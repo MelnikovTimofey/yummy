@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FlavorProfile {
+  sweet
+  sour
+  spicy
+  fresh
+  dessert
+  tobacco
+}
+
+enum LocationType {
+  home
+  lounge
+}
+
+enum MixRatingSource {
+  direct
+  derived
+}
+
+model User {
+  id               String             @id @default(uuid())
+  email            String             @unique
+  createdAt        DateTime           @default(now())
+  preferenceProfile PreferenceProfile?
+  magicLinkTokens  MagicLinkToken[]
+  refreshSessions  RefreshSession[]
+  recommendations  Recommendation[]
+  mixes            Mix[]
+  sessions         SmokingSession[]
+  mixRatings       MixRating[]
+  sessionRatings   SessionRating[]
+}
+
+model MagicLinkToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model RefreshSession {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model PreferenceProfile {
+  id                     String         @id @default(uuid())
+  userId                 String         @unique
+  likedProfiles          FlavorProfile[]
+  dislikedProfiles       FlavorProfile[]
+  favoriteManufacturerIds String[]
+  createdAt              DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Manufacturer {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  website   String?
+  createdAt DateTime @default(now())
+
+  tobaccos Tobacco[]
+}
+
+model Tobacco {
+  id              String          @id @default(uuid())
+  manufacturerId  String
+  name            String
+  flavorProfiles  FlavorProfile[]
+  flavorTags      String[]
+  strength        Int
+  line            String?
+  createdAt       DateTime        @default(now())
+
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  mixComponents MixComponent[]
+
+  @@index([manufacturerId])
+  @@unique([manufacturerId, name])
+}
+
+model Mix {
+  id        String   @id @default(uuid())
+  name      String
+  authorId  String
+  createdAt DateTime @default(now())
+
+  author      User             @relation(fields: [authorId], references: [id])
+  components  MixComponent[]
+  sessions    SmokingSession[]
+  ratings     MixRating[]
+  recommendations Recommendation[]
+
+  @@index([authorId])
+}
+
+model Recommendation {
+  id           String   @id @default(uuid())
+  userId       String
+  mixId        String
+  score        Float
+  modelVersion String
+  computedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  mix  Mix  @relation(fields: [mixId], references: [id])
+
+  @@unique([userId, mixId])
+  @@index([userId])
+  @@index([mixId])
+}
+
+model MixComponent {
+  id         String @id @default(uuid())
+  mixId      String
+  tobaccoId  String
+  proportion Int
+
+  mix     Mix     @relation(fields: [mixId], references: [id])
+  tobacco Tobacco @relation(fields: [tobaccoId], references: [id])
+
+  @@index([mixId])
+  @@index([tobaccoId])
+  @@unique([mixId, tobaccoId])
+}
+
+model SmokingSession {
+  id           String       @id @default(uuid())
+  userId       String
+  mixId        String
+  date         DateTime
+  locationType LocationType
+  locationName String?
+  createdAt    DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  mix  Mix  @relation(fields: [mixId], references: [id])
+
+  sessionRatings SessionRating[]
+
+  @@index([userId])
+  @@index([mixId])
+}
+
+model SessionRating {
+  id        String   @id @default(uuid())
+  sessionId String
+  userId    String
+  rating    Int
+  createdAt DateTime @default(now())
+
+  session SmokingSession @relation(fields: [sessionId], references: [id])
+  user    User           @relation(fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
+  @@unique([sessionId, userId])
+}
+
+model MixRating {
+  id        String          @id @default(uuid())
+  mixId     String
+  userId    String
+  rating    Int
+  source    MixRatingSource
+  createdAt DateTime        @default(now())
+
+  mix  Mix  @relation(fields: [mixId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([mixId])
+  @@index([userId])
+  @@unique([mixId, userId])
+}

@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: yummy
+      POSTGRES_PASSWORD: yummy
+      POSTGRES_DB: yummy
+    ports:
+      - "5432:5432"
+    volumes:
+      - yummy_db:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  ml:
+    build:
+      context: ../ml
+    environment:
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy
+    depends_on:
+      - db
+    profiles:
+      - ml
+
+volumes:
+  yummy_db:
