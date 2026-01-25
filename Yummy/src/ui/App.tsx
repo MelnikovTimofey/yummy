@@ -1,81 +1,260 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  Linking,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
-import { tobaccoColorHex } from '../domain/color';
-import { FlavorProfile } from '../domain/models';
+import { verifyMagicLink, sendMagicLink } from '../data/api/client';
+import { AuthTokens, ApiUser } from '../data/api/types';
+import AuthScreen from './screens/AuthScreen';
+import CatalogScreen from './screens/CatalogScreen';
+import MixesScreen from './screens/MixesScreen';
+import RecommendationsScreen from './screens/RecommendationsScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import SessionsScreen from './screens/SessionsScreen';
+import RatingsScreen from './screens/RatingsScreen';
+import { COLORS, FONTS, SIZES, SHADOW } from './theme/tokens';
 
-const sampleProfiles: FlavorProfile[] = ['sweet', 'dessert'];
-const sampleColor = tobaccoColorHex(sampleProfiles);
+const AUTH_TABS = ['catalog', 'mixes', 'sessions', 'ratings', 'recommend', 'profile'] as const;
+const GUEST_TABS = ['catalog', 'auth'] as const;
 
-// Basic UI tokens for the initial placeholder screen.
-const UI_COLORS = {
-  background: '#f9f6f1',
-  title: '#2d1b12',
-  subtitle: '#5b4a40',
-  text: '#3b2a22',
-} as const;
-
-const UI_SIZES = {
-  title: 32,
-  subtitle: 16,
-  text: 14,
-  swatch: 48,
-  swatchRadius: 12,
-  paddingHorizontal: 20,
-  paddingTop: 24,
-  previewSpacing: 12,
-  previewMarginTop: 24,
-} as const;
+const parseTokenFromUrl = (url: string | null) => {
+  if (!url) return null;
+  const match = url.match(/[?&]token=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+};
 
 const App = () => {
+  const [authTokens, setAuthTokens] = useState<AuthTokens | null>(null);
+  const [user, setUser] = useState<ApiUser | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('catalog');
+
+  const handleVerify = async (token: string) => {
+    try {
+      const response = await verifyMagicLink(token);
+      setAuthTokens({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+      setUser(response.user);
+      setStatusMessage('Magic link verified.');
+    } catch (error) {
+      setStatusMessage('Failed to verify token.');
+    }
+  };
+
+  const handleSend = async (email: string) => {
+    try {
+      await sendMagicLink(email);
+      setStatusMessage('Magic link sent. Check your email.');
+    } catch (error) {
+      setStatusMessage('Unable to send magic link.');
+    }
+  };
+
+  const handleSignOut = () => {
+    setAuthTokens(null);
+    setUser(null);
+    setActiveTab('catalog');
+  };
+
+  useEffect(() => {
+    const handleUrl = (event: { url: string }) => {
+      const token = parseTokenFromUrl(event.url);
+      if (token) {
+        handleVerify(token);
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      const token = parseTokenFromUrl(url);
+      if (token) {
+        handleVerify(token);
+      }
+    });
+
+    const subscription = Linking.addEventListener('url', handleUrl);
+    return () => subscription.remove();
+  }, []);
+
+  const handleAuthUpdate = (next: { tokens: AuthTokens | null; user: ApiUser | null }) => {
+    setAuthTokens(next.tokens);
+    setUser(next.user);
+  };
+
+  const content = () => {
+    if (activeTab === 'catalog') {
+      return <CatalogScreen />;
+    }
+
+    if (activeTab === 'auth' || !authTokens) {
+      return (
+        <AuthScreen onSendLink={handleSend} onVerify={handleVerify} statusMessage={statusMessage} />
+      );
+    }
+
+    if (activeTab === 'mixes') {
+      return <MixesScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
+    }
+
+    if (activeTab === 'sessions') {
+      return <SessionsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
+    }
+
+    if (activeTab === 'ratings') {
+      return <RatingsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
+    }
+
+    if (activeTab === 'recommend') {
+      return <RecommendationsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
+    }
+
+    return <ProfileScreen user={user} onSignOut={handleSignOut} />;
+  };
+
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Yummy</Text>
-        <Text style={styles.subtitle}>Hookah mix recommendations</Text>
-        <View style={styles.previewRow}>
-          <View style={[styles.colorSwatch, { backgroundColor: sampleColor }]} />
-          <Text style={styles.previewText}>
-            Sample color for {sampleProfiles.join(' + ')}
-          </Text>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.background}>
+        <View style={styles.haloTop} />
+        <View style={styles.haloBottom} />
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.brand}>YUMMY</Text>
+            <Text style={styles.tagline}>Aroma Atelier</Text>
+          </View>
+
+          <View style={styles.contentCard}>{content()}</View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBar}
+          >
+            {(authTokens ? AUTH_TABS : GUEST_TABS).map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
+                  {tab === 'catalog'
+                    ? 'Catalog'
+                    : tab === 'mixes'
+                    ? 'Mixes'
+                    : tab === 'sessions'
+                    ? 'Sessions'
+                    : tab === 'ratings'
+                    ? 'Ratings'
+                    : tab === 'recommend'
+                    ? 'Recommend'
+                    : tab === 'auth'
+                    ? 'Sign in'
+                  : 'Profile'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
-      </SafeAreaView>
+      </View>
     </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  haloTop: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: '#3b2e22',
+    opacity: 0.5,
+  },
+  haloBottom: {
+    position: 'absolute',
+    bottom: -160,
+    left: -120,
+    width: 260,
+    height: 260,
+    borderRadius: 999,
+    backgroundColor: '#2b1f17',
+    opacity: 0.6,
+  },
   container: {
     flex: 1,
-    paddingHorizontal: UI_SIZES.paddingHorizontal,
-    paddingTop: UI_SIZES.paddingTop,
-    backgroundColor: UI_COLORS.background,
+    paddingHorizontal: SIZES.padding,
+    paddingTop: SIZES.padding + 10,
+    paddingBottom: SIZES.padding,
   },
-  title: {
-    fontSize: UI_SIZES.title,
-    fontWeight: '700',
-    color: UI_COLORS.title,
+  header: {
+    marginBottom: 20,
   },
-  subtitle: {
-    marginTop: 8,
-    fontSize: UI_SIZES.subtitle,
-    color: UI_COLORS.subtitle,
+  brand: {
+    fontFamily: FONTS.display,
+    fontSize: 36,
+    letterSpacing: 6,
+    color: COLORS.textPrimary,
+    textTransform: 'uppercase',
   },
-  previewRow: {
-    marginTop: UI_SIZES.previewMarginTop,
+  tagline: {
+    marginTop: 6,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: COLORS.textSecondary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: SIZES.radius + 6,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOW,
+  },
+  tabBar: {
     flexDirection: 'row',
+    gap: 8,
+    paddingTop: 14,
+    paddingBottom: 6,
+    paddingRight: 6,
+  },
+  tab: {
+    minWidth: 110,
+    borderRadius: SIZES.radius,
+    paddingVertical: 12,
     alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  colorSwatch: {
-    width: UI_SIZES.swatch,
-    height: UI_SIZES.swatch,
-    borderRadius: UI_SIZES.swatchRadius,
-    marginRight: UI_SIZES.previewSpacing,
+  tabActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accentSoft,
   },
-  previewText: {
-    fontSize: UI_SIZES.text,
-    color: UI_COLORS.text,
+  tabLabel: {
+    fontFamily: FONTS.body,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
+  tabLabelActive: {
+    color: '#1b140f',
   },
 });
 
