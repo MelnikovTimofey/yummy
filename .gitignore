@@ -8,3 +8,7 @@ Yummy/ios/Yummy.xcodeproj/project.xcworkspace/
 Yummy/ios/Yummy.xcodeproj/xcuserdata/
 Yummy/ios/Yummy.xcworkspace/xcuserdata/
 Yummy/ios/DerivedData/
+
+# backend local artifacts
+backend/node_modules/
+backend/.env
