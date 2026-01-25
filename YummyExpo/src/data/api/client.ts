@@ -129,7 +129,7 @@ export const createSession = (
   auth: AuthTokens,
   onAuthUpdate: RequestOptions['onAuthUpdate'],
   payload: { mixId: string; date: string; locationType: 'home' | 'lounge'; locationName?: string },
-) => request('/sessions', { method: 'POST', body: payload, auth, onAuthUpdate });
+) => request<SmokingSession>('/sessions', { method: 'POST', body: payload, auth, onAuthUpdate });
 
 export const getSessionRatings = (
   auth: AuthTokens,

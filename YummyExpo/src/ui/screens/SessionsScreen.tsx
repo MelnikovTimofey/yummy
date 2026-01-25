@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   createSession,
   createSessionRating,
   getMixRatingSummaries,
+  getMixes,
   getSessionRatings,
   getSessions,
 } from '../../data/api/client';
 import {
   ApiUser,
   AuthTokens,
+  Mix,
   MixRatingSummary,
   SessionRating,
   SmokingSession,
@@ -29,7 +31,9 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [sessionRatings, setSessionRatings] = useState<Record<string, SessionRating>>({});
   const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
-  const [mixId, setMixId] = useState('');
+  const [mixes, setMixes] = useState<Mix[]>([]);
+  const [mixSearch, setMixSearch] = useState('');
+  const [selectedMixId, setSelectedMixId] = useState<string | null>(null);
   const [locationType, setLocationType] = useState<'home' | 'lounge'>('home');
   const [locationName, setLocationName] = useState('');
 
@@ -56,8 +60,13 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
   const load = async () => {
     setStatus('loading');
     try {
-      const [response] = await Promise.all([getSessions(auth, onAuthUpdate), loadRatings()]);
-      setItems(response.items);
+      const [sessionResponse, mixResponse] = await Promise.all([
+        getSessions(auth, onAuthUpdate),
+        getMixes(auth, onAuthUpdate),
+        loadRatings(),
+      ]);
+      setItems(sessionResponse.items);
+      setMixes(mixResponse.items);
       setStatus('idle');
     } catch {
       setStatus('error');
@@ -68,16 +77,25 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
     load();
   }, []);
 
+  const filteredMixes = useMemo(() => {
+    const query = mixSearch.trim().toLowerCase();
+    if (!query) return mixes.slice(0, 6);
+    return mixes.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 6);
+  }, [mixSearch, mixes]);
+
+  const selectedMix = mixes.find((item) => item.id === selectedMixId) ?? null;
+
   const handleCreate = async () => {
-    if (!mixId.trim()) return;
+    if (!selectedMixId) return;
     const payload = {
-      mixId: mixId.trim(),
+      mixId: selectedMixId,
       date: new Date().toISOString(),
       locationType,
       locationName: locationType === 'lounge' ? locationName.trim() : undefined,
     };
     await createSession(auth, onAuthUpdate, payload);
-    setMixId('');
+    setSelectedMixId(null);
+    setMixSearch('');
     setLocationName('');
     load();
   };
@@ -91,14 +109,56 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
     <View style={styles.container}>
       <SectionTitle title="Сессии" subtitle="История курения" />
       <View style={styles.card}>
-        <Text style={styles.label}>ID микса</Text>
+        <Text style={styles.label}>Выбор микса</Text>
         <TextInput
           style={styles.input}
-          value={mixId}
-          onChangeText={setMixId}
-          placeholder="ID микса"
+          value={mixSearch}
+          onChangeText={setMixSearch}
+          placeholder="Поиск микса"
           placeholderTextColor={COLORS.textSecondary}
         />
+        {selectedMix ? (
+          <View style={styles.selectedMix}>
+            <Text style={styles.selectedMixLabel}>Выбрано:</Text>
+            <Text style={styles.selectedMixValue}>{selectedMix.name}</Text>
+            <TouchableOpacity onPress={() => setSelectedMixId(null)}>
+              <Text style={styles.clearSelect}>Сбросить</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        <View style={styles.mixList}>
+          {filteredMixes.length === 0 ? (
+            <Text style={styles.helper}>Миксы не найдены.</Text>
+          ) : (
+            filteredMixes.map((mix) => (
+              <TouchableOpacity
+                key={mix.id}
+                style={[
+                  styles.mixRow,
+                  selectedMixId === mix.id && styles.mixRowActive,
+                ]}
+                onPress={() => setSelectedMixId(mix.id)}
+              >
+                <Text
+                  style={[
+                    styles.mixName,
+                    selectedMixId === mix.id && styles.mixNameActive,
+                  ]}
+                >
+                  {mix.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.mixMeta,
+                    selectedMixId === mix.id && styles.mixNameActive,
+                  ]}
+                >
+                  Компоненты {mix.components.length}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
         <View style={styles.toggleRow}>
           <PrimaryButton
             label={locationType === 'home' ? 'Дом (выбран)' : 'Дом'}
@@ -118,7 +178,7 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
             placeholderTextColor={COLORS.textSecondary}
           />
         ) : null}
-        <PrimaryButton label="Создать сессию" onPress={handleCreate} />
+        <PrimaryButton label="Создать сессию" onPress={handleCreate} disabled={!selectedMixId} />
       </View>
       {status === 'error' ? (
         <Text style={styles.status}>Не удалось загрузить сессии.</Text>
@@ -189,6 +249,71 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     fontFamily: FONTS.body,
     marginBottom: 10,
+  },
+  selectedMix: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: SIZES.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  selectedMixLabel: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  selectedMixValue: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  clearSelect: {
+    marginTop: 6,
+    color: COLORS.accentSoft,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  mixList: {
+    gap: 10,
+    marginBottom: 12,
+  },
+  mixRow: {
+    borderRadius: SIZES.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  mixRowActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accentSoft,
+  },
+  mixName: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+  },
+  mixNameActive: {
+    color: '#1b140f',
+  },
+  mixMeta: {
+    marginTop: 4,
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+  },
+  helper: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
   },
   toggleRow: {
     gap: 10,

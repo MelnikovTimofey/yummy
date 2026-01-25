@@ -179,7 +179,14 @@ const App = () => {
       return <RecommendationsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
     }
 
-    return <ProfileScreen user={user} onSignOut={handleSignOut} />;
+    return (
+      <ProfileScreen
+        user={user}
+        onSignOut={handleSignOut}
+        auth={authTokens}
+        onAuthUpdate={handleAuthUpdate}
+      />
+    );
   };
 
   return (

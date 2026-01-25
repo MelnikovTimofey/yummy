@@ -7,8 +7,9 @@ import {
   getMixRatingSummaries,
   getMixRatings,
   getMixes,
+  getTobaccos,
 } from '../../data/api/client';
-import { ApiUser, AuthTokens, Mix, MixRating, MixRatingSummary } from '../../data/api/types';
+import { ApiUser, AuthTokens, Mix, MixRating, MixRatingSummary, Tobacco } from '../../data/api/types';
 import PrimaryButton from '../components/PrimaryButton';
 import RatingStars from '../components/RatingStars';
 import SectionTitle from '../components/SectionTitle';
@@ -21,6 +22,8 @@ type MixesScreenProps = {
 
 type ComponentDraft = {
   tobaccoId: string;
+  tobaccoName: string;
+  manufacturerName: string;
   proportion: string;
 };
 
@@ -30,9 +33,10 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
   const [mixRatings, setMixRatings] = useState<Record<string, MixRating>>({});
   const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [name, setName] = useState('');
-  const [components, setComponents] = useState<ComponentDraft[]>([
-    { tobaccoId: '', proportion: '' },
-  ]);
+  const [components, setComponents] = useState<ComponentDraft[]>([]);
+  const [tobaccoQuery, setTobaccoQuery] = useState('');
+  const [tobaccoResults, setTobaccoResults] = useState<Tobacco[]>([]);
+  const [tobaccoStatus, setTobaccoStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const loadRatings = async () => {
@@ -76,8 +80,38 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
     );
   };
 
-  const addComponent = () => {
-    setComponents((prev) => [...prev, { tobaccoId: '', proportion: '' }]);
+  const removeComponent = (index: number) => {
+    setComponents((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleSearch = async () => {
+    const query = tobaccoQuery.trim();
+    if (!query) {
+      setTobaccoResults([]);
+      return;
+    }
+    setTobaccoStatus('loading');
+    try {
+      const response = await getTobaccos({ search: query });
+      setTobaccoResults(response.items);
+      setTobaccoStatus('idle');
+    } catch {
+      setTobaccoStatus('error');
+    }
+  };
+
+  const addComponentFromTobacco = (tobacco: Tobacco) => {
+    setComponents((prev) => [
+      ...prev,
+      {
+        tobaccoId: tobacco.id,
+        tobaccoName: tobacco.name,
+        manufacturerName: tobacco.manufacturer.name,
+        proportion: '',
+      },
+    ]);
+    setTobaccoResults([]);
+    setTobaccoQuery('');
   };
 
   const total = components.reduce((sum, item) => sum + Number(item.proportion || 0), 0);
@@ -95,7 +129,7 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
 
     await createMix(auth, onAuthUpdate, { name: name.trim(), components: payload });
     setName('');
-    setComponents([{ tobaccoId: '', proportion: '' }]);
+    setComponents([]);
     load();
   };
 
@@ -125,32 +159,67 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
           placeholder="Цитрусовая ночь"
           placeholderTextColor={COLORS.textSecondary}
         />
-        <Text style={styles.label}>Состав (ID табака + %)</Text>
-        {components.map((item, index) => (
-          <View key={`${index}`} style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.inputGrow]}
-              value={item.tobaccoId}
-              onChangeText={(value) => updateComponent(index, 'tobaccoId', value)}
-              placeholder="ID табака"
-              placeholderTextColor={COLORS.textSecondary}
-            />
-            <TextInput
-              style={[styles.input, styles.inputSmall]}
-              value={item.proportion}
-              onChangeText={(value) => updateComponent(index, 'proportion', value)}
-              placeholder="%"
-              placeholderTextColor={COLORS.textSecondary}
-              keyboardType="numeric"
-            />
+        <Text style={styles.label}>Поиск табака</Text>
+        <TextInput
+          style={styles.input}
+          value={tobaccoQuery}
+          onChangeText={setTobaccoQuery}
+          onSubmitEditing={handleSearch}
+          placeholder="Название или вкус"
+          placeholderTextColor={COLORS.textSecondary}
+        />
+        <PrimaryButton label="Найти табак" onPress={handleSearch} />
+        {tobaccoStatus === 'error' ? (
+          <Text style={styles.status}>Не удалось загрузить табаки.</Text>
+        ) : null}
+        {tobaccoResults.length > 0 ? (
+          <View style={styles.resultList}>
+            {tobaccoResults.slice(0, 6).map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.resultRow}
+                onPress={() => addComponentFromTobacco(item)}
+              >
+                <View style={styles.resultInfo}>
+                  <Text style={styles.resultName}>{item.name}</Text>
+                  <Text style={styles.resultMeta}>{item.manufacturer.name}</Text>
+                </View>
+                <Text style={styles.resultAction}>Добавить</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        ))}
+        ) : null}
+
+        <Text style={styles.label}>Компоненты и %</Text>
+        {components.length === 0 ? (
+          <Text style={styles.helper}>Добавьте табак из поиска.</Text>
+        ) : (
+          components.map((item, index) => (
+            <View key={`${item.tobaccoId}-${index}`} style={styles.componentRow}>
+              <View style={styles.componentInfo}>
+                <Text style={styles.componentName}>{item.tobaccoName}</Text>
+                <Text style={styles.componentMeta}>{item.manufacturerName}</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.inputSmall]}
+                value={item.proportion}
+                onChangeText={(value) => updateComponent(index, 'proportion', value)}
+                placeholder="%"
+                placeholderTextColor={COLORS.textSecondary}
+                keyboardType="numeric"
+              />
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => removeComponent(index)}
+              >
+                <Text style={styles.removeText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
         <View style={styles.metaRow}>
           <Text style={styles.meta}>Итого {total}%</Text>
           <Text style={styles.meta}>Нужно 100%</Text>
-        </View>
-        <View style={styles.actionsRow}>
-          <PrimaryButton label="Добавить компонент" onPress={addComponent} />
         </View>
         <PrimaryButton label="Создать микс" onPress={handleCreate} disabled={total !== 100} />
       </View>
@@ -231,15 +300,87 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     marginBottom: 10,
   },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  inputGrow: {
-    flex: 1,
-  },
   inputSmall: {
     width: 80,
+  },
+  resultList: {
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 10,
+  },
+  resultRow: {
+    borderRadius: SIZES.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  resultInfo: {
+    flex: 1,
+  },
+  resultName: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+  },
+  resultMeta: {
+    marginTop: 2,
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+  },
+  resultAction: {
+    color: COLORS.accentSoft,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  helper: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  componentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  componentInfo: {
+    flex: 1,
+  },
+  componentName: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+  },
+  componentMeta: {
+    marginTop: 2,
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+  },
+  removeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  removeText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 16,
+    lineHeight: 18,
   },
   metaRow: {
     flexDirection: 'row',
@@ -252,9 +393,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     fontFamily: FONTS.body,
-  },
-  actionsRow: {
-    marginBottom: 12,
   },
   status: {
     color: COLORS.danger,
