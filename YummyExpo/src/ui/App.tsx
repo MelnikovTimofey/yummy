@@ -8,20 +8,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { verifyMagicLink, sendMagicLink } from '../data/api/client';
+import { verifyMagicLink, sendMagicLink, upsertPreferenceProfile } from '../data/api/client';
 import { AuthTokens, ApiUser } from '../data/api/types';
 import AuthScreen from './screens/AuthScreen';
 import CatalogScreen from './screens/CatalogScreen';
 import MixesScreen from './screens/MixesScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 import RecommendationsScreen from './screens/RecommendationsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import SessionsScreen from './screens/SessionsScreen';
-import RatingsScreen from './screens/RatingsScreen';
-import { COLORS, FONTS, SIZES, SHADOW } from './theme/tokens';
+import { COLORS, FONTS, SIZES } from './theme/tokens';
 
-const AUTH_TABS = ['catalog', 'mixes', 'sessions', 'ratings', 'recommend', 'profile'] as const;
+const AUTH_TABS = ['mixes', 'sessions', 'catalog', 'recommend', 'profile'] as const;
 const GUEST_TABS = ['catalog', 'auth'] as const;
 
 const parseTokenFromUrl = (url: string | null) => {
@@ -35,6 +36,8 @@ const App = () => {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('catalog');
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   const handleVerify = async (token: string) => {
     try {
@@ -44,18 +47,19 @@ const App = () => {
         refreshToken: response.refreshToken,
       });
       setUser(response.user);
-      setStatusMessage('Magic link verified.');
+      setStatusMessage('Ссылка подтверждена.');
+      setActiveTab('mixes');
     } catch (error) {
-      setStatusMessage('Failed to verify token.');
+      setStatusMessage('Не удалось подтвердить токен.');
     }
   };
 
   const handleSend = async (email: string) => {
     try {
       await sendMagicLink(email);
-      setStatusMessage('Magic link sent. Check your email.');
+      setStatusMessage('Ссылка отправлена. Проверьте почту.');
     } catch (error) {
-      setStatusMessage('Unable to send magic link.');
+      setStatusMessage('Не удалось отправить ссылку.');
     }
   };
 
@@ -84,12 +88,75 @@ const App = () => {
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding:completed')
+      .then((value) => {
+        setOnboardingComplete(value === 'true');
+      })
+      .finally(() => setOnboardingReady(true));
+  }, []);
+
+  const handleOnboardingFinish = async (payload: {
+    profiles: string[];
+    disliked: string[];
+    brands: string[];
+  }) => {
+    await AsyncStorage.multiSet([
+      ['onboarding:completed', 'true'],
+      ['onboarding:profiles', JSON.stringify(payload.profiles)],
+      ['onboarding:disliked', JSON.stringify(payload.disliked)],
+      ['onboarding:brands', JSON.stringify(payload.brands)],
+      ['onboarding:synced', 'false'],
+    ]);
+    setOnboardingComplete(true);
+    setActiveTab(authTokens ? 'mixes' : 'auth');
+  };
+
+  useEffect(() => {
+    if (!authTokens) return;
+
+    AsyncStorage.multiGet([
+      'onboarding:profiles',
+      'onboarding:disliked',
+      'onboarding:brands',
+      'onboarding:synced',
+    ])
+      .then(async (entries) => {
+        const map = new Map(entries);
+        if (map.get('onboarding:synced') === 'true') return;
+
+        const profiles = JSON.parse(map.get('onboarding:profiles') || '[]') as string[];
+        const disliked = JSON.parse(map.get('onboarding:disliked') || '[]') as string[];
+        const brands = JSON.parse(map.get('onboarding:brands') || '[]') as string[];
+
+        await upsertPreferenceProfile(authTokens, handleAuthUpdate, {
+          likedProfiles: profiles,
+          dislikedProfiles: disliked,
+          favoriteManufacturerIds: brands,
+        });
+        await AsyncStorage.setItem('onboarding:synced', 'true');
+      })
+      .catch(() => null);
+  }, [authTokens]);
+
   const handleAuthUpdate = (next: { tokens: AuthTokens | null; user: ApiUser | null }) => {
     setAuthTokens(next.tokens);
     setUser(next.user);
   };
 
   const content = () => {
+    if (!onboardingReady) {
+      return (
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>Загрузка...</Text>
+        </View>
+      );
+    }
+
+    if (!onboardingComplete) {
+      return <OnboardingScreen onFinish={handleOnboardingFinish} />;
+    }
+
     if (activeTab === 'catalog') {
       return <CatalogScreen />;
     }
@@ -108,10 +175,6 @@ const App = () => {
       return <SessionsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
     }
 
-    if (activeTab === 'ratings') {
-      return <RatingsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
-    }
-
     if (activeTab === 'recommend') {
       return <RecommendationsScreen auth={authTokens} onAuthUpdate={handleAuthUpdate} />;
     }
@@ -125,44 +188,49 @@ const App = () => {
       <View style={styles.background}>
         <View style={styles.haloTop} />
         <View style={styles.haloBottom} />
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.brand}>YUMMY</Text>
-            <Text style={styles.tagline}>Aroma Atelier</Text>
+        <SafeAreaView edges={['top']} style={styles.safeTop}>
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.brand}>ВКУСНО</Text>
+              <Text style={styles.tagline}>АРОМА АТЕЛЬЕ</Text>
+            </View>
+
+            <View style={styles.content}>{content()}</View>
           </View>
+        </SafeAreaView>
 
-          <View style={styles.contentCard}>{content()}</View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabBar}
-          >
-            {(authTokens ? AUTH_TABS : GUEST_TABS).map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tab, activeTab === tab && styles.tabActive]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
-                  {tab === 'catalog'
-                    ? 'Catalog'
-                    : tab === 'mixes'
-                    ? 'Mixes'
-                    : tab === 'sessions'
-                    ? 'Sessions'
-                    : tab === 'ratings'
-                    ? 'Ratings'
-                    : tab === 'recommend'
-                    ? 'Recommend'
-                    : tab === 'auth'
-                    ? 'Sign in'
-                  : 'Profile'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {onboardingReady && onboardingComplete ? (
+          <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.tabBarContainer}
+              contentContainerStyle={styles.tabBar}
+            >
+              {(authTokens ? AUTH_TABS : GUEST_TABS).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.tab, activeTab === tab && styles.tabActive]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
+                    {tab === 'catalog'
+                      ? 'Каталог'
+                      : tab === 'mixes'
+                      ? 'Миксы'
+                      : tab === 'sessions'
+                      ? 'Сессии'
+                      : tab === 'recommend'
+                      ? 'Рекомендации'
+                      : tab === 'auth'
+                      ? 'Вход'
+                    : 'Профиль'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </SafeAreaView>
+        ) : null}
       </View>
     </SafeAreaProvider>
   );
@@ -172,6 +240,9 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  safeTop: {
+    flex: 1,
   },
   haloTop: {
     position: 'absolute',
@@ -195,12 +266,11 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: SIZES.padding,
-    paddingTop: SIZES.padding + 10,
-    paddingBottom: SIZES.padding,
+    paddingTop: 8,
   },
   header: {
     marginBottom: 20,
+    paddingHorizontal: SIZES.padding,
   },
   brand: {
     fontFamily: FONTS.display,
@@ -217,26 +287,42 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: COLORS.textSecondary,
   },
-  contentCard: {
+  content: {
     flex: 1,
+    paddingHorizontal: SIZES.padding,
+    paddingBottom: 12,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+  },
+  bottomBar: {
     backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius + 6,
-    padding: 18,
-    borderWidth: 1,
+    borderTopWidth: 1,
     borderColor: COLORS.border,
-    ...SHADOW,
+    paddingHorizontal: SIZES.padding,
   },
   tabBar: {
     flexDirection: 'row',
     gap: 8,
-    paddingTop: 14,
-    paddingBottom: 6,
     paddingRight: 6,
+    alignItems: 'center',
+  },
+  tabBarContainer: {
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   tab: {
-    minWidth: 110,
+    minWidth: 96,
+    height: 44,
     borderRadius: SIZES.radius,
-    paddingVertical: 12,
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceAlt,
     borderWidth: 1,

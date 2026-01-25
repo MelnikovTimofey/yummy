@@ -31,9 +31,9 @@ const RecommendationsScreen = ({ auth, onAuthUpdate }: RecommendationsScreenProp
 
   return (
     <View style={styles.container}>
-      <SectionTitle title="Recommendations" subtitle="LightFM Curated" />
+      <SectionTitle title="Рекомендации" subtitle="Подборка LightFM" />
       {status === 'error' ? (
-        <Text style={styles.status}>Failed to load recommendations.</Text>
+        <Text style={styles.status}>Не удалось загрузить рекомендации.</Text>
       ) : null}
       <FlatList
         data={items}
@@ -47,9 +47,9 @@ const RecommendationsScreen = ({ auth, onAuthUpdate }: RecommendationsScreenProp
                 .join(' · ')}
             </Text>
             {item.score !== null ? (
-              <Text style={styles.score}>Score {item.score.toFixed(2)}</Text>
+              <Text style={styles.score}>Оценка {item.score.toFixed(2)}</Text>
             ) : (
-              <Text style={styles.score}>Popular pick</Text>
+              <Text style={styles.score}>Популярный выбор</Text>
             )}
           </View>
         )}

@@ -120,6 +120,31 @@ export const registerRatingRoutes = async (app: FastifyInstance) => {
     return reply.send({ items: ratings });
   });
 
+  app.get('/mix-ratings/summary', { preHandler: requireAuth }, async (request, reply) => {
+    const parseResult = listMixRatingsSchema.safeParse(request.query);
+    if (!parseResult.success) {
+      return reply.status(400).send({ error: 'Invalid query params' });
+    }
+
+    const summaries = await prisma.mixRating.groupBy({
+      by: ['mixId'],
+      where: {
+        source: 'direct',
+        ...(parseResult.data.mixId ? { mixId: parseResult.data.mixId } : {}),
+      },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+
+    return reply.send({
+      items: summaries.map((summary) => ({
+        mixId: summary.mixId,
+        avgRating: summary._avg.rating,
+        count: summary._count.rating,
+      })),
+    });
+  });
+
   app.post('/mix-ratings', { preHandler: requireAuth }, async (request, reply) => {
     const parseResult = mixRatingSchema.safeParse(request.body);
     if (!parseResult.success) {

@@ -13,12 +13,12 @@ type ProfileScreenProps = {
 const ProfileScreen = ({ user, onSignOut }: ProfileScreenProps) => {
   return (
     <View style={styles.container}>
-      <SectionTitle title="Profile" subtitle="Session" />
+      <SectionTitle title="Профиль" subtitle="Аккаунт" />
       <View style={styles.card}>
-        <Text style={styles.label}>Signed in as</Text>
-        <Text style={styles.value}>{user?.email ?? 'Unknown'}</Text>
+        <Text style={styles.label}>Вы вошли как</Text>
+        <Text style={styles.value}>{user?.email ?? 'Неизвестно'}</Text>
       </View>
-      <PrimaryButton label="Sign out" onPress={onSignOut} />
+      <PrimaryButton label="Выйти" onPress={onSignOut} />
     </View>
   );
 };

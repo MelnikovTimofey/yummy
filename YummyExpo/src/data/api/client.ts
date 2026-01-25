@@ -5,6 +5,8 @@ import {
   Manufacturer,
   Mix,
   MixRating,
+  MixRatingSummary,
+  PreferenceProfile,
   RecommendationItem,
   SessionRating,
   SmokingSession,
@@ -147,6 +149,18 @@ export const getMixRatings = (
   return request<{ items: MixRating[] }>(`/mix-ratings${query}`, { auth, onAuthUpdate });
 };
 
+export const getMixRatingSummaries = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  mixId?: string,
+) => {
+  const query = mixId ? `?mixId=${encodeURIComponent(mixId)}` : '';
+  return request<{ items: MixRatingSummary[] }>(`/mix-ratings/summary${query}`, {
+    auth,
+    onAuthUpdate,
+  });
+};
+
 export const createSessionRating = (
   auth: AuthTokens,
   onAuthUpdate: RequestOptions['onAuthUpdate'],
@@ -161,6 +175,27 @@ export const createMixRating = (
 
 export const getRecommendations = (auth: AuthTokens, onAuthUpdate: RequestOptions['onAuthUpdate']) =>
   request<{ items: RecommendationItem[] }>('/recommendations', {
+    auth,
+    onAuthUpdate,
+  });
+
+export const getPreferenceProfile = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+) => request<{ profile: PreferenceProfile | null }>('/preference-profile', { auth, onAuthUpdate });
+
+export const upsertPreferenceProfile = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload: {
+    likedProfiles: string[];
+    dislikedProfiles: string[];
+    favoriteManufacturerIds: string[];
+  },
+) =>
+  request<{ profile: PreferenceProfile }>('/preference-profile', {
+    method: 'PUT',
+    body: payload,
     auth,
     onAuthUpdate,
   });

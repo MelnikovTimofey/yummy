@@ -1,8 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { createSession, getSessions } from '../../data/api/client';
-import { ApiUser, AuthTokens, SmokingSession } from '../../data/api/types';
+import {
+  createSession,
+  createSessionRating,
+  getMixRatingSummaries,
+  getSessionRatings,
+  getSessions,
+} from '../../data/api/client';
+import {
+  ApiUser,
+  AuthTokens,
+  MixRatingSummary,
+  SessionRating,
+  SmokingSession,
+} from '../../data/api/types';
 import PrimaryButton from '../components/PrimaryButton';
+import RatingStars from '../components/RatingStars';
 import SectionTitle from '../components/SectionTitle';
 import { COLORS, FONTS, SIZES } from '../theme/tokens';
 
@@ -14,14 +27,36 @@ type SessionsScreenProps = {
 const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
   const [items, setItems] = useState<SmokingSession[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [sessionRatings, setSessionRatings] = useState<Record<string, SessionRating>>({});
+  const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [mixId, setMixId] = useState('');
   const [locationType, setLocationType] = useState<'home' | 'lounge'>('home');
   const [locationName, setLocationName] = useState('');
 
+  const loadRatings = async () => {
+    const [sessionRatingsResponse, mixSummaryResponse] = await Promise.all([
+      getSessionRatings(auth, onAuthUpdate),
+      getMixRatingSummaries(auth, onAuthUpdate),
+    ]);
+
+    setSessionRatings(
+      sessionRatingsResponse.items.reduce<Record<string, SessionRating>>((acc, item) => {
+        acc[item.sessionId] = item;
+        return acc;
+      }, {}),
+    );
+    setMixSummaries(
+      mixSummaryResponse.items.reduce<Record<string, MixRatingSummary>>((acc, item) => {
+        acc[item.mixId] = item;
+        return acc;
+      }, {}),
+    );
+  };
+
   const load = async () => {
     setStatus('loading');
     try {
-      const response = await getSessions(auth, onAuthUpdate);
+      const [response] = await Promise.all([getSessions(auth, onAuthUpdate), loadRatings()]);
       setItems(response.items);
       setStatus('idle');
     } catch {
@@ -47,25 +82,30 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
     load();
   };
 
+  const handleRateSession = async (sessionId: string, rating: number) => {
+    await createSessionRating(auth, onAuthUpdate, { sessionId, rating });
+    await loadRatings();
+  };
+
   return (
     <View style={styles.container}>
-      <SectionTitle title="Sessions" subtitle="Track smoke" />
+      <SectionTitle title="Сессии" subtitle="История курения" />
       <View style={styles.card}>
-        <Text style={styles.label}>Mix ID</Text>
+        <Text style={styles.label}>ID микса</Text>
         <TextInput
           style={styles.input}
           value={mixId}
           onChangeText={setMixId}
-          placeholder="Mix ID"
+          placeholder="ID микса"
           placeholderTextColor={COLORS.textSecondary}
         />
         <View style={styles.toggleRow}>
           <PrimaryButton
-            label={locationType === 'home' ? 'Home (selected)' : 'Home'}
+            label={locationType === 'home' ? 'Дом (выбран)' : 'Дом'}
             onPress={() => setLocationType('home')}
           />
           <PrimaryButton
-            label={locationType === 'lounge' ? 'Lounge (selected)' : 'Lounge'}
+            label={locationType === 'lounge' ? 'Лаунж (выбран)' : 'Лаунж'}
             onPress={() => setLocationType('lounge')}
           />
         </View>
@@ -74,14 +114,14 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
             style={styles.input}
             value={locationName}
             onChangeText={setLocationName}
-            placeholder="Lounge name"
+            placeholder="Название лаунжа"
             placeholderTextColor={COLORS.textSecondary}
           />
         ) : null}
-        <PrimaryButton label="Create session" onPress={handleCreate} />
+        <PrimaryButton label="Создать сессию" onPress={handleCreate} />
       </View>
       {status === 'error' ? (
-        <Text style={styles.status}>Failed to load sessions.</Text>
+        <Text style={styles.status}>Не удалось загрузить сессии.</Text>
       ) : null}
       <FlatList
         data={items}
@@ -91,10 +131,27 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
             <Text style={styles.cardTitle}>{item.mix.name}</Text>
             <Text style={styles.cardSubtitle}>
               {item.locationType === 'home'
-                ? 'Home'
-                : `Lounge ${item.locationName ?? ''}`}
+                ? 'Дом'
+                : `Лаунж ${item.locationName ?? ''}`}
             </Text>
             <Text style={styles.meta}>{new Date(item.date).toLocaleString()}</Text>
+            <View style={styles.ratingBlock}>
+              <Text style={styles.ratingLabel}>Оценка сессии</Text>
+              <RatingStars
+                value={sessionRatings[item.id]?.rating ?? null}
+                onSelect={(score) => handleRateSession(item.id, score)}
+              />
+              <Text style={styles.average}>
+                Средняя оценка микса:{' '}
+                {mixSummaries[item.mix.id]?.avgRating !== null &&
+                mixSummaries[item.mix.id]?.avgRating !== undefined
+                  ? mixSummaries[item.mix.id]!.avgRating!.toFixed(1)
+                  : 'нет'}
+                {mixSummaries[item.mix.id]?.count
+                  ? ` (${mixSummaries[item.mix.id]!.count})`
+                  : ''}
+              </Text>
+            </View>
           </View>
         )}
       />
@@ -158,6 +215,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     fontFamily: FONTS.body,
+  },
+  ratingBlock: {
+    marginTop: 12,
+    gap: 8,
+  },
+  ratingLabel: {
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontFamily: FONTS.body,
+    fontSize: 11,
+  },
+  average: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
   },
 });
 

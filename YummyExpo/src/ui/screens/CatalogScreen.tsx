@@ -27,17 +27,17 @@ const CatalogScreen = () => {
 
   return (
     <View style={styles.container}>
-      <SectionTitle title="Catalog" subtitle="Tobaccos" />
+      <SectionTitle title="Каталог" subtitle="Табаки" />
       <TextInput
         style={styles.search}
-        placeholder="Search flavor or name"
+        placeholder="Поиск по вкусу или названию"
         placeholderTextColor={COLORS.textSecondary}
         value={query}
         onChangeText={setQuery}
         onSubmitEditing={() => load(query)}
       />
       {status === 'error' ? (
-        <Text style={styles.status}>Failed to load catalog.</Text>
+        <Text style={styles.status}>Не удалось загрузить каталог.</Text>
       ) : null}
       <FlatList
         data={items}
@@ -47,8 +47,8 @@ const CatalogScreen = () => {
             <Text style={styles.cardTitle}>{item.name}</Text>
             <Text style={styles.cardSubtitle}>{item.manufacturer.name}</Text>
             <View style={styles.metaRow}>
-              <Text style={styles.meta}>Strength {item.strength}/10</Text>
-              <Text style={styles.meta}>Profiles {item.flavorProfiles.join(', ')}</Text>
+              <Text style={styles.meta}>Крепость {item.strength}/10</Text>
+              <Text style={styles.meta}>Профили {item.flavorProfiles.join(', ')}</Text>
             </View>
           </View>
         )}

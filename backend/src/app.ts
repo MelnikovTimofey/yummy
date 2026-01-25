@@ -8,6 +8,7 @@ import { registerMixRoutes } from './mixes/routes';
 import { registerSessionRoutes } from './sessions/routes';
 import { registerRatingRoutes } from './ratings/routes';
 import { registerRecommendationRoutes } from './recommendations/routes';
+import { registerPreferenceRoutes } from './preferences/routes';
 
 export const buildApp = () => {
   const app = Fastify({ logger: true });
@@ -26,6 +27,7 @@ export const buildApp = () => {
   app.register(registerSessionRoutes);
   app.register(registerRatingRoutes);
   app.register(registerRecommendationRoutes);
+  app.register(registerPreferenceRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { createMix, getMixes } from '../../data/api/client';
-import { ApiUser, AuthTokens, Mix } from '../../data/api/types';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  createSession,
+  createMix,
+  createMixRating,
+  getMixRatingSummaries,
+  getMixRatings,
+  getMixes,
+} from '../../data/api/client';
+import { ApiUser, AuthTokens, Mix, MixRating, MixRatingSummary } from '../../data/api/types';
 import PrimaryButton from '../components/PrimaryButton';
+import RatingStars from '../components/RatingStars';
 import SectionTitle from '../components/SectionTitle';
 import { COLORS, FONTS, SIZES } from '../theme/tokens';
 
@@ -19,15 +27,38 @@ type ComponentDraft = {
 const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [mixRatings, setMixRatings] = useState<Record<string, MixRating>>({});
+  const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [name, setName] = useState('');
   const [components, setComponents] = useState<ComponentDraft[]>([
     { tobaccoId: '', proportion: '' },
   ]);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const loadRatings = async () => {
+    const [ratingResponse, summaryResponse] = await Promise.all([
+      getMixRatings(auth, onAuthUpdate),
+      getMixRatingSummaries(auth, onAuthUpdate),
+    ]);
+
+    setMixRatings(
+      ratingResponse.items.reduce<Record<string, MixRating>>((acc, item) => {
+        acc[item.mixId] = item;
+        return acc;
+      }, {}),
+    );
+    setMixSummaries(
+      summaryResponse.items.reduce<Record<string, MixRatingSummary>>((acc, item) => {
+        acc[item.mixId] = item;
+        return acc;
+      }, {}),
+    );
+  };
 
   const load = async () => {
     setStatus('loading');
     try {
-      const response = await getMixes(auth, onAuthUpdate);
+      const [response] = await Promise.all([getMixes(auth, onAuthUpdate), loadRatings()]);
       setItems(response.items);
       setStatus('idle');
     } catch {
@@ -68,26 +99,40 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
     load();
   };
 
+  const handleRateMix = async (mixId: string, rating: number) => {
+    await createMixRating(auth, onAuthUpdate, { mixId, rating });
+    await loadRatings();
+  };
+
+  const handleQuickSession = async (mixId: string) => {
+    await createSession(auth, onAuthUpdate, {
+      mixId,
+      date: new Date().toISOString(),
+      locationType: 'home',
+    });
+    setFeedback('Микс добавлен в сессию.');
+  };
+
   return (
     <View style={styles.container}>
-      <SectionTitle title="Mixes" subtitle="Create & reuse" />
+      <SectionTitle title="Миксы" subtitle="Список и оценки" />
       <View style={styles.card}>
-        <Text style={styles.label}>Mix name</Text>
+        <Text style={styles.label}>Название микса</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="Midnight Citrus"
+          placeholder="Цитрусовая ночь"
           placeholderTextColor={COLORS.textSecondary}
         />
-        <Text style={styles.label}>Components (tobacco id + %)</Text>
+        <Text style={styles.label}>Состав (ID табака + %)</Text>
         {components.map((item, index) => (
           <View key={`${index}`} style={styles.row}>
             <TextInput
               style={[styles.input, styles.inputGrow]}
               value={item.tobaccoId}
               onChangeText={(value) => updateComponent(index, 'tobaccoId', value)}
-              placeholder="Tobacco ID"
+              placeholder="ID табака"
               placeholderTextColor={COLORS.textSecondary}
             />
             <TextInput
@@ -101,31 +146,53 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
           </View>
         ))}
         <View style={styles.metaRow}>
-          <Text style={styles.meta}>Total {total}%</Text>
-          <Text style={styles.meta}>Need 100%</Text>
+          <Text style={styles.meta}>Итого {total}%</Text>
+          <Text style={styles.meta}>Нужно 100%</Text>
         </View>
         <View style={styles.actionsRow}>
-          <PrimaryButton label="Add component" onPress={addComponent} />
+          <PrimaryButton label="Добавить компонент" onPress={addComponent} />
         </View>
-        <PrimaryButton label="Create mix" onPress={handleCreate} disabled={total !== 100} />
+        <PrimaryButton label="Создать микс" onPress={handleCreate} disabled={total !== 100} />
       </View>
 
       {status === 'error' ? (
-        <Text style={styles.status}>Failed to load mixes.</Text>
+        <Text style={styles.status}>Не удалось загрузить миксы.</Text>
       ) : null}
+      {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
 
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <TouchableOpacity style={styles.quickButton} onPress={() => handleQuickSession(item.id)}>
+                <Text style={styles.quickButtonText}>В сессию</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.cardSubtitle}>
               {item.components
                 .map((component) => component.tobacco.manufacturer.name)
                 .join(' · ')}
             </Text>
-            <Text style={styles.meta}>Components {item.components.length}</Text>
+            <Text style={styles.meta}>Компоненты {item.components.length}</Text>
+            <View style={styles.ratingBlock}>
+              <Text style={styles.ratingLabel}>Моя оценка</Text>
+              <RatingStars
+                value={mixRatings[item.id]?.rating ?? null}
+                onSelect={(score) => handleRateMix(item.id, score)}
+              />
+              <Text style={styles.average}>
+                Средняя: {mixSummaries[item.id]?.avgRating !== null &&
+                mixSummaries[item.id]?.avgRating !== undefined
+                  ? mixSummaries[item.id]!.avgRating!.toFixed(1)
+                  : 'нет'}
+                {mixSummaries[item.id]?.count
+                  ? ` (${mixSummaries[item.id]!.count})`
+                  : ''}
+              </Text>
+            </View>
           </View>
         )}
       />
@@ -193,15 +260,58 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     marginBottom: 12,
   },
+  feedback: {
+    color: COLORS.accentSoft,
+    marginBottom: 12,
+    fontFamily: FONTS.body,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   cardTitle: {
     color: COLORS.textPrimary,
     fontFamily: FONTS.display,
     fontSize: 18,
+    flex: 1,
+  },
+  quickButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.accentSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  quickButtonText: {
+    color: COLORS.accentSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontFamily: FONTS.body,
+    fontSize: 11,
   },
   cardSubtitle: {
     color: COLORS.textSecondary,
     marginTop: 6,
     fontFamily: FONTS.body,
+  },
+  ratingBlock: {
+    marginTop: 12,
+    gap: 8,
+  },
+  ratingLabel: {
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontFamily: FONTS.body,
+    fontSize: 11,
+  },
+  average: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
   },
 });
 

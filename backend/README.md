@@ -60,7 +60,13 @@ Mailpit UI: `http://localhost:8025`.
 - `GET /session-ratings?sessionId=` (auth)
 - `POST /session-ratings` (auth)
 - `GET /mix-ratings?mixId=` (auth)
+- `GET /mix-ratings/summary?mixId=` (auth)
 - `POST /mix-ratings` (auth)
+
+## Preference profile
+
+- `GET /preference-profile` (auth)
+- `PUT /preference-profile` (auth)
 
 ## Recommendations
 

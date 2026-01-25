@@ -73,3 +73,17 @@ export type MixRating = {
   rating: number;
   source: 'direct' | 'derived';
 };
+
+export type MixRatingSummary = {
+  mixId: string;
+  avgRating: number | null;
+  count: number;
+};
+
+export type PreferenceProfile = {
+  id: string;
+  userId: string;
+  likedProfiles: string[];
+  dislikedProfiles: string[];
+  favoriteManufacturerIds: string[];
+};
