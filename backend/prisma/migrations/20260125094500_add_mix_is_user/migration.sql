@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Mix" ADD COLUMN "isUserMix" BOOLEAN NOT NULL DEFAULT true;

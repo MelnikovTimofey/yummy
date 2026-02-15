@@ -1,0 +1,1072 @@
+[
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "КИВИ, ЯБЛОКО И ЛАЙМ",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Киви, Яблоко, Лайм.",
+    "flavorTags": ["Киви", "Яблоко", "Лайм"],
+    "sources": ["https://musthave.ru/category/tabak-dlya-kalyana/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "СМОРОДИНА, АПЕЛЬСИН И ВИНОГРАД",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Кисло-сладкий микс, где глубина черной смородины сочетается с солнечным апельсином и сладостью спелого винограда.",
+    "flavorTags": ["Смородина", "Апельсин", "Виноград"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-smorodina-apelsin-i-vinograd/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sour Citrus",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Цитрусовый микс на основе спелого апельсина и кислого лайма с едва уловимой горчинкой грейпфрута.",
+    "flavorTags": ["Апельсин", "Грейпфрут", "Лайм", "Кислый"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sour-citrus/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sour Tropic",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Натуральный тропический коктейль с выразительной кислинкой.",
+    "flavorTags": ["Ананас", "Маракуйя", "Кислый"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sour-tropic/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sour Berries",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Яркий микс кислых лесных ягод.",
+    "flavorTags": ["Малина", "Красная смородина", "Кислый"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sour-berries/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sour Apple",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Свежий аромат кислых, зеленых сочных яблок.",
+    "flavorTags": ["Яблоко", "Кислый"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sour-apple/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Yolka",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат елки, переносящий в хвойный лес после сильного дождя.",
+    "flavorTags": ["Хвоя"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-yolka/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cherry Juice",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат вишневого сока с еле уловимой терпкостью косточки.",
+    "flavorTags": ["Вишня"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cherry-juice/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Lemon Tonic",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат газированного напитка на основе кислого лимона с оттенками горького биттера.",
+    "flavorTags": ["Тоник", "Лимон"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-lemon-tonic/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cream Soda",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкус нежной крем-соды в сочетании с ванилью.",
+    "flavorTags": ["Ваниль", "Крем-сода"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cream-soda/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Guanapapa",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Сладкий аромат спелой папайи в сочетании с освежающей гуанабаной.",
+    "flavorTags": ["Гуанабана", "Папайя"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-guanapapa/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Red Tea",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат насыщенного красного чая со свежими нотами цитруса.",
+    "flavorTags": ["Красный чай", "Цитрус"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-red-tea/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cinnamon Roll",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат свежей выпечки с сахаром и корицей.",
+    "flavorTags": ["Выпечка", "Корица"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cinnamon-roll/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cacao",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Насыщенный и выразительный аромат шоколадного печенья, дополненный какао и кофе.",
+    "flavorTags": ["Какао", "Кофе", "Печенье"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cacao/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Elderberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат спелой бузины с ярким цветочным фоном.",
+    "flavorTags": ["Бузина"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-elderberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Lemongrass",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Насыщенный и яркий аромат свежего лемонграсса.",
+    "flavorTags": ["Лемонграсс"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-lemongrass/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Prosecco",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат легкого просекко с яркими нотами яблок.",
+    "flavorTags": ["Алкоголь", "Яблоко"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-prosecco/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Alova",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Микс сладости и свежести, основой которого служит алоэ и женьшень.",
+    "flavorTags": ["Алоэ", "Женьшень"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-alova/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Milk Oolong",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Насыщенный аромат молочного улуна.",
+    "flavorTags": ["Молоко/Сливки", "Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-milk-oolong/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Berry Mors",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкус натурального ягодного морса с освежающей кислинкой.",
+    "flavorTags": ["Брусника", "Малина", "Черешня"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-berry-mors/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Strawberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкус сладкой, спелой клубники с легкой кислинкой.",
+    "flavorTags": ["Клубника"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-strawberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Jumango",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Сочетание сладкого манго и кислой маракуйи.",
+    "flavorTags": ["Манго", "Маракуйя"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-jumango/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Violet",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат садовой фиалки с нотами темного винограда.",
+    "flavorTags": ["Виноград", "Цветы"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-violet/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Tipsy",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Традиционная испанская сангрия с акцентами цитрусовых фруктов.",
+    "flavorTags": ["Алкоголь", "Сангрия"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-tipsy/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Pearl Pool",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Тропический микс со сливочно-ореховыми нотами.",
+    "flavorTags": ["Ананас", "Манго", "Марула", "Маракуйя", "Молоко/Сливки", "Моринга"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-pearl-pool/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cheesecake",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Воздушный чизкейк с нежной творожно-сливочной основой.",
+    "flavorTags": ["Десерт", "Сыр"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cheesecake/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Green Fizz",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Кисло-сладкий коктейль с кактусом, абсентом и нотами киви.",
+    "flavorTags": ["Абсент", "Алкоголь", "Кактус", "Киви"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-green-fizz/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Lemon-Lime",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Цитрусовый кисло-сладкий микс спелого лайма и сочного лимона.",
+    "flavorTags": ["Лайм", "Лимон"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-lemon-lime/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Mango Sling",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Освежающий манговый лимонад с лёгкими специями и мятой.",
+    "flavorTags": ["Груша", "Манго"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-mango-sling/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Marula",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Сладкий экзотический вкус африканской марулы.",
+    "flavorTags": ["Марула"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-marula/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Passion Plum",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Многогранный аромат кислых плодов сливы и маракуйи.",
+    "flavorTags": ["Маракуйя", "Слива"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-passion-plum/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Gooseberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Яркий вкус спелого крыжовника с вязкостью и кислинкой.",
+    "flavorTags": ["Крыжовник"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-gooseberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Grapefruit",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Кисло-сладкий микс оранжевого и розового грейпфрута.",
+    "flavorTags": ["Грейпфрут"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-grapefruit/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Coconut Shake",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Сладкий аромат кокосового шейка с молочно-сливочной основой.",
+    "flavorTags": ["Кокос", "Молоко/Сливки"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-coconut-shake/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Forest Berries",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Бархатная композиция лесных ягод с выраженными ягодными оттенками.",
+    "flavorTags": ["Земляника", "Клюква", "Лесные ягоды", "Лесные травы", "Малина", "Смородина"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-forest-berries/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Earl Grey",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Классический глубокий чайный вкус с ярким бергамотом.",
+    "flavorTags": ["Бергамот", "Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-earl-grey/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Holland Pie",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Кекс с голландским акцентом.",
+    "flavorTags": ["Вафли"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-holland-pie/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Mandarin",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Прекрасный вкус сладкого медового мандарина.",
+    "flavorTags": ["Мандарин"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-mandarin/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Citrus Spritz",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Терпкий цитрусовый коктейль с просекко и долькой апельсина.",
+    "flavorTags": ["Биттер", "Газировка", "Лимон", "Цитрус", "Яблоко"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-citrus-spritz/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Charlotte Pie",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Ягодная шарлотка с песочным печеньем.",
+    "flavorTags": ["Печенье", "Ягоды"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-charlotte-pie/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Maple Pecan",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Десерт с кленовым сиропом и орехами.",
+    "flavorTags": ["Кленовый сироп", "Орехи", "Сгущенное молоко", "Шоколад"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-maple-pecan/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Watermelon",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Сочетание арбуза, дыни и жевательной резинки.",
+    "flavorTags": ["Дыня", "Жевательная резинка", "Арбуз"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-watermelon/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Araram",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Бархатный микс лесных ягод с ореховым послевкусием.",
+    "flavorTags": ["Мёд", "Орехи", "Ягоды"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-araram/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cola",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Освежающий, по-настоящему летний аромат газированного напитка прямиком из холодильника.",
+    "flavorTags": ["Газировка", "Кола"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cola/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Vanilla Cream",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Нежный, сливочный вкус мягкого ванильного крема, который станет отличным дополнением к любым десертам.",
+    "flavorTags": ["Ваниль", "Молоко/Сливки", "Мороженое"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-vanilla-cream/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Caribbean Rum",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Аромат карибского рома.",
+    "flavorTags": ["Алкоголь", "Ром"],
+    "sources": ["https://musthave.ru/category/tabak-dlya-kalyana/napitki/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Ice Cream",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Невероятно нежный вкус настоящего пломбира с мягким, сливочным послевкусием.",
+    "flavorTags": ["Ваниль", "Молоко/Сливки", "Мороженое"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-ice-cream/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cucunade",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Освежающий, яркий вкус лимонада на основе огуречного сиропа, долек свежего лимона и листьев перечной мяты.",
+    "flavorTags": ["Газировка", "Лайм", "Лесные травы", "Лимон", "Огурец"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cucunade/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Fizzy Dizzy",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкус игристого напитка, приправленного кисло-сладкими нотками барбариса.",
+    "flavorTags": ["Алкоголь", "Барбарис", "Газировка", "Шампанское"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-fizzy-dizzy/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Paradise",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Экстравагантный вкус обжаренного в карамели банана, приправленного кокосовой стружкой.",
+    "flavorTags": ["Банан", "Карамель", "Кокос"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-paradise/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Rocketman",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Яркий, освежающий вкус клубничной содовой, сдобренной дольками киви и грейпфрута.",
+    "flavorTags": ["Газировка", "Грейпфрут", "Земляника", "Киви"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-rocketman/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Honey Holls",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Освежающий вкус морозного зимнего дня, с согревающим ароматом терпкого сладкого меда.",
+    "flavorTags": ["Жвачка", "Леденцы", "Мёд", "Эвкалипт"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-honey-holls/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Candy Cow",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Карамель, Молоко/Сливки.",
+    "flavorTags": ["Карамель", "Молоко/Сливки"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-candy-cow/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Lemon Pie",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Бисквит, Лимон, Печенье.",
+    "flavorTags": ["Бисквит", "Лимон", "Печенье"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-lemon-pie/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Baikal",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Еловая хвоя, Лимонад, Лимон, Липа, Мята, Смородина.",
+    "flavorTags": ["Еловая хвоя", "Лимонад", "Лимон", "Липа", "Мята", "Смородина"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-baikal/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Quince",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Айва.",
+    "flavorTags": ["Айва"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-quince/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sea Buckthorn Tea",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Апельсин, Имбирь, Облепиха, Перечная мята, Пряности, Чай.",
+    "flavorTags": ["Апельсин", "Имбирь", "Облепиха", "Перечная мята", "Пряности", "Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sea-backthorn-tea/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Estragon",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Тархун.",
+    "flavorTags": ["Тархун"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-estragon/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Milky Rice",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Рис, Сгущенное молоко.",
+    "flavorTags": ["Рис", "Сгущенное молоко"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-milky-rice/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Frosty",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Мята, Холодок.",
+    "flavorTags": ["Мята", "Холодок"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-frosty/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Feijoa",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Клубника, Фейхоа.",
+    "flavorTags": ["Клубника", "Фейхоа"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-feijoa/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Tropic Juice",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Груша, Маракуйя, Тропические фрукты.",
+    "flavorTags": ["Груша", "Маракуйя", "Тропические фрукты"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-tropic-juice/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Mad Pear",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Груша.",
+    "flavorTags": ["Груша"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-mad-pear/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Blackberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Ежевика.",
+    "flavorTags": ["Ежевика"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-blackberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Berry Holls",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Жвачка, Леденцы, Эвкалипт, Ягоды.",
+    "flavorTags": ["Жвачка", "Леденцы", "Эвкалипт", "Ягоды"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-berry-holls/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Morocco",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Чай.",
+    "flavorTags": ["Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-morocco/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cookie",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Ваниль, Печенье.",
+    "flavorTags": ["Ваниль", "Печенье"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cookie/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Banana Mama",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Банан, Жвачка.",
+    "flavorTags": ["Банан", "Жвачка"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-banana-mama/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Pistachio Cake",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Десертный профиль с фисташковым акцентом.",
+    "flavorTags": ["Фисташка", "Десерт"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-pistachio-cake/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cranberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Клюква.",
+    "flavorTags": ["Клюква"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cranberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Melonade",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Дыня, Лимон, Чай.",
+    "flavorTags": ["Дыня", "Лимон", "Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-melonade/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Red Bomb",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Земляника, Малина, Клубника.",
+    "flavorTags": ["Земляника", "Малина", "Клубника"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-red-bomb/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Masala Tea",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Имбирь, Кардамон, Корица, Пряности, Чай.",
+    "flavorTags": ["Имбирь", "Кардамон", "Корица", "Пряности", "Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-masala-tea/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Nord Star",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Апельсин, Карамель, Лайм, Лимон.",
+    "flavorTags": ["Апельсин", "Карамель", "Лайм", "Лимон"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-nord-star/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Kiwi Smoothie",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Йогурт, Киви.",
+    "flavorTags": ["Йогурт", "Киви"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-kiwi-smoothie/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Orange Team",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Апельсин, Мята, Мята перечная, Чай.",
+    "flavorTags": ["Апельсин", "Мята", "Мята перечная", "Чай"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-orange-team/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Pistachio",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Фисташка.",
+    "flavorTags": ["Фисташка"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-pistachio/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Space Flavour",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Крыжовник, Мята, Холодок.",
+    "flavorTags": ["Крыжовник", "Мята", "Холодок"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-space-flavour/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Strawberry-Lychee",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Клубника, Личи.",
+    "flavorTags": ["Клубника", "Личи"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-strawberry-lychee/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Cherry-Cola",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Кола, Вишня.",
+    "flavorTags": ["Кола", "Вишня"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-cherry-cola/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Barberry Candy",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Барбарис, Леденцы.",
+    "flavorTags": ["Барбарис", "Леденцы"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-barberry-candy/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sweet Melon",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Дыня.",
+    "flavorTags": ["Дыня"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sweet-melon/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Apple Drops",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Карамель, Яблоко.",
+    "flavorTags": ["Карамель", "Яблоко"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-apple-drops/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Sweet Peach",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Персик.",
+    "flavorTags": ["Персик"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-sweet-peach/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Pinkman",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Грейпфрут, Клубника, Малина.",
+    "flavorTags": ["Грейпфрут", "Клубника", "Малина"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-pinkman/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Unicorn Treats",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Йогурт, Лесные ягоды, Маракуйя.",
+    "flavorTags": ["Йогурт", "Лесные ягоды", "Маракуйя"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-unicorn-treats/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Raspberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Малина.",
+    "flavorTags": ["Малина"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-raspberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Black Currant",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Смородина.",
+    "flavorTags": ["Смородина"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-black-currant/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Blueberry",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Черника.",
+    "flavorTags": ["Черника"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-blueberry/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Pineapple Rings",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Ананас.",
+    "flavorTags": ["Ананас"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-pineapple-rings/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Mulled Wine",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Вишня, Виноград, Пряности, Яблоко.",
+    "flavorTags": ["Вишня", "Виноград", "Пряности", "Яблоко"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-mulled-wine/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Ice Mint",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Мята, Холодок.",
+    "flavorTags": ["Мята", "Холодок"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-ice-mint/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Ruby Grape",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Виноград.",
+    "flavorTags": ["Виноград"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-ruby-grape/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Choco-Mint",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкусовые ноты: Мята, Шоколад.",
+    "flavorTags": ["Мята", "Шоколад"],
+    "sources": ["https://musthave.ru/tabak-dlya-kalyana-musthave-choco-mint/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "COCOLOCO",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкус указан в миксе MustHave, карточка вкуса не найдена.",
+    "flavorTags": [],
+    "sources": ["https://musthave.ru/showmixes/potryasayushhij-miks-1152/"]
+  },
+  {
+    "manufacturer": "MUSTHAVE",
+    "website": "https://musthave.ru/",
+    "name": "Christmas Drink",
+    "strength": 6,
+    "line": "Основная",
+    "description": "Вкус указан в миксе MustHave, карточка вкуса не найдена.",
+    "flavorTags": [],
+    "sources": ["https://musthave.ru/showmixes/potryasayushhij-miks-1152/"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "BUT NOT TODAY",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Профиль с перцем и бергамотом, переходящий в пачули, ладан и древесные ноты.",
+    "flavorTags": ["Перец", "Бергамот", "Пачули", "Ладан", "Древесина"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Last Season",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Тёплая кожа со сладостью ванили и смолистой глубиной ладана.",
+    "flavorTags": ["Кожа", "Ваниль", "Ладан"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Ganymede",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Аромат, вдохновленный мифом о Ганимеде; древесные пряные ноты.",
+    "flavorTags": ["Древесные", "Пряности"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Psychedelic Love",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Чувственный, опьяняющий аромат роскошного и страстного вечера; цветочная группа.",
+    "flavorTags": ["Цветы"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Black Afgano",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Сложная древесная композиция; древесные фужерные ноты.",
+    "flavorTags": ["Древесные"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Vanilla Blend",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Ванильная гурманская композиция с фантазийным шлейфом.",
+    "flavorTags": ["Ваниль", "Гурманские"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Oud",
+    "strength": 7,
+    "line": "Perfume",
+    "description": "Природная роскошь уда; древесные пряные ноты.",
+    "flavorTags": ["Уд", "Древесные", "Пряности"],
+    "sources": ["https://deustobacco.ru/perfume"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "DEUS CIGAR 1/3",
+    "strength": 7,
+    "line": "CIGAR",
+    "description": "Ароматические ноты: лесной орех, фисташки, ржаной хлеб, жженый солод.",
+    "flavorTags": ["Лесной орех", "Фисташки", "Ржаной хлеб", "Жженый солод"],
+    "sources": ["https://deustobacco.ru/#rec491586677"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "DEUS CIGAR 2/3",
+    "strength": 7,
+    "line": "CIGAR",
+    "description": "Ароматические ноты: миндаль, бобы тонга, шоколад, семена подсолнечника.",
+    "flavorTags": ["Миндаль", "Бобы тонга", "Шоколад", "Семена подсолнечника"],
+    "sources": ["https://deustobacco.ru/#rec491586677"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "DEUS CIGAR 3/3",
+    "strength": 7,
+    "line": "CIGAR",
+    "description": "Ароматические ноты: кожа, винные дрожжи, подсолнечное масло, какао, грецкий орех.",
+    "flavorTags": ["Кожа", "Винные дрожжи", "Подсолнечное масло", "Какао", "Грецкий орех"],
+    "sources": ["https://deustobacco.ru/#rec491586677"]
+  },
+  {
+    "manufacturer": "DEUS",
+    "website": "https://deustobacco.ru/",
+    "name": "Второе Высшее",
+    "strength": 7,
+    "line": "DEUS CIGAR",
+    "description": "Эксклюзивная сигара DEUS x Артемий Лебедев. Аромат: сушеный абрикос, ягоды, желтая сушеная слива, сладкий черный чай и легкий тон сдобного теста.",
+    "flavorTags": ["Абрикос", "Ягоды", "Слива", "Чай", "Сдобное тесто"],
+    "sources": ["https://deustobacco.ru/deusxlebedev"]
+  }
+]

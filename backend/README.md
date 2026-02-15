@@ -22,13 +22,39 @@ cp .env.example .env
 npm run prisma:migrate
 ```
 
-5) Start API:
+5) Seed catalog data:
+```
+npm run seed
+```
+
+6) Start API:
 ```
 npm run dev
 ```
 
 API will be available at `http://localhost:3001`.
 Mailpit UI: `http://localhost:8025`.
+
+## Seeds
+
+Seed files live in `backend/seed/`:
+- `tobaccos.json` — tobaccos collected from the listed source services
+- `mixes.json` — mixes collected from the listed source services
+
+Current seeds are intentionally minimal while we validate sources.
+
+### Seed sources and assumptions
+
+Tobaccos:
+- MustHave catalog and product pages are the only source for MustHave flavors.
+- Deus Perfume page is the only source for Deus flavors.
+
+Mixes:
+- MustHave mixes page is the only source for seeded mixes.
+
+Notes:
+- Descriptions are short paraphrases of source text.
+- Strength values are heuristic and should be replaced by official data if/when published.
 
 ## Auth endpoints
 

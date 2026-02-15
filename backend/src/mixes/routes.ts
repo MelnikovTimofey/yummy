@@ -7,6 +7,7 @@ const MAX_LIMIT = 200;
 
 const mixCreateSchema = z.object({
   name: z.string().trim().min(1),
+  description: z.string().trim().min(1).optional(),
   components: z
     .array(
       z.object({
@@ -110,6 +111,8 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
     const mix = await prisma.mix.create({
       data: {
         name: parseResult.data.name,
+        description: parseResult.data.description ?? null,
+        isUserMix: true,
         authorId: request.user!.id,
         components: {
           create: parseResult.data.components.map((component) => ({

@@ -92,6 +92,7 @@ model Tobacco {
   id              String          @id @default(uuid())
   manufacturerId  String
   name            String
+  description     String?
   flavorProfiles  FlavorProfile[]
   flavorTags      String[]
   strength        Int
@@ -108,6 +109,8 @@ model Tobacco {
 model Mix {
   id        String   @id @default(uuid())
   name      String
+  description String?
+  isUserMix Boolean @default(true)
   authorId  String
   createdAt DateTime @default(now())
 
