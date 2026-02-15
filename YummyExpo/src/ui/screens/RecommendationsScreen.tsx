@@ -38,6 +38,8 @@ const RecommendationsScreen = ({ auth, onAuthUpdate }: RecommendationsScreenProp
       <FlatList
         data={items}
         keyExtractor={(item) => item.mix.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{item.mix.name}</Text>
@@ -91,6 +93,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: COLORS.accentSoft,
     fontFamily: FONTS.body,
+  },
+  listContent: {
+    paddingBottom: 24,
   },
 });
 

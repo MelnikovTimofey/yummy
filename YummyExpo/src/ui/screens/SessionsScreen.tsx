@@ -79,8 +79,8 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
 
   const filteredMixes = useMemo(() => {
     const query = mixSearch.trim().toLowerCase();
-    if (!query) return mixes.slice(0, 6);
-    return mixes.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 6);
+    if (!query) return mixes.slice(0, 4);
+    return mixes.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 4);
   }, [mixSearch, mixes]);
 
   const selectedMix = mixes.find((item) => item.id === selectedMixId) ?? null;
@@ -159,6 +159,7 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
             ))
           )}
         </View>
+        {mixes.length > 4 ? <Text style={styles.helper}>Показаны первые 4 микса.</Text> : null}
         <View style={styles.toggleRow}>
           <PrimaryButton
             label={locationType === 'home' ? 'Дом (выбран)' : 'Дом'}
@@ -186,6 +187,8 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{item.mix.name}</Text>
@@ -283,6 +286,7 @@ const styles = StyleSheet.create({
   mixList: {
     gap: 10,
     marginBottom: 12,
+    maxHeight: 260,
   },
   mixRow: {
     borderRadius: SIZES.radiusSmall,
@@ -356,6 +360,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONTS.body,
     fontSize: 12,
+  },
+  listContent: {
+    paddingBottom: 24,
   },
 });
 

@@ -232,6 +232,8 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -450,6 +452,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONTS.body,
     fontSize: 12,
+  },
+  listContent: {
+    paddingBottom: 24,
   },
 });
 

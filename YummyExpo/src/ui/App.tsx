@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Linking,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -29,6 +28,15 @@ const parseTokenFromUrl = (url: string | null) => {
   if (!url) return null;
   const match = url.match(/[?&]token=([^&]+)/);
   return match ? decodeURIComponent(match[1]) : null;
+};
+
+const getTabLabel = (tab: string) => {
+  if (tab === 'catalog') return 'Каталог';
+  if (tab === 'mixes') return 'Миксы';
+  if (tab === 'sessions') return 'Сессии';
+  if (tab === 'recommend') return 'Подборка';
+  if (tab === 'auth') return 'Вход';
+  return 'Профиль';
 };
 
 const App = () => {
@@ -208,34 +216,22 @@ const App = () => {
 
         {onboardingReady && onboardingComplete ? (
           <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.tabBarContainer}
-              contentContainerStyle={styles.tabBar}
-            >
+            <View style={styles.tabBar}>
               {(authTokens ? AUTH_TABS : GUEST_TABS).map((tab) => (
                 <TouchableOpacity
                   key={tab}
                   style={[styles.tab, activeTab === tab && styles.tabActive]}
                   onPress={() => setActiveTab(tab)}
                 >
-                  <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
-                    {tab === 'catalog'
-                      ? 'Каталог'
-                      : tab === 'mixes'
-                      ? 'Миксы'
-                      : tab === 'sessions'
-                      ? 'Сессии'
-                      : tab === 'recommend'
-                      ? 'Рекомендации'
-                      : tab === 'auth'
-                      ? 'Вход'
-                    : 'Профиль'}
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}
+                  >
+                    {getTabLabel(tab)}
                   </Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           </SafeAreaView>
         ) : null}
       </View>
@@ -314,19 +310,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: COLORS.border,
     paddingHorizontal: SIZES.padding,
+    paddingTop: 10,
   },
   tabBar: {
     flexDirection: 'row',
     gap: 8,
-    paddingRight: 6,
-    alignItems: 'center',
-  },
-  tabBarContainer: {
-    paddingTop: 10,
     paddingBottom: 8,
   },
   tab: {
-    minWidth: 96,
+    flex: 1,
     height: 44,
     borderRadius: SIZES.radius,
     justifyContent: 'center',
@@ -342,9 +334,9 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontFamily: FONTS.body,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     color: COLORS.textSecondary,
-    fontSize: 12,
+    fontSize: 11,
   },
   tabLabelActive: {
     color: '#1b140f',
