@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createMix, getTobaccos } from '../../data/api/client';
 import { ApiUser, AuthTokens, Tobacco } from '../../data/api/types';
 import PrimaryButton from '../components/PrimaryButton';
@@ -36,6 +36,7 @@ const CreateMixScreen = ({
   onClose,
   onCreated,
 }: CreateMixScreenProps) => {
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [components, setComponents] = useState<ComponentDraft[]>([]);
   const [tobaccoQuery, setTobaccoQuery] = useState('');
@@ -135,10 +136,13 @@ const CreateMixScreen = ({
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity onPress={handleClose} hitSlop={8}>
+            <Text style={styles.back}>Назад</Text>
+          </TouchableOpacity>
           <Text style={styles.title}>Создать микс</Text>
-          <TouchableOpacity onPress={handleClose}>
+          <TouchableOpacity onPress={handleClose} hitSlop={8}>
             <Text style={styles.close}>Закрыть</Text>
           </TouchableOpacity>
         </View>
@@ -233,7 +237,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SIZES.padding,
     paddingBottom: 12,
-    paddingTop: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -243,7 +246,14 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.textPrimary,
     fontFamily: FONTS.display,
-    fontSize: 28,
+    fontSize: 26,
+  },
+  back: {
+    color: COLORS.accentSoft,
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   close: {
     color: COLORS.accentSoft,
