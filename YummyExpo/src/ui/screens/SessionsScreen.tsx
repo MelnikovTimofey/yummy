@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   createSession,
   createSessionRating,
@@ -36,6 +45,7 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
   const [selectedMixId, setSelectedMixId] = useState<string | null>(null);
   const [locationType, setLocationType] = useState<'home' | 'lounge'>('home');
   const [locationName, setLocationName] = useState('');
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   const loadRatings = async () => {
     const [sessionRatingsResponse, mixSummaryResponse] = await Promise.all([
@@ -79,25 +89,25 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
 
   const filteredMixes = useMemo(() => {
     const query = mixSearch.trim().toLowerCase();
-    if (!query) return mixes.slice(0, 4);
-    return mixes.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 4);
+    if (!query) return mixes.slice(0, 30);
+    return mixes.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 30);
   }, [mixSearch, mixes]);
 
   const selectedMix = mixes.find((item) => item.id === selectedMixId) ?? null;
+  const canCreate = Boolean(selectedMixId) && (locationType === 'home' || locationName.trim().length > 0);
 
   const handleCreate = async () => {
-    if (!selectedMixId) return;
+    if (!canCreate) return;
     const payload = {
-      mixId: selectedMixId,
+      mixId: selectedMixId!,
       date: new Date().toISOString(),
       locationType,
       locationName: locationType === 'lounge' ? locationName.trim() : undefined,
     };
     await createSession(auth, onAuthUpdate, payload);
     setSelectedMixId(null);
-    setMixSearch('');
     setLocationName('');
-    load();
+    await load();
   };
 
   const handleRateSession = async (sessionId: string, rating: number) => {
@@ -105,71 +115,43 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
     await loadRatings();
   };
 
+  const handleSelectMix = (mixId: string) => {
+    setSelectedMixId(mixId);
+    setPickerVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       <SectionTitle title="Сессии" subtitle="История курения" />
+
       <View style={styles.card}>
-        <Text style={styles.label}>Выбор микса</Text>
-        <TextInput
-          style={styles.input}
-          value={mixSearch}
-          onChangeText={setMixSearch}
-          placeholder="Поиск микса"
-          placeholderTextColor={COLORS.textSecondary}
-        />
+        <Text style={styles.label}>Выбранный микс</Text>
         {selectedMix ? (
           <View style={styles.selectedMix}>
-            <Text style={styles.selectedMixLabel}>Выбрано:</Text>
-            <Text style={styles.selectedMixValue}>{selectedMix.name}</Text>
-            <TouchableOpacity onPress={() => setSelectedMixId(null)}>
-              <Text style={styles.clearSelect}>Сбросить</Text>
-            </TouchableOpacity>
+            <Text style={styles.selectedMixName}>{selectedMix.name}</Text>
+            <Text style={styles.selectedMixMeta}>Компоненты {selectedMix.components.length}</Text>
           </View>
-        ) : null}
-        <View style={styles.mixList}>
-          {filteredMixes.length === 0 ? (
-            <Text style={styles.helper}>Миксы не найдены.</Text>
-          ) : (
-            filteredMixes.map((mix) => (
-              <TouchableOpacity
-                key={mix.id}
-                style={[
-                  styles.mixRow,
-                  selectedMixId === mix.id && styles.mixRowActive,
-                ]}
-                onPress={() => setSelectedMixId(mix.id)}
-              >
-                <Text
-                  style={[
-                    styles.mixName,
-                    selectedMixId === mix.id && styles.mixNameActive,
-                  ]}
-                >
-                  {mix.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.mixMeta,
-                    selectedMixId === mix.id && styles.mixNameActive,
-                  ]}
-                >
-                  Компоненты {mix.components.length}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-        {mixes.length > 4 ? <Text style={styles.helper}>Показаны первые 4 микса.</Text> : null}
+        ) : (
+          <Text style={styles.helper}>Микс пока не выбран.</Text>
+        )}
+        <PrimaryButton label="Выбрать микс" onPress={() => setPickerVisible(true)} />
+
+        <Text style={styles.label}>Локация</Text>
         <View style={styles.toggleRow}>
-          <PrimaryButton
-            label={locationType === 'home' ? 'Дом (выбран)' : 'Дом'}
-            onPress={() => setLocationType('home')}
-          />
-          <PrimaryButton
-            label={locationType === 'lounge' ? 'Лаунж (выбран)' : 'Лаунж'}
-            onPress={() => setLocationType('lounge')}
-          />
+          <View style={styles.toggleItem}>
+            <PrimaryButton
+              label={locationType === 'home' ? 'Дом (выбран)' : 'Дом'}
+              onPress={() => setLocationType('home')}
+            />
+          </View>
+          <View style={styles.toggleItem}>
+            <PrimaryButton
+              label={locationType === 'lounge' ? 'Лаунж (выбран)' : 'Лаунж'}
+              onPress={() => setLocationType('lounge')}
+            />
+          </View>
         </View>
+
         {locationType === 'lounge' ? (
           <TextInput
             style={styles.input}
@@ -179,11 +161,12 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
             placeholderTextColor={COLORS.textSecondary}
           />
         ) : null}
-        <PrimaryButton label="Создать сессию" onPress={handleCreate} disabled={!selectedMixId} />
+
+        <PrimaryButton label="Создать сессию" onPress={handleCreate} disabled={!canCreate} />
       </View>
-      {status === 'error' ? (
-        <Text style={styles.status}>Не удалось загрузить сессии.</Text>
-      ) : null}
+
+      {status === 'error' ? <Text style={styles.status}>Не удалось загрузить сессии.</Text> : null}
+
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
@@ -193,9 +176,7 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{item.mix.name}</Text>
             <Text style={styles.cardSubtitle}>
-              {item.locationType === 'home'
-                ? 'Дом'
-                : `Лаунж ${item.locationName ?? ''}`}
+              {item.locationType === 'home' ? 'Дом' : `Лаунж ${item.locationName ?? ''}`}
             </Text>
             <Text style={styles.meta}>{new Date(item.date).toLocaleString()}</Text>
             <View style={styles.ratingBlock}>
@@ -210,14 +191,58 @@ const SessionsScreen = ({ auth, onAuthUpdate }: SessionsScreenProps) => {
                 mixSummaries[item.mix.id]?.avgRating !== undefined
                   ? mixSummaries[item.mix.id]!.avgRating!.toFixed(1)
                   : 'нет'}
-                {mixSummaries[item.mix.id]?.count
-                  ? ` (${mixSummaries[item.mix.id]!.count})`
-                  : ''}
+                {mixSummaries[item.mix.id]?.count ? ` (${mixSummaries[item.mix.id]!.count})` : ''}
               </Text>
             </View>
           </View>
         )}
       />
+
+      <Modal
+        visible={pickerVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setPickerVisible(false)}
+      >
+        <SafeAreaView style={styles.modalSafeArea} edges={['top', 'bottom']}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Выбор микса</Text>
+            <TouchableOpacity onPress={() => setPickerVisible(false)}>
+              <Text style={styles.modalClose}>Закрыть</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.input}
+              value={mixSearch}
+              onChangeText={setMixSearch}
+              placeholder="Поиск микса"
+              placeholderTextColor={COLORS.textSecondary}
+            />
+
+            <FlatList
+              data={filteredMixes}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.modalList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.mixRow, selectedMixId === item.id && styles.mixRowActive]}
+                  onPress={() => handleSelectMix(item.id)}
+                >
+                  <Text style={[styles.mixName, selectedMixId === item.id && styles.mixNameActive]}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.mixMeta, selectedMixId === item.id && styles.mixNameActive]}>
+                    Компоненты {item.components.length}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={<Text style={styles.helper}>Миксы не найдены.</Text>}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 };
@@ -240,7 +265,43 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontFamily: FONTS.body,
     fontSize: 12,
-    marginBottom: 6,
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  selectedMix: {
+    borderRadius: SIZES.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+    padding: 12,
+    marginBottom: 12,
+  },
+  selectedMixName: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 18,
+  },
+  selectedMixMeta: {
+    marginTop: 4,
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  helper: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  toggleItem: {
+    flex: 1,
   },
   input: {
     backgroundColor: COLORS.surfaceAlt,
@@ -252,76 +313,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     fontFamily: FONTS.body,
     marginBottom: 10,
-  },
-  selectedMix: {
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: SIZES.radiusSmall,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  selectedMixLabel: {
-    color: COLORS.textSecondary,
-    fontFamily: FONTS.body,
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  selectedMixValue: {
-    color: COLORS.textPrimary,
-    fontFamily: FONTS.body,
-    fontSize: 14,
-    marginTop: 4,
-  },
-  clearSelect: {
-    marginTop: 6,
-    color: COLORS.accentSoft,
-    fontFamily: FONTS.body,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  mixList: {
-    gap: 10,
-    marginBottom: 12,
-    maxHeight: 260,
-  },
-  mixRow: {
-    borderRadius: SIZES.radiusSmall,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  mixRowActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accentSoft,
-  },
-  mixName: {
-    color: COLORS.textPrimary,
-    fontFamily: FONTS.body,
-    fontSize: 14,
-  },
-  mixNameActive: {
-    color: '#1b140f',
-  },
-  mixMeta: {
-    marginTop: 4,
-    color: COLORS.textSecondary,
-    fontFamily: FONTS.body,
-    fontSize: 12,
-  },
-  helper: {
-    color: COLORS.textSecondary,
-    fontFamily: FONTS.body,
-    fontSize: 12,
-  },
-  toggleRow: {
-    gap: 10,
-    marginBottom: 12,
   },
   status: {
     color: COLORS.danger,
@@ -363,6 +354,66 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  modalSafeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  modalHeader: {
+    paddingHorizontal: SIZES.padding,
+    paddingBottom: 12,
+    paddingTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalTitle: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.display,
+    fontSize: 28,
+  },
+  modalClose: {
+    color: COLORS.accentSoft,
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  modalContent: {
+    flex: 1,
+    padding: SIZES.padding,
+  },
+  modalList: {
+    paddingBottom: 20,
+    gap: 10,
+  },
+  mixRow: {
+    borderRadius: SIZES.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  mixRowActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accentSoft,
+  },
+  mixName: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 18,
+  },
+  mixMeta: {
+    marginTop: 4,
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+  },
+  mixNameActive: {
+    color: '#1b140f',
   },
 });
 
