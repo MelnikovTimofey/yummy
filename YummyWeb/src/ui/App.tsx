@@ -36,8 +36,8 @@ const TABS: Tab[] = [
   },
   {
     key: 'recommendations',
-    label: 'Рекомендации',
-    title: 'Рекомендации',
+    label: 'Подборка',
+    title: 'Подборка',
     subtitle: 'Подборка миксов на основе ваших оценок и истории.',
   },
   {
@@ -88,6 +88,8 @@ export const App = () => {
   if (authChecking) {
     return (
       <div className="app-bg">
+        <div className="halo-top" />
+        <div className="halo-bottom" />
         <div className="phone-shell centered">
           <p className="screen-status">Проверяем ссылку входа...</p>
         </div>
@@ -98,9 +100,12 @@ export const App = () => {
   if (!authState.tokens || !authState.user) {
     return (
       <div className="app-bg">
+        <div className="halo-top" />
+        <div className="halo-bottom" />
         <div className="phone-shell">
           <header className="topbar">
-            <p className="eyebrow">Yummy MVP · mobile web</p>
+            <p className="brand">ВКУСНО</p>
+            <p className="tagline">Арома ателье</p>
             <h1>Авторизация</h1>
             <p className="subtitle">Вход через magic link для доступа к персональным данным.</p>
           </header>
@@ -114,9 +119,12 @@ export const App = () => {
 
   return (
     <div className="app-bg">
+      <div className="halo-top" />
+      <div className="halo-bottom" />
       <div className="phone-shell">
         <header className="topbar">
-          <p className="eyebrow">Yummy MVP · mobile web</p>
+          <p className="brand">ВКУСНО</p>
+          <p className="tagline">Арома ателье</p>
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
           <p className="session-email">{authState.user.email}</p>
