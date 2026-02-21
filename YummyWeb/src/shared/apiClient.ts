@@ -1,5 +1,15 @@
 import { API_BASE_URL } from './api';
-import { AuthState, ApiUser, AuthTokens, Mix, MixRating, MixRatingSummary } from './types';
+import {
+  AuthState,
+  ApiUser,
+  AuthTokens,
+  FlavorProfile,
+  Manufacturer,
+  Mix,
+  MixRating,
+  MixRatingSummary,
+  Tobacco,
+} from './types';
 
 type RequestOptions = {
   method?: string;
@@ -90,3 +100,21 @@ export const getMixRatingSummaries = (
     auth,
     onAuthUpdate,
   });
+
+export const getManufacturers = (search?: string) => {
+  const query = search ? `?search=${encodeURIComponent(search)}` : '';
+  return request<{ items: Manufacturer[] }>(`/manufacturers${query}`);
+};
+
+export const getTobaccos = (params: {
+  search?: string;
+  manufacturerId?: string;
+  profile?: FlavorProfile;
+}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => Boolean(value))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+
+  return request<{ items: Tobacco[] }>(`/tobaccos${query ? `?${query}` : ''}`);
+};

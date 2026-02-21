@@ -14,6 +14,19 @@ export type Manufacturer = {
   website?: string | null;
 };
 
+export type FlavorProfile = 'sweet' | 'sour' | 'spicy' | 'fresh' | 'dessert' | 'tobacco';
+
+export type Tobacco = {
+  id: string;
+  name: string;
+  description?: string | null;
+  strength: number;
+  line?: string | null;
+  flavorProfiles: FlavorProfile[];
+  flavorTags: string[];
+  manufacturer: Manufacturer;
+};
+
 export type Mix = {
   id: string;
   name: string;

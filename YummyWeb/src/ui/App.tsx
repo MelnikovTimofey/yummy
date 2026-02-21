@@ -4,6 +4,7 @@ import { verifyMagicLink } from '../shared/apiClient';
 import { loadAuthState, saveAuthState } from '../shared/authStorage';
 import { AuthState } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
+import { CatalogScreen } from './CatalogScreen';
 import { MixesScreen } from './MixesScreen';
 
 type TabKey = 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
@@ -132,7 +133,8 @@ export const App = () => {
 
         <main className="content">
           {activeTab === 'mixes' ? <MixesScreen authState={authState} onAuthUpdate={onAuthUpdate} /> : null}
-          {activeTab !== 'mixes' ? (
+          {activeTab === 'catalog' ? <CatalogScreen /> : null}
+          {activeTab !== 'mixes' && activeTab !== 'catalog' ? (
             <section className="card">
               <p className="card-title">Текущий экран</p>
               <p className="card-text">

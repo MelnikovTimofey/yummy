@@ -134,6 +134,77 @@ h1 {
   display: grid;
 }
 
+.catalog-layout {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.catalog-controls {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.search-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--text-0);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 15px;
+}
+
+.search-button {
+  border: 0;
+  background: var(--accent);
+  color: #1b140f;
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.filters-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.filter-field {
+  display: grid;
+  gap: 6px;
+}
+
+.filter-field span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-1);
+}
+
+.filter-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--text-0);
+  border-radius: 12px;
+  padding: 10px 10px;
+  font-size: 13px;
+}
+
 .auth-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -282,6 +353,26 @@ h1 {
   color: var(--text-1);
 }
 
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.profile-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #4a3b2c;
+  background: #211a14;
+  color: var(--accent-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
 .hint {
   margin: 8px 0 0;
   color: var(--text-1);
@@ -356,5 +447,9 @@ h1 {
 
   .tab {
     font-size: 11px;
+  }
+
+  .filters-row {
+    grid-template-columns: 1fr;
   }
 }
