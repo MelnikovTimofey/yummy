@@ -6,6 +6,7 @@ import { AuthState } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
 import { CatalogScreen } from './CatalogScreen';
 import { MixesScreen } from './MixesScreen';
+import { SessionsScreen } from './SessionsScreen';
 
 type TabKey = 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
 
@@ -133,8 +134,11 @@ export const App = () => {
 
         <main className="content">
           {activeTab === 'mixes' ? <MixesScreen authState={authState} onAuthUpdate={onAuthUpdate} /> : null}
+          {activeTab === 'sessions' ? (
+            <SessionsScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+          ) : null}
           {activeTab === 'catalog' ? <CatalogScreen /> : null}
-          {activeTab !== 'mixes' && activeTab !== 'catalog' ? (
+          {activeTab !== 'mixes' && activeTab !== 'catalog' && activeTab !== 'sessions' ? (
             <section className="card">
               <p className="card-title">Текущий экран</p>
               <p className="card-text">

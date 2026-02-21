@@ -54,6 +54,20 @@ export type MixRatingSummary = {
   count: number;
 };
 
+export type SmokingSession = {
+  id: string;
+  date: string;
+  locationType: 'home' | 'lounge';
+  locationName?: string | null;
+  mix: Mix;
+};
+
+export type SessionRating = {
+  id: string;
+  sessionId: string;
+  rating: number;
+};
+
 export type AuthState = {
   tokens: AuthTokens | null;
   user: ApiUser | null;

@@ -8,6 +8,8 @@ import {
   Mix,
   MixRating,
   MixRatingSummary,
+  SessionRating,
+  SmokingSession,
   Tobacco,
 } from './types';
 
@@ -100,6 +102,33 @@ export const getMixRatingSummaries = (
     auth,
     onAuthUpdate,
   });
+
+export const getSessions = (auth: AuthTokens, onAuthUpdate: RequestOptions['onAuthUpdate']) =>
+  request<{ items: SmokingSession[] }>('/sessions', {
+    auth,
+    onAuthUpdate,
+  });
+
+export const createSession = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload: { mixId: string; date: string; locationType: 'home' | 'lounge'; locationName?: string },
+) => request<SmokingSession>('/sessions', { method: 'POST', body: payload, auth, onAuthUpdate });
+
+export const getSessionRatings = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+) =>
+  request<{ items: SessionRating[] }>('/session-ratings', {
+    auth,
+    onAuthUpdate,
+  });
+
+export const createSessionRating = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload: { sessionId: string; rating: number },
+) => request<SessionRating>('/session-ratings', { method: 'POST', body: payload, auth, onAuthUpdate });
 
 export const getManufacturers = (search?: string) => {
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
