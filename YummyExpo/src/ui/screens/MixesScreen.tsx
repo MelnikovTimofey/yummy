@@ -81,6 +81,19 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
     await load();
   };
 
+  const getPreviewDescription = (description?: string | null) => {
+    if (!description) {
+      return 'Описание пока не добавлено.';
+    }
+
+    const trimmed = description.trim();
+    if (trimmed.length <= 120) {
+      return trimmed;
+    }
+
+    return `${trimmed.slice(0, 117)}...`;
+  };
+
   return (
     <View style={styles.container}>
       <SectionTitle title="Миксы" subtitle="Список и оценки" />
@@ -108,7 +121,23 @@ const MixesScreen = ({ auth, onAuthUpdate }: MixesScreenProps) => {
             <Text style={styles.cardSubtitle}>
               {item.components.map((component) => component.tobacco.manufacturer.name).join(' · ')}
             </Text>
+            <Text style={styles.description}>{getPreviewDescription(item.description)}</Text>
             <Text style={styles.meta}>Компоненты {item.components.length}</Text>
+            <View style={styles.componentsBlock}>
+              {item.components.map((component) => (
+                <View key={`${item.id}:${component.tobacco.id}`} style={styles.componentRow}>
+                  <Text style={styles.componentName} numberOfLines={1}>
+                    {component.tobacco.manufacturer.name} {component.tobacco.name}
+                  </Text>
+                  <Text style={styles.componentPercent}>{component.proportion}%</Text>
+                  <View style={styles.componentBarTrack}>
+                    <View
+                      style={[styles.componentBarFill, { width: `${Math.max(component.proportion, 4)}%` }]}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
             <View style={styles.ratingBlock}>
               <Text style={styles.ratingLabel}>Моя оценка</Text>
               <RatingStars
@@ -206,6 +235,42 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 6,
     fontFamily: FONTS.body,
+  },
+  description: {
+    color: COLORS.textPrimary,
+    marginTop: 10,
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  componentsBlock: {
+    marginTop: 10,
+    gap: 8,
+  },
+  componentRow: {
+    gap: 4,
+  },
+  componentName: {
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.body,
+    fontSize: 12,
+  },
+  componentPercent: {
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.display,
+    fontSize: 12,
+  },
+  componentBarTrack: {
+    width: '100%',
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  componentBarFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: COLORS.accentSoft,
   },
   ratingBlock: {
     marginTop: 12,
