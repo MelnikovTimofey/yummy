@@ -50,6 +50,10 @@ body {
   overflow: hidden;
 }
 
+.phone-shell.centered {
+  place-items: center;
+}
+
 .topbar {
   padding: calc(14px + var(--safe-top)) 16px 12px;
   border-bottom: 1px solid var(--line);
@@ -86,11 +90,56 @@ h1 {
   gap: 12px;
 }
 
+.auth-layout {
+  display: grid;
+}
+
+.auth-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+}
+
 .card {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
+}
+
+.form {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.form label {
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fffdfa;
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 15px;
+}
+
+.form button {
+  border: 1px solid #d89f65;
+  background: var(--brand-soft);
+  color: #6a3200;
+  border-radius: 12px;
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form button:disabled {
+  opacity: 0.65;
 }
 
 .card-title {
@@ -99,6 +148,12 @@ h1 {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-1);
+}
+
+.session-email {
+  margin: 8px 0 0;
+  color: var(--text-1);
+  font-size: 13px;
 }
 
 .card-text {
@@ -119,10 +174,86 @@ h1 {
   word-break: break-all;
 }
 
+.list-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.mix-card h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.mix-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chip {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a3200;
+  border: 1px solid #efc69d;
+  background: #fde9d1;
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.mix-description {
+  margin: 10px 0 0;
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mix-components {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.mix-component-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-0);
+}
+
+.mix-ratings {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
 .hint {
   margin: 8px 0 0;
   color: var(--text-1);
   font-size: 13px;
+}
+
+.screen-status {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 15px;
+}
+
+.status {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.status.ok {
+  color: #26603d;
+}
+
+.status.error,
+.screen-status.error {
+  color: #9f1d1d;
 }
 
 .tabbar {

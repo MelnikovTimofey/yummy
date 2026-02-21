@@ -1,5 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API_BASE_URL } from '../shared/api';
+import { verifyMagicLink } from '../shared/apiClient';
+import { loadAuthState, saveAuthState } from '../shared/authStorage';
+import { AuthState } from '../shared/types';
+import { AuthScreen } from './AuthScreen';
+import { MixesScreen } from './MixesScreen';
 
 type TabKey = 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
 
@@ -45,7 +50,67 @@ const TABS: Tab[] = [
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('mixes');
+  const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
+  const [authChecking, setAuthChecking] = useState(false);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
+
+  const onAuthUpdate = useCallback((next: AuthState) => {
+    setAuthState(next);
+    saveAuthState(next);
+  }, []);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+      return;
+    }
+
+    setAuthChecking(true);
+    verifyMagicLink(token)
+      .then((response) => {
+        onAuthUpdate({
+          tokens: {
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+          },
+          user: response.user,
+        });
+        window.history.replaceState({}, '', window.location.pathname);
+      })
+      .catch(() => {
+        setAuthChecking(false);
+      })
+      .finally(() => {
+        setAuthChecking(false);
+      });
+  }, [onAuthUpdate]);
+
+  if (authChecking) {
+    return (
+      <div className="app-bg">
+        <div className="phone-shell centered">
+          <p className="screen-status">Проверяем ссылку входа...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authState.tokens || !authState.user) {
+    return (
+      <div className="app-bg">
+        <div className="phone-shell">
+          <header className="topbar">
+            <p className="eyebrow">Yummy MVP · mobile web</p>
+            <h1>Авторизация</h1>
+            <p className="subtitle">Вход через magic link для доступа к персональным данным.</p>
+          </header>
+          <main className="content">
+            <AuthScreen onAuthUpdate={onAuthUpdate} />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-bg">
@@ -54,27 +119,30 @@ export const App = () => {
           <p className="eyebrow">Yummy MVP · mobile web</p>
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
+          <p className="session-email">{authState.user.email}</p>
         </header>
 
         <main className="content">
-          <section className="card">
-            <p className="card-title">Текущий экран</p>
-            <p className="card-text">
-              Каркас готов. Следующим PR подключим API и реальные данные для раздела
-              {' '}
-              <b>{tab.label}</b>
-              .
-            </p>
-          </section>
-
+          {activeTab === 'mixes' ? <MixesScreen authState={authState} onAuthUpdate={onAuthUpdate} /> : null}
+          {activeTab !== 'mixes' ? (
+            <section className="card">
+              <p className="card-title">Текущий экран</p>
+              <p className="card-text">
+                Экран
+                {' '}
+                <b>{tab.label}</b>
+                {' '}
+                пока в статусе заглушки. Реализован рабочий поток для раздела «Миксы».
+              </p>
+            </section>
+          ) : null}
           <section className="card">
             <p className="card-title">API endpoint</p>
             <code className="code">{API_BASE_URL}</code>
             <p className="hint">
-              Можно переопределить через переменную окружения
+              Переменная окружения:
               {' '}
               <code>VITE_API_BASE_URL</code>
-              .
             </p>
           </section>
         </main>
