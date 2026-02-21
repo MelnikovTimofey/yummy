@@ -12,3 +12,7 @@ Yummy/ios/DerivedData/
 # backend local artifacts
 backend/node_modules/
 backend/.env
+
+# web local artifacts
+YummyWeb/node_modules/
+YummyWeb/dist/
