@@ -98,6 +98,11 @@ Notes:
 
 - `GET /recommendations?limit=` (auth)
 
+Response items include `source`:
+- `model` — персональная модель;
+- `top` — fallback по композитному скору (оценка + число сессий);
+- `cold_start` — fallback популярность + онбординг + диверсификация.
+
 ## ML training
 
 Run offline training (LightFM) and store recommendations:

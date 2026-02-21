@@ -146,6 +146,12 @@ h1 {
   padding-top: 12px;
 }
 
+.recommendations-layout {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
 .catalog-controls {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -217,6 +223,11 @@ h1 {
 
 .session-submit {
   width: 100%;
+}
+
+.recommendation-refresh {
+  width: 100%;
+  margin-top: 8px;
 }
 
 .filter-field {
@@ -387,6 +398,24 @@ h1 {
   margin: 12px 0 0;
   font-size: 13px;
   color: var(--text-1);
+}
+
+.recommendation-source {
+  margin: 12px 0 0;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+}
+
+.recommendation-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.recommendation-session {
+  width: 100%;
 }
 
 .session-rating-row {

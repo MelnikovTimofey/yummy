@@ -54,6 +54,14 @@ export type MixRatingSummary = {
   count: number;
 };
 
+export type RecommendationSource = 'model' | 'top' | 'cold_start';
+
+export type RecommendationItem = {
+  score: number | null;
+  source?: RecommendationSource;
+  mix: Mix;
+};
+
 export type SmokingSession = {
   id: string;
   date: string;

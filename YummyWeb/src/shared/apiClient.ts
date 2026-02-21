@@ -8,6 +8,7 @@ import {
   Mix,
   MixRating,
   MixRatingSummary,
+  RecommendationItem,
   SessionRating,
   SmokingSession,
   Tobacco,
@@ -99,6 +100,21 @@ export const getMixRatingSummaries = (
   onAuthUpdate: RequestOptions['onAuthUpdate'],
 ) =>
   request<{ items: MixRatingSummary[] }>('/mix-ratings/summary', {
+    auth,
+    onAuthUpdate,
+  });
+
+export const createMixRating = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload: { mixId: string; rating: number },
+) => request<MixRating>('/mix-ratings', { method: 'POST', body: payload, auth, onAuthUpdate });
+
+export const getRecommendations = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+) =>
+  request<{ items: RecommendationItem[] }>('/recommendations', {
     auth,
     onAuthUpdate,
   });
