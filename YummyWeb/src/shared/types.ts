@@ -76,6 +76,14 @@ export type SessionRating = {
   rating: number;
 };
 
+export type PreferenceProfile = {
+  id: string;
+  userId: string;
+  likedProfiles: FlavorProfile[];
+  dislikedProfiles: FlavorProfile[];
+  favoriteManufacturerIds: string[];
+};
+
 export type AuthState = {
   tokens: AuthTokens | null;
   user: ApiUser | null;

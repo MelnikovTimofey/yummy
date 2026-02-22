@@ -8,6 +8,7 @@ import {
   Mix,
   MixRating,
   MixRatingSummary,
+  PreferenceProfile,
   RecommendationItem,
   SessionRating,
   SmokingSession,
@@ -163,3 +164,28 @@ export const getTobaccos = (params: {
 
   return request<{ items: Tobacco[] }>(`/tobaccos${query ? `?${query}` : ''}`);
 };
+
+export const getPreferenceProfile = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+) =>
+  request<{ profile: PreferenceProfile | null }>('/preference-profile', {
+    auth,
+    onAuthUpdate,
+  });
+
+export const upsertPreferenceProfile = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload: {
+    likedProfiles: FlavorProfile[];
+    dislikedProfiles: FlavorProfile[];
+    favoriteManufacturerIds: string[];
+  },
+) =>
+  request<{ profile: PreferenceProfile }>('/preference-profile', {
+    method: 'PUT',
+    body: payload,
+    auth,
+    onAuthUpdate,
+  });

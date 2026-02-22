@@ -17,6 +17,7 @@ import {
 type RecommendationsScreenProps = {
   authState: AuthState;
   onAuthUpdate: (next: AuthState) => void;
+  refreshSignal?: number;
 };
 
 const getSourceLabel = (item: RecommendationItem) => {
@@ -35,6 +36,7 @@ const getSourceLabel = (item: RecommendationItem) => {
 export const RecommendationsScreen = ({
   authState,
   onAuthUpdate,
+  refreshSignal,
 }: RecommendationsScreenProps) => {
   const [items, setItems] = useState<RecommendationItem[]>([]);
   const [mixRatings, setMixRatings] = useState<Record<string, MixRating>>({});
@@ -77,7 +79,7 @@ export const RecommendationsScreen = ({
 
   useEffect(() => {
     void load();
-  }, [authState.tokens]);
+  }, [authState.tokens, refreshSignal]);
 
   const onAddToSession = async (mixId: string) => {
     if (!authState.tokens) {

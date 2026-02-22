@@ -152,6 +152,12 @@ h1 {
   padding-top: 12px;
 }
 
+.profile-layout {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
 .catalog-controls {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -191,6 +197,18 @@ h1 {
 
 .search-button:disabled {
   opacity: 0.45;
+}
+
+.ghost-button {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-1);
+  border-radius: 12px;
+  min-height: 40px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .filters-row {
@@ -416,6 +434,44 @@ h1 {
 
 .recommendation-session {
   width: 100%;
+}
+
+.profile-save {
+  width: 100%;
+}
+
+.chip-grid {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.option-chip {
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--text-1);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.option-chip.liked {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+.option-chip.disliked {
+  border-color: #74423f;
+  color: #ef9a9a;
+}
+
+.option-chip.favorite {
+  border-color: #4a3b2c;
+  background: #211a14;
+  color: var(--accent-soft);
 }
 
 .session-rating-row {

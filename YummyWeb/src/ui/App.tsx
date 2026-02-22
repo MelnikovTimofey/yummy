@@ -6,6 +6,7 @@ import { AuthState } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
 import { CatalogScreen } from './CatalogScreen';
 import { MixesScreen } from './MixesScreen';
+import { ProfileScreen } from './ProfileScreen';
 import { RecommendationsScreen } from './RecommendationsScreen';
 import { SessionsScreen } from './SessionsScreen';
 
@@ -55,11 +56,22 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('mixes');
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
+  const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
 
   const onAuthUpdate = useCallback((next: AuthState) => {
     setAuthState(next);
     saveAuthState(next);
+  }, []);
+
+  const onSignOut = useCallback(() => {
+    onAuthUpdate({ tokens: null, user: null });
+    setActiveTab('mixes');
+  }, [onAuthUpdate]);
+
+  const onPreferencesSaved = useCallback(() => {
+    setRecommendationsRefreshSignal((current) => current + 1);
+    setActiveTab('recommendations');
   }, []);
 
   useEffect(() => {
@@ -140,12 +152,25 @@ export const App = () => {
           ) : null}
           {activeTab === 'catalog' ? <CatalogScreen /> : null}
           {activeTab === 'recommendations' ? (
-            <RecommendationsScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+            <RecommendationsScreen
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              refreshSignal={recommendationsRefreshSignal}
+            />
+          ) : null}
+          {activeTab === 'profile' ? (
+            <ProfileScreen
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              onPreferencesSaved={onPreferencesSaved}
+              onSignOut={onSignOut}
+            />
           ) : null}
           {activeTab !== 'mixes' &&
           activeTab !== 'catalog' &&
           activeTab !== 'sessions' &&
-          activeTab !== 'recommendations' ? (
+          activeTab !== 'recommendations' &&
+          activeTab !== 'profile' ? (
             <section className="card">
               <p className="card-title">Текущий экран</p>
               <p className="card-text">
