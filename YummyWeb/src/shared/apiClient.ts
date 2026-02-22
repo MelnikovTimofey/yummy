@@ -120,6 +120,21 @@ export const getRecommendations = (
     onAuthUpdate,
   });
 
+export const refreshRecommendations = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload?: { limit?: number },
+) =>
+  request<{ ok: true; refreshedCount: number; items: RecommendationItem[] }>(
+    '/recommendations/refresh',
+    {
+      method: 'POST',
+      body: payload ?? {},
+      auth,
+      onAuthUpdate,
+    },
+  );
+
 export const getSessions = (auth: AuthTokens, onAuthUpdate: RequestOptions['onAuthUpdate']) =>
   request<{ items: SmokingSession[] }>('/sessions', {
     auth,

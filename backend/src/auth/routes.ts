@@ -30,8 +30,9 @@ export const registerAuthRoutes = async (app: FastifyInstance) => {
         rateLimit: {
           max: config.rateLimitMax,
           timeWindow: config.rateLimitWindowMs,
-          keyGenerator: (request: { body?: { email?: string }; ip: string }) => {
-            const email = request.body?.email?.toLowerCase();
+          keyGenerator: (request) => {
+            const body = request.body as { email?: string } | undefined;
+            const email = body?.email?.toLowerCase();
             return email ? `${request.ip}:${email}` : request.ip;
           },
         },

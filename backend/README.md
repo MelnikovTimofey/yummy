@@ -97,6 +97,7 @@ Notes:
 ## Recommendations
 
 - `GET /recommendations?limit=` (auth)
+- `POST /recommendations/refresh` (auth), body `{ "limit"?: number }`
 
 Response items include `source`:
 - `model` — персональная модель;

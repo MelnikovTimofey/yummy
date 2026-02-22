@@ -5,6 +5,7 @@ import {
   getMixRatingSummaries,
   getMixRatings,
   getRecommendations,
+  refreshRecommendations,
 } from '../shared/apiClient';
 import {
   AuthState,
@@ -120,6 +121,41 @@ export const RecommendationsScreen = ({
     }
   };
 
+  const onRefreshRecommendations = async () => {
+    if (!authState.tokens) {
+      return;
+    }
+
+    setStatus('loading');
+    setFeedback(null);
+    try {
+      const response = await refreshRecommendations(authState.tokens, onAuthUpdate, { limit: 20 });
+      const [ratingsRes, summariesRes] = await Promise.all([
+        getMixRatings(authState.tokens, onAuthUpdate),
+        getMixRatingSummaries(authState.tokens, onAuthUpdate),
+      ]);
+
+      setItems(response.items);
+      setMixRatings(
+        ratingsRes.items.reduce<Record<string, MixRating>>((acc, item) => {
+          acc[item.mixId] = item;
+          return acc;
+        }, {}),
+      );
+      setMixSummaries(
+        summariesRes.items.reduce<Record<string, MixRatingSummary>>((acc, item) => {
+          acc[item.mixId] = item;
+          return acc;
+        }, {}),
+      );
+      setFeedback(`Подборка пересчитана. Модельных рекомендаций: ${response.refreshedCount}.`);
+      setStatus('idle');
+    } catch {
+      setStatus('error');
+      setFeedback('Не удалось пересчитать рекомендации.');
+    }
+  };
+
   const recommendations = useMemo(() => items, [items]);
 
   return (
@@ -129,7 +165,11 @@ export const RecommendationsScreen = ({
         <p className="card-text">
           Приоритет: модель пользователя {'->'} топ по оценкам и сессиям {'->'} cold start fallback.
         </p>
-        <button type="button" className="search-button recommendation-refresh" onClick={() => void load()}>
+        <button
+          type="button"
+          className="search-button recommendation-refresh"
+          onClick={() => void onRefreshRecommendations()}
+        >
           Обновить рекомендации
         </button>
         {feedback ? <p className="hint">{feedback}</p> : null}

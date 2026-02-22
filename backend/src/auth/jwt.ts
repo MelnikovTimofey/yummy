@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config';
 
 export type AuthTokenPayload = {
@@ -10,8 +10,10 @@ export const signAccessToken = (payload: AuthTokenPayload) => {
     throw new Error('JWT_SECRET is not configured');
   }
 
+  const expiresIn = config.jwtExpiresIn as SignOptions['expiresIn'];
+
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
+    expiresIn,
   });
 };
 
