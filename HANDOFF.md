@@ -3,16 +3,17 @@
 ## 1) Текущий статус
 
 - Проект: mobile web MVP (`YummyWeb`) + backend (Fastify + Prisma + Postgres) + ML-сервис (LightFM, offline).
-- В web MVP реализованы рабочие экраны: вход по magic link, миксы, сессии, каталог.
-- Экран рекомендаций находится в активной доработке под новую продуктовую логику fallback.
+- В web MVP реализованы рабочие экраны: вход по magic link, миксы, сессии, каталог, подборка, профиль.
+- В подборке реализован реальный backend-refresh (`POST /recommendations/refresh`), добавление в сессию и оценка микса.
+- В профиле реализовано редактирование `preference-profile` (liked/disliked профили + любимые бренды) с автообновлением подборки.
 
 ## 2) Последние коммиты (ключевые)
 
-- `c9a086c` docs(prd): add ui ux invariants from implementation feedback
-- `15350ef` fix(expo-ui): add back action and safe area inset for create mix
-- `66f5d47` fix(expo-ui): separate mix creation and stabilize sessions layout
-- `e764d39` fix(expo-ui): stabilize bottom tabs and list spacing on mixes and sessions
-- `abd8b55` feat: update seeds, backend schema and recommendation flow docs
+- `d57902d` feat(recommendations): add backend refresh endpoint and fix backend build
+- `85b1c75` feat(web-mvp): add profile preferences and recommendation refresh trigger
+- `7dd64a4` feat(recommendations): add web recommendations flow and backend fallback tiers
+- `18f8611` docs(prd): define recommendation screen fallback hierarchy
+- `c502966` feat(web-mvp): add sessions screen with create and rating flow
 
 ## 3) Важные продуктовые правила (зафиксированы)
 
@@ -27,8 +28,7 @@
 
 ## 4) Незакоммиченные изменения на момент handoff
 
-- `YummyExpo/src/data/api/config.ts` (локальный IP API на устройстве)
-- `NOTES.md` (черновые продуктовые заметки)
+- Нет (рабочие изменения закоммичены).
 
 ## 5) Что запускать локально
 
@@ -61,20 +61,19 @@ npm run dev
 
 Источник: `NOTES.md`
 
-1. Элемент списка микса: краткое описание + табаки с пропорциями.
-2. Фильтры миксов: мои/бренд/табак/профиль вкуса.
-3. Карточка микса.
-4. Полная карточка создания микса (UX polishing).
-5. Расширение каталога табаков.
-6. Карточка создания сессии (UX polishing).
-7. Переход из рекомендаций в создание сессии.
-8. Обновление рекомендаций из UI (триггер/refresh сценарий).
+1. Фильтры миксов: мои/бренд/табак/профиль вкуса.
+2. Карточка микса (детальная).
+3. Полная карточка создания микса (UX polishing).
+4. Расширение каталога табаков.
+5. Карточка создания сессии (UX polishing).
+6. UX улучшение подборки (decision-flow, свайпы/быстрые действия).
+7. E2E smoke-checklist и сценарии регресса для web MVP.
 
 ## 7) Технические риски / что проверить в первую очередь
 
 - Проверка safe-area на iPhone с активным звонком/диктофоном (динамически меняется верхний inset).
 - Проверка e2e сценария авторизации через magic link на реальном устройстве.
-- Проверка, что сиды и миграции применены и API отдает данные в ожидаемом формате.
+- Проверка, что сиды и миграции применены и API отдает ожидаемые поля (`source` в рекомендациях, корректный refresh).
 
 ## 8) Рекомендуемый старт в новом чате
 
@@ -83,5 +82,5 @@ npm run dev
 ```text
 Проект: /Users/admin/PycharmProjects/yummy
 Прочитай AGENTS.md, PRD.md, HANDOFF.md и продолжи с пункта <N> из HANDOFF.md раздел 6.
-Текущий backend: <state>, текущий API IP: <value из config.ts>.
+Текущий backend: рекомендации обновляются через POST /recommendations/refresh, web MVP в YummyWeb.
 ```
