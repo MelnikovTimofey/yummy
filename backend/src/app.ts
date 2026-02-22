@@ -29,12 +29,6 @@ export const buildApp = () => {
   app.register(registerRecommendationRoutes);
   app.register(registerPreferenceRoutes);
 
-  app.get('/', async () => ({
-    service: 'yummy-backend',
-    status: 'ok',
-    health: '/health',
-  }));
-
   app.get('/health', async () => ({ status: 'ok' }));
 
   return app;
