@@ -84,11 +84,26 @@ export const refreshToken = (refreshTokenValue: string) =>
     }))
     .catch(() => null);
 
-export const getMixes = (auth: AuthTokens, onAuthUpdate: RequestOptions['onAuthUpdate']) =>
-  request<{ items: Mix[] }>('/mixes', {
+export const getMixes = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  params?: {
+    authorId?: string;
+    manufacturerId?: string;
+    tobaccoId?: string;
+    profile?: FlavorProfile;
+  },
+) => {
+  const query = Object.entries(params ?? {})
+    .filter(([, value]) => Boolean(value))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+
+  return request<{ items: Mix[] }>(`/mixes${query ? `?${query}` : ''}`, {
     auth,
     onAuthUpdate,
   });
+};
 
 export const getMixRatings = (auth: AuthTokens, onAuthUpdate: RequestOptions['onAuthUpdate']) =>
   request<{ items: MixRating[] }>('/mix-ratings', {
@@ -171,6 +186,8 @@ export const getTobaccos = (params: {
   search?: string;
   manufacturerId?: string;
   profile?: FlavorProfile;
+  limit?: number;
+  offset?: number;
 }) => {
   const query = Object.entries(params)
     .filter(([, value]) => Boolean(value))

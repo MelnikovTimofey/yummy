@@ -23,6 +23,9 @@ const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   authorId: z.string().uuid().optional(),
+  manufacturerId: z.string().uuid().optional(),
+  tobaccoId: z.string().uuid().optional(),
+  profile: z.enum(['sweet', 'sour', 'spicy', 'fresh', 'dessert', 'tobacco']).optional(),
 });
 
 const applyPagination = (query: { limit?: number; offset?: number }) => ({
@@ -52,10 +55,31 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
       return reply.status(400).send({ error: 'Invalid query params' });
     }
 
-    const { authorId, ...pagination } = parseResult.data;
+    const { authorId, manufacturerId, tobaccoId, profile, ...pagination } = parseResult.data;
+
+    const componentFilter = {
+      ...(tobaccoId ? { tobaccoId } : {}),
+      ...(manufacturerId || profile
+        ? {
+            tobacco: {
+              ...(manufacturerId ? { manufacturerId } : {}),
+              ...(profile ? { flavorProfiles: { has: profile } } : {}),
+            },
+          }
+        : {}),
+    };
 
     const mixes = await prisma.mix.findMany({
-      where: authorId ? { authorId } : undefined,
+      where: {
+        ...(authorId ? { authorId } : {}),
+        ...(manufacturerId || tobaccoId || profile
+          ? {
+              components: {
+                some: componentFilter,
+              },
+            }
+          : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         components: {
