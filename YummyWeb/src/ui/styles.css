@@ -253,6 +253,20 @@ h1 {
   width: 100%;
 }
 
+.session-select-mix-btn {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.session-mix-preview {
+  display: grid;
+  gap: 6px;
+}
+
+.session-change-mix-btn {
+  margin-top: 0;
+}
+
 .recommendation-refresh {
   width: 100%;
   margin-top: 8px;
