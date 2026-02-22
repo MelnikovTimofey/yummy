@@ -105,6 +105,26 @@ export const getMixes = (
   });
 };
 
+export const getMixById = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  mixId: string,
+) =>
+  request<Mix>(`/mixes/${encodeURIComponent(mixId)}`, {
+    auth,
+    onAuthUpdate,
+  });
+
+export const createMix = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  payload: {
+    name: string;
+    description?: string;
+    components: Array<{ tobaccoId: string; proportion: number }>;
+  },
+) => request<Mix>('/mixes', { method: 'POST', body: payload, auth, onAuthUpdate });
+
 export const getMixRatings = (auth: AuthTokens, onAuthUpdate: RequestOptions['onAuthUpdate']) =>
   request<{ items: MixRating[] }>('/mix-ratings', {
     auth,

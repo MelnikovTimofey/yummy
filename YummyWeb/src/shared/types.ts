@@ -31,11 +31,19 @@ export type Mix = {
   id: string;
   name: string;
   description?: string | null;
+  isUserMix?: boolean;
+  createdAt?: string;
+  author?: ApiUser;
   components: Array<{
     proportion: number;
     tobacco: {
       id: string;
       name: string;
+      description?: string | null;
+      strength?: number;
+      line?: string | null;
+      flavorProfiles?: FlavorProfile[];
+      flavorTags?: string[];
       manufacturer: Manufacturer;
     };
   }>;

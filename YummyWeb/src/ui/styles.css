@@ -199,6 +199,10 @@ h1 {
   opacity: 0.45;
 }
 
+.mix-create-trigger {
+  width: 100%;
+}
+
 .ghost-button {
   margin-top: 10px;
   border: 1px solid var(--line);
@@ -209,6 +213,12 @@ h1 {
   font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+.screen-back-btn {
+  margin-top: 0;
+  width: fit-content;
+  padding: 0 12px;
 }
 
 .filters-row {
@@ -268,6 +278,50 @@ h1 {
   border-radius: 12px;
   padding: 10px 10px;
   font-size: 13px;
+}
+
+.form-textarea {
+  min-height: 88px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.mix-draft-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mix-draft-row {
+  display: grid;
+  grid-template-columns: 1fr 78px 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.mix-draft-row select,
+.mix-draft-row input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--text-0);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.mix-draft-row input {
+  text-align: center;
+}
+
+.mix-draft-add {
+  margin-top: 0;
+}
+
+.mix-create-actions {
+  display: grid;
+  gap: 6px;
 }
 
 .auth-card {
@@ -416,6 +470,10 @@ h1 {
   margin: 12px 0 0;
   font-size: 13px;
   color: var(--text-1);
+}
+
+.mix-actions {
+  margin-top: 6px;
 }
 
 .recommendation-source {
