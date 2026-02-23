@@ -1,123 +1,92 @@
-# HANDOFF — Yummy / Вкусно
+# HANDOFF — Yummy
 
-## 1) Текущий статус
+## 1) Статус на 23 февраля 2026
 
-- Проект: web MVP (`YummyWeb`) + backend (Fastify + Prisma + Postgres) + ML (LightFM offline).
-- PRD обновлён под сценарии онлайн-кинотеатра (`PRD.md`): главная с рейлами, карточка микса, каталог миксов, профиль/избранное.
-- Реализована киношная главная (`HomeScreen`) с hero, горизонтальными рейлами и fallback-режимом загрузки.
-- Реализован backend `GET /home/rails` + editor/analytics/my-mixes rails.
-- Реализовано избранное end-to-end:
-  - модель `FavoriteMix`;
-  - API `/favorites`, `/favorites/ids`;
-  - отдельный экран `FavoritesScreen`.
-- `Catalog` переделан в экран карточек **миксов** с глобальными фильтрами (поиск, профили, теги, табак, производитель, мин. оценка, сортировка).
-- `Mixes`:
-  - детальная карточка микса;
-  - действия: добавить в сессию, в избранное, оценить;
-  - 2 круговые диаграммы (по компонентам табаков и по профилям вкуса);
-  - создание микса отдельным flow.
-- Профиль:
-  - явный переход в `Избранное`, `Сессии`, `Добавить микс`;
-  - явный переход/раскрытие редактора предпочтений.
-- Реализован отдельный desktop-сценарий (верхняя навигация, отдельная компоновка, mobile-tabbar скрывается на desktop).
-- Гостевой режим:
-  - доступны `Главная` и `Каталог`;
-  - просмотр карточки микса в read-only;
-  - действия, требующие авторизации, корректно ограничены.
+- Каталог обновляется отдельным микросервисом `services/catalog-updater`.
+- Источник миксов и табаков для тестового наполнения: `hookahportal.ru`.
+- Поддержан локальный JSON-кеш артефактов:
+  - `/Users/admin/PycharmProjects/yummy/services/catalog-updater/cache/hookahportal/tobaccos.json`
+  - `/Users/admin/PycharmProjects/yummy/services/catalog-updater/cache/hookahportal/mixes.json`
+- В `local-seed` оставлены только табаки (миксы из `local-seed` не используются).
+- Все импортированные миксы пишутся с автором `hookahportal`.
 
-## 2) Изменения модели и API
+## 2) Актуальные артефакты каталога
 
-### Prisma / БД
+По состоянию на обновление артефактов:
+- `tobaccos.json`: `count=2616`, `fetchedAt=2026-02-23T16:19:44.798Z`
+- `mixes.json`: `count=587`, `fetchedAt=2026-02-23T16:27:54.944Z`
 
-- Добавлены поля у `Mix`:
-  - `flavorProfiles FlavorProfile[]`
-  - `tags String[]`
-- Добавлена модель `FavoriteMix`.
+## 3) Последняя проверенная загрузка в БД (только HookahPortal)
 
-### Миграции
+После очистки каталога и импорта из кеша:
+- `Manufacturer`: `69`
+- `Tobacco`: `2528`
+- `Mix`: `508`
+- `MixComponent`: `1652`
 
-- `backend/prisma/migrations/20260223193000_add_mix_metadata`
-- `backend/prisma/migrations/20260223195500_add_favorite_mix`
+Примечания:
+- Импорт выполнялся через `runRefreshCatalogJob` с `HOOKAHPORTAL_CACHE_READ=true`.
+- `77` миксов были пропущены валидатором (сумма пропорций != 100 или отсутствующие компоненты).
+- У пользователя `hookahportal` в БД `508` миксов.
 
-### Backend роуты (ключевые)
-
-- `GET /mixes` и `GET /mixes/:id` — публичные.
-- `GET /mixes` поддерживает:
-  - `search`, `profiles/profile`, `tags/tag`,
-  - `manufacturerId/manufacturerIds`,
-  - `tobaccoId/tobaccoIds`,
-  - `minRating`,
-  - `sort` (`newest|rating|popularity`).
-- `GET /home/rails` — рейлы главной (опциональная авторизация).
-- `GET/POST/DELETE /favorites`, `GET /favorites/ids`.
-- `session-ratings` удалены из backend API-потока (по PRD: оцениваются только миксы).
-
-## 3) Ключевые последние коммиты
-
-- `ce71dfc` feat: добавить инфографику пропорций в карточки рейлов
-- `adafba1` feat: добавить рабочее действие избранного в hero-блок главной
-- `a181019` feat: добавить явный переход в редактор предпочтений профиля
-- `32a115d` feat: добавить фильтры по тегам и мин-оценке в списки миксов
-- `894eba1` feat: добавить гостевой доступ к каталогу и карточке микса
-- `8313fb7` feat: переделать каталог в экран карточек миксов с фильтрами
-- `5133e9f` feat: добавить отдельную desktop-компоновку и верхнюю навигацию
-- `a5b149b` feat: добавить действия и диаграммы в карточку микса
-- `ee8660c` feat: добавить экран избранного и переходы из профиля
-- `d9b65c6` feat: связать рейлы главной с открытием карточки микса
-- `846aa03` feat: стилизовать главную, карточку и каталог под онлайн-кинотеатр
-- `10d3bba` feat: добавить рейлы главной, избранное и расширенные фильтры миксов
-- `3218d98` docs: обновить PRD под сценарий с рейлами
-
-## 4) Что запускать локально
-
-### Backend
+## 4) Как обновить артефакты
 
 ```bash
-cd backend
-docker compose -f docker-compose.yml up -d
-npm install
-cp .env.example .env
-npm run prisma:deploy
-npm run seed
-npm run dev
+cd /Users/admin/PycharmProjects/yummy/services/catalog-updater
+npm run build
+node -e "
+const path=require('node:path');
+const { loadHookahPortalCatalog }=require('./dist/importers/hookahPortalTobaccoImporter');
+(async()=>{await loadHookahPortalCatalog({
+  tobaccosSitemapUrl:'https://hookahportal.ru/tobaccos.xml',
+  mixesSitemapUrl:'https://hookahportal.ru/mixes.xml',
+  maxTobaccos:2683,
+  maxMixes:1018,
+  delayMs:0,
+  concurrency:16,
+  timeoutMs:15000,
+  cacheDir:path.resolve('./cache/hookahportal'),
+  cacheRead:false,
+  cacheWrite:true
+});})().catch(e=>{console.error(e);process.exit(1);});
+"
 ```
 
-- API: `http://localhost:3001`
-- Health: `http://localhost:3001/health`
-- Mailpit UI: `http://localhost:8025`
+## 5) Как перезалить БД только из HookahPortal-кеша
 
-### Frontend
-
+Очистка каталога:
 ```bash
-cd YummyWeb
-npm install
-npm run dev -- --host 0.0.0.0 --port 5173
+docker exec backend-db-1 psql -U yummy -d yummy -v ON_ERROR_STOP=1 -c \
+"BEGIN; TRUNCATE TABLE \"Recommendation\", \"FavoriteMix\", \"SessionRating\", \"SmokingSession\", \"MixRating\", \"MixComponent\", \"Mix\", \"Tobacco\", \"Manufacturer\" RESTART IDENTITY CASCADE; COMMIT;"
 ```
 
-- Web: `http://localhost:5173`
-
-## 5) Открытый продуктовый вопрос (нужны инструкции)
-
-- Оставляем ли два раздела:
-  - `Миксы` (мои + создание/детальный workflow),
-  - `Каталог миксов` (глобальный просмотр и фильтрация),
-  или объединяем их в один, чтобы убрать дублирование сценариев?
-
-## 6) Ближайшие задачи
-
-1. Принять решение по `Миксы` vs `Каталог миксов` и привести IA к финальной версии.
-2. Дополировать analytics/editorial рейлы:
-   - финальные названия,
-   - правила “смотреть всё” по типам рейлов,
-   - пустые состояния.
-3. Проверить consistency глобальных фильтров на всех list-экранах (Home/Catalog/Favorites/Mixes).
-4. Добавить e2e smoke-checklist для mobile+desktop сценариев.
-5. Подготовить регрессионный чек перед следующей итерацией UI.
-
-## 7) Быстрый старт следующего чата
-
-```text
-Проект: /Users/admin/PycharmProjects/yummy
-Прочитай AGENTS.md, PRD.md, HANDOFF.md и NOTES.md.
-Продолжи с раздела "Открытый продуктовый вопрос" в HANDOFF.md и затем с задач 1-5 из раздела "Ближайшие задачи".
+Импорт из кеша:
+```bash
+cd /Users/admin/PycharmProjects/yummy/services/catalog-updater
+DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' \
+CATALOG_ALLOW_TEST_SOURCES=true \
+HOOKAHPORTAL_CACHE_READ=true \
+HOOKAHPORTAL_CACHE_WRITE=false \
+node -e "
+const { runRefreshCatalogJob }=require('./dist/jobs/refreshCatalogJob');
+(async()=>{console.log(await runRefreshCatalogJob({
+  includeLocalSeeds:false,
+  includeHookahPortalTobaccos:true,
+  hookahPortalTobaccosLimit:2683,
+  hookahPortalMixesLimit:1018,
+  hookahPortalDelayMs:0
+}));})().catch(e=>{console.error(e);process.exit(1);});
+"
 ```
+
+## 6) Ограничения и риски
+
+- Docker-запуск `catalog-updater` на `node:alpine` может падать из-за несовместимости Prisma/OpenSSL на некоторых окружениях (workaround: запуск updater локально на хосте).
+- Источник HookahPortal помечен как test-only (`CATALOG_ALLOW_TEST_SOURCES=true`).
+- Часть миксов отбрасывается текущими правилами валидации состава.
+
+## 7) Следующие шаги
+
+1. Вынести refresh артефактов в отдельный скрипт `npm run cache:refresh:hookahportal`.
+2. Добавить артефакт-отчёт (JSON) с метриками импорта в `services/catalog-updater/cache/hookahportal/`.
+3. Добавить флаг soft-validation для миксов, где сумма пропорций != 100 (чтобы не терять контент полностью).

@@ -54,7 +54,7 @@ Catalog updater API: `http://localhost:3011`.
 ```
 curl -X POST http://localhost:3011/jobs/refresh \
   -H 'content-type: application/json' \
-  -d '{"includeLocalSeeds": true, "includeHookahPortalTobaccos": false}'
+  -d '{"includeLocalSeeds": false, "includeHookahPortalTobaccos": true, "hookahPortalTobaccosLimit": 2683, "hookahPortalMixesLimit": 1018}'
 ```
 
 Если в updater задан `UPDATER_API_KEY`, передавайте заголовок `x-api-key`.
@@ -73,16 +73,20 @@ Current seeds are intentionally minimal while we validate sources.
 ### Seed sources and assumptions
 
 Tobaccos:
-- MustHave catalog and product pages are the only source for MustHave flavors.
-- Deus Perfume page is the only source for Deus flavors.
+- В текущем тестовом контуре основной источник: HookahPortal (через `catalog-updater`).
+- `local-seed` используется только как вспомогательный источник табаков.
 
 Mixes:
-- Local seed-файл не используется для импорта миксов.
-- Тестовый источник миксов: HookahPortal (`includeHookahPortalTobaccos=true`).
+- В текущем тестовом контуре источник миксов: HookahPortal (`includeHookahPortalTobaccos=true`).
+- `local-seed` для миксов не используется.
 
 Notes:
 - Descriptions are short paraphrases of source text.
 - Strength values are heuristic and should be replaced by official data if/when published.
+
+Актуальные JSON-артефакты HookahPortal:
+- `/Users/admin/PycharmProjects/yummy/services/catalog-updater/cache/hookahportal/tobaccos.json`
+- `/Users/admin/PycharmProjects/yummy/services/catalog-updater/cache/hookahportal/mixes.json`
 
 ## Auth endpoints
 

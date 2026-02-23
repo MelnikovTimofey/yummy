@@ -104,6 +104,48 @@ Updater поддерживает кеш в файлах:
 - первый прогон: `HOOKAHPORTAL_CACHE_READ=false`, `HOOKAHPORTAL_CACHE_WRITE=true`
 - повторные прогоны: `HOOKAHPORTAL_CACHE_READ=true`, `HOOKAHPORTAL_CACHE_WRITE=false`
 
+## Обновление артефактов и БД
+
+Обновить локальные JSON-артефакты:
+```bash
+cd /Users/admin/PycharmProjects/yummy/services/catalog-updater
+npm run build
+HOOKAHPORTAL_CACHE_READ=false HOOKAHPORTAL_CACHE_WRITE=true node -e "
+const path=require('node:path');
+const { loadHookahPortalCatalog }=require('./dist/importers/hookahPortalTobaccoImporter');
+(async()=>{await loadHookahPortalCatalog({
+  tobaccosSitemapUrl:'https://hookahportal.ru/tobaccos.xml',
+  mixesSitemapUrl:'https://hookahportal.ru/mixes.xml',
+  maxTobaccos:2683,
+  maxMixes:1018,
+  delayMs:0,
+  concurrency:16,
+  timeoutMs:15000,
+  cacheDir:path.resolve('./cache/hookahportal'),
+  cacheRead:false,
+  cacheWrite:true
+});})().catch(e=>{console.error(e);process.exit(1);});
+"
+```
+
+Перезалить БД только из кеша:
+```bash
+DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' \
+CATALOG_ALLOW_TEST_SOURCES=true \
+HOOKAHPORTAL_CACHE_READ=true \
+HOOKAHPORTAL_CACHE_WRITE=false \
+node -e "
+const { runRefreshCatalogJob }=require('./dist/jobs/refreshCatalogJob');
+(async()=>{console.log(await runRefreshCatalogJob({
+  includeLocalSeeds:false,
+  includeHookahPortalTobaccos:true,
+  hookahPortalTobaccosLimit:2683,
+  hookahPortalMixesLimit:1018,
+  hookahPortalDelayMs:0
+}));})().catch(e=>{console.error(e);process.exit(1);});
+"
+```
+
 ## Ограничения текущего этапа
 
 - Пока нет cron внутри сервиса (запуск через внешний scheduler/CI).
