@@ -37,6 +37,7 @@ services:
       PORT: 3011
       HOST: 0.0.0.0
       LOG_LEVEL: info
+      CATALOG_ALLOW_TEST_SOURCES: "false"
       CATALOG_SEED_DIR: /app/backend/seed
     depends_on:
       - db

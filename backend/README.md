@@ -54,10 +54,13 @@ Catalog updater API: `http://localhost:3011`.
 ```
 curl -X POST http://localhost:3011/jobs/refresh \
   -H 'content-type: application/json' \
-  -d '{"includeLocalSeeds": true, "includeMustHaveMixes": false}'
+  -d '{"includeLocalSeeds": true, "includeMustHaveMixes": false, "includeHookahPortalTobaccos": false}'
 ```
 
 Если в updater задан `UPDATER_API_KEY`, передавайте заголовок `x-api-key`.
+
+Тестовый источник `hookahportal.ru` отключен по умолчанию и требует
+`CATALOG_ALLOW_TEST_SOURCES=true` в окружении updater.
 
 ## Seeds
 

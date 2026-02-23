@@ -1,4 +1,5 @@
 import { config } from '../config';
+import { loadHookahPortalTobaccos } from '../importers/hookahPortalTobaccoImporter';
 import { loadLocalSeedCatalog } from '../importers/localSeedImporter';
 import { loadMustHaveMixes } from '../importers/musthaveMixesImporter';
 import { upsertCatalogFromSources } from '../pipeline/upsertCatalog';
@@ -22,8 +23,26 @@ export const runRefreshCatalogJob = async (params: RefreshParams): Promise<Refre
     );
   }
 
+  if (params.includeHookahPortalTobaccos) {
+    if (!config.allowTestSources) {
+      throw new Error(
+        'Test sources are disabled. Set CATALOG_ALLOW_TEST_SOURCES=true to enable hookahportal source.',
+      );
+    }
+
+    sources.push(
+      await loadHookahPortalTobaccos({
+        sitemapUrl: config.hookahPortal.tobaccosSitemapUrl,
+        maxItems: params.hookahPortalLimit ?? config.hookahPortal.maxItems,
+        delayMs: params.hookahPortalDelayMs ?? config.hookahPortal.delayMs,
+      }),
+    );
+  }
+
   if (!sources.length) {
-    throw new Error('No sources selected. Enable includeLocalSeeds and/or includeMustHaveMixes.');
+    throw new Error(
+      'No sources selected. Enable includeLocalSeeds, includeMustHaveMixes and/or includeHookahPortalTobaccos.',
+    );
   }
 
   return upsertCatalogFromSources(sources);

@@ -54,8 +54,11 @@ npm run dev
 {
   "includeLocalSeeds": true,
   "includeMustHaveMixes": false,
+  "includeHookahPortalTobaccos": false,
   "mustHaveFromId": 1,
   "mustHaveToId": 2000,
+  "hookahPortalLimit": 250,
+  "hookahPortalDelayMs": 100,
   "delayMs": 250
 }
 ```
@@ -63,6 +66,7 @@ npm run dev
 Минимум один источник должен быть включен:
 - `includeLocalSeeds`
 - `includeMustHaveMixes`
+- `includeHookahPortalTobaccos`
 
 Если задан `UPDATER_API_KEY`, нужно передать заголовок `x-api-key`.
 
@@ -70,6 +74,22 @@ npm run dev
 
 - `local-seed`: файлы `backend/seed/tobaccos.json` и `backend/seed/mixes.json`
 - `musthave-mixes`: парсинг карточек миксов MustHave
+- `hookahportal-tobaccos-test`: тестовый импорт табаков из `https://hookahportal.ru/tobaccos.xml`
+
+## Test-only источник HookahPortal
+
+По умолчанию источник отключен. Для включения:
+
+1. Установить `CATALOG_ALLOW_TEST_SOURCES=true`
+2. Передать в job:
+```json
+{
+  "includeHookahPortalTobaccos": true,
+  "hookahPortalLimit": 250
+}
+```
+
+Рекомендуется использовать только в тестовом контуре.
 
 ## Ограничения текущего этапа
 

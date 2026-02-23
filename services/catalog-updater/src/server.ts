@@ -14,13 +14,20 @@ const refreshRequestSchema = z
   .object({
     includeLocalSeeds: z.coerce.boolean().default(true),
     includeMustHaveMixes: z.coerce.boolean().default(false),
+    includeHookahPortalTobaccos: z.coerce.boolean().default(false),
     mustHaveFromId: z.coerce.number().int().min(1).optional(),
     mustHaveToId: z.coerce.number().int().min(1).optional(),
+    hookahPortalLimit: z.coerce.number().int().min(1).max(10000).optional(),
+    hookahPortalDelayMs: z.coerce.number().int().min(0).optional(),
     delayMs: z.coerce.number().int().min(0).optional(),
   })
-  .refine((value) => value.includeLocalSeeds || value.includeMustHaveMixes, {
-    message: 'At least one source must be enabled',
-  })
+  .refine(
+    (value) =>
+      value.includeLocalSeeds || value.includeMustHaveMixes || value.includeHookahPortalTobaccos,
+    {
+      message: 'At least one source must be enabled',
+    },
+  )
   .refine(
     (value) =>
       !value.includeMustHaveMixes ||
@@ -29,6 +36,24 @@ const refreshRequestSchema = z
       value.mustHaveFromId <= value.mustHaveToId,
     {
       message: 'mustHaveFromId must be less than or equal to mustHaveToId',
+    },
+  )
+  .refine(
+    (value) =>
+      !value.includeHookahPortalTobaccos ||
+      value.hookahPortalLimit === undefined ||
+      value.hookahPortalLimit > 0,
+    {
+      message: 'hookahPortalLimit must be greater than zero',
+    },
+  )
+  .refine(
+    (value) =>
+      !value.includeHookahPortalTobaccos ||
+      value.hookahPortalDelayMs === undefined ||
+      value.hookahPortalDelayMs >= 0,
+    {
+      message: 'hookahPortalDelayMs must be zero or positive',
     },
   );
 
