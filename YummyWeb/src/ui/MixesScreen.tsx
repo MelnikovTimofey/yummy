@@ -70,9 +70,12 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const [ownOnly, setOwnOnly] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
+  const [tagsDraft, setTagsDraft] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [manufacturerId, setManufacturerId] = useState('');
   const [tobaccoId, setTobaccoId] = useState('');
   const [profile, setProfile] = useState<'' | FlavorProfile>('');
+  const [minRating, setMinRating] = useState<'' | '1' | '2' | '3' | '4' | '5'>('');
   const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('popularity');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [view, setView] = useState<MixesView>('list');
@@ -185,6 +188,8 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
           manufacturerId: manufacturerId || undefined,
           tobaccoId: tobaccoId || undefined,
           profile: profile || undefined,
+          tags: tags.length ? tags : undefined,
+          minRating: minRating ? Number(minRating) : undefined,
           sort: sortBy,
         });
 
@@ -200,12 +205,14 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     authState.tokens,
     authState.user?.id,
     manufacturerId,
+    minRating,
     onAuthUpdate,
     ownOnly,
     profile,
     reloadSignal,
     search,
     sortBy,
+    tags,
     tobaccoId,
   ]);
 
@@ -246,7 +253,9 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [openMixRequest?.mode, openMixRequest?.mixId, openMixRequest?.nonce]);
 
   const sortedItems = useMemo(() => items, [items]);
-  const hasFilters = Boolean(ownOnly || search || manufacturerId || tobaccoId || profile || sortBy !== 'popularity');
+  const hasFilters = Boolean(
+    ownOnly || search || manufacturerId || tobaccoId || profile || minRating || tags.length || sortBy !== 'popularity',
+  );
   const totalProportion = useMemo(
     () =>
       createComponents.reduce((sum, item) => {
@@ -382,6 +391,12 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const onSubmitFilters = (event: FormEvent) => {
     event.preventDefault();
     setSearch(searchDraft.trim());
+    setTags(
+      tagsDraft
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0),
+    );
   };
 
   const buildConicGradient = (segments: Array<{ value: number; color: string }>) => {
@@ -736,6 +751,29 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               <option value="rating">По рейтингу</option>
               <option value="newest">По дате</option>
             </select>
+          </label>
+        </div>
+
+        <div className="filters-row">
+          <label className="filter-field">
+            <span>Мин. оценка</span>
+            <select value={minRating} onChange={(event) => setMinRating(event.target.value as '' | '1' | '2' | '3' | '4' | '5')}>
+              <option value="">Любая</option>
+              <option value="1">1+</option>
+              <option value="2">2+</option>
+              <option value="3">3+</option>
+              <option value="4">4+</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>Теги (через запятую)</span>
+            <input
+              className="search-input"
+              value={tagsDraft}
+              onChange={(event) => setTagsDraft(event.target.value)}
+              placeholder="ягодный, свежий"
+            />
           </label>
         </div>
 

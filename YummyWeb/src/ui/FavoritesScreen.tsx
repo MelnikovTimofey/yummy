@@ -42,6 +42,8 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
 
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
+  const [tagsDraft, setTagsDraft] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [manufacturerId, setManufacturerId] = useState('');
   const [tobaccoId, setTobaccoId] = useState('');
   const [profile, setProfile] = useState<'' | FlavorProfile>('');
@@ -118,6 +120,7 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
           manufacturerId: manufacturerId || undefined,
           tobaccoId: tobaccoId || undefined,
           profile: profile || undefined,
+          tags: tags.length ? tags : undefined,
           minRating: minRating ? Number(minRating) : undefined,
           sort: sortBy,
         });
@@ -138,12 +141,19 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     reloadSignal,
     search,
     sortBy,
+    tags,
     tobaccoId,
   ]);
 
   const onSubmitFilters = (event: FormEvent) => {
     event.preventDefault();
     setSearch(searchDraft.trim());
+    setTags(
+      tagsDraft
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0),
+    );
   };
 
   const onRemove = async (mixId: string) => {
@@ -161,7 +171,7 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     }
   };
 
-  const hasFilters = Boolean(search || manufacturerId || tobaccoId || profile || minRating || sortBy !== 'newest');
+  const hasFilters = Boolean(search || manufacturerId || tobaccoId || profile || tags.length || minRating || sortBy !== 'newest');
   const totalLabel = useMemo(() => `${items.length} миксов`, [items.length]);
 
   return (
@@ -241,6 +251,16 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
               ))}
             </select>
           </label>
+        </div>
+
+        <div className="filter-field">
+          <span>Теги (через запятую)</span>
+          <input
+            className="search-input"
+            value={tagsDraft}
+            onChange={(event) => setTagsDraft(event.target.value)}
+            placeholder="ягодный, вечерний, микс"
+          />
         </div>
       </form>
 
