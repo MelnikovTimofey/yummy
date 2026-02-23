@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { getHomeRails } from '../shared/apiClient';
-import { AuthState, HomeRail } from '../shared/types';
+import { useEffect, useMemo, useState } from 'react';
+import { getHomeRails, getMixes, getRecommendations } from '../shared/apiClient';
+import { AuthState, HomeRail, Mix } from '../shared/types';
 
 type HomeScreenProps = {
   authState: AuthState;
@@ -10,15 +10,93 @@ type HomeScreenProps = {
 export const HomeScreen = ({ authState, onAuthUpdate }: HomeScreenProps) => {
   const [rails, setRails] = useState<HomeRail[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  const buildLegacyFallbackRails = async () => {
+    if (!authState.tokens) {
+      return [] as HomeRail[];
+    }
+
+    const [recommendationsRes, mixesRes] = await Promise.all([
+      getRecommendations(authState.tokens, onAuthUpdate).catch(() => ({ items: [] })),
+      getMixes(authState.tokens, onAuthUpdate, {
+        limit: 60,
+        sort: 'popularity',
+      }).catch(() => ({ items: [] })),
+    ]);
+
+    const recommendationMixes = recommendationsRes.items.map((item) => item.mix).slice(0, 20);
+    const allMixes = mixesRes.items;
+    const editorial = allMixes.filter((mix) => !mix.isUserMix).slice(0, 20);
+    const analyticsTop = allMixes.slice(0, 20);
+    const myMixes = allMixes.filter((mix) => mix.author?.id === authState.user?.id).slice(0, 20);
+
+    const nextRails: HomeRail[] = [];
+    if (recommendationMixes.length) {
+      nextRails.push({
+        id: 'recommendations-fallback',
+        type: 'recommendations',
+        title: 'Рекомендации для вас',
+        size: 'hero',
+        source: 'fallback',
+        items: recommendationMixes,
+      });
+    }
+    if (editorial.length) {
+      nextRails.push({
+        id: 'editorial-fallback',
+        type: 'editorial',
+        title: 'Выбор редакции',
+        items: editorial,
+      });
+    }
+    if (analyticsTop.length) {
+      nextRails.push({
+        id: 'analytics-fallback',
+        type: 'analytics',
+        title: 'Популярное сейчас',
+        items: analyticsTop,
+      });
+    }
+    if (myMixes.length) {
+      nextRails.push({
+        id: 'my-fallback',
+        type: 'my-mixes',
+        title: 'Мои миксы',
+        items: myMixes,
+      });
+    }
+
+    return nextRails;
+  };
+
+  const getMixTone = (mix: Mix) => {
+    const palette = ['#dd8a29', '#2e95d6', '#188a68', '#7f4ddd', '#b9476d', '#24a178', '#3c7de6'];
+    const source = `${mix.name}:${mix.id}`;
+    const hash = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return palette[hash % palette.length];
+  };
 
   useEffect(() => {
     const load = async () => {
       setStatus('loading');
+      setUsingFallback(false);
       try {
         const response = await getHomeRails(authState.tokens, onAuthUpdate);
         setRails(response.items);
         setStatus('idle');
       } catch {
+        try {
+          const fallbackRails = await buildLegacyFallbackRails();
+          if (fallbackRails.length) {
+            setRails(fallbackRails);
+            setUsingFallback(true);
+            setStatus('idle');
+            return;
+          }
+        } catch {
+          // noop
+        }
         setStatus('error');
       }
     };
@@ -26,28 +104,72 @@ export const HomeScreen = ({ authState, onAuthUpdate }: HomeScreenProps) => {
     void load();
   }, [authState.tokens, onAuthUpdate]);
 
+  const heroMix = useMemo(() => rails[0]?.items[0] ?? null, [rails]);
+  const genres = ['Рекомендации', 'Редакция', 'ТОП', 'Новые', 'Избранное', 'Мои миксы'];
+
   return (
     <section className="home-layout">
       {status === 'loading' ? <p className="screen-status">Загрузка главной...</p> : null}
       {status === 'error' ? <p className="screen-status error">Не удалось загрузить рейлы.</p> : null}
+      {usingFallback ? (
+        <p className="hint home-warning">Показан fallback-режим: перезапустите backend для полного набора рейлов.</p>
+      ) : null}
+
+      {heroMix ? (
+        <section
+          className="home-hero"
+          style={{
+            background: `linear-gradient(120deg, ${getMixTone(heroMix)}99 0%, #131313 60%, #0a0a0a 100%)`,
+          }}
+        >
+          <span className="home-hero-badge">Премьера</span>
+          <h2>{heroMix.name}</h2>
+          <p>
+            {heroMix.description?.trim() || 'Подборка вкусового микса с детальным составом и пропорциями.'}
+          </p>
+          <div className="home-hero-meta">
+            <span className="rating-pill">{heroMix.components.length}</span>
+            <span>{heroMix.components.map((component) => component.tobacco.name).slice(0, 3).join(' · ')}</span>
+          </div>
+          <div className="home-hero-actions">
+            <button type="button" className="search-button">Карточка микса</button>
+            <button type="button" className="ghost-button home-hero-secondary">В избранное</button>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="home-categories">
+        {genres.map((item) => (
+          <button key={item} type="button" className="home-category-chip">
+            {item}
+          </button>
+        ))}
+      </section>
 
       {rails.map((rail) => (
-        <section key={rail.id} className={`card home-rail ${rail.size === 'hero' ? 'hero' : ''}`}>
-          <div className="mix-header">
-            <p className="card-title">{rail.type}</p>
-            <span className="chip">{rail.items.length}</span>
+        <section key={rail.id} className={`home-rail ${rail.size === 'hero' ? 'hero' : ''}`}>
+          <div className="home-rail-head">
+            <h3 className="home-rail-title">{rail.title}</h3>
+            <button type="button" className="home-link-btn">Смотреть всё</button>
           </div>
-          <h3 className="home-rail-title">{rail.title}</h3>
           <div className="home-rail-row">
             {rail.items.map((mix) => (
-              <article key={`${rail.id}:${mix.id}`} className="home-item">
-                <p className="home-item-title">{mix.name}</p>
-                <p className="home-item-meta">
-                  {mix.components
-                    .slice(0, 2)
-                    .map((component) => component.tobacco.name)
-                    .join(' · ')}
-                </p>
+              <article
+                key={`${rail.id}:${mix.id}`}
+                className="home-item"
+                style={{
+                  background: `linear-gradient(145deg, ${getMixTone(mix)}66 0%, #1a1a1a 70%, #121212 100%)`,
+                }}
+              >
+                <div className="home-item-overlay">
+                  <p className="home-item-title">{mix.name}</p>
+                  <p className="home-item-meta">
+                    {mix.components
+                      .slice(0, 2)
+                      .map((component) => `${component.tobacco.manufacturer.name} ${component.tobacco.name}`)
+                      .join(' · ')}
+                  </p>
+                </div>
               </article>
             ))}
           </div>

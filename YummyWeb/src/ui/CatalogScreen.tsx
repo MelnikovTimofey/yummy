@@ -61,9 +61,23 @@ export const CatalogScreen = () => {
 
   const hasFilters = Boolean(query || manufacturerId || profile);
   const totalLabel = useMemo(() => `${items.length} позиций`, [items.length]);
+  const quickFilters = ['Рекомендуемые', 'Новые', 'Свежие', 'Десертные', 'Крепкие'];
 
   return (
     <section className="catalog-layout">
+      <section className="catalog-hero">
+        <h2>Каталог вкусов</h2>
+        <p>Выбирайте табаки как в онлайн-кинотеатре: фильтры сверху, карточки ниже.</p>
+      </section>
+
+      <section className="home-categories">
+        {quickFilters.map((item) => (
+          <button key={item} type="button" className="home-category-chip">
+            {item}
+          </button>
+        ))}
+      </section>
+
       <form className="catalog-controls" onSubmit={onSubmitSearch}>
         <div className="search-row">
           <input
@@ -122,24 +136,26 @@ export const CatalogScreen = () => {
         <p className="screen-status">По вашему запросу ничего не найдено.</p>
       ) : null}
 
-      <section className="list-grid">
+      <section className="list-grid cinema-grid">
         {items.map((item) => (
-          <article key={item.id} className="card catalog-card">
-            <div className="mix-header">
-              <h3>{item.name}</h3>
-              <span className="chip">{item.strength}/10</span>
+          <article key={item.id} className="catalog-poster">
+            <div className="mix-poster-overlay">
+              <div className="mix-header">
+                <h3>{item.name}</h3>
+                <span className="chip">{item.strength}/10</span>
+              </div>
+              <p className="mix-description">{item.manufacturer.name}</p>
+              <div className="profile-tags">
+                {item.flavorProfiles.map((profileName) => (
+                  <span key={`${item.id}:${profileName}`} className="profile-tag">
+                    {PROFILE_LABEL[profileName]}
+                  </span>
+                ))}
+              </div>
+              {item.flavorTags.length ? (
+                <p className="hint">Теги: {item.flavorTags.join(', ')}</p>
+              ) : null}
             </div>
-            <p className="mix-description">{item.manufacturer.name}</p>
-            <div className="profile-tags">
-              {item.flavorProfiles.map((profileName) => (
-                <span key={`${item.id}:${profileName}`} className="profile-tag">
-                  {PROFILE_LABEL[profileName]}
-                </span>
-              ))}
-            </div>
-            {item.flavorTags.length ? (
-              <p className="hint">Теги: {item.flavorTags.join(', ')}</p>
-            ) : null}
           </article>
         ))}
       </section>
