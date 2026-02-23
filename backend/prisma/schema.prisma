@@ -38,6 +38,7 @@ model User {
   sessions         SmokingSession[]
   mixRatings       MixRating[]
   sessionRatings   SessionRating[]
+  favorites        FavoriteMix[]
 }
 
 model MagicLinkToken {
@@ -110,6 +111,8 @@ model Mix {
   id        String   @id @default(uuid())
   name      String
   description String?
+  flavorProfiles FlavorProfile[]
+  tags      String[]
   isUserMix Boolean @default(true)
   authorId  String
   createdAt DateTime @default(now())
@@ -118,6 +121,7 @@ model Mix {
   components  MixComponent[]
   sessions    SmokingSession[]
   ratings     MixRating[]
+  favorites   FavoriteMix[]
   recommendations Recommendation[]
 
   @@index([authorId])
@@ -200,4 +204,18 @@ model MixRating {
   @@index([mixId])
   @@index([userId])
   @@unique([mixId, userId])
+}
+
+model FavoriteMix {
+  id        String   @id @default(uuid())
+  userId    String
+  mixId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  mix  Mix  @relation(fields: [mixId], references: [id])
+
+  @@index([userId])
+  @@index([mixId])
+  @@unique([userId, mixId])
 }

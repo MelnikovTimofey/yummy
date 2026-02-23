@@ -3,14 +3,15 @@ import {
   AuthState,
   ApiUser,
   AuthTokens,
+  FavoriteMix,
   FlavorProfile,
+  HomeRail,
   Manufacturer,
   Mix,
   MixRating,
   MixRatingSummary,
   PreferenceProfile,
   RecommendationItem,
-  SessionRating,
   SmokingSession,
   Tobacco,
 } from './types';
@@ -58,6 +59,15 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 };
 
+export const getHomeRails = (
+  auth?: AuthTokens | null,
+  onAuthUpdate?: RequestOptions['onAuthUpdate'],
+) =>
+  request<{ items: HomeRail[] }>('/home/rails', {
+    auth: auth ?? undefined,
+    onAuthUpdate,
+  });
+
 export const sendMagicLink = (email: string) =>
   request<{ ok: true }>('/auth/magic-link', {
     method: 'POST',
@@ -89,14 +99,35 @@ export const getMixes = (
   onAuthUpdate: RequestOptions['onAuthUpdate'],
   params?: {
     authorId?: string;
+    isUserMix?: boolean;
+    search?: string;
     manufacturerId?: string;
+    manufacturerIds?: string[];
     tobaccoId?: string;
+    tobaccoIds?: string[];
     profile?: FlavorProfile;
+    profiles?: FlavorProfile[];
+    tag?: string;
+    tags?: string[];
+    minRating?: number;
+    sort?: 'newest' | 'rating' | 'popularity';
+    limit?: number;
+    offset?: number;
   },
 ) => {
   const query = Object.entries(params ?? {})
-    .filter(([, value]) => Boolean(value))
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .flatMap(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return [];
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return [];
+        }
+        return `${encodeURIComponent(key)}=${encodeURIComponent(value.join(','))}`;
+      }
+      return `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+    })
     .join('&');
 
   return request<{ items: Mix[] }>(`/mixes${query ? `?${query}` : ''}`, {
@@ -182,21 +213,6 @@ export const createSession = (
   payload: { mixId: string; date: string; locationType: 'home' | 'lounge'; locationName?: string },
 ) => request<SmokingSession>('/sessions', { method: 'POST', body: payload, auth, onAuthUpdate });
 
-export const getSessionRatings = (
-  auth: AuthTokens,
-  onAuthUpdate: RequestOptions['onAuthUpdate'],
-) =>
-  request<{ items: SessionRating[] }>('/session-ratings', {
-    auth,
-    onAuthUpdate,
-  });
-
-export const createSessionRating = (
-  auth: AuthTokens,
-  onAuthUpdate: RequestOptions['onAuthUpdate'],
-  payload: { sessionId: string; rating: number },
-) => request<SessionRating>('/session-ratings', { method: 'POST', body: payload, auth, onAuthUpdate });
-
 export const getManufacturers = (search?: string) => {
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
   return request<{ items: Manufacturer[] }>(`/manufacturers${query}`);
@@ -241,3 +257,64 @@ export const upsertPreferenceProfile = (
     auth,
     onAuthUpdate,
   });
+
+export const getFavoriteMixIds = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+) =>
+  request<{ items: string[] }>('/favorites/ids', {
+    auth,
+    onAuthUpdate,
+  });
+
+export const getFavorites = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  params?: {
+    search?: string;
+    manufacturerId?: string;
+    manufacturerIds?: string[];
+    tobaccoId?: string;
+    tobaccoIds?: string[];
+    profile?: FlavorProfile;
+    profiles?: FlavorProfile[];
+    tag?: string;
+    tags?: string[];
+    minRating?: number;
+    sort?: 'newest' | 'rating' | 'popularity';
+    limit?: number;
+    offset?: number;
+  },
+) => {
+  const query = Object.entries(params ?? {})
+    .flatMap(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return [];
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return [];
+        }
+        return `${encodeURIComponent(key)}=${encodeURIComponent(value.join(','))}`;
+      }
+      return `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+    })
+    .join('&');
+
+  return request<{ items: FavoriteMix[] }>(`/favorites${query ? `?${query}` : ''}`, {
+    auth,
+    onAuthUpdate,
+  });
+};
+
+export const addFavorite = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  mixId: string,
+) => request('/favorites', { method: 'POST', body: { mixId }, auth, onAuthUpdate });
+
+export const removeFavorite = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  mixId: string,
+) => request(`/favorites/${encodeURIComponent(mixId)}`, { method: 'DELETE', auth, onAuthUpdate });

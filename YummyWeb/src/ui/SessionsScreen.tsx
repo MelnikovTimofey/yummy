@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   createSession,
-  createSessionRating,
   getMixes,
   getMixRatingSummaries,
-  getSessionRatings,
   getSessions,
 } from '../shared/apiClient';
 import {
   AuthState,
   Mix,
   MixRatingSummary,
-  SessionRating,
   SmokingSession,
 } from '../shared/types';
 
@@ -25,7 +22,6 @@ type SessionsView = 'list' | 'create' | 'pick-mix';
 export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps) => {
   const [items, setItems] = useState<SmokingSession[]>([]);
   const [mixes, setMixes] = useState<Mix[]>([]);
-  const [sessionRatings, setSessionRatings] = useState<Record<string, SessionRating>>({});
   const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -42,21 +38,14 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
 
     setStatus('loading');
     try {
-      const [sessionsRes, mixesRes, sessionRatingsRes, mixSummariesRes] = await Promise.all([
+      const [sessionsRes, mixesRes, mixSummariesRes] = await Promise.all([
         getSessions(authState.tokens, onAuthUpdate),
         getMixes(authState.tokens, onAuthUpdate),
-        getSessionRatings(authState.tokens, onAuthUpdate),
         getMixRatingSummaries(authState.tokens, onAuthUpdate),
       ]);
 
       setItems(sessionsRes.items);
       setMixes(mixesRes.items);
-      setSessionRatings(
-        sessionRatingsRes.items.reduce<Record<string, SessionRating>>((acc, item) => {
-          acc[item.sessionId] = item;
-          return acc;
-        }, {}),
-      );
       setMixSummaries(
         mixSummariesRes.items.reduce<Record<string, MixRatingSummary>>((acc, item) => {
           acc[item.mixId] = item;
@@ -95,27 +84,6 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
       await load();
     } catch {
       setFeedback('Не удалось создать сессию.');
-    }
-  };
-
-  const onRateSession = async (sessionId: string, rating: number) => {
-    if (!authState.tokens) {
-      return;
-    }
-
-    try {
-      await createSessionRating(authState.tokens, onAuthUpdate, { sessionId, rating });
-      setSessionRatings((current) => ({
-        ...current,
-        [sessionId]: {
-          ...current[sessionId],
-          id: current[sessionId]?.id ?? `${sessionId}:${rating}`,
-          sessionId,
-          rating,
-        },
-      }));
-    } catch {
-      setFeedback('Не удалось сохранить оценку.');
     }
   };
 
@@ -259,21 +227,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
               {item.locationType === 'home' ? 'Дом' : `Лаунж · ${item.locationName ?? 'без названия'}`}
             </p>
             <p className="hint">{new Date(item.date).toLocaleString('ru-RU')}</p>
-            <div className="session-rating-row">
-              {[1, 2, 3, 4, 5].map((score) => (
-                <button
-                  key={`${item.id}:${score}`}
-                  type="button"
-                  className={`score-btn ${sessionRatings[item.id]?.rating === score ? 'active' : ''}`}
-                  onClick={() => onRateSession(item.id, score)}
-                >
-                  {score}
-                </button>
-              ))}
-            </div>
             <p className="mix-ratings">
-              Оценка сессии: <b>{sessionRatings[item.id]?.rating ?? 'нет'}</b>
-              {' · '}
               Средняя оценка микса: <b>{mixSummaries[item.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
             </p>
           </article>

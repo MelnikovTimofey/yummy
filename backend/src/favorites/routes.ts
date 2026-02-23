@@ -1,6 +1,6 @@
+import { FlavorProfile } from '@prisma/client';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { FlavorProfile } from '@prisma/client';
 import { prisma } from '../db';
 import { requireAuth } from '../auth/guard';
 
@@ -10,26 +10,13 @@ const uuidSchema = z.string().uuid();
 const sortSchema = z.enum(['newest', 'rating', 'popularity']);
 const multiSelectSchema = z.union([z.string().trim().min(1), z.array(z.string().trim().min(1))]);
 
-const mixCreateSchema = z.object({
-  name: z.string().trim().min(1),
-  description: z.string().trim().min(1).optional(),
-  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
-  components: z
-    .array(
-      z.object({
-        tobaccoId: z.string().uuid(),
-        proportion: z.coerce.number().int().min(1).max(100),
-      }),
-    )
-    .min(1)
-    .max(10),
+const createSchema = z.object({
+  mixId: z.string().uuid(),
 });
 
 const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
   offset: z.coerce.number().int().min(0).optional(),
-  authorId: z.string().uuid().optional(),
-  isUserMix: z.coerce.boolean().optional(),
   search: z.string().trim().min(1).optional(),
   manufacturerId: z.string().uuid().optional(),
   manufacturerIds: multiSelectSchema.optional(),
@@ -59,21 +46,6 @@ const parseMultiSelect = (input?: string | string[]) => {
   );
 };
 
-const validateComponents = (components: { tobaccoId: string; proportion: number }[]) => {
-  const total = components.reduce((sum, item) => sum + item.proportion, 0);
-  if (total !== 100) {
-    return 'Components proportion must sum to 100';
-  }
-
-  const ids = components.map((item) => item.tobaccoId);
-  const unique = new Set(ids);
-  if (unique.size !== ids.length) {
-    return 'Duplicate tobacco components are not allowed';
-  }
-
-  return null;
-};
-
 const parseUuidList = (values: string[], label: string) => {
   const parsed: string[] = [];
   for (const value of values) {
@@ -98,8 +70,8 @@ const parseProfileList = (values: string[]) => {
   return dedupe(parsed);
 };
 
-export const registerMixRoutes = async (app: FastifyInstance) => {
-  app.get('/mixes', async (request, reply) => {
+export const registerFavoriteRoutes = async (app: FastifyInstance) => {
+  app.get('/favorites', { preHandler: requireAuth }, async (request, reply) => {
     const parseResult = listSchema.safeParse(request.query);
     if (!parseResult.success) {
       return reply.status(400).send({ error: 'Invalid query params' });
@@ -108,8 +80,6 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
     const {
       limit,
       offset,
-      authorId,
-      isUserMix,
       search,
       manufacturerId,
       manufacturerIds: manufacturerIdsRaw,
@@ -159,39 +129,45 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
         : {}),
     };
 
-    const mixes = await prisma.mix.findMany({
+    const favorites = await prisma.favoriteMix.findMany({
       where: {
-        ...(authorId ? { authorId } : {}),
-        ...(isUserMix !== undefined ? { isUserMix } : {}),
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-        ...(profiles.length ? { flavorProfiles: { hasSome: profiles } } : {}),
-        ...(tags.length ? { tags: { hasSome: tags } } : {}),
-        ...(manufacturerIds.length || tobaccoIds.length
-          ? {
-              components: {
-                some: componentFilter,
-              },
-            }
-          : {}),
+        userId: request.user!.id,
+        mix: {
+          ...(search
+            ? {
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' } },
+                  { description: { contains: search, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+          ...(profiles.length ? { flavorProfiles: { hasSome: profiles } } : {}),
+          ...(tags.length ? { tags: { hasSome: tags } } : {}),
+          ...(manufacturerIds.length || tobaccoIds.length
+            ? {
+                components: {
+                  some: componentFilter,
+                },
+              }
+            : {}),
+        },
       },
       include: {
-        components: {
+        mix: {
           include: {
-            tobacco: { include: { manufacturer: true } },
+            components: {
+              include: {
+                tobacco: { include: { manufacturer: true } },
+              },
+            },
+            author: true,
           },
         },
-        author: true,
       },
+      orderBy: { createdAt: 'desc' },
     });
 
-    const mixIds = mixes.map((mix) => mix.id);
+    const mixIds = favorites.map((item) => item.mixId);
     const [ratingSummaryRows, sessionCountRows] = await Promise.all([
       mixIds.length
         ? prisma.mixRating.groupBy({
@@ -228,23 +204,25 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
 
     const filteredByRating =
       minRating !== undefined
-        ? mixes.filter((mix) => (avgRatingByMixId[mix.id] ?? 0) >= minRating)
-        : mixes;
+        ? favorites.filter((item) => (avgRatingByMixId[item.mixId] ?? 0) >= minRating)
+        : favorites;
 
     const sorted = [...filteredByRating].sort((a, b) => {
       if (sort === 'rating') {
-        const avgDiff = (avgRatingByMixId[b.id] ?? 0) - (avgRatingByMixId[a.id] ?? 0);
+        const avgDiff = (avgRatingByMixId[b.mixId] ?? 0) - (avgRatingByMixId[a.mixId] ?? 0);
         if (avgDiff !== 0) {
           return avgDiff;
         }
-        const countDiff = (ratingCountByMixId[b.id] ?? 0) - (ratingCountByMixId[a.id] ?? 0);
+        const countDiff =
+          (ratingCountByMixId[b.mixId] ?? 0) - (ratingCountByMixId[a.mixId] ?? 0);
         if (countDiff !== 0) {
           return countDiff;
         }
       }
 
       if (sort === 'popularity') {
-        const sessionDiff = (sessionCountByMixId[b.id] ?? 0) - (sessionCountByMixId[a.id] ?? 0);
+        const sessionDiff =
+          (sessionCountByMixId[b.mixId] ?? 0) - (sessionCountByMixId[a.mixId] ?? 0);
         if (sessionDiff !== 0) {
           return sessionDiff;
         }
@@ -257,71 +235,55 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
     return reply.send({ items: paged });
   });
 
-  app.get('/mixes/:id', async (request, reply) => {
-    const id = (request.params as { id: string }).id;
-    const mix = await prisma.mix.findUnique({
-      where: { id },
-      include: {
-        components: { include: { tobacco: { include: { manufacturer: true } } } },
-        author: true,
-      },
+  app.get('/favorites/ids', { preHandler: requireAuth }, async (request, reply) => {
+    const rows = await prisma.favoriteMix.findMany({
+      where: { userId: request.user!.id },
+      select: { mixId: true },
     });
-
-    if (!mix) {
-      return reply.status(404).send({ error: 'Mix not found' });
-    }
-
-    return reply.send(mix);
+    return reply.send({ items: rows.map((row) => row.mixId) });
   });
 
-  app.post('/mixes', { preHandler: requireAuth }, async (request, reply) => {
-    const parseResult = mixCreateSchema.safeParse(request.body);
+  app.post('/favorites', { preHandler: requireAuth }, async (request, reply) => {
+    const parseResult = createSchema.safeParse(request.body);
     if (!parseResult.success) {
       return reply.status(400).send({ error: 'Invalid payload' });
     }
 
-    const validationError = validateComponents(parseResult.data.components);
-    if (validationError) {
-      return reply.status(400).send({ error: validationError });
+    const mix = await prisma.mix.findUnique({ where: { id: parseResult.data.mixId } });
+    if (!mix) {
+      return reply.status(404).send({ error: 'Mix not found' });
     }
 
-    const tobaccoIds = dedupe(parseResult.data.components.map((item) => item.tobaccoId));
-    const tobaccos = await prisma.tobacco.findMany({
-      where: { id: { in: tobaccoIds } },
-      select: {
-        id: true,
-        flavorProfiles: true,
-      },
-    });
-
-    if (tobaccos.length !== tobaccoIds.length) {
-      return reply.status(400).send({ error: 'One or more tobaccos not found' });
-    }
-
-    const flavorProfiles = dedupe(tobaccos.flatMap((tobacco) => tobacco.flavorProfiles));
-    const tags = dedupe((parseResult.data.tags ?? []).map((item) => item.toLowerCase().trim()));
-
-    const mix = await prisma.mix.create({
-      data: {
-        name: parseResult.data.name,
-        description: parseResult.data.description ?? null,
-        flavorProfiles,
-        tags,
-        isUserMix: true,
-        authorId: request.user!.id,
-        components: {
-          create: parseResult.data.components.map((component) => ({
-            tobaccoId: component.tobaccoId,
-            proportion: component.proportion,
-          })),
+    const favorite = await prisma.favoriteMix.upsert({
+      where: {
+        userId_mixId: {
+          userId: request.user!.id,
+          mixId: parseResult.data.mixId,
         },
       },
-      include: {
-        components: { include: { tobacco: { include: { manufacturer: true } } } },
-        author: true,
+      create: {
+        userId: request.user!.id,
+        mixId: parseResult.data.mixId,
+      },
+      update: {},
+    });
+
+    return reply.status(201).send(favorite);
+  });
+
+  app.delete('/favorites/:mixId', { preHandler: requireAuth }, async (request, reply) => {
+    const parseResult = z.object({ mixId: z.string().uuid() }).safeParse(request.params);
+    if (!parseResult.success) {
+      return reply.status(400).send({ error: 'Invalid params' });
+    }
+
+    await prisma.favoriteMix.deleteMany({
+      where: {
+        userId: request.user!.id,
+        mixId: parseResult.data.mixId,
       },
     });
 
-    return reply.status(201).send(mix);
+    return reply.send({ ok: true });
   });
 };

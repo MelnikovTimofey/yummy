@@ -71,8 +71,8 @@ Notes:
 
 ## Mixes
 
-- `GET /mixes?authorId=&limit=&offset=` (auth)
-- `GET /mixes/:id` (auth)
+- `GET /mixes?search=&authorId=&isUserMix=&manufacturerId=&manufacturerIds=&tobaccoId=&tobaccoIds=&profile=&profiles=&tag=&tags=&minRating=&sort=&limit=&offset=`
+- `GET /mixes/:id`
 - `POST /mixes` (auth)
 
 ## Sessions
@@ -83,8 +83,6 @@ Notes:
 
 ## Ratings
 
-- `GET /session-ratings?sessionId=` (auth)
-- `POST /session-ratings` (auth)
 - `GET /mix-ratings?mixId=` (auth)
 - `GET /mix-ratings/summary?mixId=` (auth)
 - `POST /mix-ratings` (auth)
@@ -93,6 +91,13 @@ Notes:
 
 - `GET /preference-profile` (auth)
 - `PUT /preference-profile` (auth)
+
+## Favorites
+
+- `GET /favorites?search=&manufacturerId=&manufacturerIds=&tobaccoId=&tobaccoIds=&profile=&profiles=&tag=&tags=&minRating=&sort=&limit=&offset=` (auth)
+- `GET /favorites/ids` (auth)
+- `POST /favorites` (auth)
+- `DELETE /favorites/:mixId` (auth)
 
 ## Recommendations
 
@@ -103,6 +108,10 @@ Response items include `source`:
 - `model` — персональная модель;
 - `top` — fallback по композитному скору (оценка + число сессий);
 - `cold_start` — fallback популярность + онбординг + диверсификация.
+
+## Home rails
+
+- `GET /home/rails` (public, optional auth header for personalized rails)
 
 ## ML training
 

@@ -25,6 +25,7 @@ type MixSeed = {
   name: string;
   authorEmail: string;
   description?: string | null;
+  tags?: string[];
   isUserMix?: boolean;
   components: MixComponentSeed[];
   sources?: string[];
@@ -139,6 +140,21 @@ const deriveFlavorProfiles = (tags: string[]) => {
   return Array.from(matched);
 };
 
+const extractTagsFromDescription = (description?: string | null) => {
+  if (!description) {
+    return [];
+  }
+
+  const matches = description.match(/#([\p{L}\p{N}_-]+)/gu) ?? [];
+  return Array.from(
+    new Set(
+      matches
+        .map((tag) => tag.slice(1).trim().toLowerCase())
+        .filter((tag) => tag.length > 0),
+    ),
+  );
+};
+
 const readJson = <T>(filePath: string): T =>
   JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T;
 
@@ -226,6 +242,7 @@ const upsertMixes = async (mixes: MixSeed[]) => {
     const author = await ensureSeedUser(mix.authorEmail);
 
     const mixComponents = new Map<string, number>();
+    const mixProfileSet = new Set<FlavorProfile>();
     for (const component of mix.components) {
       const tobaccoName = normalizeTobaccoName(component.tobacco);
       const manufacturer = await prisma.manufacturer.findUnique({
@@ -247,6 +264,10 @@ const upsertMixes = async (mixes: MixSeed[]) => {
         throw new Error(`Missing tobacco: ${component.manufacturer} ${tobaccoName}`);
       }
 
+      for (const profile of tobacco.flavorProfiles) {
+        mixProfileSet.add(profile);
+      }
+
       mixComponents.set(
         tobacco.id,
         (mixComponents.get(tobacco.id) ?? 0) + component.proportion
@@ -256,6 +277,14 @@ const upsertMixes = async (mixes: MixSeed[]) => {
     const componentList = Array.from(mixComponents.entries()).map(
       ([tobaccoId, proportion]) => ({ tobaccoId, proportion })
     );
+    const tags = Array.from(
+      new Set(
+        [...(mix.tags ?? []), ...extractTagsFromDescription(mix.description)].map((item) =>
+          item.trim().toLowerCase(),
+        ),
+      ),
+    ).filter((item) => item.length > 0);
+    const flavorProfiles = Array.from(mixProfileSet);
 
     const existing = await prisma.mix.findFirst({
       where: {
@@ -273,6 +302,8 @@ const upsertMixes = async (mixes: MixSeed[]) => {
         where: { id: existing.id },
         data: {
           description: mix.description ?? null,
+          tags,
+          flavorProfiles,
           isUserMix: mix.isUserMix ?? false,
           components: {
             create: componentList
@@ -284,6 +315,8 @@ const upsertMixes = async (mixes: MixSeed[]) => {
         data: {
           name: mix.name,
           description: mix.description ?? null,
+          tags,
+          flavorProfiles,
           isUserMix: mix.isUserMix ?? false,
           authorId: author.id,
           components: {

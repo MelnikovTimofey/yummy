@@ -5,12 +5,13 @@ import { loadAuthState, saveAuthState } from '../shared/authStorage';
 import { AuthState } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
 import { CatalogScreen } from './CatalogScreen';
+import { HomeScreen } from './HomeScreen';
 import { MixesScreen } from './MixesScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { RecommendationsScreen } from './RecommendationsScreen';
 import { SessionsScreen } from './SessionsScreen';
 
-type TabKey = 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
+type TabKey = 'home' | 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
 
 type Tab = {
   key: TabKey;
@@ -20,6 +21,12 @@ type Tab = {
 };
 
 const TABS: Tab[] = [
+  {
+    key: 'home',
+    label: 'Главная',
+    title: 'Главная',
+    subtitle: 'Рейлы миксов: рекомендации, редакция, аналитика и мои миксы.',
+  },
   {
     key: 'mixes',
     label: 'Миксы',
@@ -53,7 +60,7 @@ const TABS: Tab[] = [
 ];
 
 export const App = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('mixes');
+  const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
   const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
@@ -66,12 +73,12 @@ export const App = () => {
 
   const onSignOut = useCallback(() => {
     onAuthUpdate({ tokens: null, user: null });
-    setActiveTab('mixes');
+    setActiveTab('home');
   }, [onAuthUpdate]);
 
   const onPreferencesSaved = useCallback(() => {
     setRecommendationsRefreshSignal((current) => current + 1);
-    setActiveTab('recommendations');
+    setActiveTab('home');
   }, []);
 
   useEffect(() => {
@@ -121,11 +128,16 @@ export const App = () => {
           <header className="topbar">
             <p className="brand">ВКУСНО</p>
             <p className="tagline">Арома ателье</p>
-            <h1>Авторизация</h1>
-            <p className="subtitle">Вход через magic link для доступа к персональным данным.</p>
+            <h1>Главная</h1>
+            <p className="subtitle">Редакторские и аналитические рейлы доступны без входа.</p>
           </header>
           <main className="content">
-            <AuthScreen onAuthUpdate={onAuthUpdate} />
+            <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+            <section className="card">
+              <p className="card-title">Авторизация</p>
+              <p className="card-text">Войдите, чтобы получить персональные рекомендации и свои миксы.</p>
+              <AuthScreen onAuthUpdate={onAuthUpdate} />
+            </section>
           </main>
         </div>
       </div>
@@ -146,6 +158,9 @@ export const App = () => {
         </header>
 
         <main className="content">
+          {activeTab === 'home' ? (
+            <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+          ) : null}
           {activeTab === 'mixes' ? <MixesScreen authState={authState} onAuthUpdate={onAuthUpdate} /> : null}
           {activeTab === 'sessions' ? (
             <SessionsScreen authState={authState} onAuthUpdate={onAuthUpdate} />
@@ -167,6 +182,7 @@ export const App = () => {
             />
           ) : null}
           {activeTab !== 'mixes' &&
+          activeTab !== 'home' &&
           activeTab !== 'catalog' &&
           activeTab !== 'sessions' &&
           activeTab !== 'recommendations' &&

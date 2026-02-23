@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  addFavorite,
   createMix,
   getManufacturers,
+  getFavoriteMixIds,
   getMixById,
   getMixes,
   getMixRatings,
   getMixRatingSummaries,
   getTobaccos,
+  removeFavorite,
 } from '../shared/apiClient';
 import {
   AuthState,
@@ -42,6 +45,7 @@ const PROFILE_OPTIONS: Array<{ value: '' | FlavorProfile; label: string }> = [
 
 export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
+  const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
   const [ratings, setRatings] = useState<Record<string, MixRating>>({});
   const [summaries, setSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
@@ -90,6 +94,28 @@ export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
       .then((response) => setCreateTobaccos(response.items))
       .catch(() => setCreateTobaccos([]));
   }, []);
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!authState.tokens) {
+        return;
+      }
+
+      try {
+        const response = await getFavoriteMixIds(authState.tokens, onAuthUpdate);
+        setFavoriteMixIds(
+          response.items.reduce<Record<string, true>>((acc, mixId) => {
+            acc[mixId] = true;
+            return acc;
+          }, {}),
+        );
+      } catch {
+        setFavoriteMixIds({});
+      }
+    };
+
+    void loadFavorites();
+  }, [authState.tokens, onAuthUpdate, reloadSignal]);
 
   useEffect(() => {
     const loadRatings = async () => {
@@ -279,6 +305,32 @@ export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
     }
   };
 
+  const toggleFavorite = async (mixId: string) => {
+    if (!authState.tokens) {
+      return;
+    }
+
+    const isFavorite = Boolean(favoriteMixIds[mixId]);
+    try {
+      if (isFavorite) {
+        await removeFavorite(authState.tokens, onAuthUpdate, mixId);
+        setFavoriteMixIds((current) => {
+          const next = { ...current };
+          delete next[mixId];
+          return next;
+        });
+      } else {
+        await addFavorite(authState.tokens, onAuthUpdate, mixId);
+        setFavoriteMixIds((current) => ({
+          ...current,
+          [mixId]: true,
+        }));
+      }
+    } catch {
+      // Ignore toggle errors and keep current state.
+    }
+  };
+
   if (view === 'detail') {
     return (
       <section className="sessions-layout">
@@ -313,6 +365,11 @@ export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
               {' · '}
               Средняя: <b>{summaries[activeMix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
             </p>
+            <div className="mix-actions">
+              <button type="button" className="ghost-button" onClick={() => toggleFavorite(activeMix.id)}>
+                {favoriteMixIds[activeMix.id] ? 'Убрать из избранного' : 'В избранное'}
+              </button>
+            </div>
             <p className="hint">
               Автор: {activeMix.author?.email ?? 'неизвестно'}
               {' · '}
@@ -515,6 +572,9 @@ export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
             <div className="mix-actions">
               <button type="button" className="ghost-button" onClick={() => openMixDetail(mix.id)}>
                 Карточка микса
+              </button>
+              <button type="button" className="ghost-button" onClick={() => toggleFavorite(mix.id)}>
+                {favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'В избранное'}
               </button>
             </div>
           </article>

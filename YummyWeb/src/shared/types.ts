@@ -31,6 +31,8 @@ export type Mix = {
   id: string;
   name: string;
   description?: string | null;
+  flavorProfiles?: FlavorProfile[];
+  tags?: string[];
   isUserMix?: boolean;
   createdAt?: string;
   author?: ApiUser;
@@ -78,18 +80,29 @@ export type SmokingSession = {
   mix: Mix;
 };
 
-export type SessionRating = {
-  id: string;
-  sessionId: string;
-  rating: number;
-};
-
 export type PreferenceProfile = {
   id: string;
   userId: string;
   likedProfiles: FlavorProfile[];
   dislikedProfiles: FlavorProfile[];
   favoriteManufacturerIds: string[];
+};
+
+export type FavoriteMix = {
+  id: string;
+  mixId: string;
+  userId: string;
+  createdAt: string;
+  mix: Mix;
+};
+
+export type HomeRail = {
+  id: string;
+  type: 'recommendations' | 'editorial' | 'analytics' | 'my-mixes';
+  title: string;
+  size?: 'hero' | 'default';
+  source?: 'model' | 'fallback';
+  items: Mix[];
 };
 
 export type AuthState = {
