@@ -429,6 +429,31 @@ const loadHookahPortalTobaccos = async (
     options.concurrency,
   );
 
+  const parsedByUrl = new Set(parsedTobaccos.map((item) => item.url));
+  const missingCatalogUrls = catalogUrls.filter((url) => !parsedByUrl.has(normalizeUrl(url)));
+  if (missingCatalogUrls.length) {
+    let recovered = 0;
+    for (const url of missingCatalogUrls) {
+      try {
+        const html = await fetchText(url, options.timeoutMs);
+        const parsed = parseTobaccoPage(html, url);
+        if (parsed && !parsedByUrl.has(parsed.url)) {
+          parsedTobaccos.push(parsed);
+          parsedByUrl.add(parsed.url);
+          recovered += 1;
+        }
+      } catch {
+        // ignore and keep partial dataset
+      }
+    }
+
+    if (recovered > 0) {
+      console.log(
+        `[hookahportal] recovered ${recovered}/${missingCatalogUrls.length} fallback tobaccos`,
+      );
+    }
+  }
+
   const tobaccos: TobaccoSeed[] = [];
   for (const parsed of parsedTobaccos) {
     tobaccos.push(parsed.seed);
