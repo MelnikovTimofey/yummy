@@ -53,28 +53,23 @@ npm run dev
 ```json
 {
   "includeLocalSeeds": true,
-  "includeMustHaveMixes": false,
   "includeHookahPortalTobaccos": false,
-  "mustHaveFromId": 1,
-  "mustHaveToId": 2000,
-  "hookahPortalLimit": 250,
-  "hookahPortalDelayMs": 100,
-  "delayMs": 250
+  "hookahPortalTobaccosLimit": 250,
+  "hookahPortalMixesLimit": 250,
+  "hookahPortalDelayMs": 100
 }
 ```
 
 Минимум один источник должен быть включен:
 - `includeLocalSeeds`
-- `includeMustHaveMixes`
 - `includeHookahPortalTobaccos`
 
 Если задан `UPDATER_API_KEY`, нужно передать заголовок `x-api-key`.
 
 ## Источники данных
 
-- `local-seed`: файлы `backend/seed/tobaccos.json` и `backend/seed/mixes.json`
-- `musthave-mixes`: парсинг карточек миксов MustHave
-- `hookahportal-tobaccos-test`: тестовый импорт табаков из `https://hookahportal.ru/tobaccos.xml`
+- `local-seed`: только табаки из `backend/seed/tobaccos.json`
+- `hookahportal-catalog-test`: тестовый импорт табаков и миксов из `https://hookahportal.ru`
 
 ## Test-only источник HookahPortal
 
@@ -85,14 +80,31 @@ npm run dev
 ```json
 {
   "includeHookahPortalTobaccos": true,
-  "hookahPortalLimit": 250
+  "hookahPortalTobaccosLimit": 2683,
+  "hookahPortalMixesLimit": 1018
 }
 ```
 
 Рекомендуется использовать только в тестовом контуре.
 
+## Локальный JSON-кеш HookahPortal
+
+Updater поддерживает кеш в файлах:
+- `cache/hookahportal/tobaccos.json`
+- `cache/hookahportal/mixes.json`
+
+Параметры окружения:
+- `HOOKAHPORTAL_CACHE_DIR` путь к кешу
+- `HOOKAHPORTAL_CACHE_READ=true|false` читать данные из кеша
+- `HOOKAHPORTAL_CACHE_WRITE=true|false` записывать кеш после загрузки
+- `HOOKAHPORTAL_CONCURRENCY` параллельная загрузка страниц
+- `HOOKAHPORTAL_TIMEOUT_MS` таймаут одного HTTP-запроса
+
+Рекомендуемый режим для локальной разработки:
+- первый прогон: `HOOKAHPORTAL_CACHE_READ=false`, `HOOKAHPORTAL_CACHE_WRITE=true`
+- повторные прогоны: `HOOKAHPORTAL_CACHE_READ=true`, `HOOKAHPORTAL_CACHE_WRITE=false`
+
 ## Ограничения текущего этапа
 
 - Пока нет cron внутри сервиса (запуск через внешний scheduler/CI).
-- Источник табаков сейчас только из локального seed.
 - Логика нормализации и алиасы базовые; будут расширяться отдельными PR.

@@ -1,7 +1,7 @@
-import { FlavorProfile } from '../../../../backend/node_modules/@prisma/client';
 import { prisma } from '../db';
 import { CatalogSourcePayload, MixSeed, RefreshStats, TobaccoSeed } from '../types';
 import {
+  FlavorProfile,
   dedupe,
   deriveFlavorProfiles,
   extractTagsFromDescription,
@@ -161,7 +161,7 @@ const buildTobaccoLookup = async (mixes: MixSeed[]): Promise<TobaccoLookup> => {
   const tobaccoLookup: TobaccoLookup = new Map();
 
   await Promise.all(
-    manufacturers.map(async (manufacturer) => {
+    manufacturers.map(async (manufacturer: { id: string; name: string }) => {
       const tobaccoNames = dedupe(
         mixes
           .flatMap((mix) => mix.components)

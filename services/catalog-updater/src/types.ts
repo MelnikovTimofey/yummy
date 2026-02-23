@@ -34,13 +34,10 @@ export type CatalogSourcePayload = {
 
 export type RefreshParams = {
   includeLocalSeeds: boolean;
-  includeMustHaveMixes: boolean;
   includeHookahPortalTobaccos: boolean;
-  mustHaveFromId?: number;
-  mustHaveToId?: number;
-  hookahPortalLimit?: number;
+  hookahPortalTobaccosLimit?: number;
+  hookahPortalMixesLimit?: number;
   hookahPortalDelayMs?: number;
-  delayMs?: number;
 };
 
 export type RefreshStats = {

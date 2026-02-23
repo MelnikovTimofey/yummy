@@ -39,15 +39,18 @@ export const config = {
   seedDir: process.env.CATALOG_SEED_DIR
     ? path.resolve(process.env.CATALOG_SEED_DIR)
     : path.resolve(process.cwd(), '../../backend/seed'),
-  mustHave: {
-    baseUrl: process.env.MUSTHAVE_BASE_URL ?? 'https://musthave.ru/showmixes/view/',
-    fromId: toNumber(process.env.MUSTHAVE_ID_FROM, 1),
-    toId: toNumber(process.env.MUSTHAVE_ID_TO, 2000),
-    delayMs: toNumber(process.env.MUSTHAVE_DELAY_MS, 250),
-  },
   hookahPortal: {
     tobaccosSitemapUrl: process.env.HOOKAHPORTAL_TOBACCOS_SITEMAP_URL ?? 'https://hookahportal.ru/tobaccos.xml',
-    maxItems: toNumber(process.env.HOOKAHPORTAL_MAX_ITEMS, 250),
+    mixesSitemapUrl: process.env.HOOKAHPORTAL_MIXES_SITEMAP_URL ?? 'https://hookahportal.ru/mixes.xml',
+    maxTobaccos: toNumber(process.env.HOOKAHPORTAL_MAX_TOBACCOS, 250),
+    maxMixes: toNumber(process.env.HOOKAHPORTAL_MAX_MIXES, 250),
     delayMs: toNumber(process.env.HOOKAHPORTAL_DELAY_MS, 100),
+    concurrency: toNumber(process.env.HOOKAHPORTAL_CONCURRENCY, 12),
+    timeoutMs: toNumber(process.env.HOOKAHPORTAL_TIMEOUT_MS, 15000),
+    cacheDir: process.env.HOOKAHPORTAL_CACHE_DIR
+      ? path.resolve(process.env.HOOKAHPORTAL_CACHE_DIR)
+      : path.resolve(process.cwd(), './cache/hookahportal'),
+    cacheRead: toBoolean(process.env.HOOKAHPORTAL_CACHE_READ, true),
+    cacheWrite: toBoolean(process.env.HOOKAHPORTAL_CACHE_WRITE, true),
   },
 };

@@ -54,7 +54,7 @@ Catalog updater API: `http://localhost:3011`.
 ```
 curl -X POST http://localhost:3011/jobs/refresh \
   -H 'content-type: application/json' \
-  -d '{"includeLocalSeeds": true, "includeMustHaveMixes": false, "includeHookahPortalTobaccos": false}'
+  -d '{"includeLocalSeeds": true, "includeHookahPortalTobaccos": false}'
 ```
 
 Если в updater задан `UPDATER_API_KEY`, передавайте заголовок `x-api-key`.
@@ -77,7 +77,8 @@ Tobaccos:
 - Deus Perfume page is the only source for Deus flavors.
 
 Mixes:
-- MustHave mixes page is the only source for seeded mixes.
+- Local seed-файл не используется для импорта миксов.
+- Тестовый источник миксов: HookahPortal (`includeHookahPortalTobaccos=true`).
 
 Notes:
 - Descriptions are short paraphrases of source text.

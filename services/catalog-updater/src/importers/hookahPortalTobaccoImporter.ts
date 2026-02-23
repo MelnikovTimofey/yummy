@@ -1,12 +1,37 @@
-import { CatalogSourcePayload, TobaccoSeed } from '../types';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { CatalogSourcePayload, MixSeed, TobaccoSeed } from '../types';
 
 type HookahPortalOptions = {
-  sitemapUrl: string;
-  maxItems: number;
+  tobaccosSitemapUrl: string;
+  mixesSitemapUrl: string;
+  maxTobaccos: number;
+  maxMixes: number;
   delayMs: number;
+  concurrency: number;
+  timeoutMs: number;
+  cacheDir: string;
+  cacheRead: boolean;
+  cacheWrite: boolean;
 };
 
+type ParsedTobacco = {
+  seed: TobaccoSeed;
+  url: string;
+};
+
+type CacheEnvelope<T> = {
+  fetchedAt: string;
+  count: number;
+  items: T[];
+};
+
+const HOOKAHPORTAL_AUTHOR = 'hookahportal';
+const PROGRESS_STEP = 100;
+
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const normalizeWhitespace = (value: string) => value.replace(/\s+/g, ' ').trim();
 
 const decodeHtml = (value: string) =>
   value
@@ -21,13 +46,13 @@ const decodeHtml = (value: string) =>
     .replace(/&hellip;/g, '…');
 
 const stripTags = (value: string) =>
-  decodeHtml(
-    value
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim(),
+  normalizeWhitespace(
+    decodeHtml(
+      value
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' '),
+    ),
   );
 
 const firstMatch = (value: string, pattern: RegExp) => {
@@ -65,7 +90,65 @@ const normalizeStrength = (input: string | null) => {
   return 5;
 };
 
-const parseXmlUrls = (xml: string) => {
+const normalizeUrl = (url: string) => url.trim().replace(/\/+$/, '');
+
+const safeConcurrency = (value: number) => {
+  if (!Number.isFinite(value) || value < 1) {
+    return 1;
+  }
+
+  return Math.floor(value);
+};
+
+const cacheFiles = (cacheDir: string) => ({
+  tobaccos: path.join(cacheDir, 'tobaccos.json'),
+  mixes: path.join(cacheDir, 'mixes.json'),
+});
+
+const readCache = async <T>(filePath: string): Promise<T[] | null> => {
+  try {
+    const raw = await fs.readFile(filePath, 'utf-8');
+    const parsed = JSON.parse(raw) as CacheEnvelope<T>;
+    if (!parsed || !Array.isArray(parsed.items)) {
+      return null;
+    }
+    return parsed.items;
+  } catch {
+    return null;
+  }
+};
+
+const writeCache = async <T>(filePath: string, items: T[]) => {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const payload: CacheEnvelope<T> = {
+    fetchedAt: new Date().toISOString(),
+    count: items.length,
+    items,
+  };
+  await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');
+};
+
+const buildTobaccoLookups = (tobaccos: TobaccoSeed[]) => {
+  const tobaccoByUrl = new Map<string, TobaccoSeed>();
+  const tobaccoByDisplayName = new Map<string, TobaccoSeed>();
+
+  for (const tobacco of tobaccos) {
+    for (const source of tobacco.sources ?? []) {
+      if (source.includes('/tobacco/')) {
+        tobaccoByUrl.set(normalizeUrl(source), tobacco);
+      }
+    }
+
+    tobaccoByDisplayName.set(`${tobacco.manufacturer} ${tobacco.name}`.toLowerCase(), tobacco);
+  }
+
+  return {
+    tobaccoByUrl,
+    tobaccoByDisplayName,
+  };
+};
+
+const parseXmlUrls = (xml: string, segment: '/tobacco/' | '/mix/') => {
   const urls: string[] = [];
   const locRegex = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
 
@@ -75,7 +158,7 @@ const parseXmlUrls = (xml: string) => {
     match = locRegex.exec(xml);
   }
 
-  return urls.filter((url) => url.includes('/tobacco/'));
+  return urls.filter((url) => url.includes(segment)).map(normalizeUrl);
 };
 
 const parsePropertyMap = (html: string) => {
@@ -114,8 +197,11 @@ const parsePropertyMap = (html: string) => {
   return result;
 };
 
-const parseTobaccoPage = (html: string, url: string): TobaccoSeed | null => {
-  const productInfo = firstMatch(html, /<div class="product-info">([\s\S]*?)<\/div>\s*<div class="create-mix-button">/i);
+const parseTobaccoPage = (html: string, url: string): ParsedTobacco | null => {
+  const productInfo = firstMatch(
+    html,
+    /<div class="product-info">([\s\S]*?)<\/div>\s*<div class="create-mix-button">/i,
+  );
   if (!productInfo) {
     return null;
   }
@@ -139,60 +225,254 @@ const parseTobaccoPage = (html: string, url: string): TobaccoSeed | null => {
   const flavorTags = Array.from(new Set([...flavor, ...tasteType]));
 
   return {
-    manufacturer: stripTags(manufacturer),
-    website: 'https://hookahportal.ru/',
+    seed: {
+      manufacturer: stripTags(manufacturer),
+      website: 'https://hookahportal.ru/',
+      name: stripTags(name),
+      strength,
+      line,
+      description: description ? stripTags(description) : null,
+      flavorTags,
+      sources: [url],
+    },
+    url: normalizeUrl(url),
+  };
+};
+
+const parseMixPage = (
+  html: string,
+  url: string,
+  tobaccoByUrl: Map<string, TobaccoSeed>,
+  tobaccoByDisplayName: Map<string, TobaccoSeed>,
+): MixSeed | null => {
+  const name = firstMatch(
+    html,
+    /<div class="product-info product-info-desc">[\s\S]*?<h1>\s*([\s\S]*?)\s*<\/h1>/i,
+  );
+  if (!name) {
+    return null;
+  }
+
+  const descriptionMatch = firstMatch(
+    html,
+    /<div class="product-info product-info-desc">[\s\S]*?<p>\s*([\s\S]*?)\s*<\/p>/i,
+  );
+  const description = descriptionMatch ? stripTags(descriptionMatch) : null;
+
+  const listHtml = firstMatch(html, /<div id="list"[^>]*>([\s\S]*?)<\/div>\s*<div id="listTypes"/i);
+  if (!listHtml) {
+    return null;
+  }
+
+  const itemRegex =
+    /<div class="product-mix-specific__title pb-3">[\s\S]*?<span>\s*(\d{1,3})%\s*<\/span>[\s\S]*?<a href="([^"]+)"[^>]*>[\s\S]*?<h3>\s*([\s\S]*?)\s*<\/h3>/gi;
+
+  const components: MixSeed['components'] = [];
+  let itemMatch = itemRegex.exec(listHtml);
+  while (itemMatch) {
+    const proportion = Number(itemMatch[1]);
+    const componentUrl = normalizeUrl(itemMatch[2]);
+    const rawName = stripTags(itemMatch[3]);
+
+    const tobaccoFromUrl = tobaccoByUrl.get(componentUrl);
+    const tobaccoFromName = tobaccoByDisplayName.get(rawName.toLowerCase());
+    const tobacco = tobaccoFromUrl ?? tobaccoFromName ?? null;
+    if (!tobacco || !Number.isFinite(proportion) || proportion <= 0) {
+      itemMatch = itemRegex.exec(listHtml);
+      continue;
+    }
+
+    components.push({
+      manufacturer: tobacco.manufacturer,
+      tobacco: tobacco.name,
+      proportion,
+    });
+
+    itemMatch = itemRegex.exec(listHtml);
+  }
+
+  if (!components.length) {
+    return null;
+  }
+
+  return {
     name: stripTags(name),
-    strength,
-    line,
-    description: description ? stripTags(description) : null,
-    flavorTags,
+    authorEmail: HOOKAHPORTAL_AUTHOR,
+    description: description && description.length > 0 ? description : null,
+    isUserMix: false,
+    components,
     sources: [url],
   };
 };
 
-const fetchText = async (url: string) => {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'yummy-catalog-updater/0.1 (test-source-hookahportal)',
-      Accept: 'text/html,application/xml',
-    },
-  });
+const fetchText = async (url: string, timeoutMs: number) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'yummy-catalog-updater/0.1 (test-source-hookahportal)',
+        Accept: 'text/html,application/xml',
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} for ${url}`);
+    }
+
+    return response.text();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return response.text();
 };
 
-export const loadHookahPortalTobaccos = async (
-  options: HookahPortalOptions,
-): Promise<CatalogSourcePayload> => {
-  const sitemap = await fetchText(options.sitemapUrl);
-  const urls = parseXmlUrls(sitemap).slice(0, options.maxItems);
+const collectInParallel = async <T>(
+  total: number,
+  worker: (index: number) => Promise<T | null>,
+  concurrency: number,
+): Promise<T[]> => {
+  const result: T[] = [];
+  const limit = Math.min(Math.max(safeConcurrency(concurrency), 1), Math.max(total, 1));
+  let cursor = 0;
+  let done = 0;
 
-  const tobaccos: TobaccoSeed[] = [];
-
-  for (const url of urls) {
-    try {
-      const html = await fetchText(url);
-      const parsed = parseTobaccoPage(html, url);
-      if (parsed) {
-        tobaccos.push(parsed);
+  const runners = Array.from({ length: limit }).map(async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= total) {
+        return;
       }
-    } catch {
-      // Для тестового источника пропускаем битые страницы.
-    }
 
-    if (options.delayMs > 0) {
-      await delay(options.delayMs);
+      const item = await worker(index);
+      done += 1;
+
+      if (item) {
+        result.push(item);
+      }
+
+      if (done % PROGRESS_STEP === 0 || done === total) {
+        console.log(`[hookahportal] progress ${done}/${total}`);
+      }
+    }
+  });
+
+  await Promise.all(runners);
+  return result;
+};
+
+const loadHookahPortalTobaccos = async (
+  options: HookahPortalOptions,
+): Promise<{ tobaccos: TobaccoSeed[]; tobaccoByUrl: Map<string, TobaccoSeed>; tobaccoByDisplayName: Map<string, TobaccoSeed> }> => {
+  const cachePath = cacheFiles(options.cacheDir).tobaccos;
+  if (options.cacheRead) {
+    const cached = await readCache<TobaccoSeed>(cachePath);
+    if (cached !== null) {
+      console.log(`[hookahportal] tobaccos loaded from cache: ${cached.length}`);
+      const lookups = buildTobaccoLookups(cached);
+      return {
+        tobaccos: cached,
+        tobaccoByUrl: lookups.tobaccoByUrl,
+        tobaccoByDisplayName: lookups.tobaccoByDisplayName,
+      };
     }
   }
 
+  const sitemap = await fetchText(options.tobaccosSitemapUrl, options.timeoutMs);
+  const urls = parseXmlUrls(sitemap, '/tobacco/').slice(0, options.maxTobaccos);
+
+  const parsedTobaccos = await collectInParallel<ParsedTobacco>(
+    urls.length,
+    async (index) => {
+      const url = urls[index];
+      try {
+        const html = await fetchText(url, options.timeoutMs);
+        return parseTobaccoPage(html, url);
+      } catch {
+        return null;
+      } finally {
+        if (options.delayMs > 0) {
+          await delay(options.delayMs);
+        }
+      }
+    },
+    options.concurrency,
+  );
+
+  const tobaccos: TobaccoSeed[] = [];
+  for (const parsed of parsedTobaccos) {
+    tobaccos.push(parsed.seed);
+  }
+
+  if (options.cacheWrite) {
+    await writeCache(cachePath, tobaccos);
+    console.log(`[hookahportal] tobaccos cache saved: ${cachePath}`);
+  }
+
+  const lookups = buildTobaccoLookups(tobaccos);
+
   return {
-    source: 'hookahportal-tobaccos-test',
     tobaccos,
-    mixes: [],
+    tobaccoByUrl: lookups.tobaccoByUrl,
+    tobaccoByDisplayName: lookups.tobaccoByDisplayName,
+  };
+};
+
+const loadHookahPortalMixes = async (
+  options: HookahPortalOptions,
+  tobaccoByUrl: Map<string, TobaccoSeed>,
+  tobaccoByDisplayName: Map<string, TobaccoSeed>,
+) => {
+  const cachePath = cacheFiles(options.cacheDir).mixes;
+  if (options.cacheRead) {
+    const cached = await readCache<MixSeed>(cachePath);
+    if (cached !== null) {
+      console.log(`[hookahportal] mixes loaded from cache: ${cached.length}`);
+      return cached;
+    }
+  }
+
+  const sitemap = await fetchText(options.mixesSitemapUrl, options.timeoutMs);
+  const urls = parseXmlUrls(sitemap, '/mix/').slice(0, options.maxMixes);
+
+  const mixes = await collectInParallel<MixSeed>(
+    urls.length,
+    async (index) => {
+      const url = urls[index];
+      try {
+        const html = await fetchText(url, options.timeoutMs);
+        return parseMixPage(html, url, tobaccoByUrl, tobaccoByDisplayName);
+      } catch {
+        return null;
+      } finally {
+        if (options.delayMs > 0) {
+          await delay(options.delayMs);
+        }
+      }
+    },
+    options.concurrency,
+  );
+
+  if (options.cacheWrite) {
+    await writeCache(cachePath, mixes);
+    console.log(`[hookahportal] mixes cache saved: ${cachePath}`);
+  }
+
+  return mixes;
+};
+
+export const loadHookahPortalCatalog = async (
+  options: HookahPortalOptions,
+): Promise<CatalogSourcePayload> => {
+  const { tobaccos, tobaccoByUrl, tobaccoByDisplayName } = await loadHookahPortalTobaccos(options);
+  const mixes = await loadHookahPortalMixes(options, tobaccoByUrl, tobaccoByDisplayName);
+
+  return {
+    source: 'hookahportal-catalog-test',
+    tobaccos,
+    mixes,
     fetchedAt: new Date().toISOString(),
   };
 };

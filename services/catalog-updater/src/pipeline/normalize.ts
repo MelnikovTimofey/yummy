@@ -1,4 +1,4 @@
-import { FlavorProfile } from '../../../../backend/node_modules/@prisma/client';
+export type FlavorProfile = 'sweet' | 'sour' | 'spicy' | 'fresh' | 'dessert' | 'tobacco';
 
 const normalize = (value: string) => value.toLowerCase().trim();
 
