@@ -80,6 +80,7 @@ export const App = () => {
   const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
   const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
+  const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
 
   const onAuthUpdate = useCallback((next: AuthState) => {
     setAuthState(next);
@@ -199,6 +200,21 @@ export const App = () => {
           <p className="subtitle">{tab.subtitle}</p>
           <p className="session-email">{authState.user.email}</p>
         </header>
+        <nav className="desktop-tabbar" aria-label="Основная навигация">
+          {visibleTabs.map((item) => {
+            const isActive = item.key === activeTab;
+            return (
+              <button
+                key={`desktop:${item.key}`}
+                type="button"
+                className={`desktop-tab ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveTab(item.key)}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
         <main className="content">
           {activeTab === 'home' ? (
@@ -275,7 +291,7 @@ export const App = () => {
         </main>
 
         <nav className="tabbar" aria-label="Основная навигация">
-          {TABS.filter((item) => item.inTabbar !== false).map((item) => {
+          {visibleTabs.map((item) => {
             const isActive = item.key === activeTab;
             return (
               <button

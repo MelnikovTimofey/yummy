@@ -951,6 +951,28 @@ h1 {
   font-weight: 600;
 }
 
+.desktop-tabbar {
+  display: none;
+}
+
+.desktop-tab {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-1);
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.desktop-tab.active {
+  border-color: #5e4a2e;
+  background: #251d15;
+  color: var(--accent-soft);
+}
+
 @media (max-width: 480px) {
   .app-bg {
     padding: 0;
@@ -990,5 +1012,85 @@ h1 {
 
   .home-hero h2 {
     font-size: 23px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-bg {
+    padding: 24px;
+  }
+
+  .phone-shell {
+    width: min(100%, 1320px);
+    min-height: calc(100dvh - 48px);
+    border-radius: 20px;
+    grid-template-rows: auto auto 1fr auto;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px 18px;
+    padding: 16px 24px;
+  }
+
+  .brand {
+    font-size: 30px;
+    letter-spacing: 4px;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  h1 {
+    margin: 0;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .subtitle {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: -6px;
+  }
+
+  .tagline {
+    margin: 0;
+    grid-column: 2;
+    grid-row: 3;
+    font-size: 11px;
+  }
+
+  .session-email {
+    margin: 0;
+    grid-column: 3;
+    grid-row: 1 / span 3;
+    text-align: right;
+  }
+
+  .desktop-tabbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 24px 10px;
+    border-bottom: 1px solid var(--line);
+    background: #141110;
+  }
+
+  .content {
+    padding: 14px 24px 18px;
+    gap: 16px;
+  }
+
+  .tabbar {
+    display: none;
+  }
+
+  .home-rail-title {
+    font-size: 30px;
+  }
+
+  .cinema-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
