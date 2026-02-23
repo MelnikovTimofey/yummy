@@ -8,6 +8,7 @@ import { FavoritesScreen } from './FavoritesScreen';
 import { HomeScreen } from './HomeScreen';
 import { MixesScreen } from './MixesScreen';
 import { ProfileScreen } from './ProfileScreen';
+import { RailScreen } from './RailScreen';
 import { SessionsScreen } from './SessionsScreen';
 
 type TabKey = 'home' | 'sessions' | 'catalog' | 'profile' | 'favorites' | 'mixes' | 'rail-list';
@@ -116,8 +117,8 @@ export const App = () => {
     setActiveTab('mixes');
   }, []);
 
-  const openRailList = useCallback((_railType: HomeRail['type']) => {
-    setSelectedRail(null);
+  const openRailList = useCallback((rail: HomeRail) => {
+    setSelectedRail(rail);
     setActiveTab('rail-list');
   }, []);
 
@@ -309,13 +310,7 @@ export const App = () => {
             />
           ) : null}
           {activeTab === 'rail-list' ? (
-            <section className="card">
-              <p className="card-title">{selectedRail?.title ?? 'Рейл'}</p>
-              <p className="card-text">Экран полного списка рейла будет подключён на следующем этапе.</p>
-              <button type="button" className="ghost-button" onClick={() => setActiveTab('home')}>
-                Назад на главную
-              </button>
-            </section>
+            <RailScreen rail={selectedRail} onOpenMix={openMixCard} onBack={() => setActiveTab('home')} />
           ) : null}
         </main>
 
