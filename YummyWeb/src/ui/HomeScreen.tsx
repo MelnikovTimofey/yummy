@@ -191,15 +191,22 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
               {rail.items.map((mix) => {
                 const profileTags = getProfileTags(mix);
                 return (
-                  <button
+                  <article
                     key={`${rail.id}:${mix.id}`}
-                    type="button"
                     className="home-item"
-                    disabled={!onOpenMix}
                     onClick={() => onOpenMix?.(mix.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onOpenMix?.(mix.id);
+                      }
+                    }}
                     style={{
                       background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
                     }}
+                    role="button"
+                    tabIndex={onOpenMix ? 0 : -1}
+                    aria-disabled={!onOpenMix}
                   >
                     <div className="home-item-overlay">
                       <div className="home-item-head">
@@ -223,6 +230,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                               event.stopPropagation();
                               void onToggleFavorite(mix.id);
                             }}
+                            disabled={!authState.tokens}
                             aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
                           >
                             {favoriteMixIds[mix.id] ? '♥' : '♡'}
@@ -243,7 +251,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                         ))}
                       </div>
                     </div>
-                  </button>
+                  </article>
                 );
               })}
             </div>

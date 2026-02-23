@@ -280,7 +280,29 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
       <section className="list-grid cinema-grid">
         {items.map((mix) => (
-          <article key={mix.id} className="mix-poster">
+          <article
+            key={mix.id}
+            className="mix-poster mix-poster-clickable"
+            onClick={() => {
+              if (onOpenMix) {
+                onOpenMix(mix.id);
+                return;
+              }
+              setActiveMix(mix);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (onOpenMix) {
+                  onOpenMix(mix.id);
+                  return;
+                }
+                setActiveMix(mix);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="mix-poster-overlay">
               <div className="mix-header">
                 <h3>{mix.name}</h3>
@@ -290,21 +312,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
               <p className="mix-ratings">
                 Средняя: <b>{summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
-              <div className="mix-actions cinema-actions">
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => {
-                    if (onOpenMix) {
-                      onOpenMix(mix.id);
-                      return;
-                    }
-                    setActiveMix(mix);
-                  }}
-                >
-                  Карточка
-                </button>
-              </div>
             </div>
           </article>
         ))}

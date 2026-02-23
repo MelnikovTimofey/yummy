@@ -280,7 +280,19 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
 
       <section className="list-grid cinema-grid">
         {items.map((favorite) => (
-          <article key={favorite.id} className="mix-poster favorite-poster">
+          <article
+            key={favorite.id}
+            className="mix-poster favorite-poster mix-poster-clickable"
+            onClick={() => onOpenMix(favorite.mix.id)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onOpenMix(favorite.mix.id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="mix-poster-overlay">
               <div className="mix-header">
                 <h3>{favorite.mix.name}</h3>
@@ -292,12 +304,17 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
                 {' · '}
                 Средняя: <b>{summaries[favorite.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
-              <div className="mix-actions cinema-actions">
-                <button type="button" className="ghost-button" onClick={() => onOpenMix(favorite.mix.id)}>
-                  Карточка
-                </button>
-                <button type="button" className="ghost-button" onClick={() => onRemove(favorite.mix.id)}>
-                  Убрать
+              <div className="mix-actions cinema-actions icon-action-row">
+                <button
+                  type="button"
+                  className="icon-btn fav-icon active"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void onRemove(favorite.mix.id);
+                  }}
+                  aria-label="Убрать из избранного"
+                >
+                  ♥
                 </button>
               </div>
             </div>

@@ -30,6 +30,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
   const [selectedMixId, setSelectedMixId] = useState('');
   const [locationType, setLocationType] = useState<'home' | 'lounge'>('home');
   const [locationName, setLocationName] = useState('');
+  const [pickSearch, setPickSearch] = useState('');
 
   const load = async () => {
     if (!authState.tokens) {
@@ -93,6 +94,23 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
     [mixes, selectedMixId],
   );
   const canOpenCreate = mixes.length > 0;
+  const filteredMixes = useMemo(() => {
+    const query = pickSearch.trim().toLowerCase();
+    if (!query) {
+      return mixes;
+    }
+
+    return mixes.filter((mix) => {
+      const source = [
+        mix.name,
+        mix.description ?? '',
+        ...mix.components.map((component) => component.tobacco.name),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return source.includes(query);
+    });
+  }, [mixes, pickSearch]);
 
   const onOpenCreate = () => {
     if (!canOpenCreate) {
@@ -113,11 +131,23 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
           Назад к созданию
         </button>
 
+        <section className="catalog-controls cinema-controls">
+          <div className="search-row">
+            <input
+              className="search-input"
+              type="search"
+              value={pickSearch}
+              onChange={(event) => setPickSearch(event.target.value)}
+              placeholder="Поиск микса по подстроке"
+            />
+          </div>
+        </section>
+
         {status === 'loading' ? <p className="screen-status">Загрузка миксов...</p> : null}
         {status === 'error' ? <p className="screen-status error">Не удалось загрузить список миксов.</p> : null}
 
         <section className="list-grid">
-          {mixes.map((mix) => (
+          {filteredMixes.map((mix) => (
             <article key={mix.id} className="card mix-card">
               <div className="mix-header">
                 <h3>{mix.name}</h3>

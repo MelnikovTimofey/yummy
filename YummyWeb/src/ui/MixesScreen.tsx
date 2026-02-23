@@ -529,8 +529,14 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 >
                   Добавить в сессию
                 </button>
-                <button type="button" className="ghost-button home-hero-secondary" onClick={() => toggleFavorite(activeMix.id)}>
-                  {favoriteMixIds[activeMix.id] ? 'Убрать из избранного' : 'В избранное'}
+                <button
+                  type="button"
+                  className={`icon-btn fav-icon ${favoriteMixIds[activeMix.id] ? 'active' : ''}`}
+                  disabled={detailActionPending}
+                  onClick={() => toggleFavorite(activeMix.id)}
+                  aria-label={favoriteMixIds[activeMix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
+                >
+                  {favoriteMixIds[activeMix.id] ? '♥' : '♡'}
                 </button>
               </div>
             </section>
@@ -838,10 +844,19 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
         {sortedItems.map((mix) => (
           <article
             key={mix.id}
-            className="mix-poster"
+            className="mix-poster mix-poster-clickable"
             style={{
               background: `linear-gradient(130deg, ${getMixTone(mix)}88 0%, #171717 60%, #101010 100%)`,
             }}
+            onClick={() => openMixDetail(mix.id)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openMixDetail(mix.id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
           >
             <div className="mix-poster-overlay">
               <div className="mix-header">
@@ -854,12 +869,17 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 {' · '}
                 Средняя: <b>{summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
-              <div className="mix-actions cinema-actions">
-                <button type="button" className="ghost-button" onClick={() => openMixDetail(mix.id)}>
-                  Карточка
-                </button>
-                <button type="button" className="ghost-button" onClick={() => toggleFavorite(mix.id)}>
-                  {favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'В избранное'}
+              <div className="mix-actions cinema-actions icon-action-row">
+                <button
+                  type="button"
+                  className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void toggleFavorite(mix.id);
+                  }}
+                  aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
+                >
+                  {favoriteMixIds[mix.id] ? '♥' : '♡'}
                 </button>
               </div>
             </div>
