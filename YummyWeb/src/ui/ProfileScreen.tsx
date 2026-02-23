@@ -38,6 +38,7 @@ export const ProfileScreen = ({
   const [likedProfiles, setLikedProfiles] = useState<FlavorProfile[]>([]);
   const [dislikedProfiles, setDislikedProfiles] = useState<FlavorProfile[]>([]);
   const [favoriteManufacturerIds, setFavoriteManufacturerIds] = useState<string[]>([]);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -132,6 +133,13 @@ export const ProfileScreen = ({
         <p className="card-title">Аккаунт</p>
         <p className="card-text">{authState.user?.email ?? 'Пользователь'}</p>
         <div className="profile-nav-grid">
+          <button
+            type="button"
+            className="ghost-button profile-nav-btn"
+            onClick={() => setPreferencesOpen((current) => !current)}
+          >
+            {preferencesOpen ? 'Скрыть предпочтения' : 'Предпочтения'}
+          </button>
           <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenFavorites}>
             Избранное
           </button>
@@ -147,68 +155,72 @@ export const ProfileScreen = ({
         </button>
       </section>
 
-      <section className="card">
-        <p className="card-title">Любимые профили</p>
-        <div className="chip-grid">
-          {FLAVOR_OPTIONS.map((option) => (
-            <button
-              key={`liked:${option.value}`}
-              type="button"
-              className={`option-chip ${likedProfiles.includes(option.value) ? 'liked' : ''}`}
-              onClick={() => toggleLikedProfile(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      {preferencesOpen ? (
+        <>
+          <section className="card">
+            <p className="card-title">Любимые профили</p>
+            <div className="chip-grid">
+              {FLAVOR_OPTIONS.map((option) => (
+                <button
+                  key={`liked:${option.value}`}
+                  type="button"
+                  className={`option-chip ${likedProfiles.includes(option.value) ? 'liked' : ''}`}
+                  onClick={() => toggleLikedProfile(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      <section className="card">
-        <p className="card-title">Нелюбимые профили</p>
-        <div className="chip-grid">
-          {FLAVOR_OPTIONS.map((option) => (
-            <button
-              key={`disliked:${option.value}`}
-              type="button"
-              className={`option-chip ${dislikedProfiles.includes(option.value) ? 'disliked' : ''}`}
-              onClick={() => toggleDislikedProfile(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </section>
+          <section className="card">
+            <p className="card-title">Нелюбимые профили</p>
+            <div className="chip-grid">
+              {FLAVOR_OPTIONS.map((option) => (
+                <button
+                  key={`disliked:${option.value}`}
+                  type="button"
+                  className={`option-chip ${dislikedProfiles.includes(option.value) ? 'disliked' : ''}`}
+                  onClick={() => toggleDislikedProfile(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      <section className="card">
-        <p className="card-title">Любимые бренды</p>
-        <p className="hint">{favoriteCountLabel}</p>
-        {status === 'loading' ? <p className="screen-status">Загрузка брендов...</p> : null}
-        {status === 'error' ? <p className="screen-status error">Не удалось загрузить бренды.</p> : null}
-        <div className="chip-grid">
-          {manufacturers.map((manufacturer) => (
-            <button
-              key={manufacturer.id}
-              type="button"
-              className={`option-chip ${favoriteManufacturerIds.includes(manufacturer.id) ? 'favorite' : ''}`}
-              onClick={() => toggleManufacturer(manufacturer.id)}
-            >
-              {manufacturer.name}
-            </button>
-          ))}
-        </div>
-      </section>
+          <section className="card">
+            <p className="card-title">Любимые бренды</p>
+            <p className="hint">{favoriteCountLabel}</p>
+            {status === 'loading' ? <p className="screen-status">Загрузка брендов...</p> : null}
+            {status === 'error' ? <p className="screen-status error">Не удалось загрузить бренды.</p> : null}
+            <div className="chip-grid">
+              {manufacturers.map((manufacturer) => (
+                <button
+                  key={manufacturer.id}
+                  type="button"
+                  className={`option-chip ${favoriteManufacturerIds.includes(manufacturer.id) ? 'favorite' : ''}`}
+                  onClick={() => toggleManufacturer(manufacturer.id)}
+                >
+                  {manufacturer.name}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      <section className="card">
-        <button
-          type="button"
-          className="search-button profile-save"
-          onClick={onSave}
-          disabled={saving}
-        >
-          Сохранить и обновить подборку
-        </button>
-        {feedback ? <p className="hint">{feedback}</p> : null}
-      </section>
+          <section className="card">
+            <button
+              type="button"
+              className="search-button profile-save"
+              onClick={onSave}
+              disabled={saving}
+            >
+              Сохранить и обновить подборку
+            </button>
+            {feedback ? <p className="hint">{feedback}</p> : null}
+          </section>
+        </>
+      ) : null}
     </section>
   );
 };
