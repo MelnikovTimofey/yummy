@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addFavorite,
   createMix,
+  createMixRating,
+  createSession,
   getManufacturers,
   getFavoriteMixIds,
   getMixById,
@@ -48,6 +50,15 @@ const PROFILE_OPTIONS: Array<{ value: '' | FlavorProfile; label: string }> = [
   { value: 'tobacco', label: 'Табачный' },
 ];
 
+const PROFILE_COLORS: Record<FlavorProfile, string> = {
+  sweet: '#ff8a4a',
+  sour: '#e3c64c',
+  spicy: '#db5a54',
+  fresh: '#53c0d8',
+  dessert: '#d78bf5',
+  tobacco: '#9c6f4f',
+};
+
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
@@ -78,6 +89,8 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   ]);
   const [createStatus, setCreateStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const [createFeedback, setCreateFeedback] = useState<string | null>(null);
+  const [detailFeedback, setDetailFeedback] = useState<string | null>(null);
+  const [detailActionPending, setDetailActionPending] = useState(false);
   const nextDraftComponentId = useRef(2);
 
   useEffect(() => {
@@ -371,6 +384,91 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     setSearch(searchDraft.trim());
   };
 
+  const buildConicGradient = (segments: Array<{ value: number; color: string }>) => {
+    if (!segments.length) {
+      return 'conic-gradient(#2f2b2a 0 100%)';
+    }
+
+    let start = 0;
+    const parts = segments.map((segment) => {
+      const end = start + segment.value;
+      const value = `${segment.color} ${start}% ${end}%`;
+      start = end;
+      return value;
+    });
+    return `conic-gradient(${parts.join(', ')})`;
+  };
+
+  const getTobaccoPieData = (mix: Mix) =>
+    mix.components.map((component, index) => ({
+      label: `${component.tobacco.manufacturer.name} ${component.tobacco.name}`,
+      value: component.proportion,
+      color: ['#3b80f5', '#26c281', '#d8873f', '#b96af0', '#e25f7c', '#79c251'][index % 6],
+    }));
+
+  const getFlavorPieData = (mix: Mix) => {
+    const map = new Map<FlavorProfile, number>();
+    for (const component of mix.components) {
+      const profiles = component.tobacco.flavorProfiles ?? [];
+      if (!profiles.length) {
+        continue;
+      }
+      const share = component.proportion / profiles.length;
+      for (const profile of profiles) {
+        map.set(profile, (map.get(profile) ?? 0) + share);
+      }
+    }
+
+    return Array.from(map.entries())
+      .map(([profile, value]) => ({
+        label: PROFILE_OPTIONS.find((item) => item.value === profile)?.label ?? profile,
+        value: Number(value.toFixed(2)),
+        color: PROFILE_COLORS[profile],
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+
+  const onAddToSession = async (mixId: string) => {
+    if (!authState.tokens) {
+      return;
+    }
+    setDetailActionPending(true);
+    setDetailFeedback(null);
+    try {
+      await createSession(authState.tokens, onAuthUpdate, {
+        mixId,
+        date: new Date().toISOString(),
+        locationType: 'home',
+      });
+      setDetailFeedback('Микс добавлен в сессию курения.');
+    } catch {
+      setDetailFeedback('Не удалось добавить микс в сессию.');
+    } finally {
+      setDetailActionPending(false);
+    }
+  };
+
+  const onRateFromDetail = async (mixId: string, rating: number) => {
+    if (!authState.tokens) {
+      return;
+    }
+    setDetailActionPending(true);
+    setDetailFeedback(null);
+    try {
+      const result = await createMixRating(authState.tokens, onAuthUpdate, { mixId, rating });
+      setRatings((current) => ({
+        ...current,
+        [mixId]: result,
+      }));
+      setDetailFeedback('Оценка сохранена.');
+      setReloadSignal((current) => current + 1);
+    } catch {
+      setDetailFeedback('Не удалось сохранить оценку.');
+    } finally {
+      setDetailActionPending(false);
+    }
+  };
+
   if (view === 'detail') {
     return (
       <section className="sessions-layout">
@@ -385,6 +483,11 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
         {activeMix ? (
           <article className="mix-detail-wrap">
+            {(() => {
+              const tobaccoPieData = getTobaccoPieData(activeMix);
+              const flavorPieData = getFlavorPieData(activeMix);
+              return (
+                <>
             <section
               className="mix-detail-hero"
               style={{
@@ -403,7 +506,12 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </span>
               </div>
               <div className="home-hero-actions">
-                <button type="button" className="search-button">
+                <button
+                  type="button"
+                  className="search-button"
+                  disabled={detailActionPending}
+                  onClick={() => onAddToSession(activeMix.id)}
+                >
                   Добавить в сессию
                 </button>
                 <button type="button" className="ghost-button home-hero-secondary" onClick={() => toggleFavorite(activeMix.id)}>
@@ -429,12 +537,72 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 {' · '}
                 Средняя: <b>{summaries[activeMix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
+              <div className="session-rating-row">
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <button
+                    key={`${activeMix.id}:${score}`}
+                    type="button"
+                    className={`score-btn ${ratings[activeMix.id]?.rating === score ? 'active' : ''}`}
+                    disabled={detailActionPending}
+                    onClick={() => onRateFromDetail(activeMix.id, score)}
+                  >
+                    {score}
+                  </button>
+                ))}
+              </div>
+              <section className="mix-charts">
+                <article className="mix-chart-card">
+                  <p className="card-title">Диаграмма: вкусы табаков</p>
+                  <div
+                    className="mix-pie"
+                    style={{
+                      background: buildConicGradient(tobaccoPieData),
+                    }}
+                  />
+                  <div className="mix-chart-legend">
+                    {tobaccoPieData.map((item) => (
+                      <div key={`${activeMix.id}:tob:${item.label}`} className="mix-chart-item">
+                        <span className="mix-chart-dot" style={{ background: item.color }} />
+                        <span>{item.label}</span>
+                        <b>{item.value}%</b>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="mix-chart-card">
+                  <p className="card-title">Диаграмма: профили вкуса</p>
+                  <div
+                    className="mix-pie"
+                    style={{
+                      background: buildConicGradient(flavorPieData),
+                    }}
+                  />
+                  <div className="mix-chart-legend">
+                    {flavorPieData.length ? (
+                      flavorPieData.map((item) => (
+                        <div key={`${activeMix.id}:flv:${item.label}`} className="mix-chart-item">
+                          <span className="mix-chart-dot" style={{ background: item.color }} />
+                          <span>{item.label}</span>
+                          <b>{item.value.toFixed(1)}%</b>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="hint">Недостаточно данных профилей для построения диаграммы.</p>
+                    )}
+                  </div>
+                </article>
+              </section>
+              {detailFeedback ? <p className="hint">{detailFeedback}</p> : null}
               <p className="hint">
                 Автор: {activeMix.author?.email ?? 'неизвестно'}
                 {' · '}
                 Создан: {activeMix.createdAt ? new Date(activeMix.createdAt).toLocaleDateString('ru-RU') : 'нет данных'}
               </p>
             </section>
+                </>
+              );
+            })()}
           </article>
         ) : null}
       </section>
