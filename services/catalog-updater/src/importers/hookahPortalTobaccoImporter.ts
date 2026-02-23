@@ -161,6 +161,21 @@ const parseXmlUrls = (xml: string, segment: '/tobacco/' | '/mix/') => {
   return urls.filter((url) => url.includes(segment)).map(normalizeUrl);
 };
 
+const dedupeUrls = (urls: string[]) => Array.from(new Set(urls.map(normalizeUrl)));
+
+const parseCatalogTobaccoUrls = (html: string) => {
+  const urls = new Set<string>();
+  const linkRegex = /href="(https:\/\/hookahportal\.ru\/tobacco\/[^"#?\s<]+)"/gi;
+
+  let match = linkRegex.exec(html);
+  while (match) {
+    urls.add(normalizeUrl(match[1]));
+    match = linkRegex.exec(html);
+  }
+
+  return Array.from(urls);
+};
+
 const parsePropertyMap = (html: string) => {
   const result = new Map<string, string[]>();
   const specific = firstMatch(
@@ -381,7 +396,20 @@ const loadHookahPortalTobaccos = async (
   }
 
   const sitemap = await fetchText(options.tobaccosSitemapUrl, options.timeoutMs);
-  const urls = parseXmlUrls(sitemap, '/tobacco/').slice(0, options.maxTobaccos);
+  const sitemapUrls = parseXmlUrls(sitemap, '/tobacco/');
+
+  let catalogUrls: string[] = [];
+  try {
+    const catalogHtml = await fetchText('https://hookahportal.ru/tobacco/', options.timeoutMs);
+    catalogUrls = parseCatalogTobaccoUrls(catalogHtml);
+  } catch {
+    catalogUrls = [];
+  }
+
+  const urls = dedupeUrls([...catalogUrls, ...sitemapUrls]).slice(0, options.maxTobaccos);
+  console.log(
+    `[hookahportal] tobaccos urls from sitemap=${sitemapUrls.length}, fallback=${catalogUrls.length}, final=${urls.length}`,
+  );
 
   const parsedTobaccos = await collectInParallel<ParsedTobacco>(
     urls.length,
