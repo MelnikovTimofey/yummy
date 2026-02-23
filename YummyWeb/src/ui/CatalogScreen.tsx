@@ -212,14 +212,14 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       setStatus('loading');
       try {
         const mixesRequest = getMixes(authState.tokens, onAuthUpdate, {
-            search: query || undefined,
-            manufacturerId: manufacturerId || undefined,
-            tobaccoId: tobaccoId || undefined,
-            profiles: selectedProfiles.length ? selectedProfiles : undefined,
-            tags: tags.length ? tags : undefined,
-            minRating: minRating ? Number(minRating) : undefined,
-            sort: sortBy,
-          });
+          search: query || undefined,
+          manufacturerId: manufacturerId || undefined,
+          tobaccoId: tobaccoId || undefined,
+          profiles: selectedProfiles.length ? selectedProfiles : undefined,
+          tags: tags.length ? tags : undefined,
+          minRating: minRating ? Number(minRating) : undefined,
+          sort: sortBy,
+        });
         const summariesRequest = authState.tokens
           ? getMixRatingSummaries(authState.tokens, onAuthUpdate)
           : Promise.resolve({ items: [] });
@@ -234,7 +234,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
         );
         setStatus('idle');
       } catch {
-      setStatus('error');
+        setStatus('error');
       }
     };
 
