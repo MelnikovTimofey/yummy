@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getHomeRails, getMixes, getRecommendations } from '../shared/apiClient';
+import { addFavorite, getHomeRails, getMixes, getRecommendations } from '../shared/apiClient';
 import { AuthState, HomeRail, Mix } from '../shared/types';
 
 type HomeScreenProps = {
@@ -13,6 +13,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
   const [rails, setRails] = useState<HomeRail[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [usingFallback, setUsingFallback] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const buildLegacyFallbackRails = async () => {
     if (!authState.tokens) {
@@ -109,6 +110,23 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
   const heroMix = useMemo(() => rails[0]?.items[0] ?? null, [rails]);
   const genres = ['Рекомендации', 'Редакция', 'ТОП', 'Новые', 'Избранное', 'Мои миксы'];
 
+  const onAddHeroToFavorite = async () => {
+    if (!heroMix) {
+      return;
+    }
+    if (!authState.tokens) {
+      setFeedback('Войдите, чтобы добавить микс в избранное.');
+      return;
+    }
+    setFeedback(null);
+    try {
+      await addFavorite(authState.tokens, onAuthUpdate, heroMix.id);
+      setFeedback('Микс добавлен в избранное.');
+    } catch {
+      setFeedback('Не удалось добавить микс в избранное.');
+    }
+  };
+
   return (
     <section className="home-layout">
       {status === 'loading' ? <p className="screen-status">Загрузка главной...</p> : null}
@@ -142,10 +160,11 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             >
               Карточка микса
             </button>
-            <button type="button" className="ghost-button home-hero-secondary">
+            <button type="button" className="ghost-button home-hero-secondary" onClick={onAddHeroToFavorite}>
               В избранное
             </button>
           </div>
+          {feedback ? <p className="hint">{feedback}</p> : null}
         </section>
       ) : null}
 
