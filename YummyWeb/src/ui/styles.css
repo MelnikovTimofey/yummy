@@ -742,6 +742,10 @@ h1 {
   margin-top: 0;
 }
 
+.favorite-poster {
+  background: linear-gradient(140deg, #31405a 0%, #1b1f2c 55%, #12141d 100%);
+}
+
 .recommendation-source {
   margin: 12px 0 0;
   font-size: 11px;
@@ -762,6 +766,16 @@ h1 {
 
 .profile-save {
   width: 100%;
+}
+
+.profile-nav-grid {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.profile-nav-btn {
+  margin-top: 0;
 }
 
 .chip-grid {

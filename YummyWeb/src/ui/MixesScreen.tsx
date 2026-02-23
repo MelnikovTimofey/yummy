@@ -25,7 +25,8 @@ type MixesScreenProps = {
   authState: AuthState;
   onAuthUpdate: (next: AuthState) => void;
   openMixRequest?: {
-    mixId: string;
+    mode: 'detail' | 'create';
+    mixId?: string;
     nonce: number;
   } | null;
 };
@@ -216,13 +217,20 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [activeMixId, authState.tokens, onAuthUpdate, view]);
 
   useEffect(() => {
-    if (!openMixRequest?.mixId) {
+    if (!openMixRequest) {
       return;
     }
 
-    setActiveMixId(openMixRequest.mixId);
-    setView('detail');
-  }, [openMixRequest?.mixId, openMixRequest?.nonce]);
+    if (openMixRequest.mode === 'detail' && openMixRequest.mixId) {
+      setActiveMixId(openMixRequest.mixId);
+      setView('detail');
+      return;
+    }
+
+    if (openMixRequest.mode === 'create') {
+      onOpenCreateScreen();
+    }
+  }, [openMixRequest?.mode, openMixRequest?.mixId, openMixRequest?.nonce]);
 
   const sortedItems = useMemo(() => items, [items]);
   const hasFilters = Boolean(ownOnly || search || manufacturerId || tobaccoId || profile || sortBy !== 'popularity');

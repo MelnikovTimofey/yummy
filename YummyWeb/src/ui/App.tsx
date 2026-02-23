@@ -5,15 +5,17 @@ import { loadAuthState, saveAuthState } from '../shared/authStorage';
 import { AuthState } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
 import { CatalogScreen } from './CatalogScreen';
+import { FavoritesScreen } from './FavoritesScreen';
 import { HomeScreen } from './HomeScreen';
 import { MixesScreen } from './MixesScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { RecommendationsScreen } from './RecommendationsScreen';
 import { SessionsScreen } from './SessionsScreen';
 
-type TabKey = 'home' | 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
-type MixOpenRequest = {
-  mixId: string;
+type TabKey = 'home' | 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile' | 'favorites';
+type MixesOpenRequest = {
+  mode: 'detail' | 'create';
+  mixId?: string;
   nonce: number;
 };
 
@@ -22,6 +24,7 @@ type Tab = {
   label: string;
   title: string;
   subtitle: string;
+  inTabbar?: boolean;
 };
 
 const TABS: Tab[] = [
@@ -61,6 +64,13 @@ const TABS: Tab[] = [
     title: 'Профиль',
     subtitle: 'Настройка предпочтений и любимых производителей.',
   },
+  {
+    key: 'favorites',
+    label: 'Избранное',
+    title: 'Избранное',
+    subtitle: 'Сохранённые миксы с фильтрами и быстрыми действиями.',
+    inTabbar: false,
+  },
 ];
 
 export const App = () => {
@@ -68,7 +78,7 @@ export const App = () => {
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
   const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
-  const [mixOpenRequest, setMixOpenRequest] = useState<MixOpenRequest | null>(null);
+  const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
 
   const onAuthUpdate = useCallback((next: AuthState) => {
@@ -87,8 +97,17 @@ export const App = () => {
   }, []);
 
   const openMixCard = useCallback((mixId: string) => {
-    setMixOpenRequest({
+    setMixesOpenRequest({
+      mode: 'detail',
       mixId,
+      nonce: Date.now(),
+    });
+    setActiveTab('mixes');
+  }, []);
+
+  const openCreateMix = useCallback(() => {
+    setMixesOpenRequest({
+      mode: 'create',
       nonce: Date.now(),
     });
     setActiveTab('mixes');
@@ -194,7 +213,7 @@ export const App = () => {
             <MixesScreen
               authState={authState}
               onAuthUpdate={onAuthUpdate}
-              openMixRequest={mixOpenRequest}
+              openMixRequest={mixesOpenRequest}
             />
           ) : null}
           {activeTab === 'sessions' ? (
@@ -214,6 +233,16 @@ export const App = () => {
               onAuthUpdate={onAuthUpdate}
               onPreferencesSaved={onPreferencesSaved}
               onSignOut={onSignOut}
+              onOpenFavorites={() => setActiveTab('favorites')}
+              onOpenSessions={() => setActiveTab('sessions')}
+              onOpenAddMix={openCreateMix}
+            />
+          ) : null}
+          {activeTab === 'favorites' ? (
+            <FavoritesScreen
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              onOpenMix={openMixCard}
             />
           ) : null}
           {activeTab !== 'mixes' &&
@@ -221,7 +250,8 @@ export const App = () => {
           activeTab !== 'catalog' &&
           activeTab !== 'sessions' &&
           activeTab !== 'recommendations' &&
-          activeTab !== 'profile' ? (
+          activeTab !== 'profile' &&
+          activeTab !== 'favorites' ? (
             <section className="card">
               <p className="card-title">Текущий экран</p>
               <p className="card-text">
@@ -245,7 +275,7 @@ export const App = () => {
         </main>
 
         <nav className="tabbar" aria-label="Основная навигация">
-          {TABS.map((item) => {
+          {TABS.filter((item) => item.inTabbar !== false).map((item) => {
             const isActive = item.key === activeTab;
             return (
               <button

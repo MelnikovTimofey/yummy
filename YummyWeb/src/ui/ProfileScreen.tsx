@@ -11,6 +11,9 @@ type ProfileScreenProps = {
   onAuthUpdate: (next: AuthState) => void;
   onPreferencesSaved: () => void;
   onSignOut: () => void;
+  onOpenFavorites: () => void;
+  onOpenSessions: () => void;
+  onOpenAddMix: () => void;
 };
 
 const FLAVOR_OPTIONS: Array<{ value: FlavorProfile; label: string }> = [
@@ -27,6 +30,9 @@ export const ProfileScreen = ({
   onAuthUpdate,
   onPreferencesSaved,
   onSignOut,
+  onOpenFavorites,
+  onOpenSessions,
+  onOpenAddMix,
 }: ProfileScreenProps) => {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [likedProfiles, setLikedProfiles] = useState<FlavorProfile[]>([]);
@@ -125,6 +131,17 @@ export const ProfileScreen = ({
       <section className="card">
         <p className="card-title">Аккаунт</p>
         <p className="card-text">{authState.user?.email ?? 'Пользователь'}</p>
+        <div className="profile-nav-grid">
+          <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenFavorites}>
+            Избранное
+          </button>
+          <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenSessions}>
+            Сессии курения
+          </button>
+          <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenAddMix}>
+            Добавить микс
+          </button>
+        </div>
         <button type="button" className="ghost-button" onClick={onSignOut}>
           Выйти
         </button>
