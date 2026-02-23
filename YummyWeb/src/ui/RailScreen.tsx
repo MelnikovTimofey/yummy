@@ -4,10 +4,9 @@ import { HomeRail } from '../shared/types';
 type RailScreenProps = {
   rail: HomeRail | null;
   onOpenMix: (mixId: string) => void;
-  onBack: () => void;
 };
 
-export const RailScreen = ({ rail, onOpenMix, onBack }: RailScreenProps) => {
+export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
   const [search, setSearch] = useState('');
 
   const filteredItems = useMemo(() => {
@@ -35,10 +34,6 @@ export const RailScreen = ({ rail, onOpenMix, onBack }: RailScreenProps) => {
 
   return (
     <section className="catalog-layout">
-      <button type="button" className="ghost-button screen-back-btn" onClick={onBack}>
-        Назад
-      </button>
-
       {!rail ? <p className="screen-status">Рейл не выбран.</p> : null}
 
       {rail ? (

@@ -98,6 +98,15 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     const rest = rails.filter((rail) => rail.type !== 'recommendations' && rail.type !== 'favorites');
     return [...recommendations, ...favorites, ...rest];
   }, [rails]);
+  const visibleRails = useMemo(() => orderedRails.filter((rail) => rail.items.length > 0), [orderedRails]);
+  const favoriteRailHasItems = useMemo(
+    () => orderedRails.some((rail) => rail.type === 'favorites' && rail.items.length > 0),
+    [orderedRails],
+  );
+  const myMixesRailHasItems = useMemo(
+    () => orderedRails.some((rail) => rail.type === 'my-mixes' && rail.items.length > 0),
+    [orderedRails],
+  );
 
   const getMixTone = (mix: Mix) => {
     const palette = ['#a56e3f', '#7a5b46', '#556a5f', '#6e4f45', '#5f5869', '#8f704d'];
@@ -149,8 +158,16 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
       {status === 'loading' ? <p className="screen-status">Загрузка главной...</p> : null}
       {status === 'error' ? <p className="screen-status error">Не удалось загрузить рейлы.</p> : null}
       {feedback ? <p className="hint">{feedback}</p> : null}
+      {authState.tokens && !favoriteRailHasItems ? (
+        <p className="hint">Рейл «Избранное» появится после добавления хотя бы одного микса в избранное.</p>
+      ) : null}
+      {authState.tokens && !myMixesRailHasItems ? (
+        <p className="hint">Рейл «Мои миксы» появится после создания первого пользовательского микса.</p>
+      ) : null}
 
-      {orderedRails.map((rail) => (
+      {!visibleRails.length && status === 'idle' ? <p className="screen-status">Нет доступных подборок.</p> : null}
+
+      {visibleRails.map((rail) => (
         <section key={rail.id} className="home-rail">
           <div className="home-rail-head">
             <button
@@ -267,7 +284,6 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             </button>
           </div>
 
-          {!rail.items.length ? <p className="hint">В этом рейле пока нет элементов.</p> : null}
         </section>
       ))}
 
@@ -278,7 +294,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             <h3>{infoMix.name}</h3>
             <p className="card-text">{infoMix.description?.trim() || 'Описание пока не добавлено.'}</p>
             <p className="hint">
-              Табаки: {infoMix.components.map((component) => component.tobacco.name).join(' · ')}
+              Табаки: {infoMix.components.map((component) => `${component.tobacco.name} ${component.proportion}%`).join(' · ')}
             </p>
             <button type="button" className="search-button" onClick={() => setInfoMix(null)}>
               Закрыть

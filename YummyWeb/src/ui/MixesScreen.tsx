@@ -253,6 +253,36 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [openMixRequest?.mode, openMixRequest?.mixId, openMixRequest?.nonce]);
 
   const sortedItems = useMemo(() => items, [items]);
+  const sortedManufacturers = useMemo(
+    () => [...manufacturers].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })),
+    [manufacturers],
+  );
+  const sortedTobaccos = useMemo(
+    () =>
+      [...tobaccos].sort((a, b) => {
+        const byManufacturer = a.manufacturer.name.localeCompare(b.manufacturer.name, 'ru', {
+          sensitivity: 'base',
+        });
+        if (byManufacturer !== 0) {
+          return byManufacturer;
+        }
+        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+      }),
+    [tobaccos],
+  );
+  const sortedCreateTobaccos = useMemo(
+    () =>
+      [...createTobaccos].sort((a, b) => {
+        const byManufacturer = a.manufacturer.name.localeCompare(b.manufacturer.name, 'ru', {
+          sensitivity: 'base',
+        });
+        if (byManufacturer !== 0) {
+          return byManufacturer;
+        }
+        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+      }),
+    [createTobaccos],
+  );
   const hasFilters = Boolean(
     ownOnly || search || manufacturerId || tobaccoId || profile || minRating || tags.length || sortBy !== 'popularity',
   );
@@ -487,10 +517,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   if (view === 'detail') {
     return (
       <section className="sessions-layout">
-        <button type="button" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
-          Назад к списку
-        </button>
-
         {activeMixStatus === 'loading' ? <p className="screen-status">Загрузка карточки микса...</p> : null}
         {activeMixStatus === 'error' ? (
           <p className="screen-status error">Не удалось загрузить карточку микса.</p>
@@ -509,7 +535,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 background: `linear-gradient(120deg, ${getMixTone(activeMix)}99 0%, #131313 60%, #090909 100%)`,
               }}
             >
-              <span className="home-hero-badge">Карточка микса</span>
               <h3>{activeMix.name}</h3>
               <div className="home-hero-meta">
                 <span className="rating-pill">{activeMix.components.length}</span>
@@ -531,7 +556,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </button>
                 <button
                   type="button"
-                  className={`icon-btn fav-icon ${favoriteMixIds[activeMix.id] ? 'active' : ''}`}
+                  className={`icon-btn fav-icon mix-detail-fav ${favoriteMixIds[activeMix.id] ? 'active' : ''}`}
                   disabled={detailActionPending}
                   onClick={() => toggleFavorite(activeMix.id)}
                   aria-label={favoriteMixIds[activeMix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
@@ -633,10 +658,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   if (view === 'create') {
     return (
       <section className="sessions-layout">
-        <button type="button" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
-          Назад к списку
-        </button>
-
         <section className="card session-create-card">
           <p className="card-title">Создать микс</p>
           <div className="filter-field">
@@ -667,7 +688,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   onChange={(event) => onChangeComponentRow(item.id, { tobaccoId: event.target.value })}
                 >
                   <option value="">Выберите табак</option>
-                  {createTobaccos.map((tobacco) => (
+                  {sortedCreateTobaccos.map((tobacco) => (
                     <option key={tobacco.id} value={tobacco.id}>
                       {tobacco.manufacturer.name} · {tobacco.name}
                     </option>
@@ -788,7 +809,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             <span>Бренд</span>
             <select value={manufacturerId} onChange={(event) => setManufacturerId(event.target.value)}>
               <option value="">Все бренды</option>
-              {manufacturers.map((item) => (
+              {sortedManufacturers.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -800,9 +821,9 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             <span>Табак</span>
             <select value={tobaccoId} onChange={(event) => setTobaccoId(event.target.value)}>
               <option value="">Любой табак</option>
-              {tobaccos.map((item) => (
+              {sortedTobaccos.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {item.manufacturer.name} · {item.name}
                 </option>
               ))}
             </select>

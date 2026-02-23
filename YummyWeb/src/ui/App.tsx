@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { verifyMagicLink } from '../shared/apiClient';
 import { loadAuthState, saveAuthState } from '../shared/authStorage';
 import { AuthState, HomeRail } from '../shared/types';
@@ -45,6 +45,7 @@ const TABS: Tab[] = [
     label: 'Профиль',
     title: 'Профиль',
     subtitle: 'Настройка предпочтений и быстрый доступ к сессиям курения.',
+    inTabbar: false,
   },
   {
     key: 'sessions',
@@ -83,6 +84,7 @@ export const App = () => {
   const [authChecking, setAuthChecking] = useState(false);
   const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
+  const syncingFromHistory = useRef(false);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
   const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
 
@@ -148,6 +150,41 @@ export const App = () => {
       });
   }, [onAuthUpdate]);
 
+  useEffect(() => {
+    const existingState = window.history.state ?? {};
+    if (!existingState.appTab) {
+      window.history.replaceState({ ...existingState, appTab: activeTab }, '', window.location.href);
+    }
+
+    const onPopState = (event: PopStateEvent) => {
+      const nextTab = (event.state as { appTab?: TabKey } | null)?.appTab;
+      if (!nextTab || !TABS.some((item) => item.key === nextTab)) {
+        syncingFromHistory.current = true;
+        setActiveTab('home');
+        return;
+      }
+      syncingFromHistory.current = true;
+      setActiveTab(nextTab);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (syncingFromHistory.current) {
+      syncingFromHistory.current = false;
+      return;
+    }
+    const currentTab = (window.history.state as { appTab?: TabKey } | null)?.appTab;
+    if (currentTab === activeTab) {
+      return;
+    }
+    window.history.pushState({ ...(window.history.state ?? {}), appTab: activeTab }, '', window.location.href);
+  }, [activeTab]);
+
   if (authChecking) {
     return (
       <div className="app-bg">
@@ -211,22 +248,6 @@ export const App = () => {
               <AuthScreen onAuthUpdate={onAuthUpdate} />
             </section>
           </main>
-          <nav className="tabbar guest-tabbar" aria-label="Гостевая навигация">
-            <button
-              type="button"
-              className={`tab ${guestTab === 'home' ? 'active' : ''}`}
-              onClick={() => setGuestTab('home')}
-            >
-              Главная
-            </button>
-            <button
-              type="button"
-              className={`tab ${guestTab === 'catalog' ? 'active' : ''}`}
-              onClick={() => setGuestTab('catalog')}
-            >
-              Каталог
-            </button>
-          </nav>
         </div>
       </div>
     );
@@ -245,6 +266,9 @@ export const App = () => {
               <p className="tagline">Арома ателье</p>
             </div>
           </div>
+          <button type="button" className="profile-entry-btn" onClick={() => setActiveTab('profile')}>
+            Профиль
+          </button>
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
           <p className="session-email">{authState.user.email}</p>
@@ -310,25 +334,9 @@ export const App = () => {
             />
           ) : null}
           {activeTab === 'rail-list' ? (
-            <RailScreen rail={selectedRail} onOpenMix={openMixCard} onBack={() => setActiveTab('home')} />
+            <RailScreen rail={selectedRail} onOpenMix={openMixCard} />
           ) : null}
         </main>
-
-        <nav className="tabbar" aria-label="Основная навигация">
-          {visibleTabs.map((item) => {
-            const isActive = item.key === activeTab;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`tab ${isActive ? 'active' : ''}`}
-                onClick={() => setActiveTab(item.key)}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
       </div>
     </div>
   );

@@ -173,6 +173,23 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
 
   const hasFilters = Boolean(search || manufacturerId || tobaccoId || profile || tags.length || minRating || sortBy !== 'newest');
   const totalLabel = useMemo(() => `${items.length} миксов`, [items.length]);
+  const sortedManufacturers = useMemo(
+    () => [...manufacturers].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })),
+    [manufacturers],
+  );
+  const sortedTobaccos = useMemo(
+    () =>
+      [...tobaccos].sort((a, b) => {
+        const byManufacturer = a.manufacturer.name.localeCompare(b.manufacturer.name, 'ru', {
+          sensitivity: 'base',
+        });
+        if (byManufacturer !== 0) {
+          return byManufacturer;
+        }
+        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+      }),
+    [tobaccos],
+  );
 
   return (
     <section className="catalog-layout">
@@ -216,7 +233,7 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
             <span>Бренд</span>
             <select value={manufacturerId} onChange={(event) => setManufacturerId(event.target.value)}>
               <option value="">Все бренды</option>
-              {manufacturers.map((item) => (
+              {sortedManufacturers.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -228,9 +245,9 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
             <span>Табак</span>
             <select value={tobaccoId} onChange={(event) => setTobaccoId(event.target.value)}>
               <option value="">Любой табак</option>
-              {tobaccos.map((item) => (
+              {sortedTobaccos.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {item.manufacturer.name} · {item.name}
                 </option>
               ))}
             </select>

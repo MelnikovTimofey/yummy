@@ -48,6 +48,18 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const [activeMix, setActiveMix] = useState<Mix | null>(null);
 
   useEffect(() => {
+    const onPopState = (event: PopStateEvent) => {
+      const mixId = (event.state as { catalogMixId?: string } | null)?.catalogMixId;
+      if (!mixId) {
+        setActiveMix(null);
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
     getManufacturers()
       .then((response) => setManufacturers(response.items))
       .catch(() => setManufacturers([]));
@@ -129,6 +141,23 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   };
 
   const totalLabel = useMemo(() => `${items.length} миксов`, [items.length]);
+  const sortedManufacturers = useMemo(
+    () => [...manufacturers].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })),
+    [manufacturers],
+  );
+  const sortedTobaccos = useMemo(
+    () =>
+      [...tobaccos].sort((a, b) => {
+        const byManufacturer = a.manufacturer.name.localeCompare(b.manufacturer.name, 'ru', {
+          sensitivity: 'base',
+        });
+        if (byManufacturer !== 0) {
+          return byManufacturer;
+        }
+        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+      }),
+    [tobaccos],
+  );
   const hasFilters = Boolean(
     query ||
       manufacturerId ||
@@ -142,9 +171,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   if (activeMix) {
     return (
       <section className="sessions-layout">
-        <button type="button" className="ghost-button screen-back-btn" onClick={() => setActiveMix(null)}>
-          Назад к каталогу
-        </button>
         <article className="card mix-card">
           <div className="mix-header">
             <h3>{activeMix.name}</h3>
@@ -218,7 +244,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             <span>Производитель</span>
             <select value={manufacturerId} onChange={(event) => setManufacturerId(event.target.value)}>
               <option value="">Все бренды</option>
-              {manufacturers.map((item) => (
+              {sortedManufacturers.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -229,9 +255,9 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             <span>Табак</span>
             <select value={tobaccoId} onChange={(event) => setTobaccoId(event.target.value)}>
               <option value="">Любой табак</option>
-              {tobaccos.map((item) => (
+              {sortedTobaccos.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {item.manufacturer.name} · {item.name}
                 </option>
               ))}
             </select>
@@ -288,6 +314,11 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                 onOpenMix(mix.id);
                 return;
               }
+              window.history.pushState(
+                { ...(window.history.state ?? {}), catalogMixId: mix.id },
+                '',
+                window.location.href,
+              );
               setActiveMix(mix);
             }}
             onKeyDown={(event) => {
@@ -297,6 +328,11 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                   onOpenMix(mix.id);
                   return;
                 }
+                window.history.pushState(
+                  { ...(window.history.state ?? {}), catalogMixId: mix.id },
+                  '',
+                  window.location.href,
+                );
                 setActiveMix(mix);
               }
             }}
