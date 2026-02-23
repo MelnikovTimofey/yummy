@@ -75,6 +75,7 @@ const TABS: Tab[] = [
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [guestTab, setGuestTab] = useState<'home' | 'catalog'>('home');
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
   const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
@@ -164,6 +165,12 @@ export const App = () => {
   }
 
   if (!authState.tokens || !authState.user) {
+    const guestTitle = guestTab === 'home' ? 'Главная' : 'Каталог миксов';
+    const guestSubtitle =
+      guestTab === 'home'
+        ? 'Редакторские и аналитические рейлы доступны без входа.'
+        : 'Просматривайте миксы и карточки в режиме гостя.';
+
     return (
       <div className="app-bg">
         <div className="halo-top" />
@@ -172,17 +179,53 @@ export const App = () => {
           <header className="topbar">
             <p className="brand">ВКУСНО</p>
             <p className="tagline">Арома ателье</p>
-            <h1>Главная</h1>
-            <p className="subtitle">Редакторские и аналитические рейлы доступны без входа.</p>
+            <h1>{guestTitle}</h1>
+            <p className="subtitle">{guestSubtitle}</p>
           </header>
+          <nav className="desktop-tabbar" aria-label="Гостевая навигация">
+            <button
+              type="button"
+              className={`desktop-tab ${guestTab === 'home' ? 'active' : ''}`}
+              onClick={() => setGuestTab('home')}
+            >
+              Главная
+            </button>
+            <button
+              type="button"
+              className={`desktop-tab ${guestTab === 'catalog' ? 'active' : ''}`}
+              onClick={() => setGuestTab('catalog')}
+            >
+              Каталог
+            </button>
+          </nav>
           <main className="content">
-            <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+            {guestTab === 'home' ? (
+              <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+            ) : (
+              <CatalogScreen authState={authState} />
+            )}
             <section className="card">
               <p className="card-title">Авторизация</p>
               <p className="card-text">Войдите, чтобы получить персональные рекомендации и свои миксы.</p>
               <AuthScreen onAuthUpdate={onAuthUpdate} />
             </section>
           </main>
+          <nav className="tabbar guest-tabbar" aria-label="Гостевая навигация">
+            <button
+              type="button"
+              className={`tab ${guestTab === 'home' ? 'active' : ''}`}
+              onClick={() => setGuestTab('home')}
+            >
+              Главная
+            </button>
+            <button
+              type="button"
+              className={`tab ${guestTab === 'catalog' ? 'active' : ''}`}
+              onClick={() => setGuestTab('catalog')}
+            >
+              Каталог
+            </button>
+          </nav>
         </div>
       </div>
     );

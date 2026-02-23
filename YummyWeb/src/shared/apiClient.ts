@@ -95,7 +95,7 @@ export const refreshToken = (refreshTokenValue: string) =>
     .catch(() => null);
 
 export const getMixes = (
-  auth: AuthTokens,
+  auth: AuthTokens | null,
   onAuthUpdate: RequestOptions['onAuthUpdate'],
   params?: {
     authorId?: string;
@@ -131,18 +131,18 @@ export const getMixes = (
     .join('&');
 
   return request<{ items: Mix[] }>(`/mixes${query ? `?${query}` : ''}`, {
-    auth,
+    auth: auth ?? undefined,
     onAuthUpdate,
   });
 };
 
 export const getMixById = (
-  auth: AuthTokens,
+  auth: AuthTokens | null,
   onAuthUpdate: RequestOptions['onAuthUpdate'],
   mixId: string,
 ) =>
   request<Mix>(`/mixes/${encodeURIComponent(mixId)}`, {
-    auth,
+    auth: auth ?? undefined,
     onAuthUpdate,
   });
 

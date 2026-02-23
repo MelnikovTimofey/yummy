@@ -959,6 +959,10 @@ h1 {
   font-weight: 600;
 }
 
+.guest-tabbar {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .desktop-tabbar {
   display: none;
 }

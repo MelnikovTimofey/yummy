@@ -16,8 +16,8 @@ import {
 
 type CatalogScreenProps = {
   authState: AuthState;
-  onAuthUpdate: (next: AuthState) => void;
-  onOpenMix: (mixId: string) => void;
+  onAuthUpdate?: (next: AuthState) => void;
+  onOpenMix?: (mixId: string) => void;
 };
 
 const PROFILE_OPTIONS: Array<{ value: FlavorProfile; label: string }> = [
@@ -45,6 +45,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const [minRating, setMinRating] = useState<'' | '1' | '2' | '3' | '4' | '5'>('');
   const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('popularity');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [activeMix, setActiveMix] = useState<Mix | null>(null);
 
   useEffect(() => {
     getManufacturers()
@@ -67,15 +68,10 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   }, [manufacturerId]);
 
   useEffect(() => {
-    if (!authState.tokens) {
-      return;
-    }
-
     const load = async () => {
       setStatus('loading');
       try {
-        const [mixesRes, summariesRes] = await Promise.all([
-          getMixes(authState.tokens!, onAuthUpdate, {
+        const mixesRequest = getMixes(authState.tokens, onAuthUpdate, {
             search: query || undefined,
             manufacturerId: manufacturerId || undefined,
             tobaccoId: tobaccoId || undefined,
@@ -83,9 +79,11 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             tags: tags.length ? tags : undefined,
             minRating: minRating ? Number(minRating) : undefined,
             sort: sortBy,
-          }),
-          getMixRatingSummaries(authState.tokens!, onAuthUpdate),
-        ]);
+          });
+        const summariesRequest = authState.tokens
+          ? getMixRatingSummaries(authState.tokens, onAuthUpdate)
+          : Promise.resolve({ items: [] });
+        const [mixesRes, summariesRes] = await Promise.all([mixesRequest, summariesRequest]);
 
         setItems(mixesRes.items);
         setSummaries(
@@ -96,13 +94,13 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
         );
         setStatus('idle');
       } catch {
-        setStatus('error');
+      setStatus('error');
       }
     };
 
     void load();
   }, [
-    authState.tokens,
+    authState.tokens?.accessToken,
     manufacturerId,
     minRating,
     onAuthUpdate,
@@ -140,6 +138,39 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       minRating ||
       sortBy !== 'popularity',
   );
+
+  if (activeMix) {
+    return (
+      <section className="sessions-layout">
+        <button type="button" className="ghost-button screen-back-btn" onClick={() => setActiveMix(null)}>
+          Назад к каталогу
+        </button>
+        <article className="card mix-card">
+          <div className="mix-header">
+            <h3>{activeMix.name}</h3>
+            <span className="chip">{activeMix.components.length} комп.</span>
+          </div>
+          <p className="mix-description">{activeMix.description?.trim() || 'Описание пока не добавлено.'}</p>
+          <div className="mix-components">
+            {activeMix.components.map((component) => (
+              <div key={`${activeMix.id}:${component.tobacco.id}`} className="mix-component-row">
+                <span>
+                  {component.tobacco.manufacturer.name} {component.tobacco.name}
+                </span>
+                <b>{component.proportion}%</b>
+              </div>
+            ))}
+          </div>
+          <p className="mix-ratings">
+            Средняя: <b>{summaries[activeMix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
+          </p>
+          {!authState.tokens ? (
+            <p className="hint">Для добавления в избранное и оценок войдите в аккаунт.</p>
+          ) : null}
+        </article>
+      </section>
+    );
+  }
 
   return (
     <section className="catalog-layout">
@@ -260,7 +291,17 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                 Средняя: <b>{summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
               <div className="mix-actions cinema-actions">
-                <button type="button" className="ghost-button" onClick={() => onOpenMix(mix.id)}>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => {
+                    if (onOpenMix) {
+                      onOpenMix(mix.id);
+                      return;
+                    }
+                    setActiveMix(mix);
+                  }}
+                >
                   Карточка
                 </button>
               </div>
