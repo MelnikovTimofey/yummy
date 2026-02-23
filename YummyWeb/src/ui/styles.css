@@ -230,6 +230,24 @@ h1 {
   gap: 8px;
 }
 
+.rail-ratio-bar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rail-ratio-bar.compact {
+  height: 6px;
+}
+
+.rail-ratio-segment {
+  height: 100%;
+}
+
 .home-hero-secondary {
   margin-top: 0;
   min-width: 140px;

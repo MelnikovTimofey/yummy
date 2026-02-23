@@ -80,6 +80,20 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     return palette[hash % palette.length];
   };
 
+  const getComponentColor = (mix: Mix, index: number) => {
+    const fallback = ['#37a0e4', '#e18837', '#35ba7c', '#b168f0', '#d05f7e', '#84b84a'];
+    const profileColorMap: Record<string, string> = {
+      sweet: '#f08d49',
+      sour: '#dfc24a',
+      spicy: '#d45b51',
+      fresh: '#4eb9d4',
+      dessert: '#cd7ff2',
+      tobacco: '#9d704f',
+    };
+    const profile = mix.components[index]?.tobacco.flavorProfiles?.[0];
+    return (profile && profileColorMap[profile]) || fallback[index % fallback.length];
+  };
+
   useEffect(() => {
     const load = async () => {
       setStatus('loading');
@@ -151,6 +165,19 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             <span className="rating-pill">{heroMix.components.length}</span>
             <span>{heroMix.components.map((component) => component.tobacco.name).slice(0, 3).join(' · ')}</span>
           </div>
+          <div className="rail-ratio-bar">
+            {heroMix.components.map((component, index) => (
+              <span
+                key={`${heroMix.id}:hero:${component.tobacco.id}`}
+                className="rail-ratio-segment"
+                style={{
+                  width: `${component.proportion}%`,
+                  background: getComponentColor(heroMix, index),
+                }}
+                title={`${component.tobacco.name} ${component.proportion}%`}
+              />
+            ))}
+          </div>
           <div className="home-hero-actions">
             <button
               type="button"
@@ -203,6 +230,19 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
               >
                 <div className="home-item-overlay">
                   <p className="home-item-title">{mix.name}</p>
+                  <div className="rail-ratio-bar compact">
+                    {mix.components.map((component, index) => (
+                      <span
+                        key={`${mix.id}:rail:${component.tobacco.id}`}
+                        className="rail-ratio-segment"
+                        style={{
+                          width: `${component.proportion}%`,
+                          background: getComponentColor(mix, index),
+                        }}
+                        title={`${component.tobacco.name} ${component.proportion}%`}
+                      />
+                    ))}
+                  </div>
                   <p className="home-item-meta">
                     {mix.components
                       .slice(0, 2)
