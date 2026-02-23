@@ -102,20 +102,23 @@ const getEditorialRailItems = async (profiles: FlavorProfile[]) => {
   });
 };
 
-const buildRecommendationRail = async (userId: string) => {
-  const [preferenceProfile, sessionCount] = await Promise.all([
-    prisma.preferenceProfile.findUnique({
-      where: { userId },
-      select: { id: true },
-    }),
-    prisma.smokingSession.count({ where: { userId } }),
-  ]);
+const buildRecommendationRail = async (userId: string | null) => {
+  let canShowPersonal = false;
+  if (userId) {
+    const [preferenceProfile, sessionCount] = await Promise.all([
+      prisma.preferenceProfile.findUnique({
+        where: { userId },
+        select: { id: true },
+      }),
+      prisma.smokingSession.count({ where: { userId } }),
+    ]);
+    canShowPersonal = Boolean(preferenceProfile) || sessionCount > 0;
+  }
 
-  const canShowPersonal = Boolean(preferenceProfile) || sessionCount > 0;
   let source: 'model' | 'fallback' = 'fallback';
 
   let recommendationMixIds: string[] = [];
-  if (canShowPersonal) {
+  if (userId && canShowPersonal) {
     const recommendations = await prisma.recommendation.findMany({
       where: { userId },
       select: { mixId: true },
@@ -146,6 +149,22 @@ const buildRecommendationRail = async (userId: string) => {
   };
 };
 
+const buildFavoritesRail = async (userId: string) => {
+  const favoriteRows = await prisma.favoriteMix.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: RAIL_ITEM_LIMIT,
+    select: { mixId: true },
+  });
+  const items = await fetchMixesByIds(favoriteRows.map((row) => row.mixId));
+  return {
+    id: 'favorites',
+    type: 'favorites',
+    title: 'Избранное',
+    items,
+  };
+};
+
 export const registerHomeRoutes = async (app: FastifyInstance) => {
   app.get('/home/rails', async (request, reply) => {
     let userId: string | null = null;
@@ -157,8 +176,10 @@ export const registerHomeRoutes = async (app: FastifyInstance) => {
 
     const rails: Array<Record<string, unknown>> = [];
 
+    rails.push(await buildRecommendationRail(userId));
+
     if (userId) {
-      rails.push(await buildRecommendationRail(userId));
+      rails.push(await buildFavoritesRail(userId));
     }
 
     const [editorialChildhood, editorialMensDay, editorialTaiga] = await Promise.all([
