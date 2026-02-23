@@ -705,6 +705,10 @@ h1 {
   overflow: hidden;
 }
 
+.mix-poster {
+  background: linear-gradient(145deg, #362f2b 0%, #1a1716 68%, #101010 100%);
+}
+
 .catalog-poster {
   background: linear-gradient(145deg, #2f2038 0%, #19171d 68%, #101013 100%);
 }
@@ -818,6 +822,10 @@ h1 {
 
 .profile-nav-btn {
   margin-top: 0;
+}
+
+.compact-card {
+  padding: 12px;
 }
 
 .chip-grid {

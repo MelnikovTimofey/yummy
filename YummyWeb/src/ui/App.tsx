@@ -49,8 +49,8 @@ const TABS: Tab[] = [
   {
     key: 'catalog',
     label: 'Каталог',
-    title: 'Каталог табаков',
-    subtitle: 'Фильтры и поиск по брендам, профилям и крепости.',
+    title: 'Каталог миксов',
+    subtitle: 'Глобальные фильтры: поиск, профили, теги, табаки, производители и рейтинг.',
   },
   {
     key: 'recommendations',
@@ -235,7 +235,13 @@ export const App = () => {
           {activeTab === 'sessions' ? (
             <SessionsScreen authState={authState} onAuthUpdate={onAuthUpdate} />
           ) : null}
-          {activeTab === 'catalog' ? <CatalogScreen /> : null}
+          {activeTab === 'catalog' ? (
+            <CatalogScreen
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              onOpenMix={openMixCard}
+            />
+          ) : null}
           {activeTab === 'recommendations' ? (
             <RecommendationsScreen
               authState={authState}
