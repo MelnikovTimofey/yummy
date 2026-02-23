@@ -24,6 +24,10 @@ import {
 type MixesScreenProps = {
   authState: AuthState;
   onAuthUpdate: (next: AuthState) => void;
+  openMixRequest?: {
+    mixId: string;
+    nonce: number;
+  } | null;
 };
 
 type MixesView = 'list' | 'detail' | 'create';
@@ -43,7 +47,7 @@ const PROFILE_OPTIONS: Array<{ value: '' | FlavorProfile; label: string }> = [
   { value: 'tobacco', label: 'Табачный' },
 ];
 
-export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
+export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
   const [ratings, setRatings] = useState<Record<string, MixRating>>({});
@@ -210,6 +214,15 @@ export const MixesScreen = ({ authState, onAuthUpdate }: MixesScreenProps) => {
 
     void loadActiveMix();
   }, [activeMixId, authState.tokens, onAuthUpdate, view]);
+
+  useEffect(() => {
+    if (!openMixRequest?.mixId) {
+      return;
+    }
+
+    setActiveMixId(openMixRequest.mixId);
+    setView('detail');
+  }, [openMixRequest?.mixId, openMixRequest?.nonce]);
 
   const sortedItems = useMemo(() => items, [items]);
   const hasFilters = Boolean(ownOnly || search || manufacturerId || tobaccoId || profile || sortBy !== 'popularity');

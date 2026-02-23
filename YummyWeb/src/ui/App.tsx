@@ -12,6 +12,10 @@ import { RecommendationsScreen } from './RecommendationsScreen';
 import { SessionsScreen } from './SessionsScreen';
 
 type TabKey = 'home' | 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile';
+type MixOpenRequest = {
+  mixId: string;
+  nonce: number;
+};
 
 type Tab = {
   key: TabKey;
@@ -64,6 +68,7 @@ export const App = () => {
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
   const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
+  const [mixOpenRequest, setMixOpenRequest] = useState<MixOpenRequest | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
 
   const onAuthUpdate = useCallback((next: AuthState) => {
@@ -80,6 +85,25 @@ export const App = () => {
     setRecommendationsRefreshSignal((current) => current + 1);
     setActiveTab('home');
   }, []);
+
+  const openMixCard = useCallback((mixId: string) => {
+    setMixOpenRequest({
+      mixId,
+      nonce: Date.now(),
+    });
+    setActiveTab('mixes');
+  }, []);
+
+  const openRailList = useCallback(
+    (railType: 'recommendations' | 'editorial' | 'analytics' | 'my-mixes') => {
+      if (railType === 'recommendations') {
+        setActiveTab('recommendations');
+        return;
+      }
+      setActiveTab('mixes');
+    },
+    [],
+  );
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
@@ -159,9 +183,20 @@ export const App = () => {
 
         <main className="content">
           {activeTab === 'home' ? (
-            <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+            <HomeScreen
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              onOpenMix={openMixCard}
+              onOpenRail={openRailList}
+            />
           ) : null}
-          {activeTab === 'mixes' ? <MixesScreen authState={authState} onAuthUpdate={onAuthUpdate} /> : null}
+          {activeTab === 'mixes' ? (
+            <MixesScreen
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              openMixRequest={mixOpenRequest}
+            />
+          ) : null}
           {activeTab === 'sessions' ? (
             <SessionsScreen authState={authState} onAuthUpdate={onAuthUpdate} />
           ) : null}

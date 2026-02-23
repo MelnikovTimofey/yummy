@@ -296,9 +296,20 @@ h1 {
   aspect-ratio: 16 / 9;
   border: 1px solid #302722;
   border-radius: 14px;
-  padding: 10px;
+  padding: 0;
   position: relative;
   overflow: hidden;
+  text-align: left;
+  color: var(--text-0);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.home-item:disabled,
+.home-link-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
 }
 
 .home-item-overlay {

@@ -5,9 +5,11 @@ import { AuthState, HomeRail, Mix } from '../shared/types';
 type HomeScreenProps = {
   authState: AuthState;
   onAuthUpdate: (next: AuthState) => void;
+  onOpenMix?: (mixId: string) => void;
+  onOpenRail?: (type: HomeRail['type']) => void;
 };
 
-export const HomeScreen = ({ authState, onAuthUpdate }: HomeScreenProps) => {
+export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: HomeScreenProps) => {
   const [rails, setRails] = useState<HomeRail[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [usingFallback, setUsingFallback] = useState(false);
@@ -132,8 +134,17 @@ export const HomeScreen = ({ authState, onAuthUpdate }: HomeScreenProps) => {
             <span>{heroMix.components.map((component) => component.tobacco.name).slice(0, 3).join(' · ')}</span>
           </div>
           <div className="home-hero-actions">
-            <button type="button" className="search-button">Карточка микса</button>
-            <button type="button" className="ghost-button home-hero-secondary">В избранное</button>
+            <button
+              type="button"
+              className="search-button"
+              disabled={!onOpenMix}
+              onClick={() => onOpenMix?.(heroMix.id)}
+            >
+              Карточка микса
+            </button>
+            <button type="button" className="ghost-button home-hero-secondary">
+              В избранное
+            </button>
           </div>
         </section>
       ) : null}
@@ -150,13 +161,23 @@ export const HomeScreen = ({ authState, onAuthUpdate }: HomeScreenProps) => {
         <section key={rail.id} className={`home-rail ${rail.size === 'hero' ? 'hero' : ''}`}>
           <div className="home-rail-head">
             <h3 className="home-rail-title">{rail.title}</h3>
-            <button type="button" className="home-link-btn">Смотреть всё</button>
+            <button
+              type="button"
+              className="home-link-btn"
+              disabled={!onOpenRail}
+              onClick={() => onOpenRail?.(rail.type)}
+            >
+              Смотреть всё
+            </button>
           </div>
           <div className="home-rail-row">
             {rail.items.map((mix) => (
-              <article
+              <button
                 key={`${rail.id}:${mix.id}`}
+                type="button"
                 className="home-item"
+                disabled={!onOpenMix}
+                onClick={() => onOpenMix?.(mix.id)}
                 style={{
                   background: `linear-gradient(145deg, ${getMixTone(mix)}66 0%, #1a1a1a 70%, #121212 100%)`,
                 }}
@@ -170,7 +191,7 @@ export const HomeScreen = ({ authState, onAuthUpdate }: HomeScreenProps) => {
                       .join(' · ')}
                   </p>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         </section>
