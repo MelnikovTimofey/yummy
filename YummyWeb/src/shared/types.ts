@@ -98,7 +98,7 @@ export type FavoriteMix = {
 
 export type HomeRail = {
   id: string;
-  type: 'recommendations' | 'editorial' | 'analytics' | 'my-mixes';
+  type: 'recommendations' | 'favorites' | 'editorial' | 'analytics' | 'my-mixes';
   title: string;
   size?: 'hero' | 'default';
   source?: 'model' | 'fallback';

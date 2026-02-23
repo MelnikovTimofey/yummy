@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { API_BASE_URL } from '../shared/api';
 import { verifyMagicLink } from '../shared/apiClient';
 import { loadAuthState, saveAuthState } from '../shared/authStorage';
-import { AuthState } from '../shared/types';
+import { AuthState, HomeRail } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
 import { CatalogScreen } from './CatalogScreen';
 import { FavoritesScreen } from './FavoritesScreen';
 import { HomeScreen } from './HomeScreen';
 import { MixesScreen } from './MixesScreen';
 import { ProfileScreen } from './ProfileScreen';
-import { RecommendationsScreen } from './RecommendationsScreen';
 import { SessionsScreen } from './SessionsScreen';
 
-type TabKey = 'home' | 'mixes' | 'sessions' | 'catalog' | 'recommendations' | 'profile' | 'favorites';
+type TabKey = 'home' | 'sessions' | 'catalog' | 'profile' | 'favorites' | 'mixes' | 'rail-list';
+
 type MixesOpenRequest = {
   mode: 'detail' | 'create';
   mixId?: string;
@@ -32,19 +31,7 @@ const TABS: Tab[] = [
     key: 'home',
     label: 'Главная',
     title: 'Главная',
-    subtitle: 'Рейлы миксов: рекомендации, редакция, аналитика и мои миксы.',
-  },
-  {
-    key: 'mixes',
-    label: 'Миксы',
-    title: 'Миксы',
-    subtitle: 'Создавайте и переиспользуйте удачные сочетания.',
-  },
-  {
-    key: 'sessions',
-    label: 'Сессии',
-    title: 'Сессии курения',
-    subtitle: 'Добавляйте сессии и сохраняйте контекст: где и когда.',
+    subtitle: 'Рейлы миксов: рекомендации, избранное, редакция и аналитика.',
   },
   {
     key: 'catalog',
@@ -53,22 +40,37 @@ const TABS: Tab[] = [
     subtitle: 'Глобальные фильтры: поиск, профили, теги, табаки, производители и рейтинг.',
   },
   {
-    key: 'recommendations',
-    label: 'Подборка',
-    title: 'Подборка',
-    subtitle: 'Подборка миксов на основе ваших оценок и истории.',
-  },
-  {
     key: 'profile',
     label: 'Профиль',
     title: 'Профиль',
-    subtitle: 'Настройка предпочтений и любимых производителей.',
+    subtitle: 'Настройка предпочтений и быстрый доступ к сессиям курения.',
+  },
+  {
+    key: 'sessions',
+    label: 'Сессии',
+    title: 'Сессии курения',
+    subtitle: 'Добавляйте сессии и сохраняйте контекст: где и когда.',
+    inTabbar: false,
   },
   {
     key: 'favorites',
     label: 'Избранное',
     title: 'Избранное',
     subtitle: 'Сохранённые миксы с фильтрами и быстрыми действиями.',
+    inTabbar: false,
+  },
+  {
+    key: 'mixes',
+    label: 'Миксы',
+    title: 'Карточка микса',
+    subtitle: 'Просмотр карточки и действий по выбранному миксу.',
+    inTabbar: false,
+  },
+  {
+    key: 'rail-list',
+    label: 'Рейл',
+    title: 'Элементы рейла',
+    subtitle: 'Полный список миксов выбранной коллекции.',
     inTabbar: false,
   },
 ];
@@ -78,8 +80,8 @@ export const App = () => {
   const [guestTab, setGuestTab] = useState<'home' | 'catalog'>('home');
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
-  const [recommendationsRefreshSignal, setRecommendationsRefreshSignal] = useState(0);
   const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
+  const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
   const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
 
@@ -94,7 +96,6 @@ export const App = () => {
   }, [onAuthUpdate]);
 
   const onPreferencesSaved = useCallback(() => {
-    setRecommendationsRefreshSignal((current) => current + 1);
     setActiveTab('home');
   }, []);
 
@@ -115,16 +116,10 @@ export const App = () => {
     setActiveTab('mixes');
   }, []);
 
-  const openRailList = useCallback(
-    (railType: 'recommendations' | 'editorial' | 'analytics' | 'my-mixes') => {
-      if (railType === 'recommendations') {
-        setActiveTab('recommendations');
-        return;
-      }
-      setActiveTab('mixes');
-    },
-    [],
-  );
+  const openRailList = useCallback((_railType: HomeRail['type']) => {
+    setSelectedRail(null);
+    setActiveTab('rail-list');
+  }, []);
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
@@ -168,7 +163,7 @@ export const App = () => {
     const guestTitle = guestTab === 'home' ? 'Главная' : 'Каталог миксов';
     const guestSubtitle =
       guestTab === 'home'
-        ? 'Редакторские и аналитические рейлы доступны без входа.'
+        ? 'Рейл рекомендаций доступен в гостевом режиме.'
         : 'Просматривайте миксы и карточки в режиме гостя.';
 
     return (
@@ -177,8 +172,13 @@ export const App = () => {
         <div className="halo-bottom" />
         <div className="phone-shell">
           <header className="topbar">
-            <p className="brand">ВКУСНО</p>
-            <p className="tagline">Арома ателье</p>
+            <div className="brand-wrap">
+              <span className="brand-logo">V</span>
+              <div>
+                <p className="brand">ВКУСНО</p>
+                <p className="tagline">Арома ателье</p>
+              </div>
+            </div>
             <h1>{guestTitle}</h1>
             <p className="subtitle">{guestSubtitle}</p>
           </header>
@@ -237,8 +237,13 @@ export const App = () => {
       <div className="halo-bottom" />
       <div className="phone-shell">
         <header className="topbar">
-          <p className="brand">ВКУСНО</p>
-          <p className="tagline">Арома ателье</p>
+          <div className="brand-wrap">
+            <span className="brand-logo">V</span>
+            <div>
+              <p className="brand">ВКУСНО</p>
+              <p className="tagline">Арома ателье</p>
+            </div>
+          </div>
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
           <p className="session-email">{authState.user.email}</p>
@@ -285,13 +290,6 @@ export const App = () => {
               onOpenMix={openMixCard}
             />
           ) : null}
-          {activeTab === 'recommendations' ? (
-            <RecommendationsScreen
-              authState={authState}
-              onAuthUpdate={onAuthUpdate}
-              refreshSignal={recommendationsRefreshSignal}
-            />
-          ) : null}
           {activeTab === 'profile' ? (
             <ProfileScreen
               authState={authState}
@@ -310,33 +308,15 @@ export const App = () => {
               onOpenMix={openMixCard}
             />
           ) : null}
-          {activeTab !== 'mixes' &&
-          activeTab !== 'home' &&
-          activeTab !== 'catalog' &&
-          activeTab !== 'sessions' &&
-          activeTab !== 'recommendations' &&
-          activeTab !== 'profile' &&
-          activeTab !== 'favorites' ? (
+          {activeTab === 'rail-list' ? (
             <section className="card">
-              <p className="card-title">Текущий экран</p>
-              <p className="card-text">
-                Экран
-                {' '}
-                <b>{tab.label}</b>
-                {' '}
-                пока в статусе заглушки. Реализован рабочий поток для раздела «Миксы».
-              </p>
+              <p className="card-title">{selectedRail?.title ?? 'Рейл'}</p>
+              <p className="card-text">Экран полного списка рейла будет подключён на следующем этапе.</p>
+              <button type="button" className="ghost-button" onClick={() => setActiveTab('home')}>
+                Назад на главную
+              </button>
             </section>
           ) : null}
-          <section className="card">
-            <p className="card-title">API endpoint</p>
-            <code className="code">{API_BASE_URL}</code>
-            <p className="hint">
-              Переменная окружения:
-              {' '}
-              <code>VITE_API_BASE_URL</code>
-            </p>
-          </section>
         </main>
 
         <nav className="tabbar" aria-label="Основная навигация">
