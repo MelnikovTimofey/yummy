@@ -213,9 +213,17 @@ export const createSession = (
   payload: { mixId: string; date: string; locationType: 'home' | 'lounge'; locationName?: string },
 ) => request<SmokingSession>('/sessions', { method: 'POST', body: payload, auth, onAuthUpdate });
 
-export const getManufacturers = (search?: string) => {
-  const query = search ? `?search=${encodeURIComponent(search)}` : '';
-  return request<{ items: Manufacturer[] }>(`/manufacturers${query}`);
+export const getManufacturers = (params?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const query = Object.entries(params ?? {})
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+
+  return request<{ items: Manufacturer[] }>(`/manufacturers${query ? `?${query}` : ''}`);
 };
 
 export const getTobaccos = (params: {
@@ -226,7 +234,7 @@ export const getTobaccos = (params: {
   offset?: number;
 }) => {
   const query = Object.entries(params)
-    .filter(([, value]) => Boolean(value))
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
 

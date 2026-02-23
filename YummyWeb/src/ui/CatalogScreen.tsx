@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getManufacturers,
   getMixes,
@@ -29,6 +29,14 @@ const PROFILE_OPTIONS: Array<{ value: FlavorProfile; label: string }> = [
   { value: 'tobacco', label: 'Табачный' },
 ];
 
+const FILTER_PAGE_SIZE = 40;
+const FILTER_SCROLL_THRESHOLD = 48;
+
+const appendUniqueById = <T extends { id: string }>(current: T[], next: T[]) => {
+  const seen = new Set(current.map((item) => item.id));
+  return [...current, ...next.filter((item) => !seen.has(item.id))];
+};
+
 export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [summaries, setSummaries] = useState<Record<string, MixRatingSummary>>({});
@@ -37,8 +45,18 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
   const [queryDraft, setQueryDraft] = useState('');
   const [query, setQuery] = useState('');
+  const [manufacturerSearchDraft, setManufacturerSearchDraft] = useState('');
+  const [manufacturerSearch, setManufacturerSearch] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
+  const [manufacturersStatus, setManufacturersStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [manufacturersOffset, setManufacturersOffset] = useState(0);
+  const [manufacturersHasMore, setManufacturersHasMore] = useState(true);
+  const [tobaccoSearchDraft, setTobaccoSearchDraft] = useState('');
+  const [tobaccoSearch, setTobaccoSearch] = useState('');
   const [tobaccoId, setTobaccoId] = useState('');
+  const [tobaccosStatus, setTobaccosStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [tobaccosOffset, setTobaccosOffset] = useState(0);
+  const [tobaccosHasMore, setTobaccosHasMore] = useState(true);
   const [selectedProfiles, setSelectedProfiles] = useState<FlavorProfile[]>([]);
   const [tagsDraft, setTagsDraft] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -60,24 +78,134 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   }, []);
 
   useEffect(() => {
-    getManufacturers()
-      .then((response) => setManufacturers(response.items))
-      .catch(() => setManufacturers([]));
-  }, []);
+    const timeout = window.setTimeout(() => {
+      setManufacturerSearch(manufacturerSearchDraft.trim());
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [manufacturerSearchDraft]);
 
   useEffect(() => {
-    getTobaccos({
-      manufacturerId: manufacturerId || undefined,
-      limit: 200,
-    })
-      .then((response) => {
+    const timeout = window.setTimeout(() => {
+      setTobaccoSearch(tobaccoSearchDraft.trim());
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [tobaccoSearchDraft]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadManufacturers = async () => {
+      setManufacturersStatus('loading');
+      try {
+        const response = await getManufacturers({
+          search: manufacturerSearch || undefined,
+          limit: FILTER_PAGE_SIZE,
+          offset: 0,
+        });
+        if (cancelled) {
+          return;
+        }
+
+        setManufacturers(response.items);
+        setManufacturersOffset(response.items.length);
+        setManufacturersHasMore(response.items.length === FILTER_PAGE_SIZE);
+        setManufacturersStatus('idle');
+      } catch {
+        if (cancelled) {
+          return;
+        }
+        setManufacturers([]);
+        setManufacturersOffset(0);
+        setManufacturersHasMore(false);
+        setManufacturersStatus('error');
+      }
+    };
+
+    void loadManufacturers();
+    return () => {
+      cancelled = true;
+    };
+  }, [manufacturerSearch]);
+
+  const loadMoreManufacturers = useCallback(async () => {
+    if (!manufacturersHasMore || manufacturersStatus === 'loading') {
+      return;
+    }
+
+    setManufacturersStatus('loading');
+    try {
+      const response = await getManufacturers({
+        search: manufacturerSearch || undefined,
+        limit: FILTER_PAGE_SIZE,
+        offset: manufacturersOffset,
+      });
+
+      setManufacturers((current) => appendUniqueById(current, response.items));
+      setManufacturersOffset((current) => current + response.items.length);
+      setManufacturersHasMore(response.items.length === FILTER_PAGE_SIZE);
+      setManufacturersStatus('idle');
+    } catch {
+      setManufacturersStatus('error');
+    }
+  }, [manufacturerSearch, manufacturersHasMore, manufacturersOffset, manufacturersStatus]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadTobaccos = async () => {
+      setTobaccosStatus('loading');
+      try {
+        const response = await getTobaccos({
+          manufacturerId: manufacturerId || undefined,
+          search: tobaccoSearch || undefined,
+          limit: FILTER_PAGE_SIZE,
+          offset: 0,
+        });
+        if (cancelled) {
+          return;
+        }
+
         setTobaccos(response.items);
-        setTobaccoId((current) =>
-          current && !response.items.some((item) => item.id === current) ? '' : current,
-        );
-      })
-      .catch(() => setTobaccos([]));
-  }, [manufacturerId]);
+        setTobaccosOffset(response.items.length);
+        setTobaccosHasMore(response.items.length === FILTER_PAGE_SIZE);
+        setTobaccosStatus('idle');
+      } catch {
+        if (cancelled) {
+          return;
+        }
+        setTobaccos([]);
+        setTobaccosOffset(0);
+        setTobaccosHasMore(false);
+        setTobaccosStatus('error');
+      }
+    };
+
+    void loadTobaccos();
+    return () => {
+      cancelled = true;
+    };
+  }, [manufacturerId, tobaccoSearch]);
+
+  const loadMoreTobaccos = useCallback(async () => {
+    if (!tobaccosHasMore || tobaccosStatus === 'loading') {
+      return;
+    }
+
+    setTobaccosStatus('loading');
+    try {
+      const response = await getTobaccos({
+        manufacturerId: manufacturerId || undefined,
+        search: tobaccoSearch || undefined,
+        limit: FILTER_PAGE_SIZE,
+        offset: tobaccosOffset,
+      });
+
+      setTobaccos((current) => appendUniqueById(current, response.items));
+      setTobaccosOffset((current) => current + response.items.length);
+      setTobaccosHasMore(response.items.length === FILTER_PAGE_SIZE);
+      setTobaccosStatus('idle');
+    } catch {
+      setTobaccosStatus('error');
+    }
+  }, [manufacturerId, tobaccoSearch, tobaccosHasMore, tobaccosOffset, tobaccosStatus]);
 
   useEffect(() => {
     const load = async () => {
@@ -140,24 +268,32 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     );
   };
 
+  const handleManufacturersScroll = (event: UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (distanceToBottom <= FILTER_SCROLL_THRESHOLD) {
+      void loadMoreManufacturers();
+    }
+  };
+
+  const handleTobaccosScroll = (event: UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (distanceToBottom <= FILTER_SCROLL_THRESHOLD) {
+      void loadMoreTobaccos();
+    }
+  };
+
+  const handleSelectManufacturer = (value: string) => {
+    setManufacturerId(value);
+    setTobaccoId('');
+  };
+
+  const handleSelectTobacco = (value: string) => {
+    setTobaccoId(value);
+  };
+
   const totalLabel = useMemo(() => `${items.length} миксов`, [items.length]);
-  const sortedManufacturers = useMemo(
-    () => [...manufacturers].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })),
-    [manufacturers],
-  );
-  const sortedTobaccos = useMemo(
-    () =>
-      [...tobaccos].sort((a, b) => {
-        const byManufacturer = a.manufacturer.name.localeCompare(b.manufacturer.name, 'ru', {
-          sensitivity: 'base',
-        });
-        if (byManufacturer !== 0) {
-          return byManufacturer;
-        }
-        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
-      }),
-    [tobaccos],
-  );
   const hasFilters = Boolean(
     query ||
       manufacturerId ||
@@ -242,25 +378,79 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
         <div className="filters-row">
           <label className="filter-field">
             <span>Производитель</span>
-            <select value={manufacturerId} onChange={(event) => setManufacturerId(event.target.value)}>
-              <option value="">Все бренды</option>
-              {sortedManufacturers.map((item) => (
-                <option key={item.id} value={item.id}>
+            <input
+              className="search-input"
+              type="search"
+              value={manufacturerSearchDraft}
+              onChange={(event) => setManufacturerSearchDraft(event.target.value)}
+              placeholder="Поиск бренда"
+            />
+            <div className="filter-scrollbox" onScroll={handleManufacturersScroll}>
+              <button
+                type="button"
+                className={`filter-option ${manufacturerId === '' ? 'active' : ''}`}
+                onClick={() => handleSelectManufacturer('')}
+              >
+                Все бренды
+              </button>
+              {manufacturers.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`filter-option ${manufacturerId === item.id ? 'active' : ''}`}
+                  onClick={() => handleSelectManufacturer(item.id)}
+                >
                   {item.name}
-                </option>
+                </button>
               ))}
-            </select>
+              <p className="filter-scroll-meta">
+                {manufacturersStatus === 'error'
+                  ? 'Не удалось загрузить бренды'
+                  : manufacturersStatus === 'loading'
+                    ? 'Загрузка...'
+                    : manufacturersHasMore
+                      ? 'Прокрутите вниз для автоподгрузки'
+                      : 'Все бренды загружены'}
+              </p>
+            </div>
           </label>
           <label className="filter-field">
             <span>Табак</span>
-            <select value={tobaccoId} onChange={(event) => setTobaccoId(event.target.value)}>
-              <option value="">Любой табак</option>
-              {sortedTobaccos.map((item) => (
-                <option key={item.id} value={item.id}>
+            <input
+              className="search-input"
+              type="search"
+              value={tobaccoSearchDraft}
+              onChange={(event) => setTobaccoSearchDraft(event.target.value)}
+              placeholder={manufacturerId ? 'Поиск табака бренда' : 'Поиск табака'}
+            />
+            <div className="filter-scrollbox" onScroll={handleTobaccosScroll}>
+              <button
+                type="button"
+                className={`filter-option ${tobaccoId === '' ? 'active' : ''}`}
+                onClick={() => handleSelectTobacco('')}
+              >
+                Любой табак
+              </button>
+              {tobaccos.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`filter-option ${tobaccoId === item.id ? 'active' : ''}`}
+                  onClick={() => handleSelectTobacco(item.id)}
+                >
                   {item.manufacturer.name} · {item.name}
-                </option>
+                </button>
               ))}
-            </select>
+              <p className="filter-scroll-meta">
+                {tobaccosStatus === 'error'
+                  ? 'Не удалось загрузить табаки'
+                  : tobaccosStatus === 'loading'
+                    ? 'Загрузка...'
+                    : tobaccosHasMore
+                      ? 'Прокрутите вниз для автоподгрузки'
+                      : 'Все табаки загружены'}
+              </p>
+            </div>
           </label>
         </div>
 
