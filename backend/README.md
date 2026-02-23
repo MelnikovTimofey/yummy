@@ -7,6 +7,11 @@
 docker compose -f docker-compose.yml up -d
 ```
 
+Чтобы поднять также микросервис обновления каталога:
+```
+docker compose -f docker-compose.yml up -d catalog-updater
+```
+
 2) Install dependencies:
 ```
 npm install
@@ -34,6 +39,25 @@ npm run dev
 
 API will be available at `http://localhost:3001`.
 Mailpit UI: `http://localhost:8025`.
+Catalog updater API: `http://localhost:3011`.
+
+## Catalog updater (отдельный микросервис)
+
+Сервис отвечает только за обновление базы табаков/миксов.
+
+- `GET /health`
+- `POST /jobs/refresh`
+- `GET /jobs`
+- `GET /jobs/:id`
+
+Пример запуска обновления:
+```
+curl -X POST http://localhost:3011/jobs/refresh \
+  -H 'content-type: application/json' \
+  -d '{"includeLocalSeeds": true, "includeMustHaveMixes": false}'
+```
+
+Если в updater задан `UPDATER_API_KEY`, передавайте заголовок `x-api-key`.
 
 ## Seeds
 

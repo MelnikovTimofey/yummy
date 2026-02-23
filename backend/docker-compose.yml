@@ -28,5 +28,20 @@ services:
     profiles:
       - ml
 
+  catalog-updater:
+    build:
+      context: ..
+      dockerfile: services/catalog-updater/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy
+      PORT: 3011
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      CATALOG_SEED_DIR: /app/backend/seed
+    depends_on:
+      - db
+    ports:
+      - "3011:3011"
+
 volumes:
   yummy_db:
