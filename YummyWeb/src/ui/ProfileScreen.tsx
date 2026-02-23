@@ -113,7 +113,7 @@ export const ProfileScreen = ({
       setLikedProfiles(response.profile.likedProfiles);
       setDislikedProfiles(response.profile.dislikedProfiles);
       setFavoriteManufacturerIds(response.profile.favoriteManufacturerIds);
-      setFeedback('Профиль предпочтений сохранён. Подборка обновлена.');
+      setFeedback('Профиль предпочтений сохранён. Рекомендации обновлены.');
       onPreferencesSaved();
     } catch {
       setFeedback('Не удалось сохранить предпочтения.');
@@ -215,7 +215,7 @@ export const ProfileScreen = ({
               onClick={onSave}
               disabled={saving}
             >
-              Сохранить и обновить подборку
+              Сохранить и обновить рекомендации
             </button>
             {feedback ? <p className="hint">{feedback}</p> : null}
           </section>
