@@ -43,6 +43,44 @@ const appendUniqueById = <T extends { id: string }>(current: T[], next: T[]) => 
   return [...current, ...next.filter((item) => !seen.has(item.id))];
 };
 
+const buildActiveFilterLabels = (
+  params: {
+    query: string;
+    manufacturerId: string;
+    manufacturerName?: string;
+    tobaccoId: string;
+    tobaccoName?: string;
+    selectedProfiles: FlavorProfile[];
+    tags: string[];
+    minRating: '' | '1' | '2' | '3' | '4' | '5';
+    sortBy: 'newest' | 'rating' | 'popularity';
+  },
+) => {
+  const labels: string[] = [];
+  if (params.query) {
+    labels.push(`Поиск: ${params.query}`);
+  }
+  if (params.manufacturerId) {
+    labels.push(`Бренд: ${params.manufacturerName || 'выбран'}`);
+  }
+  if (params.tobaccoId) {
+    labels.push(`Табак: ${params.tobaccoName || 'выбран'}`);
+  }
+  if (params.selectedProfiles.length) {
+    labels.push(`Профили: ${params.selectedProfiles.length}`);
+  }
+  if (params.tags.length) {
+    labels.push(`Теги: ${params.tags.join(', ')}`);
+  }
+  if (params.minRating) {
+    labels.push(`Оценка: ${params.minRating}+`);
+  }
+  if (params.sortBy !== 'popularity') {
+    labels.push(params.sortBy === 'rating' ? 'Сортировка: рейтинг' : 'Сортировка: дата');
+  }
+  return labels;
+};
+
 export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [summaries, setSummaries] = useState<Record<string, MixRatingSummary>>({});
@@ -274,6 +312,22 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     );
   };
 
+  const resetFilters = () => {
+    setQueryDraft('');
+    setQuery('');
+    setManufacturerSearchDraft('');
+    setManufacturerSearch('');
+    setManufacturerId('');
+    setTobaccoSearchDraft('');
+    setTobaccoSearch('');
+    setTobaccoId('');
+    setSelectedProfiles([]);
+    setTagsDraft('');
+    setTags([]);
+    setMinRating('');
+    setSortBy('popularity');
+  };
+
   const handleManufacturersScroll = (event: UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
@@ -308,6 +362,39 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       tags.length ||
       minRating ||
       sortBy !== 'popularity',
+  );
+  const selectedManufacturerName = useMemo(
+    () => manufacturers.find((item) => item.id === manufacturerId)?.name,
+    [manufacturerId, manufacturers],
+  );
+  const selectedTobaccoName = useMemo(
+    () => tobaccos.find((item) => item.id === tobaccoId)?.name,
+    [tobaccoId, tobaccos],
+  );
+  const activeFilterLabels = useMemo(
+    () =>
+      buildActiveFilterLabels({
+        query,
+        manufacturerId,
+        manufacturerName: selectedManufacturerName,
+        tobaccoId,
+        tobaccoName: selectedTobaccoName,
+        selectedProfiles,
+        tags,
+        minRating,
+        sortBy,
+      }),
+    [
+      manufacturerId,
+      minRating,
+      query,
+      selectedManufacturerName,
+      selectedProfiles,
+      selectedTobaccoName,
+      sortBy,
+      tags,
+      tobaccoId,
+    ],
   );
 
   if (activeMix) {
@@ -357,6 +444,21 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             placeholder="Поиск по названию и описанию"
           />
           <button type="submit" className="search-button">Найти</button>
+        </div>
+        <div className="catalog-tools-row">
+          <div className="catalog-active-filters" aria-live="polite">
+            {activeFilterLabels.length ? activeFilterLabels.map((label) => (
+              <span key={label} className="filter-pill">{label}</span>
+            )) : <span className="filter-pill muted">Фильтры не заданы</span>}
+          </div>
+          <button
+            type="button"
+            className="ghost-button catalog-reset-btn"
+            onClick={resetFilters}
+            disabled={!hasFilters}
+          >
+            Сбросить фильтры
+          </button>
         </div>
 
         <div className="filters-row">

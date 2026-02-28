@@ -25,13 +25,24 @@ const PROFILE_LABELS: Record<FlavorProfile, string> = {
 };
 
 const dedupe = <T,>(items: T[]) => Array.from(new Set(items));
+const PROFILE_VALUES = new Set<FlavorProfile>(Object.keys(PROFILE_LABELS) as FlavorProfile[]);
+
+const sanitizeProfiles = (profiles: unknown[]) =>
+  dedupe(
+    profiles
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value): value is FlavorProfile => PROFILE_VALUES.has(value as FlavorProfile)),
+  );
 
 const getProfileTags = (mix: Mix) => {
   const direct = mix.flavorProfiles ?? [];
   if (direct.length) {
-    return dedupe(direct);
+    return sanitizeProfiles(direct);
   }
-  return dedupe(mix.components.flatMap((component) => component.tobacco.flavorProfiles ?? []));
+  return sanitizeProfiles(
+    mix.components.flatMap((component) => component.tobacco.flavorProfiles ?? []),
+  );
 };
 
 export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: HomeScreenProps) => {
@@ -97,6 +108,21 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
 
     void loadFavorites();
   }, [authState.tokens, onAuthUpdate, rails.length]);
+
+  useEffect(() => {
+    if (!infoMix) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setInfoMix(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [infoMix]);
 
   const orderedRails = useMemo(() => {
     const recommendations = rails.filter((rail) => rail.type === 'recommendations');
@@ -164,6 +190,9 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
       {status === 'loading' ? <p className="screen-status">Загрузка главной...</p> : null}
       {status === 'error' ? <p className="screen-status error">Не удалось загрузить рейлы.</p> : null}
       {feedback ? <p className="hint">{feedback}</p> : null}
+      {!authState.tokens ? (
+        <p className="hint home-guest-note">В гостевом режиме часть действий доступна после входа: избранное, сессии и персональные рекомендации.</p>
+      ) : null}
       {authState.tokens && !favoriteRailHasItems ? (
         <p className="hint">Рейл «Избранное» появится после добавления хотя бы одного микса в избранное.</p>
       ) : null}
@@ -213,23 +242,23 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             >
               {rail.items.map((mix) => {
                 const profileTags = getProfileTags(mix);
+                const isMixClickable = Boolean(onOpenMix);
                 return (
                   <article
                     key={`${rail.id}:${mix.id}`}
-                    className="home-item"
-                    onClick={() => onOpenMix?.(mix.id)}
-                    onKeyDown={(event) => {
+                    className={`home-item ${isMixClickable ? 'interactive' : 'static'}`}
+                    onClick={isMixClickable ? () => onOpenMix?.(mix.id) : undefined}
+                    onKeyDown={isMixClickable ? (event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         onOpenMix?.(mix.id);
                       }
-                    }}
+                    } : undefined}
                     style={{
                       background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
                     }}
-                    role="button"
-                    tabIndex={onOpenMix ? 0 : -1}
-                    aria-disabled={!onOpenMix}
+                    role={isMixClickable ? 'button' : undefined}
+                    tabIndex={isMixClickable ? 0 : undefined}
                   >
                     <div className="home-item-overlay">
                       <div className="home-item-head">
@@ -248,13 +277,14 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                           </button>
                           <button
                             type="button"
-                            className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''}`}
+                            className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
                             onClick={(event) => {
                               event.stopPropagation();
                               void onToggleFavorite(mix.id);
                             }}
-                            disabled={!authState.tokens}
+                            aria-pressed={Boolean(favoriteMixIds[mix.id])}
                             aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
+                            title={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
                           >
                             {favoriteMixIds[mix.id] ? '♥' : '♡'}
                           </button>

@@ -32,6 +32,13 @@ body {
   background: var(--bg);
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
 .app-bg {
   min-height: 100dvh;
   display: grid;
@@ -357,10 +364,9 @@ h1 {
   -webkit-appearance: none;
 }
 
-.home-item[aria-disabled='true'],
+.home-item.static,
 .home-link-btn:disabled {
   cursor: default;
-  opacity: 0.75;
 }
 
 .home-item-overlay {
@@ -420,6 +426,10 @@ h1 {
 .fav-icon.active {
   color: #f4b7c8;
   border-color: #8f4f62;
+}
+
+.fav-icon.guest {
+  border-style: dashed;
 }
 
 .home-item-title {
@@ -533,6 +543,37 @@ h1 {
 
 .search-button:disabled {
   opacity: 0.45;
+}
+
+.catalog-tools-row {
+  display: grid;
+  gap: 10px;
+}
+
+.catalog-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #4a3b2c;
+  background: #211a14;
+  color: var(--accent-soft);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.filter-pill.muted {
+  border-color: var(--line);
+  background: #1c1714;
+  color: var(--text-1);
 }
 
 .mix-create-trigger {
@@ -1119,6 +1160,10 @@ h1 {
   font-size: 15px;
 }
 
+.home-guest-note {
+  margin-top: 0;
+}
+
 .status {
   margin: 12px 0 0;
   font-size: 13px;
@@ -1192,6 +1237,10 @@ h1 {
   border-color: #5e4a2e;
   background: #251d15;
   color: var(--accent-soft);
+}
+
+.catalog-reset-btn {
+  margin-top: 0;
 }
 
 @media (max-width: 480px) {
@@ -1294,16 +1343,102 @@ h1 {
 
   .desktop-tabbar {
     flex-wrap: wrap;
-    padding: 12px 24px 10px;
+    padding: 14px 24px 12px;
   }
 
   .content {
-    padding: 14px 24px 18px;
-    gap: 16px;
+    padding: 18px 24px 20px;
+    gap: 18px;
   }
 
   .home-rail-title {
+    font-size: 34px;
+  }
+
+  .home-rail-carousel {
+    grid-template-columns: 44px 1fr 44px;
+    gap: 10px;
+  }
+
+  .rail-nav-btn {
+    min-height: 56px;
     font-size: 30px;
+  }
+
+  .home-item {
+    min-width: 340px;
+  }
+
+  .home-item-overlay {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .home-item-title {
+    font-size: 18px;
+  }
+
+  .home-item-meta {
+    font-size: 13px;
+  }
+
+  .profile-tag {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .catalog-hero {
+    padding: 20px;
+  }
+
+  .catalog-hero h2 {
+    font-size: 36px;
+  }
+
+  .catalog-hero p {
+    font-size: 15px;
+  }
+
+  .catalog-controls {
+    padding: 18px;
+    gap: 12px;
+  }
+
+  .catalog-tools-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .catalog-reset-btn {
+    min-width: 200px;
+  }
+
+  .filter-scrollbox {
+    max-height: 228px;
+  }
+
+  .card-title {
+    font-size: 13px;
+  }
+
+  .card-text {
+    font-size: 15px;
+  }
+
+  .form input {
+    font-size: 16px;
+  }
+
+  .form button,
+  .search-button {
+    min-height: 50px;
+    font-size: 14px;
+  }
+
+  .desktop-tab {
+    min-height: 42px;
+    font-size: 13px;
   }
 
   .cinema-grid {
