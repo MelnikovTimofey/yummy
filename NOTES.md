@@ -16,12 +16,15 @@
 1. Источник HookahPortal включается только при `CATALOG_ALLOW_TEST_SOURCES=true`.
 2. `local-seed` сейчас используется только для табаков (без миксов).
 3. Часть миксов отбрасывается валидатором (некорректные пропорции/компоненты).
+4. Перед запуском `npm run import:tobaccos` в новом окружении обязательно применить миграции (`docker compose --profile setup up backend-migrate` или `npm run prisma:migrate`).
 
 Следующие шаги:
-1. Добавить команду `npm run cache:refresh:hookahportal`.
-2. Добавить команду `npm run catalog:refresh:from-cache`.
-3. Сохранить отчёт о последнем импорте (JSON артефакт со stats/issues).
-4. Решить стратегию для миксов с суммой пропорций != 100 (нормализация или soft-skip).
+1. `npm run cache:refresh:hookahportal` добавлена в `services/catalog-updater`.
+2. `npm run catalog:refresh:from-cache` добавлена в `services/catalog-updater`.
+3. Добавлен `npm run import:tobaccos` в `backend` (запуск refresh через API updater + polling статуса).
+4. Добавлен корневой `docker-compose.yml` для полного локального контура (`db`, `mailpit`, `backend`, `catalog-updater`, `yummy-web`, профили `setup` и `ml`).
+5. Сохранить отчёт о последнем импорте (JSON артефакт со stats/issues).
+6. Решить стратегию для миксов с суммой пропорций != 100 (нормализация или soft-skip).
 
 ## Обновления продуктового сценария UI (целевое)
 

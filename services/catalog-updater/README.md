@@ -106,6 +106,13 @@ Updater поддерживает кеш в файлах:
 
 ## Обновление артефактов и БД
 
+Через npm-скрипты:
+```bash
+cd /Users/admin/PycharmProjects/yummy/services/catalog-updater
+npm run cache:refresh:hookahportal
+DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:refresh:from-cache
+```
+
 Обновить локальные JSON-артефакты:
 ```bash
 cd /Users/admin/PycharmProjects/yummy/services/catalog-updater

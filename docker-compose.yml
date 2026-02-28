@@ -1,0 +1,165 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: yummy
+      POSTGRES_PASSWORD: yummy
+      POSTGRES_DB: yummy
+    ports:
+      - "5432:5432"
+    volumes:
+      - yummy_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yummy -d yummy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy?schema=public
+      APP_BASE_URL: http://localhost:3001
+      APP_DEEPLINK_SCHEME: yummy://auth
+      MAGIC_LINK_TTL_MINUTES: 15
+      JWT_SECRET: local-dev-jwt-secret
+      JWT_EXPIRES_IN: 7d
+      REFRESH_SESSION_TTL_DAYS: 30
+      RATE_LIMIT_MAX: 5
+      RATE_LIMIT_WINDOW_MS: 600000
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_USER: ''
+      SMTP_PASS: ''
+      SMTP_FROM: Yummy <no-reply@yummy.local>
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  catalog-updater:
+    build:
+      context: .
+      dockerfile: services/catalog-updater/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy
+      PORT: 3011
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      CATALOG_ALLOW_TEST_SOURCES: "true"
+      CATALOG_SEED_DIR: /app/backend/seed
+      HOOKAHPORTAL_CACHE_DIR: /app/services/catalog-updater/cache/hookahportal
+      HOOKAHPORTAL_CACHE_READ: "true"
+      HOOKAHPORTAL_CACHE_WRITE: "true"
+    ports:
+      - "3011:3011"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3011/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  yummy-web:
+    build:
+      context: ./YummyWeb
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_BASE_URL: http://localhost:3001
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - ml
+
+  backend-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: build
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - setup
+    restart: "no"
+
+  backend-seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: build
+    command: ["npm", "run", "seed"]
+    environment:
+      DATABASE_URL: postgresql://yummy:yummy@db:5432/yummy?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
+    profiles:
+      - setup
+    restart: "no"
+
+volumes:
+  yummy_db:

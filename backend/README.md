@@ -2,37 +2,43 @@
 
 ## Local setup
 
-1) Start Postgres + Mailpit:
+1) Поднять весь локальный контур из корня репозитория:
 ```
-docker compose -f docker-compose.yml up -d
-```
-
-Чтобы поднять также микросервис обновления каталога:
-```
-docker compose -f docker-compose.yml up -d catalog-updater
+cd /Users/admin/PycharmProjects/yummy
+docker compose up -d
 ```
 
-2) Install dependencies:
+2) Выполнить миграции и сид (однократно для пустой БД):
+```
+docker compose --profile setup up backend-migrate backend-seed
+```
+
+3) Если нужен ML-контур:
+```
+docker compose --profile ml up -d ml
+```
+
+4) Вариант без Docker для backend (локально):
 ```
 npm install
 ```
 
-3) Configure env:
+5) Configure env:
 ```
 cp .env.example .env
 ```
 
-4) Run migrations (creates tables):
+6) Run migrations (creates tables):
 ```
 npm run prisma:migrate
 ```
 
-5) Seed catalog data:
+7) Seed catalog data:
 ```
 npm run seed
 ```
 
-6) Start API:
+8) Start API:
 ```
 npm run dev
 ```
@@ -61,6 +67,11 @@ curl -X POST http://localhost:3011/jobs/refresh \
 
 Тестовый источник `hookahportal.ru` отключен по умолчанию и требует
 `CATALOG_ALLOW_TEST_SOURCES=true` в окружении updater.
+
+CLI для запуска импорта табаков через updater:
+```
+npm run import:tobaccos
+```
 
 ## Seeds
 

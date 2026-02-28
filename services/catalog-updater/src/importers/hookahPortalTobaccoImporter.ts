@@ -176,6 +176,129 @@ const parseCatalogTobaccoUrls = (html: string) => {
   return Array.from(urls);
 };
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const parseTobaccoUrlsFromHtml = (html: string) => {
+  const urls = new Set<string>();
+  const linkRegex = /href="(https:\/\/hookahportal\.ru\/tobacco\/[^"#?\s<]+)"/gi;
+
+  let match = linkRegex.exec(html);
+  while (match) {
+    urls.add(normalizeUrl(match[1]));
+    match = linkRegex.exec(html);
+  }
+
+  return Array.from(urls);
+};
+
+const parseCategorySlugFromUrl = (url: string) => {
+  const match = normalizeUrl(url).match(/\/tobaccos\/([^/?#]+)/i);
+  return match?.[1]?.toLowerCase() ?? null;
+};
+
+const parseCategorySeedFromTobaccoUrl = (url: string) => {
+  const match = normalizeUrl(url).match(/\/tobacco\/([^/?#]+)/i);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const slug = match[1].toLowerCase();
+  const [seed] = slug.split('-');
+  return seed || null;
+};
+
+const parseCategoryFamilyLinks = (html: string, rootSlug: string) => {
+  const urls = new Set<string>();
+  const linkRegex = /href="(https:\/\/hookahportal\.ru\/tobaccos\/[^"#?\s<]+)"/gi;
+
+  let match = linkRegex.exec(html);
+  while (match) {
+    const url = normalizeUrl(match[1]);
+    const slug = parseCategorySlugFromUrl(url);
+    if (slug && (slug === rootSlug || slug.startsWith(`${rootSlug}-`))) {
+      urls.add(url);
+    }
+    match = linkRegex.exec(html);
+  }
+
+  return Array.from(urls);
+};
+
+const parseCategoryPaginationLinks = (html: string, categorySlug: string) => {
+  const urls = new Set<string>();
+  const escapedSlug = escapeRegExp(categorySlug);
+  const regex = new RegExp(
+    `href="(https:\\/\\/hookahportal\\.ru\\/tobaccos\\/${escapedSlug}(?:\\?page=\\d+)?)"`,
+    'gi',
+  );
+
+  let match = regex.exec(html);
+  while (match) {
+    urls.add(normalizeUrl(match[1]));
+    match = regex.exec(html);
+  }
+
+  return Array.from(urls);
+};
+
+const discoverCategoryFamilyTobaccoUrls = async (
+  rootCategoryUrl: string,
+  timeoutMs: number,
+) => {
+  const rootSlug = parseCategorySlugFromUrl(rootCategoryUrl);
+  if (!rootSlug) {
+    return [];
+  }
+
+  const categoriesQueue = [normalizeUrl(rootCategoryUrl)];
+  const visitedCategoryUrls = new Set<string>();
+  const visitedPageUrls = new Set<string>();
+  const tobaccoUrls = new Set<string>();
+
+  while (categoriesQueue.length > 0) {
+    const categoryUrl = categoriesQueue.shift();
+    if (!categoryUrl || visitedCategoryUrls.has(categoryUrl)) {
+      continue;
+    }
+
+    visitedCategoryUrls.add(categoryUrl);
+
+    let html: string;
+    try {
+      html = await fetchText(categoryUrl, timeoutMs);
+    } catch {
+      continue;
+    }
+
+    parseTobaccoUrlsFromHtml(html).forEach((url) => tobaccoUrls.add(url));
+    parseCategoryPaginationLinks(html, parseCategorySlugFromUrl(categoryUrl) ?? rootSlug).forEach((url) =>
+      visitedPageUrls.add(url),
+    );
+    parseCategoryFamilyLinks(html, rootSlug)
+      .filter((url) => !visitedCategoryUrls.has(url))
+      .forEach((url) => categoriesQueue.push(url));
+
+    const pageUrls = Array.from(visitedPageUrls).filter(
+      (url) => parseCategorySlugFromUrl(url) === parseCategorySlugFromUrl(categoryUrl),
+    );
+    for (const pageUrl of pageUrls) {
+      if (pageUrl === categoryUrl || visitedCategoryUrls.has(pageUrl)) {
+        continue;
+      }
+
+      visitedCategoryUrls.add(pageUrl);
+      try {
+        const pageHtml = await fetchText(pageUrl, timeoutMs);
+        parseTobaccoUrlsFromHtml(pageHtml).forEach((url) => tobaccoUrls.add(url));
+      } catch {
+        // continue with partial list
+      }
+    }
+  }
+
+  return Array.from(tobaccoUrls);
+};
+
 const parsePropertyMap = (html: string) => {
   const result = new Map<string, string[]>();
   const specific = firstMatch(
@@ -406,9 +529,28 @@ const loadHookahPortalTobaccos = async (
     catalogUrls = [];
   }
 
-  const urls = dedupeUrls([...catalogUrls, ...sitemapUrls]).slice(0, options.maxTobaccos);
+  const sitemapUrlSet = new Set(sitemapUrls);
+  const extraCategorySeeds = Array.from(
+    new Set(
+      catalogUrls
+        .filter((url) => !sitemapUrlSet.has(url))
+        .map((url) => parseCategorySeedFromTobaccoUrl(url))
+        .filter((slug): slug is string => Boolean(slug)),
+    ),
+  );
+  const extraCategoryUrls: string[] = [];
+  for (const slug of extraCategorySeeds) {
+    const discovered = await discoverCategoryFamilyTobaccoUrls(
+      `https://hookahportal.ru/tobaccos/${slug}`,
+      options.timeoutMs,
+    );
+    extraCategoryUrls.push(...discovered);
+  }
+
+  const fallbackTobaccoUrls = dedupeUrls([...catalogUrls, ...extraCategoryUrls]);
+  const urls = dedupeUrls([...fallbackTobaccoUrls, ...sitemapUrls]).slice(0, options.maxTobaccos);
   console.log(
-    `[hookahportal] tobaccos urls from sitemap=${sitemapUrls.length}, fallback=${catalogUrls.length}, final=${urls.length}`,
+    `[hookahportal] tobaccos urls from sitemap=${sitemapUrls.length}, fallback=${catalogUrls.length}, categoryFallback=${extraCategoryUrls.length}, final=${urls.length}`,
   );
 
   const parsedTobaccos = await collectInParallel<ParsedTobacco>(
@@ -430,10 +572,12 @@ const loadHookahPortalTobaccos = async (
   );
 
   const parsedByUrl = new Set(parsedTobaccos.map((item) => item.url));
-  const missingCatalogUrls = catalogUrls.filter((url) => !parsedByUrl.has(normalizeUrl(url)));
-  if (missingCatalogUrls.length) {
+  const missingFallbackUrls = fallbackTobaccoUrls.filter(
+    (url) => !parsedByUrl.has(normalizeUrl(url)),
+  );
+  if (missingFallbackUrls.length) {
     let recovered = 0;
-    for (const url of missingCatalogUrls) {
+    for (const url of missingFallbackUrls) {
       try {
         const html = await fetchText(url, options.timeoutMs);
         const parsed = parseTobaccoPage(html, url);
@@ -449,7 +593,7 @@ const loadHookahPortalTobaccos = async (
 
     if (recovered > 0) {
       console.log(
-        `[hookahportal] recovered ${recovered}/${missingCatalogUrls.length} fallback tobaccos`,
+        `[hookahportal] recovered ${recovered}/${missingFallbackUrls.length} fallback tobaccos`,
       );
     }
   }

@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "lint": "echo \"no lint configured\"",
     "seed": "prisma db seed",
+    "import:tobaccos": "tsx scripts/import/run_tobaccos.ts",
     "scrape:musthave-mixes": "tsx scripts/scrape_musthave_mixes.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
