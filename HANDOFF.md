@@ -1,5 +1,28 @@
 # HANDOFF — Yummy
 
+## 0) Последнее обновление (28 февраля 2026, финальная миграция каталога)
+
+- Схема табака приведена к целевому виду:
+  - `flavorProfiles` (+ `perfume`),
+  - `flavors` (отдельный массив вкусов),
+  - `flavorTags` только для мета-тегов (`редкие`, `напитки`, `охлаждающий`),
+  - `line` удалён.
+- Применены миграции:
+  - `20260228213000_tobacco_flavor_perfume_cleanup`
+  - `20260228222000_sanitize_tobacco_flavor_fields`
+- Выполнен полный uncached refresh из единственного источника `hookahportal.ru`:
+  - job: `11944911-aebf-4bd0-affd-e26e5421bf51`
+  - `input.tobaccos=2585`, `input.mixes=602`
+  - `tobaccosCreated=33`, `tobaccosUpdated=2552`
+  - `mixesCreated=54`, `mixesUpdated=510`, `mixesSkipped=38`
+- Итоговая контрольная выборка для `RED`:
+  - `flavorProfiles={floral_herbal,perfume}`
+  - `flavorTags={редкие}`
+  - `flavors={травы}`
+- Контроль чистоты таксономии:
+  - `tobaccos_with_non_meta_tags = 0`
+  - в таблице `Tobacco` нет колонок `line` и `flavor` (используется `flavors`).
+
 ## 1) Статус на 23 февраля 2026 (обновлено: 28 февраля 2026)
 
 - Каталог обновляется отдельным микросервисом `services/catalog-updater`.
@@ -18,6 +41,10 @@
   - `npm run catalog:refresh:from-cache`
 - Добавлен `backend`-скрипт запуска импорта через updater:
   - `npm run import:tobaccos`
+- Каталоговая модель расширена до prod-ready таксономии:
+  - `FlavorProfile`: добавлены `minty`, `fruity`, `floral_herbal`, `citrus`, `berry`
+  - `Tobacco`: используется `flavors` + `flavorTags` (мета-теги), `line` удалён
+  - `Mix`: добавлен `flavors`, наследование `flavorProfiles/flavors/tags` от компонент
 
 ## 2) Актуальные артефакты каталога
 
@@ -27,16 +54,22 @@
 
 ## 3) Последняя проверенная загрузка в БД (только HookahPortal)
 
-После очистки каталога и импорта из кеша:
-- `Manufacturer`: `69`
-- `Tobacco`: `2528`
-- `Mix`: `508`
-- `MixComponent`: `1652`
+Последний запуск refresh-job (28 февраля 2026, `id=7f01ddd7-fc8a-4865-9258-14d22a3f24a4`):
+- `sourceNames`: `["hookahportal-catalog-test"]` (только HookahPortal)
+- `input`: `tobaccos=2592`, `mixes=581`
+- `tobaccosUpdated=2592`
+- `mixesUpdated=533`
+- `mixesSkipped=48`
+
+Текущие размеры таблиц после пересборки:
+- `Manufacturer`: `72`
+- `Tobacco`: `2592`
+- `Mix`: `533`
+- `MixComponent`: `1771`
 
 Примечания:
 - Импорт выполнялся через `runRefreshCatalogJob` с `HOOKAHPORTAL_CACHE_READ=true`.
-- `77` миксов были пропущены валидатором (сумма пропорций != 100 или отсутствующие компоненты).
-- У пользователя `hookahportal` в БД `508` миксов.
+- Пропущенные миксы в основном из-за суммы пропорций != 100 и/или отсутствующих компонентов.
 
 ## 4) Как обновить артефакты
 
@@ -64,6 +97,7 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - Для `backend` и `catalog-updater` используется `node:bookworm-slim` + `openssl` в Dockerfile (устраняет падения Prisma на `node:alpine`).
 - Источник HookahPortal помечен как test-only (`CATALOG_ALLOW_TEST_SOURCES=true`).
 - Часть миксов отбрасывается текущими правилами валидации состава.
+- Для новых полей таксономии нужна миграция `20260228204000_expand_tobacco_mix_taxonomy` перед сидингом/импортом.
 
 ## 7) Следующие шаги
 

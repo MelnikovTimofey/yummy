@@ -5,7 +5,7 @@ import { prisma } from '../db';
 import { requireAuth } from '../auth/guard';
 
 const MAX_LIMIT = 200;
-const flavorProfileSchema = z.enum(['sweet', 'sour', 'spicy', 'fresh', 'dessert', 'tobacco']);
+const flavorProfileSchema = z.nativeEnum(FlavorProfile);
 const uuidSchema = z.string().uuid();
 const sortSchema = z.enum(['newest', 'rating', 'popularity']);
 const multiSelectSchema = z.union([z.string().trim().min(1), z.array(z.string().trim().min(1))]);
@@ -37,6 +37,8 @@ const listSchema = z.object({
   tobaccoIds: multiSelectSchema.optional(),
   profile: flavorProfileSchema.optional(),
   profiles: multiSelectSchema.optional(),
+  flavor: z.string().trim().min(1).optional(),
+  flavors: multiSelectSchema.optional(),
   tag: z.string().trim().min(1).optional(),
   tags: multiSelectSchema.optional(),
   minRating: z.coerce.number().min(1).max(5).optional(),
@@ -117,6 +119,8 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
       tobaccoIds: tobaccoIdsRaw,
       profile,
       profiles: profilesRaw,
+      flavor,
+      flavors: flavorsRaw,
       tag,
       tags: tagsRaw,
       minRating,
@@ -147,6 +151,9 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
     const tags = dedupe([tag, ...parseMultiSelect(tagsRaw)].filter(Boolean) as string[]).map((item) =>
       item.toLowerCase(),
     );
+    const flavors = dedupe([flavor, ...parseMultiSelect(flavorsRaw)].filter(Boolean) as string[]).map(
+      (item) => item.toLowerCase(),
+    );
 
     const componentFilter = {
       ...(tobaccoIds.length ? { tobaccoId: { in: tobaccoIds } } : {}),
@@ -172,6 +179,7 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
             }
           : {}),
         ...(profiles.length ? { flavorProfiles: { hasSome: profiles } } : {}),
+        ...(flavors.length ? { flavors: { hasSome: flavors } } : {}),
         ...(tags.length ? { tags: { hasSome: tags } } : {}),
         ...(manufacturerIds.length || tobaccoIds.length
           ? {
@@ -291,6 +299,8 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
       select: {
         id: true,
         flavorProfiles: true,
+        flavors: true,
+        flavorTags: true,
       },
     });
 
@@ -299,13 +309,18 @@ export const registerMixRoutes = async (app: FastifyInstance) => {
     }
 
     const flavorProfiles = dedupe(tobaccos.flatMap((tobacco) => tobacco.flavorProfiles));
-    const tags = dedupe((parseResult.data.tags ?? []).map((item) => item.toLowerCase().trim()));
+    const flavors = dedupe(tobaccos.flatMap((tobacco) => tobacco.flavors));
+    const tags = dedupe([
+      ...(parseResult.data.tags ?? []).map((item) => item.toLowerCase().trim()),
+      ...tobaccos.flatMap((tobacco) => tobacco.flavorTags),
+    ]);
 
     const mix = await prisma.mix.create({
       data: {
         name: parseResult.data.name,
         description: parseResult.data.description ?? null,
         flavorProfiles,
+        flavors,
         tags,
         isUserMix: true,
         authorId: request.user!.id,

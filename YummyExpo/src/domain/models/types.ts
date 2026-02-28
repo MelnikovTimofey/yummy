@@ -8,7 +8,13 @@ export type FlavorProfile =
   | 'spicy'
   | 'fresh'
   | 'dessert'
-  | 'tobacco';
+  | 'tobacco'
+  | 'minty'
+  | 'fruity'
+  | 'floral_herbal'
+  | 'citrus'
+  | 'berry'
+  | 'perfume';
 
 export type LocationType = 'home' | 'lounge';
 
@@ -42,8 +48,8 @@ export interface Tobacco {
   name: string;
   flavorProfiles: FlavorProfile[];
   flavorTags: string[];
+  flavors: string[];
   strength: number; // 0..10 scale from PRD
-  line?: string;
 }
 
 export interface MixComponent {

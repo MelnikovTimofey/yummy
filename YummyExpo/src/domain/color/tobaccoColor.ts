@@ -9,6 +9,12 @@ const FLAVOR_PROFILE_HUES: Record<FlavorProfile, number> = {
   fresh: 180, // cyan
   dessert: 330, // pink-magenta
   tobacco: 30, // brownish-orange
+  minty: 165, // mint green
+  fruity: 78, // ripe fruit yellow-green
+  floral_herbal: 138, // herbal green
+  citrus: 48, // citrus yellow
+  berry: 320, // berry magenta
+  perfume: 286, // perfume violet
 };
 
 // Saturation and lightness tuning to avoid overly vivid colors with many profiles.

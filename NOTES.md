@@ -1,5 +1,57 @@
 ## Этот файл для человека
 
+Обновление от 28 февраля 2026 (финализация каталога табаков):
+- Для `Tobacco` зафиксирована целевая модель:
+  - `flavorProfiles` (включая `perfume`),
+  - `flavors` (отдельный массив вкусов),
+  - `flavorTags` (только мета-теги: `редкие`, `напитки`, `охлаждающий`).
+- Поле `line` удалено из БД и из прикладной модели табака.
+- Поле `flavor` отсутствует в схеме, используется `flavors`.
+- Добавлены и применены миграции:
+  - `20260228213000_tobacco_flavor_perfume_cleanup`
+  - `20260228222000_sanitize_tobacco_flavor_fields`
+- Выполнен полный uncached refresh только из `hookahportal.ru`:
+  - job `11944911-aebf-4bd0-affd-e26e5421bf51`
+  - `input.tobaccos=2585`, `input.mixes=602`
+  - `tobaccosCreated=33`, `tobaccosUpdated=2552`
+  - `mixesCreated=54`, `mixesUpdated=510`, `mixesSkipped=38`
+- Проверка эталонного кейса `RED`:
+  - `flavorProfiles={floral_herbal,perfume}`
+  - `flavorTags={редкие}`
+  - `flavors={травы}`
+- Контроль качества после миграции:
+  - `tobaccos_with_non_meta_tags = 0`
+  - в `Tobacco` нет колонки `line`
+  - в `Tobacco` нет колонки `flavor`, есть `flavors`
+
+Обновление от 28 февраля 2026 (prod-ready таксономия табаков/миксов):
+- В Prisma добавлены новые профили вкуса: `minty`, `fruity`, `floral_herbal`, `citrus`, `berry`.
+- В `Tobacco` добавлены атрибуты `flavors` (вкусы) и `tags` (полезные некатегоризированные свойства).
+- В `Mix` добавлен атрибут `flavors`; микс теперь наследует `flavorProfiles`, `flavors` и `tags` от табаков-компонентов.
+- Добавлена миграция: `backend/prisma/migrations/20260228204000_expand_tobacco_mix_taxonomy/migration.sql`.
+- Обновлены `backend/prisma/seed.ts` и `services/catalog-updater` для автозаполнения:
+  - `flavors` из вкусовых тегов,
+  - `tags` (включая эвристику `напитки/охлаждающий/редкий`),
+  - наследование свойств в миксах.
+- API расширен:
+  - `/tobaccos` поддерживает фильтры `profile`, `flavor`, `tag`,
+  - `/mixes` и `/favorites` поддерживают фильтры `profiles`, `flavors`, `tags`.
+
+Обновление от 28 февраля 2026 (миграция + пересборка каталога):
+- Миграции Prisma применены через `backend-migrate` (pending migrations: `0`).
+- Пересборка каталога выполнена job `7f01ddd7-fc8a-4865-9258-14d22a3f24a4`.
+- Источник каталога: только `hookahportal` (`sourceNames: ["hookahportal-catalog-test"]`).
+- Итог job:
+  - `input.tobaccos=2592`, `input.mixes=581`
+  - `tobaccosUpdated=2592`
+  - `mixesUpdated=533`
+  - `mixesSkipped=48`
+- Текущие размеры таблиц после пересборки:
+  - `Manufacturer=72`
+  - `Tobacco=2592`
+  - `Mix=533`
+  - `MixComponent=1771`
+
 Текущее состояние каталога (на 23 февраля 2026):
 - Для табаков и миксов используется HookahPortal как test-source.
 - Добавлен локальный JSON-кеш:

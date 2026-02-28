@@ -16,6 +16,12 @@ const PROFILE_LABELS: Record<FlavorProfile, string> = {
   fresh: 'Свежий',
   dessert: 'Десертный',
   tobacco: 'Табачный',
+  minty: 'Мятный',
+  fruity: 'Фруктовый',
+  floral_herbal: 'Цветочно-травяной',
+  citrus: 'Цитрусовый',
+  berry: 'Ягодный',
+  perfume: 'Парфюм',
 };
 
 const dedupe = <T,>(items: T[]) => Array.from(new Set(items));

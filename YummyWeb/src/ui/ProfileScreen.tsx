@@ -23,6 +23,12 @@ const FLAVOR_OPTIONS: Array<{ value: FlavorProfile; label: string }> = [
   { value: 'fresh', label: 'Свежий' },
   { value: 'dessert', label: 'Десертный' },
   { value: 'tobacco', label: 'Табачный' },
+  { value: 'minty', label: 'Мятный' },
+  { value: 'fruity', label: 'Фруктовый' },
+  { value: 'floral_herbal', label: 'Цветочно-травяной' },
+  { value: 'citrus', label: 'Цитрусовый' },
+  { value: 'berry', label: 'Ягодный' },
+  { value: 'perfume', label: 'Парфюм' },
 ];
 
 export const ProfileScreen = ({

@@ -14,16 +14,28 @@ export type Manufacturer = {
   website?: string | null;
 };
 
-export type FlavorProfile = 'sweet' | 'sour' | 'spicy' | 'fresh' | 'dessert' | 'tobacco';
+export type FlavorProfile =
+  | 'sweet'
+  | 'sour'
+  | 'spicy'
+  | 'fresh'
+  | 'dessert'
+  | 'tobacco'
+  | 'minty'
+  | 'fruity'
+  | 'floral_herbal'
+  | 'citrus'
+  | 'berry'
+  | 'perfume';
 
 export type Tobacco = {
   id: string;
   name: string;
   description?: string | null;
   strength: number;
-  line?: string | null;
   flavorProfiles: FlavorProfile[];
   flavorTags: string[];
+  flavors: string[];
   manufacturer: Manufacturer;
 };
 
@@ -32,6 +44,7 @@ export type Mix = {
   name: string;
   description?: string | null;
   flavorProfiles?: FlavorProfile[];
+  flavors?: string[];
   tags?: string[];
   isUserMix?: boolean;
   createdAt?: string;
@@ -43,9 +56,9 @@ export type Mix = {
       name: string;
       description?: string | null;
       strength?: number;
-      line?: string | null;
       flavorProfiles?: FlavorProfile[];
       flavorTags?: string[];
+      flavors?: string[];
       manufacturer: Manufacturer;
     };
   }>;

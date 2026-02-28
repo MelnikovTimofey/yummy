@@ -357,10 +357,9 @@ const parseTobaccoPage = (html: string, url: string): ParsedTobacco | null => {
 
   const properties = parsePropertyMap(html);
   const strength = normalizeStrength(properties.get('Крепость')?.[0] ?? null);
-  const line = properties.get('Линейка')?.[0] ?? null;
   const flavor = properties.get('Вкус') ?? [];
   const tasteType = properties.get('Тип') ?? [];
-  const flavorTags = Array.from(new Set([...flavor, ...tasteType]));
+  const flavorTags = Array.from(new Set(tasteType));
 
   return {
     seed: {
@@ -368,8 +367,8 @@ const parseTobaccoPage = (html: string, url: string): ParsedTobacco | null => {
       website: 'https://hookahportal.ru/',
       name: stripTags(name),
       strength,
-      line,
       description: description ? stripTags(description) : null,
+      flavors: flavor,
       flavorTags,
       sources: [url],
     },

@@ -14,6 +14,12 @@ enum FlavorProfile {
   fresh
   dessert
   tobacco
+  minty
+  fruity
+  floral_herbal
+  citrus
+  berry
+  perfume
 }
 
 enum LocationType {
@@ -96,8 +102,8 @@ model Tobacco {
   description     String?
   flavorProfiles  FlavorProfile[]
   flavorTags      String[]
+  flavors         String[]
   strength        Int
-  line            String?
   createdAt       DateTime        @default(now())
 
   manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
@@ -112,6 +118,7 @@ model Mix {
   name      String
   description String?
   flavorProfiles FlavorProfile[]
+  flavors   String[]
   tags      String[]
   isUserMix Boolean @default(true)
   authorId  String

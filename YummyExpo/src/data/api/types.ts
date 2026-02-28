@@ -19,9 +19,9 @@ export type Tobacco = {
   name: string;
   description?: string | null;
   strength: number;
-  line?: string | null;
   flavorProfiles: string[];
   flavorTags: string[];
+  flavors: string[];
   manufacturer: Manufacturer;
 };
 
@@ -45,6 +45,9 @@ export type Mix = {
   id: string;
   name: string;
   description?: string | null;
+  flavorProfiles?: string[];
+  flavors?: string[];
+  tags?: string[];
   isUserMix?: boolean;
   components: Array<{
     proportion: number;

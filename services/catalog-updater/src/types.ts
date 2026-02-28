@@ -3,9 +3,11 @@ export type TobaccoSeed = {
   website?: string | null;
   name: string;
   strength: number;
-  line?: string | null;
   description?: string | null;
   flavorTags: string[];
+  flavors?: string[];
+  // legacy cache compatibility
+  flavor?: string[];
   sources?: string[];
 };
 

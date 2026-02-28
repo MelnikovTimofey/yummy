@@ -3,9 +3,12 @@ import { CatalogSourcePayload, MixSeed, RefreshStats, TobaccoSeed } from '../typ
 import {
   FlavorProfile,
   dedupe,
+  deriveFlavor,
   deriveFlavorProfiles,
+  deriveTobaccoFlavorTags,
   extractTagsFromDescription,
   normalizeTobaccoName,
+  normalizeTextList,
 } from './normalize';
 
 const makeTobaccoKey = (manufacturer: string, name: string) =>
@@ -31,7 +34,8 @@ const normalizeCatalogInput = (sources: CatalogSourcePayload[]) => {
         ...current,
         website: current.website ?? tobacco.website ?? null,
         description: current.description ?? tobacco.description ?? null,
-        flavorTags: dedupe([...current.flavorTags, ...tobacco.flavorTags]),
+        flavorTags: dedupe([...(current.flavorTags ?? []), ...(tobacco.flavorTags ?? [])]),
+        flavors: dedupe([...(current.flavors ?? current.flavor ?? []), ...(tobacco.flavors ?? tobacco.flavor ?? [])]),
         sources: dedupe([...(current.sources ?? []), ...(tobacco.sources ?? [])]),
       });
     }
@@ -96,8 +100,14 @@ const upsertTobaccos = async (
       continue;
     }
 
-    const flavorTags = dedupe(tobacco.flavorTags.map((tag) => tag.trim()).filter(Boolean));
-    const flavorProfiles = deriveFlavorProfiles(flavorTags);
+    const rawFlavorTags = normalizeTextList(tobacco.flavorTags ?? []);
+    const flavors = deriveFlavor(tobacco.flavors ?? tobacco.flavor, rawFlavorTags);
+    const flavorTags = deriveTobaccoFlavorTags(rawFlavorTags, flavors, tobacco.description);
+    const flavorProfiles = deriveFlavorProfiles([
+      ...flavors,
+      ...rawFlavorTags,
+      ...(tobacco.description ? [tobacco.description] : []),
+    ]);
 
     const existing = await prisma.tobacco.findUnique({
       where: {
@@ -118,18 +128,18 @@ const upsertTobaccos = async (
       },
       update: {
         strength: tobacco.strength,
-        line: tobacco.line ?? null,
         description: tobacco.description ?? null,
         flavorTags,
+        flavors,
         flavorProfiles,
       },
       create: {
         manufacturerId,
         name: tobacco.name,
         strength: tobacco.strength,
-        line: tobacco.line ?? null,
         description: tobacco.description ?? null,
         flavorTags,
+        flavors,
         flavorProfiles,
       },
     });
@@ -142,7 +152,15 @@ const upsertTobaccos = async (
   }
 };
 
-type TobaccoLookup = Map<string, { id: string; flavorProfiles: FlavorProfile[] }>;
+type TobaccoLookup = Map<
+  string,
+  {
+    id: string;
+    flavorProfiles: FlavorProfile[];
+    flavors: string[];
+    flavorTags: string[];
+  }
+>;
 
 const buildTobaccoLookup = async (mixes: MixSeed[]): Promise<TobaccoLookup> => {
   const manufacturerNames = dedupe(
@@ -183,6 +201,8 @@ const buildTobaccoLookup = async (mixes: MixSeed[]): Promise<TobaccoLookup> => {
           name: true,
           manufacturerId: true,
           flavorProfiles: true,
+          flavors: true,
+          flavorTags: true,
         },
       });
 
@@ -190,6 +210,8 @@ const buildTobaccoLookup = async (mixes: MixSeed[]): Promise<TobaccoLookup> => {
         tobaccoLookup.set(makeTobaccoKey(manufacturer.name, tobacco.name), {
           id: tobacco.id,
           flavorProfiles: tobacco.flavorProfiles,
+          flavors: tobacco.flavors,
+          flavorTags: tobacco.flavorTags,
         });
       }
     }),
@@ -209,7 +231,13 @@ const upsertMixes = async (mixes: MixSeed[], stats: RefreshStats) => {
       select: { id: true },
     });
 
-    const mappedComponents: Array<{ tobaccoId: string; proportion: number; flavorProfiles: FlavorProfile[] }> = [];
+    const mappedComponents: Array<{
+      tobaccoId: string;
+      proportion: number;
+      flavorProfiles: FlavorProfile[];
+      flavors: string[];
+      flavorTags: string[];
+    }> = [];
 
     for (const component of mix.components) {
       const normalizedName = normalizeTobaccoName(component.tobacco);
@@ -225,6 +253,8 @@ const upsertMixes = async (mixes: MixSeed[], stats: RefreshStats) => {
         tobaccoId: lookup.id,
         proportion: component.proportion,
         flavorProfiles: lookup.flavorProfiles,
+        flavors: lookup.flavors,
+        flavorTags: lookup.flavorTags,
       });
     }
 
@@ -244,8 +274,10 @@ const upsertMixes = async (mixes: MixSeed[], stats: RefreshStats) => {
     const flavorProfiles = dedupe(
       mappedComponents.flatMap((component) => component.flavorProfiles),
     );
+    const flavors = dedupe(mappedComponents.flatMap((component) => component.flavors));
 
     const tags = dedupe([
+      ...mappedComponents.flatMap((component) => component.flavorTags),
       ...((mix.tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean) as string[]),
       ...extractTagsFromDescription(mix.description),
     ]);
@@ -266,6 +298,7 @@ const upsertMixes = async (mixes: MixSeed[], stats: RefreshStats) => {
           description: mix.description ?? null,
           tags,
           flavorProfiles,
+          flavors,
           components: {
             deleteMany: {},
             create: mappedComponents.map((component) => ({
@@ -286,6 +319,7 @@ const upsertMixes = async (mixes: MixSeed[], stats: RefreshStats) => {
         description: mix.description ?? null,
         tags,
         flavorProfiles,
+        flavors,
         isUserMix: mix.isUserMix ?? false,
         components: {
           create: mappedComponents.map((component) => ({

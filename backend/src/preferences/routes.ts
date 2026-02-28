@@ -1,16 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { FlavorProfile } from '@prisma/client';
 import { prisma } from '../db';
 import { requireAuth } from '../auth/guard';
 
-const flavorProfileEnum = z.enum([
-  'sweet',
-  'sour',
-  'spicy',
-  'fresh',
-  'dessert',
-  'tobacco',
-]);
+const flavorProfileEnum = z.nativeEnum(FlavorProfile);
 
 const preferenceProfileSchema = z.object({
   likedProfiles: z.array(flavorProfileEnum).default([]),

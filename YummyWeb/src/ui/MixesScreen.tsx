@@ -57,6 +57,12 @@ const PROFILE_COLORS: Record<FlavorProfile, string> = {
   fresh: '#53c0d8',
   dessert: '#d78bf5',
   tobacco: '#9c6f4f',
+  minty: '#34bfa3',
+  fruity: '#ff9f43',
+  floral_herbal: '#79a96b',
+  citrus: '#f3d250',
+  berry: '#d65780',
+  perfume: '#b58acb',
 };
 
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
