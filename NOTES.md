@@ -528,3 +528,9 @@ Product-rules (зафиксировано):
 - Артефакты:
   - before: `output/playwright/before/`
   - after: `output/playwright/after/`
+
+Точечная корректировка от 1 марта 2026 (по доп. фидбэку UX):
+- В `YummyWeb/src/ui/App.tsx` убрано дублирование названия активной вкладки в хедере (удалён `h1` с title секции).
+- Хедер оставляет только бренд/профиль и строку вкладок, без отдельного текстового заголовка вкладки.
+- В `YummyWeb/src/ui/styles.css` уменьшены вертикальные отступы topbar, удалены стили `topbar-title`.
+- Проверка: `cd YummyWeb && npm run build` — успешно.
