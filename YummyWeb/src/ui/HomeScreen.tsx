@@ -248,6 +248,11 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
               {rail.items.map((mix) => {
                 const profileTags = getProfileTags(mix);
                 const flavorLabels = getFlavorLabels(mix);
+                const flavorText = flavorLabels.length
+                  ? flavorLabels.slice(0, 3).join(' · ')
+                  : profileTags.length
+                    ? profileTags.slice(0, 2).map((tag) => PROFILE_LABELS[tag].toLowerCase()).join(' · ')
+                    : 'вкус не указан';
                 const isMixClickable = Boolean(onOpenMix);
                 return (
                   <article
@@ -297,7 +302,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                         </div>
                       </div>
                       <p className="home-item-meta">
-                        {flavorLabels.length ? flavorLabels.slice(0, 3).join(' · ') : 'Вкусы не указаны'}
+                        {flavorText}
                       </p>
                       <div className="profile-tags home-item-tags">
                         {profileTags.slice(0, 3).map((tag) => (
