@@ -167,3 +167,29 @@ Product-rules (зафиксировано):
 - Скриншоты итерации:
   - before: `output/playwright/sprint2-p0-before/`
   - after: `output/playwright/sprint2-p0-after/`
+
+Обновление от 1 марта 2026 (Sprint 2, P1 — каталог desktop):
+- `YummyWeb / CatalogScreen`:
+  - desktop-раскладка каталога переделана на 2 колонки:
+    - слева выдача,
+    - справа постоянная панель фильтров;
+  - фильтры производителей и табаков теперь поддерживают мультивыбор;
+  - добавлен фильтр по вкусам (`flavors`) с мультивыбором;
+  - добавлено автодополнение тегов:
+    - ввод тега с добавлением по `Enter`/`,`,
+    - быстрый выбор из подсказок,
+    - удаление выбранных тегов через chip;
+  - summary активных фильтров расширен (бренды/табаки/вкусы/теги).
+- `API client`:
+  - в параметры `getMixes/getFavorites` добавлена поддержка `flavor/flavors`.
+- Проверка:
+  - `npm run build` — успешно;
+  - Playwright smoke:
+    - baseline catalog before/after,
+    - мультивыбор брендов и табаков,
+    - фильтр по вкусу,
+    - выбор тега из автодополнения,
+    - reset фильтров.
+- Скриншоты итерации:
+  - before: `output/playwright/sprint2-p1-before/`
+  - after: `output/playwright/sprint2-p1-after/`
