@@ -746,12 +746,25 @@ select:focus-visible {
 .profile-name-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .profile-name-cancel,
 .profile-name-save {
-  margin-top: 0;
+  margin: 0;
+  min-height: 44px;
+  align-self: center;
+}
+
+.profile-name-cancel {
+  min-width: 150px;
+}
+
+.profile-name-save {
+  min-width: 190px;
 }
 
 .cinema-controls {
