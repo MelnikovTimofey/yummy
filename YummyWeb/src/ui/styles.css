@@ -608,9 +608,22 @@ h1 {
 
 .mix-info-modal-shell {
   max-width: min(94vw, 620px);
+  max-height: min(92dvh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-color: #3a3028;
   background: linear-gradient(180deg, #171311 0%, #100d0c 100%);
   box-shadow: 0 26px 48px rgba(0, 0, 0, 0.5);
+  scrollbar-width: thin;
+}
+
+.mix-info-modal-shell::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mix-info-modal-shell::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #3f332a;
 }
 
 .mix-info-modal {
