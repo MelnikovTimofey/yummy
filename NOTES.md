@@ -765,3 +765,16 @@ Product-rules (зафиксировано):
 
 Проверка:
 - `cd YummyWeb && npm run build` — `OK`.
+
+Обновление от 2 марта 2026 (Итерация M — финальный фикс модалки имени):
+- Причина съезда кнопки `Отмена`: каскад `.ghost-button { margin-top: 10px; }` переопределял стиль модалки.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлено более специфичное правило ниже по файлу:
+    `.profile-name-actions .profile-name-cancel, .profile-name-actions .profile-name-save { margin-top: 0; }`
+  - кнопки в модалке имени снова выровнены по одной горизонтали.
+
+Проверка (playwright skill):
+- mock-auth через `localStorage` + route mock API;
+- открыта модалка `Изменить имя` и снят скрин:
+  - `output/playwright/profile-name-modal-aligned.png`.
+- `cd YummyWeb && npm run build` — `OK`.

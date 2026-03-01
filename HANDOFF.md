@@ -800,3 +800,18 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 
 Проверка:
 - `cd YummyWeb && npm run build` — `OK`.
+
+## 1.7) Итерация M (2 марта 2026) — подтверждённый фикс кнопок в модалке имени
+
+Сделано:
+- `YummyWeb/src/ui/styles.css`:
+  - устранён конфликт каскада с `.ghost-button`;
+  - добавлено специфичное правило для action-кнопок модалки имени:
+    `.profile-name-actions .profile-name-cancel, .profile-name-actions .profile-name-save { margin-top: 0; }`.
+
+Проверка:
+- Playwright skill:
+  - route mock `localhost:3001` + mock auth state,
+  - открыта модалка `Изменить имя`,
+  - артефакт: `output/playwright/profile-name-modal-aligned.png`.
+- `cd YummyWeb && npm run build` — `OK`.
