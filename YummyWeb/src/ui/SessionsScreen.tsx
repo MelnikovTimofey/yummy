@@ -509,7 +509,12 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
       <section className="card session-create-card">
         <p className="card-title">Сессии курения</p>
         <p className="card-text">Добавляйте новые сессии через выбор микса с фильтрами и быстрым сохранением.</p>
-        <AppButton className="search-button session-open-compose" onClick={() => setView('compose')} disabled={!canOpenCompose}>
+        <AppButton
+          variant="ghost"
+          className="session-open-compose"
+          onClick={() => setView('compose')}
+          disabled={!canOpenCompose}
+        >
           Добавить сессию
         </AppButton>
         {!canOpenCompose ? <p className="hint">Сначала создайте хотя бы один микс.</p> : null}

@@ -605,12 +605,6 @@ select:focus-visible {
   max-width: none;
 }
 
-.mix-unified-tags .mix-topic-tag {
-  border-color: #516076;
-  background: #1c2736;
-  color: #c6d7f1;
-}
-
 .mix-rating-tag {
   border-color: #7e6442;
   background: #2a211a;
@@ -846,10 +840,6 @@ select:focus-visible {
   border-color: var(--line);
   background: #1c1714;
   color: var(--text-1);
-}
-
-.mix-create-trigger {
-  width: 100%;
 }
 
 .ghost-button {
@@ -1610,10 +1600,31 @@ select:focus-visible {
 }
 
 .session-open-compose {
+  margin-top: 4px;
+  margin-left: auto;
   width: fit-content;
-  min-height: 40px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mixes-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mixes-create-btn {
+  margin-top: 0;
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 12px;
   font-size: 12px;
+  flex: 0 0 auto;
 }
 
 .session-table-card {
@@ -1720,6 +1731,16 @@ select:focus-visible {
   }
 
   .session-open-compose {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mixes-summary-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mixes-create-btn {
     width: 100%;
   }
 }

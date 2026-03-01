@@ -107,6 +107,13 @@ const normalizeValues = (items: string[]) =>
       .filter((item) => item.length > 0),
   );
 
+const getFlavorLabels = (items: string[]) =>
+  dedupe(
+    items
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0),
+  );
+
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
@@ -560,6 +567,43 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       .sort((a, b) => b.value - a.value);
   };
 
+  const getFlavorDistributionData = (mix: Mix) => {
+    const weighted = new Map<string, { name: string; value: number }>();
+
+    for (const component of mix.components) {
+      const flavors = getFlavorLabels(component.tobacco.flavors ?? []);
+      if (!flavors.length) {
+        continue;
+      }
+      const share = component.proportion / flavors.length;
+      for (const flavor of flavors) {
+        const key = flavor.toLowerCase();
+        const current = weighted.get(key);
+        if (current) {
+          current.value += share;
+        } else {
+          weighted.set(key, { name: flavor, value: share });
+        }
+      }
+    }
+
+    if (!weighted.size) {
+      const fallback = getFlavorLabels(mix.flavors ?? []);
+      const fallbackShare = fallback.length ? 100 / fallback.length : 0;
+      fallback.forEach((flavor) => {
+        weighted.set(flavor.toLowerCase(), { name: flavor, value: fallbackShare });
+      });
+    }
+
+    return Array.from(weighted.values())
+      .map((item, index) => ({
+        ...item,
+        value: Number(item.value.toFixed(2)),
+        fill: ['#4dd0e1', '#ffb74d', '#f06292', '#81c784', '#ba68c8', '#ff8a65'][index % 6],
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+
   const onConfirmAddToSession = async (payload: {
     locationType: 'home' | 'lounge';
     locationName?: string;
@@ -643,7 +687,8 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
           <article className="mix-detail-wrap">
             {(() => {
               const tobaccoPieData = getTobaccoPieData(activeMix);
-              const flavorPieData = getFlavorPieData(activeMix);
+              const profileChartData = getFlavorPieData(activeMix);
+              const flavorDistributionData = getFlavorDistributionData(activeMix);
               const tobaccoChartConfig = tobaccoPieData.reduce<ChartConfig>((acc, item, index) => {
                 acc[`tobacco-${index}`] = {
                   label: item.name,
@@ -651,15 +696,23 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 };
                 return acc;
               }, {});
-              const flavorChartConfig = flavorPieData.reduce<ChartConfig>((acc, item, index) => {
+              const flavorChartConfig = profileChartData.reduce<ChartConfig>((acc, item, index) => {
                 acc[`profile-${index}`] = {
                   label: item.name,
                   color: item.fill,
                 };
                 return acc;
               }, {});
-              const dominantProfile = flavorPieData[0]?.name ?? 'нет данных';
+              const flavorDistributionChartConfig = flavorDistributionData.reduce<ChartConfig>((acc, item, index) => {
+                acc[`flavor-${index}`] = {
+                  label: item.name,
+                  color: item.fill,
+                };
+                return acc;
+              }, {});
+              const dominantProfile = profileChartData[0]?.name ?? 'нет данных';
               const dominantTobacco = tobaccoPieData[0]?.name ?? 'нет данных';
+              const dominantFlavor = flavorDistributionData[0]?.name ?? 'нет данных';
               return (
                 <>
             <section
@@ -726,9 +779,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </article>
                 <article className="mix-insight-card">
                   <p className="card-title">Доминирующий вкус</p>
-                  <p className="mix-insight-value">
-                    {activeMix.flavors?.[0] ?? activeMix.components[0]?.tobacco.flavors?.[0] ?? 'нет данных'}
-                  </p>
+                  <p className="mix-insight-value">{dominantFlavor}</p>
                 </article>
               </section>
               {(activeMix.tags ?? []).length ? (
@@ -791,7 +842,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   <p className="card-title">Профили вкуса</p>
                   <ChartContainer config={flavorChartConfig} className="mix-chart-shell">
                     <BarChart
-                      data={flavorPieData}
+                      data={profileChartData}
                       layout="vertical"
                       margin={{ left: 4, right: 14, top: 8, bottom: 8 }}
                     >
@@ -808,15 +859,15 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                         contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
                       />
                       <Bar dataKey="value" radius={[8, 8, 8, 8]}>
-                        {flavorPieData.map((item) => (
+                        {profileChartData.map((item) => (
                           <Cell key={`${activeMix.id}:flv:${item.name}`} fill={item.fill} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ChartContainer>
                   <div className="mix-chart-legend">
-                    {flavorPieData.length ? (
-                      flavorPieData.map((item) => (
+                    {profileChartData.length ? (
+                      profileChartData.map((item) => (
                         <div key={`${activeMix.id}:flv:${item.name}`} className="mix-chart-item">
                           <span className="mix-chart-dot" style={{ background: item.fill }} />
                           <span>{item.name}</span>
@@ -830,42 +881,46 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </article>
                 <article className="mix-chart-card">
                   <p className="card-title">Вкусы микса</p>
-                  <ChartContainer
-                    config={Object.fromEntries(
-                      (activeMix.flavors ?? activeMix.components.flatMap((component) => component.tobacco.flavors ?? []))
-                        .slice(0, 8)
-                        .map((flavor, index) => [
-                          `flavor-${index}`,
-                          { label: flavor, color: ['#4dd0e1', '#ffb74d', '#f06292', '#81c784', '#ba68c8', '#ff8a65'][index % 6] },
-                        ]),
-                    )}
-                    className="mix-chart-shell"
-                  >
-                    <BarChart
-                      data={(activeMix.flavors ?? activeMix.components.flatMap((component) => component.tobacco.flavors ?? []))
-                        .slice(0, 8)
-                        .map((flavor) => ({
-                          name: flavor,
-                          value: 1,
-                        }))}
-                      layout="vertical"
-                      margin={{ left: 4, right: 14, top: 8, bottom: 8 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2f2a27" />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={120}
-                        tick={{ fill: '#cbc0b5', fontSize: 11 }}
-                      />
-                      <Tooltip
-                        formatter={() => 'есть в составе'}
-                        contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
-                      />
-                      <Bar dataKey="value" radius={[8, 8, 8, 8]} fill="#4dd0e1" />
-                    </BarChart>
-                  </ChartContainer>
+                  {flavorDistributionData.length ? (
+                    <>
+                      <ChartContainer config={flavorDistributionChartConfig} className="mix-chart-shell">
+                        <BarChart
+                          data={flavorDistributionData}
+                          layout="vertical"
+                          margin={{ left: 4, right: 14, top: 8, bottom: 8 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2f2a27" />
+                          <XAxis type="number" tick={{ fill: '#9f9185', fontSize: 11 }} />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={120}
+                            tick={{ fill: '#cbc0b5', fontSize: 11 }}
+                          />
+                          <Tooltip
+                            formatter={(value) => `${Number(value).toFixed(1)}%`}
+                            contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                          />
+                          <Bar dataKey="value" radius={[8, 8, 8, 8]}>
+                            {flavorDistributionData.map((item) => (
+                              <Cell key={`${activeMix.id}:flavor:${item.name}`} fill={item.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ChartContainer>
+                      <div className="mix-chart-legend">
+                        {flavorDistributionData.map((item) => (
+                          <div key={`${activeMix.id}:flavor:${item.name}`} className="mix-chart-item">
+                            <span className="mix-chart-dot" style={{ background: item.fill }} />
+                            <span>{item.name}</span>
+                            <b>{item.value.toFixed(1)}%</b>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="hint">Недостаточно данных вкусов для построения диаграммы.</p>
+                  )}
                 </article>
               </section>
               {detailFeedback ? <p className="hint">{detailFeedback}</p> : null}
@@ -1025,10 +1080,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
           </div>
 
-          <AppButton className="search-button mix-create-trigger" onClick={onOpenCreateScreen}>
-            Создать микс
-          </AppButton>
-
           <div className="catalog-tools-row">
             <div className="catalog-active-filters" aria-live="polite">
               {activeFilterLabels.length ? activeFilterLabels.map((label) => (
@@ -1146,12 +1197,19 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
         </form>
 
         <section className="catalog-results">
-          <section className="card catalog-summary">
-            <p className="card-title">Мои миксы</p>
-            <p className="card-text">
-              {status === 'loading' ? 'Обновляем список...' : `${sortedItems.length} миксов`}
-              {hasFilters ? ' · фильтры активны' : ''}
-            </p>
+          <section className="card catalog-summary mixes-summary-card">
+            <div className="mixes-summary-head">
+              <div>
+                <p className="card-title">Мои миксы</p>
+                <p className="card-text">
+                  {status === 'loading' ? 'Обновляем список...' : `${sortedItems.length} миксов`}
+                  {hasFilters ? ' · фильтры активны' : ''}
+                </p>
+              </div>
+              <AppButton className="search-button mixes-create-btn" onClick={onOpenCreateScreen}>
+                Создать микс
+              </AppButton>
+            </div>
           </section>
 
           {status === 'error' ? <p className="screen-status error">Не удалось загрузить миксы.</p> : null}
