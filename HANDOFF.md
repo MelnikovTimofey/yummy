@@ -574,3 +574,22 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright smoke (skill):
   - `output/playwright/iter-a/home-after-a.png`.
+
+## 0.6) Итерация B (1 марта 2026) — каталог: desktop UX и popup info
+
+Сделано:
+- Добавлен переиспользуемый компонент `YummyWeb/src/ui/components/MixInfoModal.tsx`.
+- `YummyWeb/src/ui/CatalogScreen.tsx`:
+  - `info` на карточках теперь всегда открывает popup (`MixInfoModal`), без перехода на экран микса;
+  - фильтры `теги`, `профили`, `вкусы` переведены с chip-схемы на scrollbox-подход (масштабируемый выбор);
+  - кнопка `Найти` уменьшена (`catalog-find-btn`).
+- `YummyWeb/src/ui/HomeScreen.tsx`:
+  - popup состава переведён на общий компонент `MixInfoModal`.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлен `catalog-find-btn`;
+  - исправлена переносимость длинных текстов в `filter-option` на desktop.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright smoke (skill):
+  - `output/playwright/iter-b/catalog-info-after-b.png`.

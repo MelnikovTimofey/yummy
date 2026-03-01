@@ -790,6 +790,12 @@ select:focus-visible {
   opacity: 0.45;
 }
 
+.catalog-find-btn {
+  min-height: 40px;
+  font-size: 12px;
+  padding: 0 12px;
+}
+
 .catalog-tools-row {
   display: grid;
   gap: 10px;
@@ -950,6 +956,8 @@ select:focus-visible {
   padding: 8px 10px;
   font-size: 12px;
   line-height: 1.25;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .filter-option.active {
@@ -1685,6 +1693,12 @@ select:focus-visible {
   .search-button {
     min-height: 50px;
     font-size: 14px;
+  }
+
+  .catalog-find-btn {
+    min-height: 40px;
+    font-size: 12px;
+    padding: 0 12px;
   }
 
   .cinema-grid {

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, getMixRatingSummaries, removeFavorite } from '../shared/apiClient';
-import { AuthState, FlavorProfile, HomeRail, Mix, MixRatingSummary } from '../shared/types';
-import { AppButton, AppModal } from '@/ui-kit';
+import { AuthState, HomeRail, Mix, MixRatingSummary } from '../shared/types';
+import { AppButton } from '@/ui-kit';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
+import { MixInfoModal } from '@/ui/components/MixInfoModal';
 
 type HomeScreenProps = {
   authState: AuthState;
@@ -11,63 +12,7 @@ type HomeScreenProps = {
   onOpenRail?: (rail: HomeRail) => void;
 };
 
-const PROFILE_LABELS: Record<FlavorProfile, string> = {
-  sweet: 'Сладкий',
-  sour: 'Кислый',
-  spicy: 'Пряный',
-  fresh: 'Свежий',
-  dessert: 'Десертный',
-  tobacco: 'Табачный',
-  minty: 'Мятный',
-  fruity: 'Фруктовый',
-  floral_herbal: 'Цветочно-травяной',
-  citrus: 'Цитрусовый',
-  berry: 'Ягодный',
-  perfume: 'Парфюм',
-};
-
-const PROFILE_VALUES = new Set<FlavorProfile>(Object.keys(PROFILE_LABELS) as FlavorProfile[]);
-
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-const dedupe = <T,>(items: T[]) => Array.from(new Set(items));
-
-const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().replace('.', ',')}%`;
-
-const sanitizeProfiles = (profiles: unknown[]) =>
-  dedupe(
-    profiles
-      .filter((value): value is string => typeof value === 'string')
-      .map((value) => value.trim())
-      .filter((value): value is FlavorProfile => PROFILE_VALUES.has(value as FlavorProfile)),
-  );
-
-const sanitizeFlavors = (flavors: unknown[]) =>
-  dedupe(
-    flavors
-      .filter((value): value is string => typeof value === 'string')
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0),
-  );
-
-const buildWeightedRows = <TKey extends string>(
-  mix: Mix,
-  extractor: (component: Mix['components'][number]) => TKey[],
-): Array<{ key: TKey; percent: number }> => {
-  const weighted = new Map<TKey, number>();
-  for (const component of mix.components) {
-    const keys = dedupe(extractor(component));
-    if (!keys.length) {
-      continue;
-    }
-    const share = component.proportion / keys.length;
-    for (const key of keys) {
-      weighted.set(key, (weighted.get(key) ?? 0) + share);
-    }
-  }
-  return Array.from(weighted.entries())
-    .map(([key, percent]) => ({ key, percent }))
-    .sort((left, right) => right.percent - left.percent);
-};
 
 const getNextRailScrollLeft = (
   cardOffsets: Array<{ left: number; right: number }>,
@@ -181,21 +126,6 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     void loadRatingSummaries();
   }, [authState.tokens, onAuthUpdate, rails.length]);
 
-  useEffect(() => {
-    if (!infoMix) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setInfoMix(null);
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [infoMix]);
-
   const orderedRails = useMemo(() => {
     const recommendations = rails.filter((rail) => rail.type === 'recommendations');
     const favorites = rails.filter((rail) => rail.type === 'favorites');
@@ -203,46 +133,6 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     return [...recommendations, ...favorites, ...rest];
   }, [rails]);
   const visibleRails = useMemo(() => orderedRails.filter((rail) => rail.items.length > 0), [orderedRails]);
-  const infoMixDetails = useMemo(() => {
-    if (!infoMix) {
-      return null;
-    }
-
-    const tobaccoRows = infoMix.components
-      .map((component) => ({
-        label: `${component.tobacco.manufacturer.name} ${component.tobacco.name}`,
-        percent: component.proportion,
-      }))
-      .sort((left, right) => right.percent - left.percent);
-
-    const flavorRows = buildWeightedRows(infoMix, (component) => sanitizeFlavors(component.tobacco.flavors ?? []));
-    const fallbackFlavors = flavorRows.length
-      ? flavorRows
-      : sanitizeFlavors(infoMix.flavors ?? []).map((flavor) => ({
-          key: flavor,
-          percent: 100 / Math.max(1, sanitizeFlavors(infoMix.flavors ?? []).length),
-        }));
-
-    const profileRows = buildWeightedRows(infoMix, (component) => sanitizeProfiles(component.tobacco.flavorProfiles ?? []));
-    const fallbackProfiles = profileRows.length
-      ? profileRows
-      : sanitizeProfiles(infoMix.flavorProfiles ?? []).map((profile) => ({
-          key: profile,
-          percent: 100 / Math.max(1, sanitizeProfiles(infoMix.flavorProfiles ?? []).length),
-        }));
-    const summary = mixSummaries[infoMix.id];
-    const avgRating = summary?.avgRating;
-
-    return {
-      description: infoMix.description?.trim() ?? '',
-      tobaccoRows,
-      flavorRows: fallbackFlavors,
-      profileRows: fallbackProfiles,
-      ratingAverage: avgRating === null || avgRating === undefined ? '—' : avgRating.toFixed(1).replace('.', ','),
-      ratingCount: summary ? String(summary.count) : '—',
-    };
-  }, [infoMix, mixSummaries]);
-
   const onToggleFavorite = async (mixId: string) => {
     if (!authState.tokens) {
       setFeedback('Войдите, чтобы управлять избранным.');
@@ -391,91 +281,15 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
         );
       })}
 
-      <AppModal
-        open={Boolean(infoMix)}
+      <MixInfoModal
+        mix={infoMix}
+        summary={infoMix ? mixSummaries[infoMix.id] : undefined}
         onOpenChange={(open) => {
           if (!open) {
             setInfoMix(null);
           }
         }}
-        title="Состав микса"
-        contentClassName="mix-info-modal-shell"
-      >
-        {infoMix && infoMixDetails ? (
-          <div className="mix-info-modal">
-            <h3 className="mix-info-name">{infoMix.name}</h3>
-
-            <section className="mix-info-section">
-              <p className="mix-info-section-title">Оценка</p>
-              <ul className="mix-info-list">
-                <li className="mix-info-row">
-                  <span className="mix-info-label">Средняя</span>
-                  <span className="mix-info-value">{infoMixDetails.ratingAverage}</span>
-                </li>
-                <li className="mix-info-row">
-                  <span className="mix-info-label">Количество оценок</span>
-                  <span className="mix-info-value">{infoMixDetails.ratingCount}</span>
-                </li>
-              </ul>
-            </section>
-
-            <section className="mix-info-section">
-              <p className="mix-info-section-title">Табаки и пропорции</p>
-              <ul className="mix-info-list">
-                {infoMixDetails.tobaccoRows.map((item) => (
-                  <li key={`${infoMix.id}:tobacco:${item.label}`} className="mix-info-row">
-                    <span className="mix-info-label">{item.label}</span>
-                    <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="mix-info-section">
-              <p className="mix-info-section-title">Вкусы и пропорции</p>
-              {infoMixDetails.flavorRows.length ? (
-                <ul className="mix-info-list">
-                  {infoMixDetails.flavorRows.map((item) => (
-                    <li key={`${infoMix.id}:flavor:${item.key}`} className="mix-info-row">
-                      <span className="mix-info-label">{item.key}</span>
-                      <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mix-info-empty">Нет данных по вкусам.</p>
-              )}
-            </section>
-
-            <section className="mix-info-section">
-              <p className="mix-info-section-title">Вкусовые профили</p>
-              {infoMixDetails.profileRows.length ? (
-                <ul className="mix-info-list">
-                  {infoMixDetails.profileRows.map((item) => (
-                    <li key={`${infoMix.id}:profile:${item.key}`} className="mix-info-row">
-                      <span className="mix-info-label">{PROFILE_LABELS[item.key]}</span>
-                      <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mix-info-empty">Профили не указаны.</p>
-              )}
-            </section>
-
-            {infoMixDetails.description ? (
-              <section className="mix-info-section">
-                <p className="mix-info-section-title">Описание</p>
-                <p className="mix-info-description">{infoMixDetails.description}</p>
-              </section>
-            ) : null}
-
-            <AppButton variant="ghost" className="ghost-button mix-info-close-btn" onClick={() => setInfoMix(null)}>
-              Закрыть
-            </AppButton>
-          </div>
-        ) : null}
-      </AppModal>
+      />
     </section>
   );
 };

@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, UIEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getManufacturers,
   getMixes,
@@ -14,6 +14,7 @@ import {
   Tobacco,
 } from '../shared/types';
 import { AppButton, AppInput, AppSelect } from '@/ui-kit';
+import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type CatalogScreenProps = {
@@ -126,13 +127,16 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const [tobaccosOffset, setTobaccosOffset] = useState(0);
   const [tobaccosHasMore, setTobaccosHasMore] = useState(true);
   const [selectedProfiles, setSelectedProfiles] = useState<FlavorProfile[]>([]);
+  const [profileSearchDraft, setProfileSearchDraft] = useState('');
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
-  const [tagDraft, setTagDraft] = useState('');
+  const [flavorSearchDraft, setFlavorSearchDraft] = useState('');
+  const [tagSearchDraft, setTagSearchDraft] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [minRating, setMinRating] = useState<'' | '1' | '2' | '3' | '4' | '5'>('');
   const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('popularity');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [activeMix, setActiveMix] = useState<Mix | null>(null);
+  const [infoMix, setInfoMix] = useState<Mix | null>(null);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
@@ -325,16 +329,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const onSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
     setQuery(queryDraft.trim());
-    if (tagDraft.trim()) {
-      setSelectedTags((current) => {
-        const nextTag = tagDraft.trim().toLowerCase();
-        if (current.includes(nextTag)) {
-          return current;
-        }
-        return [...current, nextTag];
-      });
-      setTagDraft('');
-    }
   };
 
   const toggleProfile = (profile: FlavorProfile) => {
@@ -359,8 +353,10 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     setTobaccoSearch('');
     setSelectedTobaccoIds([]);
     setSelectedProfiles([]);
+    setProfileSearchDraft('');
     setSelectedFlavors([]);
-    setTagDraft('');
+    setFlavorSearchDraft('');
+    setTagSearchDraft('');
     setSelectedTags([]);
     setMinRating('');
     setSortBy('popularity');
@@ -431,13 +427,20 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     });
     return Array.from(unique).sort((a, b) => a.localeCompare(b, 'ru'));
   }, [items, tobaccos]);
-  const filteredTagSuggestions = useMemo(() => {
-    const normalizedDraft = tagDraft.trim().toLowerCase();
-    return tagSuggestions
-      .filter((tag) => !selectedTags.includes(tag))
-      .filter((tag) => (normalizedDraft ? tag.includes(normalizedDraft) : true))
-      .slice(0, 8);
-  }, [selectedTags, tagDraft, tagSuggestions]);
+  const filteredProfileOptions = useMemo(() => {
+    const query = profileSearchDraft.trim().toLowerCase();
+    return PROFILE_OPTIONS.filter((option) =>
+      query ? option.label.toLowerCase().includes(query) : true,
+    );
+  }, [profileSearchDraft]);
+  const filteredFlavorOptions = useMemo(() => {
+    const query = flavorSearchDraft.trim().toLowerCase();
+    return flavorOptions.filter((flavor) => (query ? flavor.includes(query) : true));
+  }, [flavorOptions, flavorSearchDraft]);
+  const filteredTagOptions = useMemo(() => {
+    const query = tagSearchDraft.trim().toLowerCase();
+    return tagSuggestions.filter((tag) => (query ? tag.includes(query) : true));
+  }, [tagSearchDraft, tagSuggestions]);
   const hasFilters = Boolean(
     query ||
       selectedManufacturerIds.length ||
@@ -462,23 +465,11 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
         .filter((value): value is string => Boolean(value)),
     [selectedTobaccoIds, tobaccos],
   );
-  const addTag = useCallback((rawTag: string) => {
-    const normalized = rawTag.trim().toLowerCase();
-    if (!normalized) {
-      return;
-    }
-    setSelectedTags((current) => (current.includes(normalized) ? current : [...current, normalized]));
+  const toggleTag = useCallback((tag: string) => {
+    setSelectedTags((current) =>
+      current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag],
+    );
   }, []);
-  const removeTag = useCallback((tag: string) => {
-    setSelectedTags((current) => current.filter((item) => item !== tag));
-  }, []);
-  const onTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      addTag(tagDraft);
-      setTagDraft('');
-    }
-  };
   const activeFilterLabels = useMemo(
     () =>
       buildActiveFilterLabels({
@@ -545,7 +536,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
               onChange={(event) => setQueryDraft(event.target.value)}
               placeholder="Поиск по названию и описанию"
             />
-            <AppButton type="submit" className="search-button">Найти</AppButton>
+            <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
           </div>
           <div className="catalog-tools-row">
             <div className="catalog-active-filters" aria-live="polite">
@@ -663,73 +654,94 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
           </div>
 
           <div className="filter-field">
-            <span>Теги (автодополнение)</span>
+            <span>Теги (можно несколько)</span>
             <AppInput
               className="search-input"
-              value={tagDraft}
-              onChange={(event) => setTagDraft(event.target.value)}
-              onKeyDown={onTagKeyDown}
-              placeholder="Введите тег и нажмите Enter"
+              type="search"
+              value={tagSearchDraft}
+              onChange={(event) => setTagSearchDraft(event.target.value)}
+              placeholder="Поиск по тегам"
             />
-            {filteredTagSuggestions.length ? (
-              <div className="catalog-tag-suggestions">
-                {filteredTagSuggestions.map((tag) => (
-                  <AppButton
-                    key={tag}
-                    variant="chip"
-                    className="option-chip"
-                    onClick={() => {
-                      addTag(tag);
-                      setTagDraft('');
-                    }}
-                  >
-                    {tag}
-                  </AppButton>
-                ))}
-              </div>
-            ) : null}
-            {selectedTags.length ? (
-              <div className="catalog-selected-tags">
-                {selectedTags.map((tag) => (
-                  <AppButton key={tag} variant="ghost" className="filter-pill" onClick={() => removeTag(tag)}>
-                    {tag} ×
-                  </AppButton>
-                ))}
-              </div>
-            ) : null}
+            <div className="filter-scrollbox">
+              <AppButton
+                variant="ghost"
+                className={`filter-option ${selectedTags.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedTags([])}
+              >
+                Любые теги
+              </AppButton>
+              {filteredTagOptions.map((tag) => (
+                <AppButton
+                  key={tag}
+                  variant="ghost"
+                  className={`filter-option ${selectedTags.includes(tag) ? 'active' : ''}`}
+                  onClick={() => toggleTag(tag)}
+                >
+                  {tag}
+                </AppButton>
+              ))}
+            </div>
           </div>
 
-          <section className="card compact-card">
-            <p className="card-title">Профили вкуса</p>
-            <div className="chip-grid">
-              {PROFILE_OPTIONS.map((option) => (
+          <div className="filter-field">
+            <span>Профили вкуса (можно несколько)</span>
+            <AppInput
+              className="search-input"
+              type="search"
+              value={profileSearchDraft}
+              onChange={(event) => setProfileSearchDraft(event.target.value)}
+              placeholder="Поиск профиля"
+            />
+            <div className="filter-scrollbox">
+              <AppButton
+                variant="ghost"
+                className={`filter-option ${selectedProfiles.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedProfiles([])}
+              >
+                Любой профиль
+              </AppButton>
+              {filteredProfileOptions.map((option) => (
                 <AppButton
                   key={option.value}
-                  variant="chip"
-                  className={`option-chip ${selectedProfiles.includes(option.value) ? 'liked' : ''}`}
+                  variant="ghost"
+                  className={`filter-option ${selectedProfiles.includes(option.value) ? 'active' : ''}`}
                   onClick={() => toggleProfile(option.value)}
                 >
                   {option.label}
                 </AppButton>
               ))}
             </div>
-          </section>
+          </div>
 
-          <section className="card compact-card">
-            <p className="card-title">Вкусы (можно несколько)</p>
-            <div className="chip-grid">
-              {flavorOptions.map((flavor) => (
+          <div className="filter-field">
+            <span>Вкусы (можно несколько)</span>
+            <AppInput
+              className="search-input"
+              type="search"
+              value={flavorSearchDraft}
+              onChange={(event) => setFlavorSearchDraft(event.target.value)}
+              placeholder="Поиск вкуса"
+            />
+            <div className="filter-scrollbox">
+              <AppButton
+                variant="ghost"
+                className={`filter-option ${selectedFlavors.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedFlavors([])}
+              >
+                Любой вкус
+              </AppButton>
+              {filteredFlavorOptions.map((flavor) => (
                 <AppButton
                   key={flavor}
-                  variant="chip"
-                  className={`option-chip ${selectedFlavors.includes(flavor) ? 'liked' : ''}`}
+                  variant="ghost"
+                  className={`filter-option ${selectedFlavors.includes(flavor) ? 'active' : ''}`}
                   onClick={() => toggleFlavor(flavor)}
                 >
                   {flavor}
                 </AppButton>
               ))}
             </div>
-          </section>
+          </div>
         </form>
 
         <section className="catalog-results">
@@ -764,12 +776,22 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                   );
                   setActiveMix(currentMix);
                 }}
+                onOpenInfo={(currentMix) => setInfoMix(currentMix)}
                 footerText={`Средняя: ${summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
               />
             ))}
           </section>
         </section>
       </section>
+      <MixInfoModal
+        mix={infoMix}
+        summary={infoMix ? summaries[infoMix.id] : undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInfoMix(null);
+          }
+        }}
+      />
     </section>
   );
 };

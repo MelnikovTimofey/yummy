@@ -558,3 +558,24 @@ Product-rules (зафиксировано):
 - Проверка:
   - `cd YummyWeb && npm run build` — успешно;
   - Playwright smoke (skill `playwright`): `output/playwright/iter-a/home-after-a.png`.
+
+Обновление от 1 марта 2026 (Итерация B — каталог):
+- `YummyWeb/src/ui/CatalogScreen.tsx`:
+  - `info` на карточках каталога переведён на popup (больше не ведёт в карточку микса);
+  - добавлен единый попап состава (`MixInfoModal`) для каталога;
+  - фильтры `теги`, `профили`, `вкусы` переведены на масштабируемый scroll-паттерн (аналогично производителям/табаку);
+  - уменьшена кнопка `Найти` через класс `catalog-find-btn`.
+- `YummyWeb/src/ui/components/MixInfoModal.tsx`:
+  - выделен переиспользуемый popup с секциями: рейтинг, табаки, вкусы, профили, описание.
+- `YummyWeb/src/ui/HomeScreen.tsx`:
+  - модалка состава переведена на `MixInfoModal` (без изменения пользовательского сценария).
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили для компактного поиска в каталоге (`catalog-find-btn`);
+  - улучшена переносимость текста в `filter-option` (устранение срезания на desktop);
+  - добавлен `mix-detail-session-btn` и общий cleanup legacy-классов из итерации A.
+- Проверка:
+  - `cd YummyWeb && npm run build` — успешно;
+  - Playwright smoke (skill `playwright`):
+    - переход в `Каталог`;
+    - клик `info` открывает popup без навигации;
+    - артефакт: `output/playwright/iter-b/catalog-info-after-b.png`.
