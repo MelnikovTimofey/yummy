@@ -777,7 +777,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                   setActiveMix(currentMix);
                 }}
                 onOpenInfo={(currentMix) => setInfoMix(currentMix)}
-                footerText={`Средняя: ${summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+                ratingTagText={`★ ${summaries[mix.id]?.avgRating?.toFixed(1).replace('.', ',') ?? '—'}`}
               />
             ))}
           </section>

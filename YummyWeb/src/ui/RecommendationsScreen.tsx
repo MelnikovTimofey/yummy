@@ -16,6 +16,7 @@ import {
   RecommendationSource,
 } from '../shared/types';
 import { AppButton } from '@/ui-kit';
+import { AddToSessionModal } from '@/ui/components/AddToSessionModal';
 import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
@@ -49,6 +50,8 @@ export const RecommendationsScreen = ({
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
+  const [sessionTargetMix, setSessionTargetMix] = useState<RecommendationItem['mix'] | null>(null);
+  const [sessionSubmitting, setSessionSubmitting] = useState(false);
 
   const load = async () => {
     if (!authState.tokens) {
@@ -87,21 +90,29 @@ export const RecommendationsScreen = ({
     void load();
   }, [authState.tokens, refreshSignal]);
 
-  const onAddToSession = async (mixId: string) => {
+  const onAddToSession = async (payload: { locationType: 'home' | 'lounge'; locationName?: string }) => {
     if (!authState.tokens) {
+      return;
+    }
+    if (!sessionTargetMix) {
       return;
     }
 
     setFeedback(null);
+    setSessionSubmitting(true);
     try {
       await createSession(authState.tokens, onAuthUpdate, {
-        mixId,
+        mixId: sessionTargetMix.id,
         date: new Date().toISOString(),
-        locationType: 'home',
+        locationType: payload.locationType,
+        locationName: payload.locationName,
       });
       setFeedback('Рекомендация добавлена в сессию.');
+      setSessionTargetMix(null);
     } catch {
       setFeedback('Не удалось добавить рекомендацию в сессию.');
+    } finally {
+      setSessionSubmitting(false);
     }
   };
 
@@ -192,11 +203,12 @@ export const RecommendationsScreen = ({
               mix={item.mix}
               size="fluid"
               onOpenInfo={(currentMix) => setInfoMix(currentMix)}
-              footerText={`Моя оценка: ${mixRatings[item.mix.id]?.rating ?? 'нет'} · Средняя: ${mixSummaries[item.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+              ratingTagText={`★ ${mixSummaries[item.mix.id]?.avgRating?.toFixed(1).replace('.', ',') ?? '—'}`}
+              footerText={`Моя оценка: ${mixRatings[item.mix.id]?.rating ?? 'нет'}`}
             />
             <p className="recommendation-source">{getSourceLabel(item)}</p>
             <div className="recommendation-actions">
-              <AppButton className="search-button recommendation-session" onClick={() => onAddToSession(item.mix.id)}>
+              <AppButton className="search-button recommendation-session" onClick={() => setSessionTargetMix(item.mix)}>
                 В сессию
               </AppButton>
               <div className="session-rating-row">
@@ -223,6 +235,17 @@ export const RecommendationsScreen = ({
             setInfoMix(null);
           }
         }}
+      />
+      <AddToSessionModal
+        open={Boolean(sessionTargetMix)}
+        mixName={sessionTargetMix?.name}
+        submitting={sessionSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSessionTargetMix(null);
+          }
+        }}
+        onSubmit={onAddToSession}
       />
     </section>
   );

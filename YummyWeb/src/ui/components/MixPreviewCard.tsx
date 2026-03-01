@@ -119,6 +119,13 @@ const getFlavorText = (mix: Mix, profileTags: FlavorProfile[]) => {
   return 'вкус не указан';
 };
 
+const getMixTags = (mix: Mix) =>
+  dedupe(
+    (mix.tags ?? [])
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0),
+  );
+
 const getMixTone = (mix: Mix) => {
   const palette = ['#a56e3f', '#7a5b46', '#556a5f', '#6e4f45', '#5f5869', '#8f704d'];
   const source = `${mix.name}:${mix.id}`;
@@ -141,9 +148,14 @@ export const MixPreviewCard = ({
   style,
 }: MixPreviewCardProps) => {
   const profileTags = getOrderedProfileTags(mix);
-  const maxVisibleProfiles = ratingTagText ? 1 : profileTags.length > 2 ? 1 : 2;
-  const visibleProfileTags = profileTags.slice(0, maxVisibleProfiles);
-  const hiddenProfileTagsCount = profileTags.length - visibleProfileTags.length;
+  const mixTags = getMixTags(mix);
+  const tagRows = [
+    ...mixTags.map((tag) => ({ key: `tag:${tag}`, label: tag, kind: 'mix' as const })),
+    ...profileTags.map((tag) => ({ key: `profile:${tag}`, label: PROFILE_LABELS[tag], kind: 'profile' as const })),
+  ];
+  const maxVisibleTags = ratingTagText ? 2 : 3;
+  const visibleTags = tagRows.slice(0, maxVisibleTags);
+  const hiddenTagsCount = tagRows.length - visibleTags.length;
   const flavorText = getFlavorText(mix, profileTags);
   const isClickable = Boolean(onOpen);
 
@@ -220,14 +232,18 @@ export const MixPreviewCard = ({
                 {ratingTagText}
               </AppBadge>
             ) : null}
-            {visibleProfileTags.map((tag) => (
-              <AppBadge key={`${mix.id}:${tag}`} tone="muted" className="profile-tag">
-                {PROFILE_LABELS[tag]}
+            {visibleTags.map((tag) => (
+              <AppBadge
+                key={`${mix.id}:${tag.key}`}
+                tone="muted"
+                className={`profile-tag ${tag.kind === 'mix' ? 'mix-topic-tag' : ''}`}
+              >
+                {tag.label}
               </AppBadge>
             ))}
-            {hiddenProfileTagsCount > 0 ? (
+            {hiddenTagsCount > 0 ? (
               <AppBadge tone="muted" className="profile-tag profile-tag-more">
-                +{hiddenProfileTagsCount}
+                +{hiddenTagsCount}
               </AppBadge>
             ) : null}
           </div>

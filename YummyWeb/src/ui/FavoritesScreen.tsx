@@ -437,7 +437,8 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
                   void onRemove(currentMix.id);
                 }}
                 isFavorite
-                footerText={`Моя: ${ratings[favorite.mix.id]?.rating ?? 'нет'} · Средняя: ${summaries[favorite.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+                ratingTagText={`★ ${summaries[favorite.mix.id]?.avgRating?.toFixed(1).replace('.', ',') ?? '—'}`}
+                footerText={`Моя: ${ratings[favorite.mix.id]?.rating ?? 'нет'}`}
               />
             ))}
           </section>
