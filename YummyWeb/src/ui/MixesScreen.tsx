@@ -22,6 +22,7 @@ import {
   MixRatingSummary,
   Tobacco,
 } from '../shared/types';
+import { AppButton, AppInput, AppSelect, AppTextarea } from '@/ui-kit';
 
 type MixesScreenProps = {
   authState: AuthState;
@@ -72,6 +73,18 @@ const PROFILE_COLORS: Record<FlavorProfile, string> = {
 };
 
 const PROFILE_VALUES = new Set<FlavorProfile>(Object.keys(PROFILE_COLORS) as FlavorProfile[]);
+const SORT_OPTIONS = [
+  { value: 'popularity', label: 'По популярности' },
+  { value: 'rating', label: 'По рейтингу' },
+  { value: 'newest', label: 'По дате' },
+] as const;
+const MIN_RATING_OPTIONS = [
+  { value: '1', label: '1+' },
+  { value: '2', label: '2+' },
+  { value: '3', label: '3+' },
+  { value: '4', label: '4+' },
+  { value: '5', label: '5' },
+] as const;
 
 const sanitizeProfiles = (profiles: unknown[]) =>
   profiles
@@ -566,23 +579,22 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </span>
               </div>
               <div className="home-hero-actions">
-                <button
-                  type="button"
+                <AppButton
                   className="search-button"
                   disabled={detailActionPending}
                   onClick={() => onAddToSession(activeMix.id)}
                 >
                   Добавить в сессию
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
+                  variant="icon"
                   className={`icon-btn fav-icon mix-detail-fav ${favoriteMixIds[activeMix.id] ? 'active' : ''}`}
                   disabled={detailActionPending}
                   onClick={() => toggleFavorite(activeMix.id)}
                   aria-label={favoriteMixIds[activeMix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
                 >
                   {favoriteMixIds[activeMix.id] ? '♥' : '♡'}
-                </button>
+                </AppButton>
               </div>
             </section>
 
@@ -605,15 +617,15 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               </p>
               <div className="session-rating-row">
                 {[1, 2, 3, 4, 5].map((score) => (
-                  <button
+                  <AppButton
                     key={`${activeMix.id}:${score}`}
-                    type="button"
+                    variant="ghost"
                     className={`score-btn ${ratings[activeMix.id]?.rating === score ? 'active' : ''}`}
                     disabled={detailActionPending}
                     onClick={() => onRateFromDetail(activeMix.id, score)}
                   >
                     {score}
-                  </button>
+                  </AppButton>
                 ))}
               </div>
               <section className="mix-charts">
@@ -682,7 +694,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
           <p className="card-title">Создать микс</p>
           <div className="filter-field">
             <span>Название</span>
-            <input
+            <AppInput
               className="search-input"
               value={createName}
               onChange={(event) => setCreateName(event.target.value)}
@@ -692,7 +704,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
           <div className="filter-field">
             <span>Описание</span>
-            <textarea
+            <AppTextarea
               className="search-input form-textarea"
               value={createDescription}
               onChange={(event) => setCreateDescription(event.target.value)}
@@ -703,18 +715,16 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
           <div className="mix-draft-list">
             {createComponents.map((item) => (
               <div key={item.id} className="mix-draft-row">
-                <select
+                <AppSelect
                   value={item.tobaccoId}
-                  onChange={(event) => onChangeComponentRow(item.id, { tobaccoId: event.target.value })}
-                >
-                  <option value="">Выберите табак</option>
-                  {sortedCreateTobaccos.map((tobacco) => (
-                    <option key={tobacco.id} value={tobacco.id}>
-                      {tobacco.manufacturer.name} · {tobacco.name}
-                    </option>
-                  ))}
-                </select>
-                <input
+                  onChange={(next) => onChangeComponentRow(item.id, { tobaccoId: next })}
+                  options={sortedCreateTobaccos.map((tobacco) => ({
+                    value: tobacco.id,
+                    label: `${tobacco.manufacturer.name} · ${tobacco.name}`,
+                  }))}
+                  emptyLabel="Выберите табак"
+                />
+                <AppInput
                   type="number"
                   min={1}
                   max={100}
@@ -722,36 +732,35 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   onChange={(event) => onChangeComponentRow(item.id, { proportion: event.target.value })}
                   placeholder="%"
                 />
-                <button
-                  type="button"
+                <AppButton
+                  variant="ghost"
                   className="score-btn"
                   onClick={() => onRemoveComponentRow(item.id)}
                   disabled={createComponents.length === 1}
                 >
                   ×
-                </button>
+                </AppButton>
               </div>
             ))}
           </div>
 
           <div className="mix-create-actions">
-            <button type="button" className="ghost-button mix-draft-add" onClick={onAddComponentRow}>
+            <AppButton variant="ghost" className="ghost-button mix-draft-add" onClick={onAddComponentRow}>
               Добавить компонент
-            </button>
+            </AppButton>
             <p className="hint">
               Сумма пропорций: <b>{totalProportion}%</b>
               {hasDuplicateTobaccos ? ' · есть повторяющиеся табаки' : ''}
             </p>
           </div>
 
-          <button
-            type="button"
+          <AppButton
             className="search-button session-submit"
             onClick={onSubmitCreateMix}
             disabled={!canSubmitCreateMix}
           >
             {createStatus === 'saving' ? 'Сохраняем...' : 'Сохранить микс'}
-          </button>
+          </AppButton>
 
           {createFeedback ? (
             <p className={`hint ${createStatus === 'error' ? 'screen-status error' : ''}`}>{createFeedback}</p>
@@ -765,57 +774,56 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     <section className="catalog-layout">
       <form className="catalog-controls cinema-controls" onSubmit={onSubmitFilters}>
         <div className="search-row">
-          <input
+          <AppInput
             className="search-input"
             type="search"
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
             placeholder="Поиск по названию и описанию"
           />
-          <button type="submit" className="search-button">Найти</button>
+          <AppButton type="submit" className="search-button">Найти</AppButton>
         </div>
 
-        <button type="button" className="search-button mix-create-trigger" onClick={onOpenCreateScreen}>
+        <AppButton className="search-button mix-create-trigger" onClick={onOpenCreateScreen}>
           Создать микс
-        </button>
+        </AppButton>
 
         <div className="filters-row">
           <label className="filter-field">
             <span>Источник</span>
-            <select
+            <AppSelect
               value={ownOnly ? 'mine' : 'all'}
-              onChange={(event) => setOwnOnly(event.target.value === 'mine')}
-            >
-              <option value="all">Все миксы</option>
-              <option value="mine">Только мои</option>
-            </select>
+              onChange={(next) => setOwnOnly(next === 'mine')}
+              options={[
+                { value: 'all', label: 'Все миксы' },
+                { value: 'mine', label: 'Только мои' },
+              ]}
+            />
           </label>
 
           <label className="filter-field">
             <span>Сортировка</span>
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'newest' | 'rating' | 'popularity')}>
-              <option value="popularity">По популярности</option>
-              <option value="rating">По рейтингу</option>
-              <option value="newest">По дате</option>
-            </select>
+            <AppSelect
+              value={sortBy}
+              onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+              options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+            />
           </label>
         </div>
 
         <div className="filters-row">
           <label className="filter-field">
             <span>Мин. оценка</span>
-            <select value={minRating} onChange={(event) => setMinRating(event.target.value as '' | '1' | '2' | '3' | '4' | '5')}>
-              <option value="">Любая</option>
-              <option value="1">1+</option>
-              <option value="2">2+</option>
-              <option value="3">3+</option>
-              <option value="4">4+</option>
-              <option value="5">5</option>
-            </select>
+            <AppSelect
+              value={minRating}
+              onChange={(next) => setMinRating(next as '' | '1' | '2' | '3' | '4' | '5')}
+              options={MIN_RATING_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+              emptyLabel="Любая"
+            />
           </label>
           <label className="filter-field">
             <span>Теги (через запятую)</span>
-            <input
+            <AppInput
               className="search-input"
               value={tagsDraft}
               onChange={(event) => setTagsDraft(event.target.value)}
@@ -827,42 +835,34 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
         <div className="filters-row">
           <label className="filter-field">
             <span>Бренд</span>
-            <select value={manufacturerId} onChange={(event) => setManufacturerId(event.target.value)}>
-              <option value="">Все бренды</option>
-              {sortedManufacturers.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={manufacturerId}
+              onChange={setManufacturerId}
+              options={sortedManufacturers.map((item) => ({ value: item.id, label: item.name }))}
+              emptyLabel="Все бренды"
+            />
           </label>
 
           <label className="filter-field">
             <span>Табак</span>
-            <select value={tobaccoId} onChange={(event) => setTobaccoId(event.target.value)}>
-              <option value="">Любой табак</option>
-              {sortedTobaccos.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.manufacturer.name} · {item.name}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={tobaccoId}
+              onChange={setTobaccoId}
+              options={sortedTobaccos.map((item) => ({ value: item.id, label: `${item.manufacturer.name} · ${item.name}` }))}
+              emptyLabel="Любой табак"
+            />
           </label>
         </div>
 
         <div className="filters-row">
           <label className="filter-field">
             <span>Профиль</span>
-            <select
+            <AppSelect
               value={profile}
-              onChange={(event) => setProfile(event.target.value as '' | FlavorProfile)}
-            >
-              {PROFILE_OPTIONS.map((item) => (
-                <option key={item.value || 'all'} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => setProfile(next as '' | FlavorProfile)}
+              options={PROFILE_OPTIONS.filter((item) => item.value !== '').map((item) => ({ value: item.value, label: item.label }))}
+              emptyLabel="Все профили"
+            />
           </label>
         </div>
       </form>
@@ -911,8 +911,8 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 Средняя: <b>{summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
               <div className="mix-actions cinema-actions icon-action-row">
-                <button
-                  type="button"
+                <AppButton
+                  variant="icon"
                   className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''}`}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -921,7 +921,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
                 >
                   {favoriteMixIds[mix.id] ? '♥' : '♡'}
-                </button>
+                </AppButton>
               </div>
             </div>
           </article>

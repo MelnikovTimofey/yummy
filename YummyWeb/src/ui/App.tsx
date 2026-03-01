@@ -15,6 +15,7 @@ import { MixesScreen } from './MixesScreen';
 import { PreferencesPanel } from './PreferencesPanel';
 import { RailScreen } from './RailScreen';
 import { SessionsScreen } from './SessionsScreen';
+import { AppButton, AppInput, AppModal, AppTabs } from '@/ui-kit';
 
 type TabKey = 'home' | 'sessions' | 'catalog' | 'favorites' | 'mixes' | 'rail-list';
 
@@ -90,6 +91,17 @@ export const App = () => {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
   const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
+  const guestTabItems = useMemo(
+    () => [
+      { value: 'home', label: 'Главная' },
+      { value: 'catalog', label: 'Каталог' },
+    ],
+    [],
+  );
+  const mainTabItems = useMemo(
+    () => visibleTabs.map((item) => ({ value: item.key, label: item.label })),
+    [visibleTabs],
+  );
   const profileName = useMemo(
     () => resolveProfileName(authState.user, customProfileName),
     [authState.user, customProfileName],
@@ -283,30 +295,21 @@ export const App = () => {
             <h1>{guestTitle}</h1>
             <p className="subtitle">{guestSubtitle}</p>
             <div className="topbar-right">
-              <button
-                type="button"
+              <AppButton
+                variant="chip"
                 className="header-auth-btn"
                 onClick={() => setAuthModalOpen(true)}
               >
                 Войти
-              </button>
+              </AppButton>
             </div>
           </header>
           <nav className="desktop-tabbar" aria-label="Гостевая навигация">
-            <button
-              type="button"
-              className={`desktop-tab ${guestTab === 'home' ? 'active' : ''}`}
-              onClick={() => setGuestTab('home')}
-            >
-              Главная
-            </button>
-            <button
-              type="button"
-              className={`desktop-tab ${guestTab === 'catalog' ? 'active' : ''}`}
-              onClick={() => setGuestTab('catalog')}
-            >
-              Каталог
-            </button>
+            <AppTabs
+              value={guestTab}
+              onChange={(next) => setGuestTab(next as 'home' | 'catalog')}
+              items={guestTabItems}
+            />
           </nav>
           <main className="content">
             <section className="guest-main-panel">
@@ -319,19 +322,14 @@ export const App = () => {
           </main>
         </div>
 
-        {authModalOpen ? (
-          <div className="popup-backdrop" onClick={() => setAuthModalOpen(false)} role="presentation">
-            <article className="popup-card auth-popup" onClick={(event) => event.stopPropagation()}>
-              <div className="popup-head">
-                <h3 className="modal-title">Вход</h3>
-                <button type="button" className="popup-close-btn" onClick={() => setAuthModalOpen(false)}>
-                  Закрыть
-                </button>
-              </div>
-              <AuthScreen onAuthUpdate={onAuthUpdate} asCard={false} />
-            </article>
-          </div>
-        ) : null}
+        <AppModal
+          open={authModalOpen}
+          onOpenChange={setAuthModalOpen}
+          title="Вход"
+          contentClassName="auth-popup"
+        >
+          <AuthScreen onAuthUpdate={onAuthUpdate} asCard={false} />
+        </AppModal>
       </div>
     );
   }
@@ -352,19 +350,19 @@ export const App = () => {
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
           <div className="topbar-right" ref={profileMenuRef}>
-            <button
-              type="button"
+            <AppButton
+              variant="chip"
               className="header-profile-btn"
               onClick={() => setProfileMenuOpen((current) => !current)}
               aria-expanded={profileMenuOpen}
               aria-haspopup="menu"
             >
               {profileName}
-            </button>
+            </AppButton>
             {profileMenuOpen ? (
               <div className="profile-menu" role="menu" aria-label="Меню профиля">
-                <button
-                  type="button"
+                <AppButton
+                  variant="ghost"
                   className="profile-menu-item"
                   onClick={() => {
                     setActiveTab('favorites');
@@ -372,9 +370,9 @@ export const App = () => {
                   }}
                 >
                   Избранное
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
+                  variant="ghost"
                   className="profile-menu-item"
                   onClick={() => {
                     setActiveTab('sessions');
@@ -382,23 +380,23 @@ export const App = () => {
                   }}
                 >
                   Сессии
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
+                  variant="ghost"
                   className="profile-menu-item"
                   onClick={openCreateMix}
                 >
                   Создать микс
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
+                  variant="ghost"
                   className="profile-menu-item"
                   onClick={openProfileNameModal}
                 >
                   Изменить имя
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
+                  variant="ghost"
                   className="profile-menu-item"
                   onClick={() => {
                     setPreferencesModalOpen(true);
@@ -406,32 +404,24 @@ export const App = () => {
                   }}
                 >
                   Предпочтения
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
+                  variant="danger"
                   className="profile-menu-item danger"
                   onClick={onSignOut}
                 >
                   Выйти
-                </button>
+                </AppButton>
               </div>
             ) : null}
           </div>
         </header>
         <nav className="desktop-tabbar" aria-label="Основная навигация">
-          {visibleTabs.map((item) => {
-            const isActive = item.key === activeTab;
-            return (
-              <button
-                key={`desktop:${item.key}`}
-                type="button"
-                className={`desktop-tab ${isActive ? 'active' : ''}`}
-                onClick={() => setActiveTab(item.key)}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+          <AppTabs
+            value={activeTab}
+            onChange={(next) => setActiveTab(next as TabKey)}
+            items={mainTabItems}
+          />
         </nav>
 
         <main className="content">
@@ -473,62 +463,52 @@ export const App = () => {
         </main>
       </div>
 
-      {profileNameModalOpen ? (
-        <div className="popup-backdrop" onClick={() => setProfileNameModalOpen(false)} role="presentation">
-          <article className="popup-card profile-name-popup" onClick={(event) => event.stopPropagation()}>
-            <div className="popup-head">
-              <h3 className="modal-title">Имя профиля</h3>
-              <button type="button" className="popup-close-btn" onClick={() => setProfileNameModalOpen(false)}>
-                Закрыть
-              </button>
-            </div>
-            <form
-              className="form profile-name-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                onSaveProfileName();
-              }}
-            >
-              <label htmlFor="profile-name-input">Имя</label>
-              <input
-                id="profile-name-input"
-                type="text"
-                value={profileNameDraft}
-                onChange={(event) => setProfileNameDraft(event.target.value)}
-                maxLength={40}
-                placeholder="Введите имя профиля"
-              />
-              <p className="hint">Если поле пустое, показывается имя из e-mail или «Мой профиль».</p>
-              <div className="profile-name-actions">
-                <button type="button" className="ghost-button profile-name-cancel" onClick={() => setProfileNameModalOpen(false)}>
-                  Отмена
-                </button>
-                <button type="submit" className="search-button profile-name-save">
-                  Сохранить
-                </button>
-              </div>
-            </form>
-          </article>
-        </div>
-      ) : null}
+      <AppModal
+        open={profileNameModalOpen}
+        onOpenChange={setProfileNameModalOpen}
+        title="Имя профиля"
+        contentClassName="profile-name-popup"
+      >
+        <form
+          className="form profile-name-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSaveProfileName();
+          }}
+        >
+          <label htmlFor="profile-name-input">Имя</label>
+          <AppInput
+            id="profile-name-input"
+            type="text"
+            value={profileNameDraft}
+            onChange={(event) => setProfileNameDraft(event.target.value)}
+            maxLength={40}
+            placeholder="Введите имя профиля"
+          />
+          <p className="hint">Если поле пустое, показывается имя из e-mail или «Мой профиль».</p>
+          <div className="profile-name-actions">
+            <AppButton variant="ghost" className="ghost-button profile-name-cancel" onClick={() => setProfileNameModalOpen(false)}>
+              Отмена
+            </AppButton>
+            <AppButton type="submit" className="search-button profile-name-save">
+              Сохранить
+            </AppButton>
+          </div>
+        </form>
+      </AppModal>
 
-      {preferencesModalOpen ? (
-        <div className="popup-backdrop" onClick={() => setPreferencesModalOpen(false)} role="presentation">
-          <article className="popup-card preferences-popup" onClick={(event) => event.stopPropagation()}>
-            <div className="popup-head">
-              <h3 className="modal-title">Предпочтения</h3>
-              <button type="button" className="popup-close-btn" onClick={() => setPreferencesModalOpen(false)}>
-                Закрыть
-              </button>
-            </div>
-            <PreferencesPanel
-              authState={authState}
-              onAuthUpdate={onAuthUpdate}
-              onSaved={() => setPreferencesModalOpen(false)}
-            />
-          </article>
-        </div>
-      ) : null}
+      <AppModal
+        open={preferencesModalOpen}
+        onOpenChange={setPreferencesModalOpen}
+        title="Предпочтения"
+        contentClassName="preferences-popup"
+      >
+        <PreferencesPanel
+          authState={authState}
+          onAuthUpdate={onAuthUpdate}
+          onSaved={() => setPreferencesModalOpen(false)}
+        />
+      </AppModal>
     </div>
   );
 };

@@ -13,6 +13,7 @@ import {
   MixRatingSummary,
   Tobacco,
 } from '../shared/types';
+import { AppButton, AppInput, AppSelect } from '@/ui-kit';
 
 type CatalogScreenProps = {
   authState: AuthState;
@@ -37,6 +38,18 @@ const PROFILE_OPTIONS: Array<{ value: FlavorProfile; label: string }> = [
 
 const FILTER_PAGE_SIZE = 40;
 const FILTER_SCROLL_THRESHOLD = 48;
+const SORT_OPTIONS = [
+  { value: 'popularity', label: 'По популярности' },
+  { value: 'rating', label: 'По рейтингу' },
+  { value: 'newest', label: 'По дате' },
+] as const;
+const MIN_RATING_OPTIONS = [
+  { value: '1', label: '1+' },
+  { value: '2', label: '2+' },
+  { value: '3', label: '3+' },
+  { value: '4', label: '4+' },
+  { value: '5', label: '5' },
+] as const;
 
 const appendUniqueById = <T extends { id: string }>(current: T[], next: T[]) => {
   const seen = new Set(current.map((item) => item.id));
@@ -529,14 +542,14 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       <section className="catalog-body">
         <form className="catalog-controls cinema-controls" onSubmit={onSubmitSearch}>
           <div className="search-row">
-            <input
+            <AppInput
               className="search-input"
               type="search"
               value={queryDraft}
               onChange={(event) => setQueryDraft(event.target.value)}
               placeholder="Поиск по названию и описанию"
             />
-            <button type="submit" className="search-button">Найти</button>
+            <AppButton type="submit" className="search-button">Найти</AppButton>
           </div>
           <div className="catalog-tools-row">
             <div className="catalog-active-filters" aria-live="polite">
@@ -544,42 +557,40 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                 <span key={label} className="filter-pill">{label}</span>
               )) : <span className="filter-pill muted">Фильтры не заданы</span>}
             </div>
-            <button
-              type="button"
+            <AppButton
+              variant="ghost"
               className="ghost-button catalog-reset-btn"
               onClick={resetFilters}
               disabled={!hasFilters}
             >
               Сбросить фильтры
-            </button>
+            </AppButton>
           </div>
 
           <div className="filters-row">
             <label className="filter-field">
               <span>Сортировка</span>
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'newest' | 'rating' | 'popularity')}>
-                <option value="popularity">По популярности</option>
-                <option value="rating">По рейтингу</option>
-                <option value="newest">По дате</option>
-              </select>
+              <AppSelect
+                value={sortBy}
+                onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+                options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+              />
             </label>
             <label className="filter-field">
               <span>Мин. оценка</span>
-              <select value={minRating} onChange={(event) => setMinRating(event.target.value as '' | '1' | '2' | '3' | '4' | '5')}>
-                <option value="">Любая</option>
-                <option value="1">1+</option>
-                <option value="2">2+</option>
-                <option value="3">3+</option>
-                <option value="4">4+</option>
-                <option value="5">5</option>
-              </select>
+              <AppSelect
+                value={minRating}
+                onChange={(next) => setMinRating(next as '' | '1' | '2' | '3' | '4' | '5')}
+                options={MIN_RATING_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+                emptyLabel="Любая"
+              />
             </label>
           </div>
 
           <div className="filters-row">
             <label className="filter-field">
               <span>Производитель (можно несколько)</span>
-              <input
+              <AppInput
                 className="search-input"
                 type="search"
                 value={manufacturerSearchDraft}
@@ -587,22 +598,22 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                 placeholder="Поиск бренда"
               />
               <div className="filter-scrollbox" onScroll={handleManufacturersScroll}>
-                <button
-                  type="button"
+                <AppButton
+                  variant="ghost"
                   className={`filter-option ${selectedManufacturerIds.length === 0 ? 'active' : ''}`}
                   onClick={() => setSelectedManufacturerIds([])}
                 >
                   Все бренды
-                </button>
+                </AppButton>
                 {manufacturers.map((item) => (
-                  <button
+                  <AppButton
                     key={item.id}
-                    type="button"
+                    variant="ghost"
                     className={`filter-option ${selectedManufacturerIds.includes(item.id) ? 'active' : ''}`}
                     onClick={() => toggleManufacturer(item.id)}
                   >
                     {item.name}
-                  </button>
+                  </AppButton>
                 ))}
                 <p className="filter-scroll-meta">
                   {manufacturersStatus === 'error'
@@ -617,7 +628,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             </label>
             <label className="filter-field">
               <span>Табак (можно несколько)</span>
-              <input
+              <AppInput
                 className="search-input"
                 type="search"
                 value={tobaccoSearchDraft}
@@ -625,22 +636,22 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                 placeholder={selectedManufacturerIds.length === 1 ? 'Поиск табака выбранного бренда' : 'Поиск табака'}
               />
               <div className="filter-scrollbox" onScroll={handleTobaccosScroll}>
-                <button
-                  type="button"
+                <AppButton
+                  variant="ghost"
                   className={`filter-option ${selectedTobaccoIds.length === 0 ? 'active' : ''}`}
                   onClick={() => setSelectedTobaccoIds([])}
                 >
                   Любой табак
-                </button>
+                </AppButton>
                 {tobaccos.map((item) => (
-                  <button
+                  <AppButton
                     key={item.id}
-                    type="button"
+                    variant="ghost"
                     className={`filter-option ${selectedTobaccoIds.includes(item.id) ? 'active' : ''}`}
                     onClick={() => toggleTobacco(item.id)}
                   >
                     {item.manufacturer.name} · {item.name}
-                  </button>
+                  </AppButton>
                 ))}
                 <p className="filter-scroll-meta">
                   {tobaccosStatus === 'error'
@@ -657,7 +668,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
           <div className="filter-field">
             <span>Теги (автодополнение)</span>
-            <input
+            <AppInput
               className="search-input"
               value={tagDraft}
               onChange={(event) => setTagDraft(event.target.value)}
@@ -667,9 +678,9 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             {filteredTagSuggestions.length ? (
               <div className="catalog-tag-suggestions">
                 {filteredTagSuggestions.map((tag) => (
-                  <button
+                  <AppButton
                     key={tag}
-                    type="button"
+                    variant="chip"
                     className="option-chip"
                     onClick={() => {
                       addTag(tag);
@@ -677,16 +688,16 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                     }}
                   >
                     {tag}
-                  </button>
+                  </AppButton>
                 ))}
               </div>
             ) : null}
             {selectedTags.length ? (
               <div className="catalog-selected-tags">
                 {selectedTags.map((tag) => (
-                  <button key={tag} type="button" className="filter-pill" onClick={() => removeTag(tag)}>
+                  <AppButton key={tag} variant="ghost" className="filter-pill" onClick={() => removeTag(tag)}>
                     {tag} ×
-                  </button>
+                  </AppButton>
                 ))}
               </div>
             ) : null}
@@ -696,14 +707,14 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             <p className="card-title">Профили вкуса</p>
             <div className="chip-grid">
               {PROFILE_OPTIONS.map((option) => (
-                <button
+                <AppButton
                   key={option.value}
-                  type="button"
+                  variant="chip"
                   className={`option-chip ${selectedProfiles.includes(option.value) ? 'liked' : ''}`}
                   onClick={() => toggleProfile(option.value)}
                 >
                   {option.label}
-                </button>
+                </AppButton>
               ))}
             </div>
           </section>
@@ -712,14 +723,14 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             <p className="card-title">Вкусы (можно несколько)</p>
             <div className="chip-grid">
               {flavorOptions.map((flavor) => (
-                <button
+                <AppButton
                   key={flavor}
-                  type="button"
+                  variant="chip"
                   className={`option-chip ${selectedFlavors.includes(flavor) ? 'liked' : ''}`}
                   onClick={() => toggleFlavor(flavor)}
                 >
                   {flavor}
-                </button>
+                </AppButton>
               ))}
             </div>
           </section>

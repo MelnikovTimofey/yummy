@@ -16,6 +16,7 @@ import {
   MixRatingSummary,
   Tobacco,
 } from '../shared/types';
+import { AppButton, AppInput, AppSelect } from '@/ui-kit';
 
 type FavoritesScreenProps = {
   authState: AuthState;
@@ -38,6 +39,18 @@ const PROFILE_OPTIONS: Array<{ value: '' | FlavorProfile; label: string }> = [
   { value: 'berry', label: 'Ягодный' },
   { value: 'perfume', label: 'Парфюм' },
 ];
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'По дате добавления' },
+  { value: 'rating', label: 'По рейтингу' },
+  { value: 'popularity', label: 'По популярности' },
+] as const;
+const MIN_RATING_OPTIONS = [
+  { value: '1', label: '1+' },
+  { value: '2', label: '2+' },
+  { value: '3', label: '3+' },
+  { value: '4', label: '4+' },
+  { value: '5', label: '5' },
+] as const;
 
 export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: FavoritesScreenProps) => {
   const [items, setItems] = useState<FavoriteMix[]>([]);
@@ -201,84 +214,74 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     <section className="catalog-layout">
       <form className="catalog-controls cinema-controls" onSubmit={onSubmitFilters}>
         <div className="search-row">
-          <input
+          <AppInput
             className="search-input"
             type="search"
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
             placeholder="Поиск по названию и описанию"
           />
-          <button type="submit" className="search-button">Найти</button>
+          <AppButton type="submit" className="search-button">Найти</AppButton>
         </div>
 
         <div className="filters-row">
           <label className="filter-field">
             <span>Сортировка</span>
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'newest' | 'rating' | 'popularity')}>
-              <option value="newest">По дате добавления</option>
-              <option value="rating">По рейтингу</option>
-              <option value="popularity">По популярности</option>
-            </select>
+            <AppSelect
+              value={sortBy}
+              onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+              options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+            />
           </label>
 
           <label className="filter-field">
             <span>Мин. оценка</span>
-            <select value={minRating} onChange={(event) => setMinRating(event.target.value as '' | '1' | '2' | '3' | '4' | '5')}>
-              <option value="">Любая</option>
-              <option value="1">1+</option>
-              <option value="2">2+</option>
-              <option value="3">3+</option>
-              <option value="4">4+</option>
-              <option value="5">5</option>
-            </select>
+            <AppSelect
+              value={minRating}
+              onChange={(next) => setMinRating(next as '' | '1' | '2' | '3' | '4' | '5')}
+              options={MIN_RATING_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+              emptyLabel="Любая"
+            />
           </label>
         </div>
 
         <div className="filters-row">
           <label className="filter-field">
             <span>Бренд</span>
-            <select value={manufacturerId} onChange={(event) => setManufacturerId(event.target.value)}>
-              <option value="">Все бренды</option>
-              {sortedManufacturers.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={manufacturerId}
+              onChange={setManufacturerId}
+              options={sortedManufacturers.map((item) => ({ value: item.id, label: item.name }))}
+              emptyLabel="Все бренды"
+            />
           </label>
 
           <label className="filter-field">
             <span>Табак</span>
-            <select value={tobaccoId} onChange={(event) => setTobaccoId(event.target.value)}>
-              <option value="">Любой табак</option>
-              {sortedTobaccos.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.manufacturer.name} · {item.name}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={tobaccoId}
+              onChange={setTobaccoId}
+              options={sortedTobaccos.map((item) => ({ value: item.id, label: `${item.manufacturer.name} · ${item.name}` }))}
+              emptyLabel="Любой табак"
+            />
           </label>
         </div>
 
         <div className="filters-row">
           <label className="filter-field">
             <span>Профиль</span>
-            <select
+            <AppSelect
               value={profile}
-              onChange={(event) => setProfile(event.target.value as '' | FlavorProfile)}
-            >
-              {PROFILE_OPTIONS.map((item) => (
-                <option key={item.value || 'all'} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => setProfile(next as '' | FlavorProfile)}
+              options={PROFILE_OPTIONS.filter((item) => item.value !== '').map((item) => ({ value: item.value, label: item.label }))}
+              emptyLabel="Все профили"
+            />
           </label>
         </div>
 
         <div className="filter-field">
           <span>Теги (через запятую)</span>
-          <input
+          <AppInput
             className="search-input"
             value={tagsDraft}
             onChange={(event) => setTagsDraft(event.target.value)}
@@ -328,8 +331,8 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
                 Средняя: <b>{summaries[favorite.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
               <div className="mix-actions cinema-actions icon-action-row">
-                <button
-                  type="button"
+                <AppButton
+                  variant="icon"
                   className="icon-btn fav-icon active"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -338,7 +341,7 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
                   aria-label="Убрать из избранного"
                 >
                   ♥
-                </button>
+                </AppButton>
               </div>
             </div>
           </article>

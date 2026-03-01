@@ -1,5 +1,46 @@
 # HANDOFF — Yummy
 
+## 1.0) UI-рефакторинг карточек главной (1 марта 2026)
+
+- Проблема:
+  - в рейлах главной заголовки карточек находились на разной высоте;
+  - визуально карточки выглядели неконсистентно из-за зависимости вертикального положения заголовка от количества тегов/строк меты.
+- Изменение:
+  - `YummyWeb/src/ui/HomeScreen.tsx`:
+    - разметка карточки разделена на две зоны:
+      - `home-item-head` (заголовок + action-кнопки),
+      - `home-item-body` (meta + теги).
+  - `YummyWeb/src/ui/styles.css`:
+    - `home-item-overlay` теперь выравнивает верхнюю зону карточки стабильно;
+    - `home-item-body` закреплён у нижней границы через `margin-top: auto`;
+    - добавлены согласованные параметры для `home-item-meta` и `home-item-tags` (минимальная высота, gap, wrap), чтобы внутренний ритм карточек был предсказуемым.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
+## 0.9) Миграция `YummyWeb` на `shadcn/ui` (1 марта 2026)
+
+- Объём:
+  - мигрирован весь UI-слой `YummyWeb` (включая неактивные экраны) на архитектуру `shadcn/ui` + `ui-kit`.
+- Инфраструктура:
+  - добавлены `Tailwind CSS`, `components.json`, `tailwind.config.ts`, `postcss.config.js`;
+  - добавлен алиас `@` в `YummyWeb/tsconfig.json` и `YummyWeb/vite.config.ts`;
+  - добавлен utility `YummyWeb/src/lib/utils.ts` (`cn`).
+- Компонентный слой:
+  - `YummyWeb/src/components/ui/*` — shadcn-примитивы;
+  - `YummyWeb/src/ui-kit/*` — продуктовые обёртки (`AppButton`, `AppInput`, `AppSelect`, `AppModal`, `AppBadge`, `AppTabs`, `AppTextarea`, `AppCard`).
+- Миграция экранов:
+  - `App`, `AuthScreen`, `CatalogScreen`, `FavoritesScreen`, `HomeScreen`, `MixesScreen`,
+  - `SessionsScreen`, `PreferencesPanel`, `ProfileScreen`, `RailScreen`, `RecommendationsScreen`.
+- CSS:
+  - migration-mode: гибрид (`Tailwind + shadcn` поверх legacy-стилей);
+  - удалены неиспользуемые блоки `popup-*` и `desktop-tab*` из `styles.css`.
+- Документация:
+  - обновлён `YummyWeb/README.md` (UI-стек, структура, правила использования `ui-kit`).
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+- Коммиты:
+  - `5bf6de5`, `b3479fd`, `a366e8e`, `87eeda1`, `634966a`, `60c58e8`, `7f82647`, `00f2af7`.
+
 ## 0.8) Sprint 2 — P2.2 (fix по пользовательскому баг-репорту, 1 марта 2026)
 
 - Проблема:

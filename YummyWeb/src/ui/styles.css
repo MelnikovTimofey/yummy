@@ -453,7 +453,7 @@ h1 {
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
   padding: 12px;
   background: linear-gradient(180deg, rgba(10, 10, 10, 0.05) 20%, rgba(10, 10, 10, 0.82) 100%);
@@ -464,6 +464,14 @@ h1 {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;
+}
+
+.home-item-body {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+  align-content: end;
+  min-height: 0;
 }
 
 .home-item-actions {
@@ -526,6 +534,7 @@ h1 {
   margin: 0;
   font-size: 12px;
   color: #d6c8b9;
+  min-height: 30px;
   min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -534,58 +543,12 @@ h1 {
 }
 
 .home-item-tags {
-  margin-top: 2px;
-}
-
-.popup-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  background: rgba(8, 7, 6, 0.68);
-  display: grid;
-  place-items: center;
-  padding: 16px;
-}
-
-.popup-card {
-  width: min(100%, 460px);
-  border: 1px solid #3d342e;
-  border-radius: 18px;
-  background: #161210;
-  padding: 16px;
-}
-
-.popup-card h3 {
-  margin: 8px 0 0;
-  font-size: 26px;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-}
-
-.popup-head {
+  margin-top: 0;
+  min-height: 26px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.modal-title {
-  margin: 0;
-  font-size: 26px;
-  line-height: 1.1;
-}
-
-.popup-close-btn {
-  border: 1px solid #4a3d30;
-  background: #201a15;
-  color: var(--accent-soft);
-  border-radius: 999px;
-  min-height: 34px;
-  padding: 0 12px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
 }
 
 .auth-popup {
@@ -1379,24 +1342,6 @@ h1 {
   display: none;
 }
 
-.desktop-tab {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-1);
-  min-height: 40px;
-  padding: 0 16px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.desktop-tab.active {
-  border-color: #5e4a2e;
-  background: #251d15;
-  color: var(--accent-soft);
-}
-
 .catalog-reset-btn {
   margin-top: 0;
 }
@@ -1642,11 +1587,6 @@ h1 {
   .search-button {
     min-height: 50px;
     font-size: 14px;
-  }
-
-  .desktop-tab {
-    min-height: 42px;
-    font-size: 13px;
   }
 
   .cinema-grid {
