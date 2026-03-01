@@ -1,5 +1,19 @@
 # HANDOFF — Yummy
 
+## 1.6) Оценка на карточках главной (1 марта 2026)
+
+- Требование:
+  - добавить отображение оценки на карточках главной.
+- Изменение:
+  - `YummyWeb/src/ui/HomeScreen.tsx`:
+    - подключен `getMixRatingSummaries(...)`;
+    - summary сохраняется в локальный map по `mixId`;
+    - в карточку (`MixPreviewCard`) передаётся footer: `Средняя: {avgRating}`.
+- Ограничение:
+  - `/mix-ratings/summary` защищён `requireAuth`, поэтому в guest-режиме footer с оценкой не показывается.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.5) Унификация карточек миксов между экранами (1 марта 2026)
 
 - Требование:

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, removeFavorite } from '../shared/apiClient';
-import { AuthState, HomeRail, Mix } from '../shared/types';
+import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, getMixRatingSummaries, removeFavorite } from '../shared/apiClient';
+import { AuthState, HomeRail, Mix, MixRatingSummary } from '../shared/types';
 import { AppButton, AppModal } from '@/ui-kit';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
@@ -41,6 +41,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
   const [rails, setRails] = useState<HomeRail[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
+  const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
   const railRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -99,6 +100,29 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     };
 
     void loadFavorites();
+  }, [authState.tokens, onAuthUpdate, rails.length]);
+
+  useEffect(() => {
+    const loadRatingSummaries = async () => {
+      if (!authState.tokens) {
+        setMixSummaries({});
+        return;
+      }
+
+      try {
+        const response = await getMixRatingSummaries(authState.tokens, onAuthUpdate);
+        setMixSummaries(
+          response.items.reduce<Record<string, MixRatingSummary>>((acc, item) => {
+            acc[item.mixId] = item;
+            return acc;
+          }, {}),
+        );
+      } catch {
+        setMixSummaries({});
+      }
+    };
+
+    void loadRatingSummaries();
   }, [authState.tokens, onAuthUpdate, rails.length]);
 
   useEffect(() => {
@@ -249,6 +273,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                     isFavorite={Boolean(favoriteMixIds[mix.id])}
                     favoriteGuest={!authState.tokens}
                     favoriteTitle={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
+                    footerText={authState.tokens ? `Средняя: ${mixSummaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}` : undefined}
                   />
                 ))}
               </div>
