@@ -757,3 +757,17 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright UI-check (skill):
   - `output/playwright/catalog-dominant-tag.png`.
+
+## 1.4) Итерация J (1 марта 2026) — перенос и правка текста в сценарии добавления сессии
+
+Сделано:
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - удален текст-подсказка из фильтров compose-экрана;
+  - добавлен отдельный информационный блок рядом с результатами,
+  - обновлен copy на production-формулировку:
+    `Выберите карточку микса или откройте «Описание» и нажмите «Добавить в сессию».`
+- `YummyWeb/src/ui/styles.css`:
+  - добавлен `session-compose-reset-btn` для выравнивания кнопки `Сбросить фильтры`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.

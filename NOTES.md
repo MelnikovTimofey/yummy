@@ -728,3 +728,14 @@ Product-rules (зафиксировано):
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright UI-check (skill):
   - `output/playwright/catalog-dominant-tag.png`.
+
+Обновление от 1 марта 2026 (Итерация J — copy/placement для создания сессии):
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - убран служебный текст из блока фильтров в compose-режиме;
+  - добавлен отдельный информационный блок в зоне результатов со production-формулировкой:
+    `Выберите карточку микса или откройте «Описание» и нажмите «Добавить в сессию».`
+- `YummyWeb/src/ui/styles.css`:
+  - добавлен `session-compose-reset-btn` для аккуратного позиционирования кнопки `Сбросить фильтры`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
