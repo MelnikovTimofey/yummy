@@ -26,6 +26,16 @@
   - `output/playwright/sprint2-p1-before/`
   - `output/playwright/sprint2-p1-after/`
 
+## 0.5) Post-P1 корректировка (1 марта 2026)
+
+- По дополнительному фидбэку внесены правки:
+  - фильтры каталога на desktop перенесены в левую колонку;
+  - для карточек рейлов усилен fallback вкуса (`flavors` -> профиль -> `вкус не указан`);
+  - уменьшено ощущение «пустоты» на desktop за счёт расширения рабочей ширины и снижения внешних отступов.
+- Артефакты проверки:
+  - `output/playwright/sprint2-fix-before/`
+  - `output/playwright/sprint2-fix-after/`
+
 ## 0.3) Sprint 2 — P0 (desktop UX по пользовательскому фидбэку, 1 марта 2026)
 
 - Реализовано в `YummyWeb`:

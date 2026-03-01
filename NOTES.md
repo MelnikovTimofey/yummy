@@ -193,3 +193,17 @@ Product-rules (зафиксировано):
 - Скриншоты итерации:
   - before: `output/playwright/sprint2-p1-before/`
   - after: `output/playwright/sprint2-p1-after/`
+
+Доп. корректировка от 1 марта 2026 (по фидбэку после P1):
+- Desktop catalog:
+  - панель фильтров перенесена в левую колонку (выдача справа).
+- Карточки рейлов на главной:
+  - добавлен более жёсткий fallback для строки вкусов:
+    - `flavors`,
+    - fallback на профили (в нижнем регистре),
+    - затем `вкус не указан`.
+- Desktop spacing:
+  - расширена рабочая область (`phone-shell`) и уменьшены внешние отступы `app-bg`.
+- Артефакты проверки:
+  - before: `output/playwright/sprint2-fix-before/`
+  - after: `output/playwright/sprint2-fix-after/`
