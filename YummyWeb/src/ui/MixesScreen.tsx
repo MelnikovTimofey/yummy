@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Heart } from 'lucide-react';
 import {
   addFavorite,
   createMix,
@@ -571,7 +572,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             >
               <h3>{activeMix.name}</h3>
               <div className="home-hero-meta">
-                <span className="rating-pill">{activeMix.components.length}</span>
                 <span>
                   {activeMix.components
                     .slice(0, 3)
@@ -581,7 +581,8 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               </div>
               <div className="home-hero-actions">
                 <AppButton
-                  className="search-button"
+                  variant="ghost"
+                  className="mix-detail-session-btn"
                   disabled={detailActionPending}
                   onClick={() => onAddToSession(activeMix.id)}
                 >
@@ -589,12 +590,12 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </AppButton>
                 <AppButton
                   variant="icon"
-                  className={`icon-btn fav-icon mix-detail-fav ${favoriteMixIds[activeMix.id] ? 'active' : ''}`}
+                  className={`mix-action-btn mix-fav-btn mix-detail-fav ${favoriteMixIds[activeMix.id] ? 'active' : ''}`}
                   disabled={detailActionPending}
                   onClick={() => toggleFavorite(activeMix.id)}
                   aria-label={favoriteMixIds[activeMix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
                 >
-                  {favoriteMixIds[activeMix.id] ? '♥' : '♡'}
+                  <Heart className="mix-action-icon" aria-hidden="true" />
                 </AppButton>
               </div>
             </section>

@@ -556,3 +556,21 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - навигационное меню больше не ниже названия;
 - визуально хедер ровнее и компактнее.
 - Доп. фиксация: порядок элементов в строке header выставлен как `brand → tabs → profile`.
+
+## 0.5) Итерация A (1 марта 2026) — экран микса, унификация CTA и избранного
+
+Сделано:
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - убран зелёный бейдж количества компонентов в hero-блоке;
+  - кнопка `Добавить в сессию` уменьшена и переведена в `ghost`-стиль;
+  - кастомное сердечко `♥/♡` заменено на `Heart` (`lucide-react`);
+  - кнопка избранного в карточке микса переведена на единый стиль action-кнопок (`mix-action-btn`, `mix-fav-btn`).
+- `YummyWeb/src/ui/styles.css`:
+  - добавлен `mix-detail-session-btn`;
+  - удалены неиспользуемые legacy-стили (`rating-pill`, `icon-btn`, `fav-icon`, `info-btn`);
+  - `mix-detail-fav` синхронизирован по размеру с карточками.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright smoke (skill):
+  - `output/playwright/iter-a/home-after-a.png`.

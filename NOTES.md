@@ -544,3 +544,17 @@ Product-rules (зафиксировано):
   - для компактности уменьшены размеры бренд-блока, на узком mobile скрывается `tagline`.
 - Проверка: `cd YummyWeb && npm run build` — успешно.
 - Доп. фиксация: в одной строке установлен порядок `brand → tabs → profile`, чтобы навигация была визуально по центру, а профиль стабильно справа.
+
+Обновление от 1 марта 2026 (Итерация A — экран микса, точечная унификация):
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - убран зелёный бейдж с цифрой количества компонентов в hero-блоке;
+  - CTA `Добавить в сессию` переведён в компактный `ghost`-стиль;
+  - кастомный символ `♥/♡` заменён на `Heart` из `lucide-react`;
+  - кнопка избранного в деталке микса переведена на общие классы карточек (`mix-action-btn`, `mix-fav-btn`).
+- `YummyWeb/src/ui/styles.css`:
+  - добавлен класс `mix-detail-session-btn` для уменьшенного CTA в hero;
+  - удалены неиспользуемые legacy-стили `rating-pill`, `icon-btn`, `fav-icon`, `info-btn`;
+  - размер `mix-detail-fav` синхронизирован с action-кнопками карточек.
+- Проверка:
+  - `cd YummyWeb && npm run build` — успешно;
+  - Playwright smoke (skill `playwright`): `output/playwright/iter-a/home-after-a.png`.
