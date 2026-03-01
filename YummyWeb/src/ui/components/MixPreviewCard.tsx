@@ -141,9 +141,7 @@ export const MixPreviewCard = ({
   style,
 }: MixPreviewCardProps) => {
   const profileTags = getOrderedProfileTags(mix);
-  const maxVisibleTags = ratingTagText ? 2 : 3;
-  const visibleTags = profileTags.slice(0, maxVisibleTags);
-  const hiddenTagsCount = profileTags.length - visibleTags.length;
+  const dominantProfileTag = profileTags[0] ?? null;
   const flavorText = getFlavorText(mix, profileTags);
   const isClickable = Boolean(onOpen);
 
@@ -220,18 +218,9 @@ export const MixPreviewCard = ({
                 {ratingTagText}
               </AppBadge>
             ) : null}
-            {visibleTags.map((tag) => (
-              <AppBadge
-                key={`${mix.id}:profile:${tag}`}
-                tone="muted"
-                className="profile-tag"
-              >
-                {PROFILE_LABELS[tag]}
-              </AppBadge>
-            ))}
-            {hiddenTagsCount > 0 ? (
-              <AppBadge tone="muted" className="profile-tag profile-tag-more">
-                +{hiddenTagsCount}
+            {dominantProfileTag ? (
+              <AppBadge key={`${mix.id}:profile:${dominantProfileTag}`} tone="muted" className="profile-tag">
+                {PROFILE_LABELS[dominantProfileTag]}
               </AppBadge>
             ) : null}
           </div>

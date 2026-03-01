@@ -114,6 +114,18 @@ const getFlavorLabels = (items: string[]) =>
       .filter((item) => item.length > 0),
   );
 
+const formatPercentValue = (value: unknown) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return '0.0%';
+  }
+  return `${numeric.toFixed(1)}%`;
+};
+
+const chartTooltipContentStyle = { borderColor: '#3a2f28', background: '#141210' };
+const chartTooltipLabelStyle = { color: '#cbb9a4' };
+const chartTooltipItemStyle = { color: '#efe2d4' };
+
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
@@ -810,8 +822,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   <ChartContainer config={tobaccoChartConfig} className="mix-chart-shell">
                     <PieChart>
                       <Tooltip
-                        formatter={(value) => `${value}%`}
-                        contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                        formatter={(value) => [formatPercentValue(value), 'Доля']}
+                        contentStyle={chartTooltipContentStyle}
+                        labelStyle={chartTooltipLabelStyle}
+                        itemStyle={chartTooltipItemStyle}
                       />
                       <Pie
                         data={tobaccoPieData}
@@ -855,8 +869,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                         tick={{ fill: '#cbc0b5', fontSize: 11 }}
                       />
                       <Tooltip
-                        formatter={(value) => `${value}%`}
-                        contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                        formatter={(value) => [formatPercentValue(value), 'Доля']}
+                        contentStyle={chartTooltipContentStyle}
+                        labelStyle={chartTooltipLabelStyle}
+                        itemStyle={chartTooltipItemStyle}
                       />
                       <Bar dataKey="value" radius={[8, 8, 8, 8]}>
                         {profileChartData.map((item) => (
@@ -898,8 +914,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                             tick={{ fill: '#cbc0b5', fontSize: 11 }}
                           />
                           <Tooltip
-                            formatter={(value) => `${Number(value).toFixed(1)}%`}
-                            contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                            formatter={(value) => [formatPercentValue(value), 'Доля']}
+                            contentStyle={chartTooltipContentStyle}
+                            labelStyle={chartTooltipLabelStyle}
+                            itemStyle={chartTooltipItemStyle}
                           />
                           <Bar dataKey="value" radius={[8, 8, 8, 8]}>
                             {flavorDistributionData.map((item) => (
@@ -952,7 +970,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
   if (view === 'create') {
     return (
-      <section className="sessions-layout">
+      <section className="sessions-layout mixes-create-layout">
         <AppButton variant="ghost" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
           Назад к моим миксам
         </AppButton>
