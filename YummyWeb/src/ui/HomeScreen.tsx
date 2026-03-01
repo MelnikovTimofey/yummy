@@ -77,7 +77,7 @@ const getNextRailScrollLeft = (
     return currentScrollLeft;
   }
 
-  const leftEdge = currentScrollLeft + 1;
+  const offsetTolerance = 1;
   const rightEdge = currentScrollLeft + viewportWidth - 1;
 
   if (direction === 1) {
@@ -85,7 +85,9 @@ const getNextRailScrollLeft = (
     return nextHiddenCard ? nextHiddenCard.left : cardOffsets[cardOffsets.length - 1].left;
   }
 
-  const previousHiddenCard = [...cardOffsets].reverse().find((card) => card.left < leftEdge);
+  const previousHiddenCard = [...cardOffsets].reverse().find(
+    (card) => card.left < currentScrollLeft - offsetTolerance,
+  );
   return previousHiddenCard ? previousHiddenCard.left : 0;
 };
 
