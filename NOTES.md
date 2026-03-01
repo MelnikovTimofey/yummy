@@ -579,3 +579,14 @@ Product-rules (зафиксировано):
     - переход в `Каталог`;
     - клик `info` открывает popup без навигации;
     - артефакт: `output/playwright/iter-b/catalog-info-after-b.png`.
+
+Обновление от 1 марта 2026 (Итерация C — Избранное):
+- `YummyWeb/src/ui/FavoritesScreen.tsx` полностью переведён на новый UX:
+  - фильтры урезаны до `теги + вкусы + профили` (как согласовано);
+  - добавлены масштабируемые scrollbox-фильтры с поиском внутри групп;
+  - добавлены активные фильтры + `Сбросить фильтры` (паттерн каталога);
+  - карточки оставлены в едином `MixPreviewCard` grid-формате;
+  - `info` на карточках переведён в popup через `MixInfoModal`.
+- Проверка:
+  - `cd YummyWeb && npm run build` — успешно;
+  - Playwright smoke (skill): `output/playwright/iter-c/home-after-c.png`.

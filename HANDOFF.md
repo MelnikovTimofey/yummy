@@ -593,3 +593,17 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright smoke (skill):
   - `output/playwright/iter-b/catalog-info-after-b.png`.
+
+## 0.7) Итерация C (1 марта 2026) — Избранное: урезанные фильтры + popup info
+
+Сделано:
+- `YummyWeb/src/ui/FavoritesScreen.tsx` переработан:
+  - фильтры только `теги`, `вкусы`, `профили`;
+  - фильтрация в масштабируемом формате (поиск + scrollbox-мультивыбор);
+  - добавлены `active filters` и `Сбросить фильтры` в стиле каталога;
+  - `info` в карточке открывает `MixInfoModal`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright smoke (skill):
+  - `output/playwright/iter-c/home-after-c.png`.
