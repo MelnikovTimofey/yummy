@@ -348,6 +348,8 @@ h1 {
 
 .home-rail {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 10px;
 }
 
@@ -393,6 +395,7 @@ h1 {
   grid-template-columns: 38px 1fr 38px;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .rail-nav-btn {
@@ -415,6 +418,8 @@ h1 {
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 4px;
+  min-width: 0;
+  max-width: 100%;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1511,8 +1516,11 @@ h1 {
   }
 
   .home-rail-carousel {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     position: relative;
+    width: 100%;
+    min-width: 0;
   }
 
   .rail-nav-btn {

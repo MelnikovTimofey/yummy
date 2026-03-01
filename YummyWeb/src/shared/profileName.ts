@@ -79,19 +79,6 @@ export const saveStoredProfileName = (userId: string, value: string) => {
   return normalized;
 };
 
-const humanizeEmailLocalPart = (email: string) => {
-  const localPart = email.split('@')[0]?.trim() ?? '';
-  const normalized = localPart.replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!normalized) {
-    return null;
-  }
-
-  return normalized
-    .split(' ')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-};
-
 export const resolveProfileName = (
   user: ApiUser | null | undefined,
   storedName?: string | null,
@@ -106,7 +93,7 @@ export const resolveProfileName = (
     return userName;
   }
 
-  const emailName = user?.email ? humanizeEmailLocalPart(user.email) : null;
+  const emailName = sanitizeProfileNameInput(user?.email ?? '');
   if (emailName) {
     return emailName;
   }

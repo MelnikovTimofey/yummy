@@ -64,6 +64,30 @@ const getFlavorLabels = (mix: Mix) => {
   );
 };
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const getNextRailScrollLeft = (
+  cardOffsets: Array<{ left: number; right: number }>,
+  currentScrollLeft: number,
+  viewportWidth: number,
+  direction: -1 | 1,
+) => {
+  if (!cardOffsets.length) {
+    return currentScrollLeft;
+  }
+
+  const leftEdge = currentScrollLeft + 1;
+  const rightEdge = currentScrollLeft + viewportWidth - 1;
+
+  if (direction === 1) {
+    const nextHiddenCard = cardOffsets.find((card) => card.right > rightEdge);
+    return nextHiddenCard ? nextHiddenCard.left : cardOffsets[cardOffsets.length - 1].left;
+  }
+
+  const previousHiddenCard = [...cardOffsets].reverse().find((card) => card.left < leftEdge);
+  return previousHiddenCard ? previousHiddenCard.left : 0;
+};
+
 export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: HomeScreenProps) => {
   const [rails, setRails] = useState<HomeRail[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -186,14 +210,34 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     }
   };
 
-  const scrollRail = (railId: string, direction: -1 | 1) => {
-    const row = railRefs.current[railId];
+  const scrollRail = (railRefKey: string, direction: -1 | 1) => {
+    const row = railRefs.current[railRefKey];
     if (!row) {
       return;
     }
-    const card = row.querySelector<HTMLElement>('.home-item');
-    const offset = card ? card.offsetWidth + 12 : Math.round(row.clientWidth * 0.8);
-    row.scrollBy({ left: offset * direction, behavior: 'smooth' });
+
+    const cards = Array.from(row.querySelectorAll<HTMLElement>('.home-item'));
+    if (!cards.length) {
+      return;
+    }
+
+    const maxScrollLeft = Math.max(0, row.scrollWidth - row.clientWidth);
+    const cardOffsets = cards.map((card) => ({
+      left: card.offsetLeft,
+      right: card.offsetLeft + card.offsetWidth,
+    }));
+
+    const target = getNextRailScrollLeft(
+      cardOffsets,
+      row.scrollLeft,
+      row.clientWidth,
+      direction,
+    );
+
+    row.scrollTo({
+      left: clamp(target, 0, maxScrollLeft),
+      behavior: 'smooth',
+    });
   };
 
   return (
@@ -207,129 +251,131 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
 
       {!visibleRails.length && status === 'idle' ? <p className="screen-status">Нет доступных подборок.</p> : null}
 
-      {visibleRails.map((rail) => (
-        <section key={rail.id} className="home-rail">
-          <div className="home-rail-head">
-            <button
-              type="button"
-              className="home-rail-title-btn"
-              disabled={!onOpenRail}
-              onClick={() => onOpenRail?.(rail)}
-            >
-              <h3 className="home-rail-title">{rail.title}</h3>
-            </button>
-            <button
-              type="button"
-              className="home-link-btn"
-              disabled={!onOpenRail}
-              onClick={() => onOpenRail?.(rail)}
-            >
-              Смотреть все
-            </button>
-          </div>
-
-          <div className="home-rail-carousel">
-            <button
-              type="button"
-              className="rail-nav-btn"
-              onClick={() => scrollRail(rail.id, -1)}
-              disabled={!rail.items.length}
-              aria-label="Прокрутить влево"
-            >
-              ‹
-            </button>
-
-            <div
-              className="home-rail-row"
-              ref={(node) => {
-                railRefs.current[rail.id] = node;
-              }}
-            >
-              {rail.items.map((mix) => {
-                const profileTags = getProfileTags(mix);
-                const flavorLabels = getFlavorLabels(mix);
-                const flavorText = flavorLabels.length
-                  ? flavorLabels.slice(0, 3).join(' · ')
-                  : profileTags.length
-                    ? profileTags.slice(0, 2).map((tag) => PROFILE_LABELS[tag].toLowerCase()).join(' · ')
-                    : 'вкус не указан';
-                const isMixClickable = Boolean(onOpenMix);
-                return (
-                  <article
-                    key={`${rail.id}:${mix.id}`}
-                    className={`home-item ${isMixClickable ? 'interactive' : 'static'}`}
-                    onClick={isMixClickable ? () => onOpenMix?.(mix.id) : undefined}
-                    onKeyDown={isMixClickable ? (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        onOpenMix?.(mix.id);
-                      }
-                    } : undefined}
-                    style={{
-                      background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
-                    }}
-                    role={isMixClickable ? 'button' : undefined}
-                    tabIndex={isMixClickable ? 0 : undefined}
-                  >
-                    <div className="home-item-overlay">
-                      <div className="home-item-head">
-                        <p className="home-item-title">{mix.name}</p>
-                        <div className="home-item-actions">
-                          <button
-                            type="button"
-                            className="icon-btn info-btn"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setInfoMix(mix);
-                            }}
-                            aria-label="Описание"
-                          >
-                            i
-                          </button>
-                          <button
-                            type="button"
-                            className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void onToggleFavorite(mix.id);
-                            }}
-                            aria-pressed={Boolean(favoriteMixIds[mix.id])}
-                            aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
-                            title={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
-                          >
-                            {favoriteMixIds[mix.id] ? '♥' : '♡'}
-                          </button>
-                        </div>
-                      </div>
-                      <p className="home-item-meta">
-                        {flavorText}
-                      </p>
-                      <div className="profile-tags home-item-tags">
-                        {profileTags.slice(0, 3).map((tag) => (
-                          <span key={`${mix.id}:${tag}`} className="profile-tag">
-                            {PROFILE_LABELS[tag]}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+      {visibleRails.map((rail, railIndex) => {
+        const railRefKey = `${rail.id}:${railIndex}`;
+        return (
+          <section key={`${rail.id}:${railIndex}`} className="home-rail">
+            <div className="home-rail-head">
+              <button
+                type="button"
+                className="home-rail-title-btn"
+                disabled={!onOpenRail}
+                onClick={() => onOpenRail?.(rail)}
+              >
+                <h3 className="home-rail-title">{rail.title}</h3>
+              </button>
+              <button
+                type="button"
+                className="home-link-btn"
+                disabled={!onOpenRail}
+                onClick={() => onOpenRail?.(rail)}
+              >
+                Смотреть все
+              </button>
             </div>
 
-            <button
-              type="button"
-              className="rail-nav-btn"
-              onClick={() => scrollRail(rail.id, 1)}
-              disabled={!rail.items.length}
-              aria-label="Прокрутить вправо"
-            >
-              ›
-            </button>
-          </div>
+            <div className="home-rail-carousel">
+              <button
+                type="button"
+                className="rail-nav-btn"
+                onClick={() => scrollRail(railRefKey, -1)}
+                disabled={!rail.items.length}
+                aria-label="Прокрутить влево"
+              >
+                ‹
+              </button>
 
-        </section>
-      ))}
+              <div
+                className="home-rail-row"
+                ref={(node) => {
+                  railRefs.current[railRefKey] = node;
+                }}
+              >
+                {rail.items.map((mix) => {
+                  const profileTags = getProfileTags(mix);
+                  const flavorLabels = getFlavorLabels(mix);
+                  const flavorText = flavorLabels.length
+                    ? flavorLabels.slice(0, 3).join(' · ')
+                    : profileTags.length
+                      ? profileTags.slice(0, 2).map((tag) => PROFILE_LABELS[tag].toLowerCase()).join(' · ')
+                      : 'вкус не указан';
+                  const isMixClickable = Boolean(onOpenMix);
+                  return (
+                    <article
+                      key={`${rail.id}:${mix.id}`}
+                      className={`home-item ${isMixClickable ? 'interactive' : 'static'}`}
+                      onClick={isMixClickable ? () => onOpenMix?.(mix.id) : undefined}
+                      onKeyDown={isMixClickable ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onOpenMix?.(mix.id);
+                        }
+                      } : undefined}
+                      style={{
+                        background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
+                      }}
+                      role={isMixClickable ? 'button' : undefined}
+                      tabIndex={isMixClickable ? 0 : undefined}
+                    >
+                      <div className="home-item-overlay">
+                        <div className="home-item-head">
+                          <p className="home-item-title">{mix.name}</p>
+                          <div className="home-item-actions">
+                            <button
+                              type="button"
+                              className="icon-btn info-btn"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setInfoMix(mix);
+                              }}
+                              aria-label="Описание"
+                            >
+                              i
+                            </button>
+                            <button
+                              type="button"
+                              className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void onToggleFavorite(mix.id);
+                              }}
+                              aria-pressed={Boolean(favoriteMixIds[mix.id])}
+                              aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
+                              title={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
+                            >
+                              {favoriteMixIds[mix.id] ? '♥' : '♡'}
+                            </button>
+                          </div>
+                        </div>
+                        <p className="home-item-meta">
+                          {flavorText}
+                        </p>
+                        <div className="profile-tags home-item-tags">
+                          {profileTags.slice(0, 3).map((tag) => (
+                            <span key={`${mix.id}:${tag}`} className="profile-tag">
+                              {PROFILE_LABELS[tag]}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                className="rail-nav-btn"
+                onClick={() => scrollRail(railRefKey, 1)}
+                disabled={!rail.items.length}
+                aria-label="Прокрутить вправо"
+              >
+                ›
+              </button>
+            </div>
+          </section>
+        );
+      })}
 
       {infoMix ? (
         <div className="popup-backdrop" onClick={() => setInfoMix(null)} role="presentation">
