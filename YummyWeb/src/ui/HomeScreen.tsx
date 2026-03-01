@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Heart, Info } from 'lucide-react';
 import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, removeFavorite } from '../shared/apiClient';
 import { AuthState, FlavorProfile, HomeRail, Mix } from '../shared/types';
 import { AppBadge, AppButton, AppModal } from '@/ui-kit';
@@ -361,18 +362,18 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                           <div className="home-item-actions">
                             <AppButton
                               variant="icon"
-                              className="icon-btn info-btn"
+                              className="home-action-btn"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setInfoMix(mix);
                               }}
                               aria-label="Описание"
                             >
-                              i
+                              <Info className="home-action-icon" aria-hidden="true" />
                             </AppButton>
                             <AppButton
                               variant="icon"
-                              className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
+                              className={`home-action-btn home-fav-btn ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void onToggleFavorite(mix.id);
@@ -381,7 +382,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                               aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
                               title={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
                             >
-                              {favoriteMixIds[mix.id] ? '♥' : '♡'}
+                              <Heart className="home-action-icon" aria-hidden="true" />
                             </AppButton>
                           </div>
                         </div>
