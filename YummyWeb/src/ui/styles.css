@@ -891,6 +891,11 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
+.profile-name-actions .profile-name-cancel,
+.profile-name-actions .profile-name-save {
+  margin-top: 0;
+}
+
 .screen-back-btn {
   margin-top: 0;
   width: fit-content;
