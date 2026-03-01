@@ -40,11 +40,6 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
 
       {rail ? (
         <>
-          <section className="catalog-hero">
-            <h2>{rail.title}</h2>
-            <p>Полный список элементов рейла с поиском по подстроке.</p>
-          </section>
-
           <section className="catalog-controls cinema-controls">
             <div className="search-row">
               <AppInput

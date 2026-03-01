@@ -535,11 +535,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
   return (
     <section className="catalog-layout">
-      <section className="catalog-hero">
-        <h2>Каталог миксов</h2>
-        <p>Фильтруйте по профилям, тегам, табакам и производителям как в стриминговых каталогах.</p>
-      </section>
-
       <section className="catalog-body">
         <form className="catalog-controls cinema-controls" onSubmit={onSubmitSearch}>
           <div className="search-row">

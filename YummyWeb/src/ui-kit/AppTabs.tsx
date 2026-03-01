@@ -11,12 +11,27 @@ type AppTabsProps = {
   onChange: (value: string) => void;
   items: TabItem[];
   className?: string;
+  listClassName?: string;
+  stretch?: boolean;
 };
 
-export const AppTabs = ({ value, onChange, items, className }: AppTabsProps) => {
+export const AppTabs = ({
+  value,
+  onChange,
+  items,
+  className,
+  listClassName,
+  stretch = true,
+}: AppTabsProps) => {
   return (
     <Tabs value={value} onValueChange={onChange} className={className}>
-      <TabsList className="w-full justify-start overflow-auto rounded-full bg-secondary/70 p-1">
+      <TabsList
+        className={cn(
+          stretch ? 'w-full' : 'w-auto',
+          'justify-start overflow-auto rounded-full bg-secondary/70 p-1',
+          listClassName,
+        )}
+      >
         {items.map((item) => (
           <TabsTrigger
             key={item.value}

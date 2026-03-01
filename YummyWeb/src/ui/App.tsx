@@ -29,7 +29,6 @@ type Tab = {
   key: TabKey;
   label: string;
   title: string;
-  subtitle: string;
   inTabbar?: boolean;
 };
 
@@ -38,38 +37,32 @@ const TABS: Tab[] = [
     key: 'home',
     label: 'Главная',
     title: 'Главная',
-    subtitle: 'Рейлы миксов: рекомендации, избранное, редакция и аналитика.',
   },
   {
     key: 'catalog',
     label: 'Каталог',
     title: 'Каталог миксов',
-    subtitle: 'Глобальные фильтры: поиск, профили, теги, табаки, производители и рейтинг.',
   },
   {
     key: 'favorites',
     label: 'Избранное',
     title: 'Избранное',
-    subtitle: 'Сохранённые миксы с фильтрами и быстрыми действиями.',
   },
   {
     key: 'sessions',
     label: 'Сессии',
     title: 'Сессии курения',
-    subtitle: 'Добавляйте сессии и сохраняйте контекст: где и когда.',
   },
   {
     key: 'mixes',
     label: 'Миксы',
     title: 'Карточка микса',
-    subtitle: 'Просмотр карточки и действий по выбранному миксу.',
     inTabbar: false,
   },
   {
     key: 'rail-list',
     label: 'Рейл',
     title: 'Элементы рейла',
-    subtitle: 'Полный список миксов выбранной коллекции.',
     inTabbar: false,
   },
 ];
@@ -274,10 +267,6 @@ export const App = () => {
 
   if (!authState.tokens || !authState.user) {
     const guestTitle = guestTab === 'home' ? 'Главная' : 'Каталог миксов';
-    const guestSubtitle =
-      guestTab === 'home'
-        ? 'Рейл рекомендаций доступен в гостевом режиме.'
-        : 'Просматривайте миксы и карточки в режиме гостя.';
 
     return (
       <div className="app-bg">
@@ -285,32 +274,38 @@ export const App = () => {
         <div className="halo-bottom" />
         <div className="phone-shell">
           <header className="topbar">
-            <div className="brand-wrap">
-              <span className="brand-logo">V</span>
-              <div>
-                <p className="brand">ВКУСНО</p>
-                <p className="tagline">Арома ателье</p>
+            <div className="topbar-main-row">
+              <div className="brand-wrap">
+                <span className="brand-logo">V</span>
+                <div>
+                  <p className="brand">ВКУСНО</p>
+                  <p className="tagline">Арома ателье</p>
+                </div>
+              </div>
+              <div className="topbar-right">
+                <AppButton
+                  variant="chip"
+                  className="header-auth-btn"
+                  onClick={() => setAuthModalOpen(true)}
+                >
+                  Войти
+                </AppButton>
               </div>
             </div>
-            <h1>{guestTitle}</h1>
-            <p className="subtitle">{guestSubtitle}</p>
-            <div className="topbar-right">
-              <AppButton
-                variant="chip"
-                className="header-auth-btn"
-                onClick={() => setAuthModalOpen(true)}
-              >
-                Войти
-              </AppButton>
+            <div className="topbar-nav-row">
+              <h1 className="topbar-title">{guestTitle}</h1>
+              <nav className="topbar-nav" aria-label="Гостевая навигация">
+                <AppTabs
+                  value={guestTab}
+                  onChange={(next) => setGuestTab(next as 'home' | 'catalog')}
+                  items={guestTabItems}
+                  className="topbar-tabs"
+                  listClassName="topbar-tabs-list"
+                  stretch={false}
+                />
+              </nav>
             </div>
           </header>
-          <nav className="desktop-tabbar" aria-label="Гостевая навигация">
-            <AppTabs
-              value={guestTab}
-              onChange={(next) => setGuestTab(next as 'home' | 'catalog')}
-              items={guestTabItems}
-            />
-          </nav>
           <main className="content">
             <section className="guest-main-panel">
               {guestTab === 'home' ? (
@@ -340,89 +335,95 @@ export const App = () => {
       <div className="halo-bottom" />
       <div className="phone-shell">
         <header className="topbar">
-          <div className="brand-wrap">
-            <span className="brand-logo">V</span>
-            <div>
-              <p className="brand">ВКУСНО</p>
-              <p className="tagline">Арома ателье</p>
+          <div className="topbar-main-row">
+            <div className="brand-wrap">
+              <span className="brand-logo">V</span>
+              <div>
+                <p className="brand">ВКУСНО</p>
+                <p className="tagline">Арома ателье</p>
+              </div>
+            </div>
+            <div className="topbar-right" ref={profileMenuRef}>
+              <AppButton
+                variant="chip"
+                className="header-profile-btn"
+                onClick={() => setProfileMenuOpen((current) => !current)}
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
+              >
+                {profileName}
+              </AppButton>
+              {profileMenuOpen ? (
+                <div className="profile-menu" role="menu" aria-label="Меню профиля">
+                  <AppButton
+                    variant="ghost"
+                    className="profile-menu-item"
+                    onClick={() => {
+                      setActiveTab('favorites');
+                      setProfileMenuOpen(false);
+                    }}
+                  >
+                    Избранное
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    className="profile-menu-item"
+                    onClick={() => {
+                      setActiveTab('sessions');
+                      setProfileMenuOpen(false);
+                    }}
+                  >
+                    Сессии
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    className="profile-menu-item"
+                    onClick={openCreateMix}
+                  >
+                    Создать микс
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    className="profile-menu-item"
+                    onClick={openProfileNameModal}
+                  >
+                    Изменить имя
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    className="profile-menu-item"
+                    onClick={() => {
+                      setPreferencesModalOpen(true);
+                      setProfileMenuOpen(false);
+                    }}
+                  >
+                    Предпочтения
+                  </AppButton>
+                  <AppButton
+                    variant="danger"
+                    className="profile-menu-item danger"
+                    onClick={onSignOut}
+                  >
+                    Выйти
+                  </AppButton>
+                </div>
+              ) : null}
             </div>
           </div>
-          <h1>{tab.title}</h1>
-          <p className="subtitle">{tab.subtitle}</p>
-          <div className="topbar-right" ref={profileMenuRef}>
-            <AppButton
-              variant="chip"
-              className="header-profile-btn"
-              onClick={() => setProfileMenuOpen((current) => !current)}
-              aria-expanded={profileMenuOpen}
-              aria-haspopup="menu"
-            >
-              {profileName}
-            </AppButton>
-            {profileMenuOpen ? (
-              <div className="profile-menu" role="menu" aria-label="Меню профиля">
-                <AppButton
-                  variant="ghost"
-                  className="profile-menu-item"
-                  onClick={() => {
-                    setActiveTab('favorites');
-                    setProfileMenuOpen(false);
-                  }}
-                >
-                  Избранное
-                </AppButton>
-                <AppButton
-                  variant="ghost"
-                  className="profile-menu-item"
-                  onClick={() => {
-                    setActiveTab('sessions');
-                    setProfileMenuOpen(false);
-                  }}
-                >
-                  Сессии
-                </AppButton>
-                <AppButton
-                  variant="ghost"
-                  className="profile-menu-item"
-                  onClick={openCreateMix}
-                >
-                  Создать микс
-                </AppButton>
-                <AppButton
-                  variant="ghost"
-                  className="profile-menu-item"
-                  onClick={openProfileNameModal}
-                >
-                  Изменить имя
-                </AppButton>
-                <AppButton
-                  variant="ghost"
-                  className="profile-menu-item"
-                  onClick={() => {
-                    setPreferencesModalOpen(true);
-                    setProfileMenuOpen(false);
-                  }}
-                >
-                  Предпочтения
-                </AppButton>
-                <AppButton
-                  variant="danger"
-                  className="profile-menu-item danger"
-                  onClick={onSignOut}
-                >
-                  Выйти
-                </AppButton>
-              </div>
-            ) : null}
+          <div className="topbar-nav-row">
+            <h1 className="topbar-title">{tab.title}</h1>
+            <nav className="topbar-nav" aria-label="Основная навигация">
+              <AppTabs
+                value={activeTab}
+                onChange={(next) => setActiveTab(next as TabKey)}
+                items={mainTabItems}
+                className="topbar-tabs"
+                listClassName="topbar-tabs-list"
+                stretch={false}
+              />
+            </nav>
           </div>
         </header>
-        <nav className="desktop-tabbar" aria-label="Основная навигация">
-          <AppTabs
-            value={activeTab}
-            onChange={(next) => setActiveTab(next as TabKey)}
-            items={mainTabItems}
-          />
-        </nav>
 
         <main className="content">
           {activeTab === 'home' ? (
