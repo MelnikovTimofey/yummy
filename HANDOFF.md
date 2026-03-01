@@ -1,5 +1,45 @@
 # HANDOFF — Yummy
 
+## 0.6) Sprint 2 — P2 (auth UX desktop, 1 марта 2026)
+
+- Проблема:
+  - авторизация в гостевом сценарии была размещена в контенте и неочевидна;
+  - точка входа в профиль/выход не соответствовала стандартному desktop-паттерну;
+  - отдельный экран профиля дублировал навигационные действия.
+- Гипотеза:
+  - вынести `Войти` в правую часть хедера с popup-авторизацией;
+  - заменить email-лейбл в хедере на dropdown профиля с ключевыми действиями;
+  - убрать отдельный экран профиля из primary навигации.
+- Изменение:
+  - `App.tsx`:
+    - добавлены guest auth popup и profile dropdown в хедере;
+    - убран tab `Профиль`;
+    - `Предпочтения` открываются popup-панелью;
+    - добавлено закрытие profile-menu по outside click и `Escape`.
+  - `AuthScreen.tsx`:
+    - добавлен проп `asCard` для popup-варианта формы.
+  - `PreferencesPanel.tsx`:
+    - добавлен новый UI-компонент настроек предпочтений для popup.
+  - `styles.css`:
+    - стили для header auth/profile controls, dropdown и popup-заголовков.
+- Проверки:
+  - `npm run build` (`YummyWeb`) — `OK`;
+  - Playwright smoke:
+    - guest before/after;
+    - открытие/закрытие auth popup;
+    - mock-auth (`/auth/verify`) + открытие profile menu;
+    - открытие popup `Предпочтения`;
+    - выход через dropdown.
+- Артефакты:
+  - before: `output/playwright/sprint2-auth-before/guest-home.png`
+  - after: `output/playwright/sprint2-auth-after/guest-home.png`
+  - after (auth popup): `output/playwright/sprint2-auth-after/guest-auth-modal.png`
+  - after (profile menu): `output/playwright/sprint2-auth-after/profile-menu-open.png`
+  - after (preferences popup): `output/playwright/sprint2-auth-after/preferences-modal.png`
+  - e2e: `output/playwright/sprint2-auth-e2e/`
+- Коммит:
+  - `8cb4958` — `feat(web): перейти на header-auth popup и dropdown профиля`
+
 ## 0.4) Sprint 2 — P1 (catalog desktop UX, 1 марта 2026)
 
 - Реализовано:

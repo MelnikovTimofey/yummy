@@ -1,5 +1,49 @@
 ## Этот файл для человека
 
+Обновление от 1 марта 2026 (Sprint 2, P2 — auth UX desktop):
+- Проблема:
+  - вход для гостя был в контенте экрана и не воспринимался как primary action;
+  - точка входа в профиль была неочевидной;
+  - отдельный экран профиля дублировал навигацию и усложнял путь к `выходу/предпочтениям`.
+- Гипотеза:
+  - если перенести auth в стандартный desktop-паттерн (`Войти` в хедере + popup),
+  - а профиль перевести в header-dropdown с ключевыми действиями,
+  - то сценарии `войти/выйти/перейти в раздел` станут короче и заметнее.
+- Изменение:
+  - `YummyWeb/src/ui/App.tsx`:
+    - гостевой хедер: добавлена кнопка `Войти` справа, форма входа вынесена в popup;
+    - авторизованный хедер: email заменён на кнопку имени профиля;
+    - добавлено dropdown-меню профиля (`Избранное`, `Сессии`, `Создать микс`, `Предпочтения`, `Выйти`);
+    - убран отдельный таб `Профиль`, предпочтения открываются в popup поверх текущего экрана;
+    - меню профиля закрывается по клику вне меню и по `Escape`.
+  - `YummyWeb/src/ui/AuthScreen.tsx`:
+    - добавлен режим `asCard` для переиспользования формы входа внутри popup без лишней вложенной карточки.
+  - `YummyWeb/src/ui/PreferencesPanel.tsx`:
+    - добавлен отдельный компонент панели предпочтений для popup-сценария.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлены стили header-auth/profile controls, dropdown меню и popup-хедеров.
+- Проверка (как проверялось):
+  - `npm run build` в `YummyWeb` — `OK`;
+  - Playwright smoke:
+    - before/after скриншоты гостевого состояния,
+    - открытие/закрытие popup входа,
+    - mock-auth через `?token=` + route-моки API,
+    - открытие profile-dropdown,
+    - открытие popup `Предпочтения`,
+    - `Выйти` из dropdown с возвратом в гостевое состояние.
+- Результат:
+  - вход перенесён в стандартный и видимый desktop-паттерн;
+  - вход в профиль и выход доступны из правой части хедера без перехода на отдельный экран;
+  - сценарий управления аккаунтом стал линейным и короче по количеству действий.
+- Скриншоты:
+  - before: `output/playwright/sprint2-auth-before/guest-home.png`
+  - after: `output/playwright/sprint2-auth-after/guest-home.png`
+  - after (auth popup): `output/playwright/sprint2-auth-after/guest-auth-modal.png`
+  - after (profile menu): `output/playwright/sprint2-auth-after/profile-menu-open.png`
+  - after (preferences popup): `output/playwright/sprint2-auth-after/preferences-modal.png`
+  - e2e: `output/playwright/sprint2-auth-e2e/`
+- Коммит: `8cb4958` — `feat(web): перейти на header-auth popup и dropdown профиля`
+
 Обновление от 1 марта 2026 (адаптация клиента под новую структуру):
 - В `YummyWeb` исправлен рендер тегов на карточках главной:
   - добавлена санитизация профилей (`trim`, фильтр невалидных/пустых),
