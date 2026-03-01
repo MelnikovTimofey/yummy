@@ -711,3 +711,20 @@ Product-rules (зафиксировано):
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright UI-check (skill):
   - `output/playwright/catalog-card-tags-removed.png`.
+
+Обновление от 1 марта 2026 (Итерация I — финальные UX-правки карточек/сессий/инфографики):
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - выбран вариант отображения **одного доминирующего профильного тега** в карточке (вместо нескольких), чтобы исключить обрезание тегов.
+- `YummyWeb/src/ui/SessionsScreen.tsx`, `YummyWeb/src/ui/styles.css`:
+  - кнопка `Добавить сессию` перенесена в строку заголовка `Сессии курения` (справа) и сделана заметнее.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - tooltip на всех диаграммах экрана микса приведены к явному показу процентов (`Доля`, формат `xx.x%`);
+  - обновлена визуальная читаемость tooltip (label/item color на тёмном фоне);
+  - форма создания микса поднята выше к кнопке `Назад к моим миксам` (через `mixes-create-layout`).
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили `session-create-head`, скорректирован `session-open-compose`, добавлен `mixes-create-layout`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright UI-check (skill):
+  - `output/playwright/catalog-dominant-tag.png`.

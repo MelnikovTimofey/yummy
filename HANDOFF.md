@@ -738,3 +738,22 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright UI-check (skill):
   - `output/playwright/catalog-card-tags-removed.png`.
+
+## 1.3) Итерация I (1 марта 2026) — финальные правки после теста
+
+Сделано:
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - для карточек выбран режим с **одним доминирующим профильным тегом** (чтобы не резались слова/теги).
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - кнопка `Добавить сессию` перенесена на уровень заголовка `Сессии курения` (справа).
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - tooltip диаграмм (`Состав по табакам`, `Профили вкуса`, `Вкусы микса`) показывают проценты в формате `xx.x%`;
+  - улучшена читаемость tooltip на тёмном фоне;
+  - форма `Создать микс` визуально поднята ближе к кнопке `Назад к моим миксам`.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены/обновлены стили `session-create-head`, `session-open-compose`, `mixes-create-layout`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright UI-check (skill):
+  - `output/playwright/catalog-dominant-tag.png`.
