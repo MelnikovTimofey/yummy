@@ -590,3 +590,24 @@ Product-rules (зафиксировано):
 - Проверка:
   - `cd YummyWeb && npm run build` — успешно;
   - Playwright smoke (skill): `output/playwright/iter-c/home-after-c.png`.
+
+Обновление от 1 марта 2026 (Итерация D — Сессии):
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - сценарий создания сессии переработан: единый экран `compose` (выбор микса + локация + сохранение);
+  - добавлен поиск по миксам при добавлении;
+  - добавлен `info` popup в выборе микса через `MixInfoModal`;
+  - добавлена возможность выбора микса из popup (`Выбрать микс для сессии`);
+  - список сессий обновлён до более структурированного card-layout;
+  - добавлено удаление сессии с подтверждением (`window.confirm`).
+- `YummyWeb/src/shared/apiClient.ts`:
+  - добавлен `deleteSession(auth, onAuthUpdate, sessionId)` (`DELETE /sessions/:id`).
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили compose/list сценария сессий (`session-compose-card`, `session-entry-card`, `session-delete-btn` и др.).
+- Проверка:
+  - `cd YummyWeb && npm run build` — успешно;
+  - Playwright smoke (skill, с mock API-роутами):
+    - авторизованный mock-режим,
+    - переход на вкладку `Сессии`,
+    - артефакт: `output/playwright/iter-d/sessions-after-d.png`.
+- Ограничение:
+  - удаление требует backend endpoint `DELETE /sessions/:id`; в клиенте поддержка уже добавлена.

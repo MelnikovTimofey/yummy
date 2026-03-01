@@ -215,6 +215,16 @@ export const createSession = (
   payload: { mixId: string; date: string; locationType: 'home' | 'lounge'; locationName?: string },
 ) => request<SmokingSession>('/sessions', { method: 'POST', body: payload, auth, onAuthUpdate });
 
+export const deleteSession = (
+  auth: AuthTokens,
+  onAuthUpdate: RequestOptions['onAuthUpdate'],
+  sessionId: string,
+) => request<{ ok: true }>(`/sessions/${encodeURIComponent(sessionId)}`, {
+  method: 'DELETE',
+  auth,
+  onAuthUpdate,
+});
+
 export const getManufacturers = (params?: {
   search?: string;
   limit?: number;

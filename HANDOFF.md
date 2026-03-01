@@ -607,3 +607,25 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright smoke (skill):
   - `output/playwright/iter-c/home-after-c.png`.
+
+## 0.8) Итерация D (1 марта 2026) — Сессии до production-flow
+
+Сделано:
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - сценарий создания упрощён до одного compose-экрана (`выбор микса + локация + сохранить`);
+  - выбор микса с поиском и карточками;
+  - `info` по миксу доступен через `MixInfoModal`, из popup можно выбрать микс для сессии;
+  - список сессий переработан под card-формат;
+  - добавлено удаление сессии с подтверждением.
+- `YummyWeb/src/shared/apiClient.ts`:
+  - добавлен `deleteSession(...)`.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили новой компоновки сессий (`session-compose-card`, `session-entry-card`, `session-delete-btn` и т.д.).
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright smoke (skill, mock API):
+  - `output/playwright/iter-d/sessions-after-d.png`.
+
+Ограничение:
+- для реального удаления сессий backend должен поддерживать `DELETE /sessions/:id`.
