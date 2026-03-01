@@ -167,7 +167,6 @@ select:focus-visible {
   display: inline-flex;
   position: relative;
   flex: 0 0 auto;
-  margin-left: auto;
 }
 
 .header-auth-btn,
@@ -1586,7 +1585,7 @@ select:focus-visible {
   }
 
   .topbar-right {
-    margin-left: auto;
+    margin-left: 0;
   }
 
   .content {

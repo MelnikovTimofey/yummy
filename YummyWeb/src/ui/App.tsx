@@ -272,15 +272,6 @@ export const App = () => {
                   <p className="tagline">Арома ателье</p>
                 </div>
               </div>
-              <div className="topbar-right">
-                <AppButton
-                  variant="chip"
-                  className="header-auth-btn"
-                  onClick={() => setAuthModalOpen(true)}
-                >
-                  Войти
-                </AppButton>
-              </div>
               <nav className="topbar-nav" aria-label="Гостевая навигация">
                 <AppTabs
                   value={guestTab}
@@ -291,6 +282,15 @@ export const App = () => {
                   stretch={false}
                 />
               </nav>
+              <div className="topbar-right">
+                <AppButton
+                  variant="chip"
+                  className="header-auth-btn"
+                  onClick={() => setAuthModalOpen(true)}
+                >
+                  Войти
+                </AppButton>
+              </div>
             </div>
           </header>
           <main className="content">
@@ -330,6 +330,16 @@ export const App = () => {
                 <p className="tagline">Арома ателье</p>
               </div>
             </div>
+            <nav className="topbar-nav" aria-label="Основная навигация">
+              <AppTabs
+                value={activeTab}
+                onChange={(next) => setActiveTab(next as TabKey)}
+                items={mainTabItems}
+                className="topbar-tabs"
+                listClassName="topbar-tabs-list"
+                stretch={false}
+              />
+            </nav>
             <div className="topbar-right" ref={profileMenuRef}>
               <AppButton
                 variant="chip"
@@ -396,16 +406,6 @@ export const App = () => {
                 </div>
               ) : null}
             </div>
-            <nav className="topbar-nav" aria-label="Основная навигация">
-              <AppTabs
-                value={activeTab}
-                onChange={(next) => setActiveTab(next as TabKey)}
-                items={mainTabItems}
-                className="topbar-tabs"
-                listClassName="topbar-tabs-list"
-                stretch={false}
-              />
-            </nav>
           </div>
         </header>
 
