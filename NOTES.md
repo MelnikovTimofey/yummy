@@ -692,3 +692,22 @@ Product-rules (зафиксировано):
   - `output/playwright/catalog-info-modal.png`
   - `output/playwright/catalog-card-element.png`
   - проверка независимого скролла фильтра через `eval`: `page scroll` остаётся `0`, `filter-scrollbox` прокручивается до `boxMax`.
+
+Обновление от 1 марта 2026 (Итерация H — точечные правки после тестирования):
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - удалены теги микса из карточек на всех экранах;
+  - в карточке оставлены только профильные чипы (и рейтинг-тег, если передан).
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - диаграмма `Вкусы микса` переведена на пропорциональный расчёт (по долям компонентов, как у профилей);
+  - `Доминирующий вкус` теперь берётся из рассчитанного пропорционального распределения;
+  - кнопка `Создать микс` вынесена из фильтров в блок рядом с заголовком `Мои миксы` (справа).
+- `YummyWeb/src/ui/SessionsScreen.tsx`, `YummyWeb/src/ui/styles.css`:
+  - кнопка `Добавить сессию` уменьшена и выровнена вправо на экране сессий.
+- `YummyWeb/src/ui/styles.css`:
+  - удалены стили под mix-теги карточек;
+  - добавлены стили `mixes-summary-head`, `mixes-create-btn`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright UI-check (skill):
+  - `output/playwright/catalog-card-tags-removed.png`.

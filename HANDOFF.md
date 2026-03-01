@@ -717,3 +717,24 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 Коммиты:
 - `ed3bf60` — `feat(yummyweb): unify mix cards and add session modal flow`
 - `b7dd3fe` — `feat(yummyweb): revamp sessions and my-mixes UX layouts`
+
+## 1.2) Итерация H (1 марта 2026) — правки по результатам тестирования
+
+Сделано:
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - убраны теги микса из карточек (на всех экранах, где используется `MixPreviewCard`);
+  - оставлены только профильные чипы + рейтинг-тег.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - `Вкусы микса` теперь считаются пропорционально долям компонентов (аналогично профилям);
+  - `Доминирующий вкус` берётся из того же пропорционального расчёта;
+  - `Создать микс` перенесена из панели фильтров в summary-блок `Мои миксы` (справа).
+- `YummyWeb/src/ui/SessionsScreen.tsx`, `YummyWeb/src/ui/styles.css`:
+  - кнопка `Добавить сессию` уменьшена и выровнена вправо.
+- `YummyWeb/src/ui/styles.css`:
+  - удалены стили `mix-topic-tag`;
+  - добавлены стили `mixes-summary-head`, `mixes-create-btn`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright UI-check (skill):
+  - `output/playwright/catalog-card-tags-removed.png`.
