@@ -348,15 +348,17 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                             </AppButton>
                           </div>
                         </div>
-                        <p className="home-item-meta">
-                          {flavorText}
-                        </p>
-                        <div className="profile-tags home-item-tags">
-                          {profileTags.slice(0, 3).map((tag) => (
-                            <AppBadge key={`${mix.id}:${tag}`} tone="muted" className="profile-tag">
-                              {PROFILE_LABELS[tag]}
-                            </AppBadge>
-                          ))}
+                        <div className="home-item-body">
+                          <p className="home-item-meta">
+                            {flavorText}
+                          </p>
+                          <div className="home-item-tags">
+                            {profileTags.slice(0, 3).map((tag) => (
+                              <AppBadge key={`${mix.id}:${tag}`} tone="muted" className="profile-tag">
+                                {PROFILE_LABELS[tag]}
+                              </AppBadge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </article>

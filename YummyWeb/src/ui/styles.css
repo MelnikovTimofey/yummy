@@ -453,7 +453,7 @@ h1 {
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
   padding: 12px;
   background: linear-gradient(180deg, rgba(10, 10, 10, 0.05) 20%, rgba(10, 10, 10, 0.82) 100%);
@@ -464,6 +464,14 @@ h1 {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;
+}
+
+.home-item-body {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+  align-content: end;
+  min-height: 0;
 }
 
 .home-item-actions {
@@ -526,6 +534,7 @@ h1 {
   margin: 0;
   font-size: 12px;
   color: #d6c8b9;
+  min-height: 30px;
   min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -534,7 +543,12 @@ h1 {
 }
 
 .home-item-tags {
-  margin-top: 2px;
+  margin-top: 0;
+  min-height: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
 }
 
 .auth-popup {
