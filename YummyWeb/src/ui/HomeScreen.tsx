@@ -37,13 +37,46 @@ const sanitizeProfiles = (profiles: unknown[]) =>
   );
 
 const getProfileTags = (mix: Mix) => {
-  const direct = mix.flavorProfiles ?? [];
-  if (direct.length) {
-    return sanitizeProfiles(direct);
+  const weightedProfiles = new Map<FlavorProfile, number>();
+  const firstSeenOrder = new Map<FlavorProfile, number>();
+  let seenCounter = 0;
+
+  for (const component of mix.components) {
+    const profiles = sanitizeProfiles(component.tobacco.flavorProfiles ?? []);
+    if (!profiles.length) {
+      continue;
+    }
+
+    const profileShare = component.proportion / profiles.length;
+    for (const profile of profiles) {
+      weightedProfiles.set(profile, (weightedProfiles.get(profile) ?? 0) + profileShare);
+      if (!firstSeenOrder.has(profile)) {
+        firstSeenOrder.set(profile, seenCounter);
+        seenCounter += 1;
+      }
+    }
   }
-  return sanitizeProfiles(
-    mix.components.flatMap((component) => component.tobacco.flavorProfiles ?? []),
-  );
+
+  if (weightedProfiles.size) {
+    const sortedByProportion = Array.from(weightedProfiles.keys()).sort((left, right) => {
+      const diff = (weightedProfiles.get(right) ?? 0) - (weightedProfiles.get(left) ?? 0);
+      if (Math.abs(diff) > 0.001) {
+        return diff;
+      }
+      return (firstSeenOrder.get(left) ?? 0) - (firstSeenOrder.get(right) ?? 0);
+    });
+
+    const directProfiles = sanitizeProfiles(mix.flavorProfiles ?? []);
+    const restFromDirect = directProfiles.filter((profile) => !weightedProfiles.has(profile));
+    return [...sortedByProportion, ...restFromDirect];
+  }
+
+  const direct = sanitizeProfiles(mix.flavorProfiles ?? []);
+  if (direct.length) {
+    return direct;
+  }
+
+  return [];
 };
 
 const getFlavorLabels = (mix: Mix) => {
