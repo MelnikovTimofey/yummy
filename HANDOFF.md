@@ -790,3 +790,13 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 
 Проверка:
 - `cd YummyWeb && npm run build` — `OK`.
+
+## 1.6) Итерация L (2 марта 2026) — выравнивание кнопок в модалке профиля
+
+Сделано:
+- `YummyWeb/src/ui/styles.css`:
+  - выровнен action-row в модалке `Имя профиля`;
+  - зафиксированы размеры/отступы кнопок `Отмена` и `Сохранить`, чтобы кнопка `Сохранить` не съезжала.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
