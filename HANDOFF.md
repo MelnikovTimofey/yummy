@@ -1,5 +1,38 @@
 # HANDOFF — Yummy
 
+## 0.8) Sprint 2 — P2.2 (fix по пользовательскому баг-репорту, 1 марта 2026)
+
+- Проблема:
+  - в desktop-рейлах правая стрелка могла исчезать из видимой области, а прокрутка ощущалась как «общий свайп»;
+  - fallback имени профиля без пользовательского имени показывал `Seed` вместо email.
+- Гипотеза:
+  - зафиксировать геометрию рейла в viewport-ширине и прокручивать к первой скрытой карточке;
+  - для fallback имени использовать `email`, без генерации псевдонима.
+- Изменение:
+  - `HomeScreen.tsx`:
+    - заменён `scrollBy` на целевую прокрутку к следующей/предыдущей скрытой карточке;
+    - для рефов рейлов используется ключ `id:index`, скролл влияет только на выбранный рейл.
+  - `styles.css`:
+    - исправлена сетка рейлов (`minmax(0,1fr)`, `min-width:0`, `max-width:100%`) для предотвращения растяжения карусели на `scrollWidth`;
+    - overlay-стрелки остаются поверх крайних карточек, но теперь обе в видимой зоне.
+  - `profileName.ts`:
+    - fallback имени: `custom` -> `user.name` -> `email` -> `Мой профиль`.
+- Проверки:
+  - `npm run build` (`YummyWeb`) — `OK`;
+  - Playwright:
+    - геометрия: `carousel.width=1462`, `rightBtn.x=1439` (стрелка видима);
+    - клик правой стрелки первого рейла: `scrollLeft 0 -> 1248`;
+    - контроль по нескольким рейлам: `[1248,0,0] -> [2394,0,0]` (скроллится только первый);
+    - fallback имени в auth-mock: `seed@yummy.local`.
+- Артефакты:
+  - before: `output/playwright/sprint2-auth-fix-before/rail-hover.png`
+  - after: `output/playwright/sprint2-railfix-after/rail-hover.png`
+  - e2e before click: `output/playwright/sprint2-railfix-e2e/rail-before-click.png`
+  - e2e after click: `output/playwright/sprint2-railfix-e2e/rail-after-click.png`
+  - e2e fallback email: `output/playwright/sprint2-railfix-e2e/profile-fallback-email.png`
+- Коммит:
+  - `927f7f5` — `fix(web): починить листание рейлов стрелками и fallback имени`
+
 ## 0.7) Sprint 2 — P2.1 (доработка по фидбэку, 1 марта 2026)
 
 - Проблема:
