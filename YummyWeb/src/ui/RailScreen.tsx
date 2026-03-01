@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { HomeRail } from '../shared/types';
+import { AppInput, AppBadge } from '@/ui-kit';
 
 type RailScreenProps = {
   rail: HomeRail | null;
@@ -45,7 +46,7 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
 
           <section className="catalog-controls cinema-controls">
             <div className="search-row">
-              <input
+              <AppInput
                 className="search-input"
                 type="search"
                 value={search}
@@ -80,7 +81,7 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
                 <div className="mix-poster-overlay">
                   <div className="mix-header">
                     <h3>{mix.name}</h3>
-                    <span className="chip">{mix.components.length} комп.</span>
+                    <AppBadge tone="muted" className="chip">{mix.components.length} комп.</AppBadge>
                   </div>
                   <p className="mix-description">{mix.description?.trim() || 'Описание пока не добавлено.'}</p>
                   <p className="mix-ratings">

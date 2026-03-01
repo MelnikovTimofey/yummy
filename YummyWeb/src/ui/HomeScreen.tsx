@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, removeFavorite } from '../shared/apiClient';
 import { AuthState, FlavorProfile, HomeRail, Mix } from '../shared/types';
+import { AppBadge, AppButton, AppModal } from '@/ui-kit';
 
 type HomeScreenProps = {
   authState: AuthState;
@@ -256,34 +257,34 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
         return (
           <section key={`${rail.id}:${railIndex}`} className="home-rail">
             <div className="home-rail-head">
-              <button
-                type="button"
+              <AppButton
+                variant="ghost"
                 className="home-rail-title-btn"
                 disabled={!onOpenRail}
                 onClick={() => onOpenRail?.(rail)}
               >
                 <h3 className="home-rail-title">{rail.title}</h3>
-              </button>
-              <button
-                type="button"
+              </AppButton>
+              <AppButton
+                variant="ghost"
                 className="home-link-btn"
                 disabled={!onOpenRail}
                 onClick={() => onOpenRail?.(rail)}
               >
                 Смотреть все
-              </button>
+              </AppButton>
             </div>
 
             <div className="home-rail-carousel">
-              <button
-                type="button"
+              <AppButton
+                variant="ghost"
                 className="rail-nav-btn"
                 onClick={() => scrollRail(railRefKey, -1)}
                 disabled={!rail.items.length}
                 aria-label="Прокрутить влево"
               >
                 ‹
-              </button>
+              </AppButton>
 
               <div
                 className="home-rail-row"
@@ -321,8 +322,8 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                         <div className="home-item-head">
                           <p className="home-item-title">{mix.name}</p>
                           <div className="home-item-actions">
-                            <button
-                              type="button"
+                            <AppButton
+                              variant="icon"
                               className="icon-btn info-btn"
                               onClick={(event) => {
                                 event.stopPropagation();
@@ -331,9 +332,9 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                               aria-label="Описание"
                             >
                               i
-                            </button>
-                            <button
-                              type="button"
+                            </AppButton>
+                            <AppButton
+                              variant="icon"
                               className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
                               onClick={(event) => {
                                 event.stopPropagation();
@@ -344,7 +345,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                               title={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
                             >
                               {favoriteMixIds[mix.id] ? '♥' : '♡'}
-                            </button>
+                            </AppButton>
                           </div>
                         </div>
                         <p className="home-item-meta">
@@ -352,9 +353,9 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                         </p>
                         <div className="profile-tags home-item-tags">
                           {profileTags.slice(0, 3).map((tag) => (
-                            <span key={`${mix.id}:${tag}`} className="profile-tag">
+                            <AppBadge key={`${mix.id}:${tag}`} tone="muted" className="profile-tag">
                               {PROFILE_LABELS[tag]}
-                            </span>
+                            </AppBadge>
                           ))}
                         </div>
                       </div>
@@ -363,35 +364,42 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                 })}
               </div>
 
-              <button
-                type="button"
+              <AppButton
+                variant="ghost"
                 className="rail-nav-btn"
                 onClick={() => scrollRail(railRefKey, 1)}
                 disabled={!rail.items.length}
                 aria-label="Прокрутить вправо"
               >
                 ›
-              </button>
+              </AppButton>
             </div>
           </section>
         );
       })}
 
-      {infoMix ? (
-        <div className="popup-backdrop" onClick={() => setInfoMix(null)} role="presentation">
-          <article className="popup-card" onClick={(event) => event.stopPropagation()}>
-            <p className="card-title">Описание микса</p>
+      <AppModal
+        open={Boolean(infoMix)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInfoMix(null);
+          }
+        }}
+        title="Описание микса"
+      >
+        {infoMix ? (
+          <div>
             <h3>{infoMix.name}</h3>
             <p className="card-text">{infoMix.description?.trim() || 'Описание пока не добавлено.'}</p>
             <p className="hint">
               Табаки: {infoMix.components.map((component) => `${component.tobacco.name} ${component.proportion}%`).join(' · ')}
             </p>
-            <button type="button" className="search-button" onClick={() => setInfoMix(null)}>
+            <AppButton className="search-button" onClick={() => setInfoMix(null)}>
               Закрыть
-            </button>
-          </article>
-        </div>
-      ) : null}
+            </AppButton>
+          </div>
+        ) : null}
+      </AppModal>
     </section>
   );
 };
