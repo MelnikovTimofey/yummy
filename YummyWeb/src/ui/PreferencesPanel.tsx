@@ -5,6 +5,7 @@ import {
   upsertPreferenceProfile,
 } from '../shared/apiClient';
 import { AuthState, FlavorProfile, Manufacturer } from '../shared/types';
+import { AppButton } from '@/ui-kit';
 
 type PreferencesPanelProps = {
   authState: AuthState;
@@ -126,14 +127,14 @@ export const PreferencesPanel = ({ authState, onAuthUpdate, onSaved }: Preferenc
         <p className="card-title">Любимые профили</p>
         <div className="chip-grid">
           {FLAVOR_OPTIONS.map((option) => (
-            <button
+            <AppButton
               key={`liked:${option.value}`}
-              type="button"
+              variant="chip"
               className={`option-chip ${likedProfiles.includes(option.value) ? 'liked' : ''}`}
               onClick={() => toggleLikedProfile(option.value)}
             >
               {option.label}
-            </button>
+            </AppButton>
           ))}
         </div>
       </section>
@@ -142,14 +143,14 @@ export const PreferencesPanel = ({ authState, onAuthUpdate, onSaved }: Preferenc
         <p className="card-title">Нелюбимые профили</p>
         <div className="chip-grid">
           {FLAVOR_OPTIONS.map((option) => (
-            <button
+            <AppButton
               key={`disliked:${option.value}`}
-              type="button"
+              variant="chip"
               className={`option-chip ${dislikedProfiles.includes(option.value) ? 'disliked' : ''}`}
               onClick={() => toggleDislikedProfile(option.value)}
             >
               {option.label}
-            </button>
+            </AppButton>
           ))}
         </div>
       </section>
@@ -161,27 +162,26 @@ export const PreferencesPanel = ({ authState, onAuthUpdate, onSaved }: Preferenc
         {status === 'error' ? <p className="screen-status error">Не удалось загрузить бренды.</p> : null}
         <div className="chip-grid">
           {manufacturers.map((manufacturer) => (
-            <button
+            <AppButton
               key={manufacturer.id}
-              type="button"
+              variant="chip"
               className={`option-chip ${favoriteManufacturerIds.includes(manufacturer.id) ? 'favorite' : ''}`}
               onClick={() => toggleManufacturer(manufacturer.id)}
             >
               {manufacturer.name}
-            </button>
+            </AppButton>
           ))}
         </div>
       </section>
 
       <section className="card">
-        <button
-          type="button"
+        <AppButton
           className="search-button profile-save"
           onClick={onSave}
           disabled={saving}
         >
           Сохранить предпочтения
-        </button>
+        </AppButton>
         {feedback ? <p className="hint">{feedback}</p> : null}
       </section>
     </section>

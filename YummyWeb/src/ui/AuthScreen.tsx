@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { sendMagicLink, verifyMagicLink } from '../shared/apiClient';
 import { AuthState } from '../shared/types';
+import { AppButton, AppInput } from '@/ui-kit';
 
 type AuthScreenProps = {
   onAuthUpdate: (next: AuthState) => void;
@@ -59,7 +60,7 @@ export const AuthScreen = ({ onAuthUpdate, asCard = true }: AuthScreenProps) => 
 
       <form className="form" onSubmit={onRequestLink}>
         <label htmlFor="email">E-mail</label>
-        <input
+        <AppInput
           id="email"
           type="email"
           value={email}
@@ -68,12 +69,12 @@ export const AuthScreen = ({ onAuthUpdate, asCard = true }: AuthScreenProps) => 
           autoComplete="email"
           placeholder="you@example.com"
         />
-        <button type="submit" disabled={pending}>Отправить magic link</button>
+        <AppButton type="submit" disabled={pending}>Отправить magic link</AppButton>
       </form>
 
       <form className="form" onSubmit={onVerifyToken}>
         <label htmlFor="token">Token из письма</label>
-        <input
+        <AppInput
           id="token"
           type="text"
           value={token}
@@ -81,7 +82,7 @@ export const AuthScreen = ({ onAuthUpdate, asCard = true }: AuthScreenProps) => 
           required
           placeholder="Вставьте token"
         />
-        <button type="submit" disabled={pending}>Войти</button>
+        <AppButton type="submit" disabled={pending}>Войти</AppButton>
       </form>
 
       {status ? <p className="status ok">{status}</p> : null}

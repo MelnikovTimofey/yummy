@@ -11,6 +11,7 @@ import {
   MixRatingSummary,
   SmokingSession,
 } from '../shared/types';
+import { AppButton, AppInput } from '@/ui-kit';
 
 type SessionsScreenProps = {
   authState: AuthState;
@@ -127,13 +128,13 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
   if (view === 'pick-mix') {
     return (
       <section className="sessions-layout">
-        <button type="button" className="ghost-button screen-back-btn" onClick={() => setView('create')}>
+        <AppButton variant="ghost" className="ghost-button screen-back-btn" onClick={() => setView('create')}>
           Назад к созданию
-        </button>
+        </AppButton>
 
         <section className="catalog-controls cinema-controls">
           <div className="search-row">
-            <input
+            <AppInput
               className="search-input"
               type="search"
               value={pickSearch}
@@ -154,8 +155,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
                 <span className="chip">{mix.components.length} комп.</span>
               </div>
               <p className="mix-description">{mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-              <button
-                type="button"
+              <AppButton
                 className="search-button session-select-mix-btn"
                 onClick={() => {
                   setSelectedMixId(mix.id);
@@ -163,7 +163,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
                 }}
               >
                 Выбрать микс
-              </button>
+              </AppButton>
             </article>
           ))}
         </section>
@@ -174,9 +174,9 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
   if (view === 'create') {
     return (
       <section className="sessions-layout">
-        <button type="button" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
+        <AppButton variant="ghost" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
           Назад к сессиям
-        </button>
+        </AppButton>
 
         <section className="card session-create-card">
           <p className="card-title">Новая сессия</p>
@@ -186,30 +186,30 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
               Выбран микс:{' '}
               <b>{selectedMix?.name ?? 'не выбран'}</b>
             </p>
-            <button type="button" className="ghost-button session-change-mix-btn" onClick={() => setView('pick-mix')}>
+            <AppButton variant="ghost" className="ghost-button session-change-mix-btn" onClick={() => setView('pick-mix')}>
               Выбрать микс
-            </button>
+            </AppButton>
           </div>
 
           <div className="location-switch">
-            <button
-              type="button"
+            <AppButton
+              variant="ghost"
               className={`location-btn ${locationType === 'home' ? 'active' : ''}`}
               onClick={() => setLocationType('home')}
             >
               Дом
-            </button>
-            <button
-              type="button"
+            </AppButton>
+            <AppButton
+              variant="ghost"
               className={`location-btn ${locationType === 'lounge' ? 'active' : ''}`}
               onClick={() => setLocationType('lounge')}
             >
               Лаунж
-            </button>
+            </AppButton>
           </div>
 
           {locationType === 'lounge' ? (
-            <input
+            <AppInput
               className="search-input"
               value={locationName}
               onChange={(event) => setLocationName(event.target.value)}
@@ -217,14 +217,13 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
             />
           ) : null}
 
-          <button
-            type="button"
+          <AppButton
             className="search-button session-submit"
             onClick={onCreateSession}
             disabled={!canCreate}
           >
             Создать сессию
-          </button>
+          </AppButton>
           {feedback ? <p className="hint">{feedback}</p> : null}
         </section>
       </section>
@@ -236,9 +235,9 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
       <section className="card session-create-card">
         <p className="card-title">Новая сессия</p>
         <p className="card-text">Создание вынесено на отдельный экран выбора микса и параметров сессии.</p>
-        <button type="button" className="search-button session-submit" onClick={onOpenCreate} disabled={!canOpenCreate}>
+        <AppButton className="search-button session-submit" onClick={onOpenCreate} disabled={!canOpenCreate}>
           Создать сессию
-        </button>
+        </AppButton>
         {!canOpenCreate ? <p className="hint">Сначала создайте хотя бы один микс.</p> : null}
         {feedback ? <p className="hint">{feedback}</p> : null}
       </section>
