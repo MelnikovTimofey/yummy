@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { HomeRail } from '../shared/types';
 import { AppInput } from '@/ui-kit';
+import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type RailScreenProps = {
@@ -10,6 +11,7 @@ type RailScreenProps = {
 
 export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
   const [search, setSearch] = useState('');
+  const [infoMixId, setInfoMixId] = useState<string | null>(null);
 
   const filteredItems = useMemo(() => {
     if (!rail) {
@@ -33,6 +35,10 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
       return source.includes(query);
     });
   }, [rail, search]);
+  const infoMix = useMemo(
+    () => filteredItems.find((item) => item.id === infoMixId) ?? null,
+    [filteredItems, infoMixId],
+  );
 
   return (
     <section className="catalog-layout">
@@ -66,6 +72,7 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
                 mix={mix}
                 size="grid"
                 onOpen={(currentMix) => onOpenMix(currentMix.id)}
+                onOpenInfo={(currentMix) => setInfoMixId(currentMix.id)}
                 footerText={mix.components
                   .slice(0, 3)
                   .map((component) => component.tobacco.name)
@@ -73,6 +80,14 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
               />
             ))}
           </section>
+          <MixInfoModal
+            mix={infoMix}
+            onOpenChange={(open) => {
+              if (!open) {
+                setInfoMixId(null);
+              }
+            }}
+          />
         </>
       ) : null}
     </section>

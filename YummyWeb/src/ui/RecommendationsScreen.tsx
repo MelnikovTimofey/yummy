@@ -9,12 +9,14 @@ import {
 } from '../shared/apiClient';
 import {
   AuthState,
+  Mix,
   MixRating,
   MixRatingSummary,
   RecommendationItem,
   RecommendationSource,
 } from '../shared/types';
 import { AppButton } from '@/ui-kit';
+import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type RecommendationsScreenProps = {
@@ -46,6 +48,7 @@ export const RecommendationsScreen = ({
   const [mixSummaries, setMixSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [infoMix, setInfoMix] = useState<Mix | null>(null);
 
   const load = async () => {
     if (!authState.tokens) {
@@ -188,6 +191,7 @@ export const RecommendationsScreen = ({
             <MixPreviewCard
               mix={item.mix}
               size="fluid"
+              onOpenInfo={(currentMix) => setInfoMix(currentMix)}
               footerText={`Моя оценка: ${mixRatings[item.mix.id]?.rating ?? 'нет'} · Средняя: ${mixSummaries[item.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
             />
             <p className="recommendation-source">{getSourceLabel(item)}</p>
@@ -211,6 +215,15 @@ export const RecommendationsScreen = ({
           </article>
         ))}
       </section>
+      <MixInfoModal
+        mix={infoMix}
+        summary={infoMix ? mixSummaries[infoMix.id] : undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInfoMix(null);
+          }
+        }}
+      />
     </section>
   );
 };

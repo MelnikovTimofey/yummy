@@ -163,11 +163,7 @@ export const MixPreviewCard = ({
 
   const onInfoClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    if (onOpenInfo) {
-      onOpenInfo(mix);
-      return;
-    }
-    onOpen?.(mix);
+    onOpenInfo?.(mix);
   };
 
   const onFavoriteClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -191,7 +187,7 @@ export const MixPreviewCard = ({
         <div className="mix-unified-head">
           <p className="mix-unified-title">{mix.name}</p>
           <div className="mix-unified-actions">
-            {onOpenInfo || onOpen ? (
+            {onOpenInfo ? (
               <AppButton
                 variant="icon"
                 className="mix-action-btn"

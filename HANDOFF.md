@@ -647,3 +647,30 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd YummyWeb && npm run build` — `OK`.
 - Playwright smoke (skill, mock-auth/mock API):
   - `output/playwright/iter-e/my-mixes-after-e.png`.
+
+## 1.0) Итерация F (1 марта 2026) — экран микса с инфографикой и shadcn charts
+
+Сделано:
+- Добавлен `recharts` в `YummyWeb`.
+- Добавлен shadcn-совместимый chart-примитив:
+  - `YummyWeb/src/components/ui/chart.tsx`.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - улучшена компоновка экрана микса;
+  - добавлены инфо-блоки с ключевыми характеристиками;
+  - старые conic-диаграммы заменены на `recharts`:
+    - donut по табачной базе,
+    - вертикальный bar-chart по профилям вкуса.
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - `info` показывается только при `onOpenInfo` (убран fallback в detail).
+- `YummyWeb/src/ui/RailScreen.tsx`, `YummyWeb/src/ui/RecommendationsScreen.tsx`:
+  - подключён popup `info` (`MixInfoModal`) для карточек.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили для новых chart-блоков и инфографики.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright smoke (skill, mock-auth/mock API):
+  - `output/playwright/iter-f/mix-detail-charts-after-f.png`.
+
+Нюанс:
+- после добавления `recharts` Vite предупреждает о крупном JS chunk (`>500kB`); это не блокирует сборку, но требует последующей оптимизации (`manualChunks`/lazy loading).

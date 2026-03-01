@@ -1,6 +1,17 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart } from 'lucide-react';
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
   addFavorite,
   createMix,
   createMixRating,
@@ -23,7 +34,9 @@ import {
   MixRatingSummary,
   Tobacco,
 } from '../shared/types';
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { AppButton, AppInput, AppSelect, AppTextarea } from '@/ui-kit';
+import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type MixesScreenProps = {
@@ -129,6 +142,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const [createFeedback, setCreateFeedback] = useState<string | null>(null);
   const [detailFeedback, setDetailFeedback] = useState<string | null>(null);
   const [detailActionPending, setDetailActionPending] = useState(false);
+  const [infoMixId, setInfoMixId] = useState<string | null>(null);
   const nextDraftComponentId = useRef(2);
 
   useEffect(() => {
@@ -292,6 +306,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [openMixRequest?.mode, openMixRequest?.mixId, openMixRequest?.nonce]);
 
   const sortedItems = useMemo(() => items, [items]);
+  const infoMix = useMemo(
+    () => sortedItems.find((item) => item.id === infoMixId) ?? null,
+    [infoMixId, sortedItems],
+  );
   const sortedManufacturers = useMemo(
     () => [...manufacturers].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })),
     [manufacturers],
@@ -492,26 +510,11 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     );
   };
 
-  const buildConicGradient = (segments: Array<{ value: number; color: string }>) => {
-    if (!segments.length) {
-      return 'conic-gradient(#2f2b2a 0 100%)';
-    }
-
-    let start = 0;
-    const parts = segments.map((segment) => {
-      const end = start + segment.value;
-      const value = `${segment.color} ${start}% ${end}%`;
-      start = end;
-      return value;
-    });
-    return `conic-gradient(${parts.join(', ')})`;
-  };
-
   const getTobaccoPieData = (mix: Mix) =>
     mix.components.map((component, index) => ({
-      label: `${component.tobacco.manufacturer.name} ${component.tobacco.name}`,
+      name: `${component.tobacco.manufacturer.name} ${component.tobacco.name}`,
       value: component.proportion,
-      color: ['#3b80f5', '#26c281', '#d8873f', '#b96af0', '#e25f7c', '#79c251'][index % 6],
+      fill: ['#3b80f5', '#26c281', '#d8873f', '#b96af0', '#e25f7c', '#79c251'][index % 6],
     }));
 
   const getFlavorPieData = (mix: Mix) => {
@@ -529,9 +532,9 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
     return Array.from(map.entries())
       .map(([profile, value]) => ({
-        label: PROFILE_OPTIONS.find((item) => item.value === profile)?.label ?? profile,
+        name: PROFILE_OPTIONS.find((item) => item.value === profile)?.label ?? profile,
         value: Number(value.toFixed(2)),
-        color: PROFILE_COLORS[profile],
+        fill: PROFILE_COLORS[profile],
       }))
       .sort((a, b) => b.value - a.value);
   };
@@ -590,6 +593,22 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             {(() => {
               const tobaccoPieData = getTobaccoPieData(activeMix);
               const flavorPieData = getFlavorPieData(activeMix);
+              const tobaccoChartConfig = tobaccoPieData.reduce<ChartConfig>((acc, item, index) => {
+                acc[`tobacco-${index}`] = {
+                  label: item.name,
+                  color: item.fill,
+                };
+                return acc;
+              }, {});
+              const flavorChartConfig = flavorPieData.reduce<ChartConfig>((acc, item, index) => {
+                acc[`profile-${index}`] = {
+                  label: item.name,
+                  color: item.fill,
+                };
+                return acc;
+              }, {});
+              const dominantProfile = flavorPieData[0]?.name ?? 'нет данных';
+              const dominantTobacco = tobaccoPieData[0]?.name ?? 'нет данных';
               return (
                 <>
             <section
@@ -645,6 +664,16 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 {' · '}
                 Средняя: <b>{summaries[activeMix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
               </p>
+              <section className="mix-insight-stats">
+                <article className="mix-insight-card">
+                  <p className="card-title">Доминирующий профиль</p>
+                  <p className="mix-insight-value">{dominantProfile}</p>
+                </article>
+                <article className="mix-insight-card">
+                  <p className="card-title">База микса</p>
+                  <p className="mix-insight-value">{dominantTobacco}</p>
+                </article>
+              </section>
               <div className="session-rating-row">
                 {[1, 2, 3, 4, 5].map((score) => (
                   <AppButton
@@ -660,18 +689,32 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               </div>
               <section className="mix-charts">
                 <article className="mix-chart-card">
-                  <p className="card-title">Диаграмма: вкусы табаков</p>
-                  <div
-                    className="mix-pie"
-                    style={{
-                      background: buildConicGradient(tobaccoPieData),
-                    }}
-                  />
+                  <p className="card-title">Состав по табакам</p>
+                  <ChartContainer config={tobaccoChartConfig} className="mix-chart-shell">
+                    <PieChart>
+                      <Tooltip
+                        formatter={(value) => `${value}%`}
+                        contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                      />
+                      <Pie
+                        data={tobaccoPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={54}
+                        outerRadius={90}
+                        paddingAngle={2}
+                      >
+                        {tobaccoPieData.map((item) => (
+                          <Cell key={`${activeMix.id}:tob:${item.name}`} fill={item.fill} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
                   <div className="mix-chart-legend">
                     {tobaccoPieData.map((item) => (
-                      <div key={`${activeMix.id}:tob:${item.label}`} className="mix-chart-item">
-                        <span className="mix-chart-dot" style={{ background: item.color }} />
-                        <span>{item.label}</span>
+                      <div key={`${activeMix.id}:tob:${item.name}`} className="mix-chart-item">
+                        <span className="mix-chart-dot" style={{ background: item.fill }} />
+                        <span>{item.name}</span>
                         <b>{item.value}%</b>
                       </div>
                     ))}
@@ -679,19 +722,38 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                 </article>
 
                 <article className="mix-chart-card">
-                  <p className="card-title">Диаграмма: профили вкуса</p>
-                  <div
-                    className="mix-pie"
-                    style={{
-                      background: buildConicGradient(flavorPieData),
-                    }}
-                  />
+                  <p className="card-title">Профили вкуса</p>
+                  <ChartContainer config={flavorChartConfig} className="mix-chart-shell">
+                    <BarChart
+                      data={flavorPieData}
+                      layout="vertical"
+                      margin={{ left: 4, right: 14, top: 8, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2f2a27" />
+                      <XAxis type="number" tick={{ fill: '#9f9185', fontSize: 11 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={120}
+                        tick={{ fill: '#cbc0b5', fontSize: 11 }}
+                      />
+                      <Tooltip
+                        formatter={(value) => `${value}%`}
+                        contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                      />
+                      <Bar dataKey="value" radius={[8, 8, 8, 8]}>
+                        {flavorPieData.map((item) => (
+                          <Cell key={`${activeMix.id}:flv:${item.name}`} fill={item.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
                   <div className="mix-chart-legend">
                     {flavorPieData.length ? (
                       flavorPieData.map((item) => (
-                        <div key={`${activeMix.id}:flv:${item.label}`} className="mix-chart-item">
-                          <span className="mix-chart-dot" style={{ background: item.color }} />
-                          <span>{item.label}</span>
+                        <div key={`${activeMix.id}:flv:${item.name}`} className="mix-chart-item">
+                          <span className="mix-chart-dot" style={{ background: item.fill }} />
+                          <span>{item.name}</span>
                           <b>{item.value.toFixed(1)}%</b>
                         </div>
                       ))
@@ -930,6 +992,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             mix={mix}
             size="grid"
             onOpen={(currentMix) => openMixDetail(currentMix.id)}
+            onOpenInfo={(currentMix) => setInfoMixId(currentMix.id)}
             onToggleFavorite={(currentMix) => {
               void toggleFavorite(currentMix.id);
             }}
@@ -940,6 +1003,15 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
           />
         ))}
       </section>
+      <MixInfoModal
+        mix={infoMix}
+        summary={infoMix ? summaries[infoMix.id] : undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInfoMixId(null);
+          }
+        }}
+      />
     </section>
   );
 };

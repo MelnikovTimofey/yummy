@@ -632,3 +632,28 @@ Product-rules (зафиксировано):
     - открытие меню профиля,
     - переход `Мои миксы`,
     - артефакт: `output/playwright/iter-e/my-mixes-after-e.png`.
+
+Обновление от 1 марта 2026 (Итерация F — экран микса + shadcn charts):
+- `YummyWeb/package.json`, `YummyWeb/package-lock.json`:
+  - добавлена зависимость `recharts` для графиков.
+- `YummyWeb/src/components/ui/chart.tsx`:
+  - добавлен shadcn-совместимый chart-контейнер (`ChartContainer`, `ChartConfig`).
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - экран микса переработан по компоновке;
+  - добавлен блок инфографики (`Доминирующий профиль`, `База микса`);
+  - диаграммы переведены на `recharts` внутри `ChartContainer`:
+    - donut по табакам,
+    - bar-chart по профилям вкуса;
+  - на list-экране `Мои миксы` подключён popup `info`.
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - `info`-кнопка отображается только при переданном `onOpenInfo` (исключён fallback-переход в карточку микса).
+- `YummyWeb/src/ui/RailScreen.tsx`, `YummyWeb/src/ui/RecommendationsScreen.tsx`:
+  - подключён `MixInfoModal` для `info`-кнопки на карточках.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили инфографики и новых chart-контейнеров;
+  - адаптация chart-блоков под mobile (`1` колонка).
+- Проверка:
+  - `cd YummyWeb && npm run build` — успешно (есть предупреждение о размере chunk после добавления `recharts`);
+  - Playwright smoke (skill, mock-auth/mock API):
+    - переход `Профиль -> Мои миксы -> карточка микса`,
+    - артефакт: `output/playwright/iter-f/mix-detail-charts-after-f.png`.
