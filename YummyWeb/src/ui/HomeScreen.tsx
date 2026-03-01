@@ -364,7 +364,11 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                     isFavorite={Boolean(favoriteMixIds[mix.id])}
                     favoriteGuest={!authState.tokens}
                     favoriteTitle={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
-                    footerText={authState.tokens ? `Средняя: ${mixSummaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}` : undefined}
+                    ratingTagText={
+                      authState.tokens
+                        ? `★ ${mixSummaries[mix.id]?.avgRating?.toFixed(1).replace('.', ',') ?? '—'}`
+                        : undefined
+                    }
                   />
                 ))}
               </div>
