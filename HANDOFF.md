@@ -555,3 +555,4 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 Результат:
 - навигационное меню больше не ниже названия;
 - визуально хедер ровнее и компактнее.
+- Доп. фиксация: порядок элементов в строке header выставлен как `brand → tabs → profile`.
