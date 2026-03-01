@@ -7,11 +7,11 @@ import { CatalogScreen } from './CatalogScreen';
 import { FavoritesScreen } from './FavoritesScreen';
 import { HomeScreen } from './HomeScreen';
 import { MixesScreen } from './MixesScreen';
-import { ProfileScreen } from './ProfileScreen';
+import { PreferencesPanel } from './PreferencesPanel';
 import { RailScreen } from './RailScreen';
 import { SessionsScreen } from './SessionsScreen';
 
-type TabKey = 'home' | 'sessions' | 'catalog' | 'profile' | 'favorites' | 'mixes' | 'rail-list';
+type TabKey = 'home' | 'sessions' | 'catalog' | 'favorites' | 'mixes' | 'rail-list';
 
 type MixesOpenRequest = {
   mode: 'detail' | 'create';
@@ -53,12 +53,6 @@ const TABS: Tab[] = [
     subtitle: 'Добавляйте сессии и сохраняйте контекст: где и когда.',
   },
   {
-    key: 'profile',
-    label: 'Профиль',
-    title: 'Профиль',
-    subtitle: 'Настройка предпочтений и быстрый доступ к сессиям курения.',
-  },
-  {
     key: 'mixes',
     label: 'Миксы',
     title: 'Карточка микса',
@@ -79,25 +73,37 @@ export const App = () => {
   const [guestTab, setGuestTab] = useState<'home' | 'catalog'>('home');
   const [authState, setAuthState] = useState<AuthState>(() => loadAuthState());
   const [authChecking, setAuthChecking] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [preferencesModalOpen, setPreferencesModalOpen] = useState(false);
   const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
   const syncingFromHistory = useRef(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
   const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
+  const profileName = useMemo(() => {
+    const email = authState.user?.email?.trim();
+    if (!email) {
+      return 'Профиль';
+    }
+    return email.split('@')[0] || 'Профиль';
+  }, [authState.user?.email]);
 
   const onAuthUpdate = useCallback((next: AuthState) => {
     setAuthState(next);
     saveAuthState(next);
+    if (next.tokens && next.user) {
+      setAuthModalOpen(false);
+    }
   }, []);
 
   const onSignOut = useCallback(() => {
     onAuthUpdate({ tokens: null, user: null });
+    setProfileMenuOpen(false);
+    setPreferencesModalOpen(false);
     setActiveTab('home');
   }, [onAuthUpdate]);
-
-  const onPreferencesSaved = useCallback(() => {
-    setActiveTab('home');
-  }, []);
 
   const openMixCard = useCallback((mixId: string) => {
     setMixesOpenRequest({
@@ -113,6 +119,7 @@ export const App = () => {
       mode: 'create',
       nonce: Date.now(),
     });
+    setProfileMenuOpen(false);
     setActiveTab('mixes');
   }, []);
 
@@ -182,6 +189,36 @@ export const App = () => {
     window.history.pushState({ ...(window.history.state ?? {}), appTab: activeTab }, '', window.location.href);
   }, [activeTab]);
 
+  useEffect(() => {
+    if (!profileMenuOpen) {
+      return;
+    }
+
+    const onDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      if (profileMenuRef.current?.contains(target)) {
+        return;
+      }
+      setProfileMenuOpen(false);
+    };
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', onDocumentClick);
+    window.addEventListener('keydown', onEscape);
+    return () => {
+      window.removeEventListener('mousedown', onDocumentClick);
+      window.removeEventListener('keydown', onEscape);
+    };
+  }, [profileMenuOpen]);
+
   if (authChecking) {
     return (
       <div className="app-bg">
@@ -216,6 +253,15 @@ export const App = () => {
             </div>
             <h1>{guestTitle}</h1>
             <p className="subtitle">{guestSubtitle}</p>
+            <div className="topbar-right">
+              <button
+                type="button"
+                className="header-auth-btn"
+                onClick={() => setAuthModalOpen(true)}
+              >
+                Войти
+              </button>
+            </div>
           </header>
           <nav className="desktop-tabbar" aria-label="Гостевая навигация">
             <button
@@ -234,11 +280,6 @@ export const App = () => {
             </button>
           </nav>
           <main className="content">
-            <section className="card guest-auth-card">
-              <p className="card-title">Авторизация</p>
-              <p className="card-text">Войдите, чтобы открывать карточки, сохранять избранное и получать персональные рекомендации.</p>
-              <AuthScreen onAuthUpdate={onAuthUpdate} />
-            </section>
             <section className="guest-main-panel">
               {guestTab === 'home' ? (
                 <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
@@ -248,6 +289,20 @@ export const App = () => {
             </section>
           </main>
         </div>
+
+        {authModalOpen ? (
+          <div className="popup-backdrop" onClick={() => setAuthModalOpen(false)} role="presentation">
+            <article className="popup-card auth-popup" onClick={(event) => event.stopPropagation()}>
+              <div className="popup-head">
+                <h3 className="modal-title">Вход</h3>
+                <button type="button" className="popup-close-btn" onClick={() => setAuthModalOpen(false)}>
+                  Закрыть
+                </button>
+              </div>
+              <AuthScreen onAuthUpdate={onAuthUpdate} asCard={false} />
+            </article>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -267,7 +322,65 @@ export const App = () => {
           </div>
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
-          <p className="session-email">{authState.user.email}</p>
+          <div className="topbar-right" ref={profileMenuRef}>
+            <button
+              type="button"
+              className="header-profile-btn"
+              onClick={() => setProfileMenuOpen((current) => !current)}
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="menu"
+            >
+              {profileName}
+            </button>
+            {profileMenuOpen ? (
+              <div className="profile-menu" role="menu" aria-label="Меню профиля">
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={() => {
+                    setActiveTab('favorites');
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Избранное
+                </button>
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={() => {
+                    setActiveTab('sessions');
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Сессии
+                </button>
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={openCreateMix}
+                >
+                  Создать микс
+                </button>
+                <button
+                  type="button"
+                  className="profile-menu-item"
+                  onClick={() => {
+                    setPreferencesModalOpen(true);
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Предпочтения
+                </button>
+                <button
+                  type="button"
+                  className="profile-menu-item danger"
+                  onClick={onSignOut}
+                >
+                  Выйти
+                </button>
+              </div>
+            ) : null}
+          </div>
         </header>
         <nav className="desktop-tabbar" aria-label="Основная навигация">
           {visibleTabs.map((item) => {
@@ -311,15 +424,6 @@ export const App = () => {
               onOpenMix={openMixCard}
             />
           ) : null}
-          {activeTab === 'profile' ? (
-            <ProfileScreen
-              authState={authState}
-              onAuthUpdate={onAuthUpdate}
-              onPreferencesSaved={onPreferencesSaved}
-              onSignOut={onSignOut}
-              onOpenAddMix={openCreateMix}
-            />
-          ) : null}
           {activeTab === 'favorites' ? (
             <FavoritesScreen
               authState={authState}
@@ -332,6 +436,24 @@ export const App = () => {
           ) : null}
         </main>
       </div>
+
+      {preferencesModalOpen ? (
+        <div className="popup-backdrop" onClick={() => setPreferencesModalOpen(false)} role="presentation">
+          <article className="popup-card preferences-popup" onClick={(event) => event.stopPropagation()}>
+            <div className="popup-head">
+              <h3 className="modal-title">Предпочтения</h3>
+              <button type="button" className="popup-close-btn" onClick={() => setPreferencesModalOpen(false)}>
+                Закрыть
+              </button>
+            </div>
+            <PreferencesPanel
+              authState={authState}
+              onAuthUpdate={onAuthUpdate}
+              onSaved={() => setPreferencesModalOpen(false)}
+            />
+          </article>
+        </div>
+      ) : null}
     </div>
   );
 };

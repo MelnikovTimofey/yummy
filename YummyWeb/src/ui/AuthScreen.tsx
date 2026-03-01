@@ -4,9 +4,10 @@ import { AuthState } from '../shared/types';
 
 type AuthScreenProps = {
   onAuthUpdate: (next: AuthState) => void;
+  asCard?: boolean;
 };
 
-export const AuthScreen = ({ onAuthUpdate }: AuthScreenProps) => {
+export const AuthScreen = ({ onAuthUpdate, asCard = true }: AuthScreenProps) => {
   const [email, setEmail] = useState('seed@yummy.local');
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<string | null>(null);
@@ -51,41 +52,51 @@ export const AuthScreen = ({ onAuthUpdate }: AuthScreenProps) => {
     }
   };
 
+  const content = (
+    <>
+      <p className="card-title">Вход в Yummy</p>
+      <p className="card-text">MVP использует вход по magic link через почту.</p>
+
+      <form className="form" onSubmit={onRequestLink}>
+        <label htmlFor="email">E-mail</label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+          autoComplete="email"
+          placeholder="you@example.com"
+        />
+        <button type="submit" disabled={pending}>Отправить magic link</button>
+      </form>
+
+      <form className="form" onSubmit={onVerifyToken}>
+        <label htmlFor="token">Token из письма</label>
+        <input
+          id="token"
+          type="text"
+          value={token}
+          onChange={(event) => setToken(event.target.value)}
+          required
+          placeholder="Вставьте token"
+        />
+        <button type="submit" disabled={pending}>Войти</button>
+      </form>
+
+      {status ? <p className="status ok">{status}</p> : null}
+      {error ? <p className="status error">{error}</p> : null}
+    </>
+  );
+
+  if (!asCard) {
+    return <div className="auth-layout">{content}</div>;
+  }
+
   return (
     <div className="auth-layout">
       <section className="auth-card">
-        <p className="card-title">Вход в Yummy</p>
-        <p className="card-text">MVP использует вход по magic link через почту.</p>
-
-        <form className="form" onSubmit={onRequestLink}>
-          <label htmlFor="email">E-mail</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            autoComplete="email"
-            placeholder="you@example.com"
-          />
-          <button type="submit" disabled={pending}>Отправить magic link</button>
-        </form>
-
-        <form className="form" onSubmit={onVerifyToken}>
-          <label htmlFor="token">Token из письма</label>
-          <input
-            id="token"
-            type="text"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            required
-            placeholder="Вставьте token"
-          />
-          <button type="submit" disabled={pending}>Войти</button>
-        </form>
-
-        {status ? <p className="status ok">{status}</p> : null}
-        {error ? <p className="status error">{error}</p> : null}
+        {content}
       </section>
     </div>
   );
