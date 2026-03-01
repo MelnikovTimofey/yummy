@@ -95,23 +95,18 @@ select:focus-visible {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: grid;
-  gap: 8px;
 }
 
 .topbar-main-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.topbar-nav-row {
+  gap: 12px;
   min-width: 0;
 }
 
 .topbar-nav {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -122,8 +117,7 @@ select:focus-visible {
 }
 
 .topbar-tabs {
-  display: inline-flex;
-  min-width: 100%;
+  width: max-content;
 }
 
 .topbar-tabs-list {
@@ -155,15 +149,15 @@ select:focus-visible {
 .brand {
   margin: 0;
   font-family: "Times New Roman", serif;
-  font-size: 36px;
-  letter-spacing: 6px;
+  font-size: 30px;
+  letter-spacing: 4px;
   color: var(--text-0);
   text-transform: uppercase;
 }
 
 .tagline {
-  margin: 6px 0 0;
-  font-size: 12px;
+  margin: 4px 0 0;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-1);
@@ -1533,6 +1527,10 @@ select:focus-visible {
     font-size: 11px;
   }
 
+  .tagline {
+    display: none;
+  }
+
   .filters-row {
     grid-template-columns: 1fr;
   }
@@ -1576,11 +1574,10 @@ select:focus-visible {
 
   .topbar {
     padding: 14px 24px 10px;
-    gap: 10px;
   }
 
   .topbar-main-row {
-    gap: 18px;
+    gap: 16px;
   }
 
   .brand {

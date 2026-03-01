@@ -281,8 +281,6 @@ export const App = () => {
                   Войти
                 </AppButton>
               </div>
-            </div>
-            <div className="topbar-nav-row">
               <nav className="topbar-nav" aria-label="Гостевая навигация">
                 <AppTabs
                   value={guestTab}
@@ -398,8 +396,6 @@ export const App = () => {
                 </div>
               ) : null}
             </div>
-          </div>
-          <div className="topbar-nav-row">
             <nav className="topbar-nav" aria-label="Основная навигация">
               <AppTabs
                 value={activeTab}
