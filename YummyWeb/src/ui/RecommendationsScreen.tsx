@@ -14,6 +14,7 @@ import {
   RecommendationItem,
   RecommendationSource,
 } from '../shared/types';
+import { AppBadge, AppButton } from '@/ui-kit';
 
 type RecommendationsScreenProps = {
   authState: AuthState;
@@ -165,13 +166,12 @@ export const RecommendationsScreen = ({
         <p className="card-text">
           Приоритет: модель пользователя {'->'} топ по оценкам и сессиям {'->'} cold start fallback.
         </p>
-        <button
-          type="button"
+        <AppButton
           className="search-button recommendation-refresh"
           onClick={() => void onRefreshRecommendations()}
         >
           Обновить рекомендации
-        </button>
+        </AppButton>
         {feedback ? <p className="hint">{feedback}</p> : null}
       </section>
 
@@ -186,7 +186,7 @@ export const RecommendationsScreen = ({
           <article key={item.mix.id} className="card mix-card recommendation-card">
             <div className="mix-header">
               <h3>{item.mix.name}</h3>
-              <span className="chip">{item.mix.components.length} комп.</span>
+              <AppBadge tone="muted" className="chip">{item.mix.components.length} комп.</AppBadge>
             </div>
             <p className="mix-description">{item.mix.description?.trim() || 'Описание пока не добавлено.'}</p>
             <div className="mix-components">
@@ -201,19 +201,19 @@ export const RecommendationsScreen = ({
             </div>
             <p className="recommendation-source">{getSourceLabel(item)}</p>
             <div className="recommendation-actions">
-              <button type="button" className="search-button recommendation-session" onClick={() => onAddToSession(item.mix.id)}>
+              <AppButton className="search-button recommendation-session" onClick={() => onAddToSession(item.mix.id)}>
                 В сессию
-              </button>
+              </AppButton>
               <div className="session-rating-row">
                 {[1, 2, 3, 4, 5].map((score) => (
-                  <button
+                  <AppButton
                     key={`${item.mix.id}:${score}`}
-                    type="button"
+                    variant="ghost"
                     className={`score-btn ${mixRatings[item.mix.id]?.rating === score ? 'active' : ''}`}
                     onClick={() => onRateMix(item.mix.id, score)}
                   >
                     {score}
-                  </button>
+                  </AppButton>
                 ))}
               </div>
             </div>
