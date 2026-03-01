@@ -822,7 +822,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   <ChartContainer config={tobaccoChartConfig} className="mix-chart-shell">
                     <PieChart>
                       <Tooltip
-                        formatter={(value) => [formatPercentValue(value), 'Доля']}
+                        formatter={(value, _name, item) => [
+                          formatPercentValue(value),
+                          String(item?.payload?.name ?? 'Табак'),
+                        ]}
                         contentStyle={chartTooltipContentStyle}
                         labelStyle={chartTooltipLabelStyle}
                         itemStyle={chartTooltipItemStyle}

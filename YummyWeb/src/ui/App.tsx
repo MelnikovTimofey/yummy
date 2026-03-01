@@ -154,6 +154,16 @@ export const App = () => {
     setActiveTab('rail-list');
   }, []);
 
+  const onGoHome = useCallback(() => {
+    setProfileMenuOpen(false);
+    if (!authState.tokens || !authState.user) {
+      setGuestTab('home');
+      return;
+    }
+    setSelectedRail(null);
+    setActiveTab('home');
+  }, [authState.tokens, authState.user]);
+
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
     if (!token) {
@@ -265,13 +275,13 @@ export const App = () => {
         <div className="phone-shell">
           <header className="topbar">
             <div className="topbar-main-row">
-              <div className="brand-wrap">
+              <button type="button" className="brand-wrap brand-home-btn" onClick={onGoHome}>
                 <span className="brand-logo">V</span>
                 <div>
                   <p className="brand">ВКУСНО</p>
                   <p className="tagline">Арома ателье</p>
                 </div>
-              </div>
+              </button>
               <nav className="topbar-nav" aria-label="Гостевая навигация">
                 <AppTabs
                   value={guestTab}
@@ -323,13 +333,13 @@ export const App = () => {
       <div className="phone-shell">
         <header className="topbar">
           <div className="topbar-main-row">
-            <div className="brand-wrap">
+            <button type="button" className="brand-wrap brand-home-btn" onClick={onGoHome}>
               <span className="brand-logo">V</span>
               <div>
                 <p className="brand">ВКУСНО</p>
                 <p className="tagline">Арома ателье</p>
               </div>
-            </div>
+            </button>
             <nav className="topbar-nav" aria-label="Основная навигация">
               <AppTabs
                 value={activeTab}

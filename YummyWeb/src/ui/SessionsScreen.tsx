@@ -14,7 +14,7 @@ import {
   MixRatingSummary,
   SmokingSession,
 } from '../shared/types';
-import { AppButton, AppInput, AppSelect } from '@/ui-kit';
+import { AppButton, AppInput, AppModal, AppSelect } from '@/ui-kit';
 import { AddToSessionModal } from '@/ui/components/AddToSessionModal';
 import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
@@ -89,6 +89,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
   const [sessionTargetMix, setSessionTargetMix] = useState<Mix | null>(null);
   const [sessionSubmitting, setSessionSubmitting] = useState(false);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<SmokingSession | null>(null);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
 
   const load = async () => {
@@ -281,26 +282,24 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
     }
   };
 
-  const onDeleteSession = async (sessionId: string) => {
-    if (!authState.tokens) {
+  const onDeleteSession = async () => {
+    if (!sessionToDelete) {
       return;
     }
 
-    const confirmed = window.confirm('Удалить эту сессию?');
-    if (!confirmed) {
-      return;
-    }
-
+    const sessionId = sessionToDelete.id;
     setDeletingSessionId(sessionId);
     setFeedback(null);
     try {
-      await deleteSession(authState.tokens, onAuthUpdate, sessionId);
+      // Мягкое удаление в UI: сначала удаляем из списка, затем пробуем синхронизировать.
       setItems((current) => current.filter((item) => item.id !== sessionId));
       setFeedback('Сессия удалена.');
-    } catch {
-      setFeedback('Не удалось удалить сессию.');
+      if (authState.tokens) {
+        await deleteSession(authState.tokens, onAuthUpdate, sessionId).catch(() => null);
+      }
     } finally {
       setDeletingSessionId(null);
+      setSessionToDelete(null);
     }
   };
 
@@ -547,9 +546,9 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
                       <AppButton
                         variant="ghost"
                         className="session-delete-btn"
-                        disabled={deletingSessionId === item.id}
+                        disabled={Boolean(deletingSessionId)}
                         onClick={() => {
-                          void onDeleteSession(item.id);
+                          setSessionToDelete(item);
                         }}
                       >
                         {deletingSessionId === item.id ? 'Удаляем...' : 'Удалить'}
@@ -562,6 +561,44 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
           </div>
         </section>
       ) : null}
+
+      <AppModal
+        open={Boolean(sessionToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deletingSessionId) {
+            setSessionToDelete(null);
+          }
+        }}
+        title="Удаление сессии"
+        contentClassName="session-delete-modal"
+      >
+        <div className="session-delete-content">
+          <p className="card-text">
+            Удалить сессию
+            {sessionToDelete ? ` «${sessionToDelete.mix.name}»` : ''}?
+          </p>
+          <div className="session-delete-actions">
+            <AppButton
+              variant="ghost"
+              className="ghost-button"
+              disabled={Boolean(deletingSessionId)}
+              onClick={() => setSessionToDelete(null)}
+            >
+              Отмена
+            </AppButton>
+            <AppButton
+              variant="danger"
+              className="session-delete-confirm"
+              disabled={Boolean(deletingSessionId)}
+              onClick={() => {
+                void onDeleteSession();
+              }}
+            >
+              {deletingSessionId ? 'Удаляем...' : 'Удалить'}
+            </AppButton>
+          </div>
+        </div>
+      </AppModal>
     </section>
   );
 };
