@@ -1,5 +1,33 @@
 ## Этот файл для человека
 
+Обновление от 1 марта 2026 (миграция `YummyWeb` на `shadcn/ui`, этапы 1-9):
+- Что сделано:
+  - подключены `Tailwind CSS` + `shadcn/ui` инфраструктура:
+    - `components.json`, `tailwind.config.ts`, `postcss.config.js`,
+    - алиас `@` в `tsconfig.json` и `vite.config.ts`,
+    - `src/lib/utils.ts` (`cn`).
+  - добавлены shadcn-примитивы в `src/components/ui/*`:
+    - `button`, `input`, `textarea`, `select`, `dialog`, `sheet`, `tabs`, `card`, `badge`, `scroll-area`, `separator`, `label`.
+  - добавлен продуктовый адаптерный слой `src/ui-kit/*`:
+    - `AppButton`, `AppInput`, `AppTextarea`, `AppSelect`, `AppModal`, `AppCard`, `AppBadge`, `AppTabs`.
+  - на `ui-kit` переведены экраны:
+    - `App`, `AuthScreen`, `CatalogScreen`, `FavoritesScreen`, `HomeScreen`, `MixesScreen`,
+    - `SessionsScreen`, `PreferencesPanel`, `ProfileScreen`, `RailScreen`, `RecommendationsScreen`.
+  - выполнена первичная очистка legacy CSS:
+    - удалены неиспользуемые классы `popup-*` и `desktop-tab*` из `YummyWeb/src/ui/styles.css`.
+  - обновлён `YummyWeb/README.md` (новый UI-стек, структура и правила UI-слоя).
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+- Коммиты по логическим блокам:
+  - `5bf6de5` — `chore(yummyweb): init tailwind and shadcn base`
+  - `b3479fd` — `feat(yummyweb): add brand theme tokens for shadcn`
+  - `a366e8e` — `feat(yummyweb): introduce ui-kit adapters over shadcn`
+  - `87eeda1` — `refactor(yummyweb): migrate app shell to ui-kit`
+  - `634966a` — `refactor(yummyweb): migrate forms and filters to ui-kit`
+  - `60c58e8` — `refactor(yummyweb): migrate cards rails and chips to ui-kit`
+  - `7f82647` — `refactor(yummyweb): migrate dormant screens to ui-kit`
+  - `00f2af7` — `chore(yummyweb): remove unused legacy css after shadcn migration`
+
 Обновление от 1 марта 2026 (Sprint 2, P2.2 — точечный фикс по рейлам и fallback имени):
 - Проблема:
   - правая стрелка рейла могла «пропадать», а листание выглядело как общий свайп;

@@ -18,6 +18,32 @@ npm run dev
 echo "VITE_API_BASE_URL=http://<ваш-host>:3001" > .env.local
 ```
 
+## UI-стек (актуально)
+
+- `Tailwind CSS` + `shadcn/ui` как базовые UI-примитивы.
+- `Radix UI` для headless-поведения (`Dialog`, `Select`, `Tabs`, `ScrollArea`).
+- Адаптерный слой `ui-kit` для стабильного продуктового API компонентов.
+
+Ключевые директории:
+
+- `src/components/ui/*` — shadcn-примитивы (низкоуровневый слой).
+- `src/ui-kit/*` — продуктовые обёртки (`AppButton`, `AppInput`, `AppSelect`, `AppModal`, `AppBadge`, `AppTabs`).
+- `src/ui/*` — экраны и сценарии приложения.
+- `src/lib/utils.ts` — утилита `cn(...)` для merge className.
+
+## Правила UI-слоя
+
+1. В экранах (`src/ui/*`) использовать компоненты из `src/ui-kit`, а не прямые HTML-контролы.
+2. Если нужен новый базовый примитив — сначала добавить в `src/components/ui`, затем обернуть в `src/ui-kit`.
+3. Текущий `src/ui/styles.css` работает в гибридном режиме: legacy-классы + новая токенизированная тема.
+
+## Проверка перед коммитом
+
+```bash
+cd YummyWeb
+npm run build
+```
+
 ## Целевой сценарий после обновления требований
 
 Этот документ фиксирует целевой UX-сценарий и продуктовые требования.  
