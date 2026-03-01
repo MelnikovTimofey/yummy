@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { verifyMagicLink } from '../shared/apiClient';
 import { loadAuthState, saveAuthState } from '../shared/authStorage';
+import {
+  loadStoredProfileName,
+  resolveProfileName,
+  saveStoredProfileName,
+} from '../shared/profileName';
 import { AuthState, HomeRail } from '../shared/types';
 import { AuthScreen } from './AuthScreen';
 import { CatalogScreen } from './CatalogScreen';
@@ -76,19 +81,19 @@ export const App = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [preferencesModalOpen, setPreferencesModalOpen] = useState(false);
+  const [profileNameModalOpen, setProfileNameModalOpen] = useState(false);
+  const [customProfileName, setCustomProfileName] = useState<string | null>(null);
+  const [profileNameDraft, setProfileNameDraft] = useState('');
   const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
   const syncingFromHistory = useRef(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
   const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
-  const profileName = useMemo(() => {
-    const email = authState.user?.email?.trim();
-    if (!email) {
-      return 'Профиль';
-    }
-    return email.split('@')[0] || 'Профиль';
-  }, [authState.user?.email]);
+  const profileName = useMemo(
+    () => resolveProfileName(authState.user, customProfileName),
+    [authState.user, customProfileName],
+  );
 
   const onAuthUpdate = useCallback((next: AuthState) => {
     setAuthState(next);
@@ -98,10 +103,19 @@ export const App = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!authState.user?.id) {
+      setCustomProfileName(null);
+      return;
+    }
+    setCustomProfileName(loadStoredProfileName(authState.user.id));
+  }, [authState.user?.id]);
+
   const onSignOut = useCallback(() => {
     onAuthUpdate({ tokens: null, user: null });
     setProfileMenuOpen(false);
     setPreferencesModalOpen(false);
+    setProfileNameModalOpen(false);
     setActiveTab('home');
   }, [onAuthUpdate]);
 
@@ -122,6 +136,21 @@ export const App = () => {
     setProfileMenuOpen(false);
     setActiveTab('mixes');
   }, []);
+
+  const openProfileNameModal = useCallback(() => {
+    setProfileNameDraft(profileName);
+    setProfileNameModalOpen(true);
+    setProfileMenuOpen(false);
+  }, [profileName]);
+
+  const onSaveProfileName = useCallback(() => {
+    if (!authState.user?.id) {
+      return;
+    }
+    const saved = saveStoredProfileName(authState.user.id, profileNameDraft);
+    setCustomProfileName(saved);
+    setProfileNameModalOpen(false);
+  }, [authState.user?.id, profileNameDraft]);
 
   const openRailList = useCallback((rail: HomeRail) => {
     setSelectedRail(rail);
@@ -364,6 +393,13 @@ export const App = () => {
                 <button
                   type="button"
                   className="profile-menu-item"
+                  onClick={openProfileNameModal}
+                >
+                  Изменить имя
+                </button>
+                <button
+                  type="button"
+                  className="profile-menu-item"
                   onClick={() => {
                     setPreferencesModalOpen(true);
                     setProfileMenuOpen(false);
@@ -436,6 +472,45 @@ export const App = () => {
           ) : null}
         </main>
       </div>
+
+      {profileNameModalOpen ? (
+        <div className="popup-backdrop" onClick={() => setProfileNameModalOpen(false)} role="presentation">
+          <article className="popup-card profile-name-popup" onClick={(event) => event.stopPropagation()}>
+            <div className="popup-head">
+              <h3 className="modal-title">Имя профиля</h3>
+              <button type="button" className="popup-close-btn" onClick={() => setProfileNameModalOpen(false)}>
+                Закрыть
+              </button>
+            </div>
+            <form
+              className="form profile-name-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSaveProfileName();
+              }}
+            >
+              <label htmlFor="profile-name-input">Имя</label>
+              <input
+                id="profile-name-input"
+                type="text"
+                value={profileNameDraft}
+                onChange={(event) => setProfileNameDraft(event.target.value)}
+                maxLength={40}
+                placeholder="Введите имя профиля"
+              />
+              <p className="hint">Если поле пустое, показывается имя из e-mail или «Мой профиль».</p>
+              <div className="profile-name-actions">
+                <button type="button" className="ghost-button profile-name-cancel" onClick={() => setProfileNameModalOpen(false)}>
+                  Отмена
+                </button>
+                <button type="submit" className="search-button profile-name-save">
+                  Сохранить
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+      ) : null}
 
       {preferencesModalOpen ? (
         <div className="popup-backdrop" onClick={() => setPreferencesModalOpen(false)} role="presentation">

@@ -174,8 +174,11 @@ h1 {
   padding: 0 14px;
   font-size: 12px;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
   cursor: pointer;
+}
+
+.header-auth-btn {
+  text-transform: uppercase;
 }
 
 .header-profile-btn {
@@ -183,6 +186,9 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  font-size: 13px;
 }
 
 .profile-menu {
@@ -585,6 +591,29 @@ h1 {
   width: min(100%, 860px);
   max-height: min(88dvh, 860px);
   overflow-y: auto;
+}
+
+.profile-name-popup {
+  width: min(100%, 520px);
+}
+
+.profile-name-form {
+  gap: 10px;
+}
+
+.profile-name-form .hint {
+  margin: 2px 0 0;
+}
+
+.profile-name-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.profile-name-cancel,
+.profile-name-save {
+  margin-top: 0;
 }
 
 .catalog-hero {
@@ -1482,23 +1511,38 @@ h1 {
   }
 
   .home-rail-carousel {
-    grid-template-columns: 44px 1fr 44px;
-    gap: 10px;
+    display: block;
+    position: relative;
   }
 
   .rail-nav-btn {
-    min-height: 56px;
+    position: absolute;
+    top: 50%;
+    z-index: 5;
+    width: 52px;
+    min-height: 96px;
+    border-radius: 14px;
+    border-color: #5a4b3c;
+    background: rgba(37, 31, 27, 0.88);
     font-size: 30px;
     opacity: 0;
     pointer-events: none;
-    transform: translateY(2px);
+    transform: translateY(-50%) scale(0.98);
+  }
+
+  .home-rail-carousel .rail-nav-btn:first-child {
+    left: 8px;
+  }
+
+  .home-rail-carousel .rail-nav-btn:last-child {
+    right: 8px;
   }
 
   .home-rail-carousel:hover .rail-nav-btn,
   .home-rail-carousel:focus-within .rail-nav-btn {
     opacity: 1;
     pointer-events: auto;
-    transform: translateY(0);
+    transform: translateY(-50%) scale(1);
   }
 
   .home-rail-carousel .rail-nav-btn:disabled {

@@ -6,6 +6,7 @@ export type AuthTokens = {
 export type ApiUser = {
   id: string;
   email: string;
+  name?: string | null;
 };
 
 export type Manufacturer = {
