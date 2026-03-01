@@ -667,13 +667,6 @@ h1 {
   font-weight: 600;
 }
 
-.mix-info-profile-tags {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 .mix-info-description {
   margin: 8px 0 0;
   font-size: 14px;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, getMixRatingSummaries, removeFavorite } from '../shared/apiClient';
 import { AuthState, FlavorProfile, HomeRail, Mix, MixRatingSummary } from '../shared/types';
-import { AppBadge, AppButton, AppModal } from '@/ui-kit';
+import { AppButton, AppModal } from '@/ui-kit';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type HomeScreenProps = {
@@ -230,14 +230,18 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
           key: profile,
           percent: 100 / Math.max(1, sanitizeProfiles(infoMix.flavorProfiles ?? []).length),
         }));
+    const summary = mixSummaries[infoMix.id];
+    const avgRating = summary?.avgRating;
 
     return {
       description: infoMix.description?.trim() ?? '',
       tobaccoRows,
       flavorRows: fallbackFlavors,
       profileRows: fallbackProfiles,
+      ratingAverage: avgRating === null || avgRating === undefined ? '—' : avgRating.toFixed(1).replace('.', ','),
+      ratingCount: summary ? String(summary.count) : '—',
     };
-  }, [infoMix]);
+  }, [infoMix, mixSummaries]);
 
   const onToggleFavorite = async (mixId: string) => {
     if (!authState.tokens) {
@@ -402,6 +406,20 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             <h3 className="mix-info-name">{infoMix.name}</h3>
 
             <section className="mix-info-section">
+              <p className="mix-info-section-title">Оценка</p>
+              <ul className="mix-info-list">
+                <li className="mix-info-row">
+                  <span className="mix-info-label">Средняя</span>
+                  <span className="mix-info-value">{infoMixDetails.ratingAverage}</span>
+                </li>
+                <li className="mix-info-row">
+                  <span className="mix-info-label">Количество оценок</span>
+                  <span className="mix-info-value">{infoMixDetails.ratingCount}</span>
+                </li>
+              </ul>
+            </section>
+
+            <section className="mix-info-section">
               <p className="mix-info-section-title">Табаки и пропорции</p>
               <ul className="mix-info-list">
                 {infoMixDetails.tobaccoRows.map((item) => (
@@ -432,23 +450,14 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             <section className="mix-info-section">
               <p className="mix-info-section-title">Вкусовые профили</p>
               {infoMixDetails.profileRows.length ? (
-                <>
-                  <ul className="mix-info-list">
-                    {infoMixDetails.profileRows.map((item) => (
-                      <li key={`${infoMix.id}:profile:${item.key}`} className="mix-info-row">
-                        <span className="mix-info-label">{PROFILE_LABELS[item.key]}</span>
-                        <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mix-info-profile-tags">
-                    {infoMixDetails.profileRows.map((item) => (
-                      <AppBadge key={`${infoMix.id}:profile-badge:${item.key}`} tone="muted" className="profile-tag">
-                        {PROFILE_LABELS[item.key]}
-                      </AppBadge>
-                    ))}
-                  </div>
-                </>
+                <ul className="mix-info-list">
+                  {infoMixDetails.profileRows.map((item) => (
+                    <li key={`${infoMix.id}:profile:${item.key}`} className="mix-info-row">
+                      <span className="mix-info-label">{PROFILE_LABELS[item.key]}</span>
+                      <span className="mix-info-value">{formatPercent(item.percent)}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <p className="mix-info-empty">Профили не указаны.</p>
               )}
