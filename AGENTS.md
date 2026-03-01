@@ -27,19 +27,8 @@
 ## Архитектурные принципы
 
 * KISS > premature optimization
-* Сначала baseline-алгоритмы, затем ML
 * UI, domain logic и data access разделены
 * Любая бизнес-логика тестируема
-
----
-
-## Работа с Codex (обязательные паттерны)
-
-MVP:
-* Mobile-first web (app-like UI/UX)
-* Frontend: web (TypeScript)
-* Backend: Node.js + Fastify + Prisma + Postgres
-* ML: Python (LightFM, offline)
 
 ## Definition of Done
 
@@ -63,6 +52,7 @@ MVP:
 
 1. Всегда обновляй NOTES.md, AGENTS.md и HANDOFF.md - если указания соотвествуют корректировкам этих файлов
 2. Для каталога табаков использовать разделение: `flavorProfiles` (категории), `flavors` (вкусы), `flavorTags` (только мета-теги).
+3. Делай коммиты после каждого логического блока
 
 
 ## Главное правило

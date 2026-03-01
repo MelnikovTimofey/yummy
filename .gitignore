@@ -17,3 +17,9 @@ backend/dist/
 # web local artifacts
 YummyWeb/node_modules/
 YummyWeb/dist/
+
+# local test artifacts
+.playwright-cli/
+output/
+tobaccos.json
+tobaccos.xml

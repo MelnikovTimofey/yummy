@@ -48,6 +48,12 @@ const PROFILE_OPTIONS: Array<{ value: '' | FlavorProfile; label: string }> = [
   { value: 'fresh', label: 'Свежий' },
   { value: 'dessert', label: 'Десертный' },
   { value: 'tobacco', label: 'Табачный' },
+  { value: 'minty', label: 'Мятный' },
+  { value: 'fruity', label: 'Фруктовый' },
+  { value: 'floral_herbal', label: 'Цветочно-травяной' },
+  { value: 'citrus', label: 'Цитрусовый' },
+  { value: 'berry', label: 'Ягодный' },
+  { value: 'perfume', label: 'Парфюм' },
 ];
 
 const PROFILE_COLORS: Record<FlavorProfile, string> = {
@@ -64,6 +70,14 @@ const PROFILE_COLORS: Record<FlavorProfile, string> = {
   berry: '#d65780',
   perfume: '#b58acb',
 };
+
+const PROFILE_VALUES = new Set<FlavorProfile>(Object.keys(PROFILE_COLORS) as FlavorProfile[]);
+
+const sanitizeProfiles = (profiles: unknown[]) =>
+  profiles
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter((value): value is FlavorProfile => PROFILE_VALUES.has(value as FlavorProfile));
 
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
@@ -460,7 +474,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const getFlavorPieData = (mix: Mix) => {
     const map = new Map<FlavorProfile, number>();
     for (const component of mix.components) {
-      const profiles = component.tobacco.flavorProfiles ?? [];
+      const profiles = sanitizeProfiles(component.tobacco.flavorProfiles ?? []);
       if (!profiles.length) {
         continue;
       }
