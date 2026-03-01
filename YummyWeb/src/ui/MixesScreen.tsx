@@ -16,7 +16,6 @@ import {
   createMix,
   createMixRating,
   createSession,
-  getManufacturers,
   getFavoriteMixIds,
   getMixById,
   getMixes,
@@ -28,7 +27,6 @@ import {
 import {
   AuthState,
   FlavorProfile,
-  Manufacturer,
   Mix,
   MixRating,
   MixRatingSummary,
@@ -36,6 +34,7 @@ import {
 } from '../shared/types';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { AppButton, AppInput, AppSelect, AppTextarea } from '@/ui-kit';
+import { AddToSessionModal } from '@/ui/components/AddToSessionModal';
 import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
@@ -56,8 +55,7 @@ type DraftComponent = {
   proportion: string;
 };
 
-const PROFILE_OPTIONS: Array<{ value: '' | FlavorProfile; label: string }> = [
-  { value: '', label: 'Все профили' },
+const PROFILE_OPTIONS: Array<{ value: FlavorProfile; label: string }> = [
   { value: 'sweet', label: 'Сладкий' },
   { value: 'sour', label: 'Кислый' },
   { value: 'spicy', label: 'Пряный' },
@@ -93,13 +91,6 @@ const SORT_OPTIONS = [
   { value: 'rating', label: 'По рейтингу' },
   { value: 'newest', label: 'По дате' },
 ] as const;
-const MIN_RATING_OPTIONS = [
-  { value: '1', label: '1+' },
-  { value: '2', label: '2+' },
-  { value: '3', label: '3+' },
-  { value: '4', label: '4+' },
-  { value: '5', label: '5' },
-] as const;
 
 const sanitizeProfiles = (profiles: unknown[]) =>
   profiles
@@ -107,23 +98,30 @@ const sanitizeProfiles = (profiles: unknown[]) =>
     .map((value) => value.trim())
     .filter((value): value is FlavorProfile => PROFILE_VALUES.has(value as FlavorProfile));
 
+const dedupe = <T,>(items: T[]) => Array.from(new Set(items));
+
+const normalizeValues = (items: string[]) =>
+  dedupe(
+    items
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => item.length > 0),
+  );
+
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
   const [items, setItems] = useState<Mix[]>([]);
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
   const [ratings, setRatings] = useState<Record<string, MixRating>>({});
   const [summaries, setSummaries] = useState<Record<string, MixRatingSummary>>({});
-  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
-  const [tobaccos, setTobaccos] = useState<Tobacco[]>([]);
   const [createTobaccos, setCreateTobaccos] = useState<Tobacco[]>([]);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
-  const [tagsDraft, setTagsDraft] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [manufacturerId, setManufacturerId] = useState('');
-  const [tobaccoId, setTobaccoId] = useState('');
-  const [profile, setProfile] = useState<'' | FlavorProfile>('');
-  const [minRating, setMinRating] = useState<'' | '1' | '2' | '3' | '4' | '5'>('');
-  const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('popularity');
+  const [selectedProfiles, setSelectedProfiles] = useState<FlavorProfile[]>([]);
+  const [profileSearchDraft, setProfileSearchDraft] = useState('');
+  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
+  const [flavorSearchDraft, setFlavorSearchDraft] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagSearchDraft, setTagSearchDraft] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('newest');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [view, setView] = useState<MixesView>('list');
   const [reloadSignal, setReloadSignal] = useState(0);
@@ -143,24 +141,9 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const [detailFeedback, setDetailFeedback] = useState<string | null>(null);
   const [detailActionPending, setDetailActionPending] = useState(false);
   const [infoMixId, setInfoMixId] = useState<string | null>(null);
+  const [sessionTargetMix, setSessionTargetMix] = useState<Mix | null>(null);
+  const [sessionSubmitting, setSessionSubmitting] = useState(false);
   const nextDraftComponentId = useRef(2);
-
-  useEffect(() => {
-    getManufacturers()
-      .then((response) => setManufacturers(response.items))
-      .catch(() => setManufacturers([]));
-  }, []);
-
-  useEffect(() => {
-    getTobaccos({ manufacturerId: manufacturerId || undefined, limit: 200 })
-      .then((response) => {
-        setTobaccos(response.items);
-        setTobaccoId((current) =>
-          current && !response.items.some((item) => item.id === current) ? '' : current,
-        );
-      })
-      .catch(() => setTobaccos([]));
-  }, [manufacturerId]);
 
   useEffect(() => {
     getTobaccos({ limit: 200 })
@@ -234,11 +217,9 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
         const mixesRes = await getMixes(authState.tokens, onAuthUpdate, {
           authorId: authState.user?.id,
           search: search || undefined,
-          manufacturerId: manufacturerId || undefined,
-          tobaccoId: tobaccoId || undefined,
-          profile: profile || undefined,
-          tags: tags.length ? tags : undefined,
-          minRating: minRating ? Number(minRating) : undefined,
+          profiles: selectedProfiles.length ? selectedProfiles : undefined,
+          flavors: selectedFlavors.length ? selectedFlavors : undefined,
+          tags: selectedTags.length ? selectedTags : undefined,
           sort: sortBy,
         });
 
@@ -253,15 +234,13 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [
     authState.tokens,
     authState.user?.id,
-    manufacturerId,
-    minRating,
     onAuthUpdate,
-    profile,
     reloadSignal,
     search,
+    selectedFlavors,
+    selectedProfiles,
+    selectedTags,
     sortBy,
-    tags,
-    tobaccoId,
   ]);
 
   useEffect(() => {
@@ -310,23 +289,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     () => sortedItems.find((item) => item.id === infoMixId) ?? null,
     [infoMixId, sortedItems],
   );
-  const sortedManufacturers = useMemo(
-    () => [...manufacturers].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })),
-    [manufacturers],
-  );
-  const sortedTobaccos = useMemo(
-    () =>
-      [...tobaccos].sort((a, b) => {
-        const byManufacturer = a.manufacturer.name.localeCompare(b.manufacturer.name, 'ru', {
-          sensitivity: 'base',
-        });
-        if (byManufacturer !== 0) {
-          return byManufacturer;
-        }
-        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
-      }),
-    [tobaccos],
-  );
   const sortedCreateTobaccos = useMemo(
     () =>
       [...createTobaccos].sort((a, b) => {
@@ -350,8 +312,43 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       .filter((item) => `${item.manufacturer.name} ${item.name}`.toLowerCase().includes(query))
       .slice(0, 80);
   }, [createTobaccoSearch, sortedCreateTobaccos]);
+  const flavorOptions = useMemo(() => {
+    const unique = new Set<string>();
+    createTobaccos.forEach((item) => {
+      normalizeValues(item.flavors ?? []).forEach((flavor) => unique.add(flavor));
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'ru'));
+  }, [createTobaccos]);
+  const tagOptions = useMemo(() => {
+    const unique = new Set<string>();
+    createTobaccos.forEach((item) => {
+      normalizeValues(item.flavorTags ?? []).forEach((tag) => unique.add(tag));
+    });
+    sortedItems.forEach((mix) => {
+      normalizeValues(mix.tags ?? []).forEach((tag) => unique.add(tag));
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'ru'));
+  }, [createTobaccos, sortedItems]);
+  const filteredProfileOptions = useMemo(() => {
+    const query = profileSearchDraft.trim().toLowerCase();
+    return PROFILE_OPTIONS.filter((option) =>
+      query ? option.label.toLowerCase().includes(query) : true,
+    );
+  }, [profileSearchDraft]);
+  const filteredFlavorOptions = useMemo(() => {
+    const query = flavorSearchDraft.trim().toLowerCase();
+    return flavorOptions.filter((flavor) => (query ? flavor.includes(query) : true));
+  }, [flavorOptions, flavorSearchDraft]);
+  const filteredTagOptions = useMemo(() => {
+    const query = tagSearchDraft.trim().toLowerCase();
+    return tagOptions.filter((tag) => (query ? tag.includes(query) : true));
+  }, [tagOptions, tagSearchDraft]);
   const hasFilters = Boolean(
-    search || manufacturerId || tobaccoId || profile || minRating || tags.length || sortBy !== 'popularity',
+    search ||
+      selectedProfiles.length ||
+      selectedFlavors.length ||
+      selectedTags.length ||
+      sortBy !== 'newest',
   );
   const totalProportion = useMemo(
     () =>
@@ -502,12 +499,36 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const onSubmitFilters = (event: FormEvent) => {
     event.preventDefault();
     setSearch(searchDraft.trim());
-    setTags(
-      tagsDraft
-        .split(',')
-        .map((item) => item.trim().toLowerCase())
-        .filter((item) => item.length > 0),
+  };
+
+  const toggleProfile = (profile: FlavorProfile) => {
+    setSelectedProfiles((current) =>
+      current.includes(profile) ? current.filter((item) => item !== profile) : [...current, profile],
     );
+  };
+
+  const toggleFlavor = (flavor: string) => {
+    setSelectedFlavors((current) =>
+      current.includes(flavor) ? current.filter((item) => item !== flavor) : [...current, flavor],
+    );
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((current) =>
+      current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag],
+    );
+  };
+
+  const resetFilters = () => {
+    setSearchDraft('');
+    setSearch('');
+    setSelectedProfiles([]);
+    setProfileSearchDraft('');
+    setSelectedFlavors([]);
+    setFlavorSearchDraft('');
+    setSelectedTags([]);
+    setTagSearchDraft('');
+    setSortBy('newest');
   };
 
   const getTobaccoPieData = (mix: Mix) =>
@@ -539,23 +560,33 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       .sort((a, b) => b.value - a.value);
   };
 
-  const onAddToSession = async (mixId: string) => {
+  const onConfirmAddToSession = async (payload: {
+    locationType: 'home' | 'lounge';
+    locationName?: string;
+  }) => {
     if (!authState.tokens) {
+      return;
+    }
+    if (!sessionTargetMix) {
       return;
     }
     setDetailActionPending(true);
     setDetailFeedback(null);
+    setSessionSubmitting(true);
     try {
       await createSession(authState.tokens, onAuthUpdate, {
-        mixId,
+        mixId: sessionTargetMix.id,
         date: new Date().toISOString(),
-        locationType: 'home',
+        locationType: payload.locationType,
+        locationName: payload.locationName,
       });
       setDetailFeedback('Микс добавлен в сессию курения.');
+      setSessionTargetMix(null);
     } catch {
       setDetailFeedback('Не удалось добавить микс в сессию.');
     } finally {
       setDetailActionPending(false);
+      setSessionSubmitting(false);
     }
   };
 
@@ -579,6 +610,26 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       setDetailActionPending(false);
     }
   };
+
+  const activeFilterLabels = useMemo(() => {
+    const labels: string[] = [];
+    if (search) {
+      labels.push(`Поиск: ${search}`);
+    }
+    if (selectedProfiles.length) {
+      labels.push(`Профили: ${selectedProfiles.length}`);
+    }
+    if (selectedFlavors.length) {
+      labels.push(`Вкусы: ${selectedFlavors.length}`);
+    }
+    if (selectedTags.length) {
+      labels.push(`Теги: ${selectedTags.length}`);
+    }
+    if (sortBy !== 'newest') {
+      labels.push(sortBy === 'rating' ? 'Сортировка: рейтинг' : 'Сортировка: популярность');
+    }
+    return labels;
+  }, [search, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
 
   if (view === 'detail') {
     return (
@@ -631,7 +682,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   variant="ghost"
                   className="mix-detail-session-btn"
                   disabled={detailActionPending}
-                  onClick={() => onAddToSession(activeMix.id)}
+                  onClick={() => setSessionTargetMix(activeMix)}
                 >
                   Добавить в сессию
                 </AppButton>
@@ -673,7 +724,22 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                   <p className="card-title">База микса</p>
                   <p className="mix-insight-value">{dominantTobacco}</p>
                 </article>
+                <article className="mix-insight-card">
+                  <p className="card-title">Доминирующий вкус</p>
+                  <p className="mix-insight-value">
+                    {activeMix.flavors?.[0] ?? activeMix.components[0]?.tobacco.flavors?.[0] ?? 'нет данных'}
+                  </p>
+                </article>
               </section>
+              {(activeMix.tags ?? []).length ? (
+                <section className="mix-detail-tags">
+                  {(activeMix.tags ?? []).slice(0, 8).map((tag) => (
+                    <span key={`${activeMix.id}:tag:${tag}`} className="profile-tag mix-detail-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </section>
+              ) : null}
               <div className="session-rating-row">
                 {[1, 2, 3, 4, 5].map((score) => (
                   <AppButton
@@ -762,6 +828,45 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
                     )}
                   </div>
                 </article>
+                <article className="mix-chart-card">
+                  <p className="card-title">Вкусы микса</p>
+                  <ChartContainer
+                    config={Object.fromEntries(
+                      (activeMix.flavors ?? activeMix.components.flatMap((component) => component.tobacco.flavors ?? []))
+                        .slice(0, 8)
+                        .map((flavor, index) => [
+                          `flavor-${index}`,
+                          { label: flavor, color: ['#4dd0e1', '#ffb74d', '#f06292', '#81c784', '#ba68c8', '#ff8a65'][index % 6] },
+                        ]),
+                    )}
+                    className="mix-chart-shell"
+                  >
+                    <BarChart
+                      data={(activeMix.flavors ?? activeMix.components.flatMap((component) => component.tobacco.flavors ?? []))
+                        .slice(0, 8)
+                        .map((flavor) => ({
+                          name: flavor,
+                          value: 1,
+                        }))}
+                      layout="vertical"
+                      margin={{ left: 4, right: 14, top: 8, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2f2a27" />
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={120}
+                        tick={{ fill: '#cbc0b5', fontSize: 11 }}
+                      />
+                      <Tooltip
+                        formatter={() => 'есть в составе'}
+                        contentStyle={{ borderColor: '#3a2f28', background: '#141210' }}
+                      />
+                      <Bar dataKey="value" radius={[8, 8, 8, 8]} fill="#4dd0e1" />
+                    </BarChart>
+                  </ChartContainer>
+                </article>
               </section>
               {detailFeedback ? <p className="hint">{detailFeedback}</p> : null}
               <p className="hint">
@@ -775,6 +880,17 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             })()}
           </article>
         ) : null}
+        <AddToSessionModal
+          open={Boolean(sessionTargetMix)}
+          mixName={sessionTargetMix?.name}
+          submitting={sessionSubmitting}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSessionTargetMix(null);
+            }
+          }}
+          onSubmit={onConfirmAddToSession}
+        />
       </section>
     );
   }
@@ -785,91 +901,97 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
         <AppButton variant="ghost" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
           Назад к моим миксам
         </AppButton>
-        <section className="card session-create-card">
+        <section className="card session-create-card mix-create-card">
           <p className="card-title">Создать микс</p>
-          <div className="filter-field">
-            <span>Название</span>
-            <AppInput
-              className="search-input"
-              value={createName}
-              onChange={(event) => setCreateName(event.target.value)}
-              placeholder="Например, Яблочный вечер"
-            />
-          </div>
-
-          <div className="filter-field">
-            <span>Описание</span>
-            <AppTextarea
-              className="search-input form-textarea"
-              value={createDescription}
-              onChange={(event) => setCreateDescription(event.target.value)}
-              placeholder="Кратко про вкус и крепость"
-            />
-          </div>
-
-          <div className="filter-field">
-            <span>Быстрый поиск табака</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={createTobaccoSearch}
-              onChange={(event) => setCreateTobaccoSearch(event.target.value)}
-              placeholder="Введите бренд или вкус"
-            />
-            <div className="filter-scrollbox mix-create-search-results">
-              {filteredCreateTobaccos.map((tobacco) => (
-                <AppButton
-                  key={`quick:${tobacco.id}`}
-                  variant="ghost"
-                  className={`filter-option ${createComponents.some((item) => item.tobaccoId === tobacco.id) ? 'active' : ''}`}
-                  onClick={() => onQuickAddTobacco(tobacco.id)}
-                >
-                  {tobacco.manufacturer.name} · {tobacco.name}
-                </AppButton>
-              ))}
-            </div>
-          </div>
-
-          <div className="mix-draft-list">
-            {createComponents.map((item) => (
-              <div key={item.id} className="mix-draft-row">
-                <AppSelect
-                  value={item.tobaccoId}
-                  onChange={(next) => onChangeComponentRow(item.id, { tobaccoId: next })}
-                  options={sortedCreateTobaccos.map((tobacco) => ({
-                    value: tobacco.id,
-                    label: `${tobacco.manufacturer.name} · ${tobacco.name}`,
-                  }))}
-                  emptyLabel="Выберите табак"
-                />
+          <div className="mix-create-grid">
+            <div className="mix-create-main">
+              <div className="filter-field">
+                <span>Название</span>
                 <AppInput
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={item.proportion}
-                  onChange={(event) => onChangeComponentRow(item.id, { proportion: event.target.value })}
-                  placeholder="%"
+                  className="search-input"
+                  value={createName}
+                  onChange={(event) => setCreateName(event.target.value)}
+                  placeholder="Например, Яблочный вечер"
                 />
-                <AppButton
-                  variant="ghost"
-                  className="score-btn"
-                  onClick={() => onRemoveComponentRow(item.id)}
-                  disabled={createComponents.length === 1}
-                >
-                  ×
-                </AppButton>
               </div>
-            ))}
-          </div>
 
-          <div className="mix-create-actions">
-            <AppButton variant="ghost" className="ghost-button mix-draft-add" onClick={onAddComponentRow}>
-              Добавить компонент
-            </AppButton>
-            <p className="hint">
-              Сумма пропорций: <b>{totalProportion}%</b>
-              {hasDuplicateTobaccos ? ' · есть повторяющиеся табаки' : ''}
-            </p>
+              <div className="filter-field">
+                <span>Описание</span>
+                <AppTextarea
+                  className="search-input form-textarea"
+                  value={createDescription}
+                  onChange={(event) => setCreateDescription(event.target.value)}
+                  placeholder="Кратко про вкус и крепость"
+                />
+              </div>
+
+              <div className="mix-draft-list">
+                {createComponents.map((item) => (
+                  <div key={item.id} className="mix-draft-row">
+                    <AppSelect
+                      value={item.tobaccoId}
+                      onChange={(next) => onChangeComponentRow(item.id, { tobaccoId: next })}
+                      options={sortedCreateTobaccos.map((tobacco) => ({
+                        value: tobacco.id,
+                        label: `${tobacco.manufacturer.name} · ${tobacco.name}`,
+                      }))}
+                      emptyLabel="Выберите табак"
+                    />
+                    <AppInput
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={item.proportion}
+                      onChange={(event) => onChangeComponentRow(item.id, { proportion: event.target.value })}
+                      placeholder="%"
+                    />
+                    <AppButton
+                      variant="ghost"
+                      className="score-btn"
+                      onClick={() => onRemoveComponentRow(item.id)}
+                      disabled={createComponents.length === 1}
+                    >
+                      ×
+                    </AppButton>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mix-create-actions">
+                <AppButton variant="ghost" className="ghost-button mix-draft-add" onClick={onAddComponentRow}>
+                  Добавить компонент
+                </AppButton>
+                <p className="hint">
+                  Сумма пропорций: <b>{totalProportion}%</b>
+                  {hasDuplicateTobaccos ? ' · есть повторяющиеся табаки' : ''}
+                </p>
+              </div>
+            </div>
+
+            <aside className="mix-create-side">
+              <div className="filter-field">
+                <span>Быстрый поиск табака</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={createTobaccoSearch}
+                  onChange={(event) => setCreateTobaccoSearch(event.target.value)}
+                  placeholder="Введите бренд или вкус"
+                />
+                <div className="filter-scrollbox mix-create-search-results">
+                  {filteredCreateTobaccos.map((tobacco) => (
+                    <AppButton
+                      key={`quick:${tobacco.id}`}
+                      variant="ghost"
+                      className={`filter-option ${createComponents.some((item) => item.tobaccoId === tobacco.id) ? 'active' : ''}`}
+                      onClick={() => onQuickAddTobacco(tobacco.id)}
+                    >
+                      {tobacco.manufacturer.name} · {tobacco.name}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
+            </aside>
           </div>
 
           <AppButton
@@ -890,118 +1012,174 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
   return (
     <section className="catalog-layout">
-      <form className="catalog-controls cinema-controls" onSubmit={onSubmitFilters}>
-        <div className="search-row">
-          <AppInput
-            className="search-input"
-            type="search"
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            placeholder="Поиск по названию и описанию"
-          />
-          <AppButton type="submit" className="search-button">Найти</AppButton>
-        </div>
-
-        <AppButton className="search-button mix-create-trigger" onClick={onOpenCreateScreen}>
-          Создать микс
-        </AppButton>
-
-        <label className="filter-field">
-          <span>Сортировка</span>
-          <AppSelect
-            value={sortBy}
-            onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
-            options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
-          />
-        </label>
-
-        <div className="filters-row">
-          <label className="filter-field">
-            <span>Мин. оценка</span>
-            <AppSelect
-              value={minRating}
-              onChange={(next) => setMinRating(next as '' | '1' | '2' | '3' | '4' | '5')}
-              options={MIN_RATING_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
-              emptyLabel="Любая"
-            />
-          </label>
-          <label className="filter-field">
-            <span>Теги (через запятую)</span>
+      <section className="catalog-body">
+        <form className="catalog-controls cinema-controls" onSubmit={onSubmitFilters}>
+          <div className="search-row">
             <AppInput
               className="search-input"
-              value={tagsDraft}
-              onChange={(event) => setTagsDraft(event.target.value)}
-              placeholder="ягодный, свежий"
+              type="search"
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              placeholder="Поиск по названию и описанию"
             />
-          </label>
-        </div>
+            <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+          </div>
 
-        <div className="filters-row">
+          <AppButton className="search-button mix-create-trigger" onClick={onOpenCreateScreen}>
+            Создать микс
+          </AppButton>
+
+          <div className="catalog-tools-row">
+            <div className="catalog-active-filters" aria-live="polite">
+              {activeFilterLabels.length ? activeFilterLabels.map((label) => (
+                <span key={label} className="filter-pill">{label}</span>
+              )) : <span className="filter-pill muted">Фильтры не заданы</span>}
+            </div>
+            <AppButton
+              variant="ghost"
+              className="ghost-button catalog-reset-btn"
+              onClick={resetFilters}
+              disabled={!hasFilters}
+            >
+              Сбросить фильтры
+            </AppButton>
+          </div>
+
           <label className="filter-field">
-            <span>Бренд</span>
+            <span>Сортировка</span>
             <AppSelect
-              value={manufacturerId}
-              onChange={setManufacturerId}
-              options={sortedManufacturers.map((item) => ({ value: item.id, label: item.name }))}
-              emptyLabel="Все бренды"
+              value={sortBy}
+              onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+              options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
             />
           </label>
 
-          <label className="filter-field">
-            <span>Табак</span>
-            <AppSelect
-              value={tobaccoId}
-              onChange={setTobaccoId}
-              options={sortedTobaccos.map((item) => ({ value: item.id, label: `${item.manufacturer.name} · ${item.name}` }))}
-              emptyLabel="Любой табак"
+          <div className="filter-field">
+            <span>Теги (можно несколько)</span>
+            <AppInput
+              className="search-input"
+              type="search"
+              value={tagSearchDraft}
+              onChange={(event) => setTagSearchDraft(event.target.value)}
+              placeholder="Поиск по тегам"
             />
-          </label>
-        </div>
+            <div className="filter-scrollbox">
+              <AppButton
+                variant="ghost"
+                className={`filter-option ${selectedTags.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedTags([])}
+              >
+                Любые теги
+              </AppButton>
+              {filteredTagOptions.map((tag) => (
+                <AppButton
+                  key={tag}
+                  variant="ghost"
+                  className={`filter-option ${selectedTags.includes(tag) ? 'active' : ''}`}
+                  onClick={() => toggleTag(tag)}
+                >
+                  {tag}
+                </AppButton>
+              ))}
+            </div>
+          </div>
 
-        <div className="filters-row">
-          <label className="filter-field">
-            <span>Профиль</span>
-            <AppSelect
-              value={profile}
-              onChange={(next) => setProfile(next as '' | FlavorProfile)}
-              options={PROFILE_OPTIONS.filter((item) => item.value !== '').map((item) => ({ value: item.value, label: item.label }))}
-              emptyLabel="Все профили"
+          <div className="filter-field">
+            <span>Профили вкуса (можно несколько)</span>
+            <AppInput
+              className="search-input"
+              type="search"
+              value={profileSearchDraft}
+              onChange={(event) => setProfileSearchDraft(event.target.value)}
+              placeholder="Поиск профиля"
             />
-          </label>
-        </div>
-      </form>
+            <div className="filter-scrollbox">
+              <AppButton
+                variant="ghost"
+                className={`filter-option ${selectedProfiles.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedProfiles([])}
+              >
+                Любой профиль
+              </AppButton>
+              {filteredProfileOptions.map((option) => (
+                <AppButton
+                  key={option.value}
+                  variant="ghost"
+                  className={`filter-option ${selectedProfiles.includes(option.value) ? 'active' : ''}`}
+                  onClick={() => toggleProfile(option.value)}
+                >
+                  {option.label}
+                </AppButton>
+              ))}
+            </div>
+          </div>
 
-      <section className="card catalog-summary">
-        <p className="card-title">Мои миксы</p>
-        <p className="card-text">
-          {status === 'loading' ? 'Обновляем список...' : `${sortedItems.length} миксов`}
-          {hasFilters ? ' · фильтры активны' : ''}
-        </p>
-      </section>
+          <div className="filter-field">
+            <span>Вкусы (можно несколько)</span>
+            <AppInput
+              className="search-input"
+              type="search"
+              value={flavorSearchDraft}
+              onChange={(event) => setFlavorSearchDraft(event.target.value)}
+              placeholder="Поиск вкуса"
+            />
+            <div className="filter-scrollbox">
+              <AppButton
+                variant="ghost"
+                className={`filter-option ${selectedFlavors.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedFlavors([])}
+              >
+                Любой вкус
+              </AppButton>
+              {filteredFlavorOptions.map((flavor) => (
+                <AppButton
+                  key={flavor}
+                  variant="ghost"
+                  className={`filter-option ${selectedFlavors.includes(flavor) ? 'active' : ''}`}
+                  onClick={() => toggleFlavor(flavor)}
+                >
+                  {flavor}
+                </AppButton>
+              ))}
+            </div>
+          </div>
+        </form>
 
-      {status === 'error' ? <p className="screen-status error">Не удалось загрузить миксы.</p> : null}
+        <section className="catalog-results">
+          <section className="card catalog-summary">
+            <p className="card-title">Мои миксы</p>
+            <p className="card-text">
+              {status === 'loading' ? 'Обновляем список...' : `${sortedItems.length} миксов`}
+              {hasFilters ? ' · фильтры активны' : ''}
+            </p>
+          </section>
 
-      {status !== 'error' && status !== 'loading' && !sortedItems.length ? (
-        <p className="screen-status">По выбранным фильтрам миксы не найдены.</p>
-      ) : null}
+          {status === 'error' ? <p className="screen-status error">Не удалось загрузить миксы.</p> : null}
 
-      <section className="list-grid cinema-grid">
-        {sortedItems.map((mix) => (
-          <MixPreviewCard
-            key={mix.id}
-            mix={mix}
-            size="grid"
-            onOpen={(currentMix) => openMixDetail(currentMix.id)}
-            onOpenInfo={(currentMix) => setInfoMixId(currentMix.id)}
-            onToggleFavorite={(currentMix) => {
-              void toggleFavorite(currentMix.id);
-            }}
-            isFavorite={Boolean(favoriteMixIds[mix.id])}
-            favoriteGuest={!authState.tokens}
-            favoriteTitle={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
-            footerText={`Моя: ${ratings[mix.id]?.rating ?? 'нет'} · Средняя: ${summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
-          />
-        ))}
+          {status !== 'error' && status !== 'loading' && !sortedItems.length ? (
+            <p className="screen-status">По выбранным фильтрам миксы не найдены.</p>
+          ) : null}
+
+          <section className="list-grid cinema-grid">
+            {sortedItems.map((mix) => (
+              <MixPreviewCard
+                key={mix.id}
+                mix={mix}
+                size="grid"
+                onOpen={(currentMix) => openMixDetail(currentMix.id)}
+                onOpenInfo={(currentMix) => setInfoMixId(currentMix.id)}
+                onToggleFavorite={(currentMix) => {
+                  void toggleFavorite(currentMix.id);
+                }}
+                isFavorite={Boolean(favoriteMixIds[mix.id])}
+                favoriteGuest={!authState.tokens}
+                favoriteTitle={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
+                ratingTagText={`★ ${summaries[mix.id]?.avgRating?.toFixed(1).replace('.', ',') ?? '—'}`}
+                footerText={`Моя: ${ratings[mix.id]?.rating ?? 'нет'}`}
+              />
+            ))}
+          </section>
+        </section>
       </section>
       <MixInfoModal
         mix={infoMix}
@@ -1011,6 +1189,30 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             setInfoMixId(null);
           }
         }}
+        action={
+          infoMix ? (
+            <AppButton
+              className="search-button session-info-action"
+              onClick={() => {
+                setSessionTargetMix(infoMix);
+                setInfoMixId(null);
+              }}
+            >
+              Добавить в сессию
+            </AppButton>
+          ) : undefined
+        }
+      />
+      <AddToSessionModal
+        open={Boolean(sessionTargetMix)}
+        mixName={sessionTargetMix?.name}
+        submitting={sessionSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSessionTargetMix(null);
+          }
+        }}
+        onSubmit={onConfirmAddToSession}
       />
     </section>
   );
