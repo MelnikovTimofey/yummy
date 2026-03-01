@@ -739,3 +739,20 @@ Product-rules (зафиксировано):
 
 Проверка:
 - `cd YummyWeb && npm run build` — `OK`.
+
+Обновление от 2 марта 2026 (Итерация K — UX фиксы фильтров/удаления/хедера):
+- `YummyWeb/src/ui/styles.css`:
+  - стилизован системный крестик очистки в `search`-инпутах (`::-webkit-search-cancel-button`) под продуктовую палитру.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - tooltip диаграммы `Состав по табакам` теперь показывает не только долю, но и название табака.
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - удаление сессии переведено с системного `window.confirm` на продуктовый `AppModal`;
+  - убрано сообщение `Не удалось удалить сессию`: используется мягкое удаление в UI с best-effort синхронизацией на backend.
+- `YummyWeb/src/ui/App.tsx`:
+  - клик по логотипу/названию в хедере (гость и авторизованный режим) ведёт на `Главную`.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили для `brand-home-btn`, `session-delete-modal`, `session-delete-actions`;
+  - форма создания микса поднята ближе к кнопке `Назад к моим миксам` (`mixes-create-layout`).
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.

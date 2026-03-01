@@ -771,3 +771,22 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 
 Проверка:
 - `cd YummyWeb && npm run build` — `OK`.
+
+## 1.5) Итерация K (2 марта 2026) — финальные UX правки по тесту
+
+Сделано:
+- `YummyWeb/src/ui/styles.css`:
+  - стилизован крестик очистки в поисковых фильтрах (`::-webkit-search-cancel-button`).
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - tooltip `Состав по табакам` показывает `название табака + долю`.
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - удаление сессии переведено на кастомный `AppModal`;
+  - убрано состояние с текстом `Не удалось удалить сессию` (мягкое удаление в UI + фоновая попытка синхронизации).
+- `YummyWeb/src/ui/App.tsx`:
+  - бренд-блок в хедере (`логотип + название`) стал кликабельным переходом на `Главную`.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены стили `brand-home-btn`, `session-delete-modal`, `session-delete-content`, `session-delete-actions`;
+  - уменьшен вертикальный зазор формы создания микса (`mixes-create-layout`) для визуального выравнивания с кнопкой `Назад к моим миксам`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
