@@ -20,7 +20,7 @@ import { AppButton, AppInput, AppModal, AppTabs } from '@/ui-kit';
 type TabKey = 'home' | 'sessions' | 'catalog' | 'favorites' | 'mixes' | 'rail-list';
 
 type MixesOpenRequest = {
-  mode: 'detail' | 'create';
+  mode: 'detail' | 'create' | 'list';
   mixId?: string;
   nonce: number;
 };
@@ -125,9 +125,9 @@ export const App = () => {
     setActiveTab('mixes');
   }, []);
 
-  const openCreateMix = useCallback(() => {
+  const openMyMixes = useCallback(() => {
     setMixesOpenRequest({
-      mode: 'create',
+      mode: 'list',
       nonce: Date.now(),
     });
     setProfileMenuOpen(false);
@@ -375,9 +375,9 @@ export const App = () => {
                   <AppButton
                     variant="ghost"
                     className="profile-menu-item"
-                    onClick={openCreateMix}
+                    onClick={openMyMixes}
                   >
-                    Создать микс
+                    Мои миксы
                   </AppButton>
                   <AppButton
                     variant="ghost"

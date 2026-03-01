@@ -629,3 +629,21 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 
 Ограничение:
 - для реального удаления сессий backend должен поддерживать `DELETE /sessions/:id`.
+
+## 0.9) Итерация E (1 марта 2026) — Мои миксы + удобное создание
+
+Сделано:
+- `YummyWeb/src/ui/App.tsx`:
+  - из меню профиля открывается экран `Мои миксы`.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - list-режим переведён на `Мои миксы` (по `authorId` текущего пользователя);
+  - убран фильтр `Источник`;
+  - из create-режима добавлена кнопка `Назад к моим миксам`;
+  - в форме создания добавлен быстрый поиск табаков и блок быстрого добавления компонентов.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлен `mix-create-search-results`.
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright smoke (skill, mock-auth/mock API):
+  - `output/playwright/iter-e/my-mixes-after-e.png`.

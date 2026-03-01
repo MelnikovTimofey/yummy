@@ -1044,6 +1044,10 @@ select:focus-visible {
   margin-top: 4px;
 }
 
+.mix-create-search-results {
+  max-height: 220px;
+}
+
 .mix-draft-row {
   display: grid;
   grid-template-columns: 1fr 78px 40px;

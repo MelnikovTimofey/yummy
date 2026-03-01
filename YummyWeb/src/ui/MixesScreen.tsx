@@ -30,7 +30,7 @@ type MixesScreenProps = {
   authState: AuthState;
   onAuthUpdate: (next: AuthState) => void;
   openMixRequest?: {
-    mode: 'detail' | 'create';
+    mode: 'detail' | 'create' | 'list';
     mixId?: string;
     nonce: number;
   } | null;
@@ -102,7 +102,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [tobaccos, setTobaccos] = useState<Tobacco[]>([]);
   const [createTobaccos, setCreateTobaccos] = useState<Tobacco[]>([]);
-  const [ownOnly, setOwnOnly] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [tagsDraft, setTagsDraft] = useState('');
@@ -122,6 +121,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
   const [createName, setCreateName] = useState('');
   const [createDescription, setCreateDescription] = useState('');
+  const [createTobaccoSearch, setCreateTobaccoSearch] = useState('');
   const [createComponents, setCreateComponents] = useState<DraftComponent[]>([
     { id: 1, tobaccoId: '', proportion: '100' },
   ]);
@@ -218,7 +218,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       setStatus('loading');
       try {
         const mixesRes = await getMixes(authState.tokens, onAuthUpdate, {
-          authorId: ownOnly ? authState.user?.id : undefined,
+          authorId: authState.user?.id,
           search: search || undefined,
           manufacturerId: manufacturerId || undefined,
           tobaccoId: tobaccoId || undefined,
@@ -242,7 +242,6 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     manufacturerId,
     minRating,
     onAuthUpdate,
-    ownOnly,
     profile,
     reloadSignal,
     search,
@@ -284,6 +283,11 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
     if (openMixRequest.mode === 'create') {
       onOpenCreateScreen();
+      return;
+    }
+
+    if (openMixRequest.mode === 'list') {
+      setView('list');
     }
   }, [openMixRequest?.mode, openMixRequest?.mixId, openMixRequest?.nonce]);
 
@@ -318,8 +322,18 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       }),
     [createTobaccos],
   );
+  const filteredCreateTobaccos = useMemo(() => {
+    const query = createTobaccoSearch.trim().toLowerCase();
+    if (!query) {
+      return sortedCreateTobaccos.slice(0, 80);
+    }
+
+    return sortedCreateTobaccos
+      .filter((item) => `${item.manufacturer.name} ${item.name}`.toLowerCase().includes(query))
+      .slice(0, 80);
+  }, [createTobaccoSearch, sortedCreateTobaccos]);
   const hasFilters = Boolean(
-    ownOnly || search || manufacturerId || tobaccoId || profile || minRating || tags.length || sortBy !== 'popularity',
+    search || manufacturerId || tobaccoId || profile || minRating || tags.length || sortBy !== 'popularity',
   );
   const totalProportion = useMemo(
     () =>
@@ -357,6 +371,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const resetCreateForm = () => {
     setCreateName('');
     setCreateDescription('');
+    setCreateTobaccoSearch('');
     setCreateComponents([{ id: 1, tobaccoId: '', proportion: '100' }]);
     nextDraftComponentId.current = 2;
   };
@@ -373,6 +388,19 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       ...current,
       { id: nextDraftComponentId.current++, tobaccoId: '', proportion: '0' },
     ]);
+  };
+
+  const onQuickAddTobacco = (tobaccoId: string) => {
+    setCreateComponents((current) => {
+      if (current.some((item) => item.tobaccoId === tobaccoId)) {
+        return current;
+      }
+
+      return [
+        ...current,
+        { id: nextDraftComponentId.current++, tobaccoId, proportion: '0' },
+      ];
+    });
   };
 
   const onRemoveComponentRow = (id: number) => {
@@ -692,6 +720,9 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   if (view === 'create') {
     return (
       <section className="sessions-layout">
+        <AppButton variant="ghost" className="ghost-button screen-back-btn" onClick={() => setView('list')}>
+          Назад к моим миксам
+        </AppButton>
         <section className="card session-create-card">
           <p className="card-title">Создать микс</p>
           <div className="filter-field">
@@ -712,6 +743,29 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               onChange={(event) => setCreateDescription(event.target.value)}
               placeholder="Кратко про вкус и крепость"
             />
+          </div>
+
+          <div className="filter-field">
+            <span>Быстрый поиск табака</span>
+            <AppInput
+              className="search-input"
+              type="search"
+              value={createTobaccoSearch}
+              onChange={(event) => setCreateTobaccoSearch(event.target.value)}
+              placeholder="Введите бренд или вкус"
+            />
+            <div className="filter-scrollbox mix-create-search-results">
+              {filteredCreateTobaccos.map((tobacco) => (
+                <AppButton
+                  key={`quick:${tobacco.id}`}
+                  variant="ghost"
+                  className={`filter-option ${createComponents.some((item) => item.tobaccoId === tobacco.id) ? 'active' : ''}`}
+                  onClick={() => onQuickAddTobacco(tobacco.id)}
+                >
+                  {tobacco.manufacturer.name} · {tobacco.name}
+                </AppButton>
+              ))}
+            </div>
           </div>
 
           <div className="mix-draft-list">
@@ -790,28 +844,14 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
           Создать микс
         </AppButton>
 
-        <div className="filters-row">
-          <label className="filter-field">
-            <span>Источник</span>
-            <AppSelect
-              value={ownOnly ? 'mine' : 'all'}
-              onChange={(next) => setOwnOnly(next === 'mine')}
-              options={[
-                { value: 'all', label: 'Все миксы' },
-                { value: 'mine', label: 'Только мои' },
-              ]}
-            />
-          </label>
-
-          <label className="filter-field">
-            <span>Сортировка</span>
-            <AppSelect
-              value={sortBy}
-              onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
-              options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
-            />
-          </label>
-        </div>
+        <label className="filter-field">
+          <span>Сортировка</span>
+          <AppSelect
+            value={sortBy}
+            onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+            options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+          />
+        </label>
 
         <div className="filters-row">
           <label className="filter-field">
@@ -870,7 +910,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
       </form>
 
       <section className="card catalog-summary">
-        <p className="card-title">Каталог миксов</p>
+        <p className="card-title">Мои миксы</p>
         <p className="card-text">
           {status === 'loading' ? 'Обновляем список...' : `${sortedItems.length} миксов`}
           {hasFilters ? ' · фильтры активны' : ''}
