@@ -580,7 +580,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
           <div className="session-delete-actions">
             <AppButton
               variant="ghost"
-              className="ghost-button"
+              className="session-delete-cancel"
               disabled={Boolean(deletingSessionId)}
               onClick={() => setSessionToDelete(null)}
             >
