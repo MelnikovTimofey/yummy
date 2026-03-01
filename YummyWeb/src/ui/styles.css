@@ -168,6 +168,16 @@ h1 {
   padding-top: 12px;
 }
 
+.catalog-body {
+  display: grid;
+  gap: 12px;
+}
+
+.catalog-results {
+  display: grid;
+  gap: 12px;
+}
+
 .sessions-layout {
   display: grid;
   gap: 12px;
@@ -538,6 +548,18 @@ h1 {
 }
 
 .catalog-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-selected-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1411,9 +1433,24 @@ h1 {
     font-size: 15px;
   }
 
+  .catalog-body {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: start;
+    gap: 16px;
+  }
+
+  .catalog-results {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
   .catalog-controls {
+    grid-column: 2;
+    grid-row: 1;
     padding: 18px;
     gap: 12px;
+    position: sticky;
+    top: 8px;
   }
 
   .catalog-tools-row {

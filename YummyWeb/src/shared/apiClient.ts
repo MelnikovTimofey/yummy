@@ -107,6 +107,8 @@ export const getMixes = (
     tobaccoIds?: string[];
     profile?: FlavorProfile;
     profiles?: FlavorProfile[];
+    flavor?: string;
+    flavors?: string[];
     tag?: string;
     tags?: string[];
     minRating?: number;
@@ -286,6 +288,8 @@ export const getFavorites = (
     tobaccoIds?: string[];
     profile?: FlavorProfile;
     profiles?: FlavorProfile[];
+    flavor?: string;
+    flavors?: string[];
     tag?: string;
     tags?: string[];
     minRating?: number;
