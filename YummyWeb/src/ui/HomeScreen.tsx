@@ -45,6 +45,25 @@ const getProfileTags = (mix: Mix) => {
   );
 };
 
+const getFlavorLabels = (mix: Mix) => {
+  const fromMix = dedupe(
+    (mix.flavors ?? [])
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0),
+  );
+  if (fromMix.length) {
+    return fromMix;
+  }
+
+  return dedupe(
+    mix.components.flatMap((component) =>
+      (component.tobacco.flavors ?? [])
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
+  );
+};
+
 export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: HomeScreenProps) => {
   const [rails, setRails] = useState<HomeRail[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -131,14 +150,6 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
     return [...recommendations, ...favorites, ...rest];
   }, [rails]);
   const visibleRails = useMemo(() => orderedRails.filter((rail) => rail.items.length > 0), [orderedRails]);
-  const favoriteRailHasItems = useMemo(
-    () => orderedRails.some((rail) => rail.type === 'favorites' && rail.items.length > 0),
-    [orderedRails],
-  );
-  const myMixesRailHasItems = useMemo(
-    () => orderedRails.some((rail) => rail.type === 'my-mixes' && rail.items.length > 0),
-    [orderedRails],
-  );
 
   const getMixTone = (mix: Mix) => {
     const palette = ['#a56e3f', '#7a5b46', '#556a5f', '#6e4f45', '#5f5869', '#8f704d'];
@@ -193,12 +204,6 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
       {!authState.tokens ? (
         <p className="hint home-guest-note">В гостевом режиме часть действий доступна после входа: избранное, сессии и персональные рекомендации.</p>
       ) : null}
-      {authState.tokens && !favoriteRailHasItems ? (
-        <p className="hint">Рейл «Избранное» появится после добавления хотя бы одного микса в избранное.</p>
-      ) : null}
-      {authState.tokens && !myMixesRailHasItems ? (
-        <p className="hint">Рейл «Мои миксы» появится после создания первого пользовательского микса.</p>
-      ) : null}
 
       {!visibleRails.length && status === 'idle' ? <p className="screen-status">Нет доступных подборок.</p> : null}
 
@@ -242,6 +247,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             >
               {rail.items.map((mix) => {
                 const profileTags = getProfileTags(mix);
+                const flavorLabels = getFlavorLabels(mix);
                 const isMixClickable = Boolean(onOpenMix);
                 return (
                   <article
@@ -291,10 +297,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                         </div>
                       </div>
                       <p className="home-item-meta">
-                        {mix.components
-                          .slice(0, 3)
-                          .map((component) => component.tobacco.name)
-                          .join(' · ')}
+                        {flavorLabels.length ? flavorLabels.slice(0, 3).join(' · ') : 'Вкусы не указаны'}
                       </p>
                       <div className="profile-tags home-item-tags">
                         {profileTags.slice(0, 3).map((tag) => (

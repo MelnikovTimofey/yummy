@@ -41,25 +41,22 @@ const TABS: Tab[] = [
     subtitle: 'Глобальные фильтры: поиск, профили, теги, табаки, производители и рейтинг.',
   },
   {
-    key: 'profile',
-    label: 'Профиль',
-    title: 'Профиль',
-    subtitle: 'Настройка предпочтений и быстрый доступ к сессиям курения.',
-    inTabbar: false,
+    key: 'favorites',
+    label: 'Избранное',
+    title: 'Избранное',
+    subtitle: 'Сохранённые миксы с фильтрами и быстрыми действиями.',
   },
   {
     key: 'sessions',
     label: 'Сессии',
     title: 'Сессии курения',
     subtitle: 'Добавляйте сессии и сохраняйте контекст: где и когда.',
-    inTabbar: false,
   },
   {
-    key: 'favorites',
-    label: 'Избранное',
-    title: 'Избранное',
-    subtitle: 'Сохранённые миксы с фильтрами и быстрыми действиями.',
-    inTabbar: false,
+    key: 'profile',
+    label: 'Профиль',
+    title: 'Профиль',
+    subtitle: 'Настройка предпочтений и быстрый доступ к сессиям курения.',
   },
   {
     key: 'mixes',
@@ -237,15 +234,17 @@ export const App = () => {
             </button>
           </nav>
           <main className="content">
-            {guestTab === 'home' ? (
-              <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
-            ) : (
-              <CatalogScreen authState={authState} />
-            )}
-            <section className="card">
+            <section className="card guest-auth-card">
               <p className="card-title">Авторизация</p>
-              <p className="card-text">Войдите, чтобы получить персональные рекомендации и свои миксы.</p>
+              <p className="card-text">Войдите, чтобы открывать карточки, сохранять избранное и получать персональные рекомендации.</p>
               <AuthScreen onAuthUpdate={onAuthUpdate} />
+            </section>
+            <section className="guest-main-panel">
+              {guestTab === 'home' ? (
+                <HomeScreen authState={authState} onAuthUpdate={onAuthUpdate} />
+              ) : (
+                <CatalogScreen authState={authState} />
+              )}
             </section>
           </main>
         </div>
@@ -266,9 +265,6 @@ export const App = () => {
               <p className="tagline">Арома ателье</p>
             </div>
           </div>
-          <button type="button" className="profile-entry-btn" onClick={() => setActiveTab('profile')}>
-            Профиль
-          </button>
           <h1>{tab.title}</h1>
           <p className="subtitle">{tab.subtitle}</p>
           <p className="session-email">{authState.user.email}</p>
@@ -321,8 +317,6 @@ export const App = () => {
               onAuthUpdate={onAuthUpdate}
               onPreferencesSaved={onPreferencesSaved}
               onSignOut={onSignOut}
-              onOpenFavorites={() => setActiveTab('favorites')}
-              onOpenSessions={() => setActiveTab('sessions')}
               onOpenAddMix={openCreateMix}
             />
           ) : null}

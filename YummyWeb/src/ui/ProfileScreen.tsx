@@ -11,8 +11,6 @@ type ProfileScreenProps = {
   onAuthUpdate: (next: AuthState) => void;
   onPreferencesSaved: () => void;
   onSignOut: () => void;
-  onOpenFavorites: () => void;
-  onOpenSessions: () => void;
   onOpenAddMix: () => void;
 };
 
@@ -36,8 +34,6 @@ export const ProfileScreen = ({
   onAuthUpdate,
   onPreferencesSaved,
   onSignOut,
-  onOpenFavorites,
-  onOpenSessions,
   onOpenAddMix,
 }: ProfileScreenProps) => {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
@@ -145,12 +141,6 @@ export const ProfileScreen = ({
             onClick={() => setPreferencesOpen((current) => !current)}
           >
             {preferencesOpen ? 'Скрыть предпочтения' : 'Предпочтения'}
-          </button>
-          <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenFavorites}>
-            Избранное
-          </button>
-          <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenSessions}>
-            Сессии курения
           </button>
           <button type="button" className="ghost-button profile-nav-btn" onClick={onOpenAddMix}>
             Добавить микс
