@@ -506,3 +506,31 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 1. Добавить артефакт-отчёт (JSON) с метриками импорта в `services/catalog-updater/cache/hookahportal/`.
 2. Добавить флаг soft-validation для миксов, где сумма пропорций != 100 (чтобы не терять контент полностью).
 3. Определить стратегию хранения/чистки кеша в docker-окружении (volume и ретеншн).
+
+## 0.2) Обновление клиента (1 марта 2026) — UX/UI хедера и навигации
+
+Сделано:
+- В `YummyWeb/src/ui/App.tsx` пересобран header:
+  - title экрана и tabs теперь в одной строке,
+  - длинные subtitle-описания удалены,
+  - отдельный ряд `desktop-tabbar` убран, навигация встроена в topbar.
+- В `YummyWeb/src/ui/styles.css` обновлён layout shell/header:
+  - `phone-shell` использует `height` (не `min-height`),
+  - скролл ограничен только `main.content`,
+  - добавлены стили `topbar-main-row`, `topbar-nav-row`, `topbar-title`, `topbar-nav`.
+- Убраны дубли заголовков в контенте:
+  - `YummyWeb/src/ui/CatalogScreen.tsx` (удалён `catalog-hero`),
+  - `YummyWeb/src/ui/RailScreen.tsx` (удалён `catalog-hero`).
+- В `YummyWeb/src/ui-kit/AppTabs.tsx` добавлены параметры `listClassName` и `stretch` для компактного tabbar в header.
+
+Проверка:
+- `cd YummyWeb && npm run build` — успешно.
+- Playwright before/after:
+  - `output/playwright/before/`
+  - `output/playwright/after/`
+
+Результат по фидбэку:
+- header и меню закреплены относительно scroll-контента;
+- дубли title на экранах каталога/рейла убраны;
+- лишний служебный текст в topbar убран;
+- title и разделы меню на одной линии.

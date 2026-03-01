@@ -507,3 +507,24 @@ Product-rules (зафиксировано):
 - Артефакты проверки:
   - before: `output/playwright/sprint2-fix-before/`
   - after: `output/playwright/sprint2-fix-after/`
+
+Обновление от 1 марта 2026 (UX/UI хедера и навигации, all screens):
+- `YummyWeb / App.tsx`:
+  - убран длинный subtitle в topbar;
+  - title экрана и tab-меню объединены в одну строку в рамках `topbar`;
+  - удалён отдельный блок `desktop-tabbar` (навигация встроена в header).
+- `YummyWeb / styles.css`:
+  - `phone-shell` переведён на фиксированную высоту viewport (`height` вместо `min-height`);
+  - контейнер контента оставлен как единственная scroll-область (`main.content`);
+  - обновлены стили `topbar` и tabs для layout `title + menu` в одну линию;
+  - удалены стили `catalog-hero` и устаревшего отдельного tabbar.
+- `YummyWeb / CatalogScreen.tsx`, `RailScreen.tsx`:
+  - убраны дублирующие hero-заголовки, повторявшие title из topbar.
+- `YummyWeb / ui-kit/AppTabs.tsx`:
+  - добавлены `listClassName` и `stretch`, чтобы использовать компактные tabs в header-строке.
+- Проверка:
+  - `npm run build` — успешно;
+  - сняты before/after-скриншоты через Playwright.
+- Артефакты:
+  - before: `output/playwright/before/`
+  - after: `output/playwright/after/`
