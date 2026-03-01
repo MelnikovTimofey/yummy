@@ -324,17 +324,14 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
               <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
             </div>
 
-            <div className="catalog-tools-row">
-              <p className="hint">Нажмите карточку или `info`, чтобы добавить микс в сессию через попап.</p>
-              <AppButton
-                variant="ghost"
-                className="ghost-button catalog-reset-btn"
-                onClick={resetFilters}
-                disabled={!hasFilters}
-              >
-                Сбросить фильтры
-              </AppButton>
-            </div>
+            <AppButton
+              variant="ghost"
+              className="ghost-button catalog-reset-btn session-compose-reset-btn"
+              onClick={resetFilters}
+              disabled={!hasFilters}
+            >
+              Сбросить фильтры
+            </AppButton>
 
             <label className="filter-field">
               <span>Сортировка</span>
@@ -444,6 +441,10 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
             <section className="card catalog-summary">
               <p className="card-title">Выбор микса для сессии</p>
               <p className="card-text">{status === 'loading' ? 'Обновляем список...' : `${filteredMixes.length} миксов`}</p>
+            </section>
+            <section className="card session-compose-note">
+              <p className="card-title">Как добавить микс</p>
+              <p className="card-text">Выберите карточку микса или откройте «Описание» и нажмите «Добавить в сессию».</p>
             </section>
 
             {status === 'loading' ? <p className="screen-status">Загрузка миксов...</p> : null}
