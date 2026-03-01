@@ -657,3 +657,38 @@ Product-rules (зафиксировано):
   - Playwright smoke (skill, mock-auth/mock API):
     - переход `Профиль -> Мои миксы -> карточка микса`,
     - артефакт: `output/playwright/iter-f/mix-detail-charts-after-f.png`.
+
+Обновление от 1 марта 2026 (Итерация G — доп. UX/UI правки карточек, сессий и моих миксов):
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - унифицировано содержимое карточек: рейтинг переведён в `rating tag` формат;
+  - добавлены теги микса как отдельные чипы (`mix-topic-tag`) вместе с профилями;
+  - выровнен размер иконки избранного относительно action-кнопки.
+- `YummyWeb/src/ui/components/AddToSessionModal.tsx`:
+  - добавлен единый popup добавления в сессию (Дом/Лаунж + кнопка `Добавить в сессию`).
+- `YummyWeb/src/ui/RecommendationsScreen.tsx`:
+  - добавление в сессию переведено на общий popup `AddToSessionModal`;
+  - карточки приведены к единому контракту рейтинга (tag + footer с личной оценкой).
+- `YummyWeb/src/ui/CatalogScreen.tsx`, `YummyWeb/src/ui/FavoritesScreen.tsx`:
+  - выравнен формат рейтинга на карточках (tag), без расхождения с главной.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - list `Мои миксы` переделан в структуру как у избранного/каталога (`filters слева`, `карточки справа` на desktop);
+  - фильтры в `Мои миксы`: `теги + вкусы + профили`, поиск и сортировка;
+  - в detail добавлены: `Доминирующий вкус`, теги микса и диаграмма `Вкусы микса`;
+  - добавление в сессию из detail и из `info` popup переведено на единый popup;
+  - форма создания микса переложена в более стабильный grid-лейаут (исправление кривой верстки).
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - список сессий переведён в компактный табличный формат;
+  - уменьшена визуальная масса CTA (`Добавить сессию`);
+  - выбор микса в compose переделан как каталог: фильтры `теги + вкусы + профили`, поиск и сортировка;
+  - добавление в сессию из карточки и из `info` выполняется через popup с выбором места.
+- `YummyWeb/src/ui/styles.css`:
+  - добавлены/обновлены стили для таблицы сессий, popup добавления в сессию, create-grid, тегов detail и улучшенного скролла фильтров (`overscroll-behavior`, `touch-action`).
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright UI-check (skill, guest-flow + модалка + проверка скролла фильтра):
+  - `output/playwright/home-guest.png`
+  - `output/playwright/catalog-filters.png`
+  - `output/playwright/catalog-info-modal.png`
+  - `output/playwright/catalog-card-element.png`
+  - проверка независимого скролла фильтра через `eval`: `page scroll` остаётся `0`, `filter-scrollbox` прокручивается до `boxMax`.

@@ -674,3 +674,46 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 
 Нюанс:
 - после добавления `recharts` Vite предупреждает о крупном JS chunk (`>500kB`); это не блокирует сборку, но требует последующей оптимизации (`manualChunks`/lazy loading).
+
+## 1.1) Итерация G (1 марта 2026) — доп. пакет UX/UI + тесты/проверки
+
+Сделано:
+- `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+  - карточки унифицированы по рейтингу (`rating tag`),
+  - добавлены теги микса отдельными чипами,
+  - размер иконки избранного выровнен относительно кнопки.
+- `YummyWeb/src/ui/components/AddToSessionModal.tsx`:
+  - единый popup добавления в сессию с выбором локации (`Дом/Лаунж`) и подтверждением.
+- `YummyWeb/src/ui/RecommendationsScreen.tsx`:
+  - добавление в сессию переведено на общий popup;
+  - рейтинг приведён к единому отображению (tag + личная оценка отдельно).
+- `YummyWeb/src/ui/CatalogScreen.tsx`, `YummyWeb/src/ui/FavoritesScreen.tsx`:
+  - выравнен формат рейтинга карточек под единый контракт с главной.
+- `YummyWeb/src/ui/MixesScreen.tsx`:
+  - экран `Мои миксы` приведён к макету как в избранном (`фильтры слева, карточки справа`);
+  - фильтрация `теги + вкусы + профили`, плюс поиск/сортировка;
+  - detail: добавлены `Доминирующий вкус`, теги и диаграмма `Вкусы микса`;
+  - добавление в сессию из detail и из popup `info` — через единый popup;
+  - форма создания микса переложена на более стабильный grid-лейаут.
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - список сессий переделан в компактную таблицу;
+  - CTA уменьшен (`Добавить сессию`);
+  - выбор микса в compose переделан как в каталоге: `теги + вкусы + профили`, поиск, сортировка;
+  - добавление в сессию из карточки и из `info` выполняется через popup с выбором места.
+- `YummyWeb/src/ui/styles.css`:
+  - обновлены стили action-иконок, таблицы сессий, detail-тегов, create-grid;
+  - фильтр-скролл усилен (`overscroll-behavior: contain`, `touch-action: pan-y`).
+
+Проверка:
+- `cd YummyWeb && npm run build` — `OK`.
+- Playwright UI-check (skill):
+  - `output/playwright/home-guest.png`
+  - `output/playwright/catalog-filters.png`
+  - `output/playwright/catalog-info-modal.png`
+  - `output/playwright/catalog-card-element.png`
+- Отдельная проверка скролла фильтра через `eval`:
+  - `pageBefore=0`, `pageAfter=0`, `boxAfter=boxMax` — прокрутка фильтров независима от прокрутки страницы.
+
+Коммиты:
+- `ed3bf60` — `feat(yummyweb): unify mix cards and add session modal flow`
+- `b7dd3fe` — `feat(yummyweb): revamp sessions and my-mixes UX layouts`
