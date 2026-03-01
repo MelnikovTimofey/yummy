@@ -11,7 +11,8 @@ const normalizeProfileNameMap = (raw: unknown): ProfileNameMap => {
   }
 
   const entries = Object.entries(raw as Record<string, unknown>).filter(
-    ([key, value]) => typeof key === 'string' && typeof value === 'string',
+    (entry): entry is [string, string] =>
+      typeof entry[0] === 'string' && typeof entry[1] === 'string',
   );
 
   return entries.reduce<ProfileNameMap>((acc, [key, value]) => {
