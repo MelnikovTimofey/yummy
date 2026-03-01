@@ -28,7 +28,6 @@ type MixesOpenRequest = {
 type Tab = {
   key: TabKey;
   label: string;
-  title: string;
   inTabbar?: boolean;
 };
 
@@ -36,33 +35,27 @@ const TABS: Tab[] = [
   {
     key: 'home',
     label: 'Главная',
-    title: 'Главная',
   },
   {
     key: 'catalog',
     label: 'Каталог',
-    title: 'Каталог миксов',
   },
   {
     key: 'favorites',
     label: 'Избранное',
-    title: 'Избранное',
   },
   {
     key: 'sessions',
     label: 'Сессии',
-    title: 'Сессии курения',
   },
   {
     key: 'mixes',
     label: 'Миксы',
-    title: 'Карточка микса',
     inTabbar: false,
   },
   {
     key: 'rail-list',
     label: 'Рейл',
-    title: 'Элементы рейла',
     inTabbar: false,
   },
 ];
@@ -82,7 +75,6 @@ export const App = () => {
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
   const syncingFromHistory = useRef(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
-  const tab = useMemo(() => TABS.find((item) => item.key === activeTab) ?? TABS[0], [activeTab]);
   const visibleTabs = useMemo(() => TABS.filter((item) => item.inTabbar !== false), []);
   const guestTabItems = useMemo(
     () => [
@@ -266,8 +258,6 @@ export const App = () => {
   }
 
   if (!authState.tokens || !authState.user) {
-    const guestTitle = guestTab === 'home' ? 'Главная' : 'Каталог миксов';
-
     return (
       <div className="app-bg">
         <div className="halo-top" />
@@ -293,7 +283,6 @@ export const App = () => {
               </div>
             </div>
             <div className="topbar-nav-row">
-              <h1 className="topbar-title">{guestTitle}</h1>
               <nav className="topbar-nav" aria-label="Гостевая навигация">
                 <AppTabs
                   value={guestTab}
@@ -411,7 +400,6 @@ export const App = () => {
             </div>
           </div>
           <div className="topbar-nav-row">
-            <h1 className="topbar-title">{tab.title}</h1>
             <nav className="topbar-nav" aria-label="Основная навигация">
               <AppTabs
                 value={activeTab}

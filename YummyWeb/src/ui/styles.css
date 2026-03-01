@@ -89,14 +89,14 @@ select:focus-visible {
 }
 
 .topbar {
-  padding: calc(14px + var(--safe-top)) 20px 10px;
+  padding: calc(12px + var(--safe-top)) 20px 8px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(22, 19, 17, 0.95) 0%, rgba(22, 19, 17, 0.8) 100%);
   position: sticky;
   top: 0;
   z-index: 20;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .topbar-main-row {
@@ -107,32 +107,11 @@ select:focus-visible {
 }
 
 .topbar-nav-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   min-width: 0;
-}
-
-.topbar-title {
-  margin: 0;
-  flex: 0 1 48%;
-  min-width: 0;
-  max-width: 48%;
-  font-size: 23px;
-  line-height: 1.2;
-  color: var(--accent);
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  font-family: "Times New Roman", serif;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .topbar-nav {
-  flex: 1 1 auto;
-  max-width: min(100%, 780px);
-  min-width: 0;
+  width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1550,10 +1529,6 @@ select:focus-visible {
     border-right: 0;
   }
 
-  .topbar-title {
-    font-size: 20px;
-  }
-
   .tab {
     font-size: 11px;
   }
@@ -1600,8 +1575,8 @@ select:focus-visible {
   }
 
   .topbar {
-    padding: 16px 24px;
-    gap: 14px;
+    padding: 14px 24px 10px;
+    gap: 10px;
   }
 
   .topbar-main-row {
@@ -1613,20 +1588,8 @@ select:focus-visible {
     letter-spacing: 4px;
   }
 
-  .topbar-title {
-    margin: 0;
-    flex-basis: 40%;
-    max-width: 40%;
-    font-size: 30px;
-    letter-spacing: 1.6px;
-  }
-
   .topbar-right {
     margin-left: auto;
-  }
-
-  .topbar-nav {
-    max-width: min(100%, 980px);
   }
 
   .content {
