@@ -23,6 +23,7 @@ import {
   Tobacco,
 } from '../shared/types';
 import { AppButton, AppInput, AppSelect, AppTextarea } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type MixesScreenProps = {
   authState: AuthState;
@@ -883,48 +884,19 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
       <section className="list-grid cinema-grid">
         {sortedItems.map((mix) => (
-          <article
+          <MixPreviewCard
             key={mix.id}
-            className="mix-poster mix-poster-clickable"
-            style={{
-              background: `linear-gradient(130deg, ${getMixTone(mix)}88 0%, #171717 60%, #101010 100%)`,
+            mix={mix}
+            size="grid"
+            onOpen={(currentMix) => openMixDetail(currentMix.id)}
+            onToggleFavorite={(currentMix) => {
+              void toggleFavorite(currentMix.id);
             }}
-            onClick={() => openMixDetail(mix.id)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                openMixDetail(mix.id);
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="mix-poster-overlay">
-              <div className="mix-header">
-                <h3>{mix.name}</h3>
-                <span className="chip">{mix.components.length} комп.</span>
-              </div>
-              <p className="mix-description">{mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-              <p className="mix-ratings">
-                Моя: <b>{ratings[mix.id]?.rating ?? 'нет'}</b>
-                {' · '}
-                Средняя: <b>{summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
-              </p>
-              <div className="mix-actions cinema-actions icon-action-row">
-                <AppButton
-                  variant="icon"
-                  className={`icon-btn fav-icon ${favoriteMixIds[mix.id] ? 'active' : ''}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void toggleFavorite(mix.id);
-                  }}
-                  aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
-                >
-                  {favoriteMixIds[mix.id] ? '♥' : '♡'}
-                </AppButton>
-              </div>
-            </div>
-          </article>
+            isFavorite={Boolean(favoriteMixIds[mix.id])}
+            favoriteGuest={!authState.tokens}
+            favoriteTitle={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
+            footerText={`Моя: ${ratings[mix.id]?.rating ?? 'нет'} · Средняя: ${summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+          />
         ))}
       </section>
     </section>

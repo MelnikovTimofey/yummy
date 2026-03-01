@@ -12,6 +12,7 @@ import {
   SmokingSession,
 } from '../shared/types';
 import { AppButton, AppInput } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type SessionsScreenProps = {
   authState: AuthState;
@@ -149,22 +150,16 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
 
         <section className="list-grid">
           {filteredMixes.map((mix) => (
-            <article key={mix.id} className="card mix-card">
-              <div className="mix-header">
-                <h3>{mix.name}</h3>
-                <span className="chip">{mix.components.length} комп.</span>
-              </div>
-              <p className="mix-description">{mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-              <AppButton
-                className="search-button session-select-mix-btn"
-                onClick={() => {
-                  setSelectedMixId(mix.id);
-                  setView('create');
-                }}
-              >
-                Выбрать микс
-              </AppButton>
-            </article>
+            <MixPreviewCard
+              key={mix.id}
+              mix={mix}
+              size="grid"
+              onOpen={(currentMix) => {
+                setSelectedMixId(currentMix.id);
+                setView('create');
+              }}
+              footerText="Нажмите карточку, чтобы выбрать микс"
+            />
           ))}
         </section>
       </section>

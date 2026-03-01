@@ -1,5 +1,27 @@
 # HANDOFF — Yummy
 
+## 1.5) Унификация карточек миксов между экранами (1 марта 2026)
+
+- Требование:
+  - сделать одинаковый внешний вид карточек в каталоге, избранном, на странице рейла и остальных списках.
+- Изменение:
+  - добавлен единый компонент карточки:
+    - `YummyWeb/src/ui/components/MixPreviewCard.tsx`;
+    - общая разметка для заголовка, actions, мета-текста, тегов профилей и footer-строки;
+    - встроена единая логика профилей по пропорциям компонентов.
+  - на компонент переведены:
+    - `YummyWeb/src/ui/HomeScreen.tsx`,
+    - `YummyWeb/src/ui/CatalogScreen.tsx`,
+    - `YummyWeb/src/ui/FavoritesScreen.tsx`,
+    - `YummyWeb/src/ui/RailScreen.tsx`,
+    - `YummyWeb/src/ui/MixesScreen.tsx`,
+    - `YummyWeb/src/ui/SessionsScreen.tsx` (экран выбора микса),
+    - `YummyWeb/src/ui/RecommendationsScreen.tsx` (preview внутри карточки рекомендации).
+  - обновлены стили:
+    - `YummyWeb/src/ui/styles.css` — введены универсальные классы `mix-unified-*`, size-варианты `rail/grid/fluid` и совместимость с текущими action-классами.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.4) Рефакторинг кнопок `info` и `избранное` на карточке (1 марта 2026)
 
 - Проблема:

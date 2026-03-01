@@ -17,6 +17,7 @@ import {
   Tobacco,
 } from '../shared/types';
 import { AppButton, AppInput, AppSelect } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type FavoritesScreenProps = {
   authState: AuthState;
@@ -306,45 +307,17 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
 
       <section className="list-grid cinema-grid">
         {items.map((favorite) => (
-          <article
+          <MixPreviewCard
             key={favorite.id}
-            className="mix-poster favorite-poster mix-poster-clickable"
-            onClick={() => onOpenMix(favorite.mix.id)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onOpenMix(favorite.mix.id);
-              }
+            mix={favorite.mix}
+            size="grid"
+            onOpen={(currentMix) => onOpenMix(currentMix.id)}
+            onToggleFavorite={(currentMix) => {
+              void onRemove(currentMix.id);
             }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="mix-poster-overlay">
-              <div className="mix-header">
-                <h3>{favorite.mix.name}</h3>
-                <span className="chip">{favorite.mix.components.length} комп.</span>
-              </div>
-              <p className="mix-description">{favorite.mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-              <p className="mix-ratings">
-                Моя: <b>{ratings[favorite.mix.id]?.rating ?? 'нет'}</b>
-                {' · '}
-                Средняя: <b>{summaries[favorite.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
-              </p>
-              <div className="mix-actions cinema-actions icon-action-row">
-                <AppButton
-                  variant="icon"
-                  className="icon-btn fav-icon active"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void onRemove(favorite.mix.id);
-                  }}
-                  aria-label="Убрать из избранного"
-                >
-                  ♥
-                </AppButton>
-              </div>
-            </div>
-          </article>
+            isFavorite
+            footerText={`Моя: ${ratings[favorite.mix.id]?.rating ?? 'нет'} · Средняя: ${summaries[favorite.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+          />
         ))}
       </section>
     </section>

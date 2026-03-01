@@ -1,102 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Info } from 'lucide-react';
 import { addFavorite, getFavoriteMixIds, getHomeRails, getMixes, removeFavorite } from '../shared/apiClient';
-import { AuthState, FlavorProfile, HomeRail, Mix } from '../shared/types';
-import { AppBadge, AppButton, AppModal } from '@/ui-kit';
+import { AuthState, HomeRail, Mix } from '../shared/types';
+import { AppButton, AppModal } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type HomeScreenProps = {
   authState: AuthState;
   onAuthUpdate: (next: AuthState) => void;
   onOpenMix?: (mixId: string) => void;
   onOpenRail?: (rail: HomeRail) => void;
-};
-
-const PROFILE_LABELS: Record<FlavorProfile, string> = {
-  sweet: 'Сладкий',
-  sour: 'Кислый',
-  spicy: 'Пряный',
-  fresh: 'Свежий',
-  dessert: 'Десертный',
-  tobacco: 'Табачный',
-  minty: 'Мятный',
-  fruity: 'Фруктовый',
-  floral_herbal: 'Цветочно-травяной',
-  citrus: 'Цитрусовый',
-  berry: 'Ягодный',
-  perfume: 'Парфюм',
-};
-
-const dedupe = <T,>(items: T[]) => Array.from(new Set(items));
-const PROFILE_VALUES = new Set<FlavorProfile>(Object.keys(PROFILE_LABELS) as FlavorProfile[]);
-
-const sanitizeProfiles = (profiles: unknown[]) =>
-  dedupe(
-    profiles
-      .filter((value): value is string => typeof value === 'string')
-      .map((value) => value.trim())
-      .filter((value): value is FlavorProfile => PROFILE_VALUES.has(value as FlavorProfile)),
-  );
-
-const getProfileTags = (mix: Mix) => {
-  const weightedProfiles = new Map<FlavorProfile, number>();
-  const firstSeenOrder = new Map<FlavorProfile, number>();
-  let seenCounter = 0;
-
-  for (const component of mix.components) {
-    const profiles = sanitizeProfiles(component.tobacco.flavorProfiles ?? []);
-    if (!profiles.length) {
-      continue;
-    }
-
-    const profileShare = component.proportion / profiles.length;
-    for (const profile of profiles) {
-      weightedProfiles.set(profile, (weightedProfiles.get(profile) ?? 0) + profileShare);
-      if (!firstSeenOrder.has(profile)) {
-        firstSeenOrder.set(profile, seenCounter);
-        seenCounter += 1;
-      }
-    }
-  }
-
-  if (weightedProfiles.size) {
-    const sortedByProportion = Array.from(weightedProfiles.keys()).sort((left, right) => {
-      const diff = (weightedProfiles.get(right) ?? 0) - (weightedProfiles.get(left) ?? 0);
-      if (Math.abs(diff) > 0.001) {
-        return diff;
-      }
-      return (firstSeenOrder.get(left) ?? 0) - (firstSeenOrder.get(right) ?? 0);
-    });
-
-    const directProfiles = sanitizeProfiles(mix.flavorProfiles ?? []);
-    const restFromDirect = directProfiles.filter((profile) => !weightedProfiles.has(profile));
-    return [...sortedByProportion, ...restFromDirect];
-  }
-
-  const direct = sanitizeProfiles(mix.flavorProfiles ?? []);
-  if (direct.length) {
-    return direct;
-  }
-
-  return [];
-};
-
-const getFlavorLabels = (mix: Mix) => {
-  const fromMix = dedupe(
-    (mix.flavors ?? [])
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0),
-  );
-  if (fromMix.length) {
-    return fromMix;
-  }
-
-  return dedupe(
-    mix.components.flatMap((component) =>
-      (component.tobacco.flavors ?? [])
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0),
-    ),
-  );
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -212,13 +124,6 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
   }, [rails]);
   const visibleRails = useMemo(() => orderedRails.filter((rail) => rail.items.length > 0), [orderedRails]);
 
-  const getMixTone = (mix: Mix) => {
-    const palette = ['#a56e3f', '#7a5b46', '#556a5f', '#6e4f45', '#5f5869', '#8f704d'];
-    const source = `${mix.name}:${mix.id}`;
-    const hash = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return palette[hash % palette.length];
-  };
-
   const onToggleFavorite = async (mixId: string) => {
     if (!authState.tokens) {
       setFeedback('Войдите, чтобы управлять избранным.');
@@ -253,7 +158,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
       return;
     }
 
-    const cards = Array.from(row.querySelectorAll<HTMLElement>('.home-item'));
+    const cards = Array.from(row.querySelectorAll<HTMLElement>('.home-rail-card'));
     if (!cards.length) {
       return;
     }
@@ -328,85 +233,24 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                   railRefs.current[railRefKey] = node;
                 }}
               >
-                {rail.items.map((mix) => {
-                  const profileTags = getProfileTags(mix);
-                  const flavorLabels = getFlavorLabels(mix);
-                  const flavorText = flavorLabels.length
-                    ? flavorLabels.slice(0, 3).join(' · ')
-                    : profileTags.length
-                      ? profileTags.slice(0, 2).map((tag) => PROFILE_LABELS[tag].toLowerCase()).join(' · ')
-                      : 'вкус не указан';
-                  const visibleProfileTags = profileTags.length > 2 ? profileTags.slice(0, 1) : profileTags.slice(0, 2);
-                  const hiddenProfileTagsCount = profileTags.length - visibleProfileTags.length;
-                  const isMixClickable = Boolean(onOpenMix);
-                  return (
-                    <article
-                      key={`${rail.id}:${mix.id}`}
-                      className={`home-item ${isMixClickable ? 'interactive' : 'static'}`}
-                      onClick={isMixClickable ? () => onOpenMix?.(mix.id) : undefined}
-                      onKeyDown={isMixClickable ? (event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onOpenMix?.(mix.id);
-                        }
-                      } : undefined}
-                      style={{
-                        background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
-                      }}
-                      role={isMixClickable ? 'button' : undefined}
-                      tabIndex={isMixClickable ? 0 : undefined}
-                    >
-                      <div className="home-item-overlay">
-                        <div className="home-item-head">
-                          <p className="home-item-title">{mix.name}</p>
-                          <div className="home-item-actions">
-                            <AppButton
-                              variant="icon"
-                              className="home-action-btn"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setInfoMix(mix);
-                              }}
-                              aria-label="Описание"
-                            >
-                              <Info className="home-action-icon" aria-hidden="true" />
-                            </AppButton>
-                            <AppButton
-                              variant="icon"
-                              className={`home-action-btn home-fav-btn ${favoriteMixIds[mix.id] ? 'active' : ''} ${!authState.tokens ? 'guest' : ''}`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void onToggleFavorite(mix.id);
-                              }}
-                              aria-pressed={Boolean(favoriteMixIds[mix.id])}
-                              aria-label={favoriteMixIds[mix.id] ? 'Убрать из избранного' : 'Добавить в избранное'}
-                              title={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
-                            >
-                              <Heart className="home-action-icon" aria-hidden="true" />
-                            </AppButton>
-                          </div>
-                        </div>
-                        <div className="home-item-body">
-                          <p className="home-item-meta">
-                            {flavorText}
-                          </p>
-                          <div className="home-item-tags">
-                            {visibleProfileTags.map((tag) => (
-                              <AppBadge key={`${mix.id}:${tag}`} tone="muted" className="profile-tag">
-                                {PROFILE_LABELS[tag]}
-                              </AppBadge>
-                            ))}
-                            {hiddenProfileTagsCount > 0 ? (
-                              <AppBadge tone="muted" className="profile-tag profile-tag-more">
-                                +{hiddenProfileTagsCount}
-                              </AppBadge>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                {rail.items.map((mix) => (
+                  <MixPreviewCard
+                    key={`${rail.id}:${mix.id}`}
+                    mix={mix}
+                    size="rail"
+                    className="home-rail-card"
+                    onOpen={onOpenMix ? (currentMix) => onOpenMix(currentMix.id) : undefined}
+                    onOpenInfo={(currentMix) => {
+                      setInfoMix(currentMix);
+                    }}
+                    onToggleFavorite={(currentMix) => {
+                      void onToggleFavorite(currentMix.id);
+                    }}
+                    isFavorite={Boolean(favoriteMixIds[mix.id])}
+                    favoriteGuest={!authState.tokens}
+                    favoriteTitle={!authState.tokens ? 'Войдите, чтобы управлять избранным' : undefined}
+                  />
+                ))}
               </div>
 
               <AppButton

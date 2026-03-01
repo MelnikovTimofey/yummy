@@ -428,9 +428,15 @@ h1 {
   display: none;
 }
 
-.home-item {
+.home-rail-card {
   min-width: 286px;
-  aspect-ratio: 16 / 9;
+}
+
+.home-link-btn:disabled {
+  cursor: default;
+}
+
+.mix-unified-card {
   border: 1px solid #302722;
   border-radius: 14px;
   padding: 0;
@@ -438,17 +444,31 @@ h1 {
   overflow: hidden;
   text-align: left;
   color: var(--text-0);
-  cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
 }
 
-.home-item.static,
-.home-link-btn:disabled {
+.mix-unified-card.interactive {
+  cursor: pointer;
+}
+
+.mix-unified-card.static {
   cursor: default;
 }
 
-.home-item-overlay {
+.mix-unified-card-rail {
+  aspect-ratio: 16 / 9;
+}
+
+.mix-unified-card-grid {
+  min-height: 220px;
+}
+
+.mix-unified-card-fluid {
+  min-height: 220px;
+}
+
+.mix-unified-overlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -459,14 +479,14 @@ h1 {
   background: linear-gradient(180deg, rgba(10, 10, 10, 0.05) 20%, rgba(10, 10, 10, 0.82) 100%);
 }
 
-.home-item-head {
+.mix-unified-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;
 }
 
-.home-item-body {
+.mix-unified-body {
   margin-top: auto;
   display: grid;
   gap: 8px;
@@ -474,13 +494,14 @@ h1 {
   min-height: 0;
 }
 
-.home-item-actions {
+.mix-unified-actions {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
 }
 
+.mix-action-btn,
 .home-action-btn {
   width: 32px;
   height: 32px;
@@ -493,29 +514,87 @@ h1 {
   transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
+.mix-action-btn:hover,
 .home-action-btn:hover {
   background: rgba(29, 23, 19, 0.92);
   border-color: #5d4a37;
 }
 
+.mix-action-icon,
 .home-action-icon {
   width: 16px;
   height: 16px;
   stroke-width: 2;
 }
 
+.mix-fav-btn.active,
 .home-fav-btn.active {
   color: #f4b7c8;
   border-color: #8f4f62;
   background: rgba(45, 23, 31, 0.92);
 }
 
+.mix-fav-btn.active .mix-action-icon,
 .home-fav-btn.active .home-action-icon {
   fill: currentColor;
 }
 
+.mix-fav-btn.guest,
 .home-fav-btn.guest {
   border-style: dashed;
+}
+
+.mix-unified-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mix-unified-meta {
+  margin: 0;
+  font-size: 12px;
+  color: #d6c8b9;
+  min-height: 30px;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mix-unified-tags {
+  margin-top: 0;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mix-unified-tags .profile-tag {
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 7px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mix-unified-tags .profile-tag.profile-tag-more {
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+.mix-unified-footer {
+  margin-top: 0;
 }
 
 .icon-btn {
@@ -554,55 +633,6 @@ h1 {
 
 .fav-icon.guest {
   border-style: dashed;
-}
-
-.home-item-title {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.25;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.home-item-meta {
-  margin: 0;
-  font-size: 12px;
-  color: #d6c8b9;
-  min-height: 30px;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.home-item-tags {
-  margin-top: 0;
-  min-height: 26px;
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.home-item-tags .profile-tag {
-  min-width: 0;
-  max-width: 100%;
-  padding: 3px 7px;
-  font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-item-tags .profile-tag.profile-tag-more {
-  flex: 0 0 auto;
-  max-width: none;
 }
 
 .auth-popup {
@@ -1433,7 +1463,7 @@ h1 {
     font-size: 28px;
   }
 
-  .home-item {
+  .home-rail-card {
     min-width: 210px;
   }
 
@@ -1557,24 +1587,24 @@ h1 {
     pointer-events: none;
   }
 
-  .home-item {
+  .home-rail-card {
     min-width: 300px;
   }
 
-  .home-item-overlay {
+  .mix-unified-overlay {
     gap: 10px;
     padding: 14px;
   }
 
-  .home-item-title {
+  .mix-unified-title {
     font-size: 18px;
   }
 
-  .home-item-meta {
+  .mix-unified-meta {
     font-size: 13px;
   }
 
-  .profile-tag {
+  .mix-unified-tags .profile-tag {
     font-size: 12px;
     padding: 5px 10px;
   }

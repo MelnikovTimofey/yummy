@@ -14,7 +14,8 @@ import {
   RecommendationItem,
   RecommendationSource,
 } from '../shared/types';
-import { AppBadge, AppButton } from '@/ui-kit';
+import { AppButton } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type RecommendationsScreenProps = {
   authState: AuthState;
@@ -183,22 +184,12 @@ export const RecommendationsScreen = ({
 
       <section className="list-grid">
         {recommendations.map((item) => (
-          <article key={item.mix.id} className="card mix-card recommendation-card">
-            <div className="mix-header">
-              <h3>{item.mix.name}</h3>
-              <AppBadge tone="muted" className="chip">{item.mix.components.length} комп.</AppBadge>
-            </div>
-            <p className="mix-description">{item.mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-            <div className="mix-components">
-              {item.mix.components.map((component) => (
-                <div key={`${item.mix.id}:${component.tobacco.id}`} className="mix-component-row">
-                  <span>
-                    {component.tobacco.manufacturer.name} {component.tobacco.name}
-                  </span>
-                  <b>{component.proportion}%</b>
-                </div>
-              ))}
-            </div>
+          <article key={item.mix.id} className="card recommendation-card">
+            <MixPreviewCard
+              mix={item.mix}
+              size="fluid"
+              footerText={`Моя оценка: ${mixRatings[item.mix.id]?.rating ?? 'нет'} · Средняя: ${mixSummaries[item.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+            />
             <p className="recommendation-source">{getSourceLabel(item)}</p>
             <div className="recommendation-actions">
               <AppButton className="search-button recommendation-session" onClick={() => onAddToSession(item.mix.id)}>
@@ -217,11 +208,6 @@ export const RecommendationsScreen = ({
                 ))}
               </div>
             </div>
-            <p className="mix-ratings">
-              Моя оценка: <b>{mixRatings[item.mix.id]?.rating ?? 'нет'}</b>
-              {' · '}
-              Средняя: <b>{mixSummaries[item.mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
-            </p>
           </article>
         ))}
       </section>

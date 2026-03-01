@@ -14,6 +14,7 @@ import {
   Tobacco,
 } from '../shared/types';
 import { AppButton, AppInput, AppSelect } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type CatalogScreenProps = {
   authState: AuthState;
@@ -752,50 +753,24 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
           <section className="list-grid cinema-grid">
             {items.map((mix) => (
-              <article
+              <MixPreviewCard
                 key={mix.id}
-                className="mix-poster mix-poster-clickable"
-                onClick={() => {
+                mix={mix}
+                size="grid"
+                onOpen={(currentMix) => {
                   if (onOpenMix) {
-                    onOpenMix(mix.id);
+                    onOpenMix(currentMix.id);
                     return;
                   }
                   window.history.pushState(
-                    { ...(window.history.state ?? {}), catalogMixId: mix.id },
+                    { ...(window.history.state ?? {}), catalogMixId: currentMix.id },
                     '',
                     window.location.href,
                   );
-                  setActiveMix(mix);
+                  setActiveMix(currentMix);
                 }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    if (onOpenMix) {
-                      onOpenMix(mix.id);
-                      return;
-                    }
-                    window.history.pushState(
-                      { ...(window.history.state ?? {}), catalogMixId: mix.id },
-                      '',
-                      window.location.href,
-                    );
-                    setActiveMix(mix);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="mix-poster-overlay">
-                  <div className="mix-header">
-                    <h3>{mix.name}</h3>
-                    <span className="chip">{mix.components.length} комп.</span>
-                  </div>
-                  <p className="mix-description">{mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-                  <p className="mix-ratings">
-                    Средняя: <b>{summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}</b>
-                  </p>
-                </div>
-              </article>
+                footerText={`Средняя: ${summaries[mix.id]?.avgRating?.toFixed(1) ?? 'нет'}`}
+              />
             ))}
           </section>
         </section>

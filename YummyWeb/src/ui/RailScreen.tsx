@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { HomeRail } from '../shared/types';
-import { AppInput, AppBadge } from '@/ui-kit';
+import { AppInput } from '@/ui-kit';
+import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
 
 type RailScreenProps = {
   rail: HomeRail | null;
@@ -65,33 +66,16 @@ export const RailScreen = ({ rail, onOpenMix }: RailScreenProps) => {
 
           <section className="list-grid cinema-grid">
             {filteredItems.map((mix) => (
-              <article
+              <MixPreviewCard
                 key={`${rail.id}:${mix.id}`}
-                className="mix-poster rail-list-item"
-                onClick={() => onOpenMix(mix.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    onOpenMix(mix.id);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="mix-poster-overlay">
-                  <div className="mix-header">
-                    <h3>{mix.name}</h3>
-                    <AppBadge tone="muted" className="chip">{mix.components.length} комп.</AppBadge>
-                  </div>
-                  <p className="mix-description">{mix.description?.trim() || 'Описание пока не добавлено.'}</p>
-                  <p className="mix-ratings">
-                    {mix.components
-                      .slice(0, 3)
-                      .map((component) => component.tobacco.name)
-                      .join(' · ')}
-                  </p>
-                </div>
-              </article>
+                mix={mix}
+                size="grid"
+                onOpen={(currentMix) => onOpenMix(currentMix.id)}
+                footerText={mix.components
+                  .slice(0, 3)
+                  .map((component) => component.tobacco.name)
+                  .join(' · ')}
+              />
             ))}
           </section>
         </>
