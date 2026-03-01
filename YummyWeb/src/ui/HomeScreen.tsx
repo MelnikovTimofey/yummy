@@ -300,6 +300,8 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                     : profileTags.length
                       ? profileTags.slice(0, 2).map((tag) => PROFILE_LABELS[tag].toLowerCase()).join(' · ')
                       : 'вкус не указан';
+                  const visibleProfileTags = profileTags.length > 2 ? profileTags.slice(0, 1) : profileTags.slice(0, 2);
+                  const hiddenProfileTagsCount = profileTags.length - visibleProfileTags.length;
                   const isMixClickable = Boolean(onOpenMix);
                   return (
                     <article
@@ -353,11 +355,16 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                             {flavorText}
                           </p>
                           <div className="home-item-tags">
-                            {profileTags.slice(0, 3).map((tag) => (
+                            {visibleProfileTags.map((tag) => (
                               <AppBadge key={`${mix.id}:${tag}`} tone="muted" className="profile-tag">
                                 {PROFILE_LABELS[tag]}
                               </AppBadge>
                             ))}
+                            {hiddenProfileTagsCount > 0 ? (
+                              <AppBadge tone="muted" className="profile-tag profile-tag-more">
+                                +{hiddenProfileTagsCount}
+                              </AppBadge>
+                            ) : null}
                           </div>
                         </div>
                       </div>

@@ -546,9 +546,26 @@ h1 {
   margin-top: 0;
   min-height: 26px;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.home-item-tags .profile-tag {
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 7px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-item-tags .profile-tag.profile-tag-more {
+  flex: 0 0 auto;
+  max-width: none;
 }
 
 .auth-popup {
