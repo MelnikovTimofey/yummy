@@ -1,5 +1,43 @@
 # HANDOFF — Yummy
 
+## 0.7) Sprint 2 — P2.1 (доработка по фидбэку, 1 марта 2026)
+
+- Проблема:
+  - desktop-стрелки рейлов визуально стояли рядом с лентой, а не поверх крайних карточек;
+  - отображаемое имя профиля было `SEED`, без возможности изменить display name.
+- Гипотеза:
+  - overlay-стрелки повысят ожидаемость поведения карусели;
+  - editable profile name в хедере улучшит персонализацию и читаемость.
+- Изменение:
+  - `styles.css`:
+    - стрелки рейла на desktop переведены в абсолютный overlay поверх карточек;
+    - у profile button убран forced uppercase.
+  - `profileName.ts` (новый shared-модуль):
+    - localStorage-хранилище имени профиля по `userId`;
+    - нормализация имени;
+    - fallback-resolver (`custom` -> `user.name` -> humanized email -> `Мой профиль`).
+  - `App.tsx`:
+    - в dropdown добавлен пункт `Изменить имя`;
+    - добавлен popup редактирования имени с сохранением;
+    - имя профиля рендерится через новый resolver.
+  - `types.ts`:
+    - `ApiUser` расширен опциональным полем `name`.
+- Проверки:
+  - `npm run build` (`YummyWeb`) — `OK`;
+  - Playwright:
+    - before/after по hover-рейлу;
+    - before/after по profile menu;
+    - e2e изменения имени (`Seed` -> `Алексей`).
+- Артефакты:
+  - `output/playwright/sprint2-auth-fix-before/rail-hover.png`
+  - `output/playwright/sprint2-auth-fix-after/rail-hover.png`
+  - `output/playwright/sprint2-auth-fix-before/profile-menu.png`
+  - `output/playwright/sprint2-auth-fix-after/profile-menu.png`
+  - `output/playwright/sprint2-auth-fix-after/profile-name-modal.png`
+  - `output/playwright/sprint2-auth-fix-e2e/profile-name-updated.png`
+- Коммит:
+  - `bff4425` — `feat(web): overlay-стрелки рейлов и редактируемое имя профиля`
+
 ## 0.6) Sprint 2 — P2 (auth UX desktop, 1 марта 2026)
 
 - Проблема:

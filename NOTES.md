@@ -1,5 +1,46 @@
 ## Этот файл для человека
 
+Обновление от 1 марта 2026 (Sprint 2, P2.1 — UX доработка по фидбэку):
+- Проблема:
+  - стрелки в рейлах отображались рядом с каруселью, а не поверх крайних карточек;
+  - имя профиля в хедере выглядело как `SEED` (форсированный uppercase), не было сценария изменения имени.
+- Гипотеза:
+  - если сделать стрелки overlay-элементами над крайними карточками, навигация рейлов будет ближе к ожидаемому desktop-паттерну;
+  - если добавить редактируемое display name с fallback, профиль станет персонализированным и читаемым.
+- Изменение:
+  - `YummyWeb/src/ui/styles.css`:
+    - desktop-стрелки рейлов переведены в overlay-позиционирование (absolute, поверх левой/правой карточки);
+    - кнопка профиля больше не принудительно uppercased.
+  - `YummyWeb/src/shared/profileName.ts`:
+    - добавлена изолированная логика имени профиля:
+      - localStorage-хранилище по `userId`,
+      - нормализация ввода,
+      - fallback-резолвер (`custom name` -> `user.name` -> humanized email -> `Мой профиль`).
+  - `YummyWeb/src/ui/App.tsx`:
+    - в dropdown профиля добавлен пункт `Изменить имя`;
+    - добавлен popup с полем `Имя` и сохранением;
+    - имя в хедере теперь берётся через `resolveProfileName(...)`.
+  - `YummyWeb/src/shared/types.ts`:
+    - `ApiUser` расширен опциональным полем `name`.
+- Проверка (как проверялось):
+  - `npm run build` (`YummyWeb`) — `OK`;
+  - Playwright:
+    - before/after snapshot hover-состояния рейла;
+    - before/after snapshot dropdown профиля;
+    - сценарий изменения имени: `Seed` -> `Алексей` (обновление кнопки в хедере).
+- Результат:
+  - стрелки появляются поверх крайних карточек рейла;
+  - имя профиля читаемо (`Seed` вместо `SEED`) и редактируется пользователем;
+  - при пустом имени используется fallback: имя из e-mail или `Мой профиль`.
+- Скриншоты:
+  - before: `output/playwright/sprint2-auth-fix-before/rail-hover.png`
+  - after: `output/playwright/sprint2-auth-fix-after/rail-hover.png`
+  - before (profile): `output/playwright/sprint2-auth-fix-before/profile-menu.png`
+  - after (profile): `output/playwright/sprint2-auth-fix-after/profile-menu.png`
+  - after (edit popup): `output/playwright/sprint2-auth-fix-after/profile-name-modal.png`
+  - e2e (updated name): `output/playwright/sprint2-auth-fix-e2e/profile-name-updated.png`
+- Коммит: `bff4425` — `feat(web): overlay-стрелки рейлов и редактируемое имя профиля`
+
 Обновление от 1 марта 2026 (Sprint 2, P2 — auth UX desktop):
 - Проблема:
   - вход для гостя был в контенте экрана и не воспринимался как primary action;
