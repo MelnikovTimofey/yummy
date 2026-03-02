@@ -1,5 +1,39 @@
 ## Этот файл для человека
 
+Обновление от 2 марта 2026 (UI-фикс адаптива, скроллов, сессий и меню):
+- Проблема:
+  - контейнер `phone-shell` был ограничен по ширине на desktop;
+  - на mobile появлялся горизонтальный overflow (`topbar/content`);
+  - в фильтрах/каталоге использовались «системные» скроллбары;
+  - таблица сессий выглядела как слишком широкий пустой блок;
+  - пункт `Изменить имя` был не первым в profile-menu;
+  - карточки не отличали пользовательские миксы.
+- Изменение:
+  - `YummyWeb/src/ui/styles.css`:
+    - адаптив оболочки: добавлен `grid-template-columns: minmax(0, 1fr)`, desktop-ширина переведена на `width: 100%; max-width: none`;
+    - для `.content` включён `overflow-x: hidden`;
+    - для mobile (`@media max-width: 480px`) уменьшены отступы/гапы topbar и размеры бренда;
+    - введён единый тематический стиль скроллбаров для `.content`, `.catalog-controls`, `.filter-scrollbox`, `.session-table-wrap`, `.preferences-popup`, `.mix-info-modal-shell`;
+    - `session-table-card` переведён в `fit-content`-режим, таблица — `width: max-content; min-width: 620px` (`560px` на mobile).
+  - `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+    - добавлен optional prop `currentUserId?: string`;
+    - добавлен бейдж пользовательского микса:
+      - `Мой микс` — для микса текущего пользователя,
+      - `Пользовательский` — для остальных `isUserMix`.
+  - прокинут `currentUserId` в карточки на экранах:
+    - `HomeScreen`, `CatalogScreen`, `FavoritesScreen`, `SessionsScreen`, `RecommendationsScreen`, `MixesScreen`.
+  - `YummyWeb/src/ui/App.tsx`:
+    - пункт `Изменить имя` перенесён на первое место в выпадающем меню профиля.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` (`~/.codex/skills/playwright`):
+    - desktop `1920x1080`: `shellWidth=1896`, `shellMaxWidth=none`;
+    - mobile `390x844`: `shell/header/main scrollWidth == clientWidth` (горизонтального overflow нет);
+    - порядок profile-menu: `Изменить имя` отображается первым;
+    - в каталоге: `scrollbarWidth=thin` у `content/controls/filter-scrollbox`;
+    - в карточках есть бейджи `Мой микс`/`Пользовательский`;
+    - в сессиях: `session-table-card` имеет `justify-self:start`, таблица контентной ширины.
+
 Обновление от 1 марта 2026 (фикс переполнения попапа по высоте):
 - Проблема:
   - большой попап состава выходил за пределы экрана по вертикали.

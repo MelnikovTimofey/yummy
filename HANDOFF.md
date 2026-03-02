@@ -1,5 +1,42 @@
 # HANDOFF — Yummy
 
+## 1.11) UI-фиксы адаптива, скроллов, сессий и меню (2 марта 2026)
+
+- Что сделано:
+  - `YummyWeb/src/ui/styles.css`:
+    - устранено ограничение ширины приложения на desktop:
+      - `phone-shell` переведён на `width: 100%; max-width: none` (в `@media min-width: 1024px`);
+      - добавлен `grid-template-columns: minmax(0, 1fr)` для стабилизации ширины grid-контейнера.
+    - устранён mobile overflow:
+      - `.content` переведён на `overflow-x: hidden; overflow-y: auto`;
+      - на `@media max-width: 480px` снижены отступы/гапы topbar и уменьшен размер бренда.
+    - добавлена единая темизация скроллбаров:
+      - для `.content`, `.catalog-controls`, `.filter-scrollbox`, `.session-table-wrap`, `.preferences-popup`, `.mix-info-modal-shell`;
+      - Firefox: `scrollbar-width: thin`, Chromium/Safari: `::-webkit-scrollbar*`.
+    - сессии:
+      - `session-table-card` переведён в `fit-content` с `max-width: 100%` и `justify-self: start`;
+      - `session-table` — `width: max-content; min-width: 620px` (`560px` на mobile);
+      - горизонтальный скролл оставлен только внутри `session-table-wrap`.
+  - `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+    - добавлен prop `currentUserId?: string`;
+    - добавлен чип `mix-user-tag`:
+      - `Мой микс` при `isUserMix=true && mix.author.id === currentUserId`,
+      - `Пользовательский` для остальных пользовательских миксов.
+  - прокинут `currentUserId` в `MixPreviewCard` из:
+    - `HomeScreen`, `CatalogScreen`, `FavoritesScreen`, `SessionsScreen`, `RecommendationsScreen`, `MixesScreen`.
+  - `YummyWeb/src/ui/App.tsx`:
+    - пункт `Изменить имя` поднят на первое место в dropdown профиля.
+
+- Проверки:
+  - `cd YummyWeb && npm run build` — `OK`.
+  - Проверка через skill `playwright`:
+    - desktop `1920x1080`: `shellWidth=1896`, `shellMaxWidth=none`, `content overflow-x=hidden`;
+    - mobile `390x844`: `shell/header/main scrollWidth == clientWidth`;
+    - порядок profile-menu: `Изменить имя` — первый пункт;
+    - `scrollbarWidth=thin` в каталоге и фильтрах;
+    - на карточках отображаются `Мой микс` и `Пользовательский`;
+    - на экране сессий таблица занимает контентную ширину, а не пустой широкий блок.
+
 ## 1.10) Фикс переполнения попапа состава по высоте (1 марта 2026)
 
 - Проблема:
