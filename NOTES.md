@@ -778,3 +778,18 @@ Product-rules (зафиксировано):
 - открыта модалка `Изменить имя` и снят скрин:
   - `output/playwright/profile-name-modal-aligned.png`.
 - `cd YummyWeb && npm run build` — `OK`.
+
+Обновление от 2 марта 2026 (Итерация N — выравнивание кнопок в модалке удаления):
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - кнопка `Отмена` в модалке удаления больше не использует класс `ghost-button` (он добавлял `margin-top`).
+- `YummyWeb/src/ui/styles.css`:
+  - в `session-delete-actions` зафиксировано выравнивание по центру и единая высота;
+  - добавлены отдельные стили `session-delete-cancel` / `session-delete-confirm` с `margin:0`, `min-height:40px`.
+
+Проверка (playwright skill):
+- проверены computed styles в контексте страницы:
+  - `alignItems: center`,
+  - `cancelMarginTop: 0px`,
+  - `confirmMarginTop: 0px`,
+  - `cancelHeight: 40px`, `confirmHeight: 40px`.
+- `cd YummyWeb && npm run build` — `OK`.

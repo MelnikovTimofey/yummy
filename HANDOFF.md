@@ -815,3 +815,19 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
   - открыта модалка `Изменить имя`,
   - артефакт: `output/playwright/profile-name-modal-aligned.png`.
 - `cd YummyWeb && npm run build` — `OK`.
+
+## 1.8) Итерация N (2 марта 2026) — окончательное выравнивание кнопок в модалке удаления
+
+Сделано:
+- `YummyWeb/src/ui/SessionsScreen.tsx`:
+  - у кнопки `Отмена` в модалке удаления убран класс `ghost-button` (источник вертикального смещения).
+- `YummyWeb/src/ui/styles.css`:
+  - `session-delete-actions`: `align-items: center`, `flex-wrap: wrap`;
+  - `session-delete-cancel`, `session-delete-confirm`: `margin: 0`, `min-height: 40px`, одинаковая компоновка.
+
+Проверка:
+- Playwright skill (computed style check):
+  - `alignItems: center`,
+  - `cancelMarginTop: 0px`, `confirmMarginTop: 0px`,
+  - `cancelHeight: 40px`, `confirmHeight: 40px`.
+- `cd YummyWeb && npm run build` — `OK`.
