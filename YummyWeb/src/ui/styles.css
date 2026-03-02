@@ -1719,16 +1719,21 @@ select:focus-visible {
 .session-table-card {
   padding: 0;
   overflow: hidden;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
 }
 
 .session-table-wrap {
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .session-table {
-  width: 100%;
+  width: max-content;
   border-collapse: collapse;
-  min-width: 660px;
+  min-width: 620px;
 }
 
 .session-table thead th {
@@ -1906,6 +1911,10 @@ select:focus-visible {
 
   .mixes-create-btn {
     width: 100%;
+  }
+
+  .session-table {
+    min-width: 560px;
   }
 }
 
