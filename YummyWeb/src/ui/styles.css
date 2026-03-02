@@ -551,6 +551,13 @@ select:focus-visible {
   gap: 8px;
 }
 
+.mix-unified-title-wrap {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
 .mix-unified-body {
   margin-top: auto;
   display: grid;
@@ -620,6 +627,19 @@ select:focus-visible {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.mix-user-tag {
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 8px;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-color: #7e6442;
+  background: #2a211a;
+  color: #f1cf93;
 }
 
 .mix-unified-meta {

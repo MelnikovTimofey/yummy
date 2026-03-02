@@ -455,6 +455,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
                 <MixPreviewCard
                   key={mix.id}
                   mix={mix}
+                  currentUserId={authState.user?.id}
                   size="grid"
                   onOpen={(currentMix) => setSessionTargetMix(currentMix)}
                   onOpenInfo={(currentMix) => setInfoMix(currentMix)}

@@ -430,6 +430,7 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
               <MixPreviewCard
                 key={favorite.id}
                 mix={favorite.mix}
+                currentUserId={authState.user?.id}
                 size="grid"
                 onOpen={(currentMix) => onOpenMix(currentMix.id)}
                 onOpenInfo={(currentMix) => setInfoMix(currentMix)}

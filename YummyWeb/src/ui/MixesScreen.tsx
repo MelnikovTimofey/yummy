@@ -1244,6 +1244,7 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               <MixPreviewCard
                 key={mix.id}
                 mix={mix}
+                currentUserId={authState.user?.id}
                 size="grid"
                 onOpen={(currentMix) => openMixDetail(currentMix.id)}
                 onOpenInfo={(currentMix) => setInfoMixId(currentMix.id)}

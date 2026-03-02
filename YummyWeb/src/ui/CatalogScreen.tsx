@@ -763,6 +763,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
               <MixPreviewCard
                 key={mix.id}
                 mix={mix}
+                currentUserId={authState.user?.id}
                 size="grid"
                 onOpen={(currentMix) => {
                   if (onOpenMix) {

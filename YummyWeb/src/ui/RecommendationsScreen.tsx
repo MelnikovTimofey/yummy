@@ -201,6 +201,7 @@ export const RecommendationsScreen = ({
           <article key={item.mix.id} className="card recommendation-card">
             <MixPreviewCard
               mix={item.mix}
+              currentUserId={authState.user?.id}
               size="fluid"
               onOpenInfo={(currentMix) => setInfoMix(currentMix)}
               ratingTagText={`★ ${mixSummaries[item.mix.id]?.avgRating?.toFixed(1).replace('.', ',') ?? '—'}`}

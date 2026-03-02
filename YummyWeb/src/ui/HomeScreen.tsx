@@ -246,6 +246,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                   <MixPreviewCard
                     key={`${rail.id}:${mix.id}`}
                     mix={mix}
+                    currentUserId={authState.user?.id}
                     size="rail"
                     className="home-rail-card"
                     onOpen={onOpenMix ? (currentMix) => onOpenMix(currentMix.id) : undefined}

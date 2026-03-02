@@ -8,6 +8,7 @@ type MixPreviewCardSize = 'rail' | 'grid' | 'fluid';
 
 type MixPreviewCardProps = {
   mix: Mix;
+  currentUserId?: string;
   onOpen?: (mix: Mix) => void;
   onOpenInfo?: (mix: Mix) => void;
   onToggleFavorite?: (mix: Mix) => void;
@@ -128,6 +129,7 @@ const getMixTone = (mix: Mix) => {
 
 export const MixPreviewCard = ({
   mix,
+  currentUserId,
   onOpen,
   onOpenInfo,
   onToggleFavorite,
@@ -144,6 +146,11 @@ export const MixPreviewCard = ({
   const dominantProfileTag = profileTags[0] ?? null;
   const flavorText = getFlavorText(mix, profileTags);
   const isClickable = Boolean(onOpen);
+  const userMixTag = mix.isUserMix
+    ? mix.author?.id && currentUserId && mix.author.id === currentUserId
+      ? 'Мой микс'
+      : 'Пользовательский'
+    : null;
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (!isClickable) {
@@ -183,7 +190,14 @@ export const MixPreviewCard = ({
     >
       <div className="mix-unified-overlay">
         <div className="mix-unified-head">
-          <p className="mix-unified-title">{mix.name}</p>
+          <div className="mix-unified-title-wrap">
+            {userMixTag ? (
+              <AppBadge tone="muted" className="mix-user-tag">
+                {userMixTag}
+              </AppBadge>
+            ) : null}
+            <p className="mix-unified-title">{mix.name}</p>
+          </div>
           <div className="mix-unified-actions">
             {onOpenInfo ? (
               <AppButton
