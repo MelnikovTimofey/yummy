@@ -56,10 +56,12 @@ select:focus-visible {
   background: var(--bg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   overflow: hidden;
   position: relative;
   z-index: 2;
+  min-width: 0;
 }
 
 .halo-top {
@@ -102,6 +104,7 @@ select:focus-visible {
   align-items: center;
   gap: 12px;
   min-width: 0;
+  width: 100%;
 }
 
 .topbar-nav {
@@ -244,10 +247,12 @@ select:focus-visible {
 
 .content {
   padding: 12px 20px calc(12px + var(--safe-bottom));
+  overflow-x: hidden;
   overflow-y: auto;
   display: grid;
   gap: 12px;
   min-height: 0;
+  min-width: 0;
 }
 
 .auth-layout {
@@ -1782,6 +1787,34 @@ select:focus-visible {
     border-right: 0;
   }
 
+  .topbar {
+    padding: calc(8px + var(--safe-top)) 12px 8px;
+  }
+
+  .topbar-main-row {
+    gap: 8px;
+  }
+
+  .brand-wrap {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .brand-logo {
+    width: 34px;
+    height: 34px;
+    font-size: 20px;
+  }
+
+  .brand {
+    font-size: 24px;
+    letter-spacing: 3px;
+  }
+
+  .content {
+    padding: 12px 12px calc(12px + var(--safe-bottom));
+  }
+
   .tab {
     font-size: 11px;
   }
@@ -1851,7 +1884,8 @@ select:focus-visible {
   }
 
   .phone-shell {
-    width: min(100%, 1520px);
+    width: 100%;
+    max-width: none;
     height: calc(100dvh - 24px);
     border-radius: 20px;
     grid-template-rows: auto 1fr;
