@@ -365,6 +365,13 @@ export const App = () => {
                   <AppButton
                     variant="ghost"
                     className="profile-menu-item"
+                    onClick={openProfileNameModal}
+                  >
+                    Изменить имя
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    className="profile-menu-item"
                     onClick={() => {
                       setActiveTab('favorites');
                       setProfileMenuOpen(false);
@@ -388,13 +395,6 @@ export const App = () => {
                     onClick={openMyMixes}
                   >
                     Мои миксы
-                  </AppButton>
-                  <AppButton
-                    variant="ghost"
-                    className="profile-menu-item"
-                    onClick={openProfileNameModal}
-                  >
-                    Изменить имя
                   </AppButton>
                   <AppButton
                     variant="ghost"
