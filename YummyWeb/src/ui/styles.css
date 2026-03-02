@@ -255,6 +255,47 @@ select:focus-visible {
   min-width: 0;
 }
 
+.content,
+.catalog-controls,
+.filter-scrollbox,
+.session-table-wrap,
+.preferences-popup,
+.mix-info-modal-shell {
+  scrollbar-width: thin;
+  scrollbar-color: #4e4034 #181310;
+}
+
+.content::-webkit-scrollbar,
+.catalog-controls::-webkit-scrollbar,
+.filter-scrollbox::-webkit-scrollbar,
+.session-table-wrap::-webkit-scrollbar,
+.preferences-popup::-webkit-scrollbar,
+.mix-info-modal-shell::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.content::-webkit-scrollbar-track,
+.catalog-controls::-webkit-scrollbar-track,
+.filter-scrollbox::-webkit-scrollbar-track,
+.session-table-wrap::-webkit-scrollbar-track,
+.preferences-popup::-webkit-scrollbar-track,
+.mix-info-modal-shell::-webkit-scrollbar-track {
+  background: #181310;
+  border-radius: 999px;
+}
+
+.content::-webkit-scrollbar-thumb,
+.catalog-controls::-webkit-scrollbar-thumb,
+.filter-scrollbox::-webkit-scrollbar-thumb,
+.session-table-wrap::-webkit-scrollbar-thumb,
+.preferences-popup::-webkit-scrollbar-thumb,
+.mix-info-modal-shell::-webkit-scrollbar-thumb {
+  background: #4e4034;
+  border-radius: 999px;
+  border: 1px solid #231b16;
+}
+
 .auth-layout {
   display: grid;
 }
@@ -638,16 +679,6 @@ select:focus-visible {
   border-color: #3a3028;
   background: linear-gradient(180deg, #171311 0%, #100d0c 100%);
   box-shadow: 0 26px 48px rgba(0, 0, 0, 0.5);
-  scrollbar-width: thin;
-}
-
-.mix-info-modal-shell::-webkit-scrollbar {
-  width: 8px;
-}
-
-.mix-info-modal-shell::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: #3f332a;
 }
 
 .mix-info-modal {
