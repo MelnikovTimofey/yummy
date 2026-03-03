@@ -1,5 +1,34 @@
 # HANDOFF — Yummy
 
+## 1.14) Mobile wave1.1: убрать перегруз стрелками и перевести nav в список (3 марта 2026)
+
+- Запрос:
+  - на mobile стрелки рейлов избыточны;
+  - header-навигация срезается, меню должно быть списком.
+
+- Изменение:
+  - `YummyWeb/src/ui/App.tsx`:
+    - добавлен responsive-режим навигации:
+      - `<=900px`: list-nav (dropdown/select),
+      - `>900px`: существующий tab-nav;
+    - list-nav вынесен в отдельную строку header (`brand/profile` в верхней строке, список разделов — во второй);
+    - добавлен test hook `data-testid=\"topbar-nav-select\"`.
+  - `YummyWeb/src/ui-kit/AppSelect.tsx`:
+    - добавлен проп `triggerTestId` для назначения `data-testid` у trigger.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлены стили компактного header (`topbar-main-row-compact`, `topbar-nav-list`, `topbar-nav-select-*`);
+    - убраны mobile-стрелки рейлов:
+      - по умолчанию `rail-nav-btn` скрыт,
+      - стрелки включаются только на desktop (`@media min-width: 1024px`).
+  - `YummyWeb/e2e/mobile.smoke.spec.ts`:
+    - smoke-навигация переведена на helper для mobile list-nav;
+    - проверка прокрутки рейла в guest-flow теперь через scroll контейнера, а не через arrow click.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run api:smoke:mobile` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6).
+
 ## 1.13) Mobile wave1: проверка и доработка мобильной версии (3 марта 2026)
 
 - Контекст и baseline (этап A):

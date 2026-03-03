@@ -1,5 +1,30 @@
 ## Этот файл для человека
 
+Обновление от 3 марта 2026 (mobile wave1.1: меню-список и упрощение рейлов):
+- Запрос:
+  - в mobile-версии стрелки в рейлах выглядят избыточно;
+  - навигация в header срезается, нужна форма меню «списком».
+- Изменение:
+  - `YummyWeb/src/ui/App.tsx`:
+    - добавен responsive-переключатель навигации:
+      - на `<=900px` используется list-nav через `AppSelect`,
+      - на больших экранах сохраняется tab-nav;
+    - list-nav рендерится отдельной строкой под брендом/профилем;
+    - для mobile-nav добавлен `data-testid=\"topbar-nav-select\"`.
+  - `YummyWeb/src/ui-kit/AppSelect.tsx`:
+    - добавлен `triggerTestId` для стабильного e2e-хука.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлены стили `topbar-nav-list`, `topbar-nav-select-*`, `topbar-main-row-compact`;
+    - в mobile/compact убрано переполнение header-навигации;
+    - стрелки рейлов скрыты по умолчанию и оставлены только на desktop (`@media min-width: 1024px`).
+  - `YummyWeb/e2e/mobile.smoke.spec.ts`:
+    - smoke адаптирован под list-nav (навигация через select);
+    - guest-скролл рейла проверяется через жест прокрутки контейнера, без клика по стрелкам.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run api:smoke:mobile` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6, `android-chrome` + `ios-safari`).
+
 Обновление от 3 марта 2026 (mobile wave1: API контракт + smoke + touch UX):
 - Baseline и дефекты (этап A):
   - baseline-артефакты сохранены в:
