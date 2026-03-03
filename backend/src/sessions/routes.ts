@@ -17,6 +17,10 @@ const listSchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+const idParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
 const applyPagination = (query: { limit?: number; offset?: number }) => ({
   take: query.limit ?? 50,
   skip: query.offset ?? 0,
@@ -46,7 +50,12 @@ export const registerSessionRoutes = async (app: FastifyInstance) => {
   });
 
   app.get('/sessions/:id', { preHandler: requireAuth }, async (request, reply) => {
-    const id = (request.params as { id: string }).id;
+    const parseResult = idParamsSchema.safeParse(request.params);
+    if (!parseResult.success) {
+      return reply.status(400).send({ error: 'Invalid session id' });
+    }
+
+    const { id } = parseResult.data;
     const session = await prisma.smokingSession.findFirst({
       where: { id, userId: request.user!.id },
       include: {
@@ -100,5 +109,26 @@ export const registerSessionRoutes = async (app: FastifyInstance) => {
     });
 
     return reply.status(201).send(session);
+  });
+
+  app.delete('/sessions/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const parseResult = idParamsSchema.safeParse(request.params);
+    if (!parseResult.success) {
+      return reply.status(400).send({ error: 'Invalid session id' });
+    }
+
+    const { id } = parseResult.data;
+    const deleted = await prisma.smokingSession.deleteMany({
+      where: {
+        id,
+        userId: request.user!.id,
+      },
+    });
+
+    if (deleted.count === 0) {
+      return reply.status(404).send({ error: 'Session not found' });
+    }
+
+    return reply.send({ ok: true });
   });
 };
