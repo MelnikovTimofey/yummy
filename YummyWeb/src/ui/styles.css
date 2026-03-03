@@ -1739,9 +1739,9 @@ select:focus-visible {
 .session-table-card {
   padding: 0;
   overflow: hidden;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  justify-self: start;
+  justify-self: stretch;
 }
 
 .session-table-wrap {
@@ -1751,7 +1751,7 @@ select:focus-visible {
 }
 
 .session-table {
-  width: max-content;
+  width: 100%;
   border-collapse: collapse;
   min-width: 620px;
 }
