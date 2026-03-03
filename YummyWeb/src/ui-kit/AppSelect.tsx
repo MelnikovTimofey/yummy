@@ -23,6 +23,7 @@ type AppSelectProps = {
   className?: string;
   triggerClassName?: string;
   contentClassName?: string;
+  triggerTestId?: string;
 };
 
 const EMPTY_VALUE = '__app_select_empty__';
@@ -37,6 +38,7 @@ export const AppSelect = ({
   className,
   triggerClassName,
   contentClassName,
+  triggerTestId,
 }: AppSelectProps) => {
   const normalizedValue = value === '' ? EMPTY_VALUE : value;
 
@@ -47,7 +49,10 @@ export const AppSelect = ({
         disabled={disabled}
         onValueChange={(next) => onChange(next === EMPTY_VALUE ? '' : next)}
       >
-        <SelectTrigger className={cn('bg-background/80', triggerClassName)}>
+        <SelectTrigger
+          className={cn('bg-background/80', triggerClassName)}
+          data-testid={triggerTestId}
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className={contentClassName}>

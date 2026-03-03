@@ -15,7 +15,7 @@ import { MixesScreen } from './MixesScreen';
 import { PreferencesPanel } from './PreferencesPanel';
 import { RailScreen } from './RailScreen';
 import { SessionsScreen } from './SessionsScreen';
-import { AppButton, AppInput, AppModal, AppTabs } from '@/ui-kit';
+import { AppButton, AppInput, AppModal, AppSelect, AppTabs } from '@/ui-kit';
 
 type TabKey = 'home' | 'sessions' | 'catalog' | 'favorites' | 'mixes' | 'rail-list';
 
@@ -71,6 +71,12 @@ export const App = () => {
   const [profileNameModalOpen, setProfileNameModalOpen] = useState(false);
   const [customProfileName, setCustomProfileName] = useState<string | null>(null);
   const [profileNameDraft, setProfileNameDraft] = useState('');
+  const [useListNav, setUseListNav] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.matchMedia('(max-width: 900px)').matches;
+  });
   const [mixesOpenRequest, setMixesOpenRequest] = useState<MixesOpenRequest | null>(null);
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
   const syncingFromHistory = useRef(false);
@@ -226,6 +232,28 @@ export const App = () => {
   }, [activeTab]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const media = window.matchMedia('(max-width: 900px)');
+    const sync = () => setUseListNav(media.matches);
+
+    sync();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', sync);
+      return () => {
+        media.removeEventListener('change', sync);
+      };
+    }
+
+    media.addListener(sync);
+    return () => {
+      media.removeListener(sync);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!profileMenuOpen) {
       return;
     }
@@ -274,7 +302,7 @@ export const App = () => {
         <div className="halo-bottom" />
         <div className="phone-shell">
           <header className="topbar">
-            <div className="topbar-main-row">
+            <div className={`topbar-main-row ${useListNav ? 'topbar-main-row-compact' : ''}`}>
               <button type="button" className="brand-wrap brand-home-btn" onClick={onGoHome}>
                 <span className="brand-logo">V</span>
                 <div>
@@ -282,16 +310,18 @@ export const App = () => {
                   <p className="tagline">Арома ателье</p>
                 </div>
               </button>
-              <nav className="topbar-nav" aria-label="Гостевая навигация">
-                <AppTabs
-                  value={guestTab}
-                  onChange={(next) => setGuestTab(next as 'home' | 'catalog')}
-                  items={guestTabItems}
-                  className="topbar-tabs"
-                  listClassName="topbar-tabs-list"
-                  stretch={false}
-                />
-              </nav>
+              {!useListNav ? (
+                <nav className="topbar-nav" aria-label="Гостевая навигация">
+                  <AppTabs
+                    value={guestTab}
+                    onChange={(next) => setGuestTab(next as 'home' | 'catalog')}
+                    items={guestTabItems}
+                    className="topbar-tabs"
+                    listClassName="topbar-tabs-list"
+                    stretch={false}
+                  />
+                </nav>
+              ) : null}
               <div className="topbar-right">
                 <AppButton
                   variant="chip"
@@ -303,6 +333,18 @@ export const App = () => {
                 </AppButton>
               </div>
             </div>
+            {useListNav ? (
+              <nav className="topbar-nav-list" aria-label="Гостевая навигация">
+                <AppSelect
+                  value={guestTab}
+                  onChange={(next) => setGuestTab(next as 'home' | 'catalog')}
+                  options={guestTabItems}
+                  triggerClassName="topbar-nav-select-trigger"
+                  contentClassName="topbar-nav-select-content"
+                  triggerTestId="topbar-nav-select"
+                />
+              </nav>
+            ) : null}
           </header>
           <main className="content">
             <section className="guest-main-panel">
@@ -334,7 +376,7 @@ export const App = () => {
       <div className="halo-bottom" />
       <div className="phone-shell">
         <header className="topbar">
-          <div className="topbar-main-row">
+          <div className={`topbar-main-row ${useListNav ? 'topbar-main-row-compact' : ''}`}>
             <button type="button" className="brand-wrap brand-home-btn" onClick={onGoHome}>
               <span className="brand-logo">V</span>
               <div>
@@ -342,16 +384,18 @@ export const App = () => {
                 <p className="tagline">Арома ателье</p>
               </div>
             </button>
-            <nav className="topbar-nav" aria-label="Основная навигация">
-              <AppTabs
-                value={activeTab}
-                onChange={(next) => setActiveTab(next as TabKey)}
-                items={mainTabItems}
-                className="topbar-tabs"
-                listClassName="topbar-tabs-list"
-                stretch={false}
-              />
-            </nav>
+            {!useListNav ? (
+              <nav className="topbar-nav" aria-label="Основная навигация">
+                <AppTabs
+                  value={activeTab}
+                  onChange={(next) => setActiveTab(next as TabKey)}
+                  items={mainTabItems}
+                  className="topbar-tabs"
+                  listClassName="topbar-tabs-list"
+                  stretch={false}
+                />
+              </nav>
+            ) : null}
             <div className="topbar-right" ref={profileMenuRef}>
               <AppButton
                 variant="chip"
@@ -431,6 +475,18 @@ export const App = () => {
               ) : null}
             </div>
           </div>
+          {useListNav ? (
+            <nav className="topbar-nav-list" aria-label="Основная навигация">
+              <AppSelect
+                value={activeTab}
+                onChange={(next) => setActiveTab(next as TabKey)}
+                options={mainTabItems}
+                triggerClassName="topbar-nav-select-trigger"
+                contentClassName="topbar-nav-select-content"
+                triggerTestId="topbar-nav-select"
+              />
+            </nav>
+          ) : null}
         </header>
 
         <main className="content">

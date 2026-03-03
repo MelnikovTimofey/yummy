@@ -91,6 +91,8 @@ select:focus-visible {
 }
 
 .topbar {
+  display: grid;
+  gap: 8px;
   padding: calc(12px + var(--safe-top)) 20px 8px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(22, 19, 17, 0.95) 0%, rgba(22, 19, 17, 0.8) 100%);
@@ -105,6 +107,10 @@ select:focus-visible {
   gap: 12px;
   min-width: 0;
   width: 100%;
+}
+
+.topbar-main-row-compact .topbar-right {
+  margin-left: auto;
 }
 
 .topbar-nav {
@@ -126,6 +132,24 @@ select:focus-visible {
 .topbar-tabs-list {
   width: max-content;
   max-width: 100%;
+}
+
+.topbar-nav-list {
+  min-width: 0;
+}
+
+.topbar-nav-select-trigger {
+  min-height: 40px;
+  border-radius: 12px;
+  border-color: #4a3d30;
+  background: #201a15;
+  color: var(--accent-soft);
+  letter-spacing: 0.03em;
+}
+
+.topbar-nav-select-content {
+  border-color: #3a3028;
+  background: #151110;
 }
 
 .brand-wrap {
@@ -458,13 +482,14 @@ select:focus-visible {
 
 .home-rail-carousel {
   display: grid;
-  grid-template-columns: 40px 1fr 40px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
 .rail-nav-btn {
+  display: none;
   border: 1px solid var(--line);
   background: #1d1814;
   color: var(--accent-soft);
@@ -1853,6 +1878,10 @@ select:focus-visible {
     gap: 8px;
   }
 
+  .topbar-nav-select-trigger {
+    min-height: 38px;
+  }
+
   .brand-wrap {
     gap: 8px;
     min-width: 0;
@@ -1996,6 +2025,7 @@ select:focus-visible {
   }
 
   .rail-nav-btn {
+    display: inline-flex;
     position: absolute;
     top: 50%;
     z-index: 5;
