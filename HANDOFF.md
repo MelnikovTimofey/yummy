@@ -1,5 +1,24 @@
 # HANDOFF — Yummy
 
+## 1.15) Mobile wave1.2: фикс тега `Мой микс` на узком mobile (3 марта 2026)
+
+- Запрос:
+  - на `430x932` тег `Мой микс` на карточке съезжает и может перекрывать текст.
+
+- Изменение:
+  - `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+    - пользовательский тег рендерится как компактный бейдж с иконкой `UserRound` и короткой подписью (`Мой`/`Автор`);
+    - добавлены `title` и `aria-label` для доступности.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлены стили для `mix-user-tag-icon` / `mix-user-tag-text`;
+    - на `@media (max-width: 480px)` включён icon-only режим (`24x24`) без текста, чтобы исключить переполнение.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6);
+  - контрольный screenshot `430x932`:
+    - `output/playwright/mobile-wave1/after/check-430x932-home.png`.
+
 ## 1.14) Mobile wave1.1: убрать перегруз стрелками и перевести nav в список (3 марта 2026)
 
 - Запрос:

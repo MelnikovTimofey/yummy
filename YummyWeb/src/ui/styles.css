@@ -657,6 +657,10 @@ select:focus-visible {
 }
 
 .mix-user-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
   width: fit-content;
   max-width: 100%;
   padding: 2px 8px;
@@ -667,6 +671,19 @@ select:focus-visible {
   border-color: #7e6442;
   background: #2a211a;
   color: #f1cf93;
+}
+
+.mix-user-tag-icon {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
+.mix-user-tag-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mix-unified-meta {
@@ -1966,6 +1983,24 @@ select:focus-visible {
 
   .session-table {
     min-width: 560px;
+  }
+
+  .mix-user-tag {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    border-radius: 999px;
+  }
+
+  .mix-user-tag-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .mix-user-tag-text {
+    display: none;
   }
 }
 

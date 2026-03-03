@@ -1,5 +1,5 @@
 import { type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
-import { Heart, Info } from 'lucide-react';
+import { Heart, Info, UserRound } from 'lucide-react';
 
 import { AppBadge, AppButton } from '@/ui-kit';
 import { type FlavorProfile, type Mix } from '@/shared/types';
@@ -148,8 +148,8 @@ export const MixPreviewCard = ({
   const isClickable = Boolean(onOpen);
   const userMixTag = mix.isUserMix
     ? mix.author?.id && currentUserId && mix.author.id === currentUserId
-      ? 'Мой микс'
-      : 'Пользовательский'
+      ? { label: 'Мой', title: 'Мой микс' }
+      : { label: 'Автор', title: 'Пользовательский микс' }
     : null;
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -194,8 +194,14 @@ export const MixPreviewCard = ({
           <div className="mix-unified-title-wrap">
             <p className="mix-unified-title">{mix.name}</p>
             {userMixTag ? (
-              <AppBadge tone="muted" className="mix-user-tag">
-                {userMixTag}
+              <AppBadge
+                tone="muted"
+                className="mix-user-tag"
+                title={userMixTag.title}
+                aria-label={userMixTag.title}
+              >
+                <UserRound className="mix-user-tag-icon" aria-hidden="true" />
+                <span className="mix-user-tag-text">{userMixTag.label}</span>
               </AppBadge>
             ) : null}
           </div>
