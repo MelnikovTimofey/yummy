@@ -191,12 +191,12 @@ export const MixPreviewCard = ({
       <div className="mix-unified-overlay">
         <div className="mix-unified-head">
           <div className="mix-unified-title-wrap">
+            <p className="mix-unified-title">{mix.name}</p>
             {userMixTag ? (
               <AppBadge tone="muted" className="mix-user-tag">
                 {userMixTag}
               </AppBadge>
             ) : null}
-            <p className="mix-unified-title">{mix.name}</p>
           </div>
           <div className="mix-unified-actions">
             {onOpenInfo ? (
