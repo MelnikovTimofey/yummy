@@ -205,13 +205,18 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
       {visibleRails.map((rail, railIndex) => {
         const railRefKey = `${rail.id}:${railIndex}`;
         return (
-          <section key={`${rail.id}:${railIndex}`} className="home-rail">
+          <section
+            key={`${rail.id}:${railIndex}`}
+            className="home-rail"
+            data-testid={`home-rail-${rail.id}`}
+          >
             <div className="home-rail-head">
               <AppButton
                 variant="ghost"
                 className="home-rail-title-btn"
                 disabled={!onOpenRail}
                 onClick={() => onOpenRail?.(rail)}
+                data-testid={`home-rail-title-${rail.id}`}
               >
                 <h3 className="home-rail-title">{rail.title}</h3>
               </AppButton>
@@ -220,6 +225,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                 className="home-link-btn"
                 disabled={!onOpenRail}
                 onClick={() => onOpenRail?.(rail)}
+                data-testid={`home-rail-see-all-${rail.id}`}
               >
                 Смотреть все
               </AppButton>
@@ -232,6 +238,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                 onClick={() => scrollRail(railRefKey, -1)}
                 disabled={!rail.items.length}
                 aria-label="Прокрутить влево"
+                data-testid={`home-rail-left-${rail.id}`}
               >
                 ‹
               </AppButton>
@@ -241,6 +248,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                 ref={(node) => {
                   railRefs.current[railRefKey] = node;
                 }}
+                data-testid={`home-rail-row-${rail.id}`}
               >
                 {rail.items.map((mix) => (
                   <MixPreviewCard
@@ -274,6 +282,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
                 onClick={() => scrollRail(railRefKey, 1)}
                 disabled={!rail.items.length}
                 aria-label="Прокрутить вправо"
+                data-testid={`home-rail-right-${rail.id}`}
               >
                 ›
               </AppButton>

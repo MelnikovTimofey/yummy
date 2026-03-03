@@ -283,20 +283,21 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
   };
 
   const onDeleteSession = async () => {
-    if (!sessionToDelete) {
+    if (!sessionToDelete || !authState.tokens) {
       return;
     }
 
     const sessionId = sessionToDelete.id;
+    const previousItems = items;
     setDeletingSessionId(sessionId);
     setFeedback(null);
     try {
-      // Мягкое удаление в UI: сначала удаляем из списка, затем пробуем синхронизировать.
       setItems((current) => current.filter((item) => item.id !== sessionId));
+      await deleteSession(authState.tokens, onAuthUpdate, sessionId);
       setFeedback('Сессия удалена.');
-      if (authState.tokens) {
-        await deleteSession(authState.tokens, onAuthUpdate, sessionId).catch(() => null);
-      }
+    } catch {
+      setItems(previousItems);
+      setFeedback('Не удалось удалить сессию.');
     } finally {
       setDeletingSessionId(null);
       setSessionToDelete(null);
@@ -450,7 +451,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
             {status === 'error' ? <p className="screen-status error">Не удалось загрузить список миксов.</p> : null}
             {!filteredMixes.length && status === 'idle' ? <p className="screen-status">По фильтрам ничего не найдено.</p> : null}
 
-            <section className="list-grid cinema-grid">
+            <section className="list-grid cinema-grid" data-testid="sessions-compose-grid">
               {filteredMixes.map((mix) => (
                 <MixPreviewCard
                   key={mix.id}
@@ -483,6 +484,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
                   setSessionTargetMix(infoMix);
                   setInfoMix(null);
                 }}
+                data-testid="sessions-info-add"
               >
                 Добавить в сессию
               </AppButton>
@@ -510,7 +512,12 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
       <section className="card session-create-card">
         <div className="session-create-head">
           <p className="card-title">Сессии курения</p>
-          <AppButton className="search-button session-open-compose" onClick={() => setView('compose')} disabled={!canOpenCompose}>
+          <AppButton
+            className="search-button session-open-compose"
+            onClick={() => setView('compose')}
+            disabled={!canOpenCompose}
+            data-testid="sessions-open-compose"
+          >
             Добавить сессию
           </AppButton>
         </div>
@@ -551,6 +558,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
                         onClick={() => {
                           setSessionToDelete(item);
                         }}
+                        data-testid={`session-row-delete-${item.id}`}
                       >
                         {deletingSessionId === item.id ? 'Удаляем...' : 'Удалить'}
                       </AppButton>
@@ -572,6 +580,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
         }}
         title="Удаление сессии"
         contentClassName="session-delete-modal"
+        contentTestId="session-delete-modal"
       >
         <div className="session-delete-content">
           <p className="card-text">
@@ -584,6 +593,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
               className="session-delete-cancel"
               disabled={Boolean(deletingSessionId)}
               onClick={() => setSessionToDelete(null)}
+              data-testid="session-delete-cancel"
             >
               Отмена
             </AppButton>
@@ -594,6 +604,7 @@ export const SessionsScreen = ({ authState, onAuthUpdate }: SessionsScreenProps)
               onClick={() => {
                 void onDeleteSession();
               }}
+              data-testid="session-delete-confirm"
             >
               {deletingSessionId ? 'Удаляем...' : 'Удалить'}
             </AppButton>

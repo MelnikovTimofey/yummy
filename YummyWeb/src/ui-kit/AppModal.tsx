@@ -16,6 +16,7 @@ type AppModalProps = {
   description?: string;
   children: ReactNode;
   contentClassName?: string;
+  contentTestId?: string;
 };
 
 export const AppModal = ({
@@ -25,10 +26,14 @@ export const AppModal = ({
   description,
   children,
   contentClassName,
+  contentTestId,
 }: AppModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn('border-border/80 bg-[#151110] text-foreground', contentClassName)}>
+      <DialogContent
+        className={cn('border-border/80 bg-[#151110] text-foreground', contentClassName)}
+        data-testid={contentTestId}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}

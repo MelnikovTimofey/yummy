@@ -138,6 +138,7 @@ select:focus-visible {
   border: 0;
   background: transparent;
   padding: 0;
+  min-height: 40px;
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -187,7 +188,7 @@ select:focus-visible {
   background: #201a15;
   color: var(--accent-soft);
   border-radius: 999px;
-  min-height: 36px;
+  min-height: 40px;
   padding: 0 14px;
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -229,7 +230,7 @@ select:focus-visible {
   background: transparent;
   color: var(--text-0);
   border-radius: 8px;
-  min-height: 36px;
+  min-height: 40px;
   text-align: left;
   padding: 0 10px;
   font-size: 13px;
@@ -452,12 +453,12 @@ select:focus-visible {
   font-size: 14px;
   padding: 8px 12px;
   border-radius: 999px;
-  min-height: 36px;
+  min-height: 40px;
 }
 
 .home-rail-carousel {
   display: grid;
-  grid-template-columns: 38px 1fr 38px;
+  grid-template-columns: 40px 1fr 40px;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -468,6 +469,7 @@ select:focus-visible {
   background: #1d1814;
   color: var(--accent-soft);
   border-radius: 10px;
+  min-width: 40px;
   min-height: 48px;
   font-size: 26px;
   line-height: 1;
@@ -575,9 +577,9 @@ select:focus-visible {
 
 .mix-action-btn,
 .home-action-btn {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
   border-radius: 10px;
   border: 1px solid #4a3b2c;
@@ -1700,7 +1702,7 @@ select:focus-visible {
 .session-open-compose {
   margin-top: 0;
   width: fit-content;
-  min-height: 36px;
+  min-height: 40px;
   padding: 0 12px;
   border-radius: 10px;
   font-size: 12px;

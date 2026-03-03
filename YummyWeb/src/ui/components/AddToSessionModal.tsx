@@ -45,6 +45,7 @@ export const AddToSessionModal = ({
       }}
       title="Добавить в сессию"
       contentClassName="session-add-modal"
+      contentTestId="add-to-session-modal"
     >
       <div className="session-add-form">
         <p className="hint">
@@ -74,7 +75,12 @@ export const AddToSessionModal = ({
             placeholder="Название лаунжа"
           />
         ) : null}
-        <AppButton className="search-button session-submit" onClick={() => void handleSubmit()} disabled={!canSubmit}>
+        <AppButton
+          className="search-button session-submit"
+          onClick={() => void handleSubmit()}
+          disabled={!canSubmit}
+          data-testid="add-to-session-submit"
+        >
           {submitting ? 'Добавляем...' : 'Добавить в сессию'}
         </AppButton>
       </div>

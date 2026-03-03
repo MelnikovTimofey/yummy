@@ -297,6 +297,7 @@ export const App = () => {
                   variant="chip"
                   className="header-auth-btn"
                   onClick={() => setAuthModalOpen(true)}
+                  data-testid="auth-open-button"
                 >
                   Войти
                 </AppButton>
@@ -319,6 +320,7 @@ export const App = () => {
           onOpenChange={setAuthModalOpen}
           title="Вход"
           contentClassName="auth-popup"
+          contentTestId="auth-modal"
         >
           <AuthScreen onAuthUpdate={onAuthUpdate} asCard={false} />
         </AppModal>
@@ -357,15 +359,22 @@ export const App = () => {
                 onClick={() => setProfileMenuOpen((current) => !current)}
                 aria-expanded={profileMenuOpen}
                 aria-haspopup="menu"
+                data-testid="profile-menu-toggle"
               >
                 {profileName}
               </AppButton>
               {profileMenuOpen ? (
-                <div className="profile-menu" role="menu" aria-label="Меню профиля">
+                <div
+                  className="profile-menu"
+                  role="menu"
+                  aria-label="Меню профиля"
+                  data-testid="profile-menu"
+                >
                   <AppButton
                     variant="ghost"
                     className="profile-menu-item"
                     onClick={openProfileNameModal}
+                    data-testid="profile-menu-edit-name"
                   >
                     Изменить имя
                   </AppButton>
@@ -376,6 +385,7 @@ export const App = () => {
                       setActiveTab('favorites');
                       setProfileMenuOpen(false);
                     }}
+                    data-testid="profile-menu-favorites"
                   >
                     Избранное
                   </AppButton>
@@ -386,6 +396,7 @@ export const App = () => {
                       setActiveTab('sessions');
                       setProfileMenuOpen(false);
                     }}
+                    data-testid="profile-menu-sessions"
                   >
                     Сессии
                   </AppButton>
@@ -393,6 +404,7 @@ export const App = () => {
                     variant="ghost"
                     className="profile-menu-item"
                     onClick={openMyMixes}
+                    data-testid="profile-menu-my-mixes"
                   >
                     Мои миксы
                   </AppButton>
@@ -403,6 +415,7 @@ export const App = () => {
                       setPreferencesModalOpen(true);
                       setProfileMenuOpen(false);
                     }}
+                    data-testid="profile-menu-preferences"
                   >
                     Предпочтения
                   </AppButton>
@@ -410,6 +423,7 @@ export const App = () => {
                     variant="danger"
                     className="profile-menu-item danger"
                     onClick={onSignOut}
+                    data-testid="profile-menu-signout"
                   >
                     Выйти
                   </AppButton>
@@ -463,6 +477,7 @@ export const App = () => {
         onOpenChange={setProfileNameModalOpen}
         title="Имя профиля"
         contentClassName="profile-name-popup"
+        contentTestId="profile-name-modal"
       >
         <form
           className="form profile-name-form"
@@ -497,6 +512,7 @@ export const App = () => {
         onOpenChange={setPreferencesModalOpen}
         title="Предпочтения"
         contentClassName="preferences-popup"
+        contentTestId="preferences-modal"
       >
         <PreferencesPanel
           authState={authState}

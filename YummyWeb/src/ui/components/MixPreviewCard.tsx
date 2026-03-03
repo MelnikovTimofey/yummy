@@ -183,6 +183,7 @@ export const MixPreviewCard = ({
       onKeyDown={onKeyDown}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
+      data-testid={`mix-card-${mix.id}`}
       style={{
         background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
         ...style,
@@ -205,6 +206,7 @@ export const MixPreviewCard = ({
                 className="mix-action-btn"
                 onClick={onInfoClick}
                 aria-label="Описание"
+                data-testid={`mix-card-info-${mix.id}`}
               >
                 <Info className="mix-action-icon" aria-hidden="true" />
               </AppButton>
@@ -217,6 +219,7 @@ export const MixPreviewCard = ({
                 aria-pressed={isFavorite}
                 aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
                 title={favoriteTitle}
+                data-testid={`mix-card-favorite-${mix.id}`}
               >
                 <Heart className="mix-action-icon" aria-hidden="true" />
               </AppButton>

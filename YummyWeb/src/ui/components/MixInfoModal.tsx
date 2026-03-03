@@ -113,6 +113,7 @@ export const MixInfoModal = ({ mix, summary, onOpenChange, action }: MixInfoModa
       onOpenChange={onOpenChange}
       title="Состав микса"
       contentClassName="mix-info-modal-shell"
+      contentTestId="mix-info-modal"
     >
       {mix && details ? (
         <div className="mix-info-modal">
@@ -184,7 +185,12 @@ export const MixInfoModal = ({ mix, summary, onOpenChange, action }: MixInfoModa
           ) : null}
 
           {action}
-          <AppButton variant="ghost" className="ghost-button mix-info-close-btn" onClick={() => onOpenChange(false)}>
+          <AppButton
+            variant="ghost"
+            className="ghost-button mix-info-close-btn"
+            onClick={() => onOpenChange(false)}
+            data-testid="mix-info-close"
+          >
             Закрыть
           </AppButton>
         </div>

@@ -13,6 +13,7 @@ type AppTabsProps = {
   className?: string;
   listClassName?: string;
   stretch?: boolean;
+  testIdPrefix?: string;
 };
 
 export const AppTabs = ({
@@ -22,6 +23,7 @@ export const AppTabs = ({
   className,
   listClassName,
   stretch = true,
+  testIdPrefix = 'tab',
 }: AppTabsProps) => {
   return (
     <Tabs value={value} onValueChange={onChange} className={className}>
@@ -37,8 +39,9 @@ export const AppTabs = ({
             key={item.value}
             value={item.value}
             className={cn(
-              'rounded-full px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
+              'min-h-10 rounded-full px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
             )}
+            data-testid={`${testIdPrefix}-${item.value}`}
           >
             {item.label}
           </TabsTrigger>
