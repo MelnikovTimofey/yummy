@@ -7,11 +7,33 @@ import { createAuthState } from './helpers/authState';
 const STORAGE_KEY = 'yummy_web_auth_state_v1';
 const AFTER_DIR = path.resolve(process.cwd(), '..', 'output', 'playwright', 'mobile-wave1', 'after');
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:3001';
+const NAV_LABEL_BY_KEY = {
+  home: 'Главная',
+  catalog: 'Каталог',
+  favorites: 'Избранное',
+  sessions: 'Сессии',
+} as const;
 
 const saveScreenshot = async (page: Page, project: string, name: string) => {
   fs.mkdirSync(AFTER_DIR, { recursive: true });
   const target = path.join(AFTER_DIR, `${project}-${name}.png`);
   await page.screenshot({ path: target, fullPage: true });
+};
+
+const goToMobileNavItem = async (
+  page: Page,
+  key: keyof typeof NAV_LABEL_BY_KEY,
+) => {
+  const tab = page.getByTestId(`tab-${key}`);
+  if (await tab.count()) {
+    await tab.first().click();
+    return;
+  }
+
+  const selectTrigger = page.getByTestId('topbar-nav-select');
+  await expect(selectTrigger).toBeVisible();
+  await selectTrigger.click();
+  await page.getByRole('option', { name: NAV_LABEL_BY_KEY[key] }).click();
 };
 
 const ensureFavoriteForAuthUser = async (
@@ -41,23 +63,22 @@ const ensureFavoriteForAuthUser = async (
 test('guest: home -> rail navigation -> catalog -> info modal', async ({ page }, testInfo) => {
   await page.goto('/');
 
-  await expect(page.getByTestId('tab-home')).toBeVisible();
+  await expect(page.getByTestId('topbar-nav-select')).toBeVisible();
   await saveScreenshot(page, testInfo.project.name, 'guest-home');
 
   const railRow = page.locator('[data-testid^="home-rail-row-"]').first();
-  const railRight = page.locator('[data-testid^="home-rail-right-"]').first();
 
   await expect(railRow).toBeVisible();
   const canScroll = await railRow.evaluate((element) => element.scrollWidth > element.clientWidth + 2);
   expect(canScroll).toBeTruthy();
 
   const beforeScroll = await railRow.evaluate((element) => element.scrollLeft);
-  await railRight.click();
+  await railRow.evaluate((element) => element.scrollBy({ left: 240, behavior: 'auto' }));
   await page.waitForTimeout(350);
   const afterScroll = await railRow.evaluate((element) => element.scrollLeft);
   expect(afterScroll).toBeGreaterThan(beforeScroll);
 
-  await page.getByTestId('tab-catalog').click();
+  await goToMobileNavItem(page, 'catalog');
   await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();
   await saveScreenshot(page, testInfo.project.name, 'guest-catalog');
 
@@ -88,12 +109,12 @@ test.describe('auth flows', () => {
     );
     await page.reload();
 
-    await expect(page.getByTestId('tab-home')).toBeVisible();
+    await expect(page.getByTestId('topbar-nav-select')).toBeVisible();
     await ensureFavoriteForAuthUser(request, authState.tokens.accessToken);
     await page.reload();
 
-    await page.getByTestId('tab-favorites').click();
-    await expect(page.getByTestId('tab-favorites')).toBeVisible();
+    await goToMobileNavItem(page, 'favorites');
+    await expect(page.getByRole('main').getByText('Избранное')).toBeVisible();
     await expect.poll(async () => page.locator('[data-testid^="mix-card-"]').count()).toBeGreaterThan(0);
     await saveScreenshot(page, testInfo.project.name, 'auth-favorites');
 
@@ -111,7 +132,7 @@ test.describe('auth flows', () => {
     );
     await page.reload();
 
-    await page.getByTestId('tab-sessions').click();
+    await goToMobileNavItem(page, 'sessions');
     await expect(page.getByText('Сессии курения')).toBeVisible();
 
     await page.getByTestId('sessions-open-compose').click();
