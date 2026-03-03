@@ -1,5 +1,18 @@
 ## Этот файл для человека
 
+Обновление от 3 марта 2026 (mobile wave1.3: фиксация позиции тега пользовательского микса):
+- Проблема:
+  - после перехода на icon-only режим тег `Мой микс` оставался под заголовком и визуально «съезжал» на `430x932`.
+- Изменение:
+  - `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+    - `mix-user-tag` перенесён из `mix-unified-title-wrap` в `mix-unified-actions`, рядом с `info/favorite`.
+  - `YummyWeb/src/ui/styles.css`:
+    - для `mix-user-tag` добавлены фиксирующие параметры (`justify-content: center`, `min-height: 24px`, `flex: 0 0 auto`).
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6);
+  - контрольный скриншот `430x932` с карточкой: `output/playwright/mobile-wave1/after/check-430x932-user-tag-focus.png`.
+
 Обновление от 3 марта 2026 (mobile wave1.2: фикс тега `Мой микс` на `430x932`):
 - Запрос:
   - в карточке на mobile (`430x932`) тег `Мой микс` уезжает и перекрывает контент.

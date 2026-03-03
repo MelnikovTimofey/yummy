@@ -1,5 +1,25 @@
 # HANDOFF — Yummy
 
+## 1.16) Mobile wave1.3: перенос тега `Мой микс` в action-зону карточки (3 марта 2026)
+
+- Проблема:
+  - на `430x932` icon-only тег пользовательского микса визуально «съезжал», так как рендерился под заголовком.
+
+- Изменение:
+  - `YummyWeb/src/ui/components/MixPreviewCard.tsx`:
+    - `mix-user-tag` перемещён из `mix-unified-title-wrap` в `mix-unified-actions` (рядом с `info`/`favorite`), чтобы позиция была стабильной.
+  - `YummyWeb/src/ui/styles.css`:
+    - `mix-user-tag` дополнен фиксирующими стилями:
+      - `justify-content: center`,
+      - `min-height: 24px`,
+      - `flex: 0 0 auto`.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6);
+  - контрольный screenshot `430x932`:
+    - `output/playwright/mobile-wave1/after/check-430x932-user-tag-focus.png`.
+
 ## 1.15) Mobile wave1.2: фикс тега `Мой микс` на узком mobile (3 марта 2026)
 
 - Запрос:
