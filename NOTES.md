@@ -1,5 +1,51 @@
 ## Этот файл для человека
 
+Обновление от 3 марта 2026 (mobile wave1: API контракт + smoke + touch UX):
+- Baseline и дефекты (этап A):
+  - baseline-артефакты сохранены в:
+    - `output/playwright/mobile-wave1/before/*` (guest/auth, `390x844` и `360x800`);
+  - подтверждён P0:
+    - отсутствовал backend endpoint `DELETE /sessions/:id` (фактический `404 Not Found`);
+  - подтверждён P1:
+    - часть touch-таргетов на mobile была ниже целевого порога (`~40px`) для tab/actions.
+- Изменение (этап B/C):
+  - `backend/src/sessions/routes.ts`:
+    - добавлен `DELETE /sessions/:id` с поведением:
+      - `400` для невалидного `id`,
+      - `404` если сессия пользователя не найдена,
+      - `200 { ok: true }` при успешном удалении.
+  - `YummyWeb/src/ui/SessionsScreen.tsx`:
+    - удаление сессии переведено на optimistic+rollback:
+      - удаление из UI + API sync,
+      - rollback списка и фидбек `Не удалось удалить сессию.` при ошибке.
+  - touch/mobile UX:
+    - `YummyWeb/src/components/ui/tabs.tsx`, `YummyWeb/src/ui-kit/AppTabs.tsx`,
+      `YummyWeb/src/ui/styles.css`:
+      - увеличены tap-target для табов и ключевых action-кнопок;
+      - увеличены размеры `header`/`profile menu` кнопок и action-кнопок карточек.
+  - для стабильного e2e-контракта добавлены `data-testid` в критичные узлы:
+    - `App`, `HomeScreen`, `MixPreviewCard`, `SessionsScreen`, `MixInfoModal`, `AddToSessionModal`, `AppTabs`.
+- Репозитарный smoke-контур (этап D):
+  - добавлен Playwright smoke:
+    - `YummyWeb/playwright.config.ts` (проекты `android-chrome`, `ios-safari`);
+    - `YummyWeb/e2e/mobile.smoke.spec.ts` (guest/auth критичные флоу);
+    - `YummyWeb/e2e/helpers/authState.ts` (кеш auth-state + refresh fallback).
+  - добавлен API smoke:
+    - `YummyWeb/scripts/mobileApiSmoke.mjs` (контрактный прогон `/home/rails`, `/mixes`, `/favorites`, `/sessions`, `/mix-ratings/summary`, create/delete session).
+  - добавлены npm-скрипты:
+    - `api:smoke:mobile`,
+    - `e2e:install`,
+    - `e2e:smoke`,
+    - `e2e:smoke:chromium`,
+    - `e2e:smoke:webkit`.
+- Проверка (этап E):
+  - `cd backend && npm run build` — `OK`;
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run api:smoke:mobile` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (`android-chrome` + `ios-safari`, 6/6).
+  - after-артефакты сохранены в:
+    - `output/playwright/mobile-wave1/after/*`.
+
 Обновление от 3 марта 2026 (точечные UI-правки по фидбеку):
 - Изменение:
   - `YummyWeb/src/ui/components/MixPreviewCard.tsx`:

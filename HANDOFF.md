@@ -1,5 +1,75 @@
 # HANDOFF — Yummy
 
+## 1.13) Mobile wave1: проверка и доработка мобильной версии (3 марта 2026)
+
+- Контекст и baseline (этап A):
+  - baseline-артефакты сняты через `playwright` skill:
+    - `output/playwright/mobile-wave1/before/guest-home-390x844.png`
+    - `output/playwright/mobile-wave1/before/guest-catalog-390x844.png`
+    - `output/playwright/mobile-wave1/before/guest-catalog-info-390x844.png`
+    - `output/playwright/mobile-wave1/before/auth-home-390x844.png`
+    - `output/playwright/mobile-wave1/before/auth-favorites-390x844.png`
+    - `output/playwright/mobile-wave1/before/auth-sessions-390x844.png`
+    - и пары для `360x800`.
+  - зафиксирован P0:
+    - отсутствовал `DELETE /sessions/:id` (backend отвечал `404 Not Found`);
+  - зафиксирован P1:
+    - часть mobile touch-таргетов была ниже целевого размера.
+
+- Реализация (этап B/C):
+  - `backend/src/sessions/routes.ts`:
+    - добавлен endpoint `DELETE /sessions/:id`;
+    - возвращает:
+      - `400` при невалидном `id`,
+      - `404` при отсутствии сессии пользователя,
+      - `200 { ok: true }` при успешном удалении.
+  - `YummyWeb/src/ui/SessionsScreen.tsx`:
+    - удаление сессий переведено на optimistic delete с rollback при ошибке;
+    - добавлены `data-testid` для кнопок удаления и модалки.
+  - `YummyWeb` mobile UX:
+    - увеличены tap-target у критичных элементов (`tabs`, action-кнопки карточек, header/profile кнопки);
+    - добавлены стабильные `data-testid` в:
+      - `App.tsx`,
+      - `HomeScreen.tsx`,
+      - `MixPreviewCard.tsx`,
+      - `SessionsScreen.tsx`,
+      - `MixInfoModal.tsx`,
+      - `AddToSessionModal.tsx`,
+      - `AppTabs.tsx`/`TabsTrigger`.
+
+- Репозитарный smoke-контур (этап D):
+  - добавлены e2e smoke-файлы:
+    - `YummyWeb/playwright.config.ts`
+    - `YummyWeb/e2e/mobile.smoke.spec.ts`
+    - `YummyWeb/e2e/helpers/authState.ts`
+  - добавлен API smoke:
+    - `YummyWeb/scripts/mobileApiSmoke.mjs`
+  - `YummyWeb/package.json`:
+    - новые команды:
+      - `api:smoke:mobile`
+      - `e2e:install`
+      - `e2e:smoke`
+      - `e2e:smoke:chromium`
+      - `e2e:smoke:webkit`
+    - добавлен `@playwright/test`.
+
+- Валидация (этап E):
+  - `cd backend && npm run build` — `OK`;
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run api:smoke:mobile` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6 на `android-chrome` и `ios-safari`).
+  - after-артефакты:
+    - `output/playwright/mobile-wave1/after/android-chrome-guest-home.png`
+    - `output/playwright/mobile-wave1/after/android-chrome-guest-catalog.png`
+    - `output/playwright/mobile-wave1/after/android-chrome-guest-catalog-info.png`
+    - `output/playwright/mobile-wave1/after/android-chrome-auth-favorites.png`
+    - `output/playwright/mobile-wave1/after/android-chrome-auth-sessions.png`
+    - `output/playwright/mobile-wave1/after/ios-safari-guest-home.png`
+    - `output/playwright/mobile-wave1/after/ios-safari-guest-catalog.png`
+    - `output/playwright/mobile-wave1/after/ios-safari-guest-catalog-info.png`
+    - `output/playwright/mobile-wave1/after/ios-safari-auth-favorites.png`
+    - `output/playwright/mobile-wave1/after/ios-safari-auth-sessions.png`
+
 ## 1.12) Точечные правки карточки и таблицы сессий (3 марта 2026)
 
 - Запрос:
