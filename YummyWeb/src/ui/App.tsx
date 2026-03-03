@@ -18,6 +18,7 @@ import { SessionsScreen } from './SessionsScreen';
 import { AppButton, AppInput, AppModal, AppSelect, AppTabs } from '@/ui-kit';
 
 type TabKey = 'home' | 'sessions' | 'catalog' | 'favorites' | 'mixes' | 'rail-list';
+type MainTabKey = 'home' | 'sessions' | 'catalog' | 'favorites';
 
 type MixesOpenRequest = {
   mode: 'detail' | 'create' | 'list';
@@ -93,6 +94,12 @@ export const App = () => {
     () => visibleTabs.map((item) => ({ value: item.key, label: item.label })),
     [visibleTabs],
   );
+  const activeMainTabForListNav = useMemo<MainTabKey>(() => {
+    if (activeTab === 'home' || activeTab === 'catalog' || activeTab === 'favorites' || activeTab === 'sessions') {
+      return activeTab;
+    }
+    return 'home';
+  }, [activeTab]);
   const profileName = useMemo(
     () => resolveProfileName(authState.user, customProfileName),
     [authState.user, customProfileName],
@@ -478,7 +485,7 @@ export const App = () => {
           {useListNav ? (
             <nav className="topbar-nav-list" aria-label="Основная навигация">
               <AppSelect
-                value={activeTab}
+                value={activeMainTabForListNav}
                 onChange={(next) => setActiveTab(next as TabKey)}
                 options={mainTabItems}
                 triggerClassName="topbar-nav-select-trigger"

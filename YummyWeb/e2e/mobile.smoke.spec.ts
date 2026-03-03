@@ -113,6 +113,11 @@ test.describe('auth flows', () => {
     await ensureFavoriteForAuthUser(request, authState.tokens.accessToken);
     await page.reload();
 
+    const seeAllButton = page.locator('[data-testid^="home-rail-see-all-"]').first();
+    await expect(seeAllButton).toBeVisible();
+    await seeAllButton.click();
+    await expect(page.getByText('Результат')).toBeVisible();
+
     await goToMobileNavItem(page, 'favorites');
     await expect(page.getByRole('main').getByText('Избранное')).toBeVisible();
     await expect.poll(async () => page.locator('[data-testid^="mix-card-"]').count()).toBeGreaterThan(0);

@@ -1,5 +1,21 @@
 ## Этот файл для человека
 
+Обновление от 3 марта 2026 (mobile wave1.4: фикс пустого раздела nav после `Смотреть все`):
+- Проблема:
+  - после перехода `Главная -> Смотреть все` (`rail-list`) в mobile select-nav раздел в шапке становился пустым.
+- Причина:
+  - в list-nav использовался `value=activeTab`, но для `rail-list` нет пункта в основном списке nav (`home/catalog/favorites/sessions`), из-за чего trigger select рендерился без текста.
+- Изменение:
+  - `YummyWeb/src/ui/App.tsx`:
+    - добавлен `activeMainTabForListNav` (`MainTabKey`) с fallback на `home` для экранов вне основного меню (`rail-list`, `mixes`);
+    - в mobile `AppSelect` теперь передаётся `value={activeMainTabForListNav}` и базовые `mainTabItems`.
+  - `YummyWeb/e2e/mobile.smoke.spec.ts`:
+    - в auth-smoke добавлен шаг перехода через `Смотреть все`, чтобы закрепить регресс-контур сценария.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6);
+  - контрольный скриншот: `output/playwright/mobile-wave1/after/check-430x932-see-all-nav-v3.png`.
+
 Обновление от 3 марта 2026 (mobile wave1.3: фиксация позиции тега пользовательского микса):
 - Проблема:
   - после перехода на icon-only режим тег `Мой микс` оставался под заголовком и визуально «съезжал» на `430x932`.

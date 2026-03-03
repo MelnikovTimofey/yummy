@@ -1,5 +1,28 @@
 # HANDOFF — Yummy
 
+## 1.17) Mobile wave1.4: фикс пустого nav-пункта после `Смотреть все` (3 марта 2026)
+
+- Проблема:
+  - после перехода из `Главной` в `Смотреть все` (`rail-list`) в mobile dropdown шапки пропадал текст активного раздела.
+
+- Причина:
+  - `AppSelect` получал `value='rail-list'`, но такого значения нет в `mainTabItems` (`home/catalog/favorites/sessions`), поэтому trigger рендерился пустым.
+
+- Изменение:
+  - `YummyWeb/src/ui/App.tsx`:
+    - введён тип `MainTabKey` и вычисление `activeMainTabForListNav`:
+      - если активен основной таб (`home/catalog/favorites/sessions`) — показываем его;
+      - если активен внутренний экран (`rail-list`, `mixes`) — fallback на `home`;
+    - mobile `AppSelect` переведён на `value={activeMainTabForListNav}` с базовыми `mainTabItems`.
+  - `YummyWeb/e2e/mobile.smoke.spec.ts`:
+    - в auth smoke добавлен переход `Смотреть все` перед шагом `Избранное` для фиксации регрессии.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `cd YummyWeb && npm run e2e:smoke` — `OK` (6/6);
+  - контрольный screenshot:
+    - `output/playwright/mobile-wave1/after/check-430x932-see-all-nav-v3.png`.
+
 ## 1.16) Mobile wave1.3: перенос тега `Мой микс` в action-зону карточки (3 марта 2026)
 
 - Проблема:
