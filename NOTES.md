@@ -1,5 +1,35 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (fix: mobile rail headings + hide `Смотреть все` + desktop top align):
+- Запрос:
+  - на desktop кнопка `Смотреть все` не должна визуально проседать ниже заголовка;
+  - на mobile длинные заголовки по-прежнему не влезают;
+  - на mobile кнопку `Смотреть все` нужно скрыть.
+- Изменение:
+  - `YummyWeb/src/ui/HomeScreen.tsx`:
+    - заголовочная кнопка рейла получила utility-override:
+      - `!flex`
+      - `!h-auto`
+      - `!w-full`
+      - `!items-start`
+      - `!justify-start`
+      - `!whitespace-normal`
+      - `!px-0`
+      - `!py-0`
+      - `text-left`
+    - это снимает дефолтные `h-10`, `justify-center`, `whitespace-nowrap` из `AppButton`.
+  - `YummyWeb/src/ui/styles.css`:
+    - `home-rail-head` переведён на `align-items: flex-start`;
+    - на mobile:
+      - уменьшен размер `home-rail-title` до `24px`,
+      - включён перенос с нормальным `white-space`,
+      - `home-link-btn` скрыт.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright`:
+    - mobile viewport `393x852`: заголовки слева, влезают, `Смотреть все` скрыта;
+    - desktop viewport `1440x900`: CTA выровнена по верхнему краю строки.
+
 Обновление от 9 марта 2026 (fix: убрать центрирование mobile-заголовков рейлов):
 - Проблема:
   - после адаптации длинных заголовков они начали визуально центрироваться на узком mobile viewport.

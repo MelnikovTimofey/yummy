@@ -1,5 +1,30 @@
 # HANDOFF — Yummy
 
+## 1.23) Fix rail headers: desktop top-align, mobile wrap, hide `Смотреть все` (9 марта 2026)
+
+- Запрос:
+  - на desktop CTA `Смотреть все` не должна быть ниже заголовка;
+  - на mobile длинные заголовки должны влезать;
+  - на mobile CTA `Смотреть все` должна быть скрыта.
+
+- Реализация:
+  - `YummyWeb/src/ui/HomeScreen.tsx`:
+    - заголовочная кнопка рейла переведена на explicit utility-override:
+      - `!flex !h-auto !w-full !items-start !justify-start !whitespace-normal !px-0 !py-0 text-left`
+    - это гарантированно снимает влияние базового `AppButton` (`h-10`, `justify-center`, `whitespace-nowrap`).
+  - `YummyWeb/src/ui/styles.css`:
+    - `home-rail-head` теперь использует `align-items: flex-start`;
+    - на `@media (max-width: 480px)`:
+      - `home-rail-title` уменьшен до `24px`,
+      - сохранён перенос длинных заголовков,
+      - `home-link-btn` скрыт.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright`:
+    - viewport `393x852`: mobile-заголовки не обрезаются и CTA скрыта;
+    - viewport `1440x900`: CTA стоит на верхнем крае строки, а не ниже.
+
 ## 1.22) Fix mobile rail titles: keep wrapping, remove centering (9 марта 2026)
 
 - Проблема:

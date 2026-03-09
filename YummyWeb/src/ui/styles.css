@@ -450,7 +450,7 @@ select:focus-visible {
 
 .home-rail-head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
@@ -479,6 +479,7 @@ select:focus-visible {
   line-height: 1.1;
   letter-spacing: -0.01em;
   min-width: 0;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 
@@ -1951,7 +1952,8 @@ select:focus-visible {
   }
 
   .home-rail-title {
-    font-size: 28px;
+    font-size: 24px;
+    line-height: 1.15;
   }
 
   .home-rail-head {
@@ -1961,8 +1963,6 @@ select:focus-visible {
   }
 
   .home-rail-title-btn {
-    display: block;
-    width: 100%;
     text-align: left;
   }
 
@@ -1971,9 +1971,7 @@ select:focus-visible {
   }
 
   .home-link-btn {
-    width: fit-content;
-    align-self: flex-start;
-    max-width: 100%;
+    display: none;
   }
 
   .home-rail-card {
