@@ -1,5 +1,29 @@
 # HANDOFF — Yummy
 
+## 1.30) Remove mobile double-tap caused by hover-first buttons (9 марта 2026)
+
+- Проблема:
+  - на iPhone часть кнопок сначала входила в hover/focus-состояние и только со второго тапа выполняла действие.
+
+- Причина:
+  - в базовом UI-слое были прямые hover-утилиты (`hover:*`) без ограничения по типу устройства;
+  - Safari на touch-экранах мог трактовать первый тап как активацию hover.
+
+- Реализация:
+  - `YummyWeb/src/components/ui/button.tsx`:
+    - базовые variant-классы переведены с `hover:*` на собственные `ui-hover-default`, `ui-hover-secondary`, `ui-hover-outline`, `ui-hover-ghost`, `ui-hover-link`, `ui-hover-destructive`;
+    - добавлен `touch-manipulation`.
+  - `YummyWeb/src/components/ui/dialog.tsx`
+    и `YummyWeb/src/components/ui/sheet.tsx`:
+    - close-кнопки переведены на класс `dialog-close-btn` без прямого `hover:opacity-100`.
+  - `YummyWeb/src/ui/styles.css`:
+    - hover-правила перенесены под `@media (hover: hover)`, чтобы они работали только на pointer/hover desktop-устройствах;
+    - то же сделано для `profile-menu-item`, `mix-action-btn`, `home-action-btn`, `home-rail-carousel:hover .rail-nav-btn`;
+    - для `button` и `[role="button"]` добавлены `touch-action: manipulation` и отключён tap-highlight.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.29) Move tag/flavor filters above manufacturer/tobacco in `Каталог` (9 марта 2026)
 
 - Запрос:

@@ -34,11 +34,41 @@ body {
   overflow-x: hidden;
 }
 
+button,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--accent-soft);
   outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .ui-hover-default:hover,
+  .ui-hover-destructive:hover {
+    opacity: 0.9;
+  }
+
+  .ui-hover-outline:hover,
+  .ui-hover-ghost:hover {
+    background-color: hsl(var(--muted));
+  }
+
+  .ui-hover-secondary:hover {
+    background-color: hsl(var(--secondary) / 0.8);
+  }
+
+  .ui-hover-link:hover {
+    text-decoration-line: underline;
+  }
+
+  .dialog-close-btn:hover {
+    opacity: 1;
+  }
 }
 
 .app-bg {
@@ -266,7 +296,6 @@ select:focus-visible {
   cursor: pointer;
 }
 
-.profile-menu-item:hover,
 .profile-menu-item:focus-visible {
   background: #221a16;
 }
@@ -626,17 +655,23 @@ select:focus-visible {
   transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
-.mix-action-btn:hover,
-.home-action-btn:hover {
-  background: rgba(29, 23, 19, 0.92);
-  border-color: #5d4a37;
-}
-
 .mix-action-icon,
 .home-action-icon {
   width: 18px;
   height: 18px;
   stroke-width: 2;
+}
+
+@media (hover: hover) {
+  .profile-menu-item:hover {
+    background: #221a16;
+  }
+
+  .mix-action-btn:hover,
+  .home-action-btn:hover {
+    background: rgba(29, 23, 19, 0.92);
+    border-color: #5d4a37;
+  }
 }
 
 .mix-fav-btn.active,
@@ -2160,7 +2195,6 @@ select:focus-visible {
     right: 8px;
   }
 
-  .home-rail-carousel:hover .rail-nav-btn,
   .home-rail-carousel:focus-within .rail-nav-btn {
     opacity: 1;
     pointer-events: auto;
@@ -2259,5 +2293,13 @@ select:focus-visible {
   .mix-create-grid {
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
     align-items: start;
+  }
+}
+
+@media (hover: hover) {
+  .home-rail-carousel:hover .rail-nav-btn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
   }
 }

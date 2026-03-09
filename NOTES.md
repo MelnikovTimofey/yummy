@@ -1,5 +1,24 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (fix: убрать double-tap на mobile-кнопках из-за hover state):
+- Проблема:
+  - на iPhone часть кнопок в интерфейсе сначала получала визуальный фокус/hover, а действие срабатывало только со второго тапа.
+- Причина:
+  - базовые UI-кнопки и close-кнопки модалок использовали прямые `hover:`-стили;
+  - Safari на touch-устройствах мог сначала активировать hover-состояние, а не само действие.
+- Изменение:
+  - `YummyWeb/src/components/ui/button.tsx`:
+    - hover-утилиты заменены на собственные классы `ui-hover-*`;
+    - добавлен `touch-manipulation` в базовый button-класс.
+  - `YummyWeb/src/components/ui/dialog.tsx`
+    и `YummyWeb/src/components/ui/sheet.tsx`:
+    - close-кнопки переведены с `hover:opacity-100` на класс `dialog-close-btn`.
+  - `YummyWeb/src/ui/styles.css`:
+    - hover-поведение для `ui-hover-*`, `dialog-close-btn`, `profile-menu-item`, `mix-action-btn`, `home-action-btn`, `rail-nav-btn` ограничено через `@media (hover: hover)`;
+    - для `button` и `[role="button"]` добавлены `touch-action: manipulation` и `-webkit-tap-highlight-color: transparent`.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 Обновление от 9 марта 2026 (fix: поднять теги и вкусовые фильтры выше брендов и табаков в каталоге):
 - Запрос:
   - на desktop и mobile блоки поиска по тегам/профилям/вкусам должны быть выше фильтров по производителям и табакам.
