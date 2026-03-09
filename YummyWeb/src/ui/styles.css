@@ -972,6 +972,18 @@ select:focus-visible {
   gap: 10px;
 }
 
+@media (max-width: 768px) {
+  .search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-find-btn {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 0;
+  }
+}
+
 .catalog-active-filters {
   display: flex;
   flex-wrap: wrap;

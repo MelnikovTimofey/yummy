@@ -1,5 +1,20 @@
 # HANDOFF — Yummy
 
+## 1.25) Move mobile search CTA below input in `Каталог` и `Избранное` (9 марта 2026)
+
+- Проблема:
+  - на mobile кнопка `Найти` стояла в верхней строке рядом с поисковым полем и делала первую строку визуально тяжёлой.
+
+- Реализация:
+  - `YummyWeb/src/ui/styles.css`:
+    - на `@media (max-width: 768px)` `search-row` переведён в одну колонку;
+    - `catalog-find-btn` получает `width: 100%`, `min-height: 44px`, `margin-top: 0`;
+    - desktop-layout не затронут.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852` показала ожидаемую mobile-компоновку: поле сверху, кнопка поиска ниже.
+
 ## 1.24) Compact mobile filters for `Каталог` и `Избранное` (9 марта 2026)
 
 - Проблема:
