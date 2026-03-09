@@ -679,85 +679,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                 </label>
               </div>
 
-              <div className="filters-row">
-                <label className="filter-field">
-                  <span>Производитель (можно несколько)</span>
-                  <AppInput
-                    className="search-input"
-                    type="search"
-                    value={manufacturerSearchDraft}
-                    onChange={(event) => setManufacturerSearchDraft(event.target.value)}
-                    placeholder="Поиск бренда"
-                  />
-                  <div className="filter-scrollbox" onScroll={handleManufacturersScroll}>
-                    <AppButton
-                      variant="ghost"
-                      className={`filter-option ${selectedManufacturerIds.length === 0 ? 'active' : ''}`}
-                      onClick={() => setSelectedManufacturerIds([])}
-                    >
-                      Все бренды
-                    </AppButton>
-                    {manufacturers.map((item) => (
-                      <AppButton
-                        key={item.id}
-                        variant="ghost"
-                        className={`filter-option ${selectedManufacturerIds.includes(item.id) ? 'active' : ''}`}
-                        onClick={() => toggleManufacturer(item.id)}
-                      >
-                        {item.name}
-                      </AppButton>
-                    ))}
-                    <p className="filter-scroll-meta">
-                      {manufacturersStatus === 'error'
-                        ? 'Не удалось загрузить бренды'
-                        : manufacturersStatus === 'loading'
-                          ? 'Загрузка...'
-                          : manufacturersHasMore
-                            ? 'Прокрутите вниз для автоподгрузки'
-                            : 'Все бренды загружены'}
-                    </p>
-                  </div>
-                </label>
-                <label className="filter-field">
-                  <span>Табак (можно несколько)</span>
-                  <AppInput
-                    className="search-input"
-                    type="search"
-                    value={tobaccoSearchDraft}
-                    onChange={(event) => setTobaccoSearchDraft(event.target.value)}
-                    placeholder={selectedManufacturerIds.length === 1 ? 'Поиск табака выбранного бренда' : 'Поиск табака'}
-                  />
-                  <div className="filter-scrollbox" onScroll={handleTobaccosScroll}>
-                    <AppButton
-                      variant="ghost"
-                      className={`filter-option ${selectedTobaccoIds.length === 0 ? 'active' : ''}`}
-                      onClick={() => setSelectedTobaccoIds([])}
-                    >
-                      Любой табак
-                    </AppButton>
-                    {tobaccos.map((item) => (
-                      <AppButton
-                        key={item.id}
-                        variant="ghost"
-                        className={`filter-option ${selectedTobaccoIds.includes(item.id) ? 'active' : ''}`}
-                        onClick={() => toggleTobacco(item.id)}
-                      >
-                        {item.manufacturer.name} · {item.name}
-                      </AppButton>
-                    ))}
-                    <p className="filter-scroll-meta">
-                      {tobaccosStatus === 'error'
-                        ? 'Не удалось загрузить табаки'
-                        : tobaccosStatus === 'loading'
-                          ? 'Загрузка...'
-                          : tobaccosHasMore
-                            ? 'Прокрутите вниз для автоподгрузки'
-                            : 'Все табаки загружены'}
-                    </p>
-                  </div>
-                </label>
-              </div>
-
               <div className="filter-field">
                 <span>Теги (можно несколько)</span>
                 <AppInput
@@ -846,6 +767,85 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
                     </AppButton>
                   ))}
                 </div>
+              </div>
+
+              <div className="filters-row">
+                <label className="filter-field">
+                  <span>Производитель (можно несколько)</span>
+                  <AppInput
+                    className="search-input"
+                    type="search"
+                    value={manufacturerSearchDraft}
+                    onChange={(event) => setManufacturerSearchDraft(event.target.value)}
+                    placeholder="Поиск бренда"
+                  />
+                  <div className="filter-scrollbox" onScroll={handleManufacturersScroll}>
+                    <AppButton
+                      variant="ghost"
+                      className={`filter-option ${selectedManufacturerIds.length === 0 ? 'active' : ''}`}
+                      onClick={() => setSelectedManufacturerIds([])}
+                    >
+                      Все бренды
+                    </AppButton>
+                    {manufacturers.map((item) => (
+                      <AppButton
+                        key={item.id}
+                        variant="ghost"
+                        className={`filter-option ${selectedManufacturerIds.includes(item.id) ? 'active' : ''}`}
+                        onClick={() => toggleManufacturer(item.id)}
+                      >
+                        {item.name}
+                      </AppButton>
+                    ))}
+                    <p className="filter-scroll-meta">
+                      {manufacturersStatus === 'error'
+                        ? 'Не удалось загрузить бренды'
+                        : manufacturersStatus === 'loading'
+                          ? 'Загрузка...'
+                          : manufacturersHasMore
+                            ? 'Прокрутите вниз для автоподгрузки'
+                            : 'Все бренды загружены'}
+                    </p>
+                  </div>
+                </label>
+                <label className="filter-field">
+                  <span>Табак (можно несколько)</span>
+                  <AppInput
+                    className="search-input"
+                    type="search"
+                    value={tobaccoSearchDraft}
+                    onChange={(event) => setTobaccoSearchDraft(event.target.value)}
+                    placeholder={selectedManufacturerIds.length === 1 ? 'Поиск табака выбранного бренда' : 'Поиск табака'}
+                  />
+                  <div className="filter-scrollbox" onScroll={handleTobaccosScroll}>
+                    <AppButton
+                      variant="ghost"
+                      className={`filter-option ${selectedTobaccoIds.length === 0 ? 'active' : ''}`}
+                      onClick={() => setSelectedTobaccoIds([])}
+                    >
+                      Любой табак
+                    </AppButton>
+                    {tobaccos.map((item) => (
+                      <AppButton
+                        key={item.id}
+                        variant="ghost"
+                        className={`filter-option ${selectedTobaccoIds.includes(item.id) ? 'active' : ''}`}
+                        onClick={() => toggleTobacco(item.id)}
+                      >
+                        {item.manufacturer.name} · {item.name}
+                      </AppButton>
+                    ))}
+                    <p className="filter-scroll-meta">
+                      {tobaccosStatus === 'error'
+                        ? 'Не удалось загрузить табаки'
+                        : tobaccosStatus === 'loading'
+                          ? 'Загрузка...'
+                          : tobaccosHasMore
+                            ? 'Прокрутите вниз для автоподгрузки'
+                            : 'Все табаки загружены'}
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
           ) : null}

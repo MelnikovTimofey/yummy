@@ -1,5 +1,23 @@
 # HANDOFF — Yummy
 
+## 1.29) Move tag/flavor filters above manufacturer/tobacco in `Каталог` (9 марта 2026)
+
+- Запрос:
+  - в `Каталоге` на desktop и mobile блоки поиска по тегам и вкусовым фильтрам должны быть выше блоков по производителям и табакам.
+
+- Реализация:
+  - `YummyWeb/src/ui/CatalogScreen.tsx`:
+    - в секции `catalog-advanced-filters` после строки `Сортировка` / `Мин. оценка` порядок изменён на:
+      - `Теги`
+      - `Профили вкуса`
+      - `Вкусы`
+      - `Производитель`
+      - `Табак`
+    - так как desktop и mobile используют один и тот же advanced-блок, перестановка сразу применяется в обеих версиях.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.28) Bring `Мои миксы` to the same mobile filter pattern (9 марта 2026)
 
 - Запрос:
