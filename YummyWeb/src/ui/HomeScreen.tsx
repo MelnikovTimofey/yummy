@@ -213,7 +213,7 @@ export const HomeScreen = ({ authState, onAuthUpdate, onOpenMix, onOpenRail }: H
             <div className="home-rail-head">
               <AppButton
                 variant="ghost"
-                className="home-rail-title-btn"
+                className="home-rail-title-btn w-full !justify-start text-left"
                 disabled={!onOpenRail}
                 onClick={() => onOpenRail?.(rail)}
                 data-testid={`home-rail-title-${rail.id}`}

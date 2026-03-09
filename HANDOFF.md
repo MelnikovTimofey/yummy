@@ -1,5 +1,24 @@
 # HANDOFF — Yummy
 
+## 1.22) Fix mobile rail titles: keep wrapping, remove centering (9 марта 2026)
+
+- Проблема:
+  - после переноса шапки рейла в колонку заголовки перестали обрезаться, но стали визуально центрироваться из-за базового `AppButton/Button` (`justify-center`).
+
+- Реализация:
+  - `YummyWeb/src/ui/HomeScreen.tsx`:
+    - в `className` кнопки заголовка добавлены:
+      - `w-full`
+      - `!justify-start`
+      - `text-left`
+    - это принудительно сохраняет левое выравнивание даже при `inline-flex` у базовой кнопки.
+  - `YummyWeb/src/ui/styles.css`:
+    - оставлена mobile-компоновка рейла в колонку для длинных заголовков.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852` показала корректное левое выравнивание и отсутствие обрезания.
+
 ## 1.21) Fix long mobile rail titles on narrow iPhone viewport (9 марта 2026)
 
 - Проблема:
