@@ -37,6 +37,7 @@ import { AppButton, AppInput, AppSelect, AppTextarea } from '@/ui-kit';
 import { AddToSessionModal } from '@/ui/components/AddToSessionModal';
 import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
+import { useMediaQuery } from '@/ui/hooks/useMediaQuery';
 
 type MixesScreenProps = {
   authState: AuthState;
@@ -127,6 +128,7 @@ const chartTooltipLabelStyle = { color: '#cbb9a4' };
 const chartTooltipItemStyle = { color: '#efe2d4' };
 
 export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesScreenProps) => {
+  const isCompactFilters = useMediaQuery('(max-width: 768px)');
   const [items, setItems] = useState<Mix[]>([]);
   const [favoriteMixIds, setFavoriteMixIds] = useState<Record<string, true>>({});
   const [ratings, setRatings] = useState<Record<string, MixRating>>({});
@@ -141,9 +143,19 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearchDraft, setTagSearchDraft] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('newest');
+  const [appliedProfiles, setAppliedProfiles] = useState<FlavorProfile[]>([]);
+  const [appliedFlavors, setAppliedFlavors] = useState<string[]>([]);
+  const [appliedTags, setAppliedTags] = useState<string[]>([]);
+  const [appliedSortBy, setAppliedSortBy] = useState<'newest' | 'rating' | 'popularity'>('newest');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [view, setView] = useState<MixesView>('list');
   const [reloadSignal, setReloadSignal] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    return !window.matchMedia('(max-width: 768px)').matches;
+  });
 
   const [activeMixId, setActiveMixId] = useState<string | null>(null);
   const [activeMix, setActiveMix] = useState<Mix | null>(null);
@@ -226,6 +238,23 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [authState.tokens, onAuthUpdate]);
 
   useEffect(() => {
+    if (!isCompactFilters) {
+      setFiltersOpen(true);
+    }
+  }, [isCompactFilters]);
+
+  useEffect(() => {
+    if (isCompactFilters) {
+      return;
+    }
+
+    setAppliedProfiles(selectedProfiles);
+    setAppliedFlavors(selectedFlavors);
+    setAppliedTags(selectedTags);
+    setAppliedSortBy(sortBy);
+  }, [isCompactFilters, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
+
+  useEffect(() => {
     const load = async () => {
       if (!authState.tokens) {
         return;
@@ -236,10 +265,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
         const mixesRes = await getMixes(authState.tokens, onAuthUpdate, {
           authorId: authState.user?.id,
           search: search || undefined,
-          profiles: selectedProfiles.length ? selectedProfiles : undefined,
-          flavors: selectedFlavors.length ? selectedFlavors : undefined,
-          tags: selectedTags.length ? selectedTags : undefined,
-          sort: sortBy,
+          profiles: appliedProfiles.length ? appliedProfiles : undefined,
+          flavors: appliedFlavors.length ? appliedFlavors : undefined,
+          tags: appliedTags.length ? appliedTags : undefined,
+          sort: appliedSortBy,
         });
 
         setItems(mixesRes.items);
@@ -251,15 +280,15 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
     void load();
   }, [
+    appliedFlavors,
+    appliedProfiles,
+    appliedSortBy,
+    appliedTags,
     authState.tokens,
     authState.user?.id,
     onAuthUpdate,
     reloadSignal,
     search,
-    selectedFlavors,
-    selectedProfiles,
-    selectedTags,
-    sortBy,
   ]);
 
   useEffect(() => {
@@ -364,10 +393,10 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
   }, [tagOptions, tagSearchDraft]);
   const hasFilters = Boolean(
     search ||
-      selectedProfiles.length ||
-      selectedFlavors.length ||
-      selectedTags.length ||
-      sortBy !== 'newest',
+      appliedProfiles.length ||
+      appliedFlavors.length ||
+      appliedTags.length ||
+      appliedSortBy !== 'newest',
   );
   const totalProportion = useMemo(
     () =>
@@ -517,7 +546,14 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
 
   const onSubmitFilters = (event: FormEvent) => {
     event.preventDefault();
+    setAppliedProfiles(selectedProfiles);
+    setAppliedFlavors(selectedFlavors);
+    setAppliedTags(selectedTags);
+    setAppliedSortBy(sortBy);
     setSearch(searchDraft.trim());
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+    }
   };
 
   const toggleProfile = (profile: FlavorProfile) => {
@@ -548,6 +584,13 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     setSelectedTags([]);
     setTagSearchDraft('');
     setSortBy('newest');
+    setAppliedProfiles([]);
+    setAppliedFlavors([]);
+    setAppliedTags([]);
+    setAppliedSortBy('newest');
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+    }
   };
 
   const getTobaccoPieData = (mix: Mix) =>
@@ -672,20 +715,26 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
     if (search) {
       labels.push(`Поиск: ${search}`);
     }
-    if (selectedProfiles.length) {
-      labels.push(`Профили: ${selectedProfiles.length}`);
+    if (appliedProfiles.length) {
+      labels.push(`Профили: ${appliedProfiles.length}`);
     }
-    if (selectedFlavors.length) {
-      labels.push(`Вкусы: ${selectedFlavors.length}`);
+    if (appliedFlavors.length) {
+      labels.push(`Вкусы: ${appliedFlavors.length}`);
     }
-    if (selectedTags.length) {
-      labels.push(`Теги: ${selectedTags.length}`);
+    if (appliedTags.length) {
+      labels.push(`Теги: ${appliedTags.length}`);
     }
-    if (sortBy !== 'newest') {
-      labels.push(sortBy === 'rating' ? 'Сортировка: рейтинг' : 'Сортировка: популярность');
+    if (appliedSortBy !== 'newest') {
+      labels.push(appliedSortBy === 'rating' ? 'Сортировка: рейтинг' : 'Сортировка: популярность');
     }
     return labels;
-  }, [search, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
+  }, [appliedFlavors, appliedProfiles, appliedSortBy, appliedTags, search]);
+  const showAdvancedFilters = !isCompactFilters || filtersOpen;
+  const compactFilterButtonLabel = filtersOpen
+    ? 'Скрыть фильтры'
+    : hasFilters
+      ? `Фильтры: ${activeFilterLabels.length || 1}`
+      : 'Показать фильтры';
 
   if (view === 'detail') {
     return (
@@ -1098,8 +1147,24 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
               onChange={(event) => setSearchDraft(event.target.value)}
               placeholder="Поиск по названию и описанию"
             />
-            <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+            {!isCompactFilters ? (
+              <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+            ) : null}
           </div>
+
+          {isCompactFilters ? (
+            <div className="catalog-mobile-tools">
+              <AppButton
+                variant="outline"
+                className="catalog-mobile-filters-toggle"
+                onClick={() => setFiltersOpen((current) => !current)}
+                aria-expanded={filtersOpen}
+                data-testid="mixes-filters-toggle"
+              >
+                {compactFilterButtonLabel}
+              </AppButton>
+            </div>
+          ) : null}
 
           <div className="catalog-tools-row">
             <div className="catalog-active-filters" aria-live="polite">
@@ -1117,104 +1182,116 @@ export const MixesScreen = ({ authState, onAuthUpdate, openMixRequest }: MixesSc
             </AppButton>
           </div>
 
-          <label className="filter-field">
-            <span>Сортировка</span>
-            <AppSelect
-              value={sortBy}
-              onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
-              options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
-            />
-          </label>
+          {showAdvancedFilters ? (
+            <div className="catalog-advanced-filters" data-testid="mixes-advanced-filters">
+              <label className="filter-field">
+                <span>Сортировка</span>
+                <AppSelect
+                  value={sortBy}
+                  onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+                  options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+                />
+              </label>
 
-          <div className="filter-field">
-            <span>Теги (можно несколько)</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={tagSearchDraft}
-              onChange={(event) => setTagSearchDraft(event.target.value)}
-              placeholder="Поиск по тегам"
-            />
-            <div className="filter-scrollbox">
-              <AppButton
-                variant="ghost"
-                className={`filter-option ${selectedTags.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedTags([])}
-              >
-                Любые теги
-              </AppButton>
-              {filteredTagOptions.map((tag) => (
-                <AppButton
-                  key={tag}
-                  variant="ghost"
-                  className={`filter-option ${selectedTags.includes(tag) ? 'active' : ''}`}
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag}
-                </AppButton>
-              ))}
-            </div>
-          </div>
+              <div className="filter-field">
+                <span>Теги (можно несколько)</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={tagSearchDraft}
+                  onChange={(event) => setTagSearchDraft(event.target.value)}
+                  placeholder="Поиск по тегам"
+                />
+                <div className="filter-scrollbox">
+                  <AppButton
+                    variant="ghost"
+                    className={`filter-option ${selectedTags.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedTags([])}
+                  >
+                    Любые теги
+                  </AppButton>
+                  {filteredTagOptions.map((tag) => (
+                    <AppButton
+                      key={tag}
+                      variant="ghost"
+                      className={`filter-option ${selectedTags.includes(tag) ? 'active' : ''}`}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {tag}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
 
-          <div className="filter-field">
-            <span>Профили вкуса (можно несколько)</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={profileSearchDraft}
-              onChange={(event) => setProfileSearchDraft(event.target.value)}
-              placeholder="Поиск профиля"
-            />
-            <div className="filter-scrollbox">
-              <AppButton
-                variant="ghost"
-                className={`filter-option ${selectedProfiles.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedProfiles([])}
-              >
-                Любой профиль
-              </AppButton>
-              {filteredProfileOptions.map((option) => (
-                <AppButton
-                  key={option.value}
-                  variant="ghost"
-                  className={`filter-option ${selectedProfiles.includes(option.value) ? 'active' : ''}`}
-                  onClick={() => toggleProfile(option.value)}
-                >
-                  {option.label}
-                </AppButton>
-              ))}
-            </div>
-          </div>
+              <div className="filter-field">
+                <span>Профили вкуса (можно несколько)</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={profileSearchDraft}
+                  onChange={(event) => setProfileSearchDraft(event.target.value)}
+                  placeholder="Поиск профиля"
+                />
+                <div className="filter-scrollbox">
+                  <AppButton
+                    variant="ghost"
+                    className={`filter-option ${selectedProfiles.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedProfiles([])}
+                  >
+                    Любой профиль
+                  </AppButton>
+                  {filteredProfileOptions.map((option) => (
+                    <AppButton
+                      key={option.value}
+                      variant="ghost"
+                      className={`filter-option ${selectedProfiles.includes(option.value) ? 'active' : ''}`}
+                      onClick={() => toggleProfile(option.value)}
+                    >
+                      {option.label}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
 
-          <div className="filter-field">
-            <span>Вкусы (можно несколько)</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={flavorSearchDraft}
-              onChange={(event) => setFlavorSearchDraft(event.target.value)}
-              placeholder="Поиск вкуса"
-            />
-            <div className="filter-scrollbox">
-              <AppButton
-                variant="ghost"
-                className={`filter-option ${selectedFlavors.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedFlavors([])}
-              >
-                Любой вкус
-              </AppButton>
-              {filteredFlavorOptions.map((flavor) => (
-                <AppButton
-                  key={flavor}
-                  variant="ghost"
-                  className={`filter-option ${selectedFlavors.includes(flavor) ? 'active' : ''}`}
-                  onClick={() => toggleFlavor(flavor)}
-                >
-                  {flavor}
-                </AppButton>
-              ))}
+              <div className="filter-field">
+                <span>Вкусы (можно несколько)</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={flavorSearchDraft}
+                  onChange={(event) => setFlavorSearchDraft(event.target.value)}
+                  placeholder="Поиск вкуса"
+                />
+                <div className="filter-scrollbox">
+                  <AppButton
+                    variant="ghost"
+                    className={`filter-option ${selectedFlavors.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedFlavors([])}
+                  >
+                    Любой вкус
+                  </AppButton>
+                  {filteredFlavorOptions.map((flavor) => (
+                    <AppButton
+                      key={flavor}
+                      variant="ghost"
+                      className={`filter-option ${selectedFlavors.includes(flavor) ? 'active' : ''}`}
+                      onClick={() => toggleFlavor(flavor)}
+                    >
+                      {flavor}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
+
+          {isCompactFilters ? (
+            <div className="catalog-mobile-submit-bar">
+              <AppButton type="submit" className="search-button catalog-mobile-submit-btn" data-testid="mixes-submit-sticky">
+                Найти
+              </AppButton>
+            </div>
+          ) : null}
         </form>
 
         <section className="catalog-results">

@@ -1,5 +1,31 @@
 # HANDOFF — Yummy
 
+## 1.28) Bring `Мои миксы` to the same mobile filter pattern (9 марта 2026)
+
+- Запрос:
+  - экран `Мои миксы` должен получить ту же mobile-механику фильтров, что уже сделана в `Каталоге` и `Избранном`.
+
+- Реализация:
+  - `YummyWeb/src/ui/MixesScreen.tsx`:
+    - подключён `useMediaQuery('(max-width: 768px)')`;
+    - добавлены applied-state для `profiles`, `flavors`, `tags`, `sortBy`;
+    - mobile-screen переведён в `draft -> applied` flow;
+    - добавлены:
+      - `mixes-filters-toggle`
+      - `mixes-advanced-filters`
+      - sticky CTA `mixes-submit-sticky`
+    - inline `Найти` на compact-width скрыта;
+    - desktop сохранил старую модель через авто-синхронизацию applied-state.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852`:
+    - авторизация через `?token=...`;
+    - переход `profile menu -> Мои миксы`;
+    - mobile-layout фильтров и sticky CTA отображаются корректно.
+  - артефакт:
+    - `output/playwright/mobile-wave1/after/mixes-mobile-compact-filters.png`
+
 ## 1.27) Remove programmatic scroll after mobile submit (9 марта 2026)
 
 - Проблема:

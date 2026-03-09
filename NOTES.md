@@ -1,5 +1,26 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (fix: mobile filters in `Мои миксы` aligned with catalog pattern):
+- Запрос:
+  - в разделе `Мои миксы` нужны такие же mobile-фильтры, как в `Каталоге` и `Избранном`.
+- Изменение:
+  - `YummyWeb/src/ui/MixesScreen.tsx`:
+    - добавлен compact mobile-режим фильтров;
+    - для mobile список переведён на схему `черновик -> применить`;
+    - добавлены:
+      - `mixes-filters-toggle`
+      - `mixes-advanced-filters`
+      - sticky `mixes-submit-sticky`
+    - inline-кнопка `Найти` на compact-width скрыта, вместо неё используется нижняя sticky CTA;
+    - desktop-сценарий сохранён: applied-state автоматически синхронизируется с выбранными фильтрами.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852`:
+    - экран `Мои миксы` открывается из меню профиля;
+    - фильтры свёрнуты по умолчанию;
+    - sticky `Найти` видна;
+    - артефакт: `output/playwright/mobile-wave1/after/mixes-mobile-compact-filters.png`.
+
 Обновление от 9 марта 2026 (fix: убрать программный scroll после mobile `Найти`):
 - Проблема:
   - на реальном iPhone после нажатия mobile-кнопки `Найти` экран мог визуально «срезаться», а хедер пропадал вверх.
