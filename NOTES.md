@@ -1,5 +1,25 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (docker mobile proxy: `/api` -> `backend:3001`):
+- Задача:
+  - обеспечить запуск всего проекта в Docker для тестирования с телефона в локальной сети без ручной подстановки LAN IP в frontend API URL.
+- Изменение:
+  - `YummyWeb/src/shared/api.ts`:
+    - базовый API URL по умолчанию переведён с `http://localhost:3001` на относительный `/api`.
+  - `YummyWeb/vite.config.ts`:
+    - добавлен `server.proxy` для `/api`;
+    - target берётся из `API_PROXY_TARGET`, fallback — `http://localhost:3001`.
+  - `docker-compose.yml`:
+    - `yummy-web` теперь получает:
+      - `VITE_API_BASE_URL=/api`
+      - `API_PROXY_TARGET=http://backend:3001`
+    - запросы браузера с телефона идут на один origin (`:5173`), а затем проксируются по внутренней сети Docker.
+  - `YummyWeb/README.md`:
+    - добавлена инструкция по запуску Docker-контура для телефона.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `docker compose config` — `OK`.
+
 Обновление от 3 марта 2026 (mobile wave1.4: фикс пустого раздела nav после `Смотреть все`):
 - Проблема:
   - после перехода `Главная -> Смотреть все` (`rail-list`) в mobile select-nav раздел в шапке становился пустым.

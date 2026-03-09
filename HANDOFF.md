@@ -1,5 +1,28 @@
 # HANDOFF — Yummy
 
+## 1.18) Docker mobile proxy: один origin для телефона и backend во внутренней сети (9 марта 2026)
+
+- Задача:
+  - запускать весь стек через Docker и открывать приложение с телефона в локальной сети без ручного указания LAN IP для frontend API.
+
+- Реализация:
+  - `YummyWeb/src/shared/api.ts`:
+    - default API base URL изменён на `/api`.
+  - `YummyWeb/vite.config.ts`:
+    - добавлен proxy `/api -> API_PROXY_TARGET`;
+    - fallback target для локального запуска без Docker: `http://localhost:3001`.
+  - `docker-compose.yml`:
+    - для `yummy-web` добавлены env:
+      - `VITE_API_BASE_URL=/api`
+      - `API_PROXY_TARGET=http://backend:3001`
+    - это позволяет браузеру телефона ходить только на `http://<host-ip>:5173`, а контейнер `yummy-web` сам проксирует API в Docker-сеть.
+  - `YummyWeb/README.md`:
+    - добавлена инструкция для сценария `телефон + локальная сеть + docker compose`.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - `docker compose config` — `OK`.
+
 ## 1.17) Mobile wave1.4: фикс пустого nav-пункта после `Смотреть все` (3 марта 2026)
 
 - Проблема:

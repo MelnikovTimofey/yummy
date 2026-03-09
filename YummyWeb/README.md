@@ -10,13 +10,43 @@ npm install
 npm run dev
 ```
 
-По умолчанию API: `http://localhost:3001`.
+По умолчанию API: относительный путь `/api`.
 
 Чтобы переопределить:
 
 ```bash
 echo "VITE_API_BASE_URL=http://<ваш-host>:3001" > .env.local
 ```
+
+Для локальной разработки с `vite` без Docker прокси уже настроен на `http://localhost:3001`, так что `.env.local` обычно не нужен.
+
+## Телефон в локальной сети + Docker
+
+Если весь проект поднят через `docker compose`, отдельный LAN IP для API больше не нужен.
+
+Схема:
+- телефон открывает `http://<IP_компьютера>:5173`;
+- frontend делает запросы на `/api/...`;
+- `vite` внутри контейнера `yummy-web` проксирует `/api` на `http://backend:3001` по внутренней сети Docker.
+
+Запуск:
+
+```bash
+cd /Users/admin/PycharmProjects/yummy
+docker compose up -d db mailpit backend yummy-web
+docker compose --profile setup up backend-migrate backend-seed
+```
+
+Открыть на телефоне:
+
+```text
+http://<IP_компьютера>:5173
+```
+
+Проверки:
+- приложение: `http://<IP_компьютера>:5173`
+- backend через хост: `http://<IP_компьютера>:3001/health`
+- письма: `http://localhost:8025` на компьютере
 
 ## UI-стек (актуально)
 
