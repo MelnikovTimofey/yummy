@@ -1,4 +1,4 @@
-import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getManufacturers,
   getMixes,
@@ -146,7 +146,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [activeMix, setActiveMix] = useState<Mix | null>(null);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
-  const resultsRef = useRef<HTMLElement | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(() => {
     if (typeof window === 'undefined') {
       return true;
@@ -371,12 +370,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     query,
   ]);
 
-  const scrollToResults = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, []);
-
   const applyFilters = useCallback(() => {
     setQuery(queryDraft.trim());
     setAppliedManufacturerIds(selectedManufacturerIds);
@@ -389,13 +382,11 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
     if (isCompactFilters) {
       setFiltersOpen(false);
-      scrollToResults();
     }
   }, [
     isCompactFilters,
     minRating,
     queryDraft,
-    scrollToResults,
     selectedFlavors,
     selectedManufacturerIds,
     selectedProfiles,
@@ -448,7 +439,6 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
     if (isCompactFilters) {
       setFiltersOpen(false);
-      scrollToResults();
     }
   };
 
@@ -869,7 +859,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
           ) : null}
         </form>
 
-        <section ref={resultsRef} className="catalog-results">
+        <section className="catalog-results">
           <section className="card catalog-summary">
             <p className="card-title">Результат</p>
             <p className="card-text">

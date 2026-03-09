@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   getFavorites,
@@ -100,7 +100,6 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
   const [feedback, setFeedback] = useState<string | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
-  const resultsRef = useRef<HTMLElement | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(() => {
     if (typeof window === 'undefined') {
       return true;
@@ -190,12 +189,6 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     void load();
   }, [appliedFlavors, appliedProfiles, appliedSortBy, appliedTags, authState.tokens, onAuthUpdate, reloadSignal, search]);
 
-  const scrollToResults = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, []);
-
   const applyFilters = useCallback(() => {
     setSearch(searchDraft.trim());
     setAppliedProfiles(selectedProfiles);
@@ -205,9 +198,8 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
 
     if (isCompactFilters) {
       setFiltersOpen(false);
-      scrollToResults();
     }
-  }, [isCompactFilters, scrollToResults, searchDraft, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
+  }, [isCompactFilters, searchDraft, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
 
   const onSubmitFilters = (event: FormEvent) => {
     event.preventDefault();
@@ -264,7 +256,6 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
 
     if (isCompactFilters) {
       setFiltersOpen(false);
-      scrollToResults();
     }
   };
 
@@ -502,7 +493,7 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
           ) : null}
         </form>
 
-        <section ref={resultsRef} className="catalog-results">
+        <section className="catalog-results">
           <section className="card catalog-summary">
             <p className="card-title">Избранное</p>
             <p className="card-text">

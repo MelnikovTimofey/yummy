@@ -1,5 +1,28 @@
 # HANDOFF — Yummy
 
+## 1.27) Remove programmatic scroll after mobile submit (9 марта 2026)
+
+- Проблема:
+  - на iPhone после нажатия mobile `Найти` экран мог смещаться так, что верхний хедер уходил за пределы viewport.
+
+- Причина:
+  - после mobile-submit вызывался `scrollIntoView` к `catalog-results`;
+  - на Safari это могло прокрутить весь shell/page вместо ожидаемого локального контента.
+
+- Реализация:
+  - `YummyWeb/src/ui/CatalogScreen.tsx`:
+    - удалён `resultsRef`;
+    - убран `scrollIntoView` после apply/reset.
+  - `YummyWeb/src/ui/FavoritesScreen.tsx`:
+    - выполнен тот же откат программной прокрутки.
+  - Теперь mobile-submit делает только:
+    - применение черновиков,
+    - сворачивание фильтров.
+  - Результаты показываются естественно за счёт уменьшения высоты filter-панели, без принудительного scroll.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.26) Sticky mobile `Найти` + deferred apply for `Каталог`/`Избранное` (9 марта 2026)
 
 - Проблема:
