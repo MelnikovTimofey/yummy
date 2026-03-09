@@ -1,5 +1,20 @@
 # HANDOFF — Yummy
 
+## 1.21) Fix long mobile rail titles on narrow iPhone viewport (9 марта 2026)
+
+- Проблема:
+  - длинные заголовки рейлов срезались на узких mobile viewport, потому что делили одну строку с CTA `Смотреть все`.
+
+- Реализация:
+  - `YummyWeb/src/ui/styles.css`:
+    - `home-rail-head` дополнен `min-width: 0`;
+    - `home-rail-title-btn` переведён в гибкий блок (`flex: 1 1 auto`, `min-width: 0`, `max-width: 100%`);
+    - `home-rail-title` получил `overflow-wrap: anywhere`;
+    - на `@media (max-width: 480px)` шапка рейла переводится в колонку, а `home-link-btn` выравнивается под заголовком.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.20) Fix mobile shell width on real Safari / iPhone 16 (9 марта 2026)
 
 - Проблема:

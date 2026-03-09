@@ -453,6 +453,7 @@ select:focus-visible {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 .home-rail-title-btn {
@@ -462,6 +463,9 @@ select:focus-visible {
   padding: 0;
   text-align: left;
   cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
 }
 
 .home-rail-title-btn:disabled {
@@ -473,6 +477,8 @@ select:focus-visible {
   font-size: 30px;
   line-height: 1.1;
   letter-spacing: -0.01em;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .home-link-btn {
@@ -1945,6 +1951,18 @@ select:focus-visible {
 
   .home-rail-title {
     font-size: 28px;
+  }
+
+  .home-rail-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .home-link-btn {
+    width: fit-content;
+    align-self: flex-start;
+    max-width: 100%;
   }
 
   .home-rail-card {
