@@ -1,5 +1,23 @@
 # HANDOFF — Yummy
 
+## 1.19) Fix Docker build: `catalog-updater` + Prisma generate (9 марта 2026)
+
+- Проблема:
+  - `docker compose up -d --build` падал в `catalog-updater` на этапе `npm run prisma:generate`;
+  - Prisma брал root как `/app`, потому что schema лежит в `/app/backend/prisma/schema.prisma`, и пытался auto-install `@prisma/client` в пустом корне.
+
+- Реализация:
+  - `services/catalog-updater/Dockerfile`:
+    - до установки зависимостей updater в `/app` копируются:
+      - `backend/package.json`
+      - `backend/package-lock.json`
+    - затем выполняется `npm ci --omit=dev` в `/app`;
+    - после этого `prisma generate` в `services/catalog-updater` работает без auto-install fallback;
+    - полное `COPY services/catalog-updater ./services/catalog-updater` заменено на выборочное копирование `src`, `scripts`, `tsconfig.json`, чтобы не копировать локальный `node_modules` и не упираться в disk exhaustion.
+
+- Проверка:
+  - `docker compose build catalog-updater` — `OK`.
+
 ## 1.18) Docker mobile proxy: один origin для телефона и backend во внутренней сети (9 марта 2026)
 
 - Задача:

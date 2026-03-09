@@ -1,5 +1,17 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (fix: сборка `catalog-updater` с Prisma в Docker):
+- Проблема:
+  - `docker compose up -d --build` падал на шаге `catalog-updater` при `npm run prisma:generate`;
+  - Prisma определял project root как `/app` по пути к schema (`/app/backend/prisma/schema.prisma`) и пытался автоустановить `@prisma/client`, что завершалось ошибкой.
+- Изменение:
+  - `services/catalog-updater/Dockerfile`:
+    - в build stage добавлена установка production-deps из `backend/package.json` в `/app`;
+    - это даёт Prisma валидный root package и доступный `@prisma/client` до шага `prisma generate`.
+    - `COPY services/catalog-updater ./services/catalog-updater` заменён на выборочное копирование `src`, `scripts`, `tsconfig.json`, чтобы не тянуть локальный `node_modules` в build context образа.
+- Проверка:
+  - `docker compose build catalog-updater` — `OK`.
+
 Обновление от 9 марта 2026 (docker mobile proxy: `/api` -> `backend:3001`):
 - Задача:
   - обеспечить запуск всего проекта в Docker для тестирования с телефона в локальной сети без ручной подстановки LAN IP в frontend API URL.
