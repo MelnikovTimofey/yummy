@@ -957,6 +957,21 @@ select:focus-visible {
   gap: 10px;
 }
 
+.catalog-mobile-tools {
+  display: block;
+}
+
+.catalog-mobile-filters-toggle {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 0;
+}
+
+.catalog-advanced-filters {
+  display: grid;
+  gap: 10px;
+}
+
 .catalog-active-filters {
   display: flex;
   flex-wrap: wrap;

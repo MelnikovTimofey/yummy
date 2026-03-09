@@ -1,5 +1,34 @@
 # HANDOFF — Yummy
 
+## 1.24) Compact mobile filters for `Каталог` и `Избранное` (9 марта 2026)
+
+- Проблема:
+  - на мобильном блок фильтров занимал почти весь экран и скрывал результаты под первым viewport;
+  - особенно это ломало восприятие `Избранного`: вместо списка пользователь видел длинную форму фильтрации.
+
+- Реализация:
+  - `YummyWeb/src/ui/hooks/useMediaQuery.ts`:
+    - добавлен общий hook для `matchMedia`.
+  - `YummyWeb/src/ui/CatalogScreen.tsx`:
+    - введён `isCompactFilters` для ширины до `768px`;
+    - расширенные фильтры вынесены в collapsible-блок `catalog-advanced-filters`;
+    - добавлен toggle `catalog-filters-toggle`.
+  - `YummyWeb/src/ui/FavoritesScreen.tsx`:
+    - применена та же mobile-схема: поиск и summary остаются наверху, тяжёлые фильтры спрятаны за toggle;
+    - добавлены `favorites-filters-toggle` и `favorites-advanced-filters`.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлены стили для `catalog-mobile-tools`, `catalog-mobile-filters-toggle`, `catalog-advanced-filters`;
+    - убрано ошибочное CSS-ограничение по `480px`, из-за которого toggle мог исчезнуть на ширине `481-768px`.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852`:
+    - `Каталог`: сразу виден список результатов;
+    - `Избранное`: сразу виден summary и карточки избранного, расширенные фильтры доступны по кнопке.
+  - артефакты:
+    - `output/playwright/mobile-wave1/after/catalog-mobile-compact-filters.png`
+    - `output/playwright/mobile-wave1/after/favorites-mobile-compact-filters.png`
+
 ## 1.23) Fix rail headers: desktop top-align, mobile wrap, hide `Смотреть все` (9 марта 2026)
 
 - Запрос:

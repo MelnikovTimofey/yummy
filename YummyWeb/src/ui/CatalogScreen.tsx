@@ -16,6 +16,7 @@ import {
 import { AppButton, AppInput, AppSelect } from '@/ui-kit';
 import { MixInfoModal } from '@/ui/components/MixInfoModal';
 import { MixPreviewCard } from '@/ui/components/MixPreviewCard';
+import { useMediaQuery } from '@/ui/hooks/useMediaQuery';
 
 type CatalogScreenProps = {
   authState: AuthState;
@@ -107,6 +108,7 @@ const buildActiveFilterLabels = (
 };
 
 export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScreenProps) => {
+  const isCompactFilters = useMediaQuery('(max-width: 768px)');
   const [items, setItems] = useState<Mix[]>([]);
   const [summaries, setSummaries] = useState<Record<string, MixRatingSummary>>({});
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
@@ -137,6 +139,12 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [activeMix, setActiveMix] = useState<Mix | null>(null);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    return !window.matchMedia('(max-width: 768px)').matches;
+  });
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
@@ -149,6 +157,12 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!isCompactFilters) {
+      setFiltersOpen(true);
+    }
+  }, [isCompactFilters]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -493,6 +507,12 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       sortBy,
     ],
   );
+  const showAdvancedFilters = !isCompactFilters || filtersOpen;
+  const compactFilterButtonLabel = filtersOpen
+    ? 'Скрыть фильтры'
+    : hasFilters
+      ? `Фильтры: ${activeFilterLabels.length || 1}`
+      : 'Показать фильтры';
 
   if (activeMix) {
     return (
@@ -538,6 +558,21 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             />
             <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
           </div>
+
+          {isCompactFilters ? (
+            <div className="catalog-mobile-tools">
+              <AppButton
+                variant="outline"
+                className="catalog-mobile-filters-toggle"
+                onClick={() => setFiltersOpen((current) => !current)}
+                aria-expanded={filtersOpen}
+                data-testid="catalog-filters-toggle"
+              >
+                {compactFilterButtonLabel}
+              </AppButton>
+            </div>
+          ) : null}
+
           <div className="catalog-tools-row">
             <div className="catalog-active-filters" aria-live="polite">
               {activeFilterLabels.length ? activeFilterLabels.map((label) => (
@@ -554,194 +589,198 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
             </AppButton>
           </div>
 
-          <div className="filters-row">
-            <label className="filter-field">
-              <span>Сортировка</span>
-              <AppSelect
-                value={sortBy}
-                onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
-                options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
-              />
-            </label>
-            <label className="filter-field">
-              <span>Мин. оценка</span>
-              <AppSelect
-                value={minRating}
-                onChange={(next) => setMinRating(next as '' | '1' | '2' | '3' | '4' | '5')}
-                options={MIN_RATING_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
-                emptyLabel="Любая"
-              />
-            </label>
-          </div>
-
-          <div className="filters-row">
-            <label className="filter-field">
-              <span>Производитель (можно несколько)</span>
-              <AppInput
-                className="search-input"
-                type="search"
-                value={manufacturerSearchDraft}
-                onChange={(event) => setManufacturerSearchDraft(event.target.value)}
-                placeholder="Поиск бренда"
-              />
-              <div className="filter-scrollbox" onScroll={handleManufacturersScroll}>
-                <AppButton
-                  variant="ghost"
-                  className={`filter-option ${selectedManufacturerIds.length === 0 ? 'active' : ''}`}
-                  onClick={() => setSelectedManufacturerIds([])}
-                >
-                  Все бренды
-                </AppButton>
-                {manufacturers.map((item) => (
-                  <AppButton
-                    key={item.id}
-                    variant="ghost"
-                    className={`filter-option ${selectedManufacturerIds.includes(item.id) ? 'active' : ''}`}
-                    onClick={() => toggleManufacturer(item.id)}
-                  >
-                    {item.name}
-                  </AppButton>
-                ))}
-                <p className="filter-scroll-meta">
-                  {manufacturersStatus === 'error'
-                    ? 'Не удалось загрузить бренды'
-                    : manufacturersStatus === 'loading'
-                      ? 'Загрузка...'
-                      : manufacturersHasMore
-                        ? 'Прокрутите вниз для автоподгрузки'
-                        : 'Все бренды загружены'}
-                </p>
+          {showAdvancedFilters ? (
+            <div className="catalog-advanced-filters" data-testid="catalog-advanced-filters">
+              <div className="filters-row">
+                <label className="filter-field">
+                  <span>Сортировка</span>
+                  <AppSelect
+                    value={sortBy}
+                    onChange={(next) => setSortBy(next as 'newest' | 'rating' | 'popularity')}
+                    options={SORT_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+                  />
+                </label>
+                <label className="filter-field">
+                  <span>Мин. оценка</span>
+                  <AppSelect
+                    value={minRating}
+                    onChange={(next) => setMinRating(next as '' | '1' | '2' | '3' | '4' | '5')}
+                    options={MIN_RATING_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+                    emptyLabel="Любая"
+                  />
+                </label>
               </div>
-            </label>
-            <label className="filter-field">
-              <span>Табак (можно несколько)</span>
-              <AppInput
-                className="search-input"
-                type="search"
-                value={tobaccoSearchDraft}
-                onChange={(event) => setTobaccoSearchDraft(event.target.value)}
-                placeholder={selectedManufacturerIds.length === 1 ? 'Поиск табака выбранного бренда' : 'Поиск табака'}
-              />
-              <div className="filter-scrollbox" onScroll={handleTobaccosScroll}>
-                <AppButton
-                  variant="ghost"
-                  className={`filter-option ${selectedTobaccoIds.length === 0 ? 'active' : ''}`}
-                  onClick={() => setSelectedTobaccoIds([])}
-                >
-                  Любой табак
-                </AppButton>
-                {tobaccos.map((item) => (
-                  <AppButton
-                    key={item.id}
-                    variant="ghost"
-                    className={`filter-option ${selectedTobaccoIds.includes(item.id) ? 'active' : ''}`}
-                    onClick={() => toggleTobacco(item.id)}
-                  >
-                    {item.manufacturer.name} · {item.name}
-                  </AppButton>
-                ))}
-                <p className="filter-scroll-meta">
-                  {tobaccosStatus === 'error'
-                    ? 'Не удалось загрузить табаки'
-                    : tobaccosStatus === 'loading'
-                      ? 'Загрузка...'
-                      : tobaccosHasMore
-                        ? 'Прокрутите вниз для автоподгрузки'
-                        : 'Все табаки загружены'}
-                </p>
+
+              <div className="filters-row">
+                <label className="filter-field">
+                  <span>Производитель (можно несколько)</span>
+                  <AppInput
+                    className="search-input"
+                    type="search"
+                    value={manufacturerSearchDraft}
+                    onChange={(event) => setManufacturerSearchDraft(event.target.value)}
+                    placeholder="Поиск бренда"
+                  />
+                  <div className="filter-scrollbox" onScroll={handleManufacturersScroll}>
+                    <AppButton
+                      variant="ghost"
+                      className={`filter-option ${selectedManufacturerIds.length === 0 ? 'active' : ''}`}
+                      onClick={() => setSelectedManufacturerIds([])}
+                    >
+                      Все бренды
+                    </AppButton>
+                    {manufacturers.map((item) => (
+                      <AppButton
+                        key={item.id}
+                        variant="ghost"
+                        className={`filter-option ${selectedManufacturerIds.includes(item.id) ? 'active' : ''}`}
+                        onClick={() => toggleManufacturer(item.id)}
+                      >
+                        {item.name}
+                      </AppButton>
+                    ))}
+                    <p className="filter-scroll-meta">
+                      {manufacturersStatus === 'error'
+                        ? 'Не удалось загрузить бренды'
+                        : manufacturersStatus === 'loading'
+                          ? 'Загрузка...'
+                          : manufacturersHasMore
+                            ? 'Прокрутите вниз для автоподгрузки'
+                            : 'Все бренды загружены'}
+                    </p>
+                  </div>
+                </label>
+                <label className="filter-field">
+                  <span>Табак (можно несколько)</span>
+                  <AppInput
+                    className="search-input"
+                    type="search"
+                    value={tobaccoSearchDraft}
+                    onChange={(event) => setTobaccoSearchDraft(event.target.value)}
+                    placeholder={selectedManufacturerIds.length === 1 ? 'Поиск табака выбранного бренда' : 'Поиск табака'}
+                  />
+                  <div className="filter-scrollbox" onScroll={handleTobaccosScroll}>
+                    <AppButton
+                      variant="ghost"
+                      className={`filter-option ${selectedTobaccoIds.length === 0 ? 'active' : ''}`}
+                      onClick={() => setSelectedTobaccoIds([])}
+                    >
+                      Любой табак
+                    </AppButton>
+                    {tobaccos.map((item) => (
+                      <AppButton
+                        key={item.id}
+                        variant="ghost"
+                        className={`filter-option ${selectedTobaccoIds.includes(item.id) ? 'active' : ''}`}
+                        onClick={() => toggleTobacco(item.id)}
+                      >
+                        {item.manufacturer.name} · {item.name}
+                      </AppButton>
+                    ))}
+                    <p className="filter-scroll-meta">
+                      {tobaccosStatus === 'error'
+                        ? 'Не удалось загрузить табаки'
+                        : tobaccosStatus === 'loading'
+                          ? 'Загрузка...'
+                          : tobaccosHasMore
+                            ? 'Прокрутите вниз для автоподгрузки'
+                            : 'Все табаки загружены'}
+                    </p>
+                  </div>
+                </label>
               </div>
-            </label>
-          </div>
 
-          <div className="filter-field">
-            <span>Теги (можно несколько)</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={tagSearchDraft}
-              onChange={(event) => setTagSearchDraft(event.target.value)}
-              placeholder="Поиск по тегам"
-            />
-            <div className="filter-scrollbox">
-              <AppButton
-                variant="ghost"
-                className={`filter-option ${selectedTags.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedTags([])}
-              >
-                Любые теги
-              </AppButton>
-              {filteredTagOptions.map((tag) => (
-                <AppButton
-                  key={tag}
-                  variant="ghost"
-                  className={`filter-option ${selectedTags.includes(tag) ? 'active' : ''}`}
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag}
-                </AppButton>
-              ))}
-            </div>
-          </div>
+              <div className="filter-field">
+                <span>Теги (можно несколько)</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={tagSearchDraft}
+                  onChange={(event) => setTagSearchDraft(event.target.value)}
+                  placeholder="Поиск по тегам"
+                />
+                <div className="filter-scrollbox">
+                  <AppButton
+                    variant="ghost"
+                    className={`filter-option ${selectedTags.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedTags([])}
+                  >
+                    Любые теги
+                  </AppButton>
+                  {filteredTagOptions.map((tag) => (
+                    <AppButton
+                      key={tag}
+                      variant="ghost"
+                      className={`filter-option ${selectedTags.includes(tag) ? 'active' : ''}`}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {tag}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
 
-          <div className="filter-field">
-            <span>Профили вкуса (можно несколько)</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={profileSearchDraft}
-              onChange={(event) => setProfileSearchDraft(event.target.value)}
-              placeholder="Поиск профиля"
-            />
-            <div className="filter-scrollbox">
-              <AppButton
-                variant="ghost"
-                className={`filter-option ${selectedProfiles.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedProfiles([])}
-              >
-                Любой профиль
-              </AppButton>
-              {filteredProfileOptions.map((option) => (
-                <AppButton
-                  key={option.value}
-                  variant="ghost"
-                  className={`filter-option ${selectedProfiles.includes(option.value) ? 'active' : ''}`}
-                  onClick={() => toggleProfile(option.value)}
-                >
-                  {option.label}
-                </AppButton>
-              ))}
-            </div>
-          </div>
+              <div className="filter-field">
+                <span>Профили вкуса (можно несколько)</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={profileSearchDraft}
+                  onChange={(event) => setProfileSearchDraft(event.target.value)}
+                  placeholder="Поиск профиля"
+                />
+                <div className="filter-scrollbox">
+                  <AppButton
+                    variant="ghost"
+                    className={`filter-option ${selectedProfiles.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedProfiles([])}
+                  >
+                    Любой профиль
+                  </AppButton>
+                  {filteredProfileOptions.map((option) => (
+                    <AppButton
+                      key={option.value}
+                      variant="ghost"
+                      className={`filter-option ${selectedProfiles.includes(option.value) ? 'active' : ''}`}
+                      onClick={() => toggleProfile(option.value)}
+                    >
+                      {option.label}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
 
-          <div className="filter-field">
-            <span>Вкусы (можно несколько)</span>
-            <AppInput
-              className="search-input"
-              type="search"
-              value={flavorSearchDraft}
-              onChange={(event) => setFlavorSearchDraft(event.target.value)}
-              placeholder="Поиск вкуса"
-            />
-            <div className="filter-scrollbox">
-              <AppButton
-                variant="ghost"
-                className={`filter-option ${selectedFlavors.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedFlavors([])}
-              >
-                Любой вкус
-              </AppButton>
-              {filteredFlavorOptions.map((flavor) => (
-                <AppButton
-                  key={flavor}
-                  variant="ghost"
-                  className={`filter-option ${selectedFlavors.includes(flavor) ? 'active' : ''}`}
-                  onClick={() => toggleFlavor(flavor)}
-                >
-                  {flavor}
-                </AppButton>
-              ))}
+              <div className="filter-field">
+                <span>Вкусы (можно несколько)</span>
+                <AppInput
+                  className="search-input"
+                  type="search"
+                  value={flavorSearchDraft}
+                  onChange={(event) => setFlavorSearchDraft(event.target.value)}
+                  placeholder="Поиск вкуса"
+                />
+                <div className="filter-scrollbox">
+                  <AppButton
+                    variant="ghost"
+                    className={`filter-option ${selectedFlavors.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedFlavors([])}
+                  >
+                    Любой вкус
+                  </AppButton>
+                  {filteredFlavorOptions.map((flavor) => (
+                    <AppButton
+                      key={flavor}
+                      variant="ghost"
+                      className={`filter-option ${selectedFlavors.includes(flavor) ? 'active' : ''}`}
+                      onClick={() => toggleFlavor(flavor)}
+                    >
+                      {flavor}
+                    </AppButton>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
         </form>
 
         <section className="catalog-results">
