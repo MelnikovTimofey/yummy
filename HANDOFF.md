@@ -1,5 +1,20 @@
 # HANDOFF — Yummy
 
+## 1.20) Fix mobile shell width on real Safari / iPhone 16 (9 марта 2026)
+
+- Проблема:
+  - на реальном iPhone 16 приложение рендерилось шире экрана и визуально срезалось справа.
+
+- Реализация:
+  - `YummyWeb/src/ui/styles.css`:
+    - `html`, `body`, `#root` дополнены `width: 100%`;
+    - `body` переведён на `overflow-x: hidden`;
+    - `.app-bg` ограничен `width: 100%` и `max-width: 100vw`;
+    - `.phone-shell` переведён с `width: min(100%, 430px)` на `width: min(calc(100vw - 32px), 430px)` плюс `max-width: 100%`.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 ## 1.19) Fix Docker build: `catalog-updater` + Prisma generate (9 марта 2026)
 
 - Проблема:

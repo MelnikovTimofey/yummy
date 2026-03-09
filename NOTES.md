@@ -1,5 +1,18 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (fix: базовая ширина mobile shell для Safari / iPhone 16):
+- Проблема:
+  - на реальном iPhone 16 все экраны визуально срезались справа;
+  - оболочка приложения получалась шире viewport, даже до применения mobile media query.
+- Изменение:
+  - `YummyWeb/src/ui/styles.css`:
+    - `html`, `body`, `#root` растянуты на `width: 100%`;
+    - `body` переведён на `overflow-x: hidden`;
+    - `.app-bg` ограничен `width: 100%` и `max-width: 100vw`;
+    - `.phone-shell` теперь использует `width: min(calc(100vw - 32px), 430px)` и `max-width: 100%`, чтобы базовая ширина всегда учитывала внешние отступы и не выходила за экран.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`.
+
 Обновление от 9 марта 2026 (fix: сборка `catalog-updater` с Prisma в Docker):
 - Проблема:
   - `docker compose up -d --build` падал на шаге `catalog-updater` при `npm run prisma:generate`;
