@@ -29,6 +29,7 @@
   - `YummyWeb/vite.config.ts`:
     - добавлен proxy `/api -> API_PROXY_TARGET`;
     - fallback target для локального запуска без Docker: `http://localhost:3001`.
+    - добавлен `rewrite`, который преобразует `/api/<route>` в `/<route>` для backend.
   - `docker-compose.yml`:
     - для `yummy-web` добавлены env:
       - `VITE_API_BASE_URL=/api`

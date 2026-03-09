@@ -21,6 +21,7 @@
   - `YummyWeb/vite.config.ts`:
     - добавлен `server.proxy` для `/api`;
     - target берётся из `API_PROXY_TARGET`, fallback — `http://localhost:3001`.
+    - добавлен `rewrite`, который срезает префикс `/api` перед отправкой в backend.
   - `docker-compose.yml`:
     - `yummy-web` теперь получает:
       - `VITE_API_BASE_URL=/api`
