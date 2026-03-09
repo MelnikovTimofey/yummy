@@ -1,5 +1,36 @@
 # HANDOFF — Yummy
 
+## 1.26) Sticky mobile `Найти` + deferred apply for `Каталог`/`Избранное` (9 марта 2026)
+
+- Проблема:
+  - mobile-пользователь выбирал фильтры глубоко в форме, после чего должен был возвращаться вверх к кнопке `Найти`;
+  - логика применения была смешанной: поиск работал по submit, а часть фильтров перестраивала выдачу сразу.
+
+- Реализация:
+  - `YummyWeb/src/ui/CatalogScreen.tsx`:
+    - введены applied-state поля для mobile-фильтров (`manufacturerIds`, `tobaccoIds`, `profiles`, `flavors`, `tags`, `minRating`, `sortBy`);
+    - текущие контролы остаются draft-state;
+    - submit на mobile:
+      - переносит draft -> applied,
+      - закрывает расширенный блок фильтров,
+      - прокручивает экран к `catalog-results`;
+    - на desktop applied-state синхронизируется автоматически, чтобы старый сценарий не изменился.
+  - `YummyWeb/src/ui/FavoritesScreen.tsx`:
+    - такой же draft/applied flow для `profiles`, `flavors`, `tags`, `sortBy`;
+    - после mobile-submit панель фильтров сворачивается и экран уходит к результатам.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлен `catalog-mobile-submit-bar` со sticky-позицией;
+    - `catalog-mobile-submit-btn` всегда доступна внизу mobile-панели;
+    - inline-кнопка `Найти` на compact-width скрыта, чтобы не дублировать CTA.
+
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852`:
+    - sticky CTA видна и в закрытом, и в открытом состоянии mobile-фильтров.
+  - артефакты:
+    - `output/playwright/mobile-wave1/after/catalog-mobile-sticky-find-collapsed.png`
+    - `output/playwright/mobile-wave1/after/catalog-mobile-sticky-find-open.png`
+
 ## 1.25) Move mobile search CTA below input in `Каталог` и `Избранное` (9 марта 2026)
 
 - Проблема:

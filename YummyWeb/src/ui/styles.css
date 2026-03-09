@@ -967,6 +967,21 @@ select:focus-visible {
   margin-top: 0;
 }
 
+.catalog-mobile-submit-bar {
+  position: sticky;
+  bottom: calc(var(--safe-bottom) + 8px);
+  z-index: 5;
+  padding-top: 6px;
+  background: linear-gradient(180deg, rgba(19, 18, 22, 0) 0%, rgba(19, 18, 22, 0.94) 36%);
+}
+
+.catalog-mobile-submit-btn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
 .catalog-advanced-filters {
   display: grid;
   gap: 10px;

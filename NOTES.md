@@ -1,5 +1,32 @@
 ## Этот файл для человека
 
+Обновление от 9 марта 2026 (fix: sticky mobile `Найти` + apply flow for catalog filters):
+- Проблема:
+  - на телефоне фильтры выбирались в длинной форме, а для применения нужно было возвращаться вверх к кнопке `Найти`;
+  - часть фильтров применялась сразу, а часть только по submit, что делало поведение непредсказуемым.
+- Изменение:
+  - `YummyWeb/src/ui/CatalogScreen.tsx`:
+    - mobile-режим переведён на схему `черновик -> применить`;
+    - для `Каталога` добавлены applied-state поля для фильтров и сортировки;
+    - submit в mobile теперь:
+      - применяет текущие черновики,
+      - сворачивает блок фильтров,
+      - прокручивает к блоку результатов;
+    - desktop сохраняет прежний смысл: фильтры обновляются без отдельного цикла применения, поиск по тексту остаётся через submit.
+  - `YummyWeb/src/ui/FavoritesScreen.tsx`:
+    - та же схема применена к mobile-фильтрам `Избранного`, чтобы поведение было консистентным.
+  - `YummyWeb/src/ui/styles.css`:
+    - добавлен sticky mobile action bar для `Найти`;
+    - кнопка всегда доступна внизу mobile-панели фильтров;
+    - inline-кнопка в строке поиска на compact-ширине убрана.
+- Проверка:
+  - `cd YummyWeb && npm run build` — `OK`;
+  - проверка через skill `playwright` на viewport `393x852`:
+    - sticky-кнопка `Найти` видна в collapsed и open состоянии фильтров;
+    - артефакты:
+      - `output/playwright/mobile-wave1/after/catalog-mobile-sticky-find-collapsed.png`
+      - `output/playwright/mobile-wave1/after/catalog-mobile-sticky-find-open.png`
+
 Обновление от 9 марта 2026 (fix: mobile search CTA moved below input in catalog screens):
 - Проблема:
   - на телефоне кнопка `Найти` в `Каталоге` и `Избранном` находилась в верхней строке рядом с полем поиска и визуально перегружала верхнюю часть блока.

@@ -1,4 +1,4 @@
-import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, UIEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getManufacturers,
   getMixes,
@@ -136,9 +136,17 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [minRating, setMinRating] = useState<'' | '1' | '2' | '3' | '4' | '5'>('');
   const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'popularity'>('popularity');
+  const [appliedManufacturerIds, setAppliedManufacturerIds] = useState<string[]>([]);
+  const [appliedTobaccoIds, setAppliedTobaccoIds] = useState<string[]>([]);
+  const [appliedProfiles, setAppliedProfiles] = useState<FlavorProfile[]>([]);
+  const [appliedFlavors, setAppliedFlavors] = useState<string[]>([]);
+  const [appliedTags, setAppliedTags] = useState<string[]>([]);
+  const [appliedMinRating, setAppliedMinRating] = useState<'' | '1' | '2' | '3' | '4' | '5'>('');
+  const [appliedSortBy, setAppliedSortBy] = useState<'newest' | 'rating' | 'popularity'>('popularity');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [activeMix, setActiveMix] = useState<Mix | null>(null);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(() => {
     if (typeof window === 'undefined') {
       return true;
@@ -163,6 +171,29 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       setFiltersOpen(true);
     }
   }, [isCompactFilters]);
+
+  useEffect(() => {
+    if (isCompactFilters) {
+      return;
+    }
+
+    setAppliedManufacturerIds(selectedManufacturerIds);
+    setAppliedTobaccoIds(selectedTobaccoIds);
+    setAppliedProfiles(selectedProfiles);
+    setAppliedFlavors(selectedFlavors);
+    setAppliedTags(selectedTags);
+    setAppliedMinRating(minRating);
+    setAppliedSortBy(sortBy);
+  }, [
+    isCompactFilters,
+    minRating,
+    selectedFlavors,
+    selectedManufacturerIds,
+    selectedProfiles,
+    selectedTags,
+    selectedTobaccoIds,
+    sortBy,
+  ]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -300,13 +331,13 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
       try {
         const mixesRequest = getMixes(authState.tokens, onAuthUpdate, {
           search: query || undefined,
-          manufacturerIds: selectedManufacturerIds.length ? selectedManufacturerIds : undefined,
-          tobaccoIds: selectedTobaccoIds.length ? selectedTobaccoIds : undefined,
-          profiles: selectedProfiles.length ? selectedProfiles : undefined,
-          flavors: selectedFlavors.length ? selectedFlavors : undefined,
-          tags: selectedTags.length ? selectedTags : undefined,
-          minRating: minRating ? Number(minRating) : undefined,
-          sort: sortBy,
+          manufacturerIds: appliedManufacturerIds.length ? appliedManufacturerIds : undefined,
+          tobaccoIds: appliedTobaccoIds.length ? appliedTobaccoIds : undefined,
+          profiles: appliedProfiles.length ? appliedProfiles : undefined,
+          flavors: appliedFlavors.length ? appliedFlavors : undefined,
+          tags: appliedTags.length ? appliedTags : undefined,
+          minRating: appliedMinRating ? Number(appliedMinRating) : undefined,
+          sort: appliedSortBy,
         });
         const summariesRequest = authState.tokens
           ? getMixRatingSummaries(authState.tokens, onAuthUpdate)
@@ -329,9 +360,42 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     void load();
   }, [
     authState.tokens?.accessToken,
-    minRating,
+    appliedFlavors,
+    appliedManufacturerIds,
+    appliedMinRating,
+    appliedProfiles,
+    appliedSortBy,
+    appliedTags,
+    appliedTobaccoIds,
     onAuthUpdate,
     query,
+  ]);
+
+  const scrollToResults = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    setQuery(queryDraft.trim());
+    setAppliedManufacturerIds(selectedManufacturerIds);
+    setAppliedTobaccoIds(selectedTobaccoIds);
+    setAppliedProfiles(selectedProfiles);
+    setAppliedFlavors(selectedFlavors);
+    setAppliedTags(selectedTags);
+    setAppliedMinRating(minRating);
+    setAppliedSortBy(sortBy);
+
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+      scrollToResults();
+    }
+  }, [
+    isCompactFilters,
+    minRating,
+    queryDraft,
+    scrollToResults,
     selectedFlavors,
     selectedManufacturerIds,
     selectedProfiles,
@@ -342,7 +406,7 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
 
   const onSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
-    setQuery(queryDraft.trim());
+    applyFilters();
   };
 
   const toggleProfile = (profile: FlavorProfile) => {
@@ -374,6 +438,18 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
     setSelectedTags([]);
     setMinRating('');
     setSortBy('popularity');
+    setAppliedManufacturerIds([]);
+    setAppliedTobaccoIds([]);
+    setAppliedProfiles([]);
+    setAppliedFlavors([]);
+    setAppliedTags([]);
+    setAppliedMinRating('');
+    setAppliedSortBy('popularity');
+
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+      scrollToResults();
+    }
   };
 
   const handleManufacturersScroll = (event: UIEvent<HTMLDivElement>) => {
@@ -457,27 +533,27 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
   }, [tagSearchDraft, tagSuggestions]);
   const hasFilters = Boolean(
     query ||
-      selectedManufacturerIds.length ||
-      selectedTobaccoIds.length ||
-      selectedProfiles.length ||
-      selectedFlavors.length ||
-      selectedTags.length ||
-      minRating ||
-      sortBy !== 'popularity',
+      appliedManufacturerIds.length ||
+      appliedTobaccoIds.length ||
+      appliedProfiles.length ||
+      appliedFlavors.length ||
+      appliedTags.length ||
+      appliedMinRating ||
+      appliedSortBy !== 'popularity',
   );
   const selectedManufacturerLabels = useMemo(
     () =>
-      selectedManufacturerIds
+      appliedManufacturerIds
         .map((id) => manufacturers.find((item) => item.id === id)?.name)
         .filter((value): value is string => Boolean(value)),
-    [manufacturers, selectedManufacturerIds],
+    [appliedManufacturerIds, manufacturers],
   );
   const selectedTobaccoLabels = useMemo(
     () =>
-      selectedTobaccoIds
+      appliedTobaccoIds
         .map((id) => tobaccos.find((item) => item.id === id)?.name)
         .filter((value): value is string => Boolean(value)),
-    [selectedTobaccoIds, tobaccos],
+    [appliedTobaccoIds, tobaccos],
   );
   const toggleTag = useCallback((tag: string) => {
     setSelectedTags((current) =>
@@ -490,21 +566,21 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
         query,
         manufacturerLabels: selectedManufacturerLabels,
         tobaccoLabels: selectedTobaccoLabels,
-        selectedProfiles,
-        selectedFlavors,
-        tags: selectedTags,
-        minRating,
-        sortBy,
+        selectedProfiles: appliedProfiles,
+        selectedFlavors: appliedFlavors,
+        tags: appliedTags,
+        minRating: appliedMinRating,
+        sortBy: appliedSortBy,
       }),
     [
-      minRating,
+      appliedFlavors,
+      appliedMinRating,
+      appliedProfiles,
+      appliedSortBy,
+      appliedTags,
       query,
-      selectedFlavors,
       selectedManufacturerLabels,
-      selectedProfiles,
-      selectedTags,
       selectedTobaccoLabels,
-      sortBy,
     ],
   );
   const showAdvancedFilters = !isCompactFilters || filtersOpen;
@@ -556,7 +632,9 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
               onChange={(event) => setQueryDraft(event.target.value)}
               placeholder="Поиск по названию и описанию"
             />
-            <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+            {!isCompactFilters ? (
+              <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+            ) : null}
           </div>
 
           {isCompactFilters ? (
@@ -781,9 +859,17 @@ export const CatalogScreen = ({ authState, onAuthUpdate, onOpenMix }: CatalogScr
               </div>
             </div>
           ) : null}
+
+          {isCompactFilters ? (
+            <div className="catalog-mobile-submit-bar">
+              <AppButton type="submit" className="search-button catalog-mobile-submit-btn" data-testid="catalog-submit-sticky">
+                Найти
+              </AppButton>
+            </div>
+          ) : null}
         </form>
 
-        <section className="catalog-results">
+        <section ref={resultsRef} className="catalog-results">
           <section className="card catalog-summary">
             <p className="card-title">Результат</p>
             <p className="card-text">

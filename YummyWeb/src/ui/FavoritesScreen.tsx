@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   getFavorites,
@@ -91,11 +91,16 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
   const [flavorSearchDraft, setFlavorSearchDraft] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearchDraft, setTagSearchDraft] = useState('');
+  const [appliedProfiles, setAppliedProfiles] = useState<FlavorProfile[]>([]);
+  const [appliedFlavors, setAppliedFlavors] = useState<string[]>([]);
+  const [appliedTags, setAppliedTags] = useState<string[]>([]);
+  const [appliedSortBy, setAppliedSortBy] = useState<'newest' | 'rating' | 'popularity'>('newest');
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
   const [infoMix, setInfoMix] = useState<Mix | null>(null);
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(() => {
     if (typeof window === 'undefined') {
       return true;
@@ -114,6 +119,17 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
       setFiltersOpen(true);
     }
   }, [isCompactFilters]);
+
+  useEffect(() => {
+    if (isCompactFilters) {
+      return;
+    }
+
+    setAppliedProfiles(selectedProfiles);
+    setAppliedFlavors(selectedFlavors);
+    setAppliedTags(selectedTags);
+    setAppliedSortBy(sortBy);
+  }, [isCompactFilters, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
 
   useEffect(() => {
     if (!authState.tokens) {
@@ -159,10 +175,10 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
       try {
         const response = await getFavorites(authState.tokens, onAuthUpdate, {
           search: search || undefined,
-          profiles: selectedProfiles.length ? selectedProfiles : undefined,
-          flavors: selectedFlavors.length ? selectedFlavors : undefined,
-          tags: selectedTags.length ? selectedTags : undefined,
-          sort: sortBy,
+          profiles: appliedProfiles.length ? appliedProfiles : undefined,
+          flavors: appliedFlavors.length ? appliedFlavors : undefined,
+          tags: appliedTags.length ? appliedTags : undefined,
+          sort: appliedSortBy,
         });
         setItems(response.items);
         setStatus('idle');
@@ -172,11 +188,30 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     };
 
     void load();
-  }, [authState.tokens, onAuthUpdate, reloadSignal, search, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
+  }, [appliedFlavors, appliedProfiles, appliedSortBy, appliedTags, authState.tokens, onAuthUpdate, reloadSignal, search]);
+
+  const scrollToResults = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    setSearch(searchDraft.trim());
+    setAppliedProfiles(selectedProfiles);
+    setAppliedFlavors(selectedFlavors);
+    setAppliedTags(selectedTags);
+    setAppliedSortBy(sortBy);
+
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+      scrollToResults();
+    }
+  }, [isCompactFilters, scrollToResults, searchDraft, selectedFlavors, selectedProfiles, selectedTags, sortBy]);
 
   const onSubmitFilters = (event: FormEvent) => {
     event.preventDefault();
-    setSearch(searchDraft.trim());
+    applyFilters();
   };
 
   const toggleProfile = (profile: FlavorProfile) => {
@@ -222,10 +257,19 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     setFlavorSearchDraft('');
     setSelectedTags([]);
     setTagSearchDraft('');
+    setAppliedProfiles([]);
+    setAppliedFlavors([]);
+    setAppliedTags([]);
+    setAppliedSortBy('newest');
+
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+      scrollToResults();
+    }
   };
 
   const hasFilters = Boolean(
-    search || selectedProfiles.length || selectedFlavors.length || selectedTags.length || sortBy !== 'newest',
+    search || appliedProfiles.length || appliedFlavors.length || appliedTags.length || appliedSortBy !== 'newest',
   );
 
   const flavorOptions = useMemo(() => {
@@ -285,12 +329,12 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
     () =>
       buildActiveFilterLabels({
         query: search,
-        profiles: selectedProfiles,
-        flavors: selectedFlavors,
-        tags: selectedTags,
-        sortBy,
+        profiles: appliedProfiles,
+        flavors: appliedFlavors,
+        tags: appliedTags,
+        sortBy: appliedSortBy,
       }),
-    [search, selectedProfiles, selectedFlavors, selectedTags, sortBy],
+    [appliedFlavors, appliedProfiles, appliedSortBy, appliedTags, search],
   );
   const showAdvancedFilters = !isCompactFilters || filtersOpen;
   const compactFilterButtonLabel = filtersOpen
@@ -311,7 +355,9 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
               onChange={(event) => setSearchDraft(event.target.value)}
               placeholder="Поиск по названию и описанию"
             />
-            <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+            {!isCompactFilters ? (
+              <AppButton type="submit" className="search-button catalog-find-btn">Найти</AppButton>
+            ) : null}
           </div>
 
           {isCompactFilters ? (
@@ -446,9 +492,17 @@ export const FavoritesScreen = ({ authState, onAuthUpdate, onOpenMix }: Favorite
               </div>
             </div>
           ) : null}
+
+          {isCompactFilters ? (
+            <div className="catalog-mobile-submit-bar">
+              <AppButton type="submit" className="search-button catalog-mobile-submit-btn" data-testid="favorites-submit-sticky">
+                Найти
+              </AppButton>
+            </div>
+          ) : null}
         </form>
 
-        <section className="catalog-results">
+        <section ref={resultsRef} className="catalog-results">
           <section className="card catalog-summary">
             <p className="card-title">Избранное</p>
             <p className="card-text">
