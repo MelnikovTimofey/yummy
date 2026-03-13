@@ -39,6 +39,8 @@ RUN npm ci --omit=dev
 COPY --from=build /app/services/catalog-updater/dist ./dist
 COPY --from=build /app/services/catalog-updater/scripts ./scripts
 COPY --from=build /app/services/catalog-updater/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma /app/backend/node_modules/@prisma
+COPY --from=build /app/node_modules/.prisma /app/backend/node_modules/.prisma
 COPY --from=build /app/backend/prisma /app/backend/prisma
 COPY --from=build /app/backend/seed /app/backend/seed
 

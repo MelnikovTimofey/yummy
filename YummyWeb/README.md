@@ -33,8 +33,7 @@ echo "VITE_API_BASE_URL=http://<ваш-host>:3001" > .env.local
 
 ```bash
 cd /Users/admin/PycharmProjects/yummy
-docker compose up -d db mailpit backend yummy-web
-docker compose --profile setup up backend-migrate backend-seed
+docker compose up -d
 ```
 
 Открыть на телефоне:

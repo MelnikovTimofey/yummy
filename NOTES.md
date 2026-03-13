@@ -1,5 +1,24 @@
 ## Этот файл для человека
 
+Обновление от 13 марта 2026 (docker bootstrap fix):
+- Проблема:
+  - стандартный `docker compose up -d` поднимал backend/web на пустой БД без миграций и сидов;
+  - `backend-seed` отдельно падал с `Seed file not found: /app/seed/tobaccos.json`.
+- Изменение:
+  - `docker-compose.yml`:
+    - `backend-migrate` и `backend-seed` переведены в стандартный startup flow без profile `setup`;
+    - `backend` и `catalog-updater` теперь ждут успешного завершения `backend-seed`.
+  - `backend/Dockerfile`:
+    - каталог `seed/` копируется в build stage и runtime image.
+  - `services/catalog-updater/Dockerfile`:
+    - в runtime image добавлен сгенерированный Prisma client из backend schema, чтобы `catalog-updater` не падал на `@prisma/client did not initialize yet`.
+  - `backend/README.md`, `YummyWeb/README.md`:
+    - инструкции упрощены до обычного `docker compose up -d`.
+- Проверка:
+  - `docker compose --profile setup up backend-migrate backend-seed` на текущем окружении:
+    - миграции применились;
+    - до фикса seed падал из-за отсутствующего `/app/seed/`.
+
 Обновление от 9 марта 2026 (fix: убрать double-tap на mobile-кнопках из-за hover state):
 - Проблема:
   - на iPhone часть кнопок в интерфейсе сначала получала визуальный фокус/hover, а действие срабатывало только со второго тапа.

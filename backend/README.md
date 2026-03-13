@@ -8,37 +8,34 @@ cd /Users/admin/PycharmProjects/yummy
 docker compose up -d
 ```
 
-2) Выполнить миграции и сид (однократно для пустой БД):
-```
-docker compose --profile setup up backend-migrate backend-seed
-```
+`docker compose up -d` сам запускает `backend-migrate` и `backend-seed` перед backend/web, поэтому отдельный setup-профиль больше не нужен.
 
-3) Если нужен ML-контур:
+2) Если нужен ML-контур:
 ```
 docker compose --profile ml up -d ml
 ```
 
-4) Вариант без Docker для backend (локально):
+3) Вариант без Docker для backend (локально):
 ```
 npm install
 ```
 
-5) Configure env:
+4) Configure env:
 ```
 cp .env.example .env
 ```
 
-6) Run migrations (creates tables):
+5) Run migrations (creates tables):
 ```
 npm run prisma:migrate
 ```
 
-7) Seed catalog data:
+6) Seed catalog data:
 ```
 npm run seed
 ```
 
-8) Start API:
+7) Start API:
 ```
 npm run dev
 ```

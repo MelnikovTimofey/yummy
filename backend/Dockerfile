@@ -11,6 +11,7 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY prisma ./prisma
+COPY seed ./seed
 COPY src ./src
 
 RUN npm run prisma:generate
@@ -29,6 +30,7 @@ RUN npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/seed ./seed
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 ENV NODE_ENV=production

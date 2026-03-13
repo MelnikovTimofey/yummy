@@ -1,5 +1,28 @@
 # HANDOFF — Yummy
 
+## 1.31) Fix docker bootstrap for empty DB (13 марта 2026)
+
+- Проблема:
+  - `docker compose up -d` поднимал `backend` и `yummy-web` без инициализации БД, потому что `backend-migrate` и `backend-seed` были вынесены в profile `setup`;
+  - отдельный `backend-seed` падал, так как в backend image отсутствовал каталог `seed/`.
+
+- Реализация:
+  - `docker-compose.yml`:
+    - `backend-migrate` и `backend-seed` убраны из profile `setup` и включены в стандартный startup flow;
+    - `backend` и `catalog-updater` теперь зависят от успешного завершения `backend-seed`.
+  - `backend/Dockerfile`:
+    - добавлен `COPY seed ./seed` в build stage;
+    - `seed/` копируется и в runtime image.
+  - `services/catalog-updater/Dockerfile`:
+    - в runtime image копируется сгенерированный Prisma client из backend schema;
+    - это закрывает restart-loop `@prisma/client did not initialize yet`.
+  - `backend/README.md`, `YummyWeb/README.md`:
+    - обновлены инструкции запуска, теперь достаточно `docker compose up -d`.
+
+- Эффект:
+  - на пустой БД обычный docker-старт сам применяет миграции и загружает seed-данные;
+  - web/backend не стартуют в сломанном состоянии с ошибками Prisma `P2021`.
+
 ## 1.30) Remove mobile double-tap caused by hover-first buttons (9 марта 2026)
 
 - Проблема:

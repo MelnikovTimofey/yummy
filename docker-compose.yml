@@ -48,6 +48,8 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+      backend-seed:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -80,6 +82,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      backend-seed:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -141,8 +145,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    profiles:
-      - setup
     restart: "no"
 
   backend-seed:
@@ -158,8 +160,6 @@ services:
         condition: service_healthy
       backend-migrate:
         condition: service_completed_successfully
-    profiles:
-      - setup
     restart: "no"
 
 volumes:
