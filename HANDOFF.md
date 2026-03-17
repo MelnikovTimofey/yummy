@@ -1,5 +1,22 @@
 # HANDOFF — Yummy
 
+## 1.33) Fix Linear config in Symphony `WORKFLOW.md` (17 марта 2026)
+
+- Проблема:
+  - в `WORKFLOW.md` оказался зашит `LINEAR` API key;
+  - orchestration-конфиг должен использовать секрет из окружения, а не из tracked-файла.
+
+- Реализация:
+  - `WORKFLOW.md`:
+    - `tracker.api_key` возвращён к безопасной схеме через `$LINEAR_API_KEY`;
+    - `tracker.project_slug` дополнительно проверен через Linear API и подтверждён как `noman-yummy-f37a4787dbf5`.
+  - `NOTES.md`:
+    - добавлена запись о корректировке Symphony/Linear-конфигурации.
+
+- Эффект:
+  - orchestration-конфиг больше не хранит секрет в репозитории;
+  - запуск Symphony остаётся привязан к проверенному Linear project.
+
 ## 1.32) Add Symphony `WORKFLOW.md` for controlled repo orchestration (17 марта 2026)
 
 - Задача:

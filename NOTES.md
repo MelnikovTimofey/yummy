@@ -1,3 +1,14 @@
+Обновление от 17 марта 2026 (docs: починить Linear settings в Symphony workflow):
+- В `WORKFLOW.md` исправлена конфигурация `tracker`:
+  - удалён зашитый `LINEAR` API key из репозитория;
+  - `api_key` возвращён к безопасной схеме через переменную окружения `$LINEAR_API_KEY`;
+  - `project_slug` подтверждён для проекта `Noman Yummy` как `noman-yummy-f37a4787dbf5`.
+- Причина:
+  - хранить секрет в tracked-файле небезопасно;
+  - для Symphony нужен корректный project slug, а не произвольный URL-фрагмент.
+- Проверка:
+  - через Linear API подтверждён доступ к проекту `Noman Yummy` и его project URL.
+
 Обновление от 17 марта 2026 (docs: добавить Symphony workflow для управляемого agent flow):
 - Добавлен корневой `WORKFLOW.md` для [openai/symphony](https://github.com/openai/symphony).
 - Что настроено:

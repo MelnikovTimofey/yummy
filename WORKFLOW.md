@@ -2,7 +2,7 @@
 tracker:
   kind: linear
   api_key: "$LINEAR_API_KEY"
-  project_slug: "$LINEAR_PROJECT_SLUG"
+  project_slug: "noman-yummy-f37a4787dbf5"
 
 workspace:
   root: "~/codex-workspaces/yummy-symphony"
