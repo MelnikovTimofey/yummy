@@ -112,6 +112,8 @@ Do not complete the task without listing the actual verification commands that w
 At task start:
 - if the issue is in `Todo`, move it to `In Progress`
 - use the available Linear GraphQL tool from Symphony to perform the transition
+- do not postpone this transition until the end of the task
+- if a new turn starts and the issue is still in `Todo`, treat that as unfinished protocol work and update the status first
 
 At task finish:
 - move the issue to `Human Review` only if the change is critical and requires explicit human review
@@ -132,6 +134,43 @@ Safe changes that may go directly to `Done` after checks:
 - local fixes with clear verification
 - extraction of helpers or deduplication with no contract change
 - documentation-only updates
+
+Required implementation detail for status changes:
+- Symphony exposes the `linear_graphql` dynamic tool
+- use it to resolve the target state id from the issue team, then call `issueUpdate`
+
+Example state lookup for the current issue team:
+
+```graphql
+query ResolveWorkflowState {
+  issue(id: "{{ issue.id }}") {
+    team {
+      states(first: 20) {
+        nodes {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+```
+
+Example transition mutation:
+
+```graphql
+mutation MoveIssue($issueId: String!, $stateId: String!) {
+  issueUpdate(id: $issueId, input: { stateId: $stateId }) {
+    success
+  }
+}
+```
+
+Use that protocol at least in these cases:
+- start of work: `Todo` -> `In Progress`
+- finish of a critical task: `In Progress` -> `Human Review`
+- finish of a small safe task: `In Progress` -> `Done`
+- if a previous turn completed but the issue is still in an active state only because status was not updated, fix the status before doing more work
 
 ## Documentation and operating docs
 
@@ -166,3 +205,4 @@ If tracker access is available:
 - leave a short issue comment
 - move the task to `Human Review` only when the critical-review criteria above apply
 - otherwise move it to `Done`
+- do not leave the issue in `Todo` or `In Progress` after the work is already complete

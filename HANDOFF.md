@@ -1,5 +1,27 @@
 # HANDOFF — Yummy
 
+## 1.36) Require explicit Linear state transitions in Symphony workflow (17 марта 2026)
+
+- Проблема:
+  - после нормального завершения turn'а Symphony продолжал крутить задачу, если issue оставалась в активном статусе `Todo` или `In Progress`;
+  - на `HOO-5` это привело к повторным turn'ам без смены board-state.
+
+- Реализация:
+  - `WORKFLOW.md`:
+    - протокол статусов усилен до обязательного действия, а не просто рекомендации;
+    - добавлены правила:
+      - `Todo` -> `In Progress` в начале;
+      - `In Progress` -> `Human Review` только для критичных задач;
+      - `In Progress` -> `Done` для small safe tasks;
+      - нельзя оставлять завершённую задачу в активном статусе.
+    - добавлены явные GraphQL-примеры для `linear_graphql`:
+      - lookup `stateId` через `issue.team.states`;
+      - `issueUpdate` с `stateId`.
+
+- Эффект:
+  - у агента теперь есть конкретный protocol-level способ завершать board transition;
+  - это должно убрать повторные turn'ы по уже сделанной задаче, если сама работа завершена.
+
 ## 1.35) Narrow `Human Review` to critical changes only in Symphony workflow (17 марта 2026)
 
 - Запрос:

@@ -1,3 +1,14 @@
+Обновление от 17 марта 2026 (docs: обязать Symphony делать явные Linear status transitions):
+- В `WORKFLOW.md` дополнен `Status transition protocol`:
+  - агент теперь обязан переводить задачу `Todo` -> `In Progress` в начале работы;
+  - после завершения обязан переводить задачу либо в `Human Review`, либо в `Done` по критериям риска;
+  - оставлять завершённую задачу в `Todo` или `In Progress` больше нельзя.
+- Добавлены явные инструкции для `linear_graphql`:
+  - сначала запросить `stateId` через `issue -> team -> states`;
+  - затем выполнить `issueUpdate` с нужным `stateId`.
+- Причина:
+  - без этого Symphony продолжал делать новые turn'ы по уже выполненной задаче, если issue оставалась в активном состоянии.
+
 Обновление от 17 марта 2026 (docs: уточнить Symphony policy для `Human Review`):
 - В `WORKFLOW.md` изменён протокол статусов:
   - `Todo` -> `In Progress` при старте;
