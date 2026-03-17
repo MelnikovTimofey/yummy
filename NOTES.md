@@ -1,3 +1,14 @@
+Обновление от 17 марта 2026 (docs: уточнить Symphony policy для `Human Review`):
+- В `WORKFLOW.md` изменён протокол статусов:
+  - `Todo` -> `In Progress` при старте;
+  - `Human Review` теперь не является default handoff;
+  - в `Human Review` задача должна уходить только для критичных изменений, требующих явного человеческого ревью;
+  - для небольших безопасных задач после релевантных проверок допустим прямой переход в `Done`.
+- Критичные изменения для `Human Review` зафиксированы явно:
+  - архитектура, schema/migration, auth/security, env changes, new dependencies, public API changes, large UI/product changes, incomplete verification, unresolved ambiguity.
+- Причина:
+  - это лучше соответствует реальному процессу команды: ручное ревью нужно не для каждой мелкой задачи, а для рисковых изменений.
+
 Обновление от 17 марта 2026 (docs: перевести Symphony workflow в ASCII из-за бага `symphony_elixir`):
 - Проблема:
   - reference implementation `openai/symphony` (`symphony_elixir`) падала на `Jason.EncodeError` при запуске задач, если prompt из `WORKFLOW.md` и issue description содержал кириллицу;

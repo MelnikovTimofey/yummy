@@ -1,5 +1,31 @@
 # HANDOFF — Yummy
 
+## 1.35) Narrow `Human Review` to critical changes only in Symphony workflow (17 марта 2026)
+
+- Запрос:
+  - в протоколе должно быть явно описано, что задача переводится в `Human Review` только для критичных изменений, действительно требующих человеческого ревью.
+
+- Реализация:
+  - `WORKFLOW.md`:
+    - добавлен явный `Status transition protocol`;
+    - зафиксирован переход `Todo` -> `In Progress` на старте;
+    - `Human Review` ограничен списком критичных кейсов;
+    - для small safe tasks после проверок разрешён прямой переход в `Done`.
+
+- Критерии для `Human Review`:
+  - architecture changes;
+  - schema/migration/seed changes;
+  - auth/security/env changes;
+  - new dependencies;
+  - public API or contract changes;
+  - large UI or product-visible behavior changes;
+  - incomplete verification or unresolved risk.
+
+- Эффект:
+  - workflow больше не трактует `Human Review` как default handoff;
+  - мелкие безопасные задачи могут закрываться без лишнего промежуточного статуса;
+  - критичные изменения по-прежнему явно требуют человеческого ревью.
+
 ## 1.34) Convert Symphony `WORKFLOW.md` to ASCII-only for runtime compatibility (17 марта 2026)
 
 - Проблема:

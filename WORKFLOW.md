@@ -107,6 +107,32 @@ If pure helpers or parser logic changed:
 
 Do not complete the task without listing the actual verification commands that were run.
 
+## Status transition protocol
+
+At task start:
+- if the issue is in `Todo`, move it to `In Progress`
+- use the available Linear GraphQL tool from Symphony to perform the transition
+
+At task finish:
+- move the issue to `Human Review` only if the change is critical and requires explicit human review
+- otherwise, if the task is small, safe, fully verified, and does not require human judgment, move it directly to `Done`
+
+Critical changes that require `Human Review`:
+- architecture changes or cross-cutting refactors
+- database, Prisma schema, migration, or seed flow changes
+- auth, security, permissions, or environment variable changes
+- new dependencies
+- public API, route, contract, or data model changes
+- large UI behavior changes or product-visible logic changes
+- incomplete verification or unresolved risk
+- any ambiguous change where human judgment is still required
+
+Safe changes that may go directly to `Done` after checks:
+- small refactors without behavior change
+- local fixes with clear verification
+- extraction of helpers or deduplication with no contract change
+- documentation-only updates
+
 ## Documentation and operating docs
 
 If the change affects repo rules, developer workflow, startup, handoff, or operating instructions:
@@ -123,7 +149,8 @@ If the task does not change repo rules or operations, do not edit those files wi
 - Do not auto-merge or auto-land the task.
 
 Target final state:
-- default handoff target: `Human Review`
+- default final state for small safe tasks: `Done`
+- use `Human Review` only for critical changes that require explicit human review
 - if checks are incomplete, risk remains, or questions stay open: `Human Review`
 - if the task cannot be completed safely without clarification: `Human Review`
 
@@ -135,4 +162,7 @@ The final report must include:
 - which verification commands were run
 - which risks or gaps remain
 
-If tracker access is available, leave a short issue comment and move the task to `Human Review`.
+If tracker access is available:
+- leave a short issue comment
+- move the task to `Human Review` only when the critical-review criteria above apply
+- otherwise move it to `Done`
