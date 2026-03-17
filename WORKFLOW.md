@@ -26,113 +26,113 @@ codex:
 
 # Yummy Symphony Workflow
 
-Текущая задача:
+Current issue:
 - Issue: `{{ issue.identifier }}`
-- Заголовок: `{{ issue.title }}`
-- Попытка: `{{ attempt }}`
+- Title: `{{ issue.title }}`
+- Attempt: `{{ attempt }}`
 
-Описание issue:
+Issue description:
 
 {{ issue.description }}
 
-## Цель
+## Goal
 
-Symphony в этом репозитории управляет только небольшими и безопасными задачами.
-Главная цель: сохранить предсказуемую разработку в активном контуре `YummyWeb`, `backend`, `services/catalog-updater` без архитектурного расползания.
+Symphony in this repository must handle only small and safe tasks.
+The main goal is predictable delivery in the active path: `YummyWeb`, `backend`, `services/catalog-updater`.
 
-## Обязательный порядок работы
+## Required order of work
 
-1. Сначала прочитай корневой `AGENTS.md`.
-2. Работай только в рамках issue. Не расширяй scope без явного основания в описании задачи.
-3. Если задача затрагивает продуктовую логику, UI-тексты или структуру каталога, проверь инварианты из `AGENTS.md`.
-4. Если задача неоднозначна или требует архитектурного выбора, не принимай решение молча.
-   Остановись, сформулируй вопрос или вариант решения и передай задачу в `Human Review`.
-5. Держи изменения небольшими. Предпочитай extraction, deduplication и локальное упрощение вместо больших переписываний.
+1. Read the root `AGENTS.md` first.
+2. Work only within the current issue scope.
+3. If the task touches product logic, UI copy, or catalog structure, follow the invariants from `AGENTS.md`.
+4. If the task is ambiguous or requires an architectural choice, do not decide silently.
+   Stop, explain the question or options, and hand off to `Human Review`.
+5. Keep changes small. Prefer extraction, deduplication, and local simplification over large rewrites.
 
-## Активный контур
+## Active scope
 
-По умолчанию приоритет такой:
-- `YummyWeb/` — основной mobile-first web-клиент
-- `backend/` — основной Fastify API
-- `services/catalog-updater/` — сервис обновления каталога
+Default priority:
+- `YummyWeb/` - main mobile-first web client
+- `backend/` - main Fastify API
+- `services/catalog-updater/` - catalog update service
 
-Не трогай `Yummy/`, `YummyExpo/` и `ml/`, если этого прямо не требует issue.
+Do not touch `Yummy/`, `YummyExpo/`, or `ml/` unless the issue explicitly requires it.
 
-## Правила репозитория
+## Repository rules
 
-- Следуй принципу `KISS > premature optimization`.
-- Не добавляй новые зависимости без краткого и явного обоснования в итоговом отчёте.
-- Не меняй архитектуру без необходимости, если issue просит только локальный фикс или рефакторинг.
-- Интерфейсные строки должны быть на русском языке.
-- `README.md` должны оставаться на русском языке.
-- Для каталога табаков соблюдай разделение:
-  - `flavorProfiles` — категории
-  - `flavors` — вкусы
-  - `flavorTags` — только мета-теги
-- Не переименовывай публичные API, роуты, env-переменные и Prisma-сущности без прямого требования задачи.
+- Follow `KISS > premature optimization`.
+- Do not add dependencies without explicit justification in the final report.
+- Do not change architecture unless the issue clearly requires it.
+- UI strings must remain in Russian.
+- `README.md` files must remain in Russian.
+- For tobacco catalog data, keep this split:
+  - `flavorProfiles` - categories
+  - `flavors` - flavors
+  - `flavorTags` - meta tags only
+- Do not rename public APIs, routes, env vars, or Prisma entities without an explicit requirement.
 
-## Ожидаемый тип изменений
+## Expected change types
 
-Предпочтительны:
-- небольшие рефакторинги без изменения поведения
-- локальные багфиксы
-- выделение testable business logic
-- устранение дублирования
-- улучшение проверок и developer workflow
+Preferred:
+- small refactors without behavior change
+- local bug fixes
+- extraction of testable business logic
+- removal of duplication
+- improvements to checks and developer workflow
 
-Нежелательны без отдельного подтверждения:
-- массовое перемещение файлов
-- новый state management
-- замена библиотек
-- изменение схем данных
-- параллельные несвязанные изменения в нескольких подпроектах
+Avoid without explicit confirmation:
+- large file moves
+- new state management
+- library swaps
+- schema changes
+- unrelated changes across multiple subprojects
 
-## Проверки перед handoff
+## Checks before handoff
 
-Запускай только релевантные проверки.
+Run only relevant checks.
 
-Если менялся `YummyWeb/`:
+If `YummyWeb/` changed:
 - `cd YummyWeb && npm run build`
-- если менялось поведение UI и окружение готово: `cd YummyWeb && npm run e2e:chromium`
+- if UI behavior changed and the environment is ready: `cd YummyWeb && npm run e2e:chromium`
 
-Если менялся `backend/`:
+If `backend/` changed:
 - `cd backend && npm run build`
 
-Если менялся `services/catalog-updater/`:
+If `services/catalog-updater/` changed:
 - `cd services/catalog-updater && npm run build`
 
-Если добавлены или изменены pure helpers / parser logic:
-- добавь или обнови локальные unit-тесты, если в подпроекте уже есть подходящий test runner
-- если test runner отсутствует, явно зафиксируй этот пробел в handoff
+If pure helpers or parser logic changed:
+- add or update local unit tests if a suitable test runner already exists
+- if no test runner exists, state that gap explicitly in the handoff
 
-Нельзя завершать задачу без перечисления фактически выполненных команд проверки.
+Do not complete the task without listing the actual verification commands that were run.
 
-## Документация и операционный контур
+## Documentation and operating docs
 
-Если изменение влияет на правила работы, developer workflow, запуск, handoff или операционные инструкции:
-- обнови `NOTES.md`
-- обнови `HANDOFF.md`
-- обнови `AGENTS.md` только если реально меняются правила для агентов
+If the change affects repo rules, developer workflow, startup, handoff, or operating instructions:
+- update `NOTES.md`
+- update `HANDOFF.md`
+- update `AGENTS.md` only if agent rules truly changed
 
-Если задача не меняет правила или операционный процесс, не редактируй эти файлы без причины.
+If the task does not change repo rules or operations, do not edit those files without reason.
 
-## Git и завершение
+## Git and completion
 
-- Делай commit после логически завершённого блока работы.
-- Не используй destructive git-команды.
-- Не делай auto-merge и не land'и задачу автоматически.
+- Make a commit after each logical block.
+- Do not use destructive git commands.
+- Do not auto-merge or auto-land the task.
 
-Итоговое состояние задачи:
-- целевой handoff: `Human Review`
-- если проверок не хватает, есть риск или остались вопросы: `Human Review`
-- если задача не может быть безопасно выполнена без уточнения: `Human Review`
+Target final state:
+- default handoff target: `Human Review`
+- if checks are incomplete, risk remains, or questions stay open: `Human Review`
+- if the task cannot be completed safely without clarification: `Human Review`
 
-## Формат итогового отчёта
+## Final report format
 
-В итоговом сообщении обязательно укажи:
-- что изменено
-- какие файлы затронуты
-- какие команды проверки выполнены
-- какие риски или пробелы остались
+The final report must include:
+- what changed
+- which files changed
+- which verification commands were run
+- which risks or gaps remain
 
-Если есть доступ к трекеру, оставь короткий комментарий в issue и переведи задачу в `Human Review`.
+If tracker access is available, leave a short issue comment and move the task to `Human Review`.

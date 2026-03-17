@@ -1,3 +1,15 @@
+Обновление от 17 марта 2026 (docs: перевести Symphony workflow в ASCII из-за бага `symphony_elixir`):
+- Проблема:
+  - reference implementation `openai/symphony` (`symphony_elixir`) падала на `Jason.EncodeError` при запуске задач, если prompt из `WORKFLOW.md` и issue description содержал кириллицу;
+  - ошибка воспроизводилась сразу на `HOO-5` при сериализации сообщения в Codex App Server.
+- Изменение:
+  - `WORKFLOW.md` переведён в ASCII-only английский текст;
+  - продуктовые и репозиторные инварианты сохранены, включая требование оставлять UI и `README.md` на русском языке.
+- Причина:
+  - это workaround для текущего ограничения reference implementation, а не изменение продуктовых требований.
+- Проверка:
+  - локальные логи `symphony_elixir` подтвердили, что исходная ошибка была связана именно с кириллицей в prompt.
+
 Обновление от 17 марта 2026 (docs: починить Linear settings в Symphony workflow):
 - В `WORKFLOW.md` исправлена конфигурация `tracker`:
   - удалён зашитый `LINEAR` API key из репозитория;

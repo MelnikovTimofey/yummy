@@ -1,5 +1,22 @@
 # HANDOFF — Yummy
 
+## 1.34) Convert Symphony `WORKFLOW.md` to ASCII-only for runtime compatibility (17 марта 2026)
+
+- Проблема:
+  - `symphony_elixir` падал на `Jason.EncodeError` во время отправки prompt в Codex App Server;
+  - по логам ошибка была привязана к кириллице внутри `WORKFLOW.md` и issue description.
+
+- Реализация:
+  - `WORKFLOW.md` переведён в ASCII-only английский текст;
+  - сохранены те же repo rules:
+    - active scope `YummyWeb` / `backend` / `services/catalog-updater`;
+    - `UI strings` и `README.md` должны оставаться на русском;
+    - handoff target остаётся `Human Review`.
+
+- Эффект:
+  - orchestration prompt больше не содержит кириллицу на уровне workflow-файла;
+  - это снижает вероятность падения reference implementation на сериализации prompt.
+
 ## 1.33) Fix Linear config in Symphony `WORKFLOW.md` (17 марта 2026)
 
 - Проблема:
