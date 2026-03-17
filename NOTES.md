@@ -1,3 +1,19 @@
+Обновление от 17 марта 2026 (docs: добавить Symphony workflow для управляемого agent flow):
+- Добавлен корневой `WORKFLOW.md` для [openai/symphony](https://github.com/openai/symphony).
+- Что настроено:
+  - `Linear` как tracker через переменные `LINEAR_API_KEY` и `LINEAR_PROJECT_SLUG`;
+  - изолированные workspace в `~/codex-workspaces/yummy-symphony`;
+  - `after_create` clone из `SOURCE_REPO_URL` с fallback на локальный путь репозитория;
+  - `codex app-server` как исполнитель;
+  - последовательное выполнение задач (`max_concurrent_agents: 1`) и handoff только в `Human Review`.
+- Репозиторные ограничения перенесены в workflow:
+  - приоритет активного контура `YummyWeb` / `backend` / `services/catalog-updater`;
+  - запрет на лишнее усложнение архитектуры и новые зависимости без обоснования;
+  - обязательные релевантные проверки перед handoff;
+  - обновление `NOTES.md` / `HANDOFF.md` при изменении операционного контура.
+- Проверка:
+  - вручную проверена структура `WORKFLOW.md` и соответствие текущим правилам `AGENTS.md`.
+
 ## Этот файл для человека
 
 Обновление от 13 марта 2026 (docker bootstrap fix):

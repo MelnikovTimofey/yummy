@@ -1,5 +1,29 @@
 # HANDOFF — Yummy
 
+## 1.32) Add Symphony `WORKFLOW.md` for controlled repo orchestration (17 марта 2026)
+
+- Задача:
+  - подготовить корневой `WORKFLOW.md`, чтобы использовать `openai/symphony` как слой контроля над задачами рефакторинга и тестирования.
+
+- Реализация:
+  - добавлен новый файл `WORKFLOW.md` в корне репозитория;
+  - в front matter настроены:
+    - `Linear` tracker через `LINEAR_API_KEY` и `LINEAR_PROJECT_SLUG`;
+    - isolated workspaces в `~/codex-workspaces/yummy-symphony`;
+    - `after_create` hook с `git clone` из `SOURCE_REPO_URL` и fallback на локальный путь `/Users/admin/PycharmProjects/yummy`;
+    - `codex app-server`;
+    - последовательное исполнение: `max_concurrent_agents: 1`, `max_turns: 12`.
+  - в markdown-части workflow зафиксированы правила для агентов:
+    - сначала читать `AGENTS.md`;
+    - работать только в активном контуре `YummyWeb`, `backend`, `services/catalog-updater`, если issue не требует иного;
+    - не принимать неоднозначные архитектурные решения молча;
+    - выполнять только релевантные проверки и всегда перечислять их в handoff;
+    - передавать задачи в `Human Review`, а не закрывать автоматически.
+
+- Эффект:
+  - появился формализованный orchestration layer для Symphony;
+  - запуск агента теперь можно привязать к безопасному и предсказуемому workflow без auto-merge и без параллельного расползания задач.
+
 ## 1.31) Fix docker bootstrap for empty DB (13 марта 2026)
 
 - Проблема:
