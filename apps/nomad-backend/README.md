@@ -25,6 +25,14 @@
 2. smoke CTA event tracking;
 3. staff dashboard summary.
 
+На Phase 4 дополнительно есть:
+
+1. guest intro cards;
+2. guest home rails и guest catalog mixes;
+3. guest rating endpoint для миксов;
+4. staff CRUD для миксов и рейлов;
+5. статистический rail на базе CTA и оценок.
+
 ## Эндпоинты
 
 ### Guest access
@@ -35,7 +43,11 @@
 
 - `GET /guest/onboarding/options`
 - `POST /guest/onboarding/recommendations`
+- `GET /guest/intro/cards`
+- `GET /guest/catalog/mixes`
+- `GET /guest/home/rails`
 - `POST /guest/events/smoke-cta`
+- `POST /guest/mixes/:id/rating`
 
 ### Staff auth
 
@@ -47,6 +59,12 @@
 - `GET /staff/inventory/tobaccos`
 - `PATCH /staff/inventory/tobaccos/:id`
 - `GET /staff/dashboard/summary`
+- `GET /staff/mixes`
+- `POST /staff/mixes`
+- `PATCH /staff/mixes/:id`
+- `GET /staff/rails`
+- `POST /staff/rails`
+- `PATCH /staff/rails/:id`
 
 ## Локальный запуск
 
@@ -76,4 +94,4 @@ NOMAD_STAFF_DISPLAY_NAME=Nomad Staff
 
 ## Стадия
 
-Текущая стадия: Phase 3 inventory + analytics backend.
+Текущая стадия: Phase 4 content rails backend.

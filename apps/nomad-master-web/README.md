@@ -30,6 +30,14 @@ Staff/admin frontend для продукта `Мастер`.
 2. переключение `in stock / out of stock` через `PATCH /staff/inventory/tobaccos/:id`;
 3. сводка дашборда из `/staff/dashboard/summary`.
 
+## Phase 4
+
+Добавлены контентные менеджеры:
+
+1. список и редактирование миксов через `/staff/mixes`;
+2. создание и обновление рейлов через `/staff/rails`;
+3. табовый staff-shell с экранами `Дашборд`, `Инвентаризация`, `Миксы`, `Рейлы`.
+
 ## Локальный запуск
 
 ```bash
@@ -42,4 +50,4 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: scaffold.
+Текущая стадия: Phase 4 staff operations + content managers.

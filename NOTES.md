@@ -1530,3 +1530,25 @@ Product-rules (зафиксировано):
 Проверка:
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+Обновление от 22 марта 2026 (Nomad — Phase 4 content rails):
+- `apps/nomad-backend/src/app.ts`, `state.ts`, `types.ts`, `recommendations.ts`:
+  - добавлены guest endpoints для `знакомства`, `главной с рейлами`, `каталога миксов` и `оценки`;
+  - добавлены staff endpoints для менеджера миксов и менеджера рейлов;
+  - статистический рейл теперь строится по `Выбрать` + `avgRating`.
+- `apps/nomad-aroma-web/src/App.tsx`, `styles.css`:
+  - после доступа гость проходит через `знакомство -> онбординг -> рекомендации -> главную -> каталог`;
+  - добавлены выбор микса из разных источников и оценка `1..5`;
+  - исправлен разбор backend-ответа по rating, чтобы средняя оценка обновлялась в карточке.
+- `apps/nomad-master-web/src/App.tsx`, `contracts.ts`, `styles.css`:
+  - staff shell расширен до вкладок `Дашборд`, `Инвентаризация`, `Миксы`, `Рейлы`;
+  - добавлены MVP-формы создания и редактирования миксов и рейлов.
+- `apps/nomad-*/README.md`:
+  - документация синхронизирована с новым Phase 4 состоянием.
+
+Проверка:
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm test` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.

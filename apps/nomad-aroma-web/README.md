@@ -28,4 +28,4 @@ API задаётся через `VITE_API_BASE_URL`.
 
 ## Стадия
 
-Текущая стадия: Phase 2 onboarding + recommendations flow.
+Текущая стадия: Phase 4 guest content flow с экраном знакомства, онбордингом, рекомендациями, главной с рейлами, каталогом и оценкой микса.

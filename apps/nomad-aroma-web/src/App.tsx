@@ -393,13 +393,20 @@ const sendMixRating = async (mixId: string, value: number) => {
   });
 
   const record = isRecord(payload) ? payload : {};
+  const ratingRecord = isRecord(record.rating) ? record.rating : {};
+  const itemRecord = isRecord(record.item) ? record.item : {};
 
   return {
     ok: true as const,
-    mixId: typeof record.mixId === 'string' && record.mixId ? record.mixId : mixId,
-    value: toNumber(record.value ?? value, value),
-    averageRating: typeof record.averageRating === 'number' ? record.averageRating : undefined,
-    ratingCount: typeof record.ratingCount === 'number' ? record.ratingCount : undefined,
+    mixId:
+      typeof record.mixId === 'string' && record.mixId
+        ? record.mixId
+        : typeof itemRecord.id === 'string' && itemRecord.id
+          ? itemRecord.id
+          : mixId,
+    value: toNumber(record.value ?? ratingRecord.value ?? value, value),
+    averageRating: toNumber(record.averageRating ?? ratingRecord.avgRating ?? itemRecord.avgRating, Number.NaN),
+    ratingCount: toNumber(record.ratingCount ?? ratingRecord.ratingsCount ?? itemRecord.ratingsCount, Number.NaN),
     message: typeof record.message === 'string' ? record.message : undefined,
   } satisfies MixRatingResult;
 };

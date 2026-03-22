@@ -1826,3 +1826,27 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 Проверка:
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+## 2.2) Nomad (22 марта 2026) — Phase 4 content rails и контентные менеджеры
+
+Сделано:
+- `apps/nomad-backend/src/app.ts`, `state.ts`, `types.ts`, `content.test.ts`:
+  - добавлены guest API для `GET /guest/intro/cards`, `GET /guest/home/rails`, `GET /guest/catalog/mixes`, `POST /guest/mixes/:id/rating`;
+  - добавлены staff API для `GET/POST/PATCH /staff/mixes` и `GET/POST/PATCH /staff/rails`;
+  - статистический рейл строится по событиям `Выбрать` и текущему `avgRating`.
+- `apps/nomad-aroma-web/src/App.tsx`, `styles.css`:
+  - добавлены экраны `Знакомство`, `Главная`, `Каталог`;
+  - гость может выбрать микс из рекомендаций, рейлов или каталога и отдельно поставить оценку `1..5`;
+  - исправлен парсинг ответа rating endpoint, чтобы UI обновлял среднюю оценку выбранного микса.
+- `apps/nomad-master-web/src/App.tsx`, `contracts.ts`, `styles.css`:
+  - staff-shell теперь содержит вкладки `Дашборд`, `Инвентаризация`, `Миксы`, `Рейлы`;
+  - добавлены MVP-формы create/edit для миксов и рейлов.
+- `apps/nomad-aroma-web/README.md`, `apps/nomad-master-web/README.md`, `apps/nomad-backend/README.md`:
+  - документация приведена к текущему Phase 4 состоянию.
+
+Проверка:
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm test` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
