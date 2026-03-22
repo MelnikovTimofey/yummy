@@ -1,5 +1,37 @@
 # HANDOFF — Yummy
 
+## 1.42) Prepare Nomad as parallel track instead of direct pivot (22 марта 2026)
+
+- Запрос:
+  - подготовить репозиторий к сценарию, где текущий продукт остаётся в существующем виде, а Nomad развивается параллельно;
+  - отдельно подготовить branch, agent context и execution plan с оговоркой по multi-agent и Symphony.
+
+- Реализация:
+  - создана ветка `codex/nomad-parallel-track`;
+  - `AGENTS.md`:
+    - репозиторий переведён в режим двух контуров: `legacy Yummy` и `Nomad parallel track`;
+    - зафиксировано, что `YummyWeb/`, `backend/`, `services/catalog-updater/` не должны молча перепрофилироваться под Nomad;
+    - добавлены правила по изоляции Nomad-каталогов и условия использования multi-agent / Symphony.
+  - `NOMAD_IMPLEMENTATION_PLAN.md`:
+    - синхронизирован с parallel-track стратегией;
+    - базовая рекомендация изменена на отдельные `nomad-*` apps/services внутри репозитория вместо переезда поверх legacy-приложений.
+  - `NOMAD_PARALLEL_EXECUTION_PLAN.md`:
+    - добавлен отдельный delivery plan для параллельной разработки;
+    - зафиксированы branch strategy, directory layout, фазы реализации и multi-agent схема;
+    - отдельно указано, что текущий `WORKFLOW.md` нельзя использовать для Nomad без отдельного active scope.
+  - `NOTES.md`:
+    - добавлена операционная запись о переходе к parallel track.
+
+- Эффект:
+  - legacy-контур защищён от случайной миграции под новый продукт;
+  - Nomad получил отдельную рабочую ветку и ясную модель развития;
+  - появилась формализация, когда реально подключать multi-agent и когда имеет смысл заводить отдельный Symphony workflow.
+
+- Следующий рекомендуемый шаг:
+  1. создать Nomad scaffold-каталоги;
+  2. после scaffold подготовить отдельный Nomad workflow для Symphony;
+  3. только затем начинать feature slices.
+
 ## 1.41) Pivot product baseline to Nomad Aroma Atelier + Master (22 марта 2026)
 
 - Запрос:

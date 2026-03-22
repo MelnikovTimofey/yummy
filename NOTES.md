@@ -1,3 +1,28 @@
+Обновление от 22 марта 2026 (docs: switch Nomad work to parallel-track branch and isolated contour):
+- Проблема:
+  - предыдущий документный baseline трактовал Nomad как прямой pivot текущего проекта;
+  - фактическое решение изменилось: legacy `Yummy` нужно сохранить в текущем виде, а Nomad развивать параллельно.
+- Изменение:
+  - создана отдельная ветка разработки `codex/nomad-parallel-track`;
+  - `AGENTS.md` переведён в dual-track режим:
+    - legacy `Yummy` зафиксирован как стабильный контур;
+    - Nomad описан как параллельный контур в отдельных каталогах;
+    - запрещено молча repurpose-ить `YummyWeb/` и `backend/` под Nomad;
+    - добавлены правила по использованию multi-agent и ограничение на использование текущего `WORKFLOW.md` для Nomad.
+  - `NOMAD_IMPLEMENTATION_PLAN.md` синхронизирован с новым решением:
+    - рекомендация изменена с прямого переиспользования `backend + YummyWeb` на parallel-track архитектуру;
+    - Nomad backend/frontend теперь описаны как отдельные приложения.
+  - добавлен `NOMAD_PARALLEL_EXECUTION_PLAN.md`:
+    - branch strategy;
+    - целевая структура каталогов;
+    - фазы реализации;
+    - правила multi-agent работы;
+    - критерии, когда реально нужен Symphony и каким должен быть отдельный Nomad workflow.
+- Эффект:
+  - Nomad теперь проектируется как изолированный parallel track;
+  - legacy-контур не считается целью для переезда или скрытого рефакторинга;
+  - дальнейшие Nomad-задачи можно брать без риска сломать текущий продукт.
+
 Обновление от 22 марта 2026 (docs: pivot project baseline to Nomad Aroma Atelier + Master):
 - Проблема:
   - текущий `PRD.md` и часть agent-контекста были описаны под старый user-centric сценарий с `magic-link`, `избранным`, `сессиями` и ML-рекомендациями;
