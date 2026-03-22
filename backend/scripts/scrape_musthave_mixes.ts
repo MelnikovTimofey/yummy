@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import https from 'node:https';
+import { extractMix } from '../../services/catalog-updater/src/importers/musthaveMixParser';
 
 const BASE_URL = 'https://musthave.ru/showmixes/view/';
 
@@ -25,68 +26,6 @@ const fetchText = (url: string) =>
       })
       .on('error', reject);
   });
-
-const stripHtml = (html: string) => {
-  const withoutScripts = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '');
-  return withoutScripts.replace(/<[^>]+>/g, '\n');
-};
-
-const extractMix = (html: string, id: number) => {
-  const text = stripHtml(html)
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&laquo;/g, '«')
-    .replace(/&raquo;/g, '»');
-  const lines = text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const idLineIndex = lines.findIndex((line) => line.includes(`#ID ${id}`));
-  if (idLineIndex < 0) {
-    return null;
-  }
-
-  const name = lines[idLineIndex - 1] ?? lines[idLineIndex + 1];
-  if (!name) {
-    return null;
-  }
-
-  const yearIndex = lines.findIndex((line) => /^(19|20)\d{2}$/.test(line));
-  const description =
-    yearIndex >= 0 && lines[yearIndex + 2]
-      ? lines[yearIndex + 2]
-      : lines.find((line) => line.length > 10 && !line.includes('#ID')) ?? '';
-
-  const components: { manufacturer: string; tobacco: string; proportion: number }[] = [];
-  for (let i = 1; i < lines.length; i += 1) {
-    if (/^\d{1,3}%$/.test(lines[i])) {
-      const proportion = Number(lines[i].replace('%', ''));
-      const tobacco = lines[i - 1];
-      if (!tobacco || /^\d+$/.test(tobacco)) {
-        continue;
-      }
-      if (tobacco.toLowerCase().includes('musthave')) {
-        continue;
-      }
-      components.push({ manufacturer: 'MUSTHAVE', tobacco, proportion });
-    }
-  }
-
-  const unique = new Map<string, { manufacturer: string; tobacco: string; proportion: number }>();
-  for (const component of components) {
-    unique.set(component.tobacco, component);
-  }
-
-  return {
-    name,
-    description,
-    components: Array.from(unique.values()),
-  };
-};
 
 const main = async () => {
   const minId = Number(process.env.MIX_ID_FROM ?? 1);

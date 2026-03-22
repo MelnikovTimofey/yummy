@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
+    "test:musthave-parser": "node --import tsx --test tests/musthaveMixParser.test.ts",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate --schema ../../backend/prisma/schema.prisma",
     "cache:refresh:hookahportal": "npm run build && node ./scripts/cache-refresh-hookahportal.cjs",
