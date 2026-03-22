@@ -30,6 +30,10 @@ type RecommendationMix = {
   }>;
 };
 
+type SmokeCtaResult = {
+  ok: true;
+};
+
 const storageKeys = {
   ageConfirmed: 'nomad-aroma-age-confirmed',
   accessGranted: 'nomad-aroma-access-granted',
@@ -93,6 +97,23 @@ const fetchRecommendations = async (payload: { likedProfiles: string[]; likedFla
   };
 };
 
+const sendSmokeCta = async (mixId: string) => {
+  const response = await fetch(`${apiBaseUrl}/guest/events/smoke-cta`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ mixId }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? 'Не удалось записать действие');
+  }
+
+  return (await response.json().catch(() => ({ ok: true }))) as SmokeCtaResult;
+};
+
 const toggleSelection = (value: string, items: string[]) =>
   items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
 
@@ -110,6 +131,8 @@ export const App = () => {
   const [recommendationStatus, setRecommendationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [recommendations, setRecommendations] = useState<RecommendationMix[]>([]);
   const [selectedMix, setSelectedMix] = useState<RecommendationMix | null>(null);
+  const [smokeCtaStatus, setSmokeCtaStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [smokeCtaError, setSmokeCtaError] = useState('');
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -158,6 +181,8 @@ export const App = () => {
     setRecommendationStatus('idle');
     setRecommendations([]);
     setSelectedMix(null);
+    setSmokeCtaStatus('idle');
+    setSmokeCtaError('');
     localStorage.removeItem(storageKeys.ageConfirmed);
     localStorage.removeItem(storageKeys.accessGranted);
   };
@@ -212,6 +237,20 @@ export const App = () => {
     }
   };
 
+  const onSmokeCta = async (mix: RecommendationMix) => {
+    setSmokeCtaStatus('loading');
+    setSmokeCtaError('');
+
+    try {
+      await sendSmokeCta(mix.id);
+      setSelectedMix(mix);
+      setSmokeCtaStatus('ready');
+    } catch (cause) {
+      setSmokeCtaError(cause instanceof Error ? cause.message : 'Не удалось записать действие');
+      setSmokeCtaStatus('error');
+    }
+  };
+
   if (!ageConfirmed) {
     return (
       <main className="shell shell--guest">
@@ -245,7 +284,10 @@ export const App = () => {
         </section>
 
         <section className="card success-card">
-          <div className="pill">Покажите эту карточку кальянному мастеру</div>
+          <div className="pill">Записано в аналитику лаунжа</div>
+          <p className="hint-text">
+            Нажатие `Покурить` сохранено и теперь можно показать эту карточку кальянному мастеру.
+          </p>
           <div className="status-grid">
             <div className="status-tile">
               <span className="status-label">Профили</span>
@@ -336,12 +378,13 @@ export const App = () => {
               <p className="meta-line">
                 Рейтинг {mix.avgRating.toFixed(1)} · Популярность {mix.popularity}
               </p>
-              <button className="primary-btn" type="button" onClick={() => setSelectedMix(mix)}>
-                Покурить
+              <button className="primary-btn" type="button" onClick={() => void onSmokeCta(mix)} disabled={smokeCtaStatus === 'loading'}>
+                {smokeCtaStatus === 'loading' ? 'Сохраняем...' : 'Покурить'}
               </button>
             </article>
           ))}
         </section>
+        {smokeCtaError ? <section className="card card--compact"><p className="error-text">{smokeCtaError}</p></section> : null}
       </main>
     );
   }
@@ -413,6 +456,7 @@ export const App = () => {
         <section className="card card--compact">
           <div className="pill">18+ и код подтверждены</div>
           <p className="meta-line">API: {apiBaseUrl}</p>
+          {smokeCtaStatus === 'ready' ? <p className="meta-line">Событие `Покурить` отправлено в аналитику.</p> : null}
         </section>
       </main>
     );
