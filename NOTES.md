@@ -1599,3 +1599,27 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-backend && npm run build` — `OK`.
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+Обновление от 22 марта 2026 (Nomad — staff auth и daily code переведены из env в Postgres):
+- `apps/nomad-backend/prisma/schema.prisma`:
+  - добавлены модели `NomadStaffAccount` и `NomadDailyAccessCode`.
+- `apps/nomad-backend/prisma/seed.ts` и `apps/nomad-backend/src/state.ts`:
+  - reset/seed теперь создают persisted staff accounts и активный daily code;
+  - стартовые данные живут в БД, а не в `.env`.
+- `apps/nomad-backend/src/auth.ts`:
+  - staff login теперь проверяется по записям `NomadStaffAccount`;
+  - daily code верифицируется по активным окнам `NomadDailyAccessCode`;
+  - секреты хранятся не в plaintext, а как `scrypt` hash + salt.
+- `apps/nomad-backend/src/app.ts`:
+  - `POST /guest/access-code/verify` и `POST /staff/auth/login` переключены на Postgres-backed источники данных.
+- `apps/nomad-backend/src/auth.test.ts`:
+  - добавлены прямые тесты на persisted guest access code и persisted staff auth.
+- `apps/nomad-backend/.env.example`, `README.md`:
+  - удалены переменные `NOMAD_GUEST_ACCESS_CODE`, `NOMAD_ADMIN_*`, `NOMAD_NOMAD_*`, `NOMAD_STAFF_DISPLAY_NAME` как runtime source of truth.
+
+Проверка:
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.

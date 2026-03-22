@@ -1,6 +1,7 @@
 import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import type { Tobacco } from './catalog';
 import { prisma } from './db';
+import { createSecretHash } from './auth';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -85,6 +86,24 @@ type SeedRail = {
   isSystem: boolean;
 };
 
+type SeedStaffAccount = {
+  id: string;
+  login: string;
+  password: string;
+  passwordSalt: string;
+  name: string;
+  role: 'admin' | 'nomad';
+  active: boolean;
+};
+
+type SeedDailyAccessCode = {
+  id: string;
+  code: string;
+  codeSalt: string;
+  codeLabel: string;
+  active: boolean;
+};
+
 const introCards: SeedIntroCard[] = [
   {
     id: 'intro-age-check',
@@ -113,6 +132,37 @@ const introCards: SeedIntroCard[] = [
     title: 'Покажите микс мастеру',
     description: 'Карточка микса открывается после кнопки выбора и сразу готова для показа staff.',
     bullets: ['Гость видит состав микса и рейтинг.', 'Мастер получает понятную карточку без лишних шагов.'],
+  },
+];
+
+const seedStaffAccounts: SeedStaffAccount[] = [
+  {
+    id: 'staff-admin',
+    login: 'admin',
+    password: 'admin',
+    passwordSalt: 'seed:staff-admin',
+    name: 'Admin',
+    role: 'admin',
+    active: true,
+  },
+  {
+    id: 'staff-nomad',
+    login: 'nomad',
+    password: 'nomad',
+    passwordSalt: 'seed:staff-nomad',
+    name: 'Nomad Staff',
+    role: 'nomad',
+    active: true,
+  },
+];
+
+const seedDailyAccessCodes: SeedDailyAccessCode[] = [
+  {
+    id: 'daily-code-default',
+    code: 'NOMAD-2026',
+    codeSalt: 'seed:daily-code-default',
+    codeLabel: 'Базовый daily code',
+    active: true,
   },
 ];
 
@@ -159,6 +209,20 @@ const slugify = (value: string) =>
     .slice(0, 48) || 'item';
 
 const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));
+
+const createCurrentCodeWindow = () => {
+  const now = new Date();
+  const startsAt = new Date(now);
+  startsAt.setHours(0, 0, 0, 0);
+
+  const endsAt = new Date(startsAt);
+  endsAt.setDate(endsAt.getDate() + 1);
+
+  return {
+    startsAt,
+    endsAt,
+  };
+};
 
 const parseList = (value: string | null | undefined) => {
   if (!value) {
@@ -429,6 +493,8 @@ const nextRailId = async (name: string) => {
 };
 
 const seedNomadStorage = async () => {
+  const currentCodeWindow = createCurrentCodeWindow();
+
   await prisma.$transaction(async (tx) => {
     await tx.nomadSmokeCtaEvent.deleteMany();
     await tx.nomadMixRating.deleteMany();
@@ -438,6 +504,32 @@ const seedNomadStorage = async () => {
     await tx.nomadMix.deleteMany();
     await tx.nomadTobacco.deleteMany();
     await tx.nomadIntroCard.deleteMany();
+    await tx.nomadDailyAccessCode.deleteMany();
+    await tx.nomadStaffAccount.deleteMany();
+
+    await tx.nomadStaffAccount.createMany({
+      data: seedStaffAccounts.map((account) => ({
+        id: account.id,
+        login: account.login,
+        passwordHash: createSecretHash(account.password, account.passwordSalt),
+        passwordSalt: account.passwordSalt,
+        name: account.name,
+        role: account.role,
+        active: account.active,
+      })),
+    });
+
+    await tx.nomadDailyAccessCode.createMany({
+      data: seedDailyAccessCodes.map((code) => ({
+        id: code.id,
+        codeHash: createSecretHash(code.code, code.codeSalt),
+        codeSalt: code.codeSalt,
+        codeLabel: code.codeLabel,
+        active: code.active,
+        startsAt: currentCodeWindow.startsAt,
+        endsAt: currentCodeWindow.endsAt,
+      })),
+    });
 
     await tx.nomadIntroCard.createMany({
       data: introCards.map((card) => ({

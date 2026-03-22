@@ -5,6 +5,7 @@ import { config } from './config';
 import {
   createStaffToken,
   resolveStaffUser,
+  verifyGuestAccessCode,
   verifyStaffToken,
 } from './auth';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
@@ -108,7 +109,8 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Code is required' } satisfies ApiError);
     }
 
-    if (code !== config.guestAccessCode) {
+    const dailyCode = await verifyGuestAccessCode(code);
+    if (!dailyCode) {
       return reply.status(401).send({ error: 'Invalid access code' } satisfies ApiError);
     }
 
@@ -254,7 +256,7 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Login and password are required' } satisfies ApiError);
     }
 
-    const user = resolveStaffUser(login, password);
+    const user = await resolveStaffUser(login, password);
     if (!user) {
       return reply.status(401).send({ error: 'Invalid credentials' } satisfies ApiError);
     }

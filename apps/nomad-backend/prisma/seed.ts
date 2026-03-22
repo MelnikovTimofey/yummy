@@ -1,9 +1,27 @@
 import 'dotenv/config';
+import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 
 process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
 
 const prisma = new PrismaClient();
+
+const createSecretHash = (secret: string, salt: string) =>
+  crypto.scryptSync(secret, salt, 64).toString('hex');
+
+const createCurrentCodeWindow = () => {
+  const now = new Date();
+  const startsAt = new Date(now);
+  startsAt.setHours(0, 0, 0, 0);
+
+  const endsAt = new Date(startsAt);
+  endsAt.setDate(endsAt.getDate() + 1);
+
+  return {
+    startsAt,
+    endsAt,
+  };
+};
 
 const introCards = [
   {
@@ -33,6 +51,37 @@ const introCards = [
     title: 'Покажите микс мастеру',
     description: 'Карточка микса открывается после кнопки выбора и сразу готова для показа staff.',
     bullets: ['Гость видит состав микса и рейтинг.', 'Мастер получает понятную карточку без лишних шагов.'],
+  },
+] as const;
+
+const staffAccounts = [
+  {
+    id: 'staff-admin',
+    login: 'admin',
+    password: 'admin',
+    passwordSalt: 'seed:staff-admin',
+    name: 'Admin',
+    role: 'admin',
+    active: true,
+  },
+  {
+    id: 'staff-nomad',
+    login: 'nomad',
+    password: 'nomad',
+    passwordSalt: 'seed:staff-nomad',
+    name: 'Nomad Staff',
+    role: 'nomad',
+    active: true,
+  },
+] as const;
+
+const dailyAccessCodes = [
+  {
+    id: 'daily-code-default',
+    code: 'NOMAD-2026',
+    codeSalt: 'seed:daily-code-default',
+    codeLabel: 'Базовый daily code',
+    active: true,
   },
 ] as const;
 
@@ -217,6 +266,8 @@ const railMixes = [
 ] as const;
 
 async function main() {
+  const currentCodeWindow = createCurrentCodeWindow();
+
   await prisma.nomadSmokeCtaEvent.deleteMany();
   await prisma.nomadMixRating.deleteMany();
   await prisma.nomadRailMix.deleteMany();
@@ -225,6 +276,34 @@ async function main() {
   await prisma.nomadMix.deleteMany();
   await prisma.nomadTobacco.deleteMany();
   await prisma.nomadIntroCard.deleteMany();
+  await prisma.nomadDailyAccessCode.deleteMany();
+  await prisma.nomadStaffAccount.deleteMany();
+
+  await prisma.nomadStaffAccount.createMany({
+    data: staffAccounts.map((account) => ({
+      id: account.id,
+      login: account.login,
+      passwordHash: createSecretHash(account.password, account.passwordSalt),
+      passwordSalt: account.passwordSalt,
+      name: account.name,
+      role: account.role,
+      active: account.active,
+    })),
+    skipDuplicates: true,
+  });
+
+  await prisma.nomadDailyAccessCode.createMany({
+    data: dailyAccessCodes.map((code) => ({
+      id: code.id,
+      codeHash: createSecretHash(code.code, code.codeSalt),
+      codeSalt: code.codeSalt,
+      codeLabel: code.codeLabel,
+      active: code.active,
+      startsAt: currentCodeWindow.startsAt,
+      endsAt: currentCodeWindow.endsAt,
+    })),
+    skipDuplicates: true,
+  });
 
   await prisma.nomadIntroCard.createMany({
     data: introCards.map((card) => ({
@@ -234,6 +313,7 @@ async function main() {
       description: card.description,
       bullets: JSON.stringify(card.bullets),
     })),
+    skipDuplicates: true,
   });
 
   await prisma.nomadTobacco.createMany({
@@ -247,6 +327,7 @@ async function main() {
       flavorTags: JSON.stringify(tobacco.flavorTags),
       inStock: tobacco.inStock,
     })),
+    skipDuplicates: true,
   });
 
   await prisma.nomadMix.createMany({
@@ -261,6 +342,7 @@ async function main() {
       popularity: mix.popularity,
       baseAvgRating: mix.baseAvgRating,
     })),
+    skipDuplicates: true,
   });
 
   await prisma.nomadMixComponent.createMany({
@@ -270,6 +352,7 @@ async function main() {
       proportion: component.proportion,
       sortOrder: component.sortOrder,
     })),
+    skipDuplicates: true,
   });
 
   await prisma.nomadRail.createMany({
@@ -281,6 +364,7 @@ async function main() {
       active: rail.active,
       isSystem: rail.isSystem,
     })),
+    skipDuplicates: true,
   });
 
   await prisma.nomadRailMix.createMany({
@@ -289,6 +373,7 @@ async function main() {
       mixId: railMix.mixId,
       sortOrder: railMix.sortOrder,
     })),
+    skipDuplicates: true,
   });
 }
 

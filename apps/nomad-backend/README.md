@@ -13,6 +13,16 @@
 3. stateless bearer token для `GET /staff/auth/me`;
 4. health/meta endpoints для фронтенда.
 
+На текущем storage-backed этапе:
+
+1. daily code хранится в Postgres как `NomadDailyAccessCode`;
+2. staff accounts хранятся в Postgres как `NomadStaffAccount`;
+3. `.env` больше не является источником истины для guest access code и staff credentials;
+4. seed создаёт стартовые записи:
+   - login `admin` / password `admin`,
+   - login `nomad` / password `nomad`,
+   - daily code `NOMAD-2026`.
+
 На Phase 2 дополнительно есть:
 
 1. onboarding options на основе текущего in-stock каталога;
@@ -101,14 +111,8 @@ PORT=3021
 HOST=0.0.0.0
 APP_NAME=nomad-backend
 DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public"
-NOMAD_GUEST_ACCESS_CODE=NOMAD-2026
 NOMAD_TOKEN_SECRET=change-me
 NOMAD_TOKEN_TTL_HOURS=24
-NOMAD_ADMIN_LOGIN=admin
-NOMAD_ADMIN_PASSWORD=admin
-NOMAD_NOMAD_LOGIN=nomad
-NOMAD_NOMAD_PASSWORD=nomad
-NOMAD_STAFF_DISPLAY_NAME=Nomad Staff
 ```
 
 ## Стадия

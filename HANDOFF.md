@@ -1916,3 +1916,38 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd apps/nomad-backend && npm run build` — `OK`.
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+## 2.5) Nomad (22 марта 2026) — daily code и staff auth переведены из env в Postgres
+
+Сделано:
+- `apps/nomad-backend/prisma/schema.prisma`:
+  - добавлены модели `NomadStaffAccount` и `NomadDailyAccessCode`.
+- `apps/nomad-backend/prisma/seed.ts`:
+  - seed создаёт persisted staff accounts:
+    - `admin` / `admin`,
+    - `nomad` / `nomad`;
+  - seed создаёт активный daily code `NOMAD-2026` в текущем дневном окне;
+  - секреты сохраняются как `scrypt hash + salt`.
+- `apps/nomad-backend/src/state.ts`:
+  - `resetNomadState()` теперь пересоздаёт staff accounts и active daily code вместе с остальными Nomad-данными.
+- `apps/nomad-backend/src/auth.ts`:
+  - `resolveStaffUser()` больше не читает `.env`, а проверяет Postgres-backed `NomadStaffAccount`;
+  - добавлена `verifyGuestAccessCode()` по таблице `NomadDailyAccessCode`.
+- `apps/nomad-backend/src/app.ts`:
+  - `POST /guest/access-code/verify` и `POST /staff/auth/login` переведены на persisted storage.
+- `apps/nomad-backend/src/auth.test.ts`:
+  - добавлены прямые регрессии на persisted daily code и persisted staff login.
+- `apps/nomad-backend/.env.example`, `apps/nomad-backend/README.md`:
+  - переменные гостевого кода и staff credentials удалены из runtime-конфига.
+
+Важно:
+- token signing secret и token TTL всё ещё остаются в `.env`; это нормально и не противоречит задаче.
+- CRUD для staff accounts и daily codes пока не добавлен; сейчас ими управляет seed/reset path.
+- Внешний UX не изменился: гость всё так же вводит `NOMAD-2026`, staff всё так же логинится как `admin` / `nomad`, но источник истины уже в Postgres.
+
+Проверка:
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
