@@ -24,9 +24,12 @@ type RequestOptions = {
 };
 
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+  const hasJsonBody = options.body !== undefined;
+
+  if (hasJsonBody) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (options.auth?.accessToken) {
     headers.Authorization = `Bearer ${options.auth.accessToken}`;
@@ -35,7 +38,7 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: hasJsonBody ? JSON.stringify(options.body) : undefined,
   });
 
   if (response.status === 401 && options.auth?.refreshToken && options.onAuthUpdate) {

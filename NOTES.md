@@ -1,3 +1,15 @@
+Обновление от 22 марта 2026 (fix: remove favorite without empty JSON body):
+- Проблема:
+  - при клике на сердечко для удаления микса из избранного фронтенд отправлял `DELETE /favorites/:mixId` с заголовком `Content-Type: application/json`, но без тела;
+  - Fastify отвечал `400 FST_ERR_CTP_EMPTY_JSON_BODY`, потому что пустой JSON body при таком заголовке считается невалидным.
+- Изменение:
+  - `YummyWeb/src/shared/apiClient.ts`:
+    - общий `request()` больше не ставит `Content-Type: application/json` для запросов без `body`;
+    - JSON сериализуется только когда тело действительно передано.
+- Эффект:
+  - удаление из избранного снова работает;
+  - заодно исправлено то же поведение для других `DELETE`/`GET` запросов без тела, которые шли через тот же API-клиент.
+
 Обновление от 22 марта 2026 (docs: import HOO-5 baseline verification gate into current Symphony workflow):
 - В `WORKFLOW.md` секция `Checks before handoff` приведена к явному baseline verification gate для active scope.
 - Зафиксированы быстрые routine-команды:

@@ -1,5 +1,22 @@
 # HANDOFF — Yummy
 
+## 1.39) Fix empty JSON body on remove-from-favorites (22 марта 2026)
+
+- Проблема:
+  - при удалении микса из избранного UI вызывал `DELETE /favorites/:mixId` без тела, но общий API-клиент всё равно добавлял `Content-Type: application/json`;
+  - Fastify интерпретировал такой запрос как пустой JSON body и возвращал `400 FST_ERR_CTP_EMPTY_JSON_BODY`.
+
+- Реализация:
+  - `YummyWeb/src/shared/apiClient.ts`:
+    - `request()` теперь добавляет `Content-Type: application/json` только если реально передан `body`;
+    - `JSON.stringify` также выполняется только при наличии тела запроса.
+  - `NOTES.md`:
+    - добавлена короткая запись о причине бага и самом исправлении.
+
+- Эффект:
+  - сердечко корректно убирает микс из избранного;
+  - общее поведение API-клиента стало корректным для любых запросов без тела, включая другие `DELETE`.
+
 ## 1.38) Import HOO-5 baseline verification gate into current Symphony workflow (22 марта 2026)
 
 - Проблема:
