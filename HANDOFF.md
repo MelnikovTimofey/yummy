@@ -1811,3 +1811,18 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
   - `cancelMarginTop: 0px`, `confirmMarginTop: 0px`,
   - `cancelHeight: 40px`, `confirmHeight: 40px`.
 - `cd YummyWeb && npm run build` — `OK`.
+
+## 2.1) Nomad (22 марта 2026) — переименование CTA в `Выбрать`
+
+Сделано:
+- `apps/nomad-aroma-web/src/App.tsx`:
+  - основная CTA-кнопка на карточке микса переименована из `Покурить` в `Выбрать`;
+  - тексты об отправке аналитического события тоже показывают `Выбрать`.
+- `apps/nomad-master-web/src/App.tsx`:
+  - summary-card и empty-state dashboard переименованы на `Нажатия Выбрать`.
+- `apps/nomad-aroma-web/README.md`:
+  - документация синхронизирована с новым CTA.
+
+Проверка:
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.

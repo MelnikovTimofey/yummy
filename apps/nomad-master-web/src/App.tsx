@@ -63,7 +63,7 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
       { label: 'Всего табаков', value: 0 },
       { label: 'В наличии', value: 0 },
       { label: 'Не в наличии', value: 0 },
-      { label: 'Нажатия Покурить', value: 0 },
+      { label: 'Нажатия Выбрать', value: 0 },
     ];
   }
 
@@ -71,7 +71,7 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
     { label: 'Всего табаков', value: summary.totalTobaccos },
     { label: 'В наличии', value: summary.inStockCount },
     { label: 'Не в наличии', value: summary.outOfStockCount },
-    { label: 'Нажатия Покурить', value: summary.smokeCtaTotal },
+    { label: 'Нажатия Выбрать', value: summary.smokeCtaTotal },
   ];
 };
 
@@ -287,7 +287,7 @@ export const App = () => {
                 </article>
               ))
             ) : (
-              <p className="meta-line">Пока нет данных по нажатиям `Покурить`.</p>
+              <p className="meta-line">Пока нет данных по нажатиям `Выбрать`.</p>
             )}
           </div>
         </section>

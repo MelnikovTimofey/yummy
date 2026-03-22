@@ -286,7 +286,7 @@ export const App = () => {
         <section className="card success-card">
           <div className="pill">Записано в аналитику лаунжа</div>
           <p className="hint-text">
-            Нажатие `Покурить` сохранено и теперь можно показать эту карточку кальянному мастеру.
+            Нажатие `Выбрать` сохранено и теперь можно показать эту карточку кальянному мастеру.
           </p>
           <div className="status-grid">
             <div className="status-tile">
@@ -379,7 +379,7 @@ export const App = () => {
                 Рейтинг {mix.avgRating.toFixed(1)} · Популярность {mix.popularity}
               </p>
               <button className="primary-btn" type="button" onClick={() => void onSmokeCta(mix)} disabled={smokeCtaStatus === 'loading'}>
-                {smokeCtaStatus === 'loading' ? 'Сохраняем...' : 'Покурить'}
+                {smokeCtaStatus === 'loading' ? 'Сохраняем...' : 'Выбрать'}
               </button>
             </article>
           ))}
@@ -456,7 +456,7 @@ export const App = () => {
         <section className="card card--compact">
           <div className="pill">18+ и код подтверждены</div>
           <p className="meta-line">API: {apiBaseUrl}</p>
-          {smokeCtaStatus === 'ready' ? <p className="meta-line">Событие `Покурить` отправлено в аналитику.</p> : null}
+          {smokeCtaStatus === 'ready' ? <p className="meta-line">Событие `Выбрать` отправлено в аналитику.</p> : null}
         </section>
       </main>
     );

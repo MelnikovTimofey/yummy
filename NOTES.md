@@ -1517,3 +1517,16 @@ Product-rules (зафиксировано):
   - `confirmMarginTop: 0px`,
   - `cancelHeight: 40px`, `confirmHeight: 40px`.
 - `cd YummyWeb && npm run build` — `OK`.
+
+Обновление от 22 марта 2026 (Nomad — смена CTA `Покурить` на `Выбрать`):
+- `apps/nomad-aroma-web/src/App.tsx`:
+  - user-facing текст кнопки рекомендации изменён с `Покурить` на `Выбрать`;
+  - сопутствующие сообщения об аналитическом событии тоже приведены к `Выбрать`.
+- `apps/nomad-master-web/src/App.tsx`:
+  - подписи dashboard со статистикой нажатий обновлены на `Нажатия Выбрать`.
+- `apps/nomad-aroma-web/README.md`:
+  - описание guest CTA синхронизировано с новым названием.
+
+Проверка:
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
