@@ -1,3 +1,19 @@
+Обновление от 22 марта 2026 (docs: import HOO-5 baseline verification gate into current Symphony workflow):
+- В `WORKFLOW.md` секция `Checks before handoff` приведена к явному baseline verification gate для active scope.
+- Зафиксированы быстрые routine-команды:
+  - `cd YummyWeb && npm run build`
+  - `cd backend && npm run build`
+  - `cd services/catalog-updater && npm run build`
+- Добавлено правило: если задача затрагивает несколько subproject в active scope, нужно прогонять build для каждого затронутого проекта.
+- UI-эскалация исправлена на существующий script `cd YummyWeb && npm run e2e:smoke:chromium`.
+- Отдельно зафиксировано, что остаётся manual:
+  - browser smoke без готового Playwright-окружения;
+  - backend behavior beyond build без существующих automated tests;
+  - catalog refresh/parser/integration behavior beyond build без существующих automated tests.
+- Причина:
+  - в `main` отсутствовала merged-версия `HOO-5`, хотя задача была завершена в tracker;
+  - baseline gate нужен как минимальный и воспроизводимый набор проверок перед маленькими Symphony-изменениями.
+
 Обновление от 22 марта 2026 (ops: auto-merge `Done` Symphony tasks into `main`):
 - В `WORKFLOW.md` добавлен `hooks.after_run`, который вызывает `scripts/symphony_auto_merge_done.sh`.
 - `hooks.after_create` теперь дополнительно:

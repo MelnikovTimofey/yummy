@@ -1,5 +1,29 @@
 # HANDOFF — Yummy
 
+## 1.38) Import HOO-5 baseline verification gate into current Symphony workflow (22 марта 2026)
+
+- Проблема:
+  - completed task `HOO-5` не была фактически перенесена в `main`, хотя её baseline verification gate нужен для повседневых Symphony-рефакторингов;
+  - в секции `Checks before handoff` оставалась старая UI-команда `npm run e2e:chromium`, которой нет в `YummyWeb`.
+
+- Реализация:
+  - `WORKFLOW.md`:
+    - секция `Checks before handoff` оформлена как baseline verification gate;
+    - для routine local runs зафиксированы быстрые команды:
+      - `cd YummyWeb && npm run build`
+      - `cd backend && npm run build`
+      - `cd services/catalog-updater && npm run build`
+    - добавлено правило: если задача затрагивает несколько subproject в active scope, нужно прогонять build для каждого затронутого проекта;
+    - UI-эскалация исправлена на реальный script `cd YummyWeb && npm run e2e:smoke:chromium`;
+    - отдельно описаны manual-проверки для UI smoke без готового Playwright, а также для backend/catalog behavior beyond build, если нет существующих automated tests.
+  - `NOTES.md`:
+    - добавлена операционная запись о переносе baseline gate из `HOO-5` в текущий workflow.
+
+- Эффект:
+  - в `main` появился тот baseline verification gate, который уже считался done на стороне tracker;
+  - agents получают короткий, воспроизводимый и согласованный набор проверок для `YummyWeb`, `backend` и `services/catalog-updater`;
+  - workflow больше не ссылается на несуществующую UI smoke-команду.
+
 ## 1.37) Auto-merge `Done` Symphony tasks into `main` (22 марта 2026)
 
 - Запрос:

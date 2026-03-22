@@ -99,15 +99,19 @@ Avoid without explicit confirmation:
 
 Run only relevant checks.
 
-If `YummyWeb/` changed:
-- `cd YummyWeb && npm run build`
-- if UI behavior changed and the environment is ready: `cd YummyWeb && npm run e2e:chromium`
+Use the baseline verification gate below. It must stay small enough for routine local runs and reproducible across tasks in the active scope.
 
-If `backend/` changed:
-- `cd backend && npm run build`
+Fast routine gate:
+- If `YummyWeb/` changed: `cd YummyWeb && npm run build`
+- If `backend/` changed: `cd backend && npm run build`
+- If `services/catalog-updater/` changed: `cd services/catalog-updater && npm run build`
+- If a task changes more than one active-scope project, run the matching build command in each changed project.
 
-If `services/catalog-updater/` changed:
-- `cd services/catalog-updater && npm run build`
+Expanded or manual checks:
+- If UI behavior changed and the environment is ready: `cd YummyWeb && npm run e2e:smoke:chromium`
+- If UI behavior changed but Playwright is not ready, do a manual browser smoke pass for the touched flow and state that limitation in the handoff.
+- Backend behavior beyond `npm run build` remains manual unless the task updates an existing automated test.
+- Catalog refresh, parser, or integration behavior beyond `npm run build` remains manual unless the task updates an existing automated test.
 
 If pure helpers or parser logic changed:
 - add or update local unit tests if a suitable test runner already exists
