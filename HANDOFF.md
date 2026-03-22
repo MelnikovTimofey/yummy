@@ -1,5 +1,41 @@
 # HANDOFF — Yummy
 
+## 1.41) Pivot product baseline to Nomad Aroma Atelier + Master (22 марта 2026)
+
+- Запрос:
+  - подготовить проект к новому сценарию интеграции с лаундж-баром Nomad и зафиксировать, как его реализовывать с использованием лучших практик AI-разработки.
+
+- Реализация:
+  - `PRD.md`:
+    - полностью переписан под новый baseline;
+    - зафиксированы три контура: `Арома Ателье`, `Мастер`, `Telegram-бот`;
+    - исключены из guest-модели `избранное`, профиль пользователя и user sessions;
+    - `Покурить` определено как аналитическое событие;
+    - добавлены типы рейлов `statistical`, `prepared`, `curated`;
+    - подтверждены age gate, daily code и inventory-aware recommendation flow.
+  - `NOMAD_IMPLEMENTATION_PLAN.md`:
+    - добавлен discovery/architecture brief;
+    - сравнены варианты реализации;
+    - рекомендован подход `модульный монолит + bot worker`;
+    - зафиксирован AI delivery workflow по вертикальным slices.
+  - `AGENTS.md`:
+    - добавлен `Текущий продуктовый режим: Nomad`;
+    - добавлены правила, запрещающие молча возвращать legacy user-centric функциональность в guest-flow;
+    - добавлены правила по последовательности `docs -> schema -> API -> UI -> verification`.
+  - `NOTES.md`:
+    - добавлена запись о product baseline pivot.
+
+- Эффект:
+  - дальнейшая разработка теперь опирается на единый и непротиворечивый baseline;
+  - agents получают явный ориентир, что текущий backend/frontend нужно мигрировать от старой модели к Nomad-сценарию поэтапно;
+  - появился рабочий план разбиения на slices без преждевременного усложнения архитектуры.
+
+- Рекомендуемый следующий блок реализации:
+  1. убрать зависимость guest-flow от `magic-link` и user auth;
+  2. ввести `18+` и `daily access code`;
+  3. подготовить backend-сущности `StaffUser`, `DailyAccessCode`, `InventoryStatus`, `Rail`, `GuestEvent`;
+  4. после этого строить onboarding и rule-based рекомендации.
+
 ## 1.40) Remove scrollbar from desktop top menu (22 марта 2026)
 
 - Проблема:
