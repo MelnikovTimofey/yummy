@@ -1,3 +1,18 @@
+Обновление от 22 марта 2026 (fix: align Nomad inventory toggle response contract):
+- Проблема:
+  - toggle наличия в `Мастер` падал с `Cannot read properties of undefined (reading 'id')`.
+- Причина:
+  - frontend ожидал ответ `PATCH /staff/inventory/tobaccos/:id` как `{ item: ... }`;
+  - backend возвращал сырой объект табака без обёртки `item`.
+- Изменение:
+  - `apps/nomad-backend/src/app.ts`:
+    - `PATCH /staff/inventory/tobaccos/:id` теперь возвращает `{ item: updated }`.
+  - `apps/nomad-backend/src/inventory.test.ts`:
+    - тест обновлён и теперь явно фиксирует форму ответа `PATCH`.
+- Эффект:
+  - toggle наличия снова работает;
+  - контракт ответа защищён тестом от повторной регрессии.
+
 Обновление от 22 марта 2026 (phase 3: inventory, smoke CTA and dashboard for Nomad backend):
 - Проблема:
   - после Phase 2 backend умел только access + onboarding/recommendations;

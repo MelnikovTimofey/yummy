@@ -195,7 +195,7 @@ export const buildApp = () => {
       return reply.status(404).send({ error: 'Tobacco not found' } satisfies ApiError);
     }
 
-    return reply.send(updated);
+    return reply.send({ item: updated });
   });
 
   app.get('/staff/dashboard/summary', async (request, reply) => {

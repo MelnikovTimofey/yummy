@@ -1,5 +1,31 @@
 # HANDOFF — Yummy
 
+## 1.47) Fix Nomad Master inventory toggle response mismatch (22 марта 2026)
+
+- Проблема:
+  - toggle наличия в `Мастер` падал с ошибкой `Cannot read properties of undefined (reading 'id')`.
+
+- Причина:
+  - frontend в `apps/nomad-master-web/src/App.tsx` ждал ответ `PATCH /staff/inventory/tobaccos/:id` как `{ item: InventoryTobacco }`;
+  - backend отдавал просто объект табака без ключа `item`.
+
+- Реализация:
+  - `apps/nomad-backend/src/app.ts`:
+    - `PATCH /staff/inventory/tobaccos/:id` теперь возвращает `{ item: updated }`.
+  - `apps/nomad-backend/src/inventory.test.ts`:
+    - тест расширен и теперь фиксирует именно эту форму ответа.
+  - `NOTES.md`:
+    - добавлена запись о регрессии и исправлении.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm run build`
+
+- Эффект:
+  - inventory toggle снова совместим с текущим Master UI;
+  - backend contract зафиксирован тестом.
+
 ## 1.46) Deliver Nomad backend Phase 3 with inventory and smoke analytics (22 марта 2026)
 
 - Запрос:

@@ -51,8 +51,9 @@ test('staff inventory endpoints expose and mutate in-memory stock', async () => 
   });
 
   assert.equal(patch.statusCode, 200);
-  const patchBody = patch.json() as { id: string; inStock: boolean };
-  assert.equal(patchBody.inStock, true);
+  const patchBody = patch.json() as { item: { id: string; inStock: boolean } };
+  assert.equal(patchBody.item.id, 'tobacco-peach-silk');
+  assert.equal(patchBody.item.inStock, true);
 
   const options = await app.inject({
     method: 'GET',
