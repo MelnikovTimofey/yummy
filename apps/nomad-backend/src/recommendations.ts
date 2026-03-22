@@ -1,5 +1,6 @@
-import { Mix, Tobacco } from './catalog';
-import { getInventoryTobaccos, getAvailableMixCatalog } from './state';
+import { getInventoryTobaccos } from './state';
+import type { MixView } from './state';
+import { getGuestCatalogMixes } from './state';
 
 export type OnboardingInput = {
   likedProfiles: string[];
@@ -29,11 +30,6 @@ const unique = (items: string[]) => Array.from(new Set(items));
 const normalizeInput = (items: string[]) =>
   unique(items.map((item) => item.trim().toLowerCase()).filter(Boolean));
 
-const getMixTobaccos = (mix: Mix) =>
-  mix.componentIds
-    .map((componentId) => getInventoryTobaccos().find((item) => item.id === componentId))
-    .filter((item): item is Tobacco => Boolean(item));
-
 export const getOnboardingOptions = () => {
   const inStockTobaccos = getInventoryTobaccos().filter((item) => item.inStock);
 
@@ -44,20 +40,15 @@ export const getOnboardingOptions = () => {
 };
 
 export const getInStockMixes = () =>
-  getAvailableMixCatalog().filter(
-    (mix) =>
-      getMixTobaccos(mix).length === mix.componentIds.length &&
-      getMixTobaccos(mix).every((item) => item.inStock),
-  );
+  getGuestCatalogMixes();
 
 const calculateScore = (
-  mix: Mix,
-  mixTobaccos: Tobacco[],
+  mix: MixView,
   likedProfiles: string[],
   likedFlavors: string[],
 ) => {
-  const profiles = unique(mixTobaccos.flatMap((item) => item.flavorProfiles));
-  const flavors = unique(mixTobaccos.flatMap((item) => item.flavors.map((flavor) => flavor.toLowerCase())));
+  const profiles = unique(mix.flavorProfiles.map((profile) => profile.toLowerCase()));
+  const flavors = unique(mix.flavors.map((flavor) => flavor.toLowerCase()));
 
   const profileHits = profiles.filter((profile) => likedProfiles.includes(profile)).length;
   const flavorHits = flavors.filter((flavor) => likedFlavors.includes(flavor)).length;
@@ -74,24 +65,20 @@ export const getRecommendations = (input: OnboardingInput): RecommendationMix[] 
 
   return getInStockMixes()
     .map((mix) => {
-      const mixTobaccos = getMixTobaccos(mix);
-      const flavorProfiles = unique(mixTobaccos.flatMap((item) => item.flavorProfiles));
-      const flavors = unique(mixTobaccos.flatMap((item) => item.flavors));
-
       return {
         id: mix.id,
         name: mix.name,
         description: mix.description,
-        flavorProfiles,
-        flavors,
-        score: Number(calculateScore(mix, mixTobaccos, likedProfiles, likedFlavors).toFixed(2)),
+        flavorProfiles: [...mix.flavorProfiles],
+        flavors: [...mix.flavors],
+        score: Number(calculateScore(mix, likedProfiles, likedFlavors).toFixed(2)),
         avgRating: mix.avgRating,
         popularity: mix.popularity,
-        components: mixTobaccos.map((item) => ({
+        components: mix.components.map((item) => ({
           id: item.id,
           name: item.name,
           manufacturer: item.manufacturer,
-          flavors: item.flavors,
+          flavors: [...item.flavors],
         })),
       };
     })

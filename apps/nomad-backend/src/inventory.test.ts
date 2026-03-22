@@ -126,7 +126,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
   const dashboardBody = dashboard.json() as {
     inventory: { total: number; inStockCount: number; outOfStockCount: number };
     smokeCtaTotal: number;
-    topMixes: Array<{ mixId: string; mixName: string; count: number }>;
+    topMixes: Array<{ mixId: string; mixName: string; count: number; avgRating: number }>;
   };
 
   assert.equal(dashboardBody.inventory.total, 6);
@@ -135,6 +135,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
     mixId: 'mix-citrus-scout',
     mixName: 'Цитрусовый караван',
     count: 2,
+    avgRating: 4.8,
   });
 
   await app.close();

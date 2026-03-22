@@ -9,19 +9,38 @@ import {
 } from './auth';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import {
+  createMix,
+  createRail,
   getInventorySummary,
   getInventoryTobaccos,
+  getGuestCatalogMixes,
+  getGuestHomeRails,
+  getGuestIntroCards,
+  getStaffMixes,
+  getStaffRails,
   getSmokeCtaSummary,
   getAvailableMixCatalog,
   recordSmokeCtaEvent,
+  rateMix,
+  updateMix,
   updateTobaccoInStock,
+  updateRail,
 } from './state';
 import type {
   ApiError,
   GuestAccessSuccess,
+  GuestCatalogMixesResponse,
+  GuestHomeRailsResponse,
+  GuestIntroCardsResponse,
+  GuestMixRatingResponse,
   OnboardingRecommendationsResponse,
   StaffAuthResponse,
+  StaffMixMutationResponse,
+  StaffMixesResponse,
+  StaffRailMutationResponse,
+  StaffRailsResponse,
 } from './types';
+import type { MixView, RailView } from './state';
 
 export const buildApp = () => {
   const app = Fastify({ logger: true });
@@ -32,24 +51,40 @@ export const buildApp = () => {
 
   app.get('/meta', async () => ({
     appName: config.appName,
-    mode: 'phase-3',
+    mode: 'phase-4',
     scope: [
       'guest-access',
       'staff-auth',
       'guest-onboarding',
+      'guest-intro',
+      'guest-catalog',
+      'guest-home',
       'recommendations',
       'guest-events',
+      'guest-ratings',
       'inventory',
+      'staff-mixes',
+      'staff-rails',
       'dashboard',
     ],
     endpoints: {
       guestVerify: 'POST /guest/access-code/verify',
       onboardingOptions: 'GET /guest/onboarding/options',
       onboardingRecommendations: 'POST /guest/onboarding/recommendations',
+      guestIntroCards: 'GET /guest/intro/cards',
+      guestCatalogMixes: 'GET /guest/catalog/mixes',
+      guestHomeRails: 'GET /guest/home/rails',
+      guestMixRating: 'POST /guest/mixes/:id/rating',
       smokeCtaEvent: 'POST /guest/events/smoke-cta',
       inventoryList: 'GET /staff/inventory/tobaccos',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
+      staffMixesList: 'GET /staff/mixes',
+      staffMixesCreate: 'POST /staff/mixes',
+      staffMixesUpdate: 'PATCH /staff/mixes/:id',
+      staffRailsList: 'GET /staff/rails',
+      staffRailsCreate: 'POST /staff/rails',
+      staffRailsUpdate: 'PATCH /staff/rails/:id',
       staffLogin: 'POST /staff/auth/login',
       staffMe: 'GET /staff/auth/me',
     },
@@ -83,8 +118,40 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
+  app.get('/guest/intro/cards', async () => {
+    const response: GuestIntroCardsResponse = {
+      items: getGuestIntroCards(),
+    };
+
+    return response;
+  });
+
   app.get('/guest/onboarding/options', async () => {
     return getOnboardingOptions();
+  });
+
+  app.get('/guest/catalog/mixes', async (request) => {
+    const query = request.query as { profiles?: unknown; flavors?: unknown } | undefined;
+    const profiles = readStringList(query?.profiles);
+    const flavors = readStringList(query?.flavors);
+
+    const response: GuestCatalogMixesResponse = {
+      filters: {
+        profiles,
+        flavors,
+      },
+      items: getGuestCatalogMixes({ profiles, flavors }),
+    };
+
+    return response;
+  });
+
+  app.get('/guest/home/rails', async () => {
+    const response: GuestHomeRailsResponse = {
+      items: getGuestHomeRails(),
+    };
+
+    return response;
   });
 
   app.post('/guest/onboarding/recommendations', async (request, reply) => {
@@ -139,6 +206,40 @@ export const buildApp = () => {
     });
   });
 
+  app.post('/guest/mixes/:id/rating', async (request, reply) => {
+    const mixId = (request.params as { id?: string }).id?.trim();
+    const body = request.body as { value?: unknown } | undefined;
+    const value = typeof body?.value === 'number' ? body.value : Number.NaN;
+
+    if (!mixId) {
+      return reply.status(400).send({ error: 'Mix id is required' } satisfies ApiError);
+    }
+
+    if (!Number.isInteger(value) || value < 1 || value > 5) {
+      return reply.status(400).send({ error: 'Rating value must be between 1 and 5' } satisfies ApiError);
+    }
+
+    const rated = rateMix(mixId, value);
+    if (!rated) {
+      return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
+    }
+
+    if (isApiError(rated)) {
+      return reply.status(400).send(rated);
+    }
+
+    const response: GuestMixRatingResponse = {
+      item: rated,
+      rating: {
+        value,
+        avgRating: rated.avgRating,
+        ratingsCount: rated.ratingsCount,
+      },
+    };
+
+    return reply.send(response);
+  });
+
   app.post('/staff/auth/login', async (request, reply) => {
     const body = request.body as { login?: string; password?: string } | undefined;
     const login = body?.login?.trim();
@@ -162,6 +263,102 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
+  app.get('/staff/mixes', async (request, reply) => {
+    const user = authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffMixesResponse = {
+      items: getStaffMixes(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/mixes', async (request, reply) => {
+    const user = authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          name?: string;
+          description?: string;
+          componentIds?: string[];
+          available?: boolean;
+          popularity?: number;
+          baseAvgRating?: number;
+        }
+      | undefined;
+
+    const created = createMix({
+      name: payload?.name ?? '',
+      description: payload?.description ?? '',
+      componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : [],
+      available: payload?.available,
+      popularity: payload?.popularity,
+      baseAvgRating: payload?.baseAvgRating,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffMixMutationResponse = {
+      item: created as MixView,
+    };
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/mixes/:id', async (request, reply) => {
+    const user = authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const mixId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          name?: string;
+          description?: string;
+          componentIds?: string[];
+          available?: boolean;
+          popularity?: number;
+          baseAvgRating?: number;
+        }
+      | undefined;
+
+    if (!mixId) {
+      return reply.status(400).send({ error: 'Mix id is required' } satisfies ApiError);
+    }
+
+    const updated = updateMix(mixId, {
+      name: payload?.name,
+      description: payload?.description,
+      componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : undefined,
+      available: payload?.available,
+      popularity: payload?.popularity,
+      baseAvgRating: payload?.baseAvgRating,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffMixMutationResponse = {
+      item: updated as MixView,
+    };
+
+    return reply.send(response);
+  });
+
   app.get('/staff/inventory/tobaccos', async (request, reply) => {
     const user = authenticateStaffRequest(request, reply);
     if (!user) {
@@ -171,6 +368,98 @@ export const buildApp = () => {
     return reply.send({
       items: getInventoryTobaccos(),
     });
+  });
+
+  app.get('/staff/rails', async (request, reply) => {
+    const user = authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffRailsResponse = {
+      items: getStaffRails(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/rails', async (request, reply) => {
+    const user = authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          name?: string;
+          description?: string;
+          type?: 'prepared' | 'curated' | 'statistical';
+          mixIds?: string[];
+          active?: boolean;
+        }
+      | undefined;
+
+    const created = createRail({
+      name: payload?.name ?? '',
+      description: payload?.description ?? '',
+      type: payload?.type,
+      mixIds: Array.isArray(payload?.mixIds) ? payload!.mixIds : [],
+      active: payload?.active,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffRailMutationResponse = {
+      item: created as RailView,
+    };
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/rails/:id', async (request, reply) => {
+    const user = authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const railId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          name?: string;
+          description?: string;
+          type?: 'prepared' | 'curated' | 'statistical';
+          mixIds?: string[];
+          active?: boolean;
+        }
+      | undefined;
+
+    if (!railId) {
+      return reply.status(400).send({ error: 'Rail id is required' } satisfies ApiError);
+    }
+
+    const updated = updateRail(railId, {
+      name: payload?.name,
+      description: payload?.description,
+      type: payload?.type,
+      mixIds: Array.isArray(payload?.mixIds) ? payload!.mixIds : undefined,
+      active: payload?.active,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Rail not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffRailMutationResponse = {
+      item: updated as RailView,
+    };
+
+    return reply.send(response);
   });
 
   app.patch('/staff/inventory/tobaccos/:id', async (request, reply) => {
@@ -230,6 +519,24 @@ export const buildApp = () => {
   });
 
   return app;
+};
+
+const isApiError = (value: unknown): value is ApiError =>
+  Boolean(value && typeof value === 'object' && 'error' in value && typeof (value as { error?: unknown }).error === 'string');
+
+const readStringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => readStringList(item));
+  }
+
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 };
 
 const authenticateStaffRequest = (request: FastifyRequest, reply: FastifyReply) => {

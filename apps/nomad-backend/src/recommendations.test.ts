@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildApp } from './app';
+import { resetNomadState } from './state';
 import { getInStockMixes, getOnboardingOptions, getRecommendations } from './recommendations';
+
+test.beforeEach(() => {
+  resetNomadState();
+});
 
 test('onboarding options include only in-stock profiles and flavors', () => {
   const options = getOnboardingOptions();

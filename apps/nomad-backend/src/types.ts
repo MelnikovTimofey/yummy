@@ -1,3 +1,5 @@
+import type { IntroCard, MixView, RailType, RailView } from './state';
+
 export type ApiError = {
   error: string;
 };
@@ -8,6 +10,31 @@ export type GuestAccessSuccess = {
   message: string;
   issuedAt: string;
   nextStep: 'intro' | 'onboarding';
+};
+
+export type GuestIntroCardsResponse = {
+  items: IntroCard[];
+};
+
+export type GuestCatalogMixesResponse = {
+  filters: {
+    profiles: string[];
+    flavors: string[];
+  };
+  items: MixView[];
+};
+
+export type GuestHomeRailsResponse = {
+  items: RailView[];
+};
+
+export type GuestMixRatingResponse = {
+  item: MixView;
+  rating: {
+    value: number;
+    avgRating: number;
+    ratingsCount: number;
+  };
 };
 
 export type OnboardingRecommendationsResponse = {
@@ -42,3 +69,23 @@ export type StaffAuthResponse = {
     role: 'admin' | 'nomad';
   };
 };
+
+export type StaffMixesResponse = {
+  items: MixView[];
+};
+
+export type StaffRailsResponse = {
+  items: RailView[];
+};
+
+export type StaffMixMutationResponse = {
+  item: MixView;
+};
+
+export type StaffRailMutationResponse = {
+  item: RailView;
+};
+
+export type GuestRatingMutationResponse = GuestMixRatingResponse;
+
+export type NomadRailType = RailType;
