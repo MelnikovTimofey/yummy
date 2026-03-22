@@ -8,20 +8,37 @@ type StaffUser = {
 
 type StaffAuthResponse = {
   accessToken: string;
-  tokenType: 'Bearer';
+  tokenType?: 'Bearer';
   user: StaffUser;
 };
 
-const storageKeys = {
-  token: 'nomad-master-token',
-};
-
+const STORAGE_KEY = 'nomad-master-auth-v1';
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 
-const requestJson = async <T,>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> => {
+const masterModules = ['Инвентаризация', 'Менеджер миксов', 'Менеджер рейлов', 'Дашборды'];
+
+const readStoredToken = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.sessionStorage.getItem(STORAGE_KEY) ?? '';
+};
+
+const storeToken = (token: string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!token) {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(STORAGE_KEY, token);
+};
+
+const requestJson = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
     headers: {
@@ -30,21 +47,21 @@ const requestJson = async <T,>(
     },
   });
 
+  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? 'Запрос не выполнен');
   }
 
-  return (await response.json()) as T;
+  return payload as T;
 };
 
 export const App = () => {
-  const [login, setLogin] = useState('nomad');
-  const [password, setPassword] = useState('nomad');
+  const [login, setLogin] = useState('admin');
+  const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [token, setToken] = useState(() => readStoredToken());
   const [user, setUser] = useState<StaffUser | null>(null);
-  const [token, setToken] = useState(() => sessionStorage.getItem(storageKeys.token) ?? '');
 
   useEffect(() => {
     const hydrate = async () => {
@@ -62,7 +79,7 @@ export const App = () => {
         setUser(response.user);
         setStatus('ready');
       } catch {
-        sessionStorage.removeItem(storageKeys.token);
+        storeToken('');
         setToken('');
         setUser(null);
         setStatus('idle');
@@ -78,14 +95,19 @@ export const App = () => {
     setError('');
 
     try {
-      const response = await requestJson<StaffAuthResponse>('/staff/auth/login', {
+      const auth = await requestJson<StaffAuthResponse>('/staff/auth/login', {
         method: 'POST',
         body: JSON.stringify({ login, password }),
       });
+      const profile = await requestJson<{ user: StaffUser }>('/staff/auth/me', {
+        headers: {
+          authorization: `Bearer ${auth.accessToken}`,
+        },
+      });
 
-      sessionStorage.setItem(storageKeys.token, response.accessToken);
-      setToken(response.accessToken);
-      setUser(response.user);
+      storeToken(auth.accessToken);
+      setToken(auth.accessToken);
+      setUser(profile.user);
       setStatus('ready');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Не удалось войти');
@@ -94,12 +116,12 @@ export const App = () => {
   };
 
   const onSignOut = () => {
-    sessionStorage.removeItem(storageKeys.token);
+    storeToken('');
     setToken('');
     setUser(null);
     setStatus('idle');
     setError('');
-    setPassword('nomad');
+    setPassword('');
   };
 
   if (user) {
@@ -116,12 +138,12 @@ export const App = () => {
         <section className="card">
           <h2>Следующий контур</h2>
           <ul>
-            <li>Инвентаризация</li>
-            <li>Менеджер миксов</li>
-            <li>Менеджер рейлов</li>
-            <li>Дашборды</li>
+            {masterModules.map((moduleName) => (
+              <li key={moduleName}>{moduleName}</li>
+            ))}
           </ul>
           <p className="meta-line">API: {apiBaseUrl}</p>
+          <p className="meta-line">Логин: {user.login}</p>
         </section>
 
         <section className="card card--compact">
@@ -135,7 +157,7 @@ export const App = () => {
 
   return (
     <main className="shell shell--master">
-      <section className="hero">
+      <section className="hero hero--master">
         <p className="eyebrow">Nomad Master</p>
         <h1>Вход для staff</h1>
         <p className="lead">Используйте учётные данные `admin` или `nomad`.</p>
@@ -173,7 +195,7 @@ export const App = () => {
       </section>
 
       <section className="card card--compact">
-        <div className="status-chip">Bearer token</div>
+        <div className="status-chip">Bearer token в sessionStorage</div>
         <p className="meta-line">API: {apiBaseUrl}</p>
       </section>
     </main>
