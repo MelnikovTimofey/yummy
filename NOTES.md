@@ -1,3 +1,30 @@
+Обновление от 22 марта 2026 (scaffold: add isolated Nomad apps and dedicated Symphony workflow):
+- Проблема:
+  - у Nomad parallel track была только документная рамка, но не было реальных каталогов приложений и отдельного workflow для Symphony;
+  - из-за этого следующий шаг разработки всё ещё рисковал свалиться в legacy `YummyWeb` / `backend`.
+- Изменение:
+  - созданы отдельные Nomad scaffold-каталоги:
+    - `apps/nomad-aroma-web`
+    - `apps/nomad-master-web`
+    - `apps/nomad-backend`
+    - `services/nomad-telegram-bot`
+  - в каждом контуре добавлены базовые файлы:
+    - `README.md`
+    - `package.json`
+    - `tsconfig.json`
+    - `.env.example`
+    - базовые entrypoints / placeholder UI или server bootstrap.
+  - добавлен `WORKFLOW_NOMAD.md`:
+    - base branch по умолчанию `codex/nomad-parallel-track`;
+    - active scope ограничен `apps/nomad-*` и вторично `services/nomad-telegram-bot`;
+    - auto-merge hook отсутствует;
+    - default final state для Nomad-задач — `Human Review`, пока контур не стабилизирован.
+  - `AGENTS.md` и `NOMAD_PARALLEL_EXECUTION_PLAN.md` синхронизированы с появлением `WORKFLOW_NOMAD.md`.
+- Эффект:
+  - Nomad получил реальный изолированный стартовый каркас;
+  - Symphony теперь можно подключать отдельно от legacy workflow;
+  - следующий feature slice можно делать уже внутри Nomad-каталогов без расползания по старому продукту.
+
 Обновление от 22 марта 2026 (docs: switch Nomad work to parallel-track branch and isolated contour):
 - Проблема:
   - предыдущий документный baseline трактовал Nomad как прямой pivot текущего проекта;

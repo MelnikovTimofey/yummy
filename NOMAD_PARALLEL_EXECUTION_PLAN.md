@@ -159,7 +159,7 @@ packages/
 
 1. Не использовать текущий `WORKFLOW.md` для Nomad-задач.
 2. Не пытаться вести Nomad через legacy active scope.
-3. Для Nomad создать отдельный Symphony workflow только после появления Nomad-каталогов.
+3. Для Nomad использовать отдельный Symphony workflow `WORKFLOW_NOMAD.md`.
 
 ### Когда Symphony действительно нужен
 

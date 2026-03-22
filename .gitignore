@@ -17,6 +17,9 @@ backend/dist/
 # web local artifacts
 YummyWeb/node_modules/
 YummyWeb/dist/
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.env
 
 # local test artifacts
 .playwright-cli/
@@ -25,3 +28,8 @@ tobaccos.json
 tobaccos.xml
 .env.local
 test-results
+
+# Nomad service local artifacts
+services/nomad-telegram-bot/node_modules/
+services/nomad-telegram-bot/dist/
+services/nomad-telegram-bot/.env

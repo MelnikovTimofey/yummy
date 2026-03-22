@@ -1,5 +1,49 @@
 # HANDOFF — Yummy
 
+## 1.43) Add Nomad scaffold apps and dedicated Symphony workflow (22 марта 2026)
+
+- Запрос:
+  - на ветке `codex/nomad-parallel-track` создать Nomad scaffold-каталоги и отдельный WORKFLOW для Symphony под `apps/nomad-*`.
+
+- Реализация:
+  - созданы каталоги:
+    - `apps/nomad-aroma-web`
+    - `apps/nomad-master-web`
+    - `apps/nomad-backend`
+    - `services/nomad-telegram-bot`
+  - для каждого нового Nomad-контура добавлены базовые scaffold-файлы:
+    - `README.md`
+    - `package.json`
+    - `tsconfig.json`
+    - `.env.example`
+    - минимальные entrypoints;
+  - `apps/nomad-aroma-web` и `apps/nomad-master-web`:
+    - подняты как отдельные Vite/React skeleton-apps с независимыми портами;
+    - содержат placeholder UI и базовый стиль под Nomad-направление.
+  - `apps/nomad-backend`:
+    - поднят как отдельный Fastify/TypeScript scaffold;
+    - содержит `health` и `meta` endpoints.
+  - `services/nomad-telegram-bot`:
+    - добавлен как отдельный TypeScript scaffold без Telegram API-интеграции на этом этапе.
+  - добавлен `WORKFLOW_NOMAD.md`:
+    - workspace root `~/codex-workspaces/yummy-nomad-symphony`;
+    - base branch по умолчанию `codex/nomad-parallel-track`;
+    - active scope ограничен Nomad-путями;
+    - нет auto-merge hook;
+    - для Nomad-задач по умолчанию используется `Human Review`.
+  - `AGENTS.md` и `NOMAD_PARALLEL_EXECUTION_PLAN.md`:
+    - обновлены, чтобы ссылаться на `WORKFLOW_NOMAD.md` как на правильный Symphony workflow для Nomad.
+
+- Эффект:
+  - Nomad получил отдельный runtime scaffold, не затрагивающий legacy `Yummy`;
+  - появилась рабочая основа для будущих feature slices;
+  - Symphony теперь можно запускать по Nomad-задачам в отдельном active scope.
+
+- Следующий рекомендуемый шаг:
+  1. установить зависимости в новых Nomad-пакетах;
+  2. проверить их build;
+  3. после этого перейти к `Phase 1`: `18+`, daily code и staff auth.
+
 ## 1.42) Prepare Nomad as parallel track instead of direct pivot (22 марта 2026)
 
 - Запрос:
