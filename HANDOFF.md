@@ -1,5 +1,48 @@
 # HANDOFF — Yummy
 
+## 1.46) Deliver Nomad backend Phase 3 with inventory and smoke analytics (22 марта 2026)
+
+- Запрос:
+  - выполнить следующий автономный backend шаг после Phase 2 до момента, когда потребуется UX-проверка.
+
+- Реализация:
+  - `apps/nomad-backend/src/state.ts`:
+    - добавлен in-memory state для stock и smoke CTA events;
+    - добавлены reset/update helpers.
+  - `apps/nomad-backend/src/recommendations.ts`:
+    - рекомендации переведены на live inventory state;
+    - onboarding options тоже зависят от текущего наличия.
+  - `apps/nomad-backend/src/app.ts`:
+    - добавлены `POST /guest/events/smoke-cta`;
+    - добавлены `GET /staff/inventory/tobaccos`;
+    - добавлены `PATCH /staff/inventory/tobaccos/:id`;
+    - добавлен `GET /staff/dashboard/summary`;
+    - staff routes защищены bearer token auth.
+  - `apps/nomad-backend/src/inventory.test.ts`:
+    - добавлены тесты на inventory mutation, recommendations update, smoke CTA tracking и dashboard summary.
+  - `apps/nomad-backend/README.md`:
+    - обновлён contract list и phase marker.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+
+- Эффект:
+  - inventory теперь меняется в runtime и реально влияет на guest recommendations;
+  - smoke CTA стал записываемым backend event;
+  - у staff появился минимальный dashboard/inventory surface.
+
+- Ограничения:
+  - состояние всё ещё in-memory;
+  - нет persistence и audit trail;
+  - нет staff UI, который бы потреблял новые endpoint’ы;
+  - следующий user-visible шаг потребует UX-проверки.
+
+- Следующий рекомендуемый шаг:
+  1. подключить новые staff endpoints к Nomad Master UI;
+  2. отдельно решить persistence/audit trail;
+  3. после этого попросить UX-review.
+
 ## 1.45) Deliver Nomad Phase 2 with TDD-backed onboarding and recommendations (22 марта 2026)
 
 - Запрос:

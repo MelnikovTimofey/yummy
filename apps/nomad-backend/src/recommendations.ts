@@ -1,4 +1,5 @@
-import { Mix, Tobacco, mixes, tobaccos } from './catalog';
+import { Mix, Tobacco } from './catalog';
+import { getInventoryTobaccos, getAvailableMixCatalog } from './state';
 
 export type OnboardingInput = {
   likedProfiles: string[];
@@ -23,8 +24,6 @@ export type RecommendationMix = {
   }>;
 };
 
-const tobaccoById = new Map(tobaccos.map((item) => [item.id, item]));
-
 const unique = (items: string[]) => Array.from(new Set(items));
 
 const normalizeInput = (items: string[]) =>
@@ -32,11 +31,11 @@ const normalizeInput = (items: string[]) =>
 
 const getMixTobaccos = (mix: Mix) =>
   mix.componentIds
-    .map((componentId) => tobaccoById.get(componentId))
+    .map((componentId) => getInventoryTobaccos().find((item) => item.id === componentId))
     .filter((item): item is Tobacco => Boolean(item));
 
 export const getOnboardingOptions = () => {
-  const inStockTobaccos = tobaccos.filter((item) => item.inStock);
+  const inStockTobaccos = getInventoryTobaccos().filter((item) => item.inStock);
 
   return {
     profiles: unique(inStockTobaccos.flatMap((item) => item.flavorProfiles)).sort(),
@@ -45,7 +44,11 @@ export const getOnboardingOptions = () => {
 };
 
 export const getInStockMixes = () =>
-  mixes.filter((mix) => getMixTobaccos(mix).length === mix.componentIds.length && getMixTobaccos(mix).every((item) => item.inStock));
+  getAvailableMixCatalog().filter(
+    (mix) =>
+      getMixTobaccos(mix).length === mix.componentIds.length &&
+      getMixTobaccos(mix).every((item) => item.inStock),
+  );
 
 const calculateScore = (
   mix: Mix,

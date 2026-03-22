@@ -19,6 +19,12 @@
 2. rule-based recommendations для гостя;
 3. in-memory demo catalog без Prisma.
 
+На Phase 3 дополнительно есть:
+
+1. in-memory inventory management для staff;
+2. smoke CTA event tracking;
+3. staff dashboard summary.
+
 ## Эндпоинты
 
 ### Guest access
@@ -29,11 +35,18 @@
 
 - `GET /guest/onboarding/options`
 - `POST /guest/onboarding/recommendations`
+- `POST /guest/events/smoke-cta`
 
 ### Staff auth
 
 - `POST /staff/auth/login`
 - `GET /staff/auth/me`
+
+### Staff inventory / dashboard
+
+- `GET /staff/inventory/tobaccos`
+- `PATCH /staff/inventory/tobaccos/:id`
+- `GET /staff/dashboard/summary`
 
 ## Локальный запуск
 
@@ -63,4 +76,4 @@ NOMAD_STAFF_DISPLAY_NAME=Nomad Staff
 
 ## Стадия
 
-Текущая стадия: Phase 2 onboarding + recommendations backend.
+Текущая стадия: Phase 3 inventory + analytics backend.

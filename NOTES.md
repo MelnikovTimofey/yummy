@@ -1,3 +1,32 @@
+Обновление от 22 марта 2026 (phase 3: inventory, smoke CTA and dashboard for Nomad backend):
+- Проблема:
+  - после Phase 2 backend умел только access + onboarding/recommendations;
+  - не было живого in-memory inventory state, события `Покурить` и staff dashboard summary;
+  - рекомендации не могли реагировать на изменение наличия в runtime.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`:
+    - добавлен in-memory state для табаков и smoke CTA events;
+    - реализованы reset/update helpers для тестов и runtime.
+  - `apps/nomad-backend/src/recommendations.ts`:
+    - рекомендации теперь опираются на текущий inventory state;
+    - `getOnboardingOptions` и `getInStockMixes` используют live stock state.
+  - `apps/nomad-backend/src/app.ts`:
+    - добавлены `POST /guest/events/smoke-cta`;
+    - добавлены `GET /staff/inventory/tobaccos`;
+    - добавлены `PATCH /staff/inventory/tobaccos/:id`;
+    - добавлен `GET /staff/dashboard/summary`;
+    - staff endpoints требуют bearer token.
+  - `apps/nomad-backend/src/inventory.test.ts`:
+    - добавлены backend tests для inventory mutation;
+    - проверяется, что после смены `inStock` рекомендации меняются;
+    - проверяется `smoke CTA` tracking и dashboard summary.
+  - `apps/nomad-backend/README.md`:
+    - обновлён список endpoint’ов и стадия backend.
+- Эффект:
+  - Nomad backend теперь способен реагировать на runtime inventory changes;
+  - появилась минимальная аналитика выбора миксов;
+  - backend контур готов к следующему frontend/staff slice без ручного SQL/Prisma.
+
 Обновление от 22 марта 2026 (phase 2: TDD-backed onboarding and recommendations for Nomad):
 - Проблема:
   - после Phase 1 guest-flow останавливался сразу после подтверждения daily code;
