@@ -33,6 +33,7 @@ model NomadStaffAccount {
 
 model NomadDailyAccessCode {
   id        String   @id
+  codeValue String
   codeHash  String
   codeSalt  String
   codeLabel String

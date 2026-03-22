@@ -26,11 +26,17 @@ const base64UrlDecode = (value: string) => {
   return Buffer.from(padded, 'base64').toString('utf8');
 };
 
-const sign = (value: string) =>
-  crypto.createHmac('sha256', config.tokenSecret).update(value).digest('base64url');
+const sign = (value: string) => crypto.createHmac('sha256', config.tokenSecret).update(value).digest('base64url');
 
-const hashSecret = (secret: string, salt: string) =>
-  crypto.scryptSync(secret, salt, 64).toString('hex');
+const hashSecret = (secret: string, salt: string) => crypto.scryptSync(secret, salt, 64).toString('hex');
+
+const isStaffRole = (value: string): value is StaffRole => value === 'admin' || value === 'nomad';
+
+const verifySecret = (secret: string, hash: string, salt: string) => {
+  const expected = Buffer.from(hash, 'hex');
+  const received = Buffer.from(hashSecret(secret, salt), 'hex');
+  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+};
 
 export const createSecretHash = (secret: string, salt: string) => hashSecret(secret, salt);
 
@@ -79,14 +85,6 @@ export const verifyStaffToken = (token: string): StaffUser | null => {
   }
 };
 
-const isStaffRole = (value: string): value is StaffRole => value === 'admin' || value === 'nomad';
-
-const verifySecret = (secret: string, hash: string, salt: string) => {
-  const expected = Buffer.from(hash, 'hex');
-  const received = Buffer.from(hashSecret(secret, salt), 'hex');
-  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
-};
-
 export const resolveStaffUser = async (login: string, password: string): Promise<StaffUser | null> => {
   const account = await prisma.nomadStaffAccount.findUnique({
     where: { login },
@@ -115,6 +113,33 @@ export const resolveStaffUser = async (login: string, password: string): Promise
   };
 };
 
+export const resolveStaffSession = async (token: string): Promise<StaffUser | null> => {
+  const claims = verifyStaffToken(token);
+  if (!claims) {
+    return null;
+  }
+
+  const account = await prisma.nomadStaffAccount.findUnique({
+    where: { login: claims.login },
+    select: {
+      login: true,
+      name: true,
+      role: true,
+      active: true,
+    },
+  });
+
+  if (!account || !account.active || !isStaffRole(account.role) || account.role !== claims.role) {
+    return null;
+  }
+
+  return {
+    login: account.login,
+    name: account.name,
+    role: account.role,
+  };
+};
+
 export const verifyGuestAccessCode = async (code: string) => {
   const now = new Date();
   const codes = await prisma.nomadDailyAccessCode.findMany({
@@ -127,10 +152,7 @@ export const verifyGuestAccessCode = async (code: string) => {
         gt: now,
       },
     },
-    orderBy: [
-      { startsAt: 'desc' },
-      { createdAt: 'desc' },
-    ],
+    orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
     select: {
       id: true,
       codeHash: true,

@@ -1,4 +1,5 @@
 import type { IntroCard, MixView, RailType, RailView } from './state';
+import type { DailyAccessCodeView, StaffAccountView } from './access';
 
 export type ApiError = {
   error: string;
@@ -76,6 +77,22 @@ export type StaffMixesResponse = {
 
 export type StaffRailsResponse = {
   items: RailView[];
+};
+
+export type StaffDailyAccessCodesResponse = {
+  items: DailyAccessCodeView[];
+};
+
+export type StaffDailyAccessCodeMutationResponse = {
+  item: DailyAccessCodeView;
+};
+
+export type StaffAccountsResponse = {
+  items: StaffAccountView[];
+};
+
+export type StaffAccountMutationResponse = {
+  item: StaffAccountView;
 };
 
 export type StaffMixMutationResponse = {

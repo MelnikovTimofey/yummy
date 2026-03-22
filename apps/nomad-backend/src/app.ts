@@ -4,10 +4,20 @@ import cors from '@fastify/cors';
 import { config } from './config';
 import {
   createStaffToken,
+  resolveStaffSession,
   resolveStaffUser,
   verifyGuestAccessCode,
-  verifyStaffToken,
 } from './auth';
+import {
+  createDailyAccessCode,
+  createStaffAccount,
+  deleteDailyAccessCode,
+  deleteStaffAccount,
+  listDailyAccessCodes,
+  listStaffAccounts,
+  updateDailyAccessCode,
+  updateStaffAccount,
+} from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import {
   createMix,
@@ -36,12 +46,17 @@ import type {
   GuestIntroCardsResponse,
   GuestMixRatingResponse,
   OnboardingRecommendationsResponse,
+  StaffAccountMutationResponse,
+  StaffAccountsResponse,
   StaffAuthResponse,
+  StaffDailyAccessCodeMutationResponse,
+  StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
   StaffMixesResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
+import type { StaffRole } from './auth';
 import type { MixView, RailView } from './state';
 
 export const buildApp = () => {
@@ -69,6 +84,7 @@ export const buildApp = () => {
       'guest-events',
       'guest-ratings',
       'inventory',
+      'staff-access',
       'staff-mixes',
       'staff-rails',
       'dashboard',
@@ -85,6 +101,14 @@ export const buildApp = () => {
       inventoryList: 'GET /staff/inventory/tobaccos',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
+      dailyCodesList: 'GET /staff/access/daily-codes',
+      dailyCodesCreate: 'POST /staff/access/daily-codes',
+      dailyCodesUpdate: 'PATCH /staff/access/daily-codes/:id',
+      dailyCodesDelete: 'DELETE /staff/access/daily-codes/:id',
+      staffAccountsList: 'GET /staff/access/accounts',
+      staffAccountsCreate: 'POST /staff/access/accounts',
+      staffAccountsUpdate: 'PATCH /staff/access/accounts/:id',
+      staffAccountsDelete: 'DELETE /staff/access/accounts/:id',
       staffMixesList: 'GET /staff/mixes',
       staffMixesCreate: 'POST /staff/mixes',
       staffMixesUpdate: 'PATCH /staff/mixes/:id',
@@ -270,8 +294,250 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
+  app.get('/staff/access/daily-codes', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffDailyAccessCodesResponse = {
+      items: await listDailyAccessCodes(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/access/daily-codes', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          codeValue?: string;
+          codeLabel?: string;
+          active?: boolean;
+          startsAt?: unknown;
+          endsAt?: unknown;
+        }
+      | undefined;
+
+    const startsAt = parseDateField(payload?.startsAt, 'startsAt');
+    if (startsAt && 'error' in startsAt) {
+      return reply.status(400).send(startsAt);
+    }
+
+    const endsAt = parseDateField(payload?.endsAt, 'endsAt');
+    if (endsAt && 'error' in endsAt) {
+      return reply.status(400).send(endsAt);
+    }
+
+    const created = await createDailyAccessCode({
+      codeValue: payload?.codeValue ?? '',
+      codeLabel: payload?.codeLabel,
+      active: payload?.active,
+      startsAt: startsAt && startsAt instanceof Date ? startsAt : undefined,
+      endsAt: endsAt && endsAt instanceof Date ? endsAt : undefined,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffDailyAccessCodeMutationResponse = {
+      item: created as StaffDailyAccessCodeMutationResponse['item'],
+    };
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/access/daily-codes/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const codeId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          codeValue?: string;
+          codeLabel?: string;
+          active?: boolean;
+          startsAt?: unknown;
+          endsAt?: unknown;
+        }
+      | undefined;
+
+    if (!codeId) {
+      return reply.status(400).send({ error: 'Daily code id is required' } satisfies ApiError);
+    }
+
+    const startsAt = parseDateField(payload?.startsAt, 'startsAt');
+    if (startsAt && 'error' in startsAt) {
+      return reply.status(400).send(startsAt);
+    }
+
+    const endsAt = parseDateField(payload?.endsAt, 'endsAt');
+    if (endsAt && 'error' in endsAt) {
+      return reply.status(400).send(endsAt);
+    }
+
+    const updated = await updateDailyAccessCode(codeId, {
+      codeValue: payload?.codeValue,
+      codeLabel: payload?.codeLabel,
+      active: payload?.active,
+      startsAt: startsAt && startsAt instanceof Date ? startsAt : undefined,
+      endsAt: endsAt && endsAt instanceof Date ? endsAt : undefined,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Daily code not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffDailyAccessCodeMutationResponse = {
+      item: updated as StaffDailyAccessCodeMutationResponse['item'],
+    };
+
+    return reply.send(response);
+  });
+
+  app.delete('/staff/access/daily-codes/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const codeId = (request.params as { id?: string }).id?.trim();
+    if (!codeId) {
+      return reply.status(400).send({ error: 'Daily code id is required' } satisfies ApiError);
+    }
+
+    const deleted = await deleteDailyAccessCode(codeId);
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Daily code not found' } satisfies ApiError);
+    }
+
+    return reply.status(204).send();
+  });
+
+  app.get('/staff/access/accounts', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffAccountsResponse = {
+      items: await listStaffAccounts(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/access/accounts', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          login?: string;
+          name?: string;
+          role?: string;
+          password?: string;
+          active?: boolean;
+        }
+      | undefined;
+
+    const created = await createStaffAccount({
+      login: payload?.login ?? '',
+      name: payload?.name ?? '',
+      role: payload?.role ?? '',
+      password: payload?.password ?? '',
+      active: payload?.active,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffAccountMutationResponse = {
+      item: created,
+    };
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/access/accounts/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const accountId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          login?: string;
+          name?: string;
+          role?: string;
+          password?: string;
+          active?: boolean;
+        }
+      | undefined;
+
+    if (!accountId) {
+      return reply.status(400).send({ error: 'Staff account id is required' } satisfies ApiError);
+    }
+
+    const updated = await updateStaffAccount(accountId, {
+      login: payload?.login,
+      name: payload?.name,
+      role: payload?.role,
+      password: payload?.password,
+      active: payload?.active,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Staff account not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffAccountMutationResponse = {
+      item: updated,
+    };
+
+    return reply.send(response);
+  });
+
+  app.delete('/staff/access/accounts/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const accountId = (request.params as { id?: string }).id?.trim();
+    if (!accountId) {
+      return reply.status(400).send({ error: 'Staff account id is required' } satisfies ApiError);
+    }
+
+    const deleted = await deleteStaffAccount(accountId);
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Staff account not found' } satisfies ApiError);
+    }
+
+    return reply.status(204).send();
+  });
+
   app.get('/staff/mixes', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -284,7 +550,7 @@ export const buildApp = () => {
   });
 
   app.post('/staff/mixes', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -321,7 +587,7 @@ export const buildApp = () => {
   });
 
   app.patch('/staff/mixes/:id', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -367,7 +633,7 @@ export const buildApp = () => {
   });
 
   app.get('/staff/inventory/tobaccos', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -378,7 +644,7 @@ export const buildApp = () => {
   });
 
   app.get('/staff/rails', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -391,7 +657,7 @@ export const buildApp = () => {
   });
 
   app.post('/staff/rails', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -426,7 +692,7 @@ export const buildApp = () => {
   });
 
   app.patch('/staff/rails/:id', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -470,7 +736,7 @@ export const buildApp = () => {
   });
 
   app.patch('/staff/inventory/tobaccos/:id', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -495,7 +761,7 @@ export const buildApp = () => {
   });
 
   app.get('/staff/dashboard/summary', async (request, reply) => {
-    const user = authenticateStaffRequest(request, reply);
+    const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
@@ -517,7 +783,7 @@ export const buildApp = () => {
     }
 
     const token = header.slice('Bearer '.length).trim();
-    const user = verifyStaffToken(token);
+    const user = await resolveStaffSession(token);
     if (!user) {
       return reply.status(401).send({ error: 'Invalid or expired token' } satisfies ApiError);
     }
@@ -546,7 +812,24 @@ const readStringList = (value: unknown): string[] => {
     .filter(Boolean);
 };
 
-const authenticateStaffRequest = (request: FastifyRequest, reply: FastifyReply) => {
+const parseDateField = (value: unknown, fieldName: string) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return { error: `${fieldName} must be a valid ISO date` } satisfies ApiError;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { error: `${fieldName} must be a valid ISO date` } satisfies ApiError;
+  }
+
+  return parsed;
+};
+
+const authenticateStaffRequest = async (request: FastifyRequest, reply: FastifyReply, roles?: StaffRole[]) => {
   const header = request.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     reply.status(401).send({ error: 'Missing bearer token' } satisfies ApiError);
@@ -554,9 +837,14 @@ const authenticateStaffRequest = (request: FastifyRequest, reply: FastifyReply) 
   }
 
   const token = header.slice('Bearer '.length).trim();
-  const user = verifyStaffToken(token);
+  const user = await resolveStaffSession(token);
   if (!user) {
     reply.status(401).send({ error: 'Invalid or expired token' } satisfies ApiError);
+    return null;
+  }
+
+  if (roles && roles.length && !roles.includes(user.role)) {
+    reply.status(403).send({ error: 'Insufficient permissions' } satisfies ApiError);
     return null;
   }
 

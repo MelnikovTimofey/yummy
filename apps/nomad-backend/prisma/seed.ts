@@ -79,6 +79,7 @@ const dailyAccessCodes = [
   {
     id: 'daily-code-default',
     code: 'NOMAD-2026',
+    codeValue: 'NOMAD-2026',
     codeSalt: 'seed:daily-code-default',
     codeLabel: 'Базовый daily code',
     active: true,
@@ -295,6 +296,7 @@ async function main() {
   await prisma.nomadDailyAccessCode.createMany({
     data: dailyAccessCodes.map((code) => ({
       id: code.id,
+      codeValue: code.code,
       codeHash: createSecretHash(code.code, code.codeSalt),
       codeSalt: code.codeSalt,
       codeLabel: code.codeLabel,

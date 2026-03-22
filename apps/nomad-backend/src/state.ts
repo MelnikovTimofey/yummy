@@ -99,6 +99,7 @@ type SeedStaffAccount = {
 type SeedDailyAccessCode = {
   id: string;
   code: string;
+  codeValue: string;
   codeSalt: string;
   codeLabel: string;
   active: boolean;
@@ -160,6 +161,7 @@ const seedDailyAccessCodes: SeedDailyAccessCode[] = [
   {
     id: 'daily-code-default',
     code: 'NOMAD-2026',
+    codeValue: 'NOMAD-2026',
     codeSalt: 'seed:daily-code-default',
     codeLabel: 'Базовый daily code',
     active: true,
@@ -522,6 +524,7 @@ const seedNomadStorage = async () => {
     await tx.nomadDailyAccessCode.createMany({
       data: seedDailyAccessCodes.map((code) => ({
         id: code.id,
+        codeValue: code.code,
         codeHash: createSecretHash(code.code, code.codeSalt),
         codeSalt: code.codeSalt,
         codeLabel: code.codeLabel,
