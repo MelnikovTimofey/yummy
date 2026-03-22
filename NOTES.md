@@ -1,3 +1,17 @@
+Обновление от 22 марта 2026 (fix: remove scroll from desktop top menu):
+- Проблема:
+  - в верхнем меню шапки навигация рендерилась как scroll-контейнер, из-за чего справа появлялся заметный scrollbar прямо внутри меню;
+  - это визуально ломало desktop/tablet-header при обычном наборе вкладок `Главная`, `Каталог`, `Избранное`, `Сессии`.
+- Изменение:
+  - `YummyWeb/src/ui-kit/AppTabs.tsx`:
+    - из `TabsList` убран `overflow-auto` для верхних вкладок.
+  - `YummyWeb/src/ui/styles.css`:
+    - `.topbar-nav` больше не является scroll-контейнером;
+    - `.topbar-tabs` и `.topbar-tabs-list` растягиваются по доступной ширине без внутреннего скролла.
+- Эффект:
+  - в шапке больше не показывается scrollbar;
+  - mobile-навигация через `select` не затронута.
+
 Обновление от 22 марта 2026 (fix: remove favorite without empty JSON body):
 - Проблема:
   - при клике на сердечко для удаления микса из избранного фронтенд отправлял `DELETE /favorites/:mixId` с заголовком `Content-Type: application/json`, но без тела;

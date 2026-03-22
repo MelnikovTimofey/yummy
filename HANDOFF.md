@@ -1,5 +1,24 @@
 # HANDOFF — Yummy
 
+## 1.40) Remove scrollbar from desktop top menu (22 марта 2026)
+
+- Проблема:
+  - верхняя навигация в шапке была собрана как scrollable-контейнер;
+  - из-за этого в меню появлялся видимый scrollbar, хотя для текущего набора вкладок прокрутка не нужна.
+
+- Реализация:
+  - `YummyWeb/src/ui-kit/AppTabs.tsx`:
+    - у `TabsList` убран `overflow-auto`.
+  - `YummyWeb/src/ui/styles.css`:
+    - `.topbar-nav` переведён в обычный контейнер без scroll behavior;
+    - `.topbar-tabs` и `.topbar-tabs-list` растягиваются по ширине строки и больше не создают внутренний scrollbar.
+  - `NOTES.md`:
+    - добавлена краткая запись о причине и эффекте изменения.
+
+- Эффект:
+  - scrollbar в верхнем меню исчез;
+  - mobile-режим с выпадающим nav-select не изменился.
+
 ## 1.39) Fix empty JSON body on remove-from-favorites (22 марта 2026)
 
 - Проблема:

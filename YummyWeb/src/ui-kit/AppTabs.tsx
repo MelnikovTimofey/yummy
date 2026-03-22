@@ -30,7 +30,7 @@ export const AppTabs = ({
       <TabsList
         className={cn(
           stretch ? 'w-full' : 'w-auto',
-          'justify-start overflow-auto rounded-full bg-secondary/70 p-1',
+          'justify-start rounded-full bg-secondary/70 p-1',
           listClassName,
         )}
       >

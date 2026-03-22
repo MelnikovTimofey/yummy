@@ -151,22 +151,18 @@ select:focus-visible {
 .topbar-nav {
   flex: 1 1 auto;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.topbar-nav::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .topbar-tabs {
-  width: max-content;
+  width: 100%;
+  min-width: 0;
 }
 
 .topbar-tabs-list {
-  width: max-content;
+  width: 100%;
   max-width: 100%;
+  overflow: visible;
 }
 
 .topbar-nav-list {
