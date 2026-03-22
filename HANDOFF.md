@@ -1,5 +1,43 @@
 # HANDOFF — Yummy
 
+## 1.44) Deliver Phase 1 access slice for Nomad (22 марта 2026)
+
+- Запрос:
+  - запустить Phase 1 Nomad поверх существующего scaffold:
+    - guest access code verification;
+    - staff auth for `admin` and `nomad`;
+    - guest `18+` gate and code entry;
+    - master login shell;
+    - без Prisma и без новых зависимостей.
+
+- Реализация:
+  - `apps/nomad-backend`:
+    - добавлены `POST /guest/access-code/verify`, `POST /staff/auth/login`, `GET /staff/auth/me`;
+    - токен сделан stateless через `crypto` HMAC;
+    - credentials and guest code берутся из env;
+    - сохранены `GET /health` и `GET /meta`.
+  - `apps/nomad-aroma-web`:
+    - заменён placeholder на working guest flow;
+    - реализован `18+` gate и ввод daily code;
+    - success state показывает, что доступ подтверждён и можно идти дальше к intro/onboarding.
+  - `apps/nomad-master-web`:
+    - добавлен рабочий staff login flow;
+    - token хранится в `localStorage`;
+    - `GET /staff/auth/me` восстанавливает сессию.
+  - документация:
+    - `apps/nomad-backend/README.md` и `.env.example` обновлены под Phase 1 contract;
+    - `NOTES.md` синхронизирован с результатом.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+  - `cd apps/nomad-master-web && npm run build`
+
+- Эффект:
+  - Nomad Phase 1 теперь end-to-end работает в изолированном контуре;
+  - у следующих фронтенд- и backend-задач есть стабильный контракт;
+  - legacy `Yummy` не затронут.
+
 ## 1.43) Add Nomad scaffold apps and dedicated Symphony workflow (22 марта 2026)
 
 - Запрос:

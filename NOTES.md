@@ -1,3 +1,33 @@
+Обновление от 22 марта 2026 (phase 1: guest access and staff auth slice for Nomad):
+- Проблема:
+  - Nomad scaffold не имел рабочего access slice, который могли бы использовать frontend-агенты;
+  - без этого Phase 1 оставался только на уровне каркаса.
+- Изменение:
+  - `apps/nomad-backend` получил минимальный end-to-end access backend:
+    - `POST /guest/access-code/verify`
+    - `POST /staff/auth/login`
+    - `GET /staff/auth/me`
+    - stateless bearer token на `crypto` без новых зависимостей;
+    - env-backed guest code и credentials для `admin` / `nomad`.
+  - `apps/nomad-aroma-web` получил живой guest flow:
+    - `18+` gate;
+    - ввод daily code;
+    - success shell после подтверждения кода;
+    - локальное сохранение состояния сессии в браузере.
+  - `apps/nomad-master-web` получил staff login flow:
+    - логин/пароль;
+    - хранение bearer token;
+    - проверка `/staff/auth/me`;
+    - shell после успешного входа.
+  - проверка:
+    - `cd apps/nomad-backend && npm run build`
+    - `cd apps/nomad-aroma-web && npm run build`
+    - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - Phase 1 теперь можно использовать как реальный стартовый контракт для следующих Nomad-задач;
+  - фронтенд-агенты получили конкретные endpoint-ответы;
+  - backend остался простым и не потребовал Prisma или новых библиотек.
+
 Обновление от 22 марта 2026 (scaffold: add isolated Nomad apps and dedicated Symphony workflow):
 - Проблема:
   - у Nomad parallel track была только документная рамка, но не было реальных каталогов приложений и отдельного workflow для Symphony;
