@@ -10,16 +10,24 @@ workspace:
     after_create: |
       set -eu
       REPO_SOURCE="${SOURCE_REPO_URL:-/Users/admin/PycharmProjects/yummy}"
+      BASE_BRANCH="${SOURCE_BASE_BRANCH:-main}"
+      WORKSPACE_BRANCH="$(basename "$PWD")"
       git clone "$REPO_SOURCE" .
       git config user.name "${GIT_AUTHOR_NAME:-Codex Symphony}"
       git config user.email "${GIT_AUTHOR_EMAIL:-codex-symphony@example.com}"
+      git config symphony.repoSource "$REPO_SOURCE"
+      git config symphony.baseBranch "$BASE_BRANCH"
+      git checkout -B "$WORKSPACE_BRANCH"
+    after_run: |
+      sh scripts/symphony_auto_merge_done.sh
+    timeout_ms: 120000
 
 agent:
   max_concurrent_agents: 1
   max_turns: 12
 
 codex:
-  command: codex app-server
+  command: /Applications/Codex.app/Contents/Resources/codex app-server
   approval_policy: never
   thread_sandbox: workspace-write
 ---
@@ -118,6 +126,8 @@ At task start:
 At task finish:
 - move the issue to `Human Review` only if the change is critical and requires explicit human review
 - otherwise, if the task is small, safe, fully verified, and does not require human judgment, move it directly to `Done`
+- `Done` is now an auto-merge trigger: after the agent exits, `hooks.after_run` tries to merge the issue branch into the source repo `main`
+- if that auto-merge is blocked (for example dirty target repo, merge conflict, or missing tracker credentials), the hook should move the issue back to `Human Review`
 
 Critical changes that require `Human Review`:
 - architecture changes or cross-cutting refactors
@@ -185,7 +195,9 @@ If the task does not change repo rules or operations, do not edit those files wi
 
 - Make a commit after each logical block.
 - Do not use destructive git commands.
-- Do not auto-merge or auto-land the task.
+- Do not manually merge `Done` tasks inside the Codex sandbox.
+- `Done` tasks are merged automatically by `hooks.after_run` into the source repo base branch.
+- Tasks that require `Human Review` must never be auto-merged.
 
 Target final state:
 - default final state for small safe tasks: `Done`

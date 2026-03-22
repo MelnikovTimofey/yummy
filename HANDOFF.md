@@ -1,5 +1,29 @@
 # HANDOFF — Yummy
 
+## 1.37) Auto-merge `Done` Symphony tasks into `main` (22 марта 2026)
+
+- Запрос:
+  - после перевода small safe task в `Done` изменения должны автоматически попадать из issue-workspace в `main`, а не оставаться только в изолированном clone.
+
+- Реализация:
+  - `WORKFLOW.md`:
+    - в `hooks.after_create` добавлено сохранение `symphony.repoSource` и `symphony.baseBranch` в git config workspace;
+    - workspace теперь сразу переводится на branch с именем issue identifier;
+    - добавлен `hooks.after_run`, который запускает `scripts/symphony_auto_merge_done.sh`;
+    - `Git and completion` обновлён: manual merge внутри Codex sandbox запрещён, а для `Done` merge выполняется hook'ом автоматически.
+  - `scripts/symphony_auto_merge_done.sh`:
+    - определяет issue identifier по имени рабочей папки;
+    - через Linear GraphQL читает текущее состояние issue;
+    - если состояние не `Done`, ничего не делает;
+    - если состояние `Done`, подтягивает branch issue-workspace в source repo и пытается merge в `main`;
+    - если target repo dirty, стоит не на `main` или возникает merge conflict, переводит issue в `Human Review` и оставляет комментарий о блокере.
+  - `NOTES.md`:
+    - добавлена запись о новом auto-merge flow и его preconditions.
+
+- Эффект:
+  - `Done` теперь означает не только успешный agent run, но и фактический перенос коммитов в основной репозиторий;
+  - когда auto-merge невозможен, workflow откатывает задачу в `Human Review`, а не оставляет ложное ощущение, что `main` уже обновлён.
+
 ## 1.36) Require explicit Linear state transitions in Symphony workflow (17 марта 2026)
 
 - Проблема:

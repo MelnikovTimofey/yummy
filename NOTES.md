@@ -1,3 +1,21 @@
+Обновление от 22 марта 2026 (ops: auto-merge `Done` Symphony tasks into `main`):
+- В `WORKFLOW.md` добавлен `hooks.after_run`, который вызывает `scripts/symphony_auto_merge_done.sh`.
+- `hooks.after_create` теперь дополнительно:
+  - сохраняет исходный путь репозитория в `git config symphony.repoSource`;
+  - сохраняет целевую базовую ветку в `git config symphony.baseBranch`;
+  - явно переводит fresh workspace на issue-ветку с именем каталога (`HOO-123` и т.д.).
+- Новый `scripts/symphony_auto_merge_done.sh` делает следующее:
+  - определяет текущий issue по имени workspace;
+  - запрашивает состояние issue в Linear;
+  - если issue в `Done`, пытается автоматически вмержить branch issue-workspace в `main` исходного репозитория;
+  - если merge блокируется из-за dirty target repo, конфликта или неверной target branch, переводит issue обратно в `Human Review` и оставляет комментарий в Linear.
+- Ограничения:
+  - авто-merge работает только при наличии `LINEAR_API_KEY`;
+  - target repo должен быть чистым и стоять на `main`;
+  - если preconditions не выполнены, задача не должна считаться тихо слитой.
+- Причина:
+  - `Done` без переноса коммитов из issue-workspace в основной репозиторий оставлял фактическое расхождение между tracker state и реальным состоянием `main`.
+
 Обновление от 17 марта 2026 (docs: обязать Symphony делать явные Linear status transitions):
 - В `WORKFLOW.md` дополнен `Status transition protocol`:
   - агент теперь обязан переводить задачу `Todo` -> `In Progress` в начале работы;
