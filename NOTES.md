@@ -1,3 +1,41 @@
+Обновление от 22 марта 2026 (phase 2: TDD-backed onboarding and recommendations for Nomad):
+- Проблема:
+  - после Phase 1 guest-flow останавливался сразу после подтверждения daily code;
+  - отсутствовали онбординг, рекомендации и бизнес-логика, учитывающая наличие табаков;
+  - новый шаг требовалось делать по принципу test-driven development.
+- Изменение:
+  - `apps/nomad-backend/package.json`:
+    - добавлен script `npm test` на базе `tsx --test`.
+  - `apps/nomad-backend/src/catalog.ts`:
+    - добавлен in-memory demo catalog табаков и миксов.
+  - `apps/nomad-backend/src/recommendations.ts`:
+    - выделена testable rule-based recommendation logic;
+    - выдача фильтруется по `in stock` компонентам;
+    - score учитывает совпадения по `flavorProfiles`, `flavors`, а также popularity/rating bonus.
+  - `apps/nomad-backend/src/recommendations.test.ts`:
+    - добавлены тесты для:
+      - onboarding options;
+      - availability filter;
+      - ranking logic;
+      - endpoint `/guest/onboarding/recommendations` через `app.inject`.
+  - `apps/nomad-backend/src/app.ts`:
+    - добавлены `GET /guest/onboarding/options` и `POST /guest/onboarding/recommendations`;
+    - `meta` расширен до Phase 2 scope.
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - после daily code теперь открывается реальный onboarding;
+    - варианты онбординга загружаются с backend;
+    - реализован выбор профилей и вкусов;
+    - после submit показывается список рекомендаций;
+    - на `Покурить` открывается карточка выбранного микса для показа мастеру.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - добавлены стили для onboarding chips, recommendation cards и chosen-mix view.
+  - `apps/nomad-backend/README.md`, `apps/nomad-aroma-web/README.md`:
+    - обновлены под Phase 2.
+- Эффект:
+  - Nomad получил первый полезный e2e flow `18+ -> код -> онбординг -> рекомендации -> выбранный микс`;
+  - backend recommendation logic теперь покрыта тестами;
+  - рекомендации уже учитывают наличие табаков, пусть пока и на in-memory каталоге.
+
 Обновление от 22 марта 2026 (phase 1: guest access and staff auth slice for Nomad):
 - Проблема:
   - Nomad scaffold не имел рабочего access slice, который могли бы использовать frontend-агенты;

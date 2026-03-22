@@ -6,7 +6,13 @@ import {
   resolveStaffUser,
   verifyStaffToken,
 } from './auth';
-import type { ApiError, GuestAccessSuccess, StaffAuthResponse } from './types';
+import { getOnboardingOptions, getRecommendations } from './recommendations';
+import type {
+  ApiError,
+  GuestAccessSuccess,
+  OnboardingRecommendationsResponse,
+  StaffAuthResponse,
+} from './types';
 
 export const buildApp = () => {
   const app = Fastify({ logger: true });
@@ -18,9 +24,11 @@ export const buildApp = () => {
   app.get('/meta', async () => ({
     appName: config.appName,
     mode: 'phase-1',
-    scope: ['guest-access', 'staff-auth'],
+    scope: ['guest-access', 'staff-auth', 'guest-onboarding', 'recommendations'],
     endpoints: {
       guestVerify: 'POST /guest/access-code/verify',
+      onboardingOptions: 'GET /guest/onboarding/options',
+      onboardingRecommendations: 'POST /guest/onboarding/recommendations',
       staffLogin: 'POST /staff/auth/login',
       staffMe: 'GET /staff/auth/me',
     },
@@ -49,6 +57,40 @@ export const buildApp = () => {
       message: 'Доступ подтвержден. Можно переходить к знакомству и онбордингу.',
       issuedAt: new Date().toISOString(),
       nextStep: 'intro',
+    };
+
+    return reply.send(response);
+  });
+
+  app.get('/guest/onboarding/options', async () => {
+    return getOnboardingOptions();
+  });
+
+  app.post('/guest/onboarding/recommendations', async (request, reply) => {
+    const body = request.body as
+      | { likedProfiles?: string[]; likedFlavors?: string[]; limit?: number }
+      | undefined;
+
+    const likedProfiles = Array.isArray(body?.likedProfiles) ? body!.likedProfiles : [];
+    const likedFlavors = Array.isArray(body?.likedFlavors) ? body!.likedFlavors : [];
+    const limit = body?.limit;
+
+    if (!likedProfiles.length && !likedFlavors.length) {
+      return reply.status(400).send({
+        error: 'Choose at least one flavor profile or flavor',
+      } satisfies ApiError);
+    }
+
+    const response: OnboardingRecommendationsResponse = {
+      onboarding: {
+        likedProfiles,
+        likedFlavors,
+      },
+      items: getRecommendations({
+        likedProfiles,
+        likedFlavors,
+        limit,
+      }),
     };
 
     return reply.send(response);

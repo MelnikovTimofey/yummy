@@ -13,6 +13,28 @@
 3. stateless bearer token для `GET /staff/auth/me`;
 4. health/meta endpoints для фронтенда.
 
+На Phase 2 дополнительно есть:
+
+1. onboarding options на основе текущего in-stock каталога;
+2. rule-based recommendations для гостя;
+3. in-memory demo catalog без Prisma.
+
+## Эндпоинты
+
+### Guest access
+
+- `POST /guest/access-code/verify`
+
+### Guest onboarding / recommendations
+
+- `GET /guest/onboarding/options`
+- `POST /guest/onboarding/recommendations`
+
+### Staff auth
+
+- `POST /staff/auth/login`
+- `GET /staff/auth/me`
+
 ## Локальный запуск
 
 ```bash
@@ -41,4 +63,4 @@ NOMAD_STAFF_DISPLAY_NAME=Nomad Staff
 
 ## Стадия
 
-Текущая стадия: Phase 1 access backend.
+Текущая стадия: Phase 2 onboarding + recommendations backend.

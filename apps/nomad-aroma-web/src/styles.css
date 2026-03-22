@@ -223,6 +223,78 @@ p {
   margin: 0 0 8px;
 }
 
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.onboarding-form {
+  display: grid;
+  gap: 18px;
+}
+
+.choice-group {
+  display: grid;
+  gap: 10px;
+}
+
+.choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.choice-chip {
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 14px;
+  background: rgba(85, 24, 23, 0.08);
+  color: #551817;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.choice-chip:hover {
+  transform: translateY(-1px);
+}
+
+.choice-chip--active {
+  background: #551817;
+  color: #fff7f2;
+}
+
+.recommendation-grid {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.mix-card {
+  border-radius: 24px;
+  padding: 22px;
+  background: rgba(255, 250, 246, 0.97);
+  border: 1px solid rgba(85, 24, 23, 0.12);
+  box-shadow: 0 14px 36px rgba(30, 18, 17, 0.08);
+  display: grid;
+  gap: 14px;
+}
+
+.mix-card__head {
+  display: grid;
+  gap: 2px;
+}
+
+.mix-card__eyebrow {
+  margin-bottom: 0;
+}
+
 @media (max-width: 720px) {
   .hero,
   .card {
@@ -235,5 +307,11 @@ p {
 
   .code-form {
     max-width: none;
+  }
+}
+
+@media (min-width: 860px) {
+  .recommendation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

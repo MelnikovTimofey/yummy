@@ -27,4 +27,4 @@ API задаётся через `VITE_API_BASE_URL`.
 
 ## Стадия
 
-Текущая стадия: Phase 1 guest flow.
+Текущая стадия: Phase 2 onboarding + recommendations flow.

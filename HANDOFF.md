@@ -1,5 +1,53 @@
 # HANDOFF — Yummy
 
+## 1.45) Deliver Nomad Phase 2 with TDD-backed onboarding and recommendations (22 марта 2026)
+
+- Запрос:
+  - выполнить `Phase 2` и использовать принцип разработки через тестирование.
+
+- Реализация:
+  - `apps/nomad-backend/package.json`:
+    - добавлен script `npm test` на `tsx --test`.
+  - `apps/nomad-backend/src/catalog.ts`:
+    - добавлен in-memory demo catalog для Phase 2.
+  - `apps/nomad-backend/src/recommendations.ts`:
+    - реализована testable rule-based recommendation logic;
+    - недоступные по наличию миксы исключаются из выдачи.
+  - `apps/nomad-backend/src/recommendations.test.ts`:
+    - добавлены тесты на options, availability filter, ranking и recommendations endpoint.
+  - `apps/nomad-backend/src/app.ts`:
+    - добавлены `GET /guest/onboarding/options` и `POST /guest/onboarding/recommendations`.
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - guest flow расширен до реального onboarding;
+    - frontend получает варианты с backend;
+    - после ответов показывает список рекомендаций;
+    - `Покурить` открывает карточку выбранного микса.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - добавлены стили для onboarding и recommendation cards.
+  - `apps/nomad-backend/README.md`, `apps/nomad-aroma-web/README.md`:
+    - обновлены под новый этап.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+  - `cd apps/nomad-master-web && npm run build`
+
+- Эффект:
+  - Phase 2 закрывает первый полезный guest e2e flow после доступа;
+  - recommendation logic стала тестируемой и покрыта backend-тестами;
+  - Aroma теперь доводит пользователя до готовой карточки микса.
+
+- Ограничения:
+  - каталог и наличие пока in-memory;
+  - нет persistence результатов онбординга;
+  - ещё нет аналитического события `Покурить`.
+
+- Следующий рекомендуемый шаг:
+  1. перевести demo catalog в реальную inventory/mix model;
+  2. добавить `smoke_cta_clicked`;
+  3. после этого переходить к staff inventory manager.
+
 ## 1.44) Deliver Phase 1 access slice for Nomad (22 марта 2026)
 
 - Запрос:
