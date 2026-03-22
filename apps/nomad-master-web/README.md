@@ -22,6 +22,14 @@ Staff/admin frontend для продукта `Мастер`.
 4. хранение токена в `sessionStorage`;
 5. authenticated shell с профилем и списком следующих модулей.
 
+## Phase 2
+
+Добавлены первые рабочие staff-экраны:
+
+1. инвентаризация табаков с загрузкой `/staff/inventory/tobaccos`;
+2. переключение `in stock / out of stock` через `PATCH /staff/inventory/tobaccos/:id`;
+3. сводка дашборда из `/staff/dashboard/summary`.
+
 ## Локальный запуск
 
 ```bash

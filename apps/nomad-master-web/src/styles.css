@@ -134,6 +134,102 @@ h2 {
   gap: 12px;
 }
 
+.summary-grid {
+  max-width: 840px;
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-card,
+.top-mix-card,
+.inventory-card {
+  border-radius: 18px;
+  background: #fffaf6;
+  border: 1px solid rgba(85, 24, 23, 0.1);
+  box-shadow: 0 10px 24px rgba(30, 18, 17, 0.06);
+  padding: 16px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 8px;
+}
+
+.metric-label,
+.inventory-manufacturer {
+  color: #7a3a34;
+  font-size: 13px;
+}
+
+.metric-value {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.section-head,
+.inventory-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inventory-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.inventory-card {
+  display: grid;
+  gap: 14px;
+}
+
+.stock-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stock-pill--in {
+  background: rgba(53, 119, 74, 0.12);
+  color: #2f6a41;
+}
+
+.stock-pill--out {
+  background: rgba(149, 61, 39, 0.12);
+  color: #8f3824;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(85, 24, 23, 0.08);
+  color: #551817;
+  font-size: 13px;
+}
+
+.top-mixes {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 .status-chip {
   display: inline-flex;
   width: fit-content;
@@ -165,5 +261,9 @@ h2 {
   .card {
     border-radius: 20px;
     padding: 20px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
   }
 }
