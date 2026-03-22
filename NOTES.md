@@ -1576,3 +1576,26 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-backend && npm run build` — `OK`.
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+Обновление от 22 марта 2026 (Nomad — перевод Prisma-контура на отдельный Postgres):
+- `apps/nomad-backend/prisma/schema.prisma`:
+  - datasource переключён с `sqlite` на `postgresql`.
+- `apps/nomad-backend/docker-compose.yml`:
+  - добавлен отдельный локальный Postgres-контур Nomad на `5433`.
+- `apps/nomad-backend/.env.example`, `src/db.ts`, `prisma/seed.ts`:
+  - дефолтный `DATABASE_URL` переведён на `postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public`.
+- `apps/nomad-backend/package.json`:
+  - добавлены `db:start` / `db:stop` для локального Postgres.
+- `.gitignore`:
+  - убран SQLite-specific ignore, так как Nomad runtime больше не использует file DB.
+
+Проверка:
+- `docker compose -f apps/nomad-backend/docker-compose.yml up -d db` — `OK`.
+- `docker compose -f apps/nomad-backend/docker-compose.yml exec -T db pg_isready -U nomad -d nomad` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.

@@ -35,10 +35,17 @@
 
 На текущем этапе runtime больше не хранит состояние в памяти:
 
-1. `Prisma + SQLite` используются как локальное persistence-хранилище для Nomad;
+1. `Prisma + PostgreSQL` используются как локальное persistence-хранилище для Nomad;
 2. схема живёт в `apps/nomad-backend/prisma/schema.prisma`;
 3. сиды живут в `apps/nomad-backend/prisma/seed.ts`;
-4. SQLite-файл `prisma/nomad.db` является локальным артефактом и не коммитится.
+4. локальный Postgres поднимается отдельным `docker-compose.yml` внутри `apps/nomad-backend`.
+
+Параметры локального Postgres-контура:
+
+1. порт `5433`;
+2. database `nomad`;
+3. user `nomad`;
+4. password `nomad`.
 
 ## Эндпоинты
 
@@ -78,6 +85,7 @@
 ```bash
 cd apps/nomad-backend
 npm install
+npm run db:start
 npm run prisma:generate
 npm run prisma:dbpush -- --force-reset
 npm run prisma:seed
@@ -92,7 +100,7 @@ npm run dev
 PORT=3021
 HOST=0.0.0.0
 APP_NAME=nomad-backend
-DATABASE_URL="file:./nomad.db"
+DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public"
 NOMAD_GUEST_ACCESS_CODE=NOMAD-2026
 NOMAD_TOKEN_SECRET=change-me
 NOMAD_TOKEN_TTL_HOURS=24
@@ -105,4 +113,4 @@ NOMAD_STAFF_DISPLAY_NAME=Nomad Staff
 
 ## Стадия
 
-Текущая стадия: Phase 4 content rails backend + Prisma persistence.
+Текущая стадия: Phase 4 content rails backend + Prisma persistence на отдельном Postgres.

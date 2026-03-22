@@ -1884,3 +1884,35 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd apps/nomad-backend && npm run build` — `OK`.
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+## 2.4) Nomad (22 марта 2026) — перевод Prisma-контура на отдельный Postgres
+
+Сделано:
+- `apps/nomad-backend/prisma/schema.prisma`:
+  - datasource переведён на `postgresql`.
+- `apps/nomad-backend/docker-compose.yml`:
+  - добавлен отдельный Postgres для Nomad (`5433`, db `nomad`, user `nomad`, password `nomad`).
+- `apps/nomad-backend/.env.example`, `apps/nomad-backend/src/db.ts`, `apps/nomad-backend/prisma/seed.ts`:
+  - Nomad runtime и seed по умолчанию смотрят в отдельный Postgres URL.
+- `apps/nomad-backend/package.json`:
+  - добавлены сервисные команды `npm run db:start` и `npm run db:stop`.
+- `apps/nomad-backend/README.md`:
+  - локальный runbook синхронизирован под Postgres.
+- `.gitignore`:
+  - SQLite-specific следы убраны, так как storage больше не file-backed.
+
+Важно:
+- Postgres-контур уже поднят локально через `apps/nomad-backend/docker-compose.yml`.
+- Prisma schema пока сохранена максимально совместимой с существующим runtime-кодом; это осознанно, чтобы не смешивать транспортный перенос на Postgres с отдельной нормализацией модели.
+- Backend тесты и сиды теперь реально гоняются против отдельного Postgres, а не против SQLite.
+
+Проверка:
+- `docker compose -f apps/nomad-backend/docker-compose.yml up -d db` — `OK`.
+- `docker compose -f apps/nomad-backend/docker-compose.yml exec -T db pg_isready -U nomad -d nomad` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.

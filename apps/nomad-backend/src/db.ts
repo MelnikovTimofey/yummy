@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
-process.env.DATABASE_URL ??= 'file:./nomad.db';
+process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
 
 declare global {
   // eslint-disable-next-line no-var

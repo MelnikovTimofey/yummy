@@ -8,6 +8,8 @@
     "test": "tsx --test --test-concurrency=1 src/**/*.test.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "db:start": "docker compose -f docker-compose.yml up -d db",
+    "db:stop": "docker compose -f docker-compose.yml down",
     "prisma:generate": "prisma generate",
     "prisma:dbpush": "prisma db push",
     "prisma:seed": "prisma db seed"
