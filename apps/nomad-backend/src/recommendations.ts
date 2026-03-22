@@ -30,8 +30,8 @@ const unique = (items: string[]) => Array.from(new Set(items));
 const normalizeInput = (items: string[]) =>
   unique(items.map((item) => item.trim().toLowerCase()).filter(Boolean));
 
-export const getOnboardingOptions = () => {
-  const inStockTobaccos = getInventoryTobaccos().filter((item) => item.inStock);
+export const getOnboardingOptions = async () => {
+  const inStockTobaccos = (await getInventoryTobaccos()).filter((item) => item.inStock);
 
   return {
     profiles: unique(inStockTobaccos.flatMap((item) => item.flavorProfiles)).sort(),
@@ -39,8 +39,7 @@ export const getOnboardingOptions = () => {
   };
 };
 
-export const getInStockMixes = () =>
-  getGuestCatalogMixes();
+export const getInStockMixes = () => getGuestCatalogMixes();
 
 const calculateScore = (
   mix: MixView,
@@ -58,12 +57,12 @@ const calculateScore = (
   return profileHits * 110 + flavorHits * 75 + ratingBonus + popularityBonus;
 };
 
-export const getRecommendations = (input: OnboardingInput): RecommendationMix[] => {
+export const getRecommendations = async (input: OnboardingInput): Promise<RecommendationMix[]> => {
   const likedProfiles = normalizeInput(input.likedProfiles);
   const likedFlavors = normalizeInput(input.likedFlavors);
   const limit = Math.max(1, Math.min(input.limit ?? 6, 12));
 
-  return getInStockMixes()
+  return (await getInStockMixes())
     .map((mix) => {
       return {
         id: mix.id,

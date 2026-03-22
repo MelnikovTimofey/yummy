@@ -1552,3 +1552,27 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm test` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+Обновление от 22 марта 2026 (Nomad — перевод backend на хранилище):
+- `apps/nomad-backend` переведён с in-memory state на `Prisma + SQLite`.
+- Добавлены:
+  - `apps/nomad-backend/prisma/schema.prisma`,
+  - `apps/nomad-backend/prisma/seed.ts`,
+  - `apps/nomad-backend/src/db.ts`.
+- `apps/nomad-backend/src/state.ts`:
+  - весь runtime state перенесён на persistence-слой Prisma;
+  - добавлены bootstrap/reset функции для наполнения Nomad storage.
+- `apps/nomad-backend/src/app.ts`, `recommendations.ts`, `*.test.ts`:
+  - backend и тесты переведены на async persistence API;
+  - тестовый прогон сделан последовательным, чтобы SQLite-файл не конфликтовал между test workers.
+- `.gitignore`:
+  - добавлен ignore для локального `apps/nomad-backend/prisma/*.db`.
+
+Проверка:
+- `cd apps/nomad-backend && npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.

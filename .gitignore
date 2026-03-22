@@ -20,6 +20,7 @@ YummyWeb/dist/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.env
+apps/nomad-backend/prisma/*.db
 
 # local test artifacts
 .playwright-cli/

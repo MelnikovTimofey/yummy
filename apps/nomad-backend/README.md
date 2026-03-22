@@ -33,6 +33,13 @@
 4. staff CRUD для миксов и рейлов;
 5. статистический rail на базе CTA и оценок.
 
+На текущем этапе runtime больше не хранит состояние в памяти:
+
+1. `Prisma + SQLite` используются как локальное persistence-хранилище для Nomad;
+2. схема живёт в `apps/nomad-backend/prisma/schema.prisma`;
+3. сиды живут в `apps/nomad-backend/prisma/seed.ts`;
+4. SQLite-файл `prisma/nomad.db` является локальным артефактом и не коммитится.
+
 ## Эндпоинты
 
 ### Guest access
@@ -71,6 +78,9 @@
 ```bash
 cd apps/nomad-backend
 npm install
+npm run prisma:generate
+npm run prisma:dbpush -- --force-reset
+npm run prisma:seed
 npm run dev
 ```
 
@@ -82,6 +92,7 @@ npm run dev
 PORT=3021
 HOST=0.0.0.0
 APP_NAME=nomad-backend
+DATABASE_URL="file:./nomad.db"
 NOMAD_GUEST_ACCESS_CODE=NOMAD-2026
 NOMAD_TOKEN_SECRET=change-me
 NOMAD_TOKEN_TTL_HOURS=24
@@ -94,4 +105,4 @@ NOMAD_STAFF_DISPLAY_NAME=Nomad Staff
 
 ## Стадия
 
-Текущая стадия: Phase 4 content rails backend.
+Текущая стадия: Phase 4 content rails backend + Prisma persistence.

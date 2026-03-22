@@ -19,8 +19,8 @@ const loginStaff = async (app: ReturnType<typeof buildApp>) => {
   return body.accessToken;
 };
 
-test.beforeEach(() => {
-  resetNomadState();
+test.beforeEach(async () => {
+  await resetNomadState();
 });
 
 test('staff inventory endpoints expose and mutate in-memory stock', async () => {

@@ -19,8 +19,8 @@ const loginStaff = async (app: ReturnType<typeof buildApp>) => {
   return body.accessToken;
 };
 
-test.beforeEach(() => {
-  resetNomadState();
+test.beforeEach(async () => {
+  await resetNomadState();
 });
 
 test('guest intro cards describe the onboarding flow', async () => {

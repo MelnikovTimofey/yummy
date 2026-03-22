@@ -11,6 +11,7 @@ import { getOnboardingOptions, getRecommendations } from './recommendations';
 import {
   createMix,
   createRail,
+  ensureNomadState,
   getInventorySummary,
   getInventoryTobaccos,
   getGuestCatalogMixes,
@@ -47,6 +48,10 @@ export const buildApp = () => {
 
   app.register(cors, {
     origin: true,
+  });
+
+  app.addHook('onReady', async () => {
+    await ensureNomadState();
   });
 
   app.get('/meta', async () => ({
@@ -120,7 +125,7 @@ export const buildApp = () => {
 
   app.get('/guest/intro/cards', async () => {
     const response: GuestIntroCardsResponse = {
-      items: getGuestIntroCards(),
+      items: await getGuestIntroCards(),
     };
 
     return response;
@@ -140,7 +145,7 @@ export const buildApp = () => {
         profiles,
         flavors,
       },
-      items: getGuestCatalogMixes({ profiles, flavors }),
+      items: await getGuestCatalogMixes({ profiles, flavors }),
     };
 
     return response;
@@ -148,7 +153,7 @@ export const buildApp = () => {
 
   app.get('/guest/home/rails', async () => {
     const response: GuestHomeRailsResponse = {
-      items: getGuestHomeRails(),
+      items: await getGuestHomeRails(),
     };
 
     return response;
@@ -174,7 +179,7 @@ export const buildApp = () => {
         likedProfiles,
         likedFlavors,
       },
-      items: getRecommendations({
+      items: await getRecommendations({
         likedProfiles,
         likedFlavors,
         limit,
@@ -192,12 +197,12 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Mix id is required' } satisfies ApiError);
     }
 
-    const mix = getAvailableMixCatalog().find((item) => item.id === mixId);
+    const mix = (await getAvailableMixCatalog()).find((item) => item.id === mixId);
     if (!mix) {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
 
-    const event = recordSmokeCtaEvent(mixId);
+    const event = await recordSmokeCtaEvent(mixId);
     return reply.status(201).send({
       ok: true,
       recordedAt: event.createdAt,
@@ -219,7 +224,7 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Rating value must be between 1 and 5' } satisfies ApiError);
     }
 
-    const rated = rateMix(mixId, value);
+    const rated = await rateMix(mixId, value);
     if (!rated) {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
@@ -270,7 +275,7 @@ export const buildApp = () => {
     }
 
     const response: StaffMixesResponse = {
-      items: getStaffMixes(),
+      items: await getStaffMixes(),
     };
 
     return reply.send(response);
@@ -293,7 +298,7 @@ export const buildApp = () => {
         }
       | undefined;
 
-    const created = createMix({
+    const created = await createMix({
       name: payload?.name ?? '',
       description: payload?.description ?? '',
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : [],
@@ -335,7 +340,7 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Mix id is required' } satisfies ApiError);
     }
 
-    const updated = updateMix(mixId, {
+    const updated = await updateMix(mixId, {
       name: payload?.name,
       description: payload?.description,
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : undefined,
@@ -366,7 +371,7 @@ export const buildApp = () => {
     }
 
     return reply.send({
-      items: getInventoryTobaccos(),
+      items: await getInventoryTobaccos(),
     });
   });
 
@@ -377,7 +382,7 @@ export const buildApp = () => {
     }
 
     const response: StaffRailsResponse = {
-      items: getStaffRails(),
+      items: await getStaffRails(),
     };
 
     return reply.send(response);
@@ -399,7 +404,7 @@ export const buildApp = () => {
         }
       | undefined;
 
-    const created = createRail({
+    const created = await createRail({
       name: payload?.name ?? '',
       description: payload?.description ?? '',
       type: payload?.type,
@@ -439,7 +444,7 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Rail id is required' } satisfies ApiError);
     }
 
-    const updated = updateRail(railId, {
+    const updated = await updateRail(railId, {
       name: payload?.name,
       description: payload?.description,
       type: payload?.type,
@@ -479,7 +484,7 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'inStock must be boolean' } satisfies ApiError);
     }
 
-    const updated = updateTobaccoInStock(tobaccoId, body.inStock);
+    const updated = await updateTobaccoInStock(tobaccoId, body.inStock);
     if (!updated) {
       return reply.status(404).send({ error: 'Tobacco not found' } satisfies ApiError);
     }
@@ -493,8 +498,8 @@ export const buildApp = () => {
       return;
     }
 
-    const inventory = getInventorySummary();
-    const smoke = getSmokeCtaSummary();
+    const inventory = await getInventorySummary();
+    const smoke = await getSmokeCtaSummary();
 
     return reply.send({
       inventory,

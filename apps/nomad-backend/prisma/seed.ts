@@ -1,0 +1,303 @@
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+
+process.env.DATABASE_URL ??= 'file:./nomad.db';
+
+const prisma = new PrismaClient();
+
+const introCards = [
+  {
+    id: 'intro-age-check',
+    step: 1,
+    title: 'Подтвердите возраст',
+    description: 'Перед началом сценария гость подтверждает, что ему есть 18 лет.',
+    bullets: ['Это быстрый gate до доступа к рекомендациям.', 'Дальше понадобится daily code от staff.'],
+  },
+  {
+    id: 'intro-code-check',
+    step: 2,
+    title: 'Введите daily code',
+    description: 'Код меняется каждый день и позволяет открыть гостевой сценарий без авторизации.',
+    bullets: ['Код сообщает кальянный мастер или официант.', 'Код приходит staff через Telegram.'],
+  },
+  {
+    id: 'intro-onboarding',
+    step: 3,
+    title: 'Выберите вкус',
+    description: 'Быстрый онбординг помогает подобрать микс под профиль и вкусы гостя.',
+    bullets: ['Можно выбрать несколько профилей.', 'Рекомендации учитывают наличие табаков.'],
+  },
+  {
+    id: 'intro-mix-card',
+    step: 4,
+    title: 'Покажите микс мастеру',
+    description: 'Карточка микса открывается после кнопки выбора и сразу готова для показа staff.',
+    bullets: ['Гость видит состав микса и рейтинг.', 'Мастер получает понятную карточку без лишних шагов.'],
+  },
+] as const;
+
+const tobaccos = [
+  {
+    id: 'tobacco-citrus-breeze',
+    manufacturer: 'Nomad Reserve',
+    name: 'Citrus Breeze',
+    description: 'Свежий цитрусовый профиль.',
+    flavorProfiles: ['fresh', 'citrus'],
+    flavors: ['лимон', 'грейпфрут', 'лайм'],
+    flavorTags: ['fresh'],
+    inStock: true,
+  },
+  {
+    id: 'tobacco-berry-oasis',
+    manufacturer: 'Nomad Reserve',
+    name: 'Berry Oasis',
+    description: 'Мягкая ягодная сладость.',
+    flavorProfiles: ['berry', 'sweet'],
+    flavors: ['малина', 'черника'],
+    flavorTags: ['berry'],
+    inStock: true,
+  },
+  {
+    id: 'tobacco-desert-honey',
+    manufacturer: 'Nomad Reserve',
+    name: 'Desert Honey',
+    description: 'Десертный акцент с мёдом и ванилью.',
+    flavorProfiles: ['dessert', 'sweet'],
+    flavors: ['мед', 'ваниль'],
+    flavorTags: ['dessert'],
+    inStock: true,
+  },
+  {
+    id: 'tobacco-spice-route',
+    manufacturer: 'Nomad Reserve',
+    name: 'Spice Route',
+    description: 'Пряный табачный профиль.',
+    flavorProfiles: ['spicy', 'tobacco'],
+    flavors: ['корица', 'кардамон'],
+    flavorTags: ['spicy'],
+    inStock: true,
+  },
+  {
+    id: 'tobacco-mint-veil',
+    manufacturer: 'Nomad Reserve',
+    name: 'Mint Veil',
+    description: 'Чистая мята и прохлада.',
+    flavorProfiles: ['fresh'],
+    flavors: ['мята'],
+    flavorTags: ['minty'],
+    inStock: true,
+  },
+  {
+    id: 'tobacco-peach-silk',
+    manufacturer: 'Nomad Reserve',
+    name: 'Peach Silk',
+    description: 'Сладкий персиковый профиль.',
+    flavorProfiles: ['sweet'],
+    flavors: ['персик'],
+    flavorTags: ['fruity'],
+    inStock: false,
+  },
+] as const;
+
+const mixes = [
+  {
+    id: 'mix-citrus-scout',
+    name: 'Цитрусовый караван',
+    description: 'Свежий микс с ярким лимонно-мятным акцентом.',
+    flavorProfiles: ['fresh', 'citrus'],
+    flavors: ['лимон', 'мята'],
+    flavorTags: ['fresh'],
+    available: true,
+    popularity: 92,
+    baseAvgRating: 4.8,
+  },
+  {
+    id: 'mix-berry-dawn',
+    name: 'Ягодный рассвет',
+    description: 'Мягкая ягодная сладость с холодным хвостом.',
+    flavorProfiles: ['berry', 'sweet'],
+    flavors: ['малина', 'черника'],
+    flavorTags: ['berry'],
+    available: true,
+    popularity: 85,
+    baseAvgRating: 4.7,
+  },
+  {
+    id: 'mix-silk-road',
+    name: 'Шёлковый путь',
+    description: 'Десертный микс с мёдом и ванилью.',
+    flavorProfiles: ['dessert', 'sweet'],
+    flavors: ['мед', 'ваниль'],
+    flavorTags: ['dessert'],
+    available: true,
+    popularity: 78,
+    baseAvgRating: 4.6,
+  },
+  {
+    id: 'mix-amber-bazaar',
+    name: 'Янтарный базар',
+    description: 'Пряно-табачный профиль с теплым послевкусием.',
+    flavorProfiles: ['spicy', 'tobacco'],
+    flavors: ['корица', 'кардамон'],
+    flavorTags: ['spicy'],
+    available: true,
+    popularity: 74,
+    baseAvgRating: 4.5,
+  },
+  {
+    id: 'mix-peach-mirage',
+    name: 'Персиковый мираж',
+    description: 'Сладкий фруктовый микс, который сейчас недоступен по наличию.',
+    flavorProfiles: ['sweet'],
+    flavors: ['персик'],
+    flavorTags: ['fruity'],
+    available: true,
+    popularity: 81,
+    baseAvgRating: 4.4,
+  },
+] as const;
+
+const mixComponents = [
+  { mixId: 'mix-citrus-scout', tobaccoId: 'tobacco-citrus-breeze', proportion: 60, sortOrder: 0 },
+  { mixId: 'mix-citrus-scout', tobaccoId: 'tobacco-mint-veil', proportion: 40, sortOrder: 1 },
+  { mixId: 'mix-berry-dawn', tobaccoId: 'tobacco-berry-oasis', proportion: 65, sortOrder: 0 },
+  { mixId: 'mix-berry-dawn', tobaccoId: 'tobacco-mint-veil', proportion: 35, sortOrder: 1 },
+  { mixId: 'mix-silk-road', tobaccoId: 'tobacco-desert-honey', proportion: 60, sortOrder: 0 },
+  { mixId: 'mix-silk-road', tobaccoId: 'tobacco-berry-oasis', proportion: 40, sortOrder: 1 },
+  { mixId: 'mix-amber-bazaar', tobaccoId: 'tobacco-spice-route', proportion: 55, sortOrder: 0 },
+  { mixId: 'mix-amber-bazaar', tobaccoId: 'tobacco-desert-honey', proportion: 45, sortOrder: 1 },
+  { mixId: 'mix-peach-mirage', tobaccoId: 'tobacco-peach-silk', proportion: 70, sortOrder: 0 },
+  { mixId: 'mix-peach-mirage', tobaccoId: 'tobacco-mint-veil', proportion: 30, sortOrder: 1 },
+] as const;
+
+const rails = [
+  {
+    id: 'rail-statistical-top',
+    name: 'Статистический топ',
+    description: 'Миксы, которые выбирают чаще всего и лучше оценивают гости.',
+    type: 'statistical',
+    active: true,
+    isSystem: true,
+  },
+  {
+    id: 'rail-prepared-fresh-line',
+    name: 'Свежая линия',
+    description: 'Цитрус, мята и лёгкая прохлада для быстрого выбора.',
+    type: 'prepared',
+    active: true,
+    isSystem: false,
+  },
+  {
+    id: 'rail-prepared-sweet-line',
+    name: 'Сладкая линия',
+    description: 'Десертные и мягкие сочетания для спокойного вечера.',
+    type: 'prepared',
+    active: true,
+    isSystem: false,
+  },
+  {
+    id: 'rail-curated-evening-choice',
+    name: 'Вечерний выбор',
+    description: 'Ручная подборка для позднего визита в Nomad.',
+    type: 'curated',
+    active: false,
+    isSystem: false,
+  },
+] as const;
+
+const railMixes = [
+  { railId: 'rail-statistical-top', mixId: 'mix-citrus-scout', sortOrder: 0 },
+  { railId: 'rail-statistical-top', mixId: 'mix-berry-dawn', sortOrder: 1 },
+  { railId: 'rail-statistical-top', mixId: 'mix-silk-road', sortOrder: 2 },
+  { railId: 'rail-prepared-fresh-line', mixId: 'mix-citrus-scout', sortOrder: 0 },
+  { railId: 'rail-prepared-fresh-line', mixId: 'mix-berry-dawn', sortOrder: 1 },
+  { railId: 'rail-prepared-sweet-line', mixId: 'mix-silk-road', sortOrder: 0 },
+  { railId: 'rail-prepared-sweet-line', mixId: 'mix-peach-mirage', sortOrder: 1 },
+  { railId: 'rail-curated-evening-choice', mixId: 'mix-amber-bazaar', sortOrder: 0 },
+] as const;
+
+async function main() {
+  await prisma.nomadSmokeCtaEvent.deleteMany();
+  await prisma.nomadMixRating.deleteMany();
+  await prisma.nomadRailMix.deleteMany();
+  await prisma.nomadMixComponent.deleteMany();
+  await prisma.nomadRail.deleteMany();
+  await prisma.nomadMix.deleteMany();
+  await prisma.nomadTobacco.deleteMany();
+  await prisma.nomadIntroCard.deleteMany();
+
+  await prisma.nomadIntroCard.createMany({
+    data: introCards.map((card) => ({
+      id: card.id,
+      step: card.step,
+      title: card.title,
+      description: card.description,
+      bullets: JSON.stringify(card.bullets),
+    })),
+  });
+
+  await prisma.nomadTobacco.createMany({
+    data: tobaccos.map((tobacco) => ({
+      id: tobacco.id,
+      manufacturer: tobacco.manufacturer,
+      name: tobacco.name,
+      description: tobacco.description,
+      flavorProfiles: JSON.stringify(tobacco.flavorProfiles),
+      flavors: JSON.stringify(tobacco.flavors),
+      flavorTags: JSON.stringify(tobacco.flavorTags),
+      inStock: tobacco.inStock,
+    })),
+  });
+
+  await prisma.nomadMix.createMany({
+    data: mixes.map((mix) => ({
+      id: mix.id,
+      name: mix.name,
+      description: mix.description,
+      flavorProfiles: JSON.stringify(mix.flavorProfiles),
+      flavors: JSON.stringify(mix.flavors),
+      flavorTags: JSON.stringify(mix.flavorTags),
+      available: mix.available,
+      popularity: mix.popularity,
+      baseAvgRating: mix.baseAvgRating,
+    })),
+  });
+
+  await prisma.nomadMixComponent.createMany({
+    data: mixComponents.map((component) => ({
+      mixId: component.mixId,
+      tobaccoId: component.tobaccoId,
+      proportion: component.proportion,
+      sortOrder: component.sortOrder,
+    })),
+  });
+
+  await prisma.nomadRail.createMany({
+    data: rails.map((rail) => ({
+      id: rail.id,
+      name: rail.name,
+      description: rail.description,
+      type: rail.type,
+      active: rail.active,
+      isSystem: rail.isSystem,
+    })),
+  });
+
+  await prisma.nomadRailMix.createMany({
+    data: railMixes.map((railMix) => ({
+      railId: railMix.railId,
+      mixId: railMix.mixId,
+      sortOrder: railMix.sortOrder,
+    })),
+  });
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (error) => {
+    console.error(error);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

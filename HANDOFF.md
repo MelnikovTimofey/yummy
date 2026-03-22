@@ -1850,3 +1850,37 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd apps/nomad-aroma-web && npm run build` — `OK`.
 - `cd apps/nomad-master-web && npm test` — `OK`.
 - `cd apps/nomad-master-web && npm run build` — `OK`.
+
+## 2.3) Nomad (22 марта 2026) — перевод backend на Prisma persistence
+
+Сделано:
+- `apps/nomad-backend/package.json`, `.env.example`, `src/db.ts`:
+  - добавлены `Prisma`, `@prisma/client`, scripts для `generate/dbpush/seed`;
+  - добавлен безопасный локальный fallback `DATABASE_URL=file:./nomad.db`.
+- `apps/nomad-backend/prisma/schema.prisma`, `apps/nomad-backend/prisma/seed.ts`:
+  - добавлена отдельная Nomad schema под SQLite;
+  - добавлены модели `NomadIntroCard`, `NomadTobacco`, `NomadMix`, `NomadMixComponent`, `NomadRail`, `NomadRailMix`, `NomadSmokeCtaEvent`, `NomadMixRating`;
+  - seed заполняет intro cards, каталог, миксы, рейлы и связи.
+- `apps/nomad-backend/src/state.ts`:
+  - in-memory state удалён;
+  - все guest/staff операции переведены на Prisma-backed persistence;
+  - bootstrap/reset теперь реально пересоздают и наполняют storage.
+- `apps/nomad-backend/src/app.ts`, `recommendations.ts`, `content.test.ts`, `inventory.test.ts`, `recommendations.test.ts`:
+  - API и тесты переведены на async storage calls;
+  - тестовый раннер сделан последовательным из-за общего SQLite-файла.
+- `.gitignore`:
+  - локальный `apps/nomad-backend/prisma/*.db` больше не попадает в git.
+
+Важно:
+- Nomad storage сейчас persistence-backed, но пока это `SQLite` для локального MVP, а не production Postgres.
+- Auth и daily code по-прежнему env-backed.
+- Для `mix-peach-mirage` сохранена логика: микс становится видимым гостю после возврата `tobacco-peach-silk` в наличие.
+
+Проверка:
+- `cd apps/nomad-backend && npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-aroma-web && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.

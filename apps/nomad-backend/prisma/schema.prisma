@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model NomadIntroCard {
+  id          String   @id
+  step        Int      @unique
+  title       String
+  description String
+  bullets     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NomadTobacco {
+  id              String            @id
+  manufacturer    String
+  name            String
+  description     String?
+  flavorProfiles  String
+  flavors         String
+  flavorTags      String
+  inStock         Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  mixComponents   NomadMixComponent[]
+
+  @@unique([manufacturer, name])
+  @@index([inStock])
+}
+
+model NomadMix {
+  id              String            @id
+  name            String
+  description     String
+  flavorProfiles  String
+  flavors         String
+  flavorTags      String
+  available       Boolean           @default(true)
+  popularity      Int               @default(0)
+  baseAvgRating   Float             @default(4.5)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  components      NomadMixComponent[]
+  railMixes       NomadRailMix[]
+  ratings         NomadMixRating[]
+  smokeEvents     NomadSmokeCtaEvent[]
+}
+
+model NomadMixComponent {
+  id         String      @id @default(uuid())
+  mixId      String
+  tobaccoId   String
+  proportion  Int         @default(50)
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  mix         NomadMix    @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  tobacco     NomadTobacco @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
+
+  @@unique([mixId, tobaccoId])
+  @@index([mixId])
+  @@index([tobaccoId])
+}
+
+model NomadRail {
+  id          String         @id
+  name        String
+  description String
+  type        String
+  active      Boolean        @default(true)
+  isSystem    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  mixes       NomadRailMix[]
+
+  @@index([type])
+  @@index([active])
+}
+
+model NomadRailMix {
+  id         String    @id @default(uuid())
+  railId     String
+  mixId      String
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  rail       NomadRail @relation(fields: [railId], references: [id], onDelete: Cascade)
+  mix        NomadMix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+
+  @@unique([railId, mixId])
+  @@index([railId])
+  @@index([mixId])
+}
+
+model NomadSmokeCtaEvent {
+  id        String    @id @default(uuid())
+  mixId     String
+  createdAt DateTime  @default(now())
+  mix       NomadMix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+
+  @@index([mixId])
+}
+
+model NomadMixRating {
+  id        String    @id @default(uuid())
+  mixId     String
+  value     Int
+  source    String    @default("guest")
+  createdAt DateTime  @default(now())
+  mix       NomadMix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+
+  @@index([mixId])
+  @@index([createdAt])
+}

@@ -1,5 +1,6 @@
-import { mixes as seedMixes, tobaccos } from './catalog';
-import type { Mix, Tobacco } from './catalog';
+import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
+import type { Tobacco } from './catalog';
+import { prisma } from './db';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -9,17 +10,6 @@ export type IntroCard = {
   title: string;
   description: string;
   bullets: string[];
-};
-
-export type MixRecord = {
-  id: string;
-  name: string;
-  description: string;
-  componentIds: string[];
-  popularity: number;
-  baseAvgRating: number;
-  available: boolean;
-  ratings: number[];
 };
 
 export type MixComponentView = {
@@ -36,21 +26,13 @@ export type MixView = {
   componentIds: string[];
   flavorProfiles: string[];
   flavors: string[];
+  flavorTags: string[];
   components: MixComponentView[];
   avgRating: number;
   ratingsCount: number;
   popularity: number;
   available: boolean;
   guestVisible: boolean;
-};
-
-export type RailRecord = {
-  id: string;
-  name: string;
-  description: string;
-  type: RailType;
-  mixIds: string[];
-  active: boolean;
 };
 
 export type RailView = {
@@ -78,7 +60,9 @@ export type MixInput = {
   baseAvgRating?: number;
 };
 
-export type MixPatch = Partial<Pick<MixInput, 'name' | 'description' | 'componentIds' | 'available' | 'popularity' | 'baseAvgRating'>>;
+export type MixPatch = Partial<
+  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'available' | 'popularity' | 'baseAvgRating'>
+>;
 
 export type RailInput = {
   name: string;
@@ -90,13 +74,24 @@ export type RailInput = {
 
 export type RailPatch = Partial<Pick<RailInput, 'name' | 'description' | 'type' | 'mixIds' | 'active'>>;
 
-const introCards: IntroCard[] = [
+type SeedIntroCard = IntroCard;
+type SeedRail = {
+  id: string;
+  name: string;
+  description: string;
+  type: Exclude<RailType, 'statistical'>;
+  mixIds: string[];
+  active: boolean;
+  isSystem: boolean;
+};
+
+const introCards: SeedIntroCard[] = [
   {
     id: 'intro-age-check',
     step: 1,
     title: 'Подтвердите возраст',
     description: 'Перед началом сценария гость подтверждает, что ему есть 18 лет.',
-    bullets: ['Это быстрый gate до доступа к рекомендациям.', 'Дальше понадобится дневной код от staff.'],
+    bullets: ['Это быстрый gate до доступа к рекомендациям.', 'Дальше понадобится daily code от staff.'],
   },
   {
     id: 'intro-code-check',
@@ -121,6 +116,38 @@ const introCards: IntroCard[] = [
   },
 ];
 
+const defaultRails: SeedRail[] = [
+  {
+    id: 'rail-prepared-fresh-line',
+    name: 'Свежая линия',
+    description: 'Цитрус, мята и лёгкая прохлада для быстрого выбора.',
+    type: 'prepared',
+    mixIds: ['mix-citrus-scout', 'mix-berry-dawn'],
+    active: true,
+    isSystem: false,
+  },
+  {
+    id: 'rail-prepared-sweet-line',
+    name: 'Сладкая линия',
+    description: 'Десертные и мягкие сочетания для спокойного вечера.',
+    type: 'prepared',
+    mixIds: ['mix-silk-road', 'mix-peach-mirage'],
+    active: true,
+    isSystem: false,
+  },
+  {
+    id: 'rail-curated-evening-choice',
+    name: 'Вечерний выбор',
+    description: 'Ручная подборка для позднего визита в Nomad.',
+    type: 'curated',
+    mixIds: ['mix-amber-bazaar'],
+    active: false,
+    isSystem: false,
+  },
+];
+
+let bootstrapPromise: Promise<void> | null = null;
+
 const unique = (items: string[]) => Array.from(new Set(items));
 
 const normalizeToken = (value: string) => value.trim().toLowerCase();
@@ -131,66 +158,29 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 48) || 'item';
 
-const cloneTobacco = (item: Tobacco): Tobacco => ({
-  ...item,
-  flavorProfiles: [...item.flavorProfiles],
-  flavors: [...item.flavors],
-});
+const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));
 
-const cloneMixRecord = (mix: MixRecord): MixRecord => ({
-  ...mix,
-  componentIds: [...mix.componentIds],
-  ratings: [...mix.ratings],
-});
+const parseList = (value: string | null | undefined) => {
+  if (!value) {
+    return [] as string[];
+  }
 
-const cloneRailRecord = (rail: RailRecord): RailRecord => ({
-  ...rail,
-  mixIds: [...rail.mixIds],
-});
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
 
-const cloneMixView = (mix: MixView): MixView => ({
-  ...mix,
-  componentIds: [...mix.componentIds],
-  flavorProfiles: [...mix.flavorProfiles],
-  flavors: [...mix.flavors],
-  components: mix.components.map((component) => ({
-    ...component,
-    flavors: [...component.flavors],
-  })),
-});
+    return parsed
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+};
 
-const cloneRailView = (rail: RailView): RailView => ({
-  ...rail,
-  mixIds: [...rail.mixIds],
-  mixes: rail.mixes.map(cloneMixView),
-});
-
-const defaultRails = (): RailRecord[] => [
-  {
-    id: 'rail-prepared-fresh-line',
-    name: 'Свежая линия',
-    description: 'Цитрус, мята и лёгкая прохлада для быстрого выбора.',
-    type: 'prepared',
-    mixIds: ['mix-citrus-scout', 'mix-berry-dawn'],
-    active: true,
-  },
-  {
-    id: 'rail-prepared-sweet-line',
-    name: 'Сладкая линия',
-    description: 'Десертные и мягкие сочетания для спокойного вечера.',
-    type: 'prepared',
-    mixIds: ['mix-silk-road', 'mix-peach-mirage'],
-    active: true,
-  },
-  {
-    id: 'rail-curated-evening-choice',
-    name: 'Вечерний выбор',
-    description: 'Ручная подборка для позднего визита в Nomad.',
-    type: 'curated',
-    mixIds: ['mix-amber-bazaar'],
-    active: false,
-  },
-];
+const isRailType = (value: string): value is RailType =>
+  value === 'statistical' || value === 'prepared' || value === 'curated';
 
 const mixViewSort = (left: MixView, right: MixView) => {
   if (right.avgRating !== left.avgRating) {
@@ -204,98 +194,467 @@ const mixViewSort = (left: MixView, right: MixView) => {
   return left.name.localeCompare(right.name, 'ru');
 };
 
-const getInventoryTobaccoInternal = (id: string) => inventoryTobaccos.find((item) => item.id === id) ?? null;
+const mapTobacco = (record: {
+  id: string;
+  name: string;
+  manufacturer: string;
+  flavorProfiles: string;
+  flavors: string;
+  inStock: boolean;
+}) => ({
+  id: record.id,
+  name: record.name,
+  manufacturer: record.manufacturer,
+  flavorProfiles: parseList(record.flavorProfiles),
+  flavors: parseList(record.flavors),
+  inStock: record.inStock,
+});
 
-const getMixRecordInternal = (id: string) => mixRecords.find((item) => item.id === id) ?? null;
+const getMixFlavorShape = (components: Array<{ tobacco: { flavorProfiles: string; flavors: string; flavorTags: string } }>) => ({
+  flavorProfiles: unique(components.flatMap((item) => parseList(item.tobacco.flavorProfiles))),
+  flavors: unique(components.flatMap((item) => parseList(item.tobacco.flavors))),
+  flavorTags: unique(components.flatMap((item) => parseList(item.tobacco.flavorTags))),
+});
 
-const getRailRecordInternal = (id: string) => railRecords.find((item) => item.id === id) ?? null;
-
-const getMixComponents = (mix: MixRecord) =>
-  mix.componentIds
-    .map((componentId) => getInventoryTobaccoInternal(componentId))
-    .filter((item): item is Tobacco => Boolean(item))
-    .map(cloneTobacco);
-
-const getMixRatingSummary = (mix: MixRecord) => {
-  if (mix.ratings.length) {
-    const total = mix.ratings.reduce((sum, value) => sum + value, 0);
-    return {
-      avgRating: Number((total / mix.ratings.length).toFixed(1)),
-      ratingsCount: mix.ratings.length,
+const mapMixView = (record: {
+  id: string;
+  name: string;
+  description: string;
+  available: boolean;
+  popularity: number;
+  baseAvgRating: number;
+  flavorProfiles: string;
+  flavors: string;
+  flavorTags: string;
+  components: Array<{
+    tobaccoId: string;
+    tobacco: {
+      id: string;
+      name: string;
+      manufacturer: string;
+      flavorProfiles: string;
+      flavors: string;
+      flavorTags: string;
+      inStock: boolean;
     };
-  }
+  }>;
+  ratings: Array<{ value: number }>;
+}): MixView => {
+  const componentIds = record.components.map((item) => item.tobaccoId);
+  const flavorShape = getMixFlavorShape(record.components);
+  const ratingsCount = record.ratings.length;
+  const avgRating = ratingsCount
+    ? Number((record.ratings.reduce((sum, item) => sum + item.value, 0) / ratingsCount).toFixed(1))
+    : Number(record.baseAvgRating.toFixed(1));
+  const guestVisible = record.available && record.components.every((item) => item.tobacco.inStock);
 
   return {
-    avgRating: mix.baseAvgRating,
-    ratingsCount: 0,
+    id: record.id,
+    name: record.name,
+    description: record.description,
+    componentIds,
+    flavorProfiles: flavorShape.flavorProfiles.length ? flavorShape.flavorProfiles : parseList(record.flavorProfiles),
+    flavors: flavorShape.flavors.length ? flavorShape.flavors : parseList(record.flavors),
+    flavorTags: flavorShape.flavorTags.length ? flavorShape.flavorTags : parseList(record.flavorTags),
+    components: record.components.map((item) => ({
+      id: item.tobacco.id,
+      name: item.tobacco.name,
+      manufacturer: item.tobacco.manufacturer,
+      flavors: parseList(item.tobacco.flavors),
+    })),
+    avgRating,
+    ratingsCount,
+    popularity: record.popularity,
+    available: record.available,
+    guestVisible,
   };
 };
 
-const isMixGuestVisible = (mix: MixRecord) => {
-  if (!mix.available) {
-    return false;
+const fetchMixViews = async () => {
+  const records = await prisma.nomadMix.findMany({
+    include: {
+      components: {
+        orderBy: { sortOrder: 'asc' },
+        include: {
+          tobacco: true,
+        },
+      },
+      ratings: {
+        select: {
+          value: true,
+        },
+      },
+    },
+  });
+
+  return records.map(mapMixView);
+};
+
+const validateMixComponents = async (componentIds: string[]) => {
+  const normalized = unique(componentIds.map((id) => id.trim()).filter(Boolean));
+  if (!normalized.length) {
+    return { error: 'At least one component is required', componentIds: [] as string[] };
   }
 
-  return mix.componentIds.every((componentId) => {
-    const tobacco = getInventoryTobaccoInternal(componentId);
-    return Boolean(tobacco?.inStock);
+  const tobaccos = await prisma.nomadTobacco.findMany({
+    where: {
+      id: {
+        in: normalized,
+      },
+    },
+    select: {
+      id: true,
+      flavorProfiles: true,
+      flavors: true,
+      flavorTags: true,
+    },
+  });
+
+  const missing = normalized.filter((componentId) => !tobaccos.some((item) => item.id === componentId));
+  if (missing.length) {
+    return { error: `Unknown component ids: ${missing.join(', ')}`, componentIds: [] as string[] };
+  }
+
+  return {
+    componentIds: normalized,
+    flavorProfiles: unique(tobaccos.flatMap((item) => parseList(item.flavorProfiles))),
+    flavors: unique(tobaccos.flatMap((item) => parseList(item.flavors))),
+    flavorTags: unique(tobaccos.flatMap((item) => parseList(item.flavorTags))),
+  };
+};
+
+const validateMixInput = async (payload: Partial<MixInput>) => {
+  const name = payload.name?.trim();
+  const description = payload.description?.trim();
+
+  if (!name || !description) {
+    return { error: 'Name and description are required' };
+  }
+
+  const componentValidation = await validateMixComponents(payload.componentIds ?? []);
+  if ('error' in componentValidation) {
+    return { error: componentValidation.error };
+  }
+
+  return {
+    name,
+    description,
+    componentIds: componentValidation.componentIds,
+    flavorProfiles: componentValidation.flavorProfiles,
+    flavors: componentValidation.flavors,
+    flavorTags: componentValidation.flavorTags,
+    available: payload.available ?? true,
+    popularity: typeof payload.popularity === 'number' ? payload.popularity : 0,
+    baseAvgRating: typeof payload.baseAvgRating === 'number' ? payload.baseAvgRating : 4.5,
+  };
+};
+
+const normalizeRailMixIds = async (mixIds: string[]) => {
+  const normalized = unique(mixIds.map((id) => id.trim()).filter(Boolean));
+  if (!normalized.length) {
+    return { error: 'At least one mix is required', mixIds: [] as string[] };
+  }
+
+  const mixes = await prisma.nomadMix.findMany({
+    where: {
+      id: {
+        in: normalized,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const missing = normalized.filter((mixId) => !mixes.some((item) => item.id === mixId));
+  if (missing.length) {
+    return { error: `Unknown mix ids: ${missing.join(', ')}`, mixIds: [] as string[] };
+  }
+
+  return { mixIds: normalized };
+};
+
+const validateRailInput = async (payload: Partial<RailInput>) => {
+  const name = payload.name?.trim();
+  const description = payload.description?.trim();
+  const type = payload.type;
+
+  if (!name || !description) {
+    return { error: 'Name and description are required' };
+  }
+
+  if (type && type === 'statistical') {
+    return { error: 'Statistical rails are read-only' };
+  }
+
+  const railType: Exclude<RailType, 'statistical'> = type ?? 'prepared';
+  const railMixIds = await normalizeRailMixIds(payload.mixIds ?? []);
+  if ('error' in railMixIds) {
+    return { error: railMixIds.error };
+  }
+
+  return {
+    name,
+    description,
+    type: railType,
+    mixIds: railMixIds.mixIds,
+    active: payload.active ?? true,
+  };
+};
+
+const nextMixId = async (name: string) => {
+  const prefix = `mix-${slugify(name)}`;
+  const total = await prisma.nomadMix.count({
+    where: {
+      id: {
+        startsWith: prefix,
+      },
+    },
+  });
+
+  return `${prefix}-${total + 1}`;
+};
+
+const nextRailId = async (name: string) => {
+  const prefix = `rail-${slugify(name)}`;
+  const total = await prisma.nomadRail.count({
+    where: {
+      id: {
+        startsWith: prefix,
+      },
+    },
+  });
+
+  return `${prefix}-${total + 1}`;
+};
+
+const seedNomadStorage = async () => {
+  await prisma.$transaction(async (tx) => {
+    await tx.nomadSmokeCtaEvent.deleteMany();
+    await tx.nomadMixRating.deleteMany();
+    await tx.nomadRailMix.deleteMany();
+    await tx.nomadMixComponent.deleteMany();
+    await tx.nomadRail.deleteMany();
+    await tx.nomadMix.deleteMany();
+    await tx.nomadTobacco.deleteMany();
+    await tx.nomadIntroCard.deleteMany();
+
+    await tx.nomadIntroCard.createMany({
+      data: introCards.map((card) => ({
+        id: card.id,
+        step: card.step,
+        title: card.title,
+        description: card.description,
+        bullets: serializeList(card.bullets),
+      })),
+    });
+
+    await tx.nomadTobacco.createMany({
+      data: seedTobaccos.map((tobacco) => ({
+        id: tobacco.id,
+        manufacturer: tobacco.manufacturer,
+        name: tobacco.name,
+        description: null,
+        flavorProfiles: serializeList(tobacco.flavorProfiles),
+        flavors: serializeList(tobacco.flavors),
+        flavorTags: '[]',
+        inStock: tobacco.inStock,
+      })),
+    });
+
+    await tx.nomadMix.createMany({
+      data: seedMixes.map((mix) => {
+        const components = mix.componentIds
+          .map((componentId) => seedTobaccos.find((item) => item.id === componentId))
+          .filter((item): item is (typeof seedTobaccos)[number] => Boolean(item));
+
+        return {
+          id: mix.id,
+          name: mix.name,
+          description: mix.description,
+          flavorProfiles: serializeList(unique(components.flatMap((item) => item.flavorProfiles))),
+          flavors: serializeList(unique(components.flatMap((item) => item.flavors))),
+          flavorTags: '[]',
+          available: true,
+          popularity: mix.popularity,
+          baseAvgRating: mix.avgRating,
+        };
+      }),
+    });
+
+    await tx.nomadMixComponent.createMany({
+      data: seedMixes.flatMap((mix) =>
+        mix.componentIds.map((componentId, index) => ({
+          mixId: mix.id,
+          tobaccoId: componentId,
+          proportion: Math.round(100 / Math.max(1, mix.componentIds.length)),
+          sortOrder: index,
+        })),
+      ),
+    });
+
+    await tx.nomadRail.createMany({
+      data: defaultRails.map((rail) => ({
+        id: rail.id,
+        name: rail.name,
+        description: rail.description,
+        type: rail.type,
+        active: rail.active,
+        isSystem: rail.isSystem,
+      })),
+    });
+
+    await tx.nomadRailMix.createMany({
+      data: defaultRails.flatMap((rail) =>
+        rail.mixIds.map((mixId, index) => ({
+          railId: rail.id,
+          mixId,
+          sortOrder: index,
+        })),
+      ),
+    });
   });
 };
 
-const buildMixView = (mix: MixRecord): MixView => {
-  const components = getMixComponents(mix);
-  const flavorProfiles = unique(components.flatMap((item) => item.flavorProfiles));
-  const flavors = unique(components.flatMap((item) => item.flavors));
-  const summary = getMixRatingSummary(mix);
+export const ensureNomadState = async () => {
+  if (bootstrapPromise) {
+    await bootstrapPromise;
+    return;
+  }
 
-  return {
-    id: mix.id,
-    name: mix.name,
-    description: mix.description,
-    componentIds: [...mix.componentIds],
-    flavorProfiles,
-    flavors,
-    components: components.map((item) => ({
-      id: item.id,
-      name: item.name,
-      manufacturer: item.manufacturer,
-      flavors: [...item.flavors],
-    })),
-    avgRating: summary.avgRating,
-    ratingsCount: summary.ratingsCount,
-    popularity: mix.popularity,
-    available: mix.available,
-    guestVisible: isMixGuestVisible(mix),
-  };
+  bootstrapPromise = (async () => {
+    const tobaccoCount = await prisma.nomadTobacco.count();
+    if (!tobaccoCount) {
+      await seedNomadStorage();
+    }
+  })();
+
+  try {
+    await bootstrapPromise;
+  } finally {
+    bootstrapPromise = null;
+  }
 };
 
-const buildMixViews = (mixes: MixRecord[], filter?: (mix: MixRecord, view: MixView) => boolean) => {
-  return mixes
-    .map((mix) => {
-      const view = buildMixView(mix);
-      return filter && !filter(mix, view) ? null : view;
+export const resetNomadState = async () => {
+  await seedNomadStorage();
+};
+
+export const getGuestIntroCards = async () => {
+  await ensureNomadState();
+
+  const records = await prisma.nomadIntroCard.findMany({
+    orderBy: {
+      step: 'asc',
+    },
+  });
+
+  return records.map((record) => ({
+    id: record.id,
+    step: record.step,
+    title: record.title,
+    description: record.description,
+    bullets: parseList(record.bullets),
+  }));
+};
+
+export const getInventoryTobaccos = async () => {
+  await ensureNomadState();
+
+  const records = await prisma.nomadTobacco.findMany({
+    orderBy: [
+      { inStock: 'desc' },
+      { name: 'asc' },
+    ],
+  });
+
+  return records.map(mapTobacco);
+};
+
+export const getTobaccoById = async (id: string) => {
+  await ensureNomadState();
+
+  const tobacco = await prisma.nomadTobacco.findUnique({
+    where: { id },
+  });
+
+  return tobacco ? mapTobacco(tobacco) : null;
+};
+
+export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadTobacco.findUnique({
+    where: { id },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const updated = await prisma.nomadTobacco.update({
+    where: { id },
+    data: { inStock },
+  });
+
+  return mapTobacco(updated);
+};
+
+export const getAvailableMixCatalog = async () => {
+  await ensureNomadState();
+  return (await fetchMixViews()).sort(mixViewSort);
+};
+
+export const getMixById = async (id: string) => {
+  const mixes = await getAvailableMixCatalog();
+  return mixes.find((mix) => mix.id === id) ?? null;
+};
+
+export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flavors?: string[] }) => {
+  const profiles = unique((filters?.profiles ?? []).map(normalizeToken).filter(Boolean));
+  const flavors = unique((filters?.flavors ?? []).map(normalizeToken).filter(Boolean));
+
+  return (await getAvailableMixCatalog())
+    .filter((mix) => mix.guestVisible)
+    .filter((mix) => {
+      const profileMatches = !profiles.length || mix.flavorProfiles.some((profile) => profiles.includes(normalizeToken(profile)));
+      const flavorMatches = !flavors.length || mix.flavors.some((flavor) => flavors.includes(normalizeToken(flavor)));
+      return profileMatches && flavorMatches;
     })
-    .filter((item): item is MixView => Boolean(item))
-    .map(cloneMixView);
+    .sort((left, right) => {
+      const leftMatches = [
+        ...left.flavorProfiles.map(normalizeToken).filter((profile) => profiles.includes(profile)),
+        ...left.flavors.map(normalizeToken).filter((flavor) => flavors.includes(flavor)),
+      ].length;
+      const rightMatches = [
+        ...right.flavorProfiles.map(normalizeToken).filter((profile) => profiles.includes(profile)),
+        ...right.flavors.map(normalizeToken).filter((flavor) => flavors.includes(flavor)),
+      ].length;
+
+      if (rightMatches !== leftMatches) {
+        return rightMatches - leftMatches;
+      }
+
+      return mixViewSort(left, right);
+    });
 };
 
-const getMixByIds = (mixIds: string[], guestOnly: boolean) => {
-  const selected = mixIds
-    .map((id) => getMixRecordInternal(id))
-    .filter((item): item is MixRecord => Boolean(item))
-    .map(buildMixView)
-    .filter((view) => (guestOnly ? view.guestVisible : true));
+const buildStatisticalRail = async (): Promise<RailView> => {
+  const [mixes, events] = await Promise.all([
+    getAvailableMixCatalog(),
+    prisma.nomadSmokeCtaEvent.findMany({
+      select: {
+        mixId: true,
+      },
+    }),
+  ]);
 
-  return selected.sort(mixViewSort).map(cloneMixView);
-};
-
-const buildStatisticalRail = (): RailView => {
-  const counts = smokeCtaEvents.reduce<Record<string, number>>((acc, event) => {
+  const counts = events.reduce<Record<string, number>>((acc, event) => {
     acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
     return acc;
   }, {});
 
-  const ranked = getAvailableMixCatalog()
+  const ranked = mixes
     .filter((mix) => mix.guestVisible)
     .map((mix) => ({
       mix,
@@ -326,349 +685,313 @@ const buildStatisticalRail = (): RailView => {
     type: 'statistical',
     active: true,
     mixIds: ranked.map((mix) => mix.id),
-    mixes: ranked.map(cloneMixView),
+    mixes: ranked,
     isSystem: true,
   };
 };
 
-const buildRailView = (rail: RailRecord, guestOnly: boolean): RailView => ({
-  id: rail.id,
-  name: rail.name,
-  description: rail.description,
-  type: rail.type,
-  active: rail.active,
-  mixIds: [...rail.mixIds],
-  mixes: getMixByIds(rail.mixIds, guestOnly),
-  isSystem: false,
-});
+const buildRailViews = async (guestOnly: boolean) => {
+  await ensureNomadState();
 
-const initialMixRecords = (): MixRecord[] =>
-  seedMixes.map((mix) => ({
-    id: mix.id,
-    name: mix.name,
-    description: mix.description,
-    componentIds: [...mix.componentIds],
-    popularity: mix.popularity,
-    baseAvgRating: mix.avgRating,
-    available: true,
-    ratings: [],
-  }));
+  const [mixes, rails] = await Promise.all([
+    getAvailableMixCatalog(),
+    prisma.nomadRail.findMany({
+      where: guestOnly
+        ? {
+            active: true,
+            isSystem: false,
+          }
+        : undefined,
+      include: {
+        mixes: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+      },
+      orderBy: [
+        { active: 'desc' },
+        { updatedAt: 'desc' },
+      ],
+    }),
+  ]);
 
-const initialInventoryTobaccos = (): Tobacco[] => tobaccos.map(cloneTobacco);
+  const mixMap = new Map(mixes.map((mix) => [mix.id, mix]));
 
-const initialRailRecords = (): RailRecord[] => defaultRails().map(cloneRailRecord);
+  return rails
+    .filter((rail) => !rail.isSystem)
+    .map((rail) => {
+      const type = isRailType(rail.type) ? rail.type : 'prepared';
+      const mixIds = rail.mixes.map((item) => item.mixId);
+      const railMixes = mixIds
+        .map((mixId) => mixMap.get(mixId))
+        .filter((mix): mix is MixView => Boolean(mix))
+        .filter((mix) => (guestOnly ? mix.guestVisible : true));
 
-let mixRecords = initialMixRecords();
-let inventoryTobaccos = initialInventoryTobaccos();
-let railRecords = initialRailRecords();
-let smokeCtaEvents: SmokeCtaEvent[] = [];
-let mixSequence = 1;
-let railSequence = 1;
-
-export const resetNomadState = () => {
-  mixRecords = initialMixRecords();
-  inventoryTobaccos = initialInventoryTobaccos();
-  railRecords = initialRailRecords();
-  smokeCtaEvents = [];
-  mixSequence = 1;
-  railSequence = 1;
+      return {
+        id: rail.id,
+        name: rail.name,
+        description: rail.description,
+        type,
+        active: rail.active,
+        mixIds,
+        mixes: railMixes,
+        isSystem: rail.isSystem,
+      } satisfies RailView;
+    });
 };
 
-export const getGuestIntroCards = () => introCards.map((card) => ({ ...card, bullets: [...card.bullets] }));
-
-export const getInventoryTobaccos = () => inventoryTobaccos.map(cloneTobacco);
-
-export const getTobaccoById = (id: string) => {
-  const tobacco = getInventoryTobaccoInternal(id);
-  return tobacco ? cloneTobacco(tobacco) : null;
+export const getGuestHomeRails = async () => {
+  const rails = [await buildStatisticalRail(), ...(await buildRailViews(true))];
+  return rails.filter((rail) => rail.type === 'statistical' || rail.mixes.length > 0);
 };
 
-export const updateTobaccoInStock = (id: string, inStock: boolean) => {
-  const tobacco = getInventoryTobaccoInternal(id);
-  if (!tobacco) {
+export const getStaffMixes = async () => getAvailableMixCatalog();
+
+export const createMix = async (payload: Partial<MixInput>) => {
+  await ensureNomadState();
+
+  const validated = await validateMixInput(payload);
+  if ('error' in validated) {
+    return validated;
+  }
+
+  const id = await nextMixId(validated.name);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.nomadMix.create({
+      data: {
+        id,
+        name: validated.name,
+        description: validated.description,
+        flavorProfiles: serializeList(validated.flavorProfiles),
+        flavors: serializeList(validated.flavors),
+        flavorTags: serializeList(validated.flavorTags),
+        available: validated.available,
+        popularity: validated.popularity,
+        baseAvgRating: validated.baseAvgRating,
+      },
+    });
+
+    await tx.nomadMixComponent.createMany({
+      data: validated.componentIds.map((componentId, index) => ({
+        mixId: id,
+        tobaccoId: componentId,
+        proportion: Math.round(100 / Math.max(1, validated.componentIds.length)),
+        sortOrder: index,
+      })),
+    });
+  });
+
+  return getMixById(id);
+};
+
+export const updateMix = async (id: string, payload: MixPatch) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadMix.findUnique({
+    where: { id },
+    include: {
+      components: {
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+
+  if (!current) {
     return null;
   }
 
-  tobacco.inStock = inStock;
-  return cloneTobacco(tobacco);
-};
+  const nextName = typeof payload.name === 'string' ? payload.name.trim() : current.name;
+  const nextDescription = typeof payload.description === 'string' ? payload.description.trim() : current.description;
 
-export const getAvailableMixCatalog = () => mixRecords.map(buildMixView).map(cloneMixView);
-
-export const getMixById = (id: string) => {
-  const mix = getMixRecordInternal(id);
-  return mix ? buildMixView(mix) : null;
-};
-
-export const getGuestCatalogMixes = (filters?: { profiles?: string[]; flavors?: string[] }) => {
-  const profiles = unique((filters?.profiles ?? []).map(normalizeToken).filter(Boolean));
-  const flavors = unique((filters?.flavors ?? []).map(normalizeToken).filter(Boolean));
-
-  return getAvailableMixCatalog()
-    .filter((mix) => mix.guestVisible)
-    .filter((mix) => {
-      const profileMatches = !profiles.length || mix.flavorProfiles.some((profile) => profiles.includes(normalizeToken(profile)));
-      const flavorMatches = !flavors.length || mix.flavors.some((flavor) => flavors.includes(normalizeToken(flavor)));
-      return profileMatches && flavorMatches;
-    })
-    .sort((left, right) => {
-      const leftMatches = [
-        ...left.flavorProfiles.map(normalizeToken).filter((profile) => profiles.includes(profile)),
-        ...left.flavors.map(normalizeToken).filter((flavor) => flavors.includes(flavor)),
-      ].length;
-      const rightMatches = [
-        ...right.flavorProfiles.map(normalizeToken).filter((profile) => profiles.includes(profile)),
-        ...right.flavors.map(normalizeToken).filter((flavor) => flavors.includes(flavor)),
-      ].length;
-
-      if (rightMatches !== leftMatches) {
-        return rightMatches - leftMatches;
-      }
-
-      return mixViewSort(left, right);
-    })
-    .map(cloneMixView);
-};
-
-export const getGuestHomeRails = () => {
-  const rails = [buildStatisticalRail(), ...railRecords.filter((rail) => rail.active).map((rail) => buildRailView(rail, true))];
-  return rails.filter((rail) => rail.type === 'statistical' || rail.mixes.length > 0).map(cloneRailView);
-};
-
-export const getStaffMixes = () => mixRecords.map(buildMixView).map(cloneMixView);
-
-const validateMixComponents = (componentIds: string[]) => {
-  const normalized = unique(componentIds.map((id) => id.trim()).filter(Boolean));
-  if (!normalized.length) {
-    return { error: 'At least one component is required', componentIds: [] as string[] };
-  }
-
-  const missing = normalized.filter((componentId) => !getInventoryTobaccoInternal(componentId));
-  if (missing.length) {
-    return { error: `Unknown component ids: ${missing.join(', ')}`, componentIds: [] as string[] };
-  }
-
-  return { componentIds: normalized };
-};
-
-const validateMixInput = (payload: Partial<MixInput>) => {
-  const name = payload.name?.trim();
-  const description = payload.description?.trim();
-
-  if (!name || !description) {
+  if (!nextName || !nextDescription) {
     return { error: 'Name and description are required' };
   }
 
-  const componentValidation = validateMixComponents(payload.componentIds ?? []);
+  const nextComponentIds = Array.isArray(payload.componentIds)
+    ? payload.componentIds
+    : current.components.map((item) => item.tobaccoId);
+  const componentValidation = await validateMixComponents(nextComponentIds);
   if ('error' in componentValidation) {
     return { error: componentValidation.error };
   }
 
-  return {
-    name,
-    description,
-    componentIds: componentValidation.componentIds,
-    available: payload.available ?? true,
-    popularity: typeof payload.popularity === 'number' ? payload.popularity : 0,
-    baseAvgRating: typeof payload.baseAvgRating === 'number' ? payload.baseAvgRating : 4.5,
-  };
+  await prisma.$transaction(async (tx) => {
+    await tx.nomadMix.update({
+      where: { id },
+      data: {
+        name: nextName,
+        description: nextDescription,
+        flavorProfiles: serializeList(componentValidation.flavorProfiles),
+        flavors: serializeList(componentValidation.flavors),
+        flavorTags: serializeList(componentValidation.flavorTags),
+        available: typeof payload.available === 'boolean' ? payload.available : current.available,
+        popularity: typeof payload.popularity === 'number' ? payload.popularity : current.popularity,
+        baseAvgRating: typeof payload.baseAvgRating === 'number' ? payload.baseAvgRating : current.baseAvgRating,
+      },
+    });
+
+    if (Array.isArray(payload.componentIds)) {
+      await tx.nomadMixComponent.deleteMany({
+        where: { mixId: id },
+      });
+
+      await tx.nomadMixComponent.createMany({
+        data: componentValidation.componentIds.map((componentId, index) => ({
+          mixId: id,
+          tobaccoId: componentId,
+          proportion: Math.round(100 / Math.max(1, componentValidation.componentIds.length)),
+          sortOrder: index,
+        })),
+      });
+    }
+  });
+
+  return getMixById(id);
 };
 
-const nextMixId = (name: string) => `mix-${slugify(name)}-${mixSequence++}`;
+export const getStaffRails = async () => [await buildStatisticalRail(), ...(await buildRailViews(false))];
 
-export const createMix = (payload: Partial<MixInput>) => {
-  const validated = validateMixInput(payload);
+export const createRail = async (payload: Partial<RailInput>) => {
+  await ensureNomadState();
+
+  const validated = await validateRailInput(payload);
   if ('error' in validated) {
     return validated;
   }
 
-  const mix: MixRecord = {
-    id: nextMixId(validated.name),
-    name: validated.name,
-    description: validated.description,
-    componentIds: [...validated.componentIds],
-    popularity: validated.popularity,
-    baseAvgRating: validated.baseAvgRating,
-    available: validated.available,
-    ratings: [],
-  };
+  const id = await nextRailId(validated.name);
 
-  mixRecords = [mix, ...mixRecords];
-  return buildMixView(mix);
+  await prisma.$transaction(async (tx) => {
+    await tx.nomadRail.create({
+      data: {
+        id,
+        name: validated.name,
+        description: validated.description,
+        type: validated.type,
+        active: validated.active,
+        isSystem: false,
+      },
+    });
+
+    await tx.nomadRailMix.createMany({
+      data: validated.mixIds.map((mixId, index) => ({
+        railId: id,
+        mixId,
+        sortOrder: index,
+      })),
+    });
+  });
+
+  return (await getStaffRails()).find((rail) => rail.id === id) ?? null;
 };
 
-export const updateMix = (id: string, payload: MixPatch) => {
-  const mix = getMixRecordInternal(id);
-  if (!mix) {
-    return null;
-  }
+export const updateRail = async (id: string, payload: RailPatch) => {
+  await ensureNomadState();
 
-  if (typeof payload.name === 'string') {
-    const nextName = payload.name.trim();
-    if (!nextName) {
-      return { error: 'Name cannot be empty' };
-    }
-    mix.name = nextName;
-  }
-
-  if (typeof payload.description === 'string') {
-    const nextDescription = payload.description.trim();
-    if (!nextDescription) {
-      return { error: 'Description cannot be empty' };
-    }
-    mix.description = nextDescription;
-  }
-
-  if (Array.isArray(payload.componentIds)) {
-    const componentValidation = validateMixComponents(payload.componentIds);
-    if ('error' in componentValidation) {
-      return { error: componentValidation.error };
-    }
-    mix.componentIds = componentValidation.componentIds;
-  }
-
-  if (typeof payload.available === 'boolean') {
-    mix.available = payload.available;
-  }
-
-  if (typeof payload.popularity === 'number') {
-    mix.popularity = payload.popularity;
-  }
-
-  if (typeof payload.baseAvgRating === 'number') {
-    mix.baseAvgRating = payload.baseAvgRating;
-  }
-
-  return buildMixView(mix);
-};
-
-const normalizeRailMixIds = (mixIds: string[]) => {
-  const normalized = unique(mixIds.map((id) => id.trim()).filter(Boolean));
-  if (!normalized.length) {
-    return { error: 'At least one mix is required', mixIds: [] as string[] };
-  }
-
-  const missing = normalized.filter((mixId) => !getMixRecordInternal(mixId));
-  if (missing.length) {
-    return { error: `Unknown mix ids: ${missing.join(', ')}`, mixIds: [] as string[] };
-  }
-
-  return { mixIds: normalized };
-};
-
-const validateRailInput = (payload: Partial<RailInput>) => {
-  const name = payload.name?.trim();
-  const description = payload.description?.trim();
-  const type = payload.type;
-
-  if (!name || !description) {
-    return { error: 'Name and description are required' };
-  }
-
-  if (type && type === 'statistical') {
-    return { error: 'Statistical rails are read-only' };
-  }
-
-  const railType: Exclude<RailType, 'statistical'> = type ?? 'prepared';
-  const railMixIds = normalizeRailMixIds(payload.mixIds ?? []);
-  if ('error' in railMixIds) {
-    return { error: railMixIds.error };
-  }
-
-  return {
-    name,
-    description,
-    type: railType,
-    mixIds: railMixIds.mixIds,
-    active: payload.active ?? true,
-  };
-};
-
-const nextRailId = (name: string) => `rail-${slugify(name)}-${railSequence++}`;
-
-export const createRail = (payload: Partial<RailInput>) => {
-  const validated = validateRailInput(payload);
-  if ('error' in validated) {
-    return validated;
-  }
-
-  const rail: RailRecord = {
-    id: nextRailId(validated.name),
-    name: validated.name,
-    description: validated.description,
-    type: validated.type,
-    mixIds: [...validated.mixIds],
-    active: validated.active,
-  };
-
-  railRecords = [rail, ...railRecords];
-  return buildRailView(rail, false);
-};
-
-export const updateRail = (id: string, payload: RailPatch) => {
   if (id === 'rail-statistical-top') {
     return { error: 'Statistical rail is read-only' };
   }
 
-  const rail = getRailRecordInternal(id);
-  if (!rail) {
+  const current = await prisma.nomadRail.findUnique({
+    where: { id },
+    include: {
+      mixes: {
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+
+  if (!current) {
     return null;
   }
 
-  if (typeof payload.name === 'string') {
-    const nextName = payload.name.trim();
-    if (!nextName) {
-      return { error: 'Name cannot be empty' };
+  const nextName = typeof payload.name === 'string' ? payload.name.trim() : current.name;
+  const nextDescription = typeof payload.description === 'string' ? payload.description.trim() : current.description;
+
+  if (!nextName || !nextDescription) {
+    return { error: 'Name and description are required' };
+  }
+
+  const nextType = payload.type ?? (isRailType(current.type) ? current.type : 'prepared');
+  if (nextType === 'statistical') {
+    return { error: 'Statistical rails are read-only' };
+  }
+
+  const nextMixIds = Array.isArray(payload.mixIds)
+    ? payload.mixIds
+    : current.mixes.map((item) => item.mixId);
+  const railMixIds = await normalizeRailMixIds(nextMixIds);
+  if ('error' in railMixIds) {
+    return { error: railMixIds.error };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.nomadRail.update({
+      where: { id },
+      data: {
+        name: nextName,
+        description: nextDescription,
+        type: nextType,
+        active: typeof payload.active === 'boolean' ? payload.active : current.active,
+      },
+    });
+
+    if (Array.isArray(payload.mixIds)) {
+      await tx.nomadRailMix.deleteMany({
+        where: { railId: id },
+      });
+
+      await tx.nomadRailMix.createMany({
+        data: railMixIds.mixIds.map((mixId, index) => ({
+          railId: id,
+          mixId,
+          sortOrder: index,
+        })),
+      });
     }
-    rail.name = nextName;
-  }
+  });
 
-  if (typeof payload.description === 'string') {
-    const nextDescription = payload.description.trim();
-    if (!nextDescription) {
-      return { error: 'Description cannot be empty' };
-    }
-    rail.description = nextDescription;
-  }
-
-  if (payload.type) {
-    if (payload.type === 'statistical') {
-      return { error: 'Statistical rails are read-only' };
-    }
-    rail.type = payload.type;
-  }
-
-  if (Array.isArray(payload.mixIds)) {
-    const railMixIds = normalizeRailMixIds(payload.mixIds);
-    if ('error' in railMixIds) {
-      return { error: railMixIds.error };
-    }
-    rail.mixIds = railMixIds.mixIds;
-  }
-
-  if (typeof payload.active === 'boolean') {
-    rail.active = payload.active;
-  }
-
-  return buildRailView(rail, false);
+  return (await getStaffRails()).find((rail) => rail.id === id) ?? null;
 };
 
-export const getStaffRails = () => [buildStatisticalRail(), ...railRecords.map((rail) => buildRailView(rail, false))].map(cloneRailView);
+export const recordSmokeCtaEvent = async (mixId: string) => {
+  await ensureNomadState();
 
-export const recordSmokeCtaEvent = (mixId: string) => {
-  const event = {
-    mixId,
-    createdAt: new Date().toISOString(),
-  };
+  const event = await prisma.nomadSmokeCtaEvent.create({
+    data: { mixId },
+  });
 
-  smokeCtaEvents.push(event);
-  return event;
+  return {
+    mixId: event.mixId,
+    createdAt: event.createdAt.toISOString(),
+  } satisfies SmokeCtaEvent;
 };
 
-export const getSmokeCtaEvents = () => smokeCtaEvents.slice();
+export const getSmokeCtaEvents = async () => {
+  await ensureNomadState();
 
-export const rateMix = (id: string, value: number) => {
-  const mix = getMixRecordInternal(id);
+  const events = await prisma.nomadSmokeCtaEvent.findMany({
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  return events.map((event) => ({
+    mixId: event.mixId,
+    createdAt: event.createdAt.toISOString(),
+  }));
+};
+
+export const rateMix = async (id: string, value: number) => {
+  await ensureNomadState();
+
+  const mix = await prisma.nomadMix.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
   if (!mix) {
     return null;
   }
@@ -677,13 +1000,28 @@ export const rateMix = (id: string, value: number) => {
     return { error: 'Rating value must be between 1 and 5' };
   }
 
-  mix.ratings.push(value);
-  return buildMixView(mix);
+  await prisma.nomadMixRating.create({
+    data: {
+      mixId: id,
+      value,
+      source: 'guest',
+    },
+  });
+
+  return getMixById(id);
 };
 
-export const getInventorySummary = () => {
-  const total = inventoryTobaccos.length;
-  const inStockCount = inventoryTobaccos.filter((item) => item.inStock).length;
+export const getInventorySummary = async () => {
+  await ensureNomadState();
+
+  const [total, inStockCount] = await Promise.all([
+    prisma.nomadTobacco.count(),
+    prisma.nomadTobacco.count({
+      where: {
+        inStock: true,
+      },
+    }),
+  ]);
 
   return {
     total,
@@ -692,13 +1030,24 @@ export const getInventorySummary = () => {
   };
 };
 
-export const getSmokeCtaSummary = () => {
-  const counts = smokeCtaEvents.reduce<Record<string, number>>((acc, event) => {
+export const getSmokeCtaSummary = async () => {
+  await ensureNomadState();
+
+  const [mixes, events] = await Promise.all([
+    getAvailableMixCatalog(),
+    prisma.nomadSmokeCtaEvent.findMany({
+      select: {
+        mixId: true,
+      },
+    }),
+  ]);
+
+  const counts = events.reduce<Record<string, number>>((acc, event) => {
     acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
     return acc;
   }, {});
 
-  const topMixes = getAvailableMixCatalog()
+  const topMixes = mixes
     .map((mix) => ({
       mixId: mix.id,
       mixName: mix.name,
@@ -719,7 +1068,7 @@ export const getSmokeCtaSummary = () => {
     });
 
   return {
-    smokeCtaTotal: smokeCtaEvents.length,
+    smokeCtaTotal: events.length,
     topMixes,
   };
 };

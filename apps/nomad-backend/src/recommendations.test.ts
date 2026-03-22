@@ -4,25 +4,25 @@ import { buildApp } from './app';
 import { resetNomadState } from './state';
 import { getInStockMixes, getOnboardingOptions, getRecommendations } from './recommendations';
 
-test.beforeEach(() => {
-  resetNomadState();
+test.beforeEach(async () => {
+  await resetNomadState();
 });
 
-test('onboarding options include only in-stock profiles and flavors', () => {
-  const options = getOnboardingOptions();
+test('onboarding options include only in-stock profiles and flavors', async () => {
+  const options = await getOnboardingOptions();
 
   assert.equal(options.profiles.includes('fresh'), true);
   assert.equal(options.flavors.includes('персик'), false);
 });
 
-test('recommendations exclude mixes with out-of-stock components', () => {
-  const recommendationIds = getInStockMixes().map((item) => item.id);
+test('recommendations exclude mixes with out-of-stock components', async () => {
+  const recommendationIds = (await getInStockMixes()).map((item) => item.id);
 
   assert.equal(recommendationIds.includes('mix-peach-mirage'), false);
 });
 
-test('recommendations rank citrus and fresh mix first for matching onboarding', () => {
-  const recommendations = getRecommendations({
+test('recommendations rank citrus and fresh mix first for matching onboarding', async () => {
+  const recommendations = await getRecommendations({
     likedProfiles: ['fresh', 'citrus'],
     likedFlavors: ['лимон', 'мята'],
   });
