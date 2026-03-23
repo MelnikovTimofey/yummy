@@ -95,6 +95,28 @@ export type StaffAccountMutationResponse = {
   item: StaffAccountView;
 };
 
+export type AutomationDailyCodeWindow = {
+  startsAt: string;
+  endsAt: string;
+};
+
+export type AutomationDailyCodeCurrentResponse = {
+  item: DailyAccessCodeView | null;
+  window: AutomationDailyCodeWindow;
+};
+
+export type AutomationDailyCodeEnsureResponse = {
+  item: DailyAccessCodeView;
+  window: AutomationDailyCodeWindow;
+  state: 'existing' | 'created';
+};
+
+export type AutomationDailyCodeRotateResponse = {
+  item: DailyAccessCodeView;
+  window: AutomationDailyCodeWindow;
+  state: 'rotated';
+};
+
 export type StaffMixMutationResponse = {
   item: MixView;
 };

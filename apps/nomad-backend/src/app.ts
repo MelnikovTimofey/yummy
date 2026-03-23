@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from './config';
+import { getNomadDailyCodeWindow } from './daily-code';
 import {
   createStaffToken,
   resolveStaffSession,
@@ -13,8 +14,11 @@ import {
   createStaffAccount,
   deleteDailyAccessCode,
   deleteStaffAccount,
+  ensureCurrentDailyAccessCode,
+  getCurrentDailyAccessCode,
   listDailyAccessCodes,
   listStaffAccounts,
+  rotateCurrentDailyAccessCode,
   updateDailyAccessCode,
   updateStaffAccount,
 } from './access';
@@ -40,6 +44,9 @@ import {
 } from './state';
 import type {
   ApiError,
+  AutomationDailyCodeCurrentResponse,
+  AutomationDailyCodeEnsureResponse,
+  AutomationDailyCodeRotateResponse,
   GuestAccessSuccess,
   GuestCatalogMixesResponse,
   GuestHomeRailsResponse,
@@ -84,6 +91,7 @@ export const buildApp = () => {
       'guest-events',
       'guest-ratings',
       'inventory',
+      'automation',
       'staff-access',
       'staff-mixes',
       'staff-rails',
@@ -98,6 +106,9 @@ export const buildApp = () => {
       guestHomeRails: 'GET /guest/home/rails',
       guestMixRating: 'POST /guest/mixes/:id/rating',
       smokeCtaEvent: 'POST /guest/events/smoke-cta',
+      automationCurrentDailyCode: 'GET /automation/daily-code/current',
+      automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
+      automationRotateDailyCode: 'POST /automation/daily-code/rotate',
       inventoryList: 'GET /staff/inventory/tobaccos',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
@@ -235,6 +246,59 @@ export const buildApp = () => {
       mixId,
       mixName: mix.name,
     });
+  });
+
+  app.get('/automation/daily-code/current', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const window = getNomadDailyCodeWindow();
+    const response: AutomationDailyCodeCurrentResponse = {
+      item: await getCurrentDailyAccessCode(),
+      window: {
+        startsAt: window.startsAt.toISOString(),
+        endsAt: window.endsAt.toISOString(),
+      },
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/automation/daily-code/ensure', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const result = await ensureCurrentDailyAccessCode();
+    const response: AutomationDailyCodeEnsureResponse = {
+      item: result.dailyCode,
+      state: result.state,
+      window: {
+        startsAt: result.window.startsAt.toISOString(),
+        endsAt: result.window.endsAt.toISOString(),
+      },
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/automation/daily-code/rotate', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const result = await rotateCurrentDailyAccessCode();
+    const response: AutomationDailyCodeRotateResponse = {
+      item: result.dailyCode,
+      state: result.state,
+      window: {
+        startsAt: result.window.startsAt.toISOString(),
+        endsAt: result.window.endsAt.toISOString(),
+      },
+    };
+
+    return reply.send(response);
   });
 
   app.post('/guest/mixes/:id/rating', async (request, reply) => {
@@ -849,4 +913,18 @@ const authenticateStaffRequest = async (request: FastifyRequest, reply: FastifyR
   }
 
   return user;
+};
+
+const AUTOMATION_HEADER = 'x-nomad-automation-key';
+
+const authenticateAutomationRequest = (request: FastifyRequest, reply: FastifyReply) => {
+  const header = request.headers[AUTOMATION_HEADER];
+  const key = Array.isArray(header) ? header[0] : header;
+
+  if (key !== config.automationKey) {
+    reply.status(401).send({ error: 'Invalid automation key' } satisfies ApiError);
+    return false;
+  }
+
+  return true;
 };

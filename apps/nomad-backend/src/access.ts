@@ -1,5 +1,7 @@
+import crypto from 'node:crypto';
 import { createSecretHash, type StaffRole } from './auth';
 import { prisma } from './db';
+import { createNomadDailyCodeValue, getNomadDailyCodeWindow } from './daily-code';
 import { ensureNomadState } from './state';
 
 export type DailyAccessCodeView = {
@@ -43,22 +45,8 @@ type StaffAccountInput = {
 
 type StaffAccountPatch = Partial<StaffAccountInput>;
 
-const createCurrentCodeWindow = () => {
-  const now = new Date();
-  const startsAt = new Date(now);
-  startsAt.setHours(0, 0, 0, 0);
-
-  const endsAt = new Date(startsAt);
-  endsAt.setDate(endsAt.getDate() + 1);
-
-  return {
-    startsAt,
-    endsAt,
-  };
-};
-
 const normalizeDateRange = (startsAt?: Date, endsAt?: Date) => {
-  const currentWindow = createCurrentCodeWindow();
+  const currentWindow = getNomadDailyCodeWindow();
   const nextStartsAt = startsAt ?? currentWindow.startsAt;
   const nextEndsAt = endsAt ?? currentWindow.endsAt;
 
@@ -141,6 +129,24 @@ const mapStaffAccount = (record: {
 
 const isUniqueConstraintError = (error: unknown) =>
   Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2002');
+
+const dailyCodeWindowFilter = (window = getNomadDailyCodeWindow()) => ({
+  active: true,
+  startsAt: {
+    lt: window.endsAt,
+  },
+  endsAt: {
+    gt: window.startsAt,
+  },
+});
+
+const createAutomationSecret = (value: string) => {
+  const salt = crypto.randomUUID();
+  return {
+    salt,
+    hash: createSecretHash(value, salt),
+  };
+};
 
 export const listDailyAccessCodes = async () => {
   await ensureNomadState();
@@ -273,6 +279,117 @@ export const deleteDailyAccessCode = async (id: string) => {
   });
 
   return true;
+};
+
+export const getCurrentDailyAccessCode = async () => {
+  await ensureNomadState();
+
+  const window = getNomadDailyCodeWindow();
+  const records = await prisma.nomadDailyAccessCode.findMany({
+    where: dailyCodeWindowFilter(window),
+    orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
+  });
+
+  return records[0] ? mapDailyAccessCode(records[0]) : null;
+};
+
+export const ensureCurrentDailyAccessCode = async () => {
+  await ensureNomadState();
+
+  const window = getNomadDailyCodeWindow();
+  const records = await prisma.nomadDailyAccessCode.findMany({
+    where: dailyCodeWindowFilter(window),
+    orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
+  });
+
+  if (records[0]) {
+    if (records.length > 1) {
+      await prisma.nomadDailyAccessCode.updateMany({
+        where: {
+          id: {
+            in: records.slice(1).map((record) => record.id),
+          },
+        },
+        data: {
+          active: false,
+        },
+      });
+    }
+
+    return {
+      dailyCode: mapDailyAccessCode(records[0]),
+      state: 'existing' as const,
+      window,
+    };
+  }
+
+  const codeValue = createNomadDailyCodeValue(window.startsAt);
+  const secret = createAutomationSecret(codeValue);
+  const created = await prisma.nomadDailyAccessCode.create({
+    data: {
+      id: `daily-code-${codeValue.toLowerCase()}`,
+      codeValue,
+      codeLabel: 'Автоматический daily code',
+      codeHash: secret.hash,
+      codeSalt: secret.salt,
+      active: true,
+      startsAt: window.startsAt,
+      endsAt: window.endsAt,
+    },
+  });
+
+  return {
+    dailyCode: mapDailyAccessCode(created),
+    state: 'created' as const,
+    window,
+  };
+};
+
+export const rotateCurrentDailyAccessCode = async () => {
+  await ensureNomadState();
+
+  const window = getNomadDailyCodeWindow();
+
+  return prisma.$transaction(async (tx) => {
+    const records = await tx.nomadDailyAccessCode.findMany({
+      where: dailyCodeWindowFilter(window),
+      orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+
+    if (records.length) {
+      await tx.nomadDailyAccessCode.updateMany({
+        where: {
+          id: {
+            in: records.map((record) => record.id),
+          },
+        },
+        data: {
+          active: false,
+        },
+      });
+    }
+
+    const codeValue = createNomadDailyCodeValue(window.startsAt);
+    const secret = createAutomationSecret(codeValue);
+    const created = await tx.nomadDailyAccessCode.create({
+      data: {
+        id: `daily-code-${codeValue.toLowerCase()}`,
+        codeValue,
+        codeHash: secret.hash,
+        codeSalt: secret.salt,
+        codeLabel: 'Автоматический daily code',
+        active: true,
+        startsAt: window.startsAt,
+        endsAt: window.endsAt,
+      },
+    });
+
+    return {
+      dailyCode: mapDailyAccessCode(created),
+      state: 'rotated' as const,
+      window,
+    };
+  });
 };
 
 export const listStaffAccounts = async () => {

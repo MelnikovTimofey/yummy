@@ -1,5 +1,6 @@
 import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import type { Tobacco } from './catalog';
+import { getNomadDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
 import { createSecretHash } from './auth';
 
@@ -211,20 +212,6 @@ const slugify = (value: string) =>
     .slice(0, 48) || 'item';
 
 const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));
-
-const createCurrentCodeWindow = () => {
-  const now = new Date();
-  const startsAt = new Date(now);
-  startsAt.setHours(0, 0, 0, 0);
-
-  const endsAt = new Date(startsAt);
-  endsAt.setDate(endsAt.getDate() + 1);
-
-  return {
-    startsAt,
-    endsAt,
-  };
-};
 
 const parseList = (value: string | null | undefined) => {
   if (!value) {
@@ -495,7 +482,7 @@ const nextRailId = async (name: string) => {
 };
 
 const seedNomadStorage = async () => {
-  const currentCodeWindow = createCurrentCodeWindow();
+  const currentCodeWindow = getNomadDailyCodeWindow();
 
   await prisma.$transaction(async (tx) => {
     await tx.nomadSmokeCtaEvent.deleteMany();

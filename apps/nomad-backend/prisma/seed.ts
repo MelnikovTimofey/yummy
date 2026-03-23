@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
+import { getNomadDailyCodeWindow } from '../src/daily-code';
 
 process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
 
@@ -8,20 +9,6 @@ const prisma = new PrismaClient();
 
 const createSecretHash = (secret: string, salt: string) =>
   crypto.scryptSync(secret, salt, 64).toString('hex');
-
-const createCurrentCodeWindow = () => {
-  const now = new Date();
-  const startsAt = new Date(now);
-  startsAt.setHours(0, 0, 0, 0);
-
-  const endsAt = new Date(startsAt);
-  endsAt.setDate(endsAt.getDate() + 1);
-
-  return {
-    startsAt,
-    endsAt,
-  };
-};
 
 const introCards = [
   {
@@ -267,7 +254,7 @@ const railMixes = [
 ] as const;
 
 async function main() {
-  const currentCodeWindow = createCurrentCodeWindow();
+  const currentCodeWindow = getNomadDailyCodeWindow();
 
   await prisma.nomadSmokeCtaEvent.deleteMany();
   await prisma.nomadMixRating.deleteMany();
