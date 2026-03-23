@@ -66,6 +66,8 @@ type MixRatingResult = {
   message?: string;
 };
 
+type StatePanelTone = 'loading' | 'error' | 'empty';
+
 const storageKeys = {
   ageConfirmed: 'nomad-aroma-age-confirmed',
   accessGranted: 'nomad-aroma-access-granted',
@@ -454,6 +456,35 @@ const formatSelectedMixSource = (source: MixSource) => {
   return 'Из каталога';
 };
 
+const StatePanel = ({
+  tone,
+  eyebrow,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  tone: StatePanelTone;
+  eyebrow: string;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) => (
+  <div className={`state-panel state-panel--${tone}`}>
+    <div className="state-panel__content">
+      <p className="eyebrow">{eyebrow}</p>
+      <h3>{title}</h3>
+      <p className="hint-text">{description}</p>
+    </div>
+    {actionLabel && onAction ? (
+      <button className={tone === 'error' ? 'primary-btn' : 'secondary-btn'} type="button" onClick={onAction}>
+        {actionLabel}
+      </button>
+    ) : null}
+  </div>
+);
+
 const MixCardView = ({
   mix,
   variant = 'catalog',
@@ -751,6 +782,34 @@ export const App = () => {
     }
   };
 
+  const loadRecommendations = async (profiles = likedProfiles, flavors = likedFlavors) => {
+    if (!profiles.length && !flavors.length) {
+      setRecommendationError('Выберите хотя бы один профиль или вкус');
+      setRecommendationStatus('error');
+      return;
+    }
+
+    setRecommendationStatus('loading');
+    setRecommendationError('');
+
+    try {
+      const response = await fetchRecommendations({
+        likedProfiles: profiles,
+        likedFlavors: flavors,
+      });
+
+      setRecommendations(response.items);
+      setCatalogProfilesFilter(profiles);
+      setCatalogFlavorsFilter(flavors);
+      void loadCatalogMixes(profiles, flavors);
+      setRecommendationStatus('ready');
+      setStage('recommendations');
+    } catch (cause) {
+      setRecommendationStatus('error');
+      setRecommendationError(cause instanceof Error ? cause.message : 'Не удалось получить рекомендации');
+    }
+  };
+
   useEffect(() => {
     if (!accessGranted) {
       return;
@@ -850,34 +909,7 @@ export const App = () => {
 
   const onSubmitOnboarding = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!likedProfiles.length && !likedFlavors.length) {
-      setRecommendationError('Выберите хотя бы один профиль или вкус');
-      setRecommendationStatus('error');
-      return;
-    }
-
-    setRecommendationStatus('loading');
-    setRecommendationError('');
-
-    try {
-      const nextProfiles = [...likedProfiles];
-      const nextFlavors = [...likedFlavors];
-      const response = await fetchRecommendations({
-        likedProfiles: nextProfiles,
-        likedFlavors: nextFlavors,
-      });
-
-      setRecommendations(response.items);
-      setCatalogProfilesFilter(nextProfiles);
-      setCatalogFlavorsFilter(nextFlavors);
-      void loadCatalogMixes(nextProfiles, nextFlavors);
-      setRecommendationStatus('ready');
-      setStage('recommendations');
-    } catch (cause) {
-      setRecommendationStatus('error');
-      setRecommendationError(cause instanceof Error ? cause.message : 'Не удалось получить рекомендации');
-    }
+    await loadRecommendations([...likedProfiles], [...likedFlavors]);
   };
 
   const onChooseMix = async (mix: MixCard, source: MixSource) => {
@@ -945,6 +977,19 @@ export const App = () => {
     setRatingMessage('');
   };
 
+  const scrollToSelectedMix = () => {
+    document.getElementById('selected-mix-card')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
+
+  const selectedMood =
+    [...likedProfiles, ...likedFlavors].length > 0
+      ? [...likedProfiles, ...likedFlavors].map(formatLabel).join(', ')
+      : 'Пока ничего не выбрано';
+  const hasCatalogFilters = catalogProfilesFilter.length > 0 || catalogFlavorsFilter.length > 0;
+
   const renderStageNav = () => (
     <section className="card nav-card">
       <div className="section-head section-head--compact">
@@ -971,7 +1016,7 @@ export const App = () => {
 
   const renderSelectedMix = () =>
     selectedMix && stage !== 'intro' && stage !== 'onboarding' ? (
-      <section className="card selected-mix-card">
+      <section className="card selected-mix-card" id="selected-mix-card">
         <div className="section-head">
           <div>
             <p className="eyebrow">Карточка для мастера</p>
@@ -1051,6 +1096,25 @@ export const App = () => {
           </button>
           <button className="secondary-btn" type="button" onClick={() => setStage('catalog')}>
             Перейти в каталог
+          </button>
+        </div>
+      </section>
+    ) : null;
+
+  const renderSelectedMixDock = () =>
+    selectedMix && stage !== 'intro' && stage !== 'onboarding' ? (
+      <section className="selected-mix-dock">
+        <div className="selected-mix-dock__summary">
+          <span className="selected-mix-dock__label">Выбранный микс</span>
+          <strong>{selectedMix.name}</strong>
+          <span className="selected-mix-dock__meta">{formatSelectedMixSource(selectedMix.source)}</span>
+        </div>
+        <div className="selected-mix-dock__actions">
+          <button className="secondary-btn" type="button" onClick={scrollToSelectedMix}>
+            Открыть карточку
+          </button>
+          <button className="secondary-btn" type="button" onClick={clearSelectedMix}>
+            Сбросить
           </button>
         </div>
       </section>
@@ -1138,6 +1202,7 @@ export const App = () => {
       </section>
 
       {renderStageNav()}
+      {renderSelectedMixDock()}
 
       {chooseError ? (
         <section className="card card--compact">
@@ -1155,8 +1220,34 @@ export const App = () => {
               </div>
               <div className="status-pill status-pill--active">Экран 1</div>
             </div>
-            {introStatus === 'loading' ? <p className="meta-line">Загружаем карточки знакомства...</p> : null}
-            {introError ? <p className="error-text">{introError}</p> : null}
+            {introStatus === 'loading' ? (
+              <StatePanel
+                tone="loading"
+                eyebrow="Подготовка"
+                title="Собираем сценарий знакомства"
+                description="Подтягиваем короткие карточки, чтобы вы сразу поняли механику выбора."
+              />
+            ) : null}
+            {introError ? (
+              <StatePanel
+                tone="error"
+                eyebrow="Знакомство недоступно"
+                title="Карточки знакомства не загрузились"
+                description={introError}
+                actionLabel="Повторить"
+                onAction={() => void loadIntroCards()}
+              />
+            ) : null}
+            {introStatus === 'ready' && !introCards.length ? (
+              <StatePanel
+                tone="empty"
+                eyebrow="Короткий маршрут"
+                title="Карточки пока не настроены"
+                description="Можно сразу перейти к онбордингу или открыть каталог без шага знакомства."
+                actionLabel="Перейти к онбордингу"
+                onAction={() => setStage('onboarding')}
+              />
+            ) : null}
             {introCards.length ? (
               <div className="intro-grid">
                 {introCards.map((card) => (
@@ -1209,7 +1300,7 @@ export const App = () => {
               </div>
               <div className="selection-summary__item selection-summary__item--wide">
                 <span className="selection-summary__label">Ваше настроение</span>
-                <p>{[...likedProfiles, ...likedFlavors].length ? [...likedProfiles, ...likedFlavors].map(formatLabel).join(', ') : 'Пока ничего не выбрано'}</p>
+                <p>{selectedMood}</p>
               </div>
             </div>
             <form className="onboarding-form" onSubmit={onSubmitOnboarding}>
@@ -1251,8 +1342,34 @@ export const App = () => {
                 </div>
               </div>
 
-              {optionsStatus === 'loading' ? <p className="hint-text">Загружаем варианты онбординга...</p> : null}
-              {optionsError ? <p className="error-text">{optionsError}</p> : null}
+              {optionsStatus === 'loading' ? (
+                <StatePanel
+                  tone="loading"
+                  eyebrow="Онбординг"
+                  title="Готовим варианты вкусов"
+                  description="Подтягиваем профили и вкусы, которые доступны в текущем наличии."
+                />
+              ) : null}
+              {optionsError ? (
+                <StatePanel
+                  tone="error"
+                  eyebrow="Онбординг недоступен"
+                  title="Не удалось получить варианты вкусов"
+                  description={optionsError}
+                  actionLabel="Загрузить ещё раз"
+                  onAction={() => void loadOptions()}
+                />
+              ) : null}
+              {optionsStatus === 'ready' && !options.profiles.length && !options.flavors.length ? (
+                <StatePanel
+                  tone="empty"
+                  eyebrow="Нет вариантов"
+                  title="Онбординг временно пуст"
+                  description="Можно перейти в каталог и посмотреть доступные миксы без подбора."
+                  actionLabel="Открыть каталог"
+                  onAction={() => setStage('catalog')}
+                />
+              ) : null}
               {recommendationError ? <p className="error-text">{recommendationError}</p> : null}
 
               <div className="card-actions">
@@ -1292,8 +1409,24 @@ export const App = () => {
                 ? 'Ниже миксы, которые лучше всего совпадают с ответами онбординга и текущим наличием.'
                 : 'После выбора ответов здесь появится персональная подборка.'}
             </p>
-            {recommendationStatus === 'loading' ? <p className="meta-line">Подбираем рекомендации...</p> : null}
-            {recommendationError ? <p className="error-text">{recommendationError}</p> : null}
+            {recommendationStatus === 'loading' ? (
+              <StatePanel
+                tone="loading"
+                eyebrow="Подбор"
+                title="Считаем рекомендации"
+                description="Сопоставляем ваш выбор с доступными миксами и текущим наличием на кухне."
+              />
+            ) : null}
+            {recommendationError ? (
+              <StatePanel
+                tone="error"
+                eyebrow="Подбор остановился"
+                title="Не удалось собрать рекомендации"
+                description={recommendationError}
+                actionLabel="Повторить подбор"
+                onAction={() => void loadRecommendations([...likedProfiles], [...likedFlavors])}
+              />
+            ) : null}
 
             {recommendations.length ? (
               <div className="mix-grid recommendation-grid">
@@ -1308,6 +1441,15 @@ export const App = () => {
                   />
                 ))}
               </div>
+            ) : recommendationStatus === 'ready' ? (
+              <StatePanel
+                tone="empty"
+                eyebrow="Нужен другой вектор"
+                title="Под ваши ответы сейчас нет точных совпадений"
+                description="Попробуйте изменить профили или вкусы, либо откройте каталог и посмотрите весь ассортимент."
+                actionLabel="Вернуться к онбордингу"
+                onAction={() => setStage('onboarding')}
+              />
             ) : (
               <p className="meta-line">Пока нет рекомендаций. Вернитесь на онбординг и выберите несколько ответов.</p>
             )}
@@ -1334,8 +1476,24 @@ export const App = () => {
               </div>
               <div className="status-pill status-pill--active">Экран 4</div>
             </div>
-            {homeStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
-            {homeError ? <p className="error-text">{homeError}</p> : null}
+            {homeStatus === 'loading' ? (
+              <StatePanel
+                tone="loading"
+                eyebrow="Главная"
+                title="Собираем рейлы"
+                description="Подгружаем подборки по популярности, заготовкам и авторским сценариям."
+              />
+            ) : null}
+            {homeError ? (
+              <StatePanel
+                tone="error"
+                eyebrow="Главная недоступна"
+                title="Не удалось загрузить рейлы"
+                description={homeError}
+                actionLabel="Повторить"
+                onAction={() => void loadHomeRails()}
+              />
+            ) : null}
 
             {homeRails.length ? (
               <div className="rail-stack">
@@ -1349,6 +1507,15 @@ export const App = () => {
                   />
                 ))}
               </div>
+            ) : homeStatus === 'ready' ? (
+              <StatePanel
+                tone="empty"
+                eyebrow="Пока тихо"
+                title="Активных рейлов сейчас нет"
+                description="Откройте каталог, чтобы посмотреть все доступные миксы без готовых подборок."
+                actionLabel="Открыть каталог"
+                onAction={() => setStage('catalog')}
+              />
             ) : (
               <p className="meta-line">Пока нет доступных рейлов.</p>
             )}
@@ -1371,6 +1538,21 @@ export const App = () => {
             </p>
 
             <div className="filter-shell">
+              <div className="filter-summary">
+                <div className="filter-summary__item">
+                  <span className="selection-summary__label">Активных профилей</span>
+                  <strong>{catalogProfilesFilter.length}</strong>
+                </div>
+                <div className="filter-summary__item">
+                  <span className="selection-summary__label">Активных вкусов</span>
+                  <strong>{catalogFlavorsFilter.length}</strong>
+                </div>
+                <div className="filter-summary__item filter-summary__item--wide">
+                  <span className="selection-summary__label">Текущий фильтр</span>
+                  <p>{hasCatalogFilters ? [...catalogProfilesFilter, ...catalogFlavorsFilter].map(formatLabel).join(', ') : 'Каталог открыт без фильтров'}</p>
+                </div>
+              </div>
+
               <div className="choice-group">
                 <h3>Фильтр по профилям</h3>
                 <div className="choice-grid">
@@ -1422,14 +1604,41 @@ export const App = () => {
                 >
                   Сбросить фильтры
                 </button>
+                <button
+                  className="secondary-btn"
+                  type="button"
+                  onClick={() => {
+                    setCatalogProfilesFilter(likedProfiles);
+                    setCatalogFlavorsFilter(likedFlavors);
+                    void loadCatalogMixes(likedProfiles, likedFlavors);
+                  }}
+                >
+                  Взять фильтры из онбординга
+                </button>
                 <button className="secondary-btn" type="button" onClick={() => setStage('home')}>
                   Смотреть рейлы
                 </button>
               </div>
             </div>
 
-            {catalogStatus === 'loading' ? <p className="meta-line">Загружаем каталог...</p> : null}
-            {catalogError ? <p className="error-text">{catalogError}</p> : null}
+            {catalogStatus === 'loading' ? (
+              <StatePanel
+                tone="loading"
+                eyebrow="Каталог"
+                title="Обновляем ассортимент"
+                description="Сверяем список миксов с активными фильтрами и текущим наличием."
+              />
+            ) : null}
+            {catalogError ? (
+              <StatePanel
+                tone="error"
+                eyebrow="Каталог недоступен"
+                title="Не удалось загрузить миксы"
+                description={catalogError}
+                actionLabel="Повторить загрузку"
+                onAction={() => void loadCatalogMixes()}
+              />
+            ) : null}
 
             <div className="mix-grid mix-grid--catalog">
               {catalogMixes.length ? (
@@ -1443,6 +1652,28 @@ export const App = () => {
                     onChoose={(nextMix) => void onChooseMix(nextMix, 'catalog')}
                   />
                 ))
+              ) : catalogStatus === 'ready' ? (
+                <StatePanel
+                  tone="empty"
+                  eyebrow="Каталог пуст"
+                  title={hasCatalogFilters ? 'По этим фильтрам миксы не найдены' : 'Доступные миксы пока не опубликованы'}
+                  description={
+                    hasCatalogFilters
+                      ? 'Сбросьте часть фильтров или вернитесь к онбордингу, чтобы расширить подбор.'
+                      : 'Попробуйте обновить каталог позже или спросите мастера о доступных позициях.'
+                  }
+                  actionLabel={hasCatalogFilters ? 'Сбросить фильтры' : 'Обновить каталог'}
+                  onAction={() => {
+                    if (hasCatalogFilters) {
+                      setCatalogProfilesFilter([]);
+                      setCatalogFlavorsFilter([]);
+                      void loadCatalogMixes([], []);
+                      return;
+                    }
+
+                    void loadCatalogMixes();
+                  }}
+                />
               ) : (
                 <p className="meta-line">Каталог пока пуст или ещё загружается.</p>
               )}

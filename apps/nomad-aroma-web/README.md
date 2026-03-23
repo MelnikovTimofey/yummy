@@ -28,4 +28,4 @@ API задаётся через `VITE_API_BASE_URL`.
 
 ## Стадия
 
-Текущая стадия: Phase 4 guest content flow + Aroma Polish с более выраженным lounge/premium UI, усиленной типографикой, stage-hero системой, переработанными карточками миксов и mobile-first rhythm.
+Текущая стадия: Phase 4 guest content flow + Aroma Polish + UX Hardening с более выраженным lounge/premium UI, осмысленными loading/error/empty states, sticky handoff-блоком выбранного микса и усиленным mobile-first сценарием.

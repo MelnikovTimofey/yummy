@@ -1,5 +1,40 @@
 # HANDOFF — Yummy
 
+## 1.51) Harden Aroma Atelier guest states and mobile handoff UX (23 марта 2026)
+
+- Запрос:
+  - продолжить доработку `Арома Ателье` в текущем Nomad baseline без затрагивания legacy-контура.
+
+- Реализация:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - добавлен единый `StatePanel` для `loading / error / empty`;
+    - intro, onboarding, recommendations, home и catalog получили retry-пути и более предметные сценарные тексты;
+    - submit рекомендаций переведён на общий `loadRecommendations()` path для reuse и retry;
+    - каталог получил summary фильтров и кнопку применения онбординг-фильтров;
+    - после выбора микса появляется sticky mobile-friendly dock c быстрым переходом к `Карточке для мастера`.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - добавлены стили для `state-panel`, `filter-summary` и `selected-mix-dock`;
+    - CTA и dock адаптированы под узкие viewport.
+  - `apps/nomad-aroma-web/README.md`:
+    - стадия обновлена под `UX Hardening`.
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175` в viewport `390x844`
+  - guest flow пройден до выбора микса из рекомендаций
+  - подтверждено появление:
+    - sticky `selected mix dock`
+    - `Карточки для мастера`
+  - артефакты:
+    - `output/playwright/nomad-quality/aroma-recommendations-mobile.png`
+    - `output/playwright/nomad-quality/aroma-selected-mix-dock-mobile.png`
+    - `output/playwright/nomad-quality/aroma-selected-mix-card-mobile.png`
+
+- Эффект:
+  - guest-side UI стал устойчивее к сбоям загрузки и пустым данным;
+  - мобильный сценарий после выбора микса лучше удерживает пользователя в handoff-flow;
+  - новый UX-срез не меняет backend contract и не ломает существующий Nomad baseline.
+
 ## 1.50) Deliver Master Polish for Nomad staff/admin console (23 марта 2026)
 
 - Запрос:

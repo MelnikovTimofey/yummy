@@ -1,3 +1,32 @@
+Обновление от 23 марта 2026 (aroma ux hardening: resilient guest states and mobile handoff pass):
+- Проблема:
+  - после `Aroma Polish` основной guest flow выглядел хорошо визуально, но async-state UX оставался слишком техническим;
+  - загрузки, пустые сценарии и ошибки на этапах `знакомство`, `онбординг`, `рекомендации`, `главная`, `каталог` показывались как короткие строки без action path;
+  - на мобильном выбранный микс было легко потерять в длинном скролле до нижней карточки для мастера.
+- Изменение:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - добавлен универсальный `StatePanel` для `loading / error / empty`;
+    - введены retry-пути для intro, onboarding options, recommendations, home rails и catalog;
+    - рекомендации переведены на общий `loadRecommendations()` path для submit и повторной попытки;
+    - каталог получил summary активных фильтров и кнопку применения фильтров из онбординга;
+    - добавлен sticky `selected mix dock` c быстрым переходом к карточке мастера и reset-экшеном.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - добавлены стили для state panels, filter summary и sticky selected mix dock;
+    - mobile layout усилен под компактный handoff-блок и full-width CTA в узком viewport.
+  - `apps/nomad-aroma-web/README.md`:
+    - стадия обновлена под `UX Hardening`.
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175` в mobile viewport `390x844`
+  - сохранены артефакты:
+    - `output/playwright/nomad-quality/aroma-recommendations-mobile.png`
+    - `output/playwright/nomad-quality/aroma-selected-mix-dock-mobile.png`
+    - `output/playwright/nomad-quality/aroma-selected-mix-card-mobile.png`
+- Эффект:
+  - guest flow стал устойчивее при сбоях и пустых ответах backend;
+  - у пользователя появился явный retry/next-step вместо тупиковых сообщений;
+  - выбранный микс на мобильном теперь лучше работает как быстрый handoff к карточке для мастера.
+
 Обновление от 23 марта 2026 (master polish: operational console pass for Nomad staff UI):
 - Проблема:
   - `Мастер` уже был функционально полным, но визуально оставался набором однотипных карточек без чёткой operational hierarchy;
