@@ -89,6 +89,32 @@ const railTypeLabels: Record<RailType, string> = {
 
 const guestStages: GuestStage[] = ['intro', 'onboarding', 'recommendations', 'home', 'catalog'];
 
+const stageMoodClasses: Record<GuestStage, string> = {
+  intro: 'hero--intro',
+  onboarding: 'hero--onboarding',
+  recommendations: 'hero--recommendations',
+  home: 'hero--home',
+  catalog: 'hero--catalog',
+};
+
+const stageTitles: Record<GuestStage, string> = {
+  intro: 'Знакомство с сервисом',
+  onboarding: 'Быстрый онбординг',
+  recommendations: 'Рекомендации для вас',
+  home: 'Главная с рейлами',
+  catalog: 'Каталог миксов',
+};
+
+const stageDescriptions: Record<GuestStage, string> = {
+  intro: 'Коротко покажем механику выбора, чтобы вы сразу перешли к подходящему вкусу без лишних действий.',
+  onboarding:
+    'Выберите несколько ощущений и вкусов. На основе ответов и реального наличия на кухне мы подберём актуальные миксы.',
+  recommendations:
+    'Это персональная подборка из доступных миксов. Сохраняйте понравившийся вариант и показывайте карточку мастеру.',
+  home: 'Если хочется посмотреть шире, изучите рейлы с подборками по популярности, заготовкам и авторским сценариям.',
+  catalog: 'Самостоятельный просмотр всех доступных миксов с фильтрами по профилям и вкусам.',
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -416,20 +442,34 @@ const toggleSelection = (value: string, items: string[]) =>
 
 const formatRailType = (type: RailType) => railTypeLabels[type];
 
+const formatSelectedMixSource = (source: MixSource) => {
+  if (source === 'recommendation') {
+    return 'Из рекомендаций';
+  }
+
+  if (source === 'rail') {
+    return 'Из рейла';
+  }
+
+  return 'Из каталога';
+};
+
 const MixCardView = ({
   mix,
+  variant = 'catalog',
   sourceLabel,
   actionLabel = 'Выбрать',
   chooseBusy = false,
   onChoose,
 }: {
   mix: MixCard;
+  variant?: MixSource;
   sourceLabel?: string;
   actionLabel?: string;
   chooseBusy?: boolean;
   onChoose?: (mix: MixCard) => void;
 }) => (
-  <article className="mix-card">
+  <article className={`mix-card mix-card--${variant}`}>
     <div className="mix-card__head">
       <div className="mix-card__title-row">
         <div>
@@ -441,7 +481,7 @@ const MixCardView = ({
       <p className="hint-text">{mix.description}</p>
     </div>
 
-    <div className="hero-meta">
+    <div className="mix-card__stats">
       {mix.score !== undefined ? <span className="pill">Score {mix.score.toFixed(0)}</span> : null}
       <span className="pill">Рейтинг {mix.avgRating.toFixed(1)}</span>
       <span className="pill">Популярность {mix.popularity}</span>
@@ -460,7 +500,12 @@ const MixCardView = ({
       ))}
     </div>
 
-    <p className="meta-line">{mix.flavors.length ? `Вкусы: ${mix.flavors.join(', ')}` : 'Вкусы: не указаны'}</p>
+    <div className="mix-card__flavor-line">
+      <span className="meta-line">{mix.flavors.length ? `Вкусы: ${mix.flavors.join(', ')}` : 'Вкусы: не указаны'}</span>
+      <span className={mix.available ? 'availability-badge availability-badge--ready' : 'availability-badge'}>
+        {mix.available ? 'Можно выбрать сейчас' : 'Временно недоступно'}
+      </span>
+    </div>
 
     {mix.components.length ? (
       <ul className="component-list">
@@ -473,14 +518,17 @@ const MixCardView = ({
     ) : null}
 
     {onChoose ? (
-      <button
-        className="primary-btn"
-        type="button"
-        onClick={() => onChoose(mix)}
-        disabled={chooseBusy || !mix.available}
-      >
-        {chooseBusy ? 'Сохраняем...' : actionLabel}
-      </button>
+      <div className="mix-card__footer">
+        <div className="mix-card__service-note">Карточка откроется сразу после сохранения выбора.</div>
+        <button
+          className="primary-btn"
+          type="button"
+          onClick={() => onChoose(mix)}
+          disabled={chooseBusy || !mix.available}
+        >
+          {chooseBusy ? 'Сохраняем...' : actionLabel}
+        </button>
+      </div>
     ) : null}
   </article>
 );
@@ -501,6 +549,13 @@ const RailView = ({
       <div>
         <p className="eyebrow">{formatRailType(rail.type)}</p>
         <h3>{rail.name}</h3>
+        <p className="rail-card__subtitle">
+          {rail.type === 'statistical'
+            ? 'Формируется по выбору гостей и оценкам.'
+            : rail.type === 'prepared'
+              ? 'Готовая подборка для быстрого старта.'
+              : 'Подборка, собранная мастером вручную.'}
+        </p>
       </div>
       <span className={rail.active ? 'status-pill status-pill--active' : 'status-pill status-pill--muted'}>
         {rail.active ? 'Активен' : 'Не активен'}
@@ -513,6 +568,7 @@ const RailView = ({
           <MixCardView
             key={mix.id}
             mix={mix}
+            variant="rail"
             sourceLabel="Рейл"
             actionLabel={activeMixId === mix.id ? 'Выбрано' : 'Выбрать'}
             chooseBusy={chooseBusyMixId === mix.id}
@@ -541,12 +597,15 @@ const TabButton = ({
   label,
   active,
   onClick,
+  index,
 }: {
   label: string;
   active: boolean;
+  index: number;
   onClick: () => void;
 }) => (
   <button className={active ? 'tab-button tab-button--active' : 'tab-button'} type="button" onClick={onClick}>
+    <span className="tab-button__index">{index + 1}</span>
     {label}
   </button>
 );
@@ -888,36 +947,57 @@ export const App = () => {
 
   const renderStageNav = () => (
     <section className="card nav-card">
-      <div className="nav-row">
-        {guestStages.map((item) => (
-          <TabButton key={item} label={stageLabels[item]} active={stage === item} onClick={() => setStage(item)} />
+      <div className="section-head section-head--compact">
+        <div>
+          <p className="eyebrow">Маршрут гостя</p>
+          <h2>От предпочтений до карточки для мастера</h2>
+        </div>
+        <div className="status-pill status-pill--active">Шаг {guestStages.indexOf(stage) + 1} из 5</div>
+      </div>
+      <div className="nav-row nav-row--journey">
+        {guestStages.map((item, index) => (
+          <TabButton
+            key={item}
+            index={index}
+            label={stageLabels[item]}
+            active={stage === item}
+            onClick={() => setStage(item)}
+          />
         ))}
       </div>
-      <p className="meta-line">
-        Данные из backend: знакомство, рекомендации, главная и каталог открыты как отдельные гостевые экраны.
-      </p>
+      <p className="meta-line">Каждый шаг можно пересмотреть, но основной сценарий ведёт к быстрому осознанному выбору.</p>
     </section>
   );
 
   const renderSelectedMix = () =>
-    selectedMix ? (
+    selectedMix && stage !== 'intro' && stage !== 'onboarding' ? (
       <section className="card selected-mix-card">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Выбранный микс</p>
+            <p className="eyebrow">Карточка для мастера</p>
             <h2>{selectedMix.name}</h2>
+            <p className="selected-mix-card__subtitle">Покажите эту карточку кальянному мастеру, чтобы он сразу увидел состав и настроение микса.</p>
           </div>
           <div className="status-stack">
-            <span className="status-pill status-pill--active">{selectedMix.source === 'recommendation' ? 'Из рекомендаций' : selectedMix.source === 'rail' ? 'Из рейла' : 'Из каталога'}</span>
+            <span className="status-pill status-pill--active">{formatSelectedMixSource(selectedMix.source)}</span>
             {chooseStatus === 'ready' ? <span className="status-pill status-pill--active">Выбор сохранён</span> : null}
           </div>
         </div>
 
-        <p className="hint-text">{selectedMix.description}</p>
-        <div className="hero-meta">
+        <div className="selected-mix-card__lead">
+          <p className="hint-text">{selectedMix.description}</p>
+          <div className="selected-mix-card__cue">
+            <span className={selectedMix.available ? 'availability-badge availability-badge--ready' : 'availability-badge'}>
+              {selectedMix.available ? 'Все компоненты в наличии' : 'Часть компонентов требует проверки'}
+            </span>
+            <span className="selected-mix-card__origin">{formatSelectedMixSource(selectedMix.source)}</span>
+          </div>
+        </div>
+
+        <div className="hero-meta hero-meta--selected">
           <span className="pill">Рейтинг {selectedMix.avgRating.toFixed(1)}</span>
           <span className="pill">Популярность {selectedMix.popularity}</span>
-          <span className="pill">{selectedMix.available ? 'В наличии' : 'Нет в наличии'}</span>
+          <span className="pill">{selectedMix.available ? 'Готов к приготовлению' : 'Требует уточнения'}</span>
         </div>
 
         <div className="chip-row">
@@ -934,13 +1014,19 @@ export const App = () => {
         </div>
 
         {selectedMix.components.length ? (
-          <ul className="component-list">
-            {selectedMix.components.map((component) => (
-              <li key={component.id}>
-                {component.name} · {component.manufacturer} · {component.flavors.join(', ')}
-              </li>
-            ))}
-          </ul>
+          <div className="selected-mix-card__recipe">
+            <div>
+              <p className="eyebrow">Состав</p>
+              <p className="hint-text">Ингредиенты, которые мастер увидит сразу при выборе.</p>
+            </div>
+            <ul className="component-list">
+              {selectedMix.components.map((component) => (
+                <li key={component.id}>
+                  {component.name} · {component.manufacturer} · {component.flavors.join(', ')}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         <div className="rating-section">
@@ -976,7 +1062,12 @@ export const App = () => {
         <section className="hero hero--guest">
           <p className="eyebrow">Nomad Aroma Atelier</p>
           <h1>Подтвердите возраст</h1>
-          <p className="lead">Это гостевой сценарий Nomad. Для продолжения подтвердите, что вам есть 18 лет.</p>
+          <p className="lead">Арома Ателье создано для быстрого выбора вкуса в зале Nomad. Для продолжения подтвердите, что вам есть 18 лет.</p>
+          <div className="hero-meta">
+            <span className="pill">Guest flow</span>
+            <span className="pill">Без регистрации</span>
+            <span className="pill">Выбор за 1 минуту</span>
+          </div>
         </section>
 
         <section className="card card--compact">
@@ -997,7 +1088,11 @@ export const App = () => {
         <section className="hero">
           <p className="eyebrow">Nomad Aroma Atelier</p>
           <h1>Ввод кода доступа</h1>
-          <p className="lead">Введите ежедневный код, который сказал кальянный мастер или официант.</p>
+          <p className="lead">Введите ежедневный код, который сказал кальянный мастер или официант, и мы откроем подборки и персональные рекомендации.</p>
+          <div className="hero-meta">
+            <span className="pill">Код обновляется ежедневно</span>
+            <span className="pill">Доступ только для гостей Nomad</span>
+          </div>
         </section>
 
         <section className="card accent-card">
@@ -1023,8 +1118,8 @@ export const App = () => {
         </section>
 
         <section className="card card--compact">
-          <div className="pill">18+ подтвержден</div>
-          <p className="meta-line">API: {apiBaseUrl}</p>
+          <div className="pill">18+ подтверждено</div>
+          <p className="meta-line">После проверки кода откроются знакомство, онбординг и весь каталог доступных миксов.</p>
         </section>
       </main>
     );
@@ -1032,27 +1127,17 @@ export const App = () => {
 
   return (
     <main className="shell shell--guest">
-      <section className="hero hero--success">
+      <section className={`hero hero--success ${stageMoodClasses[stage]}`}>
         <p className="eyebrow">Гостевой контур Nomad</p>
-        <h1>
-          {stage === 'intro'
-            ? 'Знакомство с сервисом'
-            : stage === 'onboarding'
-              ? 'Быстрый онбординг'
-              : stage === 'recommendations'
-                ? 'Рекомендации для вас'
-                : stage === 'home'
-                  ? 'Главная с рейлами'
-                  : 'Каталог миксов'}
-        </h1>
-        <p className="lead">
-          {successMessage ||
-            'От знакомства до выбора микса и оценки - единый мобильный guest flow для гостей Nomad.'}
-        </p>
+        <h1>{stageTitles[stage]}</h1>
+        <p className="lead">{successMessage || stageDescriptions[stage]}</p>
+        <div className="hero-meta">
+          <span className="pill">Шаг {guestStages.indexOf(stage) + 1} из 5</span>
+          {selectedMix ? <span className="pill">Выбран: {selectedMix.name}</span> : <span className="pill">Выбор ещё не сохранён</span>}
+        </div>
       </section>
 
       {renderStageNav()}
-      {renderSelectedMix()}
 
       {chooseError ? (
         <section className="card card--compact">
@@ -1109,12 +1194,30 @@ export const App = () => {
               <div>
                 <p className="eyebrow">Онбординг</p>
                 <h2>Что хочется покурить</h2>
+                <p className="hint-text">Не нужно заполнять всё. Достаточно нескольких ощущений, чтобы собрать адекватную подборку.</p>
               </div>
               <div className="status-pill status-pill--active">Экран 2</div>
             </div>
+            <div className="selection-summary">
+              <div className="selection-summary__item">
+                <span className="selection-summary__label">Профили</span>
+                <strong>{likedProfiles.length || 0}</strong>
+              </div>
+              <div className="selection-summary__item">
+                <span className="selection-summary__label">Вкусы</span>
+                <strong>{likedFlavors.length || 0}</strong>
+              </div>
+              <div className="selection-summary__item selection-summary__item--wide">
+                <span className="selection-summary__label">Ваше настроение</span>
+                <p>{[...likedProfiles, ...likedFlavors].length ? [...likedProfiles, ...likedFlavors].map(formatLabel).join(', ') : 'Пока ничего не выбрано'}</p>
+              </div>
+            </div>
             <form className="onboarding-form" onSubmit={onSubmitOnboarding}>
               <div className="choice-group">
-                <h3>Профили вкуса</h3>
+                <div className="choice-group__head">
+                  <h3>Профили вкуса</h3>
+                  <span className="status-pill">{likedProfiles.length} выбрано</span>
+                </div>
                 <div className="choice-grid">
                   {options.profiles.map((profile) => (
                     <button
@@ -1130,7 +1233,10 @@ export const App = () => {
               </div>
 
               <div className="choice-group">
-                <h3>Вкусы</h3>
+                <div className="choice-group__head">
+                  <h3>Вкусы</h3>
+                  <span className="status-pill">{likedFlavors.length} выбрано</span>
+                </div>
                 <div className="choice-grid">
                   {options.flavors.map((flavor) => (
                     <button
@@ -1165,8 +1271,8 @@ export const App = () => {
           </section>
 
           <section className="card card--compact">
-            <div className="pill">18+ и код подтверждены</div>
-            <p className="meta-line">API: {apiBaseUrl}</p>
+            <div className="pill">Доступ подтверждён</div>
+            <p className="meta-line">После ответа мы покажем только те миксы, которые совпадают с вашим выбором и доступны прямо сейчас.</p>
           </section>
         </section>
       ) : null}
@@ -1190,11 +1296,12 @@ export const App = () => {
             {recommendationError ? <p className="error-text">{recommendationError}</p> : null}
 
             {recommendations.length ? (
-              <div className="mix-grid">
+              <div className="mix-grid recommendation-grid">
                 {recommendations.map((mix) => (
                   <MixCardView
                     key={mix.id}
                     mix={mix}
+                    variant="recommendation"
                     sourceLabel="Рекомендация"
                     chooseBusy={choosingMixId === mix.id}
                     onChoose={(nextMix) => void onChooseMix(nextMix, 'recommendation')}
@@ -1304,6 +1411,17 @@ export const App = () => {
                 <button className="primary-btn" type="button" onClick={() => void loadCatalogMixes()}>
                   Обновить каталог
                 </button>
+                <button
+                  className="secondary-btn"
+                  type="button"
+                  onClick={() => {
+                    setCatalogProfilesFilter([]);
+                    setCatalogFlavorsFilter([]);
+                    void loadCatalogMixes([], []);
+                  }}
+                >
+                  Сбросить фильтры
+                </button>
                 <button className="secondary-btn" type="button" onClick={() => setStage('home')}>
                   Смотреть рейлы
                 </button>
@@ -1319,6 +1437,7 @@ export const App = () => {
                   <MixCardView
                     key={mix.id}
                     mix={mix}
+                    variant="catalog"
                     sourceLabel="Каталог"
                     chooseBusy={choosingMixId === mix.id}
                     onChoose={(nextMix) => void onChooseMix(nextMix, 'catalog')}
@@ -1331,6 +1450,8 @@ export const App = () => {
           </section>
         </section>
       ) : null}
+
+      {renderSelectedMix()}
     </main>
   );
 };

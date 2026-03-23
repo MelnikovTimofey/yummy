@@ -1,5 +1,35 @@
 # HANDOFF — Yummy
 
+## 1.49) Deliver Aroma Polish for Nomad guest flow (23 марта 2026)
+
+- Запрос:
+  - после блока `Quality And Hardening` перейти к отдельному визуальному этапу `Aroma Polish`.
+
+- Реализация:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - stage hero теперь имеет отдельные mood states для `intro`, `onboarding`, `recommendations`, `home`, `catalog`;
+    - stage navigation переработана в route/journey-подачу;
+    - cards миксов различаются по режимам `recommendation / rail / catalog`;
+    - карточка выбранного микса стала более явным handoff-экраном для мастера;
+    - онбординг получил summary выбранных профилей и вкусов;
+    - из guest UI убраны dev-like API строки.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - переписан дизайн-слой в тёплой lounge-палитре Nomad;
+    - усилены типографика, фон, surface hierarchy, chips/pills/statuses;
+    - добавлен спокойный motion и улучшен mobile rhythm.
+  - `apps/nomad-aroma-web/README.md`:
+    - обновлена стадия пакета под `Aroma Polish`.
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke через Playwright CLI на `http://127.0.0.1:4176`
+  - артефакты сохранены в `output/playwright/nomad-quality`
+
+- Эффект:
+  - `Арома Ателье` визуально отделился от MVP-каркаса и стал ближе к launch-ready lounge-facing интерфейсу;
+  - пользовательский ритм стал понятнее на мобильном;
+  - `selected mix` лучше работает как экран показа мастеру.
+
 ## 1.48) Deliver Nomad Quality And Hardening baseline with audit trail and smoke checklist (23 марта 2026)
 
 - Запрос:

@@ -1,3 +1,29 @@
+Обновление от 23 марта 2026 (aroma polish: premium guest UI pass for Nomad):
+- Проблема:
+  - `Арома Ателье` уже было функционально полным, но визуально оставалось на уровне MVP-карточек;
+  - guest flow выглядел слишком технически: stage navigation конкурировала с hero, selected mix давил на сценарий, а states и карточки были почти одного визуального веса.
+- Изменение:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - введены stage-specific hero mood states;
+    - переработана навигация в формат guest journey;
+    - selected mix превращён в более выразительную карточку для показа мастеру;
+    - mix cards получили variant-подачу для `recommendation`, `rail`, `catalog`;
+    - онбординг получил summary по выбранным профилям и вкусам;
+    - из публичного guest UI убраны dev-like строки про `API`.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - сделан полноценный design pass в тёплой lounge-палитре Nomad;
+    - усилена типографика, фон, surface system, chips/pills/statuses;
+    - добавлены спокойные motion-эффекты и более плотная mobile adaptation.
+  - `apps/nomad-aroma-web/README.md`:
+    - стадия обновлена под `Aroma Polish`.
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://127.0.0.1:4176` через Playwright CLI с артефактами в `output/playwright/nomad-quality`.
+- Эффект:
+  - Aroma теперь выглядит как самостоятельный lounge-facing продукт, а не как utility MVP;
+  - сценарные этапы визуально различимы;
+  - карточка выбранного микса стала ближе к реальному handoff экрану для мастера.
+
 Обновление от 23 марта 2026 (quality and hardening: audit trail and manual smoke baseline for Nomad):
 - Проблема:
   - Nomad staff-contour уже имел CRUD и automation, но не было persisted audit trail для staff-sensitive действий;
