@@ -112,9 +112,9 @@ const profileLabelMap = profileOptions.reduce<Record<string, string>>((acc, item
 }, {});
 
 const railToneLabels: Record<RailType, string> = {
-  statistical: 'Аналитика',
-  prepared: 'Редакторская подборка',
-  curated: 'От мастеров',
+  statistical: 'Выбор гостей',
+  prepared: 'Редакция',
+  curated: 'Мастера',
 };
 
 const mixSourceLabels: Record<MixSource, string> = {
@@ -131,9 +131,9 @@ const sortOptions: Array<{ value: CatalogSort; label: string }> = [
 ];
 
 const railDescriptions: Record<RailType, string> = {
-  statistical: 'Миксы, которые чаще выбирают и выше оценивают гости.',
-  prepared: 'Подборка для быстрого старта без долгого поиска по каталогу.',
-  curated: 'Подборка от команды зала для более выразительного сценария.',
+  statistical: 'Миксы, к которым гости возвращаются чаще всего.',
+  prepared: 'Подборка для быстрого старта в стилистике Nomad Lounge.',
+  curated: 'Выразительные сочетания, которые чаще советуют мастера зала.',
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -229,7 +229,7 @@ const extractErrorMessage = (payload: unknown, fallback: string) => {
 const buildManufacturerKey = (value: string) => normalizeToken(value);
 
 const getMixTone = (mix: MixCard) => {
-  const palette = ['#a56e3f', '#7a5b46', '#556a5f', '#6e4f45', '#5f5869', '#8f704d'];
+  const palette = ['#6a1718', '#7d241c', '#8f3f22', '#5a1712', '#7b3021', '#4a1a16'];
   const source = `${mix.name}:${mix.id}`;
   const hash = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return palette[hash % palette.length];
@@ -661,7 +661,7 @@ const MixDetailModal = ({
                         <span className="mix-info-value">{formatPercent(item.percent)}</span>
                       </div>
                       <div className="rail-ratio-bar compact" aria-hidden="true">
-                        <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#c9a86a' }} />
+                        <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#f0c27b' }} />
                       </div>
                     </div>
                   ))}
@@ -679,7 +679,7 @@ const MixDetailModal = ({
                           <span className="mix-info-value">{formatPercent(item.percent)}</span>
                         </div>
                         <div className="rail-ratio-bar compact" aria-hidden="true">
-                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#8f704d' }} />
+                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#d17f43' }} />
                         </div>
                       </div>
                     ))}
@@ -698,7 +698,7 @@ const MixDetailModal = ({
                           <span className="mix-info-value">{formatPercent(item.percent)}</span>
                         </div>
                         <div className="rail-ratio-bar compact" aria-hidden="true">
-                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#556a5f' }} />
+                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#8a3028' }} />
                         </div>
                       </div>
                     ))}
@@ -1321,10 +1321,10 @@ export const App = () => {
 
   const renderBrand = () => (
     <button type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
-      <span className="brand-logo">N</span>
+      <span className="brand-logo">n</span>
       <div>
-        <p className="brand">Nomad</p>
-        <p className="tagline">Арома ателье</p>
+        <p className="brand">nomad</p>
+        <p className="tagline">лаунж · арома ателье</p>
       </div>
     </button>
   );

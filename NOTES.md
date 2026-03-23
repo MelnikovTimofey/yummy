@@ -1,3 +1,25 @@
+Обновление от 23 марта 2026 (nomad lounge visual branding pass for aroma atelier):
+- Проблема:
+  - после выравнивания механик под `Yami Web` `Арома Ателье` всё ещё ощущалось визуально нейтральным и не транслировало атмосферу `Nomad Lounge`;
+  - шапка, карточки и интро не использовали фирменную бордовую палитру и тёплый свет интерьера.
+- Изменение:
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - базовая тема переведена в бордово-янтарную палитру с более глубокими surface-градиентами;
+    - topbar, phone shell, intro, modal и карточки получили фирменный `Nomad`-контраст и более lounge-подачу;
+    - заголовки, rail names и wordmark переведены на serif-display стек.
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - brand обновлён под `nomad` wordmark;
+    - rail tags смягчены до `Выбор гостей / Редакция / Мастера`;
+    - tonal palette карточек и инфографики переведена в burgundy / amber гамму.
+  - `apps/nomad-aroma-web/README.md`:
+    - README синхронизирован с новым `Nomad Lounge` visual layer.
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175`
+- Эффект:
+  - `Арома Ателье` стало визуально ближе к реальному `Nomad Lounge`;
+  - интерфейс сохранил механику `Yami Web`, но получил собственный lounge-характер.
+
 Обновление от 23 марта 2026 (live intro sync for aroma onboarding cards):
 - Проблема:
   - в живом `Nomad` backend старые intro-карточки про `18+` и `код доступа` оставались в БД даже после обновления seed-контента в исходниках;

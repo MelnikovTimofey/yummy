@@ -1,13 +1,18 @@
 :root {
-  --bg: #0d0b0a;
-  --surface: #161311;
-  --surface-alt: #1e1916;
-  --accent: #c9a86a;
-  --accent-soft: #e2c288;
-  --text-0: #f4efe9;
-  --text-1: #b8a89a;
-  --line: #2a2320;
-  --danger: #d94c4c;
+  --bg: #130807;
+  --surface: #1b0d0e;
+  --surface-alt: #271314;
+  --surface-elevated: #351717;
+  --accent: #d8ab68;
+  --accent-soft: #f2d5a5;
+  --accent-deep: #8c2d24;
+  --ember: #ee9d45;
+  --text-0: #f8eee8;
+  --text-1: #d0b5a3;
+  --line: rgba(193, 141, 106, 0.22);
+  --danger: #df6f5b;
+  --font-body: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -28,9 +33,12 @@ body,
 }
 
 body {
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   color: var(--text-0);
-  background: var(--bg);
+  background:
+    radial-gradient(circle at top, rgba(140, 45, 36, 0.28), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(238, 157, 69, 0.18), transparent 22%),
+    linear-gradient(180deg, #0d0506 0%, #180809 36%, #130807 100%);
   overflow-x: hidden;
 }
 
@@ -62,6 +70,10 @@ select:focus-visible {
   padding: 16px;
   position: relative;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(122, 28, 25, 0.35), transparent 34%),
+    radial-gradient(circle at 80% 18%, rgba(240, 154, 62, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(18, 8, 7, 0.94) 0%, rgba(18, 8, 7, 1) 100%);
 }
 
 .phone-shell {
@@ -70,8 +82,10 @@ select:focus-visible {
   height: calc(100dvh - 32px);
   border: 1px solid var(--line);
   border-radius: 28px;
-  background: var(--bg);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, rgba(40, 15, 16, 0.98) 0%, rgba(20, 9, 10, 0.98) 100%);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 233, 214, 0.03);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -81,24 +95,26 @@ select:focus-visible {
 
 .halo-top {
   position: absolute;
-  top: -120px;
-  right: -80px;
-  width: 220px;
-  height: 220px;
+  top: -100px;
+  right: -48px;
+  width: 260px;
+  height: 260px;
   border-radius: 999px;
-  background: #3b2e22;
-  opacity: 0.5;
+  background: radial-gradient(circle, rgba(142, 36, 28, 0.8) 0%, rgba(142, 36, 28, 0) 70%);
+  filter: blur(10px);
+  opacity: 0.72;
 }
 
 .halo-bottom {
   position: absolute;
-  bottom: -160px;
-  left: -120px;
-  width: 260px;
-  height: 260px;
+  bottom: -180px;
+  left: -90px;
+  width: 320px;
+  height: 320px;
   border-radius: 999px;
-  background: #2b1f17;
-  opacity: 0.6;
+  background: radial-gradient(circle, rgba(238, 157, 69, 0.24) 0%, rgba(238, 157, 69, 0) 72%);
+  filter: blur(14px);
+  opacity: 0.8;
 }
 
 .topbar {
@@ -106,10 +122,12 @@ select:focus-visible {
   gap: 8px;
   padding: calc(12px + var(--safe-top)) 20px 8px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(22, 19, 17, 0.95) 0%, rgba(22, 19, 17, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(37, 14, 15, 0.96) 0%, rgba(28, 11, 12, 0.82) 100%);
   position: sticky;
   top: 0;
   z-index: 20;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(18px);
 }
 
 .topbar-main-row {
@@ -149,38 +167,44 @@ select:focus-visible {
 .brand-logo {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
-  border: 1px solid #5e4a2e;
-  background: linear-gradient(145deg, #2f261f 0%, #191511 100%);
-  color: var(--accent-soft);
+  border-radius: 12px;
+  border: 1px solid rgba(242, 213, 165, 0.22);
+  background: linear-gradient(180deg, #7a1e1a 0%, #541311 100%);
+  color: #fff8f4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: "Times New Roman", serif;
-  font-weight: 700;
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1;
+  text-transform: lowercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 24px rgba(72, 14, 12, 0.32);
 }
 
 .brand {
   margin: 0;
-  font-family: "Times New Roman", serif;
-  font-size: 30px;
-  letter-spacing: 4px;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
   color: var(--text-0);
-  text-transform: uppercase;
+  text-transform: lowercase;
 }
 
 .tagline {
   margin: 4px 0 0;
   font-size: 11px;
-  letter-spacing: 2px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text-1);
 }
 
 .header-auth-btn {
-  border: 1px solid #4a3d30;
-  background: #201a15;
+  border: 1px solid rgba(242, 213, 165, 0.16);
+  background: rgba(63, 20, 20, 0.62);
   color: var(--accent-soft);
   border-radius: 999px;
   min-height: 40px;
@@ -272,10 +296,13 @@ select:focus-visible {
 
 .card,
 .auth-card {
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(34, 15, 16, 0.96) 0%, rgba(24, 11, 12, 0.94) 100%);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 236, 0.04),
+    0 18px 36px rgba(0, 0, 0, 0.16);
 }
 
 .compact-card {
@@ -287,13 +314,13 @@ select:focus-visible {
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-1);
+  color: #e1c1aa;
 }
 
 .card-text {
   margin: 8px 0 0;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
 .hint {
@@ -335,18 +362,19 @@ select:focus-visible {
 .filter-field select {
   width: 100%;
   border: 1px solid var(--line);
-  background: var(--surface-alt);
+  background: rgba(44, 21, 22, 0.88);
   color: var(--text-0);
   border-radius: 12px;
   padding: 11px 12px;
   font-size: 15px;
+  box-shadow: inset 0 1px 0 rgba(255, 242, 232, 0.04);
 }
 
 .form button,
 .search-button {
   border: 0;
-  background: var(--accent);
-  color: #1b140f;
+  background: linear-gradient(180deg, #e0b878 0%, #c99346 100%);
+  color: #28160f;
   border-radius: 12px;
   min-height: 44px;
   padding: 0 14px;
@@ -354,6 +382,7 @@ select:focus-visible {
   letter-spacing: 1px;
   text-transform: uppercase;
   cursor: pointer;
+  box-shadow: 0 12px 24px rgba(150, 87, 28, 0.2);
 }
 
 .form button:disabled,
@@ -366,8 +395,8 @@ select:focus-visible {
 .ghost-button {
   margin-top: 0;
   border: 1px solid var(--line);
-  background: transparent;
-  color: var(--text-1);
+  background: rgba(51, 20, 20, 0.54);
+  color: var(--text-0);
   border-radius: 12px;
   min-height: 44px;
   font-size: 12px;
@@ -399,8 +428,8 @@ select:focus-visible {
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1px solid #5a4a3a;
-  background: #201914;
+  border: 1px solid rgba(242, 213, 165, 0.24);
+  background: rgba(52, 22, 20, 0.82);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -420,7 +449,7 @@ select:focus-visible {
 
 .checkbox-input:checked + .checkbox-box {
   border-color: var(--accent);
-  background: #2a2119;
+  background: linear-gradient(180deg, #6c1e1b 0%, #4f1613 100%);
   box-shadow: 0 0 0 1px rgba(201, 168, 106, 0.2);
 }
 
@@ -435,12 +464,12 @@ select:focus-visible {
 
 .tab {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: transparent;
+  border-radius: 999px;
+  background: rgba(56, 24, 22, 0.54);
   color: var(--text-1);
   font-size: 11px;
   line-height: 1.2;
-  padding: 10px 6px;
+  padding: 10px 12px;
   min-height: 44px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -448,14 +477,14 @@ select:focus-visible {
 }
 
 .tab.active {
-  background: var(--accent);
-  color: #1b140f;
-  border-color: var(--accent);
+  background: linear-gradient(180deg, #e0b878 0%, #cb974c 100%);
+  color: #2b160f;
+  border-color: rgba(255, 220, 175, 0.4);
   font-weight: 600;
 }
 
 .catalog-controls {
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(33, 14, 15, 0.96) 0%, rgba(24, 11, 12, 0.96) 100%);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 14px;
@@ -520,8 +549,8 @@ select:focus-visible {
 .selection-chip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #4a3b2c;
-  background: #211a14;
+  border: 1px solid rgba(242, 213, 165, 0.18);
+  background: rgba(60, 26, 22, 0.72);
   color: var(--accent-soft);
   border-radius: 999px;
   padding: 7px 10px;
@@ -565,8 +594,8 @@ select:focus-visible {
 .chip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #4a3b2c;
-  background: #211a14;
+  border: 1px solid rgba(242, 213, 165, 0.16);
+  background: rgba(63, 23, 21, 0.7);
   color: var(--accent-soft);
   border-radius: 999px;
   padding: 6px 10px;
@@ -578,7 +607,7 @@ select:focus-visible {
 
 .filter-pill.muted {
   border-color: var(--line);
-  background: #1c1714;
+  background: rgba(28, 14, 13, 0.88);
   color: var(--text-1);
 }
 
@@ -602,7 +631,7 @@ select:focus-visible {
 
 .filter-scrollbox {
   border: 1px solid var(--line);
-  background: var(--surface-alt);
+  background: rgba(38, 18, 18, 0.9);
   border-radius: 12px;
   max-height: 196px;
   overflow-y: auto;
@@ -614,8 +643,8 @@ select:focus-visible {
 
 .filter-option {
   width: 100%;
-  border: 1px solid #3a2f29;
-  background: #191512;
+  border: 1px solid rgba(182, 132, 97, 0.18);
+  background: rgba(28, 13, 14, 0.92);
   color: var(--text-1);
   border-radius: 10px;
   min-height: 34px;
@@ -631,7 +660,7 @@ select:focus-visible {
 .filter-option.active {
   border-color: var(--accent);
   color: var(--accent-soft);
-  background: #231c16;
+  background: rgba(83, 30, 26, 0.88);
 }
 
 .list-grid {
@@ -675,9 +704,10 @@ select:focus-visible {
 
 .home-rail-title {
   margin: 0;
-  font-size: 30px;
+  font-family: var(--font-display);
+  font-size: 34px;
   line-height: 1.1;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .home-rail-title-btn .hint {
@@ -685,8 +715,8 @@ select:focus-visible {
 }
 
 .home-link-btn {
-  border: 1px solid #4a3d30;
-  background: #201a15;
+  border: 1px solid rgba(242, 213, 165, 0.16);
+  background: rgba(64, 23, 21, 0.66);
   color: var(--accent-soft);
   font-size: 14px;
   padding: 8px 12px;
@@ -709,13 +739,14 @@ select:focus-visible {
 }
 
 .mix-unified-card {
-  border: 1px solid #302722;
-  border-radius: 14px;
+  border: 1px solid rgba(193, 141, 106, 0.16);
+  border-radius: 18px;
   padding: 0;
   position: relative;
   overflow: hidden;
   text-align: left;
   color: var(--text-0);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
 }
 
 .mix-unified-card.interactive {
@@ -738,7 +769,7 @@ select:focus-visible {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background: linear-gradient(180deg, rgba(10, 10, 10, 0.05) 20%, rgba(10, 10, 10, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(33, 11, 11, 0.06) 18%, rgba(14, 8, 8, 0.84) 100%);
 }
 
 .mix-unified-head {
@@ -756,8 +787,9 @@ select:focus-visible {
 
 .mix-unified-title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 16px;
-  line-height: 1.25;
+  line-height: 1.2;
   min-height: 2.5em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -801,8 +833,8 @@ select:focus-visible {
 }
 
 .mix-rating-tag {
-  border-color: #7e6442;
-  background: #2a211a;
+  border-color: rgba(240, 194, 123, 0.28);
+  background: rgba(81, 33, 21, 0.88);
   color: #f1cf93;
   flex: 0 0 auto;
 }
@@ -833,8 +865,8 @@ select:focus-visible {
 
 .selected-mix-shell {
   padding: 8px 20px 0;
-  border-bottom: 1px solid rgba(74, 59, 44, 0.35);
-  background: linear-gradient(180deg, rgba(22, 19, 17, 0.95) 0%, rgba(15, 12, 11, 0.92) 100%);
+  border-bottom: 1px solid rgba(193, 141, 106, 0.14);
+  background: linear-gradient(180deg, rgba(40, 15, 16, 0.95) 0%, rgba(23, 10, 11, 0.92) 100%);
 }
 
 .selected-mix-shell .selected-mix-bar {
@@ -885,8 +917,9 @@ select:focus-visible {
   flex-direction: column;
   justify-content: center;
   background:
-    radial-gradient(circle at top right, rgba(201, 168, 106, 0.18), transparent 32%),
-    linear-gradient(180deg, rgba(26, 21, 18, 0.98) 0%, rgba(14, 11, 10, 1) 100%);
+    radial-gradient(circle at 80% 12%, rgba(239, 159, 74, 0.34), transparent 24%),
+    radial-gradient(circle at 0% 42%, rgba(126, 31, 26, 0.38), transparent 28%),
+    linear-gradient(180deg, rgba(46, 17, 18, 0.98) 0%, rgba(18, 8, 9, 1) 100%);
 }
 
 .intro-slide-kicker-row {
@@ -899,7 +932,8 @@ select:focus-visible {
 
 .intro-slide-title {
   margin: 12px 0 0;
-  font-size: 34px;
+  font-family: var(--font-display);
+  font-size: 38px;
   line-height: 1.08;
   max-width: 10ch;
 }
@@ -925,8 +959,8 @@ select:focus-visible {
   display: grid;
   gap: 12px;
   padding: 16px 20px calc(20px + var(--safe-bottom));
-  border-top: 1px solid rgba(74, 59, 44, 0.35);
-  background: linear-gradient(180deg, rgba(16, 13, 12, 0.92) 0%, rgba(12, 10, 9, 1) 100%);
+  border-top: 1px solid rgba(193, 141, 106, 0.14);
+  background: linear-gradient(180deg, rgba(28, 11, 12, 0.92) 0%, rgba(17, 8, 9, 1) 100%);
 }
 
 .intro-dots {
@@ -940,7 +974,7 @@ select:focus-visible {
   height: 10px;
   border-radius: 999px;
   border: 0;
-  background: #43362c;
+  background: rgba(137, 88, 62, 0.54);
   padding: 0;
   cursor: pointer;
 }
@@ -952,7 +986,9 @@ select:focus-visible {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(5, 4, 3, 0.72);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(239, 159, 74, 0.08), transparent 24%),
+    rgba(8, 4, 5, 0.8);
   display: grid;
   place-items: center;
   padding: 18px;
@@ -963,10 +999,12 @@ select:focus-visible {
   width: min(94vw, 620px);
   max-height: min(92dvh, 900px);
   overflow-y: auto;
-  border: 1px solid #3a3028;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #171311 0%, #100d0c 100%);
-  box-shadow: 0 26px 48px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(193, 141, 106, 0.18);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(35, 14, 14, 0.98) 0%, rgba(18, 8, 9, 0.98) 100%);
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 240, 228, 0.03);
 }
 
 .guest-mix-modal {
@@ -1004,7 +1042,8 @@ select:focus-visible {
 
 .mix-info-name {
   margin: 4px 0 0;
-  font-size: 28px;
+  font-family: var(--font-display);
+  font-size: 31px;
   line-height: 1.15;
 }
 
@@ -1027,10 +1066,10 @@ select:focus-visible {
 }
 
 .mix-info-section {
-  border: 1px solid #332923;
-  border-radius: 12px;
+  border: 1px solid rgba(193, 141, 106, 0.14);
+  border-radius: 16px;
   padding: 12px;
-  background: linear-gradient(145deg, rgba(39, 31, 26, 0.55) 0%, rgba(24, 20, 18, 0.85) 100%);
+  background: linear-gradient(145deg, rgba(58, 22, 21, 0.62) 0%, rgba(28, 13, 14, 0.86) 100%);
 }
 
 .mix-info-section-title {
@@ -1039,7 +1078,7 @@ select:focus-visible {
   line-height: 1.3;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #cbb9a4;
+  color: #e0c0a8;
 }
 
 .mix-ratio-stack {
@@ -1105,7 +1144,7 @@ select:focus-visible {
   margin: 8px 0 0;
   font-size: 14px;
   line-height: 1.5;
-  color: #e0d2c5;
+  color: #f2dfd3;
 }
 
 .mix-info-close-btn {
@@ -1123,7 +1162,7 @@ select:focus-visible {
   height: 32px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: var(--surface-alt);
+  background: rgba(45, 20, 19, 0.9);
   color: var(--text-1);
   font-size: 13px;
   cursor: pointer;
@@ -1131,7 +1170,7 @@ select:focus-visible {
 
 .score-btn.active {
   border-color: var(--accent);
-  background: #3a2d20;
+  background: linear-gradient(180deg, #6f221e 0%, #531815 100%);
   color: var(--accent-soft);
 }
 

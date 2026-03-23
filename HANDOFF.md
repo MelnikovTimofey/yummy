@@ -1,5 +1,33 @@
 # HANDOFF — Yummy
 
+## 1.57) Add Nomad Lounge visual layer to Aroma Atelier (23 марта 2026)
+
+- Запрос:
+  - добавить в `Арома Ателье` стилистику реального `Nomad Lounge`: бордовый тон, тёплые янтарные акценты и атмосферу интерьера.
+
+- Реализация:
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - тема переведена в burgundy / amber палитру;
+    - обновлены фон приложения, phone shell, topbar, карточки, chips, tabs, intro и modal;
+    - заголовки переведены на serif-display стек для более lounge-подачи.
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - шапка получила `nomad` wordmark и новую подпись;
+    - rail labels смягчены до `Выбор гостей / Редакция / Мастера`;
+    - фоновые tones карточек и цвета инфографики переведены в фирменную гамму.
+  - `apps/nomad-aroma-web/README.md`:
+    - README синхронизирован с новым visual branding pass.
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175`
+  - подтверждены:
+    - новый brand-shell на access screen;
+    - полноэкранное intro в бордово-янтарной палитре `Nomad`.
+
+- Эффект:
+  - `Арома Ателье` стало выглядеть как часть реального `Nomad Lounge`, а не как абстрактный тёмный шаблон;
+  - при этом UI-механика `Nomad` baseline и `Yami Web` alignment сохранены.
+
 ## 1.56) Sync live Aroma intro cards with current product flow (23 марта 2026)
 
 - Запрос:
