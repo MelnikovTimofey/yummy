@@ -1678,3 +1678,31 @@ Product-rules (зафиксировано):
 - `cd services/nomad-telegram-bot && npm run build` — `OK`.
 - `cd apps/nomad-backend && npm run build` — `OK`.
 - backend integration tests против Postgres локально в этой сессии не повторялись из-за недоступного Docker daemon; access/automation backend build прошёл, а automation backend slice уже зафиксирован коммитом `a828a47`.
+
+Обновление от 23 марта 2026 (Nomad — smoke-test Telegram и синхронизация automation worker):
+- `services/nomad-telegram-bot/src/backend.ts`, `src/backend.test.ts`, `src/config.ts`:
+  - backend client и тесты синхронизированы с реальным automation contract;
+  - worker больше не опирается на устаревший staff-auth CRUD flow;
+  - из bot config убраны неиспользуемые runtime-поля `backendAdminLogin`, `backendAdminPassword`, `codePrefix`, `codeLabelPrefix`.
+- `services/nomad-telegram-bot/.env.example`, `services/nomad-telegram-bot/README.md`:
+  - runbook обновлён под automation-only backend integration.
+- Локально создан `services/nomad-telegram-bot/.env` с реальными значениями:
+  - `TELEGRAM_BOT_TOKEN`;
+  - `NOMAD_TELEGRAM_ALLOWED_CHAT_IDS=362223626`;
+  - `NOMAD_TELEGRAM_BROADCAST_CHAT_IDS=362223626`;
+  - `NOMAD_BACKEND_AUTOMATION_TOKEN=nomad-local-automation-key`.
+
+Проверка:
+- `docker compose -f apps/nomad-backend/docker-compose.yml up -d db` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test` — `OK`, `17/17`.
+- `cd services/nomad-telegram-bot && npm test` — `OK`, `7/7`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+- `curl -sS http://127.0.0.1:3021/health` — `OK`.
+- `curl -sS -H 'x-nomad-automation-key: nomad-local-automation-key' http://127.0.0.1:3021/automation/daily-code/current` — `OK`.
+
+Ограничение:
+- реальный smoke-test доставки в Telegram не завершён из этой среды, потому что исходящие запросы к `https://api.telegram.org` стабильно падают по timeout;
+- worker стартует до шага Telegram API и завершается на `fetch failed / UND_ERR_CONNECT_TIMEOUT`;
+- проблема воспроизводится и напрямую через `curl -I https://api.telegram.org`, и через `curl https://api.telegram.org/bot.../getMe`.

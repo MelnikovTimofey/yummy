@@ -2040,3 +2040,49 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - после вашей проверки можно переходить к одному из двух направлений:
   - chat provisioning и управление Telegram recipient lists из `Мастера`;
   - product analytics по bot-side доставке и manual rotate events.
+
+## 2.8) Nomad (23 марта 2026) — backend integration tests и реальный Telegram smoke-test
+
+Сделано:
+- `services/nomad-telegram-bot/src/backend.ts`, `services/nomad-telegram-bot/src/backend.test.ts`:
+  - backend client окончательно переведён на automation endpoints:
+    - `GET /automation/daily-code/current`
+    - `POST /automation/daily-code/ensure`
+    - `POST /automation/daily-code/rotate`
+  - unit tests переписаны под `x-nomad-automation-key`, старый staff login flow удалён из тестового контракта.
+- `services/nomad-telegram-bot/src/config.ts`, `.env.example`, `README.md`:
+  - из runtime-конфига убраны устаревшие поля под staff auth;
+  - README и env example синхронизированы с фактическим automation-only worker.
+- Для реального smoke-test локально создан `services/nomad-telegram-bot/.env` c user-provided значениями:
+  - `TELEGRAM_BOT_TOKEN`;
+  - `NOMAD_TELEGRAM_ALLOWED_CHAT_IDS=362223626`;
+  - `NOMAD_TELEGRAM_BROADCAST_CHAT_IDS=362223626`;
+  - `NOMAD_BACKEND_AUTOMATION_TOKEN=nomad-local-automation-key`.
+
+Проверка:
+- `docker compose -f apps/nomad-backend/docker-compose.yml up -d db` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test` — `OK`, 17/17.
+- `cd services/nomad-telegram-bot && npm test` — `OK`, 7/7.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+- `curl http://127.0.0.1:3021/health` — `OK`.
+- `curl -H 'x-nomad-automation-key: nomad-local-automation-key' http://127.0.0.1:3021/automation/daily-code/current` — `OK`.
+- `cd services/nomad-telegram-bot && npm start`:
+  - backend side проходит;
+  - процесс падает на первом outbound call к Telegram API с `UND_ERR_CONNECT_TIMEOUT`.
+
+Важно:
+- проблема не в токене и не в bot runtime contract, а в сетевой доступности `api.telegram.org` из текущей среды;
+- это подтверждено прямыми проверками:
+  - `curl -I --max-time 15 https://api.telegram.org` — timeout;
+  - `curl --max-time 20 https://api.telegram.org/bot.../getMe` — timeout;
+  - `curl -4 ...` даёт тот же timeout.
+- Пока исходящий доступ к Telegram не открыт, smoke-test реальной доставки завершить из этой машины нельзя.
+
+Следующий шаг:
+- либо запустить тот же bot worker из сети, где доступен `api.telegram.org`;
+- либо настроить прокси/egress и повторить:
+  - `cd services/nomad-telegram-bot && npm start`;
+  - затем в Telegram проверить стартовую авторассылку в chat `362223626`;
+  - после этого вручную проверить `/whoami`, `/code` и `/rotate`.

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { NomadBackendClient } from './backend';
-import { buildDailyCodeLabel, buildDailyCodeValue, buildMoscowWindow } from './time';
 
 type FetchCall = {
   url: string;
@@ -42,41 +41,33 @@ const buildConfig = () => ({
   telegramBotToken: 'bot-token',
   telegramApiBaseUrl: 'https://api.telegram.org',
   backendUrl: 'https://backend.example',
-  backendAutomationToken: '',
-  backendAdminLogin: 'admin',
-  backendAdminPassword: 'admin',
+  backendAutomationToken: 'automation-token',
   allowedChatIds: [],
   broadcastChatIds: [],
   statePath: '.state.json',
   updateTimeoutSeconds: 25,
   broadcastHour: 9,
   broadcastMinute: 0,
-  codePrefix: 'NOMAD',
-  codeLabelPrefix: 'Код на',
 });
 
-test('ensureDailyCode creates a new daily code via backend CRUD', async () => {
-  const window = buildMoscowWindow(new Date());
-  const codeValue = buildDailyCodeValue('NOMAD', window.dayKey);
-  const codeLabel = buildDailyCodeLabel(window.dayKey);
-
+test('ensureDailyCode calls automation endpoint with automation header', async () => {
   const { result, calls } = await withMockFetch(
     [
       makeResponse({
-        accessToken: 'staff-token',
-        user: { login: 'admin', name: 'Admin', role: 'admin' },
-      }),
-      makeResponse({ items: [] }),
-      makeResponse({
         item: {
           id: 'daily-code-1',
-          codeValue,
-          codeLabel,
+          codeValue: 'NOMAD-2026',
+          codeLabel: 'Код на 23.03.2026',
           active: true,
-          startsAt: window.startsAt.toISOString(),
-          endsAt: window.endsAt.toISOString(),
+          startsAt: '2026-03-22T21:00:00.000Z',
+          endsAt: '2026-03-23T20:59:59.999Z',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+        },
+        state: 'created',
+        window: {
+          startsAt: '2026-03-22T21:00:00.000Z',
+          endsAt: '2026-03-23T20:59:59.999Z',
         },
       }),
     ],
@@ -85,59 +76,30 @@ test('ensureDailyCode creates a new daily code via backend CRUD', async () => {
 
   assert.equal(result.state, 'created');
   assert.equal(result.item.id, 'daily-code-1');
-  assert.equal(calls[0].url, 'https://backend.example/staff/auth/login');
-  assert.equal(calls[1].url, 'https://backend.example/staff/access/daily-codes');
-  assert.equal(calls[2].url, 'https://backend.example/staff/access/daily-codes');
-  assert.match(String(calls[1].init?.headers && (calls[1].init.headers as Record<string, string>).authorization), /Bearer staff-token/);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/ensure');
+  assert.equal(calls[0].init?.method, 'POST');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
 });
 
-test('rotateDailyCode deactivates existing code and creates a fresh one', async () => {
-  const window = buildMoscowWindow(new Date());
-  const nextCodeValue = buildDailyCodeValue('NOMAD', window.dayKey, 2);
-  const nextCodeLabel = buildDailyCodeLabel(window.dayKey, 2);
-
+test('rotateDailyCode calls automation rotate endpoint', async () => {
   const { result, calls } = await withMockFetch(
     [
       makeResponse({
-        accessToken: 'staff-token',
-        user: { login: 'admin', name: 'Admin', role: 'admin' },
-      }),
-      makeResponse({
-        items: [
-          {
-            id: 'daily-code-old',
-            codeValue: buildDailyCodeValue('NOMAD', window.dayKey),
-            codeLabel: buildDailyCodeLabel(window.dayKey),
-            active: true,
-            startsAt: window.startsAt.toISOString(),
-            endsAt: window.endsAt.toISOString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-      }),
-      makeResponse({
         item: {
-          id: 'daily-code-old',
-          codeValue: buildDailyCodeValue('NOMAD', window.dayKey),
-          codeLabel: buildDailyCodeLabel(window.dayKey),
-          active: false,
-          startsAt: window.startsAt.toISOString(),
-          endsAt: window.endsAt.toISOString(),
+          id: 'daily-code-new',
+          codeValue: 'NOMAD-2026-2',
+          codeLabel: 'Код на 23.03.2026 #2',
+          active: true,
+          startsAt: '2026-03-22T21:00:00.000Z',
+          endsAt: '2026-03-23T20:59:59.999Z',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-      }),
-      makeResponse({
-        item: {
-          id: 'daily-code-new',
-          codeValue: nextCodeValue,
-          codeLabel: nextCodeLabel,
-          active: true,
-          startsAt: window.startsAt.toISOString(),
-          endsAt: window.endsAt.toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+        state: 'rotated',
+        window: {
+          startsAt: '2026-03-22T21:00:00.000Z',
+          endsAt: '2026-03-23T20:59:59.999Z',
         },
       }),
     ],
@@ -146,37 +108,38 @@ test('rotateDailyCode deactivates existing code and creates a fresh one', async 
 
   assert.equal(result.state, 'rotated');
   assert.equal(result.item.id, 'daily-code-new');
-  assert.equal(calls.length, 4);
-  assert.equal(calls[2].url, 'https://backend.example/staff/access/daily-codes/daily-code-old');
-  assert.equal(calls[3].url, 'https://backend.example/staff/access/daily-codes');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/rotate');
+  assert.equal(calls[0].init?.method, 'POST');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
 });
 
 test('getCurrentDailyCode returns current active item when it exists', async () => {
-  const window = buildMoscowWindow(new Date());
-
-  const { result } = await withMockFetch(
+  const { result, calls } = await withMockFetch(
     [
       makeResponse({
-        accessToken: 'staff-token',
-        user: { login: 'admin', name: 'Admin', role: 'admin' },
-      }),
-      makeResponse({
-        items: [
-          {
-            id: 'daily-code-current',
-            codeValue: buildDailyCodeValue('NOMAD', window.dayKey),
-            codeLabel: buildDailyCodeLabel(window.dayKey),
-            active: true,
-            startsAt: window.startsAt.toISOString(),
-            endsAt: window.endsAt.toISOString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
+        item: {
+          id: 'daily-code-current',
+          codeValue: 'NOMAD-2026',
+          codeLabel: 'Код на 23.03.2026',
+          active: true,
+          startsAt: '2026-03-22T21:00:00.000Z',
+          endsAt: '2026-03-23T20:59:59.999Z',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        window: {
+          startsAt: '2026-03-22T21:00:00.000Z',
+          endsAt: '2026-03-23T20:59:59.999Z',
+        },
       }),
     ],
     async () => new NomadBackendClient(buildConfig()).getCurrentDailyCode(),
   );
 
   assert.equal(result.item?.id, 'daily-code-current');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/current');
+  assert.equal(calls[0].init?.method, undefined);
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
 });
