@@ -985,6 +985,23 @@ select:focus-visible {
   gap: 10px;
 }
 
+.mix-detail-top-main {
+  min-width: 0;
+}
+
+.mix-detail-top-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mix-detail-select-btn {
+  min-height: 38px;
+  padding-inline: 14px;
+}
+
 .mix-info-name {
   margin: 4px 0 0;
   font-size: 28px;

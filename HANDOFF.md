@@ -1,5 +1,30 @@
 # HANDOFF — Yummy
 
+## 1.55) Refine Aroma Atelier intro copy and top-level mix action (23 марта 2026)
+
+- Запрос:
+  - убрать из intro карточки про возраст и код, поднять `Выбрать микс` наверх modal, переименовать статистический rail и сворачивать фильтры после `Найти`.
+
+- Реализация:
+  - `apps/nomad-backend/src/state.ts`:
+    - intro-карточки переписаны под продуктовый сценарий после access-code;
+    - statistical rail renamed to `Больше всего выбирают`.
+  - `apps/nomad-aroma-web/src/App.tsx`, `apps/nomad-aroma-web/src/styles.css`:
+    - `Выбрать микс` перенесён в верхнюю action-row рядом с `Закрыть`;
+    - отдельная нижняя секция `Выбор` удалена;
+    - mobile catalog filters теперь сворачиваются после `Найти`.
+  - `apps/nomad-aroma-web/README.md`:
+    - README синхронизирован с новым названием аналитического рейла.
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - `cd apps/nomad-backend && npm run build`
+
+- Эффект:
+  - знакомство лучше соответствует моменту входа в продукт;
+  - modal карточка стала понятнее по первичному действию;
+  - мобильный каталог стал компактнее после применения фильтров.
+
 ## 1.54) Tighten Aroma Atelier guest flow after sticky chosen-mix feedback (23 марта 2026)
 
 - Запрос:

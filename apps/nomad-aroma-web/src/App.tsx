@@ -613,15 +613,25 @@ const MixDetailModal = ({
       >
         <div className="mix-info-modal">
           <div className="mix-detail-top-row">
-            <div>
+            <div className="mix-detail-top-main">
               <p className="card-title">{mixSourceLabels[source]}</p>
               <h3 className="mix-info-name" id="guest-mix-modal-title">
                 {mix.name}
               </h3>
             </div>
-            <button className="ghost-button mix-info-close-btn" type="button" onClick={onClose}>
-              Закрыть
-            </button>
+            <div className="mix-detail-top-actions">
+              <button
+                className="search-button recommendation-session mix-detail-select-btn"
+                type="button"
+                onClick={() => onChoose()}
+                disabled={!mix.available || chooseStatus === 'loading' || isSelected}
+              >
+                {chooseStatus === 'loading' ? 'Выбираем...' : isSelected ? 'Выбранный микс' : 'Выбрать микс'}
+              </button>
+              <button className="ghost-button mix-info-close-btn" type="button" onClick={onClose}>
+                Закрыть
+              </button>
+            </div>
           </div>
 
           <section className="mix-info-section">
@@ -720,21 +730,6 @@ const MixDetailModal = ({
           </section>
 
           <section className="mix-info-section">
-            <p className="mix-info-section-title">Выбор</p>
-            <div className="recommendation-actions">
-              <button
-                className="search-button recommendation-session"
-                type="button"
-                onClick={() => onChoose()}
-                disabled={!mix.available || chooseStatus === 'loading' || isSelected}
-              >
-                {chooseStatus === 'loading' ? 'Выбираем...' : isSelected ? 'Выбранный микс' : 'Выбрать микс'}
-              </button>
-              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
-            </div>
-          </section>
-
-          <section className="mix-info-section">
             <p className="mix-info-section-title">Оценка</p>
             <div className="session-rating-row" role="group" aria-label="Оценка микса">
               {[1, 2, 3, 4, 5].map((value) => (
@@ -751,6 +746,7 @@ const MixDetailModal = ({
             </div>
             <div className="recommendation-actions">
               {!mix.available ? <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p> : null}
+              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
               {ratingError ? <p className="screen-status error">{ratingError}</p> : null}
               {ratingStatus === 'loading' ? <p className="screen-status">Сохраняем оценку...</p> : null}
               {ratingMessage ? <p className="status ok">{ratingMessage}</p> : null}
@@ -1008,6 +1004,9 @@ export const App = () => {
     setAppliedCatalogProfiles(selectedCatalogProfiles);
     setAppliedCatalogFlavors(selectedCatalogFlavors);
     setAppliedSortBy(sortBy);
+    if (isCompactFilters) {
+      setFiltersOpen(false);
+    }
   };
 
   const resetCatalogFilters = () => {
