@@ -7,6 +7,7 @@ import {
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
+  normalizeAuditEventRecord,
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
   normalizeTelegramRecipientRecord,
@@ -311,6 +312,40 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastErrorAt: '2026-03-23T10:21:00.000Z',
     lastErrorMessage: 'Telegram request timeout',
     updatedAt: '2026-03-23T10:21:00.000Z',
+  });
+});
+
+test('normalizeAuditEventRecord preserves actor and details', () => {
+  const record = normalizeAuditEventRecord({
+    id: 'audit-1',
+    actorLogin: 'admin',
+    actorName: 'Admin',
+    actorRole: 'admin',
+    action: 'toggle',
+    entityType: 'inventory',
+    entityId: 'tobacco-1',
+    entityLabel: 'Nomad Reserve · Peach Silk',
+    details: {
+      fromInStock: false,
+      toInStock: true,
+    },
+    createdAt: '2026-03-23T10:20:45.288Z',
+  });
+
+  assert.deepEqual(record, {
+    id: 'audit-1',
+    actorLogin: 'admin',
+    actorName: 'Admin',
+    actorRole: 'admin',
+    action: 'toggle',
+    entityType: 'inventory',
+    entityId: 'tobacco-1',
+    entityLabel: 'Nomad Reserve · Peach Silk',
+    details: {
+      fromInStock: false,
+      toInStock: true,
+    },
+    createdAt: '2026-03-23T10:20:45.288Z',
   });
 });
 

@@ -387,3 +387,80 @@ test('telegram automation state is admin-only on staff side', async () => {
     await app.close();
   }
 });
+
+test('audit trail stores staff-sensitive mutations and is admin-only', async () => {
+  const app = buildApp();
+
+  try {
+    const adminToken = await login(app, 'admin', 'admin');
+    const nomadToken = await login(app, 'nomad', 'nomad');
+
+    const inventoryUpdate = await app.inject({
+      method: 'PATCH',
+      url: '/staff/inventory/tobaccos/tobacco-peach-silk',
+      headers: {
+        authorization: `Bearer ${nomadToken}`,
+      },
+      payload: {
+        inStock: true,
+      },
+    });
+
+    assert.equal(inventoryUpdate.statusCode, 200);
+
+    const codeCreate = await app.inject({
+      method: 'POST',
+      url: '/staff/access/daily-codes',
+      headers: {
+        authorization: `Bearer ${nomadToken}`,
+      },
+      payload: {
+        codeValue: 'NOMAD-AUDIT',
+        codeLabel: 'Audit code',
+        active: true,
+      },
+    });
+
+    assert.equal(codeCreate.statusCode, 201);
+
+    const forbidden = await app.inject({
+      method: 'GET',
+      url: '/staff/audit/events',
+      headers: {
+        authorization: `Bearer ${nomadToken}`,
+      },
+    });
+
+    assert.equal(forbidden.statusCode, 403);
+
+    const allowed = await app.inject({
+      method: 'GET',
+      url: '/staff/audit/events?limit=10',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+    });
+
+    assert.equal(allowed.statusCode, 200);
+    const body = allowed.json() as {
+      items: Array<{
+        actorLogin: string;
+        action: string;
+        entityType: string;
+        entityId: string;
+        entityLabel: string;
+        details: Record<string, unknown>;
+      }>;
+    };
+
+    assert.equal(body.items.length >= 2, true);
+    assert.equal(body.items.some((item) => item.actorLogin === 'nomad' && item.entityType === 'inventory' && item.action === 'toggle'), true);
+    assert.equal(body.items.some((item) => item.actorLogin === 'nomad' && item.entityType === 'daily-code' && item.action === 'create'), true);
+
+    const inventoryEvent = body.items.find((item) => item.entityType === 'inventory');
+    assert.equal(inventoryEvent?.entityId, 'tobacco-peach-silk');
+    assert.equal(inventoryEvent?.details.toInStock, true);
+  } finally {
+    await app.close();
+  }
+});

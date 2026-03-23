@@ -75,6 +75,23 @@ model NomadTelegramAutomationState {
   updatedAt             DateTime  @updatedAt
 }
 
+model NomadAuditEvent {
+  id          String   @id @default(uuid())
+  actorLogin  String
+  actorName   String
+  actorRole   String
+  action      String
+  entityType  String
+  entityId    String
+  entityLabel String
+  details     String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, createdAt])
+  @@index([actorLogin, createdAt])
+}
+
 model NomadTobacco {
   id              String            @id
   manufacturer    String

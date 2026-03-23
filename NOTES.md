@@ -1,3 +1,39 @@
+Обновление от 23 марта 2026 (quality and hardening: audit trail and manual smoke baseline for Nomad):
+- Проблема:
+  - Nomad staff-contour уже имел CRUD и automation, но не было persisted audit trail для staff-sensitive действий;
+  - не было зафиксированного acceptance baseline и ручного browser smoke поверх реальных Nomad-сценариев;
+  - в dev-smoke всплыл лишний шум: `404 /favicon.ico`.
+- Изменение:
+  - `apps/nomad-backend/prisma/schema.prisma`:
+    - добавлена модель `NomadAuditEvent`.
+  - `apps/nomad-backend/src/audit.ts`:
+    - вынесены `recordAuditEvent()` и `listAuditEvents()`.
+  - `apps/nomad-backend/src/app.ts`:
+    - staff-sensitive mutations теперь пишут audit events;
+    - добавлен admin-only endpoint `GET /staff/audit/events`.
+  - `apps/nomad-master-web/src/App.tsx`, `contracts.ts`:
+    - добавлен admin-only журнал последних staff-операций в разделе `Доступ`.
+  - `apps/nomad-master-web/index.html`, `apps/nomad-aroma-web/index.html`:
+    - подключён `favicon.svg` для устранения `404 /favicon.ico`.
+  - `apps/nomad-master-web/src/App.tsx`:
+    - password field в staff account editor получил `autocomplete="new-password"`.
+  - `NOMAD_ACCEPTANCE_CHECKLIST.md`:
+    - добавлен чеклист release/pilot acceptance для Nomad.
+  - `output/playwright/nomad-quality`:
+    - сохранены CLI-based smoke artifacts для `Арома Ателье` и `Мастера`.
+- Проверки:
+  - `cd apps/nomad-backend && npm run prisma:generate`
+  - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush`
+  - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test -- --test-name-pattern="audit|telegram automation state|staff-sensitive"`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test -- --test-name-pattern="audit|Audit|telegram automation state|staff-sensitive"`
+  - `cd apps/nomad-master-web && npm run build`
+  - ручной smoke через Playwright CLI для guest и staff сценариев.
+- Эффект:
+  - staff-изменения теперь трассируются и видны в `Мастере`;
+  - у Nomad появился формальный acceptance baseline;
+  - dev-smoke больше не засоряется отсутствующим favicon.
+
 Обновление от 22 марта 2026 (fix: align Nomad inventory toggle response contract):
 - Проблема:
   - toggle наличия в `Мастер` падал с `Cannot read properties of undefined (reading 'id')`.

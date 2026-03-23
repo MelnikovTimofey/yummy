@@ -64,6 +64,19 @@ export type TelegramAutomationStateRecord = {
   updatedAt: string;
 };
 
+export type AuditEventRecord = {
+  id: string;
+  actorLogin: string;
+  actorName: string;
+  actorRole: StaffUser['role'];
+  action: 'create' | 'update' | 'delete' | 'toggle';
+  entityType: 'daily-code' | 'staff-account' | 'telegram-recipient' | 'mix' | 'rail' | 'inventory';
+  entityId: string;
+  entityLabel: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type DashboardSummary = {
   totalTobaccos: number;
   inStockCount: number;
@@ -347,6 +360,36 @@ export const normalizeTelegramAutomationStateRecord = (value: unknown): Telegram
   };
 };
 
+export const normalizeAuditEventRecord = (value: unknown): AuditEventRecord => {
+  const raw = isRecord(value) ? value : {};
+  const details = isRecord(raw.details) ? raw.details : {};
+  const action = raw.action === 'create' || raw.action === 'update' || raw.action === 'delete' || raw.action === 'toggle'
+    ? raw.action
+    : 'update';
+  const entityType =
+    raw.entityType === 'daily-code'
+    || raw.entityType === 'staff-account'
+    || raw.entityType === 'telegram-recipient'
+    || raw.entityType === 'mix'
+    || raw.entityType === 'rail'
+    || raw.entityType === 'inventory'
+      ? raw.entityType
+      : 'inventory';
+
+  return {
+    id: String(raw.id ?? ''),
+    actorLogin: String(raw.actorLogin ?? ''),
+    actorName: String(raw.actorName ?? ''),
+    actorRole: raw.actorRole === 'admin' ? 'admin' : 'nomad',
+    action,
+    entityType,
+    entityId: String(raw.entityId ?? ''),
+    entityLabel: String(raw.entityLabel ?? ''),
+    details,
+    createdAt: toIsoString(raw.createdAt, ''),
+  };
+};
+
 export const normalizeMixRecord = (value: unknown): MixRecord => {
   const raw = isRecord(value) ? value : {};
   const components = readListPayload<unknown>(raw.components).map(normalizeMixComponent);
@@ -546,6 +589,36 @@ export const formatTelegramAutomationHealth = (value: TelegramAutomationHealth) 
       return 'Есть ошибка';
     default:
       return 'Статус неизвестен';
+  }
+};
+
+export const formatAuditAction = (value: AuditEventRecord['action']) => {
+  switch (value) {
+    case 'create':
+      return 'Создание';
+    case 'update':
+      return 'Обновление';
+    case 'delete':
+      return 'Удаление';
+    case 'toggle':
+      return 'Переключение';
+  }
+};
+
+export const formatAuditEntityType = (value: AuditEventRecord['entityType']) => {
+  switch (value) {
+    case 'daily-code':
+      return 'Код доступа';
+    case 'staff-account':
+      return 'Сотрудник';
+    case 'telegram-recipient':
+      return 'Telegram чат';
+    case 'mix':
+      return 'Микс';
+    case 'rail':
+      return 'Рейл';
+    case 'inventory':
+      return 'Инвентарь';
   }
 };
 

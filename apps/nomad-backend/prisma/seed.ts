@@ -269,6 +269,7 @@ async function main() {
   await prisma.nomadDailyAccessCode.deleteMany();
   await prisma.nomadTelegramRecipient.deleteMany();
   await prisma.nomadTelegramAutomationState.deleteMany();
+  await prisma.nomadAuditEvent.deleteMany();
   await prisma.nomadStaffAccount.deleteMany();
 
   await prisma.nomadStaffAccount.createMany({

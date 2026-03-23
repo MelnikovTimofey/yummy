@@ -90,6 +90,20 @@
    - last error;
 5. health вычисляется как `unknown / healthy / stale / error`.
 
+На этапе Quality And Hardening дополнительно есть:
+
+1. persisted audit trail `NomadAuditEvent`;
+2. audit покрывает staff-sensitive изменения:
+   - daily codes;
+   - staff accounts;
+   - Telegram recipients;
+   - inventory toggle;
+   - mixes;
+   - rails;
+3. admin-only endpoint:
+   - `GET /staff/audit/events`;
+4. аудит предназначен для операционного контроля и проверки изменений в `Мастере`.
+
 На release-foundation этапе дополнительно есть:
 
 1. отдельный bootstrap path для первого production admin;
@@ -147,6 +161,7 @@
 - `GET /staff/rails`
 - `POST /staff/rails`
 - `PATCH /staff/rails/:id`
+- `GET /staff/audit/events`
 
 ### Automation
 
@@ -160,6 +175,7 @@
 ### Staff admin
 
 - `GET /staff/access/telegram-automation-state`
+- `GET /staff/audit/events`
 
 ## Локальный запуск
 
@@ -217,5 +233,7 @@ NOMAD_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
 ```
 
 ## Стадия
+
+Текущая стадия: storage-backed MVP + Telegram automation + access management + audit trail + quality smoke baseline.
 
 Текущая стадия: Phase 4 content rails backend + persisted access management + daily code automation + Telegram provisioning + Telegram automation state на отдельном Postgres.

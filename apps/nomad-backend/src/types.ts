@@ -1,4 +1,5 @@
 import type { IntroCard, MixView, RailType, RailView } from './state';
+import type { AuditEventView } from './audit';
 import type {
   DailyAccessCodeView,
   StaffAccountView,
@@ -143,6 +144,10 @@ export type AutomationTelegramStateResponse = {
 
 export type StaffTelegramAutomationStateResponse = {
   item: TelegramAutomationStateView;
+};
+
+export type StaffAuditEventsResponse = {
+  items: AuditEventView[];
 };
 
 export type StaffMixMutationResponse = {

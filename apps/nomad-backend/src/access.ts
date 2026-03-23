@@ -323,6 +323,16 @@ export const listDailyAccessCodes = async () => {
   return records.map(mapDailyAccessCode);
 };
 
+export const getDailyAccessCodeById = async (id: string) => {
+  await ensureNomadState();
+
+  const record = await prisma.nomadDailyAccessCode.findUnique({
+    where: { id },
+  });
+
+  return record ? mapDailyAccessCode(record) : null;
+};
+
 export const createDailyAccessCode = async (payload: Partial<DailyAccessCodeInput>) => {
   await ensureNomadState();
 
@@ -568,6 +578,16 @@ export const listStaffAccounts = async () => {
   return records.map(mapStaffAccount);
 };
 
+export const getStaffAccountById = async (id: string) => {
+  await ensureNomadState();
+
+  const record = await prisma.nomadStaffAccount.findUnique({
+    where: { id },
+  });
+
+  return record ? mapStaffAccount(record) : null;
+};
+
 export const createStaffAccount = async (payload: Partial<StaffAccountInput>) => {
   await ensureNomadState();
 
@@ -696,6 +716,16 @@ export const listTelegramRecipients = async () => {
   });
 
   return records.map(mapTelegramRecipient);
+};
+
+export const getTelegramRecipientById = async (id: string) => {
+  await ensureNomadState();
+
+  const record = await prisma.nomadTelegramRecipient.findUnique({
+    where: { id },
+  });
+
+  return record ? mapTelegramRecipient(record) : null;
 };
 
 export const listActiveTelegramRecipients = async () => {

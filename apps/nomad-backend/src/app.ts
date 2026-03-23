@@ -17,8 +17,11 @@ import {
   deleteStaffAccount,
   deleteTelegramRecipient,
   ensureCurrentDailyAccessCode,
+  getDailyAccessCodeById,
   getCurrentDailyAccessCode,
+  getStaffAccountById,
   getTelegramAutomationState,
+  getTelegramRecipientById,
   listActiveTelegramRecipients,
   listDailyAccessCodes,
   listStaffAccounts,
@@ -30,12 +33,14 @@ import {
   updateTelegramRecipient,
 } from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
+import { listAuditEvents, recordAuditEvent } from './audit';
 import {
   createMix,
   createRail,
   ensureNomadState,
   getInventorySummary,
   getInventoryTobaccos,
+  getTobaccoById,
   getGuestCatalogMixes,
   getGuestHomeRails,
   getGuestIntroCards,
@@ -72,6 +77,7 @@ import type {
   StaffTelegramRecipientMutationResponse,
   StaffTelegramRecipientsResponse,
   StaffTelegramAutomationStateResponse,
+  StaffAuditEventsResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
@@ -140,6 +146,7 @@ export const buildApp = () => {
       telegramRecipientsUpdate: 'PATCH /staff/access/telegram-recipients/:id',
       telegramRecipientsDelete: 'DELETE /staff/access/telegram-recipients/:id',
       telegramAutomationState: 'GET /staff/access/telegram-automation-state',
+      staffAuditEvents: 'GET /staff/audit/events',
       staffMixesList: 'GET /staff/mixes',
       staffMixesCreate: 'POST /staff/mixes',
       staffMixesUpdate: 'PATCH /staff/mixes/:id',
@@ -501,6 +508,20 @@ export const buildApp = () => {
       item: created as StaffDailyAccessCodeMutationResponse['item'],
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'daily-code',
+      entityId: response.item.id,
+      entityLabel: response.item.codeLabel || response.item.codeValue,
+      details: {
+        codeValue: response.item.codeValue,
+        active: response.item.active,
+        startsAt: response.item.startsAt,
+        endsAt: response.item.endsAt,
+      },
+    });
+
     return reply.status(201).send(response);
   });
 
@@ -555,6 +576,20 @@ export const buildApp = () => {
       item: updated as StaffDailyAccessCodeMutationResponse['item'],
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'daily-code',
+      entityId: response.item.id,
+      entityLabel: response.item.codeLabel || response.item.codeValue,
+      details: {
+        codeValue: response.item.codeValue,
+        active: response.item.active,
+        startsAt: response.item.startsAt,
+        endsAt: response.item.endsAt,
+      },
+    });
+
     return reply.send(response);
   });
 
@@ -569,10 +604,22 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Daily code id is required' } satisfies ApiError);
     }
 
+    const current = await getDailyAccessCodeById(codeId);
     const deleted = await deleteDailyAccessCode(codeId);
     if (!deleted) {
       return reply.status(404).send({ error: 'Daily code not found' } satisfies ApiError);
     }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'daily-code',
+      entityId: codeId,
+      entityLabel: current?.codeLabel || current?.codeValue || codeId,
+      details: {
+        codeValue: current?.codeValue ?? '',
+      },
+    });
 
     return reply.status(204).send();
   });
@@ -622,6 +669,19 @@ export const buildApp = () => {
       item: created,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'staff-account',
+      entityId: response.item.id,
+      entityLabel: response.item.login,
+      details: {
+        login: response.item.login,
+        role: response.item.role,
+        active: response.item.active,
+      },
+    });
+
     return reply.status(201).send(response);
   });
 
@@ -666,6 +726,19 @@ export const buildApp = () => {
       item: updated,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'staff-account',
+      entityId: response.item.id,
+      entityLabel: response.item.login,
+      details: {
+        login: response.item.login,
+        role: response.item.role,
+        active: response.item.active,
+      },
+    });
+
     return reply.send(response);
   });
 
@@ -680,10 +753,23 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Staff account id is required' } satisfies ApiError);
     }
 
+    const current = await getStaffAccountById(accountId);
     const deleted = await deleteStaffAccount(accountId);
     if (!deleted) {
       return reply.status(404).send({ error: 'Staff account not found' } satisfies ApiError);
     }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'staff-account',
+      entityId: accountId,
+      entityLabel: current?.login || accountId,
+      details: {
+        login: current?.login ?? '',
+        role: current?.role ?? '',
+      },
+    });
 
     return reply.status(204).send();
   });
@@ -731,6 +817,19 @@ export const buildApp = () => {
       item: created,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'telegram-recipient',
+      entityId: response.item.id,
+      entityLabel: response.item.label || response.item.chatId,
+      details: {
+        chatId: response.item.chatId,
+        scope: response.item.scope,
+        active: response.item.active,
+      },
+    });
+
     return reply.status(201).send(response);
   });
 
@@ -773,6 +872,19 @@ export const buildApp = () => {
       item: updated,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'telegram-recipient',
+      entityId: response.item.id,
+      entityLabel: response.item.label || response.item.chatId,
+      details: {
+        chatId: response.item.chatId,
+        scope: response.item.scope,
+        active: response.item.active,
+      },
+    });
+
     return reply.send(response);
   });
 
@@ -787,10 +899,23 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Telegram recipient id is required' } satisfies ApiError);
     }
 
+    const current = await getTelegramRecipientById(recipientId);
     const deleted = await deleteTelegramRecipient(recipientId);
     if (!deleted) {
       return reply.status(404).send({ error: 'Telegram recipient not found' } satisfies ApiError);
     }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'telegram-recipient',
+      entityId: recipientId,
+      entityLabel: current?.label || current?.chatId || recipientId,
+      details: {
+        chatId: current?.chatId ?? '',
+        scope: current?.scope ?? '',
+      },
+    });
 
     return reply.status(204).send();
   });
@@ -803,6 +928,24 @@ export const buildApp = () => {
 
     const response: StaffTelegramAutomationStateResponse = {
       item: await getTelegramAutomationState(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.get('/staff/audit/events', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const limit = Math.max(
+      1,
+      Math.min(200, Number((request.query as { limit?: unknown } | undefined)?.limit ?? 40) || 40),
+    );
+
+    const response: StaffAuditEventsResponse = {
+      items: await listAuditEvents(limit),
     };
 
     return reply.send(response);
@@ -855,6 +998,18 @@ export const buildApp = () => {
       item: created as MixView,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'mix',
+      entityId: response.item.id,
+      entityLabel: response.item.name,
+      details: {
+        available: response.item.available,
+        componentIds: response.item.componentIds,
+      },
+    });
+
     return reply.status(201).send(response);
   });
 
@@ -900,6 +1055,18 @@ export const buildApp = () => {
     const response: StaffMixMutationResponse = {
       item: updated as MixView,
     };
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'mix',
+      entityId: response.item.id,
+      entityLabel: response.item.name,
+      details: {
+        available: response.item.available,
+        componentIds: response.item.componentIds,
+      },
+    });
 
     return reply.send(response);
   });
@@ -960,6 +1127,19 @@ export const buildApp = () => {
       item: created as RailView,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'rail',
+      entityId: response.item.id,
+      entityLabel: response.item.name,
+      details: {
+        type: response.item.type,
+        active: response.item.active,
+        mixIds: response.item.mixIds,
+      },
+    });
+
     return reply.status(201).send(response);
   });
 
@@ -1004,6 +1184,19 @@ export const buildApp = () => {
       item: updated as RailView,
     };
 
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'rail',
+      entityId: response.item.id,
+      entityLabel: response.item.name,
+      details: {
+        type: response.item.type,
+        active: response.item.active,
+        mixIds: response.item.mixIds,
+      },
+    });
+
     return reply.send(response);
   });
 
@@ -1024,10 +1217,23 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'inStock must be boolean' } satisfies ApiError);
     }
 
+    const current = await getTobaccoById(tobaccoId);
     const updated = await updateTobaccoInStock(tobaccoId, body.inStock);
     if (!updated) {
       return reply.status(404).send({ error: 'Tobacco not found' } satisfies ApiError);
     }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'toggle',
+      entityType: 'inventory',
+      entityId: updated.id,
+      entityLabel: `${updated.manufacturer} · ${updated.name}`,
+      details: {
+        fromInStock: current?.inStock ?? null,
+        toInStock: updated.inStock,
+      },
+    });
 
     return reply.send({ item: updated });
   });

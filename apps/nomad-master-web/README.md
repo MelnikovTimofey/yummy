@@ -67,6 +67,14 @@ Staff/admin frontend для продукта `Мастер`.
 3. последняя backend-зафиксированная ошибка;
 4. summary по active Telegram chats.
 
+## Audit trail
+
+Добавлен admin-only журнал staff-операций:
+
+1. `GET /staff/audit/events` показывает последние изменения;
+2. журнал покрывает daily codes, staff accounts, Telegram recipients, inventory toggle, mixes и rails;
+3. журнал предназначен для операционного контроля и быстрой верификации изменений после staff CRUD-действий.
+
 ## Локальный запуск
 
 ```bash
@@ -79,4 +87,4 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning + Telegram automation status.
+Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning + Telegram automation status + audit trail.

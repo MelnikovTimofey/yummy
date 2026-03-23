@@ -1,5 +1,51 @@
 # HANDOFF — Yummy
 
+## 1.48) Deliver Nomad Quality And Hardening baseline with audit trail and smoke checklist (23 марта 2026)
+
+- Запрос:
+  - после Telegram automation перейти к блоку `Quality And Hardening`, а дизайн оставить следующим отдельным этапом.
+
+- Реализация:
+  - `apps/nomad-backend/prisma/schema.prisma`:
+    - добавлена модель `NomadAuditEvent`.
+  - `apps/nomad-backend/src/audit.ts`:
+    - добавлены persisted helper’ы `recordAuditEvent` и `listAuditEvents`.
+  - `apps/nomad-backend/src/app.ts`:
+    - audit логирование подключено к CRUD daily codes, staff accounts, Telegram recipients, mixes, rails и inventory toggle;
+    - добавлен admin-only endpoint `GET /staff/audit/events`.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/contracts.ts`:
+    - в разделе `Доступ` добавлен admin-only журнал последних staff-операций.
+  - `apps/nomad-master-web/index.html`, `apps/nomad-aroma-web/index.html`:
+    - подключён `favicon.svg`, чтобы убрать `404 /favicon.ico` в dev smoke.
+  - `apps/nomad-master-web/src/App.tsx`:
+    - staff account password field получил `autocomplete="new-password"`.
+  - `NOMAD_ACCEPTANCE_CHECKLIST.md`:
+    - добавлен единый acceptance checklist для backend, `Арома Ателье`, `Мастера`, Telegram automation и audit trail.
+
+- Smoke и верификация:
+  - backend:
+    - `cd apps/nomad-backend && npm run prisma:generate`
+    - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush`
+    - `cd apps/nomad-backend && npm test -- --test-name-pattern="audit|telegram automation state|staff-sensitive"`
+    - `cd apps/nomad-backend && npm run build`
+  - master:
+    - `cd apps/nomad-master-web && npm test -- --test-name-pattern="audit|Audit|telegram automation state|staff-sensitive"`
+    - `cd apps/nomad-master-web && npm run build`
+  - browser smoke:
+    - guest flow пройден через Playwright CLI до сохранения оценки;
+    - staff flow пройден через Playwright CLI до раздела `Доступ`;
+    - для проверки журнала создан и удалён временный daily code `Smoke test code`, после чего аудиторные записи отобразились в `Мастере`;
+    - артефакты сохранены в `output/playwright/nomad-quality`.
+
+- Эффект:
+  - staff-sensitive операции теперь имеют persisted audit trail;
+  - `admin` видит журнал последних изменений прямо в `Мастере`;
+  - у Nomad появился практический quality baseline перед переходом к отдельному дизайн-блоку.
+
+- Ограничения:
+  - smoke пока оформлен как CLI-based manual baseline, а не как репозиторный `@playwright/test` suite;
+  - в dev-console остаётся ожидаемый React DevTools hint, но product-breaking ошибок после исправления favicon не осталось.
+
 ## 1.47) Fix Nomad Master inventory toggle response mismatch (22 марта 2026)
 
 - Проблема:

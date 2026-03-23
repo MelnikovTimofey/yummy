@@ -248,6 +248,12 @@ h2 {
   align-content: start;
 }
 
+.audit-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .workspace-tabs {
   display: flex;
   flex-wrap: wrap;

@@ -10,15 +10,19 @@ import {
   TelegramRecipientRecord,
   TelegramRecipientScope,
   TelegramAutomationStateRecord,
+  AuditEventRecord,
   StaffUser,
   formatDateTimeLocalInput,
   buildInventorySummary,
   formatDelimitedList,
+  formatAuditAction,
+  formatAuditEntityType,
   formatMetricValue,
   formatRailType,
   formatTelegramAutomationHealth,
   formatTelegramRecipientScope,
   normalizeDashboardSummary,
+  normalizeAuditEventRecord,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
@@ -317,6 +321,7 @@ export const App = () => {
   const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
   const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
   const [telegramAutomationState, setTelegramAutomationState] = useState<TelegramAutomationStateRecord | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AuditEventRecord[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -331,6 +336,7 @@ export const App = () => {
   const [telegramAutomationStateStatus, setTelegramAutomationStateStatus] = useState<
     'idle' | 'loading' | 'ready' | 'forbidden' | 'error'
   >('idle');
+  const [auditEventsStatus, setAuditEventsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>('idle');
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
@@ -339,6 +345,7 @@ export const App = () => {
   const [staffAccountsError, setStaffAccountsError] = useState('');
   const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
   const [telegramAutomationStateError, setTelegramAutomationStateError] = useState('');
+  const [auditEventsError, setAuditEventsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -507,6 +514,28 @@ export const App = () => {
     }
   };
 
+  const loadAuditEvents = async (nextToken: string, role: StaffUser['role']) => {
+    if (role !== 'admin') {
+      setAuditEvents([]);
+      setAuditEventsStatus('forbidden');
+      setAuditEventsError('Журнал изменений доступен только для admin.');
+      return;
+    }
+
+    setAuditEventsStatus('loading');
+    setAuditEventsError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/audit/events?limit=25', {}, nextToken);
+      setAuditEvents(readListPayload<unknown>(response).map(normalizeAuditEventRecord));
+      setAuditEventsStatus('ready');
+    } catch (cause) {
+      setAuditEvents([]);
+      setAuditEventsStatus('error');
+      setAuditEventsError(cause instanceof Error ? cause.message : 'Не удалось загрузить журнал изменений');
+    }
+  };
+
   useEffect(() => {
     const hydrate = async () => {
       if (!token) {
@@ -531,6 +560,7 @@ export const App = () => {
           loadStaffAccounts(token, profile.user.role),
           loadTelegramRecipients(token, profile.user.role),
           loadTelegramAutomationState(token, profile.user.role),
+          loadAuditEvents(token, profile.user.role),
         ]);
         setStatus('ready');
       } catch {
@@ -574,6 +604,7 @@ export const App = () => {
         loadStaffAccounts(auth.accessToken, profile.user.role),
         loadTelegramRecipients(auth.accessToken, profile.user.role),
         loadTelegramAutomationState(auth.accessToken, profile.user.role),
+        loadAuditEvents(auth.accessToken, profile.user.role),
       ]);
       setStatus('ready');
     } catch (cause) {
@@ -602,6 +633,7 @@ export const App = () => {
     setStaffAccountsStatus('idle');
     setTelegramRecipientsStatus('idle');
     setTelegramAutomationStateStatus('idle');
+    setAuditEventsStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
@@ -610,6 +642,7 @@ export const App = () => {
     setStaffAccountsError('');
     setTelegramRecipientsError('');
     setTelegramAutomationStateError('');
+    setAuditEventsError('');
     setToggleId('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
@@ -629,6 +662,7 @@ export const App = () => {
     setStaffAccounts([]);
     setTelegramRecipients([]);
     setTelegramAutomationState(null);
+    setAuditEvents([]);
     setTelegramRecipientEditor(emptyTelegramRecipientEditor());
     setTelegramRecipientSaveStatus('idle');
     setTelegramRecipientSaveError('');
@@ -1929,6 +1963,50 @@ export const App = () => {
         </article>
       </div>
 
+      <article className="editor-card">
+        <div className="entity-card__head">
+          <div>
+            <p className="entity-kicker">Журнал изменений</p>
+            <h3>Последние staff-операции</h3>
+          </div>
+          <span className="status-chip">/staff/audit/events</span>
+        </div>
+
+        {auditEventsStatus === 'loading' ? <p className="meta-line">Загружаем журнал изменений...</p> : null}
+        {auditEventsStatus === 'error' ? <p className="error-text">{auditEventsError}</p> : null}
+        {auditEventsStatus === 'forbidden' ? <p className="meta-line">{auditEventsError}</p> : null}
+
+        {auditEventsStatus === 'ready' && !auditEvents.length ? (
+          <p className="meta-line">Пока нет записей аудита.</p>
+        ) : null}
+
+        {auditEventsStatus !== 'forbidden' && auditEvents.length ? (
+          <div className="audit-list">
+            {auditEvents.map((event) => (
+              <article className="entity-card entity-card--compact" key={event.id}>
+                <div className="entity-card__head">
+                  <div>
+                    <p className="entity-kicker">
+                      {formatAuditEntityType(event.entityType)} · {formatAuditAction(event.action)}
+                    </p>
+                    <h3>{event.entityLabel || event.entityId}</h3>
+                  </div>
+                  <span className="status-chip">{event.actorRole}</span>
+                </div>
+                <p className="meta-line">
+                  {event.actorName || event.actorLogin} ({event.actorLogin}) · {formatDateTimeDisplay(event.createdAt)}
+                </p>
+                <div className="chip-row">
+                  <span className="chip">{event.entityType}</span>
+                  <span className="chip">{event.action}</span>
+                  <span className="chip">{event.entityId}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </article>
+
       <div className="manager-layout manager-layout--stacked">
         <aside className="entity-list">
           {dailyCodes.map((code) => (
@@ -2148,6 +2226,7 @@ export const App = () => {
                     className="text-input"
                     value={staffAccountEditor.login}
                     onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
+                    autoComplete="username"
                     placeholder="nomad"
                   />
                 </label>
@@ -2158,6 +2237,7 @@ export const App = () => {
                     className="text-input"
                     value={staffAccountEditor.name}
                     onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
+                    autoComplete="name"
                     placeholder="Кальянный мастер"
                   />
                 </label>
@@ -2186,6 +2266,7 @@ export const App = () => {
                     type="password"
                     value={staffAccountEditor.password}
                     onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
+                    autoComplete="new-password"
                     placeholder="Оставьте пустым, если не менять"
                   />
                 </label>
