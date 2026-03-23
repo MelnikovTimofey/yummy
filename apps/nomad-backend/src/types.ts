@@ -63,6 +63,7 @@ export type OnboardingRecommendationsResponse = {
       name: string;
       manufacturer: string;
       flavors: string[];
+      proportion: number;
     }>;
   }>;
 };

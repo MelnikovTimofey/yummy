@@ -22,6 +22,7 @@ export type RecommendationMix = {
     name: string;
     manufacturer: string;
     flavors: string[];
+    proportion: number;
   }>;
 };
 
@@ -78,6 +79,7 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
           name: item.name,
           manufacturer: item.manufacturer,
           flavors: [...item.flavors],
+          proportion: item.proportion,
         })),
       };
     })

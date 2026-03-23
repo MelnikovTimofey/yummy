@@ -1,3 +1,46 @@
+Обновление от 23 марта 2026 (aroma yami alignment: storefront, rails and catalog mechanics pass):
+- Проблема:
+  - после `Aroma Polish` и `UX Hardening` `Арома Ателье` всё ещё ощущалось как отдельный экспериментальный UI, а не как Nomad-вариант базового `Yami Web`;
+  - рекомендации, витрина и каталог не повторяли ключевую механику `Yami Web`: карточечные списки, product-copy для рейлов, отдельный экран рейла и модальное открытие карточки микса;
+  - в потоке оставался старый хвост от access-сообщения, который продолжал отображаться уже после входа в продуктовый сценарий.
+- Изменение:
+  - `apps/nomad-backend/src/catalog.ts`, `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/recommendations.ts`, `apps/nomad-backend/src/types.ts`:
+    - расширен демо-каталог табаков, миксов, вкусов и `flavorProfiles`;
+    - intro и витрина переписаны в более продуктовой подаче;
+    - mix payload расширен `createdAt` и `proportion`, чтобы карточки и модалка могли выглядеть ближе к `Yami Web`.
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - весь guest flow перестроен под механику `код -> знакомство -> выбор вкусов -> подбор -> витрина -> каталог`;
+    - intro сделан в формате горизонтально листаемых карточек;
+    - рекомендации и каталог переведены на Yami-подобные сетки карточек;
+    - карточка микса теперь открывается в modal overlay на текущем экране;
+    - витрина получила продуктовые rail-метки `По выбору гостей`, `Готовая подборка`, `От наших мастеров`;
+    - отдельный экран рейла работает как список карточек внутри конкретной подборки;
+    - каталог получил фильтры по профилям вкуса, вкусам, брендам, табакам и сортировке;
+    - удалён постоянный `access`-hint, который торчал внизу всех поздних экранов.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - стили переписаны ближе к shell/cards/filters из базового `Yami Web`, но без legacy-функций вроде избранного.
+  - `apps/nomad-aroma-web/README.md`:
+    - стадия обновлена под `Yami Web Alignment`.
+- Проверки:
+  - `cd apps/nomad-backend && npm test -- --test-name-pattern="guest intro|guest catalog|guest home rails|recommendations"`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175` в viewport `390x844`
+  - подтверждены сценарии:
+    - `код -> знакомство -> онбординг -> подбор`;
+    - модальное открытие карточки микса без нижнего догруза страницы;
+    - выбор микса для мастера;
+    - переходы `Подбор -> Витрина -> рейл -> Каталог`.
+  - сохранены артефакты:
+    - `output/playwright/nomad-quality/aroma-recommendations-yami-mobile.png`
+    - `output/playwright/nomad-quality/aroma-recommendation-modal-yami-mobile.png`
+    - `output/playwright/nomad-quality/aroma-showcase-yami-mobile.png`
+    - `output/playwright/nomad-quality/aroma-catalog-yami-mobile.png`
+- Эффект:
+  - `Арома Ателье` стало заметно ближе к UX-механике и визуальному ритму базового `Yami Web`;
+  - продуктовый поток читается как `подбор + витрина + каталог`, а не как набор технических экранов;
+  - Nomad baseline не затронут вне собственного параллельного контура.
+
 Обновление от 23 марта 2026 (aroma ux hardening: resilient guest states and mobile handoff pass):
 - Проблема:
   - после `Aroma Polish` основной guest flow выглядел хорошо визуально, но async-state UX оставался слишком техническим;

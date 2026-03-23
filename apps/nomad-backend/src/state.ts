@@ -19,6 +19,7 @@ export type MixComponentView = {
   name: string;
   manufacturer: string;
   flavors: string[];
+  proportion: number;
 };
 
 export type MixView = {
@@ -35,6 +36,7 @@ export type MixView = {
   popularity: number;
   available: boolean;
   guestVisible: boolean;
+  createdAt: string;
 };
 
 export type RailView = {
@@ -119,29 +121,29 @@ const introCards: SeedIntroCard[] = [
     id: 'intro-age-check',
     step: 1,
     title: 'Подтвердите возраст',
-    description: 'Перед началом сценария гость подтверждает, что ему есть 18 лет.',
-    bullets: ['Это быстрый gate до доступа к рекомендациям.', 'Дальше понадобится daily code от staff.'],
+    description: 'Перед открытием витрины и рекомендаций мы просим подтвердить, что гостю уже исполнилось 18 лет.',
+    bullets: ['Подтверждение занимает одно действие.', 'После этого остаётся ввести код от команды зала.'],
   },
   {
     id: 'intro-code-check',
     step: 2,
-    title: 'Введите daily code',
-    description: 'Код меняется каждый день и позволяет открыть гостевой сценарий без авторизации.',
-    bullets: ['Код сообщает кальянный мастер или официант.', 'Код приходит staff через Telegram.'],
+    title: 'Введите код доступа',
+    description: 'Ежедневный код открывает гостевой сценарий без регистрации и лишних действий.',
+    bullets: ['Код подскажет кальянный мастер или официант.', 'После ввода сразу открывается знакомство с сервисом.'],
   },
   {
     id: 'intro-onboarding',
     step: 3,
-    title: 'Выберите вкус',
-    description: 'Быстрый онбординг помогает подобрать микс под профиль и вкусы гостя.',
-    bullets: ['Можно выбрать несколько профилей.', 'Рекомендации учитывают наличие табаков.'],
+    title: 'Расскажите, что хочется покурить',
+    description: 'Профили вкуса и любимые ноты помогают собрать рекомендации под текущее настроение.',
+    bullets: ['Можно выбрать несколько профилей и вкусов.', 'Рекомендации учитывают наличие табаков.'],
   },
   {
     id: 'intro-mix-card',
     step: 4,
-    title: 'Покажите микс мастеру',
-    description: 'Карточка микса открывается после кнопки выбора и сразу готова для показа staff.',
-    bullets: ['Гость видит состав микса и рейтинг.', 'Мастер получает понятную карточку без лишних шагов.'],
+    title: 'Смотрите витрину и подборки',
+    description: 'После рекомендаций можно перейти в витрину, открыть подборки от мастеров и изучить весь каталог.',
+    bullets: ['Есть готовые подборки и рейлы от наших мастеров.', 'Карточка микса открывается отдельно и не требует прокрутки вниз.'],
   },
 ];
 
@@ -182,29 +184,29 @@ const seedTelegramRecipients: SeedTelegramRecipient[] = [];
 const defaultRails: SeedRail[] = [
   {
     id: 'rail-prepared-fresh-line',
-    name: 'Свежая линия',
-    description: 'Цитрус, мята и лёгкая прохлада для быстрого выбора.',
+    name: 'Быстрый старт',
+    description: 'Лёгкие и понятные миксы для первого выбора в зале.',
     type: 'prepared',
-    mixIds: ['mix-citrus-scout', 'mix-berry-dawn'],
+    mixIds: ['mix-citrus-scout', 'mix-apple-wave', 'mix-berry-dawn'],
     active: true,
     isSystem: false,
   },
   {
     id: 'rail-prepared-sweet-line',
-    name: 'Сладкая линия',
-    description: 'Десертные и мягкие сочетания для спокойного вечера.',
+    name: 'Мягкая витрина',
+    description: 'Сладкие, фруктовые и спокойные сочетания для длинного вечера.',
     type: 'prepared',
-    mixIds: ['mix-silk-road', 'mix-peach-mirage'],
+    mixIds: ['mix-silk-road', 'mix-grape-atelier', 'mix-iced-plum-night'],
     active: true,
     isSystem: false,
   },
   {
     id: 'rail-curated-evening-choice',
-    name: 'Вечерний выбор',
-    description: 'Ручная подборка для позднего визита в Nomad.',
+    name: 'От наших мастеров',
+    description: 'Подборка, которую команда зала советует для более выразительного вкуса.',
     type: 'curated',
-    mixIds: ['mix-amber-bazaar'],
-    active: false,
+    mixIds: ['mix-amber-bazaar', 'mix-dark-market', 'mix-rose-afterglow'],
+    active: true,
     isSystem: false,
   },
 ];
@@ -286,11 +288,13 @@ const mapMixView = (record: {
   available: boolean;
   popularity: number;
   baseAvgRating: number;
+  createdAt: Date;
   flavorProfiles: string;
   flavors: string;
   flavorTags: string;
   components: Array<{
     tobaccoId: string;
+    proportion: number;
     tobacco: {
       id: string;
       name: string;
@@ -324,12 +328,14 @@ const mapMixView = (record: {
       name: item.tobacco.name,
       manufacturer: item.tobacco.manufacturer,
       flavors: parseList(item.tobacco.flavors),
+      proportion: item.proportion,
     })),
     avgRating,
     ratingsCount,
     popularity: record.popularity,
     available: record.available,
     guestVisible,
+    createdAt: record.createdAt.toISOString(),
   };
 };
 

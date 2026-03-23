@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
+import { tobaccos as seedTobaccos } from './catalog';
 import { resetNomadState } from './state';
 
 const loginStaff = async (app: ReturnType<typeof buildApp>) => {
@@ -129,7 +130,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
     topMixes: Array<{ mixId: string; mixName: string; count: number; avgRating: number }>;
   };
 
-  assert.equal(dashboardBody.inventory.total, 6);
+  assert.equal(dashboardBody.inventory.total, seedTobaccos.length);
   assert.equal(dashboardBody.smokeCtaTotal, 3);
   assert.deepEqual(dashboardBody.topMixes[0], {
     mixId: 'mix-citrus-scout',

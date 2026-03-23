@@ -1,5 +1,52 @@
 # HANDOFF — Yummy
 
+## 1.52) Align Aroma Atelier with Yami Web storefront mechanics (23 марта 2026)
+
+- Запрос:
+  - привести `Арома Ателье` ближе к механикам базового `Yami Web` без изменения legacy-контура.
+
+- Реализация:
+  - `apps/nomad-backend/src/catalog.ts`, `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/recommendations.ts`, `apps/nomad-backend/src/types.ts`:
+    - расширен демо-каталог, список вкусов и профилей вкуса;
+    - витрина и intro получили более продуктовую подачу;
+    - mix contract расширен полями `createdAt` и `proportion`.
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - flow перестроен в формат `код -> знакомство -> онбординг -> подбор -> витрина -> каталог`;
+    - экран знакомства переведён на горизонтальные карточки;
+    - рекомендации, витрина, рейлы и каталог используют Yami-подобные карточечные списки;
+    - карточка микса теперь открывается поверх текущего экрана в modal overlay;
+    - витрина использует продуктовые rail-типы `По выбору гостей`, `Готовая подборка`, `От наших мастеров`;
+    - добавлен отдельный экран конкретного рейла;
+    - каталог получил фильтрацию по профилям вкуса, вкусам, брендам, табакам и сортировке;
+    - удалён persistent access-hint, который оставался на поздних экранах.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - visual shell, rails, filters и mix cards подтянуты к механике `Yami Web`, но без legacy-функций вроде избранного.
+  - `apps/nomad-aroma-web/README.md`:
+    - стадия обновлена под `Yami Web Alignment`.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test -- --test-name-pattern="guest intro|guest catalog|guest home rails|recommendations"`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175` в viewport `390x844`
+  - подтверждены:
+    - код доступа;
+    - intro-карточки;
+    - онбординг;
+    - подбор и modal mix card;
+    - витрина и отдельный экран рейла;
+    - каталог с фильтрами.
+  - артефакты:
+    - `output/playwright/nomad-quality/aroma-recommendations-yami-mobile.png`
+    - `output/playwright/nomad-quality/aroma-recommendation-modal-yami-mobile.png`
+    - `output/playwright/nomad-quality/aroma-showcase-yami-mobile.png`
+    - `output/playwright/nomad-quality/aroma-catalog-yami-mobile.png`
+
+- Эффект:
+  - `Арома Ателье` заметно ближе к UX и визуальному ритму базового `Yami Web`;
+  - пользователь видит понятные `Подбор`, `Витрину`, `Каталог` и продуктовые подборки вместо технических состояний;
+  - изменения локализованы внутри Nomad parallel track и не затрагивают legacy.
+
 ## 1.51) Harden Aroma Atelier guest states and mobile handoff UX (23 марта 2026)
 
 - Запрос:
