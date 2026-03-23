@@ -2,7 +2,7 @@ import type { BotConfig } from './config';
 import { NomadBackendClient } from './backend';
 import { JsonStateStore } from './storage';
 import { TelegramClient } from './telegram';
-import type { DailyAccessCodeRecord, TelegramMessage, TelegramUpdate } from './types';
+import type { DailyAccessCodeRecord, TelegramAutomationReportPayload, TelegramMessage, TelegramUpdate } from './types';
 import { buildDayKey, buildMoscowWindow, buildNextBroadcastDelay, formatMoscowDateTime } from './time';
 
 type Dependencies = {
@@ -77,7 +77,12 @@ export class NomadTelegramBot {
   private stopped = false;
   private updateOffset = 0;
   private scheduler: NodeJS.Timeout | null = null;
+  private heartbeatTimer: NodeJS.Timeout | null = null;
   private poller: Promise<void> | null = null;
+  private lastReportedError = {
+    signature: '',
+    at: 0,
+  };
 
   constructor(private readonly deps: Dependencies) {}
 
@@ -90,8 +95,10 @@ export class NomadTelegramBot {
       throw new Error('NOMAD_BACKEND_AUTOMATION_TOKEN is required');
     }
 
+    await this.safeReportState({ event: 'heartbeat' });
     await this.runScheduledBroadcast('startup');
     this.scheduleNextBroadcast();
+    this.startHeartbeatLoop();
     this.poller = this.pollUpdates();
     await this.poller;
   }
@@ -101,6 +108,10 @@ export class NomadTelegramBot {
     if (this.scheduler) {
       clearTimeout(this.scheduler);
       this.scheduler = null;
+    }
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
   }
 
@@ -114,6 +125,7 @@ export class NomadTelegramBot {
         }
       } catch (error) {
         console.error('[nomad-telegram-bot] poll error', error);
+        await this.safeReportError(error);
         await this.sleep(1_000);
       }
     }
@@ -213,6 +225,11 @@ export class NomadTelegramBot {
     }));
 
     await this.reply(message.chat.id, buildDailyCodeMessage(rotated.item, 'Выпущен новый daily code.'));
+    await this.safeReportState({
+      event: 'rotate',
+      codeId: rotated.item.id,
+      codeValue: rotated.item.codeValue,
+    });
     await this.broadcastCodeIfNeeded(rotated.item, buildDayKey(), 'Ручная ротация daily code.', recipients, true, [message.chat.id]);
   }
 
@@ -256,6 +273,13 @@ export class NomadTelegramBot {
       lastBroadcastDayKey: dayKey,
       lastBroadcastAt: new Date().toISOString(),
     });
+
+    await this.safeReportState({
+      event: 'broadcast',
+      codeId: code.id,
+      codeValue: code.codeValue,
+      dayKey,
+    });
   }
 
   private scheduleNextBroadcast() {
@@ -272,11 +296,22 @@ export class NomadTelegramBot {
       void this.runScheduledBroadcast('scheduled')
         .catch((error) => {
           console.error('[nomad-telegram-bot] scheduled broadcast error', error);
+          return this.safeReportError(error);
         })
         .finally(() => {
           this.scheduleNextBroadcast();
         });
     }, delay);
+  }
+
+  private startHeartbeatLoop() {
+    if (this.stopped || this.heartbeatTimer) {
+      return;
+    }
+
+    this.heartbeatTimer = setInterval(() => {
+      void this.safeReportState({ event: 'heartbeat' });
+    }, 60_000);
   }
 
   private async reply(chatId: number, text: string) {
@@ -303,5 +338,33 @@ export class NomadTelegramBot {
 
   private async sleep(ms: number) {
     await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async safeReportState(payload: TelegramAutomationReportPayload) {
+    try {
+      await this.deps.backend.reportTelegramAutomationState(payload);
+    } catch (error) {
+      console.error('[nomad-telegram-bot] automation state report failed', error);
+    }
+  }
+
+  private async safeReportError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const signature = message.trim() || 'unknown error';
+    const now = Date.now();
+
+    if (this.lastReportedError.signature === signature && now - this.lastReportedError.at < 60_000) {
+      return;
+    }
+
+    this.lastReportedError = {
+      signature,
+      at: now,
+    };
+
+    await this.safeReportState({
+      event: 'error',
+      message: signature,
+    });
   }
 }

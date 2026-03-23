@@ -37,6 +37,34 @@ export type TelegramRecipientView = {
   updatedAt: string;
 };
 
+export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
+
+export type TelegramAutomationStateView = {
+  id: string;
+  health: TelegramAutomationHealth;
+  lastHeartbeatAt: string | null;
+  lastRotateAt: string | null;
+  lastRotateCodeId: string | null;
+  lastRotateCodeValue: string | null;
+  lastBroadcastAt: string | null;
+  lastBroadcastCodeId: string | null;
+  lastBroadcastCodeValue: string | null;
+  lastBroadcastDayKey: string | null;
+  lastErrorAt: string | null;
+  lastErrorMessage: string | null;
+  updatedAt: string | null;
+};
+
+export type TelegramAutomationReportEvent = 'heartbeat' | 'broadcast' | 'rotate' | 'error';
+
+type TelegramAutomationReportInput = {
+  event: TelegramAutomationReportEvent;
+  codeId?: string;
+  codeValue?: string;
+  dayKey?: string;
+  message?: string;
+};
+
 type DailyAccessCodeInput = {
   codeValue: string;
   codeLabel?: string;
@@ -201,6 +229,84 @@ const createAutomationSecret = (value: string) => {
   return {
     salt,
     hash: createSecretHash(value, salt),
+  };
+};
+
+const TELEGRAM_AUTOMATION_STATE_ID = 'telegram-bot-status';
+const HEARTBEAT_STALE_MS = 5 * 60_000;
+
+const toIsoOrNull = (value?: Date | null) => (value instanceof Date ? value.toISOString() : null);
+
+const resolveTelegramAutomationHealth = (
+  record: {
+    lastHeartbeatAt?: Date | null;
+    lastErrorAt?: Date | null;
+  } | null,
+  now = new Date(),
+): TelegramAutomationHealth => {
+  const lastHeartbeatAt = record?.lastHeartbeatAt ?? null;
+  const lastErrorAt = record?.lastErrorAt ?? null;
+
+  if (lastErrorAt && (!lastHeartbeatAt || lastErrorAt.getTime() >= lastHeartbeatAt.getTime())) {
+    return 'error';
+  }
+
+  if (!lastHeartbeatAt) {
+    return 'unknown';
+  }
+
+  return now.getTime() - lastHeartbeatAt.getTime() > HEARTBEAT_STALE_MS ? 'stale' : 'healthy';
+};
+
+const mapTelegramAutomationState = (
+  record: {
+    id: string;
+    lastHeartbeatAt: Date | null;
+    lastRotateAt: Date | null;
+    lastRotateCodeId: string | null;
+    lastRotateCodeValue: string | null;
+    lastBroadcastAt: Date | null;
+    lastBroadcastCodeId: string | null;
+    lastBroadcastCodeValue: string | null;
+    lastBroadcastDayKey: string | null;
+    lastErrorAt: Date | null;
+    lastErrorMessage: string | null;
+    updatedAt: Date;
+  } | null,
+  now = new Date(),
+): TelegramAutomationStateView => {
+  if (!record) {
+    return {
+      id: TELEGRAM_AUTOMATION_STATE_ID,
+      health: 'unknown',
+      lastHeartbeatAt: null,
+      lastRotateAt: null,
+      lastRotateCodeId: null,
+      lastRotateCodeValue: null,
+      lastBroadcastAt: null,
+      lastBroadcastCodeId: null,
+      lastBroadcastCodeValue: null,
+      lastBroadcastDayKey: null,
+      lastErrorAt: null,
+      lastErrorMessage: null,
+      updatedAt: null,
+    };
+  }
+
+  return {
+    id: record.id,
+    health: resolveTelegramAutomationHealth(record, now),
+    lastHeartbeatAt: toIsoOrNull(record.lastHeartbeatAt),
+    lastRotateAt: toIsoOrNull(record.lastRotateAt),
+    lastRotateCodeId: record.lastRotateCodeId,
+    lastRotateCodeValue: record.lastRotateCodeValue,
+    lastBroadcastAt: toIsoOrNull(record.lastBroadcastAt),
+    lastBroadcastCodeId: record.lastBroadcastCodeId,
+    lastBroadcastCodeValue: record.lastBroadcastCodeValue,
+    lastBroadcastDayKey: record.lastBroadcastDayKey,
+    lastErrorAt: toIsoOrNull(record.lastErrorAt),
+    lastErrorMessage: record.lastErrorMessage,
+    updatedAt: record.updatedAt.toISOString(),
   };
 };
 
@@ -709,4 +815,77 @@ export const deleteTelegramRecipient = async (id: string) => {
   });
 
   return true;
+};
+
+export const getTelegramAutomationState = async () => {
+  await ensureNomadState();
+
+  const record = await prisma.nomadTelegramAutomationState.findUnique({
+    where: {
+      id: TELEGRAM_AUTOMATION_STATE_ID,
+    },
+  });
+
+  return mapTelegramAutomationState(record);
+};
+
+export const reportTelegramAutomationState = async (payload: Partial<TelegramAutomationReportInput>) => {
+  await ensureNomadState();
+
+  const event = payload.event;
+  if (event !== 'heartbeat' && event !== 'broadcast' && event !== 'rotate' && event !== 'error') {
+    return { error: 'event must be heartbeat, broadcast, rotate or error' };
+  }
+
+  const now = new Date();
+  const data: Record<string, Date | string | null> = {};
+
+  if (event === 'heartbeat' || event === 'broadcast' || event === 'rotate') {
+    data.lastHeartbeatAt = now;
+  }
+
+  if (event === 'broadcast') {
+    data.lastBroadcastAt = now;
+    data.lastBroadcastCodeId = payload.codeId?.trim() || null;
+    data.lastBroadcastCodeValue = payload.codeValue?.trim() || null;
+    data.lastBroadcastDayKey = payload.dayKey?.trim() || null;
+  }
+
+  if (event === 'rotate') {
+    data.lastRotateAt = now;
+    data.lastRotateCodeId = payload.codeId?.trim() || null;
+    data.lastRotateCodeValue = payload.codeValue?.trim() || null;
+  }
+
+  if (event === 'error') {
+    const message = payload.message?.trim();
+    if (!message) {
+      return { error: 'message is required for error event' };
+    }
+
+    data.lastErrorAt = now;
+    data.lastErrorMessage = message;
+  }
+
+  const updated = await prisma.nomadTelegramAutomationState.upsert({
+    where: {
+      id: TELEGRAM_AUTOMATION_STATE_ID,
+    },
+    update: data,
+    create: {
+      id: TELEGRAM_AUTOMATION_STATE_ID,
+      lastHeartbeatAt: event === 'heartbeat' || event === 'broadcast' || event === 'rotate' ? now : null,
+      lastRotateAt: event === 'rotate' ? now : null,
+      lastRotateCodeId: event === 'rotate' ? payload.codeId?.trim() || null : null,
+      lastRotateCodeValue: event === 'rotate' ? payload.codeValue?.trim() || null : null,
+      lastBroadcastAt: event === 'broadcast' ? now : null,
+      lastBroadcastCodeId: event === 'broadcast' ? payload.codeId?.trim() || null : null,
+      lastBroadcastCodeValue: event === 'broadcast' ? payload.codeValue?.trim() || null : null,
+      lastBroadcastDayKey: event === 'broadcast' ? payload.dayKey?.trim() || null : null,
+      lastErrorAt: event === 'error' ? now : null,
+      lastErrorMessage: event === 'error' ? payload.message?.trim() || null : null,
+    },
+  });
+
+  return mapTelegramAutomationState(updated, now);
 };

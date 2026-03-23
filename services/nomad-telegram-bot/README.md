@@ -9,6 +9,9 @@
 - `GET /automation/daily-code/current`
 - `POST /automation/daily-code/ensure`
 - `POST /automation/daily-code/rotate`
+- `GET /automation/telegram/recipients`
+- `GET /automation/telegram/state`
+- `POST /automation/telegram/state/report`
 
 Бот делает три вещи:
 
@@ -34,6 +37,7 @@
 6. Ротация через `/rotate` выпускает новый код через automation endpoint backend.
 7. Если backend уже хранит чаты Telegram, бот читает их через automation API и использует `.env` только как fallback.
 8. Последняя отправка сохраняется локально в `NOMAD_BOT_STATE_PATH`, чтобы не слать дубликаты после рестарта.
+9. Бот отправляет heartbeat и операционные события в backend, чтобы `Мастер` видел текущее состояние automation без чтения логов.
 
 ## Локальный запуск
 
@@ -79,4 +83,4 @@ NOMAD_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
 
 ## Стадия
 
-Текущая стадия: рабочий Nomad worker для daily code automation и staff рассылок.
+Текущая стадия: рабочий Nomad worker для daily code automation, staff рассылок и backend-reported heartbeat/status.

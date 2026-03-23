@@ -9,18 +9,21 @@ import {
   StaffAccountRecord,
   TelegramRecipientRecord,
   TelegramRecipientScope,
+  TelegramAutomationStateRecord,
   StaffUser,
   formatDateTimeLocalInput,
   buildInventorySummary,
   formatDelimitedList,
   formatMetricValue,
   formatRailType,
+  formatTelegramAutomationHealth,
   formatTelegramRecipientScope,
   normalizeDashboardSummary,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
   normalizeStaffAccountRecord,
+  normalizeTelegramAutomationStateRecord,
   normalizeTelegramRecipientRecord,
   parseDelimitedList,
   parseDateTimeLocalInput,
@@ -313,6 +316,7 @@ export const App = () => {
   const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
   const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
+  const [telegramAutomationState, setTelegramAutomationState] = useState<TelegramAutomationStateRecord | null>(null);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -324,6 +328,9 @@ export const App = () => {
   const [telegramRecipientsStatus, setTelegramRecipientsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
     'idle',
   );
+  const [telegramAutomationStateStatus, setTelegramAutomationStateStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'forbidden' | 'error'
+  >('idle');
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
@@ -331,6 +338,7 @@ export const App = () => {
   const [dailyCodesError, setDailyCodesError] = useState('');
   const [staffAccountsError, setStaffAccountsError] = useState('');
   const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
+  const [telegramAutomationStateError, setTelegramAutomationStateError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -477,6 +485,28 @@ export const App = () => {
     }
   };
 
+  const loadTelegramAutomationState = async (nextToken: string, role: StaffUser['role']) => {
+    if (role !== 'admin') {
+      setTelegramAutomationState(null);
+      setTelegramAutomationStateStatus('forbidden');
+      setTelegramAutomationStateError('Статус Telegram automation доступен только для admin.');
+      return;
+    }
+
+    setTelegramAutomationStateStatus('loading');
+    setTelegramAutomationStateError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/access/telegram-automation-state', {}, nextToken);
+      setTelegramAutomationState(normalizeTelegramAutomationStateRecord(readEntityPayload<unknown>(response)));
+      setTelegramAutomationStateStatus('ready');
+    } catch (cause) {
+      setTelegramAutomationState(null);
+      setTelegramAutomationStateStatus('error');
+      setTelegramAutomationStateError(cause instanceof Error ? cause.message : 'Не удалось загрузить статус Telegram automation');
+    }
+  };
+
   useEffect(() => {
     const hydrate = async () => {
       if (!token) {
@@ -500,6 +530,7 @@ export const App = () => {
           loadDailyCodes(token),
           loadStaffAccounts(token, profile.user.role),
           loadTelegramRecipients(token, profile.user.role),
+          loadTelegramAutomationState(token, profile.user.role),
         ]);
         setStatus('ready');
       } catch {
@@ -542,6 +573,7 @@ export const App = () => {
         loadDailyCodes(auth.accessToken),
         loadStaffAccounts(auth.accessToken, profile.user.role),
         loadTelegramRecipients(auth.accessToken, profile.user.role),
+        loadTelegramAutomationState(auth.accessToken, profile.user.role),
       ]);
       setStatus('ready');
     } catch (cause) {
@@ -569,6 +601,7 @@ export const App = () => {
     setDailyCodesStatus('idle');
     setStaffAccountsStatus('idle');
     setTelegramRecipientsStatus('idle');
+    setTelegramAutomationStateStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
@@ -576,6 +609,7 @@ export const App = () => {
     setDailyCodesError('');
     setStaffAccountsError('');
     setTelegramRecipientsError('');
+    setTelegramAutomationStateError('');
     setToggleId('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
@@ -594,6 +628,7 @@ export const App = () => {
     setDailyCodes([]);
     setStaffAccounts([]);
     setTelegramRecipients([]);
+    setTelegramAutomationState(null);
     setTelegramRecipientEditor(emptyTelegramRecipientEditor());
     setTelegramRecipientSaveStatus('idle');
     setTelegramRecipientSaveError('');
@@ -1834,6 +1869,65 @@ export const App = () => {
       <p className="meta-line">
         Коды доступа доступны всем staff-ролям. Аккаунты сотрудников и чаты Telegram управляются только admin.
       </p>
+
+      <div className="summary-grid automation-grid">
+        <article className="metric-card automation-card">
+          <p className="metric-label">Telegram automation</p>
+          <p className="metric-value metric-value--compact">
+            {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
+          </p>
+          <div className="chip-row">
+            <span
+              className={
+                telegramAutomationState?.health === 'healthy'
+                  ? 'stock-pill stock-pill--in'
+                  : telegramAutomationState?.health === 'unknown'
+                    ? 'status-chip'
+                    : 'stock-pill stock-pill--out'
+              }
+            >
+              {telegramAutomationState?.health ?? 'unknown'}
+            </span>
+          </div>
+          <p className="meta-line">Heartbeat: {formatDateTimeDisplay(telegramAutomationState?.lastHeartbeatAt ?? '')}</p>
+          <p className="meta-line">Последнее обновление: {formatDateTimeDisplay(telegramAutomationState?.updatedAt ?? '')}</p>
+          {telegramAutomationState?.lastErrorMessage ? (
+            <p className="meta-line">Последняя ошибка: {telegramAutomationState.lastErrorMessage}</p>
+          ) : (
+            <p className="meta-line">Последняя ошибка: нет</p>
+          )}
+          {telegramAutomationStateStatus === 'loading' ? <p className="meta-line">Загружаем статус бота...</p> : null}
+          {telegramAutomationStateStatus === 'error' ? <p className="error-text">{telegramAutomationStateError}</p> : null}
+          {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
+        </article>
+
+        <article className="metric-card automation-card">
+          <p className="metric-label">Последние действия</p>
+          <p className="meta-line">Авторассылка: {formatDateTimeDisplay(telegramAutomationState?.lastBroadcastAt ?? '')}</p>
+          <p className="meta-line">
+            Код авторассылки: {telegramAutomationState?.lastBroadcastCodeValue || 'Не указано'}
+          </p>
+          <p className="meta-line">День авторассылки: {telegramAutomationState?.lastBroadcastDayKey || 'Не указано'}</p>
+          <p className="meta-line">Ротация: {formatDateTimeDisplay(telegramAutomationState?.lastRotateAt ?? '')}</p>
+          <p className="meta-line">Код ротации: {telegramAutomationState?.lastRotateCodeValue || 'Не указано'}</p>
+        </article>
+
+        <article className="metric-card automation-card">
+          <p className="metric-label">Telegram чаты</p>
+          <p className="meta-line">
+            Разрешённые: {telegramRecipients.filter((item) => item.scope === 'allowed' && item.active).length}
+          </p>
+          <p className="meta-line">
+            Авторассылка: {telegramRecipients.filter((item) => item.scope === 'broadcast' && item.active).length}
+          </p>
+          <p className="meta-line">
+            Ротация: {telegramRecipients.filter((item) => item.scope === 'rotate' && item.active).length}
+          </p>
+          <p className="meta-line">
+            Всего записей: {telegramRecipients.length}
+          </p>
+        </article>
+      </div>
 
       <div className="manager-layout manager-layout--stacked">
         <aside className="entity-list">

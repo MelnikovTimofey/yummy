@@ -2226,3 +2226,66 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - перевести `HOO-12..HOO-15` в `Human Review`;
 - затем открыть следующий Release Foundation slice:
   - backend/web/bot deployment runbook на конкретную target-инфраструктуру.
+
+## 2.12) Nomad (23 марта 2026) — Telegram automation state и admin status panel
+
+Связанные Linear issues:
+
+1. `HOO-16` — persisted bot status and heartbeat
+2. `HOO-17` — admin panel for bot status
+
+Сделано:
+- `apps/nomad-backend/prisma/schema.prisma`, `prisma/seed.ts`, `src/state.ts`:
+  - добавлена модель `NomadTelegramAutomationState`;
+  - Nomad reset/storage теперь очищает automation state вместе с остальными persisted сущностями.
+- `apps/nomad-backend/src/access.ts`, `src/types.ts`, `src/app.ts`:
+  - добавлены endpoints:
+    - `GET /automation/telegram/state`
+    - `POST /automation/telegram/state/report`
+    - `GET /staff/access/telegram-automation-state`
+  - backend хранит singleton-состояние Telegram-бота:
+    - heartbeat;
+    - last rotate;
+    - last broadcast;
+    - last error;
+    - computed health `unknown / healthy / stale / error`.
+- `apps/nomad-backend/src/automation.test.ts`, `src/access.test.ts`:
+  - добавлены регрессии на report/read cycle и admin-only доступ с staff-side.
+- `services/nomad-telegram-bot/src/types.ts`, `src/backend.ts`, `src/backend.test.ts`, `src/bot.ts`:
+  - bot умеет читать и репортить automation state в backend;
+  - heartbeat отправляется раз в минуту;
+  - успешные `rotate` и `broadcast` фиксируются в backend;
+  - ошибки polling/scheduled broadcast тоже фиксируются, но с throttling, чтобы не шуметь одинаковыми сообщениями.
+- `apps/nomad-master-web/src/contracts.ts`, `src/contracts.test.ts`, `src/App.tsx`, `src/styles.css`:
+  - в разделе `Доступ` добавлен admin-only обзор Telegram automation;
+  - показываются:
+    - статус бота;
+    - heartbeat;
+    - last rotate;
+    - last broadcast;
+    - последняя ошибка;
+    - summary по Telegram chats.
+- `apps/nomad-backend/README.md`, `apps/nomad-master-web/README.md`, `services/nomad-telegram-bot/README.md`:
+  - README синхронизированы под новый automation-state slice.
+
+Проверка:
+- `cd apps/nomad-backend && npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test -- --test-name-pattern=\"telegram\"` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm test -- --test-name-pattern=\"Telegram\"` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
+- `cd services/nomad-telegram-bot && npm test -- --test-name-pattern=\"telegram\"` — `OK`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+
+Важно:
+- backend health `stale` начинает срабатывать, если heartbeat старше 5 минут;
+- текущая реализация хранит только последнее состояние бота, а не историю событий;
+- ошибки бота репортятся в backend best-effort и не должны валить сам worker, если automation endpoint временно недоступен.
+
+Следующий шаг:
+- перевести `HOO-16` и `HOO-17` в `Human Review`;
+- затем взять следующий Telegram/Quality slice:
+  - bot recovery runbook;
+  - targeted e2e smoke для `Мастера` и staff access flows;
+  - audit trail для staff-sensitive операций.

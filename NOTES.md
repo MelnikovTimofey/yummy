@@ -1781,3 +1781,44 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-backend && env DATABASE_URL=... NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin NOMAD_BOOTSTRAP_ADMIN_NAME=\"Nomad Admin\" NOMAD_BOOTSTRAP_ADMIN_PASSWORD=temporary-admin-password npm run bootstrap:admin` — `OK`.
 - `cd services/nomad-telegram-bot && npm run build` — `OK`.
 - `git diff --check` — `OK`.
+
+Обновление от 23 марта 2026 (Nomad — Telegram automation state и admin status panel):
+- Linear:
+  - создан `HOO-16` — persisted bot status and heartbeat;
+  - создан `HOO-17` — admin panel for bot status.
+- `apps/nomad-backend/prisma/schema.prisma`, `prisma/seed.ts`, `src/state.ts`:
+  - добавлена persisted модель `NomadTelegramAutomationState`;
+  - reset/seed очищают automation state вместе с остальными Nomad-данными.
+- `apps/nomad-backend/src/access.ts`, `src/types.ts`, `src/app.ts`:
+  - добавлены backend contracts и endpoints:
+    - `GET /automation/telegram/state`
+    - `POST /automation/telegram/state/report`
+    - `GET /staff/access/telegram-automation-state`
+  - backend хранит и отдаёт:
+    - heartbeat;
+    - last rotate;
+    - last broadcast;
+    - last error;
+    - computed health `unknown / healthy / stale / error`.
+- `apps/nomad-backend/src/automation.test.ts`, `src/access.test.ts`:
+  - добавлены регрессии на automation state reporting и admin-only staff read endpoint.
+- `services/nomad-telegram-bot/src/types.ts`, `src/backend.ts`, `src/backend.test.ts`, `src/bot.ts`:
+  - bot client умеет читать и репортить automation state;
+  - worker шлёт heartbeat раз в минуту;
+  - worker фиксирует в backend успешные `broadcast` и `rotate`;
+  - ошибки polling/scheduled broadcast отправляются в backend с throttling, чтобы не спамить state log.
+- `apps/nomad-master-web/src/contracts.ts`, `contracts.test.ts`, `App.tsx`, `styles.css`:
+  - в разделе `Доступ` появился admin-only обзор Telegram automation;
+  - показываются heartbeat, last rotate, last broadcast, last error и summary по Telegram chats.
+- `apps/nomad-backend/README.md`, `apps/nomad-master-web/README.md`, `services/nomad-telegram-bot/README.md`:
+  - runbook и stage descriptions синхронизированы под новый automation-state slice.
+
+Проверка:
+- `cd apps/nomad-backend && npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test -- --test-name-pattern=\"telegram\"` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm test -- --test-name-pattern=\"Telegram\"` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
+- `cd services/nomad-telegram-bot && npm test -- --test-name-pattern=\"telegram\"` — `OK`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.

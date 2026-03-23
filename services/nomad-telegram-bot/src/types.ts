@@ -50,6 +50,36 @@ export type AutomationTelegramRecipientsResponse = {
   rotateChatIds: number[];
 };
 
+export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
+
+export type TelegramAutomationStateRecord = {
+  id: string;
+  health: TelegramAutomationHealth;
+  lastHeartbeatAt: string | null;
+  lastRotateAt: string | null;
+  lastRotateCodeId: string | null;
+  lastRotateCodeValue: string | null;
+  lastBroadcastAt: string | null;
+  lastBroadcastCodeId: string | null;
+  lastBroadcastCodeValue: string | null;
+  lastBroadcastDayKey: string | null;
+  lastErrorAt: string | null;
+  lastErrorMessage: string | null;
+  updatedAt: string | null;
+};
+
+export type AutomationTelegramStateResponse = {
+  item: TelegramAutomationStateRecord;
+};
+
+export type TelegramAutomationReportPayload = {
+  event: 'heartbeat' | 'broadcast' | 'rotate' | 'error';
+  codeId?: string;
+  codeValue?: string;
+  dayKey?: string;
+  message?: string;
+};
+
 export type BotState = {
   lastBroadcastCodeId: string | null;
   lastBroadcastCodeValue: string | null;

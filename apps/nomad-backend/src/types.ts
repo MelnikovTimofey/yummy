@@ -1,5 +1,10 @@
 import type { IntroCard, MixView, RailType, RailView } from './state';
-import type { DailyAccessCodeView, StaffAccountView, TelegramRecipientView } from './access';
+import type {
+  DailyAccessCodeView,
+  StaffAccountView,
+  TelegramAutomationStateView,
+  TelegramRecipientView,
+} from './access';
 
 export type ApiError = {
   error: string;
@@ -130,6 +135,14 @@ export type AutomationTelegramRecipientsResponse = {
   allowedChatIds: number[];
   broadcastChatIds: number[];
   rotateChatIds: number[];
+};
+
+export type AutomationTelegramStateResponse = {
+  item: TelegramAutomationStateView;
+};
+
+export type StaffTelegramAutomationStateResponse = {
+  item: TelegramAutomationStateView;
 };
 
 export type StaffMixMutationResponse = {

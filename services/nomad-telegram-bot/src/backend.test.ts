@@ -176,3 +176,64 @@ test('getTelegramRecipients reads grouped automation recipients', async () => {
   assert.equal(calls[0].url, 'https://backend.example/automation/telegram/recipients');
   assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
 });
+
+test('telegram automation state endpoints use automation header and payload', async () => {
+  const { result, calls } = await withMockFetch(
+    [
+      makeResponse({
+        item: {
+          id: 'telegram-bot-status',
+          health: 'healthy',
+          lastHeartbeatAt: '2026-03-23T10:20:45.288Z',
+          lastRotateAt: null,
+          lastRotateCodeId: null,
+          lastRotateCodeValue: null,
+          lastBroadcastAt: null,
+          lastBroadcastCodeId: null,
+          lastBroadcastCodeValue: null,
+          lastBroadcastDayKey: null,
+          lastErrorAt: null,
+          lastErrorMessage: null,
+          updatedAt: '2026-03-23T10:20:45.288Z',
+        },
+      }),
+      makeResponse({
+        item: {
+          id: 'telegram-bot-status',
+          health: 'healthy',
+          lastHeartbeatAt: '2026-03-23T10:22:00.000Z',
+          lastRotateAt: null,
+          lastRotateCodeId: null,
+          lastRotateCodeValue: null,
+          lastBroadcastAt: null,
+          lastBroadcastCodeId: null,
+          lastBroadcastCodeValue: null,
+          lastBroadcastDayKey: null,
+          lastErrorAt: null,
+          lastErrorMessage: null,
+          updatedAt: '2026-03-23T10:22:00.000Z',
+        },
+      }),
+    ],
+    async () => {
+      const client = new NomadBackendClient(buildConfig());
+      const current = await client.getTelegramAutomationState();
+      const reported = await client.reportTelegramAutomationState({
+        event: 'heartbeat',
+      });
+      return { current, reported };
+    },
+  );
+
+  assert.equal(result.current.item.health, 'healthy');
+  assert.equal(result.reported.item.lastHeartbeatAt, '2026-03-23T10:22:00.000Z');
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, 'https://backend.example/automation/telegram/state');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal(calls[1].url, 'https://backend.example/automation/telegram/state/report');
+  assert.equal(calls[1].init?.method, 'POST');
+  assert.equal((calls[1].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.deepEqual(JSON.parse(String(calls[1].init?.body)), {
+    event: 'heartbeat',
+  });
+});

@@ -59,6 +59,22 @@ model NomadTelegramRecipient {
   @@index([scope, active])
 }
 
+model NomadTelegramAutomationState {
+  id                    String    @id
+  lastHeartbeatAt       DateTime?
+  lastRotateAt          DateTime?
+  lastRotateCodeId      String?
+  lastRotateCodeValue   String?
+  lastBroadcastAt       DateTime?
+  lastBroadcastCodeId   String?
+  lastBroadcastCodeValue String?
+  lastBroadcastDayKey   String?
+  lastErrorAt           DateTime?
+  lastErrorMessage      String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
 model NomadTobacco {
   id              String            @id
   manufacturer    String

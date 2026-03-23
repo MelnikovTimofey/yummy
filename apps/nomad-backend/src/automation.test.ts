@@ -224,3 +224,130 @@ test('automation can read active telegram recipients grouped by scope', async ()
     await app.close();
   }
 });
+
+test('automation can report and read telegram bot state', async () => {
+  const app = buildApp();
+
+  try {
+    const initial = await app.inject({
+      method: 'GET',
+      url: '/automation/telegram/state',
+      headers: automationHeaders,
+    });
+
+    assert.equal(initial.statusCode, 200);
+    const initialBody = initial.json() as {
+      item: {
+        health: 'unknown' | 'healthy' | 'stale' | 'error';
+        lastHeartbeatAt: string | null;
+        lastBroadcastAt: string | null;
+        lastErrorAt: string | null;
+      };
+    };
+
+    assert.equal(initialBody.item.health, 'unknown');
+    assert.equal(initialBody.item.lastHeartbeatAt, null);
+    assert.equal(initialBody.item.lastBroadcastAt, null);
+    assert.equal(initialBody.item.lastErrorAt, null);
+
+    const heartbeat = await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/state/report',
+      headers: automationHeaders,
+      payload: {
+        event: 'heartbeat',
+      },
+    });
+
+    assert.equal(heartbeat.statusCode, 200);
+    const heartbeatBody = heartbeat.json() as {
+      item: {
+        health: 'unknown' | 'healthy' | 'stale' | 'error';
+        lastHeartbeatAt: string | null;
+      };
+    };
+
+    assert.equal(heartbeatBody.item.health, 'healthy');
+    assert.ok(heartbeatBody.item.lastHeartbeatAt);
+
+    const broadcast = await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/state/report',
+      headers: automationHeaders,
+      payload: {
+        event: 'broadcast',
+        codeId: 'daily-code-default',
+        codeValue: 'NOMAD-2026',
+        dayKey: '2026-03-23',
+      },
+    });
+
+    assert.equal(broadcast.statusCode, 200);
+    const broadcastBody = broadcast.json() as {
+      item: {
+        health: 'unknown' | 'healthy' | 'stale' | 'error';
+        lastBroadcastAt: string | null;
+        lastBroadcastCodeId: string | null;
+        lastBroadcastCodeValue: string | null;
+        lastBroadcastDayKey: string | null;
+      };
+    };
+
+    assert.equal(broadcastBody.item.health, 'healthy');
+    assert.ok(broadcastBody.item.lastBroadcastAt);
+    assert.equal(broadcastBody.item.lastBroadcastCodeId, 'daily-code-default');
+    assert.equal(broadcastBody.item.lastBroadcastCodeValue, 'NOMAD-2026');
+    assert.equal(broadcastBody.item.lastBroadcastDayKey, '2026-03-23');
+
+    const error = await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/state/report',
+      headers: automationHeaders,
+      payload: {
+        event: 'error',
+        message: 'Telegram request timeout',
+      },
+    });
+
+    assert.equal(error.statusCode, 200);
+    const errorBody = error.json() as {
+      item: {
+        health: 'unknown' | 'healthy' | 'stale' | 'error';
+        lastErrorAt: string | null;
+        lastErrorMessage: string | null;
+      };
+    };
+
+    assert.equal(errorBody.item.health, 'error');
+    assert.ok(errorBody.item.lastErrorAt);
+    assert.equal(errorBody.item.lastErrorMessage, 'Telegram request timeout');
+
+    const rotate = await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/state/report',
+      headers: automationHeaders,
+      payload: {
+        event: 'rotate',
+        codeId: 'daily-code-rotated',
+        codeValue: 'NOMAD-20260323-FA2481',
+      },
+    });
+
+    assert.equal(rotate.statusCode, 200);
+    const rotateBody = rotate.json() as {
+      item: {
+        health: 'unknown' | 'healthy' | 'stale' | 'error';
+        lastRotateAt: string | null;
+        lastRotateCodeId: string | null;
+        lastRotateCodeValue: string | null;
+      };
+    };
+
+    assert.equal(rotateBody.item.health, 'healthy');
+    assert.ok(rotateBody.item.lastRotateAt);
+    assert.equal(rotateBody.item.lastRotateCodeId, 'daily-code-rotated');
+    assert.equal(rotateBody.item.lastRotateCodeValue, 'NOMAD-20260323-FA2481');
+  } finally {
+    await app.close();
+  }
+});

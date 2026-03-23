@@ -58,6 +58,15 @@ Staff/admin frontend для продукта `Мастер`.
 3. эти записи используются Telegram-ботом как backend-driven recipient lists;
 4. если записей в backend нет, bot может fallback-нуться на `.env`.
 
+## Telegram automation state
+
+Добавлен admin-only обзор состояния Telegram automation:
+
+1. heartbeat бота;
+2. last rotate и last broadcast;
+3. последняя backend-зафиксированная ошибка;
+4. summary по active Telegram chats.
+
 ## Локальный запуск
 
 ```bash
@@ -70,4 +79,4 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning.
+Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning + Telegram automation status.

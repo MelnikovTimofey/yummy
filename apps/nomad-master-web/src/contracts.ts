@@ -46,6 +46,24 @@ export type TelegramRecipientRecord = {
   active: boolean;
 };
 
+export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
+
+export type TelegramAutomationStateRecord = {
+  id: string;
+  health: TelegramAutomationHealth;
+  lastHeartbeatAt: string;
+  lastRotateAt: string;
+  lastRotateCodeId: string;
+  lastRotateCodeValue: string;
+  lastBroadcastAt: string;
+  lastBroadcastCodeId: string;
+  lastBroadcastCodeValue: string;
+  lastBroadcastDayKey: string;
+  lastErrorAt: string;
+  lastErrorMessage: string;
+  updatedAt: string;
+};
+
 export type DashboardSummary = {
   totalTobaccos: number;
   inStockCount: number;
@@ -170,6 +188,12 @@ const toTelegramRecipientScope = (value: unknown): TelegramRecipientScope => {
   return value === 'allowed' || value === 'broadcast' || value === 'rotate'
     ? value
     : 'allowed';
+};
+
+const toTelegramAutomationHealth = (value: unknown): TelegramAutomationHealth => {
+  return value === 'healthy' || value === 'stale' || value === 'error' || value === 'unknown'
+    ? value
+    : 'unknown';
 };
 
 const uniqueStrings = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
@@ -300,6 +324,26 @@ export const normalizeTelegramRecipientRecord = (value: unknown): TelegramRecipi
     label: String(raw.label ?? raw.name ?? ''),
     scope: toTelegramRecipientScope(raw.scope),
     active: toBoolean(raw.active, true),
+  };
+};
+
+export const normalizeTelegramAutomationStateRecord = (value: unknown): TelegramAutomationStateRecord => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? 'telegram-bot-status'),
+    health: toTelegramAutomationHealth(raw.health),
+    lastHeartbeatAt: toIsoString(raw.lastHeartbeatAt, ''),
+    lastRotateAt: toIsoString(raw.lastRotateAt, ''),
+    lastRotateCodeId: String(raw.lastRotateCodeId ?? ''),
+    lastRotateCodeValue: String(raw.lastRotateCodeValue ?? ''),
+    lastBroadcastAt: toIsoString(raw.lastBroadcastAt, ''),
+    lastBroadcastCodeId: String(raw.lastBroadcastCodeId ?? ''),
+    lastBroadcastCodeValue: String(raw.lastBroadcastCodeValue ?? ''),
+    lastBroadcastDayKey: String(raw.lastBroadcastDayKey ?? ''),
+    lastErrorAt: toIsoString(raw.lastErrorAt, ''),
+    lastErrorMessage: String(raw.lastErrorMessage ?? ''),
+    updatedAt: toIsoString(raw.updatedAt, ''),
   };
 };
 
@@ -490,6 +534,19 @@ export const formatRailType = (value: RailType) => {
 
 export const formatTelegramRecipientScope = (value: TelegramRecipientScope) => {
   return telegramRecipientScopeOptions.find((item) => item.value === value)?.label ?? 'Разрешённые чаты';
+};
+
+export const formatTelegramAutomationHealth = (value: TelegramAutomationHealth) => {
+  switch (value) {
+    case 'healthy':
+      return 'Бот в норме';
+    case 'stale':
+      return 'Heartbeat устарел';
+    case 'error':
+      return 'Есть ошибка';
+    default:
+      return 'Статус неизвестен';
+  }
 };
 
 export const buildInventorySummary = (items: InventoryTobacco[]) => {

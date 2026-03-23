@@ -173,6 +173,11 @@ h2 {
   line-height: 1;
 }
 
+.metric-value--compact {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
 .section-head,
 .inventory-card__head {
   display: flex;
@@ -233,6 +238,14 @@ h2 {
   display: grid;
   gap: 12px;
   margin-top: 16px;
+}
+
+.automation-grid {
+  margin-bottom: 20px;
+}
+
+.automation-card {
+  align-content: start;
 }
 
 .workspace-tabs {

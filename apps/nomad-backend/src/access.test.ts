@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
+import { config } from './config';
 import { resetNomadState } from './state';
 
 const login = async (app: ReturnType<typeof buildApp>, loginName: string, password: string) => {
@@ -331,6 +332,57 @@ test('telegram recipients CRUD is admin-only', async () => {
 
     assert.equal(listAfterDelete.statusCode, 200);
     assert.equal((listAfterDelete.json() as { items: Array<{ id: string }> }).items.length, 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test('telegram automation state is admin-only on staff side', async () => {
+  const app = buildApp();
+
+  try {
+    const adminToken = await login(app, 'admin', 'admin');
+    const nomadToken = await login(app, 'nomad', 'nomad');
+
+    await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/state/report',
+      headers: {
+        'x-nomad-automation-key': config.automationKey,
+      },
+      payload: {
+        event: 'heartbeat',
+      },
+    });
+
+    const forbidden = await app.inject({
+      method: 'GET',
+      url: '/staff/access/telegram-automation-state',
+      headers: {
+        authorization: `Bearer ${nomadToken}`,
+      },
+    });
+
+    assert.equal(forbidden.statusCode, 403);
+
+    const allowed = await app.inject({
+      method: 'GET',
+      url: '/staff/access/telegram-automation-state',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+    });
+
+    assert.equal(allowed.statusCode, 200);
+    const body = allowed.json() as {
+      item: {
+        health: 'unknown' | 'healthy' | 'stale' | 'error';
+        lastHeartbeatAt: string | null;
+      };
+    };
+
+    assert.equal(body.item.health, 'healthy');
+    assert.ok(body.item.lastHeartbeatAt);
   } finally {
     await app.close();
   }

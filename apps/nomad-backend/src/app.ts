@@ -18,10 +18,12 @@ import {
   deleteTelegramRecipient,
   ensureCurrentDailyAccessCode,
   getCurrentDailyAccessCode,
+  getTelegramAutomationState,
   listActiveTelegramRecipients,
   listDailyAccessCodes,
   listStaffAccounts,
   listTelegramRecipients,
+  reportTelegramAutomationState,
   rotateCurrentDailyAccessCode,
   updateDailyAccessCode,
   updateStaffAccount,
@@ -53,6 +55,7 @@ import type {
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
   AutomationTelegramRecipientsResponse,
+  AutomationTelegramStateResponse,
   GuestAccessSuccess,
   GuestCatalogMixesResponse,
   GuestHomeRailsResponse,
@@ -68,6 +71,7 @@ import type {
   StaffMixesResponse,
   StaffTelegramRecipientMutationResponse,
   StaffTelegramRecipientsResponse,
+  StaffTelegramAutomationStateResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
@@ -118,6 +122,8 @@ export const buildApp = () => {
       automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
       automationRotateDailyCode: 'POST /automation/daily-code/rotate',
       automationTelegramRecipients: 'GET /automation/telegram/recipients',
+      automationTelegramState: 'GET /automation/telegram/state',
+      automationTelegramStateReport: 'POST /automation/telegram/state/report',
       inventoryList: 'GET /staff/inventory/tobaccos',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
@@ -133,6 +139,7 @@ export const buildApp = () => {
       telegramRecipientsCreate: 'POST /staff/access/telegram-recipients',
       telegramRecipientsUpdate: 'PATCH /staff/access/telegram-recipients/:id',
       telegramRecipientsDelete: 'DELETE /staff/access/telegram-recipients/:id',
+      telegramAutomationState: 'GET /staff/access/telegram-automation-state',
       staffMixesList: 'GET /staff/mixes',
       staffMixesCreate: 'POST /staff/mixes',
       staffMixesUpdate: 'PATCH /staff/mixes/:id',
@@ -331,6 +338,52 @@ export const buildApp = () => {
       allowedChatIds: pickChatIds('allowed'),
       broadcastChatIds: pickChatIds('broadcast'),
       rotateChatIds: pickChatIds('rotate'),
+    };
+
+    return reply.send(response);
+  });
+
+  app.get('/automation/telegram/state', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const response: AutomationTelegramStateResponse = {
+      item: await getTelegramAutomationState(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/automation/telegram/state/report', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          event?: string;
+          codeId?: string;
+          codeValue?: string;
+          dayKey?: string;
+          message?: string;
+        }
+      | undefined;
+
+    const reported = await reportTelegramAutomationState({
+      event: payload?.event as 'heartbeat' | 'broadcast' | 'rotate' | 'error' | undefined,
+      codeId: payload?.codeId,
+      codeValue: payload?.codeValue,
+      dayKey: payload?.dayKey,
+      message: payload?.message,
+    });
+
+    if (isApiError(reported)) {
+      return reply.status(400).send(reported);
+    }
+
+    const response: AutomationTelegramStateResponse = {
+      item: reported,
     };
 
     return reply.send(response);
@@ -740,6 +793,19 @@ export const buildApp = () => {
     }
 
     return reply.status(204).send();
+  });
+
+  app.get('/staff/access/telegram-automation-state', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffTelegramAutomationStateResponse = {
+      item: await getTelegramAutomationState(),
+    };
+
+    return reply.send(response);
   });
 
   app.get('/staff/mixes', async (request, reply) => {

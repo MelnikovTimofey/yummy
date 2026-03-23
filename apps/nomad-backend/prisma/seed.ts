@@ -268,6 +268,7 @@ async function main() {
   await prisma.nomadIntroCard.deleteMany();
   await prisma.nomadDailyAccessCode.deleteMany();
   await prisma.nomadTelegramRecipient.deleteMany();
+  await prisma.nomadTelegramAutomationState.deleteMany();
   await prisma.nomadStaffAccount.deleteMany();
 
   await prisma.nomadStaffAccount.createMany({

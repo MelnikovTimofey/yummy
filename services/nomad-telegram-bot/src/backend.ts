@@ -4,6 +4,8 @@ import type {
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
   AutomationTelegramRecipientsResponse,
+  AutomationTelegramStateResponse,
+  TelegramAutomationReportPayload,
 } from './types';
 
 const AUTOMATION_HEADER = 'x-nomad-automation-key';
@@ -52,6 +54,19 @@ export class NomadBackendClient {
     return this.readResponse<T>(response);
   }
 
+  private async postBodyJson<T>(path: string, payload: unknown) {
+    const response = await fetch(`${this.config.backendUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        ...this.headers(),
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    return this.readResponse<T>(response);
+  }
+
   async getCurrentDailyCode() {
     return this.getJson<AutomationDailyCodeCurrentResponse>('/automation/daily-code/current');
   }
@@ -66,5 +81,13 @@ export class NomadBackendClient {
 
   async getTelegramRecipients() {
     return this.getJson<AutomationTelegramRecipientsResponse>('/automation/telegram/recipients');
+  }
+
+  async getTelegramAutomationState() {
+    return this.getJson<AutomationTelegramStateResponse>('/automation/telegram/state');
+  }
+
+  async reportTelegramAutomationState(payload: TelegramAutomationReportPayload) {
+    return this.postBodyJson<AutomationTelegramStateResponse>('/automation/telegram/state/report', payload);
   }
 }

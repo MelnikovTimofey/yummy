@@ -8,6 +8,7 @@ import {
   normalizeMixRecord,
   normalizeRailRecord,
   normalizeStaffAccountRecord,
+  normalizeTelegramAutomationStateRecord,
   normalizeTelegramRecipientRecord,
   parseDelimitedList,
   parseDateTimeLocalInput,
@@ -277,6 +278,40 @@ test('sortStaffAccounts keeps active admins first', () => {
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['staff-1', 'staff-2', 'staff-3']);
+});
+
+test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
+  const record = normalizeTelegramAutomationStateRecord({
+    id: 'telegram-bot-status',
+    health: 'error',
+    lastHeartbeatAt: '2026-03-23T10:20:45.288Z',
+    lastRotateAt: null,
+    lastRotateCodeId: null,
+    lastRotateCodeValue: null,
+    lastBroadcastAt: '2026-03-23T09:00:00.000Z',
+    lastBroadcastCodeId: 'daily-code-default',
+    lastBroadcastCodeValue: 'NOMAD-2026',
+    lastBroadcastDayKey: '2026-03-23',
+    lastErrorAt: '2026-03-23T10:21:00.000Z',
+    lastErrorMessage: 'Telegram request timeout',
+    updatedAt: '2026-03-23T10:21:00.000Z',
+  });
+
+  assert.deepEqual(record, {
+    id: 'telegram-bot-status',
+    health: 'error',
+    lastHeartbeatAt: '2026-03-23T10:20:45.288Z',
+    lastRotateAt: '',
+    lastRotateCodeId: '',
+    lastRotateCodeValue: '',
+    lastBroadcastAt: '2026-03-23T09:00:00.000Z',
+    lastBroadcastCodeId: 'daily-code-default',
+    lastBroadcastCodeValue: 'NOMAD-2026',
+    lastBroadcastDayKey: '2026-03-23',
+    lastErrorAt: '2026-03-23T10:21:00.000Z',
+    lastErrorMessage: 'Telegram request timeout',
+    updatedAt: '2026-03-23T10:21:00.000Z',
+  });
 });
 
 test('normalizeTelegramRecipientRecord reads scope and chat id', () => {

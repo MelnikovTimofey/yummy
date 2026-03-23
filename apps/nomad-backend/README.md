@@ -75,6 +75,21 @@
 4. automation endpoint `GET /automation/telegram/recipients` отдаёт активные chat lists для worker;
 5. bot может использовать backend как source of truth, а `.env` оставляет только fallback.
 
+На этапе Telegram automation state дополнительно есть:
+
+1. persisted singleton `NomadTelegramAutomationState` в Postgres;
+2. automation endpoints:
+   - `GET /automation/telegram/state`
+   - `POST /automation/telegram/state/report`
+3. admin-only endpoint:
+   - `GET /staff/access/telegram-automation-state`
+4. backend хранит:
+   - heartbeat бота;
+   - last rotate;
+   - last broadcast;
+   - last error;
+5. health вычисляется как `unknown / healthy / stale / error`.
+
 На release-foundation этапе дополнительно есть:
 
 1. отдельный bootstrap path для первого production admin;
@@ -139,6 +154,12 @@
 - `POST /automation/daily-code/ensure`
 - `POST /automation/daily-code/rotate`
 - `GET /automation/telegram/recipients`
+- `GET /automation/telegram/state`
+- `POST /automation/telegram/state/report`
+
+### Staff admin
+
+- `GET /staff/access/telegram-automation-state`
 
 ## Локальный запуск
 
@@ -197,4 +218,4 @@ NOMAD_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
 
 ## Стадия
 
-Текущая стадия: Phase 4 content rails backend + persisted access management + daily code automation + Telegram provisioning на отдельном Postgres.
+Текущая стадия: Phase 4 content rails backend + persisted access management + daily code automation + Telegram provisioning + Telegram automation state на отдельном Postgres.

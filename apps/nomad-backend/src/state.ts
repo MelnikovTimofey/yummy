@@ -505,6 +505,7 @@ const seedNomadStorage = async () => {
     await tx.nomadIntroCard.deleteMany();
     await tx.nomadDailyAccessCode.deleteMany();
     await tx.nomadTelegramRecipient.deleteMany();
+    await tx.nomadTelegramAutomationState.deleteMany();
     await tx.nomadStaffAccount.deleteMany();
 
     await tx.nomadStaffAccount.createMany({
