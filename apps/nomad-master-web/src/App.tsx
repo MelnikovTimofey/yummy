@@ -7,17 +7,21 @@ import {
   RailRecord,
   StaffAuthResponse,
   StaffAccountRecord,
+  TelegramRecipientRecord,
+  TelegramRecipientScope,
   StaffUser,
   formatDateTimeLocalInput,
   buildInventorySummary,
   formatDelimitedList,
   formatMetricValue,
   formatRailType,
+  formatTelegramRecipientScope,
   normalizeDashboardSummary,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
   normalizeStaffAccountRecord,
+  normalizeTelegramRecipientRecord,
   parseDelimitedList,
   parseDateTimeLocalInput,
   railTypeOptions,
@@ -28,6 +32,8 @@ import {
   sortMixes,
   sortRails,
   sortStaffAccounts,
+  sortTelegramRecipients,
+  telegramRecipientScopeOptions,
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
@@ -74,6 +80,14 @@ type StaffAccountEditorState = {
   active: boolean;
 };
 
+type TelegramRecipientEditorState = {
+  id: string;
+  chatId: string;
+  label: string;
+  scope: TelegramRecipientScope;
+  active: boolean;
+};
+
 const emptyMixEditor = (): MixEditorState => ({
   id: '',
   name: '',
@@ -110,6 +124,14 @@ const emptyStaffAccountEditor = (): StaffAccountEditorState => ({
   name: '',
   role: 'nomad',
   password: '',
+  active: true,
+});
+
+const emptyTelegramRecipientEditor = (): TelegramRecipientEditorState => ({
+  id: '',
+  chatId: '',
+  label: '',
+  scope: 'allowed',
   active: true,
 });
 
@@ -150,6 +172,14 @@ const toStaffAccountEditorState = (account: StaffAccountRecord): StaffAccountEdi
   role: account.role,
   password: '',
   active: account.active,
+});
+
+const toTelegramRecipientEditorState = (recipient: TelegramRecipientRecord): TelegramRecipientEditorState => ({
+  id: recipient.id,
+  chatId: recipient.chatId,
+  label: recipient.label,
+  scope: recipient.scope,
+  active: recipient.active,
 });
 
 const parseNumberInput = (value: string, fallback = 0) => {
@@ -282,6 +312,7 @@ export const App = () => {
   const [rails, setRails] = useState<RailRecord[]>([]);
   const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
+  const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -290,12 +321,16 @@ export const App = () => {
   const [staffAccountsStatus, setStaffAccountsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
     'idle',
   );
+  const [telegramRecipientsStatus, setTelegramRecipientsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
+    'idle',
+  );
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
   const [railsError, setRailsError] = useState('');
   const [dailyCodesError, setDailyCodesError] = useState('');
   const [staffAccountsError, setStaffAccountsError] = useState('');
+  const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -311,6 +346,11 @@ export const App = () => {
   const [staffAccountSaveStatus, setStaffAccountSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [staffAccountSaveError, setStaffAccountSaveError] = useState('');
   const [staffAccountToggleId, setStaffAccountToggleId] = useState('');
+  const [telegramRecipientEditor, setTelegramRecipientEditor] =
+    useState<TelegramRecipientEditorState>(emptyTelegramRecipientEditor);
+  const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
+  const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
 
   const loadInventory = async (nextToken: string) => {
     setInventoryStatus('loading');
@@ -414,6 +454,29 @@ export const App = () => {
     }
   };
 
+  const loadTelegramRecipients = async (nextToken: string, role: StaffUser['role']) => {
+    if (role !== 'admin') {
+      setTelegramRecipients([]);
+      setTelegramRecipientsStatus('forbidden');
+      setTelegramRecipientsError('Чаты Telegram доступны только для admin.');
+      return;
+    }
+
+    setTelegramRecipientsStatus('loading');
+    setTelegramRecipientsError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/access/telegram-recipients', {}, nextToken);
+      const items = sortTelegramRecipients(readListPayload<unknown>(response).map(normalizeTelegramRecipientRecord));
+      setTelegramRecipients(items);
+      setTelegramRecipientsStatus('ready');
+    } catch (cause) {
+      setTelegramRecipients([]);
+      setTelegramRecipientsStatus('error');
+      setTelegramRecipientsError(cause instanceof Error ? cause.message : 'Не удалось загрузить чаты Telegram');
+    }
+  };
+
   useEffect(() => {
     const hydrate = async () => {
       if (!token) {
@@ -436,6 +499,7 @@ export const App = () => {
           loadRails(token),
           loadDailyCodes(token),
           loadStaffAccounts(token, profile.user.role),
+          loadTelegramRecipients(token, profile.user.role),
         ]);
         setStatus('ready');
       } catch {
@@ -477,6 +541,7 @@ export const App = () => {
         loadRails(auth.accessToken),
         loadDailyCodes(auth.accessToken),
         loadStaffAccounts(auth.accessToken, profile.user.role),
+        loadTelegramRecipients(auth.accessToken, profile.user.role),
       ]);
       setStatus('ready');
     } catch (cause) {
@@ -503,12 +568,14 @@ export const App = () => {
     setRailsStatus('idle');
     setDailyCodesStatus('idle');
     setStaffAccountsStatus('idle');
+    setTelegramRecipientsStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
     setRailsError('');
     setDailyCodesError('');
     setStaffAccountsError('');
+    setTelegramRecipientsError('');
     setToggleId('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
@@ -526,6 +593,11 @@ export const App = () => {
     setStaffAccountToggleId('');
     setDailyCodes([]);
     setStaffAccounts([]);
+    setTelegramRecipients([]);
+    setTelegramRecipientEditor(emptyTelegramRecipientEditor());
+    setTelegramRecipientSaveStatus('idle');
+    setTelegramRecipientSaveError('');
+    setTelegramRecipientToggleId('');
   };
 
   const onToggleStock = async (item: InventoryTobacco) => {
@@ -1005,6 +1077,140 @@ export const App = () => {
     }
   };
 
+  const onSelectTelegramRecipient = (recipient: TelegramRecipientRecord) => {
+    setTelegramRecipientEditor(toTelegramRecipientEditorState(recipient));
+    setTelegramRecipientSaveError('');
+    setTelegramRecipientSaveStatus('idle');
+    setActiveTab('access');
+  };
+
+  const onResetTelegramRecipientEditor = () => {
+    setTelegramRecipientEditor(emptyTelegramRecipientEditor());
+    setTelegramRecipientSaveError('');
+    setTelegramRecipientSaveStatus('idle');
+  };
+
+  const onSubmitTelegramRecipient = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    const chatId = telegramRecipientEditor.chatId.trim();
+    const label = telegramRecipientEditor.label.trim();
+
+    if (!chatId) {
+      setTelegramRecipientSaveError('Укажите chat id Telegram');
+      setTelegramRecipientSaveStatus('error');
+      return;
+    }
+
+    setTelegramRecipientSaveStatus('loading');
+    setTelegramRecipientSaveError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        telegramRecipientEditor.id
+          ? `/staff/access/telegram-recipients/${telegramRecipientEditor.id}`
+          : '/staff/access/telegram-recipients',
+        {
+          method: telegramRecipientEditor.id ? 'PATCH' : 'POST',
+          body: JSON.stringify({
+            chatId,
+            label,
+            scope: telegramRecipientEditor.scope,
+            active: telegramRecipientEditor.active,
+          }),
+        },
+        token,
+      );
+
+      const savedRecipient = normalizeTelegramRecipientRecord(readEntityPayload<unknown>(response));
+      if (!savedRecipient.id) {
+        throw new Error('Backend вернул пустую запись чата Telegram');
+      }
+
+      setTelegramRecipients((current) => sortTelegramRecipients(replaceOrInsert(current, savedRecipient)));
+      setTelegramRecipientEditor(toTelegramRecipientEditorState(savedRecipient));
+      setTelegramRecipientSaveStatus('ready');
+      setActiveTab('access');
+    } catch (cause) {
+      setTelegramRecipientSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить чат Telegram');
+      setTelegramRecipientSaveStatus('error');
+    }
+  };
+
+  const onToggleTelegramRecipientActive = async (recipient: TelegramRecipientRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramRecipientToggleId(recipient.id);
+    setTelegramRecipientsError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/telegram-recipients/${recipient.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            chatId: recipient.chatId,
+            label: recipient.label,
+            scope: recipient.scope,
+            active: !recipient.active,
+          }),
+        },
+        token,
+      );
+
+      const savedRecipient = normalizeTelegramRecipientRecord(readEntityPayload<unknown>(response));
+      if (!savedRecipient.id) {
+        throw new Error('Backend вернул пустую запись чата Telegram');
+      }
+
+      setTelegramRecipients((current) => sortTelegramRecipients(replaceOrInsert(current, savedRecipient)));
+      if (telegramRecipientEditor.id === recipient.id) {
+        setTelegramRecipientEditor(toTelegramRecipientEditorState(savedRecipient));
+      }
+      setTelegramRecipientsStatus('ready');
+    } catch (cause) {
+      setTelegramRecipientsError(cause instanceof Error ? cause.message : 'Не удалось обновить чат Telegram');
+      setTelegramRecipientsStatus('error');
+    } finally {
+      setTelegramRecipientToggleId('');
+    }
+  };
+
+  const onDeleteTelegramRecipient = async (recipient: TelegramRecipientRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramRecipientToggleId(recipient.id);
+    setTelegramRecipientsError('');
+
+    try {
+      await requestJson(
+        `/staff/access/telegram-recipients/${recipient.id}`,
+        {
+          method: 'DELETE',
+        },
+        token,
+      );
+
+      setTelegramRecipients((current) => sortTelegramRecipients(current.filter((item) => item.id !== recipient.id)));
+      if (telegramRecipientEditor.id === recipient.id) {
+        onResetTelegramRecipientEditor();
+      }
+      setTelegramRecipientsStatus('ready');
+    } catch (cause) {
+      setTelegramRecipientsError(cause instanceof Error ? cause.message : 'Не удалось удалить чат Telegram');
+      setTelegramRecipientsStatus('error');
+    } finally {
+      setTelegramRecipientToggleId('');
+    }
+  };
+
   const renderDashboard = () => (
     <section className="card">
       <div className="section-head">
@@ -1270,6 +1476,185 @@ export const App = () => {
           </form>
         </article>
       </div>
+
+      <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+        <aside className="entity-list">
+          {telegramRecipientsStatus === 'forbidden' ? (
+            <article className="entity-card entity-card--muted">
+              <p className="entity-kicker">Чаты Telegram</p>
+              <h3>Только для admin</h3>
+              <p className="meta-line">{telegramRecipientsError || 'У вас нет доступа к управлению чатами Telegram.'}</p>
+            </article>
+          ) : (
+            telegramRecipients.map((recipient) => (
+              <article
+                className={telegramRecipientEditor.id === recipient.id ? 'entity-card entity-card--active' : 'entity-card'}
+                key={recipient.id}
+              >
+                <div className="entity-card__head">
+                  <div>
+                    <p className="entity-kicker">Чат Telegram</p>
+                    <h3>{recipient.label || `Чат ${recipient.chatId}`}</h3>
+                  </div>
+                  <span className={recipient.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                    {recipient.active ? 'Активен' : 'Неактивен'}
+                  </span>
+                </div>
+                <div className="chip-row">
+                  <span className="chip">{recipient.chatId}</span>
+                  <span className="chip">{formatTelegramRecipientScope(recipient.scope)}</span>
+                </div>
+                <div className="entity-card__actions entity-card__actions--wrap">
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() => onSelectTelegramRecipient(recipient)}
+                  >
+                    Редактировать
+                  </button>
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() => void onToggleTelegramRecipientActive(recipient)}
+                    disabled={telegramRecipientToggleId === recipient.id}
+                  >
+                    {telegramRecipientToggleId === recipient.id ? 'Сохраняем...' : recipient.active ? 'Деактивировать' : 'Активировать'}
+                  </button>
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() => void onDeleteTelegramRecipient(recipient)}
+                    disabled={telegramRecipientToggleId === recipient.id}
+                  >
+                    {telegramRecipientToggleId === recipient.id ? 'Удаляем...' : 'Удалить'}
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
+
+          {telegramRecipientsStatus !== 'forbidden' && !telegramRecipients.length && telegramRecipientsStatus !== 'loading' ? (
+            <p className="meta-line">Пока нет чатов Telegram.</p>
+          ) : null}
+        </aside>
+
+        <article className="editor-card">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">
+                {telegramRecipientEditor.id ? 'Редактирование чата Telegram' : 'Новый чат Telegram'}
+              </p>
+              <h3>{telegramRecipientEditor.id ? telegramRecipientEditor.label || 'Без названия' : 'Создать чат Telegram'}</h3>
+            </div>
+            <span className="status-chip">{formatTelegramRecipientScope(telegramRecipientEditor.scope)}</span>
+          </div>
+
+          {telegramRecipientsStatus === 'loading' ? <p className="meta-line">Загружаем чаты Telegram...</p> : null}
+          {telegramRecipientsStatus === 'error' ? <p className="error-text">{telegramRecipientsError}</p> : null}
+          {telegramRecipientsStatus === 'forbidden' ? <p className="meta-line">{telegramRecipientsError}</p> : null}
+
+          {telegramRecipientsStatus !== 'forbidden' ? (
+            <form className="admin-form" onSubmit={onSubmitTelegramRecipient}>
+              <div className="form-grid form-grid--two">
+                <label className="field">
+                  <span className="field-label">Chat id Telegram</span>
+                  <input
+                    className="text-input"
+                    value={telegramRecipientEditor.chatId}
+                    onChange={(event) => setTelegramRecipientEditor((current) => ({ ...current, chatId: event.target.value }))}
+                    placeholder="362223626"
+                  />
+                </label>
+
+                <label className="field">
+                  <span className="field-label">Тип</span>
+                  <select
+                    className="select-input"
+                    value={telegramRecipientEditor.scope}
+                    onChange={(event) =>
+                      setTelegramRecipientEditor((current) => ({
+                        ...current,
+                        scope: event.target.value as TelegramRecipientScope,
+                      }))
+                    }
+                  >
+                    {telegramRecipientScopeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field field--wide">
+                  <span className="field-label">Подпись</span>
+                  <input
+                    className="text-input"
+                    value={telegramRecipientEditor.label}
+                    onChange={(event) => setTelegramRecipientEditor((current) => ({ ...current, label: event.target.value }))}
+                    placeholder="Основной staff-чат"
+                  />
+                </label>
+
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={telegramRecipientEditor.active}
+                    onChange={(event) =>
+                      setTelegramRecipientEditor((current) => ({
+                        ...current,
+                        active: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Активен</span>
+                </label>
+              </div>
+
+              {telegramRecipientSaveError ? <p className="error-text">{telegramRecipientSaveError}</p> : null}
+
+              <div className="form-actions">
+                <button
+                  className="primary-button primary-button--inline"
+                  type="submit"
+                  disabled={telegramRecipientSaveStatus === 'loading'}
+                >
+                  {telegramRecipientSaveStatus === 'loading'
+                    ? 'Сохраняем...'
+                    : telegramRecipientEditor.id
+                      ? 'Сохранить чат Telegram'
+                      : 'Создать чат Telegram'}
+                </button>
+                <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramRecipientEditor}>
+                  Сбросить форму
+                </button>
+                {telegramRecipientEditor.id ? (
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() =>
+                      void onDeleteTelegramRecipient({
+                        id: telegramRecipientEditor.id,
+                        chatId: telegramRecipientEditor.chatId,
+                        label: telegramRecipientEditor.label,
+                        scope: telegramRecipientEditor.scope,
+                        active: telegramRecipientEditor.active,
+                      })
+                    }
+                    disabled={telegramRecipientToggleId === telegramRecipientEditor.id}
+                  >
+                    {telegramRecipientToggleId === telegramRecipientEditor.id ? 'Удаляем...' : 'Удалить чат'}
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          ) : (
+            <div className="forbidden-panel">
+              <p className="meta-line">Чаты Telegram недоступны для вашей роли.</p>
+            </div>
+          )}
+        </article>
+      </div>
     </section>
   );
 
@@ -1433,18 +1818,21 @@ export const App = () => {
       <div className="section-head">
         <div>
           <p className="eyebrow">Доступ</p>
-          <h2>Коды доступа и сотрудники</h2>
+          <h2>Коды доступа, сотрудники и Telegram</h2>
         </div>
         <div className="section-actions">
           <span className="status-chip">API: /staff/access/*</span>
           <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
             Новый код доступа
           </button>
+          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramRecipientEditor}>
+            Новый чат Telegram
+          </button>
         </div>
       </div>
 
       <p className="meta-line">
-        Коды доступа доступны всем staff-ролям. Аккаунты сотрудников управляются только admin.
+        Коды доступа доступны всем staff-ролям. Аккаунты сотрудников и чаты Telegram управляются только admin.
       </p>
 
       <div className="manager-layout manager-layout--stacked">

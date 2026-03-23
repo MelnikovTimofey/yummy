@@ -12,15 +12,20 @@ import {
 import {
   createDailyAccessCode,
   createStaffAccount,
+  createTelegramRecipient,
   deleteDailyAccessCode,
   deleteStaffAccount,
+  deleteTelegramRecipient,
   ensureCurrentDailyAccessCode,
   getCurrentDailyAccessCode,
+  listActiveTelegramRecipients,
   listDailyAccessCodes,
   listStaffAccounts,
+  listTelegramRecipients,
   rotateCurrentDailyAccessCode,
   updateDailyAccessCode,
   updateStaffAccount,
+  updateTelegramRecipient,
 } from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import {
@@ -47,6 +52,7 @@ import type {
   AutomationDailyCodeCurrentResponse,
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
+  AutomationTelegramRecipientsResponse,
   GuestAccessSuccess,
   GuestCatalogMixesResponse,
   GuestHomeRailsResponse,
@@ -60,6 +66,8 @@ import type {
   StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
   StaffMixesResponse,
+  StaffTelegramRecipientMutationResponse,
+  StaffTelegramRecipientsResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
@@ -109,6 +117,7 @@ export const buildApp = () => {
       automationCurrentDailyCode: 'GET /automation/daily-code/current',
       automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
       automationRotateDailyCode: 'POST /automation/daily-code/rotate',
+      automationTelegramRecipients: 'GET /automation/telegram/recipients',
       inventoryList: 'GET /staff/inventory/tobaccos',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
@@ -120,6 +129,10 @@ export const buildApp = () => {
       staffAccountsCreate: 'POST /staff/access/accounts',
       staffAccountsUpdate: 'PATCH /staff/access/accounts/:id',
       staffAccountsDelete: 'DELETE /staff/access/accounts/:id',
+      telegramRecipientsList: 'GET /staff/access/telegram-recipients',
+      telegramRecipientsCreate: 'POST /staff/access/telegram-recipients',
+      telegramRecipientsUpdate: 'PATCH /staff/access/telegram-recipients/:id',
+      telegramRecipientsDelete: 'DELETE /staff/access/telegram-recipients/:id',
       staffMixesList: 'GET /staff/mixes',
       staffMixesCreate: 'POST /staff/mixes',
       staffMixesUpdate: 'PATCH /staff/mixes/:id',
@@ -296,6 +309,28 @@ export const buildApp = () => {
         startsAt: result.window.startsAt.toISOString(),
         endsAt: result.window.endsAt.toISOString(),
       },
+    };
+
+    return reply.send(response);
+  });
+
+  app.get('/automation/telegram/recipients', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const items = await listActiveTelegramRecipients();
+    const pickChatIds = (scope: 'allowed' | 'broadcast' | 'rotate') =>
+      items
+        .filter((item: { scope: string; chatId: string }) => item.scope === scope)
+        .map((item: { scope: string; chatId: string }) => Number(item.chatId))
+        .filter((item: number) => Number.isSafeInteger(item));
+
+    const response: AutomationTelegramRecipientsResponse = {
+      items,
+      allowedChatIds: pickChatIds('allowed'),
+      broadcastChatIds: pickChatIds('broadcast'),
+      rotateChatIds: pickChatIds('rotate'),
     };
 
     return reply.send(response);
@@ -595,6 +630,113 @@ export const buildApp = () => {
     const deleted = await deleteStaffAccount(accountId);
     if (!deleted) {
       return reply.status(404).send({ error: 'Staff account not found' } satisfies ApiError);
+    }
+
+    return reply.status(204).send();
+  });
+
+  app.get('/staff/access/telegram-recipients', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffTelegramRecipientsResponse = {
+      items: await listTelegramRecipients(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/access/telegram-recipients', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          chatId?: string;
+          label?: string;
+          scope?: string;
+          active?: boolean;
+        }
+      | undefined;
+
+    const created = await createTelegramRecipient({
+      chatId: payload?.chatId ?? '',
+      label: payload?.label,
+      scope: payload?.scope ?? '',
+      active: payload?.active,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffTelegramRecipientMutationResponse = {
+      item: created,
+    };
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/access/telegram-recipients/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const recipientId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          chatId?: string;
+          label?: string;
+          scope?: string;
+          active?: boolean;
+        }
+      | undefined;
+
+    if (!recipientId) {
+      return reply.status(400).send({ error: 'Telegram recipient id is required' } satisfies ApiError);
+    }
+
+    const updated = await updateTelegramRecipient(recipientId, {
+      chatId: payload?.chatId,
+      label: payload?.label,
+      scope: payload?.scope,
+      active: payload?.active,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Telegram recipient not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffTelegramRecipientMutationResponse = {
+      item: updated,
+    };
+
+    return reply.send(response);
+  });
+
+  app.delete('/staff/access/telegram-recipients/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const recipientId = (request.params as { id?: string }).id?.trim();
+    if (!recipientId) {
+      return reply.status(400).send({ error: 'Telegram recipient id is required' } satisfies ApiError);
+    }
+
+    const deleted = await deleteTelegramRecipient(recipientId);
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Telegram recipient not found' } satisfies ApiError);
     }
 
     return reply.status(204).send();

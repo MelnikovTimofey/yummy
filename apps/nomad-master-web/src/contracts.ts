@@ -36,6 +36,16 @@ export type StaffAccountRecord = {
   active: boolean;
 };
 
+export type TelegramRecipientScope = 'allowed' | 'broadcast' | 'rotate';
+
+export type TelegramRecipientRecord = {
+  id: string;
+  chatId: string;
+  label: string;
+  scope: TelegramRecipientScope;
+  active: boolean;
+};
+
 export type DashboardSummary = {
   totalTobaccos: number;
   inStockCount: number;
@@ -156,6 +166,12 @@ const toRailType = (value: unknown): RailType => {
     : 'prepared';
 };
 
+const toTelegramRecipientScope = (value: unknown): TelegramRecipientScope => {
+  return value === 'allowed' || value === 'broadcast' || value === 'rotate'
+    ? value
+    : 'allowed';
+};
+
 const uniqueStrings = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
 const toIsoString = (value: unknown, fallback = '') => {
@@ -271,6 +287,18 @@ export const normalizeStaffAccountRecord = (value: unknown): StaffAccountRecord 
     login: String(raw.login ?? ''),
     name: String(raw.name ?? ''),
     role: raw.role === 'admin' ? 'admin' : 'nomad',
+    active: toBoolean(raw.active, true),
+  };
+};
+
+export const normalizeTelegramRecipientRecord = (value: unknown): TelegramRecipientRecord => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.recipientId ?? ''),
+    chatId: String(raw.chatId ?? raw.chat_id ?? ''),
+    label: String(raw.label ?? raw.name ?? ''),
+    scope: toTelegramRecipientScope(raw.scope),
     active: toBoolean(raw.active, true),
   };
 };
@@ -424,14 +452,44 @@ export const sortStaffAccounts = (items: StaffAccountRecord[]) => {
   });
 };
 
+export const sortTelegramRecipients = (items: TelegramRecipientRecord[]) => {
+  const scopeRank: Record<TelegramRecipientScope, number> = {
+    allowed: 0,
+    broadcast: 1,
+    rotate: 2,
+  };
+
+  return [...items].sort((left, right) => {
+    if (left.active !== right.active) {
+      return left.active ? -1 : 1;
+    }
+
+    if (scopeRank[left.scope] !== scopeRank[right.scope]) {
+      return scopeRank[left.scope] - scopeRank[right.scope];
+    }
+
+    return left.chatId.localeCompare(right.chatId, 'ru');
+  });
+};
+
 export const railTypeOptions: Array<{ value: RailType; label: string }> = [
   { value: 'statistical', label: 'Статистический' },
   { value: 'prepared', label: 'Предзаготовленный' },
   { value: 'curated', label: 'Собранный мастером' },
 ];
 
+export const telegramRecipientScopeOptions: Array<{ value: TelegramRecipientScope; label: string }> = [
+  { value: 'allowed', label: 'Разрешённые чаты' },
+  { value: 'broadcast', label: 'Авторассылка' },
+  { value: 'rotate', label: 'Ручная ротация' },
+];
+
 export const formatRailType = (value: RailType) => {
   return railTypeOptions.find((item) => item.value === value)?.label ?? 'Предзаготовленный';
+};
+
+export const formatTelegramRecipientScope = (value: TelegramRecipientScope) => {
+  return telegramRecipientScopeOptions.find((item) => item.value === value)?.label ?? 'Разрешённые чаты';
 };
 
 export const buildInventorySummary = (items: InventoryTobacco[]) => {

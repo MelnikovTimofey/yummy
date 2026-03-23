@@ -1706,3 +1706,37 @@ Product-rules (зафиксировано):
 - реальный smoke-test доставки в Telegram не завершён из этой среды, потому что исходящие запросы к `https://api.telegram.org` стабильно падают по timeout;
 - worker стартует до шага Telegram API и завершается на `fetch failed / UND_ERR_CONNECT_TIMEOUT`;
 - проблема воспроизводится и напрямую через `curl -I https://api.telegram.org`, и через `curl https://api.telegram.org/bot.../getMe`.
+
+Обновление от 23 марта 2026 (Nomad — Telegram provisioning из `Мастера` и backend-driven recipient lists):
+- `apps/nomad-backend/prisma/schema.prisma`, `prisma/seed.ts`, `src/state.ts`:
+  - добавлена модель `NomadTelegramRecipient`;
+  - reset/seed теперь чистят persisted Telegram recipients вместе с остальным Nomad storage;
+  - стартовый seed для recipients пока пустой.
+- `apps/nomad-backend/src/access.ts`, `src/app.ts`, `src/types.ts`:
+  - добавлены admin-only endpoints:
+    - `GET/POST/PATCH/DELETE /staff/access/telegram-recipients`;
+  - добавлен automation endpoint:
+    - `GET /automation/telegram/recipients`;
+  - backend группирует активные chat ids в `allowed`, `broadcast`, `rotate`.
+- `apps/nomad-backend/src/access.test.ts`, `src/automation.test.ts`:
+  - добавлены регрессии на CRUD Telegram recipients и automation grouping.
+- `apps/nomad-master-web/src/contracts.ts`, `contracts.test.ts`, `App.tsx`:
+  - добавлен новый access-блок для управления чатами Telegram;
+  - UI позволяет создавать, редактировать, активировать и удалять чаты по типам `allowed`, `broadcast`, `rotate`;
+  - user-facing интерфейс сохранён на русском.
+- `services/nomad-telegram-bot/src/types.ts`, `src/backend.ts`, `src/backend.test.ts`, `src/config.ts`, `src/bot.ts`:
+  - bot читает recipient lists из backend automation API;
+  - по каждому scope остаётся fallback на `.env`, если backend-список пуст или endpoint недоступен;
+  - `NOMAD_TELEGRAM_ROTATE_CHAT_IDS` снова учитывается как отдельный fallback-список для `/rotate`.
+- `apps/nomad-backend/README.md`, `apps/nomad-master-web/README.md`, `services/nomad-telegram-bot/README.md`:
+  - runbook синхронизирован с Telegram provisioning slice.
+
+Проверка:
+- `cd apps/nomad-backend && npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`, `19/19`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm test` — `OK`, `15/15`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
+- `cd services/nomad-telegram-bot && npm test` — `OK`, `8/8`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.

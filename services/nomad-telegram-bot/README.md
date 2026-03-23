@@ -28,10 +28,12 @@
 
 1. Команды доступны только чатам из `NOMAD_TELEGRAM_ALLOWED_CHAT_IDS`.
 2. Авторассылка идёт в чаты из `NOMAD_TELEGRAM_BROADCAST_CHAT_IDS`.
-3. При старте бот делает `ensure` current code и отправляет его в broadcast-чаты, если это ещё не было сделано для текущего кода.
-4. По расписанию бот повторяет ту же проверку.
-5. Ротация через `/rotate` выпускает новый код через automation endpoint backend.
-6. Последняя отправка сохраняется локально в `NOMAD_BOT_STATE_PATH`, чтобы не слать дубликаты после рестарта.
+3. Ручная `/rotate` ограничивается списком `NOMAD_TELEGRAM_ROTATE_CHAT_IDS`; если список пуст, используется allowlist.
+4. При старте бот делает `ensure` current code и отправляет его в broadcast-чаты, если это ещё не было сделано для текущего кода.
+5. По расписанию бот повторяет ту же проверку.
+6. Ротация через `/rotate` выпускает новый код через automation endpoint backend.
+7. Если backend уже хранит чаты Telegram, бот читает их через automation API и использует `.env` только как fallback.
+8. Последняя отправка сохраняется локально в `NOMAD_BOT_STATE_PATH`, чтобы не слать дубликаты после рестарта.
 
 ## Локальный запуск
 
@@ -52,6 +54,7 @@ NOMAD_BACKEND_URL=http://localhost:3021
 NOMAD_BACKEND_AUTOMATION_TOKEN=
 NOMAD_TELEGRAM_ALLOWED_CHAT_IDS=
 NOMAD_TELEGRAM_BROADCAST_CHAT_IDS=
+NOMAD_TELEGRAM_ROTATE_CHAT_IDS=
 NOMAD_BOT_STATE_PATH=.nomad-telegram-bot-state.json
 NOMAD_DAILY_BROADCAST_HOUR=9
 NOMAD_DAILY_BROADCAST_MINUTE=0

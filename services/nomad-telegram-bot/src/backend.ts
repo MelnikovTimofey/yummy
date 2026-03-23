@@ -3,6 +3,7 @@ import type {
   AutomationDailyCodeCurrentResponse,
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
+  AutomationTelegramRecipientsResponse,
 } from './types';
 
 const AUTOMATION_HEADER = 'x-nomad-automation-key';
@@ -61,5 +62,9 @@ export class NomadBackendClient {
 
   async rotateDailyCode() {
     return this.postJson<AutomationDailyCodeRotateResponse>('/automation/daily-code/rotate');
+  }
+
+  async getTelegramRecipients() {
+    return this.getJson<AutomationTelegramRecipientsResponse>('/automation/telegram/recipients');
   }
 }

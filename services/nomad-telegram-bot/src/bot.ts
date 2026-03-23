@@ -17,6 +17,12 @@ type CommandContext = {
   args: string[];
 };
 
+type RecipientLists = {
+  allowedChatIds: number[];
+  broadcastChatIds: number[];
+  rotateChatIds: number[];
+};
+
 const HELP_TEXT = [
   'Nomad Telegram Bot',
   'Команды:',
@@ -42,11 +48,20 @@ const normalizeCommandText = (text: string) => {
   };
 };
 
-const isAllowedChat = (config: BotConfig, chatId: number) =>
-  !config.allowedChatIds.length || config.allowedChatIds.includes(chatId);
+const uniqueNumbers = (items: number[]) => Array.from(new Set(items.filter((item) => Number.isFinite(item) && item !== 0)));
 
-const canRotateFromChat = (config: BotConfig, chatId: number) => {
-  return isAllowedChat(config, chatId);
+const pickScopeRecipients = (backendItems: number[], fallbackItems: number[]) =>
+  uniqueNumbers(backendItems.length ? backendItems : fallbackItems);
+
+const isAllowedChat = (lists: RecipientLists, chatId: number) =>
+  !lists.allowedChatIds.length || lists.allowedChatIds.includes(chatId);
+
+const canRotateFromChat = (lists: RecipientLists, chatId: number) => {
+  if (lists.rotateChatIds.length) {
+    return lists.rotateChatIds.includes(chatId);
+  }
+
+  return isAllowedChat(lists, chatId);
 };
 
 const buildDailyCodeMessage = (code: DailyAccessCodeRecord, reason: string) =>
@@ -140,7 +155,8 @@ export class NomadTelegramBot {
   }
 
   private async handleHelp({ message }: CommandContext) {
-    if (!isAllowedChat(this.deps.config, message.chat.id)) {
+    const recipients = await this.getRecipientLists();
+    if (!isAllowedChat(recipients, message.chat.id)) {
       await this.reply(message.chat.id, ACCESS_DENIED_TEXT);
       return;
     }
@@ -149,6 +165,7 @@ export class NomadTelegramBot {
   }
 
   private async handleWhoAmI({ message }: CommandContext) {
+    const recipients = await this.getRecipientLists();
     const from = message.from;
     const fullName = [from?.first_name, from?.last_name].filter(Boolean).join(' ').trim() || 'неизвестно';
     const username = from?.username ? `@${from.username}` : 'без username';
@@ -158,14 +175,15 @@ export class NomadTelegramBot {
       [
         `Чат: ${message.chat.id}`,
         `Пользователь: ${fullName} (${username})`,
-        `Доступ к боту: ${isAllowedChat(this.deps.config, message.chat.id) ? 'разрешён' : 'запрещён'}`,
-        `Ротация: ${canRotateFromChat(this.deps.config, message.chat.id) ? 'разрешена' : 'запрещена'}`,
+        `Доступ к боту: ${isAllowedChat(recipients, message.chat.id) ? 'разрешён' : 'запрещён'}`,
+        `Ротация: ${canRotateFromChat(recipients, message.chat.id) ? 'разрешена' : 'запрещена'}`,
       ].join('\n'),
     );
   }
 
   private async handleCode({ message }: CommandContext) {
-    if (!isAllowedChat(this.deps.config, message.chat.id)) {
+    const recipients = await this.getRecipientLists();
+    if (!isAllowedChat(recipients, message.chat.id)) {
       await this.reply(message.chat.id, ACCESS_DENIED_TEXT);
       return;
     }
@@ -178,7 +196,8 @@ export class NomadTelegramBot {
   }
 
   private async handleRotate({ message }: CommandContext) {
-    if (!canRotateFromChat(this.deps.config, message.chat.id)) {
+    const recipients = await this.getRecipientLists();
+    if (!canRotateFromChat(recipients, message.chat.id)) {
       await this.reply(message.chat.id, 'Для этого чата ручная ротация запрещена.');
       return;
     }
@@ -194,7 +213,7 @@ export class NomadTelegramBot {
     }));
 
     await this.reply(message.chat.id, buildDailyCodeMessage(rotated.item, 'Выпущен новый daily code.'));
-    await this.broadcastCodeIfNeeded(rotated.item, buildDayKey(), 'Ручная ротация daily code.', true, [message.chat.id]);
+    await this.broadcastCodeIfNeeded(rotated.item, buildDayKey(), 'Ручная ротация daily code.', recipients, true, [message.chat.id]);
   }
 
   private async runScheduledBroadcast(trigger: 'startup' | 'scheduled') {
@@ -203,10 +222,12 @@ export class NomadTelegramBot {
     }
 
     const ensured = await this.deps.backend.ensureDailyCode();
+    const recipients = await this.getRecipientLists();
     await this.broadcastCodeIfNeeded(
       ensured.item,
       buildMoscowWindow().dayKey,
       trigger === 'startup' ? 'Авторассылка при запуске бота.' : 'Ежедневная авторассылка daily code.',
+      recipients,
     );
   }
 
@@ -214,6 +235,7 @@ export class NomadTelegramBot {
     code: DailyAccessCodeRecord,
     dayKey: string,
     reason: string,
+    recipients: RecipientLists,
     force = false,
     excludeChatIds: number[] = [],
   ) {
@@ -222,7 +244,7 @@ export class NomadTelegramBot {
       return;
     }
 
-    const chatIds = this.deps.config.broadcastChatIds.filter((chatId) => !excludeChatIds.includes(chatId));
+    const chatIds = recipients.broadcastChatIds.filter((chatId) => !excludeChatIds.includes(chatId));
     if (chatIds.length) {
       await this.deps.telegram.sendMessages(chatIds, buildDailyCodeMessage(code, reason));
     }
@@ -259,6 +281,24 @@ export class NomadTelegramBot {
 
   private async reply(chatId: number, text: string) {
     await this.deps.telegram.sendMessage(chatId, text);
+  }
+
+  private async getRecipientLists(): Promise<RecipientLists> {
+    try {
+      const response = await this.deps.backend.getTelegramRecipients();
+      return {
+        allowedChatIds: pickScopeRecipients(response.allowedChatIds, this.deps.config.allowedChatIds),
+        broadcastChatIds: pickScopeRecipients(response.broadcastChatIds, this.deps.config.broadcastChatIds),
+        rotateChatIds: pickScopeRecipients(response.rotateChatIds, this.deps.config.rotateChatIds),
+      };
+    } catch (error) {
+      console.error('[nomad-telegram-bot] recipients fallback to env', error);
+      return {
+        allowedChatIds: uniqueNumbers(this.deps.config.allowedChatIds),
+        broadcastChatIds: uniqueNumbers(this.deps.config.broadcastChatIds),
+        rotateChatIds: uniqueNumbers(this.deps.config.rotateChatIds),
+      };
+    }
   }
 
   private async sleep(ms: number) {

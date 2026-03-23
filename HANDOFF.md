@@ -2086,3 +2086,55 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
   - `cd services/nomad-telegram-bot && npm start`;
   - затем в Telegram проверить стартовую авторассылку в chat `362223626`;
   - после этого вручную проверить `/whoami`, `/code` и `/rotate`.
+
+## 2.9) Nomad (23 марта 2026) — Telegram provisioning из `Мастера`
+
+Сделано:
+- `apps/nomad-backend/prisma/schema.prisma`, `apps/nomad-backend/prisma/seed.ts`, `apps/nomad-backend/src/state.ts`:
+  - добавлена persisted модель `NomadTelegramRecipient`;
+  - reset/seed очищают таблицу recipients вместе с остальными данными Nomad;
+  - стартовых recipients в seed пока нет.
+- `apps/nomad-backend/src/access.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/app.ts`:
+  - добавлены admin-only CRUD endpoints:
+    - `GET /staff/access/telegram-recipients`
+    - `POST /staff/access/telegram-recipients`
+    - `PATCH /staff/access/telegram-recipients/:id`
+    - `DELETE /staff/access/telegram-recipients/:id`
+  - добавлен automation endpoint:
+    - `GET /automation/telegram/recipients`
+  - backend группирует активные chat ids по scope:
+    - `allowed`
+    - `broadcast`
+    - `rotate`
+- `apps/nomad-backend/src/access.test.ts`, `apps/nomad-backend/src/automation.test.ts`:
+  - добавлены регрессии на CRUD Telegram recipients и automation grouping.
+- `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`, `apps/nomad-master-web/src/App.tsx`:
+  - в разделе `Доступ` добавлен admin-only блок управления чатами Telegram;
+  - можно создавать, редактировать, активировать и удалять записи;
+  - поддержаны типы `allowed`, `broadcast`, `rotate`;
+  - весь user-facing текст сохранён на русском.
+- `services/nomad-telegram-bot/src/types.ts`, `src/backend.ts`, `src/backend.test.ts`, `src/config.ts`, `src/bot.ts`:
+  - bot теперь читает recipient lists из backend automation API;
+  - fallback на `.env` остался по каждому scope отдельно, чтобы не ломать локальный и аварийный запуск;
+  - `NOMAD_TELEGRAM_ROTATE_CHAT_IDS` снова учитывается как отдельный env fallback для `/rotate`.
+- `apps/nomad-backend/README.md`, `apps/nomad-master-web/README.md`, `services/nomad-telegram-bot/README.md`:
+  - runbook обновлён под Telegram provisioning slice.
+
+Проверка:
+- `cd apps/nomad-backend && npm run prisma:generate` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush` — `OK`.
+- `cd apps/nomad-backend && npm test` — `OK`, 19/19.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-master-web && npm test` — `OK`, 15/15.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
+- `cd services/nomad-telegram-bot && npm test` — `OK`, 8/8.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+
+Важно:
+- bot теперь может жить без recipient lists в `.env`, если они заведены в backend;
+- `.env` не удаляется полностью и остаётся как fallback при пустых backend-списках или временной недоступности automation endpoint;
+- доступ к управлению чатами Telegram в `Мастере` намеренно оставлен только у `admin`, а не у роли `nomad`.
+
+Следующий шаг:
+- либо сделать в `Мастере` явный просмотр текущего automation state бота и last broadcast;
+- либо переводить bot worker в managed runtime (`pm2` / `systemd`) с production runbook.

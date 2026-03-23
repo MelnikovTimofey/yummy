@@ -238,3 +238,100 @@ test('staff accounts CRUD is admin-only', async () => {
     await app.close();
   }
 });
+
+test('telegram recipients CRUD is admin-only', async () => {
+  const app = buildApp();
+
+  try {
+    const adminToken = await login(app, 'admin', 'admin');
+    const nomadToken = await login(app, 'nomad', 'nomad');
+
+    const forbidden = await app.inject({
+      method: 'GET',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${nomadToken}`,
+      },
+    });
+
+    assert.equal(forbidden.statusCode, 403);
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+    });
+
+    assert.equal(list.statusCode, 200);
+    assert.deepEqual((list.json() as { items: unknown[] }).items, []);
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        chatId: '362223626',
+        label: 'Тестовый чат',
+        scope: 'broadcast',
+        active: true,
+      },
+    });
+
+    assert.equal(created.statusCode, 201);
+    const createdBody = created.json() as {
+      item: { id: string; chatId: string; label: string; scope: string; active: boolean };
+    };
+    assert.equal(createdBody.item.chatId, '362223626');
+    assert.equal(createdBody.item.scope, 'broadcast');
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/staff/access/telegram-recipients/${createdBody.item.id}`,
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        chatId: '362223626',
+        label: 'Основной чат',
+        scope: 'rotate',
+        active: false,
+      },
+    });
+
+    assert.equal(updated.statusCode, 200);
+    const updatedBody = updated.json() as {
+      item: { id: string; label: string; scope: string; active: boolean };
+    };
+    assert.equal(updatedBody.item.id, createdBody.item.id);
+    assert.equal(updatedBody.item.label, 'Основной чат');
+    assert.equal(updatedBody.item.scope, 'rotate');
+    assert.equal(updatedBody.item.active, false);
+
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/staff/access/telegram-recipients/${createdBody.item.id}`,
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+    });
+
+    assert.equal(deleted.statusCode, 204);
+
+    const listAfterDelete = await app.inject({
+      method: 'GET',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+    });
+
+    assert.equal(listAfterDelete.statusCode, 200);
+    assert.equal((listAfterDelete.json() as { items: Array<{ id: string }> }).items.length, 0);
+  } finally {
+    await app.close();
+  }
+});

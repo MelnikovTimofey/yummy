@@ -46,6 +46,19 @@ model NomadDailyAccessCode {
   @@index([active, startsAt, endsAt])
 }
 
+model NomadTelegramRecipient {
+  id        String   @id
+  chatId    String
+  label     String
+  scope     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([chatId, scope])
+  @@index([scope, active])
+}
+
 model NomadTobacco {
   id              String            @id
   manufacturer    String

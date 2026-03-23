@@ -106,6 +106,14 @@ type SeedDailyAccessCode = {
   active: boolean;
 };
 
+type SeedTelegramRecipient = {
+  id: string;
+  chatId: string;
+  label: string;
+  scope: 'allowed' | 'broadcast' | 'rotate';
+  active: boolean;
+};
+
 const introCards: SeedIntroCard[] = [
   {
     id: 'intro-age-check',
@@ -168,6 +176,8 @@ const seedDailyAccessCodes: SeedDailyAccessCode[] = [
     active: true,
   },
 ];
+
+const seedTelegramRecipients: SeedTelegramRecipient[] = [];
 
 const defaultRails: SeedRail[] = [
   {
@@ -494,6 +504,7 @@ const seedNomadStorage = async () => {
     await tx.nomadTobacco.deleteMany();
     await tx.nomadIntroCard.deleteMany();
     await tx.nomadDailyAccessCode.deleteMany();
+    await tx.nomadTelegramRecipient.deleteMany();
     await tx.nomadStaffAccount.deleteMany();
 
     await tx.nomadStaffAccount.createMany({
@@ -518,6 +529,16 @@ const seedNomadStorage = async () => {
         active: code.active,
         startsAt: currentCodeWindow.startsAt,
         endsAt: currentCodeWindow.endsAt,
+      })),
+    });
+
+    await tx.nomadTelegramRecipient.createMany({
+      data: seedTelegramRecipients.map((recipient) => ({
+        id: recipient.id,
+        chatId: recipient.chatId,
+        label: recipient.label,
+        scope: recipient.scope,
+        active: recipient.active,
       })),
     });
 

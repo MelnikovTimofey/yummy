@@ -9,6 +9,20 @@ const automationHeaders = {
   'x-nomad-automation-key': config.automationKey,
 };
 
+const login = async (app: ReturnType<typeof buildApp>, loginName: string, password: string) => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/staff/auth/login',
+    payload: {
+      login: loginName,
+      password,
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  return (response.json() as { accessToken: string }).accessToken;
+};
+
 test.beforeEach(async () => {
   await resetNomadState();
 });
@@ -135,6 +149,77 @@ test('automation can read, ensure and rotate the current daily code', async () =
     assert.equal(refreshedBody.state, 'existing');
     assert.equal(refreshedBody.item.codeValue, rotatedBody.item.codeValue);
     assert.equal(refreshedBody.item.active, true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('automation can read active telegram recipients grouped by scope', async () => {
+  const app = buildApp();
+
+  try {
+    const adminToken = await login(app, 'admin', 'admin');
+
+    await app.inject({
+      method: 'POST',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        chatId: '362223626',
+        label: 'Allowed chat',
+        scope: 'allowed',
+        active: true,
+      },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        chatId: '362223626',
+        label: 'Broadcast chat',
+        scope: 'broadcast',
+        active: true,
+      },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/staff/access/telegram-recipients',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        chatId: '999999',
+        label: 'Inactive rotate',
+        scope: 'rotate',
+        active: false,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/automation/telegram/recipients',
+      headers: automationHeaders,
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as {
+      items: Array<{ chatId: string; scope: string; active: boolean }>;
+      allowedChatIds: number[];
+      broadcastChatIds: number[];
+      rotateChatIds: number[];
+    };
+
+    assert.equal(body.items.length, 2);
+    assert.deepEqual(body.allowedChatIds, [362223626]);
+    assert.deepEqual(body.broadcastChatIds, [362223626]);
+    assert.deepEqual(body.rotateChatIds, []);
   } finally {
     await app.close();
   }

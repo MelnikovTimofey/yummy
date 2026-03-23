@@ -67,6 +67,14 @@
    - `POST /automation/daily-code/rotate`
 4. единая Moscow-based логика окна daily code для seed, CRUD и automation.
 
+На этапе Telegram provisioning дополнительно есть:
+
+1. CRUD для чатов Telegram через `/staff/access/telegram-recipients`;
+2. эти записи хранятся в Postgres как `NomadTelegramRecipient`;
+3. управление чатами Telegram доступно только роли `admin`;
+4. automation endpoint `GET /automation/telegram/recipients` отдаёт активные chat lists для worker;
+5. bot может использовать backend как source of truth, а `.env` оставляет только fallback.
+
 Параметры локального Postgres-контура:
 
 1. порт `5433`;
@@ -105,6 +113,10 @@
 - `POST /staff/access/accounts`
 - `PATCH /staff/access/accounts/:id`
 - `DELETE /staff/access/accounts/:id`
+- `GET /staff/access/telegram-recipients`
+- `POST /staff/access/telegram-recipients`
+- `PATCH /staff/access/telegram-recipients/:id`
+- `DELETE /staff/access/telegram-recipients/:id`
 - `GET /staff/inventory/tobaccos`
 - `PATCH /staff/inventory/tobaccos/:id`
 - `GET /staff/dashboard/summary`
@@ -120,6 +132,7 @@
 - `GET /automation/daily-code/current`
 - `POST /automation/daily-code/ensure`
 - `POST /automation/daily-code/rotate`
+- `GET /automation/telegram/recipients`
 
 ## Локальный запуск
 
@@ -149,4 +162,4 @@ NOMAD_TOKEN_TTL_HOURS=24
 
 ## Стадия
 
-Текущая стадия: Phase 4 content rails backend + persisted access management + daily code automation на отдельном Postgres.
+Текущая стадия: Phase 4 content rails backend + persisted access management + daily code automation + Telegram provisioning на отдельном Postgres.

@@ -1,5 +1,5 @@
 import type { IntroCard, MixView, RailType, RailView } from './state';
-import type { DailyAccessCodeView, StaffAccountView } from './access';
+import type { DailyAccessCodeView, StaffAccountView, TelegramRecipientView } from './access';
 
 export type ApiError = {
   error: string;
@@ -95,6 +95,14 @@ export type StaffAccountMutationResponse = {
   item: StaffAccountView;
 };
 
+export type StaffTelegramRecipientsResponse = {
+  items: TelegramRecipientView[];
+};
+
+export type StaffTelegramRecipientMutationResponse = {
+  item: TelegramRecipientView;
+};
+
 export type AutomationDailyCodeWindow = {
   startsAt: string;
   endsAt: string;
@@ -115,6 +123,13 @@ export type AutomationDailyCodeRotateResponse = {
   item: DailyAccessCodeView;
   window: AutomationDailyCodeWindow;
   state: 'rotated';
+};
+
+export type AutomationTelegramRecipientsResponse = {
+  items: TelegramRecipientView[];
+  allowedChatIds: number[];
+  broadcastChatIds: number[];
+  rotateChatIds: number[];
 };
 
 export type StaffMixMutationResponse = {

@@ -8,6 +8,7 @@ import {
   normalizeMixRecord,
   normalizeRailRecord,
   normalizeStaffAccountRecord,
+  normalizeTelegramRecipientRecord,
   parseDelimitedList,
   parseDateTimeLocalInput,
   sortDailyAccessCodes,
@@ -15,6 +16,7 @@ import {
   sortMixes,
   sortRails,
   sortStaffAccounts,
+  sortTelegramRecipients,
 } from './contracts';
 
 test('buildInventorySummary counts stock states', () => {
@@ -275,6 +277,52 @@ test('sortStaffAccounts keeps active admins first', () => {
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['staff-1', 'staff-2', 'staff-3']);
+});
+
+test('normalizeTelegramRecipientRecord reads scope and chat id', () => {
+  const record = normalizeTelegramRecipientRecord({
+    recipientId: 'telegram-1',
+    chatId: '362223626',
+    label: 'Основной чат',
+    scope: 'broadcast',
+    active: false,
+  });
+
+  assert.deepEqual(record, {
+    id: 'telegram-1',
+    chatId: '362223626',
+    label: 'Основной чат',
+    scope: 'broadcast',
+    active: false,
+  });
+});
+
+test('sortTelegramRecipients keeps active and scope priority first', () => {
+  const sorted = sortTelegramRecipients([
+    {
+      id: 'telegram-2',
+      chatId: '2',
+      label: 'Rotate',
+      scope: 'rotate',
+      active: true,
+    },
+    {
+      id: 'telegram-1',
+      chatId: '1',
+      label: 'Allowed',
+      scope: 'allowed',
+      active: true,
+    },
+    {
+      id: 'telegram-3',
+      chatId: '3',
+      label: 'Broadcast inactive',
+      scope: 'broadcast',
+      active: false,
+    },
+  ]);
+
+  assert.deepEqual(sorted.map((item) => item.id), ['telegram-1', 'telegram-2', 'telegram-3']);
 });
 
 test('date helpers roundtrip local input', () => {

@@ -44,6 +44,7 @@ const buildConfig = () => ({
   backendAutomationToken: 'automation-token',
   allowedChatIds: [],
   broadcastChatIds: [],
+  rotateChatIds: [],
   statePath: '.state.json',
   updateTimeoutSeconds: 25,
   broadcastHour: 9,
@@ -141,5 +142,37 @@ test('getCurrentDailyCode returns current active item when it exists', async () 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/current');
   assert.equal(calls[0].init?.method, undefined);
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+});
+
+test('getTelegramRecipients reads grouped automation recipients', async () => {
+  const { result, calls } = await withMockFetch(
+    [
+      makeResponse({
+        items: [
+          {
+            id: 'telegram-allowed-1',
+            chatId: '362223626',
+            label: 'Основной чат',
+            scope: 'allowed',
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        allowedChatIds: [362223626],
+        broadcastChatIds: [362223626],
+        rotateChatIds: [],
+      }),
+    ],
+    async () => new NomadBackendClient(buildConfig()).getTelegramRecipients(),
+  );
+
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(result.allowedChatIds, [362223626]);
+  assert.deepEqual(result.broadcastChatIds, [362223626]);
+  assert.deepEqual(result.rotateChatIds, []);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://backend.example/automation/telegram/recipients');
   assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
 });

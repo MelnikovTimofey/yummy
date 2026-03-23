@@ -73,6 +73,8 @@ const dailyAccessCodes = [
   },
 ] as const;
 
+const telegramRecipients = [] as const;
+
 const tobaccos = [
   {
     id: 'tobacco-citrus-breeze',
@@ -265,6 +267,7 @@ async function main() {
   await prisma.nomadTobacco.deleteMany();
   await prisma.nomadIntroCard.deleteMany();
   await prisma.nomadDailyAccessCode.deleteMany();
+  await prisma.nomadTelegramRecipient.deleteMany();
   await prisma.nomadStaffAccount.deleteMany();
 
   await prisma.nomadStaffAccount.createMany({
@@ -292,6 +295,10 @@ async function main() {
       endsAt: currentCodeWindow.endsAt,
     })),
     skipDuplicates: true,
+  });
+
+  await prisma.nomadTelegramRecipient.createMany({
+    data: telegramRecipients,
   });
 
   await prisma.nomadIntroCard.createMany({

@@ -31,6 +31,25 @@ export type AutomationDailyCodeRotateResponse = {
   window: AutomationWindow;
 };
 
+export type TelegramRecipientScope = 'allowed' | 'broadcast' | 'rotate';
+
+export type TelegramRecipientRecord = {
+  id: string;
+  chatId: string;
+  label: string;
+  scope: TelegramRecipientScope;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AutomationTelegramRecipientsResponse = {
+  items: TelegramRecipientRecord[];
+  allowedChatIds: number[];
+  broadcastChatIds: number[];
+  rotateChatIds: number[];
+};
+
 export type BotState = {
   lastBroadcastCodeId: string | null;
   lastBroadcastCodeValue: string | null;

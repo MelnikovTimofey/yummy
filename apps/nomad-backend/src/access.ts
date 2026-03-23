@@ -25,6 +25,18 @@ export type StaffAccountView = {
   updatedAt: string;
 };
 
+export type TelegramRecipientScope = 'allowed' | 'broadcast' | 'rotate';
+
+export type TelegramRecipientView = {
+  id: string;
+  chatId: string;
+  label: string;
+  scope: TelegramRecipientScope;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type DailyAccessCodeInput = {
   codeValue: string;
   codeLabel?: string;
@@ -44,6 +56,15 @@ type StaffAccountInput = {
 };
 
 type StaffAccountPatch = Partial<StaffAccountInput>;
+
+type TelegramRecipientInput = {
+  chatId: string;
+  label?: string;
+  scope: string;
+  active?: boolean;
+};
+
+type TelegramRecipientPatch = Partial<TelegramRecipientInput>;
 
 const normalizeDateRange = (startsAt?: Date, endsAt?: Date) => {
   const currentWindow = getNomadDailyCodeWindow();
@@ -74,6 +95,23 @@ const normalizeRole = (value: string | undefined): StaffRole | null => {
   }
 
   return null;
+};
+
+const normalizeTelegramRecipientScope = (value: string | undefined): TelegramRecipientScope | null => {
+  if (value === 'allowed' || value === 'broadcast' || value === 'rotate') {
+    return value;
+  }
+
+  return null;
+};
+
+const normalizeChatId = (value: string | undefined) => {
+  const normalized = value?.trim() ?? '';
+  if (!normalized) {
+    return '';
+  }
+
+  return /^-?\d+$/.test(normalized) ? normalized : '';
 };
 
 const slugify = (value: string) =>
@@ -122,6 +160,24 @@ const mapStaffAccount = (record: {
   login: record.login,
   name: record.name,
   role: normalizeRole(record.role) ?? 'nomad',
+  active: record.active,
+  createdAt: record.createdAt.toISOString(),
+  updatedAt: record.updatedAt.toISOString(),
+});
+
+const mapTelegramRecipient = (record: {
+  id: string;
+  chatId: string;
+  label: string;
+  scope: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): TelegramRecipientView => ({
+  id: record.id,
+  chatId: record.chatId,
+  label: record.label,
+  scope: normalizeTelegramRecipientScope(record.scope) ?? 'allowed',
   active: record.active,
   createdAt: record.createdAt.toISOString(),
   updatedAt: record.updatedAt.toISOString(),
@@ -520,6 +576,135 @@ export const deleteStaffAccount = async (id: string) => {
   }
 
   await prisma.nomadStaffAccount.delete({
+    where: { id },
+  });
+
+  return true;
+};
+
+export const listTelegramRecipients = async () => {
+  await ensureNomadState();
+
+  const records = await prisma.nomadTelegramRecipient.findMany({
+    orderBy: [{ scope: 'asc' }, { active: 'desc' }, { chatId: 'asc' }],
+  });
+
+  return records.map(mapTelegramRecipient);
+};
+
+export const listActiveTelegramRecipients = async () => {
+  await ensureNomadState();
+
+  const records = await prisma.nomadTelegramRecipient.findMany({
+    where: {
+      active: true,
+    },
+    orderBy: [{ scope: 'asc' }, { chatId: 'asc' }],
+  });
+
+  return records.map(mapTelegramRecipient);
+};
+
+export const createTelegramRecipient = async (payload: Partial<TelegramRecipientInput>) => {
+  await ensureNomadState();
+
+  const chatId = normalizeChatId(payload.chatId);
+  const scope = normalizeTelegramRecipientScope(payload.scope);
+  const label = payload.label?.trim() || (chatId ? `Чат ${chatId}` : '');
+  const active = typeof payload.active === 'boolean' ? payload.active : true;
+
+  if (!chatId || !scope) {
+    return { error: 'chatId and scope are required' };
+  }
+
+  const prefix = `telegram-${scope}-${slugify(chatId)}`;
+  const id = await nextPrefixedId(prefix, () =>
+    prisma.nomadTelegramRecipient.count({
+      where: {
+        id: {
+          startsWith: prefix,
+        },
+      },
+    }),
+  );
+
+  try {
+    const created = await prisma.nomadTelegramRecipient.create({
+      data: {
+        id,
+        chatId,
+        label,
+        scope,
+        active,
+      },
+    });
+
+    return mapTelegramRecipient(created);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { error: 'Telegram recipient already exists for this scope' };
+    }
+
+    throw error;
+  }
+};
+
+export const updateTelegramRecipient = async (id: string, payload: TelegramRecipientPatch) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadTelegramRecipient.findUnique({
+    where: { id },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const chatId = typeof payload.chatId === 'string' ? normalizeChatId(payload.chatId) : current.chatId;
+  const requestedScope = typeof payload.scope === 'string' ? normalizeTelegramRecipientScope(payload.scope) : null;
+  const scope = typeof payload.scope === 'string' && !requestedScope
+    ? null
+    : requestedScope ?? normalizeTelegramRecipientScope(current.scope);
+  const label = typeof payload.label === 'string' ? payload.label.trim() || `Чат ${chatId}` : current.label;
+
+  if (!chatId || !scope) {
+    return { error: 'chatId and scope are required' };
+  }
+
+  try {
+    const updated = await prisma.nomadTelegramRecipient.update({
+      where: { id },
+      data: {
+        chatId,
+        label,
+        scope,
+        active: typeof payload.active === 'boolean' ? payload.active : current.active,
+      },
+    });
+
+    return mapTelegramRecipient(updated);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { error: 'Telegram recipient already exists for this scope' };
+    }
+
+    throw error;
+  }
+};
+
+export const deleteTelegramRecipient = async (id: string) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadTelegramRecipient.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!current) {
+    return false;
+  }
+
+  await prisma.nomadTelegramRecipient.delete({
     where: { id },
   });
 

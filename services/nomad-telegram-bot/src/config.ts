@@ -21,6 +21,7 @@ export type BotConfig = {
   backendAutomationToken: string;
   allowedChatIds: number[];
   broadcastChatIds: number[];
+  rotateChatIds: number[];
   statePath: string;
   updateTimeoutSeconds: number;
   broadcastHour: number;
@@ -34,6 +35,7 @@ export const loadConfig = (): BotConfig => ({
   backendAutomationToken: env(process.env.NOMAD_BACKEND_AUTOMATION_TOKEN),
   allowedChatIds: parseIdList(process.env.NOMAD_TELEGRAM_ALLOWED_CHAT_IDS),
   broadcastChatIds: parseIdList(process.env.NOMAD_TELEGRAM_BROADCAST_CHAT_IDS),
+  rotateChatIds: parseIdList(process.env.NOMAD_TELEGRAM_ROTATE_CHAT_IDS),
   statePath: env(
     process.env.NOMAD_BOT_STATE_PATH,
     path.join(process.cwd(), '.nomad-telegram-bot-state.json'),

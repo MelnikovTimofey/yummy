@@ -12,6 +12,7 @@ Staff/admin frontend для продукта `Мастер`.
 4. менеджер рейлов;
 5. аналитические дашборды;
 6. управление доступом.
+7. управление Telegram-чатами для bot automation.
 
 ## Phase 1
 
@@ -48,6 +49,15 @@ Staff/admin frontend для продукта `Мастер`.
 3. роли `nomad` доступно управление daily codes, но staff accounts открыты только для `admin`;
 4. формы приведены к одному CRUD-паттерну с остальными менеджерами `Мастера`.
 
+## Telegram provisioning
+
+Добавлен admin-only блок для bot recipients:
+
+1. список, создание, редактирование и удаление чатов Telegram через `/staff/access/telegram-recipients`;
+2. поддержаны типы `allowed`, `broadcast`, `rotate`;
+3. эти записи используются Telegram-ботом как backend-driven recipient lists;
+4. если записей в backend нет, bot может fallback-нуться на `.env`.
+
 ## Локальный запуск
 
 ```bash
@@ -60,4 +70,4 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: Phase 4 staff operations + content managers + access management.
+Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning.
