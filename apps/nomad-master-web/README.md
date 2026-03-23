@@ -10,7 +10,8 @@ Staff/admin frontend для продукта `Мастер`.
 2. инвентаризация;
 3. менеджер миксов;
 4. менеджер рейлов;
-5. аналитические дашборды.
+5. аналитические дашборды;
+6. управление доступом.
 
 ## Phase 1
 
@@ -38,6 +39,15 @@ Staff/admin frontend для продукта `Мастер`.
 2. создание и обновление рейлов через `/staff/rails`;
 3. табовый staff-shell с экранами `Дашборд`, `Инвентаризация`, `Миксы`, `Рейлы`.
 
+## Access management
+
+Добавлен раздел `Доступ`:
+
+1. список, создание, редактирование и удаление daily codes через `/staff/access/daily-codes`;
+2. список, создание, редактирование и удаление staff accounts через `/staff/access/accounts`;
+3. роли `nomad` доступно управление daily codes, но staff accounts открыты только для `admin`;
+4. формы приведены к одному CRUD-паттерну с остальными менеджерами `Мастера`.
+
 ## Локальный запуск
 
 ```bash
@@ -50,4 +60,4 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: Phase 4 staff operations + content managers.
+Текущая стадия: Phase 4 staff operations + content managers + access management.

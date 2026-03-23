@@ -1623,3 +1623,33 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
 - `cd apps/nomad-backend && npm test` — `OK`.
 - `cd apps/nomad-backend && npm run build` — `OK`.
+
+Обновление от 23 марта 2026 (Nomad — CRUD для daily codes и staff accounts в `Мастер`):
+- `apps/nomad-backend/prisma/schema.prisma`, `prisma/seed.ts`, `src/state.ts`:
+  - в persisted daily code добавлено явное поле `codeValue`, чтобы staff видел и редактировал текущий код без обращения к seed;
+  - reset/seed продолжают поднимать стартовый код `NOMAD-2026` и staff accounts в Postgres.
+- `apps/nomad-backend/src/auth.ts`:
+  - `resolveStaffSession()` теперь валидирует bearer token против актуального состояния account в БД;
+  - деактивация staff account сразу влияет на `GET /staff/auth/me`.
+- `apps/nomad-backend/src/access.ts`, `src/app.ts`, `src/types.ts`, `src/access.test.ts`:
+  - добавлены persisted CRUD endpoints:
+    - `GET/POST/PATCH/DELETE /staff/access/daily-codes`,
+    - `GET/POST/PATCH/DELETE /staff/access/accounts`;
+  - daily codes доступны ролям `admin` и `nomad`;
+  - staff accounts доступны только `admin`.
+- `apps/nomad-master-web/src/App.tsx`, `contracts.ts`, `contracts.test.ts`, `styles.css`:
+  - добавлена вкладка `Доступ`;
+  - реализованы create/edit/delete формы для daily codes;
+  - реализованы create/edit/delete формы для staff accounts;
+  - для роли `nomad` staff accounts отображаются в forbidden-state, а daily codes остаются доступными.
+- `apps/nomad-backend/README.md`, `apps/nomad-master-web/README.md`:
+  - runbook и описание продукта синхронизированы с access-management slice.
+
+Проверка:
+- `cd apps/nomad-master-web && npm test` — `OK`.
+- `cd apps/nomad-master-web && npm run build` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `git diff --check` — `OK`.
+- `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test`:
+  - локально не воспроизведён в этой сессии, потому что Docker daemon оказался недоступен, а backend-тесты требуют живой Postgres на `5433`;
+  - по итогам параллельной backend-ветки подагент прогнал `prisma generate/dbpush/seed`, `npm test` и `npm run build` успешно на том же access slice.

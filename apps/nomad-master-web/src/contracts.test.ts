@@ -2,13 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildInventorySummary,
+  formatDateTimeLocalInput,
   normalizeDashboardSummary,
+  normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
+  normalizeStaffAccountRecord,
   parseDelimitedList,
+  parseDateTimeLocalInput,
+  sortDailyAccessCodes,
   sortInventoryItems,
   sortMixes,
   sortRails,
+  sortStaffAccounts,
 } from './contracts';
 
 test('buildInventorySummary counts stock states', () => {
@@ -181,4 +187,101 @@ test('sortRails keeps active statistical rails first', () => {
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['rail-1', 'rail-2']);
+});
+
+test('normalizeDailyAccessCodeRecord preserves display code and dates', () => {
+  const record = normalizeDailyAccessCodeRecord({
+    codeId: 'code-1',
+    codeValue: 'NOMAD-2026',
+    codeLabel: 'Сегодня',
+    active: false,
+    startsAt: '2026-03-23T08:00:00.000Z',
+    endsAt: '2026-03-23T23:59:59.000Z',
+  });
+
+  assert.deepEqual(record, {
+    id: 'code-1',
+    codeValue: 'NOMAD-2026',
+    codeLabel: 'Сегодня',
+    active: false,
+    startsAt: '2026-03-23T08:00:00.000Z',
+    endsAt: '2026-03-23T23:59:59.000Z',
+  });
+});
+
+test('normalizeStaffAccountRecord defaults to nomad role', () => {
+  const record = normalizeStaffAccountRecord({
+    id: 'staff-1',
+    login: 'nomad',
+    name: 'Кальянный мастер',
+    active: true,
+  });
+
+  assert.deepEqual(record, {
+    id: 'staff-1',
+    login: 'nomad',
+    name: 'Кальянный мастер',
+    role: 'nomad',
+    active: true,
+  });
+});
+
+test('sortDailyAccessCodes keeps active and newest codes first', () => {
+  const sorted = sortDailyAccessCodes([
+    {
+      id: 'code-2',
+      codeValue: 'B',
+      codeLabel: 'Вчера',
+      active: false,
+      startsAt: '2026-03-22T08:00:00.000Z',
+      endsAt: '2026-03-22T23:59:59.000Z',
+    },
+    {
+      id: 'code-1',
+      codeValue: 'A',
+      codeLabel: 'Сегодня',
+      active: true,
+      startsAt: '2026-03-23T08:00:00.000Z',
+      endsAt: '2026-03-23T23:59:59.000Z',
+    },
+  ]);
+
+  assert.deepEqual(sorted.map((item) => item.id), ['code-1', 'code-2']);
+});
+
+test('sortStaffAccounts keeps active admins first', () => {
+  const sorted = sortStaffAccounts([
+    {
+      id: 'staff-2',
+      login: 'nomad',
+      name: 'Nomad',
+      role: 'nomad',
+      active: true,
+    },
+    {
+      id: 'staff-1',
+      login: 'admin',
+      name: 'Admin',
+      role: 'admin',
+      active: true,
+    },
+    {
+      id: 'staff-3',
+      login: 'guest',
+      name: 'Guest',
+      role: 'nomad',
+      active: false,
+    },
+  ]);
+
+  assert.deepEqual(sorted.map((item) => item.id), ['staff-1', 'staff-2', 'staff-3']);
+});
+
+test('date helpers roundtrip local input', () => {
+  const input = '2026-03-23T10:15';
+  const iso = parseDateTimeLocalInput(input);
+
+  assert.equal(typeof iso, 'string');
+  assert.ok(iso.endsWith('Z'));
+  assert.equal(formatDateTimeLocalInput(iso), input);
 });

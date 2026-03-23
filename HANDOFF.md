@@ -1951,3 +1951,49 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed` — `OK`.
 - `cd apps/nomad-backend && npm test` — `OK`.
 - `cd apps/nomad-backend && npm run build` — `OK`.
+
+## 2.6) Nomad (23 марта 2026) — CRUD для access management в `Мастер`
+
+Сделано:
+- `apps/nomad-backend/prisma/schema.prisma`, `apps/nomad-backend/prisma/seed.ts`, `apps/nomad-backend/src/state.ts`:
+  - в `NomadDailyAccessCode` добавлено поле `codeValue`, чтобы staff видел и редактировал код в явном виде;
+  - seed/reset продолжают поднимать `NOMAD-2026`, `admin/admin` и `nomad/nomad`.
+- `apps/nomad-backend/src/auth.ts`:
+  - `resolveStaffSession()` теперь проверяет, что account в БД ещё активен и роль совпадает с token claims;
+  - изменения staff account через CRUD сразу влияют на `GET /staff/auth/me`.
+- `apps/nomad-backend/src/access.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/access.test.ts`:
+  - добавлены persisted CRUD endpoints:
+    - `GET/POST/PATCH/DELETE /staff/access/daily-codes`,
+    - `GET/POST/PATCH/DELETE /staff/access/accounts`;
+  - daily codes доступны `admin` и `nomad`;
+  - staff accounts доступны только `admin`;
+  - добавлены backend-тесты на CRUD и role-guard.
+- `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`, `apps/nomad-master-web/src/styles.css`:
+  - добавлена вкладка `Доступ`;
+  - реализованы list/create/edit/delete для daily codes;
+  - реализованы list/create/edit/delete для staff accounts;
+  - для роли `nomad` staff accounts показываются в forbidden-state, а daily codes доступны.
+- `apps/nomad-backend/README.md`, `apps/nomad-master-web/README.md`:
+  - README синхронизированы с access-management slice.
+
+Важно:
+- В этой сессии Docker daemon на машине оказался недоступен, поэтому локально не удалось повторно прогнать backend integration tests против Postgres.
+- Непосредственно перед этим access slice был успешно прогнан в параллельной backend-ветке подагентом:
+  - `npm run prisma:generate`,
+  - `npm run db:start`,
+  - `DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset`,
+  - `DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed`,
+  - `DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test`,
+  - `npm run build`.
+- В текущей рабочей копии подтверждены:
+  - `cd apps/nomad-master-web && npm test` — `OK`;
+  - `cd apps/nomad-master-web && npm run build` — `OK`;
+  - `cd apps/nomad-backend && npm run build` — `OK`;
+  - `git diff --check` — `OK`.
+
+Следующий шаг:
+- как только Docker daemon снова доступен, повторить backend прогон локально:
+  - `docker compose -f apps/nomad-backend/docker-compose.yml up -d db`
+  - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset`
+  - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed`
+  - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test`

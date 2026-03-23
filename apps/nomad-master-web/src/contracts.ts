@@ -19,6 +19,23 @@ export type InventoryTobacco = {
   flavors?: string[];
 };
 
+export type DailyAccessCodeRecord = {
+  id: string;
+  codeValue: string;
+  codeLabel: string;
+  active: boolean;
+  startsAt: string;
+  endsAt: string;
+};
+
+export type StaffAccountRecord = {
+  id: string;
+  login: string;
+  name: string;
+  role: StaffUser['role'];
+  active: boolean;
+};
+
 export type DashboardSummary = {
   totalTobaccos: number;
   inStockCount: number;
@@ -141,6 +158,19 @@ const toRailType = (value: unknown): RailType => {
 
 const uniqueStrings = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
+const toIsoString = (value: unknown, fallback = '') => {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString();
+  }
+
+  return fallback;
+};
+
 export const parseDelimitedList = (value: string) => {
   return uniqueStrings(
     value
@@ -161,7 +191,7 @@ export const readListPayload = <T>(value: unknown): T[] => {
     return [];
   }
 
-  const collections = [value.items, value.mixes, value.rails, value.data];
+  const collections = [value.items, value.mixes, value.rails, value.codes, value.accounts, value.data];
 
   for (const collection of collections) {
     if (Array.isArray(collection)) {
@@ -174,7 +204,7 @@ export const readListPayload = <T>(value: unknown): T[] => {
 
 export const readEntityPayload = <T>(value: unknown): T | null => {
   if (isRecord(value)) {
-    const candidates = [value.item, value.mix, value.rail, value.data];
+    const candidates = [value.item, value.mix, value.rail, value.code, value.account, value.data];
 
     for (const candidate of candidates) {
       if (candidate !== undefined && candidate !== null) {
@@ -217,6 +247,31 @@ const normalizeRailMixReference = (value: unknown): RailMixReference => {
   return {
     id,
     name: String(value.name ?? value.mixName ?? id),
+  };
+};
+
+export const normalizeDailyAccessCodeRecord = (value: unknown): DailyAccessCodeRecord => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.codeId ?? ''),
+    codeValue: String(raw.codeValue ?? raw.code ?? ''),
+    codeLabel: String(raw.codeLabel ?? raw.label ?? 'Код доступа'),
+    active: toBoolean(raw.active, true),
+    startsAt: toIsoString(raw.startsAt ?? raw.starts_at, ''),
+    endsAt: toIsoString(raw.endsAt ?? raw.ends_at, ''),
+  };
+};
+
+export const normalizeStaffAccountRecord = (value: unknown): StaffAccountRecord => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.accountId ?? ''),
+    login: String(raw.login ?? ''),
+    name: String(raw.name ?? ''),
+    role: raw.role === 'admin' ? 'admin' : 'nomad',
+    active: toBoolean(raw.active, true),
   };
 };
 
@@ -328,6 +383,47 @@ export const sortRails = (items: RailRecord[]) => {
   });
 };
 
+export const sortDailyAccessCodes = (items: DailyAccessCodeRecord[]) => {
+  const copy = [...items];
+
+  return copy.sort((left, right) => {
+    if (left.active !== right.active) {
+      return left.active ? -1 : 1;
+    }
+
+    if (right.startsAt !== left.startsAt) {
+      return right.startsAt.localeCompare(left.startsAt);
+    }
+
+    if (right.endsAt !== left.endsAt) {
+      return right.endsAt.localeCompare(left.endsAt);
+    }
+
+    return left.codeLabel.localeCompare(right.codeLabel, 'ru');
+  });
+};
+
+export const sortStaffAccounts = (items: StaffAccountRecord[]) => {
+  const roleRank: Record<StaffUser['role'], number> = {
+    admin: 0,
+    nomad: 1,
+  };
+
+  const copy = [...items];
+
+  return copy.sort((left, right) => {
+    if (left.active !== right.active) {
+      return left.active ? -1 : 1;
+    }
+
+    if (roleRank[left.role] !== roleRank[right.role]) {
+      return roleRank[left.role] - roleRank[right.role];
+    }
+
+    return left.login.localeCompare(right.login, 'ru');
+  });
+};
+
 export const railTypeOptions: Array<{ value: RailType; label: string }> = [
   { value: 'statistical', label: 'Статистический' },
   { value: 'prepared', label: 'Предзаготовленный' },
@@ -362,4 +458,28 @@ export const sortInventoryItems = (items: InventoryTobacco[]) => {
 
 export const formatMetricValue = (value: number) => {
   return new Intl.NumberFormat('ru-RU').format(value);
+};
+
+export const formatDateTimeLocalInput = (value: string) => {
+  if (!value) {
+    return '';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  const offset = parsed.getTimezoneOffset();
+  const local = new Date(parsed.getTime() - offset * 60_000);
+  return local.toISOString().slice(0, 16);
+};
+
+export const parseDateTimeLocalInput = (value: string) => {
+  if (!value.trim()) {
+    return '';
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
 };

@@ -50,6 +50,13 @@
 3. сиды живут в `apps/nomad-backend/prisma/seed.ts`;
 4. локальный Postgres поднимается отдельным `docker-compose.yml` внутри `apps/nomad-backend`.
 
+На access-management этапе дополнительно есть:
+
+1. CRUD для daily codes через `/staff/access/daily-codes`;
+2. CRUD для staff accounts через `/staff/access/accounts`;
+3. role-guard: daily codes доступны `admin` и `nomad`, staff accounts только `admin`;
+4. `GET /staff/auth/me` проверяет не только bearer token, но и актуальное состояние account в БД.
+
 Параметры локального Postgres-контура:
 
 1. порт `5433`;
@@ -80,6 +87,14 @@
 
 ### Staff inventory / dashboard
 
+- `GET /staff/access/daily-codes`
+- `POST /staff/access/daily-codes`
+- `PATCH /staff/access/daily-codes/:id`
+- `DELETE /staff/access/daily-codes/:id`
+- `GET /staff/access/accounts`
+- `POST /staff/access/accounts`
+- `PATCH /staff/access/accounts/:id`
+- `DELETE /staff/access/accounts/:id`
 - `GET /staff/inventory/tobaccos`
 - `PATCH /staff/inventory/tobaccos/:id`
 - `GET /staff/dashboard/summary`
@@ -117,4 +132,4 @@ NOMAD_TOKEN_TTL_HOURS=24
 
 ## Стадия
 
-Текущая стадия: Phase 4 content rails backend + Prisma persistence на отдельном Postgres.
+Текущая стадия: Phase 4 content rails backend + persisted access management на отдельном Postgres.

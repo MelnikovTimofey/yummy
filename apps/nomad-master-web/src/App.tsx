@@ -1,31 +1,39 @@
 import { FormEvent, useEffect, useState } from 'react';
 import {
   DashboardSummary,
+  DailyAccessCodeRecord,
   InventoryTobacco,
   MixRecord,
   RailRecord,
   StaffAuthResponse,
+  StaffAccountRecord,
   StaffUser,
+  formatDateTimeLocalInput,
   buildInventorySummary,
   formatDelimitedList,
   formatMetricValue,
   formatRailType,
   normalizeDashboardSummary,
+  normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
+  normalizeStaffAccountRecord,
   parseDelimitedList,
+  parseDateTimeLocalInput,
   railTypeOptions,
   readEntityPayload,
   readListPayload,
+  sortDailyAccessCodes,
   sortInventoryItems,
   sortMixes,
   sortRails,
+  sortStaffAccounts,
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 
-type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails';
+type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
 type MixEditorState = {
   id: string;
@@ -45,6 +53,24 @@ type RailEditorState = {
   description: string;
   type: 'statistical' | 'prepared' | 'curated';
   mixIds: string;
+  active: boolean;
+};
+
+type DailyCodeEditorState = {
+  id: string;
+  codeValue: string;
+  codeLabel: string;
+  startsAt: string;
+  endsAt: string;
+  active: boolean;
+};
+
+type StaffAccountEditorState = {
+  id: string;
+  login: string;
+  name: string;
+  role: StaffUser['role'];
+  password: string;
   active: boolean;
 };
 
@@ -69,6 +95,24 @@ const emptyRailEditor = (): RailEditorState => ({
   active: true,
 });
 
+const emptyDailyCodeEditor = (): DailyCodeEditorState => ({
+  id: '',
+  codeValue: '',
+  codeLabel: '',
+  startsAt: '',
+  endsAt: '',
+  active: true,
+});
+
+const emptyStaffAccountEditor = (): StaffAccountEditorState => ({
+  id: '',
+  login: '',
+  name: '',
+  role: 'nomad',
+  password: '',
+  active: true,
+});
+
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
   name: mix.name,
@@ -88,6 +132,24 @@ const toRailEditorState = (rail: RailRecord): RailEditorState => ({
   type: rail.type,
   mixIds: formatDelimitedList(rail.mixIds),
   active: rail.active,
+});
+
+const toDailyCodeEditorState = (code: DailyAccessCodeRecord): DailyCodeEditorState => ({
+  id: code.id,
+  codeValue: code.codeValue,
+  codeLabel: code.codeLabel,
+  startsAt: formatDateTimeLocalInput(code.startsAt),
+  endsAt: formatDateTimeLocalInput(code.endsAt),
+  active: code.active,
+});
+
+const toStaffAccountEditorState = (account: StaffAccountRecord): StaffAccountEditorState => ({
+  id: account.id,
+  login: account.login,
+  name: account.name,
+  role: account.role,
+  password: '',
+  active: account.active,
 });
 
 const parseNumberInput = (value: string, fallback = 0) => {
@@ -158,7 +220,9 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: 
 
   if (!response.ok) {
     const error = payload && typeof payload === 'object' && 'error' in payload ? String(payload.error) : 'Запрос не выполнен';
-    throw new Error(error);
+    const wrapped = new Error(error) as Error & { status?: number };
+    wrapped.status = response.status;
+    throw wrapped;
   }
 
   return (payload ?? {}) as T;
@@ -216,14 +280,22 @@ export const App = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [mixes, setMixes] = useState<MixRecord[]>([]);
   const [rails, setRails] = useState<RailRecord[]>([]);
+  const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
+  const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railsStatus, setRailsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [dailyCodesStatus, setDailyCodesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [staffAccountsStatus, setStaffAccountsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
+    'idle',
+  );
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
   const [railsError, setRailsError] = useState('');
+  const [dailyCodesError, setDailyCodesError] = useState('');
+  const [staffAccountsError, setStaffAccountsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -231,6 +303,14 @@ export const App = () => {
   const [railEditor, setRailEditor] = useState<RailEditorState>(emptyRailEditor);
   const [railSaveStatus, setRailSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railSaveError, setRailSaveError] = useState('');
+  const [dailyCodeEditor, setDailyCodeEditor] = useState<DailyCodeEditorState>(emptyDailyCodeEditor);
+  const [dailyCodeSaveStatus, setDailyCodeSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [dailyCodeSaveError, setDailyCodeSaveError] = useState('');
+  const [dailyCodeToggleId, setDailyCodeToggleId] = useState('');
+  const [staffAccountEditor, setStaffAccountEditor] = useState<StaffAccountEditorState>(emptyStaffAccountEditor);
+  const [staffAccountSaveStatus, setStaffAccountSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [staffAccountSaveError, setStaffAccountSaveError] = useState('');
+  const [staffAccountToggleId, setStaffAccountToggleId] = useState('');
 
   const loadInventory = async (nextToken: string) => {
     setInventoryStatus('loading');
@@ -295,6 +375,45 @@ export const App = () => {
     }
   };
 
+  const loadDailyCodes = async (nextToken: string) => {
+    setDailyCodesStatus('loading');
+    setDailyCodesError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/access/daily-codes', {}, nextToken);
+      const items = sortDailyAccessCodes(readListPayload<unknown>(response).map(normalizeDailyAccessCodeRecord));
+      setDailyCodes(items);
+      setDailyCodesStatus('ready');
+    } catch (cause) {
+      setDailyCodes([]);
+      setDailyCodesStatus('error');
+      setDailyCodesError(cause instanceof Error ? cause.message : 'Не удалось загрузить коды доступа');
+    }
+  };
+
+  const loadStaffAccounts = async (nextToken: string, role: StaffUser['role']) => {
+    if (role !== 'admin') {
+      setStaffAccounts([]);
+      setStaffAccountsStatus('forbidden');
+      setStaffAccountsError('Раздел сотрудников доступен только для admin.');
+      return;
+    }
+
+    setStaffAccountsStatus('loading');
+    setStaffAccountsError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/access/accounts', {}, nextToken);
+      const items = sortStaffAccounts(readListPayload<unknown>(response).map(normalizeStaffAccountRecord));
+      setStaffAccounts(items);
+      setStaffAccountsStatus('ready');
+    } catch (cause) {
+      setStaffAccounts([]);
+      setStaffAccountsStatus('error');
+      setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось загрузить сотрудников');
+    }
+  };
+
   useEffect(() => {
     const hydrate = async () => {
       if (!token) {
@@ -310,7 +429,14 @@ export const App = () => {
         }
 
         setUser(profile.user);
-        await Promise.all([loadInventory(token), loadSummary(token), loadMixes(token), loadRails(token)]);
+        await Promise.all([
+          loadInventory(token),
+          loadSummary(token),
+          loadMixes(token),
+          loadRails(token),
+          loadDailyCodes(token),
+          loadStaffAccounts(token, profile.user.role),
+        ]);
         setStatus('ready');
       } catch {
         storeToken('');
@@ -344,7 +470,14 @@ export const App = () => {
       storeToken(auth.accessToken);
       setToken(auth.accessToken);
       setUser(profile.user);
-      await Promise.all([loadInventory(auth.accessToken), loadSummary(auth.accessToken), loadMixes(auth.accessToken), loadRails(auth.accessToken)]);
+      await Promise.all([
+        loadInventory(auth.accessToken),
+        loadSummary(auth.accessToken),
+        loadMixes(auth.accessToken),
+        loadRails(auth.accessToken),
+        loadDailyCodes(auth.accessToken),
+        loadStaffAccounts(auth.accessToken, profile.user.role),
+      ]);
       setStatus('ready');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Не удалось войти');
@@ -368,10 +501,14 @@ export const App = () => {
     setSummaryStatus('idle');
     setMixesStatus('idle');
     setRailsStatus('idle');
+    setDailyCodesStatus('idle');
+    setStaffAccountsStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
     setRailsError('');
+    setDailyCodesError('');
+    setStaffAccountsError('');
     setToggleId('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
@@ -379,6 +516,16 @@ export const App = () => {
     setRailEditor(emptyRailEditor());
     setRailSaveStatus('idle');
     setRailSaveError('');
+    setDailyCodeEditor(emptyDailyCodeEditor());
+    setDailyCodeSaveStatus('idle');
+    setDailyCodeSaveError('');
+    setDailyCodeToggleId('');
+    setStaffAccountEditor(emptyStaffAccountEditor());
+    setStaffAccountSaveStatus('idle');
+    setStaffAccountSaveError('');
+    setStaffAccountToggleId('');
+    setDailyCodes([]);
+    setStaffAccounts([]);
   };
 
   const onToggleStock = async (item: InventoryTobacco) => {
@@ -566,6 +713,298 @@ export const App = () => {
     }
   };
 
+  const onSelectDailyCode = (code: DailyAccessCodeRecord) => {
+    setDailyCodeEditor(toDailyCodeEditorState(code));
+    setDailyCodeSaveError('');
+    setDailyCodeSaveStatus('idle');
+    setActiveTab('access');
+  };
+
+  const onResetDailyCodeEditor = () => {
+    setDailyCodeEditor(emptyDailyCodeEditor());
+    setDailyCodeSaveError('');
+    setDailyCodeSaveStatus('idle');
+  };
+
+  const onSubmitDailyCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    const codeValue = dailyCodeEditor.codeValue.trim();
+    const codeLabel = dailyCodeEditor.codeLabel.trim();
+    const startsAt = parseDateTimeLocalInput(dailyCodeEditor.startsAt);
+    const endsAt = parseDateTimeLocalInput(dailyCodeEditor.endsAt);
+
+    if (!codeValue) {
+      setDailyCodeSaveError('Введите код доступа');
+      setDailyCodeSaveStatus('error');
+      return;
+    }
+
+    if (!startsAt || !endsAt) {
+      setDailyCodeSaveError('Укажите корректные даты начала и окончания');
+      setDailyCodeSaveStatus('error');
+      return;
+    }
+
+    setDailyCodeSaveStatus('loading');
+    setDailyCodeSaveError('');
+
+    const payload = {
+      codeValue,
+      codeLabel: codeLabel || 'Код доступа',
+      active: dailyCodeEditor.active,
+      startsAt,
+      endsAt,
+    };
+
+    try {
+      const response = await requestJson<unknown>(
+        dailyCodeEditor.id ? `/staff/access/daily-codes/${dailyCodeEditor.id}` : '/staff/access/daily-codes',
+        {
+          method: dailyCodeEditor.id ? 'PATCH' : 'POST',
+          body: JSON.stringify(payload),
+        },
+        token,
+      );
+
+      const savedCode = normalizeDailyAccessCodeRecord(readEntityPayload<unknown>(response));
+      if (!savedCode.id) {
+        throw new Error('Backend вернул пустой код доступа');
+      }
+
+      setDailyCodes((current) => sortDailyAccessCodes(replaceOrInsert(current, savedCode)));
+      setDailyCodeEditor(toDailyCodeEditorState(savedCode));
+      setDailyCodeSaveStatus('ready');
+      setActiveTab('access');
+    } catch (cause) {
+      setDailyCodeSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить код доступа');
+      setDailyCodeSaveStatus('error');
+    }
+  };
+
+  const onToggleDailyCodeActive = async (code: DailyAccessCodeRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setDailyCodeToggleId(code.id);
+    setDailyCodesError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/daily-codes/${code.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            codeValue: code.codeValue,
+            codeLabel: code.codeLabel,
+            active: !code.active,
+            startsAt: code.startsAt,
+            endsAt: code.endsAt,
+          }),
+        },
+        token,
+      );
+
+      const savedCode = normalizeDailyAccessCodeRecord(readEntityPayload<unknown>(response));
+      if (!savedCode.id) {
+        throw new Error('Backend вернул пустой код доступа');
+      }
+
+      setDailyCodes((current) => sortDailyAccessCodes(replaceOrInsert(current, savedCode)));
+      if (dailyCodeEditor.id === code.id) {
+        setDailyCodeEditor(toDailyCodeEditorState(savedCode));
+      }
+      setDailyCodesStatus('ready');
+    } catch (cause) {
+      setDailyCodesError(cause instanceof Error ? cause.message : 'Не удалось обновить код доступа');
+      setDailyCodesStatus('error');
+    } finally {
+      setDailyCodeToggleId('');
+    }
+  };
+
+  const onDeleteDailyCode = async (code: DailyAccessCodeRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setDailyCodeToggleId(code.id);
+    setDailyCodesError('');
+
+    try {
+      await requestJson(
+        `/staff/access/daily-codes/${code.id}`,
+        {
+          method: 'DELETE',
+        },
+        token,
+      );
+
+      setDailyCodes((current) => sortDailyAccessCodes(current.filter((item) => item.id !== code.id)));
+      if (dailyCodeEditor.id === code.id) {
+        onResetDailyCodeEditor();
+      }
+      setDailyCodesStatus('ready');
+    } catch (cause) {
+      setDailyCodesError(cause instanceof Error ? cause.message : 'Не удалось удалить код доступа');
+      setDailyCodesStatus('error');
+    } finally {
+      setDailyCodeToggleId('');
+    }
+  };
+
+  const onSelectStaffAccount = (account: StaffAccountRecord) => {
+    setStaffAccountEditor(toStaffAccountEditorState(account));
+    setStaffAccountSaveError('');
+    setStaffAccountSaveStatus('idle');
+    setActiveTab('access');
+  };
+
+  const onResetStaffAccountEditor = () => {
+    setStaffAccountEditor(emptyStaffAccountEditor());
+    setStaffAccountSaveError('');
+    setStaffAccountSaveStatus('idle');
+  };
+
+  const onSubmitStaffAccount = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    const loginValue = staffAccountEditor.login.trim();
+    const name = staffAccountEditor.name.trim();
+    const password = staffAccountEditor.password.trim();
+
+    if (!loginValue) {
+      setStaffAccountSaveError('Введите логин');
+      setStaffAccountSaveStatus('error');
+      return;
+    }
+
+    if (!name) {
+      setStaffAccountSaveError('Введите имя');
+      setStaffAccountSaveStatus('error');
+      return;
+    }
+
+    if (!staffAccountEditor.id && !password) {
+      setStaffAccountSaveError('Для нового сотрудника нужен пароль');
+      setStaffAccountSaveStatus('error');
+      return;
+    }
+
+    setStaffAccountSaveStatus('loading');
+    setStaffAccountSaveError('');
+
+    const payload = {
+      login: loginValue,
+      name,
+      role: staffAccountEditor.role,
+      active: staffAccountEditor.active,
+      ...(password ? { password } : {}),
+    };
+
+    try {
+      const response = await requestJson<unknown>(
+        staffAccountEditor.id ? `/staff/access/accounts/${staffAccountEditor.id}` : '/staff/access/accounts',
+        {
+          method: staffAccountEditor.id ? 'PATCH' : 'POST',
+          body: JSON.stringify(payload),
+        },
+        token,
+      );
+
+      const savedAccount = normalizeStaffAccountRecord(readEntityPayload<unknown>(response));
+      if (!savedAccount.id) {
+        throw new Error('Backend вернул пустого сотрудника');
+      }
+
+      setStaffAccounts((current) => sortStaffAccounts(replaceOrInsert(current, savedAccount)));
+      setStaffAccountEditor(toStaffAccountEditorState(savedAccount));
+      setStaffAccountSaveStatus('ready');
+      setActiveTab('access');
+    } catch (cause) {
+      setStaffAccountSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить сотрудника');
+      setStaffAccountSaveStatus('error');
+    }
+  };
+
+  const onToggleStaffAccountActive = async (account: StaffAccountRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setStaffAccountToggleId(account.id);
+    setStaffAccountsError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/accounts/${account.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            login: account.login,
+            name: account.name,
+            role: account.role,
+            active: !account.active,
+          }),
+        },
+        token,
+      );
+
+      const savedAccount = normalizeStaffAccountRecord(readEntityPayload<unknown>(response));
+      if (!savedAccount.id) {
+        throw new Error('Backend вернул пустого сотрудника');
+      }
+
+      setStaffAccounts((current) => sortStaffAccounts(replaceOrInsert(current, savedAccount)));
+      if (staffAccountEditor.id === account.id) {
+        setStaffAccountEditor(toStaffAccountEditorState(savedAccount));
+      }
+      setStaffAccountsStatus('ready');
+    } catch (cause) {
+      setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось обновить сотрудника');
+      setStaffAccountsStatus('error');
+    } finally {
+      setStaffAccountToggleId('');
+    }
+  };
+
+  const onDeleteStaffAccount = async (account: StaffAccountRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setStaffAccountToggleId(account.id);
+    setStaffAccountsError('');
+
+    try {
+      await requestJson(
+        `/staff/access/accounts/${account.id}`,
+        {
+          method: 'DELETE',
+        },
+        token,
+      );
+
+      setStaffAccounts((current) => sortStaffAccounts(current.filter((item) => item.id !== account.id)));
+      if (staffAccountEditor.id === account.id) {
+        onResetStaffAccountEditor();
+      }
+      setStaffAccountsStatus('ready');
+    } catch (cause) {
+      setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось удалить сотрудника');
+      setStaffAccountsStatus('error');
+    } finally {
+      setStaffAccountToggleId('');
+    }
+  };
+
   const renderDashboard = () => (
     <section className="card">
       <div className="section-head">
@@ -594,6 +1033,9 @@ export const App = () => {
         </button>
         <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('rails')}>
           Перейти в менеджер рейлов
+        </button>
+        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('access')}>
+          Перейти в доступ
         </button>
       </div>
 
@@ -970,15 +1412,364 @@ export const App = () => {
     </section>
   );
 
+  const formatDateTimeDisplay = (value: string) => {
+    if (!value) {
+      return 'Не указано';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat('ru-RU', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  };
+
+  const renderAccess = () => (
+    <section className="card">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Доступ</p>
+          <h2>Коды доступа и сотрудники</h2>
+        </div>
+        <div className="section-actions">
+          <span className="status-chip">API: /staff/access/*</span>
+          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
+            Новый код доступа
+          </button>
+        </div>
+      </div>
+
+      <p className="meta-line">
+        Коды доступа доступны всем staff-ролям. Аккаунты сотрудников управляются только admin.
+      </p>
+
+      <div className="manager-layout manager-layout--stacked">
+        <aside className="entity-list">
+          {dailyCodes.map((code) => (
+            <article className={dailyCodeEditor.id === code.id ? 'entity-card entity-card--active' : 'entity-card'} key={code.id}>
+              <div className="entity-card__head">
+                <div>
+                  <p className="entity-kicker">Код доступа</p>
+                  <h3>{code.codeLabel || 'Код доступа'}</h3>
+                </div>
+                <span className={code.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                  {code.active ? 'Активен' : 'Неактивен'}
+                </span>
+              </div>
+              <p className="code-value">{code.codeValue || 'Код не указан'}</p>
+              <p className="meta-line">Начало: {formatDateTimeDisplay(code.startsAt)}</p>
+              <p className="meta-line">Окончание: {formatDateTimeDisplay(code.endsAt)}</p>
+              <div className="entity-card__actions entity-card__actions--wrap">
+                <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectDailyCode(code)}>
+                  Редактировать
+                </button>
+                <button
+                  className="secondary-button secondary-button--inline"
+                  type="button"
+                  onClick={() => void onToggleDailyCodeActive(code)}
+                  disabled={dailyCodeToggleId === code.id}
+                >
+                  {dailyCodeToggleId === code.id ? 'Сохраняем...' : code.active ? 'Деактивировать' : 'Активировать'}
+                </button>
+                <button
+                  className="secondary-button secondary-button--inline"
+                  type="button"
+                  onClick={() => void onDeleteDailyCode(code)}
+                  disabled={dailyCodeToggleId === code.id}
+                >
+                  {dailyCodeToggleId === code.id ? 'Удаляем...' : 'Удалить'}
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {!dailyCodes.length && dailyCodesStatus !== 'loading' ? <p className="meta-line">Пока нет кодов доступа.</p> : null}
+        </aside>
+
+        <article className="editor-card">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">{dailyCodeEditor.id ? 'Редактирование кода доступа' : 'Новый код доступа'}</p>
+              <h3>{dailyCodeEditor.id ? dailyCodeEditor.codeLabel || 'Код доступа' : 'Создать код доступа'}</h3>
+            </div>
+            <span className="status-chip">{dailyCodeEditor.active ? 'Активен' : 'Неактивен'}</span>
+          </div>
+
+          {dailyCodesStatus === 'loading' ? <p className="meta-line">Загружаем коды доступа...</p> : null}
+          {dailyCodesError ? <p className="error-text">{dailyCodesError}</p> : null}
+
+          <form className="admin-form" onSubmit={onSubmitDailyCode}>
+            <div className="form-grid form-grid--two">
+              <label className="field">
+                <span className="field-label">Код</span>
+                <input
+                  className="text-input"
+                  value={dailyCodeEditor.codeValue}
+                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, codeValue: event.target.value }))}
+                  placeholder="NOMAD-2026"
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Подпись</span>
+                <input
+                  className="text-input"
+                  value={dailyCodeEditor.codeLabel}
+                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, codeLabel: event.target.value }))}
+                  placeholder="Код на сегодня"
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Начало действия</span>
+                <input
+                  className="text-input"
+                  type="datetime-local"
+                  value={dailyCodeEditor.startsAt}
+                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, startsAt: event.target.value }))}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Окончание действия</span>
+                <input
+                  className="text-input"
+                  type="datetime-local"
+                  value={dailyCodeEditor.endsAt}
+                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, endsAt: event.target.value }))}
+                />
+              </label>
+
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={dailyCodeEditor.active}
+                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, active: event.target.checked }))}
+                />
+                <span>Активен</span>
+              </label>
+            </div>
+
+            {dailyCodeSaveError ? <p className="error-text">{dailyCodeSaveError}</p> : null}
+
+            <div className="form-actions">
+              <button className="primary-button primary-button--inline" type="submit" disabled={dailyCodeSaveStatus === 'loading'}>
+                {dailyCodeSaveStatus === 'loading' ? 'Сохраняем...' : dailyCodeEditor.id ? 'Сохранить код доступа' : 'Создать код доступа'}
+              </button>
+              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
+                Сбросить форму
+              </button>
+              {dailyCodeEditor.id ? (
+                <button
+                  className="secondary-button secondary-button--inline"
+                  type="button"
+                  onClick={() =>
+                    void onDeleteDailyCode({
+                      id: dailyCodeEditor.id,
+                      codeValue: dailyCodeEditor.codeValue,
+                      codeLabel: dailyCodeEditor.codeLabel,
+                      startsAt: parseDateTimeLocalInput(dailyCodeEditor.startsAt),
+                      endsAt: parseDateTimeLocalInput(dailyCodeEditor.endsAt),
+                      active: dailyCodeEditor.active,
+                    })
+                  }
+                  disabled={dailyCodeToggleId === dailyCodeEditor.id}
+                >
+                  {dailyCodeToggleId === dailyCodeEditor.id ? 'Удаляем...' : 'Удалить код'}
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </article>
+      </div>
+
+      <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+        <aside className="entity-list">
+          {staffAccountsStatus === 'forbidden' ? (
+            <article className="entity-card entity-card--muted">
+              <p className="entity-kicker">Аккаунты сотрудников</p>
+              <h3>Только для admin</h3>
+              <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению аккаунтами сотрудников.'}</p>
+            </article>
+          ) : (
+            staffAccounts.map((account) => (
+              <article
+                className={staffAccountEditor.id === account.id ? 'entity-card entity-card--active' : 'entity-card'}
+                key={account.id}
+              >
+                <div className="entity-card__head">
+                  <div>
+                    <p className="entity-kicker">Аккаунт сотрудника</p>
+                    <h3>{account.name}</h3>
+                  </div>
+                  <span className={account.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                    {account.active ? 'Активен' : 'Неактивен'}
+                  </span>
+                </div>
+                <div className="chip-row">
+                  <span className="chip">{account.login}</span>
+                  <span className="chip">{account.role === 'admin' ? 'admin' : 'nomad'}</span>
+                </div>
+                <div className="entity-card__actions entity-card__actions--wrap">
+                  <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectStaffAccount(account)}>
+                    Редактировать
+                  </button>
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() => void onToggleStaffAccountActive(account)}
+                    disabled={staffAccountToggleId === account.id}
+                  >
+                    {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
+                  </button>
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() => void onDeleteStaffAccount(account)}
+                    disabled={staffAccountToggleId === account.id}
+                  >
+                    {staffAccountToggleId === account.id ? 'Удаляем...' : 'Удалить'}
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
+
+          {staffAccountsStatus !== 'forbidden' && !staffAccounts.length && staffAccountsStatus !== 'loading' ? (
+            <p className="meta-line">Пока нет сотрудников.</p>
+          ) : null}
+        </aside>
+
+        <article className="editor-card">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
+              <h3>{staffAccountEditor.id ? staffAccountEditor.name || 'Без имени' : 'Создать сотрудника'}</h3>
+            </div>
+            <span className="status-chip">{staffAccountEditor.role === 'admin' ? 'admin' : 'nomad'}</span>
+          </div>
+
+          {staffAccountsStatus === 'loading' ? <p className="meta-line">Загружаем сотрудников...</p> : null}
+          {staffAccountsStatus === 'error' ? <p className="error-text">{staffAccountsError}</p> : null}
+          {staffAccountsStatus === 'forbidden' ? <p className="meta-line">{staffAccountsError}</p> : null}
+
+          {staffAccountsStatus !== 'forbidden' ? (
+            <form className="admin-form" onSubmit={onSubmitStaffAccount}>
+              <div className="form-grid form-grid--two">
+                <label className="field">
+                  <span className="field-label">Логин</span>
+                  <input
+                    className="text-input"
+                    value={staffAccountEditor.login}
+                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
+                    placeholder="nomad"
+                  />
+                </label>
+
+                <label className="field">
+                  <span className="field-label">Имя</span>
+                  <input
+                    className="text-input"
+                    value={staffAccountEditor.name}
+                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
+                    placeholder="Кальянный мастер"
+                  />
+                </label>
+
+                <label className="field">
+                  <span className="field-label">Роль</span>
+                  <select
+                    className="select-input"
+                    value={staffAccountEditor.role}
+                    onChange={(event) =>
+                      setStaffAccountEditor((current) => ({
+                        ...current,
+                        role: event.target.value as StaffUser['role'],
+                      }))
+                    }
+                  >
+                    <option value="admin">admin</option>
+                    <option value="nomad">nomad</option>
+                  </select>
+                </label>
+
+                <label className="field">
+                  <span className="field-label">Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}</span>
+                  <input
+                    className="text-input"
+                    type="password"
+                    value={staffAccountEditor.password}
+                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
+                    placeholder="Оставьте пустым, если не менять"
+                  />
+                </label>
+
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={staffAccountEditor.active}
+                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, active: event.target.checked }))}
+                  />
+                  <span>Активен</span>
+                </label>
+              </div>
+
+              {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
+
+              <div className="form-actions">
+                <button className="primary-button primary-button--inline" type="submit" disabled={staffAccountSaveStatus === 'loading'}>
+                  {staffAccountSaveStatus === 'loading'
+                    ? 'Сохраняем...'
+                    : staffAccountEditor.id
+                      ? 'Сохранить сотрудника'
+                      : 'Создать сотрудника'}
+                </button>
+                <button className="secondary-button secondary-button--inline" type="button" onClick={onResetStaffAccountEditor}>
+                  Сбросить форму
+                </button>
+                {staffAccountEditor.id ? (
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() =>
+                      void onDeleteStaffAccount({
+                        id: staffAccountEditor.id,
+                        login: staffAccountEditor.login,
+                        name: staffAccountEditor.name,
+                        role: staffAccountEditor.role,
+                        active: staffAccountEditor.active,
+                      })
+                    }
+                    disabled={staffAccountToggleId === staffAccountEditor.id}
+                  >
+                    {staffAccountToggleId === staffAccountEditor.id ? 'Удаляем...' : 'Удалить сотрудника'}
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          ) : (
+            <div className="forbidden-panel">
+              <p className="meta-line">Staff accounts недоступны для вашей роли.</p>
+            </div>
+          )}
+        </article>
+      </div>
+    </section>
+  );
+
   if (user) {
     return (
       <main className="shell shell--master">
         <section className="hero hero--master">
           <p className="eyebrow">Nomad Master</p>
-          <h1>Staff dashboard</h1>
+          <h1>Панель персонала</h1>
           <p className="lead">
-            Вы вошли как {user.name} ({user.role}). Здесь обновляется инвентарь, миксы, рейлы и сводка по
-            действиям гостей.
+            Вы вошли как {user.name} ({user.role}). Здесь обновляются инвентарь, миксы, рейлы, коды доступа и
+            сводка по действиям гостей.
           </p>
         </section>
 
@@ -993,14 +1784,22 @@ export const App = () => {
 
         <section className="card card--compact">
           <div className="workspace-tabs">
-            {(['dashboard', 'inventory', 'mixes', 'rails'] as WorkspaceTab[]).map((tab) => (
+            {(['dashboard', 'inventory', 'mixes', 'rails', 'access'] as WorkspaceTab[]).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 className={activeTab === tab ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'dashboard' ? 'Дашборд' : tab === 'inventory' ? 'Инвентаризация' : tab === 'mixes' ? 'Миксы' : 'Рейлы'}
+                {tab === 'dashboard'
+                  ? 'Дашборд'
+                  : tab === 'inventory'
+                    ? 'Инвентаризация'
+                    : tab === 'mixes'
+                      ? 'Миксы'
+                      : tab === 'rails'
+                        ? 'Рейлы'
+                        : 'Доступ'}
               </button>
             ))}
           </div>
@@ -1010,6 +1809,7 @@ export const App = () => {
         {activeTab === 'inventory' ? renderInventory() : null}
         {activeTab === 'mixes' ? renderMixes() : null}
         {activeTab === 'rails' ? renderRails() : null}
+        {activeTab === 'access' ? renderAccess() : null}
 
         <section className="card card--compact">
           <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
@@ -1024,7 +1824,7 @@ export const App = () => {
     <main className="shell shell--master">
       <section className="hero hero--master">
         <p className="eyebrow">Nomad Master</p>
-        <h1>Вход для staff</h1>
+        <h1>Вход для персонала</h1>
         <p className="lead">Используйте учётные данные `admin` или `nomad`.</p>
       </section>
 
