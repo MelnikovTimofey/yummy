@@ -57,6 +57,16 @@
 3. role-guard: daily codes доступны `admin` и `nomad`, staff accounts только `admin`;
 4. `GET /staff/auth/me` проверяет не только bearer token, но и актуальное состояние account в БД.
 
+На automation этапе дополнительно есть:
+
+1. отдельный machine-to-machine контур для Telegram-бота;
+2. automation auth через header `x-nomad-automation-key`;
+3. endpoints:
+   - `GET /automation/daily-code/current`
+   - `POST /automation/daily-code/ensure`
+   - `POST /automation/daily-code/rotate`
+4. единая Moscow-based логика окна daily code для seed, CRUD и automation.
+
 Параметры локального Postgres-контура:
 
 1. порт `5433`;
@@ -105,6 +115,12 @@
 - `POST /staff/rails`
 - `PATCH /staff/rails/:id`
 
+### Automation
+
+- `GET /automation/daily-code/current`
+- `POST /automation/daily-code/ensure`
+- `POST /automation/daily-code/rotate`
+
 ## Локальный запуск
 
 ```bash
@@ -126,10 +142,11 @@ PORT=3021
 HOST=0.0.0.0
 APP_NAME=nomad-backend
 DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public"
+NOMAD_AUTOMATION_KEY=nomad-local-automation-key
 NOMAD_TOKEN_SECRET=change-me
 NOMAD_TOKEN_TTL_HOURS=24
 ```
 
 ## Стадия
 
-Текущая стадия: Phase 4 content rails backend + persisted access management на отдельном Postgres.
+Текущая стадия: Phase 4 content rails backend + persisted access management + daily code automation на отдельном Postgres.

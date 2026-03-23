@@ -1997,3 +1997,46 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
   - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:dbpush -- --force-reset`
   - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm run prisma:seed`
   - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test`
+
+## 2.7) Nomad (23 марта 2026) — Telegram-бот и automation daily code
+
+Сделано:
+- `apps/nomad-backend/src/daily-code.ts`, `apps/nomad-backend/src/access.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/config.ts`, `apps/nomad-backend/src/types.ts`:
+  - added M2M automation layer for Telegram worker;
+  - введён auth header `x-nomad-automation-key`;
+  - добавлены endpoints:
+    - `GET /automation/daily-code/current`
+    - `POST /automation/daily-code/ensure`
+    - `POST /automation/daily-code/rotate`
+  - seed, CRUD и automation используют одно и то же Moscow-based daily window.
+- `services/nomad-telegram-bot/src/backend.ts`:
+  - бот ходит в backend только через automation endpoints;
+  - staff login больше не нужен как runtime dependency для worker.
+- `services/nomad-telegram-bot/src/bot.ts`, `src/config.ts`, `src/storage.ts`, `src/telegram.ts`, `src/time.ts`, `src/types.ts`:
+  - реализован poll-based Telegram worker;
+  - поддержаны команды `/start`, `/help`, `/code`, `/rotate`, `/whoami`;
+  - `allowed`, `broadcast` и `rotate` chat ids конфигурируются через env;
+  - ежедневная авторассылка идёт по московскому времени;
+  - локальный state-файл не даёт повторно broadcast-ить один и тот же code после рестарта.
+- `services/nomad-telegram-bot/src/storage.test.ts`, `services/nomad-telegram-bot/src/time.test.ts`:
+  - добавлены unit tests на state persistence и Moscow-time helpers.
+- `apps/nomad-backend/.env.example`, `apps/nomad-backend/README.md`, `services/nomad-telegram-bot/.env.example`, `services/nomad-telegram-bot/README.md`:
+  - runbook обновлён под automation key и Telegram env.
+
+Важно:
+- Telegram recipients пока не управляются из продукта и не хранятся в БД; это осознанно вынесено в env, чтобы не смешивать access CRUD и chat provisioning в одну итерацию.
+- Ручная `/rotate` сейчас разрешается chat id из `NOMAD_TELEGRAM_ROTATE_CHAT_IDS`; если список пуст, fallback идёт на общий allowed list.
+- Для реального запуска нужно выставить одинаковые значения:
+  - backend: `NOMAD_AUTOMATION_KEY`
+  - bot: `NOMAD_BACKEND_AUTOMATION_TOKEN`
+
+Проверка:
+- `cd services/nomad-telegram-bot && npm test` — `OK`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- backend integration tests against Postgres в этой сессии не повторялись, потому что Docker daemon был недоступен.
+
+Следующий шаг:
+- после вашей проверки можно переходить к одному из двух направлений:
+  - chat provisioning и управление Telegram recipient lists из `Мастера`;
+  - product analytics по bot-side доставке и manual rotate events.

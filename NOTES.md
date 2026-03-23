@@ -1653,3 +1653,28 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-backend && DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public npm test`:
   - локально не воспроизведён в этой сессии, потому что Docker daemon оказался недоступен, а backend-тесты требуют живой Postgres на `5433`;
   - по итогам параллельной backend-ветки подагент прогнал `prisma generate/dbpush/seed`, `npm test` и `npm run build` успешно на том же access slice.
+
+Обновление от 23 марта 2026 (Nomad — Telegram-бот и automation daily code):
+- `apps/nomad-backend/src/daily-code.ts`, `src/access.ts`, `src/app.ts`, `src/config.ts`, `src/types.ts`:
+  - добавлен automation слой для бота с `x-nomad-automation-key`;
+  - появились endpoints:
+    - `GET /automation/daily-code/current`,
+    - `POST /automation/daily-code/ensure`,
+    - `POST /automation/daily-code/rotate`;
+  - `ensure` идемпотентно держит один актуальный code на текущее московское окно;
+  - `rotate` деактивирует текущие активные коды окна и создаёт новый.
+- `services/nomad-telegram-bot/src/*`:
+  - bot service больше не ходит в backoffice CRUD через staff auth;
+  - используется отдельный backend automation contract;
+  - поддержаны команды `/start`, `/help`, `/code`, `/rotate`, `/whoami`;
+  - добавлены allowlist/broadcast/rotate chat lists через env;
+  - локальный state-файл защищает от повторной авторассылки после рестарта;
+  - добавлены unit tests на time/storage helpers.
+- `apps/nomad-backend/.env.example`, `apps/nomad-backend/README.md`, `services/nomad-telegram-bot/.env.example`, `services/nomad-telegram-bot/README.md`:
+  - runbook синхронизирован под automation key, расписание и Telegram chat configuration.
+
+Проверка:
+- `cd services/nomad-telegram-bot && npm test` — `OK`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- backend integration tests против Postgres локально в этой сессии не повторялись из-за недоступного Docker daemon; access/automation backend build прошёл, а automation backend slice уже зафиксирован коммитом `a828a47`.

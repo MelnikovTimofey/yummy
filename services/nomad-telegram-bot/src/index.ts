@@ -1,10 +1,39 @@
-import 'dotenv/config';
+import { loadConfig } from './config';
+import { NomadBackendClient } from './backend';
+import { NomadTelegramBot } from './bot';
+import { JsonStateStore } from './storage';
+import { TelegramClient } from './telegram';
 
-const backendUrl = process.env.NOMAD_BACKEND_URL ?? 'http://localhost:3021';
-const hasToken = Boolean(process.env.TELEGRAM_BOT_TOKEN);
+export const createBot = () => {
+  const config = loadConfig();
+  const backend = new NomadBackendClient(config);
+  const telegram = new TelegramClient(config.telegramBotToken, config.telegramApiBaseUrl);
+  const stateStore = new JsonStateStore(config.statePath);
 
-const message = hasToken
-  ? `Nomad Telegram Bot scaffold. Backend: ${backendUrl}`
-  : `Nomad Telegram Bot scaffold without TELEGRAM_BOT_TOKEN. Backend: ${backendUrl}`;
+  return new NomadTelegramBot({
+    config,
+    backend,
+    telegram,
+    stateStore,
+  });
+};
 
-console.log(message);
+export const main = async () => {
+  const bot = createBot();
+
+  const shutdown = () => {
+    bot.stop();
+  };
+
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+
+  await bot.start();
+};
+
+if (require.main === module) {
+  void main().catch((error) => {
+    console.error('[nomad-telegram-bot] fatal error', error);
+    process.exit(1);
+  });
+}
