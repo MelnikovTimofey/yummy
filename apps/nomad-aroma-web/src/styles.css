@@ -72,8 +72,8 @@ select:focus-visible {
   border-radius: 28px;
   background: var(--bg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   position: relative;
   z-index: 2;
@@ -219,6 +219,12 @@ select:focus-visible {
   gap: 12px;
   min-height: 0;
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.content-intro {
+  padding: 0;
+  gap: 0;
 }
 
 .content,
@@ -526,25 +532,19 @@ select:focus-visible {
 }
 
 .catalog-mobile-tools {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .catalog-mobile-filters-toggle {
   width: 100%;
 }
 
-.catalog-mobile-submit-bar {
-  position: sticky;
-  bottom: calc(var(--safe-bottom) + 8px);
-  z-index: 5;
-  padding-top: 6px;
-  background: linear-gradient(180deg, rgba(19, 18, 22, 0) 0%, rgba(19, 18, 22, 0.94) 36%);
-}
-
-.catalog-mobile-submit-btn {
-  width: 100%;
-  min-height: 48px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+.catalog-mobile-inline-submit {
+  min-height: 44px;
+  padding-inline: 18px;
 }
 
 .catalog-advanced-filters {
@@ -655,11 +655,11 @@ select:focus-visible {
   gap: 10px;
 }
 
-.home-rail-head-actions {
+.home-rail-title-line {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .home-rail-title-btn {
@@ -678,6 +678,10 @@ select:focus-visible {
   font-size: 30px;
   line-height: 1.1;
   letter-spacing: -0.01em;
+}
+
+.home-rail-title-btn .hint {
+  margin-top: 8px;
 }
 
 .home-link-btn {
@@ -827,22 +831,39 @@ select:focus-visible {
   gap: 10px;
 }
 
-.intro-summary-card {
-  gap: 6px;
+.selected-mix-shell {
+  padding: 8px 20px 0;
+  border-bottom: 1px solid rgba(74, 59, 44, 0.35);
+  background: linear-gradient(180deg, rgba(22, 19, 17, 0.95) 0%, rgba(15, 12, 11, 0.92) 100%);
+}
+
+.selected-mix-shell .selected-mix-bar {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin: 0;
+}
+
+.intro-stage {
+  min-height: 100%;
+  height: 100%;
 }
 
 .intro-slider-wrap {
   display: grid;
-  gap: 10px;
+  grid-template-rows: 1fr auto;
+  gap: 0;
+  min-height: 100%;
+  height: 100%;
 }
 
 .intro-slider-track {
   display: flex;
-  gap: 12px;
+  gap: 0;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  min-height: 0;
 }
 
 .intro-slider-track::-webkit-scrollbar {
@@ -854,25 +875,58 @@ select:focus-visible {
   scroll-snap-align: start;
 }
 
+.intro-slide-fullscreen {
+  min-height: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: 0;
+  padding: 28px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top right, rgba(201, 168, 106, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(26, 21, 18, 0.98) 0%, rgba(14, 11, 10, 1) 100%);
+}
+
+.intro-slide-kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .intro-slide-title {
-  margin: 10px 0 0;
-  font-size: 28px;
-  line-height: 1.15;
+  margin: 12px 0 0;
+  font-size: 34px;
+  line-height: 1.08;
+  max-width: 10ch;
+}
+
+.intro-slide .card-text {
+  max-width: 28ch;
+  font-size: 18px;
+  line-height: 1.5;
 }
 
 .intro-bullets {
-  margin: 12px 0 0;
+  margin: 18px 0 0;
   padding-left: 18px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   color: var(--text-1);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.55;
+  max-width: 32ch;
 }
 
 .intro-slider-controls {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  padding: 16px 20px calc(20px + var(--safe-bottom));
+  border-top: 1px solid rgba(74, 59, 44, 0.35);
+  background: linear-gradient(180deg, rgba(16, 13, 12, 0.92) 0%, rgba(12, 10, 9, 1) 100%);
 }
 
 .intro-dots {
@@ -1121,18 +1175,22 @@ select:focus-visible {
     padding: 12px 12px calc(12px + var(--safe-bottom));
   }
 
+  .content-intro {
+    padding: 0;
+  }
+
   .home-rail-head,
   .mix-detail-top-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .home-rail-head-actions {
-    align-items: stretch;
-  }
-
   .home-link-btn {
     display: none;
+  }
+
+  .selected-mix-shell {
+    padding: 8px 12px 0;
   }
 
   .mix-unified-card-rail {
@@ -1142,6 +1200,15 @@ select:focus-visible {
   .mix-info-name,
   .intro-slide-title {
     font-size: 24px;
+  }
+
+  .intro-slide-fullscreen {
+    padding: 24px 16px 16px;
+  }
+
+  .intro-slide .card-text,
+  .intro-bullets {
+    max-width: none;
   }
 
   .guest-stage-nav,

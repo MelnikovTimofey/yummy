@@ -572,6 +572,7 @@ const MixDetailModal = ({
   ratingError,
   ratingMessage,
   onClose,
+  onChoose,
   onRate,
 }: {
   state: MixModalState | null;
@@ -583,6 +584,7 @@ const MixDetailModal = ({
   ratingError: string;
   ratingMessage: string;
   onClose: () => void;
+  onChoose: () => void;
   onRate: (value: number) => void;
 }) => {
   if (!state) {
@@ -718,6 +720,21 @@ const MixDetailModal = ({
           </section>
 
           <section className="mix-info-section">
+            <p className="mix-info-section-title">Выбор</p>
+            <div className="recommendation-actions">
+              <button
+                className="search-button recommendation-session"
+                type="button"
+                onClick={() => onChoose()}
+                disabled={!mix.available || chooseStatus === 'loading' || isSelected}
+              >
+                {chooseStatus === 'loading' ? 'Выбираем...' : isSelected ? 'Выбранный микс' : 'Выбрать микс'}
+              </button>
+              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
+            </div>
+          </section>
+
+          <section className="mix-info-section">
             <p className="mix-info-section-title">Оценка</p>
             <div className="session-rating-row" role="group" aria-label="Оценка микса">
               {[1, 2, 3, 4, 5].map((value) => (
@@ -734,9 +751,6 @@ const MixDetailModal = ({
             </div>
             <div className="recommendation-actions">
               {!mix.available ? <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p> : null}
-              {chooseStatus === 'loading' ? <p className="screen-status">Добавляем в карточку для мастера...</p> : null}
-              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
-              {isSelected && chooseStatus === 'ready' ? <p className="status ok">Микс уже добавлен в карточку для мастера.</p> : null}
               {ratingError ? <p className="screen-status error">{ratingError}</p> : null}
               {ratingStatus === 'loading' ? <p className="screen-status">Сохраняем оценку...</p> : null}
               {ratingMessage ? <p className="status ok">{ratingMessage}</p> : null}
@@ -1099,10 +1113,9 @@ export const App = () => {
     setRatingError('');
     setRatingMessage('');
     setRatingValue(null);
-
-    if (selectedMix?.id !== mix.id) {
-      void onChooseMix(mix, source);
-    }
+    void sendSmokeCta(mix.id).catch(() => {
+      // Ignore analytics errors in the guest flow so card opening stays instant.
+    });
   };
 
   const onChooseMix = async (mix: MixCard, source: MixSource) => {
@@ -1110,7 +1123,6 @@ export const App = () => {
     setChooseError('');
 
     try {
-      await sendSmokeCta(mix.id);
       setSelectedMix({
         id: mix.id,
         source,
@@ -1363,6 +1375,10 @@ export const App = () => {
       );
     }
 
+    if (view === 'intro') {
+      return null;
+    }
+
     const activeTab: AppTab | null =
       view === 'recommendations' || view === 'showcase' || view === 'catalog'
         ? view
@@ -1437,15 +1453,7 @@ export const App = () => {
   );
 
   const renderIntroView = () => (
-    <section className="catalog-layout">
-      <article className="card intro-summary-card">
-        <p className="card-title">Знакомство</p>
-        <p className="card-text">
-          Если вы впервые открыли сервис, пролистайте карточки вправо. После этого можно сразу перейти к выбору вкусов.
-        </p>
-        <p className="hint">Карточка {introProgress}</p>
-      </article>
-
+    <section className="intro-stage">
       {introStatus === 'loading' ? <p className="screen-status">Загружаем знакомство...</p> : null}
       {introError ? <p className="screen-status error">{introError}</p> : null}
 
@@ -1463,10 +1471,11 @@ export const App = () => {
             }}
           >
             {introCards.map((card) => (
-              <article className="card intro-slide" key={card.id}>
-                <p className="card-title">
-                  Шаг {card.step}
-                </p>
+              <article className="card intro-slide intro-slide-fullscreen" key={card.id}>
+                <div className="intro-slide-kicker-row">
+                  <p className="card-title">Шаг {card.step}</p>
+                  <span className="filter-pill muted">Карточка {introProgress}</span>
+                </div>
                 <h3 className="intro-slide-title">{card.title}</h3>
                 <p className="card-text">{card.description}</p>
                 <ul className="intro-bullets">
@@ -1633,28 +1642,29 @@ export const App = () => {
 
   const renderSelectedMixBar = () =>
     selectedMixCard && selectedMix ? (
-      <article className="card compact-card selected-mix-bar">
-        <div>
-          <p className="card-title">Выбрано для мастера</p>
-          <p className="card-text">
-            {selectedMixCard.name} · {mixSourceLabels[selectedMix.source]}
-          </p>
-        </div>
-        <div className="cinema-actions">
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => openMix(selectedMixCard, selectedMix.source)}
-          >
-            Открыть карточку
-          </button>
-        </div>
-      </article>
+      <div className="selected-mix-shell">
+        <article className="card compact-card selected-mix-bar">
+          <div>
+            <p className="card-title">Выбранный микс</p>
+            <p className="card-text">
+              {selectedMixCard.name} · {mixSourceLabels[selectedMix.source]}
+            </p>
+          </div>
+          <div className="cinema-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => openMix(selectedMixCard, selectedMix.source)}
+            >
+              Открыть карточку
+            </button>
+          </div>
+        </article>
+      </div>
     ) : null;
 
   const renderRecommendationsView = () => (
     <section className="recommendations-layout">
-      {renderSelectedMixBar()}
       <article className="card catalog-summary">
         <p className="card-title">Подбор для вас</p>
         <p className="card-text">
@@ -1704,7 +1714,6 @@ export const App = () => {
 
   const renderShowcaseView = () => (
     <section className="home-layout">
-      {renderSelectedMixBar()}
       <article className="card compact-card">
         <p className="card-title">Витрина</p>
         <p className="card-text">
@@ -1724,19 +1733,19 @@ export const App = () => {
               setRailSearch('');
               setView('rail');
             }}>
-              <h3 className="home-rail-title">{rail.name}</h3>
+              <div className="home-rail-title-line">
+                <h3 className="home-rail-title">{rail.name}</h3>
+                <span className="filter-pill">{railToneLabels[rail.type]}</span>
+              </div>
               <p className="hint">{rail.description || railDescriptions[rail.type]}</p>
             </button>
-            <div className="home-rail-head-actions">
-              <span className="filter-pill">{railToneLabels[rail.type]}</span>
-              <button className="home-link-btn" type="button" onClick={() => {
-                setSelectedRail(rail);
-                setRailSearch('');
-                setView('rail');
-              }}>
-                Смотреть всё
-              </button>
-            </div>
+            <button className="home-link-btn" type="button" onClick={() => {
+              setSelectedRail(rail);
+              setRailSearch('');
+              setView('rail');
+            }}>
+              Смотреть всё
+            </button>
           </div>
           <div className="home-rail-row">
             {rail.mixes.map((mix) => (
@@ -1789,7 +1798,6 @@ export const App = () => {
 
   const renderCatalogView = () => (
     <section className="catalog-layout">
-      {renderSelectedMixBar()}
       <section className="catalog-body">
         <form
           className="catalog-controls cinema-controls"
@@ -1822,6 +1830,9 @@ export const App = () => {
                 aria-expanded={filtersOpen}
               >
                 {filtersOpen ? 'Скрыть фильтры' : hasCatalogFilters ? `Фильтры: ${activeFilterLabels.length}` : 'Показать фильтры'}
+              </button>
+              <button className="search-button catalog-mobile-inline-submit" type="submit">
+                Найти
               </button>
             </div>
           ) : null}
@@ -1999,14 +2010,6 @@ export const App = () => {
               </div>
             </div>
           ) : null}
-
-          {isCompactFilters ? (
-            <div className="catalog-mobile-submit-bar">
-              <button className="search-button catalog-mobile-submit-btn" type="submit">
-                Найти
-              </button>
-            </div>
-          ) : null}
         </form>
 
         <section className="catalog-results">
@@ -2040,7 +2043,8 @@ export const App = () => {
       <div className="halo-bottom" />
       <div className="phone-shell">
         {renderTopbar()}
-        <main className="content">
+        {accessGranted && view !== 'intro' ? renderSelectedMixBar() : null}
+        <main className={view === 'intro' ? 'content content-intro' : 'content'}>
           {!accessGranted ? renderAccessView() : null}
           {accessGranted && view === 'intro' ? renderIntroView() : null}
           {accessGranted && view === 'onboarding' ? renderOnboardingView() : null}
@@ -2061,6 +2065,11 @@ export const App = () => {
         ratingError={ratingError}
         ratingMessage={ratingMessage}
         onClose={() => setMixModalState(null)}
+        onChoose={() => {
+          if (mixModalState) {
+            void onChooseMix(mixModalState.mix, mixModalState.source);
+          }
+        }}
         onRate={(value) => void onSaveRating(value)}
       />
     </div>

@@ -1,5 +1,43 @@
 # HANDOFF — Yummy
 
+## 1.54) Tighten Aroma Atelier guest flow after sticky chosen-mix feedback (23 марта 2026)
+
+- Запрос:
+  - убрать служебный блок знакомства, сделать intro полноэкранным, закрепить `Выбранный микс` под меню и исправить мобильный CTA `Найти` в каталоге.
+
+- Реализация:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - intro теперь открывается без topbar и без служебного summary-блока;
+    - открытие карточки микса регистрирует analytics event по каждому открытию;
+    - явный выбор снова вынесен в кнопку `Выбрать микс`;
+    - `Выбранный микс` вынесен в отдельную закреплённую панель под меню;
+    - rail tags теперь стоят справа от названия;
+    - мобильный каталог получил верхний action-row с доступной кнопкой `Найти`.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - shell переведён на flex-layout;
+    - intro сделан fullscreen;
+    - выбранный микс закреплён вне scroll-зоны;
+    - mobile catalog submit перенесён наверх формы.
+  - `apps/nomad-backend/src/state.ts`:
+    - статистический rail renamed to `Частые миксы`.
+  - `apps/nomad-aroma-web/README.md`:
+    - README обновлён под fullscreen intro и sticky chosen mix shell.
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - `cd apps/nomad-backend && npm run build`
+  - ручной browser smoke на `http://localhost:5175`
+  - подтверждены:
+    - intro без меню;
+    - modal с отдельной кнопкой выбора;
+    - панель `Выбранный микс` под меню;
+    - доступная `Найти` в каталоге.
+
+- Эффект:
+  - знакомство стало соответствовать one-time fullscreen сценарию;
+  - выбранный микс теперь стабильно виден на верхнем уровне интерфейса;
+  - каталог на мобильном больше не прячет основной CTA.
+
 ## 1.53) Polish Aroma Atelier detail interactions after Yami alignment (23 марта 2026)
 
 - Запрос:
