@@ -75,6 +75,12 @@
 4. automation endpoint `GET /automation/telegram/recipients` отдаёт активные chat lists для worker;
 5. bot может использовать backend как source of truth, а `.env` оставляет только fallback.
 
+На release-foundation этапе дополнительно есть:
+
+1. отдельный bootstrap path для первого production admin;
+2. managed runtime templates для Telegram-бота;
+3. env matrix и deployment smoke checklist на уровне Nomad-контура.
+
 Параметры локального Postgres-контура:
 
 1. порт `5433`;
@@ -148,6 +154,27 @@ npm run dev
 
 По умолчанию backend слушает `3021`.
 
+## Bootstrap admin
+
+Для production не нужно опираться на dev seed `admin/admin`.
+
+Используйте отдельный bootstrap path:
+
+```bash
+cd apps/nomad-backend
+NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
+NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin" \
+NOMAD_BOOTSTRAP_ADMIN_PASSWORD="change-me-now" \
+DATABASE_URL="postgresql://..." \
+npm run bootstrap:admin
+```
+
+Скрипт:
+
+1. создаёт admin, если такого логина ещё нет;
+2. обновляет пароль и активирует account, если логин уже существует;
+3. не требует запуска `prisma seed`.
+
 ## Переменные окружения
 
 ```bash
@@ -158,6 +185,14 @@ DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public"
 NOMAD_AUTOMATION_KEY=nomad-local-automation-key
 NOMAD_TOKEN_SECRET=change-me
 NOMAD_TOKEN_TTL_HOURS=24
+```
+
+Отдельные bootstrap-only переменные для `npm run bootstrap:admin`:
+
+```bash
+NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin
+NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin"
+NOMAD_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
 ```
 
 ## Стадия

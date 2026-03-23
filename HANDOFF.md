@@ -2181,3 +2181,48 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
     2. production env matrix;
     3. bootstrap admin path;
     4. deployment smoke checklist.
+
+## 2.11) Nomad (23 марта 2026) — Release Foundation batch 1
+
+Связанные Linear issues:
+
+1. `HOO-12` — managed runtime for Telegram bot
+2. `HOO-13` — production env matrix
+3. `HOO-14` — bootstrap admin path
+4. `HOO-15` — deployment smoke checklist
+
+Сделано:
+- `apps/nomad-backend/scripts/bootstrap-admin.ts`, `apps/nomad-backend/package.json`, `apps/nomad-backend/README.md`:
+  - добавлен отдельный bootstrap path для production admin;
+  - команда `npm run bootstrap:admin` создаёт или обновляет admin-account по env-параметрам;
+  - production больше не обязан опираться на dev seed `admin/admin`.
+- `services/nomad-telegram-bot/ops/ecosystem.config.cjs`:
+  - добавлен шаблон `pm2`-конфига для managed runtime.
+- `services/nomad-telegram-bot/ops/nomad-telegram-bot.service`:
+  - добавлен шаблон `systemd`-unit для managed runtime.
+- `services/nomad-telegram-bot/README.md`:
+  - добавлена секция `Managed runtime` и ссылка на `NOMAD_ENV_MATRIX.md`.
+- `NOMAD_ENV_MATRIX.md`:
+  - зафиксированы required/optional/bootstrap/fallback env variables для:
+    - `apps/nomad-backend`
+    - `apps/nomad-aroma-web`
+    - `apps/nomad-master-web`
+    - `services/nomad-telegram-bot`
+- `NOMAD_DEPLOYMENT_SMOKE_CHECKLIST.md`:
+  - добавлен post-deploy smoke checklist для release/pilot запуска.
+
+Проверка:
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-backend && env DATABASE_URL=postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin NOMAD_BOOTSTRAP_ADMIN_NAME=\"Nomad Admin\" NOMAD_BOOTSTRAP_ADMIN_PASSWORD=temporary-admin-password npm run bootstrap:admin` — `OK`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+- `git diff --check` — `OK`.
+
+Важно:
+- `bootstrap:admin` протестирован на локальном Postgres и создал account `nomad-admin`; это изменило локальную БД, но не git-состояние репозитория;
+- шаблоны `pm2` и `systemd` требуют адаптации production путей и пользователя сервиса;
+- Linear API key в среде не был задан заранее, поэтому tracker sync начался только после ручной передачи ключа пользователем в чате.
+
+Следующий шаг:
+- перевести `HOO-12..HOO-15` в `Human Review`;
+- затем открыть следующий Release Foundation slice:
+  - backend/web/bot deployment runbook на конкретную target-инфраструктуру.

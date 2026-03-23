@@ -1756,3 +1756,28 @@ Product-rules (зафиксировано):
 
 Проверка:
 - `git diff --check` — `OK`.
+
+Обновление от 23 марта 2026 (Nomad — Release Foundation batch 1):
+- Linear:
+  - созданы issues:
+    - `HOO-12` — managed runtime for Telegram bot;
+    - `HOO-13` — production env matrix;
+    - `HOO-14` — bootstrap admin path;
+    - `HOO-15` — deployment smoke checklist.
+- `apps/nomad-backend/scripts/bootstrap-admin.ts`, `apps/nomad-backend/package.json`, `apps/nomad-backend/README.md`:
+  - добавлен отдельный production bootstrap path для первого admin;
+  - команда `npm run bootstrap:admin` создаёт или обновляет admin-account без зависимости от dev seed credentials.
+- `services/nomad-telegram-bot/ops/ecosystem.config.cjs`, `services/nomad-telegram-bot/ops/nomad-telegram-bot.service`, `services/nomad-telegram-bot/README.md`:
+  - добавлены managed runtime templates для `pm2` и `systemd`;
+  - runbook обновлён под production запуск.
+- `NOMAD_ENV_MATRIX.md`:
+  - зафиксирована env matrix для backend, обоих web-приложений и Telegram-бота;
+  - отдельно выделены bootstrap-only и fallback-only переменные.
+- `NOMAD_DEPLOYMENT_SMOKE_CHECKLIST.md`:
+  - добавлен post-deploy smoke checklist для backend, guest web, master web и bot automation.
+
+Проверка:
+- `cd apps/nomad-backend && npm run build` — `OK`.
+- `cd apps/nomad-backend && env DATABASE_URL=... NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin NOMAD_BOOTSTRAP_ADMIN_NAME=\"Nomad Admin\" NOMAD_BOOTSTRAP_ADMIN_PASSWORD=temporary-admin-password npm run bootstrap:admin` — `OK`.
+- `cd services/nomad-telegram-bot && npm run build` — `OK`.
+- `git diff --check` — `OK`.

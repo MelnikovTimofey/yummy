@@ -45,6 +45,20 @@ npm run build
 npm run start
 ```
 
+## Managed runtime
+
+Для production в репозитории подготовлены шаблоны:
+
+1. `services/nomad-telegram-bot/ops/ecosystem.config.cjs` для `pm2`;
+2. `services/nomad-telegram-bot/ops/nomad-telegram-bot.service` для `systemd`.
+
+Они являются шаблонами и требуют адаптации путей:
+
+1. рабочий каталог;
+2. путь к `node`;
+3. путь к env-файлу;
+4. пользователь сервиса.
+
 ## Переменные окружения
 
 ```bash
@@ -60,6 +74,8 @@ NOMAD_DAILY_BROADCAST_HOUR=9
 NOMAD_DAILY_BROADCAST_MINUTE=0
 NOMAD_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
 ```
+
+Полная operating matrix по всем Nomad-сервисам зафиксирована в `NOMAD_ENV_MATRIX.md`.
 
 ## Стадия
 
