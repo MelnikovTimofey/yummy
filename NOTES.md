@@ -1740,3 +1740,19 @@ Product-rules (зафиксировано):
 - `cd apps/nomad-master-web && npm run build` — `OK`.
 - `cd services/nomad-telegram-bot && npm test` — `OK`, `8/8`.
 - `cd services/nomad-telegram-bot && npm run build` — `OK`.
+
+Обновление от 23 марта 2026 (Nomad — roadmap и Symphony batching):
+- добавлен новый документ `NOMAD_ROADMAP.md`:
+  - текущий статус Nomad;
+  - направления работ;
+  - приоритеты `must / should / later`;
+  - рекомендуемые Symphony batches;
+  - правила дробления задач и exit criteria.
+- `WORKFLOW_NOMAD.md`:
+  - теперь явно требует читать `NOMAD_ROADMAP.md` перед выбором приоритета;
+  - фиксирует roadmap-driven execution и preferred batch order.
+- `AGENTS.md`:
+  - `NOMAD_ROADMAP.md` добавлен в список активных Nomad-контекстных документов.
+
+Проверка:
+- `git diff --check` — `OK`.

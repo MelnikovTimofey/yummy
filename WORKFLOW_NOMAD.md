@@ -50,10 +50,33 @@ Issue description:
 
 1. Read the root `AGENTS.md` first.
 2. Read `NOMAD_PARALLEL_EXECUTION_PLAN.md` before making architecture or repo-structure decisions.
-3. Work only inside the current Nomad issue scope.
-4. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
+3. Read `NOMAD_ROADMAP.md` before choosing issue priority or batching work.
+4. Work only inside the current Nomad issue scope.
+5. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
    Stop, explain the question or options, and hand off to `Human Review`.
-5. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
+6. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
+
+## Roadmap-driven execution
+
+Symphony should follow `NOMAD_ROADMAP.md`, not invent its own priority order.
+
+Preferred batch order:
+- `Batch 1`: `Release Foundation`
+- `Batch 2`: `Master Operations`
+- `Batch 3`: `Analytics And Rails`
+- `Batch 4`: `Quality And Hardening`
+- `Batch 5`: `Aroma Polish`
+
+Preferred task granularity:
+- `1 issue = 1 bounded context = 1 clear verification result`
+- default scope should be one Nomad app/service at a time
+- use cross-app issues only when an integration step is truly needed after smaller issues are complete
+
+Do not use Symphony for:
+- repo-wide architecture decisions
+- large schema/auth/UI/infra changes in one issue
+- legacy repurposing
+- premature shared-package extraction
 
 ## Active scope
 

@@ -2138,3 +2138,46 @@ DATABASE_URL='postgresql://yummy:yummy@localhost:5432/yummy' npm run catalog:ref
 Следующий шаг:
 - либо сделать в `Мастере` явный просмотр текущего automation state бота и last broadcast;
 - либо переводить bot worker в managed runtime (`pm2` / `systemd`) с production runbook.
+
+## 2.10) Nomad (23 марта 2026) — roadmap и Symphony execution model
+
+Сделано:
+- добавлен новый документ `NOMAD_ROADMAP.md`:
+  - зафиксирован текущий статус Nomad как рабочего MVP-контура;
+  - выделены направления:
+    - `Release Foundation`
+    - `Aroma Atelier Product Polish`
+    - `Master Operations`
+    - `Analytics And Rails`
+    - `Telegram And Automation`
+    - `Quality And Hardening`
+  - для каждого направления добавлены:
+    - текущий статус
+    - следующие шаги
+    - definition of done
+  - добавлены приоритеты `must / should / later`;
+  - добавлены рекомендуемые Symphony batches и task-splitting rules.
+- `WORKFLOW_NOMAD.md`:
+  - теперь требует читать `NOMAD_ROADMAP.md` перед выбором issue priority;
+  - закрепляет roadmap-driven execution, batch order и ограничения на крупные cross-app задачи.
+- `AGENTS.md`:
+  - `NOMAD_ROADMAP.md` добавлен в список активных Nomad-контекстных документов.
+
+Важно:
+- roadmap не заменяет `PRD.md`, а слой поверх него:
+  - `PRD.md` отвечает за продуктовые инварианты;
+  - `NOMAD_IMPLEMENTATION_PLAN.md` — за архитектурную логику и delivery slices;
+  - `NOMAD_ROADMAP.md` — за текущие приоритеты и очередность реализации через Symphony.
+- Для Nomad дальше рекомендуется вести Symphony только batch-by-batch, а не запускать несвязанные задачи без приоритета.
+
+Проверка:
+- `git diff --check` — `OK`.
+
+Следующий шаг:
+- первый рекомендуемый Symphony batch:
+  - `Release Foundation`
+  - внутри него:
+    1. managed runtime для Telegram-бота;
+    2. production env matrix;
+    3. bootstrap admin path;
+    4. deployment smoke checklist.

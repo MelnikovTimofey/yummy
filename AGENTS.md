@@ -69,7 +69,7 @@
 
 ## Текущий Nomad-контекст
 
-Актуальный целевой сценарий Nomad описан в `PRD.md`, `NOMAD_IMPLEMENTATION_PLAN.md` и `NOMAD_PARALLEL_EXECUTION_PLAN.md`.
+Актуальный целевой сценарий Nomad описан в `PRD.md`, `NOMAD_IMPLEMENTATION_PLAN.md`, `NOMAD_PARALLEL_EXECUTION_PLAN.md` и `NOMAD_ROADMAP.md`.
 
 Для Nomad-режима агент обязан:
 
