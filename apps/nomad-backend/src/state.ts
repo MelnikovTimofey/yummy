@@ -791,7 +791,7 @@ const buildStatisticalRail = async (): Promise<RailView> => {
 
   return {
     id: 'rail-statistical-top',
-    name: 'Статистический топ',
+    name: 'По выбору гостей',
     description: 'Миксы, которые выбирают чаще всего и лучше оценивают гости.',
     type: 'statistical',
     active: true,

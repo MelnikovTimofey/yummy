@@ -112,9 +112,9 @@ const profileLabelMap = profileOptions.reduce<Record<string, string>>((acc, item
 }, {});
 
 const railToneLabels: Record<RailType, string> = {
-  statistical: 'По выбору гостей',
-  prepared: 'Готовая подборка',
-  curated: 'От наших мастеров',
+  statistical: 'Аналитика',
+  prepared: 'Редакторская подборка',
+  curated: 'От мастеров',
 };
 
 const mixSourceLabels: Record<MixSource, string> = {
@@ -251,6 +251,51 @@ const getMixFooterText = (mix: MixCard) => {
 const getDominantProfile = (mix: MixCard) => mix.flavorProfiles[0] ?? null;
 
 const formatRatingTag = (mix: MixCard) => `★ ${mix.avgRating.toFixed(1).replace('.', ',')}`;
+const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().replace('.', ',')}%`;
+
+const buildWeightedRows = (
+  mix: MixCard,
+  extractor: (component: MixCard['components'][number]) => string[],
+) => {
+  const weighted = new Map<string, number>();
+
+  for (const component of mix.components) {
+    const keys = unique(
+      extractor(component)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    );
+
+    if (!keys.length) {
+      continue;
+    }
+
+    const share = component.proportion / keys.length;
+
+    for (const key of keys) {
+      weighted.set(key, (weighted.get(key) ?? 0) + share);
+    }
+  }
+
+  return Array.from(weighted.entries())
+    .map(([key, percent]) => ({ key, percent }))
+    .sort((left, right) => right.percent - left.percent);
+};
+
+const buildEqualShareRows = (values: string[]) => {
+  const items = unique(
+    values
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+
+  if (!items.length) {
+    return [] as Array<{ key: string; percent: number }>;
+  }
+
+  const share = 100 / items.length;
+  return items.map((key) => ({ key, percent: share }));
+};
 
 const normalizeIntroCard = (item: unknown, index: number): IntroCard => {
   const record = isRecord(item) ? item : {};
@@ -527,9 +572,7 @@ const MixDetailModal = ({
   ratingError,
   ratingMessage,
   onClose,
-  onChoose,
   onRate,
-  onRatingValueChange,
 }: {
   state: MixModalState | null;
   selectedMixId: string;
@@ -540,9 +583,7 @@ const MixDetailModal = ({
   ratingError: string;
   ratingMessage: string;
   onClose: () => void;
-  onChoose: () => void;
-  onRate: () => void;
-  onRatingValueChange: (value: number) => void;
+  onRate: (value: number) => void;
 }) => {
   if (!state) {
     return null;
@@ -550,6 +591,14 @@ const MixDetailModal = ({
 
   const { mix, source } = state;
   const isSelected = selectedMixId === mix.id;
+  const tobaccoRows = [...mix.components]
+    .sort((left, right) => right.proportion - left.proportion)
+    .map((component) => ({
+      key: `${component.manufacturer} ${component.name}`,
+      percent: component.proportion,
+    }));
+  const flavorRows = buildWeightedRows(mix, (component) => component.flavors).slice(0, 4);
+  const profileRows = buildEqualShareRows(mix.flavorProfiles).slice(0, 4);
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -588,21 +637,77 @@ const MixDetailModal = ({
           </section>
 
           <section className="mix-info-section">
-            <p className="mix-info-section-title">Табаки и пропорции</p>
+            <p className="mix-info-section-title">Инфографика</p>
+            <div className="mix-ratio-stack">
+              <div className="mix-ratio-group">
+                <p className="mix-ratio-title">Табаки</p>
+                <div className="mix-ratio-list">
+                  {tobaccoRows.map((item) => (
+                    <div className="mix-ratio-item" key={`${mix.id}:ratio:tobacco:${item.key}`}>
+                      <div className="mix-info-row mix-info-row-compact">
+                        <span className="mix-info-label">{item.key}</span>
+                        <span className="mix-info-value">{formatPercent(item.percent)}</span>
+                      </div>
+                      <div className="rail-ratio-bar compact" aria-hidden="true">
+                        <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#c9a86a' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {flavorRows.length ? (
+                <div className="mix-ratio-group">
+                  <p className="mix-ratio-title">Вкусы</p>
+                  <div className="mix-ratio-list">
+                    {flavorRows.map((item) => (
+                      <div className="mix-ratio-item" key={`${mix.id}:ratio:flavor:${item.key}`}>
+                        <div className="mix-info-row mix-info-row-compact">
+                          <span className="mix-info-label">{item.key}</span>
+                          <span className="mix-info-value">{formatPercent(item.percent)}</span>
+                        </div>
+                        <div className="rail-ratio-bar compact" aria-hidden="true">
+                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#8f704d' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {profileRows.length ? (
+                <div className="mix-ratio-group">
+                  <p className="mix-ratio-title">Профили</p>
+                  <div className="mix-ratio-list">
+                    {profileRows.map((item) => (
+                      <div className="mix-ratio-item" key={`${mix.id}:ratio:profile:${item.key}`}>
+                        <div className="mix-info-row mix-info-row-compact">
+                          <span className="mix-info-label">{formatProfileLabel(item.key)}</span>
+                          <span className="mix-info-value">{formatPercent(item.percent)}</span>
+                        </div>
+                        <div className="rail-ratio-bar compact" aria-hidden="true">
+                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#556a5f' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="mix-info-section">
+            <p className="mix-info-section-title">Состав</p>
             <ul className="mix-info-list">
               {mix.components.map((component) => (
                 <li className="mix-info-row" key={`${mix.id}:${component.id}`}>
                   <span className="mix-info-label">
                     {component.manufacturer} {component.name}
                   </span>
-                  <span className="mix-info-value">{component.proportion}%</span>
+                  <span className="mix-info-value">{formatPercent(component.proportion)}</span>
                 </li>
               ))}
             </ul>
-          </section>
-
-          <section className="mix-info-section">
-            <p className="mix-info-section-title">Вкусы</p>
             <ul className="mix-info-list">
               {mix.flavors.map((flavor) => (
                 <li className="mix-info-row" key={`${mix.id}:flavor:${flavor}`}>
@@ -613,27 +718,6 @@ const MixDetailModal = ({
           </section>
 
           <section className="mix-info-section">
-            <p className="mix-info-section-title">Для гостя</p>
-            <div className="recommendation-actions">
-              <button
-                className="search-button recommendation-session"
-                type="button"
-                onClick={onChoose}
-                disabled={!mix.available || chooseStatus === 'loading'}
-              >
-                {chooseStatus === 'loading'
-                  ? 'Сохраняем...'
-                  : isSelected
-                    ? 'Уже выбрано для мастера'
-                    : 'Выбрать и показать мастеру'}
-              </button>
-              {!mix.available ? <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p> : null}
-              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
-              {isSelected ? <p className="status ok">Микс сохранён. Можно показать мастеру без перехода на другой экран.</p> : null}
-            </div>
-          </section>
-
-          <section className="mix-info-section">
             <p className="mix-info-section-title">Оценка</p>
             <div className="session-rating-row" role="group" aria-label="Оценка микса">
               {[1, 2, 3, 4, 5].map((value) => (
@@ -641,22 +725,20 @@ const MixDetailModal = ({
                   key={value}
                   className={ratingValue === value ? 'score-btn active' : 'score-btn'}
                   type="button"
-                  onClick={() => onRatingValueChange(value)}
+                  onClick={() => onRate(value)}
+                  disabled={ratingStatus === 'loading'}
                 >
                   {value}
                 </button>
               ))}
             </div>
             <div className="recommendation-actions">
-              <button
-                className="ghost-button recommendation-session"
-                type="button"
-                onClick={onRate}
-                disabled={ratingValue === null || ratingStatus === 'loading'}
-              >
-                {ratingStatus === 'loading' ? 'Сохраняем оценку...' : 'Сохранить оценку'}
-              </button>
+              {!mix.available ? <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p> : null}
+              {chooseStatus === 'loading' ? <p className="screen-status">Добавляем в карточку для мастера...</p> : null}
+              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
+              {isSelected && chooseStatus === 'ready' ? <p className="status ok">Микс уже добавлен в карточку для мастера.</p> : null}
               {ratingError ? <p className="screen-status error">{ratingError}</p> : null}
+              {ratingStatus === 'loading' ? <p className="screen-status">Сохраняем оценку...</p> : null}
               {ratingMessage ? <p className="status ok">{ratingMessage}</p> : null}
             </div>
           </section>
@@ -1017,21 +1099,21 @@ export const App = () => {
     setRatingError('');
     setRatingMessage('');
     setRatingValue(null);
+
+    if (selectedMix?.id !== mix.id) {
+      void onChooseMix(mix, source);
+    }
   };
 
-  const onChooseMix = async () => {
-    if (!mixModalState) {
-      return;
-    }
-
+  const onChooseMix = async (mix: MixCard, source: MixSource) => {
     setChooseStatus('loading');
     setChooseError('');
 
     try {
-      await sendSmokeCta(mixModalState.mix.id);
+      await sendSmokeCta(mix.id);
       setSelectedMix({
-        id: mixModalState.mix.id,
-        source: mixModalState.source,
+        id: mix.id,
+        source,
       });
       setChooseStatus('ready');
     } catch (cause) {
@@ -1040,23 +1122,18 @@ export const App = () => {
     }
   };
 
-  const onSaveRating = async () => {
+  const onSaveRating = async (value: number) => {
     if (!mixModalState) {
       return;
     }
 
-    if (ratingValue === null) {
-      setRatingStatus('error');
-      setRatingError('Выберите оценку от 1 до 5.');
-      return;
-    }
-
+    setRatingValue(value);
     setRatingStatus('loading');
     setRatingError('');
     setRatingMessage('');
 
     try {
-      const result = await sendMixRating(mixModalState.mix.id, ratingValue);
+      const result = await sendMixRating(mixModalState.mix.id, value);
       syncMixEverywhere(mixModalState.mix.id, (mix) => ({
         ...mix,
         avgRating: Number.isFinite(result.averageRating ?? Number.NaN) ? (result.averageRating as number) : mix.avgRating,
@@ -1336,10 +1413,12 @@ export const App = () => {
           />
           <label className="checkbox-row">
             <input
+              className="checkbox-input"
               type="checkbox"
               checked={ageConfirmed}
               onChange={(event) => setAgeConfirmed(event.target.checked)}
             />
+            <span className="checkbox-box" aria-hidden="true" />
             <span>Мне уже исполнилось 18 лет</span>
           </label>
           <button type="submit" disabled={accessStatus === 'loading'}>
@@ -1458,25 +1537,39 @@ export const App = () => {
 
   const renderOnboardingView = () => (
     <section className="catalog-layout">
-      <article className="card compact-card">
+      <article className="card compact-card onboarding-copy-card">
         <p className="card-title">Предпочтения</p>
-        <p className="card-text">
-          Выберите несколько профилей и вкусов. Мы используем их, чтобы собрать персональный подбор и подсветить релевантный каталог.
-        </p>
+        <p className="card-text">Выберите профили и вкусы. По ним мы соберём подбор и подсветим релевантный каталог.</p>
       </article>
 
       <form className="catalog-controls cinema-controls" onSubmit={onSubmitOnboarding}>
         <div className="catalog-tools-row">
-          <div className="catalog-active-filters">
-            {likedProfiles.length || likedFlavors.length ? (
-              [...likedProfiles.map(formatProfileLabel), ...likedFlavors].map((item) => (
-                <span className="filter-pill" key={item}>
-                  {item}
-                </span>
-              ))
-            ) : (
-              <span className="filter-pill muted">Ничего не выбрано</span>
-            )}
+          <div className="selection-summary">
+            {likedProfiles.length ? (
+              <div className="selection-group">
+                <span className="selection-group-label">Профили</span>
+                <div className="selection-chip-grid">
+                  {likedProfiles.map((item) => (
+                    <span className="selection-chip" key={item}>
+                      {formatProfileLabel(item)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {likedFlavors.length ? (
+              <div className="selection-group">
+                <span className="selection-group-label">Вкусы</span>
+                <div className="selection-chip-grid">
+                  {likedFlavors.map((item) => (
+                    <span className="selection-chip" key={item}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {!likedProfiles.length && !likedFlavors.length ? <span className="filter-pill muted">Ничего не выбрано</span> : null}
           </div>
         </div>
 
@@ -1568,7 +1661,7 @@ export const App = () => {
           {recommendationStatus === 'loading'
             ? 'Собираем список миксов под выбранные вкусы...'
             : recommendations.length
-              ? `Найдено ${recommendations.length} вариантов. Откройте карточку микса и выберите то, что хочется покурить сейчас.`
+              ? `Найдено ${recommendations.length} вариантов. Откройте карточку микса и посмотрите состав, рейтинг и детали.`
               : 'После выбора вкусов здесь появится персональный подбор.'}
         </p>
       </article>
@@ -1968,9 +2061,7 @@ export const App = () => {
         ratingError={ratingError}
         ratingMessage={ratingMessage}
         onClose={() => setMixModalState(null)}
-        onChoose={() => void onChooseMix()}
-        onRate={() => void onSaveRating()}
-        onRatingValueChange={setRatingValue}
+        onRate={(value) => void onSaveRating(value)}
       />
     </div>
   );

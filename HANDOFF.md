@@ -1,5 +1,44 @@
 # HANDOFF — Yummy
 
+## 1.53) Polish Aroma Atelier detail interactions after Yami alignment (23 марта 2026)
+
+- Запрос:
+  - дотянуть UX-детали `Арома Ателье` после крупного Yami-прохода, не ломая Nomad baseline.
+
+- Реализация:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - 18+ checkbox переведён на кастомный control;
+    - onboarding-summary разделён на отдельные группы `Профили` и `Вкусы`;
+    - вводный блок `Предпочтения` сделан компактнее;
+    - modal карточка микса больше не требует отдельного CTA `Выбрать и показать мастеру`:
+      - микс автоматически попадает в карточку для мастера при открытии;
+      - рейтинг сохраняется сразу по нажатию на оценку;
+    - в modal добавлена инфографика по табакам, вкусам и профилям;
+    - rail tags переведены в продуктовые типы `Аналитика / Редакторская подборка / От мастеров`.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - добавлены кастомный checkbox, компактные selection chips и ratio-bars;
+    - улучшены отступы и ритм секции `О миксе`.
+  - `apps/nomad-backend/src/state.ts`:
+    - статистический rail renamed to `По выбору гостей`.
+  - `apps/nomad-aroma-web/README.md`:
+    - обновлён под auto-select mix и rating-by-tap.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175`
+  - подтверждены:
+    - новый checkbox;
+    - разделённый onboarding summary;
+    - modal с инфографикой;
+    - авто-добавление микса в карточку для мастера;
+    - сохранение оценки по одному нажатию.
+
+- Эффект:
+  - карточка микса стала чище и ближе к логике `Yami Web`;
+  - onboarding-summary перестал сливаться в один общий список;
+  - витрина стала понятнее по типам рейлов без техничных заголовков.
+
 ## 1.52) Align Aroma Atelier with Yami Web storefront mechanics (23 марта 2026)
 
 - Запрос:
