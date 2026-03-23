@@ -48,6 +48,14 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 
 type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
+const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string }> = [
+  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка' },
+  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие' },
+  { id: 'mixes', label: 'Миксы', kicker: 'Каталог' },
+  { id: 'rails', label: 'Рейлы', kicker: 'Витрина' },
+  { id: 'access', label: 'Доступ', kicker: 'Коды и staff' },
+];
+
 type MixEditorState = {
   id: string;
   name: string;
@@ -304,6 +312,10 @@ const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
 
   return resolvedNames.join(', ') || 'Миксы не заданы';
 };
+
+const formatWorkspaceTab = (value: WorkspaceTab) => workspaceTabs.find((item) => item.id === value)?.label ?? value;
+
+const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
 
 export const App = () => {
   const [login, setLogin] = useState('admin');
@@ -1286,8 +1298,9 @@ export const App = () => {
         <div>
           <p className="eyebrow">Дашборд</p>
           <h2>Сводка Nomad</h2>
+          <p className="meta-line">Ключевые метрики смены и быстрые переходы к рабочим разделам.</p>
         </div>
-        <div className="status-chip">Синхронизировано с backend</div>
+        <div className="status-chip">Операционный обзор</div>
       </div>
 
       {summaryStatus === 'loading' ? <p className="meta-line">Загружаем сводку...</p> : null}
@@ -1318,7 +1331,8 @@ export const App = () => {
         {(summary?.topMixes ?? []).length ? (
           summary.topMixes.map((mix) => (
             <article className="top-mix-card" key={mix.mixId}>
-              <span className="metric-label">{mix.name}</span>
+              <span className="metric-label">Топ по выбору</span>
+              <h3>{mix.name}</h3>
               <strong className="metric-value">{formatMetricValue(mix.smokeCtaCount)}</strong>
             </article>
           ))
@@ -1335,8 +1349,9 @@ export const App = () => {
         <div>
           <p className="eyebrow">Инвентаризация</p>
           <h2>Табаки и наличие</h2>
+          <p className="meta-line">Быстро отмечайте остатки и сразу влияйте на guest recommendations.</p>
         </div>
-        <div className="status-chip">Обновляется с backend</div>
+        <div className="status-chip">Live stock</div>
       </div>
 
       {inventoryStatus === 'loading' ? <p className="meta-line">Загружаем инвентарь...</p> : null}
@@ -1385,9 +1400,10 @@ export const App = () => {
         <div>
           <p className="eyebrow">Менеджер миксов</p>
           <h2>Каталог миксов</h2>
+          <p className="meta-line">Редактирование состава, вкусов и доступности для guest-контура.</p>
         </div>
         <div className="section-actions">
-          <span className="status-chip">API: /staff/mixes</span>
+          <span className="status-chip">Контентный модуль</span>
           <button className="secondary-button secondary-button--inline" type="button" onClick={onResetMixEditor}>
             Новый микс
           </button>
@@ -1733,9 +1749,10 @@ export const App = () => {
         <div>
           <p className="eyebrow">Менеджер рейлов</p>
           <h2>Рейлы Nomad</h2>
+          <p className="meta-line">Управление витринами для гостя: статистика, заготовки и авторские подборки.</p>
         </div>
         <div className="section-actions">
-          <span className="status-chip">API: /staff/rails</span>
+          <span className="status-chip">Витрина гостя</span>
           <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
             Новый рейл
           </button>
@@ -1888,9 +1905,10 @@ export const App = () => {
         <div>
           <p className="eyebrow">Доступ</p>
           <h2>Коды доступа, сотрудники и Telegram</h2>
+          <p className="meta-line">Контур ежедневного доступа, staff-аккаунтов, Telegram automation и аудита.</p>
         </div>
         <div className="section-actions">
-          <span className="status-chip">API: /staff/access/*</span>
+          <span className="status-chip">Admin / staff controls</span>
           <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
             Новый код доступа
           </button>
@@ -1900,9 +1918,9 @@ export const App = () => {
         </div>
       </div>
 
-      <p className="meta-line">
-        Коды доступа доступны всем staff-ролям. Аккаунты сотрудников и чаты Telegram управляются только admin.
-      </p>
+      <div className="info-banner">
+        <strong>Ролевой контур:</strong> коды доступа доступны всем staff-ролям, а сотрудники, Telegram и аудит открыты только для `admin`.
+      </div>
 
       <div className="summary-grid automation-grid">
         <article className="metric-card automation-card">
@@ -2334,6 +2352,11 @@ export const App = () => {
             Вы вошли как {user.name} ({user.role}). Здесь обновляются инвентарь, миксы, рейлы, коды доступа и
             сводка по действиям гостей.
           </p>
+          <div className="hero-meta">
+            <span className="status-chip status-chip--inverse">{formatRoleLabel(user.role)}</span>
+            <span className="status-chip status-chip--inverse">{formatWorkspaceTab(activeTab)}</span>
+            <span className="status-chip status-chip--inverse">Postgres-backed runtime</span>
+          </div>
         </section>
 
         <section className="summary-grid">
@@ -2346,23 +2369,23 @@ export const App = () => {
         </section>
 
         <section className="card card--compact">
+          <div className="section-head section-head--compact">
+            <div>
+              <p className="eyebrow">Рабочие разделы</p>
+              <h2>Операционный маршрут смены</h2>
+            </div>
+            <div className="status-chip">Текущий модуль: {formatWorkspaceTab(activeTab)}</div>
+          </div>
           <div className="workspace-tabs">
-            {(['dashboard', 'inventory', 'mixes', 'rails', 'access'] as WorkspaceTab[]).map((tab) => (
+            {workspaceTabs.map((tab) => (
               <button
-                key={tab}
+                key={tab.id}
                 type="button"
-                className={activeTab === tab ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-                onClick={() => setActiveTab(tab)}
+                className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+                onClick={() => setActiveTab(tab.id)}
               >
-                {tab === 'dashboard'
-                  ? 'Дашборд'
-                  : tab === 'inventory'
-                    ? 'Инвентаризация'
-                    : tab === 'mixes'
-                      ? 'Миксы'
-                      : tab === 'rails'
-                        ? 'Рейлы'
-                        : 'Доступ'}
+                <span className="workspace-tab__kicker">{tab.kicker}</span>
+                <strong>{tab.label}</strong>
               </button>
             ))}
           </div>
@@ -2388,7 +2411,12 @@ export const App = () => {
       <section className="hero hero--master">
         <p className="eyebrow">Nomad Master</p>
         <h1>Вход для персонала</h1>
-        <p className="lead">Используйте учётные данные `admin` или `nomad`.</p>
+        <p className="lead">Операционная консоль для кальянных мастеров и администратора Nomad. Используйте учётные данные `admin` или `nomad`.</p>
+        <div className="hero-meta">
+          <span className="status-chip status-chip--inverse">Инвентаризация</span>
+          <span className="status-chip status-chip--inverse">Контент и рейлы</span>
+          <span className="status-chip status-chip--inverse">Доступ и Telegram</span>
+        </div>
       </section>
 
       <section className="card">
@@ -2423,8 +2451,8 @@ export const App = () => {
       </section>
 
       <section className="card card--compact">
-        <div className="status-chip">Bearer token в sessionStorage</div>
-        <p className="meta-line">API: {apiBaseUrl}</p>
+        <div className="status-chip">SessionStorage bearer token</div>
+        <p className="meta-line">Локально подключено к {apiBaseUrl}. После входа загрузятся inventory, dashboard, access и контентные менеджеры.</p>
       </section>
     </main>
   );

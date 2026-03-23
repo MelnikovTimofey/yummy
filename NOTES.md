@@ -1,3 +1,27 @@
+Обновление от 23 марта 2026 (master polish: operational console pass for Nomad staff UI):
+- Проблема:
+  - `Мастер` уже был функционально полным, но визуально оставался набором однотипных карточек без чёткой operational hierarchy;
+  - KPI, табы, editor panels и admin-only секции выглядели слишком одинаково и не создавали ощущения staff/admin console.
+- Изменение:
+  - `apps/nomad-master-web/src/App.tsx`:
+    - hero расширен до более явного control-room header;
+    - workspace navigation получила route-подачу с kicker-слоями;
+    - section heads переведены с raw API-маркировки на product/operational labels;
+    - access-блок получил более явную роль и admin/staff framing.
+  - `apps/nomad-master-web/src/styles.css`:
+    - выполнен полный visual pass в той же Nomad brand-system, но в более operational ритме;
+    - усилены KPI cards, workspace tabs, manager layouts, editor cards, forms и access-panels;
+    - улучшена mobile/tablet адаптация для рабочей панели.
+  - `apps/nomad-master-web/README.md`:
+    - стадия обновлена под `Master Polish`.
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - ручной browser smoke на `http://127.0.0.1:4276` через Playwright CLI с login + inventory tab.
+- Эффект:
+  - `Мастер` теперь ощущается как staff/admin console, а не просто CRUD-набор;
+  - KPI, рабочие разделы и manager/editor зоны читаются заметно лучше;
+  - visual language Nomad теперь консистентна между `Арома Ателье` и `Мастер`.
+
 Обновление от 23 марта 2026 (aroma polish: premium guest UI pass for Nomad):
 - Проблема:
   - `Арома Ателье` уже было функционально полным, но визуально оставалось на уровне MVP-карточек;

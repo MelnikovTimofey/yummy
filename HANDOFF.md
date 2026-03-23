@@ -1,5 +1,34 @@
 # HANDOFF — Yummy
 
+## 1.50) Deliver Master Polish for Nomad staff/admin console (23 марта 2026)
+
+- Запрос:
+  - после `Aroma Polish` выполнить отдельный visual pass для `Мастера`.
+
+- Реализация:
+  - `apps/nomad-master-web/src/App.tsx`:
+    - hero переработан в более явный control-room header;
+    - workspace tabs получили route/kicker подачу;
+    - section heads, quick actions и access framing стали более operational, без raw API-подачи в ключевых зонах;
+    - login screen и authenticated shell теперь визуально ближе к staff/admin console.
+  - `apps/nomad-master-web/src/styles.css`:
+    - переписан дизайн-слой в operational Nomad-подаче;
+    - усилены KPI cards, workspace navigation, manager/editor layout, forms, forbidden panels и access sections;
+    - улучшена tablet/mobile адаптация.
+  - `apps/nomad-master-web/README.md`:
+    - стадия обновлена под `Master Polish`.
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - ручной browser smoke на `http://127.0.0.1:4276`
+  - login `admin/admin` + переход во вкладку `Инвентаризация`
+  - console чистая, кроме ожидаемого React DevTools hint в dev-режиме
+
+- Эффект:
+  - `Мастер` визуально догнал `Арома Ателье`;
+  - operational hierarchy стала заметно сильнее;
+  - admin/staff console стала ближе к launch-ready состоянию без изменения бизнес-логики.
+
 ## 1.49) Deliver Aroma Polish for Nomad guest flow (23 марта 2026)
 
 - Запрос:
