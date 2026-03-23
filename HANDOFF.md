@@ -1,5 +1,27 @@
 # HANDOFF — Yummy
 
+## 1.58) Clean up Nomad header icon, primary CTA and checkbox alignment (23 марта 2026)
+
+- Запрос:
+  - убрать иконку `n` из шапки, сделать primary кнопку менее яркой и поправить центрирование checkbox.
+
+- Реализация:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - из brand-shell удалена отдельная иконка, оставлен только `nomad` wordmark.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - primary CTA переведён в более спокойный bronze-tone;
+    - checkbox marker теперь центрируется через absolute positioning;
+    - отступы brand-shell подчищены под header без иконки.
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175`
+
+- Эффект:
+  - шапка стала чище и спокойнее;
+  - CTA лучше вписан в новую `Nomad Lounge` тему;
+  - checkbox больше не выглядит смещённым.
+
 ## 1.57) Add Nomad Lounge visual layer to Aroma Atelier (23 марта 2026)
 
 - Запрос:

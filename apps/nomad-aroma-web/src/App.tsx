@@ -1321,7 +1321,6 @@ export const App = () => {
 
   const renderBrand = () => (
     <button type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
-      <span className="brand-logo">n</span>
       <div>
         <p className="brand">nomad</p>
         <p className="tagline">лаунж · арома ателье</p>

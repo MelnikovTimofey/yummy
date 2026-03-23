@@ -151,7 +151,7 @@ select:focus-visible {
 .brand-wrap {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
 }
 
 .brand-home-btn {
@@ -372,9 +372,9 @@ select:focus-visible {
 
 .form button,
 .search-button {
-  border: 0;
-  background: linear-gradient(180deg, #e0b878 0%, #c99346 100%);
-  color: #28160f;
+  border: 1px solid rgba(242, 213, 165, 0.22);
+  background: linear-gradient(180deg, #caa066 0%, #9d6635 100%);
+  color: #23120d;
   border-radius: 12px;
   min-height: 44px;
   padding: 0 14px;
@@ -382,7 +382,9 @@ select:focus-visible {
   letter-spacing: 1px;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 12px 24px rgba(150, 87, 28, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 243, 220, 0.18),
+    0 12px 24px rgba(96, 42, 20, 0.2);
 }
 
 .form button:disabled,
@@ -425,6 +427,7 @@ select:focus-visible {
 }
 
 .checkbox-box {
+  position: relative;
   width: 18px;
   height: 18px;
   border-radius: 5px;
@@ -439,11 +442,14 @@ select:focus-visible {
 
 .checkbox-box::after {
   content: "";
-  width: 9px;
-  height: 9px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
   border-radius: 2px;
   background: var(--accent-soft);
-  transform: scale(0);
+  transform: translate(-50%, -50%) scale(0);
   transition: transform 0.18s ease;
 }
 
@@ -454,7 +460,7 @@ select:focus-visible {
 }
 
 .checkbox-input:checked + .checkbox-box::after {
-  transform: scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .checkbox-input:focus-visible + .checkbox-box {

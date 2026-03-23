@@ -1,3 +1,23 @@
+Обновление от 23 марта 2026 (nomad visual cleanup for brand, cta and checkbox):
+- Проблема:
+  - после `Nomad Lounge` visual pass brand-icon `n` в шапке выглядел лишним;
+  - primary CTA оставался слишком ярко-жёлтым относительно остального интерфейса;
+  - внутренний маркер кастомного checkbox визуально сидел не по центру.
+- Изменение:
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - из brand-shell удалена отдельная иконка `n`, оставлен только wordmark `nomad`.
+  - `apps/nomad-aroma-web/src/styles.css`:
+    - primary buttons переведены в более спокойный bronze-tone;
+    - checkbox marker переведён на абсолютное центрирование;
+    - spacing brand-wrap подчищен под wordmark-only header.
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - ручной browser smoke на `http://localhost:5175`
+- Эффект:
+  - шапка стала чище;
+  - primary CTA лучше сочетается с `Nomad Lounge` палитрой;
+  - checkbox выглядит аккуратнее в access-flow.
+
 Обновление от 23 марта 2026 (nomad lounge visual branding pass for aroma atelier):
 - Проблема:
   - после выравнивания механик под `Yami Web` `Арома Ателье` всё ещё ощущалось визуально нейтральным и не транслировало атмосферу `Nomad Lounge`;
