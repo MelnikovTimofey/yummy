@@ -1,5 +1,30 @@
 # HANDOFF — Yummy
 
+## 1.56) Sync live Aroma intro cards with current product flow (23 марта 2026)
+
+- Запрос:
+  - убрать из живого intro оставшиеся карточки про возраст и код, оставить карточку про каталог и вернуть финальное welcome-сообщение.
+
+- Реализация:
+  - `apps/nomad-backend/src/state.ts`:
+    - добавлена синхронизация intro-карточек с текущим seed-набором без полного reset storage;
+    - устаревшие записи теперь удаляются, актуальные тексты обновляются при чтении `/guest/intro/cards`;
+    - последняя карточка переписана в welcome-формат `Добро пожаловать в Арома Ателье`.
+  - `apps/nomad-backend/src/content.test.ts`:
+    - intro-тест обновлён под новый состав карточек.
+  - `apps/nomad-aroma-web/README.md`:
+    - README синхронизирован с финальным составом fullscreen intro.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `curl -s http://localhost:3021/guest/intro/cards | jq`
+
+- Эффект:
+  - живой backend больше не раздаёт устаревшие шаги про `18+` и код;
+  - знакомство заканчивается явным приглашением перейти в `Арома Ателье`;
+  - product flow в intro соответствует фактическому моменту входа после access-code.
+
 ## 1.55) Refine Aroma Atelier intro copy and top-level mix action (23 марта 2026)
 
 - Запрос:

@@ -141,8 +141,8 @@ const introCards: SeedIntroCard[] = [
   {
     id: 'intro-invite',
     step: 4,
-    title: 'Перейдём в Арома Ателье',
-    description: 'Сейчас соберём ваш первый подбор и покажем витрину, с которой удобно начать выбор.',
+    title: 'Добро пожаловать в Арома Ателье',
+    description: 'Давайте приступим: соберём ваш первый подбор и покажем витрину, с которой удобно начать выбор.',
     bullets: ['Откройте карточку микса и выберите вариант для мастера.', 'Дальше останется только показать экран и оформить заказ.'],
   },
 ];
@@ -244,6 +244,20 @@ const parseList = (value: string | null | undefined) => {
   }
 };
 
+const mapIntroCardRecord = (record: {
+  id: string;
+  step: number;
+  title: string;
+  description: string;
+  bullets: string;
+}): IntroCard => ({
+  id: record.id,
+  step: record.step,
+  title: record.title,
+  description: record.description,
+  bullets: parseList(record.bullets),
+});
+
 const isRailType = (value: string): value is RailType =>
   value === 'statistical' || value === 'prepared' || value === 'curated';
 
@@ -257,6 +271,62 @@ const mixViewSort = (left: MixView, right: MixView) => {
   }
 
   return left.name.localeCompare(right.name, 'ru');
+};
+
+const syncIntroCards = async () => {
+  const existingCards = await prisma.nomadIntroCard.findMany();
+  const existingById = new Map(existingCards.map((card) => [card.id, card]));
+  const expectedIds = new Set(introCards.map((card) => card.id));
+
+  await prisma.$transaction(async (tx) => {
+    for (const staleCard of existingCards) {
+      if (!expectedIds.has(staleCard.id)) {
+        await tx.nomadIntroCard.delete({
+          where: {
+            id: staleCard.id,
+          },
+        });
+      }
+    }
+
+    for (const card of introCards) {
+      const current = existingById.get(card.id);
+
+      if (!current) {
+        await tx.nomadIntroCard.create({
+          data: {
+            id: card.id,
+            step: card.step,
+            title: card.title,
+            description: card.description,
+            bullets: serializeList(card.bullets),
+          },
+        });
+        continue;
+      }
+
+      const nextBullets = serializeList(card.bullets);
+      const needsUpdate =
+        current.step !== card.step ||
+        current.title !== card.title ||
+        current.description !== card.description ||
+        current.bullets !== nextBullets;
+
+      if (needsUpdate) {
+        await tx.nomadIntroCard.update({
+          where: {
+            id: card.id,
+          },
+          data: {
+            step: card.step,
+            title: card.title,
+            description: card.description,
+            bullets: nextBullets,
+          },
+        });
+      }
+    }
+  });
 };
 
 const mapTobacco = (record: {
@@ -653,6 +723,7 @@ export const resetNomadState = async () => {
 
 export const getGuestIntroCards = async () => {
   await ensureNomadState();
+  await syncIntroCards();
 
   const records = await prisma.nomadIntroCard.findMany({
     orderBy: {
@@ -660,13 +731,7 @@ export const getGuestIntroCards = async () => {
     },
   });
 
-  return records.map((record) => ({
-    id: record.id,
-    step: record.step,
-    title: record.title,
-    description: record.description,
-    bullets: parseList(record.bullets),
-  }));
+  return records.map(mapIntroCardRecord);
 };
 
 export const getInventoryTobaccos = async () => {

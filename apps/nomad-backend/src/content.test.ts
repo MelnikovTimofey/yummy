@@ -42,8 +42,10 @@ test('guest intro cards describe the onboarding flow', async () => {
       body.items.map((item) => item.step),
       [1, 2, 3, 4],
     );
-    assert.equal(body.items[0]?.title, 'Подтвердите возраст');
-    assert.equal(body.items[2]?.bullets.includes('Рекомендации учитывают наличие табаков.'), true);
+    assert.equal(body.items[0]?.title, 'Расскажите, что хочется покурить');
+    assert.equal(body.items[2]?.title, 'Открывайте каталог');
+    assert.equal(body.items[3]?.title, 'Добро пожаловать в Арома Ателье');
+    assert.equal(body.items[0]?.bullets.includes('Рекомендации учитывают наличие табаков.'), true);
   } finally {
     await app.close();
   }
