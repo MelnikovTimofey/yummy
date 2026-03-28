@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildInventoryRequestQuery,
   buildInventorySummary,
+  defaultInventoryListResponse,
   dashboardWindowOptions,
+  formatInventoryBatchAction,
   formatDateTimeLocalInput,
   normalizeDashboardSummary,
+  normalizeInventoryBatchResponse,
+  normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
@@ -20,6 +25,7 @@ import {
   sortRails,
   sortStaffAccounts,
   sortTelegramRecipients,
+  toggleInventoryFilterValue,
 } from './contracts';
 
 test('buildInventorySummary counts stock states', () => {
@@ -44,6 +50,117 @@ test('sortInventoryItems places in-stock tobaccos first', () => {
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['1', '3', '2']);
+});
+
+test('normalizeInventoryListResponse supports filter meta and dependent mixes', () => {
+  const response = normalizeInventoryListResponse({
+    items: [
+      {
+        id: 'tobacco-peach-silk',
+        name: 'Peach Silk',
+        manufacturer: 'Nomad Reserve',
+        inStock: false,
+        flavorProfiles: ['Сладкие'],
+        flavors: ['персик'],
+        flavorTags: ['fruity'],
+        updatedAt: '2026-03-28T10:00:00.000Z',
+        dependentMixCount: 1,
+        blockedDependentMixCount: 1,
+        dependentMixes: [
+          {
+            id: 'mix-peach-mirage',
+            name: 'Персиковый мираж',
+            available: true,
+            guestVisible: false,
+            avgRating: 4.7,
+            popularity: 12,
+          },
+        ],
+      },
+    ],
+    filters: {
+      search: 'персик',
+      stock: 'out-of-stock',
+      manufacturers: ['Nomad Reserve'],
+      flavors: ['персик'],
+      options: {
+        manufacturers: ['Nomad Reserve', 'Darkside'],
+        flavorTags: ['fruity'],
+      },
+    },
+    sort: {
+      field: 'dependentMixes',
+      direction: 'desc',
+    },
+    meta: {
+      totalItems: 14,
+      filteredItems: 1,
+      inStockCount: 0,
+      outOfStockCount: 1,
+    },
+  });
+
+  assert.equal(response.items[0]?.dependentMixes?.[0]?.id, 'mix-peach-mirage');
+  assert.equal(response.items[0]?.blockedDependentMixCount, 1);
+  assert.equal(response.filters.stock, 'out-of-stock');
+  assert.deepEqual(response.filters.options.flavorTags, ['fruity']);
+  assert.equal(response.sort.field, 'dependentMixes');
+  assert.equal(response.meta.filteredItems, 1);
+});
+
+test('normalizeInventoryListResponse falls back to defaults', () => {
+  const response = normalizeInventoryListResponse({});
+
+  assert.deepEqual(response, defaultInventoryListResponse);
+});
+
+test('normalizeInventoryBatchResponse parses batch mutation payload', () => {
+  const response = normalizeInventoryBatchResponse({
+    action: 'set-out-of-stock',
+    ids: ['tobacco-1', 'tobacco-2'],
+    skippedIds: ['missing-id'],
+    processedCount: 2,
+    items: [
+      {
+        id: 'tobacco-1',
+        name: 'Mint Veil',
+        manufacturer: 'Nomad Reserve',
+        inStock: false,
+      },
+    ],
+  });
+
+  assert.equal(response.action, 'set-out-of-stock');
+  assert.deepEqual(response.ids, ['tobacco-1', 'tobacco-2']);
+  assert.deepEqual(response.skippedIds, ['missing-id']);
+  assert.equal(response.items[0]?.inStock, false);
+  assert.equal(formatInventoryBatchAction(response.action), 'Убрать из наличия');
+});
+
+test('buildInventoryRequestQuery serializes selected filters and sort', () => {
+  const query = buildInventoryRequestQuery(
+    {
+      ...defaultInventoryListResponse.filters,
+      search: 'персик',
+      stock: 'out-of-stock',
+      manufacturers: ['Nomad Reserve'],
+      flavors: ['персик'],
+    },
+    {
+      field: 'dependentMixes',
+      direction: 'desc',
+    },
+  );
+
+  assert.equal(
+    query,
+    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc',
+  );
+});
+
+test('toggleInventoryFilterValue adds and removes option without duplicates', () => {
+  assert.deepEqual(toggleInventoryFilterValue(['Nomad Reserve'], 'Darkside'), ['Nomad Reserve', 'Darkside']);
+  assert.deepEqual(toggleInventoryFilterValue(['Nomad Reserve'], 'Nomad Reserve'), []);
 });
 
 test('parseDelimitedList trims empty chunks and duplicates', () => {

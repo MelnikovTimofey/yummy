@@ -17,6 +17,100 @@ export type InventoryTobacco = {
   inStock: boolean;
   flavorProfiles?: string[];
   flavors?: string[];
+  flavorTags?: string[];
+  updatedAt?: string;
+  dependentMixCount?: number;
+  blockedDependentMixCount?: number;
+  dependentMixes?: InventoryDependentMix[];
+};
+
+export type InventoryDependentMix = {
+  id: string;
+  name: string;
+  available: boolean;
+  guestVisible: boolean;
+  avgRating: number;
+  popularity: number;
+};
+
+export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
+
+export type InventorySortField = 'stock' | 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixes';
+
+export type InventorySortDirection = 'asc' | 'desc';
+
+export type InventoryListFilters = {
+  search: string;
+  stock: InventoryStockFilter;
+  manufacturers: string[];
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  options: {
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+  };
+};
+
+export type InventoryListSort = {
+  field: InventorySortField;
+  direction: InventorySortDirection;
+};
+
+export type InventoryListMeta = {
+  totalItems: number;
+  filteredItems: number;
+  inStockCount: number;
+  outOfStockCount: number;
+};
+
+export type InventoryListResponse = {
+  items: InventoryTobacco[];
+  filters: InventoryListFilters;
+  sort: InventoryListSort;
+  meta: InventoryListMeta;
+};
+
+export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive';
+
+export type InventoryBatchResponse = {
+  action: InventoryBatchAction;
+  ids: string[];
+  skippedIds: string[];
+  processedCount: number;
+  items: InventoryTobacco[];
+};
+
+export type InventoryFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
+
+export const defaultInventoryListResponse: InventoryListResponse = {
+  items: [],
+  filters: {
+    search: '',
+    stock: 'all',
+    manufacturers: [],
+    flavorProfiles: [],
+    flavors: [],
+    flavorTags: [],
+    options: {
+      manufacturers: [],
+      flavorProfiles: [],
+      flavors: [],
+      flavorTags: [],
+    },
+  },
+  sort: {
+    field: 'stock',
+    direction: 'desc',
+  },
+  meta: {
+    totalItems: 0,
+    filteredItems: 0,
+    inStockCount: 0,
+    outOfStockCount: 0,
+  },
 };
 
 export type DailyAccessCodeRecord = {
@@ -318,6 +412,24 @@ const toDashboardWindowKey = (value: unknown): DashboardWindowKey => {
   return value === '7d' || value === '14d' || value === '30d' ? value : '14d';
 };
 
+const toInventoryStockFilter = (value: unknown): InventoryStockFilter => {
+  return value === 'in-stock' || value === 'out-of-stock' || value === 'all' ? value : 'all';
+};
+
+const toInventorySortField = (value: unknown): InventorySortField => {
+  return value === 'name'
+    || value === 'manufacturer'
+    || value === 'updatedAt'
+    || value === 'dependentMixes'
+    || value === 'stock'
+      ? value
+      : 'stock';
+};
+
+const toInventorySortDirection = (value: unknown): InventorySortDirection => {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+};
+
 const uniqueStrings = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
 const toIsoString = (value: unknown, fallback = '') => {
@@ -499,6 +611,37 @@ export const normalizeAuditEventRecord = (value: unknown): AuditEventRecord => {
   };
 };
 
+export const normalizeInventoryDependentMix = (value: unknown): InventoryDependentMix => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.mixId ?? ''),
+    name: String(raw.name ?? raw.mixName ?? ''),
+    available: toBoolean(raw.available, true),
+    guestVisible: toBoolean(raw.guestVisible, true),
+    avgRating: toNumber(raw.avgRating, 0),
+    popularity: toNumber(raw.popularity, 0),
+  };
+};
+
+export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.tobaccoId ?? ''),
+    name: String(raw.name ?? ''),
+    manufacturer: String(raw.manufacturer ?? ''),
+    inStock: toBoolean(raw.inStock, true),
+    flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
+    flavors: uniqueStrings(toStringList(raw.flavors)),
+    flavorTags: uniqueStrings(toStringList(raw.flavorTags)),
+    updatedAt: toIsoString(raw.updatedAt, ''),
+    dependentMixCount: toNumber(raw.dependentMixCount, 0),
+    blockedDependentMixCount: toNumber(raw.blockedDependentMixCount, 0),
+    dependentMixes: readListPayload<unknown>(raw.dependentMixes).map(normalizeInventoryDependentMix),
+  };
+};
+
 export const normalizeMixRecord = (value: unknown): MixRecord => {
   const raw = isRecord(value) ? value : {};
   const components = readListPayload<unknown>(raw.components).map(normalizeMixComponent);
@@ -654,6 +797,97 @@ export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
       railHealth: readListPayload<unknown>(ops.railHealth).map(normalizeRailHealthItem),
     },
   };
+};
+
+export const normalizeInventoryListResponse = (value: unknown): InventoryListResponse => {
+  const raw = isRecord(value) ? value : {};
+  const filters = isRecord(raw.filters) ? raw.filters : {};
+  const sort = isRecord(raw.sort) ? raw.sort : {};
+  const meta = isRecord(raw.meta) ? raw.meta : {};
+  const options = isRecord(filters.options) ? filters.options : {};
+
+  return {
+    items: readListPayload<unknown>(raw.items ?? raw).map(normalizeInventoryTobacco),
+    filters: {
+      search: String(filters.search ?? ''),
+      stock: toInventoryStockFilter(filters.stock),
+      manufacturers: uniqueStrings(toStringList(filters.manufacturers)),
+      flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
+      flavors: uniqueStrings(toStringList(filters.flavors)),
+      flavorTags: uniqueStrings(toStringList(filters.flavorTags)),
+      options: {
+        manufacturers: uniqueStrings(toStringList(options.manufacturers)),
+        flavorProfiles: uniqueStrings(toStringList(options.flavorProfiles)),
+        flavors: uniqueStrings(toStringList(options.flavors)),
+        flavorTags: uniqueStrings(toStringList(options.flavorTags)),
+      },
+    },
+    sort: {
+      field: toInventorySortField(sort.field),
+      direction: toInventorySortDirection(sort.direction),
+    },
+    meta: {
+      totalItems: toNumber(meta.totalItems, 0),
+      filteredItems: toNumber(meta.filteredItems, 0),
+      inStockCount: toNumber(meta.inStockCount, 0),
+      outOfStockCount: toNumber(meta.outOfStockCount, 0),
+    },
+  };
+};
+
+export const normalizeInventoryBatchResponse = (value: unknown): InventoryBatchResponse => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    action: raw.action === 'set-in-stock' || raw.action === 'set-out-of-stock' || raw.action === 'archive'
+      ? raw.action
+      : 'set-in-stock',
+    ids: uniqueStrings(toStringList(raw.ids)),
+    skippedIds: uniqueStrings(toStringList(raw.skippedIds)),
+    processedCount: toNumber(raw.processedCount, 0),
+    items: readListPayload<unknown>(raw.items).map(normalizeInventoryTobacco),
+  };
+};
+
+export const buildInventoryRequestQuery = (filters: InventoryListFilters, sort: InventoryListSort) => {
+  const params = new URLSearchParams();
+
+  if (filters.search.trim()) {
+    params.set('search', filters.search.trim());
+  }
+
+  if (filters.stock !== 'all') {
+    params.set('stock', filters.stock);
+  }
+
+  for (const value of filters.manufacturers) {
+    params.append('manufacturers', value);
+  }
+
+  for (const value of filters.flavorProfiles) {
+    params.append('flavorProfiles', value);
+  }
+
+  for (const value of filters.flavors) {
+    params.append('flavors', value);
+  }
+
+  for (const value of filters.flavorTags) {
+    params.append('flavorTags', value);
+  }
+
+  params.set('sort', sort.field);
+  params.set('direction', sort.direction);
+
+  return params.toString();
+};
+
+export const toggleInventoryFilterValue = (values: string[], value: string) => {
+  const next = values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+
+  return uniqueStrings(next);
 };
 
 export const sortMixes = (items: MixRecord[]) => {
@@ -842,6 +1076,36 @@ export const sortInventoryItems = (items: InventoryTobacco[]) => {
 
     return left.name.localeCompare(right.name, 'ru');
   });
+};
+
+export const inventoryStockFilterOptions: Array<{ value: InventoryStockFilter; label: string }> = [
+  { value: 'all', label: 'Все позиции' },
+  { value: 'in-stock', label: 'Только в наличии' },
+  { value: 'out-of-stock', label: 'Только вне наличия' },
+];
+
+export const inventorySortFieldOptions: Array<{ value: InventorySortField; label: string }> = [
+  { value: 'stock', label: 'Сначала по наличию' },
+  { value: 'dependentMixes', label: 'По зависимым миксам' },
+  { value: 'updatedAt', label: 'По обновлению' },
+  { value: 'manufacturer', label: 'По производителю' },
+  { value: 'name', label: 'По названию' },
+];
+
+export const inventorySortDirectionOptions: Array<{ value: InventorySortDirection; label: string }> = [
+  { value: 'desc', label: 'По убыванию' },
+  { value: 'asc', label: 'По возрастанию' },
+];
+
+export const formatInventoryBatchAction = (value: InventoryBatchAction) => {
+  switch (value) {
+    case 'set-out-of-stock':
+      return 'Убрать из наличия';
+    case 'archive':
+      return 'Архивировать';
+    default:
+      return 'Вернуть в наличие';
+  }
 };
 
 export const formatMetricValue = (value: number) => {

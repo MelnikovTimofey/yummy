@@ -105,3 +105,13 @@ npm run dev
 6. операционные сигналы по blocked mixes и состоянию rails;
 7. `shadcn/ui` foundation для `nomad-master-web` как новый UI baseline;
 8. visual redesign dashboard под premium HoReCa direction вместо прежней MVP-сводки.
+
+## Slice 2. Inventory operations hardening
+
+Inventory переведён в новый operational flow:
+
+1. `GET /staff/inventory/tobaccos` поддерживает `search`, `stock`, фильтры по производителям, `flavorProfiles`, вкусам и `flavorTags`, а также server-side sort;
+2. строки инвентаризации показывают dependent mixes, blocked mix count и время последнего изменения;
+3. staff получил table-first экран с filters bar, bulk selection и batch actions `вернуть в наличие / убрать из наличия`;
+4. после inventory update frontend синхронно перезагружает и `dashboard`, и `mixes`, чтобы UI не жил на устаревшем состоянии;
+5. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.

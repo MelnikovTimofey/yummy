@@ -1,22 +1,28 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
+import { InventoryView } from '@/components/inventory/inventory-view';
 import {
+  AuditEventRecord,
+  DailyAccessCodeRecord,
   DashboardSummary,
   DashboardWindowKey,
-  DailyAccessCodeRecord,
+  InventoryBatchAction,
+  InventoryFilterKey,
+  InventoryListFilters,
+  InventoryListMeta,
+  InventoryListSort,
   InventoryTobacco,
   MixRecord,
   RailRecord,
-  StaffAuthResponse,
   StaffAccountRecord,
+  StaffAuthResponse,
+  StaffUser,
+  TelegramAutomationStateRecord,
   TelegramRecipientRecord,
   TelegramRecipientScope,
-  TelegramAutomationStateRecord,
-  AuditEventRecord,
-  StaffUser,
+  buildInventoryRequestQuery,
   formatDateTimeLocalInput,
-  buildInventorySummary,
   formatDelimitedList,
   formatAuditAction,
   formatAuditEntityType,
@@ -24,8 +30,10 @@ import {
   formatRailType,
   formatTelegramAutomationHealth,
   formatTelegramRecipientScope,
-  normalizeDashboardSummary,
   normalizeAuditEventRecord,
+  normalizeDashboardSummary,
+  normalizeInventoryBatchResponse,
+  normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
@@ -38,12 +46,13 @@ import {
   readEntityPayload,
   readListPayload,
   sortDailyAccessCodes,
-  sortInventoryItems,
   sortMixes,
   sortRails,
   sortStaffAccounts,
   sortTelegramRecipients,
   telegramRecipientScopeOptions,
+  toggleInventoryFilterValue,
+  defaultInventoryListResponse,
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
@@ -333,6 +342,10 @@ export const App = () => {
   const [user, setUser] = useState<StaffUser | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
+  const [inventoryFilters, setInventoryFilters] = useState<InventoryListFilters>(defaultInventoryListResponse.filters);
+  const [inventorySort, setInventorySort] = useState<InventoryListSort>(defaultInventoryListResponse.sort);
+  const [inventoryMeta, setInventoryMeta] = useState<InventoryListMeta>(defaultInventoryListResponse.meta);
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
   const [mixes, setMixes] = useState<MixRecord[]>([]);
@@ -367,6 +380,7 @@ export const App = () => {
   const [telegramAutomationStateError, setTelegramAutomationStateError] = useState('');
   const [auditEventsError, setAuditEventsError] = useState('');
   const [toggleId, setToggleId] = useState('');
+  const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
@@ -387,17 +401,27 @@ export const App = () => {
   const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
   const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
 
-  const loadInventory = async (nextToken: string) => {
+  const loadInventory = async (
+    nextToken: string,
+    nextFilters: InventoryListFilters = inventoryFilters,
+    nextSort: InventoryListSort = inventorySort,
+  ) => {
     setInventoryStatus('loading');
     setInventoryError('');
 
     try {
-      const response = await requestJson<unknown>('/staff/inventory/tobaccos', {}, nextToken);
-      const items = sortInventoryItems(readListPayload<InventoryTobacco>(response));
-      setInventory(items);
+      const query = buildInventoryRequestQuery(nextFilters, nextSort);
+      const response = await requestJson<unknown>(`/staff/inventory/tobaccos${query ? `?${query}` : ''}`, {}, nextToken);
+      const payload = normalizeInventoryListResponse(response);
+      setInventory(payload.items);
+      setInventoryFilters(payload.filters);
+      setInventorySort(payload.sort);
+      setInventoryMeta(payload.meta);
+      setSelectedInventoryIds((current) => current.filter((id) => payload.items.some((item) => item.id === id)));
       setInventoryStatus('ready');
     } catch (cause) {
       setInventory([]);
+      setInventoryMeta(defaultInventoryListResponse.meta);
       setInventoryStatus('error');
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось загрузить инвентарь');
     }
@@ -643,11 +667,83 @@ export const App = () => {
     await loadSummary(token, windowKey);
   };
 
+  const refreshInventorySurface = async (
+    nextFilters: InventoryListFilters = inventoryFilters,
+    nextSort: InventoryListSort = inventorySort,
+  ) => {
+    if (!token) {
+      return;
+    }
+
+    await loadInventory(token, nextFilters, nextSort);
+  };
+
+  const onInventorySearchChange = async (value: string) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      search: value,
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort);
+  };
+
+  const onInventoryStockChange = async (value: InventoryListFilters['stock']) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      stock: value,
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort);
+  };
+
+  const onInventorySortFieldChange = async (field: InventoryListSort['field']) => {
+    const nextSort = {
+      ...inventorySort,
+      field,
+    };
+    setInventorySort(nextSort);
+    await refreshInventorySurface(inventoryFilters, nextSort);
+  };
+
+  const onInventorySortDirectionChange = async (direction: InventoryListSort['direction']) => {
+    const nextSort = {
+      ...inventorySort,
+      direction,
+    };
+    setInventorySort(nextSort);
+    await refreshInventorySurface(inventoryFilters, nextSort);
+  };
+
+  const onInventoryToggleFilterValue = async (key: InventoryFilterKey, value: string) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      [key]: toggleInventoryFilterValue(inventoryFilters[key], value),
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort);
+  };
+
+  const onInventoryResetFilters = async () => {
+    const nextFilters = {
+      ...defaultInventoryListResponse.filters,
+      options: inventoryFilters.options,
+    };
+    const nextSort = defaultInventoryListResponse.sort;
+    setSelectedInventoryIds([]);
+    setInventoryFilters(nextFilters);
+    setInventorySort(nextSort);
+    await refreshInventorySurface(nextFilters, nextSort);
+  };
+
   const onSignOut = () => {
     storeToken('');
     setToken('');
     setUser(null);
     setInventory([]);
+    setInventoryFilters(defaultInventoryListResponse.filters);
+    setInventorySort(defaultInventoryListResponse.sort);
+    setInventoryMeta(defaultInventoryListResponse.meta);
+    setSelectedInventoryIds([]);
     setSummary(null);
     setDashboardWindow('14d');
     setMixes([]);
@@ -675,6 +771,7 @@ export const App = () => {
     setTelegramAutomationStateError('');
     setAuditEventsError('');
     setToggleId('');
+    setInventoryBatchAction('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
     setMixSaveError('');
@@ -705,41 +802,23 @@ export const App = () => {
       return;
     }
 
-    const nextInStock = !item.inStock;
     setToggleId(item.id);
     setInventoryError('');
 
     try {
-      const response = await requestJson<unknown>(
+      await requestJson<unknown>(
         `/staff/inventory/tobaccos/${item.id}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ inStock: nextInStock }),
+          body: JSON.stringify({ inStock: !item.inStock }),
         },
         token,
       );
-
-      const payload = readEntityPayload<InventoryTobacco>(response);
-      const nextItem = payload ?? { ...item, inStock: nextInStock };
-      const nextInventory = sortInventoryItems(replaceOrInsert(inventory, nextItem));
-
-      setInventory(nextInventory);
-      setSummary((current) => {
-        if (!current) {
-          return current;
-        }
-
-        const inventorySummary = buildInventorySummary(nextInventory);
-        return {
-          ...current,
-          ...inventorySummary,
-          inventory: {
-            ...current.inventory,
-            ...inventorySummary,
-          },
-        };
-      });
-      void loadSummary(token, dashboardWindow);
+      await Promise.all([
+        loadInventory(token, inventoryFilters, inventorySort),
+        loadSummary(token, dashboardWindow),
+        loadMixes(token),
+      ]);
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить наличие');
@@ -747,6 +826,65 @@ export const App = () => {
     } finally {
       setToggleId('');
     }
+  };
+
+  const onToggleInventorySelection = (id: string) => {
+    setSelectedInventoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const onToggleSelectAllInventory = () => {
+    const visibleIds = inventory.map((item) => item.id);
+    const nextSelection = visibleIds.every((id) => selectedInventoryIds.includes(id)) ? [] : visibleIds;
+    setSelectedInventoryIds(nextSelection);
+  };
+
+  const onRunInventoryBatch = async (action: Exclude<InventoryBatchAction, 'archive'>) => {
+    if (!token || !selectedInventoryIds.length) {
+      return;
+    }
+
+    setInventoryBatchAction(action);
+    setInventoryError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        '/staff/inventory/tobaccos/batch',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            ids: selectedInventoryIds,
+            action,
+          }),
+        },
+        token,
+      );
+      const batch = normalizeInventoryBatchResponse(response);
+      if (batch.skippedIds.length) {
+        setInventoryError(`Часть позиций пропущена backend: ${batch.skippedIds.join(', ')}`);
+      }
+      setSelectedInventoryIds([]);
+      await Promise.all([
+        loadInventory(token, inventoryFilters, inventorySort),
+        loadSummary(token, dashboardWindow),
+        loadMixes(token),
+      ]);
+      setInventoryStatus('ready');
+    } catch (cause) {
+      setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить batch действие');
+      setInventoryStatus('error');
+    } finally {
+      setInventoryBatchAction('');
+    }
+  };
+
+  const onOpenInventoryMix = (mixId: string) => {
+    const mix = mixes.find((item) => item.id === mixId);
+    if (mix) {
+      onSelectMix(mix);
+      return;
+    }
+
+    setActiveTab('mixes');
   };
 
   const onSelectMix = (mix: MixRecord) => {
@@ -1330,54 +1468,28 @@ export const App = () => {
   );
 
   const renderInventory = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Инвентаризация</p>
-          <h2>Табаки и наличие</h2>
-          <p className="meta-line">Быстро отмечайте остатки и сразу влияйте на guest recommendations.</p>
-        </div>
-        <div className="status-chip">Live stock</div>
-      </div>
-
-      {inventoryStatus === 'loading' ? <p className="meta-line">Загружаем инвентарь...</p> : null}
-      {inventoryError ? <p className="error-text">{inventoryError}</p> : null}
-
-      <div className="inventory-grid">
-        {inventory.map((item) => (
-          <article className="inventory-card" key={item.id}>
-            <div className="inventory-card__head">
-              <div>
-                <p className="inventory-manufacturer">{item.manufacturer}</p>
-                <h3>{item.name}</h3>
-              </div>
-              <span className={item.inStock ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                {item.inStock ? 'В наличии' : 'Нет в наличии'}
-              </span>
-            </div>
-
-            <div className="chip-row">
-              {(item.flavorProfiles ?? []).map((profile) => (
-                <span className="chip" key={`${item.id}:${profile}`}>
-                  {profile}
-                </span>
-              ))}
-            </div>
-
-            <p className="meta-line">{(item.flavors ?? []).join(', ') || 'Нет привязанных вкусов'}</p>
-
-            <button
-              className="secondary-button secondary-button--inline"
-              type="button"
-              onClick={() => void onToggleStock(item)}
-              disabled={toggleId === item.id}
-            >
-              {toggleId === item.id ? 'Сохраняем...' : item.inStock ? 'Убрать из наличия' : 'Вернуть в наличие'}
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
+    <InventoryView
+      items={inventory}
+      status={inventoryStatus}
+      error={inventoryError}
+      filters={inventoryFilters}
+      meta={inventoryMeta}
+      sort={inventorySort}
+      selectedIds={selectedInventoryIds}
+      pendingRowId={toggleId}
+      pendingBatchAction={inventoryBatchAction}
+      onSearchChange={(value) => void onInventorySearchChange(value)}
+      onStockChange={(value) => void onInventoryStockChange(value)}
+      onSortFieldChange={(value) => void onInventorySortFieldChange(value)}
+      onSortDirectionChange={(value) => void onInventorySortDirectionChange(value)}
+      onToggleFilterValue={(key, value) => void onInventoryToggleFilterValue(key, value)}
+      onResetFilters={() => void onInventoryResetFilters()}
+      onToggleSelection={onToggleInventorySelection}
+      onToggleSelectAll={onToggleSelectAllInventory}
+      onToggleStock={(item) => void onToggleStock(item)}
+      onRunBatchAction={(action) => void onRunInventoryBatch(action)}
+      onOpenMix={onOpenInventoryMix}
+    />
   );
 
   const renderMixes = () => (

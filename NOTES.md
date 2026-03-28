@@ -1,3 +1,34 @@
+Обновление от 28 марта 2026 (nomad master: start slice 2 inventory hardening with table-first ops):
+- Проблема:
+  - `Slice 2` по inventory operations оставался только backlog-планом, а сам интерфейс был card-first и непригоден для ежедневной операционной работы;
+  - backend не умел server-side filters/sort и batch stock mutations, а staff не видел, какие миксы зависят от конкретного табака;
+  - после inventory toggle frontend не синхронизировал связанный `mixes` state.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/inventory.test.ts`, `apps/nomad-backend/src/recommendations.ts`, `apps/nomad-backend/src/catalog.ts`:
+    - inventory list contract расширен до `filters + sort + meta + dependentMixes`;
+    - добавлен `POST /staff/inventory/tobaccos/batch` для `set-in-stock / set-out-of-stock`;
+    - audit trail теперь покрывает batch inventory updates по каждой затронутой позиции;
+    - `archive` остаётся explicit stop-signal до отдельного product-approved contract.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - добавлены inventory parsers, query builder и helper-утилиты для нового contract.
+  - `apps/nomad-master-web/src/components/inventory/inventory-view.tsx`, `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - inventory UI вынесен в отдельный component;
+    - добавлены table-first layout, filter groups, bulk toolbar и quick path в dependent mixes;
+    - после inventory mutation перезагружаются и `dashboard`, и `mixes`.
+  - docs sync:
+    - `docs/nomad/feature-slices/README.md`
+    - `apps/nomad-master-web/README.md`
+    - `Slice 2` отмечен как `in progress`, а не `done`, потому что `archive/delete` ещё ждёт human review.
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Nomad Master` получил usable inventory surface вместо MVP-карточек;
+  - staff теперь видит dependent mixes и может массово менять наличие;
+  - нерешённым остаётся только policy по `archive/delete`, а не базовая inventory usability.
+
 Обновление от 28 марта 2026 (nomad master: complete slice 1 dashboard redesign under shadcn baseline):
 - Проблема:
   - формально `Slice 1` уже считался завершённым по analytics contract, но сам dashboard ещё не был переделан по новым соглашениям;

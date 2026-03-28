@@ -1,5 +1,49 @@
 # HANDOFF — Yummy
 
+## 1.71) Start Nomad Master Slice 2 inventory hardening with table-first ops (28 марта 2026)
+
+- Запрос:
+  - продолжить выполнение `feature-slices` для `Nomad Master`;
+  - взять следующий незакрытый slice и провести его по repo guard, delivery skills, checks и git flow.
+
+- Реализация:
+  - backend inventory contract:
+    - `apps/nomad-backend/src/state.ts`
+    - `apps/nomad-backend/src/app.ts`
+    - `apps/nomad-backend/src/types.ts`
+    - `apps/nomad-backend/src/inventory.test.ts`
+    - `apps/nomad-backend/src/recommendations.ts`
+    - `apps/nomad-backend/src/catalog.ts`
+    - `GET /staff/inventory/tobaccos` теперь отдаёт table-ready payload с `filters`, `sort`, `meta`, `flavorTags`, `dependentMixes`, `dependentMixCount`, `blockedDependentMixCount`, `updatedAt`;
+    - добавлен `POST /staff/inventory/tobaccos/batch` для `set-in-stock / set-out-of-stock`;
+    - batch changes пишутся в audit trail по каждой обновлённой позиции;
+    - `archive` намеренно не включён и отдаёт explicit stop-signal про отдельный product-approved contract.
+  - frontend inventory surface:
+    - `apps/nomad-master-web/src/contracts.ts`
+    - `apps/nomad-master-web/src/contracts.test.ts`
+    - `apps/nomad-master-web/src/components/inventory/inventory-view.tsx`
+    - `apps/nomad-master-web/src/App.tsx`
+    - `apps/nomad-master-web/src/styles.css`
+    - inventory переведён из card-first блока в table-first экран с filters bar, server-driven sort, bulk selection и batch toolbar;
+    - строки inventory показывают dependent mixes и blocked mix count, а из строки можно сразу открыть связанный микс;
+    - после inventory mutation UI перезагружает и `dashboard`, и `mixes`, чтобы staff не работал с устаревшим состоянием.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `NOTES.md`
+    - slice отмечен как `in progress`, потому что policy по `archive/delete` ещё не утверждена.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+
+- Эффект:
+  - `Slice 2` сдвинут из backlog в реальную поставку: inventory стал пригоден для daily operations;
+  - открытый вопрос сузился до одной product policy по `archive/delete`, а не до всей inventory usability;
+  - следующий безопасный шаг внутри того же slice: human review по inventory semantics и затем либо archive contract, либо переход к `Slice 3`.
+
 ## 1.70) Complete Nomad Master Slice 1 dashboard redesign under shadcn baseline (28 марта 2026)
 
 - Запрос:
