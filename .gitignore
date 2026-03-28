@@ -28,6 +28,7 @@ tobaccos.json
 tobaccos.xml
 .env.local
 test-results
+tests/*/node_modules/
 
 # Nomad service local artifacts
 services/nomad-telegram-bot/node_modules/
