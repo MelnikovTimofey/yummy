@@ -1,46 +1,72 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { DashboardView } from '@/components/dashboard/dashboard-view';
+import { InventoryView } from '@/components/inventory/inventory-view';
+import { MixCatalogView, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import {
-  DashboardSummary,
+  AuditEventRecord,
   DailyAccessCodeRecord,
+  DashboardSummary,
+  DashboardWindowKey,
+  InventoryBatchAction,
+  InventoryFilterKey,
+  InventoryListFilters,
+  InventoryListMeta,
+  InventoryListSort,
   InventoryTobacco,
+  MixFilterKey,
+  MixListFilters,
+  MixListMeta,
+  MixListSort,
+  MixRailMembership,
   MixRecord,
+  MixRailFilter,
+  MixSortDirection,
+  MixSortField,
+  MixStatusFilter,
   RailRecord,
-  StaffAuthResponse,
   StaffAccountRecord,
+  StaffAuthResponse,
+  StaffUser,
+  TelegramAutomationStateRecord,
+  TelegramOperatorRecord,
   TelegramRecipientRecord,
   TelegramRecipientScope,
-  TelegramAutomationStateRecord,
-  AuditEventRecord,
-  StaffUser,
+  buildInventoryRequestQuery,
+  buildMixRequestQuery,
   formatDateTimeLocalInput,
-  buildInventorySummary,
-  formatDelimitedList,
   formatAuditAction,
   formatAuditEntityType,
   formatMetricValue,
   formatRailType,
   formatTelegramAutomationHealth,
   formatTelegramRecipientScope,
-  normalizeDashboardSummary,
   normalizeAuditEventRecord,
+  normalizeDashboardSummary,
+  normalizeInventoryBatchResponse,
+  normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
+  normalizeMixListResponse,
   normalizeMixRecord,
   normalizeRailRecord,
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
+  normalizeTelegramOperatorRecord,
   normalizeTelegramRecipientRecord,
-  parseDelimitedList,
   parseDateTimeLocalInput,
-  railTypeOptions,
   readEntityPayload,
   readListPayload,
   sortDailyAccessCodes,
-  sortInventoryItems,
   sortMixes,
   sortRails,
   sortStaffAccounts,
+  sortTelegramOperators,
   sortTelegramRecipients,
   telegramRecipientScopeOptions,
+  toggleInventoryFilterValue,
+  toggleMixFilterValue,
+  defaultInventoryListResponse,
+  defaultMixListResponse,
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
@@ -48,24 +74,26 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 
 type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
-const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string }> = [
-  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка' },
-  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие' },
-  { id: 'mixes', label: 'Миксы', kicker: 'Каталог' },
-  { id: 'rails', label: 'Рейлы', kicker: 'Витрина' },
-  { id: 'access', label: 'Доступ', kicker: 'Коды и staff' },
+const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; detail: string }> = [
+  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка', detail: 'Ключевые guest и ops сигналы за смену.' },
+  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие', detail: 'Контроль табаков, фильтров и batch-операций.' },
+  { id: 'mixes', label: 'Миксы', kicker: 'Каталог', detail: 'Каталог миксов, компоненты и доступность для гостя.' },
+  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Авто- и мастерские подборки для guest surface.' },
+  { id: 'access', label: 'Доступ', kicker: 'Бот и allowlist', detail: 'Daily code, staff access и Telegram observability.' },
 ];
+
+const getWorkspaceTabId = (tab: WorkspaceTab) => `workspace-tab-${tab}`;
+const getWorkspacePanelId = (tab: WorkspaceTab) => `workspace-panel-${tab}`;
 
 type MixEditorState = {
   id: string;
   name: string;
   description: string;
-  componentIds: string;
-  flavorProfiles: string;
-  flavors: string;
+  components: MixEditorComponentInput[];
   avgRating: string;
   popularity: string;
   available: boolean;
+  railMemberships: MixRailMembership[];
 };
 
 type RailEditorState = {
@@ -73,8 +101,10 @@ type RailEditorState = {
   name: string;
   description: string;
   type: 'statistical' | 'prepared' | 'curated';
-  mixIds: string;
+  mixIds: string[];
   active: boolean;
+  editable: boolean;
+  readOnlyReason: string;
 };
 
 type DailyCodeEditorState = {
@@ -103,25 +133,41 @@ type TelegramRecipientEditorState = {
   active: boolean;
 };
 
+type TelegramOperatorEditorState = {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+};
+
+let mixEditorComponentDraftId = 0;
+
+const createMixEditorComponent = (tobaccoId = '', proportion = ''): MixEditorComponentInput => ({
+  key: `mix-component-${mixEditorComponentDraftId += 1}`,
+  tobaccoId,
+  proportion,
+});
+
 const emptyMixEditor = (): MixEditorState => ({
   id: '',
   name: '',
   description: '',
-  componentIds: '',
-  flavorProfiles: '',
-  flavors: '',
+  components: [],
   avgRating: '0',
   popularity: '0',
   available: true,
+  railMemberships: [],
 });
 
 const emptyRailEditor = (): RailEditorState => ({
   id: '',
   name: '',
   description: '',
-  type: 'prepared',
-  mixIds: '',
+  type: 'curated',
+  mixIds: [],
   active: true,
+  editable: true,
+  readOnlyReason: '',
 });
 
 const emptyDailyCodeEditor = (): DailyCodeEditorState => ({
@@ -150,16 +196,22 @@ const emptyTelegramRecipientEditor = (): TelegramRecipientEditorState => ({
   active: true,
 });
 
+const emptyTelegramOperatorEditor = (): TelegramOperatorEditorState => ({
+  id: '',
+  name: '',
+  phone: '',
+  active: true,
+});
+
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
   name: mix.name,
   description: mix.description,
-  componentIds: formatDelimitedList(mix.componentIds),
-  flavorProfiles: formatDelimitedList(mix.flavorProfiles),
-  flavors: formatDelimitedList(mix.flavors),
+  components: mix.components.map((component) => createMixEditorComponent(component.tobaccoId, String(component.proportion))),
   avgRating: String(mix.avgRating),
   popularity: String(mix.popularity),
   available: mix.available,
+  railMemberships: mix.railMemberships,
 });
 
 const toRailEditorState = (rail: RailRecord): RailEditorState => ({
@@ -167,8 +219,10 @@ const toRailEditorState = (rail: RailRecord): RailEditorState => ({
   name: rail.name,
   description: rail.description,
   type: rail.type,
-  mixIds: formatDelimitedList(rail.mixIds),
+  mixIds: [...rail.mixIds],
   active: rail.active,
+  editable: rail.editable,
+  readOnlyReason: rail.readOnlyReason,
 });
 
 const toDailyCodeEditorState = (code: DailyAccessCodeRecord): DailyCodeEditorState => ({
@@ -195,6 +249,13 @@ const toTelegramRecipientEditorState = (recipient: TelegramRecipientRecord): Tel
   label: recipient.label,
   scope: recipient.scope,
   active: recipient.active,
+});
+
+const toTelegramOperatorEditorState = (operator: TelegramOperatorRecord): TelegramOperatorEditorState => ({
+  id: operator.id,
+  name: operator.name,
+  phone: operator.phone,
+  active: operator.active,
 });
 
 const parseNumberInput = (value: string, fallback = 0) => {
@@ -278,27 +339,21 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
     return [
       { label: 'Всего табаков', value: 0 },
       { label: 'В наличии', value: 0 },
-      { label: 'Не в наличии', value: 0 },
       { label: 'Нажатия Выбрать', value: 0 },
+      { label: 'Оценок гостей', value: 0 },
+      { label: 'Миксов блокирует наличие', value: 0 },
+      { label: 'Пустых активных рейлов', value: 0 },
     ];
   }
 
   return [
     { label: 'Всего табаков', value: summary.totalTobaccos },
     { label: 'В наличии', value: summary.inStockCount },
-    { label: 'Не в наличии', value: summary.outOfStockCount },
     { label: 'Нажатия Выбрать', value: summary.smokeCtaTotal },
+    { label: 'Оценок гостей', value: summary.ratingsTotal },
+    { label: 'Миксов блокирует наличие', value: summary.ops.blockedByInventoryCount },
+    { label: 'Пустых активных рейлов', value: summary.ops.emptyActiveRailsCount },
   ];
-};
-
-const resolveMixComponentSummary = (mix: MixRecord) => {
-  if (mix.components.length) {
-    return mix.components
-      .map((component) => `${component.name}${component.manufacturer ? ` · ${component.manufacturer}` : ''}`)
-      .join(' | ');
-  }
-
-  return mix.componentIds.join(', ') || 'Компоненты не заданы';
 };
 
 const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
@@ -313,6 +368,8 @@ const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   return resolvedNames.join(', ') || 'Миксы не заданы';
 };
 
+const normalizeRailMixSearch = (value: string) => value.trim().toLowerCase();
+
 const formatWorkspaceTab = (value: WorkspaceTab) => workspaceTabs.find((item) => item.id === value)?.label ?? value;
 
 const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
@@ -323,14 +380,32 @@ export const App = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState('');
   const [token, setToken] = useState(() => readStoredToken());
+  const workspaceTabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
+    dashboard: null,
+    inventory: null,
+    mixes: null,
+    rails: null,
+    access: null,
+  });
   const [user, setUser] = useState<StaffUser | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
+  const [inventoryFilters, setInventoryFilters] = useState<InventoryListFilters>(defaultInventoryListResponse.filters);
+  const [inventorySort, setInventorySort] = useState<InventoryListSort>(defaultInventoryListResponse.sort);
+  const [inventoryMeta, setInventoryMeta] = useState<InventoryListMeta>(defaultInventoryListResponse.meta);
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
   const [mixes, setMixes] = useState<MixRecord[]>([]);
+  const [mixesFilters, setMixesFilters] = useState<MixListFilters>(defaultMixListResponse.filters);
+  const [mixesSort, setMixesSort] = useState<MixListSort>(defaultMixListResponse.sort);
+  const [mixesMeta, setMixesMeta] = useState<MixListMeta>(defaultMixListResponse.meta);
+  const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
+  const [railMixCatalog, setRailMixCatalog] = useState<MixRecord[]>([]);
   const [rails, setRails] = useState<RailRecord[]>([]);
   const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
+  const [telegramOperators, setTelegramOperators] = useState<TelegramOperatorRecord[]>([]);
   const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
   const [telegramAutomationState, setTelegramAutomationState] = useState<TelegramAutomationStateRecord | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEventRecord[]>([]);
@@ -340,6 +415,9 @@ export const App = () => {
   const [railsStatus, setRailsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [dailyCodesStatus, setDailyCodesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [staffAccountsStatus, setStaffAccountsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
+    'idle',
+  );
+  const [telegramOperatorsStatus, setTelegramOperatorsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
     'idle',
   );
   const [telegramRecipientsStatus, setTelegramRecipientsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
@@ -355,14 +433,18 @@ export const App = () => {
   const [railsError, setRailsError] = useState('');
   const [dailyCodesError, setDailyCodesError] = useState('');
   const [staffAccountsError, setStaffAccountsError] = useState('');
+  const [telegramOperatorsError, setTelegramOperatorsError] = useState('');
   const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
   const [telegramAutomationStateError, setTelegramAutomationStateError] = useState('');
   const [auditEventsError, setAuditEventsError] = useState('');
   const [toggleId, setToggleId] = useState('');
+  const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
   const [railEditor, setRailEditor] = useState<RailEditorState>(emptyRailEditor);
+  const [railMixSearch, setRailMixSearch] = useState('');
+  const [railMixCandidateId, setRailMixCandidateId] = useState('');
   const [railSaveStatus, setRailSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railSaveError, setRailSaveError] = useState('');
   const [dailyCodeEditor, setDailyCodeEditor] = useState<DailyCodeEditorState>(emptyDailyCodeEditor);
@@ -373,34 +455,91 @@ export const App = () => {
   const [staffAccountSaveStatus, setStaffAccountSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [staffAccountSaveError, setStaffAccountSaveError] = useState('');
   const [staffAccountToggleId, setStaffAccountToggleId] = useState('');
+  const [telegramOperatorEditor, setTelegramOperatorEditor] = useState<TelegramOperatorEditorState>(emptyTelegramOperatorEditor);
+  const [telegramOperatorSaveStatus, setTelegramOperatorSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [telegramOperatorSaveError, setTelegramOperatorSaveError] = useState('');
+  const [telegramOperatorToggleId, setTelegramOperatorToggleId] = useState('');
   const [telegramRecipientEditor, setTelegramRecipientEditor] =
     useState<TelegramRecipientEditorState>(emptyTelegramRecipientEditor);
   const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
   const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
 
-  const loadInventory = async (nextToken: string) => {
+  const focusWorkspaceTab = (tab: WorkspaceTab) => {
+    requestAnimationFrame(() => {
+      workspaceTabRefs.current[tab]?.focus();
+    });
+  };
+
+  const onWorkspaceTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentTab: WorkspaceTab) => {
+    const currentIndex = workspaceTabs.findIndex((tab) => tab.id === currentTab);
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    let nextTab: WorkspaceTab | null = null;
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextTab = workspaceTabs[(currentIndex + 1) % workspaceTabs.length]?.id ?? null;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextTab = workspaceTabs[(currentIndex - 1 + workspaceTabs.length) % workspaceTabs.length]?.id ?? null;
+        break;
+      case 'Home':
+        nextTab = workspaceTabs[0]?.id ?? null;
+        break;
+      case 'End':
+        nextTab = workspaceTabs[workspaceTabs.length - 1]?.id ?? null;
+        break;
+      default:
+        break;
+    }
+
+    if (!nextTab) {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveTab(nextTab);
+    focusWorkspaceTab(nextTab);
+  };
+
+  const loadInventory = async (
+    nextToken: string,
+    nextFilters: InventoryListFilters = inventoryFilters,
+    nextSort: InventoryListSort = inventorySort,
+  ) => {
     setInventoryStatus('loading');
     setInventoryError('');
 
     try {
-      const response = await requestJson<unknown>('/staff/inventory/tobaccos', {}, nextToken);
-      const items = sortInventoryItems(readListPayload<InventoryTobacco>(response));
-      setInventory(items);
+      const query = buildInventoryRequestQuery(nextFilters, nextSort);
+      const response = await requestJson<unknown>(`/staff/inventory/tobaccos${query ? `?${query}` : ''}`, {}, nextToken);
+      const payload = normalizeInventoryListResponse(response);
+      setInventory(payload.items);
+      setInventoryFilters(payload.filters);
+      setInventorySort(payload.sort);
+      setInventoryMeta(payload.meta);
+      setSelectedInventoryIds((current) => current.filter((id) => payload.items.some((item) => item.id === id)));
       setInventoryStatus('ready');
     } catch (cause) {
       setInventory([]);
+      setInventoryMeta(defaultInventoryListResponse.meta);
       setInventoryStatus('error');
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось загрузить инвентарь');
     }
   };
 
-  const loadSummary = async (nextToken: string) => {
+  const loadSummary = async (nextToken: string, windowKey: DashboardWindowKey = dashboardWindow) => {
     setSummaryStatus('loading');
     setSummaryError('');
 
     try {
-      const response = await requestJson<unknown>('/staff/dashboard/summary', {}, nextToken);
+      const response = await requestJson<unknown>(`/staff/dashboard/summary?window=${windowKey}`, {}, nextToken);
       setSummary(normalizeDashboardSummary(response));
       setSummaryStatus('ready');
     } catch (cause) {
@@ -410,19 +549,48 @@ export const App = () => {
     }
   };
 
-  const loadMixes = async (nextToken: string) => {
+  const loadMixes = async (
+    nextToken: string,
+    nextFilters: MixListFilters = mixesFilters,
+    nextSort: MixListSort = mixesSort,
+  ) => {
     setMixesStatus('loading');
     setMixesError('');
 
     try {
-      const response = await requestJson<unknown>('/staff/mixes', {}, nextToken);
-      const items = readListPayload<unknown>(response).map(normalizeMixRecord);
-      setMixes(sortMixes(items));
+      const query = buildMixRequestQuery(nextFilters, nextSort);
+      const response = await requestJson<unknown>(`/staff/mixes${query ? `?${query}` : ''}`, {}, nextToken);
+      const payload = normalizeMixListResponse(response);
+      setMixes(sortMixes(payload.items));
+      setMixesFilters(payload.filters);
+      setMixesSort(payload.sort);
+      setMixesMeta(payload.meta);
       setMixesStatus('ready');
     } catch (cause) {
       setMixes([]);
+      setMixesMeta(defaultMixListResponse.meta);
       setMixesStatus('error');
       setMixesError(cause instanceof Error ? cause.message : 'Не удалось загрузить миксы');
+    }
+  };
+
+  const loadMixTobaccos = async (nextToken: string) => {
+    try {
+      const response = await requestJson<unknown>('/staff/inventory/tobaccos?sort=name&direction=asc', {}, nextToken);
+      const payload = normalizeInventoryListResponse(response);
+      setMixTobaccos(payload.items);
+    } catch {
+      setMixTobaccos([]);
+    }
+  };
+
+  const loadRailMixCatalog = async (nextToken: string) => {
+    try {
+      const response = await requestJson<unknown>('/staff/mixes?sort=name&direction=asc', {}, nextToken);
+      const payload = normalizeMixListResponse(response);
+      setRailMixCatalog(payload.items);
+    } catch {
+      setRailMixCatalog([]);
     }
   };
 
@@ -478,6 +646,29 @@ export const App = () => {
       setStaffAccounts([]);
       setStaffAccountsStatus('error');
       setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось загрузить сотрудников');
+    }
+  };
+
+  const loadTelegramOperators = async (nextToken: string, role: StaffUser['role']) => {
+    if (role !== 'admin') {
+      setTelegramOperators([]);
+      setTelegramOperatorsStatus('forbidden');
+      setTelegramOperatorsError('Allowlist Telegram доступен только для admin.');
+      return;
+    }
+
+    setTelegramOperatorsStatus('loading');
+    setTelegramOperatorsError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/access/telegram-operators', {}, nextToken);
+      const items = sortTelegramOperators(readListPayload<unknown>(response).map(normalizeTelegramOperatorRecord));
+      setTelegramOperators(items);
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperators([]);
+      setTelegramOperatorsStatus('error');
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось загрузить Telegram allowlist');
     }
   };
 
@@ -565,12 +756,14 @@ export const App = () => {
         setUser(profile.user);
         await Promise.all([
           loadInventory(token),
-          loadSummary(token),
+          loadSummary(token, dashboardWindow),
           loadMixes(token),
+          loadMixTobaccos(token),
+          loadRailMixCatalog(token),
           loadRails(token),
           loadDailyCodes(token),
           loadStaffAccounts(token, profile.user.role),
-          loadTelegramRecipients(token, profile.user.role),
+          loadTelegramOperators(token, profile.user.role),
           loadTelegramAutomationState(token, profile.user.role),
           loadAuditEvents(token, profile.user.role),
         ]);
@@ -609,12 +802,14 @@ export const App = () => {
       setUser(profile.user);
       await Promise.all([
         loadInventory(auth.accessToken),
-        loadSummary(auth.accessToken),
+        loadSummary(auth.accessToken, dashboardWindow),
         loadMixes(auth.accessToken),
+        loadMixTobaccos(auth.accessToken),
+        loadRailMixCatalog(auth.accessToken),
         loadRails(auth.accessToken),
         loadDailyCodes(auth.accessToken),
         loadStaffAccounts(auth.accessToken, profile.user.role),
-        loadTelegramRecipients(auth.accessToken, profile.user.role),
+        loadTelegramOperators(auth.accessToken, profile.user.role),
         loadTelegramAutomationState(auth.accessToken, profile.user.role),
         loadAuditEvents(auth.accessToken, profile.user.role),
       ]);
@@ -625,13 +820,101 @@ export const App = () => {
     }
   };
 
+  const onSelectDashboardWindow = async (windowKey: DashboardWindowKey) => {
+    setDashboardWindow(windowKey);
+
+    if (!token || !user) {
+      return;
+    }
+
+    await loadSummary(token, windowKey);
+  };
+
+  const refreshInventorySurface = async (
+    nextFilters: InventoryListFilters = inventoryFilters,
+    nextSort: InventoryListSort = inventorySort,
+  ) => {
+    if (!token) {
+      return;
+    }
+
+    await loadInventory(token, nextFilters, nextSort);
+  };
+
+  const onInventorySearchChange = async (value: string) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      search: value,
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort);
+  };
+
+  const onInventoryStockChange = async (value: InventoryListFilters['stock']) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      stock: value,
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort);
+  };
+
+  const onInventorySortFieldChange = async (field: InventoryListSort['field']) => {
+    const nextSort = {
+      ...inventorySort,
+      field,
+    };
+    setInventorySort(nextSort);
+    await refreshInventorySurface(inventoryFilters, nextSort);
+  };
+
+  const onInventorySortDirectionChange = async (direction: InventoryListSort['direction']) => {
+    const nextSort = {
+      ...inventorySort,
+      direction,
+    };
+    setInventorySort(nextSort);
+    await refreshInventorySurface(inventoryFilters, nextSort);
+  };
+
+  const onInventoryToggleFilterValue = async (key: InventoryFilterKey, value: string) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      [key]: toggleInventoryFilterValue(inventoryFilters[key], value),
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort);
+  };
+
+  const onInventoryResetFilters = async () => {
+    const nextFilters = {
+      ...defaultInventoryListResponse.filters,
+      options: inventoryFilters.options,
+    };
+    const nextSort = defaultInventoryListResponse.sort;
+    setSelectedInventoryIds([]);
+    setInventoryFilters(nextFilters);
+    setInventorySort(nextSort);
+    await refreshInventorySurface(nextFilters, nextSort);
+  };
+
   const onSignOut = () => {
     storeToken('');
     setToken('');
     setUser(null);
     setInventory([]);
+    setInventoryFilters(defaultInventoryListResponse.filters);
+    setInventorySort(defaultInventoryListResponse.sort);
+    setInventoryMeta(defaultInventoryListResponse.meta);
+    setSelectedInventoryIds([]);
     setSummary(null);
+    setDashboardWindow('14d');
     setMixes([]);
+    setMixesFilters(defaultMixListResponse.filters);
+    setMixesSort(defaultMixListResponse.sort);
+    setMixesMeta(defaultMixListResponse.meta);
+    setMixTobaccos([]);
+    setRailMixCatalog([]);
     setRails([]);
     setStatus('idle');
     setError('');
@@ -643,6 +926,7 @@ export const App = () => {
     setRailsStatus('idle');
     setDailyCodesStatus('idle');
     setStaffAccountsStatus('idle');
+    setTelegramOperatorsStatus('idle');
     setTelegramRecipientsStatus('idle');
     setTelegramAutomationStateStatus('idle');
     setAuditEventsStatus('idle');
@@ -652,14 +936,18 @@ export const App = () => {
     setRailsError('');
     setDailyCodesError('');
     setStaffAccountsError('');
+    setTelegramOperatorsError('');
     setTelegramRecipientsError('');
     setTelegramAutomationStateError('');
     setAuditEventsError('');
     setToggleId('');
+    setInventoryBatchAction('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
     setMixSaveError('');
     setRailEditor(emptyRailEditor());
+    setRailMixSearch('');
+    setRailMixCandidateId('');
     setRailSaveStatus('idle');
     setRailSaveError('');
     setDailyCodeEditor(emptyDailyCodeEditor());
@@ -672,9 +960,14 @@ export const App = () => {
     setStaffAccountToggleId('');
     setDailyCodes([]);
     setStaffAccounts([]);
+    setTelegramOperators([]);
     setTelegramRecipients([]);
     setTelegramAutomationState(null);
     setAuditEvents([]);
+    setTelegramOperatorEditor(emptyTelegramOperatorEditor());
+    setTelegramOperatorSaveStatus('idle');
+    setTelegramOperatorSaveError('');
+    setTelegramOperatorToggleId('');
     setTelegramRecipientEditor(emptyTelegramRecipientEditor());
     setTelegramRecipientSaveStatus('idle');
     setTelegramRecipientSaveError('');
@@ -686,36 +979,25 @@ export const App = () => {
       return;
     }
 
-    const nextInStock = !item.inStock;
     setToggleId(item.id);
     setInventoryError('');
 
     try {
-      const response = await requestJson<unknown>(
+      await requestJson<unknown>(
         `/staff/inventory/tobaccos/${item.id}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ inStock: nextInStock }),
+          body: JSON.stringify({ inStock: !item.inStock }),
         },
         token,
       );
-
-      const payload = readEntityPayload<InventoryTobacco>(response);
-      const nextItem = payload ?? { ...item, inStock: nextInStock };
-      const nextInventory = sortInventoryItems(replaceOrInsert(inventory, nextItem));
-
-      setInventory(nextInventory);
-      setSummary((current) => {
-        if (!current) {
-          return current;
-        }
-
-        const inventorySummary = buildInventorySummary(nextInventory);
-        return {
-          ...current,
-          ...inventorySummary,
-        };
-      });
+      await Promise.all([
+        loadInventory(token, inventoryFilters, inventorySort),
+        loadSummary(token, dashboardWindow),
+        loadMixes(token),
+        loadMixTobaccos(token),
+        loadRailMixCatalog(token),
+      ]);
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить наличие');
@@ -723,6 +1005,67 @@ export const App = () => {
     } finally {
       setToggleId('');
     }
+  };
+
+  const onToggleInventorySelection = (id: string) => {
+    setSelectedInventoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const onToggleSelectAllInventory = () => {
+    const visibleIds = inventory.map((item) => item.id);
+    const nextSelection = visibleIds.every((id) => selectedInventoryIds.includes(id)) ? [] : visibleIds;
+    setSelectedInventoryIds(nextSelection);
+  };
+
+  const onRunInventoryBatch = async (action: Exclude<InventoryBatchAction, 'archive'>) => {
+    if (!token || !selectedInventoryIds.length) {
+      return;
+    }
+
+    setInventoryBatchAction(action);
+    setInventoryError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        '/staff/inventory/tobaccos/batch',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            ids: selectedInventoryIds,
+            action,
+          }),
+        },
+        token,
+      );
+      const batch = normalizeInventoryBatchResponse(response);
+      if (batch.skippedIds.length) {
+        setInventoryError(`Часть позиций пропущена backend: ${batch.skippedIds.join(', ')}`);
+      }
+      setSelectedInventoryIds([]);
+      await Promise.all([
+        loadInventory(token, inventoryFilters, inventorySort),
+        loadSummary(token, dashboardWindow),
+        loadMixes(token),
+        loadMixTobaccos(token),
+        loadRailMixCatalog(token),
+      ]);
+      setInventoryStatus('ready');
+    } catch (cause) {
+      setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить batch действие');
+      setInventoryStatus('error');
+    } finally {
+      setInventoryBatchAction('');
+    }
+  };
+
+  const onOpenInventoryMix = (mixId: string) => {
+    const mix = mixes.find((item) => item.id === mixId);
+    if (mix) {
+      onSelectMix(mix);
+      return;
+    }
+
+    setActiveTab('mixes');
   };
 
   const onSelectMix = (mix: MixRecord) => {
@@ -738,6 +1081,162 @@ export const App = () => {
     setMixSaveStatus('idle');
   };
 
+  const refreshMixesSurface = async (
+    nextFilters: MixListFilters = mixesFilters,
+    nextSort: MixListSort = mixesSort,
+  ) => {
+    if (!token) {
+      return;
+    }
+
+    await loadMixes(token, nextFilters, nextSort);
+  };
+
+  const onMixSearchChange = async (value: string) => {
+    const nextFilters = {
+      ...mixesFilters,
+      search: value,
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixStatusChange = async (value: MixStatusFilter) => {
+    const nextFilters = {
+      ...mixesFilters,
+      status: value,
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixRailStateChange = async (value: MixRailFilter) => {
+    const nextFilters = {
+      ...mixesFilters,
+      railState: value,
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixSortFieldChange = async (field: MixSortField) => {
+    const nextSort = {
+      ...mixesSort,
+      field,
+    };
+    setMixesSort(nextSort);
+    await refreshMixesSurface(mixesFilters, nextSort);
+  };
+
+  const onMixSortDirectionChange = async (direction: MixSortDirection) => {
+    const nextSort = {
+      ...mixesSort,
+      direction,
+    };
+    setMixesSort(nextSort);
+    await refreshMixesSurface(mixesFilters, nextSort);
+  };
+
+  const onMixToggleFilterValue = async (key: MixFilterKey, value: string) => {
+    const nextFilters = {
+      ...mixesFilters,
+      [key]: toggleMixFilterValue(mixesFilters[key], value),
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixResetFilters = async () => {
+    const nextFilters = {
+      ...defaultMixListResponse.filters,
+      options: mixesFilters.options,
+    };
+    const nextSort = defaultMixListResponse.sort;
+    setMixesFilters(nextFilters);
+    setMixesSort(nextSort);
+    await refreshMixesSurface(nextFilters, nextSort);
+  };
+
+  const onChangeMixEditorField = (field: 'name' | 'description' | 'avgRating' | 'popularity', value: string) => {
+    setMixEditor((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const onChangeMixEditorAvailability = (value: boolean) => {
+    setMixEditor((current) => ({
+      ...current,
+      available: value,
+    }));
+  };
+
+  const onAddMixComponent = () => {
+    const fallbackId = mixTobaccos.find((item) => !mixEditor.components.some((component) => component.tobaccoId === item.id))?.id ?? '';
+    setMixEditor((current) => ({
+      ...current,
+      components: [...current.components, createMixEditorComponent(fallbackId, '')],
+    }));
+  };
+
+  const onUpdateMixComponent = (key: string, patch: Partial<Omit<MixEditorComponentInput, 'key'>>) => {
+    setMixEditor((current) => ({
+      ...current,
+      components: current.components.map((component) => (
+        component.key === key ? { ...component, ...patch } : component
+      )),
+    }));
+  };
+
+  const onMoveMixComponent = (key: string, direction: 'up' | 'down') => {
+    setMixEditor((current) => {
+      const index = current.components.findIndex((component) => component.key === key);
+      if (index === -1) {
+        return current;
+      }
+
+      const nextIndex = direction === 'up' ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= current.components.length) {
+        return current;
+      }
+
+      const nextComponents = [...current.components];
+      const [item] = nextComponents.splice(index, 1);
+      nextComponents.splice(nextIndex, 0, item);
+
+      return {
+        ...current,
+        components: nextComponents,
+      };
+    });
+  };
+
+  const onRemoveMixComponent = (key: string) => {
+    setMixEditor((current) => ({
+      ...current,
+      components: current.components.filter((component) => component.key !== key),
+    }));
+  };
+
+  const onRebalanceMixComponents = () => {
+    setMixEditor((current) => {
+      if (!current.components.length) {
+        return current;
+      }
+
+      const base = Math.floor(100 / current.components.length);
+      const remainder = 100 - base * current.components.length;
+
+      return {
+        ...current,
+        components: current.components.map((component, index) => ({
+          ...component,
+          proportion: String(base + (index < remainder ? 1 : 0)),
+        })),
+      };
+    });
+  };
+
   const onSubmitMix = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) {
@@ -746,12 +1245,35 @@ export const App = () => {
 
     const name = mixEditor.name.trim();
     const description = mixEditor.description.trim();
-    const componentIds = parseDelimitedList(mixEditor.componentIds);
-    const flavorProfiles = parseDelimitedList(mixEditor.flavorProfiles);
-    const flavors = parseDelimitedList(mixEditor.flavors);
+    const components = mixEditor.components
+      .map((component, index) => ({
+        tobaccoId: component.tobaccoId.trim(),
+        proportion: parseNumberInput(component.proportion, 0),
+        sortOrder: index,
+      }))
+      .filter((component) => component.tobaccoId);
 
     if (!name) {
       setMixSaveError('Введите название микса');
+      setMixSaveStatus('error');
+      return;
+    }
+
+    if (!description) {
+      setMixSaveError('Добавьте описание микса');
+      setMixSaveStatus('error');
+      return;
+    }
+
+    if (!components.length) {
+      setMixSaveError('Добавьте хотя бы один компонент');
+      setMixSaveStatus('error');
+      return;
+    }
+
+    const total = components.reduce((sum, component) => sum + component.proportion, 0);
+    if (total !== 100) {
+      setMixSaveError('Сумма долей должна быть ровно 100%');
       setMixSaveStatus('error');
       return;
     }
@@ -762,9 +1284,7 @@ export const App = () => {
     const payload = {
       name,
       description,
-      componentIds,
-      flavorProfiles,
-      flavors,
+      components,
       avgRating: parseNumberInput(mixEditor.avgRating, 0),
       popularity: parseNumberInput(mixEditor.popularity, 0),
       available: mixEditor.available,
@@ -785,8 +1305,13 @@ export const App = () => {
         throw new Error('Backend вернул пустой микс');
       }
 
-      setMixes((current) => sortMixes(replaceOrInsert(current, savedMix)));
       setMixEditor(toMixEditorState(savedMix));
+      await Promise.all([
+        loadMixes(token, mixesFilters, mixesSort),
+        loadRailMixCatalog(token),
+        loadRails(token),
+        loadSummary(token, dashboardWindow),
+      ]);
       setMixSaveStatus('ready');
       setActiveTab('mixes');
     } catch (cause) {
@@ -797,6 +1322,8 @@ export const App = () => {
 
   const onSelectRail = (rail: RailRecord) => {
     setRailEditor(toRailEditorState(rail));
+    setRailMixSearch('');
+    setRailMixCandidateId('');
     setRailSaveError('');
     setRailSaveStatus('idle');
     setActiveTab('rails');
@@ -804,8 +1331,55 @@ export const App = () => {
 
   const onResetRailEditor = () => {
     setRailEditor(emptyRailEditor());
+    setRailMixSearch('');
+    setRailMixCandidateId('');
     setRailSaveError('');
     setRailSaveStatus('idle');
+  };
+
+  const onAddRailMix = (mixId: string) => {
+    if (!mixId) {
+      return;
+    }
+
+    setRailEditor((current) => (
+      current.mixIds.includes(mixId)
+        ? current
+        : {
+            ...current,
+            mixIds: [...current.mixIds, mixId],
+          }
+    ));
+  };
+
+  const onRemoveRailMix = (mixId: string) => {
+    setRailEditor((current) => ({
+      ...current,
+      mixIds: current.mixIds.filter((item) => item !== mixId),
+    }));
+  };
+
+  const onMoveRailMix = (mixId: string, direction: 'up' | 'down') => {
+    setRailEditor((current) => {
+      const index = current.mixIds.indexOf(mixId);
+      if (index < 0) {
+        return current;
+      }
+
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= current.mixIds.length) {
+        return current;
+      }
+
+      const nextMixIds = [...current.mixIds];
+      const [item] = nextMixIds.splice(index, 1);
+      nextMixIds.splice(targetIndex, 0, item);
+
+      return {
+        ...current,
+        mixIds: nextMixIds,
+      };
+    });
   };
 
   const onSubmitRail = async (event: FormEvent<HTMLFormElement>) => {
@@ -816,7 +1390,13 @@ export const App = () => {
 
     const name = railEditor.name.trim();
     const description = railEditor.description.trim();
-    const mixIds = parseDelimitedList(railEditor.mixIds);
+    const mixIds = railEditor.mixIds;
+
+    if (railEditor.id && !railEditor.editable) {
+      setRailSaveError(railEditor.readOnlyReason || 'Этот рейл доступен только для просмотра');
+      setRailSaveStatus('error');
+      return;
+    }
 
     if (!name) {
       setRailSaveError('Введите название рейла');
@@ -836,7 +1416,6 @@ export const App = () => {
     const payload = {
       name,
       description,
-      type: railEditor.type,
       mixIds,
       active: railEditor.active,
     };
@@ -858,6 +1437,12 @@ export const App = () => {
 
       setRails((current) => sortRails(replaceOrInsert(current, savedRail)));
       setRailEditor(toRailEditorState(savedRail));
+      await Promise.all([
+        loadSummary(token, dashboardWindow),
+        loadMixes(token, mixesFilters, mixesSort),
+        loadRailMixCatalog(token),
+        loadRails(token),
+      ]);
       setRailSaveStatus('ready');
       setActiveTab('rails');
     } catch (cause) {
@@ -1158,6 +1743,185 @@ export const App = () => {
     }
   };
 
+  const onSelectTelegramOperator = (operator: TelegramOperatorRecord) => {
+    setTelegramOperatorEditor(toTelegramOperatorEditorState(operator));
+    setTelegramOperatorSaveError('');
+    setTelegramOperatorSaveStatus('idle');
+    setActiveTab('access');
+  };
+
+  const onResetTelegramOperatorEditor = () => {
+    setTelegramOperatorEditor(emptyTelegramOperatorEditor());
+    setTelegramOperatorSaveError('');
+    setTelegramOperatorSaveStatus('idle');
+  };
+
+  const onSubmitTelegramOperator = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    const name = telegramOperatorEditor.name.trim();
+    const phone = telegramOperatorEditor.phone.trim();
+
+    if (!name) {
+      setTelegramOperatorSaveError('Укажите имя оператора');
+      setTelegramOperatorSaveStatus('error');
+      return;
+    }
+
+    if (!phone) {
+      setTelegramOperatorSaveError('Укажите номер телефона');
+      setTelegramOperatorSaveStatus('error');
+      return;
+    }
+
+    setTelegramOperatorSaveStatus('loading');
+    setTelegramOperatorSaveError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        telegramOperatorEditor.id
+          ? `/staff/access/telegram-operators/${telegramOperatorEditor.id}`
+          : '/staff/access/telegram-operators',
+        {
+          method: telegramOperatorEditor.id ? 'PATCH' : 'POST',
+          body: JSON.stringify({
+            name,
+            phone,
+            active: telegramOperatorEditor.active,
+          }),
+        },
+        token,
+      );
+
+      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
+      if (!savedOperator.id) {
+        throw new Error('Backend вернул пустую запись Telegram доступа');
+      }
+
+      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
+      setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
+      setTelegramOperatorSaveStatus('ready');
+      setActiveTab('access');
+    } catch (cause) {
+      setTelegramOperatorSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить Telegram доступ');
+      setTelegramOperatorSaveStatus('error');
+    }
+  };
+
+  const onToggleTelegramOperatorActive = async (operator: TelegramOperatorRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramOperatorToggleId(operator.id);
+    setTelegramOperatorsError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/telegram-operators/${operator.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: operator.name,
+            phone: operator.phone,
+            active: !operator.active,
+          }),
+        },
+        token,
+      );
+
+      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
+      if (!savedOperator.id) {
+        throw new Error('Backend вернул пустую запись Telegram доступа');
+      }
+
+      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
+      if (telegramOperatorEditor.id === operator.id) {
+        setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
+      }
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось обновить Telegram доступ');
+      setTelegramOperatorsStatus('error');
+    } finally {
+      setTelegramOperatorToggleId('');
+    }
+  };
+
+  const onClearTelegramOperatorLink = async (operator: TelegramOperatorRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramOperatorToggleId(operator.id);
+    setTelegramOperatorsError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/telegram-operators/${operator.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: operator.name,
+            phone: operator.phone,
+            active: operator.active,
+            clearLink: true,
+          }),
+        },
+        token,
+      );
+
+      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
+      if (!savedOperator.id) {
+        throw new Error('Backend вернул пустую запись Telegram доступа');
+      }
+
+      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
+      if (telegramOperatorEditor.id === operator.id) {
+        setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
+      }
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось сбросить привязку Telegram');
+      setTelegramOperatorsStatus('error');
+    } finally {
+      setTelegramOperatorToggleId('');
+    }
+  };
+
+  const onDeleteTelegramOperator = async (operator: TelegramOperatorRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramOperatorToggleId(operator.id);
+    setTelegramOperatorsError('');
+
+    try {
+      await requestJson(
+        `/staff/access/telegram-operators/${operator.id}`,
+        {
+          method: 'DELETE',
+        },
+        token,
+      );
+
+      setTelegramOperators((current) => sortTelegramOperators(current.filter((item) => item.id !== operator.id)));
+      if (telegramOperatorEditor.id === operator.id) {
+        onResetTelegramOperatorEditor();
+      }
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось удалить Telegram доступ');
+      setTelegramOperatorsStatus('error');
+    } finally {
+      setTelegramOperatorToggleId('');
+    }
+  };
+
   const onSelectTelegramRecipient = (recipient: TelegramRecipientRecord) => {
     setTelegramRecipientEditor(toTelegramRecipientEditorState(recipient));
     setTelegramRecipientSaveError('');
@@ -1293,455 +2057,107 @@ export const App = () => {
   };
 
   const renderDashboard = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Дашборд</p>
-          <h2>Сводка Nomad</h2>
-          <p className="meta-line">Ключевые метрики смены и быстрые переходы к рабочим разделам.</p>
-        </div>
-        <div className="status-chip">Операционный обзор</div>
-      </div>
-
-      {summaryStatus === 'loading' ? <p className="meta-line">Загружаем сводку...</p> : null}
-      {summaryError ? <p className="error-text">{summaryError}</p> : null}
-
-      <section className="summary-grid summary-grid--stacked">
-        {readSummaryCards(summary).map((card) => (
-          <article className="metric-card" key={card.label}>
-            <span className="metric-label">{card.label}</span>
-            <strong className="metric-value">{formatMetricValue(card.value)}</strong>
-          </article>
-        ))}
-      </section>
-
-      <div className="quick-actions">
-        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('mixes')}>
-          Перейти в менеджер миксов
-        </button>
-        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('rails')}>
-          Перейти в менеджер рейлов
-        </button>
-        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('access')}>
-          Перейти в доступ
-        </button>
-      </div>
-
-      <div className="top-mixes">
-        {(summary?.topMixes ?? []).length ? (
-          summary.topMixes.map((mix) => (
-            <article className="top-mix-card" key={mix.mixId}>
-              <span className="metric-label">Топ по выбору</span>
-              <h3>{mix.name}</h3>
-              <strong className="metric-value">{formatMetricValue(mix.smokeCtaCount)}</strong>
-            </article>
-          ))
-        ) : (
-          <p className="meta-line">Пока нет данных по нажатиям `Выбрать`.</p>
-        )}
-      </div>
-    </section>
+    <DashboardView
+      summary={summary}
+      summaryStatus={summaryStatus}
+      summaryError={summaryError}
+      dashboardWindow={dashboardWindow}
+      onSelectDashboardWindow={onSelectDashboardWindow}
+      onNavigate={(tab) => setActiveTab(tab)}
+    />
   );
 
   const renderInventory = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Инвентаризация</p>
-          <h2>Табаки и наличие</h2>
-          <p className="meta-line">Быстро отмечайте остатки и сразу влияйте на guest recommendations.</p>
-        </div>
-        <div className="status-chip">Live stock</div>
-      </div>
-
-      {inventoryStatus === 'loading' ? <p className="meta-line">Загружаем инвентарь...</p> : null}
-      {inventoryError ? <p className="error-text">{inventoryError}</p> : null}
-
-      <div className="inventory-grid">
-        {inventory.map((item) => (
-          <article className="inventory-card" key={item.id}>
-            <div className="inventory-card__head">
-              <div>
-                <p className="inventory-manufacturer">{item.manufacturer}</p>
-                <h3>{item.name}</h3>
-              </div>
-              <span className={item.inStock ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                {item.inStock ? 'В наличии' : 'Нет в наличии'}
-              </span>
-            </div>
-
-            <div className="chip-row">
-              {(item.flavorProfiles ?? []).map((profile) => (
-                <span className="chip" key={`${item.id}:${profile}`}>
-                  {profile}
-                </span>
-              ))}
-            </div>
-
-            <p className="meta-line">{(item.flavors ?? []).join(', ') || 'Нет привязанных вкусов'}</p>
-
-            <button
-              className="secondary-button secondary-button--inline"
-              type="button"
-              onClick={() => void onToggleStock(item)}
-              disabled={toggleId === item.id}
-            >
-              {toggleId === item.id ? 'Сохраняем...' : item.inStock ? 'Убрать из наличия' : 'Вернуть в наличие'}
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
+    <InventoryView
+      items={inventory}
+      status={inventoryStatus}
+      error={inventoryError}
+      filters={inventoryFilters}
+      meta={inventoryMeta}
+      sort={inventorySort}
+      selectedIds={selectedInventoryIds}
+      pendingRowId={toggleId}
+      pendingBatchAction={inventoryBatchAction}
+      onSearchChange={(value) => void onInventorySearchChange(value)}
+      onStockChange={(value) => void onInventoryStockChange(value)}
+      onSortFieldChange={(value) => void onInventorySortFieldChange(value)}
+      onSortDirectionChange={(value) => void onInventorySortDirectionChange(value)}
+      onToggleFilterValue={(key, value) => void onInventoryToggleFilterValue(key, value)}
+      onResetFilters={() => void onInventoryResetFilters()}
+      onToggleSelection={onToggleInventorySelection}
+      onToggleSelectAll={onToggleSelectAllInventory}
+      onToggleStock={(item) => void onToggleStock(item)}
+      onRunBatchAction={(action) => void onRunInventoryBatch(action)}
+      onOpenMix={onOpenInventoryMix}
+    />
   );
 
   const renderMixes = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Менеджер миксов</p>
-          <h2>Каталог миксов</h2>
-          <p className="meta-line">Редактирование состава, вкусов и доступности для guest-контура.</p>
-        </div>
-        <div className="section-actions">
-          <span className="status-chip">Контентный модуль</span>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetMixEditor}>
-            Новый микс
-          </button>
-        </div>
-      </div>
-
-      {mixesStatus === 'loading' ? <p className="meta-line">Загружаем миксы...</p> : null}
-      {mixesError ? <p className="error-text">{mixesError}</p> : null}
-
-      <div className="manager-layout">
-        <aside className="entity-list">
-          {mixes.map((mix) => (
-            <article
-              className={mixEditor.id === mix.id ? 'entity-card entity-card--active' : 'entity-card'}
-              key={mix.id}
-            >
-              <div className="entity-card__head">
-                <div>
-                  <p className="entity-kicker">Микс</p>
-                  <h3>{mix.name}</h3>
-                </div>
-                <span className={mix.available ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                  {mix.available ? 'Доступен' : 'Скрыт'}
-                </span>
-              </div>
-              <p className="meta-line">{mix.description || 'Без описания'}</p>
-              <p className="meta-line">Компоненты: {resolveMixComponentSummary(mix)}</p>
-              <div className="chip-row">
-                {mix.flavorProfiles.map((profile) => (
-                  <span className="chip" key={`${mix.id}:profile:${profile}`}>
-                    {profile}
-                  </span>
-                ))}
-              </div>
-              <p className="meta-line">Вкусы: {mix.flavors.join(', ') || 'Не указаны'}</p>
-              <p className="meta-line">
-                Рейтинг {mix.avgRating.toFixed(1)} · Популярность {mix.popularity}
-              </p>
-              <div className="entity-card__actions">
-                <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectMix(mix)}>
-                  Редактировать
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {!mixes.length && mixesStatus !== 'loading' ? <p className="meta-line">Пока нет миксов.</p> : null}
-        </aside>
-
-        <article className="editor-card">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">{mixEditor.id ? 'Редактирование микса' : 'Новый микс'}</p>
-              <h3>{mixEditor.id ? mixEditor.name || 'Без названия' : 'Создать микс'}</h3>
-            </div>
-            <span className="status-chip">{mixEditor.available ? 'Доступен' : 'Скрыт'}</span>
-          </div>
-
-          <form className="admin-form" onSubmit={onSubmitMix}>
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Название</span>
-                <input
-                  className="text-input"
-                  value={mixEditor.name}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Например, Цитрусовый караван"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Рейтинг</span>
-                <input
-                  className="text-input"
-                  type="number"
-                  step="0.1"
-                  value={mixEditor.avgRating}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, avgRating: event.target.value }))}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">Описание</span>
-                <textarea
-                  className="textarea-input"
-                  value={mixEditor.description}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Короткое описание микса"
-                  rows={4}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">componentIds</span>
-                <textarea
-                  className="textarea-input"
-                  value={mixEditor.componentIds}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, componentIds: event.target.value }))}
-                  placeholder="mix-1, mix-2"
-                  rows={3}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">flavorProfiles</span>
-                <input
-                  className="text-input"
-                  value={mixEditor.flavorProfiles}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, flavorProfiles: event.target.value }))}
-                  placeholder="fresh, citrus"
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">flavors</span>
-                <input
-                  className="text-input"
-                  value={mixEditor.flavors}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, flavors: event.target.value }))}
-                  placeholder="мята, лимон"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Популярность</span>
-                <input
-                  className="text-input"
-                  type="number"
-                  step="1"
-                  value={mixEditor.popularity}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, popularity: event.target.value }))}
-                />
-              </label>
-
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={mixEditor.available}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, available: event.target.checked }))}
-                />
-                <span>Доступен для гостя</span>
-              </label>
-            </div>
-
-            {mixSaveError ? <p className="error-text">{mixSaveError}</p> : null}
-
-            <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={mixSaveStatus === 'loading'}>
-                {mixSaveStatus === 'loading' ? 'Сохраняем...' : mixEditor.id ? 'Сохранить микс' : 'Создать микс'}
-              </button>
-              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetMixEditor}>
-                Сбросить форму
-              </button>
-            </div>
-          </form>
-        </article>
-      </div>
-
-      <div className="manager-layout manager-layout--stacked manager-layout--spaced">
-        <aside className="entity-list">
-          {telegramRecipientsStatus === 'forbidden' ? (
-            <article className="entity-card entity-card--muted">
-              <p className="entity-kicker">Чаты Telegram</p>
-              <h3>Только для admin</h3>
-              <p className="meta-line">{telegramRecipientsError || 'У вас нет доступа к управлению чатами Telegram.'}</p>
-            </article>
-          ) : (
-            telegramRecipients.map((recipient) => (
-              <article
-                className={telegramRecipientEditor.id === recipient.id ? 'entity-card entity-card--active' : 'entity-card'}
-                key={recipient.id}
-              >
-                <div className="entity-card__head">
-                  <div>
-                    <p className="entity-kicker">Чат Telegram</p>
-                    <h3>{recipient.label || `Чат ${recipient.chatId}`}</h3>
-                  </div>
-                  <span className={recipient.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                    {recipient.active ? 'Активен' : 'Неактивен'}
-                  </span>
-                </div>
-                <div className="chip-row">
-                  <span className="chip">{recipient.chatId}</span>
-                  <span className="chip">{formatTelegramRecipientScope(recipient.scope)}</span>
-                </div>
-                <div className="entity-card__actions entity-card__actions--wrap">
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => onSelectTelegramRecipient(recipient)}
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onToggleTelegramRecipientActive(recipient)}
-                    disabled={telegramRecipientToggleId === recipient.id}
-                  >
-                    {telegramRecipientToggleId === recipient.id ? 'Сохраняем...' : recipient.active ? 'Деактивировать' : 'Активировать'}
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onDeleteTelegramRecipient(recipient)}
-                    disabled={telegramRecipientToggleId === recipient.id}
-                  >
-                    {telegramRecipientToggleId === recipient.id ? 'Удаляем...' : 'Удалить'}
-                  </button>
-                </div>
-              </article>
-            ))
-          )}
-
-          {telegramRecipientsStatus !== 'forbidden' && !telegramRecipients.length && telegramRecipientsStatus !== 'loading' ? (
-            <p className="meta-line">Пока нет чатов Telegram.</p>
-          ) : null}
-        </aside>
-
-        <article className="editor-card">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">
-                {telegramRecipientEditor.id ? 'Редактирование чата Telegram' : 'Новый чат Telegram'}
-              </p>
-              <h3>{telegramRecipientEditor.id ? telegramRecipientEditor.label || 'Без названия' : 'Создать чат Telegram'}</h3>
-            </div>
-            <span className="status-chip">{formatTelegramRecipientScope(telegramRecipientEditor.scope)}</span>
-          </div>
-
-          {telegramRecipientsStatus === 'loading' ? <p className="meta-line">Загружаем чаты Telegram...</p> : null}
-          {telegramRecipientsStatus === 'error' ? <p className="error-text">{telegramRecipientsError}</p> : null}
-          {telegramRecipientsStatus === 'forbidden' ? <p className="meta-line">{telegramRecipientsError}</p> : null}
-
-          {telegramRecipientsStatus !== 'forbidden' ? (
-            <form className="admin-form" onSubmit={onSubmitTelegramRecipient}>
-              <div className="form-grid form-grid--two">
-                <label className="field">
-                  <span className="field-label">Chat id Telegram</span>
-                  <input
-                    className="text-input"
-                    value={telegramRecipientEditor.chatId}
-                    onChange={(event) => setTelegramRecipientEditor((current) => ({ ...current, chatId: event.target.value }))}
-                    placeholder="362223626"
-                  />
-                </label>
-
-                <label className="field">
-                  <span className="field-label">Тип</span>
-                  <select
-                    className="select-input"
-                    value={telegramRecipientEditor.scope}
-                    onChange={(event) =>
-                      setTelegramRecipientEditor((current) => ({
-                        ...current,
-                        scope: event.target.value as TelegramRecipientScope,
-                      }))
-                    }
-                  >
-                    {telegramRecipientScopeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field field--wide">
-                  <span className="field-label">Подпись</span>
-                  <input
-                    className="text-input"
-                    value={telegramRecipientEditor.label}
-                    onChange={(event) => setTelegramRecipientEditor((current) => ({ ...current, label: event.target.value }))}
-                    placeholder="Основной staff-чат"
-                  />
-                </label>
-
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={telegramRecipientEditor.active}
-                    onChange={(event) =>
-                      setTelegramRecipientEditor((current) => ({
-                        ...current,
-                        active: event.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Активен</span>
-                </label>
-              </div>
-
-              {telegramRecipientSaveError ? <p className="error-text">{telegramRecipientSaveError}</p> : null}
-
-              <div className="form-actions">
-                <button
-                  className="primary-button primary-button--inline"
-                  type="submit"
-                  disabled={telegramRecipientSaveStatus === 'loading'}
-                >
-                  {telegramRecipientSaveStatus === 'loading'
-                    ? 'Сохраняем...'
-                    : telegramRecipientEditor.id
-                      ? 'Сохранить чат Telegram'
-                      : 'Создать чат Telegram'}
-                </button>
-                <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramRecipientEditor}>
-                  Сбросить форму
-                </button>
-                {telegramRecipientEditor.id ? (
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() =>
-                      void onDeleteTelegramRecipient({
-                        id: telegramRecipientEditor.id,
-                        chatId: telegramRecipientEditor.chatId,
-                        label: telegramRecipientEditor.label,
-                        scope: telegramRecipientEditor.scope,
-                        active: telegramRecipientEditor.active,
-                      })
-                    }
-                    disabled={telegramRecipientToggleId === telegramRecipientEditor.id}
-                  >
-                    {telegramRecipientToggleId === telegramRecipientEditor.id ? 'Удаляем...' : 'Удалить чат'}
-                  </button>
-                ) : null}
-              </div>
-            </form>
-          ) : (
-            <div className="forbidden-panel">
-              <p className="meta-line">Чаты Telegram недоступны для вашей роли.</p>
-            </div>
-          )}
-        </article>
-      </div>
-    </section>
+    <MixCatalogView
+      items={mixes}
+      tobaccoOptions={mixTobaccos}
+      status={mixesStatus}
+      error={mixesError}
+      filters={mixesFilters}
+      meta={mixesMeta}
+      sort={mixesSort}
+      editor={mixEditor}
+      saveStatus={mixSaveStatus}
+      saveError={mixSaveError}
+      onSearchChange={(value) => void onMixSearchChange(value)}
+      onStatusChange={(value) => void onMixStatusChange(value)}
+      onRailStateChange={(value) => void onMixRailStateChange(value)}
+      onSortFieldChange={(value) => void onMixSortFieldChange(value)}
+      onSortDirectionChange={(value) => void onMixSortDirectionChange(value)}
+      onToggleFilterValue={(key, value) => void onMixToggleFilterValue(key, value)}
+      onResetFilters={() => void onMixResetFilters()}
+      onSelectMix={onSelectMix}
+      onResetEditor={onResetMixEditor}
+      onEditorFieldChange={onChangeMixEditorField}
+      onEditorAvailabilityChange={onChangeMixEditorAvailability}
+      onAddComponent={onAddMixComponent}
+      onUpdateComponent={onUpdateMixComponent}
+      onMoveComponent={onMoveMixComponent}
+      onRemoveComponent={onRemoveMixComponent}
+      onRebalanceComponents={onRebalanceMixComponents}
+      onSubmit={onSubmitMix}
+    />
   );
+
+  const normalizedRailMixSearch = normalizeRailMixSearch(railMixSearch);
+  const selectedRailMixEntries = railEditor.mixIds.map((mixId, index) => ({
+    mixId,
+    index,
+    mix: railMixCatalog.find((item) => item.id === mixId) ?? mixes.find((item) => item.id === mixId) ?? null,
+  }));
+  const availableRailMixOptions = railMixCatalog
+    .filter((mix) => {
+      if (railEditor.mixIds.includes(mix.id)) {
+        return false;
+      }
+
+      if (!normalizedRailMixSearch) {
+        return true;
+      }
+
+      return [
+        mix.name,
+        mix.description,
+        ...mix.flavorProfiles,
+        ...mix.flavors,
+        ...mix.flavorTags,
+      ].some((value) => normalizeRailMixSearch(value).includes(normalizedRailMixSearch));
+    })
+    .sort((left, right) => left.name.localeCompare(right.name, 'ru'));
+  const effectiveRailMixCandidateId = availableRailMixOptions.some((mix) => mix.id === railMixCandidateId)
+    ? railMixCandidateId
+    : (availableRailMixOptions[0]?.id ?? '');
+  const railEditorLocked = Boolean(railEditor.id) && !railEditor.editable;
+  const railEditorStatusLabel = railEditorLocked
+    ? 'Только просмотр'
+    : railEditor.active
+      ? 'Активен'
+      : 'Неактивен';
 
   const renderRails = () => (
     <section className="card">
@@ -1766,7 +2182,11 @@ export const App = () => {
         <aside className="entity-list">
           {rails.map((rail) => (
             <article
-              className={railEditor.id === rail.id ? 'entity-card entity-card--active' : 'entity-card'}
+              className={[
+                'entity-card',
+                railEditor.id === rail.id ? 'entity-card--active' : '',
+                rail.editable ? '' : 'entity-card--muted',
+              ].filter(Boolean).join(' ')}
               key={rail.id}
             >
               <div className="entity-card__head">
@@ -1780,12 +2200,16 @@ export const App = () => {
               </div>
               <div className="chip-row">
                 <span className="chip">{formatRailType(rail.type)}</span>
+                <span className={rail.editable ? 'chip chip--editable' : 'chip chip--readonly'}>
+                  {rail.editable ? 'Редактируемый' : 'Только просмотр'}
+                </span>
               </div>
               <p className="meta-line">{rail.description || 'Без описания'}</p>
-              <p className="meta-line">Миксы: {resolveRailMixSummary(rail, mixes)}</p>
+              {!rail.editable && rail.readOnlyReason ? <p className="meta-line">{rail.readOnlyReason}</p> : null}
+              <p className="meta-line">Миксы: {resolveRailMixSummary(rail, railMixCatalog)}</p>
               <div className="entity-card__actions">
                 <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectRail(rail)}>
-                  Редактировать
+                  {rail.editable ? 'Редактировать' : 'Просмотр'}
                 </button>
               </div>
             </article>
@@ -1800,10 +2224,21 @@ export const App = () => {
               <p className="entity-kicker">{railEditor.id ? 'Редактирование рейла' : 'Новый рейл'}</p>
               <h3>{railEditor.id ? railEditor.name || 'Без названия' : 'Создать рейл'}</h3>
             </div>
-            <span className="status-chip">{railEditor.active ? 'Активен' : 'Неактивен'}</span>
+            <span className={railEditorLocked ? 'status-chip status-chip--locked' : 'status-chip'}>{railEditorStatusLabel}</span>
           </div>
 
           <form className="admin-form" onSubmit={onSubmitRail}>
+            {railEditor.id ? (
+              <div className="info-banner">
+                Тип рейла: {formatRailType(railEditor.type)}.
+                {!railEditor.editable && railEditor.readOnlyReason ? ` ${railEditor.readOnlyReason}` : ''}
+              </div>
+            ) : (
+              <div className="info-banner">
+                Новый рейл всегда создаётся как мастерский curated rail. Выбор типа на этапе создания больше не нужен.
+              </div>
+            )}
+
             <div className="form-grid form-grid--two">
               <label className="field">
                 <span className="field-label">Название</span>
@@ -1812,28 +2247,14 @@ export const App = () => {
                   value={railEditor.name}
                   onChange={(event) => setRailEditor((current) => ({ ...current, name: event.target.value }))}
                   placeholder="Например, Топ по статистике"
+                  disabled={railEditorLocked}
                 />
               </label>
 
-              <label className="field">
+              <div className="field">
                 <span className="field-label">Тип</span>
-                <select
-                  className="select-input"
-                  value={railEditor.type}
-                  onChange={(event) =>
-                    setRailEditor((current) => ({
-                      ...current,
-                      type: event.target.value as RailEditorState['type'],
-                    }))
-                  }
-                >
-                  {railTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <div className="info-banner">{formatRailType(railEditor.type)}</div>
+              </div>
 
               <label className="field field--wide">
                 <span className="field-label">Описание</span>
@@ -1843,25 +2264,103 @@ export const App = () => {
                   onChange={(event) => setRailEditor((current) => ({ ...current, description: event.target.value }))}
                   placeholder="Короткое описание рейла"
                   rows={4}
+                  disabled={railEditorLocked}
                 />
               </label>
 
-              <label className="field field--wide">
-                <span className="field-label">mixIds</span>
-                <textarea
-                  className="textarea-input"
-                  value={railEditor.mixIds}
-                  onChange={(event) => setRailEditor((current) => ({ ...current, mixIds: event.target.value }))}
-                  placeholder="mix-1, mix-2"
-                  rows={3}
-                />
-              </label>
+              <div className="field field--wide">
+                <span className="field-label">Состав рейла</span>
+                <div className="rail-mix-builder">
+                  <div className="rail-mix-builder__toolbar">
+                    <input
+                      className="text-input"
+                      value={railMixSearch}
+                      onChange={(event) => setRailMixSearch(event.target.value)}
+                      placeholder="Поиск миксов по названию, вкусу или описанию"
+                      disabled={railEditorLocked}
+                    />
+                    <select
+                      className="select-input"
+                      value={effectiveRailMixCandidateId}
+                      onChange={(event) => setRailMixCandidateId(event.target.value)}
+                      disabled={railEditorLocked || !availableRailMixOptions.length}
+                    >
+                      {availableRailMixOptions.length ? null : <option value="">Нет доступных миксов</option>}
+                      {availableRailMixOptions.map((mix) => (
+                        <option key={mix.id} value={mix.id}>
+                          {mix.name} · {mix.available ? 'виден гостю' : 'скрыт или заблокирован'}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => onAddRailMix(effectiveRailMixCandidateId)}
+                      disabled={railEditorLocked || !effectiveRailMixCandidateId}
+                    >
+                      Добавить микс
+                    </button>
+                  </div>
+
+                  <div className="rail-mix-builder__summary">
+                    <span className="meta-line">В рейле: {railEditor.mixIds.length}</span>
+                    <span className="meta-line">Доступно для добавления: {availableRailMixOptions.length}</span>
+                  </div>
+
+                  <div className="rail-mix-list">
+                    {selectedRailMixEntries.length ? selectedRailMixEntries.map(({ mixId, index, mix }) => (
+                      <article className="rail-mix-row" key={mixId}>
+                        <div className="rail-mix-row__order">{index + 1}</div>
+                        <div className="rail-mix-row__content">
+                          <strong>{mix?.name ?? mixId}</strong>
+                          <p className="meta-line">
+                            {mix
+                              ? `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`
+                              : 'Микс не найден в актуальном каталоге, но сохранён в составе рейла.'}
+                          </p>
+                        </div>
+                        <div className="rail-mix-row__actions">
+                          <button
+                            className="secondary-button secondary-button--inline"
+                            type="button"
+                            onClick={() => onMoveRailMix(mixId, 'up')}
+                            disabled={railEditorLocked || index === 0}
+                          >
+                            Вверх
+                          </button>
+                          <button
+                            className="secondary-button secondary-button--inline"
+                            type="button"
+                            onClick={() => onMoveRailMix(mixId, 'down')}
+                            disabled={railEditorLocked || index === selectedRailMixEntries.length - 1}
+                          >
+                            Вниз
+                          </button>
+                          <button
+                            className="secondary-button secondary-button--inline"
+                            type="button"
+                            onClick={() => onRemoveRailMix(mixId)}
+                            disabled={railEditorLocked}
+                          >
+                            Убрать
+                          </button>
+                        </div>
+                      </article>
+                    )) : (
+                      <div className="rail-mix-empty">
+                        <p className="meta-line">Добавьте хотя бы один микс, чтобы собрать рейл и задать порядок показа.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <label className="checkbox-field">
                 <input
                   type="checkbox"
                   checked={railEditor.active}
                   onChange={(event) => setRailEditor((current) => ({ ...current, active: event.target.checked }))}
+                  disabled={railEditorLocked}
                 />
                 <span>Активен в витрине</span>
               </label>
@@ -1870,11 +2369,13 @@ export const App = () => {
             {railSaveError ? <p className="error-text">{railSaveError}</p> : null}
 
             <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={railSaveStatus === 'loading'}>
-                {railSaveStatus === 'loading' ? 'Сохраняем...' : railEditor.id ? 'Сохранить рейл' : 'Создать рейл'}
-              </button>
+              {!railEditorLocked ? (
+                <button className="primary-button primary-button--inline" type="submit" disabled={railSaveStatus === 'loading'}>
+                  {railSaveStatus === 'loading' ? 'Сохраняем...' : railEditor.id ? 'Сохранить рейл' : 'Создать рейл'}
+                </button>
+              ) : null}
               <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
-                Сбросить форму
+                {railEditorLocked ? 'Создать новый рейл' : 'Сбросить форму'}
               </button>
             </div>
           </form>
@@ -1899,508 +2400,597 @@ export const App = () => {
     }).format(date);
   };
 
-  const renderAccess = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Доступ</p>
-          <h2>Коды доступа, сотрудники и Telegram</h2>
-          <p className="meta-line">Контур ежедневного доступа, staff-аккаунтов, Telegram automation и аудита.</p>
-        </div>
-        <div className="section-actions">
-          <span className="status-chip">Admin / staff controls</span>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
-            Новый код доступа
-          </button>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramRecipientEditor}>
-            Новый чат Telegram
-          </button>
-        </div>
-      </div>
+  const renderAccess = () => {
+    const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
+    const activeOperators = telegramOperators.filter((item) => item.active);
+    const linkedOperatorsCount = activeOperators.filter((item) => item.linkedChatId).length;
 
-      <div className="info-banner">
-        <strong>Ролевой контур:</strong> коды доступа доступны всем staff-ролям, а сотрудники, Telegram и аудит открыты только для `admin`.
-      </div>
-
-      <div className="summary-grid automation-grid">
-        <article className="metric-card automation-card">
-          <p className="metric-label">Telegram automation</p>
-          <p className="metric-value metric-value--compact">
-            {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
-          </p>
-          <div className="chip-row">
-            <span
-              className={
-                telegramAutomationState?.health === 'healthy'
-                  ? 'stock-pill stock-pill--in'
-                  : telegramAutomationState?.health === 'unknown'
-                    ? 'status-chip'
-                    : 'stock-pill stock-pill--out'
-              }
-            >
-              {telegramAutomationState?.health ?? 'unknown'}
-            </span>
-          </div>
-          <p className="meta-line">Heartbeat: {formatDateTimeDisplay(telegramAutomationState?.lastHeartbeatAt ?? '')}</p>
-          <p className="meta-line">Последнее обновление: {formatDateTimeDisplay(telegramAutomationState?.updatedAt ?? '')}</p>
-          {telegramAutomationState?.lastErrorMessage ? (
-            <p className="meta-line">Последняя ошибка: {telegramAutomationState.lastErrorMessage}</p>
-          ) : (
-            <p className="meta-line">Последняя ошибка: нет</p>
-          )}
-          {telegramAutomationStateStatus === 'loading' ? <p className="meta-line">Загружаем статус бота...</p> : null}
-          {telegramAutomationStateStatus === 'error' ? <p className="error-text">{telegramAutomationStateError}</p> : null}
-          {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
-        </article>
-
-        <article className="metric-card automation-card">
-          <p className="metric-label">Последние действия</p>
-          <p className="meta-line">Авторассылка: {formatDateTimeDisplay(telegramAutomationState?.lastBroadcastAt ?? '')}</p>
-          <p className="meta-line">
-            Код авторассылки: {telegramAutomationState?.lastBroadcastCodeValue || 'Не указано'}
-          </p>
-          <p className="meta-line">День авторассылки: {telegramAutomationState?.lastBroadcastDayKey || 'Не указано'}</p>
-          <p className="meta-line">Ротация: {formatDateTimeDisplay(telegramAutomationState?.lastRotateAt ?? '')}</p>
-          <p className="meta-line">Код ротации: {telegramAutomationState?.lastRotateCodeValue || 'Не указано'}</p>
-        </article>
-
-        <article className="metric-card automation-card">
-          <p className="metric-label">Telegram чаты</p>
-          <p className="meta-line">
-            Разрешённые: {telegramRecipients.filter((item) => item.scope === 'allowed' && item.active).length}
-          </p>
-          <p className="meta-line">
-            Авторассылка: {telegramRecipients.filter((item) => item.scope === 'broadcast' && item.active).length}
-          </p>
-          <p className="meta-line">
-            Ротация: {telegramRecipients.filter((item) => item.scope === 'rotate' && item.active).length}
-          </p>
-          <p className="meta-line">
-            Всего записей: {telegramRecipients.length}
-          </p>
-        </article>
-      </div>
-
-      <article className="editor-card">
-        <div className="entity-card__head">
+    return (
+      <section className="card">
+        <div className="section-head">
           <div>
-            <p className="entity-kicker">Журнал изменений</p>
-            <h3>Последние staff-операции</h3>
+            <p className="eyebrow">Доступ</p>
+            <h2>Daily code и Telegram allowlist</h2>
+            <p className="meta-line">
+              Daily code выпускается автоматически каждый день, а оператор получает его только через Telegram-бота.
+            </p>
           </div>
-          <span className="status-chip">/staff/audit/events</span>
+          <div className="section-actions">
+            <span className="status-chip">Bot request flow</span>
+            {user?.role === 'admin' ? (
+              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
+                Новый оператор
+              </button>
+            ) : null}
+          </div>
         </div>
 
-        {auditEventsStatus === 'loading' ? <p className="meta-line">Загружаем журнал изменений...</p> : null}
-        {auditEventsStatus === 'error' ? <p className="error-text">{auditEventsError}</p> : null}
-        {auditEventsStatus === 'forbidden' ? <p className="meta-line">{auditEventsError}</p> : null}
+        <div className="info-banner">
+          <strong>Новая схема:</strong> оператор впервые пишет боту, делится контактом, бот сверяет номер с allowlist и после
+          привязки отдаёт `/code`. Ручной отправки и переотправки из `Мастера` нет.
+        </div>
 
-        {auditEventsStatus === 'ready' && !auditEvents.length ? (
-          <p className="meta-line">Пока нет записей аудита.</p>
-        ) : null}
+        <div className="summary-grid automation-grid">
+          <article className="metric-card automation-card">
+            <p className="metric-label">Текущий daily code</p>
+            <p className="metric-value metric-value--compact">{currentDailyCode?.codeValue || 'Нет активного кода'}</p>
+            <p className="meta-line">Подпись: {currentDailyCode?.codeLabel || 'Не задано'}</p>
+            <p className="meta-line">Начало: {formatDateTimeDisplay(currentDailyCode?.startsAt || '')}</p>
+            <p className="meta-line">Окончание: {formatDateTimeDisplay(currentDailyCode?.endsAt || '')}</p>
+            <p className="meta-line">История окон: {dailyCodes.length}</p>
+            {dailyCodesStatus === 'loading' ? <p className="meta-line">Загружаем daily code...</p> : null}
+            {dailyCodesError ? <p className="error-text">{dailyCodesError}</p> : null}
+          </article>
 
-        {auditEventsStatus !== 'forbidden' && auditEvents.length ? (
+          <article className="metric-card automation-card">
+            <p className="metric-label">Состояние бота</p>
+            <p className="metric-value metric-value--compact">
+              {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
+            </p>
+            <div className="chip-row">
+              <span
+                className={
+                  telegramAutomationState?.health === 'healthy'
+                    ? 'stock-pill stock-pill--in'
+                    : telegramAutomationState?.health === 'unknown'
+                      ? 'status-chip'
+                      : 'stock-pill stock-pill--out'
+                }
+              >
+                {telegramAutomationState?.health ?? 'unknown'}
+              </span>
+            </div>
+            <p className="meta-line">Heartbeat: {formatDateTimeDisplay(telegramAutomationState?.lastHeartbeatAt ?? '')}</p>
+            <p className="meta-line">Последнее обновление: {formatDateTimeDisplay(telegramAutomationState?.updatedAt ?? '')}</p>
+            <p className="meta-line">Последняя ошибка: {telegramAutomationState?.lastErrorMessage || 'нет'}</p>
+            {telegramAutomationStateStatus === 'loading' ? <p className="meta-line">Загружаем статус бота...</p> : null}
+            {telegramAutomationStateStatus === 'error' ? <p className="error-text">{telegramAutomationStateError}</p> : null}
+            {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
+          </article>
+
+          <article className="metric-card automation-card">
+            <p className="metric-label">Последний запрос кода</p>
+            <p className="meta-line">Время: {formatDateTimeDisplay(telegramAutomationState?.lastRequestAt ?? '')}</p>
+            <p className="meta-line">Оператор: {telegramAutomationState?.lastRequestOperatorName || 'Не было запросов'}</p>
+            <p className="meta-line">Телефон: {telegramAutomationState?.lastRequestPhone || 'Не указано'}</p>
+            <p className="meta-line">Чат: {telegramAutomationState?.lastRequestChatId || 'Не указан'}</p>
+            <p className="meta-line">Код: {telegramAutomationState?.lastRequestCodeValue || currentDailyCode?.codeValue || 'Не указан'}</p>
+          </article>
+
+          <article className="metric-card automation-card">
+            <p className="metric-label">Allowlist</p>
+            <p className="meta-line">Активных номеров: {activeOperators.length}</p>
+            <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
+            <p className="meta-line">Ожидают first-link: {Math.max(activeOperators.length - linkedOperatorsCount, 0)}</p>
+            <p className="meta-line">Всего записей: {telegramOperators.length}</p>
+            {telegramOperatorsStatus === 'loading' ? <p className="meta-line">Загружаем allowlist...</p> : null}
+            {telegramOperatorsStatus === 'error' ? <p className="error-text">{telegramOperatorsError}</p> : null}
+            {telegramOperatorsStatus === 'forbidden' ? <p className="meta-line">{telegramOperatorsError}</p> : null}
+          </article>
+        </div>
+
+        <article className="editor-card">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Как это работает</p>
+              <h3>Bot-request flow</h3>
+            </div>
+            <span className="status-chip">Автоматический daily code</span>
+          </div>
           <div className="audit-list">
-            {auditEvents.map((event) => (
-              <article className="entity-card entity-card--compact" key={event.id}>
-                <div className="entity-card__head">
-                  <div>
-                    <p className="entity-kicker">
-                      {formatAuditEntityType(event.entityType)} · {formatAuditAction(event.action)}
-                    </p>
-                    <h3>{event.entityLabel || event.entityId}</h3>
-                  </div>
-                  <span className="status-chip">{event.actorRole}</span>
-                </div>
-                <p className="meta-line">
-                  {event.actorName || event.actorLogin} ({event.actorLogin}) · {formatDateTimeDisplay(event.createdAt)}
-                </p>
-                <div className="chip-row">
-                  <span className="chip">{event.entityType}</span>
-                  <span className="chip">{event.action}</span>
-                  <span className="chip">{event.entityId}</span>
-                </div>
+            {[
+              '1. Admin добавляет оператора в allowlist по имени и телефону.',
+              '2. Оператор впервые пишет боту и жмёт "Поделиться контактом".',
+              '3. Бот привязывает текущий chat id к allowlist-номеру.',
+              '4. После привязки оператор получает актуальный daily code через /code.',
+            ].map((item) => (
+              <article className="entity-card entity-card--compact" key={item}>
+                <p className="meta-line">{item}</p>
               </article>
             ))}
           </div>
-        ) : null}
-      </article>
-
-      <div className="manager-layout manager-layout--stacked">
-        <aside className="entity-list">
-          {dailyCodes.map((code) => (
-            <article className={dailyCodeEditor.id === code.id ? 'entity-card entity-card--active' : 'entity-card'} key={code.id}>
-              <div className="entity-card__head">
-                <div>
-                  <p className="entity-kicker">Код доступа</p>
-                  <h3>{code.codeLabel || 'Код доступа'}</h3>
-                </div>
-                <span className={code.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                  {code.active ? 'Активен' : 'Неактивен'}
-                </span>
-              </div>
-              <p className="code-value">{code.codeValue || 'Код не указан'}</p>
-              <p className="meta-line">Начало: {formatDateTimeDisplay(code.startsAt)}</p>
-              <p className="meta-line">Окончание: {formatDateTimeDisplay(code.endsAt)}</p>
-              <div className="entity-card__actions entity-card__actions--wrap">
-                <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectDailyCode(code)}>
-                  Редактировать
-                </button>
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() => void onToggleDailyCodeActive(code)}
-                  disabled={dailyCodeToggleId === code.id}
-                >
-                  {dailyCodeToggleId === code.id ? 'Сохраняем...' : code.active ? 'Деактивировать' : 'Активировать'}
-                </button>
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() => void onDeleteDailyCode(code)}
-                  disabled={dailyCodeToggleId === code.id}
-                >
-                  {dailyCodeToggleId === code.id ? 'Удаляем...' : 'Удалить'}
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {!dailyCodes.length && dailyCodesStatus !== 'loading' ? <p className="meta-line">Пока нет кодов доступа.</p> : null}
-        </aside>
-
-        <article className="editor-card">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">{dailyCodeEditor.id ? 'Редактирование кода доступа' : 'Новый код доступа'}</p>
-              <h3>{dailyCodeEditor.id ? dailyCodeEditor.codeLabel || 'Код доступа' : 'Создать код доступа'}</h3>
-            </div>
-            <span className="status-chip">{dailyCodeEditor.active ? 'Активен' : 'Неактивен'}</span>
-          </div>
-
-          {dailyCodesStatus === 'loading' ? <p className="meta-line">Загружаем коды доступа...</p> : null}
-          {dailyCodesError ? <p className="error-text">{dailyCodesError}</p> : null}
-
-          <form className="admin-form" onSubmit={onSubmitDailyCode}>
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Код</span>
-                <input
-                  className="text-input"
-                  value={dailyCodeEditor.codeValue}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, codeValue: event.target.value }))}
-                  placeholder="NOMAD-2026"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Подпись</span>
-                <input
-                  className="text-input"
-                  value={dailyCodeEditor.codeLabel}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, codeLabel: event.target.value }))}
-                  placeholder="Код на сегодня"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Начало действия</span>
-                <input
-                  className="text-input"
-                  type="datetime-local"
-                  value={dailyCodeEditor.startsAt}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, startsAt: event.target.value }))}
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Окончание действия</span>
-                <input
-                  className="text-input"
-                  type="datetime-local"
-                  value={dailyCodeEditor.endsAt}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, endsAt: event.target.value }))}
-                />
-              </label>
-
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={dailyCodeEditor.active}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, active: event.target.checked }))}
-                />
-                <span>Активен</span>
-              </label>
-            </div>
-
-            {dailyCodeSaveError ? <p className="error-text">{dailyCodeSaveError}</p> : null}
-
-            <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={dailyCodeSaveStatus === 'loading'}>
-                {dailyCodeSaveStatus === 'loading' ? 'Сохраняем...' : dailyCodeEditor.id ? 'Сохранить код доступа' : 'Создать код доступа'}
-              </button>
-              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
-                Сбросить форму
-              </button>
-              {dailyCodeEditor.id ? (
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() =>
-                    void onDeleteDailyCode({
-                      id: dailyCodeEditor.id,
-                      codeValue: dailyCodeEditor.codeValue,
-                      codeLabel: dailyCodeEditor.codeLabel,
-                      startsAt: parseDateTimeLocalInput(dailyCodeEditor.startsAt),
-                      endsAt: parseDateTimeLocalInput(dailyCodeEditor.endsAt),
-                      active: dailyCodeEditor.active,
-                    })
-                  }
-                  disabled={dailyCodeToggleId === dailyCodeEditor.id}
-                >
-                  {dailyCodeToggleId === dailyCodeEditor.id ? 'Удаляем...' : 'Удалить код'}
-                </button>
-              ) : null}
-            </div>
-          </form>
         </article>
-      </div>
 
-      <div className="manager-layout manager-layout--stacked manager-layout--spaced">
-        <aside className="entity-list">
-          {staffAccountsStatus === 'forbidden' ? (
-            <article className="entity-card entity-card--muted">
-              <p className="entity-kicker">Аккаунты сотрудников</p>
-              <h3>Только для admin</h3>
-              <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению аккаунтами сотрудников.'}</p>
-            </article>
-          ) : (
-            staffAccounts.map((account) => (
-              <article
-                className={staffAccountEditor.id === account.id ? 'entity-card entity-card--active' : 'entity-card'}
-                key={account.id}
-              >
-                <div className="entity-card__head">
-                  <div>
-                    <p className="entity-kicker">Аккаунт сотрудника</p>
-                    <h3>{account.name}</h3>
-                  </div>
-                  <span className={account.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                    {account.active ? 'Активен' : 'Неактивен'}
-                  </span>
-                </div>
-                <div className="chip-row">
-                  <span className="chip">{account.login}</span>
-                  <span className="chip">{account.role === 'admin' ? 'admin' : 'nomad'}</span>
-                </div>
-                <div className="entity-card__actions entity-card__actions--wrap">
-                  <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectStaffAccount(account)}>
-                    Редактировать
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onToggleStaffAccountActive(account)}
-                    disabled={staffAccountToggleId === account.id}
-                  >
-                    {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onDeleteStaffAccount(account)}
-                    disabled={staffAccountToggleId === account.id}
-                  >
-                    {staffAccountToggleId === account.id ? 'Удаляем...' : 'Удалить'}
-                  </button>
-                </div>
+        <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+          <aside className="entity-list">
+            {telegramOperatorsStatus === 'forbidden' ? (
+              <article className="entity-card entity-card--muted">
+                <p className="entity-kicker">Telegram allowlist</p>
+                <h3>Только для admin</h3>
+                <p className="meta-line">{telegramOperatorsError || 'У вас нет доступа к управлению allowlist.'}</p>
               </article>
-            ))
-          )}
+            ) : (
+              telegramOperators.map((operator) => (
+                <article
+                  className={telegramOperatorEditor.id === operator.id ? 'entity-card entity-card--active' : 'entity-card'}
+                  key={operator.id}
+                >
+                  <div className="entity-card__head">
+                    <div>
+                      <p className="entity-kicker">Telegram allowlist</p>
+                      <h3>{operator.name}</h3>
+                    </div>
+                    <span className={operator.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                      {operator.active ? 'Активен' : 'Неактивен'}
+                    </span>
+                  </div>
+                  <div className="chip-row">
+                    <span className="chip">{operator.phone}</span>
+                    <span className="chip">{operator.linkedChatId ? 'Чат привязан' : 'Ждёт first-link'}</span>
+                  </div>
+                  <p className="meta-line">Чат: {operator.linkedChatId || 'ещё не привязан'}</p>
+                  <p className="meta-line">Последний запрос: {formatDateTimeDisplay(operator.lastCodeRequestedAt)}</p>
+                  <div className="entity-card__actions entity-card__actions--wrap">
+                    <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectTelegramOperator(operator)}>
+                      Редактировать
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onToggleTelegramOperatorActive(operator)}
+                      disabled={telegramOperatorToggleId === operator.id}
+                    >
+                      {telegramOperatorToggleId === operator.id ? 'Сохраняем...' : operator.active ? 'Деактивировать' : 'Активировать'}
+                    </button>
+                    {operator.linkedChatId ? (
+                      <button
+                        className="secondary-button secondary-button--inline"
+                        type="button"
+                        onClick={() => void onClearTelegramOperatorLink(operator)}
+                        disabled={telegramOperatorToggleId === operator.id}
+                      >
+                        {telegramOperatorToggleId === operator.id ? 'Сбрасываем...' : 'Сбросить привязку'}
+                      </button>
+                    ) : null}
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onDeleteTelegramOperator(operator)}
+                      disabled={telegramOperatorToggleId === operator.id}
+                    >
+                      {telegramOperatorToggleId === operator.id ? 'Удаляем...' : 'Удалить'}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
 
-          {staffAccountsStatus !== 'forbidden' && !staffAccounts.length && staffAccountsStatus !== 'loading' ? (
-            <p className="meta-line">Пока нет сотрудников.</p>
-          ) : null}
-        </aside>
+            {telegramOperatorsStatus !== 'forbidden' && !telegramOperators.length && telegramOperatorsStatus !== 'loading' ? (
+              <p className="meta-line">Пока нет операторов в allowlist.</p>
+            ) : null}
+          </aside>
+
+          <article className="editor-card">
+            <div className="entity-card__head">
+              <div>
+                <p className="entity-kicker">{telegramOperatorEditor.id ? 'Редактирование Telegram доступа' : 'Новый Telegram доступ'}</p>
+                <h3>{telegramOperatorEditor.id ? telegramOperatorEditor.name || 'Без имени' : 'Добавить оператора'}</h3>
+              </div>
+              <span className="status-chip">{telegramOperatorEditor.active ? 'Активен' : 'Неактивен'}</span>
+            </div>
+
+            {telegramOperatorsStatus === 'forbidden' ? (
+              <div className="forbidden-panel">
+                <p className="meta-line">Telegram allowlist недоступен для вашей роли.</p>
+              </div>
+            ) : (
+              <form className="admin-form" onSubmit={onSubmitTelegramOperator}>
+                <div className="form-grid form-grid--two">
+                  <label className="field">
+                    <span className="field-label">Имя оператора</span>
+                    <input
+                      className="text-input"
+                      value={telegramOperatorEditor.name}
+                      onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Анна"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Телефон</span>
+                    <input
+                      className="text-input"
+                      value={telegramOperatorEditor.phone}
+                      onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, phone: event.target.value }))}
+                      placeholder="+7 999 123-45-67"
+                    />
+                  </label>
+
+                  <label className="checkbox-field">
+                    <input
+                      type="checkbox"
+                      checked={telegramOperatorEditor.active}
+                      onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, active: event.target.checked }))}
+                    />
+                    <span>Активен</span>
+                  </label>
+                </div>
+
+                <p className="meta-line">
+                  После сохранения оператор сам проходит first-link в боте через кнопку "Поделиться контактом".
+                </p>
+                {telegramOperatorSaveError ? <p className="error-text">{telegramOperatorSaveError}</p> : null}
+
+                <div className="form-actions">
+                  <button className="primary-button primary-button--inline" type="submit" disabled={telegramOperatorSaveStatus === 'loading'}>
+                    {telegramOperatorSaveStatus === 'loading'
+                      ? 'Сохраняем...'
+                      : telegramOperatorEditor.id
+                        ? 'Сохранить доступ'
+                        : 'Добавить в allowlist'}
+                  </button>
+                  <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
+                    Сбросить форму
+                  </button>
+                </div>
+              </form>
+            )}
+          </article>
+        </div>
+
+        <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+          <aside className="entity-list">
+            {staffAccountsStatus === 'forbidden' ? (
+              <article className="entity-card entity-card--muted">
+                <p className="entity-kicker">Master staff accounts</p>
+                <h3>Только для admin</h3>
+                <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению staff accounts.'}</p>
+              </article>
+            ) : (
+              staffAccounts.map((account) => (
+                <article
+                  className={staffAccountEditor.id === account.id ? 'entity-card entity-card--active' : 'entity-card'}
+                  key={account.id}
+                >
+                  <div className="entity-card__head">
+                    <div>
+                      <p className="entity-kicker">Master staff account</p>
+                      <h3>{account.name}</h3>
+                    </div>
+                    <span className={account.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                      {account.active ? 'Активен' : 'Неактивен'}
+                    </span>
+                  </div>
+                  <div className="chip-row">
+                    <span className="chip">{account.login}</span>
+                    <span className="chip">{account.role === 'admin' ? 'admin' : 'nomad'}</span>
+                  </div>
+                  <div className="entity-card__actions entity-card__actions--wrap">
+                    <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectStaffAccount(account)}>
+                      Редактировать
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onToggleStaffAccountActive(account)}
+                      disabled={staffAccountToggleId === account.id}
+                    >
+                      {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onDeleteStaffAccount(account)}
+                      disabled={staffAccountToggleId === account.id}
+                    >
+                      {staffAccountToggleId === account.id ? 'Удаляем...' : 'Удалить'}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+
+            {staffAccountsStatus !== 'forbidden' && !staffAccounts.length && staffAccountsStatus !== 'loading' ? (
+              <p className="meta-line">Пока нет сотрудников.</p>
+            ) : null}
+          </aside>
+
+          <article className="editor-card">
+            <div className="entity-card__head">
+              <div>
+                <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
+                <h3>{staffAccountEditor.id ? staffAccountEditor.name || 'Без имени' : 'Создать сотрудника'}</h3>
+              </div>
+              <span className="status-chip">{staffAccountEditor.role === 'admin' ? 'admin' : 'nomad'}</span>
+            </div>
+
+            {staffAccountsStatus === 'loading' ? <p className="meta-line">Загружаем сотрудников...</p> : null}
+            {staffAccountsStatus === 'error' ? <p className="error-text">{staffAccountsError}</p> : null}
+            {staffAccountsStatus === 'forbidden' ? <p className="meta-line">{staffAccountsError}</p> : null}
+
+            {staffAccountsStatus !== 'forbidden' ? (
+              <form className="admin-form" onSubmit={onSubmitStaffAccount}>
+                <div className="form-grid form-grid--two">
+                  <label className="field">
+                    <span className="field-label">Логин</span>
+                    <input
+                      className="text-input"
+                      value={staffAccountEditor.login}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
+                      autoComplete="username"
+                      placeholder="nomad"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Имя</span>
+                    <input
+                      className="text-input"
+                      value={staffAccountEditor.name}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
+                      autoComplete="name"
+                      placeholder="Кальянный мастер"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Роль</span>
+                    <select
+                      className="select-input"
+                      value={staffAccountEditor.role}
+                      onChange={(event) =>
+                        setStaffAccountEditor((current) => ({
+                          ...current,
+                          role: event.target.value as StaffUser['role'],
+                        }))
+                      }
+                    >
+                      <option value="admin">admin</option>
+                      <option value="nomad">nomad</option>
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}</span>
+                    <input
+                      className="text-input"
+                      type="password"
+                      value={staffAccountEditor.password}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
+                      autoComplete="new-password"
+                      placeholder="Оставьте пустым, если не менять"
+                    />
+                  </label>
+
+                  <label className="checkbox-field">
+                    <input
+                      type="checkbox"
+                      checked={staffAccountEditor.active}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, active: event.target.checked }))}
+                    />
+                    <span>Активен</span>
+                  </label>
+                </div>
+
+                {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
+
+                <div className="form-actions">
+                  <button className="primary-button primary-button--inline" type="submit" disabled={staffAccountSaveStatus === 'loading'}>
+                    {staffAccountSaveStatus === 'loading'
+                      ? 'Сохраняем...'
+                      : staffAccountEditor.id
+                        ? 'Сохранить сотрудника'
+                        : 'Создать сотрудника'}
+                  </button>
+                  <button className="secondary-button secondary-button--inline" type="button" onClick={onResetStaffAccountEditor}>
+                    Сбросить форму
+                  </button>
+                  {staffAccountEditor.id ? (
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() =>
+                        void onDeleteStaffAccount({
+                          id: staffAccountEditor.id,
+                          login: staffAccountEditor.login,
+                          name: staffAccountEditor.name,
+                          role: staffAccountEditor.role,
+                          active: staffAccountEditor.active,
+                        })
+                      }
+                      disabled={staffAccountToggleId === staffAccountEditor.id}
+                    >
+                      {staffAccountToggleId === staffAccountEditor.id ? 'Удаляем...' : 'Удалить сотрудника'}
+                    </button>
+                  ) : null}
+                </div>
+              </form>
+            ) : (
+              <div className="forbidden-panel">
+                <p className="meta-line">Staff accounts недоступны для вашей роли.</p>
+              </div>
+            )}
+          </article>
+        </div>
 
         <article className="editor-card">
           <div className="entity-card__head">
             <div>
-              <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
-              <h3>{staffAccountEditor.id ? staffAccountEditor.name || 'Без имени' : 'Создать сотрудника'}</h3>
+              <p className="entity-kicker">Журнал изменений</p>
+              <h3>Последние staff-операции</h3>
             </div>
-            <span className="status-chip">{staffAccountEditor.role === 'admin' ? 'admin' : 'nomad'}</span>
+            <span className="status-chip">/staff/audit/events</span>
           </div>
 
-          {staffAccountsStatus === 'loading' ? <p className="meta-line">Загружаем сотрудников...</p> : null}
-          {staffAccountsStatus === 'error' ? <p className="error-text">{staffAccountsError}</p> : null}
-          {staffAccountsStatus === 'forbidden' ? <p className="meta-line">{staffAccountsError}</p> : null}
+          {auditEventsStatus === 'loading' ? <p className="meta-line">Загружаем журнал изменений...</p> : null}
+          {auditEventsStatus === 'error' ? <p className="error-text">{auditEventsError}</p> : null}
+          {auditEventsStatus === 'forbidden' ? <p className="meta-line">{auditEventsError}</p> : null}
 
-          {staffAccountsStatus !== 'forbidden' ? (
-            <form className="admin-form" onSubmit={onSubmitStaffAccount}>
-              <div className="form-grid form-grid--two">
-                <label className="field">
-                  <span className="field-label">Логин</span>
-                  <input
-                    className="text-input"
-                    value={staffAccountEditor.login}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
-                    autoComplete="username"
-                    placeholder="nomad"
-                  />
-                </label>
+          {auditEventsStatus === 'ready' && !auditEvents.length ? (
+            <p className="meta-line">Пока нет записей аудита.</p>
+          ) : null}
 
-                <label className="field">
-                  <span className="field-label">Имя</span>
-                  <input
-                    className="text-input"
-                    value={staffAccountEditor.name}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
-                    autoComplete="name"
-                    placeholder="Кальянный мастер"
-                  />
-                </label>
-
-                <label className="field">
-                  <span className="field-label">Роль</span>
-                  <select
-                    className="select-input"
-                    value={staffAccountEditor.role}
-                    onChange={(event) =>
-                      setStaffAccountEditor((current) => ({
-                        ...current,
-                        role: event.target.value as StaffUser['role'],
-                      }))
-                    }
-                  >
-                    <option value="admin">admin</option>
-                    <option value="nomad">nomad</option>
-                  </select>
-                </label>
-
-                <label className="field">
-                  <span className="field-label">Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}</span>
-                  <input
-                    className="text-input"
-                    type="password"
-                    value={staffAccountEditor.password}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
-                    autoComplete="new-password"
-                    placeholder="Оставьте пустым, если не менять"
-                  />
-                </label>
-
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={staffAccountEditor.active}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, active: event.target.checked }))}
-                  />
-                  <span>Активен</span>
-                </label>
-              </div>
-
-              {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
-
-              <div className="form-actions">
-                <button className="primary-button primary-button--inline" type="submit" disabled={staffAccountSaveStatus === 'loading'}>
-                  {staffAccountSaveStatus === 'loading'
-                    ? 'Сохраняем...'
-                    : staffAccountEditor.id
-                      ? 'Сохранить сотрудника'
-                      : 'Создать сотрудника'}
-                </button>
-                <button className="secondary-button secondary-button--inline" type="button" onClick={onResetStaffAccountEditor}>
-                  Сбросить форму
-                </button>
-                {staffAccountEditor.id ? (
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() =>
-                      void onDeleteStaffAccount({
-                        id: staffAccountEditor.id,
-                        login: staffAccountEditor.login,
-                        name: staffAccountEditor.name,
-                        role: staffAccountEditor.role,
-                        active: staffAccountEditor.active,
-                      })
-                    }
-                    disabled={staffAccountToggleId === staffAccountEditor.id}
-                  >
-                    {staffAccountToggleId === staffAccountEditor.id ? 'Удаляем...' : 'Удалить сотрудника'}
-                  </button>
-                ) : null}
-              </div>
-            </form>
-          ) : (
-            <div className="forbidden-panel">
-              <p className="meta-line">Staff accounts недоступны для вашей роли.</p>
+          {auditEventsStatus !== 'forbidden' && auditEvents.length ? (
+            <div className="audit-list">
+              {auditEvents.map((event) => (
+                <article className="entity-card entity-card--compact" key={event.id}>
+                  <div className="entity-card__head">
+                    <div>
+                      <p className="entity-kicker">
+                        {formatAuditEntityType(event.entityType)} · {formatAuditAction(event.action)}
+                      </p>
+                      <h3>{event.entityLabel || event.entityId}</h3>
+                    </div>
+                    <span className="status-chip">{event.actorRole}</span>
+                  </div>
+                  <p className="meta-line">
+                    {event.actorName || event.actorLogin} ({event.actorLogin}) · {formatDateTimeDisplay(event.createdAt)}
+                  </p>
+                  <div className="chip-row">
+                    <span className="chip">{event.entityType}</span>
+                    <span className="chip">{event.action}</span>
+                    <span className="chip">{event.entityId}</span>
+                  </div>
+                </article>
+              ))}
             </div>
-          )}
+          ) : null}
         </article>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
+
+  const renderActiveWorkspace = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return renderDashboard();
+      case 'inventory':
+        return renderInventory();
+      case 'mixes':
+        return renderMixes();
+      case 'rails':
+        return renderRails();
+      case 'access':
+        return renderAccess();
+      default:
+        return null;
+    }
+  };
 
   if (user) {
+    const activeWorkspace = workspaceTabs.find((tab) => tab.id === activeTab) ?? workspaceTabs[0];
+
     return (
-      <main className="shell shell--master">
-        <section className="hero hero--master">
-          <p className="eyebrow">Nomad Master</p>
-          <h1>Панель персонала</h1>
-          <p className="lead">
-            Вы вошли как {user.name} ({user.role}). Здесь обновляются инвентарь, миксы, рейлы, коды доступа и
-            сводка по действиям гостей.
-          </p>
-          <div className="hero-meta">
-            <span className="status-chip status-chip--inverse">{formatRoleLabel(user.role)}</span>
-            <span className="status-chip status-chip--inverse">{formatWorkspaceTab(activeTab)}</span>
-            <span className="status-chip status-chip--inverse">Postgres-backed runtime</span>
-          </div>
-        </section>
-
-        <section className="summary-grid">
-          {readSummaryCards(summary).map((card) => (
-            <article className="metric-card" key={card.label}>
-              <span className="metric-label">{card.label}</span>
-              <strong className="metric-value">{formatMetricValue(card.value)}</strong>
-            </article>
-          ))}
-        </section>
-
-        <section className="card card--compact">
-          <div className="section-head section-head--compact">
-            <div>
-              <p className="eyebrow">Рабочие разделы</p>
-              <h2>Операционный маршрут смены</h2>
+      <main className="shell shell--master shell--master-auth">
+        <aside className="master-sidebar">
+          <section className="master-sidebar__panel">
+            <p className="eyebrow">Nomad Master</p>
+            <h1>Операционный контур</h1>
+            <p className="master-sidebar__lead">
+              Вы вошли как {user.name}. Этот shell собирает дашборд, инвентарь, миксы, рейлы и контур доступа в
+              единую рабочую консоль.
+            </p>
+            <div className="master-sidebar__meta">
+              <span className="status-chip status-chip--inverse">{formatRoleLabel(user.role)}</span>
+              <span className="status-chip status-chip--inverse">Postgres-backed runtime</span>
             </div>
-            <div className="status-chip">Текущий модуль: {formatWorkspaceTab(activeTab)}</div>
-          </div>
-          <div className="workspace-tabs">
-            {workspaceTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-                onClick={() => setActiveTab(tab.id)}
+          </section>
+
+          <section className="master-sidebar__panel master-sidebar__panel--muted">
+            <div className="master-sidebar__section-head">
+              <div>
+                <p className="eyebrow">Рабочий фокус</p>
+                <h2>Маршрут смены</h2>
+              </div>
+              <span className="status-chip">{activeWorkspace.label}</span>
+            </div>
+
+            <nav className="master-sidebar__nav" aria-label="Рабочие разделы Мастера">
+              <div className="workspace-tabs workspace-tabs--sidebar" role="tablist" aria-label="Рабочие разделы Мастера">
+                {workspaceTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    id={getWorkspaceTabId(tab.id)}
+                    ref={(node) => {
+                      workspaceTabRefs.current[tab.id] = node;
+                    }}
+                    type="button"
+                    className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    aria-controls={getWorkspacePanelId(tab.id)}
+                    tabIndex={activeTab === tab.id ? 0 : -1}
+                    onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
+                  >
+                    <span className="workspace-tab__kicker">{tab.kicker}</span>
+                    <strong>{tab.label}</strong>
+                    <span className="workspace-tab__detail">{tab.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </nav>
+          </section>
+
+          <section className="master-sidebar__panel master-sidebar__panel--compact">
+            <div className="master-runtime-card">
+              <span className="master-runtime-card__label">Текущий контекст</span>
+              <strong>{activeWorkspace.kicker}</strong>
+              <p>{activeWorkspace.detail}</p>
+            </div>
+
+            <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
+              Выйти
+            </button>
+          </section>
+        </aside>
+
+        <section className="master-stage">
+          <header className="master-stage__header">
+            <div className="master-stage__copy">
+              <p className="eyebrow">Активный модуль</p>
+              <h2>{activeWorkspace.label}</h2>
+              <p className="meta-line">{activeWorkspace.detail}</p>
+            </div>
+            <div className="master-stage__status">
+              <span className="status-chip">Смена: {formatWorkspaceTab(activeTab)}</span>
+              <span className="status-chip">Роль: {formatRoleLabel(user.role)}</span>
+            </div>
+          </header>
+
+          <section className="master-summary-strip" aria-label="Ключевые метрики смены">
+            {readSummaryCards(summary).map((card) => (
+              <Card
+                key={card.label}
+                size="sm"
+                className="rounded-[1.55rem] border-white/58 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,249,244,0.7))] shadow-[0_18px_42px_rgba(43,24,21,0.07)] backdrop-blur-lg"
               >
-                <span className="workspace-tab__kicker">{tab.kicker}</span>
-                <strong>{tab.label}</strong>
-              </button>
+                <CardContent className="space-y-2 pt-3.5">
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{card.label}</div>
+                  <div className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
+                </CardContent>
+              </Card>
             ))}
+          </section>
+
+          <div
+            className="master-stage__panel"
+            id={getWorkspacePanelId(activeTab)}
+            role="tabpanel"
+            aria-labelledby={getWorkspaceTabId(activeTab)}
+          >
+            {renderActiveWorkspace()}
           </div>
-        </section>
-
-        {activeTab === 'dashboard' ? renderDashboard() : null}
-        {activeTab === 'inventory' ? renderInventory() : null}
-        {activeTab === 'mixes' ? renderMixes() : null}
-        {activeTab === 'rails' ? renderRails() : null}
-        {activeTab === 'access' ? renderAccess() : null}
-
-        <section className="card card--compact">
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
-            Выйти
-          </button>
         </section>
       </main>
     );

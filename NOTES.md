@@ -1,3 +1,491 @@
+Обновление от 29 марта 2026 (nomad master: complete issue #2 shell foundation):
+- Проблема:
+  - `Nomad Master` уже имел рабочие staff-модули, но авторизованный контур оставался hero-stack из разрозненных блоков и не ощущался как цельная premium HoReCa console;
+  - большой redesign уже был разложен на GitHub issues `#2/#3/#4`, но `Issue #2` нужно было честно довести до состояния source-of-truth implementation с runtime verification, а не оставлять как локальную незакоммиченную работу;
+  - существующий smoke для `Master` был привязан к старому shell contract и не подтверждал новый layout.
+- Изменение:
+  - `apps/nomad-master-web/src/App.tsx`:
+    - авторизованный `Master` переведён в console shell с тёмным sidebar, stage-header активного модуля и summary strip;
+    - workspace navigation встроена в sidebar как основной маршрут смены;
+    - добавлены keyboard navigation и semantic `tablist/tab/tabpanel` для shell navigation.
+  - `apps/nomad-master-web/src/styles.css`:
+    - добавлены `shell--master-auth`, `master-sidebar`, `master-stage`, sidebar panels, runtime card и responsive rules для нового shell;
+    - visual hierarchy смещена от MVP hero-stack к более цельному premium console layout.
+  - `tests/nomad-smoke/tests/master-smoke.spec.ts`:
+    - smoke синхронизирован с новым shell contract;
+    - после login проверяется `Операционный контур`, keyboard path по workspace tabs и критические admin/nomad сценарии.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5176' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+- Эффект:
+  - `Issue #2` теперь закрывает именно shell foundation, а не абстрактное намерение на redesign;
+  - `Master` получил цельный auth-shell без изменения product semantics и role boundaries;
+  - следующий безопасный шаг остаётся в `Issue #3` по harmonization модульных surfaces.
+
+Обновление от 28 марта 2026 (nomad aroma: add shadcn/ui foundation for guest components):
+- Проблема:
+  - `apps/nomad-aroma-web` оставался монолитным Vite/React экраном без локального component layer;
+  - кнопки, badges, inputs, modal и card surfaces жили только как сырой HTML + большой `styles.css`, из-за чего дальнейший UI-срез приходилось собирать вручную и без общей базы;
+  - `Nomad Master` уже получил `shadcn/ui` baseline, а `Aroma` отставал по инженерной консистентности.
+- Изменение:
+  - `apps/nomad-aroma-web/package.json`, `package-lock.json`, `components.json`, `tsconfig.json`, `vite.config.ts`, `src/styles.css`:
+    - добавлен foundation для `shadcn/ui` под Vite;
+    - подключены `Tailwind CSS v4`, alias `@/*`, theme tokens и CSS-bridge к существующей бордово-янтарной палитре `Aroma`;
+    - сохранён текущий визуальный язык, а не введён новый generic theme.
+  - добавлены локальные UI-примитивы:
+    - `apps/nomad-aroma-web/src/lib/utils.ts`
+    - `apps/nomad-aroma-web/src/components/ui/button.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/card.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/badge.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/input.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/checkbox.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/dialog.tsx`
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - ключевые guest surfaces переведены на `Button`, `Card`, `Badge`, `Input`, `Checkbox`, `Dialog`;
+    - модальная карточка микса больше не живёт на отдельном hand-rolled overlay shell, а использует `shadcn`-совместимый dialog primitive;
+    - продуктовая семантика `Арома Ателье` не менялась: guest flow, CTA `Выбрать микс`, onboarding и каталог остались прежними.
+  - docs sync:
+    - `apps/nomad-aroma-web/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - `cd tests/nomad-smoke && npm run smoke`
+- Эффект:
+  - `Aroma` получил локальный, переиспользуемый UI foundation без захода в backend или соседние Nomad-приложения;
+  - следующие визуальные и UX-срезы можно делать через централизованные примитивы, а не через дальнейшее разрастание монолитного `App.tsx`;
+  - smoke не показал регрессии guest flow после миграции на новый component layer.
+
+Обновление от 28 марта 2026 (nomad master: complete slice 6 hardening and QA):
+- Проблема:
+  - после закрытия `Slice 5` у `Nomad Master` оставался незавершённый hardening-pass: smoke suite покрывал только тонкий login/access сценарий и отставал от текущего UI;
+  - shell `Мастера` визуально работал, но workspace tabs не были оформлены как tablist c keyboard navigation и явным focus-visible состоянием;
+  - dashboard card titles были стилизованы как заголовки, но рендерились как `div`, из-за чего accessibility review нельзя было честно считать закрытым.
+- Изменение:
+  - `tests/nomad-smoke/tests/master-smoke.spec.ts`:
+    - smoke расширен до ключевых staff/admin сценариев `dashboard`, `inventory`, `mixes`, `rails`, `access`;
+    - добавлены проверки keyboard navigation по workspace tabs;
+    - добавлены smoke для inventory batch flow, mix editor, rail read-only режима и role-restricted access surface для `nomad`.
+  - `apps/nomad-master-web/src/App.tsx`:
+    - workspace navigation размечен как `tablist/tab/tabpanel`;
+    - добавлена keyboard navigation по `ArrowLeft/Right/Up/Down`, `Home`, `End`;
+    - `Telegram allowlist` form получила `type="tel"` и `autocomplete="tel"` для phone input.
+  - `apps/nomad-master-web/src/styles.css`:
+    - добавлен явный `focus-visible` state для workspace tabs и primary/secondary actions;
+    - keyboard path в shell больше не теряет визуальный focus.
+  - `apps/nomad-master-web/src/components/ui/card.tsx`:
+    - `CardTitle` переведён с `div` на `h3`;
+    - `CardDescription` переведён с `div` на `p`;
+    - dashboard и related surfaces теперь лучше соответствуют semantic heading structure.
+  - docs sync:
+    - `docs/nomad/feature-slices/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd services/nomad-telegram-bot && npm test`
+  - `cd services/nomad-telegram-bot && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5177' NOMAD_AROMA_URL='http://127.0.0.1:5175' npm run smoke`
+  - `git diff --check`
+- Эффект:
+  - `Slice 6` закрыт как отдельная поставка, а не как разрозненные follow-up правки после предыдущих slices;
+  - smoke теперь подтверждает ключевые operational сценарии `Master`, а не только базовый вход;
+  - accessibility hardening закрыл реальный shell gap без захода в новый feature redesign;
+  - визуально критичных откатов на проверенном desktop smoke не обнаружено, но отдельный mobile/viewport visual pass для всех admin states всё ещё остаётся полезным как follow-up, а не как blocker.
+
+Обновление от 28 марта 2026 (nomad master: complete slice 5 access and telegram redesign):
+- Проблема:
+  - access/Telegram контур `Nomad Master` всё ещё жил в MVP-семантике `daily-code CRUD + telegram recipients by chat scope`;
+  - это уже противоречило подтверждённой продуктовой модели, где daily code выпускается автоматически каждый день, а оператор получает его не из `Мастера`, а через Telegram-бота после first-link по номеру телефона;
+  - backend, bot runtime и staff UI не имели общего контракта для `phone allowlist + share contact + /code`.
+- Изменение:
+  - `apps/nomad-backend/prisma/schema.prisma`, `apps/nomad-backend/src/access.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/audit.ts`, `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/prisma/seed.ts`:
+    - добавлен persisted `NomadTelegramOperator` с `name`, `phone`, `linkedChatId`, `linkedAt`, `lastCodeRequestedAt`;
+    - automation contract расширен endpoint'ами link/resolve для Telegram operator flow;
+    - `NomadTelegramAutomationState` теперь хранит `lastRequest*` observability;
+    - staff получает admin-only CRUD по `/staff/access/telegram-operators`;
+    - audit trail теперь покрывает `telegram-operator`.
+  - `services/nomad-telegram-bot/src/backend.ts`, `services/nomad-telegram-bot/src/bot.ts`, `services/nomad-telegram-bot/src/telegram.ts`, `services/nomad-telegram-bot/src/types.ts`, `services/nomad-telegram-bot/src/backend.test.ts`:
+    - бот больше не живёт на `allowed/broadcast/rotate` chat scopes;
+    - добавлен flow `share contact -> backend link -> /code`;
+    - scheduled background loop теперь делает daily `ensure`, а не broadcast;
+    - `/rotate` убран из рабочего сценария, а backend state получает `request` events.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`, `apps/nomad-master-web/src/App.tsx`:
+    - вкладка `Доступ` перестроена вокруг read-only current daily code, bot health, last request и phone allowlist;
+    - old operator path с ручным управлением кодами и Telegram scope-чатами убран из основной UI-семантики;
+    - `staff accounts` оставлены как secondary admin surface для входа в сам `Мастер`.
+  - docs sync:
+    - `apps/nomad-backend/README.md`
+    - `apps/nomad-master-web/README.md`
+    - `services/nomad-telegram-bot/README.md`
+    - `docs/nomad/master-production-redesign.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `docs/nomad/feature-slices/slice-5-access-and-telegram-redesign.md`
+    - `NOMAD_ENV_MATRIX.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm run prisma:generate`
+- `cd apps/nomad-backend && DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' npm run prisma:dbpush`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd services/nomad-telegram-bot && npm test`
+  - `cd services/nomad-telegram-bot && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Slice 5` закрывает новый access semantics end-to-end, а не только как UI veneer;
+  - source of truth для доступа к боту теперь `phone allowlist` в backend, а не ручные `chatId/scope`;
+  - следующий bounded шаг по backlog теперь `Slice 6` hardening/QA, а не возврат к старому access draft.
+
+Обновление от 28 марта 2026 (nomad master: complete slice 4 rail manager hardening):
+- Проблема:
+  - предыдущий под-срез `Slice 4` закрыл только staff editability contract и create semantics, но сам rail manager ещё не был доведён до полного redesign outcome;
+  - backend всё ещё отдавал только один statistical rail, а rail composition в `Мастере` формально уже был read-only aware, но всё равно не давал полноценного select/reorder flow;
+  - из-за этого slice нельзя было честно считать завершённым.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/content.test.ts`:
+    - добавлен второй auto rail `Лучшие оценки`;
+    - `getGuestHomeRails` и `getStaffRails` теперь возвращают оба statistical rail в явном порядке перед ручными витринами;
+    - backend tests подтверждают оба statistical rail и read-only behavior.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - rail editor больше не использует строковый `mixIds`;
+    - добавлен отдельный rail mix builder с full rail mix catalog, поиском, add/remove, reorder `вверх/вниз` и счётчиком состава;
+    - selection flow отвязан от текущих фильтров mix catalog за счёт отдельного `railMixCatalog`, чтобы рейлы не зависели от временного состояния вкладки `Миксы`.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - targeted browser smoke на `http://127.0.0.1:5176`:
+    - проверено наличие обоих auto rail `Больше всего выбирают` и `Лучшие оценки`;
+    - проверен read-only state для statistical rails;
+    - проверен новый rail composer: `Редактировать -> Убрать -> Добавить микс`, без сохранения в backend;
+  - `git diff --check`
+- Эффект:
+  - `Slice 4` закрыт целиком, а rail manager теперь действительно соответствует redesign contract;
+  - следующий slice `5` по access/Telegram всё ещё упирается в human review из `master-production-redesign.md`, поэтому автоматически продолжать backlog дальше без отдельного решения нельзя;
+  - частично начат `Slice 6` в виде targeted smoke, но не как отдельная поставка.
+
+Обновление от 28 марта 2026 (nomad master: start slice 4 rail contract hardening):
+- Проблема:
+  - `Nomad Master` показывал statistical rails почти как обычные редактируемые объекты: UI не видел ни явного `editable`-статуса, ни причины блокировки;
+  - create flow по рейлам всё ещё требовал ручной выбор `type`, хотя по redesign contract новые rails должны всегда создаваться как мастерские curated rails;
+  - это размывало staff semantics и мешало отделить auto-generated rails от operator-managed витрин.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/content.test.ts`:
+    - `GET /staff/rails` и rail mutation responses теперь несут `editable` и `readOnlyReason`;
+    - statistical rails возвращаются как explicit read-only surface с человекочитаемой причиной;
+    - create contract больше не зависит от client-supplied `type`: новый rail всегда создаётся как `curated`;
+    - patch по auto rail теперь возвращает явный read-only error вместо неявного поведения.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - `RailRecord` расширен полями `editable` и `readOnlyReason`;
+    - parser научен корректно fallback-ить read-only semantics даже для старого statistical payload.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - rails manager визуально разделяет editable и read-only rails;
+    - create form убран от ручного выбора типа и теперь объясняет, что новый rail создаётся как curated;
+    - statistical rail открывается в режиме просмотра с disabled form controls и причиной блокировки, а не как ложный edit flow.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `git diff --check`
+- Эффект:
+  - `Slice 4` сдвинут из backlog в реальную поставку без захода в спорную guest ranking semantics;
+  - staff contract по rail editability стал явным и тестируемым;
+  - следующий bounded шаг по этому же slice: reorder/select flow для составов rail и затем второй auto-rail `Лучшие оценки`.
+
+Обновление от 28 марта 2026 (nomad master: start slice 3 mix catalog and component editor):
+- Проблема:
+  - `Nomad Master` всё ещё держал миксы на примитивном CRUD: staff редактировал `componentIds` строкой, не видел rail membership и не мог работать с каталогом как с table-first операционным экраном;
+  - backend уже хранил `proportion/sortOrder`, но staff contract не поднимал их наружу и не валидировал сумму долей;
+  - mix filters по доступности и участию в рейлах отсутствовали, а inventory/rails обновления могли оставлять mix UI на устаревшем состоянии.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/content.test.ts`:
+    - `GET /staff/mixes` расширен до list response с `filters`, `sort`, `meta`, `railMemberships`, `railCount`, `activeRailCount`;
+    - create/update по миксам теперь принимают `components[]` с `tobaccoId`, `proportion`, `sortOrder`, при этом старый `componentIds` оставлен как fallback для безопасной совместимости;
+    - добавлена строгая валидация суммы долей до `100%` и нормализация равного распределения без остатка `99%`;
+    - исправлен общий helper фильтрации по selected values, чтобы server-side filters работали корректно и для inventory, и для mixes.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - добавлены типы и parser'ы для нового mix list contract;
+    - добавлены query builder и filter toggle helpers для `Slice 3`.
+  - `apps/nomad-master-web/src/components/mixes/mix-catalog-view.tsx`, `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - mix catalog переведён в table-first экран с filters bar, server-driven sort и rail membership summary;
+    - editor компонентов получил catalog-backed select, percent inputs, reorder, rebalance и явный total state;
+    - после rail update UI перезагружает и `mixes`, а editor берёт полный список табаков из inventory catalog, а не из случайного текстового поля.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Slice 3` перешёл из backlog в реальную поставку по contract и UI;
+  - staff получил usable mix operations surface вместо string-based CRUD;
+  - следующий безопасный шаг: browser/manual smoke для нового mix flow и затем переход к `Slice 4` по rail manager hardening.
+
+Обновление от 28 марта 2026 (nomad master: start slice 2 inventory hardening with table-first ops):
+- Проблема:
+  - `Slice 2` по inventory operations оставался только backlog-планом, а сам интерфейс был card-first и непригоден для ежедневной операционной работы;
+  - backend не умел server-side filters/sort и batch stock mutations, а staff не видел, какие миксы зависят от конкретного табака;
+  - после inventory toggle frontend не синхронизировал связанный `mixes` state.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/inventory.test.ts`, `apps/nomad-backend/src/recommendations.ts`, `apps/nomad-backend/src/catalog.ts`:
+    - inventory list contract расширен до `filters + sort + meta + dependentMixes`;
+    - добавлен `POST /staff/inventory/tobaccos/batch` для `set-in-stock / set-out-of-stock`;
+    - audit trail теперь покрывает batch inventory updates по каждой затронутой позиции;
+    - `archive` остаётся explicit stop-signal до отдельного product-approved contract.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - добавлены inventory parsers, query builder и helper-утилиты для нового contract.
+  - `apps/nomad-master-web/src/components/inventory/inventory-view.tsx`, `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - inventory UI вынесен в отдельный component;
+    - добавлены table-first layout, filter groups, bulk toolbar и quick path в dependent mixes;
+    - после inventory mutation перезагружаются и `dashboard`, и `mixes`.
+  - docs sync:
+    - `docs/nomad/feature-slices/README.md`
+    - `apps/nomad-master-web/README.md`
+    - `Slice 2` отмечен как `in progress`, а не `done`, потому что `archive/delete` ещё ждёт human review.
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Nomad Master` получил usable inventory surface вместо MVP-карточек;
+  - staff теперь видит dependent mixes и может массово менять наличие;
+  - нерешённым остаётся только policy по `archive/delete`, а не базовая inventory usability.
+
+Обновление от 28 марта 2026 (nomad master: complete slice 1 dashboard redesign under shadcn baseline):
+- Проблема:
+  - формально `Slice 1` уже считался завершённым по analytics contract, но сам dashboard ещё не был переделан по новым соглашениям;
+  - `nomad-master-web` не использовал `shadcn/ui`, а дашборд оставался локальным монолитным экраном на старом card/grid слое;
+  - backlog требовал выполнения slices по порядку, а значит следующим реальным шагом был не `Slice 2`, а закрытие visual/UI части `Slice 1`.
+- Изменение:
+  - `apps/nomad-master-web/package.json`, `package-lock.json`, `components.json`, `tsconfig.json`, `vite.config.ts`, `src/styles.css`:
+    - добавлен `shadcn/ui` foundation для Vite-проекта;
+    - подключены Tailwind v4, alias `@/*`, базовые design tokens и generated primitives.
+  - добавлены UI-примитивы:
+    - `apps/nomad-master-web/src/components/ui/button.tsx`
+    - `apps/nomad-master-web/src/components/ui/card.tsx`
+    - `apps/nomad-master-web/src/components/ui/badge.tsx`
+    - `apps/nomad-master-web/src/components/ui/separator.tsx`
+    - `apps/nomad-master-web/src/lib/utils.ts`
+  - добавлен `apps/nomad-master-web/src/components/dashboard/dashboard-view.tsx`:
+    - новый dashboard screen на `shadcn/ui` с premium HoReCa visual direction;
+    - hero-блок, window toggles, action routing, inventory atlas, product analytics и ops watchlist.
+  - `apps/nomad-master-web/src/App.tsx`:
+    - старый dashboard markup заменён на новый `DashboardView`;
+    - верхний summary strip тоже переведён на новый visual layer.
+  - backlog/docs:
+    - `docs/nomad/master-production-redesign.md`, `docs/nomad/feature-slices/README.md`, `apps/nomad-master-web/README.md` синхронизированы так, что `Slice 1` теперь действительно закрыт, а следующий незакрытый шаг — `Slice 2`.
+- Проверки:
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `git diff --check`
+- Эффект:
+  - `Slice 1` больше не является только contract slice; теперь у него есть и production-ready visual layer;
+  - следующий шаг по порядку действительно стал `Slice 2`, а не исправление старого долга по dashboard redesign.
+
+Обновление от 28 марта 2026 (nomad master: formalize all redesign slices through nomad-feature issue shape):
+- Проблема:
+  - `Nomad Master production redesign` уже был разложен на `Slice 0-6` в одном markdown-документе, но сами slices ещё не существовали как отдельные issue-shaped артефакты;
+  - из-за этого backlog было неудобно переносить в GitHub, назначать по одному bounded context и проверять на полноту полей `Constraints`, `Design / UX baseline`, `References`, `Checks`;
+  - baseline flow уже был переведён на `nomad-feature.yml`, но весь пакет `Nomad Master` ещё не был оформлен в этом формате.
+- Изменение:
+  - добавлен каталог `docs/nomad/feature-slices/` как локальный backlog для issue body mirrors;
+  - созданы отдельные markdown-документы для `Slice 0-6`, повторяющие поля `.github/ISSUE_TEMPLATE/nomad-feature.yml`:
+    - `Primary scope`
+    - `Problem`
+    - `Success criteria`
+    - `Active scope`
+    - `Out of scope`
+    - `Constraints`
+    - `Design / UX baseline`
+    - `References`
+    - `Checks`
+    - `Risk flags`
+  - `docs/nomad/master-production-redesign.md`:
+    - дополнен ссылкой на локальные issue-shaped mirrors.
+- Проверки:
+  - review структуры и полноты всех файлов в `docs/nomad/feature-slices/`
+  - `git diff --check`
+- Эффект:
+  - весь backlog `Nomad Master` теперь оформлен по `nomad-feature.yml`, а не только описан как список slices;
+  - каждый slice можно перенести в GitHub issue без повторного нормализующего прохода;
+  - UI/redesign slices уже несут обязательный baseline по `shadcn/ui` и TIMELESS / TIS.
+
+Обновление от 28 марта 2026 (nomad process: make nomad-feature issue template the default intake path):
+- Проблема:
+  - формально в репозитории уже были Nomad issue templates, но базовый flow всё ещё допускал старт feature-задач напрямую от локального brief;
+  - из-за этого крупные Nomad slices можно было запускать без строгой issue-структуры;
+  - для `Nomad Master` UI/redesign задач не был зафиксирован обязательный visual baseline, поэтому интерфейс рисковал скатываться в default Codex-generated стиль.
+- Изменение:
+  - `.github/ISSUE_TEMPLATE/nomad-feature.yml`:
+    - объявлен базовым intake path для Nomad feature slices;
+    - добавлены поля `Constraints`, `Design / UX baseline`, `References`, `Checks`;
+    - добавлен redesign-specific risk flag для `apps/nomad-master-web`.
+  - `CONTRIBUTING_NOMAD.md`, `WORKFLOW_NOMAD.md`, `.github/NOMAD_REVIEW_POLICY.md`:
+    - синхронизированы с правилом, что feature slices по умолчанию начинаются с `nomad-feature.yml`;
+    - локальный `ai-task-brief` оставлен только как fallback;
+    - для `Nomad Master` UI slices зафиксированы обязательные visual inputs.
+  - `docs/nomad/master-production-redesign.md`:
+    - добавлен visual baseline: `shadcn/ui` где уместно и TIMELESS / TIS как benchmark.
+- Проверки:
+  - `ruby -e 'require \"yaml\"; YAML.load_file(\"/Users/admin/PycharmProjects/yummy/.github/ISSUE_TEMPLATE/nomad-feature.yml\"); puts \"OK\"'`
+  - `git diff --check`
+- Эффект:
+  - Nomad feature work теперь должен стартовать от issue template, а не от свободного текста;
+  - `Nomad Master` redesign получил формальный visual baseline для следующих slices.
+
+Обновление от 28 марта 2026 (nomad master: implement slice 1 dashboard analytics contract):
+- Проблема:
+  - после фиксации `master-production-redesign` у `Nomad Master` всё ещё оставался примитивный dashboard:
+    - только базовые KPI по inventory и `Покурить`;
+    - без окна аналитики;
+    - без breakdown по производителям и вкусовым атрибутам;
+    - без разведения `product metrics` и `ops metrics`;
+    - без сигналов по blocked mixes и health rail-контуров.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`:
+    - `GET /staff/dashboard/summary` расширен до нового nested payload;
+    - добавлено окно `7d | 14d | 30d`;
+    - добавлены inventory breakdowns, product analytics, rating distribution, daily activity и ops signals;
+    - тренд по дням приведён к timezone-stable local day keys.
+  - `apps/nomad-backend/src/inventory.test.ts`:
+    - обновлены contract tests для нового dashboard summary.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - расширен parser `DashboardSummary`;
+    - добавлены поддержка dashboard windows и nested dashboard sections.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - dashboard переведён в production-oriented layout;
+    - добавлены window toggles, breakdown cards, product/ops blocks и daily trend;
+    - summary автоматически перезагружается после inventory/mix/rail мутаций.
+  - `apps/nomad-master-web/README.md`:
+    - добавлено описание реализованного `Slice 1`.
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Nomad Master` получил первый production-ready analytics slice;
+  - следующий безопасный шаг теперь `Slice 2` по inventory table и bulk operations.
+
+Обновление от 28 марта 2026 (nomad master: fix production redesign contract before broad rewrite):
+- Проблема:
+  - `Nomad Master` уже покрывает базовые staff/admin сценарии, но остаётся сырым MVP:
+    - dashboard даёт только минимальную сводку;
+    - inventory, mixes и rails работают как card-first CRUD, а не как production-ready operational tools;
+    - access/Telegram flow не совпадает с целевым упрощённым admin-сценарием;
+    - frontend и backend уже монолитны настолько, что большой rewrite без contract-first этапа создаст конфликтующие write scopes.
+- Изменение:
+  - добавлен `docs/nomad/master-production-redesign.md`:
+    - зафиксированы текущие ограничения frontend/backend;
+    - описан целевой результат по `dashboard`, `inventory`, `mixes`, `rails`, `access`;
+    - redesign разложен на `Slice 0-6` с явными human-review checkpoints;
+    - определены agent roles, non-overlapping write scopes и verification path.
+  - `NOMAD_IMPLEMENTATION_PLAN.md`:
+    - добавлена `Master production redesign note` с правилом не запускать параллельную реализацию без slice-level contracts.
+  - `NOMAD_ROADMAP.md`:
+    - уточнены приоритеты по `Master Operations` и `Analytics And Rails`;
+    - добавлена ссылка на новый execution contract.
+  - `apps/nomad-master-web/README.md`:
+    - текущая стадия переопределена как рабочий MVP, а не завершённый production-hardening.
+- Проверки:
+  - review markdown-структуры и согласованности с `AGENTS.md`, `AI_DEVELOPMENT_PROCESS.md`, `WORKFLOW_NOMAD.md`
+  - `git diff --check`
+- Эффект:
+  - дальнейшее масштабное преобразование `Nomad Master` теперь можно вести по поэтапному contract-first сценарию;
+  - запуск нескольких агентов больше не требует придумывать scope и stop conditions на лету.
+
+Обновление от 28 марта 2026 (skills: add guided Nomad task intake skill):
+- Проблема:
+  - в репозитории уже существовали `CONTRIBUTING_NOMAD.md` и `docs/templates/ai-task-brief.md`, но не было отдельного repo-specific skill для guided task intake;
+  - из-за этого формирование brief по шаблону зависело от ручной дисциплины и не вызывалось как отдельный reusable workflow.
+- Изменение:
+  - добавлен `.codex/skills/nomad-task-intake`:
+    - `SKILL.md` задаёт workflow для кратких intake-вопросов, safe defaults и stop condition на этапе brief formation;
+    - `agents/openai.yaml` добавляет UI metadata;
+    - `references/intake-checklist.md` фиксирует field order, escalation cases и default checks.
+  - `CONTRIBUTING_NOMAD.md`:
+    - добавлена явная ссылка на `$nomad-task-intake` как на способ собрать task brief через guided intake.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - `nomad-task-intake` добавлен в минимальный набор repo-скиллов;
+    - `AI Lead / Integrator` теперь обязан использовать intake skill вместе с repo guard и docs/handoff discipline.
+- Проверки:
+  - `rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md`
+  - `git diff --check`
+- Эффект:
+  - guided task intake теперь существует как отдельный repo-specific workflow;
+  - задачу можно формировать через вызов skill, а не только через ручное заполнение markdown template.
+
+Обновление от 28 марта 2026 (nomad: add solo-agent enablement, thin smoke suite, and accessibility review skill):
+- Проблема:
+  - Nomad governance и repo-specific skills уже существовали, но для одного оператора всё ещё не хватало reproducible local bootstrap, формального task intake, handoff template и репозиторного browser smoke;
+  - из-за этого local startup оставался в формате “вспомнить нужные команды”, а UI verification жила в ручных договорённостях и Playwright CLI артефактах вне отдельного Nomad smoke package;
+  - accessibility-review для Nomad UI не была оформлена как отдельный reusable skill.
+- Изменение:
+  - добавлен `CONTRIBUTING_NOMAD.md`:
+    - зафиксирован solo-agent operating flow для одного `AI Lead / Integrator`;
+    - описаны active Nomad scope, branch policy, canonical local ports, dev credentials и verification baseline.
+  - добавлены templates:
+    - `docs/templates/ai-task-brief.md`
+    - `docs/templates/agent-handoff.md`
+  - добавлен `scripts/nomad/bootstrap-local.sh`:
+    - ставит зависимости в Nomad-пакетах;
+    - поднимает local Postgres;
+    - запускает `prisma:generate`, `prisma:dbpush -- --force-reset`, `prisma:seed`;
+    - сам подставляет default `DATABASE_URL` для Prisma CLI, чтобы bootstrap не требовал ручного env export.
+  - добавлен изолированный smoke package `tests/nomad-smoke/`:
+    - `package.json` с `@playwright/test`;
+    - `playwright.config.ts`;
+    - `tests/aroma-smoke.spec.ts`;
+    - `tests/master-smoke.spec.ts`.
+  - добавлен workflow `.github/workflows/nomad-smoke.yml`:
+    - path-filtered Nomad smoke для PR в `codex/nomad-parallel-track`;
+    - локальный stack `backend + aroma + master`;
+    - upload artifacts в `output/playwright/nomad-quality`.
+  - добавлен skill `.codex/skills/nomad-accessibility-review`:
+    - отдельный checklist для focus order, keyboard reachability, contrast, readable copy, form semantics и role-sensitive UI.
+  - добавлен `docs/skills/forward-testing.md` с protocol для валидации repo-specific skills на трёх классах задач.
+  - синхронизированы process/governance docs:
+    - `AI_DEVELOPMENT_PROCESS.md`
+    - `WORKFLOW_NOMAD.md`
+    - `.github/NOMAD_REVIEW_POLICY.md`
+    - `.github/CODEOWNERS`
+    - `.github/workflows/nomad-pr-checks.yml`
+    - `.github/workflows/nomad-docs-lint.yml`
+- Проверки:
+  - `git diff --check`
+  - `ruby -e 'require "yaml"; Dir[".github/**/*.yml"].sort.each { |file| YAML.load_file(file); puts "OK #{file}" }'`
+  - `bash -n scripts/nomad/bootstrap-local.sh`
+  - `rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md`
+  - `cd tests/nomad-smoke && npx playwright test --list`
+  - `./scripts/nomad/bootstrap-local.sh`
+  - `cd tests/nomad-smoke && npm run smoke`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+- Эффект:
+  - у Nomad появился полноценный solo-agent baseline для одного оператора без ручного поиска startup и handoff-практик;
+  - browser smoke теперь живёт в отдельном репозиторном Nomad suite, а не только в ad-hoc CLI smoke;
+  - accessibility review и forward-testing skills получили собственный операционный слой.
+
 Обновление от 28 марта 2026 (github: add Nomad-only GitHub governance layer):
 - Проблема:
   - в репозитории уже были локальные Nomad workflow и AI process docs, но не было GitHub-layer для Nomad issues, PR review и CI;

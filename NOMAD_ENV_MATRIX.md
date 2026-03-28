@@ -81,25 +81,16 @@
 | `NOMAD_BACKEND_URL` | base URL Nomad backend |
 | `NOMAD_BACKEND_AUTOMATION_TOKEN` | должен совпадать с backend `NOMAD_AUTOMATION_KEY` |
 | `NOMAD_BOT_STATE_PATH` | локальный state-файл бота |
-| `NOMAD_DAILY_BROADCAST_HOUR` | час авторассылки |
-| `NOMAD_DAILY_BROADCAST_MINUTE` | минута авторассылки |
+| `NOMAD_DAILY_BROADCAST_HOUR` | час ежедневного `ensure` current code |
+| `NOMAD_DAILY_BROADCAST_MINUTE` | минута ежедневного `ensure` current code |
 | `NOMAD_TELEGRAM_UPDATE_TIMEOUT_SECONDS` | long-poll timeout |
-
-### Fallback-only
-
-Эти переменные можно оставить пустыми, если recipient lists ведутся через backend:
-
-| Переменная | Назначение |
-|---|---|
-| `NOMAD_TELEGRAM_ALLOWED_CHAT_IDS` | fallback allowlist |
-| `NOMAD_TELEGRAM_BROADCAST_CHAT_IDS` | fallback broadcast list |
-| `NOMAD_TELEGRAM_ROTATE_CHAT_IDS` | fallback rotate list |
 
 ### Production notes
 
-1. source of truth по recipient lists лучше держать в backend;
-2. `.env` остаётся fallback path на случай аварийного запуска;
-3. `NOMAD_BACKEND_AUTOMATION_TOKEN` должен ротироваться отдельно от staff credentials.
+1. source of truth по Telegram access должен жить в backend allowlist по телефонам;
+2. first-link идёт через `share contact`, после чего backend привязывает `chatId` к allowlist-номеру;
+3. `NOMAD_DAILY_BROADCAST_*` сохраняют старое имя только ради совместимости env, но управляют уже не рассылкой, а ежедневным `ensure` current code;
+4. `NOMAD_BACKEND_AUTOMATION_TOKEN` должен ротироваться отдельно от staff credentials.
 
 ## 6. Secret ownership
 

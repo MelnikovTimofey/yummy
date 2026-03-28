@@ -11,8 +11,7 @@ Staff/admin frontend для продукта `Мастер`.
 3. менеджер миксов;
 4. менеджер рейлов;
 5. аналитические дашборды;
-6. управление доступом.
-7. управление Telegram-чатами для bot automation.
+6. управление доступом и Telegram allowlist.
 
 ## Phase 1
 
@@ -44,35 +43,36 @@ Staff/admin frontend для продукта `Мастер`.
 
 Добавлен раздел `Доступ`:
 
-1. список, создание, редактирование и удаление daily codes через `/staff/access/daily-codes`;
-2. список, создание, редактирование и удаление staff accounts через `/staff/access/accounts`;
-3. роли `nomad` доступно управление daily codes, но staff accounts открыты только для `admin`;
-4. формы приведены к одному CRUD-паттерну с остальными менеджерами `Мастера`.
+1. текущий daily code показывается как read-only operational surface;
+2. `admin` управляет Telegram allowlist операторов по `имя + телефон`;
+3. `nomad` не отправляет код из `Мастера`, а получает его в Telegram-боте;
+4. staff accounts остаются отдельным admin-only блоком для входа в сам `Мастер`.
 
-## Telegram provisioning
+## Telegram allowlist и bot-request flow
 
-Добавлен admin-only блок для bot recipients:
+Добавлен новый admin-only блок для bot access:
 
-1. список, создание, редактирование и удаление чатов Telegram через `/staff/access/telegram-recipients`;
-2. поддержаны типы `allowed`, `broadcast`, `rotate`;
-3. эти записи используются Telegram-ботом как backend-driven recipient lists;
-4. если записей в backend нет, bot может fallback-нуться на `.env`.
+1. список, создание, редактирование и удаление allowlist-операторов через `/staff/access/telegram-operators`;
+2. allowlist хранится по `имя + телефон`, а не по `chatId`;
+3. оператор впервые пишет боту и делится контактом, после чего backend привязывает текущий `chatId`;
+4. после привязки оператор получает актуальный daily code через `/code`;
+5. ручной send/re-send flow из `Мастера` отсутствует.
 
 ## Telegram automation state
 
 Добавлен admin-only обзор состояния Telegram automation:
 
 1. heartbeat бота;
-2. last rotate и last broadcast;
+2. last request кода и связанный оператор;
 3. последняя backend-зафиксированная ошибка;
-4. summary по active Telegram chats.
+4. summary по active allowlist entries и linked chats.
 
 ## Audit trail
 
 Добавлен admin-only журнал staff-операций:
 
 1. `GET /staff/audit/events` показывает последние изменения;
-2. журнал покрывает daily codes, staff accounts, Telegram recipients, inventory toggle, mixes и rails;
+2. журнал покрывает daily codes, staff accounts, Telegram allowlist, inventory toggle, mixes и rails;
 3. журнал предназначен для операционного контроля и быстрой верификации изменений после staff CRUD-действий.
 
 ## Локальный запуск
@@ -87,4 +87,67 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning + Telegram automation status + audit trail + Master Polish с более выразительной operational console подачей.
+Текущая стадия: рабочий MVP для staff/admin операций.
+
+Для перехода из MVP в production-ready backoffice зафиксирован отдельный redesign contract:
+
+1. `docs/nomad/master-production-redesign.md`
+
+Текущий GitHub-backed redesign sequence:
+
+1. `#2` — `Master shell foundation under TIMELESS TIS benchmark`
+2. `#3` — `Harmonize operational surfaces across Master modules`
+3. `#4` — `Master visual polish, responsive hardening and design sign-off`
+
+## Issue #2. Master shell foundation
+
+Реализован первый GitHub-backed redesign slice по shell-level visual system:
+
+1. авторизованный `Master` больше не рендерится как hero-stack поверх отдельных блоков, а собирается в console shell с тёмным sidebar и отдельным stage для активного модуля;
+2. workspace navigation встроена в sidebar как основной маршрут смены, а summary metrics вынесены в отдельный strip внутри рабочего stage;
+3. shell-level visual hierarchy теперь ближе к premium HoReCa console, но без изменения product semantics, staff/admin boundaries и API contracts;
+4. targeted Playwright smoke для `Master` синхронизирован с новым shell contract и проходит против локального runtime.
+
+## Slice 1. Dashboard analytics
+
+Реализован первый production-hardening slice для дашборда:
+
+1. окно аналитики `7 / 14 / 30` дней;
+2. разделение `product metrics` и `ops metrics`;
+3. breakdown по производителям, flavor profiles и вкусам;
+4. топ по выборам, топ по guest-оценкам и распределение оценок;
+5. daily activity trend;
+6. операционные сигналы по blocked mixes и состоянию rails;
+7. `shadcn/ui` foundation для `nomad-master-web` как новый UI baseline;
+8. visual redesign dashboard под premium HoReCa direction вместо прежней MVP-сводки.
+
+## Slice 2. Inventory operations hardening
+
+Inventory переведён в новый operational flow:
+
+1. `GET /staff/inventory/tobaccos` поддерживает `search`, `stock`, фильтры по производителям, `flavorProfiles`, вкусам и `flavorTags`, а также server-side sort;
+2. строки инвентаризации показывают dependent mixes, blocked mix count и время последнего изменения;
+3. staff получил table-first экран с filters bar, bulk selection и batch actions `вернуть в наличие / убрать из наличия`;
+4. после inventory update frontend синхронно перезагружает и `dashboard`, и `mixes`, чтобы UI не жил на устаревшем состоянии;
+5. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
+
+## Slice 3. Mix catalog and component editor
+
+Mixes переведены в новый contract-first flow:
+
+1. `GET /staff/mixes` поддерживает `search`, `status`, `railState`, фильтры по производителям компонентов, `flavorProfiles`, вкусам и `flavorTags`, а также server-side sort;
+2. backend create/update для миксов принимает `components[]` с `tobaccoId`, `proportion` и `sortOrder`, а сумма процентов валидируется строго до `100%`;
+3. staff получил table-first экран каталога миксов с rail membership summary, статусами `виден гостю / скрыт / заблокирован наличием` и быстрым переходом в редактор;
+4. editor компонентов больше не требует ручного ввода `componentIds`: оператор выбирает табаки из catalog-backed списка, задаёт доли, меняет порядок строк и может распределить проценты поровну;
+5. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.
+
+## Slice 4. Rail contract hardening
+
+Rails переведены на более явный staff contract:
+
+1. `GET /staff/rails` теперь несёт `editable` и `readOnlyReason`, поэтому statistical rails больше не выглядят как обычный CRUD-объект;
+2. в guest и staff rail surfaces теперь есть два auto rail: `Больше всего выбирают` и `Лучшие оценки`;
+3. create flow больше не просит выбирать `type`: новый rail всегда создаётся как editable master-curated rail;
+4. в менеджере рейлов read-only rails визуально отделены от редактируемых и открываются в режиме просмотра с объяснением причины блокировки;
+5. состав rail больше не редактируется строкой `mixIds`: staff работает через отдельный select/reorder flow с добавлением, удалением и изменением порядка миксов;
+6. существующие prepared и curated rails остаются редактируемыми без изменения guest semantics.

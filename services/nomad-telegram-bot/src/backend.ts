@@ -3,7 +3,8 @@ import type {
   AutomationDailyCodeCurrentResponse,
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
-  AutomationTelegramRecipientsResponse,
+  AutomationTelegramOperatorLinkResponse,
+  AutomationTelegramOperatorResponse,
   AutomationTelegramStateResponse,
   TelegramAutomationReportPayload,
 } from './types';
@@ -79,8 +80,19 @@ export class NomadBackendClient {
     return this.postJson<AutomationDailyCodeRotateResponse>('/automation/daily-code/rotate');
   }
 
-  async getTelegramRecipients() {
-    return this.getJson<AutomationTelegramRecipientsResponse>('/automation/telegram/recipients');
+  async getTelegramOperatorByChatId(chatId: number) {
+    return this.getJson<AutomationTelegramOperatorResponse>(`/automation/telegram/operators/by-chat/${chatId}`);
+  }
+
+  async linkTelegramOperator(payload: {
+    phone: string;
+    chatId: string;
+    telegramUserId?: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+  }) {
+    return this.postBodyJson<AutomationTelegramOperatorLinkResponse>('/automation/telegram/operators/link', payload);
   }
 
   async getTelegramAutomationState() {

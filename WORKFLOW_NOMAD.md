@@ -53,10 +53,13 @@ Issue description:
 3. Read `.github/NOMAD_REVIEW_POLICY.md` before changing Nomad GitHub workflow, PR policy, labels, CODEOWNERS, or CI governance.
 4. Read `NOMAD_PARALLEL_EXECUTION_PLAN.md` before making architecture or repo-structure decisions.
 5. Read `NOMAD_ROADMAP.md` before choosing issue priority or batching work.
-6. Work only inside the current Nomad issue scope.
-7. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
+6. Read `CONTRIBUTING_NOMAD.md` before changing Nomad startup, task intake, handoff templates, or solo-agent operating flow.
+7. For Nomad feature slices, use `.github/ISSUE_TEMPLATE/nomad-feature.yml` as the default intake source of truth.
+8. Use `docs/templates/ai-task-brief.md` only as a fallback for local work when the issue does not exist yet, and use `docs/templates/agent-handoff.md` for structured handoff.
+9. Work only inside the current Nomad issue scope.
+10. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
    Stop, explain the question or options, and hand off to `Human Review`.
-8. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
+11. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
 
 ## Roadmap-driven execution
 
@@ -73,6 +76,12 @@ Preferred task granularity:
 - `1 issue = 1 bounded context = 1 clear verification result`
 - default scope should be one Nomad app/service at a time
 - use cross-app issues only when an integration step is truly needed after smaller issues are complete
+
+For `apps/nomad-master-web` UI/redesign issues:
+- fill the `Design / UX baseline` field in `nomad-feature.yml`
+- prefer `shadcn/ui` where it fits the slice and does not force a broad refactor
+- do not accept default Codex-generated UI as the final visual layer
+- use TIMELESS / TIS references as visual benchmark when the issue is about premium backoffice polish
 
 Do not use Symphony for:
 - repo-wide architecture decisions
@@ -142,6 +151,7 @@ If a task changes more than one Nomad project, run the matching build command in
 
 Expanded checks:
 - If Nomad UI behavior changed and the environment is ready, run a targeted browser smoke for the touched flow.
+- If `tests/nomad-smoke/` is available and the local stack is up, prefer `cd tests/nomad-smoke && npm run smoke`.
 - If automated browser checks are unavailable, do a manual smoke pass and say so in the handoff.
 - Backend behavior beyond build remains manual unless an automated test is explicitly added.
 
@@ -173,6 +183,7 @@ If the change affects Nomad repo rules, workflow, startup, handoff, or operating
 - update `AGENTS.md` only if agent rules truly changed
 - update `AI_DEVELOPMENT_PROCESS.md` if the AI operating model or skill lifecycle changed
 - update `.github/NOMAD_REVIEW_POLICY.md` if Nomad GitHub governance changed
+- update `CONTRIBUTING_NOMAD.md` if local startup, task intake, smoke, or solo-agent flow changed
 
 ## Git and completion
 

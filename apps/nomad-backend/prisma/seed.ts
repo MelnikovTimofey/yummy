@@ -268,6 +268,7 @@ async function main() {
   await prisma.nomadIntroCard.deleteMany();
   await prisma.nomadDailyAccessCode.deleteMany();
   await prisma.nomadTelegramRecipient.deleteMany();
+  await prisma.nomadTelegramOperator.deleteMany();
   await prisma.nomadTelegramAutomationState.deleteMany();
   await prisma.nomadAuditEvent.deleteMany();
   await prisma.nomadStaffAccount.deleteMany();
@@ -301,6 +302,36 @@ async function main() {
 
   await prisma.nomadTelegramRecipient.createMany({
     data: telegramRecipients,
+  });
+
+  await prisma.nomadTelegramOperator.createMany({
+    data: [
+      {
+        id: 'telegram-operator-anna',
+        name: 'Анна',
+        phone: '+79991234567',
+        active: true,
+        linkedChatId: null,
+        linkedTelegramUserId: null,
+        linkedUsername: null,
+        linkedDisplayName: null,
+        linkedAt: null,
+        lastCodeRequestedAt: null,
+      },
+      {
+        id: 'telegram-operator-ilya',
+        name: 'Илья',
+        phone: '+79997654321',
+        active: true,
+        linkedChatId: null,
+        linkedTelegramUserId: null,
+        linkedUsername: null,
+        linkedDisplayName: null,
+        linkedAt: null,
+        lastCodeRequestedAt: null,
+      },
+    ],
+    skipDuplicates: true,
   });
 
   await prisma.nomadIntroCard.createMany({

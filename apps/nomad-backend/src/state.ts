@@ -16,10 +16,19 @@ export type IntroCard = {
 
 export type MixComponentView = {
   id: string;
+  tobaccoId: string;
   name: string;
   manufacturer: string;
   flavors: string[];
   proportion: number;
+  sortOrder: number;
+};
+
+export type MixRailMembershipView = {
+  id: string;
+  name: string;
+  type: RailType;
+  active: boolean;
 };
 
 export type MixView = {
@@ -37,6 +46,10 @@ export type MixView = {
   available: boolean;
   guestVisible: boolean;
   createdAt: string;
+  updatedAt: string;
+  railMemberships: MixRailMembershipView[];
+  railCount: number;
+  activeRailCount: number;
 };
 
 export type RailView = {
@@ -50,22 +63,248 @@ export type RailView = {
   isSystem: boolean;
 };
 
+export type StaffRailView = RailView & {
+  editable: boolean;
+  readOnlyReason: string;
+};
+
 export type SmokeCtaEvent = {
   mixId: string;
   createdAt: string;
 };
 
+export type DashboardWindowKey = '7d' | '14d' | '30d';
+
+export type DashboardWindow = {
+  key: DashboardWindowKey;
+  label: string;
+  days: number;
+  startsAt: string;
+  endsAt: string;
+};
+
+export type DashboardBreakdownItem = {
+  key: string;
+  label: string;
+  total: number;
+  inStockCount: number;
+  outOfStockCount: number;
+};
+
+export type DashboardMixMetric = {
+  mixId: string;
+  mixName: string;
+  smokeCtaCount: number;
+  avgRating: number;
+  ratingsCount: number;
+  popularity: number;
+};
+
+export type DashboardRatingDistributionItem = {
+  value: number;
+  count: number;
+};
+
+export type DashboardActivityPoint = {
+  date: string;
+  smokeCtaCount: number;
+  ratingsCount: number;
+};
+
+export type DashboardBlockedMix = {
+  mixId: string;
+  mixName: string;
+  missingComponents: string[];
+  railNames: string[];
+  smokeCtaCount: number;
+};
+
+export type DashboardRailHealthItem = {
+  railId: string;
+  name: string;
+  type: RailType;
+  active: boolean;
+  totalMixCount: number;
+  visibleMixCount: number;
+  hiddenMixCount: number;
+};
+
+export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
+
+export type InventorySortField = 'stock' | 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixes';
+
+export type InventorySortDirection = 'asc' | 'desc';
+
+export type InventoryDependentMixView = {
+  id: string;
+  name: string;
+  available: boolean;
+  guestVisible: boolean;
+  avgRating: number;
+  popularity: number;
+};
+
+export type InventoryTobaccoView = {
+  id: string;
+  name: string;
+  manufacturer: string;
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  inStock: boolean;
+  updatedAt: string;
+  dependentMixCount: number;
+  blockedDependentMixCount: number;
+  dependentMixes: InventoryDependentMixView[];
+};
+
+export type InventoryListQuery = {
+  search?: string;
+  stock?: InventoryStockFilter;
+  manufacturers?: string[];
+  flavorProfiles?: string[];
+  flavors?: string[];
+  flavorTags?: string[];
+  sort?: InventorySortField;
+  direction?: InventorySortDirection;
+};
+
+export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+
+export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
+
+export type MixSortField = 'popularity' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
+
+export type MixSortDirection = 'asc' | 'desc';
+
+export type MixListQuery = {
+  search?: string;
+  status?: MixStatusFilter;
+  railState?: MixRailFilter;
+  manufacturers?: string[];
+  flavorProfiles?: string[];
+  flavors?: string[];
+  flavorTags?: string[];
+  sort?: MixSortField;
+  direction?: MixSortDirection;
+};
+
+export type MixListResult = {
+  items: MixView[];
+  filters: {
+    search: string;
+    status: MixStatusFilter;
+    railState: MixRailFilter;
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+    options: {
+      manufacturers: string[];
+      flavorProfiles: string[];
+      flavors: string[];
+      flavorTags: string[];
+    };
+  };
+  sort: {
+    field: MixSortField;
+    direction: MixSortDirection;
+  };
+  meta: {
+    totalItems: number;
+    filteredItems: number;
+    guestVisibleCount: number;
+    hiddenCount: number;
+    blockedCount: number;
+    inRailsCount: number;
+    withoutRailsCount: number;
+  };
+};
+
+export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive';
+
+export type InventoryListResult = {
+  items: InventoryTobaccoView[];
+  filters: {
+    search: string;
+    stock: InventoryStockFilter;
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+    options: {
+      manufacturers: string[];
+      flavorProfiles: string[];
+      flavors: string[];
+      flavorTags: string[];
+    };
+  };
+  sort: {
+    field: InventorySortField;
+    direction: InventorySortDirection;
+  };
+  meta: {
+    totalItems: number;
+    filteredItems: number;
+    inStockCount: number;
+    outOfStockCount: number;
+  };
+};
+
+export type InventoryBatchResult = {
+  action: Exclude<InventoryBatchAction, 'archive'>;
+  ids: string[];
+  skippedIds: string[];
+  processedCount: number;
+  items: InventoryTobaccoView[];
+};
+
+export type DashboardSummary = {
+  window: DashboardWindow;
+  inventory: {
+    total: number;
+    inStockCount: number;
+    outOfStockCount: number;
+    manufacturers: DashboardBreakdownItem[];
+    flavorProfiles: DashboardBreakdownItem[];
+    topFlavors: DashboardBreakdownItem[];
+  };
+  product: {
+    smokeCtaTotal: number;
+    ratingsTotal: number;
+    avgGuestRating: number;
+    topMixes: DashboardMixMetric[];
+    topRatedMixes: DashboardMixMetric[];
+    ratingDistribution: DashboardRatingDistributionItem[];
+    activity: DashboardActivityPoint[];
+  };
+  ops: {
+    guestVisibleMixesCount: number;
+    hiddenMixesCount: number;
+    blockedByInventoryCount: number;
+    activeRailsCount: number;
+    emptyActiveRailsCount: number;
+    blockedMixes: DashboardBlockedMix[];
+    railHealth: DashboardRailHealthItem[];
+  };
+};
+
 export type MixInput = {
   name: string;
   description: string;
-  componentIds: string[];
+  componentIds?: string[];
+  components?: Array<{
+    tobaccoId?: string;
+    proportion?: number;
+    sortOrder?: number;
+  }>;
   available?: boolean;
   popularity?: number;
   baseAvgRating?: number;
 };
 
 export type MixPatch = Partial<
-  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'available' | 'popularity' | 'baseAvgRating'>
+  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'components' | 'available' | 'popularity' | 'baseAvgRating'>
 >;
 
 export type RailInput = {
@@ -114,6 +353,19 @@ type SeedTelegramRecipient = {
   label: string;
   scope: 'allowed' | 'broadcast' | 'rotate';
   active: boolean;
+};
+
+type SeedTelegramOperator = {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  linkedChatId?: string | null;
+  linkedTelegramUserId?: string | null;
+  linkedUsername?: string | null;
+  linkedDisplayName?: string | null;
+  linkedAt?: string | null;
+  lastCodeRequestedAt?: string | null;
 };
 
 const introCards: SeedIntroCard[] = [
@@ -181,6 +433,21 @@ const seedDailyAccessCodes: SeedDailyAccessCode[] = [
 
 const seedTelegramRecipients: SeedTelegramRecipient[] = [];
 
+const seedTelegramOperators: SeedTelegramOperator[] = [
+  {
+    id: 'telegram-operator-anna',
+    name: 'Анна',
+    phone: '+79991234567',
+    active: true,
+  },
+  {
+    id: 'telegram-operator-ilya',
+    name: 'Илья',
+    phone: '+79997654321',
+    active: true,
+  },
+];
+
 const defaultRails: SeedRail[] = [
   {
     id: 'rail-prepared-fresh-line',
@@ -223,6 +490,27 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 48) || 'item';
 
+const dashboardWindowConfig: Record<DashboardWindowKey, { label: string; days: number }> = {
+  '7d': { label: '7 дней', days: 7 },
+  '14d': { label: '14 дней', days: 14 },
+  '30d': { label: '30 дней', days: 30 },
+};
+
+const flavorProfileLabels: Record<string, string> = {
+  sweet: 'Сладкие',
+  sour: 'Кислые',
+  spicy: 'Пряные',
+  fresh: 'Свежие',
+  dessert: 'Десертные',
+  tobacco: 'Табачные',
+  minty: 'Мятные',
+  fruity: 'Фруктовые',
+  floral_herbal: 'Цветочно-травяные',
+  citrus: 'Цитрусовые',
+  berry: 'Ягодные',
+  perfume: 'Парфюмные',
+};
+
 const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));
 
 const parseList = (value: string | null | undefined) => {
@@ -242,6 +530,103 @@ const parseList = (value: string | null | undefined) => {
   } catch {
     return [];
   }
+};
+
+const isDashboardWindowKey = (value: string): value is DashboardWindowKey =>
+  value === '7d' || value === '14d' || value === '30d';
+
+const isInventoryStockFilter = (value: string): value is InventoryStockFilter =>
+  value === 'all' || value === 'in-stock' || value === 'out-of-stock';
+
+const isInventorySortField = (value: string): value is InventorySortField =>
+  value === 'stock' || value === 'name' || value === 'manufacturer' || value === 'updatedAt' || value === 'dependentMixes';
+
+const isInventorySortDirection = (value: string): value is InventorySortDirection => value === 'asc' || value === 'desc';
+
+export const normalizeDashboardWindowKey = (value: unknown): DashboardWindowKey => {
+  if (typeof value !== 'string') {
+    return '14d';
+  }
+
+  return isDashboardWindowKey(value) ? value : '14d';
+};
+
+const startOfDay = (value: Date) => {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const endOfDay = (value: Date) => {
+  const next = new Date(value);
+  next.setHours(23, 59, 59, 999);
+  return next;
+};
+
+const toDayKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const buildDashboardWindow = (key: DashboardWindowKey) => {
+  const config = dashboardWindowConfig[key];
+  const endsAtDate = endOfDay(new Date());
+  const startsAtDate = startOfDay(new Date());
+  startsAtDate.setDate(startsAtDate.getDate() - (config.days - 1));
+
+  return {
+    key,
+    label: config.label,
+    days: config.days,
+    startsAtDate,
+    endsAtDate,
+    startsAt: startsAtDate.toISOString(),
+    endsAt: endsAtDate.toISOString(),
+  };
+};
+
+const buildInventoryBreakdown = (
+  values: Array<{
+    key: string;
+    label: string;
+    inStock: boolean;
+  }>,
+): DashboardBreakdownItem[] => {
+  const stats = new Map<string, DashboardBreakdownItem>();
+
+  for (const value of values) {
+    const current = stats.get(value.key) ?? {
+      key: value.key,
+      label: value.label,
+      total: 0,
+      inStockCount: 0,
+      outOfStockCount: 0,
+    };
+
+    current.total += 1;
+    if (value.inStock) {
+      current.inStockCount += 1;
+    } else {
+      current.outOfStockCount += 1;
+    }
+
+    stats.set(value.key, current);
+  }
+
+  return [...stats.values()].sort((left, right) => {
+    if (right.total !== left.total) {
+      return right.total - left.total;
+    }
+
+    if (right.inStockCount !== left.inStockCount) {
+      return right.inStockCount - left.inStockCount;
+    }
+
+    return left.label.localeCompare(right.label, 'ru');
+  });
 };
 
 const mapIntroCardRecord = (record: {
@@ -335,14 +720,18 @@ const mapTobacco = (record: {
   manufacturer: string;
   flavorProfiles: string;
   flavors: string;
+  flavorTags: string;
   inStock: boolean;
+  updatedAt: Date;
 }) => ({
   id: record.id,
   name: record.name,
   manufacturer: record.manufacturer,
   flavorProfiles: parseList(record.flavorProfiles),
   flavors: parseList(record.flavors),
+  flavorTags: parseList(record.flavorTags),
   inStock: record.inStock,
+  updatedAt: record.updatedAt.toISOString(),
 });
 
 const getMixFlavorShape = (components: Array<{ tobacco: { flavorProfiles: string; flavors: string; flavorTags: string } }>) => ({
@@ -359,12 +748,14 @@ const mapMixView = (record: {
   popularity: number;
   baseAvgRating: number;
   createdAt: Date;
+  updatedAt: Date;
   flavorProfiles: string;
   flavors: string;
   flavorTags: string;
   components: Array<{
     tobaccoId: string;
     proportion: number;
+    sortOrder: number;
     tobacco: {
       id: string;
       name: string;
@@ -373,6 +764,14 @@ const mapMixView = (record: {
       flavors: string;
       flavorTags: string;
       inStock: boolean;
+    };
+  }>;
+  railMixes: Array<{
+    rail: {
+      id: string;
+      name: string;
+      type: string;
+      active: boolean;
     };
   }>;
   ratings: Array<{ value: number }>;
@@ -384,6 +783,12 @@ const mapMixView = (record: {
     ? Number((record.ratings.reduce((sum, item) => sum + item.value, 0) / ratingsCount).toFixed(1))
     : Number(record.baseAvgRating.toFixed(1));
   const guestVisible = record.available && record.components.every((item) => item.tobacco.inStock);
+  const railMemberships = record.railMixes.map((item) => ({
+    id: item.rail.id,
+    name: item.rail.name,
+    type: item.rail.type as RailType,
+    active: item.rail.active,
+  }));
 
   return {
     id: record.id,
@@ -395,10 +800,12 @@ const mapMixView = (record: {
     flavorTags: flavorShape.flavorTags.length ? flavorShape.flavorTags : parseList(record.flavorTags),
     components: record.components.map((item) => ({
       id: item.tobacco.id,
+      tobaccoId: item.tobacco.id,
       name: item.tobacco.name,
       manufacturer: item.tobacco.manufacturer,
       flavors: parseList(item.tobacco.flavors),
       proportion: item.proportion,
+      sortOrder: item.sortOrder,
     })),
     avgRating,
     ratingsCount,
@@ -406,6 +813,10 @@ const mapMixView = (record: {
     available: record.available,
     guestVisible,
     createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+    railMemberships,
+    railCount: railMemberships.length,
+    activeRailCount: railMemberships.filter((item) => item.active).length,
   };
 };
 
@@ -418,6 +829,18 @@ const fetchMixViews = async () => {
           tobacco: true,
         },
       },
+      railMixes: {
+        include: {
+          rail: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              active: true,
+            },
+          },
+        },
+      },
       ratings: {
         select: {
           value: true,
@@ -427,6 +850,247 @@ const fetchMixViews = async () => {
   });
 
   return records.map(mapMixView);
+};
+
+const normalizeMixStatusFilter = (value: unknown): MixStatusFilter => {
+  if (value === 'guest-visible' || value === 'hidden' || value === 'blocked') {
+    return value;
+  }
+
+  return 'all';
+};
+
+const normalizeMixRailFilter = (value: unknown): MixRailFilter => {
+  if (value === 'in-rails' || value === 'without-rails') {
+    return value;
+  }
+
+  return 'all';
+};
+
+const normalizeMixSortField = (value: unknown): MixSortField => {
+  if (value === 'name' || value === 'avgRating' || value === 'updatedAt' || value === 'rails') {
+    return value;
+  }
+
+  return 'popularity';
+};
+
+const normalizeMixSortDirection = (value: unknown): MixSortDirection => {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+};
+
+const matchesMixStatus = (mix: MixView, status: MixStatusFilter) => {
+  switch (status) {
+    case 'guest-visible':
+      return mix.guestVisible;
+    case 'hidden':
+      return !mix.available;
+    case 'blocked':
+      return mix.available && !mix.guestVisible;
+    case 'all':
+    default:
+      return true;
+  }
+};
+
+const matchesMixRailState = (mix: MixView, railState: MixRailFilter) => {
+  switch (railState) {
+    case 'in-rails':
+      return mix.railCount > 0;
+    case 'without-rails':
+      return mix.railCount === 0;
+    case 'all':
+    default:
+      return true;
+  }
+};
+
+const mixViewSortBy = (
+  left: MixView,
+  right: MixView,
+  field: MixSortField,
+  direction: MixSortDirection,
+) => {
+  const multiplier = direction === 'asc' ? 1 : -1;
+
+  const by = (value: number) => value * multiplier;
+
+  switch (field) {
+    case 'name': {
+      const result = left.name.localeCompare(right.name, 'ru');
+      if (result !== 0) {
+        return result * multiplier;
+      }
+      break;
+    }
+    case 'avgRating': {
+      if (left.avgRating !== right.avgRating) {
+        return by(left.avgRating - right.avgRating);
+      }
+      break;
+    }
+    case 'updatedAt': {
+      const result = left.updatedAt.localeCompare(right.updatedAt);
+      if (result !== 0) {
+        return result * multiplier;
+      }
+      break;
+    }
+    case 'rails': {
+      if (left.railCount !== right.railCount) {
+        return by(left.railCount - right.railCount);
+      }
+      break;
+    }
+    case 'popularity':
+    default: {
+      if (left.popularity !== right.popularity) {
+        return by(left.popularity - right.popularity);
+      }
+      break;
+    }
+  }
+
+  return mixViewSort(left, right);
+};
+
+const normalizeInventoryStockFilter = (value: unknown): InventoryStockFilter => {
+  if (typeof value !== 'string') {
+    return 'all';
+  }
+
+  return isInventoryStockFilter(value) ? value : 'all';
+};
+
+const normalizeInventorySortField = (value: unknown): InventorySortField => {
+  if (typeof value !== 'string') {
+    return 'stock';
+  }
+
+  return isInventorySortField(value) ? value : 'stock';
+};
+
+const normalizeInventorySortDirection = (value: unknown): InventorySortDirection => {
+  if (typeof value !== 'string') {
+    return 'desc';
+  }
+
+  return isInventorySortDirection(value) ? value : 'desc';
+};
+
+const normalizeInventorySelections = (items: string[] | undefined) =>
+  unique((items ?? []).map(normalizeToken).filter(Boolean));
+
+const resolveInventorySelections = (options: string[], selected: string[]) => {
+  if (!selected.length) {
+    return [] as string[];
+  }
+
+  return options.filter((item) => selected.includes(normalizeToken(item)));
+};
+
+const matchesInventorySelection = (values: string[], selected: string[]) => {
+  if (!selected.length) {
+    return true;
+  }
+
+  const normalized = values.map(normalizeToken);
+  return selected.map(normalizeToken).some((item) => normalized.includes(item));
+};
+
+const inventoryMixSort = (left: InventoryDependentMixView, right: InventoryDependentMixView) => {
+  if (left.guestVisible !== right.guestVisible) {
+    return left.guestVisible ? -1 : 1;
+  }
+
+  if (left.available !== right.available) {
+    return left.available ? -1 : 1;
+  }
+
+  if (right.popularity !== left.popularity) {
+    return right.popularity - left.popularity;
+  }
+
+  if (right.avgRating !== left.avgRating) {
+    return right.avgRating - left.avgRating;
+  }
+
+  return left.name.localeCompare(right.name, 'ru');
+};
+
+const buildInventoryTobaccoView = (
+  tobacco: ReturnType<typeof mapTobacco>,
+  allMixes: MixView[],
+): InventoryTobaccoView => {
+  const dependentMixes = allMixes
+    .filter((mix) => mix.componentIds.includes(tobacco.id))
+    .map((mix) => ({
+      id: mix.id,
+      name: mix.name,
+      available: mix.available,
+      guestVisible: mix.guestVisible,
+      avgRating: mix.avgRating,
+      popularity: mix.popularity,
+    }))
+    .sort(inventoryMixSort);
+
+  return {
+    ...tobacco,
+    dependentMixCount: dependentMixes.length,
+    blockedDependentMixCount: dependentMixes.filter((mix) => mix.available && !mix.guestVisible).length,
+    dependentMixes,
+  };
+};
+
+const inventoryTobaccoSort = (
+  left: InventoryTobaccoView,
+  right: InventoryTobaccoView,
+  field: InventorySortField,
+  direction: InventorySortDirection,
+) => {
+  const multiplier = direction === 'asc' ? 1 : -1;
+
+  const by = (value: number) => value * multiplier;
+
+  switch (field) {
+    case 'name': {
+      const result = left.name.localeCompare(right.name, 'ru');
+      if (result !== 0) {
+        return result * multiplier;
+      }
+      break;
+    }
+    case 'manufacturer': {
+      const manufacturerResult = left.manufacturer.localeCompare(right.manufacturer, 'ru');
+      if (manufacturerResult !== 0) {
+        return manufacturerResult * multiplier;
+      }
+      break;
+    }
+    case 'updatedAt': {
+      const result = left.updatedAt.localeCompare(right.updatedAt);
+      if (result !== 0) {
+        return result * multiplier;
+      }
+      break;
+    }
+    case 'dependentMixes': {
+      if (left.dependentMixCount !== right.dependentMixCount) {
+        return by(left.dependentMixCount - right.dependentMixCount);
+      }
+      break;
+    }
+    case 'stock':
+    default: {
+      if (left.inStock !== right.inStock) {
+        return by(Number(left.inStock) - Number(right.inStock));
+      }
+      break;
+    }
+  }
+
+  return left.name.localeCompare(right.name, 'ru');
 };
 
 const validateMixComponents = async (componentIds: string[]) => {
@@ -462,12 +1126,95 @@ const validateMixComponents = async (componentIds: string[]) => {
   };
 };
 
-const validateMixInput = async (payload: Partial<MixInput>) => {
-  const name = payload.name?.trim();
-  const description = payload.description?.trim();
+const distributeMixComponentProportions = (componentIds: string[]) => {
+  if (!componentIds.length) {
+    return [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>;
+  }
 
-  if (!name || !description) {
-    return { error: 'Name and description are required' };
+  const base = Math.floor(100 / componentIds.length);
+  const remainder = 100 - base * componentIds.length;
+
+  return componentIds.map((tobaccoId, index) => ({
+    tobaccoId,
+    proportion: base + (index < remainder ? 1 : 0),
+    sortOrder: index,
+  }));
+};
+
+const validateStructuredMixComponents = async (
+  components: Array<{ tobaccoId?: string; proportion?: number; sortOrder?: number }>,
+) => {
+  const normalized = components
+    .map((component, index) => ({
+      tobaccoId: component.tobaccoId?.trim() ?? '',
+      proportion: typeof component.proportion === 'number' ? Math.round(component.proportion) : NaN,
+      sortOrder: typeof component.sortOrder === 'number' && Number.isFinite(component.sortOrder) ? component.sortOrder : index,
+      sourceIndex: index,
+    }))
+    .filter((component) => component.tobaccoId)
+    .sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.sourceIndex - right.sourceIndex;
+    })
+    .map((component, index) => ({
+      tobaccoId: component.tobaccoId,
+      proportion: component.proportion,
+      sortOrder: index,
+    }));
+
+  if (!normalized.length) {
+    return { error: 'At least one component is required', components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }> };
+  }
+
+  const seen = new Set<string>();
+  for (const component of normalized) {
+    if (seen.has(component.tobaccoId)) {
+      return {
+        error: `Duplicate component id: ${component.tobaccoId}`,
+        components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+      };
+    }
+    seen.add(component.tobaccoId);
+
+    if (!Number.isInteger(component.proportion) || component.proportion <= 0 || component.proportion > 100) {
+      return {
+        error: `Invalid component proportion for ${component.tobaccoId}`,
+        components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+      };
+    }
+  }
+
+  const total = normalized.reduce((sum, component) => sum + component.proportion, 0);
+  if (total !== 100) {
+    return {
+      error: 'Component proportions must total exactly 100',
+      components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+    };
+  }
+
+  const componentValidation = await validateMixComponents(normalized.map((component) => component.tobaccoId));
+  if ('error' in componentValidation) {
+    return {
+      error: componentValidation.error,
+      components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+    };
+  }
+
+  return {
+    components: normalized,
+    componentIds: componentValidation.componentIds,
+    flavorProfiles: componentValidation.flavorProfiles,
+    flavors: componentValidation.flavors,
+    flavorTags: componentValidation.flavorTags,
+  };
+};
+
+const resolveMixComponentsInput = async (payload: Partial<MixInput>) => {
+  if (Array.isArray(payload.components)) {
+    return validateStructuredMixComponents(payload.components);
   }
 
   const componentValidation = await validateMixComponents(payload.componentIds ?? []);
@@ -476,8 +1223,31 @@ const validateMixInput = async (payload: Partial<MixInput>) => {
   }
 
   return {
+    components: distributeMixComponentProportions(componentValidation.componentIds),
+    componentIds: componentValidation.componentIds,
+    flavorProfiles: componentValidation.flavorProfiles,
+    flavors: componentValidation.flavors,
+    flavorTags: componentValidation.flavorTags,
+  };
+};
+
+const validateMixInput = async (payload: Partial<MixInput>) => {
+  const name = payload.name?.trim();
+  const description = payload.description?.trim();
+
+  if (!name || !description) {
+    return { error: 'Name and description are required' };
+  }
+
+  const componentValidation = await resolveMixComponentsInput(payload);
+  if ('error' in componentValidation) {
+    return { error: componentValidation.error };
+  }
+
+  return {
     name,
     description,
+    components: componentValidation.components,
     componentIds: componentValidation.componentIds,
     flavorProfiles: componentValidation.flavorProfiles,
     flavors: componentValidation.flavors,
@@ -516,17 +1286,11 @@ const normalizeRailMixIds = async (mixIds: string[]) => {
 const validateRailInput = async (payload: Partial<RailInput>) => {
   const name = payload.name?.trim();
   const description = payload.description?.trim();
-  const type = payload.type;
 
   if (!name || !description) {
     return { error: 'Name and description are required' };
   }
 
-  if (type && type === 'statistical') {
-    return { error: 'Statistical rails are read-only' };
-  }
-
-  const railType: Exclude<RailType, 'statistical'> = type ?? 'prepared';
   const railMixIds = await normalizeRailMixIds(payload.mixIds ?? []);
   if ('error' in railMixIds) {
     return { error: railMixIds.error };
@@ -535,7 +1299,7 @@ const validateRailInput = async (payload: Partial<RailInput>) => {
   return {
     name,
     description,
-    type: railType,
+    type: 'curated' as const,
     mixIds: railMixIds.mixIds,
     active: payload.active ?? true,
   };
@@ -581,6 +1345,7 @@ const seedNomadStorage = async () => {
     await tx.nomadIntroCard.deleteMany();
     await tx.nomadDailyAccessCode.deleteMany();
     await tx.nomadTelegramRecipient.deleteMany();
+    await tx.nomadTelegramOperator.deleteMany();
     await tx.nomadTelegramAutomationState.deleteMany();
     await tx.nomadAuditEvent.deleteMany();
     await tx.nomadStaffAccount.deleteMany();
@@ -620,6 +1385,21 @@ const seedNomadStorage = async () => {
       })),
     });
 
+    await tx.nomadTelegramOperator.createMany({
+      data: seedTelegramOperators.map((operator) => ({
+        id: operator.id,
+        name: operator.name,
+        phone: operator.phone,
+        active: operator.active,
+        linkedChatId: operator.linkedChatId ?? null,
+        linkedTelegramUserId: operator.linkedTelegramUserId ?? null,
+        linkedUsername: operator.linkedUsername ?? null,
+        linkedDisplayName: operator.linkedDisplayName ?? null,
+        linkedAt: operator.linkedAt ? new Date(operator.linkedAt) : null,
+        lastCodeRequestedAt: operator.lastCodeRequestedAt ? new Date(operator.lastCodeRequestedAt) : null,
+      })),
+    });
+
     await tx.nomadIntroCard.createMany({
       data: introCards.map((card) => ({
         id: card.id,
@@ -638,7 +1418,7 @@ const seedNomadStorage = async () => {
         description: null,
         flavorProfiles: serializeList(tobacco.flavorProfiles),
         flavors: serializeList(tobacco.flavors),
-        flavorTags: '[]',
+        flavorTags: serializeList(tobacco.flavorTags),
         inStock: tobacco.inStock,
       })),
     });
@@ -655,7 +1435,7 @@ const seedNomadStorage = async () => {
           description: mix.description,
           flavorProfiles: serializeList(unique(components.flatMap((item) => item.flavorProfiles))),
           flavors: serializeList(unique(components.flatMap((item) => item.flavors))),
-          flavorTags: '[]',
+          flavorTags: serializeList(unique(components.flatMap((item) => item.flavorTags))),
           available: true,
           popularity: mix.popularity,
           baseAvgRating: mix.avgRating,
@@ -665,11 +1445,11 @@ const seedNomadStorage = async () => {
 
     await tx.nomadMixComponent.createMany({
       data: seedMixes.flatMap((mix) =>
-        mix.componentIds.map((componentId, index) => ({
+        distributeMixComponentProportions(mix.componentIds).map((component) => ({
           mixId: mix.id,
-          tobaccoId: componentId,
-          proportion: Math.round(100 / Math.max(1, mix.componentIds.length)),
-          sortOrder: index,
+          tobaccoId: component.tobaccoId,
+          proportion: component.proportion,
+          sortOrder: component.sortOrder,
         })),
       ),
     });
@@ -734,17 +1514,107 @@ export const getGuestIntroCards = async () => {
   return records.map(mapIntroCardRecord);
 };
 
-export const getInventoryTobaccos = async () => {
+export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Promise<InventoryListResult> => {
   await ensureNomadState();
 
-  const records = await prisma.nomadTobacco.findMany({
-    orderBy: [
-      { inStock: 'desc' },
-      { name: 'asc' },
-    ],
-  });
+  const [records, mixes] = await Promise.all([
+    prisma.nomadTobacco.findMany(),
+    fetchMixViews(),
+  ]);
 
-  return records.map(mapTobacco);
+  const items = records.map((record) => buildInventoryTobaccoView(mapTobacco(record), mixes));
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const stock = normalizeInventoryStockFilter(query.stock);
+  const manufacturers = normalizeInventorySelections(query.manufacturers);
+  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
+  const flavors = normalizeInventorySelections(query.flavors);
+  const flavorTags = normalizeInventorySelections(query.flavorTags);
+  const sort = normalizeInventorySortField(query.sort);
+  const direction = normalizeInventorySortDirection(query.direction);
+  const searchTokens = search
+    .split(/\s+/)
+    .map(normalizeToken)
+    .filter(Boolean);
+
+  const filteredItems = items
+    .filter((item) => {
+      if (stock === 'in-stock' && !item.inStock) {
+        return false;
+      }
+
+      if (stock === 'out-of-stock' && item.inStock) {
+        return false;
+      }
+
+      if (!matchesInventorySelection([item.manufacturer], manufacturers)) {
+        return false;
+      }
+
+      if (!matchesInventorySelection(item.flavorProfiles, flavorProfiles)) {
+        return false;
+      }
+
+      if (!matchesInventorySelection(item.flavors, flavors)) {
+        return false;
+      }
+
+      if (!matchesInventorySelection(item.flavorTags, flavorTags)) {
+        return false;
+      }
+
+      if (!searchTokens.length) {
+        return true;
+      }
+
+      const haystack = [
+        item.name,
+        item.manufacturer,
+        ...item.flavorProfiles,
+        ...item.flavors,
+        ...item.flavorTags,
+        ...item.dependentMixes.map((mix) => mix.name),
+      ]
+        .map(normalizeToken)
+        .join(' ');
+
+      return searchTokens.every((token) => haystack.includes(token));
+    })
+    .sort((left, right) => inventoryTobaccoSort(left, right, sort, direction));
+
+  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort((left, right) => left.localeCompare(right, 'ru'));
+  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort((left, right) =>
+    left.localeCompare(right, 'ru'),
+  );
+  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru'));
+  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru'));
+
+  return {
+    items: filteredItems,
+    filters: {
+      search,
+      stock,
+      manufacturers: resolveInventorySelections(manufacturerOptions, manufacturers),
+      flavorProfiles: resolveInventorySelections(flavorProfileOptions, flavorProfiles),
+      flavors: resolveInventorySelections(flavorOptions, flavors),
+      flavorTags: resolveInventorySelections(flavorTagOptions, flavorTags),
+      options: {
+        manufacturers: manufacturerOptions,
+        flavorProfiles: flavorProfileOptions,
+        flavors: flavorOptions,
+        flavorTags: flavorTagOptions,
+      },
+    },
+    sort: {
+      field: sort,
+      direction,
+    },
+    meta: {
+      totalItems: items.length,
+      filteredItems: filteredItems.length,
+      inStockCount: filteredItems.filter((item) => item.inStock).length,
+      outOfStockCount: filteredItems.filter((item) => !item.inStock).length,
+    },
+  };
 };
 
 export const getTobaccoById = async (id: string) => {
@@ -768,12 +1638,66 @@ export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
     return null;
   }
 
-  const updated = await prisma.nomadTobacco.update({
+  await prisma.nomadTobacco.update({
     where: { id },
     data: { inStock },
   });
 
-  return mapTobacco(updated);
+  return (await getInventoryTobaccos()).items.find((item) => item.id === id) ?? null;
+};
+
+export const batchUpdateTobaccoInStock = async (
+  ids: string[],
+  action: Exclude<InventoryBatchAction, 'archive'>,
+): Promise<InventoryBatchResult> => {
+  await ensureNomadState();
+
+  const normalizedIds = unique(ids.map((id) => id.trim()).filter(Boolean));
+  if (!normalizedIds.length) {
+    return {
+      action,
+      ids: [],
+      skippedIds: [],
+      processedCount: 0,
+      items: [],
+    };
+  }
+
+  const nextInStock = action === 'set-in-stock';
+  const currentItems = await prisma.nomadTobacco.findMany({
+    where: {
+      id: {
+        in: normalizedIds,
+      },
+    },
+  });
+  const currentIds = currentItems.map((item) => item.id);
+  const skippedIds = normalizedIds.filter((id) => !currentIds.includes(id));
+
+  await prisma.nomadTobacco.updateMany({
+    where: {
+      id: {
+        in: currentIds,
+      },
+    },
+    data: {
+      inStock: nextInStock,
+    },
+  });
+
+  const refreshed = await getInventoryTobaccos({
+    sort: 'name',
+    direction: 'asc',
+  });
+  const items = refreshed.items.filter((item) => currentIds.includes(item.id));
+
+  return {
+    action,
+    ids: currentIds,
+    skippedIds,
+    processedCount: items.length,
+    items,
+  };
 };
 
 export const getAvailableMixCatalog = async () => {
@@ -815,7 +1739,7 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
     });
 };
 
-const buildStatisticalRail = async (): Promise<RailView> => {
+const buildMostSelectedRail = async (): Promise<RailView> => {
   const [mixes, events] = await Promise.all([
     getAvailableMixCatalog(),
     prisma.nomadSmokeCtaEvent.findMany({
@@ -865,6 +1789,50 @@ const buildStatisticalRail = async (): Promise<RailView> => {
     isSystem: true,
   };
 };
+
+const buildTopRatedRail = async (): Promise<RailView> => {
+  const mixes = await getAvailableMixCatalog();
+
+  const ranked = mixes
+    .filter((mix) => mix.guestVisible)
+    .sort((left, right) => {
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
+      }
+
+      if (right.ratingsCount !== left.ratingsCount) {
+        return right.ratingsCount - left.ratingsCount;
+      }
+
+      if (right.popularity !== left.popularity) {
+        return right.popularity - left.popularity;
+      }
+
+      return left.name.localeCompare(right.name, 'ru');
+    })
+    .slice(0, 3);
+
+  return {
+    id: 'rail-statistical-rated',
+    name: 'Лучшие оценки',
+    description: 'Миксы с самыми сильными оценками гостей и устойчивым качеством вкуса.',
+    type: 'statistical',
+    active: true,
+    mixIds: ranked.map((mix) => mix.id),
+    mixes: ranked,
+    isSystem: true,
+  };
+};
+
+const buildStatisticalRails = async (): Promise<RailView[]> => [await buildMostSelectedRail(), await buildTopRatedRail()];
+
+const statisticalRailReadOnlyReason = 'Статистический рейл формируется автоматически и доступен только для просмотра.';
+
+const toStaffRailView = (rail: RailView): StaffRailView => ({
+  ...rail,
+  editable: rail.type !== 'statistical',
+  readOnlyReason: rail.type === 'statistical' ? statisticalRailReadOnlyReason : '',
+});
 
 const buildRailViews = async (guestOnly: boolean) => {
   await ensureNomadState();
@@ -918,11 +1886,87 @@ const buildRailViews = async (guestOnly: boolean) => {
 };
 
 export const getGuestHomeRails = async () => {
-  const rails = [await buildStatisticalRail(), ...(await buildRailViews(true))];
+  const rails = [...(await buildStatisticalRails()), ...(await buildRailViews(true))];
   return rails.filter((rail) => rail.type === 'statistical' || rail.mixes.length > 0);
 };
 
-export const getStaffMixes = async () => getAvailableMixCatalog();
+export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
+  await ensureNomadState();
+
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const normalizedSearch = normalizeToken(search);
+  const status = normalizeMixStatusFilter(query.status);
+  const railState = normalizeMixRailFilter(query.railState);
+  const manufacturers = normalizeInventorySelections(query.manufacturers);
+  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
+  const flavors = normalizeInventorySelections(query.flavors);
+  const flavorTags = normalizeInventorySelections(query.flavorTags);
+  const sortField = normalizeMixSortField(query.sort);
+  const sortDirection = normalizeMixSortDirection(query.direction);
+  const allItems = await getAvailableMixCatalog();
+
+  const options = {
+    manufacturers: unique(allItems.flatMap((item) => item.components.map((component) => component.manufacturer))).sort((left, right) =>
+      left.localeCompare(right, 'ru')),
+    flavorProfiles: unique(allItems.flatMap((item) => item.flavorProfiles)).sort((left, right) => left.localeCompare(right, 'ru')),
+    flavors: unique(allItems.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru')),
+    flavorTags: unique(allItems.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru')),
+  };
+
+  const resolvedFilters = {
+    manufacturers: resolveInventorySelections(options.manufacturers, manufacturers),
+    flavorProfiles: resolveInventorySelections(options.flavorProfiles, flavorProfiles),
+    flavors: resolveInventorySelections(options.flavors, flavors),
+    flavorTags: resolveInventorySelections(options.flavorTags, flavorTags),
+  };
+
+  const filteredItems = allItems
+    .filter((mix) => matchesMixStatus(mix, status))
+    .filter((mix) => matchesMixRailState(mix, railState))
+    .filter((mix) =>
+      !normalizedSearch
+      || [
+        mix.name,
+        mix.description,
+        ...mix.flavorProfiles,
+        ...mix.flavors,
+        ...mix.flavorTags,
+        ...mix.components.flatMap((component) => [component.name, component.manufacturer, ...component.flavors]),
+        ...mix.railMemberships.map((membership) => membership.name),
+      ].some((value) => normalizeToken(value).includes(normalizedSearch)))
+    .filter((mix) => matchesInventorySelection(mix.components.map((component) => component.manufacturer), resolvedFilters.manufacturers))
+    .filter((mix) => matchesInventorySelection(mix.flavorProfiles, resolvedFilters.flavorProfiles))
+    .filter((mix) => matchesInventorySelection(mix.flavors, resolvedFilters.flavors))
+    .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags))
+    .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
+
+  return {
+    items: filteredItems,
+    filters: {
+      search,
+      status,
+      railState,
+      manufacturers: resolvedFilters.manufacturers,
+      flavorProfiles: resolvedFilters.flavorProfiles,
+      flavors: resolvedFilters.flavors,
+      flavorTags: resolvedFilters.flavorTags,
+      options,
+    },
+    sort: {
+      field: sortField,
+      direction: sortDirection,
+    },
+    meta: {
+      totalItems: allItems.length,
+      filteredItems: filteredItems.length,
+      guestVisibleCount: filteredItems.filter((item) => item.guestVisible).length,
+      hiddenCount: filteredItems.filter((item) => !item.available).length,
+      blockedCount: filteredItems.filter((item) => item.available && !item.guestVisible).length,
+      inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
+      withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
+    },
+  };
+};
 
 export const createMix = async (payload: Partial<MixInput>) => {
   await ensureNomadState();
@@ -950,11 +1994,11 @@ export const createMix = async (payload: Partial<MixInput>) => {
     });
 
     await tx.nomadMixComponent.createMany({
-      data: validated.componentIds.map((componentId, index) => ({
+      data: validated.components.map((component) => ({
         mixId: id,
-        tobaccoId: componentId,
-        proportion: Math.round(100 / Math.max(1, validated.componentIds.length)),
-        sortOrder: index,
+        tobaccoId: component.tobaccoId,
+        proportion: component.proportion,
+        sortOrder: component.sortOrder,
       })),
     });
   });
@@ -985,10 +2029,17 @@ export const updateMix = async (id: string, payload: MixPatch) => {
     return { error: 'Name and description are required' };
   }
 
-  const nextComponentIds = Array.isArray(payload.componentIds)
-    ? payload.componentIds
-    : current.components.map((item) => item.tobaccoId);
-  const componentValidation = await validateMixComponents(nextComponentIds);
+  const componentValidation = await resolveMixComponentsInput(
+    Array.isArray(payload.components) || Array.isArray(payload.componentIds)
+      ? payload
+      : {
+          components: current.components.map((item) => ({
+            tobaccoId: item.tobaccoId,
+            proportion: item.proportion,
+            sortOrder: item.sortOrder,
+          })),
+        },
+  );
   if ('error' in componentValidation) {
     return { error: componentValidation.error };
   }
@@ -1008,17 +2059,17 @@ export const updateMix = async (id: string, payload: MixPatch) => {
       },
     });
 
-    if (Array.isArray(payload.componentIds)) {
+    if (Array.isArray(payload.components) || Array.isArray(payload.componentIds)) {
       await tx.nomadMixComponent.deleteMany({
         where: { mixId: id },
       });
 
       await tx.nomadMixComponent.createMany({
-        data: componentValidation.componentIds.map((componentId, index) => ({
+        data: componentValidation.components.map((component) => ({
           mixId: id,
-          tobaccoId: componentId,
-          proportion: Math.round(100 / Math.max(1, componentValidation.componentIds.length)),
-          sortOrder: index,
+          tobaccoId: component.tobaccoId,
+          proportion: component.proportion,
+          sortOrder: component.sortOrder,
         })),
       });
     }
@@ -1027,7 +2078,9 @@ export const updateMix = async (id: string, payload: MixPatch) => {
   return getMixById(id);
 };
 
-export const getStaffRails = async () => [await buildStatisticalRail(), ...(await buildRailViews(false))];
+export const getStaffRails = async (): Promise<StaffRailView[]> => {
+  return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
+};
 
 export const createRail = async (payload: Partial<RailInput>) => {
   await ensureNomadState();
@@ -1066,8 +2119,8 @@ export const createRail = async (payload: Partial<RailInput>) => {
 export const updateRail = async (id: string, payload: RailPatch) => {
   await ensureNomadState();
 
-  if (id === 'rail-statistical-top') {
-    return { error: 'Statistical rail is read-only' };
+  if (id.startsWith('rail-statistical-')) {
+    return { error: statisticalRailReadOnlyReason };
   }
 
   const current = await prisma.nomadRail.findUnique({
@@ -1092,7 +2145,7 @@ export const updateRail = async (id: string, payload: RailPatch) => {
 
   const nextType = payload.type ?? (isRailType(current.type) ? current.type : 'prepared');
   if (nextType === 'statistical') {
-    return { error: 'Statistical rails are read-only' };
+    return { error: statisticalRailReadOnlyReason };
   }
 
   const nextMixIds = Array.isArray(payload.mixIds)
@@ -1246,5 +2299,310 @@ export const getSmokeCtaSummary = async () => {
   return {
     smokeCtaTotal: events.length,
     topMixes,
+  };
+};
+
+export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d'): Promise<DashboardSummary> => {
+  await ensureNomadState();
+
+  const window = buildDashboardWindow(windowKey);
+  const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents, blockedMixRecords] = await Promise.all([
+    prisma.nomadTobacco.findMany({
+      orderBy: [{ manufacturer: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        manufacturer: true,
+        name: true,
+        flavorProfiles: true,
+        flavors: true,
+        inStock: true,
+      },
+    }),
+    getAvailableMixCatalog(),
+    getStaffRails(),
+    prisma.nomadSmokeCtaEvent.findMany({
+      where: {
+        createdAt: {
+          gte: window.startsAtDate,
+          lte: window.endsAtDate,
+        },
+      },
+      select: {
+        mixId: true,
+        createdAt: true,
+      },
+    }),
+    prisma.nomadMixRating.findMany({
+      where: {
+        createdAt: {
+          gte: window.startsAtDate,
+          lte: window.endsAtDate,
+        },
+      },
+      select: {
+        mixId: true,
+        value: true,
+        createdAt: true,
+      },
+    }),
+    prisma.nomadMix.findMany({
+      where: {
+        available: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            tobacco: {
+              select: {
+                name: true,
+                inStock: true,
+              },
+            },
+          },
+        },
+        railMixes: {
+          select: {
+            rail: {
+              select: {
+                name: true,
+                active: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const smokeCounts = smokeEvents.reduce<Record<string, number>>((acc, event) => {
+    acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const ratingStats = ratingEvents.reduce<Record<string, { sum: number; count: number }>>((acc, event) => {
+    const current = acc[event.mixId] ?? { sum: 0, count: 0 };
+    current.sum += event.value;
+    current.count += 1;
+    acc[event.mixId] = current;
+    return acc;
+  }, {});
+
+  const activityByDay = new Map<string, DashboardActivityPoint>();
+  for (let dayOffset = 0; dayOffset < window.days; dayOffset += 1) {
+    const current = startOfDay(window.startsAtDate);
+    current.setDate(window.startsAtDate.getDate() + dayOffset);
+    const date = toDayKey(current);
+    activityByDay.set(date, {
+      date,
+      smokeCtaCount: 0,
+      ratingsCount: 0,
+    });
+  }
+
+  for (const event of smokeEvents) {
+    const key = toDayKey(event.createdAt);
+    const current = activityByDay.get(key);
+    if (current) {
+      current.smokeCtaCount += 1;
+    }
+  }
+
+  for (const event of ratingEvents) {
+    const key = toDayKey(event.createdAt);
+    const current = activityByDay.get(key);
+    if (current) {
+      current.ratingsCount += 1;
+    }
+  }
+
+  const manufacturers = buildInventoryBreakdown(
+    inventoryRecords.map((item) => ({
+      key: item.manufacturer,
+      label: item.manufacturer,
+      inStock: item.inStock,
+    })),
+  );
+
+  const flavorProfiles = buildInventoryBreakdown(
+    inventoryRecords.flatMap((item) =>
+      parseList(item.flavorProfiles).map((profile) => ({
+        key: profile,
+        label: flavorProfileLabels[profile] ?? profile,
+        inStock: item.inStock,
+      })),
+    ),
+  );
+
+  const topFlavors = buildInventoryBreakdown(
+    inventoryRecords.flatMap((item) =>
+      parseList(item.flavors).map((flavor) => ({
+        key: flavor,
+        label: flavor,
+        inStock: item.inStock,
+      })),
+    ),
+  ).slice(0, 8);
+
+  const topMixes = mixes
+    .map((mix) => ({
+      mixId: mix.id,
+      mixName: mix.name,
+      smokeCtaCount: smokeCounts[mix.id] ?? 0,
+      avgRating: mix.avgRating,
+      ratingsCount: mix.ratingsCount,
+      popularity: mix.popularity,
+    }))
+    .filter((item) => item.smokeCtaCount > 0)
+    .sort((left, right) => {
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
+      }
+
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
+      }
+
+      if (right.popularity !== left.popularity) {
+        return right.popularity - left.popularity;
+      }
+
+      return left.mixName.localeCompare(right.mixName, 'ru');
+    })
+    .slice(0, 5);
+
+  const topRatedMixes = mixes
+    .map((mix) => {
+      const stats = ratingStats[mix.id];
+      const avgRating = stats ? Number((stats.sum / stats.count).toFixed(1)) : 0;
+
+      return {
+        mixId: mix.id,
+        mixName: mix.name,
+        smokeCtaCount: smokeCounts[mix.id] ?? 0,
+        avgRating,
+        ratingsCount: stats?.count ?? 0,
+        popularity: mix.popularity,
+      };
+    })
+    .filter((item) => item.ratingsCount > 0)
+    .sort((left, right) => {
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
+      }
+
+      if (right.ratingsCount !== left.ratingsCount) {
+        return right.ratingsCount - left.ratingsCount;
+      }
+
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
+      }
+
+      return left.mixName.localeCompare(right.mixName, 'ru');
+    })
+    .slice(0, 5);
+
+  const ratingDistribution: DashboardRatingDistributionItem[] = [5, 4, 3, 2, 1].map((value) => ({
+    value,
+    count: ratingEvents.filter((item) => item.value === value).length,
+  }));
+
+  const blockedMixes = blockedMixRecords
+    .map((mix) => {
+      const missingComponents = mix.components
+        .filter((component) => !component.tobacco.inStock)
+        .map((component) => component.tobacco.name);
+
+      return {
+        mixId: mix.id,
+        mixName: mix.name,
+        missingComponents,
+        railNames: unique(
+          mix.railMixes
+            .filter((item) => item.rail.active)
+            .map((item) => item.rail.name),
+        ),
+        smokeCtaCount: smokeCounts[mix.id] ?? 0,
+      } satisfies DashboardBlockedMix;
+    })
+    .filter((mix) => mix.missingComponents.length > 0)
+    .sort((left, right) => {
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
+      }
+
+      if (right.missingComponents.length !== left.missingComponents.length) {
+        return right.missingComponents.length - left.missingComponents.length;
+      }
+
+      return left.mixName.localeCompare(right.mixName, 'ru');
+    })
+    .slice(0, 5);
+
+  const railHealth = rails
+    .map((rail) => {
+      const visibleMixCount = rail.mixes.filter((mix) => mix.guestVisible).length;
+
+      return {
+        railId: rail.id,
+        name: rail.name,
+        type: rail.type,
+        active: rail.active,
+        totalMixCount: rail.mixIds.length,
+        visibleMixCount,
+        hiddenMixCount: Math.max(rail.mixIds.length - visibleMixCount, 0),
+      } satisfies DashboardRailHealthItem;
+    })
+    .sort((left, right) => {
+      if (left.active !== right.active) {
+        return left.active ? -1 : 1;
+      }
+
+      if (left.hiddenMixCount !== right.hiddenMixCount) {
+        return right.hiddenMixCount - left.hiddenMixCount;
+      }
+
+      return left.name.localeCompare(right.name, 'ru');
+    });
+
+  const totalRatingsValue = ratingEvents.reduce((sum, item) => sum + item.value, 0);
+
+  return {
+    window: {
+      key: window.key,
+      label: window.label,
+      days: window.days,
+      startsAt: window.startsAt,
+      endsAt: window.endsAt,
+    },
+    inventory: {
+      total: inventoryRecords.length,
+      inStockCount: inventoryRecords.filter((item) => item.inStock).length,
+      outOfStockCount: inventoryRecords.filter((item) => !item.inStock).length,
+      manufacturers: manufacturers.slice(0, 6),
+      flavorProfiles: flavorProfiles.slice(0, 6),
+      topFlavors,
+    },
+    product: {
+      smokeCtaTotal: smokeEvents.length,
+      ratingsTotal: ratingEvents.length,
+      avgGuestRating: ratingEvents.length ? Number((totalRatingsValue / ratingEvents.length).toFixed(1)) : 0,
+      topMixes,
+      topRatedMixes,
+      ratingDistribution,
+      activity: [...activityByDay.values()],
+    },
+    ops: {
+      guestVisibleMixesCount: mixes.filter((mix) => mix.guestVisible).length,
+      hiddenMixesCount: mixes.filter((mix) => !mix.available).length,
+      blockedByInventoryCount: mixes.filter((mix) => mix.available && !mix.guestVisible).length,
+      activeRailsCount: railHealth.filter((rail) => rail.active).length,
+      emptyActiveRailsCount: railHealth.filter((rail) => rail.active && rail.visibleMixCount === 0).length,
+      blockedMixes,
+      railHealth: railHealth.slice(0, 6),
+    },
   };
 };

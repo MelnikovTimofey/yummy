@@ -225,6 +225,61 @@ test('automation can read active telegram recipients grouped by scope', async ()
   }
 });
 
+test('automation can link operator chat by phone and resolve it later', async () => {
+  const app = buildApp();
+
+  try {
+    const linked = await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/operators/link',
+      headers: automationHeaders,
+      payload: {
+        phone: '+7 (999) 123-45-67',
+        chatId: '362223626',
+        telegramUserId: '998877',
+        username: 'anna_nomad',
+        firstName: 'Анна',
+        lastName: 'Nomad',
+      },
+    });
+
+    assert.equal(linked.statusCode, 200);
+    const linkedBody = linked.json() as {
+      item: {
+        id: string;
+        name: string;
+        phone: string;
+        linkedChatId: string | null;
+        linkedTelegramUserId: string | null;
+      };
+    };
+
+    assert.equal(linkedBody.item.id, 'telegram-operator-anna');
+    assert.equal(linkedBody.item.phone, '+79991234567');
+    assert.equal(linkedBody.item.linkedChatId, '362223626');
+    assert.equal(linkedBody.item.linkedTelegramUserId, '998877');
+
+    const resolved = await app.inject({
+      method: 'GET',
+      url: '/automation/telegram/operators/by-chat/362223626',
+      headers: automationHeaders,
+    });
+
+    assert.equal(resolved.statusCode, 200);
+    const resolvedBody = resolved.json() as {
+      item: {
+        id: string;
+        linkedChatId: string | null;
+      } | null;
+    };
+
+    assert.equal(resolvedBody.item?.id, 'telegram-operator-anna');
+    assert.equal(resolvedBody.item?.linkedChatId, '362223626');
+  } finally {
+    await app.close();
+  }
+});
+
 test('automation can report and read telegram bot state', async () => {
   const app = buildApp();
 
@@ -347,6 +402,49 @@ test('automation can report and read telegram bot state', async () => {
     assert.ok(rotateBody.item.lastRotateAt);
     assert.equal(rotateBody.item.lastRotateCodeId, 'daily-code-rotated');
     assert.equal(rotateBody.item.lastRotateCodeValue, 'NOMAD-20260323-FA2481');
+
+    await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/operators/link',
+      headers: automationHeaders,
+      payload: {
+        phone: '+79991234567',
+        chatId: '362223626',
+      },
+    });
+
+    const request = await app.inject({
+      method: 'POST',
+      url: '/automation/telegram/state/report',
+      headers: automationHeaders,
+      payload: {
+        event: 'request',
+        chatId: '362223626',
+        codeId: 'daily-code-default',
+        codeValue: 'NOMAD-2026',
+      },
+    });
+
+    assert.equal(request.statusCode, 200);
+    const requestBody = request.json() as {
+      item: {
+        lastRequestAt: string | null;
+        lastRequestChatId: string | null;
+        lastRequestOperatorId: string | null;
+        lastRequestOperatorName: string | null;
+        lastRequestPhone: string | null;
+        lastRequestCodeId: string | null;
+        lastRequestCodeValue: string | null;
+      };
+    };
+
+    assert.ok(requestBody.item.lastRequestAt);
+    assert.equal(requestBody.item.lastRequestChatId, '362223626');
+    assert.equal(requestBody.item.lastRequestOperatorId, 'telegram-operator-anna');
+    assert.equal(requestBody.item.lastRequestOperatorName, 'Анна');
+    assert.equal(requestBody.item.lastRequestPhone, '+79991234567');
+    assert.equal(requestBody.item.lastRequestCodeId, 'daily-code-default');
+    assert.equal(requestBody.item.lastRequestCodeValue, 'NOMAD-2026');
   } finally {
     await app.close();
   }

@@ -37,6 +37,21 @@ export type TelegramRecipientView = {
   updatedAt: string;
 };
 
+export type TelegramOperatorView = {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  linkedChatId: string | null;
+  linkedTelegramUserId: string | null;
+  linkedUsername: string | null;
+  linkedDisplayName: string | null;
+  linkedAt: string | null;
+  lastCodeRequestedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
 
 export type TelegramAutomationStateView = {
@@ -50,18 +65,26 @@ export type TelegramAutomationStateView = {
   lastBroadcastCodeId: string | null;
   lastBroadcastCodeValue: string | null;
   lastBroadcastDayKey: string | null;
+  lastRequestAt: string | null;
+  lastRequestChatId: string | null;
+  lastRequestOperatorId: string | null;
+  lastRequestOperatorName: string | null;
+  lastRequestPhone: string | null;
+  lastRequestCodeId: string | null;
+  lastRequestCodeValue: string | null;
   lastErrorAt: string | null;
   lastErrorMessage: string | null;
   updatedAt: string | null;
 };
 
-export type TelegramAutomationReportEvent = 'heartbeat' | 'broadcast' | 'rotate' | 'error';
+export type TelegramAutomationReportEvent = 'heartbeat' | 'broadcast' | 'rotate' | 'request' | 'error';
 
 type TelegramAutomationReportInput = {
   event: TelegramAutomationReportEvent;
   codeId?: string;
   codeValue?: string;
   dayKey?: string;
+  chatId?: string;
   message?: string;
 };
 
@@ -93,6 +116,25 @@ type TelegramRecipientInput = {
 };
 
 type TelegramRecipientPatch = Partial<TelegramRecipientInput>;
+
+type TelegramOperatorInput = {
+  name: string;
+  phone: string;
+  active?: boolean;
+};
+
+type TelegramOperatorPatch = Partial<TelegramOperatorInput> & {
+  clearLink?: boolean;
+};
+
+type TelegramOperatorLinkInput = {
+  phone: string;
+  chatId: string;
+  telegramUserId?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+};
 
 const normalizeDateRange = (startsAt?: Date, endsAt?: Date) => {
   const currentWindow = getNomadDailyCodeWindow();
@@ -140,6 +182,36 @@ const normalizeChatId = (value: string | undefined) => {
   }
 
   return /^-?\d+$/.test(normalized) ? normalized : '';
+};
+
+const normalizePhone = (value: string | undefined) => {
+  const normalized = value?.trim() ?? '';
+  if (!normalized) {
+    return '';
+  }
+
+  const digits = normalized.replace(/\D/g, '');
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.length === 10) {
+    return `+7${digits}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith('8')) {
+    return `+7${digits.slice(1)}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith('7')) {
+    return `+${digits}`;
+  }
+
+  if (digits.length >= 11 && digits.length <= 15) {
+    return `+${digits}`;
+  }
+
+  return '';
 };
 
 const slugify = (value: string) =>
@@ -211,6 +283,34 @@ const mapTelegramRecipient = (record: {
   updatedAt: record.updatedAt.toISOString(),
 });
 
+const mapTelegramOperator = (record: {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  linkedChatId: string | null;
+  linkedTelegramUserId: string | null;
+  linkedUsername: string | null;
+  linkedDisplayName: string | null;
+  linkedAt: Date | null;
+  lastCodeRequestedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): TelegramOperatorView => ({
+  id: record.id,
+  name: record.name,
+  phone: record.phone,
+  active: record.active,
+  linkedChatId: record.linkedChatId,
+  linkedTelegramUserId: record.linkedTelegramUserId,
+  linkedUsername: record.linkedUsername,
+  linkedDisplayName: record.linkedDisplayName,
+  linkedAt: toIsoOrNull(record.linkedAt),
+  lastCodeRequestedAt: toIsoOrNull(record.lastCodeRequestedAt),
+  createdAt: record.createdAt.toISOString(),
+  updatedAt: record.updatedAt.toISOString(),
+});
+
 const isUniqueConstraintError = (error: unknown) =>
   Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2002');
 
@@ -269,6 +369,13 @@ const mapTelegramAutomationState = (
     lastBroadcastCodeId: string | null;
     lastBroadcastCodeValue: string | null;
     lastBroadcastDayKey: string | null;
+    lastRequestAt: Date | null;
+    lastRequestChatId: string | null;
+    lastRequestOperatorId: string | null;
+    lastRequestOperatorName: string | null;
+    lastRequestPhone: string | null;
+    lastRequestCodeId: string | null;
+    lastRequestCodeValue: string | null;
     lastErrorAt: Date | null;
     lastErrorMessage: string | null;
     updatedAt: Date;
@@ -287,6 +394,13 @@ const mapTelegramAutomationState = (
       lastBroadcastCodeId: null,
       lastBroadcastCodeValue: null,
       lastBroadcastDayKey: null,
+      lastRequestAt: null,
+      lastRequestChatId: null,
+      lastRequestOperatorId: null,
+      lastRequestOperatorName: null,
+      lastRequestPhone: null,
+      lastRequestCodeId: null,
+      lastRequestCodeValue: null,
       lastErrorAt: null,
       lastErrorMessage: null,
       updatedAt: null,
@@ -304,6 +418,13 @@ const mapTelegramAutomationState = (
     lastBroadcastCodeId: record.lastBroadcastCodeId,
     lastBroadcastCodeValue: record.lastBroadcastCodeValue,
     lastBroadcastDayKey: record.lastBroadcastDayKey,
+    lastRequestAt: toIsoOrNull(record.lastRequestAt),
+    lastRequestChatId: record.lastRequestChatId,
+    lastRequestOperatorId: record.lastRequestOperatorId,
+    lastRequestOperatorName: record.lastRequestOperatorName,
+    lastRequestPhone: record.lastRequestPhone,
+    lastRequestCodeId: record.lastRequestCodeId,
+    lastRequestCodeValue: record.lastRequestCodeValue,
     lastErrorAt: toIsoOrNull(record.lastErrorAt),
     lastErrorMessage: record.lastErrorMessage,
     updatedAt: record.updatedAt.toISOString(),
@@ -847,6 +968,215 @@ export const deleteTelegramRecipient = async (id: string) => {
   return true;
 };
 
+export const listTelegramOperators = async () => {
+  await ensureNomadState();
+
+  const records = await prisma.nomadTelegramOperator.findMany({
+    orderBy: [{ active: 'desc' }, { name: 'asc' }, { phone: 'asc' }],
+  });
+
+  return records.map(mapTelegramOperator);
+};
+
+export const getTelegramOperatorById = async (id: string) => {
+  await ensureNomadState();
+
+  const record = await prisma.nomadTelegramOperator.findUnique({
+    where: { id },
+  });
+
+  return record ? mapTelegramOperator(record) : null;
+};
+
+export const getLinkedTelegramOperatorByChatId = async (chatIdValue: string) => {
+  await ensureNomadState();
+
+  const chatId = normalizeChatId(chatIdValue);
+  if (!chatId) {
+    return null;
+  }
+
+  const record = await prisma.nomadTelegramOperator.findFirst({
+    where: {
+      linkedChatId: chatId,
+      active: true,
+    },
+  });
+
+  return record ? mapTelegramOperator(record) : null;
+};
+
+export const createTelegramOperator = async (payload: Partial<TelegramOperatorInput>) => {
+  await ensureNomadState();
+
+  const name = payload.name?.trim();
+  const phone = normalizePhone(payload.phone);
+  const active = typeof payload.active === 'boolean' ? payload.active : true;
+
+  if (!name || !phone) {
+    return { error: 'name and phone are required' };
+  }
+
+  const prefix = `telegram-operator-${slugify(name)}`;
+  const id = await nextPrefixedId(prefix, () =>
+    prisma.nomadTelegramOperator.count({
+      where: {
+        id: {
+          startsWith: prefix,
+        },
+      },
+    }),
+  );
+
+  try {
+    const created = await prisma.nomadTelegramOperator.create({
+      data: {
+        id,
+        name,
+        phone,
+        active,
+      },
+    });
+
+    return mapTelegramOperator(created);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { error: 'Telegram operator already exists' };
+    }
+
+    throw error;
+  }
+};
+
+export const updateTelegramOperator = async (id: string, payload: TelegramOperatorPatch) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadTelegramOperator.findUnique({
+    where: { id },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const name = typeof payload.name === 'string' ? payload.name.trim() : current.name;
+  const nextPhone = typeof payload.phone === 'string' ? normalizePhone(payload.phone) : current.phone;
+  const active = typeof payload.active === 'boolean' ? payload.active : current.active;
+  const clearLink = payload.clearLink === true || nextPhone !== current.phone;
+
+  if (!name || !nextPhone) {
+    return { error: 'name and phone are required' };
+  }
+
+  try {
+    const updated = await prisma.nomadTelegramOperator.update({
+      where: { id },
+      data: {
+        name,
+        phone: nextPhone,
+        active,
+        ...(clearLink
+          ? {
+              linkedChatId: null,
+              linkedTelegramUserId: null,
+              linkedUsername: null,
+              linkedDisplayName: null,
+              linkedAt: null,
+            }
+          : {}),
+      },
+    });
+
+    return mapTelegramOperator(updated);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { error: 'Telegram operator already exists' };
+    }
+
+    throw error;
+  }
+};
+
+export const deleteTelegramOperator = async (id: string) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadTelegramOperator.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!current) {
+    return false;
+  }
+
+  await prisma.nomadTelegramOperator.delete({
+    where: { id },
+  });
+
+  return true;
+};
+
+export const linkTelegramOperator = async (payload: Partial<TelegramOperatorLinkInput>) => {
+  await ensureNomadState();
+
+  const phone = normalizePhone(payload.phone);
+  const chatId = normalizeChatId(payload.chatId);
+  const telegramUserId = normalizeChatId(payload.telegramUserId);
+  const username = payload.username?.trim() || null;
+  const displayName =
+    [payload.firstName?.trim(), payload.lastName?.trim()]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || username;
+
+  if (!phone || !chatId) {
+    return { error: 'phone and chatId are required' };
+  }
+
+  const operator = await prisma.nomadTelegramOperator.findUnique({
+    where: {
+      phone,
+    },
+  });
+
+  if (!operator || !operator.active) {
+    return null;
+  }
+
+  const linked = await prisma.$transaction(async (tx) => {
+    await tx.nomadTelegramOperator.updateMany({
+      where: {
+        linkedChatId: chatId,
+        NOT: {
+          id: operator.id,
+        },
+      },
+      data: {
+        linkedChatId: null,
+        linkedTelegramUserId: null,
+        linkedUsername: null,
+        linkedDisplayName: null,
+        linkedAt: null,
+      },
+    });
+
+    return tx.nomadTelegramOperator.update({
+      where: {
+        id: operator.id,
+      },
+      data: {
+        linkedChatId: chatId,
+        linkedTelegramUserId: telegramUserId || null,
+        linkedUsername: username,
+        linkedDisplayName: displayName || operator.name,
+        linkedAt: new Date(),
+      },
+    });
+  });
+
+  return mapTelegramOperator(linked);
+};
+
 export const getTelegramAutomationState = async () => {
   await ensureNomadState();
 
@@ -863,14 +1193,21 @@ export const reportTelegramAutomationState = async (payload: Partial<TelegramAut
   await ensureNomadState();
 
   const event = payload.event;
-  if (event !== 'heartbeat' && event !== 'broadcast' && event !== 'rotate' && event !== 'error') {
-    return { error: 'event must be heartbeat, broadcast, rotate or error' };
+  if (event !== 'heartbeat' && event !== 'broadcast' && event !== 'rotate' && event !== 'request' && event !== 'error') {
+    return { error: 'event must be heartbeat, broadcast, rotate, request or error' };
   }
 
   const now = new Date();
   const data: Record<string, Date | string | null> = {};
+  let requestOperator:
+    | {
+        id: string;
+        name: string;
+        phone: string;
+      }
+    | null = null;
 
-  if (event === 'heartbeat' || event === 'broadcast' || event === 'rotate') {
+  if (event === 'heartbeat' || event === 'broadcast' || event === 'rotate' || event === 'request') {
     data.lastHeartbeatAt = now;
   }
 
@@ -887,6 +1224,38 @@ export const reportTelegramAutomationState = async (payload: Partial<TelegramAut
     data.lastRotateCodeValue = payload.codeValue?.trim() || null;
   }
 
+  if (event === 'request') {
+    const chatId = normalizeChatId(payload.chatId);
+    if (!chatId) {
+      return { error: 'chatId is required for request event' };
+    }
+
+    const operator = await prisma.nomadTelegramOperator.findFirst({
+      where: {
+        linkedChatId: chatId,
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+      },
+    });
+
+    if (!operator) {
+      return { error: 'Linked telegram operator not found' };
+    }
+
+    requestOperator = operator;
+    data.lastRequestAt = now;
+    data.lastRequestChatId = chatId;
+    data.lastRequestOperatorId = operator.id;
+    data.lastRequestOperatorName = operator.name;
+    data.lastRequestPhone = operator.phone;
+    data.lastRequestCodeId = payload.codeId?.trim() || null;
+    data.lastRequestCodeValue = payload.codeValue?.trim() || null;
+  }
+
   if (event === 'error') {
     const message = payload.message?.trim();
     if (!message) {
@@ -897,24 +1266,44 @@ export const reportTelegramAutomationState = async (payload: Partial<TelegramAut
     data.lastErrorMessage = message;
   }
 
-  const updated = await prisma.nomadTelegramAutomationState.upsert({
-    where: {
-      id: TELEGRAM_AUTOMATION_STATE_ID,
-    },
-    update: data,
-    create: {
-      id: TELEGRAM_AUTOMATION_STATE_ID,
-      lastHeartbeatAt: event === 'heartbeat' || event === 'broadcast' || event === 'rotate' ? now : null,
-      lastRotateAt: event === 'rotate' ? now : null,
-      lastRotateCodeId: event === 'rotate' ? payload.codeId?.trim() || null : null,
-      lastRotateCodeValue: event === 'rotate' ? payload.codeValue?.trim() || null : null,
-      lastBroadcastAt: event === 'broadcast' ? now : null,
-      lastBroadcastCodeId: event === 'broadcast' ? payload.codeId?.trim() || null : null,
-      lastBroadcastCodeValue: event === 'broadcast' ? payload.codeValue?.trim() || null : null,
-      lastBroadcastDayKey: event === 'broadcast' ? payload.dayKey?.trim() || null : null,
-      lastErrorAt: event === 'error' ? now : null,
-      lastErrorMessage: event === 'error' ? payload.message?.trim() || null : null,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    if (event === 'request' && requestOperator) {
+      await tx.nomadTelegramOperator.update({
+        where: {
+          id: requestOperator.id,
+        },
+        data: {
+          lastCodeRequestedAt: now,
+        },
+      });
+    }
+
+    return tx.nomadTelegramAutomationState.upsert({
+      where: {
+        id: TELEGRAM_AUTOMATION_STATE_ID,
+      },
+      update: data,
+      create: {
+        id: TELEGRAM_AUTOMATION_STATE_ID,
+        lastHeartbeatAt: event === 'heartbeat' || event === 'broadcast' || event === 'rotate' || event === 'request' ? now : null,
+        lastRotateAt: event === 'rotate' ? now : null,
+        lastRotateCodeId: event === 'rotate' ? payload.codeId?.trim() || null : null,
+        lastRotateCodeValue: event === 'rotate' ? payload.codeValue?.trim() || null : null,
+        lastBroadcastAt: event === 'broadcast' ? now : null,
+        lastBroadcastCodeId: event === 'broadcast' ? payload.codeId?.trim() || null : null,
+        lastBroadcastCodeValue: event === 'broadcast' ? payload.codeValue?.trim() || null : null,
+        lastBroadcastDayKey: event === 'broadcast' ? payload.dayKey?.trim() || null : null,
+        lastRequestAt: event === 'request' ? now : null,
+        lastRequestChatId: event === 'request' ? payload.chatId?.trim() || null : null,
+        lastRequestOperatorId: event === 'request' ? requestOperator?.id ?? null : null,
+        lastRequestOperatorName: event === 'request' ? requestOperator?.name ?? null : null,
+        lastRequestPhone: event === 'request' ? requestOperator?.phone ?? null : null,
+        lastRequestCodeId: event === 'request' ? payload.codeId?.trim() || null : null,
+        lastRequestCodeValue: event === 'request' ? payload.codeValue?.trim() || null : null,
+        lastErrorAt: event === 'error' ? now : null,
+        lastErrorMessage: event === 'error' ? payload.message?.trim() || null : null,
+      },
+    });
   });
 
   return mapTelegramAutomationState(updated, now);

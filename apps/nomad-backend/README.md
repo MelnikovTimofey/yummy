@@ -75,6 +75,20 @@
 4. automation endpoint `GET /automation/telegram/recipients` отдаёт активные chat lists для worker;
 5. bot может использовать backend как source of truth, а `.env` оставляет только fallback.
 
+На этапе Telegram allowlist дополнительно есть:
+
+1. allowlist операторов через `/staff/access/telegram-operators`;
+2. эти записи хранятся в Postgres как `NomadTelegramOperator`;
+3. allowlist ведётся по `имя + телефон`, а не по `chatId`;
+4. automation endpoints:
+   - `GET /automation/telegram/operators/by-chat/:chatId`
+   - `POST /automation/telegram/operators/link`
+5. bot request flow теперь выглядит так:
+   - оператор пишет боту;
+   - делится контактом;
+   - backend сверяет номер с allowlist и привязывает `chatId`;
+   - бот отдаёт актуальный daily code по `/code`.
+
 На этапе Telegram automation state дополнительно есть:
 
 1. persisted singleton `NomadTelegramAutomationState` в Postgres;
@@ -87,6 +101,7 @@
    - heartbeat бота;
    - last rotate;
    - last broadcast;
+   - last request;
    - last error;
 5. health вычисляется как `unknown / healthy / stale / error`.
 
@@ -152,6 +167,10 @@
 - `POST /staff/access/telegram-recipients`
 - `PATCH /staff/access/telegram-recipients/:id`
 - `DELETE /staff/access/telegram-recipients/:id`
+- `GET /staff/access/telegram-operators`
+- `POST /staff/access/telegram-operators`
+- `PATCH /staff/access/telegram-operators/:id`
+- `DELETE /staff/access/telegram-operators/:id`
 - `GET /staff/inventory/tobaccos`
 - `PATCH /staff/inventory/tobaccos/:id`
 - `GET /staff/dashboard/summary`
@@ -169,6 +188,8 @@
 - `POST /automation/daily-code/ensure`
 - `POST /automation/daily-code/rotate`
 - `GET /automation/telegram/recipients`
+- `GET /automation/telegram/operators/by-chat/:chatId`
+- `POST /automation/telegram/operators/link`
 - `GET /automation/telegram/state`
 - `POST /automation/telegram/state/report`
 

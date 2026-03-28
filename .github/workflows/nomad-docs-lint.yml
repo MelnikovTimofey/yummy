@@ -9,8 +9,10 @@ on:
       - .codex/skills/**
       - AGENTS.md
       - AI_DEVELOPMENT_PROCESS.md
+      - CONTRIBUTING_NOMAD.md
       - WORKFLOW_NOMAD.md
       - NOMAD_*.md
+      - docs/**
       - NOTES.md
       - HANDOFF.md
   push:
@@ -21,8 +23,10 @@ on:
       - .codex/skills/**
       - AGENTS.md
       - AI_DEVELOPMENT_PROCESS.md
+      - CONTRIBUTING_NOMAD.md
       - WORKFLOW_NOMAD.md
       - NOMAD_*.md
+      - docs/**
       - NOTES.md
       - HANDOFF.md
 
@@ -55,7 +59,7 @@ jobs:
       - name: Reject placeholder TODO markers
         run: |
           set -eu
-          if rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .codex/skills .github; then
+          if rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md; then
             echo "Placeholder markers found in docs or skills"
             exit 1
           fi

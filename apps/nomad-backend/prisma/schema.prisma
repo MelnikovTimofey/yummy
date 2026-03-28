@@ -59,6 +59,24 @@ model NomadTelegramRecipient {
   @@index([scope, active])
 }
 
+model NomadTelegramOperator {
+  id                  String    @id
+  name                String
+  phone               String    @unique
+  active              Boolean   @default(true)
+  linkedChatId        String?   @unique
+  linkedTelegramUserId String?
+  linkedUsername      String?
+  linkedDisplayName   String?
+  linkedAt            DateTime?
+  lastCodeRequestedAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([active])
+  @@index([linkedChatId])
+}
+
 model NomadTelegramAutomationState {
   id                    String    @id
   lastHeartbeatAt       DateTime?
@@ -69,6 +87,13 @@ model NomadTelegramAutomationState {
   lastBroadcastCodeId   String?
   lastBroadcastCodeValue String?
   lastBroadcastDayKey   String?
+  lastRequestAt         DateTime?
+  lastRequestChatId     String?
+  lastRequestOperatorId String?
+  lastRequestOperatorName String?
+  lastRequestPhone      String?
+  lastRequestCodeId     String?
+  lastRequestCodeValue  String?
   lastErrorAt           DateTime?
   lastErrorMessage      String?
   createdAt             DateTime  @default(now())

@@ -1,9 +1,21 @@
-import type { IntroCard, MixView, RailType, RailView } from './state';
+import type {
+  DashboardSummary,
+  IntroCard,
+  InventoryBatchResult,
+  InventoryListResult,
+  InventoryTobaccoView,
+  MixListResult,
+  MixView,
+  RailType,
+  RailView,
+  StaffRailView,
+} from './state';
 import type { AuditEventView } from './audit';
 import type {
   DailyAccessCodeView,
   StaffAccountView,
   TelegramAutomationStateView,
+  TelegramOperatorView,
   TelegramRecipientView,
 } from './access';
 
@@ -80,10 +92,20 @@ export type StaffAuthResponse = {
 
 export type StaffMixesResponse = {
   items: MixView[];
+} & MixListResult;
+
+export type StaffDashboardSummaryResponse = DashboardSummary;
+
+export type StaffInventoryResponse = InventoryListResult;
+
+export type StaffInventoryMutationResponse = {
+  item: InventoryTobaccoView;
 };
 
+export type StaffInventoryBatchMutationResponse = InventoryBatchResult;
+
 export type StaffRailsResponse = {
-  items: RailView[];
+  items: StaffRailView[];
 };
 
 export type StaffDailyAccessCodesResponse = {
@@ -108,6 +130,14 @@ export type StaffTelegramRecipientsResponse = {
 
 export type StaffTelegramRecipientMutationResponse = {
   item: TelegramRecipientView;
+};
+
+export type StaffTelegramOperatorsResponse = {
+  items: TelegramOperatorView[];
+};
+
+export type StaffTelegramOperatorMutationResponse = {
+  item: TelegramOperatorView;
 };
 
 export type AutomationDailyCodeWindow = {
@@ -139,6 +169,14 @@ export type AutomationTelegramRecipientsResponse = {
   rotateChatIds: number[];
 };
 
+export type AutomationTelegramOperatorResponse = {
+  item: TelegramOperatorView | null;
+};
+
+export type AutomationTelegramOperatorLinkResponse = {
+  item: TelegramOperatorView;
+};
+
 export type AutomationTelegramStateResponse = {
   item: TelegramAutomationStateView;
 };
@@ -156,7 +194,7 @@ export type StaffMixMutationResponse = {
 };
 
 export type StaffRailMutationResponse = {
-  item: RailView;
+  item: StaffRailView;
 };
 
 export type GuestRatingMutationResponse = GuestMixRatingResponse;

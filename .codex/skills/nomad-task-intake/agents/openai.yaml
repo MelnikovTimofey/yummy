@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad Task Intake"
+  short_description: "Guided task brief formation for Nomad development"
+  default_prompt: "Use $nomad-task-intake to ask for missing task details one by one and return a clean Nomad task brief before implementation."

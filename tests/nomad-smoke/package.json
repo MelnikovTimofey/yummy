@@ -1,0 +1,13 @@
+{
+  "name": "nomad-smoke",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "smoke": "playwright test",
+    "smoke:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

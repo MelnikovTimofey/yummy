@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/**/*.test.ts",
+    "test": "tsx --test $(find src -type f \\( -name '*.test.ts' -o -name '*.test.tsx' \\) | sort)",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js"
   },

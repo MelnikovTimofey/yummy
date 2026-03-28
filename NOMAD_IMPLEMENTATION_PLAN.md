@@ -136,6 +136,26 @@
 7. `Slice 6` — Telegram-бот + code rotation automation.
 8. `Slice 7` — UX polish, observability, acceptance smoke.
 
+### Master production redesign note
+
+Для `Nomad Master` текущий roadmap-level redesign нужно вести не одним broad rewrite, а отдельной программой hardening:
+
+1. `dashboard analytics contract`
+2. `inventory table + bulk operations`
+3. `mix catalog + component editor`
+4. `rail manager hardening`
+5. `access + Telegram delivery redesign`
+6. `QA and release hardening`
+
+Источник контракта для этой программы:
+
+1. `docs/nomad/master-production-redesign.md`
+
+Правило:
+
+1. не запускать параллельную реализацию этих частей, пока не зафиксирован payload/acceptance contract каждого слайса;
+2. access/Telegram slice по умолчанию требует human review, так как может затронуть schema/access/runtime semantics.
+
 ### Практики работы с ИИ
 
 1. Перед началом slice обновлять фактологию в документации.

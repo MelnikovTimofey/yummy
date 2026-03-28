@@ -1,0 +1,136 @@
+name: Nomad Smoke
+
+on:
+  pull_request:
+    branches:
+      - codex/nomad-parallel-track
+    paths:
+      - apps/nomad-aroma-web/**
+      - apps/nomad-master-web/**
+      - apps/nomad-backend/**
+      - tests/nomad-smoke/**
+      - AGENTS.md
+      - AI_DEVELOPMENT_PROCESS.md
+      - WORKFLOW_NOMAD.md
+      - NOMAD_*.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nomad-smoke-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  nomad-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+      DATABASE_URL: postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public
+      NOMAD_AROMA_URL: http://127.0.0.1:5174
+      NOMAD_MASTER_URL: http://127.0.0.1:5176
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            apps/nomad-backend/package-lock.json
+            apps/nomad-aroma-web/package-lock.json
+            apps/nomad-master-web/package-lock.json
+            tests/nomad-smoke/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: apps/nomad-backend
+        run: npm ci
+
+      - name: Install aroma dependencies
+        working-directory: apps/nomad-aroma-web
+        run: npm ci
+
+      - name: Install master dependencies
+        working-directory: apps/nomad-master-web
+        run: npm ci
+
+      - name: Install smoke dependencies
+        working-directory: tests/nomad-smoke
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: tests/nomad-smoke
+        run: npx playwright install --with-deps chromium
+
+      - name: Start backend database
+        working-directory: apps/nomad-backend
+        run: docker compose -f docker-compose.yml up -d db
+
+      - name: Prepare backend schema and seed
+        working-directory: apps/nomad-backend
+        run: |
+          npm run prisma:generate
+          npm run prisma:dbpush -- --force-reset
+          npm run prisma:seed
+
+      - name: Start Nomad local stack
+        run: |
+          mkdir -p output/playwright/nomad-quality/logs
+          (
+            cd apps/nomad-backend
+            npm run dev > ../../output/playwright/nomad-quality/logs/backend.log 2>&1 &
+            echo $! > ../../output/playwright/nomad-quality/logs/backend.pid
+          )
+          (
+            cd apps/nomad-aroma-web
+            npm run dev > ../../output/playwright/nomad-quality/logs/aroma.log 2>&1 &
+            echo $! > ../../output/playwright/nomad-quality/logs/aroma.pid
+          )
+          (
+            cd apps/nomad-master-web
+            npm run dev > ../../output/playwright/nomad-quality/logs/master.log 2>&1 &
+            echo $! > ../../output/playwright/nomad-quality/logs/master.pid
+          )
+
+      - name: Wait for Nomad services
+        run: |
+          set -eu
+          for url in http://127.0.0.1:3021/health http://127.0.0.1:5174 http://127.0.0.1:5176; do
+            echo "Waiting for ${url}"
+            for attempt in $(seq 1 60); do
+              if curl -fsS "${url}" >/dev/null 2>&1; then
+                echo "Ready: ${url}"
+                break
+              fi
+
+              if [ "${attempt}" -eq 60 ]; then
+                echo "Timed out waiting for ${url}" >&2
+                exit 1
+              fi
+
+              sleep 2
+            done
+          done
+
+      - name: Run thin browser smoke
+        working-directory: tests/nomad-smoke
+        run: npm run smoke
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nomad-smoke-artifacts
+          path: output/playwright/nomad-quality
+          if-no-files-found: warn
+
+      - name: Stop local stack
+        if: always()
+        run: |
+          set +e
+          for pid_file in output/playwright/nomad-quality/logs/*.pid; do
+            [ -f "${pid_file}" ] || continue
+            kill "$(cat "${pid_file}")" >/dev/null 2>&1 || true
+          done
+          docker compose -f apps/nomad-backend/docker-compose.yml down -v

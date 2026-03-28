@@ -12,32 +12,41 @@ import {
 import {
   createDailyAccessCode,
   createStaffAccount,
+  createTelegramOperator,
   createTelegramRecipient,
   deleteDailyAccessCode,
   deleteStaffAccount,
+  deleteTelegramOperator,
   deleteTelegramRecipient,
   ensureCurrentDailyAccessCode,
   getDailyAccessCodeById,
   getCurrentDailyAccessCode,
+  getLinkedTelegramOperatorByChatId,
   getStaffAccountById,
   getTelegramAutomationState,
+  getTelegramOperatorById,
   getTelegramRecipientById,
   listActiveTelegramRecipients,
   listDailyAccessCodes,
   listStaffAccounts,
+  listTelegramOperators,
   listTelegramRecipients,
+  linkTelegramOperator,
   reportTelegramAutomationState,
   rotateCurrentDailyAccessCode,
   updateDailyAccessCode,
   updateStaffAccount,
+  updateTelegramOperator,
   updateTelegramRecipient,
 } from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import {
+  batchUpdateTobaccoInStock,
   createMix,
   createRail,
   ensureNomadState,
+  getDashboardSummary,
   getInventorySummary,
   getInventoryTobaccos,
   getTobaccoById,
@@ -46,8 +55,16 @@ import {
   getGuestIntroCards,
   getStaffMixes,
   getStaffRails,
-  getSmokeCtaSummary,
   getAvailableMixCatalog,
+  type InventoryBatchAction,
+  type MixRailFilter,
+  type MixSortDirection,
+  type MixSortField,
+  type MixStatusFilter,
+  type InventorySortDirection,
+  type InventorySortField,
+  type InventoryStockFilter,
+  normalizeDashboardWindowKey,
   recordSmokeCtaEvent,
   rateMix,
   updateMix,
@@ -59,6 +76,8 @@ import type {
   AutomationDailyCodeCurrentResponse,
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
+  AutomationTelegramOperatorLinkResponse,
+  AutomationTelegramOperatorResponse,
   AutomationTelegramRecipientsResponse,
   AutomationTelegramStateResponse,
   GuestAccessSuccess,
@@ -70,19 +89,25 @@ import type {
   StaffAccountMutationResponse,
   StaffAccountsResponse,
   StaffAuthResponse,
+  StaffInventoryBatchMutationResponse,
+  StaffInventoryMutationResponse,
+  StaffInventoryResponse,
   StaffDailyAccessCodeMutationResponse,
   StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
   StaffMixesResponse,
+  StaffTelegramOperatorMutationResponse,
+  StaffTelegramOperatorsResponse,
   StaffTelegramRecipientMutationResponse,
   StaffTelegramRecipientsResponse,
   StaffTelegramAutomationStateResponse,
   StaffAuditEventsResponse,
+  StaffDashboardSummaryResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
 import type { StaffRole } from './auth';
-import type { MixView, RailView } from './state';
+import type { MixView, RailView, StaffRailView } from './state';
 
 export const buildApp = () => {
   const app = Fastify({ logger: true });
@@ -97,7 +122,7 @@ export const buildApp = () => {
 
   app.get('/meta', async () => ({
     appName: config.appName,
-    mode: 'phase-4',
+    mode: 'phase-5',
     scope: [
       'guest-access',
       'staff-auth',
@@ -127,10 +152,13 @@ export const buildApp = () => {
       automationCurrentDailyCode: 'GET /automation/daily-code/current',
       automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
       automationRotateDailyCode: 'POST /automation/daily-code/rotate',
+      automationTelegramOperatorByChat: 'GET /automation/telegram/operators/by-chat/:chatId',
+      automationTelegramOperatorLink: 'POST /automation/telegram/operators/link',
       automationTelegramRecipients: 'GET /automation/telegram/recipients',
       automationTelegramState: 'GET /automation/telegram/state',
       automationTelegramStateReport: 'POST /automation/telegram/state/report',
       inventoryList: 'GET /staff/inventory/tobaccos',
+      inventoryBatch: 'POST /staff/inventory/tobaccos/batch',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
@@ -145,6 +173,10 @@ export const buildApp = () => {
       telegramRecipientsCreate: 'POST /staff/access/telegram-recipients',
       telegramRecipientsUpdate: 'PATCH /staff/access/telegram-recipients/:id',
       telegramRecipientsDelete: 'DELETE /staff/access/telegram-recipients/:id',
+      telegramOperatorsList: 'GET /staff/access/telegram-operators',
+      telegramOperatorsCreate: 'POST /staff/access/telegram-operators',
+      telegramOperatorsUpdate: 'PATCH /staff/access/telegram-operators/:id',
+      telegramOperatorsDelete: 'DELETE /staff/access/telegram-operators/:id',
       telegramAutomationState: 'GET /staff/access/telegram-automation-state',
       staffAuditEvents: 'GET /staff/audit/events',
       staffMixesList: 'GET /staff/mixes',
@@ -350,6 +382,59 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
+  app.get('/automation/telegram/operators/by-chat/:chatId', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const chatId = (request.params as { chatId?: string }).chatId?.trim();
+    const response: AutomationTelegramOperatorResponse = {
+      item: chatId ? await getLinkedTelegramOperatorByChatId(chatId) : null,
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/automation/telegram/operators/link', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          phone?: string;
+          chatId?: string;
+          telegramUserId?: string;
+          username?: string;
+          firstName?: string;
+          lastName?: string;
+        }
+      | undefined;
+
+    const linked = await linkTelegramOperator({
+      phone: payload?.phone ?? '',
+      chatId: payload?.chatId ?? '',
+      telegramUserId: payload?.telegramUserId,
+      username: payload?.username,
+      firstName: payload?.firstName,
+      lastName: payload?.lastName,
+    });
+
+    if (!linked) {
+      return reply.status(404).send({ error: 'Telegram operator allowlist entry not found' } satisfies ApiError);
+    }
+
+    if (isApiError(linked)) {
+      return reply.status(400).send(linked);
+    }
+
+    const response: AutomationTelegramOperatorLinkResponse = {
+      item: linked,
+    };
+
+    return reply.send(response);
+  });
+
   app.get('/automation/telegram/state', async (request, reply) => {
     if (!authenticateAutomationRequest(request, reply)) {
       return;
@@ -368,20 +453,22 @@ export const buildApp = () => {
     }
 
     const payload = request.body as
-      | {
+        | {
           event?: string;
           codeId?: string;
           codeValue?: string;
           dayKey?: string;
+          chatId?: string;
           message?: string;
         }
       | undefined;
 
     const reported = await reportTelegramAutomationState({
-      event: payload?.event as 'heartbeat' | 'broadcast' | 'rotate' | 'error' | undefined,
+      event: payload?.event as 'heartbeat' | 'broadcast' | 'rotate' | 'request' | 'error' | undefined,
       codeId: payload?.codeId,
       codeValue: payload?.codeValue,
       dayKey: payload?.dayKey,
+      chatId: payload?.chatId,
       message: payload?.message,
     });
 
@@ -920,6 +1007,148 @@ export const buildApp = () => {
     return reply.status(204).send();
   });
 
+  app.get('/staff/access/telegram-operators', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffTelegramOperatorsResponse = {
+      items: await listTelegramOperators(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/access/telegram-operators', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          name?: string;
+          phone?: string;
+          active?: boolean;
+        }
+      | undefined;
+
+    const created = await createTelegramOperator({
+      name: payload?.name ?? '',
+      phone: payload?.phone ?? '',
+      active: payload?.active,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffTelegramOperatorMutationResponse = {
+      item: created,
+    };
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'telegram-operator',
+      entityId: response.item.id,
+      entityLabel: response.item.name || response.item.phone,
+      details: {
+        phone: response.item.phone,
+        active: response.item.active,
+      },
+    });
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/access/telegram-operators/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const operatorId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          name?: string;
+          phone?: string;
+          active?: boolean;
+          clearLink?: boolean;
+        }
+      | undefined;
+
+    if (!operatorId) {
+      return reply.status(400).send({ error: 'Telegram operator id is required' } satisfies ApiError);
+    }
+
+    const updated = await updateTelegramOperator(operatorId, {
+      name: payload?.name,
+      phone: payload?.phone,
+      active: payload?.active,
+      clearLink: payload?.clearLink,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Telegram operator not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffTelegramOperatorMutationResponse = {
+      item: updated,
+    };
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'telegram-operator',
+      entityId: response.item.id,
+      entityLabel: response.item.name || response.item.phone,
+      details: {
+        phone: response.item.phone,
+        active: response.item.active,
+        linkedChatId: response.item.linkedChatId,
+      },
+    });
+
+    return reply.send(response);
+  });
+
+  app.delete('/staff/access/telegram-operators/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const operatorId = (request.params as { id?: string }).id?.trim();
+    if (!operatorId) {
+      return reply.status(400).send({ error: 'Telegram operator id is required' } satisfies ApiError);
+    }
+
+    const current = await getTelegramOperatorById(operatorId);
+    const deleted = await deleteTelegramOperator(operatorId);
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Telegram operator not found' } satisfies ApiError);
+    }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'telegram-operator',
+      entityId: operatorId,
+      entityLabel: current?.name || current?.phone || operatorId,
+      details: {
+        phone: current?.phone ?? '',
+      },
+    });
+
+    return reply.status(204).send();
+  });
+
   app.get('/staff/access/telegram-automation-state', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply, ['admin']);
     if (!user) {
@@ -957,9 +1186,47 @@ export const buildApp = () => {
       return;
     }
 
-    const response: StaffMixesResponse = {
-      items: await getStaffMixes(),
-    };
+    const query = request.query as
+      | {
+          search?: unknown;
+          status?: unknown;
+          railState?: unknown;
+          manufacturers?: unknown;
+          flavorProfiles?: unknown;
+          flavors?: unknown;
+          flavorTags?: unknown;
+          sort?: unknown;
+          direction?: unknown;
+        }
+      | undefined;
+
+    const response: StaffMixesResponse = await getStaffMixes({
+      search: typeof query?.search === 'string' ? query.search : undefined,
+      status: (typeof query?.status === 'string' ? query.status : undefined) as MixStatusFilter | undefined,
+      railState: (typeof query?.railState === 'string' ? query.railState : undefined) as MixRailFilter | undefined,
+      manufacturers: Array.isArray(query?.manufacturers)
+        ? query.manufacturers.filter((value): value is string => typeof value === 'string')
+        : typeof query?.manufacturers === 'string'
+          ? [query.manufacturers]
+          : undefined,
+      flavorProfiles: Array.isArray(query?.flavorProfiles)
+        ? query.flavorProfiles.filter((value): value is string => typeof value === 'string')
+        : typeof query?.flavorProfiles === 'string'
+          ? [query.flavorProfiles]
+          : undefined,
+      flavors: Array.isArray(query?.flavors)
+        ? query.flavors.filter((value): value is string => typeof value === 'string')
+        : typeof query?.flavors === 'string'
+          ? [query.flavors]
+          : undefined,
+      flavorTags: Array.isArray(query?.flavorTags)
+        ? query.flavorTags.filter((value): value is string => typeof value === 'string')
+        : typeof query?.flavorTags === 'string'
+          ? [query.flavorTags]
+          : undefined,
+      sort: (typeof query?.sort === 'string' ? query.sort : undefined) as MixSortField | undefined,
+      direction: (typeof query?.direction === 'string' ? query.direction : undefined) as MixSortDirection | undefined,
+    });
 
     return reply.send(response);
   });
@@ -975,6 +1242,11 @@ export const buildApp = () => {
           name?: string;
           description?: string;
           componentIds?: string[];
+          components?: Array<{
+            tobaccoId?: string;
+            proportion?: number;
+            sortOrder?: number;
+          }>;
           available?: boolean;
           popularity?: number;
           baseAvgRating?: number;
@@ -985,6 +1257,7 @@ export const buildApp = () => {
       name: payload?.name ?? '',
       description: payload?.description ?? '',
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : [],
+      components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
       popularity: payload?.popularity,
       baseAvgRating: payload?.baseAvgRating,
@@ -1025,6 +1298,11 @@ export const buildApp = () => {
           name?: string;
           description?: string;
           componentIds?: string[];
+          components?: Array<{
+            tobaccoId?: string;
+            proportion?: number;
+            sortOrder?: number;
+          }>;
           available?: boolean;
           popularity?: number;
           baseAvgRating?: number;
@@ -1039,6 +1317,7 @@ export const buildApp = () => {
       name: payload?.name,
       description: payload?.description,
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : undefined,
+      components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
       popularity: payload?.popularity,
       baseAvgRating: payload?.baseAvgRating,
@@ -1077,9 +1356,83 @@ export const buildApp = () => {
       return;
     }
 
-    return reply.send({
-      items: await getInventoryTobaccos(),
+    const query = request.query as
+      | {
+          search?: unknown;
+          stock?: unknown;
+          manufacturers?: unknown;
+          flavorProfiles?: unknown;
+          flavors?: unknown;
+          flavorTags?: unknown;
+          sort?: unknown;
+          direction?: unknown;
+        }
+      | undefined;
+
+    const response: StaffInventoryResponse = await getInventoryTobaccos({
+      search: typeof query?.search === 'string' ? query.search : '',
+      stock: (typeof query?.stock === 'string' ? query.stock : undefined) as InventoryStockFilter | undefined,
+      manufacturers: readStringList(query?.manufacturers),
+      flavorProfiles: readStringList(query?.flavorProfiles),
+      flavors: readStringList(query?.flavors),
+      flavorTags: readStringList(query?.flavorTags),
+      sort: (typeof query?.sort === 'string' ? query.sort : undefined) as InventorySortField | undefined,
+      direction: (typeof query?.direction === 'string' ? query.direction : undefined) as InventorySortDirection | undefined,
     });
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/inventory/tobaccos/batch', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const body = request.body as { ids?: unknown; action?: unknown } | undefined;
+    const ids = Array.isArray(body?.ids)
+      ? body.ids.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+      : [];
+    const action = typeof body?.action === 'string' ? body.action : '';
+
+    if (!ids.length) {
+      return reply.status(400).send({ error: 'At least one tobacco id is required' } satisfies ApiError);
+    }
+
+    if (action === 'archive') {
+      return reply.status(409).send({
+        error: 'Archive/delete for inventory needs a separate product-approved contract',
+      } satisfies ApiError);
+    }
+
+    if (action !== 'set-in-stock' && action !== 'set-out-of-stock') {
+      return reply.status(400).send({ error: 'Unsupported batch action' } satisfies ApiError);
+    }
+
+    const currentItems = await Promise.all(ids.map(async (id) => [id, await getTobaccoById(id)] as const));
+    const currentMap = new Map(currentItems);
+    const result = await batchUpdateTobaccoInStock(ids, action as Exclude<InventoryBatchAction, 'archive'>);
+    const response: StaffInventoryBatchMutationResponse = result;
+
+    await Promise.all(
+      response.items.map((item) =>
+        recordAuditEvent({
+          actor: user,
+          action: 'toggle',
+          entityType: 'inventory',
+          entityId: item.id,
+          entityLabel: `${item.manufacturer} · ${item.name}`,
+          details: {
+            batchAction: response.action,
+            batchSize: response.ids.length,
+            fromInStock: currentMap.get(item.id)?.inStock ?? null,
+            toInStock: item.inStock,
+          },
+        }),
+      ),
+    );
+
+    return reply.send(response);
   });
 
   app.get('/staff/rails', async (request, reply) => {
@@ -1105,7 +1458,6 @@ export const buildApp = () => {
       | {
           name?: string;
           description?: string;
-          type?: 'prepared' | 'curated' | 'statistical';
           mixIds?: string[];
           active?: boolean;
         }
@@ -1114,7 +1466,6 @@ export const buildApp = () => {
     const created = await createRail({
       name: payload?.name ?? '',
       description: payload?.description ?? '',
-      type: payload?.type,
       mixIds: Array.isArray(payload?.mixIds) ? payload!.mixIds : [],
       active: payload?.active,
     });
@@ -1124,7 +1475,7 @@ export const buildApp = () => {
     }
 
     const response: StaffRailMutationResponse = {
-      item: created as RailView,
+      item: created as StaffRailView,
     };
 
     await recordAuditEvent({
@@ -1181,7 +1532,7 @@ export const buildApp = () => {
     }
 
     const response: StaffRailMutationResponse = {
-      item: updated as RailView,
+      item: updated as StaffRailView,
     };
 
     await recordAuditEvent({
@@ -1235,7 +1586,11 @@ export const buildApp = () => {
       },
     });
 
-    return reply.send({ item: updated });
+    const response: StaffInventoryMutationResponse = {
+      item: updated,
+    };
+
+    return reply.send(response);
   });
 
   app.get('/staff/dashboard/summary', async (request, reply) => {
@@ -1244,14 +1599,10 @@ export const buildApp = () => {
       return;
     }
 
-    const inventory = await getInventorySummary();
-    const smoke = await getSmokeCtaSummary();
+    const query = request.query as { window?: unknown } | undefined;
+    const response: StaffDashboardSummaryResponse = await getDashboardSummary(normalizeDashboardWindowKey(query?.window));
 
-    return reply.send({
-      inventory,
-      smokeCtaTotal: smoke.smokeCtaTotal,
-      topMixes: smoke.topMixes,
-    });
+    return reply.send(response);
   });
 
   app.get('/staff/auth/me', async (request, reply) => {

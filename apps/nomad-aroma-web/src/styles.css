@@ -1,4 +1,54 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-ui);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.7);
+  --radius-md: calc(var(--radius) * 0.9);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+}
+
 :root {
+  --radius: 0.95rem;
+  --background: #130807;
+  --foreground: #f8eee8;
+  --card: #1b0d0e;
+  --card-foreground: #f8eee8;
+  --popover: #1b0d0e;
+  --popover-foreground: #f8eee8;
+  --primary: #d8ab68;
+  --primary-foreground: #23120d;
+  --secondary: rgba(63, 20, 20, 0.62);
+  --secondary-foreground: #f8eee8;
+  --muted: rgba(67, 27, 24, 0.66);
+  --muted-foreground: #d0b5a3;
+  --accent-ui: rgba(240, 183, 125, 0.14);
+  --accent-foreground: #fff2dd;
+  --destructive: #df6f5b;
+  --border: rgba(193, 141, 106, 0.22);
+  --input: rgba(193, 141, 106, 0.26);
+  --ring: rgba(242, 213, 165, 0.7);
   --bg: #130807;
   --surface: #1b0d0e;
   --surface-alt: #271314;
@@ -15,6 +65,16 @@
   --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 *,
@@ -370,7 +430,7 @@ select:focus-visible {
   box-shadow: inset 0 1px 0 rgba(255, 242, 232, 0.04);
 }
 
-.form button,
+.form > button,
 .search-button {
   border: 1px solid rgba(242, 213, 165, 0.22);
   background: linear-gradient(180deg, #caa066 0%, #9d6635 100%);
@@ -387,7 +447,7 @@ select:focus-visible {
     0 12px 24px rgba(96, 42, 20, 0.2);
 }
 
-.form button:disabled,
+.form > button:disabled,
 .search-button:disabled,
 .ghost-button:disabled {
   opacity: 0.45;
@@ -421,49 +481,25 @@ select:focus-visible {
 }
 
 .checkbox-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.checkbox-box {
-  position: relative;
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
   border-radius: 5px;
   border: 1px solid rgba(242, 213, 165, 0.24);
   background: rgba(52, 22, 20, 0.82);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 242, 232, 0.04);
 }
 
-.checkbox-box::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--accent-soft);
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.18s ease;
-}
-
-.checkbox-input:checked + .checkbox-box {
+.checkbox-input[data-state="checked"] {
   border-color: var(--accent);
   background: linear-gradient(180deg, #6c1e1b 0%, #4f1613 100%);
   box-shadow: 0 0 0 1px rgba(201, 168, 106, 0.2);
 }
 
-.checkbox-input:checked + .checkbox-box::after {
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.checkbox-input:focus-visible + .checkbox-box {
+.checkbox-input:focus-visible {
   outline: 2px solid var(--accent-soft);
   outline-offset: 2px;
 }
@@ -687,13 +723,14 @@ select:focus-visible {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .home-rail-title-line {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  column-gap: 10px;
+  row-gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -706,34 +743,45 @@ select:focus-visible {
   cursor: pointer;
   min-width: 0;
   flex: 1 1 auto;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  justify-items: start;
 }
 
 .home-rail-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.1;
+  font-size: clamp(21px, 5.2vw, 25px);
+  line-height: 1.02;
   letter-spacing: 0;
+  text-wrap: balance;
+  max-width: 12ch;
 }
 
 .home-rail-title-btn .hint {
-  margin-top: 8px;
+  margin-top: 0;
+  max-width: 40ch;
+  line-height: 1.4;
+  font-size: 13px;
 }
 
 .home-link-btn {
   border: 1px solid rgba(242, 213, 165, 0.16);
   background: rgba(64, 23, 21, 0.66);
   color: var(--accent-soft);
-  font-size: 14px;
+  font-size: 13px;
   padding: 8px 12px;
   border-radius: 999px;
   min-height: 40px;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .home-rail-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: none;
@@ -819,6 +867,11 @@ select:focus-visible {
   overflow: hidden;
 }
 
+.mix-unified-card-rail .mix-unified-meta {
+  -webkit-line-clamp: 2;
+  min-height: 2.4em;
+}
+
 .mix-unified-tags {
   min-height: 26px;
   display: flex;
@@ -826,6 +879,11 @@ select:focus-visible {
   flex-wrap: nowrap;
   gap: 6px;
   overflow: hidden;
+}
+
+.mix-unified-card-rail .mix-unified-tags {
+  min-height: 0;
+  flex-wrap: wrap;
 }
 
 .mix-unified-tags .profile-tag {
@@ -862,6 +920,25 @@ select:focus-visible {
 .onboarding-copy-card .card-text {
   max-width: 31ch;
   margin-top: 6px;
+}
+
+.recommendation-empty-card {
+  gap: 12px;
+}
+
+.recommendation-empty-head {
+  display: grid;
+  gap: 8px;
+}
+
+.recommendation-empty-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recommendation-empty-actions {
+  margin-top: 2px;
 }
 
 .selected-mix-bar {
@@ -1115,14 +1192,6 @@ select:focus-visible {
   gap: 5px;
 }
 
-.mix-info-list {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-}
-
 .mix-info-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1245,6 +1314,7 @@ select:focus-visible {
   .mix-detail-top-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
 
   .home-link-btn {
@@ -1256,7 +1326,7 @@ select:focus-visible {
   }
 
   .mix-unified-card-rail {
-    min-width: 210px;
+    min-width: 228px;
   }
 
   .mix-info-name,
@@ -1273,9 +1343,35 @@ select:focus-visible {
     max-width: none;
   }
 
-  .guest-stage-nav,
+  .guest-stage-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .guest-app-nav {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tab {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+  }
+
+  .home-rail-title {
+    font-size: 20px;
+    line-height: 1.04;
+    max-width: none;
+  }
+
+  .home-rail-title-btn .hint {
+    max-width: none;
+    font-size: 13px;
+  }
+
+  .home-rail-row {
+    padding-top: 2px;
   }
 
   .cinema-actions .ghost-button,

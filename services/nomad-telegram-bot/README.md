@@ -1,6 +1,6 @@
 # Nomad Telegram Bot
 
-Сервис для автоматической выдачи и рассылки daily code в Nomad.
+Сервис для автоматической выдачи daily code по request-модели в Nomad.
 
 ## Назначение
 
@@ -9,35 +9,31 @@
 - `GET /automation/daily-code/current`
 - `POST /automation/daily-code/ensure`
 - `POST /automation/daily-code/rotate`
-- `GET /automation/telegram/recipients`
+- `GET /automation/telegram/operators/by-chat/:chatId`
+- `POST /automation/telegram/operators/link`
 - `GET /automation/telegram/state`
 - `POST /automation/telegram/state/report`
 
 Бот делает три вещи:
 
 1. отвечает на команды staff в Telegram;
-2. автоматически рассылает текущий daily code по расписанию и при старте;
-3. защищается от дублей через локальное состояние.
+2. связывает chat id с allowlist-номером после `share contact`;
+3. гарантирует наличие актуального daily code на каждый день и отдаёт его по `/code`.
 
 ## Команды
 
 - `/start` - приветствие и краткая навигация
 - `/help` - список команд
 - `/code` - показать текущий daily code
-- `/rotate` - выпустить новый daily code и разослать его
-- `/whoami` - показать информацию о чате и доступе
+- `/whoami` - показать информацию о чате и текущей привязке
 
 ## Поведение
 
-1. Команды доступны только чатам из `NOMAD_TELEGRAM_ALLOWED_CHAT_IDS`.
-2. Авторассылка идёт в чаты из `NOMAD_TELEGRAM_BROADCAST_CHAT_IDS`.
-3. Ручная `/rotate` ограничивается списком `NOMAD_TELEGRAM_ROTATE_CHAT_IDS`; если список пуст, используется allowlist.
-4. При старте бот делает `ensure` current code и отправляет его в broadcast-чаты, если это ещё не было сделано для текущего кода.
-5. По расписанию бот повторяет ту же проверку.
-6. Ротация через `/rotate` выпускает новый код через automation endpoint backend.
-7. Если backend уже хранит чаты Telegram, бот читает их через automation API и использует `.env` только как fallback.
-8. Последняя отправка сохраняется локально в `NOMAD_BOT_STATE_PATH`, чтобы не слать дубликаты после рестарта.
-9. Бот отправляет heartbeat и операционные события в backend, чтобы `Мастер` видел текущее состояние automation без чтения логов.
+1. При первом входе оператор обязан поделиться своим контактом в Telegram.
+2. Бот сверяет номер телефона с backend allowlist и привязывает текущий `chatId`.
+3. После привязки `/code` отдаёт текущий автоматически выпущенный daily code.
+4. По расписанию бот делает `ensure` current code, чтобы код существовал для нового дня ещё до первого запроса.
+5. Бот отправляет heartbeat, request events и ошибки в backend, чтобы `Мастер` видел текущее состояние automation без чтения логов.
 
 ## Локальный запуск
 
@@ -70,9 +66,6 @@ TELEGRAM_BOT_TOKEN=
 NOMAD_TELEGRAM_API_BASE_URL=https://api.telegram.org
 NOMAD_BACKEND_URL=http://localhost:3021
 NOMAD_BACKEND_AUTOMATION_TOKEN=
-NOMAD_TELEGRAM_ALLOWED_CHAT_IDS=
-NOMAD_TELEGRAM_BROADCAST_CHAT_IDS=
-NOMAD_TELEGRAM_ROTATE_CHAT_IDS=
 NOMAD_BOT_STATE_PATH=.nomad-telegram-bot-state.json
 NOMAD_DAILY_BROADCAST_HOUR=9
 NOMAD_DAILY_BROADCAST_MINUTE=0
@@ -83,4 +76,4 @@ NOMAD_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
 
 ## Стадия
 
-Текущая стадия: рабочий Nomad worker для daily code automation, staff рассылок и backend-reported heartbeat/status.
+Текущая стадия: рабочий Nomad worker для `share contact -> /code` flow и backend-reported heartbeat/request status.

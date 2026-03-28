@@ -145,36 +145,68 @@ test('getCurrentDailyCode returns current active item when it exists', async () 
   assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
 });
 
-test('getTelegramRecipients reads grouped automation recipients', async () => {
+test('telegram operator automation endpoints read linked operator and link contact', async () => {
   const { result, calls } = await withMockFetch(
     [
       makeResponse({
-        items: [
-          {
-            id: 'telegram-allowed-1',
-            chatId: '362223626',
-            label: 'Основной чат',
-            scope: 'allowed',
-            active: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        allowedChatIds: [362223626],
-        broadcastChatIds: [362223626],
-        rotateChatIds: [],
+        item: {
+          id: 'telegram-operator-anna',
+          name: 'Анна',
+          phone: '+79991234567',
+          active: true,
+          linkedChatId: '362223626',
+          linkedTelegramUserId: '998877',
+          linkedUsername: 'anna_nomad',
+          linkedDisplayName: 'Анна Nomad',
+          linkedAt: new Date().toISOString(),
+          lastCodeRequestedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+      makeResponse({
+        item: {
+          id: 'telegram-operator-anna',
+          name: 'Анна',
+          phone: '+79991234567',
+          active: true,
+          linkedChatId: '362223626',
+          linkedTelegramUserId: '998877',
+          linkedUsername: 'anna_nomad',
+          linkedDisplayName: 'Анна Nomad',
+          linkedAt: new Date().toISOString(),
+          lastCodeRequestedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       }),
     ],
-    async () => new NomadBackendClient(buildConfig()).getTelegramRecipients(),
+    async () => {
+      const client = new NomadBackendClient(buildConfig());
+      const current = await client.getTelegramOperatorByChatId(362223626);
+      const linked = await client.linkTelegramOperator({
+        phone: '+79991234567',
+        chatId: '362223626',
+        telegramUserId: '998877',
+        username: 'anna_nomad',
+      });
+      return { current, linked };
+    },
   );
 
-  assert.equal(result.items.length, 1);
-  assert.deepEqual(result.allowedChatIds, [362223626]);
-  assert.deepEqual(result.broadcastChatIds, [362223626]);
-  assert.deepEqual(result.rotateChatIds, []);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://backend.example/automation/telegram/recipients');
+  assert.equal(result.current.item?.id, 'telegram-operator-anna');
+  assert.equal(result.linked.item.phone, '+79991234567');
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, 'https://backend.example/automation/telegram/operators/by-chat/362223626');
   assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal(calls[1].url, 'https://backend.example/automation/telegram/operators/link');
+  assert.equal(calls[1].init?.method, 'POST');
+  assert.deepEqual(JSON.parse(String(calls[1].init?.body)), {
+    phone: '+79991234567',
+    chatId: '362223626',
+    telegramUserId: '998877',
+    username: 'anna_nomad',
+  });
 });
 
 test('telegram automation state endpoints use automation header and payload', async () => {
@@ -192,6 +224,13 @@ test('telegram automation state endpoints use automation header and payload', as
           lastBroadcastCodeId: null,
           lastBroadcastCodeValue: null,
           lastBroadcastDayKey: null,
+          lastRequestAt: null,
+          lastRequestChatId: null,
+          lastRequestOperatorId: null,
+          lastRequestOperatorName: null,
+          lastRequestPhone: null,
+          lastRequestCodeId: null,
+          lastRequestCodeValue: null,
           lastErrorAt: null,
           lastErrorMessage: null,
           updatedAt: '2026-03-23T10:20:45.288Z',
@@ -209,6 +248,13 @@ test('telegram automation state endpoints use automation header and payload', as
           lastBroadcastCodeId: null,
           lastBroadcastCodeValue: null,
           lastBroadcastDayKey: null,
+          lastRequestAt: null,
+          lastRequestChatId: null,
+          lastRequestOperatorId: null,
+          lastRequestOperatorName: null,
+          lastRequestPhone: null,
+          lastRequestCodeId: null,
+          lastRequestCodeValue: null,
           lastErrorAt: null,
           lastErrorMessage: null,
           updatedAt: '2026-03-23T10:22:00.000Z',

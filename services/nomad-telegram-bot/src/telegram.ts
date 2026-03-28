@@ -2,6 +2,7 @@ import type { TelegramUpdate } from './types';
 
 export type TelegramSendMessageOptions = {
   disable_web_page_preview?: boolean;
+  reply_markup?: Record<string, unknown>;
 };
 
 export class TelegramClient {
@@ -49,6 +50,7 @@ export class TelegramClient {
         chat_id: chatId,
         text,
         disable_web_page_preview: options.disable_web_page_preview ?? true,
+        reply_markup: options.reply_markup,
       }),
     });
 

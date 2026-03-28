@@ -17,6 +17,220 @@ export type InventoryTobacco = {
   inStock: boolean;
   flavorProfiles?: string[];
   flavors?: string[];
+  flavorTags?: string[];
+  updatedAt?: string;
+  dependentMixCount?: number;
+  blockedDependentMixCount?: number;
+  dependentMixes?: InventoryDependentMix[];
+};
+
+export type InventoryDependentMix = {
+  id: string;
+  name: string;
+  available: boolean;
+  guestVisible: boolean;
+  avgRating: number;
+  popularity: number;
+};
+
+export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
+
+export type InventorySortField = 'stock' | 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixes';
+
+export type InventorySortDirection = 'asc' | 'desc';
+
+export type InventoryListFilters = {
+  search: string;
+  stock: InventoryStockFilter;
+  manufacturers: string[];
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  options: {
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+  };
+};
+
+export type InventoryListSort = {
+  field: InventorySortField;
+  direction: InventorySortDirection;
+};
+
+export type InventoryListMeta = {
+  totalItems: number;
+  filteredItems: number;
+  inStockCount: number;
+  outOfStockCount: number;
+};
+
+export type InventoryListResponse = {
+  items: InventoryTobacco[];
+  filters: InventoryListFilters;
+  sort: InventoryListSort;
+  meta: InventoryListMeta;
+};
+
+export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive';
+
+export type InventoryBatchResponse = {
+  action: InventoryBatchAction;
+  ids: string[];
+  skippedIds: string[];
+  processedCount: number;
+  items: InventoryTobacco[];
+};
+
+export type InventoryFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
+
+export const defaultInventoryListResponse: InventoryListResponse = {
+  items: [],
+  filters: {
+    search: '',
+    stock: 'all',
+    manufacturers: [],
+    flavorProfiles: [],
+    flavors: [],
+    flavorTags: [],
+    options: {
+      manufacturers: [],
+      flavorProfiles: [],
+      flavors: [],
+      flavorTags: [],
+    },
+  },
+  sort: {
+    field: 'stock',
+    direction: 'desc',
+  },
+  meta: {
+    totalItems: 0,
+    filteredItems: 0,
+    inStockCount: 0,
+    outOfStockCount: 0,
+  },
+};
+
+export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+
+export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
+
+export type MixSortField = 'popularity' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
+
+export type MixSortDirection = 'asc' | 'desc';
+
+export type MixListFilters = {
+  search: string;
+  status: MixStatusFilter;
+  railState: MixRailFilter;
+  manufacturers: string[];
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  options: {
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+  };
+};
+
+export type MixListSort = {
+  field: MixSortField;
+  direction: MixSortDirection;
+};
+
+export type MixListMeta = {
+  totalItems: number;
+  filteredItems: number;
+  guestVisibleCount: number;
+  hiddenCount: number;
+  blockedCount: number;
+  inRailsCount: number;
+  withoutRailsCount: number;
+};
+
+export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
+
+export type MixComponent = {
+  id: string;
+  tobaccoId: string;
+  name: string;
+  manufacturer: string;
+  flavors: string[];
+  proportion: number;
+  sortOrder: number;
+};
+
+export type RailType = 'statistical' | 'prepared' | 'curated';
+
+export type MixRailMembership = {
+  id: string;
+  name: string;
+  type: RailType;
+  active: boolean;
+};
+
+export type MixRecord = {
+  id: string;
+  name: string;
+  description: string;
+  componentIds: string[];
+  components: MixComponent[];
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  avgRating: number;
+  ratingsCount: number;
+  popularity: number;
+  available: boolean;
+  guestVisible: boolean;
+  createdAt: string;
+  updatedAt: string;
+  railMemberships: MixRailMembership[];
+  railCount: number;
+  activeRailCount: number;
+};
+
+export type MixListResponse = {
+  items: MixRecord[];
+  filters: MixListFilters;
+  sort: MixListSort;
+  meta: MixListMeta;
+};
+
+export const defaultMixListResponse: MixListResponse = {
+  items: [],
+  filters: {
+    search: '',
+    status: 'all',
+    railState: 'all',
+    manufacturers: [],
+    flavorProfiles: [],
+    flavors: [],
+    flavorTags: [],
+    options: {
+      manufacturers: [],
+      flavorProfiles: [],
+      flavors: [],
+      flavorTags: [],
+    },
+  },
+  sort: {
+    field: 'popularity',
+    direction: 'desc',
+  },
+  meta: {
+    totalItems: 0,
+    filteredItems: 0,
+    guestVisibleCount: 0,
+    hiddenCount: 0,
+    blockedCount: 0,
+    inRailsCount: 0,
+    withoutRailsCount: 0,
+  },
 };
 
 export type DailyAccessCodeRecord = {
@@ -46,6 +260,19 @@ export type TelegramRecipientRecord = {
   active: boolean;
 };
 
+export type TelegramOperatorRecord = {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  linkedChatId: string;
+  linkedTelegramUserId: string;
+  linkedUsername: string;
+  linkedDisplayName: string;
+  linkedAt: string;
+  lastCodeRequestedAt: string;
+};
+
 export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
 
 export type TelegramAutomationStateRecord = {
@@ -59,6 +286,13 @@ export type TelegramAutomationStateRecord = {
   lastBroadcastCodeId: string;
   lastBroadcastCodeValue: string;
   lastBroadcastDayKey: string;
+  lastRequestAt: string;
+  lastRequestChatId: string;
+  lastRequestOperatorId: string;
+  lastRequestOperatorName: string;
+  lastRequestPhone: string;
+  lastRequestCodeId: string;
+  lastRequestCodeValue: string;
   lastErrorAt: string;
   lastErrorMessage: string;
   updatedAt: string;
@@ -70,60 +304,143 @@ export type AuditEventRecord = {
   actorName: string;
   actorRole: StaffUser['role'];
   action: 'create' | 'update' | 'delete' | 'toggle';
-  entityType: 'daily-code' | 'staff-account' | 'telegram-recipient' | 'mix' | 'rail' | 'inventory';
+  entityType: 'daily-code' | 'staff-account' | 'telegram-operator' | 'telegram-recipient' | 'mix' | 'rail' | 'inventory';
   entityId: string;
   entityLabel: string;
   details: Record<string, unknown>;
   createdAt: string;
 };
 
+export type DashboardWindowKey = '7d' | '14d' | '30d';
+
+export type DashboardBreakdownItem = {
+  key: string;
+  label: string;
+  total: number;
+  inStockCount: number;
+  outOfStockCount: number;
+};
+
+export type DashboardMixMetric = {
+  mixId: string;
+  name: string;
+  smokeCtaCount: number;
+  avgRating: number;
+  ratingsCount: number;
+  popularity: number;
+};
+
+export type DashboardBlockedMix = {
+  mixId: string;
+  name: string;
+  missingComponents: string[];
+  railNames: string[];
+  smokeCtaCount: number;
+};
+
+export type DashboardRailHealthItem = {
+  railId: string;
+  name: string;
+  type: RailType;
+  active: boolean;
+  totalMixCount: number;
+  visibleMixCount: number;
+  hiddenMixCount: number;
+};
+
 export type DashboardSummary = {
+  window: {
+    key: DashboardWindowKey;
+    label: string;
+    days: number;
+    startsAt: string;
+    endsAt: string;
+  };
   totalTobaccos: number;
   inStockCount: number;
   outOfStockCount: number;
   smokeCtaTotal: number;
-  topMixes: Array<{
-    mixId: string;
-    name: string;
-    smokeCtaCount: number;
+  ratingsTotal: number;
+  avgGuestRating: number;
+  topMixes: DashboardMixMetric[];
+  topRatedMixes: DashboardMixMetric[];
+  ratingDistribution: Array<{
+    value: number;
+    count: number;
   }>;
+  activity: Array<{
+    date: string;
+    smokeCtaCount: number;
+    ratingsCount: number;
+  }>;
+  inventory: {
+    totalTobaccos: number;
+    inStockCount: number;
+    outOfStockCount: number;
+    manufacturers: DashboardBreakdownItem[];
+    flavorProfiles: DashboardBreakdownItem[];
+    topFlavors: DashboardBreakdownItem[];
+  };
+  ops: {
+    guestVisibleMixesCount: number;
+    hiddenMixesCount: number;
+    blockedByInventoryCount: number;
+    activeRailsCount: number;
+    emptyActiveRailsCount: number;
+    blockedMixes: DashboardBlockedMix[];
+    railHealth: DashboardRailHealthItem[];
+  };
 };
 
+export const dashboardWindowOptions: Array<{ key: DashboardWindowKey; label: string }> = [
+  { key: '7d', label: '7 дней' },
+  { key: '14d', label: '14 дней' },
+  { key: '30d', label: '30 дней' },
+];
+
 type DashboardSummaryPayload = {
+  window?: {
+    key?: unknown;
+    label?: unknown;
+    days?: unknown;
+    startsAt?: unknown;
+    endsAt?: unknown;
+  };
   inventory?: {
     totalTobaccos?: number;
     total?: number;
     inStockCount?: number;
     outOfStockCount?: number;
+    manufacturers?: unknown[];
+    flavorProfiles?: unknown[];
+    topFlavors?: unknown[];
+  };
+  product?: {
+    smokeCtaTotal?: unknown;
+    ratingsTotal?: unknown;
+    avgGuestRating?: unknown;
+    topMixes?: unknown[];
+    topRatedMixes?: unknown[];
+    ratingDistribution?: unknown[];
+    activity?: unknown[];
+  };
+  ops?: {
+    guestVisibleMixesCount?: unknown;
+    hiddenMixesCount?: unknown;
+    blockedByInventoryCount?: unknown;
+    activeRailsCount?: unknown;
+    emptyActiveRailsCount?: unknown;
+    blockedMixes?: unknown[];
+    railHealth?: unknown[];
   };
   totalTobaccos?: number;
   inStockCount?: number;
   outOfStockCount?: number;
   smokeCtaTotal?: number;
+  ratingsTotal?: number;
+  avgGuestRating?: number;
   topMixes?: unknown[];
 };
-
-export type MixComponent = {
-  id: string;
-  name: string;
-  manufacturer: string;
-  flavors: string[];
-};
-
-export type MixRecord = {
-  id: string;
-  name: string;
-  description: string;
-  componentIds: string[];
-  components: MixComponent[];
-  flavorProfiles: string[];
-  flavors: string[];
-  avgRating: number;
-  popularity: number;
-  available: boolean;
-};
-
-export type RailType = 'statistical' | 'prepared' | 'curated';
 
 export type RailMixReference = {
   id: string;
@@ -138,6 +455,8 @@ export type RailRecord = {
   mixIds: string[];
   mixes: RailMixReference[];
   active: boolean;
+  editable: boolean;
+  readOnlyReason: string;
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -209,6 +528,50 @@ const toTelegramAutomationHealth = (value: unknown): TelegramAutomationHealth =>
     : 'unknown';
 };
 
+const toDashboardWindowKey = (value: unknown): DashboardWindowKey => {
+  return value === '7d' || value === '14d' || value === '30d' ? value : '14d';
+};
+
+const toInventoryStockFilter = (value: unknown): InventoryStockFilter => {
+  return value === 'in-stock' || value === 'out-of-stock' || value === 'all' ? value : 'all';
+};
+
+const toInventorySortField = (value: unknown): InventorySortField => {
+  return value === 'name'
+    || value === 'manufacturer'
+    || value === 'updatedAt'
+    || value === 'dependentMixes'
+    || value === 'stock'
+      ? value
+      : 'stock';
+};
+
+const toInventorySortDirection = (value: unknown): InventorySortDirection => {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+};
+
+const toMixStatusFilter = (value: unknown): MixStatusFilter => {
+  return value === 'guest-visible' || value === 'hidden' || value === 'blocked' || value === 'all'
+    ? value
+    : 'all';
+};
+
+const toMixRailFilter = (value: unknown): MixRailFilter => {
+  return value === 'in-rails' || value === 'without-rails' || value === 'all'
+    ? value
+    : 'all';
+};
+
+const toMixSortField = (value: unknown): MixSortField => {
+  return value === 'avgRating' || value === 'name' || value === 'updatedAt' || value === 'rails' || value === 'popularity'
+    ? value
+    : 'popularity';
+};
+
+const toMixSortDirection = (value: unknown): MixSortDirection => {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+};
+
 const uniqueStrings = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
 const toIsoString = (value: unknown, fallback = '') => {
@@ -273,17 +636,23 @@ const normalizeMixComponent = (value: unknown): MixComponent => {
   if (!isRecord(value)) {
     return {
       id: '',
+      tobaccoId: '',
       name: '',
       manufacturer: '',
       flavors: [],
+      proportion: 0,
+      sortOrder: 0,
     };
   }
 
   return {
-    id: String(value.id ?? value.componentId ?? ''),
+    id: String(value.id ?? value.componentId ?? value.tobaccoId ?? ''),
+    tobaccoId: String(value.tobaccoId ?? value.id ?? value.componentId ?? ''),
     name: String(value.name ?? value.title ?? ''),
     manufacturer: String(value.manufacturer ?? ''),
     flavors: uniqueStrings(toStringList(value.flavors)),
+    proportion: toNumber(value.proportion, 0),
+    sortOrder: toNumber(value.sortOrder, 0),
   };
 };
 
@@ -340,6 +709,23 @@ export const normalizeTelegramRecipientRecord = (value: unknown): TelegramRecipi
   };
 };
 
+export const normalizeTelegramOperatorRecord = (value: unknown): TelegramOperatorRecord => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.operatorId ?? ''),
+    name: String(raw.name ?? ''),
+    phone: String(raw.phone ?? ''),
+    active: toBoolean(raw.active, true),
+    linkedChatId: String(raw.linkedChatId ?? ''),
+    linkedTelegramUserId: String(raw.linkedTelegramUserId ?? ''),
+    linkedUsername: String(raw.linkedUsername ?? ''),
+    linkedDisplayName: String(raw.linkedDisplayName ?? ''),
+    linkedAt: toIsoString(raw.linkedAt, ''),
+    lastCodeRequestedAt: toIsoString(raw.lastCodeRequestedAt, ''),
+  };
+};
+
 export const normalizeTelegramAutomationStateRecord = (value: unknown): TelegramAutomationStateRecord => {
   const raw = isRecord(value) ? value : {};
 
@@ -354,6 +740,13 @@ export const normalizeTelegramAutomationStateRecord = (value: unknown): Telegram
     lastBroadcastCodeId: String(raw.lastBroadcastCodeId ?? ''),
     lastBroadcastCodeValue: String(raw.lastBroadcastCodeValue ?? ''),
     lastBroadcastDayKey: String(raw.lastBroadcastDayKey ?? ''),
+    lastRequestAt: toIsoString(raw.lastRequestAt, ''),
+    lastRequestChatId: String(raw.lastRequestChatId ?? ''),
+    lastRequestOperatorId: String(raw.lastRequestOperatorId ?? ''),
+    lastRequestOperatorName: String(raw.lastRequestOperatorName ?? ''),
+    lastRequestPhone: String(raw.lastRequestPhone ?? ''),
+    lastRequestCodeId: String(raw.lastRequestCodeId ?? ''),
+    lastRequestCodeValue: String(raw.lastRequestCodeValue ?? ''),
     lastErrorAt: toIsoString(raw.lastErrorAt, ''),
     lastErrorMessage: String(raw.lastErrorMessage ?? ''),
     updatedAt: toIsoString(raw.updatedAt, ''),
@@ -369,6 +762,7 @@ export const normalizeAuditEventRecord = (value: unknown): AuditEventRecord => {
   const entityType =
     raw.entityType === 'daily-code'
     || raw.entityType === 'staff-account'
+    || raw.entityType === 'telegram-operator'
     || raw.entityType === 'telegram-recipient'
     || raw.entityType === 'mix'
     || raw.entityType === 'rail'
@@ -390,12 +784,52 @@ export const normalizeAuditEventRecord = (value: unknown): AuditEventRecord => {
   };
 };
 
+export const normalizeInventoryDependentMix = (value: unknown): InventoryDependentMix => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.mixId ?? ''),
+    name: String(raw.name ?? raw.mixName ?? ''),
+    available: toBoolean(raw.available, true),
+    guestVisible: toBoolean(raw.guestVisible, true),
+    avgRating: toNumber(raw.avgRating, 0),
+    popularity: toNumber(raw.popularity, 0),
+  };
+};
+
+export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.tobaccoId ?? ''),
+    name: String(raw.name ?? ''),
+    manufacturer: String(raw.manufacturer ?? ''),
+    inStock: toBoolean(raw.inStock, true),
+    flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
+    flavors: uniqueStrings(toStringList(raw.flavors)),
+    flavorTags: uniqueStrings(toStringList(raw.flavorTags)),
+    updatedAt: toIsoString(raw.updatedAt, ''),
+    dependentMixCount: toNumber(raw.dependentMixCount, 0),
+    blockedDependentMixCount: toNumber(raw.blockedDependentMixCount, 0),
+    dependentMixes: readListPayload<unknown>(raw.dependentMixes).map(normalizeInventoryDependentMix),
+  };
+};
+
 export const normalizeMixRecord = (value: unknown): MixRecord => {
   const raw = isRecord(value) ? value : {};
   const components = readListPayload<unknown>(raw.components).map(normalizeMixComponent);
+  const railMemberships = readListPayload<unknown>(raw.railMemberships).map((item) => {
+    const source = isRecord(item) ? item : {};
+    return {
+      id: String(source.id ?? source.railId ?? ''),
+      name: String(source.name ?? source.railName ?? ''),
+      type: toRailType(source.type),
+      active: toBoolean(source.active, true),
+    } satisfies MixRailMembership;
+  });
   const componentIds = uniqueStrings([
     ...toStringList(raw.componentIds),
-    ...components.map((component) => component.id),
+    ...components.map((component) => component.tobaccoId || component.id),
   ]);
 
   return {
@@ -406,9 +840,57 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     components,
     flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
     flavors: uniqueStrings(toStringList(raw.flavors)),
+    flavorTags: uniqueStrings(toStringList(raw.flavorTags)),
     avgRating: toNumber(raw.avgRating, 0),
+    ratingsCount: toNumber(raw.ratingsCount, 0),
     popularity: toNumber(raw.popularity, 0),
     available: toBoolean(raw.available ?? raw.inStock, true),
+    guestVisible: toBoolean(raw.guestVisible, toBoolean(raw.available ?? raw.inStock, true)),
+    createdAt: toIsoString(raw.createdAt, ''),
+    updatedAt: toIsoString(raw.updatedAt, ''),
+    railMemberships,
+    railCount: toNumber(raw.railCount, railMemberships.length),
+    activeRailCount: toNumber(raw.activeRailCount, railMemberships.filter((item) => item.active).length),
+  };
+};
+
+export const normalizeMixListResponse = (value: unknown): MixListResponse => {
+  const raw = isRecord(value) ? value : {};
+  const filters = isRecord(raw.filters) ? raw.filters : {};
+  const sort = isRecord(raw.sort) ? raw.sort : {};
+  const meta = isRecord(raw.meta) ? raw.meta : {};
+  const options = isRecord(filters.options) ? filters.options : {};
+
+  return {
+    items: readListPayload<unknown>(raw.items ?? raw).map(normalizeMixRecord),
+    filters: {
+      search: String(filters.search ?? ''),
+      status: toMixStatusFilter(filters.status),
+      railState: toMixRailFilter(filters.railState),
+      manufacturers: uniqueStrings(toStringList(filters.manufacturers)),
+      flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
+      flavors: uniqueStrings(toStringList(filters.flavors)),
+      flavorTags: uniqueStrings(toStringList(filters.flavorTags)),
+      options: {
+        manufacturers: uniqueStrings(toStringList(options.manufacturers)),
+        flavorProfiles: uniqueStrings(toStringList(options.flavorProfiles)),
+        flavors: uniqueStrings(toStringList(options.flavors)),
+        flavorTags: uniqueStrings(toStringList(options.flavorTags)),
+      },
+    },
+    sort: {
+      field: toMixSortField(sort.field),
+      direction: toMixSortDirection(sort.direction),
+    },
+    meta: {
+      totalItems: toNumber(meta.totalItems, 0),
+      filteredItems: toNumber(meta.filteredItems, 0),
+      guestVisibleCount: toNumber(meta.guestVisibleCount, 0),
+      hiddenCount: toNumber(meta.hiddenCount, 0),
+      blockedCount: toNumber(meta.blockedCount, 0),
+      inRailsCount: toNumber(meta.inRailsCount, 0),
+      withoutRailsCount: toNumber(meta.withoutRailsCount, 0),
+    },
   };
 };
 
@@ -416,52 +898,294 @@ export const normalizeRailRecord = (value: unknown): RailRecord => {
   const raw = isRecord(value) ? value : {};
   const mixes = readListPayload<unknown>(raw.mixes).map(normalizeRailMixReference);
   const mixIds = uniqueStrings([...toStringList(raw.mixIds), ...mixes.map((mix) => mix.id)]);
+  const type = toRailType(raw.type);
+  const editable = toBoolean(raw.editable, type !== 'statistical');
+  const readOnlyReason = String(
+    raw.readOnlyReason ?? (editable ? '' : 'Статистический рейл формируется автоматически и доступен только для просмотра.'),
+  );
 
   return {
     id: String(raw.id ?? raw.railId ?? ''),
     name: String(raw.name ?? 'Без названия'),
-    type: toRailType(raw.type),
+    type,
     description: String(raw.description ?? ''),
     mixIds,
     mixes,
     active: toBoolean(raw.active, true),
+    editable,
+    readOnlyReason,
   };
 };
 
 export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
   const raw = isRecord(value) ? (value as DashboardSummaryPayload) : {};
   const inventory = isRecord(raw.inventory) ? raw.inventory : {};
+  const product = isRecord(raw.product) ? raw.product : {};
+  const ops = isRecord(raw.ops) ? raw.ops : {};
+  const window = isRecord(raw.window) ? raw.window : {};
+
+  const normalizeMixMetric = (item: unknown): DashboardMixMetric => {
+    if (!isRecord(item)) {
+      const stringValue = String(item ?? '');
+      return {
+        mixId: stringValue,
+        name: stringValue,
+        smokeCtaCount: 0,
+        avgRating: 0,
+        ratingsCount: 0,
+        popularity: 0,
+      };
+    }
+
+    return {
+      mixId: String(item.mixId ?? item.id ?? ''),
+      name: String(item.name ?? item.mixName ?? ''),
+      smokeCtaCount: toNumber(item.smokeCtaCount ?? item.count, 0),
+      avgRating: toNumber(item.avgRating, 0),
+      ratingsCount: toNumber(item.ratingsCount, 0),
+      popularity: toNumber(item.popularity, 0),
+    };
+  };
+
+  const normalizeBreakdownItem = (item: unknown): DashboardBreakdownItem => {
+    const source = isRecord(item) ? item : {};
+
+    return {
+      key: String(source.key ?? source.id ?? source.label ?? ''),
+      label: String(source.label ?? source.name ?? source.key ?? ''),
+      total: toNumber(source.total, 0),
+      inStockCount: toNumber(source.inStockCount, 0),
+      outOfStockCount: toNumber(source.outOfStockCount, 0),
+    };
+  };
+
+  const normalizeBlockedMix = (item: unknown): DashboardBlockedMix => {
+    const source = isRecord(item) ? item : {};
+
+    return {
+      mixId: String(source.mixId ?? source.id ?? ''),
+      name: String(source.name ?? source.mixName ?? ''),
+      missingComponents: uniqueStrings(toStringList(source.missingComponents)),
+      railNames: uniqueStrings(toStringList(source.railNames)),
+      smokeCtaCount: toNumber(source.smokeCtaCount, 0),
+    };
+  };
+
+  const normalizeRailHealthItem = (item: unknown): DashboardRailHealthItem => {
+    const source = isRecord(item) ? item : {};
+
+    return {
+      railId: String(source.railId ?? source.id ?? ''),
+      name: String(source.name ?? 'Без названия'),
+      type: toRailType(source.type),
+      active: toBoolean(source.active, true),
+      totalMixCount: toNumber(source.totalMixCount, 0),
+      visibleMixCount: toNumber(source.visibleMixCount, 0),
+      hiddenMixCount: toNumber(source.hiddenMixCount, 0),
+    };
+  };
 
   return {
+    window: {
+      key: toDashboardWindowKey(window.key),
+      label: String(window.label ?? dashboardWindowOptions.find((item) => item.key === toDashboardWindowKey(window.key))?.label ?? '14 дней'),
+      days: toNumber(window.days, 14),
+      startsAt: toIsoString(window.startsAt, ''),
+      endsAt: toIsoString(window.endsAt, ''),
+    },
     totalTobaccos: toNumber(raw.totalTobaccos ?? inventory.totalTobaccos ?? inventory.total, 0),
     inStockCount: toNumber(raw.inStockCount ?? inventory.inStockCount, 0),
     outOfStockCount: toNumber(raw.outOfStockCount ?? inventory.outOfStockCount, 0),
-    smokeCtaTotal: toNumber(raw.smokeCtaTotal, 0),
-    topMixes: readListPayload<unknown>(raw.topMixes).map((item) => {
-      if (!isRecord(item)) {
-        const stringValue = String(item ?? '');
-        return {
-          mixId: stringValue,
-          name: stringValue,
-          smokeCtaCount: 0,
-        };
-      }
-
+    smokeCtaTotal: toNumber(raw.smokeCtaTotal ?? product.smokeCtaTotal, 0),
+    ratingsTotal: toNumber(raw.ratingsTotal ?? product.ratingsTotal, 0),
+    avgGuestRating: toNumber(raw.avgGuestRating ?? product.avgGuestRating, 0),
+    topMixes: readListPayload<unknown>(raw.topMixes ?? product.topMixes).map(normalizeMixMetric),
+    topRatedMixes: readListPayload<unknown>(product.topRatedMixes).map(normalizeMixMetric),
+    ratingDistribution: readListPayload<unknown>(product.ratingDistribution).map((item) => {
+      const source = isRecord(item) ? item : {};
       return {
-        mixId: String(item.mixId ?? item.id ?? ''),
-        name: String(item.name ?? item.mixName ?? ''),
-        smokeCtaCount: toNumber(item.smokeCtaCount ?? item.count, 0),
+        value: toNumber(source.value, 0),
+        count: toNumber(source.count, 0),
       };
     }),
+    activity: readListPayload<unknown>(product.activity).map((item) => {
+      const source = isRecord(item) ? item : {};
+      return {
+        date: toIsoString(source.date, ''),
+        smokeCtaCount: toNumber(source.smokeCtaCount, 0),
+        ratingsCount: toNumber(source.ratingsCount, 0),
+      };
+    }),
+    inventory: {
+      totalTobaccos: toNumber(raw.totalTobaccos ?? inventory.totalTobaccos ?? inventory.total, 0),
+      inStockCount: toNumber(raw.inStockCount ?? inventory.inStockCount, 0),
+      outOfStockCount: toNumber(raw.outOfStockCount ?? inventory.outOfStockCount, 0),
+      manufacturers: readListPayload<unknown>(inventory.manufacturers).map(normalizeBreakdownItem),
+      flavorProfiles: readListPayload<unknown>(inventory.flavorProfiles).map(normalizeBreakdownItem),
+      topFlavors: readListPayload<unknown>(inventory.topFlavors).map(normalizeBreakdownItem),
+    },
+    ops: {
+      guestVisibleMixesCount: toNumber(ops.guestVisibleMixesCount, 0),
+      hiddenMixesCount: toNumber(ops.hiddenMixesCount, 0),
+      blockedByInventoryCount: toNumber(ops.blockedByInventoryCount, 0),
+      activeRailsCount: toNumber(ops.activeRailsCount, 0),
+      emptyActiveRailsCount: toNumber(ops.emptyActiveRailsCount, 0),
+      blockedMixes: readListPayload<unknown>(ops.blockedMixes).map(normalizeBlockedMix),
+      railHealth: readListPayload<unknown>(ops.railHealth).map(normalizeRailHealthItem),
+    },
   };
+};
+
+export const normalizeInventoryListResponse = (value: unknown): InventoryListResponse => {
+  const raw = isRecord(value) ? value : {};
+  const filters = isRecord(raw.filters) ? raw.filters : {};
+  const sort = isRecord(raw.sort) ? raw.sort : {};
+  const meta = isRecord(raw.meta) ? raw.meta : {};
+  const options = isRecord(filters.options) ? filters.options : {};
+
+  return {
+    items: readListPayload<unknown>(raw.items ?? raw).map(normalizeInventoryTobacco),
+    filters: {
+      search: String(filters.search ?? ''),
+      stock: toInventoryStockFilter(filters.stock),
+      manufacturers: uniqueStrings(toStringList(filters.manufacturers)),
+      flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
+      flavors: uniqueStrings(toStringList(filters.flavors)),
+      flavorTags: uniqueStrings(toStringList(filters.flavorTags)),
+      options: {
+        manufacturers: uniqueStrings(toStringList(options.manufacturers)),
+        flavorProfiles: uniqueStrings(toStringList(options.flavorProfiles)),
+        flavors: uniqueStrings(toStringList(options.flavors)),
+        flavorTags: uniqueStrings(toStringList(options.flavorTags)),
+      },
+    },
+    sort: {
+      field: toInventorySortField(sort.field),
+      direction: toInventorySortDirection(sort.direction),
+    },
+    meta: {
+      totalItems: toNumber(meta.totalItems, 0),
+      filteredItems: toNumber(meta.filteredItems, 0),
+      inStockCount: toNumber(meta.inStockCount, 0),
+      outOfStockCount: toNumber(meta.outOfStockCount, 0),
+    },
+  };
+};
+
+export const normalizeInventoryBatchResponse = (value: unknown): InventoryBatchResponse => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    action: raw.action === 'set-in-stock' || raw.action === 'set-out-of-stock' || raw.action === 'archive'
+      ? raw.action
+      : 'set-in-stock',
+    ids: uniqueStrings(toStringList(raw.ids)),
+    skippedIds: uniqueStrings(toStringList(raw.skippedIds)),
+    processedCount: toNumber(raw.processedCount, 0),
+    items: readListPayload<unknown>(raw.items).map(normalizeInventoryTobacco),
+  };
+};
+
+export const buildInventoryRequestQuery = (filters: InventoryListFilters, sort: InventoryListSort) => {
+  const params = new URLSearchParams();
+
+  if (filters.search.trim()) {
+    params.set('search', filters.search.trim());
+  }
+
+  if (filters.stock !== 'all') {
+    params.set('stock', filters.stock);
+  }
+
+  for (const value of filters.manufacturers) {
+    params.append('manufacturers', value);
+  }
+
+  for (const value of filters.flavorProfiles) {
+    params.append('flavorProfiles', value);
+  }
+
+  for (const value of filters.flavors) {
+    params.append('flavors', value);
+  }
+
+  for (const value of filters.flavorTags) {
+    params.append('flavorTags', value);
+  }
+
+  params.set('sort', sort.field);
+  params.set('direction', sort.direction);
+
+  return params.toString();
+};
+
+export const toggleInventoryFilterValue = (values: string[], value: string) => {
+  const next = values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+
+  return uniqueStrings(next);
+};
+
+export const buildMixRequestQuery = (filters: MixListFilters, sort: MixListSort) => {
+  const params = new URLSearchParams();
+
+  if (filters.search.trim()) {
+    params.set('search', filters.search.trim());
+  }
+
+  if (filters.status !== 'all') {
+    params.set('status', filters.status);
+  }
+
+  if (filters.railState !== 'all') {
+    params.set('railState', filters.railState);
+  }
+
+  for (const value of filters.manufacturers) {
+    params.append('manufacturers', value);
+  }
+
+  for (const value of filters.flavorProfiles) {
+    params.append('flavorProfiles', value);
+  }
+
+  for (const value of filters.flavors) {
+    params.append('flavors', value);
+  }
+
+  for (const value of filters.flavorTags) {
+    params.append('flavorTags', value);
+  }
+
+  params.set('sort', sort.field);
+  params.set('direction', sort.direction);
+
+  return params.toString();
+};
+
+export const toggleMixFilterValue = (values: string[], value: string) => {
+  const next = values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+
+  return uniqueStrings(next);
 };
 
 export const sortMixes = (items: MixRecord[]) => {
   const copy = [...items];
 
   return copy.sort((left, right) => {
+    if (left.guestVisible !== right.guestVisible) {
+      return left.guestVisible ? -1 : 1;
+    }
+
     if (left.available !== right.available) {
       return left.available ? -1 : 1;
+    }
+
+    if (left.railCount !== right.railCount) {
+      return right.railCount - left.railCount;
     }
 
     if (right.popularity !== left.popularity) {
@@ -559,6 +1283,24 @@ export const sortTelegramRecipients = (items: TelegramRecipientRecord[]) => {
   });
 };
 
+export const sortTelegramOperators = (items: TelegramOperatorRecord[]) => {
+  return [...items].sort((left, right) => {
+    if (left.active !== right.active) {
+      return left.active ? -1 : 1;
+    }
+
+    if (Boolean(left.linkedChatId) !== Boolean(right.linkedChatId)) {
+      return left.linkedChatId ? -1 : 1;
+    }
+
+    if (right.lastCodeRequestedAt !== left.lastCodeRequestedAt) {
+      return right.lastCodeRequestedAt.localeCompare(left.lastCodeRequestedAt);
+    }
+
+    return left.name.localeCompare(right.name, 'ru');
+  });
+};
+
 export const railTypeOptions: Array<{ value: RailType; label: string }> = [
   { value: 'statistical', label: 'Статистический' },
   { value: 'prepared', label: 'Предзаготовленный' },
@@ -611,6 +1353,8 @@ export const formatAuditEntityType = (value: AuditEventRecord['entityType']) => 
       return 'Код доступа';
     case 'staff-account':
       return 'Сотрудник';
+    case 'telegram-operator':
+      return 'Telegram доступ';
     case 'telegram-recipient':
       return 'Telegram чат';
     case 'mix':
@@ -642,6 +1386,62 @@ export const sortInventoryItems = (items: InventoryTobacco[]) => {
 
     return left.name.localeCompare(right.name, 'ru');
   });
+};
+
+export const inventoryStockFilterOptions: Array<{ value: InventoryStockFilter; label: string }> = [
+  { value: 'all', label: 'Нет наличия' },
+  { value: 'in-stock', label: 'Только в наличии' },
+  { value: 'out-of-stock', label: 'Только нет наличия' },
+];
+
+export const inventorySortFieldOptions: Array<{ value: InventorySortField; label: string }> = [
+  { value: 'stock', label: 'Сначала по наличию' },
+  { value: 'dependentMixes', label: 'По зависимым миксам' },
+  { value: 'updatedAt', label: 'По обновлению' },
+  { value: 'manufacturer', label: 'По производителю' },
+  { value: 'name', label: 'По названию' },
+];
+
+export const inventorySortDirectionOptions: Array<{ value: InventorySortDirection; label: string }> = [
+  { value: 'desc', label: 'По убыванию' },
+  { value: 'asc', label: 'По возрастанию' },
+];
+
+export const mixStatusFilterOptions: Array<{ value: MixStatusFilter; label: string }> = [
+  { value: 'all', label: 'Все статусы' },
+  { value: 'guest-visible', label: 'Виден гостю' },
+  { value: 'blocked', label: 'Заблокирован наличием' },
+  { value: 'hidden', label: 'Скрыт оператором' },
+];
+
+export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }> = [
+  { value: 'all', label: 'Любое участие' },
+  { value: 'in-rails', label: 'Только в рейлах' },
+  { value: 'without-rails', label: 'Без рейлов' },
+];
+
+export const mixSortFieldOptions: Array<{ value: MixSortField; label: string }> = [
+  { value: 'popularity', label: 'По популярности' },
+  { value: 'rails', label: 'По участию в рейлах' },
+  { value: 'avgRating', label: 'По рейтингу' },
+  { value: 'updatedAt', label: 'По обновлению' },
+  { value: 'name', label: 'По названию' },
+];
+
+export const mixSortDirectionOptions: Array<{ value: MixSortDirection; label: string }> = [
+  { value: 'desc', label: 'По убыванию' },
+  { value: 'asc', label: 'По возрастанию' },
+];
+
+export const formatInventoryBatchAction = (value: InventoryBatchAction) => {
+  switch (value) {
+    case 'set-out-of-stock':
+      return 'Убрать из наличия';
+    case 'archive':
+      return 'Архивировать';
+    default:
+      return 'Вернуть в наличие';
+  }
 };
 
 export const formatMetricValue = (value: number) => {
