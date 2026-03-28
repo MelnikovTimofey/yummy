@@ -177,7 +177,18 @@ test('staff can manage mixes and rails', async () => {
       payload: {
         name: 'Лаймовая ночь',
         description: 'Свежий микс для вечернего зала',
-        componentIds: ['tobacco-citrus-breeze', 'tobacco-mint-veil'],
+        components: [
+          {
+            tobaccoId: 'tobacco-citrus-breeze',
+            proportion: 60,
+            sortOrder: 0,
+          },
+          {
+            tobaccoId: 'tobacco-mint-veil',
+            proportion: 40,
+            sortOrder: 1,
+          },
+        ],
         available: true,
         popularity: 33,
       },
@@ -185,11 +196,18 @@ test('staff can manage mixes and rails', async () => {
 
     assert.equal(createdMix.statusCode, 201);
     const createdMixBody = createdMix.json() as {
-      item: { id: string; available: boolean; guestVisible: boolean };
+      item: { id: string; available: boolean; guestVisible: boolean; components: Array<{ tobaccoId: string; proportion: number }> };
     };
 
     assert.equal(createdMixBody.item.available, true);
     assert.equal(createdMixBody.item.guestVisible, true);
+    assert.deepEqual(
+      createdMixBody.item.components.map((item) => ({ tobaccoId: item.tobaccoId, proportion: item.proportion })),
+      [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 60 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 40 },
+      ],
+    );
 
     const listMixes = await app.inject({
       method: 'GET',
@@ -284,6 +302,129 @@ test('staff can manage mixes and rails', async () => {
 
     assert.equal(staffRailsBody.items.some((item) => item.type === 'statistical'), true);
     assert.equal(staffRailsBody.items.some((item) => item.id === createdRailBody.item.id), true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('staff mixes list supports filters and validates component proportions', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const invalidMix = await app.inject({
+      method: 'POST',
+      url: '/staff/mixes',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Неконсистентный микс',
+        description: 'Сумма процентов не равна 100',
+        components: [
+          {
+            tobaccoId: 'tobacco-citrus-breeze',
+            proportion: 30,
+            sortOrder: 0,
+          },
+          {
+            tobaccoId: 'tobacco-mint-veil',
+            proportion: 30,
+            sortOrder: 1,
+          },
+        ],
+      },
+    });
+
+    assert.equal(invalidMix.statusCode, 400);
+    assert.equal(invalidMix.json().error, 'Component proportions must total exactly 100');
+
+    const createdMix = await app.inject({
+      method: 'POST',
+      url: '/staff/mixes',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Микс для рейлов',
+        description: 'Микс с ягодным профилем',
+        components: [
+          {
+            tobaccoId: 'tobacco-berry-oasis',
+            proportion: 55,
+            sortOrder: 0,
+          },
+          {
+            tobaccoId: 'tobacco-mint-veil',
+            proportion: 45,
+            sortOrder: 1,
+          },
+        ],
+        available: true,
+        popularity: 22,
+      },
+    });
+
+    assert.equal(createdMix.statusCode, 201);
+    const createdMixId = createdMix.json().item.id as string;
+
+    const createdRail = await app.inject({
+      method: 'POST',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Ягодный рейл',
+        description: 'Ручная подборка для дегустации',
+        mixIds: [createdMixId],
+        type: 'curated',
+        active: true,
+      },
+    });
+
+    assert.equal(createdRail.statusCode, 201);
+
+    const filtered = await app.inject({
+      method: 'GET',
+      url: '/staff/mixes?status=guest-visible&railState=in-rails&manufacturers=Nomad%20Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(filtered.statusCode, 200);
+    const filteredBody = filtered.json() as {
+      items: Array<{ id: string; railMemberships: Array<{ name: string }> }>;
+      filters: {
+        status: string;
+        railState: string;
+        manufacturers: string[];
+        flavors: string[];
+      };
+      sort: {
+        field: string;
+        direction: string;
+      };
+      meta: {
+        filteredItems: number;
+        inRailsCount: number;
+      };
+    };
+
+    assert.equal(filteredBody.items.some((item) => item.id === createdMixId), true);
+    assert.equal(
+      filteredBody.items.find((item) => item.id === createdMixId)?.railMemberships.some((membership) => membership.name === 'Ягодный рейл'),
+      true,
+    );
+    assert.equal(filteredBody.filters.status, 'guest-visible');
+    assert.equal(filteredBody.filters.railState, 'in-rails');
+    assert.deepEqual(filteredBody.filters.manufacturers, ['Nomad Reserve']);
+    assert.deepEqual(filteredBody.filters.flavors, ['малина']);
+    assert.equal(filteredBody.sort.field, 'rails');
+    assert.equal(filteredBody.sort.direction, 'desc');
+    assert.equal(filteredBody.meta.filteredItems >= 1, true);
+    assert.equal(filteredBody.meta.inRailsCount >= 1, true);
   } finally {
     await app.close();
   }

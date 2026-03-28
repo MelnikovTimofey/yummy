@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView } from '@/components/inventory/inventory-view';
+import { MixCatalogView, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import {
   AuditEventRecord,
   DailyAccessCodeRecord,
@@ -13,7 +14,16 @@ import {
   InventoryListMeta,
   InventoryListSort,
   InventoryTobacco,
+  MixFilterKey,
+  MixListFilters,
+  MixListMeta,
+  MixListSort,
+  MixRailMembership,
   MixRecord,
+  MixRailFilter,
+  MixSortDirection,
+  MixSortField,
+  MixStatusFilter,
   RailRecord,
   StaffAccountRecord,
   StaffAuthResponse,
@@ -22,6 +32,7 @@ import {
   TelegramRecipientRecord,
   TelegramRecipientScope,
   buildInventoryRequestQuery,
+  buildMixRequestQuery,
   formatDateTimeLocalInput,
   formatDelimitedList,
   formatAuditAction,
@@ -35,6 +46,7 @@ import {
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
+  normalizeMixListResponse,
   normalizeMixRecord,
   normalizeRailRecord,
   normalizeStaffAccountRecord,
@@ -52,7 +64,9 @@ import {
   sortTelegramRecipients,
   telegramRecipientScopeOptions,
   toggleInventoryFilterValue,
+  toggleMixFilterValue,
   defaultInventoryListResponse,
+  defaultMixListResponse,
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
@@ -72,12 +86,11 @@ type MixEditorState = {
   id: string;
   name: string;
   description: string;
-  componentIds: string;
-  flavorProfiles: string;
-  flavors: string;
+  components: MixEditorComponentInput[];
   avgRating: string;
   popularity: string;
   available: boolean;
+  railMemberships: MixRailMembership[];
 };
 
 type RailEditorState = {
@@ -115,16 +128,23 @@ type TelegramRecipientEditorState = {
   active: boolean;
 };
 
+let mixEditorComponentDraftId = 0;
+
+const createMixEditorComponent = (tobaccoId = '', proportion = ''): MixEditorComponentInput => ({
+  key: `mix-component-${mixEditorComponentDraftId += 1}`,
+  tobaccoId,
+  proportion,
+});
+
 const emptyMixEditor = (): MixEditorState => ({
   id: '',
   name: '',
   description: '',
-  componentIds: '',
-  flavorProfiles: '',
-  flavors: '',
+  components: [],
   avgRating: '0',
   popularity: '0',
   available: true,
+  railMemberships: [],
 });
 
 const emptyRailEditor = (): RailEditorState => ({
@@ -166,12 +186,11 @@ const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
   name: mix.name,
   description: mix.description,
-  componentIds: formatDelimitedList(mix.componentIds),
-  flavorProfiles: formatDelimitedList(mix.flavorProfiles),
-  flavors: formatDelimitedList(mix.flavors),
+  components: mix.components.map((component) => createMixEditorComponent(component.tobaccoId, String(component.proportion))),
   avgRating: String(mix.avgRating),
   popularity: String(mix.popularity),
   available: mix.available,
+  railMemberships: mix.railMemberships,
 });
 
 const toRailEditorState = (rail: RailRecord): RailEditorState => ({
@@ -307,16 +326,6 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
   ];
 };
 
-const resolveMixComponentSummary = (mix: MixRecord) => {
-  if (mix.components.length) {
-    return mix.components
-      .map((component) => `${component.name}${component.manufacturer ? ` · ${component.manufacturer}` : ''}`)
-      .join(' | ');
-  }
-
-  return mix.componentIds.join(', ') || 'Компоненты не заданы';
-};
-
 const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   if (rail.mixes.length) {
     return rail.mixes.map((mix) => mix.name).join(', ');
@@ -349,6 +358,10 @@ export const App = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
   const [mixes, setMixes] = useState<MixRecord[]>([]);
+  const [mixesFilters, setMixesFilters] = useState<MixListFilters>(defaultMixListResponse.filters);
+  const [mixesSort, setMixesSort] = useState<MixListSort>(defaultMixListResponse.sort);
+  const [mixesMeta, setMixesMeta] = useState<MixListMeta>(defaultMixListResponse.meta);
+  const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
   const [rails, setRails] = useState<RailRecord[]>([]);
   const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
@@ -442,19 +455,38 @@ export const App = () => {
     }
   };
 
-  const loadMixes = async (nextToken: string) => {
+  const loadMixes = async (
+    nextToken: string,
+    nextFilters: MixListFilters = mixesFilters,
+    nextSort: MixListSort = mixesSort,
+  ) => {
     setMixesStatus('loading');
     setMixesError('');
 
     try {
-      const response = await requestJson<unknown>('/staff/mixes', {}, nextToken);
-      const items = readListPayload<unknown>(response).map(normalizeMixRecord);
-      setMixes(sortMixes(items));
+      const query = buildMixRequestQuery(nextFilters, nextSort);
+      const response = await requestJson<unknown>(`/staff/mixes${query ? `?${query}` : ''}`, {}, nextToken);
+      const payload = normalizeMixListResponse(response);
+      setMixes(sortMixes(payload.items));
+      setMixesFilters(payload.filters);
+      setMixesSort(payload.sort);
+      setMixesMeta(payload.meta);
       setMixesStatus('ready');
     } catch (cause) {
       setMixes([]);
+      setMixesMeta(defaultMixListResponse.meta);
       setMixesStatus('error');
       setMixesError(cause instanceof Error ? cause.message : 'Не удалось загрузить миксы');
+    }
+  };
+
+  const loadMixTobaccos = async (nextToken: string) => {
+    try {
+      const response = await requestJson<unknown>('/staff/inventory/tobaccos?sort=name&direction=asc', {}, nextToken);
+      const payload = normalizeInventoryListResponse(response);
+      setMixTobaccos(payload.items);
+    } catch {
+      setMixTobaccos([]);
     }
   };
 
@@ -599,6 +631,7 @@ export const App = () => {
           loadInventory(token),
           loadSummary(token, dashboardWindow),
           loadMixes(token),
+          loadMixTobaccos(token),
           loadRails(token),
           loadDailyCodes(token),
           loadStaffAccounts(token, profile.user.role),
@@ -643,6 +676,7 @@ export const App = () => {
         loadInventory(auth.accessToken),
         loadSummary(auth.accessToken, dashboardWindow),
         loadMixes(auth.accessToken),
+        loadMixTobaccos(auth.accessToken),
         loadRails(auth.accessToken),
         loadDailyCodes(auth.accessToken),
         loadStaffAccounts(auth.accessToken, profile.user.role),
@@ -747,6 +781,10 @@ export const App = () => {
     setSummary(null);
     setDashboardWindow('14d');
     setMixes([]);
+    setMixesFilters(defaultMixListResponse.filters);
+    setMixesSort(defaultMixListResponse.sort);
+    setMixesMeta(defaultMixListResponse.meta);
+    setMixTobaccos([]);
     setRails([]);
     setStatus('idle');
     setError('');
@@ -818,6 +856,7 @@ export const App = () => {
         loadInventory(token, inventoryFilters, inventorySort),
         loadSummary(token, dashboardWindow),
         loadMixes(token),
+        loadMixTobaccos(token),
       ]);
       setInventoryStatus('ready');
     } catch (cause) {
@@ -867,6 +906,7 @@ export const App = () => {
         loadInventory(token, inventoryFilters, inventorySort),
         loadSummary(token, dashboardWindow),
         loadMixes(token),
+        loadMixTobaccos(token),
       ]);
       setInventoryStatus('ready');
     } catch (cause) {
@@ -900,6 +940,162 @@ export const App = () => {
     setMixSaveStatus('idle');
   };
 
+  const refreshMixesSurface = async (
+    nextFilters: MixListFilters = mixesFilters,
+    nextSort: MixListSort = mixesSort,
+  ) => {
+    if (!token) {
+      return;
+    }
+
+    await loadMixes(token, nextFilters, nextSort);
+  };
+
+  const onMixSearchChange = async (value: string) => {
+    const nextFilters = {
+      ...mixesFilters,
+      search: value,
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixStatusChange = async (value: MixStatusFilter) => {
+    const nextFilters = {
+      ...mixesFilters,
+      status: value,
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixRailStateChange = async (value: MixRailFilter) => {
+    const nextFilters = {
+      ...mixesFilters,
+      railState: value,
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixSortFieldChange = async (field: MixSortField) => {
+    const nextSort = {
+      ...mixesSort,
+      field,
+    };
+    setMixesSort(nextSort);
+    await refreshMixesSurface(mixesFilters, nextSort);
+  };
+
+  const onMixSortDirectionChange = async (direction: MixSortDirection) => {
+    const nextSort = {
+      ...mixesSort,
+      direction,
+    };
+    setMixesSort(nextSort);
+    await refreshMixesSurface(mixesFilters, nextSort);
+  };
+
+  const onMixToggleFilterValue = async (key: MixFilterKey, value: string) => {
+    const nextFilters = {
+      ...mixesFilters,
+      [key]: toggleMixFilterValue(mixesFilters[key], value),
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort);
+  };
+
+  const onMixResetFilters = async () => {
+    const nextFilters = {
+      ...defaultMixListResponse.filters,
+      options: mixesFilters.options,
+    };
+    const nextSort = defaultMixListResponse.sort;
+    setMixesFilters(nextFilters);
+    setMixesSort(nextSort);
+    await refreshMixesSurface(nextFilters, nextSort);
+  };
+
+  const onChangeMixEditorField = (field: 'name' | 'description' | 'avgRating' | 'popularity', value: string) => {
+    setMixEditor((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const onChangeMixEditorAvailability = (value: boolean) => {
+    setMixEditor((current) => ({
+      ...current,
+      available: value,
+    }));
+  };
+
+  const onAddMixComponent = () => {
+    const fallbackId = mixTobaccos.find((item) => !mixEditor.components.some((component) => component.tobaccoId === item.id))?.id ?? '';
+    setMixEditor((current) => ({
+      ...current,
+      components: [...current.components, createMixEditorComponent(fallbackId, '')],
+    }));
+  };
+
+  const onUpdateMixComponent = (key: string, patch: Partial<Omit<MixEditorComponentInput, 'key'>>) => {
+    setMixEditor((current) => ({
+      ...current,
+      components: current.components.map((component) => (
+        component.key === key ? { ...component, ...patch } : component
+      )),
+    }));
+  };
+
+  const onMoveMixComponent = (key: string, direction: 'up' | 'down') => {
+    setMixEditor((current) => {
+      const index = current.components.findIndex((component) => component.key === key);
+      if (index === -1) {
+        return current;
+      }
+
+      const nextIndex = direction === 'up' ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= current.components.length) {
+        return current;
+      }
+
+      const nextComponents = [...current.components];
+      const [item] = nextComponents.splice(index, 1);
+      nextComponents.splice(nextIndex, 0, item);
+
+      return {
+        ...current,
+        components: nextComponents,
+      };
+    });
+  };
+
+  const onRemoveMixComponent = (key: string) => {
+    setMixEditor((current) => ({
+      ...current,
+      components: current.components.filter((component) => component.key !== key),
+    }));
+  };
+
+  const onRebalanceMixComponents = () => {
+    setMixEditor((current) => {
+      if (!current.components.length) {
+        return current;
+      }
+
+      const base = Math.floor(100 / current.components.length);
+      const remainder = 100 - base * current.components.length;
+
+      return {
+        ...current,
+        components: current.components.map((component, index) => ({
+          ...component,
+          proportion: String(base + (index < remainder ? 1 : 0)),
+        })),
+      };
+    });
+  };
+
   const onSubmitMix = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) {
@@ -908,12 +1104,35 @@ export const App = () => {
 
     const name = mixEditor.name.trim();
     const description = mixEditor.description.trim();
-    const componentIds = parseDelimitedList(mixEditor.componentIds);
-    const flavorProfiles = parseDelimitedList(mixEditor.flavorProfiles);
-    const flavors = parseDelimitedList(mixEditor.flavors);
+    const components = mixEditor.components
+      .map((component, index) => ({
+        tobaccoId: component.tobaccoId.trim(),
+        proportion: parseNumberInput(component.proportion, 0),
+        sortOrder: index,
+      }))
+      .filter((component) => component.tobaccoId);
 
     if (!name) {
       setMixSaveError('Введите название микса');
+      setMixSaveStatus('error');
+      return;
+    }
+
+    if (!description) {
+      setMixSaveError('Добавьте описание микса');
+      setMixSaveStatus('error');
+      return;
+    }
+
+    if (!components.length) {
+      setMixSaveError('Добавьте хотя бы один компонент');
+      setMixSaveStatus('error');
+      return;
+    }
+
+    const total = components.reduce((sum, component) => sum + component.proportion, 0);
+    if (total !== 100) {
+      setMixSaveError('Сумма долей должна быть ровно 100%');
       setMixSaveStatus('error');
       return;
     }
@@ -924,9 +1143,7 @@ export const App = () => {
     const payload = {
       name,
       description,
-      componentIds,
-      flavorProfiles,
-      flavors,
+      components,
       avgRating: parseNumberInput(mixEditor.avgRating, 0),
       popularity: parseNumberInput(mixEditor.popularity, 0),
       available: mixEditor.available,
@@ -947,9 +1164,11 @@ export const App = () => {
         throw new Error('Backend вернул пустой микс');
       }
 
-      setMixes((current) => sortMixes(replaceOrInsert(current, savedMix)));
       setMixEditor(toMixEditorState(savedMix));
-      void loadSummary(token, dashboardWindow);
+      await Promise.all([
+        loadMixes(token, mixesFilters, mixesSort),
+        loadSummary(token, dashboardWindow),
+      ]);
       setMixSaveStatus('ready');
       setActiveTab('mixes');
     } catch (cause) {
@@ -1021,7 +1240,10 @@ export const App = () => {
 
       setRails((current) => sortRails(replaceOrInsert(current, savedRail)));
       setRailEditor(toRailEditorState(savedRail));
-      void loadSummary(token, dashboardWindow);
+      await Promise.all([
+        loadSummary(token, dashboardWindow),
+        loadMixes(token, mixesFilters, mixesSort),
+      ]);
       setRailSaveStatus('ready');
       setActiveTab('rails');
     } catch (cause) {
@@ -1493,352 +1715,35 @@ export const App = () => {
   );
 
   const renderMixes = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Менеджер миксов</p>
-          <h2>Каталог миксов</h2>
-          <p className="meta-line">Редактирование состава, вкусов и доступности для guest-контура.</p>
-        </div>
-        <div className="section-actions">
-          <span className="status-chip">Контентный модуль</span>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetMixEditor}>
-            Новый микс
-          </button>
-        </div>
-      </div>
-
-      {mixesStatus === 'loading' ? <p className="meta-line">Загружаем миксы...</p> : null}
-      {mixesError ? <p className="error-text">{mixesError}</p> : null}
-
-      <div className="manager-layout">
-        <aside className="entity-list">
-          {mixes.map((mix) => (
-            <article
-              className={mixEditor.id === mix.id ? 'entity-card entity-card--active' : 'entity-card'}
-              key={mix.id}
-            >
-              <div className="entity-card__head">
-                <div>
-                  <p className="entity-kicker">Микс</p>
-                  <h3>{mix.name}</h3>
-                </div>
-                <span className={mix.available ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                  {mix.available ? 'Доступен' : 'Скрыт'}
-                </span>
-              </div>
-              <p className="meta-line">{mix.description || 'Без описания'}</p>
-              <p className="meta-line">Компоненты: {resolveMixComponentSummary(mix)}</p>
-              <div className="chip-row">
-                {mix.flavorProfiles.map((profile) => (
-                  <span className="chip" key={`${mix.id}:profile:${profile}`}>
-                    {profile}
-                  </span>
-                ))}
-              </div>
-              <p className="meta-line">Вкусы: {mix.flavors.join(', ') || 'Не указаны'}</p>
-              <p className="meta-line">
-                Рейтинг {mix.avgRating.toFixed(1)} · Популярность {mix.popularity}
-              </p>
-              <div className="entity-card__actions">
-                <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectMix(mix)}>
-                  Редактировать
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {!mixes.length && mixesStatus !== 'loading' ? <p className="meta-line">Пока нет миксов.</p> : null}
-        </aside>
-
-        <article className="editor-card">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">{mixEditor.id ? 'Редактирование микса' : 'Новый микс'}</p>
-              <h3>{mixEditor.id ? mixEditor.name || 'Без названия' : 'Создать микс'}</h3>
-            </div>
-            <span className="status-chip">{mixEditor.available ? 'Доступен' : 'Скрыт'}</span>
-          </div>
-
-          <form className="admin-form" onSubmit={onSubmitMix}>
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Название</span>
-                <input
-                  className="text-input"
-                  value={mixEditor.name}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Например, Цитрусовый караван"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Рейтинг</span>
-                <input
-                  className="text-input"
-                  type="number"
-                  step="0.1"
-                  value={mixEditor.avgRating}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, avgRating: event.target.value }))}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">Описание</span>
-                <textarea
-                  className="textarea-input"
-                  value={mixEditor.description}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Короткое описание микса"
-                  rows={4}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">componentIds</span>
-                <textarea
-                  className="textarea-input"
-                  value={mixEditor.componentIds}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, componentIds: event.target.value }))}
-                  placeholder="mix-1, mix-2"
-                  rows={3}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">flavorProfiles</span>
-                <input
-                  className="text-input"
-                  value={mixEditor.flavorProfiles}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, flavorProfiles: event.target.value }))}
-                  placeholder="fresh, citrus"
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">flavors</span>
-                <input
-                  className="text-input"
-                  value={mixEditor.flavors}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, flavors: event.target.value }))}
-                  placeholder="мята, лимон"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Популярность</span>
-                <input
-                  className="text-input"
-                  type="number"
-                  step="1"
-                  value={mixEditor.popularity}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, popularity: event.target.value }))}
-                />
-              </label>
-
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={mixEditor.available}
-                  onChange={(event) => setMixEditor((current) => ({ ...current, available: event.target.checked }))}
-                />
-                <span>Доступен для гостя</span>
-              </label>
-            </div>
-
-            {mixSaveError ? <p className="error-text">{mixSaveError}</p> : null}
-
-            <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={mixSaveStatus === 'loading'}>
-                {mixSaveStatus === 'loading' ? 'Сохраняем...' : mixEditor.id ? 'Сохранить микс' : 'Создать микс'}
-              </button>
-              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetMixEditor}>
-                Сбросить форму
-              </button>
-            </div>
-          </form>
-        </article>
-      </div>
-
-      <div className="manager-layout manager-layout--stacked manager-layout--spaced">
-        <aside className="entity-list">
-          {telegramRecipientsStatus === 'forbidden' ? (
-            <article className="entity-card entity-card--muted">
-              <p className="entity-kicker">Чаты Telegram</p>
-              <h3>Только для admin</h3>
-              <p className="meta-line">{telegramRecipientsError || 'У вас нет доступа к управлению чатами Telegram.'}</p>
-            </article>
-          ) : (
-            telegramRecipients.map((recipient) => (
-              <article
-                className={telegramRecipientEditor.id === recipient.id ? 'entity-card entity-card--active' : 'entity-card'}
-                key={recipient.id}
-              >
-                <div className="entity-card__head">
-                  <div>
-                    <p className="entity-kicker">Чат Telegram</p>
-                    <h3>{recipient.label || `Чат ${recipient.chatId}`}</h3>
-                  </div>
-                  <span className={recipient.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                    {recipient.active ? 'Активен' : 'Неактивен'}
-                  </span>
-                </div>
-                <div className="chip-row">
-                  <span className="chip">{recipient.chatId}</span>
-                  <span className="chip">{formatTelegramRecipientScope(recipient.scope)}</span>
-                </div>
-                <div className="entity-card__actions entity-card__actions--wrap">
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => onSelectTelegramRecipient(recipient)}
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onToggleTelegramRecipientActive(recipient)}
-                    disabled={telegramRecipientToggleId === recipient.id}
-                  >
-                    {telegramRecipientToggleId === recipient.id ? 'Сохраняем...' : recipient.active ? 'Деактивировать' : 'Активировать'}
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onDeleteTelegramRecipient(recipient)}
-                    disabled={telegramRecipientToggleId === recipient.id}
-                  >
-                    {telegramRecipientToggleId === recipient.id ? 'Удаляем...' : 'Удалить'}
-                  </button>
-                </div>
-              </article>
-            ))
-          )}
-
-          {telegramRecipientsStatus !== 'forbidden' && !telegramRecipients.length && telegramRecipientsStatus !== 'loading' ? (
-            <p className="meta-line">Пока нет чатов Telegram.</p>
-          ) : null}
-        </aside>
-
-        <article className="editor-card">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">
-                {telegramRecipientEditor.id ? 'Редактирование чата Telegram' : 'Новый чат Telegram'}
-              </p>
-              <h3>{telegramRecipientEditor.id ? telegramRecipientEditor.label || 'Без названия' : 'Создать чат Telegram'}</h3>
-            </div>
-            <span className="status-chip">{formatTelegramRecipientScope(telegramRecipientEditor.scope)}</span>
-          </div>
-
-          {telegramRecipientsStatus === 'loading' ? <p className="meta-line">Загружаем чаты Telegram...</p> : null}
-          {telegramRecipientsStatus === 'error' ? <p className="error-text">{telegramRecipientsError}</p> : null}
-          {telegramRecipientsStatus === 'forbidden' ? <p className="meta-line">{telegramRecipientsError}</p> : null}
-
-          {telegramRecipientsStatus !== 'forbidden' ? (
-            <form className="admin-form" onSubmit={onSubmitTelegramRecipient}>
-              <div className="form-grid form-grid--two">
-                <label className="field">
-                  <span className="field-label">Chat id Telegram</span>
-                  <input
-                    className="text-input"
-                    value={telegramRecipientEditor.chatId}
-                    onChange={(event) => setTelegramRecipientEditor((current) => ({ ...current, chatId: event.target.value }))}
-                    placeholder="362223626"
-                  />
-                </label>
-
-                <label className="field">
-                  <span className="field-label">Тип</span>
-                  <select
-                    className="select-input"
-                    value={telegramRecipientEditor.scope}
-                    onChange={(event) =>
-                      setTelegramRecipientEditor((current) => ({
-                        ...current,
-                        scope: event.target.value as TelegramRecipientScope,
-                      }))
-                    }
-                  >
-                    {telegramRecipientScopeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field field--wide">
-                  <span className="field-label">Подпись</span>
-                  <input
-                    className="text-input"
-                    value={telegramRecipientEditor.label}
-                    onChange={(event) => setTelegramRecipientEditor((current) => ({ ...current, label: event.target.value }))}
-                    placeholder="Основной staff-чат"
-                  />
-                </label>
-
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={telegramRecipientEditor.active}
-                    onChange={(event) =>
-                      setTelegramRecipientEditor((current) => ({
-                        ...current,
-                        active: event.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Активен</span>
-                </label>
-              </div>
-
-              {telegramRecipientSaveError ? <p className="error-text">{telegramRecipientSaveError}</p> : null}
-
-              <div className="form-actions">
-                <button
-                  className="primary-button primary-button--inline"
-                  type="submit"
-                  disabled={telegramRecipientSaveStatus === 'loading'}
-                >
-                  {telegramRecipientSaveStatus === 'loading'
-                    ? 'Сохраняем...'
-                    : telegramRecipientEditor.id
-                      ? 'Сохранить чат Telegram'
-                      : 'Создать чат Telegram'}
-                </button>
-                <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramRecipientEditor}>
-                  Сбросить форму
-                </button>
-                {telegramRecipientEditor.id ? (
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() =>
-                      void onDeleteTelegramRecipient({
-                        id: telegramRecipientEditor.id,
-                        chatId: telegramRecipientEditor.chatId,
-                        label: telegramRecipientEditor.label,
-                        scope: telegramRecipientEditor.scope,
-                        active: telegramRecipientEditor.active,
-                      })
-                    }
-                    disabled={telegramRecipientToggleId === telegramRecipientEditor.id}
-                  >
-                    {telegramRecipientToggleId === telegramRecipientEditor.id ? 'Удаляем...' : 'Удалить чат'}
-                  </button>
-                ) : null}
-              </div>
-            </form>
-          ) : (
-            <div className="forbidden-panel">
-              <p className="meta-line">Чаты Telegram недоступны для вашей роли.</p>
-            </div>
-          )}
-        </article>
-      </div>
-    </section>
+    <MixCatalogView
+      items={mixes}
+      tobaccoOptions={mixTobaccos}
+      status={mixesStatus}
+      error={mixesError}
+      filters={mixesFilters}
+      meta={mixesMeta}
+      sort={mixesSort}
+      editor={mixEditor}
+      saveStatus={mixSaveStatus}
+      saveError={mixSaveError}
+      onSearchChange={(value) => void onMixSearchChange(value)}
+      onStatusChange={(value) => void onMixStatusChange(value)}
+      onRailStateChange={(value) => void onMixRailStateChange(value)}
+      onSortFieldChange={(value) => void onMixSortFieldChange(value)}
+      onSortDirectionChange={(value) => void onMixSortDirectionChange(value)}
+      onToggleFilterValue={(key, value) => void onMixToggleFilterValue(key, value)}
+      onResetFilters={() => void onMixResetFilters()}
+      onSelectMix={onSelectMix}
+      onResetEditor={onResetMixEditor}
+      onEditorFieldChange={onChangeMixEditorField}
+      onEditorAvailabilityChange={onChangeMixEditorAvailability}
+      onAddComponent={onAddMixComponent}
+      onUpdateComponent={onUpdateMixComponent}
+      onMoveComponent={onMoveMixComponent}
+      onRemoveComponent={onRemoveMixComponent}
+      onRebalanceComponents={onRebalanceMixComponents}
+      onSubmit={onSubmitMix}
+    />
   );
 
   const renderRails = () => (

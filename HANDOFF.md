@@ -1,5 +1,50 @@
 # HANDOFF — Yummy
 
+## 1.72) Start Nomad Master Slice 3 mix catalog and component editor (28 марта 2026)
+
+- Запрос:
+  - продолжить работу по `feature-slices` в роли `AI Lead`;
+  - после блокера в `Slice 2` перейти к следующему безопасному bounded slice для `Nomad Master`.
+
+- Реализация:
+  - repo frame:
+    - контур подтверждён как `Nomad`, reuse decision оставлен `keep separate`, execution mode — `single-agent`, потому что снова меняется backend/frontend public contract;
+    - `Slice 2` не трогался по `archive/delete`, так как этот вопрос всё ещё требует human product sign-off.
+  - backend mix contract:
+    - `apps/nomad-backend/src/state.ts`
+    - `apps/nomad-backend/src/app.ts`
+    - `apps/nomad-backend/src/types.ts`
+    - `apps/nomad-backend/src/content.test.ts`
+    - `GET /staff/mixes` теперь отдаёт table-ready payload с `filters`, `sort`, `meta`, `railMemberships`, `railCount`, `activeRailCount`, `updatedAt`;
+    - create/update по миксам принимают `components[]` с `tobaccoId`, `proportion`, `sortOrder`;
+    - старый `componentIds` оставлен как fallback, но server-side validation теперь требует точную сумму долей `100%`;
+    - helper фильтрации по selected values исправлен так, что одинаково корректно работают и inventory, и mixes filters.
+  - frontend mix surface:
+    - `apps/nomad-master-web/src/contracts.ts`
+    - `apps/nomad-master-web/src/contracts.test.ts`
+    - `apps/nomad-master-web/src/components/mixes/mix-catalog-view.tsx`
+    - `apps/nomad-master-web/src/App.tsx`
+    - `apps/nomad-master-web/src/styles.css`
+    - mix catalog переведён в отдельный table-first модуль с filters bar, server-driven sort и rail membership summary;
+    - component editor получил выбор табаков из inventory-backed catalog, percent inputs, reorder и rebalance;
+    - после `rail` mutation UI теперь перезагружает `mixes`, чтобы membership не устаревал.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `NOTES.md`
+    - `Slice 3` отмечен как `in progress`, потому что код и build gates закрыты, но targeted browser/manual smoke ещё не выполнен.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+
+- Эффект:
+  - `Nomad Master` получил production-oriented mix operations surface вместо string-based CRUD;
+  - новый mix contract стал прозрачным и тестируемым, а доли компонентов перестали быть скрытой логикой backend seed/state;
+  - следующий безопасный шаг: targeted smoke нового mix flow, затем `Slice 4` по rail manager hardening.
+
 ## 1.71) Start Nomad Master Slice 2 inventory hardening with table-first ops (28 марта 2026)
 
 - Запрос:

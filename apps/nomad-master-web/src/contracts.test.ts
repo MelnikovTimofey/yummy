@@ -1,15 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildMixRequestQuery,
   buildInventoryRequestQuery,
   buildInventorySummary,
   defaultInventoryListResponse,
+  defaultMixListResponse,
   dashboardWindowOptions,
   formatInventoryBatchAction,
   formatDateTimeLocalInput,
   normalizeDashboardSummary,
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
+  normalizeMixListResponse,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
   normalizeRailRecord,
@@ -26,6 +29,7 @@ import {
   sortStaffAccounts,
   sortTelegramRecipients,
   toggleInventoryFilterValue,
+  toggleMixFilterValue,
 } from './contracts';
 
 test('buildInventorySummary counts stock states', () => {
@@ -193,10 +197,106 @@ test('normalizeMixRecord accepts inStock alias and component objects', () => {
   assert.deepEqual(mix.componentIds, ['c-1', 'c-2']);
   assert.deepEqual(mix.components[0], {
     id: 'c-2',
+    tobaccoId: 'c-2',
     name: 'Компонент',
     manufacturer: 'Nomad',
     flavors: ['мята'],
+    proportion: 0,
+    sortOrder: 0,
   });
+});
+
+test('normalizeMixListResponse supports filters, meta and rail memberships', () => {
+  const response = normalizeMixListResponse({
+    items: [
+      {
+        id: 'mix-1',
+        name: 'Ягодный караван',
+        description: 'Описание',
+        components: [
+          {
+            tobaccoId: 't-1',
+            name: 'Berry Oasis',
+            manufacturer: 'Nomad Reserve',
+            flavors: ['малина'],
+            proportion: 60,
+            sortOrder: 0,
+          },
+        ],
+        flavorProfiles: ['berry'],
+        flavors: ['малина'],
+        flavorTags: ['berry'],
+        available: true,
+        guestVisible: true,
+        railMemberships: [
+          {
+            id: 'rail-1',
+            name: 'Ягодный рейл',
+            type: 'curated',
+            active: true,
+          },
+        ],
+      },
+    ],
+    filters: {
+      search: 'ягода',
+      status: 'guest-visible',
+      railState: 'in-rails',
+      manufacturers: ['Nomad Reserve'],
+      options: {
+        manufacturers: ['Nomad Reserve'],
+        flavorProfiles: ['berry'],
+        flavors: ['малина'],
+        flavorTags: ['berry'],
+      },
+    },
+    sort: {
+      field: 'rails',
+      direction: 'desc',
+    },
+    meta: {
+      totalItems: 7,
+      filteredItems: 1,
+      guestVisibleCount: 1,
+      hiddenCount: 0,
+      blockedCount: 0,
+      inRailsCount: 1,
+      withoutRailsCount: 0,
+    },
+  });
+
+  assert.equal(response.items[0]?.railMemberships[0]?.name, 'Ягодный рейл');
+  assert.equal(response.filters.status, 'guest-visible');
+  assert.equal(response.filters.railState, 'in-rails');
+  assert.equal(response.sort.field, 'rails');
+  assert.equal(response.meta.inRailsCount, 1);
+});
+
+test('buildMixRequestQuery serializes mix filters and sort', () => {
+  const query = buildMixRequestQuery(
+    {
+      ...defaultMixListResponse.filters,
+      search: 'ягода',
+      status: 'guest-visible',
+      railState: 'in-rails',
+      manufacturers: ['Nomad Reserve'],
+      flavors: ['малина'],
+    },
+    {
+      field: 'rails',
+      direction: 'desc',
+    },
+  );
+
+  assert.equal(
+    query,
+    'search=%D1%8F%D0%B3%D0%BE%D0%B4%D0%B0&status=guest-visible&railState=in-rails&manufacturers=Nomad+Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc',
+  );
+});
+
+test('toggleMixFilterValue adds and removes option without duplicates', () => {
+  assert.deepEqual(toggleMixFilterValue(['berry'], 'fresh'), ['berry', 'fresh']);
+  assert.deepEqual(toggleMixFilterValue(['berry'], 'berry'), []);
 });
 
 test('normalizeRailRecord accepts mix refs and active alias', () => {

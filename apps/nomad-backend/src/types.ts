@@ -4,6 +4,7 @@ import type {
   InventoryBatchResult,
   InventoryListResult,
   InventoryTobaccoView,
+  MixListResult,
   MixView,
   RailType,
   RailView,
@@ -89,7 +90,7 @@ export type StaffAuthResponse = {
 
 export type StaffMixesResponse = {
   items: MixView[];
-};
+} & MixListResult;
 
 export type StaffDashboardSummaryResponse = DashboardSummary;
 

@@ -50,6 +50,10 @@ import {
   getStaffRails,
   getAvailableMixCatalog,
   type InventoryBatchAction,
+  type MixRailFilter,
+  type MixSortDirection,
+  type MixSortField,
+  type MixStatusFilter,
   type InventorySortDirection,
   type InventorySortField,
   type InventoryStockFilter,
@@ -968,9 +972,47 @@ export const buildApp = () => {
       return;
     }
 
-    const response: StaffMixesResponse = {
-      items: await getStaffMixes(),
-    };
+    const query = request.query as
+      | {
+          search?: unknown;
+          status?: unknown;
+          railState?: unknown;
+          manufacturers?: unknown;
+          flavorProfiles?: unknown;
+          flavors?: unknown;
+          flavorTags?: unknown;
+          sort?: unknown;
+          direction?: unknown;
+        }
+      | undefined;
+
+    const response: StaffMixesResponse = await getStaffMixes({
+      search: typeof query?.search === 'string' ? query.search : undefined,
+      status: (typeof query?.status === 'string' ? query.status : undefined) as MixStatusFilter | undefined,
+      railState: (typeof query?.railState === 'string' ? query.railState : undefined) as MixRailFilter | undefined,
+      manufacturers: Array.isArray(query?.manufacturers)
+        ? query.manufacturers.filter((value): value is string => typeof value === 'string')
+        : typeof query?.manufacturers === 'string'
+          ? [query.manufacturers]
+          : undefined,
+      flavorProfiles: Array.isArray(query?.flavorProfiles)
+        ? query.flavorProfiles.filter((value): value is string => typeof value === 'string')
+        : typeof query?.flavorProfiles === 'string'
+          ? [query.flavorProfiles]
+          : undefined,
+      flavors: Array.isArray(query?.flavors)
+        ? query.flavors.filter((value): value is string => typeof value === 'string')
+        : typeof query?.flavors === 'string'
+          ? [query.flavors]
+          : undefined,
+      flavorTags: Array.isArray(query?.flavorTags)
+        ? query.flavorTags.filter((value): value is string => typeof value === 'string')
+        : typeof query?.flavorTags === 'string'
+          ? [query.flavorTags]
+          : undefined,
+      sort: (typeof query?.sort === 'string' ? query.sort : undefined) as MixSortField | undefined,
+      direction: (typeof query?.direction === 'string' ? query.direction : undefined) as MixSortDirection | undefined,
+    });
 
     return reply.send(response);
   });
@@ -986,6 +1028,11 @@ export const buildApp = () => {
           name?: string;
           description?: string;
           componentIds?: string[];
+          components?: Array<{
+            tobaccoId?: string;
+            proportion?: number;
+            sortOrder?: number;
+          }>;
           available?: boolean;
           popularity?: number;
           baseAvgRating?: number;
@@ -996,6 +1043,7 @@ export const buildApp = () => {
       name: payload?.name ?? '',
       description: payload?.description ?? '',
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : [],
+      components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
       popularity: payload?.popularity,
       baseAvgRating: payload?.baseAvgRating,
@@ -1036,6 +1084,11 @@ export const buildApp = () => {
           name?: string;
           description?: string;
           componentIds?: string[];
+          components?: Array<{
+            tobaccoId?: string;
+            proportion?: number;
+            sortOrder?: number;
+          }>;
           available?: boolean;
           popularity?: number;
           baseAvgRating?: number;
@@ -1050,6 +1103,7 @@ export const buildApp = () => {
       name: payload?.name,
       description: payload?.description,
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : undefined,
+      components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
       popularity: payload?.popularity,
       baseAvgRating: payload?.baseAvgRating,

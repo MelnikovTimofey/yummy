@@ -115,3 +115,13 @@ Inventory переведён в новый operational flow:
 3. staff получил table-first экран с filters bar, bulk selection и batch actions `вернуть в наличие / убрать из наличия`;
 4. после inventory update frontend синхронно перезагружает и `dashboard`, и `mixes`, чтобы UI не жил на устаревшем состоянии;
 5. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
+
+## Slice 3. Mix catalog and component editor
+
+Mixes переведены в новый contract-first flow:
+
+1. `GET /staff/mixes` поддерживает `search`, `status`, `railState`, фильтры по производителям компонентов, `flavorProfiles`, вкусам и `flavorTags`, а также server-side sort;
+2. backend create/update для миксов принимает `components[]` с `tobaccoId`, `proportion` и `sortOrder`, а сумма процентов валидируется строго до `100%`;
+3. staff получил table-first экран каталога миксов с rail membership summary, статусами `виден гостю / скрыт / заблокирован наличием` и быстрым переходом в редактор;
+4. editor компонентов больше не требует ручного ввода `componentIds`: оператор выбирает табаки из catalog-backed списка, задаёт доли, меняет порядок строк и может распределить проценты поровну;
+5. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.

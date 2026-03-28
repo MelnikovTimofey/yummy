@@ -113,6 +113,126 @@ export const defaultInventoryListResponse: InventoryListResponse = {
   },
 };
 
+export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+
+export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
+
+export type MixSortField = 'popularity' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
+
+export type MixSortDirection = 'asc' | 'desc';
+
+export type MixListFilters = {
+  search: string;
+  status: MixStatusFilter;
+  railState: MixRailFilter;
+  manufacturers: string[];
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  options: {
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+  };
+};
+
+export type MixListSort = {
+  field: MixSortField;
+  direction: MixSortDirection;
+};
+
+export type MixListMeta = {
+  totalItems: number;
+  filteredItems: number;
+  guestVisibleCount: number;
+  hiddenCount: number;
+  blockedCount: number;
+  inRailsCount: number;
+  withoutRailsCount: number;
+};
+
+export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
+
+export type MixComponent = {
+  id: string;
+  tobaccoId: string;
+  name: string;
+  manufacturer: string;
+  flavors: string[];
+  proportion: number;
+  sortOrder: number;
+};
+
+export type RailType = 'statistical' | 'prepared' | 'curated';
+
+export type MixRailMembership = {
+  id: string;
+  name: string;
+  type: RailType;
+  active: boolean;
+};
+
+export type MixRecord = {
+  id: string;
+  name: string;
+  description: string;
+  componentIds: string[];
+  components: MixComponent[];
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  avgRating: number;
+  ratingsCount: number;
+  popularity: number;
+  available: boolean;
+  guestVisible: boolean;
+  createdAt: string;
+  updatedAt: string;
+  railMemberships: MixRailMembership[];
+  railCount: number;
+  activeRailCount: number;
+};
+
+export type MixListResponse = {
+  items: MixRecord[];
+  filters: MixListFilters;
+  sort: MixListSort;
+  meta: MixListMeta;
+};
+
+export const defaultMixListResponse: MixListResponse = {
+  items: [],
+  filters: {
+    search: '',
+    status: 'all',
+    railState: 'all',
+    manufacturers: [],
+    flavorProfiles: [],
+    flavors: [],
+    flavorTags: [],
+    options: {
+      manufacturers: [],
+      flavorProfiles: [],
+      flavors: [],
+      flavorTags: [],
+    },
+  },
+  sort: {
+    field: 'popularity',
+    direction: 'desc',
+  },
+  meta: {
+    totalItems: 0,
+    filteredItems: 0,
+    guestVisibleCount: 0,
+    hiddenCount: 0,
+    blockedCount: 0,
+    inRailsCount: 0,
+    withoutRailsCount: 0,
+  },
+};
+
 export type DailyAccessCodeRecord = {
   id: string;
   codeValue: string;
@@ -302,28 +422,6 @@ type DashboardSummaryPayload = {
   topMixes?: unknown[];
 };
 
-export type MixComponent = {
-  id: string;
-  name: string;
-  manufacturer: string;
-  flavors: string[];
-};
-
-export type MixRecord = {
-  id: string;
-  name: string;
-  description: string;
-  componentIds: string[];
-  components: MixComponent[];
-  flavorProfiles: string[];
-  flavors: string[];
-  avgRating: number;
-  popularity: number;
-  available: boolean;
-};
-
-export type RailType = 'statistical' | 'prepared' | 'curated';
-
 export type RailMixReference = {
   id: string;
   name: string;
@@ -430,6 +528,28 @@ const toInventorySortDirection = (value: unknown): InventorySortDirection => {
   return value === 'asc' || value === 'desc' ? value : 'desc';
 };
 
+const toMixStatusFilter = (value: unknown): MixStatusFilter => {
+  return value === 'guest-visible' || value === 'hidden' || value === 'blocked' || value === 'all'
+    ? value
+    : 'all';
+};
+
+const toMixRailFilter = (value: unknown): MixRailFilter => {
+  return value === 'in-rails' || value === 'without-rails' || value === 'all'
+    ? value
+    : 'all';
+};
+
+const toMixSortField = (value: unknown): MixSortField => {
+  return value === 'avgRating' || value === 'name' || value === 'updatedAt' || value === 'rails' || value === 'popularity'
+    ? value
+    : 'popularity';
+};
+
+const toMixSortDirection = (value: unknown): MixSortDirection => {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+};
+
 const uniqueStrings = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
 const toIsoString = (value: unknown, fallback = '') => {
@@ -494,17 +614,23 @@ const normalizeMixComponent = (value: unknown): MixComponent => {
   if (!isRecord(value)) {
     return {
       id: '',
+      tobaccoId: '',
       name: '',
       manufacturer: '',
       flavors: [],
+      proportion: 0,
+      sortOrder: 0,
     };
   }
 
   return {
-    id: String(value.id ?? value.componentId ?? ''),
+    id: String(value.id ?? value.componentId ?? value.tobaccoId ?? ''),
+    tobaccoId: String(value.tobaccoId ?? value.id ?? value.componentId ?? ''),
     name: String(value.name ?? value.title ?? ''),
     manufacturer: String(value.manufacturer ?? ''),
     flavors: uniqueStrings(toStringList(value.flavors)),
+    proportion: toNumber(value.proportion, 0),
+    sortOrder: toNumber(value.sortOrder, 0),
   };
 };
 
@@ -645,9 +771,18 @@ export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
 export const normalizeMixRecord = (value: unknown): MixRecord => {
   const raw = isRecord(value) ? value : {};
   const components = readListPayload<unknown>(raw.components).map(normalizeMixComponent);
+  const railMemberships = readListPayload<unknown>(raw.railMemberships).map((item) => {
+    const source = isRecord(item) ? item : {};
+    return {
+      id: String(source.id ?? source.railId ?? ''),
+      name: String(source.name ?? source.railName ?? ''),
+      type: toRailType(source.type),
+      active: toBoolean(source.active, true),
+    } satisfies MixRailMembership;
+  });
   const componentIds = uniqueStrings([
     ...toStringList(raw.componentIds),
-    ...components.map((component) => component.id),
+    ...components.map((component) => component.tobaccoId || component.id),
   ]);
 
   return {
@@ -658,9 +793,57 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     components,
     flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
     flavors: uniqueStrings(toStringList(raw.flavors)),
+    flavorTags: uniqueStrings(toStringList(raw.flavorTags)),
     avgRating: toNumber(raw.avgRating, 0),
+    ratingsCount: toNumber(raw.ratingsCount, 0),
     popularity: toNumber(raw.popularity, 0),
     available: toBoolean(raw.available ?? raw.inStock, true),
+    guestVisible: toBoolean(raw.guestVisible, toBoolean(raw.available ?? raw.inStock, true)),
+    createdAt: toIsoString(raw.createdAt, ''),
+    updatedAt: toIsoString(raw.updatedAt, ''),
+    railMemberships,
+    railCount: toNumber(raw.railCount, railMemberships.length),
+    activeRailCount: toNumber(raw.activeRailCount, railMemberships.filter((item) => item.active).length),
+  };
+};
+
+export const normalizeMixListResponse = (value: unknown): MixListResponse => {
+  const raw = isRecord(value) ? value : {};
+  const filters = isRecord(raw.filters) ? raw.filters : {};
+  const sort = isRecord(raw.sort) ? raw.sort : {};
+  const meta = isRecord(raw.meta) ? raw.meta : {};
+  const options = isRecord(filters.options) ? filters.options : {};
+
+  return {
+    items: readListPayload<unknown>(raw.items ?? raw).map(normalizeMixRecord),
+    filters: {
+      search: String(filters.search ?? ''),
+      status: toMixStatusFilter(filters.status),
+      railState: toMixRailFilter(filters.railState),
+      manufacturers: uniqueStrings(toStringList(filters.manufacturers)),
+      flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
+      flavors: uniqueStrings(toStringList(filters.flavors)),
+      flavorTags: uniqueStrings(toStringList(filters.flavorTags)),
+      options: {
+        manufacturers: uniqueStrings(toStringList(options.manufacturers)),
+        flavorProfiles: uniqueStrings(toStringList(options.flavorProfiles)),
+        flavors: uniqueStrings(toStringList(options.flavors)),
+        flavorTags: uniqueStrings(toStringList(options.flavorTags)),
+      },
+    },
+    sort: {
+      field: toMixSortField(sort.field),
+      direction: toMixSortDirection(sort.direction),
+    },
+    meta: {
+      totalItems: toNumber(meta.totalItems, 0),
+      filteredItems: toNumber(meta.filteredItems, 0),
+      guestVisibleCount: toNumber(meta.guestVisibleCount, 0),
+      hiddenCount: toNumber(meta.hiddenCount, 0),
+      blockedCount: toNumber(meta.blockedCount, 0),
+      inRailsCount: toNumber(meta.inRailsCount, 0),
+      withoutRailsCount: toNumber(meta.withoutRailsCount, 0),
+    },
   };
 };
 
@@ -890,12 +1073,65 @@ export const toggleInventoryFilterValue = (values: string[], value: string) => {
   return uniqueStrings(next);
 };
 
+export const buildMixRequestQuery = (filters: MixListFilters, sort: MixListSort) => {
+  const params = new URLSearchParams();
+
+  if (filters.search.trim()) {
+    params.set('search', filters.search.trim());
+  }
+
+  if (filters.status !== 'all') {
+    params.set('status', filters.status);
+  }
+
+  if (filters.railState !== 'all') {
+    params.set('railState', filters.railState);
+  }
+
+  for (const value of filters.manufacturers) {
+    params.append('manufacturers', value);
+  }
+
+  for (const value of filters.flavorProfiles) {
+    params.append('flavorProfiles', value);
+  }
+
+  for (const value of filters.flavors) {
+    params.append('flavors', value);
+  }
+
+  for (const value of filters.flavorTags) {
+    params.append('flavorTags', value);
+  }
+
+  params.set('sort', sort.field);
+  params.set('direction', sort.direction);
+
+  return params.toString();
+};
+
+export const toggleMixFilterValue = (values: string[], value: string) => {
+  const next = values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+
+  return uniqueStrings(next);
+};
+
 export const sortMixes = (items: MixRecord[]) => {
   const copy = [...items];
 
   return copy.sort((left, right) => {
+    if (left.guestVisible !== right.guestVisible) {
+      return left.guestVisible ? -1 : 1;
+    }
+
     if (left.available !== right.available) {
       return left.available ? -1 : 1;
+    }
+
+    if (left.railCount !== right.railCount) {
+      return right.railCount - left.railCount;
     }
 
     if (right.popularity !== left.popularity) {
@@ -1093,6 +1329,32 @@ export const inventorySortFieldOptions: Array<{ value: InventorySortField; label
 ];
 
 export const inventorySortDirectionOptions: Array<{ value: InventorySortDirection; label: string }> = [
+  { value: 'desc', label: 'По убыванию' },
+  { value: 'asc', label: 'По возрастанию' },
+];
+
+export const mixStatusFilterOptions: Array<{ value: MixStatusFilter; label: string }> = [
+  { value: 'all', label: 'Все статусы' },
+  { value: 'guest-visible', label: 'Виден гостю' },
+  { value: 'blocked', label: 'Заблокирован наличием' },
+  { value: 'hidden', label: 'Скрыт оператором' },
+];
+
+export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }> = [
+  { value: 'all', label: 'Любое участие' },
+  { value: 'in-rails', label: 'Только в рейлах' },
+  { value: 'without-rails', label: 'Без рейлов' },
+];
+
+export const mixSortFieldOptions: Array<{ value: MixSortField; label: string }> = [
+  { value: 'popularity', label: 'По популярности' },
+  { value: 'rails', label: 'По участию в рейлах' },
+  { value: 'avgRating', label: 'По рейтингу' },
+  { value: 'updatedAt', label: 'По обновлению' },
+  { value: 'name', label: 'По названию' },
+];
+
+export const mixSortDirectionOptions: Array<{ value: MixSortDirection; label: string }> = [
   { value: 'desc', label: 'По убыванию' },
   { value: 'asc', label: 'По возрастанию' },
 ];

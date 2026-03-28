@@ -16,10 +16,19 @@ export type IntroCard = {
 
 export type MixComponentView = {
   id: string;
+  tobaccoId: string;
   name: string;
   manufacturer: string;
   flavors: string[];
   proportion: number;
+  sortOrder: number;
+};
+
+export type MixRailMembershipView = {
+  id: string;
+  name: string;
+  type: RailType;
+  active: boolean;
 };
 
 export type MixView = {
@@ -37,6 +46,10 @@ export type MixView = {
   available: boolean;
   guestVisible: boolean;
   createdAt: string;
+  updatedAt: string;
+  railMemberships: MixRailMembershipView[];
+  railCount: number;
+  activeRailCount: number;
 };
 
 export type RailView = {
@@ -151,6 +164,58 @@ export type InventoryListQuery = {
   direction?: InventorySortDirection;
 };
 
+export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+
+export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
+
+export type MixSortField = 'popularity' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
+
+export type MixSortDirection = 'asc' | 'desc';
+
+export type MixListQuery = {
+  search?: string;
+  status?: MixStatusFilter;
+  railState?: MixRailFilter;
+  manufacturers?: string[];
+  flavorProfiles?: string[];
+  flavors?: string[];
+  flavorTags?: string[];
+  sort?: MixSortField;
+  direction?: MixSortDirection;
+};
+
+export type MixListResult = {
+  items: MixView[];
+  filters: {
+    search: string;
+    status: MixStatusFilter;
+    railState: MixRailFilter;
+    manufacturers: string[];
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+    options: {
+      manufacturers: string[];
+      flavorProfiles: string[];
+      flavors: string[];
+      flavorTags: string[];
+    };
+  };
+  sort: {
+    field: MixSortField;
+    direction: MixSortDirection;
+  };
+  meta: {
+    totalItems: number;
+    filteredItems: number;
+    guestVisibleCount: number;
+    hiddenCount: number;
+    blockedCount: number;
+    inRailsCount: number;
+    withoutRailsCount: number;
+  };
+};
+
 export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive';
 
 export type InventoryListResult = {
@@ -222,14 +287,19 @@ export type DashboardSummary = {
 export type MixInput = {
   name: string;
   description: string;
-  componentIds: string[];
+  componentIds?: string[];
+  components?: Array<{
+    tobaccoId?: string;
+    proportion?: number;
+    sortOrder?: number;
+  }>;
   available?: boolean;
   popularity?: number;
   baseAvgRating?: number;
 };
 
 export type MixPatch = Partial<
-  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'available' | 'popularity' | 'baseAvgRating'>
+  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'components' | 'available' | 'popularity' | 'baseAvgRating'>
 >;
 
 export type RailInput = {
@@ -645,12 +715,14 @@ const mapMixView = (record: {
   popularity: number;
   baseAvgRating: number;
   createdAt: Date;
+  updatedAt: Date;
   flavorProfiles: string;
   flavors: string;
   flavorTags: string;
   components: Array<{
     tobaccoId: string;
     proportion: number;
+    sortOrder: number;
     tobacco: {
       id: string;
       name: string;
@@ -659,6 +731,14 @@ const mapMixView = (record: {
       flavors: string;
       flavorTags: string;
       inStock: boolean;
+    };
+  }>;
+  railMixes: Array<{
+    rail: {
+      id: string;
+      name: string;
+      type: string;
+      active: boolean;
     };
   }>;
   ratings: Array<{ value: number }>;
@@ -670,6 +750,12 @@ const mapMixView = (record: {
     ? Number((record.ratings.reduce((sum, item) => sum + item.value, 0) / ratingsCount).toFixed(1))
     : Number(record.baseAvgRating.toFixed(1));
   const guestVisible = record.available && record.components.every((item) => item.tobacco.inStock);
+  const railMemberships = record.railMixes.map((item) => ({
+    id: item.rail.id,
+    name: item.rail.name,
+    type: item.rail.type as RailType,
+    active: item.rail.active,
+  }));
 
   return {
     id: record.id,
@@ -681,10 +767,12 @@ const mapMixView = (record: {
     flavorTags: flavorShape.flavorTags.length ? flavorShape.flavorTags : parseList(record.flavorTags),
     components: record.components.map((item) => ({
       id: item.tobacco.id,
+      tobaccoId: item.tobacco.id,
       name: item.tobacco.name,
       manufacturer: item.tobacco.manufacturer,
       flavors: parseList(item.tobacco.flavors),
       proportion: item.proportion,
+      sortOrder: item.sortOrder,
     })),
     avgRating,
     ratingsCount,
@@ -692,6 +780,10 @@ const mapMixView = (record: {
     available: record.available,
     guestVisible,
     createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+    railMemberships,
+    railCount: railMemberships.length,
+    activeRailCount: railMemberships.filter((item) => item.active).length,
   };
 };
 
@@ -704,6 +796,18 @@ const fetchMixViews = async () => {
           tobacco: true,
         },
       },
+      railMixes: {
+        include: {
+          rail: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              active: true,
+            },
+          },
+        },
+      },
       ratings: {
         select: {
           value: true,
@@ -713,6 +817,109 @@ const fetchMixViews = async () => {
   });
 
   return records.map(mapMixView);
+};
+
+const normalizeMixStatusFilter = (value: unknown): MixStatusFilter => {
+  if (value === 'guest-visible' || value === 'hidden' || value === 'blocked') {
+    return value;
+  }
+
+  return 'all';
+};
+
+const normalizeMixRailFilter = (value: unknown): MixRailFilter => {
+  if (value === 'in-rails' || value === 'without-rails') {
+    return value;
+  }
+
+  return 'all';
+};
+
+const normalizeMixSortField = (value: unknown): MixSortField => {
+  if (value === 'name' || value === 'avgRating' || value === 'updatedAt' || value === 'rails') {
+    return value;
+  }
+
+  return 'popularity';
+};
+
+const normalizeMixSortDirection = (value: unknown): MixSortDirection => {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+};
+
+const matchesMixStatus = (mix: MixView, status: MixStatusFilter) => {
+  switch (status) {
+    case 'guest-visible':
+      return mix.guestVisible;
+    case 'hidden':
+      return !mix.available;
+    case 'blocked':
+      return mix.available && !mix.guestVisible;
+    case 'all':
+    default:
+      return true;
+  }
+};
+
+const matchesMixRailState = (mix: MixView, railState: MixRailFilter) => {
+  switch (railState) {
+    case 'in-rails':
+      return mix.railCount > 0;
+    case 'without-rails':
+      return mix.railCount === 0;
+    case 'all':
+    default:
+      return true;
+  }
+};
+
+const mixViewSortBy = (
+  left: MixView,
+  right: MixView,
+  field: MixSortField,
+  direction: MixSortDirection,
+) => {
+  const multiplier = direction === 'asc' ? 1 : -1;
+
+  const by = (value: number) => value * multiplier;
+
+  switch (field) {
+    case 'name': {
+      const result = left.name.localeCompare(right.name, 'ru');
+      if (result !== 0) {
+        return result * multiplier;
+      }
+      break;
+    }
+    case 'avgRating': {
+      if (left.avgRating !== right.avgRating) {
+        return by(left.avgRating - right.avgRating);
+      }
+      break;
+    }
+    case 'updatedAt': {
+      const result = left.updatedAt.localeCompare(right.updatedAt);
+      if (result !== 0) {
+        return result * multiplier;
+      }
+      break;
+    }
+    case 'rails': {
+      if (left.railCount !== right.railCount) {
+        return by(left.railCount - right.railCount);
+      }
+      break;
+    }
+    case 'popularity':
+    default: {
+      if (left.popularity !== right.popularity) {
+        return by(left.popularity - right.popularity);
+      }
+      break;
+    }
+  }
+
+  return mixViewSort(left, right);
 };
 
 const normalizeInventoryStockFilter = (value: unknown): InventoryStockFilter => {
@@ -756,7 +963,7 @@ const matchesInventorySelection = (values: string[], selected: string[]) => {
   }
 
   const normalized = values.map(normalizeToken);
-  return selected.some((item) => normalized.includes(item));
+  return selected.map(normalizeToken).some((item) => normalized.includes(item));
 };
 
 const inventoryMixSort = (left: InventoryDependentMixView, right: InventoryDependentMixView) => {
@@ -886,12 +1093,95 @@ const validateMixComponents = async (componentIds: string[]) => {
   };
 };
 
-const validateMixInput = async (payload: Partial<MixInput>) => {
-  const name = payload.name?.trim();
-  const description = payload.description?.trim();
+const distributeMixComponentProportions = (componentIds: string[]) => {
+  if (!componentIds.length) {
+    return [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>;
+  }
 
-  if (!name || !description) {
-    return { error: 'Name and description are required' };
+  const base = Math.floor(100 / componentIds.length);
+  const remainder = 100 - base * componentIds.length;
+
+  return componentIds.map((tobaccoId, index) => ({
+    tobaccoId,
+    proportion: base + (index < remainder ? 1 : 0),
+    sortOrder: index,
+  }));
+};
+
+const validateStructuredMixComponents = async (
+  components: Array<{ tobaccoId?: string; proportion?: number; sortOrder?: number }>,
+) => {
+  const normalized = components
+    .map((component, index) => ({
+      tobaccoId: component.tobaccoId?.trim() ?? '',
+      proportion: typeof component.proportion === 'number' ? Math.round(component.proportion) : NaN,
+      sortOrder: typeof component.sortOrder === 'number' && Number.isFinite(component.sortOrder) ? component.sortOrder : index,
+      sourceIndex: index,
+    }))
+    .filter((component) => component.tobaccoId)
+    .sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.sourceIndex - right.sourceIndex;
+    })
+    .map((component, index) => ({
+      tobaccoId: component.tobaccoId,
+      proportion: component.proportion,
+      sortOrder: index,
+    }));
+
+  if (!normalized.length) {
+    return { error: 'At least one component is required', components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }> };
+  }
+
+  const seen = new Set<string>();
+  for (const component of normalized) {
+    if (seen.has(component.tobaccoId)) {
+      return {
+        error: `Duplicate component id: ${component.tobaccoId}`,
+        components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+      };
+    }
+    seen.add(component.tobaccoId);
+
+    if (!Number.isInteger(component.proportion) || component.proportion <= 0 || component.proportion > 100) {
+      return {
+        error: `Invalid component proportion for ${component.tobaccoId}`,
+        components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+      };
+    }
+  }
+
+  const total = normalized.reduce((sum, component) => sum + component.proportion, 0);
+  if (total !== 100) {
+    return {
+      error: 'Component proportions must total exactly 100',
+      components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+    };
+  }
+
+  const componentValidation = await validateMixComponents(normalized.map((component) => component.tobaccoId));
+  if ('error' in componentValidation) {
+    return {
+      error: componentValidation.error,
+      components: [] as Array<{ tobaccoId: string; proportion: number; sortOrder: number }>,
+    };
+  }
+
+  return {
+    components: normalized,
+    componentIds: componentValidation.componentIds,
+    flavorProfiles: componentValidation.flavorProfiles,
+    flavors: componentValidation.flavors,
+    flavorTags: componentValidation.flavorTags,
+  };
+};
+
+const resolveMixComponentsInput = async (payload: Partial<MixInput>) => {
+  if (Array.isArray(payload.components)) {
+    return validateStructuredMixComponents(payload.components);
   }
 
   const componentValidation = await validateMixComponents(payload.componentIds ?? []);
@@ -900,8 +1190,31 @@ const validateMixInput = async (payload: Partial<MixInput>) => {
   }
 
   return {
+    components: distributeMixComponentProportions(componentValidation.componentIds),
+    componentIds: componentValidation.componentIds,
+    flavorProfiles: componentValidation.flavorProfiles,
+    flavors: componentValidation.flavors,
+    flavorTags: componentValidation.flavorTags,
+  };
+};
+
+const validateMixInput = async (payload: Partial<MixInput>) => {
+  const name = payload.name?.trim();
+  const description = payload.description?.trim();
+
+  if (!name || !description) {
+    return { error: 'Name and description are required' };
+  }
+
+  const componentValidation = await resolveMixComponentsInput(payload);
+  if ('error' in componentValidation) {
+    return { error: componentValidation.error };
+  }
+
+  return {
     name,
     description,
+    components: componentValidation.components,
     componentIds: componentValidation.componentIds,
     flavorProfiles: componentValidation.flavorProfiles,
     flavors: componentValidation.flavors,
@@ -1089,11 +1402,11 @@ const seedNomadStorage = async () => {
 
     await tx.nomadMixComponent.createMany({
       data: seedMixes.flatMap((mix) =>
-        mix.componentIds.map((componentId, index) => ({
+        distributeMixComponentProportions(mix.componentIds).map((component) => ({
           mixId: mix.id,
-          tobaccoId: componentId,
-          proportion: Math.round(100 / Math.max(1, mix.componentIds.length)),
-          sortOrder: index,
+          tobaccoId: component.tobaccoId,
+          proportion: component.proportion,
+          sortOrder: component.sortOrder,
         })),
       ),
     });
@@ -1490,7 +1803,83 @@ export const getGuestHomeRails = async () => {
   return rails.filter((rail) => rail.type === 'statistical' || rail.mixes.length > 0);
 };
 
-export const getStaffMixes = async () => getAvailableMixCatalog();
+export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
+  await ensureNomadState();
+
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const normalizedSearch = normalizeToken(search);
+  const status = normalizeMixStatusFilter(query.status);
+  const railState = normalizeMixRailFilter(query.railState);
+  const manufacturers = normalizeInventorySelections(query.manufacturers);
+  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
+  const flavors = normalizeInventorySelections(query.flavors);
+  const flavorTags = normalizeInventorySelections(query.flavorTags);
+  const sortField = normalizeMixSortField(query.sort);
+  const sortDirection = normalizeMixSortDirection(query.direction);
+  const allItems = await getAvailableMixCatalog();
+
+  const options = {
+    manufacturers: unique(allItems.flatMap((item) => item.components.map((component) => component.manufacturer))).sort((left, right) =>
+      left.localeCompare(right, 'ru')),
+    flavorProfiles: unique(allItems.flatMap((item) => item.flavorProfiles)).sort((left, right) => left.localeCompare(right, 'ru')),
+    flavors: unique(allItems.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru')),
+    flavorTags: unique(allItems.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru')),
+  };
+
+  const resolvedFilters = {
+    manufacturers: resolveInventorySelections(options.manufacturers, manufacturers),
+    flavorProfiles: resolveInventorySelections(options.flavorProfiles, flavorProfiles),
+    flavors: resolveInventorySelections(options.flavors, flavors),
+    flavorTags: resolveInventorySelections(options.flavorTags, flavorTags),
+  };
+
+  const filteredItems = allItems
+    .filter((mix) => matchesMixStatus(mix, status))
+    .filter((mix) => matchesMixRailState(mix, railState))
+    .filter((mix) =>
+      !normalizedSearch
+      || [
+        mix.name,
+        mix.description,
+        ...mix.flavorProfiles,
+        ...mix.flavors,
+        ...mix.flavorTags,
+        ...mix.components.flatMap((component) => [component.name, component.manufacturer, ...component.flavors]),
+        ...mix.railMemberships.map((membership) => membership.name),
+      ].some((value) => normalizeToken(value).includes(normalizedSearch)))
+    .filter((mix) => matchesInventorySelection(mix.components.map((component) => component.manufacturer), resolvedFilters.manufacturers))
+    .filter((mix) => matchesInventorySelection(mix.flavorProfiles, resolvedFilters.flavorProfiles))
+    .filter((mix) => matchesInventorySelection(mix.flavors, resolvedFilters.flavors))
+    .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags))
+    .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
+
+  return {
+    items: filteredItems,
+    filters: {
+      search,
+      status,
+      railState,
+      manufacturers: resolvedFilters.manufacturers,
+      flavorProfiles: resolvedFilters.flavorProfiles,
+      flavors: resolvedFilters.flavors,
+      flavorTags: resolvedFilters.flavorTags,
+      options,
+    },
+    sort: {
+      field: sortField,
+      direction: sortDirection,
+    },
+    meta: {
+      totalItems: allItems.length,
+      filteredItems: filteredItems.length,
+      guestVisibleCount: filteredItems.filter((item) => item.guestVisible).length,
+      hiddenCount: filteredItems.filter((item) => !item.available).length,
+      blockedCount: filteredItems.filter((item) => item.available && !item.guestVisible).length,
+      inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
+      withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
+    },
+  };
+};
 
 export const createMix = async (payload: Partial<MixInput>) => {
   await ensureNomadState();
@@ -1518,11 +1907,11 @@ export const createMix = async (payload: Partial<MixInput>) => {
     });
 
     await tx.nomadMixComponent.createMany({
-      data: validated.componentIds.map((componentId, index) => ({
+      data: validated.components.map((component) => ({
         mixId: id,
-        tobaccoId: componentId,
-        proportion: Math.round(100 / Math.max(1, validated.componentIds.length)),
-        sortOrder: index,
+        tobaccoId: component.tobaccoId,
+        proportion: component.proportion,
+        sortOrder: component.sortOrder,
       })),
     });
   });
@@ -1553,10 +1942,17 @@ export const updateMix = async (id: string, payload: MixPatch) => {
     return { error: 'Name and description are required' };
   }
 
-  const nextComponentIds = Array.isArray(payload.componentIds)
-    ? payload.componentIds
-    : current.components.map((item) => item.tobaccoId);
-  const componentValidation = await validateMixComponents(nextComponentIds);
+  const componentValidation = await resolveMixComponentsInput(
+    Array.isArray(payload.components) || Array.isArray(payload.componentIds)
+      ? payload
+      : {
+          components: current.components.map((item) => ({
+            tobaccoId: item.tobaccoId,
+            proportion: item.proportion,
+            sortOrder: item.sortOrder,
+          })),
+        },
+  );
   if ('error' in componentValidation) {
     return { error: componentValidation.error };
   }
@@ -1576,17 +1972,17 @@ export const updateMix = async (id: string, payload: MixPatch) => {
       },
     });
 
-    if (Array.isArray(payload.componentIds)) {
+    if (Array.isArray(payload.components) || Array.isArray(payload.componentIds)) {
       await tx.nomadMixComponent.deleteMany({
         where: { mixId: id },
       });
 
       await tx.nomadMixComponent.createMany({
-        data: componentValidation.componentIds.map((componentId, index) => ({
+        data: componentValidation.components.map((component) => ({
           mixId: id,
-          tobaccoId: componentId,
-          proportion: Math.round(100 / Math.max(1, componentValidation.componentIds.length)),
-          sortOrder: index,
+          tobaccoId: component.tobaccoId,
+          proportion: component.proportion,
+          sortOrder: component.sortOrder,
         })),
       });
     }

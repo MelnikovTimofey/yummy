@@ -19,7 +19,7 @@
 1. `Slice 0` - done
 2. `Slice 1` - done
 3. `Slice 2` - in progress
-4. `Slice 3` - todo
+4. `Slice 3` - in progress
 5. `Slice 4` - todo
 6. `Slice 5` - todo
 7. `Slice 6` - todo

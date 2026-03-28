@@ -1,3 +1,34 @@
+Обновление от 28 марта 2026 (nomad master: start slice 3 mix catalog and component editor):
+- Проблема:
+  - `Nomad Master` всё ещё держал миксы на примитивном CRUD: staff редактировал `componentIds` строкой, не видел rail membership и не мог работать с каталогом как с table-first операционным экраном;
+  - backend уже хранил `proportion/sortOrder`, но staff contract не поднимал их наружу и не валидировал сумму долей;
+  - mix filters по доступности и участию в рейлах отсутствовали, а inventory/rails обновления могли оставлять mix UI на устаревшем состоянии.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/content.test.ts`:
+    - `GET /staff/mixes` расширен до list response с `filters`, `sort`, `meta`, `railMemberships`, `railCount`, `activeRailCount`;
+    - create/update по миксам теперь принимают `components[]` с `tobaccoId`, `proportion`, `sortOrder`, при этом старый `componentIds` оставлен как fallback для безопасной совместимости;
+    - добавлена строгая валидация суммы долей до `100%` и нормализация равного распределения без остатка `99%`;
+    - исправлен общий helper фильтрации по selected values, чтобы server-side filters работали корректно и для inventory, и для mixes.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - добавлены типы и parser'ы для нового mix list contract;
+    - добавлены query builder и filter toggle helpers для `Slice 3`.
+  - `apps/nomad-master-web/src/components/mixes/mix-catalog-view.tsx`, `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - mix catalog переведён в table-first экран с filters bar, server-driven sort и rail membership summary;
+    - editor компонентов получил catalog-backed select, percent inputs, reorder, rebalance и явный total state;
+    - после rail update UI перезагружает и `mixes`, а editor берёт полный список табаков из inventory catalog, а не из случайного текстового поля.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Slice 3` перешёл из backlog в реальную поставку по contract и UI;
+  - staff получил usable mix operations surface вместо string-based CRUD;
+  - следующий безопасный шаг: browser/manual smoke для нового mix flow и затем переход к `Slice 4` по rail manager hardening.
+
 Обновление от 28 марта 2026 (nomad master: start slice 2 inventory hardening with table-first ops):
 - Проблема:
   - `Slice 2` по inventory operations оставался только backlog-планом, а сам интерфейс был card-first и непригоден для ежедневной операционной работы;
