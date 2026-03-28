@@ -5,6 +5,13 @@ labels:
   - "contour:nomad"
   - "type:feature"
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Базовый intake flow для Nomad feature work:
+        - для bounded feature slice использовать этот шаблон как source of truth;
+        - `docs/templates/ai-task-brief.md` использовать только как локальный fallback, если issue ещё не создан;
+        - для UI/redesign задач в `apps/nomad-master-web` обязательно заполнить `Design / UX baseline`.
   - type: dropdown
     id: scope
     attributes:
@@ -51,6 +58,52 @@ body:
       description: "Что точно не должно входить в эту задачу?"
     validations:
       required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: "Constraints"
+      description: "Продуктовые, UX, архитектурные или runtime-ограничения"
+      placeholder: |
+        Интерфейс на русском
+        Не трогать legacy runtime paths
+        1 issue = 1 bounded context
+    validations:
+      required: true
+  - type: textarea
+    id: design-baseline
+    attributes:
+      label: "Design / UX baseline"
+      description: "Обязательно для UI/redesign slices. Если задача не про UI, напишите `N/A`."
+      placeholder: |
+        Для `apps/nomad-master-web`:
+        - использовать `shadcn/ui` там, где это уместно и не ломает bounded slice;
+        - не оставлять default Codex-generated UI как финальный visual layer;
+        - целиться в stylish premium HoReCa console, а не в generic SaaS;
+        - использовать TIMELESS / TIS как visual benchmark:
+          https://vc.ru/offline/1765963-osnovatel-timeless-kak-delat-next-gen-v-horeca
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: "References"
+      description: "Ссылки на Figma, статьи, визуальные референсы, runbooks или related docs"
+      placeholder: |
+        https://...
+        docs/nomad/...
+        PRD.md
+    validations:
+      required: false
+  - type: textarea
+    id: checks
+    attributes:
+      label: "Checks"
+      description: "Какие build/test/smoke-проверки обязательны для acceptance?"
+      placeholder: |
+        cd apps/nomad-master-web && npm test && npm run build
+        cd tests/nomad-smoke && npm run smoke
+    validations:
+      required: true
   - type: checkboxes
     id: risk
     attributes:
@@ -61,3 +114,4 @@ body:
         - label: "Задача затрагивает public contract"
         - label: "Задача меняет process/workflow/docs rules"
         - label: "Можно делать как локальный bounded slice без cross-app rewrite"
+        - label: "Это UI/redesign slice для `apps/nomad-master-web` и нужен visual benchmark / design sign-off"

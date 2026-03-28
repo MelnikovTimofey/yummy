@@ -64,6 +64,24 @@
 
 ## Целевой результат
 
+## Visual baseline
+
+Для `Nomad Master` redesign использовать следующий baseline:
+
+1. предпочитать `shadcn/ui` для базовых UI primitives там, где это ускоряет delivery и не тянет широкий UI rewrite;
+2. не оставлять default Codex-generated components как финальный visual слой;
+3. целиться не в generic admin SaaS, а в premium HoReCa console;
+4. использовать TIMELESS / TIS как visual benchmark:
+   - [Основатель TIMELESS: как делать next-gen в HoReCa](https://vc.ru/offline/1765963-osnovatel-timeless-kak-delat-next-gen-v-horeca)
+
+Что брать из TIMELESS как направление:
+
+1. ощущение `третьего места`, а не холодной CRM;
+2. премиальность без кричащего люкса;
+3. единая концепция при сложной детализации;
+4. интерьерная теплая глубина, layered surfaces и продуманная визуальная драматургия;
+5. ощущение, что продукт сделан как собственная система для реальной команды, а не как шаблонный backoffice.
+
 ### 1. Dashboard
 
 Целевой dashboard должен разделять `product metrics` и `ops metrics`.

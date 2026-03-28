@@ -1,5 +1,37 @@
 # HANDOFF — Yummy
 
+## 1.68) Make nomad-feature issue template the default intake path and lock Master redesign baseline (28 марта 2026)
+
+- Запрос:
+  - зафиксировать базовый Nomad flow через `nomad-feature.yml`;
+  - добавить в intake и process docs важный redesign baseline для `Nomad Master`:
+    - использовать `shadcn/ui` там, где это уместно;
+    - целиться в stylish premium visual direction, близкий к TIMELESS / TIS, а не в default Codex-generated UI.
+
+- Реализация:
+  - `.github/ISSUE_TEMPLATE/nomad-feature.yml`:
+    - сделан базовым intake path для Nomad feature slices;
+    - добавлены поля `Constraints`, `Design / UX baseline`, `References`, `Checks`;
+    - добавлен redesign-specific risk flag для `apps/nomad-master-web`.
+  - `CONTRIBUTING_NOMAD.md`:
+    - solo-agent loop и `Task Intake Minimum` переведены на правило `issue first`, а `ai-task-brief` оставлен как fallback.
+  - `WORKFLOW_NOMAD.md`:
+    - workflow теперь явно требует использовать `nomad-feature.yml` как default intake source of truth;
+    - для `apps/nomad-master-web` UI/redesign issues зафиксирован visual baseline.
+  - `.github/NOMAD_REVIEW_POLICY.md`:
+    - добавлена секция `Issue shape` с обязательными полями для feature issues;
+    - для Master UI issues добавлены дополнительные требования по design baseline и references.
+  - `docs/nomad/master-production-redesign.md`:
+    - добавлен раздел `Visual baseline` с опорой на `shadcn/ui` и TIMELESS / TIS benchmark.
+
+- Проверки:
+  - `ruby -e 'require "yaml"; YAML.load_file("/Users/admin/PycharmProjects/yummy/.github/ISSUE_TEMPLATE/nomad-feature.yml"); puts "OK"'`
+  - `git diff --check`
+
+- Эффект:
+  - новый Nomad feature slice теперь должен начинаться с `nomad-feature.yml`;
+  - будущие redesign-задачи по `Nomad Master` получают обязательный visual baseline и перестают стартовать без design input.
+
 ## 1.67) Implement Nomad Master Slice 1 dashboard analytics (28 марта 2026)
 
 - Запрос:

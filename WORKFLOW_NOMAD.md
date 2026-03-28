@@ -54,11 +54,12 @@ Issue description:
 4. Read `NOMAD_PARALLEL_EXECUTION_PLAN.md` before making architecture or repo-structure decisions.
 5. Read `NOMAD_ROADMAP.md` before choosing issue priority or batching work.
 6. Read `CONTRIBUTING_NOMAD.md` before changing Nomad startup, task intake, handoff templates, or solo-agent operating flow.
-7. Use `docs/templates/ai-task-brief.md` and `docs/templates/agent-handoff.md` when the task needs a formal intake or a structured handoff.
-8. Work only inside the current Nomad issue scope.
-9. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
+7. For Nomad feature slices, use `.github/ISSUE_TEMPLATE/nomad-feature.yml` as the default intake source of truth.
+8. Use `docs/templates/ai-task-brief.md` only as a fallback for local work when the issue does not exist yet, and use `docs/templates/agent-handoff.md` for structured handoff.
+9. Work only inside the current Nomad issue scope.
+10. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
    Stop, explain the question or options, and hand off to `Human Review`.
-10. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
+11. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
 
 ## Roadmap-driven execution
 
@@ -75,6 +76,12 @@ Preferred task granularity:
 - `1 issue = 1 bounded context = 1 clear verification result`
 - default scope should be one Nomad app/service at a time
 - use cross-app issues only when an integration step is truly needed after smaller issues are complete
+
+For `apps/nomad-master-web` UI/redesign issues:
+- fill the `Design / UX baseline` field in `nomad-feature.yml`
+- prefer `shadcn/ui` where it fits the slice and does not force a broad refactor
+- do not accept default Codex-generated UI as the final visual layer
+- use TIMELESS / TIS references as visual benchmark when the issue is about premium backoffice polish
 
 Do not use Symphony for:
 - repo-wide architecture decisions

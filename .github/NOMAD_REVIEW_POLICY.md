@@ -31,6 +31,31 @@
 2. Nomad и legacy runtime changes;
 3. process-governance changes и unrelated feature work.
 
+## Issue shape
+
+Для Nomad feature work базовым intake path считается:
+
+1. `.github/ISSUE_TEMPLATE/nomad-feature.yml`
+
+`docs/templates/ai-task-brief.md` допустим как локальный fallback только если issue ещё не создан.
+
+Каждый Nomad feature issue должен зафиксировать:
+
+1. `Primary scope`
+2. `Problem`
+3. `Success criteria`
+4. `Active scope`
+5. `Out of scope`
+6. `Constraints`
+7. `Checks`
+
+Для UI/redesign задач в `apps/nomad-master-web` issue также должен содержать:
+
+1. `Design / UX baseline`
+2. visual references
+3. явное ожидание по `shadcn/ui`, если его нужно использовать в slice
+4. указание, что benchmark не должен скатываться в default Codex-generated UI
+
 ## Required PR fields
 
 Каждый Nomad PR обязан содержать:
@@ -93,7 +118,7 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 
 Включить:
 
-1. issue templates для Nomad;
+1. issue templates для Nomad как базовый intake path;
 2. PR template для Nomad;
 3. `CODEOWNERS` для Nomad paths;
 4. Nomad-only GitHub Actions;

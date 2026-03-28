@@ -1,3 +1,26 @@
+Обновление от 28 марта 2026 (nomad process: make nomad-feature issue template the default intake path):
+- Проблема:
+  - формально в репозитории уже были Nomad issue templates, но базовый flow всё ещё допускал старт feature-задач напрямую от локального brief;
+  - из-за этого крупные Nomad slices можно было запускать без строгой issue-структуры;
+  - для `Nomad Master` UI/redesign задач не был зафиксирован обязательный visual baseline, поэтому интерфейс рисковал скатываться в default Codex-generated стиль.
+- Изменение:
+  - `.github/ISSUE_TEMPLATE/nomad-feature.yml`:
+    - объявлен базовым intake path для Nomad feature slices;
+    - добавлены поля `Constraints`, `Design / UX baseline`, `References`, `Checks`;
+    - добавлен redesign-specific risk flag для `apps/nomad-master-web`.
+  - `CONTRIBUTING_NOMAD.md`, `WORKFLOW_NOMAD.md`, `.github/NOMAD_REVIEW_POLICY.md`:
+    - синхронизированы с правилом, что feature slices по умолчанию начинаются с `nomad-feature.yml`;
+    - локальный `ai-task-brief` оставлен только как fallback;
+    - для `Nomad Master` UI slices зафиксированы обязательные visual inputs.
+  - `docs/nomad/master-production-redesign.md`:
+    - добавлен visual baseline: `shadcn/ui` где уместно и TIMELESS / TIS как benchmark.
+- Проверки:
+  - `ruby -e 'require \"yaml\"; YAML.load_file(\"/Users/admin/PycharmProjects/yummy/.github/ISSUE_TEMPLATE/nomad-feature.yml\"); puts \"OK\"'`
+  - `git diff --check`
+- Эффект:
+  - Nomad feature work теперь должен стартовать от issue template, а не от свободного текста;
+  - `Nomad Master` redesign получил формальный visual baseline для следующих slices.
+
 Обновление от 28 марта 2026 (nomad master: implement slice 1 dashboard analytics contract):
 - Проблема:
   - после фиксации `master-production-redesign` у `Nomad Master` всё ещё оставался примитивный dashboard:

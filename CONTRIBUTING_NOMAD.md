@@ -123,15 +123,16 @@ npm run smoke
 
 Для любой заметной Nomad-задачи использовать такой цикл:
 
-1. создать issue или локальный task brief по шаблону `docs/templates/ai-task-brief.md`;
-2. зафиксировать bounded context и write scope;
-3. выбрать single-agent или multi-agent режим;
-4. выполнить один вертикальный slice;
-5. запустить релевантные build/test/smoke checks;
-6. оформить результат и риски через `docs/templates/agent-handoff.md`;
-7. обновить `NOTES.md` и `HANDOFF.md`, если изменились правила, workflow, UX, startup, verification или delivery discipline;
-8. открыть PR в `codex/nomad-parallel-track`;
-9. пройти self-review до merge.
+1. создать issue через `.github/ISSUE_TEMPLATE/nomad-feature.yml` для feature slice;
+2. использовать локальный `docs/templates/ai-task-brief.md` только как fallback, если issue ещё не создан или задача остаётся вне GitHub;
+3. зафиксировать bounded context и write scope;
+4. выбрать single-agent или multi-agent режим;
+5. выполнить один вертикальный slice;
+6. запустить релевантные build/test/smoke checks;
+7. оформить результат и риски через `docs/templates/agent-handoff.md`;
+8. обновить `NOTES.md` и `HANDOFF.md`, если изменились правила, workflow, UX, startup, verification или delivery discipline;
+9. открыть PR в `codex/nomad-parallel-track`;
+10. пройти self-review до merge.
 
 ## Task Intake Minimum
 
@@ -146,7 +147,15 @@ npm run smoke
 7. `checks`
 8. `human review needed`
 
-Если этого нет, сначала заполнить [docs/templates/ai-task-brief.md](/Users/admin/PycharmProjects/yummy/docs/templates/ai-task-brief.md).
+Базовый путь для feature slice:
+
+1. сначала заполнить `.github/ISSUE_TEMPLATE/nomad-feature.yml`;
+2. для UI/redesign slices в `apps/nomad-master-web` обязательно зафиксировать:
+   - `Design / UX baseline`
+   - ссылки на visual references
+   - ожидание по `shadcn/ui`, если он должен использоваться
+
+Если issue ещё не создан, использовать [docs/templates/ai-task-brief.md](/Users/admin/PycharmProjects/yummy/docs/templates/ai-task-brief.md) как временный локальный контракт.
 
 Если хотите, чтобы агент сам задал недостающие вопросы и собрал brief по шаблону, используйте `$nomad-task-intake`.
 
