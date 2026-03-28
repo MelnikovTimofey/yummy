@@ -322,7 +322,7 @@ export function DashboardView({
           kicker="Profiles"
           items={summary?.inventory.flavorProfiles ?? []}
           emptyText="Пока нет разреза по профилям."
-          stockLine={(item) => `Нет в наличии ${formatMetricValue(item.outOfStockCount)} позиции`}
+          stockLine={(item) => `Нет наличия ${formatMetricValue(item.outOfStockCount)} позиции`}
         />
         <BreakdownPanel
           title="Топ вкусов"
@@ -512,7 +512,7 @@ export function DashboardView({
                       <div className="space-y-1">
                         <div className="text-sm font-semibold text-stone-900">{mix.name}</div>
                         <div className="text-xs leading-5 text-stone-500">
-                          Нет в наличии: {mix.missingComponents.join(', ') || 'не указано'}
+                          Нет наличия: {mix.missingComponents.join(', ') || 'не указано'}
                         </div>
                         <div className="text-xs leading-5 text-stone-500">
                           Рейлы: {mix.railNames.join(', ') || 'не участвует'}

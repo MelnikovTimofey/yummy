@@ -112,7 +112,7 @@ export const InventoryView = ({
             <strong>{formatMetricValue(meta.inStockCount)}</strong>
           </div>
           <div className="inventory-stat">
-            <span>Вне наличия</span>
+            <span>Нет наличия</span>
             <strong>{formatMetricValue(meta.outOfStockCount)}</strong>
           </div>
         </div>
@@ -326,7 +326,7 @@ export const InventoryView = ({
                   <td>{formatUpdatedAt(item.updatedAt)}</td>
                   <td>
                     <Badge variant={item.inStock ? 'default' : 'destructive'}>
-                      {item.inStock ? 'В наличии' : 'Вне наличия'}
+                      {item.inStock ? 'В наличии' : 'Нет наличия'}
                     </Badge>
                   </td>
                   <td className="inventory-table__actions">
