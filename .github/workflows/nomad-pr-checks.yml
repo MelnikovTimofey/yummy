@@ -215,6 +215,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -225,12 +227,24 @@ jobs:
       - name: Install dependencies
         working-directory: apps/nomad-backend
         run: npm ci
+      - name: Start backend database
+        working-directory: apps/nomad-backend
+        run: docker compose -f docker-compose.yml up -d db
+      - name: Prepare backend schema
+        working-directory: apps/nomad-backend
+        run: |
+          npm run prisma:generate
+          npm run prisma:dbpush -- --force-reset
       - name: Test
         working-directory: apps/nomad-backend
         run: npm test
       - name: Build
         working-directory: apps/nomad-backend
         run: npm run build
+      - name: Stop backend database
+        if: always()
+        working-directory: apps/nomad-backend
+        run: docker compose -f docker-compose.yml down -v
 
   nomad-bot-build:
     name: nomad-bot-build
