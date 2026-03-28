@@ -1,3 +1,46 @@
+Обновление от 28 марта 2026 (nomad master: complete slice 5 access and telegram redesign):
+- Проблема:
+  - access/Telegram контур `Nomad Master` всё ещё жил в MVP-семантике `daily-code CRUD + telegram recipients by chat scope`;
+  - это уже противоречило подтверждённой продуктовой модели, где daily code выпускается автоматически каждый день, а оператор получает его не из `Мастера`, а через Telegram-бота после first-link по номеру телефона;
+  - backend, bot runtime и staff UI не имели общего контракта для `phone allowlist + share contact + /code`.
+- Изменение:
+  - `apps/nomad-backend/prisma/schema.prisma`, `apps/nomad-backend/src/access.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/audit.ts`, `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/prisma/seed.ts`:
+    - добавлен persisted `NomadTelegramOperator` с `name`, `phone`, `linkedChatId`, `linkedAt`, `lastCodeRequestedAt`;
+    - automation contract расширен endpoint'ами link/resolve для Telegram operator flow;
+    - `NomadTelegramAutomationState` теперь хранит `lastRequest*` observability;
+    - staff получает admin-only CRUD по `/staff/access/telegram-operators`;
+    - audit trail теперь покрывает `telegram-operator`.
+  - `services/nomad-telegram-bot/src/backend.ts`, `services/nomad-telegram-bot/src/bot.ts`, `services/nomad-telegram-bot/src/telegram.ts`, `services/nomad-telegram-bot/src/types.ts`, `services/nomad-telegram-bot/src/backend.test.ts`:
+    - бот больше не живёт на `allowed/broadcast/rotate` chat scopes;
+    - добавлен flow `share contact -> backend link -> /code`;
+    - scheduled background loop теперь делает daily `ensure`, а не broadcast;
+    - `/rotate` убран из рабочего сценария, а backend state получает `request` events.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`, `apps/nomad-master-web/src/App.tsx`:
+    - вкладка `Доступ` перестроена вокруг read-only current daily code, bot health, last request и phone allowlist;
+    - old operator path с ручным управлением кодами и Telegram scope-чатами убран из основной UI-семантики;
+    - `staff accounts` оставлены как secondary admin surface для входа в сам `Мастер`.
+  - docs sync:
+    - `apps/nomad-backend/README.md`
+    - `apps/nomad-master-web/README.md`
+    - `services/nomad-telegram-bot/README.md`
+    - `docs/nomad/master-production-redesign.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `docs/nomad/feature-slices/slice-5-access-and-telegram-redesign.md`
+    - `NOMAD_ENV_MATRIX.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm run prisma:generate`
+- `cd apps/nomad-backend && DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' npm run prisma:dbpush`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd services/nomad-telegram-bot && npm test`
+  - `cd services/nomad-telegram-bot && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Slice 5` закрывает новый access semantics end-to-end, а не только как UI veneer;
+  - source of truth для доступа к боту теперь `phone allowlist` в backend, а не ручные `chatId/scope`;
+  - следующий bounded шаг по backlog теперь `Slice 6` hardening/QA, а не возврат к старому access draft.
+
 Обновление от 28 марта 2026 (nomad master: complete slice 4 rail manager hardening):
 - Проблема:
   - предыдущий под-срез `Slice 4` закрыл только staff editability contract и create semantics, но сам rail manager ещё не был доведён до полного redesign outcome;

@@ -337,6 +337,80 @@ test('telegram recipients CRUD is admin-only', async () => {
   }
 });
 
+test('telegram operators CRUD is admin-only', async () => {
+  const app = buildApp();
+
+  try {
+    const adminToken = await login(app, 'admin', 'admin');
+    const nomadToken = await login(app, 'nomad', 'nomad');
+
+    const forbidden = await app.inject({
+      method: 'GET',
+      url: '/staff/access/telegram-operators',
+      headers: {
+        authorization: `Bearer ${nomadToken}`,
+      },
+    });
+
+    assert.equal(forbidden.statusCode, 403);
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/staff/access/telegram-operators',
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        name: 'Марат',
+        phone: '+7 (999) 111-22-33',
+        active: true,
+      },
+    });
+
+    assert.equal(created.statusCode, 201);
+    const createdBody = created.json() as {
+      item: { id: string; name: string; phone: string; active: boolean; linkedChatId: string | null };
+    };
+    assert.equal(createdBody.item.name, 'Марат');
+    assert.equal(createdBody.item.phone, '+79991112233');
+    assert.equal(createdBody.item.linkedChatId, null);
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/staff/access/telegram-operators/${createdBody.item.id}`,
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+      payload: {
+        name: 'Марат Nomad',
+        phone: '+7 999 111-22-33',
+        active: false,
+      },
+    });
+
+    assert.equal(updated.statusCode, 200);
+    const updatedBody = updated.json() as {
+      item: { id: string; name: string; phone: string; active: boolean };
+    };
+    assert.equal(updatedBody.item.id, createdBody.item.id);
+    assert.equal(updatedBody.item.name, 'Марат Nomad');
+    assert.equal(updatedBody.item.phone, '+79991112233');
+    assert.equal(updatedBody.item.active, false);
+
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/staff/access/telegram-operators/${createdBody.item.id}`,
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+      },
+    });
+
+    assert.equal(deleted.statusCode, 204);
+  } finally {
+    await app.close();
+  }
+});
+
 test('telegram automation state is admin-only on staff side', async () => {
   const app = buildApp();
 

@@ -11,8 +11,7 @@ Staff/admin frontend для продукта `Мастер`.
 3. менеджер миксов;
 4. менеджер рейлов;
 5. аналитические дашборды;
-6. управление доступом.
-7. управление Telegram-чатами для bot automation.
+6. управление доступом и Telegram allowlist.
 
 ## Phase 1
 
@@ -44,35 +43,36 @@ Staff/admin frontend для продукта `Мастер`.
 
 Добавлен раздел `Доступ`:
 
-1. список, создание, редактирование и удаление daily codes через `/staff/access/daily-codes`;
-2. список, создание, редактирование и удаление staff accounts через `/staff/access/accounts`;
-3. роли `nomad` доступно управление daily codes, но staff accounts открыты только для `admin`;
-4. формы приведены к одному CRUD-паттерну с остальными менеджерами `Мастера`.
+1. текущий daily code показывается как read-only operational surface;
+2. `admin` управляет Telegram allowlist операторов по `имя + телефон`;
+3. `nomad` не отправляет код из `Мастера`, а получает его в Telegram-боте;
+4. staff accounts остаются отдельным admin-only блоком для входа в сам `Мастер`.
 
-## Telegram provisioning
+## Telegram allowlist и bot-request flow
 
-Добавлен admin-only блок для bot recipients:
+Добавлен новый admin-only блок для bot access:
 
-1. список, создание, редактирование и удаление чатов Telegram через `/staff/access/telegram-recipients`;
-2. поддержаны типы `allowed`, `broadcast`, `rotate`;
-3. эти записи используются Telegram-ботом как backend-driven recipient lists;
-4. если записей в backend нет, bot может fallback-нуться на `.env`.
+1. список, создание, редактирование и удаление allowlist-операторов через `/staff/access/telegram-operators`;
+2. allowlist хранится по `имя + телефон`, а не по `chatId`;
+3. оператор впервые пишет боту и делится контактом, после чего backend привязывает текущий `chatId`;
+4. после привязки оператор получает актуальный daily code через `/code`;
+5. ручной send/re-send flow из `Мастера` отсутствует.
 
 ## Telegram automation state
 
 Добавлен admin-only обзор состояния Telegram automation:
 
 1. heartbeat бота;
-2. last rotate и last broadcast;
+2. last request кода и связанный оператор;
 3. последняя backend-зафиксированная ошибка;
-4. summary по active Telegram chats.
+4. summary по active allowlist entries и linked chats.
 
 ## Audit trail
 
 Добавлен admin-only журнал staff-операций:
 
 1. `GET /staff/audit/events` показывает последние изменения;
-2. журнал покрывает daily codes, staff accounts, Telegram recipients, inventory toggle, mixes и rails;
+2. журнал покрывает daily codes, staff accounts, Telegram allowlist, inventory toggle, mixes и rails;
 3. журнал предназначен для операционного контроля и быстрой верификации изменений после staff CRUD-действий.
 
 ## Локальный запуск

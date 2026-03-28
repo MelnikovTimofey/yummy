@@ -260,6 +260,19 @@ export type TelegramRecipientRecord = {
   active: boolean;
 };
 
+export type TelegramOperatorRecord = {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  linkedChatId: string;
+  linkedTelegramUserId: string;
+  linkedUsername: string;
+  linkedDisplayName: string;
+  linkedAt: string;
+  lastCodeRequestedAt: string;
+};
+
 export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
 
 export type TelegramAutomationStateRecord = {
@@ -273,6 +286,13 @@ export type TelegramAutomationStateRecord = {
   lastBroadcastCodeId: string;
   lastBroadcastCodeValue: string;
   lastBroadcastDayKey: string;
+  lastRequestAt: string;
+  lastRequestChatId: string;
+  lastRequestOperatorId: string;
+  lastRequestOperatorName: string;
+  lastRequestPhone: string;
+  lastRequestCodeId: string;
+  lastRequestCodeValue: string;
   lastErrorAt: string;
   lastErrorMessage: string;
   updatedAt: string;
@@ -284,7 +304,7 @@ export type AuditEventRecord = {
   actorName: string;
   actorRole: StaffUser['role'];
   action: 'create' | 'update' | 'delete' | 'toggle';
-  entityType: 'daily-code' | 'staff-account' | 'telegram-recipient' | 'mix' | 'rail' | 'inventory';
+  entityType: 'daily-code' | 'staff-account' | 'telegram-operator' | 'telegram-recipient' | 'mix' | 'rail' | 'inventory';
   entityId: string;
   entityLabel: string;
   details: Record<string, unknown>;
@@ -689,6 +709,23 @@ export const normalizeTelegramRecipientRecord = (value: unknown): TelegramRecipi
   };
 };
 
+export const normalizeTelegramOperatorRecord = (value: unknown): TelegramOperatorRecord => {
+  const raw = isRecord(value) ? value : {};
+
+  return {
+    id: String(raw.id ?? raw.operatorId ?? ''),
+    name: String(raw.name ?? ''),
+    phone: String(raw.phone ?? ''),
+    active: toBoolean(raw.active, true),
+    linkedChatId: String(raw.linkedChatId ?? ''),
+    linkedTelegramUserId: String(raw.linkedTelegramUserId ?? ''),
+    linkedUsername: String(raw.linkedUsername ?? ''),
+    linkedDisplayName: String(raw.linkedDisplayName ?? ''),
+    linkedAt: toIsoString(raw.linkedAt, ''),
+    lastCodeRequestedAt: toIsoString(raw.lastCodeRequestedAt, ''),
+  };
+};
+
 export const normalizeTelegramAutomationStateRecord = (value: unknown): TelegramAutomationStateRecord => {
   const raw = isRecord(value) ? value : {};
 
@@ -703,6 +740,13 @@ export const normalizeTelegramAutomationStateRecord = (value: unknown): Telegram
     lastBroadcastCodeId: String(raw.lastBroadcastCodeId ?? ''),
     lastBroadcastCodeValue: String(raw.lastBroadcastCodeValue ?? ''),
     lastBroadcastDayKey: String(raw.lastBroadcastDayKey ?? ''),
+    lastRequestAt: toIsoString(raw.lastRequestAt, ''),
+    lastRequestChatId: String(raw.lastRequestChatId ?? ''),
+    lastRequestOperatorId: String(raw.lastRequestOperatorId ?? ''),
+    lastRequestOperatorName: String(raw.lastRequestOperatorName ?? ''),
+    lastRequestPhone: String(raw.lastRequestPhone ?? ''),
+    lastRequestCodeId: String(raw.lastRequestCodeId ?? ''),
+    lastRequestCodeValue: String(raw.lastRequestCodeValue ?? ''),
     lastErrorAt: toIsoString(raw.lastErrorAt, ''),
     lastErrorMessage: String(raw.lastErrorMessage ?? ''),
     updatedAt: toIsoString(raw.updatedAt, ''),
@@ -718,6 +762,7 @@ export const normalizeAuditEventRecord = (value: unknown): AuditEventRecord => {
   const entityType =
     raw.entityType === 'daily-code'
     || raw.entityType === 'staff-account'
+    || raw.entityType === 'telegram-operator'
     || raw.entityType === 'telegram-recipient'
     || raw.entityType === 'mix'
     || raw.entityType === 'rail'
@@ -1238,6 +1283,24 @@ export const sortTelegramRecipients = (items: TelegramRecipientRecord[]) => {
   });
 };
 
+export const sortTelegramOperators = (items: TelegramOperatorRecord[]) => {
+  return [...items].sort((left, right) => {
+    if (left.active !== right.active) {
+      return left.active ? -1 : 1;
+    }
+
+    if (Boolean(left.linkedChatId) !== Boolean(right.linkedChatId)) {
+      return left.linkedChatId ? -1 : 1;
+    }
+
+    if (right.lastCodeRequestedAt !== left.lastCodeRequestedAt) {
+      return right.lastCodeRequestedAt.localeCompare(left.lastCodeRequestedAt);
+    }
+
+    return left.name.localeCompare(right.name, 'ru');
+  });
+};
+
 export const railTypeOptions: Array<{ value: RailType; label: string }> = [
   { value: 'statistical', label: 'Статистический' },
   { value: 'prepared', label: 'Предзаготовленный' },
@@ -1290,6 +1353,8 @@ export const formatAuditEntityType = (value: AuditEventRecord['entityType']) => 
       return 'Код доступа';
     case 'staff-account':
       return 'Сотрудник';
+    case 'telegram-operator':
+      return 'Telegram доступ';
     case 'telegram-recipient':
       return 'Telegram чат';
     case 'mix':

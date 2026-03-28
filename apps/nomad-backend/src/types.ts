@@ -15,6 +15,7 @@ import type {
   DailyAccessCodeView,
   StaffAccountView,
   TelegramAutomationStateView,
+  TelegramOperatorView,
   TelegramRecipientView,
 } from './access';
 
@@ -131,6 +132,14 @@ export type StaffTelegramRecipientMutationResponse = {
   item: TelegramRecipientView;
 };
 
+export type StaffTelegramOperatorsResponse = {
+  items: TelegramOperatorView[];
+};
+
+export type StaffTelegramOperatorMutationResponse = {
+  item: TelegramOperatorView;
+};
+
 export type AutomationDailyCodeWindow = {
   startsAt: string;
   endsAt: string;
@@ -158,6 +167,14 @@ export type AutomationTelegramRecipientsResponse = {
   allowedChatIds: number[];
   broadcastChatIds: number[];
   rotateChatIds: number[];
+};
+
+export type AutomationTelegramOperatorResponse = {
+  item: TelegramOperatorView | null;
+};
+
+export type AutomationTelegramOperatorLinkResponse = {
+  item: TelegramOperatorView;
 };
 
 export type AutomationTelegramStateResponse = {

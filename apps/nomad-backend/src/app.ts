@@ -12,24 +12,31 @@ import {
 import {
   createDailyAccessCode,
   createStaffAccount,
+  createTelegramOperator,
   createTelegramRecipient,
   deleteDailyAccessCode,
   deleteStaffAccount,
+  deleteTelegramOperator,
   deleteTelegramRecipient,
   ensureCurrentDailyAccessCode,
   getDailyAccessCodeById,
   getCurrentDailyAccessCode,
+  getLinkedTelegramOperatorByChatId,
   getStaffAccountById,
   getTelegramAutomationState,
+  getTelegramOperatorById,
   getTelegramRecipientById,
   listActiveTelegramRecipients,
   listDailyAccessCodes,
   listStaffAccounts,
+  listTelegramOperators,
   listTelegramRecipients,
+  linkTelegramOperator,
   reportTelegramAutomationState,
   rotateCurrentDailyAccessCode,
   updateDailyAccessCode,
   updateStaffAccount,
+  updateTelegramOperator,
   updateTelegramRecipient,
 } from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
@@ -69,6 +76,8 @@ import type {
   AutomationDailyCodeCurrentResponse,
   AutomationDailyCodeEnsureResponse,
   AutomationDailyCodeRotateResponse,
+  AutomationTelegramOperatorLinkResponse,
+  AutomationTelegramOperatorResponse,
   AutomationTelegramRecipientsResponse,
   AutomationTelegramStateResponse,
   GuestAccessSuccess,
@@ -87,6 +96,8 @@ import type {
   StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
   StaffMixesResponse,
+  StaffTelegramOperatorMutationResponse,
+  StaffTelegramOperatorsResponse,
   StaffTelegramRecipientMutationResponse,
   StaffTelegramRecipientsResponse,
   StaffTelegramAutomationStateResponse,
@@ -111,7 +122,7 @@ export const buildApp = () => {
 
   app.get('/meta', async () => ({
     appName: config.appName,
-    mode: 'phase-4',
+    mode: 'phase-5',
     scope: [
       'guest-access',
       'staff-auth',
@@ -141,6 +152,8 @@ export const buildApp = () => {
       automationCurrentDailyCode: 'GET /automation/daily-code/current',
       automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
       automationRotateDailyCode: 'POST /automation/daily-code/rotate',
+      automationTelegramOperatorByChat: 'GET /automation/telegram/operators/by-chat/:chatId',
+      automationTelegramOperatorLink: 'POST /automation/telegram/operators/link',
       automationTelegramRecipients: 'GET /automation/telegram/recipients',
       automationTelegramState: 'GET /automation/telegram/state',
       automationTelegramStateReport: 'POST /automation/telegram/state/report',
@@ -160,6 +173,10 @@ export const buildApp = () => {
       telegramRecipientsCreate: 'POST /staff/access/telegram-recipients',
       telegramRecipientsUpdate: 'PATCH /staff/access/telegram-recipients/:id',
       telegramRecipientsDelete: 'DELETE /staff/access/telegram-recipients/:id',
+      telegramOperatorsList: 'GET /staff/access/telegram-operators',
+      telegramOperatorsCreate: 'POST /staff/access/telegram-operators',
+      telegramOperatorsUpdate: 'PATCH /staff/access/telegram-operators/:id',
+      telegramOperatorsDelete: 'DELETE /staff/access/telegram-operators/:id',
       telegramAutomationState: 'GET /staff/access/telegram-automation-state',
       staffAuditEvents: 'GET /staff/audit/events',
       staffMixesList: 'GET /staff/mixes',
@@ -365,6 +382,59 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
+  app.get('/automation/telegram/operators/by-chat/:chatId', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const chatId = (request.params as { chatId?: string }).chatId?.trim();
+    const response: AutomationTelegramOperatorResponse = {
+      item: chatId ? await getLinkedTelegramOperatorByChatId(chatId) : null,
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/automation/telegram/operators/link', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          phone?: string;
+          chatId?: string;
+          telegramUserId?: string;
+          username?: string;
+          firstName?: string;
+          lastName?: string;
+        }
+      | undefined;
+
+    const linked = await linkTelegramOperator({
+      phone: payload?.phone ?? '',
+      chatId: payload?.chatId ?? '',
+      telegramUserId: payload?.telegramUserId,
+      username: payload?.username,
+      firstName: payload?.firstName,
+      lastName: payload?.lastName,
+    });
+
+    if (!linked) {
+      return reply.status(404).send({ error: 'Telegram operator allowlist entry not found' } satisfies ApiError);
+    }
+
+    if (isApiError(linked)) {
+      return reply.status(400).send(linked);
+    }
+
+    const response: AutomationTelegramOperatorLinkResponse = {
+      item: linked,
+    };
+
+    return reply.send(response);
+  });
+
   app.get('/automation/telegram/state', async (request, reply) => {
     if (!authenticateAutomationRequest(request, reply)) {
       return;
@@ -383,20 +453,22 @@ export const buildApp = () => {
     }
 
     const payload = request.body as
-      | {
+        | {
           event?: string;
           codeId?: string;
           codeValue?: string;
           dayKey?: string;
+          chatId?: string;
           message?: string;
         }
       | undefined;
 
     const reported = await reportTelegramAutomationState({
-      event: payload?.event as 'heartbeat' | 'broadcast' | 'rotate' | 'error' | undefined,
+      event: payload?.event as 'heartbeat' | 'broadcast' | 'rotate' | 'request' | 'error' | undefined,
       codeId: payload?.codeId,
       codeValue: payload?.codeValue,
       dayKey: payload?.dayKey,
+      chatId: payload?.chatId,
       message: payload?.message,
     });
 
@@ -929,6 +1001,148 @@ export const buildApp = () => {
       details: {
         chatId: current?.chatId ?? '',
         scope: current?.scope ?? '',
+      },
+    });
+
+    return reply.status(204).send();
+  });
+
+  app.get('/staff/access/telegram-operators', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffTelegramOperatorsResponse = {
+      items: await listTelegramOperators(),
+    };
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/access/telegram-operators', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          name?: string;
+          phone?: string;
+          active?: boolean;
+        }
+      | undefined;
+
+    const created = await createTelegramOperator({
+      name: payload?.name ?? '',
+      phone: payload?.phone ?? '',
+      active: payload?.active,
+    });
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffTelegramOperatorMutationResponse = {
+      item: created,
+    };
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'telegram-operator',
+      entityId: response.item.id,
+      entityLabel: response.item.name || response.item.phone,
+      details: {
+        phone: response.item.phone,
+        active: response.item.active,
+      },
+    });
+
+    return reply.status(201).send(response);
+  });
+
+  app.patch('/staff/access/telegram-operators/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const operatorId = (request.params as { id?: string }).id?.trim();
+    const payload = request.body as
+      | {
+          name?: string;
+          phone?: string;
+          active?: boolean;
+          clearLink?: boolean;
+        }
+      | undefined;
+
+    if (!operatorId) {
+      return reply.status(400).send({ error: 'Telegram operator id is required' } satisfies ApiError);
+    }
+
+    const updated = await updateTelegramOperator(operatorId, {
+      name: payload?.name,
+      phone: payload?.phone,
+      active: payload?.active,
+      clearLink: payload?.clearLink,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({ error: 'Telegram operator not found' } satisfies ApiError);
+    }
+
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
+    const response: StaffTelegramOperatorMutationResponse = {
+      item: updated,
+    };
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'update',
+      entityType: 'telegram-operator',
+      entityId: response.item.id,
+      entityLabel: response.item.name || response.item.phone,
+      details: {
+        phone: response.item.phone,
+        active: response.item.active,
+        linkedChatId: response.item.linkedChatId,
+      },
+    });
+
+    return reply.send(response);
+  });
+
+  app.delete('/staff/access/telegram-operators/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply, ['admin']);
+    if (!user) {
+      return;
+    }
+
+    const operatorId = (request.params as { id?: string }).id?.trim();
+    if (!operatorId) {
+      return reply.status(400).send({ error: 'Telegram operator id is required' } satisfies ApiError);
+    }
+
+    const current = await getTelegramOperatorById(operatorId);
+    const deleted = await deleteTelegramOperator(operatorId);
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Telegram operator not found' } satisfies ApiError);
+    }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'telegram-operator',
+      entityId: operatorId,
+      entityLabel: current?.name || current?.phone || operatorId,
+      details: {
+        phone: current?.phone ?? '',
       },
     });
 

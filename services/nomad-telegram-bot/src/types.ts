@@ -31,23 +31,27 @@ export type AutomationDailyCodeRotateResponse = {
   window: AutomationWindow;
 };
 
-export type TelegramRecipientScope = 'allowed' | 'broadcast' | 'rotate';
-
-export type TelegramRecipientRecord = {
+export type TelegramOperatorRecord = {
   id: string;
-  chatId: string;
-  label: string;
-  scope: TelegramRecipientScope;
+  name: string;
+  phone: string;
   active: boolean;
+  linkedChatId: string | null;
+  linkedTelegramUserId: string | null;
+  linkedUsername: string | null;
+  linkedDisplayName: string | null;
+  linkedAt: string | null;
+  lastCodeRequestedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-export type AutomationTelegramRecipientsResponse = {
-  items: TelegramRecipientRecord[];
-  allowedChatIds: number[];
-  broadcastChatIds: number[];
-  rotateChatIds: number[];
+export type AutomationTelegramOperatorResponse = {
+  item: TelegramOperatorRecord | null;
+};
+
+export type AutomationTelegramOperatorLinkResponse = {
+  item: TelegramOperatorRecord;
 };
 
 export type TelegramAutomationHealth = 'unknown' | 'healthy' | 'stale' | 'error';
@@ -63,6 +67,13 @@ export type TelegramAutomationStateRecord = {
   lastBroadcastCodeId: string | null;
   lastBroadcastCodeValue: string | null;
   lastBroadcastDayKey: string | null;
+  lastRequestAt: string | null;
+  lastRequestChatId: string | null;
+  lastRequestOperatorId: string | null;
+  lastRequestOperatorName: string | null;
+  lastRequestPhone: string | null;
+  lastRequestCodeId: string | null;
+  lastRequestCodeValue: string | null;
   lastErrorAt: string | null;
   lastErrorMessage: string | null;
   updatedAt: string | null;
@@ -73,10 +84,11 @@ export type AutomationTelegramStateResponse = {
 };
 
 export type TelegramAutomationReportPayload = {
-  event: 'heartbeat' | 'broadcast' | 'rotate' | 'error';
+  event: 'heartbeat' | 'broadcast' | 'rotate' | 'request' | 'error';
   codeId?: string;
   codeValue?: string;
   dayKey?: string;
+  chatId?: string;
   message?: string;
 };
 
@@ -112,6 +124,12 @@ export type TelegramFrom = {
 export type TelegramMessage = {
   message_id: number;
   text?: string;
+  contact?: {
+    phone_number?: string;
+    user_id?: number;
+    first_name?: string;
+    last_name?: string;
+  };
   chat: TelegramChat;
   from?: TelegramFrom;
 };

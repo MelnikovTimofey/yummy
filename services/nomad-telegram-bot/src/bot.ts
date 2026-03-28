@@ -1,9 +1,15 @@
 import type { BotConfig } from './config';
 import { NomadBackendClient } from './backend';
 import { JsonStateStore } from './storage';
-import { TelegramClient } from './telegram';
-import type { DailyAccessCodeRecord, TelegramAutomationReportPayload, TelegramMessage, TelegramUpdate } from './types';
-import { buildDayKey, buildMoscowWindow, buildNextBroadcastDelay, formatMoscowDateTime } from './time';
+import { TelegramClient, type TelegramSendMessageOptions } from './telegram';
+import type {
+  DailyAccessCodeRecord,
+  TelegramAutomationReportPayload,
+  TelegramMessage,
+  TelegramOperatorRecord,
+  TelegramUpdate,
+} from './types';
+import { buildNextBroadcastDelay, formatMoscowDateTime } from './time';
 
 type Dependencies = {
   config: BotConfig;
@@ -17,23 +23,32 @@ type CommandContext = {
   args: string[];
 };
 
-type RecipientLists = {
-  allowedChatIds: number[];
-  broadcastChatIds: number[];
-  rotateChatIds: number[];
-};
-
 const HELP_TEXT = [
   'Nomad Telegram Bot',
   'Команды:',
-  '/start - приветствие',
+  '/start - инструкция и привязка доступа',
   '/help - список команд',
   '/code - показать текущий daily code',
-  '/rotate - выпустить новый daily code и разослать его',
-  '/whoami - показать информацию о чате',
+  '/whoami - показать статус привязки чата',
 ].join('\n');
 
-const ACCESS_DENIED_TEXT = 'Доступ к боту ограничен.';
+const CONTACT_REQUEST_TEXT = [
+  'Чтобы получить доступ к daily code, поделитесь своим контактом.',
+  'Бот сверит номер телефона с allowlist Nomad и привяжет этот чат.',
+].join('\n');
+
+const CONTACT_MISMATCH_TEXT = 'Нужно отправить свой собственный контакт из Telegram.';
+const ACCESS_DENIED_TEXT = 'Номер телефона не найден в allowlist Nomad. Обратитесь к администратору.';
+
+const buildContactRequestMarkup = () => ({
+  keyboard: [[{ text: 'Поделиться контактом', request_contact: true }]],
+  resize_keyboard: true,
+  one_time_keyboard: true,
+});
+
+const buildRemoveKeyboardMarkup = () => ({
+  remove_keyboard: true,
+});
 
 const normalizeCommandText = (text: string) => {
   const trimmed = text.trim();
@@ -48,22 +63,6 @@ const normalizeCommandText = (text: string) => {
   };
 };
 
-const uniqueNumbers = (items: number[]) => Array.from(new Set(items.filter((item) => Number.isFinite(item) && item !== 0)));
-
-const pickScopeRecipients = (backendItems: number[], fallbackItems: number[]) =>
-  uniqueNumbers(backendItems.length ? backendItems : fallbackItems);
-
-const isAllowedChat = (lists: RecipientLists, chatId: number) =>
-  !lists.allowedChatIds.length || lists.allowedChatIds.includes(chatId);
-
-const canRotateFromChat = (lists: RecipientLists, chatId: number) => {
-  if (lists.rotateChatIds.length) {
-    return lists.rotateChatIds.includes(chatId);
-  }
-
-  return isAllowedChat(lists, chatId);
-};
-
 const buildDailyCodeMessage = (code: DailyAccessCodeRecord, reason: string) =>
   [
     reason,
@@ -72,6 +71,19 @@ const buildDailyCodeMessage = (code: DailyAccessCodeRecord, reason: string) =>
     `Действует с: ${formatMoscowDateTime(code.startsAt)}`,
     `Действует до: ${formatMoscowDateTime(code.endsAt)}`,
   ].join('\n');
+
+const buildLinkedStatus = (operator: TelegramOperatorRecord | null) => {
+  if (!operator) {
+    return 'Привязка отсутствует.';
+  }
+
+  return [
+    `Оператор: ${operator.name}`,
+    `Телефон: ${operator.phone}`,
+    `Чат: ${operator.linkedChatId ?? 'не привязан'}`,
+    `Последний запрос кода: ${operator.lastCodeRequestedAt ? formatMoscowDateTime(operator.lastCodeRequestedAt) : 'ещё не было'}`,
+  ].join('\n');
+};
 
 export class NomadTelegramBot {
   private stopped = false;
@@ -96,8 +108,8 @@ export class NomadTelegramBot {
     }
 
     await this.safeReportState({ event: 'heartbeat' });
-    await this.runScheduledBroadcast('startup');
-    this.scheduleNextBroadcast();
+    await this.runScheduledEnsure('startup');
+    this.scheduleNextEnsure();
     this.startHeartbeatLoop();
     this.poller = this.pollUpdates();
     await this.poller;
@@ -133,7 +145,16 @@ export class NomadTelegramBot {
 
   private async handleUpdate(update: TelegramUpdate) {
     const message = update.message;
-    if (!message?.text) {
+    if (!message) {
+      return;
+    }
+
+    if (message.contact) {
+      await this.handleContactShare(message);
+      return;
+    }
+
+    if (!message.text) {
       return;
     }
 
@@ -149,14 +170,13 @@ export class NomadTelegramBot {
 
     switch (normalized.command) {
       case '/start':
+        await this.handleStart(context);
+        return;
       case '/help':
         await this.handleHelp(context);
         return;
       case '/code':
         await this.handleCode(context);
-        return;
-      case '/rotate':
-        await this.handleRotate(context);
         return;
       case '/whoami':
         await this.handleWhoAmI(context);
@@ -166,18 +186,36 @@ export class NomadTelegramBot {
     }
   }
 
-  private async handleHelp({ message }: CommandContext) {
-    const recipients = await this.getRecipientLists();
-    if (!isAllowedChat(recipients, message.chat.id)) {
-      await this.reply(message.chat.id, ACCESS_DENIED_TEXT);
+  private async handleStart({ message }: CommandContext) {
+    const linked = await this.getLinkedOperator(message.chat.id);
+    if (!linked) {
+      await this.promptContactShare(message.chat.id);
       return;
     }
 
-    await this.reply(message.chat.id, HELP_TEXT);
+    await this.reply(
+      message.chat.id,
+      [HELP_TEXT, '', buildLinkedStatus(linked)].join('\n'),
+      { reply_markup: buildRemoveKeyboardMarkup() },
+    );
+  }
+
+  private async handleHelp({ message }: CommandContext) {
+    const linked = await this.getLinkedOperator(message.chat.id);
+    if (!linked) {
+      await this.promptContactShare(message.chat.id, [HELP_TEXT, '', CONTACT_REQUEST_TEXT].join('\n'));
+      return;
+    }
+
+    await this.reply(
+      message.chat.id,
+      [HELP_TEXT, '', buildLinkedStatus(linked)].join('\n'),
+      { reply_markup: buildRemoveKeyboardMarkup() },
+    );
   }
 
   private async handleWhoAmI({ message }: CommandContext) {
-    const recipients = await this.getRecipientLists();
+    const linked = await this.getLinkedOperator(message.chat.id);
     const from = message.from;
     const fullName = [from?.first_name, from?.last_name].filter(Boolean).join(' ').trim() || 'неизвестно';
     const username = from?.username ? `@${from.username}` : 'без username';
@@ -187,102 +225,97 @@ export class NomadTelegramBot {
       [
         `Чат: ${message.chat.id}`,
         `Пользователь: ${fullName} (${username})`,
-        `Доступ к боту: ${isAllowedChat(recipients, message.chat.id) ? 'разрешён' : 'запрещён'}`,
-        `Ротация: ${canRotateFromChat(recipients, message.chat.id) ? 'разрешена' : 'запрещена'}`,
+        buildLinkedStatus(linked),
       ].join('\n'),
+      linked ? { reply_markup: buildRemoveKeyboardMarkup() } : undefined,
     );
   }
 
   private async handleCode({ message }: CommandContext) {
-    const recipients = await this.getRecipientLists();
-    if (!isAllowedChat(recipients, message.chat.id)) {
-      await this.reply(message.chat.id, ACCESS_DENIED_TEXT);
+    const linked = await this.getLinkedOperator(message.chat.id);
+    if (!linked) {
+      await this.promptContactShare(message.chat.id);
       return;
     }
 
     const ensured = await this.deps.backend.ensureDailyCode();
+    await this.safeReportState({
+      event: 'request',
+      chatId: String(message.chat.id),
+      codeId: ensured.item.id,
+      codeValue: ensured.item.codeValue,
+    });
+
     await this.reply(
       message.chat.id,
-      buildDailyCodeMessage(ensured.item, ensured.state === 'created' ? 'Daily code был создан автоматически.' : 'Текущий daily code.'),
+      buildDailyCodeMessage(
+        ensured.item,
+        ensured.state === 'created' ? 'Daily code был создан автоматически.' : 'Текущий daily code.',
+      ),
+      { reply_markup: buildRemoveKeyboardMarkup() },
     );
   }
 
-  private async handleRotate({ message }: CommandContext) {
-    const recipients = await this.getRecipientLists();
-    if (!canRotateFromChat(recipients, message.chat.id)) {
-      await this.reply(message.chat.id, 'Для этого чата ручная ротация запрещена.');
+  private async handleContactShare(message: TelegramMessage) {
+    const phone = message.contact?.phone_number?.trim() || '';
+    if (!phone) {
+      await this.promptContactShare(message.chat.id);
       return;
     }
 
-    const rotated = await this.deps.backend.rotateDailyCode();
-    await this.deps.stateStore.update((state) => ({
-      ...state,
-      lastRotationAt: new Date().toISOString(),
-      lastBroadcastCodeId: null,
-      lastBroadcastCodeValue: null,
-      lastBroadcastDayKey: null,
-      lastBroadcastAt: null,
-    }));
+    if (
+      message.from?.id
+      && message.contact?.user_id
+      && message.from.id !== message.contact.user_id
+    ) {
+      await this.promptContactShare(message.chat.id, CONTACT_MISMATCH_TEXT);
+      return;
+    }
 
-    await this.reply(message.chat.id, buildDailyCodeMessage(rotated.item, 'Выпущен новый daily code.'));
-    await this.safeReportState({
-      event: 'rotate',
-      codeId: rotated.item.id,
-      codeValue: rotated.item.codeValue,
-    });
-    await this.broadcastCodeIfNeeded(rotated.item, buildDayKey(), 'Ручная ротация daily code.', recipients, true, [message.chat.id]);
+    try {
+      const linked = await this.deps.backend.linkTelegramOperator({
+        phone,
+        chatId: String(message.chat.id),
+        telegramUserId: message.from?.id ? String(message.from.id) : undefined,
+        username: message.from?.username,
+        firstName: message.from?.first_name ?? message.contact?.first_name,
+        lastName: message.from?.last_name ?? message.contact?.last_name,
+      });
+
+      await this.reply(
+        message.chat.id,
+        [
+          'Контакт подтверждён.',
+          `Оператор: ${linked.item.name}`,
+          `Телефон: ${linked.item.phone}`,
+          'Теперь можно использовать /code.',
+        ].join('\n'),
+        { reply_markup: buildRemoveKeyboardMarkup() },
+      );
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error);
+      if (messageText.includes('allowlist entry not found')) {
+        await this.promptContactShare(message.chat.id, ACCESS_DENIED_TEXT);
+        return;
+      }
+
+      await this.safeReportError(error);
+      await this.reply(message.chat.id, 'Не удалось подтвердить контакт. Попробуйте ещё раз позже.');
+    }
   }
 
-  private async runScheduledBroadcast(trigger: 'startup' | 'scheduled') {
+  private async runScheduledEnsure(trigger: 'startup' | 'scheduled') {
     if (this.stopped) {
       return;
     }
 
     const ensured = await this.deps.backend.ensureDailyCode();
-    const recipients = await this.getRecipientLists();
-    await this.broadcastCodeIfNeeded(
-      ensured.item,
-      buildMoscowWindow().dayKey,
-      trigger === 'startup' ? 'Авторассылка при запуске бота.' : 'Ежедневная авторассылка daily code.',
-      recipients,
-    );
+    if (trigger === 'scheduled' && ensured.state === 'created') {
+      await this.safeReportState({ event: 'heartbeat' });
+    }
   }
 
-  private async broadcastCodeIfNeeded(
-    code: DailyAccessCodeRecord,
-    dayKey: string,
-    reason: string,
-    recipients: RecipientLists,
-    force = false,
-    excludeChatIds: number[] = [],
-  ) {
-    const state = await this.deps.stateStore.read();
-    if (!force && state.lastBroadcastCodeId === code.id && state.lastBroadcastDayKey === dayKey) {
-      return;
-    }
-
-    const chatIds = recipients.broadcastChatIds.filter((chatId) => !excludeChatIds.includes(chatId));
-    if (chatIds.length) {
-      await this.deps.telegram.sendMessages(chatIds, buildDailyCodeMessage(code, reason));
-    }
-
-    await this.deps.stateStore.write({
-      ...state,
-      lastBroadcastCodeId: code.id,
-      lastBroadcastCodeValue: code.codeValue,
-      lastBroadcastDayKey: dayKey,
-      lastBroadcastAt: new Date().toISOString(),
-    });
-
-    await this.safeReportState({
-      event: 'broadcast',
-      codeId: code.id,
-      codeValue: code.codeValue,
-      dayKey,
-    });
-  }
-
-  private scheduleNextBroadcast() {
+  private scheduleNextEnsure() {
     if (this.stopped) {
       return;
     }
@@ -293,13 +326,13 @@ export class NomadTelegramBot {
     );
 
     this.scheduler = setTimeout(() => {
-      void this.runScheduledBroadcast('scheduled')
+      void this.runScheduledEnsure('scheduled')
         .catch((error) => {
-          console.error('[nomad-telegram-bot] scheduled broadcast error', error);
+          console.error('[nomad-telegram-bot] scheduled ensure error', error);
           return this.safeReportError(error);
         })
         .finally(() => {
-          this.scheduleNextBroadcast();
+          this.scheduleNextEnsure();
         });
     }, delay);
   }
@@ -314,26 +347,25 @@ export class NomadTelegramBot {
     }, 60_000);
   }
 
-  private async reply(chatId: number, text: string) {
-    await this.deps.telegram.sendMessage(chatId, text);
+  private async getLinkedOperator(chatId: number) {
+    try {
+      const response = await this.deps.backend.getTelegramOperatorByChatId(chatId);
+      return response.item;
+    } catch (error) {
+      console.error('[nomad-telegram-bot] linked operator lookup failed', error);
+      await this.safeReportError(error);
+      return null;
+    }
   }
 
-  private async getRecipientLists(): Promise<RecipientLists> {
-    try {
-      const response = await this.deps.backend.getTelegramRecipients();
-      return {
-        allowedChatIds: pickScopeRecipients(response.allowedChatIds, this.deps.config.allowedChatIds),
-        broadcastChatIds: pickScopeRecipients(response.broadcastChatIds, this.deps.config.broadcastChatIds),
-        rotateChatIds: pickScopeRecipients(response.rotateChatIds, this.deps.config.rotateChatIds),
-      };
-    } catch (error) {
-      console.error('[nomad-telegram-bot] recipients fallback to env', error);
-      return {
-        allowedChatIds: uniqueNumbers(this.deps.config.allowedChatIds),
-        broadcastChatIds: uniqueNumbers(this.deps.config.broadcastChatIds),
-        rotateChatIds: uniqueNumbers(this.deps.config.rotateChatIds),
-      };
-    }
+  private async promptContactShare(chatId: number, text = CONTACT_REQUEST_TEXT) {
+    await this.reply(chatId, text, {
+      reply_markup: buildContactRequestMarkup(),
+    });
+  }
+
+  private async reply(chatId: number, text: string, options: TelegramSendMessageOptions = {}) {
+    await this.deps.telegram.sendMessage(chatId, text, options);
   }
 
   private async sleep(ms: number) {

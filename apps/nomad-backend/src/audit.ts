@@ -5,6 +5,7 @@ import type { StaffRole, StaffUser } from './auth';
 export type AuditEntityType =
   | 'daily-code'
   | 'staff-account'
+  | 'telegram-operator'
   | 'telegram-recipient'
   | 'mix'
   | 'rail'
@@ -37,6 +38,7 @@ type AuditEventInput = {
 const isAuditEntityType = (value: string): value is AuditEntityType =>
   value === 'daily-code'
   || value === 'staff-account'
+  || value === 'telegram-operator'
   || value === 'telegram-recipient'
   || value === 'mix'
   || value === 'rail'

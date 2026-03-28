@@ -8,15 +8,15 @@ _Локальный issue body mirror для `.github/ISSUE_TEMPLATE/nomad-featu
 
 ## Problem
 
-Текущий access flow ориентирован на MVP-модель `staff accounts + Telegram recipients`, тогда как целевой операционный сценарий проще: один admin контур, операторское управление `ФИО + телефон`, автоматическая доставка кода через Telegram-бот и отсутствие ручного создания access codes как ежедневной операции.
+Текущий access flow ориентирован на MVP-модель `staff accounts + Telegram recipients`, тогда как целевой операционный сценарий уже уточнён: один admin контур, allowlist операторов по `имя + телефон`, first-link через `share contact` в Telegram и получение актуального daily code по запросу `/code`, без ручной отправки из `Мастера`.
 
 ## Success criteria
 
-1. backend contract описывает упрощённый admin flow для code delivery;
-2. UI позволяет оператору работать с `ФИО + телефон` как с основным сценарием;
-3. Telegram-бот поддерживает автоматическую доставку кода через backend-managed flow;
-4. ручное создание кода убрано из основного operator path;
-5. operational visibility по Telegram automation остаётся доступной;
+1. backend contract поддерживает `phone allowlist + linked chat` и request-based bot flow;
+2. UI `Мастера` показывает allowlist операторов, текущий daily code и bot observability вместо operator-driven send flow;
+3. Telegram-бот поддерживает `share contact -> link -> /code`;
+4. ручное создание или ручная отправка кода убраны из основного operator path;
+5. operational visibility по Telegram automation и последнему запросу кода остаётся доступной;
 6. проверки backend/master/bot проходят.
 
 ## Active scope
@@ -41,7 +41,7 @@ _Локальный issue body mirror для `.github/ISSUE_TEMPLATE/nomad-featu
 - интерфейс на русском языке
 - код доступа не должен создаваться вручную как основной сценарий
 - текущая рабочая модель остаётся `один админ, под которым ходят все` до второго этапа
-- если меняются schema, auth model, env или runtime contracts, slice обязан идти через human review
+- schema/runtime изменения допустимы только после явного product confirmation по Telegram semantics
 - Telegram delivery flow должен оставаться наблюдаемым и диагностируемым
 
 ## Design / UX baseline

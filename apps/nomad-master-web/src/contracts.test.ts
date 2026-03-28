@@ -19,6 +19,7 @@ import {
   normalizeAuditEventRecord,
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
+  normalizeTelegramOperatorRecord,
   normalizeTelegramRecipientRecord,
   parseDelimitedList,
   parseDateTimeLocalInput,
@@ -27,6 +28,7 @@ import {
   sortMixes,
   sortRails,
   sortStaffAccounts,
+  sortTelegramOperators,
   sortTelegramRecipients,
   toggleInventoryFilterValue,
   toggleMixFilterValue,
@@ -671,6 +673,13 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastBroadcastCodeId: 'daily-code-default',
     lastBroadcastCodeValue: 'NOMAD-2026',
     lastBroadcastDayKey: '2026-03-23',
+    lastRequestAt: '2026-03-23T12:00:00.000Z',
+    lastRequestChatId: '362223626',
+    lastRequestOperatorId: 'telegram-operator-anna',
+    lastRequestOperatorName: 'Анна',
+    lastRequestPhone: '+79991234567',
+    lastRequestCodeId: 'daily-code-default',
+    lastRequestCodeValue: 'NOMAD-2026',
     lastErrorAt: '2026-03-23T10:21:00.000Z',
     lastErrorMessage: 'Telegram request timeout',
     updatedAt: '2026-03-23T10:21:00.000Z',
@@ -687,9 +696,44 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastBroadcastCodeId: 'daily-code-default',
     lastBroadcastCodeValue: 'NOMAD-2026',
     lastBroadcastDayKey: '2026-03-23',
+    lastRequestAt: '2026-03-23T12:00:00.000Z',
+    lastRequestChatId: '362223626',
+    lastRequestOperatorId: 'telegram-operator-anna',
+    lastRequestOperatorName: 'Анна',
+    lastRequestPhone: '+79991234567',
+    lastRequestCodeId: 'daily-code-default',
+    lastRequestCodeValue: 'NOMAD-2026',
     lastErrorAt: '2026-03-23T10:21:00.000Z',
     lastErrorMessage: 'Telegram request timeout',
     updatedAt: '2026-03-23T10:21:00.000Z',
+  });
+});
+
+test('normalizeTelegramOperatorRecord reads linked chat and request status', () => {
+  const record = normalizeTelegramOperatorRecord({
+    id: 'telegram-operator-anna',
+    name: 'Анна',
+    phone: '+79991234567',
+    active: true,
+    linkedChatId: '362223626',
+    linkedTelegramUserId: '998877',
+    linkedUsername: 'anna_nomad',
+    linkedDisplayName: 'Анна Nomad',
+    linkedAt: '2026-03-23T11:00:00.000Z',
+    lastCodeRequestedAt: '2026-03-23T12:00:00.000Z',
+  });
+
+  assert.deepEqual(record, {
+    id: 'telegram-operator-anna',
+    name: 'Анна',
+    phone: '+79991234567',
+    active: true,
+    linkedChatId: '362223626',
+    linkedTelegramUserId: '998877',
+    linkedUsername: 'anna_nomad',
+    linkedDisplayName: 'Анна Nomad',
+    linkedAt: '2026-03-23T11:00:00.000Z',
+    lastCodeRequestedAt: '2026-03-23T12:00:00.000Z',
   });
 });
 
@@ -771,6 +815,49 @@ test('sortTelegramRecipients keeps active and scope priority first', () => {
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['telegram-1', 'telegram-2', 'telegram-3']);
+});
+
+test('sortTelegramOperators keeps linked active operators first', () => {
+  const sorted = sortTelegramOperators([
+    {
+      id: 'telegram-operator-2',
+      name: 'Илья',
+      phone: '+79997654321',
+      active: true,
+      linkedChatId: '',
+      linkedTelegramUserId: '',
+      linkedUsername: '',
+      linkedDisplayName: '',
+      linkedAt: '',
+      lastCodeRequestedAt: '',
+    },
+    {
+      id: 'telegram-operator-1',
+      name: 'Анна',
+      phone: '+79991234567',
+      active: true,
+      linkedChatId: '362223626',
+      linkedTelegramUserId: '998877',
+      linkedUsername: 'anna_nomad',
+      linkedDisplayName: 'Анна Nomad',
+      linkedAt: '2026-03-23T11:00:00.000Z',
+      lastCodeRequestedAt: '2026-03-23T12:00:00.000Z',
+    },
+    {
+      id: 'telegram-operator-3',
+      name: 'Олег',
+      phone: '+79990001122',
+      active: false,
+      linkedChatId: '',
+      linkedTelegramUserId: '',
+      linkedUsername: '',
+      linkedDisplayName: '',
+      linkedAt: '',
+      lastCodeRequestedAt: '',
+    },
+  ]);
+
+  assert.deepEqual(sorted.map((item) => item.id), ['telegram-operator-1', 'telegram-operator-2', 'telegram-operator-3']);
 });
 
 test('date helpers roundtrip local input', () => {

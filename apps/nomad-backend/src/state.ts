@@ -355,6 +355,19 @@ type SeedTelegramRecipient = {
   active: boolean;
 };
 
+type SeedTelegramOperator = {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  linkedChatId?: string | null;
+  linkedTelegramUserId?: string | null;
+  linkedUsername?: string | null;
+  linkedDisplayName?: string | null;
+  linkedAt?: string | null;
+  lastCodeRequestedAt?: string | null;
+};
+
 const introCards: SeedIntroCard[] = [
   {
     id: 'intro-onboarding',
@@ -419,6 +432,21 @@ const seedDailyAccessCodes: SeedDailyAccessCode[] = [
 ];
 
 const seedTelegramRecipients: SeedTelegramRecipient[] = [];
+
+const seedTelegramOperators: SeedTelegramOperator[] = [
+  {
+    id: 'telegram-operator-anna',
+    name: 'Анна',
+    phone: '+79991234567',
+    active: true,
+  },
+  {
+    id: 'telegram-operator-ilya',
+    name: 'Илья',
+    phone: '+79997654321',
+    active: true,
+  },
+];
 
 const defaultRails: SeedRail[] = [
   {
@@ -1317,6 +1345,7 @@ const seedNomadStorage = async () => {
     await tx.nomadIntroCard.deleteMany();
     await tx.nomadDailyAccessCode.deleteMany();
     await tx.nomadTelegramRecipient.deleteMany();
+    await tx.nomadTelegramOperator.deleteMany();
     await tx.nomadTelegramAutomationState.deleteMany();
     await tx.nomadAuditEvent.deleteMany();
     await tx.nomadStaffAccount.deleteMany();
@@ -1353,6 +1382,21 @@ const seedNomadStorage = async () => {
         label: recipient.label,
         scope: recipient.scope,
         active: recipient.active,
+      })),
+    });
+
+    await tx.nomadTelegramOperator.createMany({
+      data: seedTelegramOperators.map((operator) => ({
+        id: operator.id,
+        name: operator.name,
+        phone: operator.phone,
+        active: operator.active,
+        linkedChatId: operator.linkedChatId ?? null,
+        linkedTelegramUserId: operator.linkedTelegramUserId ?? null,
+        linkedUsername: operator.linkedUsername ?? null,
+        linkedDisplayName: operator.linkedDisplayName ?? null,
+        linkedAt: operator.linkedAt ? new Date(operator.linkedAt) : null,
+        lastCodeRequestedAt: operator.lastCodeRequestedAt ? new Date(operator.lastCodeRequestedAt) : null,
       })),
     });
 

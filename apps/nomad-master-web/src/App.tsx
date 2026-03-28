@@ -29,6 +29,7 @@ import {
   StaffAuthResponse,
   StaffUser,
   TelegramAutomationStateRecord,
+  TelegramOperatorRecord,
   TelegramRecipientRecord,
   TelegramRecipientScope,
   buildInventoryRequestQuery,
@@ -50,6 +51,7 @@ import {
   normalizeRailRecord,
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
+  normalizeTelegramOperatorRecord,
   normalizeTelegramRecipientRecord,
   parseDateTimeLocalInput,
   readEntityPayload,
@@ -58,6 +60,7 @@ import {
   sortMixes,
   sortRails,
   sortStaffAccounts,
+  sortTelegramOperators,
   sortTelegramRecipients,
   telegramRecipientScopeOptions,
   toggleInventoryFilterValue,
@@ -76,7 +79,7 @@ const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string }> 
   { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие' },
   { id: 'mixes', label: 'Миксы', kicker: 'Каталог' },
   { id: 'rails', label: 'Рейлы', kicker: 'Витрина' },
-  { id: 'access', label: 'Доступ', kicker: 'Коды и staff' },
+  { id: 'access', label: 'Доступ', kicker: 'Бот и allowlist' },
 ];
 
 type MixEditorState = {
@@ -124,6 +127,13 @@ type TelegramRecipientEditorState = {
   chatId: string;
   label: string;
   scope: TelegramRecipientScope;
+  active: boolean;
+};
+
+type TelegramOperatorEditorState = {
+  id: string;
+  name: string;
+  phone: string;
   active: boolean;
 };
 
@@ -183,6 +193,13 @@ const emptyTelegramRecipientEditor = (): TelegramRecipientEditorState => ({
   active: true,
 });
 
+const emptyTelegramOperatorEditor = (): TelegramOperatorEditorState => ({
+  id: '',
+  name: '',
+  phone: '',
+  active: true,
+});
+
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
   name: mix.name,
@@ -229,6 +246,13 @@ const toTelegramRecipientEditorState = (recipient: TelegramRecipientRecord): Tel
   label: recipient.label,
   scope: recipient.scope,
   active: recipient.active,
+});
+
+const toTelegramOperatorEditorState = (operator: TelegramOperatorRecord): TelegramOperatorEditorState => ({
+  id: operator.id,
+  name: operator.name,
+  phone: operator.phone,
+  active: operator.active,
 });
 
 const parseNumberInput = (value: string, fallback = 0) => {
@@ -371,6 +395,7 @@ export const App = () => {
   const [rails, setRails] = useState<RailRecord[]>([]);
   const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
+  const [telegramOperators, setTelegramOperators] = useState<TelegramOperatorRecord[]>([]);
   const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
   const [telegramAutomationState, setTelegramAutomationState] = useState<TelegramAutomationStateRecord | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEventRecord[]>([]);
@@ -380,6 +405,9 @@ export const App = () => {
   const [railsStatus, setRailsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [dailyCodesStatus, setDailyCodesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [staffAccountsStatus, setStaffAccountsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
+    'idle',
+  );
+  const [telegramOperatorsStatus, setTelegramOperatorsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
     'idle',
   );
   const [telegramRecipientsStatus, setTelegramRecipientsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
@@ -395,6 +423,7 @@ export const App = () => {
   const [railsError, setRailsError] = useState('');
   const [dailyCodesError, setDailyCodesError] = useState('');
   const [staffAccountsError, setStaffAccountsError] = useState('');
+  const [telegramOperatorsError, setTelegramOperatorsError] = useState('');
   const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
   const [telegramAutomationStateError, setTelegramAutomationStateError] = useState('');
   const [auditEventsError, setAuditEventsError] = useState('');
@@ -416,6 +445,10 @@ export const App = () => {
   const [staffAccountSaveStatus, setStaffAccountSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [staffAccountSaveError, setStaffAccountSaveError] = useState('');
   const [staffAccountToggleId, setStaffAccountToggleId] = useState('');
+  const [telegramOperatorEditor, setTelegramOperatorEditor] = useState<TelegramOperatorEditorState>(emptyTelegramOperatorEditor);
+  const [telegramOperatorSaveStatus, setTelegramOperatorSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [telegramOperatorSaveError, setTelegramOperatorSaveError] = useState('');
+  const [telegramOperatorToggleId, setTelegramOperatorToggleId] = useState('');
   const [telegramRecipientEditor, setTelegramRecipientEditor] =
     useState<TelegramRecipientEditorState>(emptyTelegramRecipientEditor);
   const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -563,6 +596,29 @@ export const App = () => {
     }
   };
 
+  const loadTelegramOperators = async (nextToken: string, role: StaffUser['role']) => {
+    if (role !== 'admin') {
+      setTelegramOperators([]);
+      setTelegramOperatorsStatus('forbidden');
+      setTelegramOperatorsError('Allowlist Telegram доступен только для admin.');
+      return;
+    }
+
+    setTelegramOperatorsStatus('loading');
+    setTelegramOperatorsError('');
+
+    try {
+      const response = await requestJson<unknown>('/staff/access/telegram-operators', {}, nextToken);
+      const items = sortTelegramOperators(readListPayload<unknown>(response).map(normalizeTelegramOperatorRecord));
+      setTelegramOperators(items);
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperators([]);
+      setTelegramOperatorsStatus('error');
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось загрузить Telegram allowlist');
+    }
+  };
+
   const loadTelegramRecipients = async (nextToken: string, role: StaffUser['role']) => {
     if (role !== 'admin') {
       setTelegramRecipients([]);
@@ -654,7 +710,7 @@ export const App = () => {
           loadRails(token),
           loadDailyCodes(token),
           loadStaffAccounts(token, profile.user.role),
-          loadTelegramRecipients(token, profile.user.role),
+          loadTelegramOperators(token, profile.user.role),
           loadTelegramAutomationState(token, profile.user.role),
           loadAuditEvents(token, profile.user.role),
         ]);
@@ -700,7 +756,7 @@ export const App = () => {
         loadRails(auth.accessToken),
         loadDailyCodes(auth.accessToken),
         loadStaffAccounts(auth.accessToken, profile.user.role),
-        loadTelegramRecipients(auth.accessToken, profile.user.role),
+        loadTelegramOperators(auth.accessToken, profile.user.role),
         loadTelegramAutomationState(auth.accessToken, profile.user.role),
         loadAuditEvents(auth.accessToken, profile.user.role),
       ]);
@@ -817,6 +873,7 @@ export const App = () => {
     setRailsStatus('idle');
     setDailyCodesStatus('idle');
     setStaffAccountsStatus('idle');
+    setTelegramOperatorsStatus('idle');
     setTelegramRecipientsStatus('idle');
     setTelegramAutomationStateStatus('idle');
     setAuditEventsStatus('idle');
@@ -826,6 +883,7 @@ export const App = () => {
     setRailsError('');
     setDailyCodesError('');
     setStaffAccountsError('');
+    setTelegramOperatorsError('');
     setTelegramRecipientsError('');
     setTelegramAutomationStateError('');
     setAuditEventsError('');
@@ -849,9 +907,14 @@ export const App = () => {
     setStaffAccountToggleId('');
     setDailyCodes([]);
     setStaffAccounts([]);
+    setTelegramOperators([]);
     setTelegramRecipients([]);
     setTelegramAutomationState(null);
     setAuditEvents([]);
+    setTelegramOperatorEditor(emptyTelegramOperatorEditor());
+    setTelegramOperatorSaveStatus('idle');
+    setTelegramOperatorSaveError('');
+    setTelegramOperatorToggleId('');
     setTelegramRecipientEditor(emptyTelegramRecipientEditor());
     setTelegramRecipientSaveStatus('idle');
     setTelegramRecipientSaveError('');
@@ -1627,6 +1690,185 @@ export const App = () => {
     }
   };
 
+  const onSelectTelegramOperator = (operator: TelegramOperatorRecord) => {
+    setTelegramOperatorEditor(toTelegramOperatorEditorState(operator));
+    setTelegramOperatorSaveError('');
+    setTelegramOperatorSaveStatus('idle');
+    setActiveTab('access');
+  };
+
+  const onResetTelegramOperatorEditor = () => {
+    setTelegramOperatorEditor(emptyTelegramOperatorEditor());
+    setTelegramOperatorSaveError('');
+    setTelegramOperatorSaveStatus('idle');
+  };
+
+  const onSubmitTelegramOperator = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    const name = telegramOperatorEditor.name.trim();
+    const phone = telegramOperatorEditor.phone.trim();
+
+    if (!name) {
+      setTelegramOperatorSaveError('Укажите имя оператора');
+      setTelegramOperatorSaveStatus('error');
+      return;
+    }
+
+    if (!phone) {
+      setTelegramOperatorSaveError('Укажите номер телефона');
+      setTelegramOperatorSaveStatus('error');
+      return;
+    }
+
+    setTelegramOperatorSaveStatus('loading');
+    setTelegramOperatorSaveError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        telegramOperatorEditor.id
+          ? `/staff/access/telegram-operators/${telegramOperatorEditor.id}`
+          : '/staff/access/telegram-operators',
+        {
+          method: telegramOperatorEditor.id ? 'PATCH' : 'POST',
+          body: JSON.stringify({
+            name,
+            phone,
+            active: telegramOperatorEditor.active,
+          }),
+        },
+        token,
+      );
+
+      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
+      if (!savedOperator.id) {
+        throw new Error('Backend вернул пустую запись Telegram доступа');
+      }
+
+      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
+      setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
+      setTelegramOperatorSaveStatus('ready');
+      setActiveTab('access');
+    } catch (cause) {
+      setTelegramOperatorSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить Telegram доступ');
+      setTelegramOperatorSaveStatus('error');
+    }
+  };
+
+  const onToggleTelegramOperatorActive = async (operator: TelegramOperatorRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramOperatorToggleId(operator.id);
+    setTelegramOperatorsError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/telegram-operators/${operator.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: operator.name,
+            phone: operator.phone,
+            active: !operator.active,
+          }),
+        },
+        token,
+      );
+
+      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
+      if (!savedOperator.id) {
+        throw new Error('Backend вернул пустую запись Telegram доступа');
+      }
+
+      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
+      if (telegramOperatorEditor.id === operator.id) {
+        setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
+      }
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось обновить Telegram доступ');
+      setTelegramOperatorsStatus('error');
+    } finally {
+      setTelegramOperatorToggleId('');
+    }
+  };
+
+  const onClearTelegramOperatorLink = async (operator: TelegramOperatorRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramOperatorToggleId(operator.id);
+    setTelegramOperatorsError('');
+
+    try {
+      const response = await requestJson<unknown>(
+        `/staff/access/telegram-operators/${operator.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: operator.name,
+            phone: operator.phone,
+            active: operator.active,
+            clearLink: true,
+          }),
+        },
+        token,
+      );
+
+      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
+      if (!savedOperator.id) {
+        throw new Error('Backend вернул пустую запись Telegram доступа');
+      }
+
+      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
+      if (telegramOperatorEditor.id === operator.id) {
+        setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
+      }
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось сбросить привязку Telegram');
+      setTelegramOperatorsStatus('error');
+    } finally {
+      setTelegramOperatorToggleId('');
+    }
+  };
+
+  const onDeleteTelegramOperator = async (operator: TelegramOperatorRecord) => {
+    if (!token) {
+      return;
+    }
+
+    setTelegramOperatorToggleId(operator.id);
+    setTelegramOperatorsError('');
+
+    try {
+      await requestJson(
+        `/staff/access/telegram-operators/${operator.id}`,
+        {
+          method: 'DELETE',
+        },
+        token,
+      );
+
+      setTelegramOperators((current) => sortTelegramOperators(current.filter((item) => item.id !== operator.id)));
+      if (telegramOperatorEditor.id === operator.id) {
+        onResetTelegramOperatorEditor();
+      }
+      setTelegramOperatorsStatus('ready');
+    } catch (cause) {
+      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось удалить Telegram доступ');
+      setTelegramOperatorsStatus('error');
+    } finally {
+      setTelegramOperatorToggleId('');
+    }
+  };
+
   const onSelectTelegramRecipient = (recipient: TelegramRecipientRecord) => {
     setTelegramRecipientEditor(toTelegramRecipientEditorState(recipient));
     setTelegramRecipientSaveError('');
@@ -2105,448 +2347,475 @@ export const App = () => {
     }).format(date);
   };
 
-  const renderAccess = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Доступ</p>
-          <h2>Коды доступа, сотрудники и Telegram</h2>
-          <p className="meta-line">Контур ежедневного доступа, staff-аккаунтов, Telegram automation и аудита.</p>
-        </div>
-        <div className="section-actions">
-          <span className="status-chip">Admin / staff controls</span>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
-            Новый код доступа
-          </button>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramRecipientEditor}>
-            Новый чат Telegram
-          </button>
-        </div>
-      </div>
+  const renderAccess = () => {
+    const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
+    const activeOperators = telegramOperators.filter((item) => item.active);
+    const linkedOperatorsCount = activeOperators.filter((item) => item.linkedChatId).length;
 
-      <div className="info-banner">
-        <strong>Ролевой контур:</strong> коды доступа доступны всем staff-ролям, а сотрудники, Telegram и аудит открыты только для `admin`.
-      </div>
-
-      <div className="summary-grid automation-grid">
-        <article className="metric-card automation-card">
-          <p className="metric-label">Telegram automation</p>
-          <p className="metric-value metric-value--compact">
-            {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
-          </p>
-          <div className="chip-row">
-            <span
-              className={
-                telegramAutomationState?.health === 'healthy'
-                  ? 'stock-pill stock-pill--in'
-                  : telegramAutomationState?.health === 'unknown'
-                    ? 'status-chip'
-                    : 'stock-pill stock-pill--out'
-              }
-            >
-              {telegramAutomationState?.health ?? 'unknown'}
-            </span>
-          </div>
-          <p className="meta-line">Heartbeat: {formatDateTimeDisplay(telegramAutomationState?.lastHeartbeatAt ?? '')}</p>
-          <p className="meta-line">Последнее обновление: {formatDateTimeDisplay(telegramAutomationState?.updatedAt ?? '')}</p>
-          {telegramAutomationState?.lastErrorMessage ? (
-            <p className="meta-line">Последняя ошибка: {telegramAutomationState.lastErrorMessage}</p>
-          ) : (
-            <p className="meta-line">Последняя ошибка: нет</p>
-          )}
-          {telegramAutomationStateStatus === 'loading' ? <p className="meta-line">Загружаем статус бота...</p> : null}
-          {telegramAutomationStateStatus === 'error' ? <p className="error-text">{telegramAutomationStateError}</p> : null}
-          {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
-        </article>
-
-        <article className="metric-card automation-card">
-          <p className="metric-label">Последние действия</p>
-          <p className="meta-line">Авторассылка: {formatDateTimeDisplay(telegramAutomationState?.lastBroadcastAt ?? '')}</p>
-          <p className="meta-line">
-            Код авторассылки: {telegramAutomationState?.lastBroadcastCodeValue || 'Не указано'}
-          </p>
-          <p className="meta-line">День авторассылки: {telegramAutomationState?.lastBroadcastDayKey || 'Не указано'}</p>
-          <p className="meta-line">Ротация: {formatDateTimeDisplay(telegramAutomationState?.lastRotateAt ?? '')}</p>
-          <p className="meta-line">Код ротации: {telegramAutomationState?.lastRotateCodeValue || 'Не указано'}</p>
-        </article>
-
-        <article className="metric-card automation-card">
-          <p className="metric-label">Telegram чаты</p>
-          <p className="meta-line">
-            Разрешённые: {telegramRecipients.filter((item) => item.scope === 'allowed' && item.active).length}
-          </p>
-          <p className="meta-line">
-            Авторассылка: {telegramRecipients.filter((item) => item.scope === 'broadcast' && item.active).length}
-          </p>
-          <p className="meta-line">
-            Ротация: {telegramRecipients.filter((item) => item.scope === 'rotate' && item.active).length}
-          </p>
-          <p className="meta-line">
-            Всего записей: {telegramRecipients.length}
-          </p>
-        </article>
-      </div>
-
-      <article className="editor-card">
-        <div className="entity-card__head">
+    return (
+      <section className="card">
+        <div className="section-head">
           <div>
-            <p className="entity-kicker">Журнал изменений</p>
-            <h3>Последние staff-операции</h3>
+            <p className="eyebrow">Доступ</p>
+            <h2>Daily code и Telegram allowlist</h2>
+            <p className="meta-line">
+              Daily code выпускается автоматически каждый день, а оператор получает его только через Telegram-бота.
+            </p>
           </div>
-          <span className="status-chip">/staff/audit/events</span>
+          <div className="section-actions">
+            <span className="status-chip">Bot request flow</span>
+            {user?.role === 'admin' ? (
+              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
+                Новый оператор
+              </button>
+            ) : null}
+          </div>
         </div>
 
-        {auditEventsStatus === 'loading' ? <p className="meta-line">Загружаем журнал изменений...</p> : null}
-        {auditEventsStatus === 'error' ? <p className="error-text">{auditEventsError}</p> : null}
-        {auditEventsStatus === 'forbidden' ? <p className="meta-line">{auditEventsError}</p> : null}
+        <div className="info-banner">
+          <strong>Новая схема:</strong> оператор впервые пишет боту, делится контактом, бот сверяет номер с allowlist и после
+          привязки отдаёт `/code`. Ручной отправки и переотправки из `Мастера` нет.
+        </div>
 
-        {auditEventsStatus === 'ready' && !auditEvents.length ? (
-          <p className="meta-line">Пока нет записей аудита.</p>
-        ) : null}
+        <div className="summary-grid automation-grid">
+          <article className="metric-card automation-card">
+            <p className="metric-label">Текущий daily code</p>
+            <p className="metric-value metric-value--compact">{currentDailyCode?.codeValue || 'Нет активного кода'}</p>
+            <p className="meta-line">Подпись: {currentDailyCode?.codeLabel || 'Не задано'}</p>
+            <p className="meta-line">Начало: {formatDateTimeDisplay(currentDailyCode?.startsAt || '')}</p>
+            <p className="meta-line">Окончание: {formatDateTimeDisplay(currentDailyCode?.endsAt || '')}</p>
+            <p className="meta-line">История окон: {dailyCodes.length}</p>
+            {dailyCodesStatus === 'loading' ? <p className="meta-line">Загружаем daily code...</p> : null}
+            {dailyCodesError ? <p className="error-text">{dailyCodesError}</p> : null}
+          </article>
 
-        {auditEventsStatus !== 'forbidden' && auditEvents.length ? (
+          <article className="metric-card automation-card">
+            <p className="metric-label">Состояние бота</p>
+            <p className="metric-value metric-value--compact">
+              {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
+            </p>
+            <div className="chip-row">
+              <span
+                className={
+                  telegramAutomationState?.health === 'healthy'
+                    ? 'stock-pill stock-pill--in'
+                    : telegramAutomationState?.health === 'unknown'
+                      ? 'status-chip'
+                      : 'stock-pill stock-pill--out'
+                }
+              >
+                {telegramAutomationState?.health ?? 'unknown'}
+              </span>
+            </div>
+            <p className="meta-line">Heartbeat: {formatDateTimeDisplay(telegramAutomationState?.lastHeartbeatAt ?? '')}</p>
+            <p className="meta-line">Последнее обновление: {formatDateTimeDisplay(telegramAutomationState?.updatedAt ?? '')}</p>
+            <p className="meta-line">Последняя ошибка: {telegramAutomationState?.lastErrorMessage || 'нет'}</p>
+            {telegramAutomationStateStatus === 'loading' ? <p className="meta-line">Загружаем статус бота...</p> : null}
+            {telegramAutomationStateStatus === 'error' ? <p className="error-text">{telegramAutomationStateError}</p> : null}
+            {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
+          </article>
+
+          <article className="metric-card automation-card">
+            <p className="metric-label">Последний запрос кода</p>
+            <p className="meta-line">Время: {formatDateTimeDisplay(telegramAutomationState?.lastRequestAt ?? '')}</p>
+            <p className="meta-line">Оператор: {telegramAutomationState?.lastRequestOperatorName || 'Не было запросов'}</p>
+            <p className="meta-line">Телефон: {telegramAutomationState?.lastRequestPhone || 'Не указано'}</p>
+            <p className="meta-line">Чат: {telegramAutomationState?.lastRequestChatId || 'Не указан'}</p>
+            <p className="meta-line">Код: {telegramAutomationState?.lastRequestCodeValue || currentDailyCode?.codeValue || 'Не указан'}</p>
+          </article>
+
+          <article className="metric-card automation-card">
+            <p className="metric-label">Allowlist</p>
+            <p className="meta-line">Активных номеров: {activeOperators.length}</p>
+            <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
+            <p className="meta-line">Ожидают first-link: {Math.max(activeOperators.length - linkedOperatorsCount, 0)}</p>
+            <p className="meta-line">Всего записей: {telegramOperators.length}</p>
+            {telegramOperatorsStatus === 'loading' ? <p className="meta-line">Загружаем allowlist...</p> : null}
+            {telegramOperatorsStatus === 'error' ? <p className="error-text">{telegramOperatorsError}</p> : null}
+            {telegramOperatorsStatus === 'forbidden' ? <p className="meta-line">{telegramOperatorsError}</p> : null}
+          </article>
+        </div>
+
+        <article className="editor-card">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Как это работает</p>
+              <h3>Bot-request flow</h3>
+            </div>
+            <span className="status-chip">Автоматический daily code</span>
+          </div>
           <div className="audit-list">
-            {auditEvents.map((event) => (
-              <article className="entity-card entity-card--compact" key={event.id}>
-                <div className="entity-card__head">
-                  <div>
-                    <p className="entity-kicker">
-                      {formatAuditEntityType(event.entityType)} · {formatAuditAction(event.action)}
-                    </p>
-                    <h3>{event.entityLabel || event.entityId}</h3>
-                  </div>
-                  <span className="status-chip">{event.actorRole}</span>
-                </div>
-                <p className="meta-line">
-                  {event.actorName || event.actorLogin} ({event.actorLogin}) · {formatDateTimeDisplay(event.createdAt)}
-                </p>
-                <div className="chip-row">
-                  <span className="chip">{event.entityType}</span>
-                  <span className="chip">{event.action}</span>
-                  <span className="chip">{event.entityId}</span>
-                </div>
+            {[
+              '1. Admin добавляет оператора в allowlist по имени и телефону.',
+              '2. Оператор впервые пишет боту и жмёт "Поделиться контактом".',
+              '3. Бот привязывает текущий chat id к allowlist-номеру.',
+              '4. После привязки оператор получает актуальный daily code через /code.',
+            ].map((item) => (
+              <article className="entity-card entity-card--compact" key={item}>
+                <p className="meta-line">{item}</p>
               </article>
             ))}
           </div>
-        ) : null}
-      </article>
-
-      <div className="manager-layout manager-layout--stacked">
-        <aside className="entity-list">
-          {dailyCodes.map((code) => (
-            <article className={dailyCodeEditor.id === code.id ? 'entity-card entity-card--active' : 'entity-card'} key={code.id}>
-              <div className="entity-card__head">
-                <div>
-                  <p className="entity-kicker">Код доступа</p>
-                  <h3>{code.codeLabel || 'Код доступа'}</h3>
-                </div>
-                <span className={code.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                  {code.active ? 'Активен' : 'Неактивен'}
-                </span>
-              </div>
-              <p className="code-value">{code.codeValue || 'Код не указан'}</p>
-              <p className="meta-line">Начало: {formatDateTimeDisplay(code.startsAt)}</p>
-              <p className="meta-line">Окончание: {formatDateTimeDisplay(code.endsAt)}</p>
-              <div className="entity-card__actions entity-card__actions--wrap">
-                <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectDailyCode(code)}>
-                  Редактировать
-                </button>
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() => void onToggleDailyCodeActive(code)}
-                  disabled={dailyCodeToggleId === code.id}
-                >
-                  {dailyCodeToggleId === code.id ? 'Сохраняем...' : code.active ? 'Деактивировать' : 'Активировать'}
-                </button>
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() => void onDeleteDailyCode(code)}
-                  disabled={dailyCodeToggleId === code.id}
-                >
-                  {dailyCodeToggleId === code.id ? 'Удаляем...' : 'Удалить'}
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {!dailyCodes.length && dailyCodesStatus !== 'loading' ? <p className="meta-line">Пока нет кодов доступа.</p> : null}
-        </aside>
-
-        <article className="editor-card">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">{dailyCodeEditor.id ? 'Редактирование кода доступа' : 'Новый код доступа'}</p>
-              <h3>{dailyCodeEditor.id ? dailyCodeEditor.codeLabel || 'Код доступа' : 'Создать код доступа'}</h3>
-            </div>
-            <span className="status-chip">{dailyCodeEditor.active ? 'Активен' : 'Неактивен'}</span>
-          </div>
-
-          {dailyCodesStatus === 'loading' ? <p className="meta-line">Загружаем коды доступа...</p> : null}
-          {dailyCodesError ? <p className="error-text">{dailyCodesError}</p> : null}
-
-          <form className="admin-form" onSubmit={onSubmitDailyCode}>
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Код</span>
-                <input
-                  className="text-input"
-                  value={dailyCodeEditor.codeValue}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, codeValue: event.target.value }))}
-                  placeholder="NOMAD-2026"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Подпись</span>
-                <input
-                  className="text-input"
-                  value={dailyCodeEditor.codeLabel}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, codeLabel: event.target.value }))}
-                  placeholder="Код на сегодня"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Начало действия</span>
-                <input
-                  className="text-input"
-                  type="datetime-local"
-                  value={dailyCodeEditor.startsAt}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, startsAt: event.target.value }))}
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Окончание действия</span>
-                <input
-                  className="text-input"
-                  type="datetime-local"
-                  value={dailyCodeEditor.endsAt}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, endsAt: event.target.value }))}
-                />
-              </label>
-
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={dailyCodeEditor.active}
-                  onChange={(event) => setDailyCodeEditor((current) => ({ ...current, active: event.target.checked }))}
-                />
-                <span>Активен</span>
-              </label>
-            </div>
-
-            {dailyCodeSaveError ? <p className="error-text">{dailyCodeSaveError}</p> : null}
-
-            <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={dailyCodeSaveStatus === 'loading'}>
-                {dailyCodeSaveStatus === 'loading' ? 'Сохраняем...' : dailyCodeEditor.id ? 'Сохранить код доступа' : 'Создать код доступа'}
-              </button>
-              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetDailyCodeEditor}>
-                Сбросить форму
-              </button>
-              {dailyCodeEditor.id ? (
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() =>
-                    void onDeleteDailyCode({
-                      id: dailyCodeEditor.id,
-                      codeValue: dailyCodeEditor.codeValue,
-                      codeLabel: dailyCodeEditor.codeLabel,
-                      startsAt: parseDateTimeLocalInput(dailyCodeEditor.startsAt),
-                      endsAt: parseDateTimeLocalInput(dailyCodeEditor.endsAt),
-                      active: dailyCodeEditor.active,
-                    })
-                  }
-                  disabled={dailyCodeToggleId === dailyCodeEditor.id}
-                >
-                  {dailyCodeToggleId === dailyCodeEditor.id ? 'Удаляем...' : 'Удалить код'}
-                </button>
-              ) : null}
-            </div>
-          </form>
         </article>
-      </div>
 
-      <div className="manager-layout manager-layout--stacked manager-layout--spaced">
-        <aside className="entity-list">
-          {staffAccountsStatus === 'forbidden' ? (
-            <article className="entity-card entity-card--muted">
-              <p className="entity-kicker">Аккаунты сотрудников</p>
-              <h3>Только для admin</h3>
-              <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению аккаунтами сотрудников.'}</p>
-            </article>
-          ) : (
-            staffAccounts.map((account) => (
-              <article
-                className={staffAccountEditor.id === account.id ? 'entity-card entity-card--active' : 'entity-card'}
-                key={account.id}
-              >
-                <div className="entity-card__head">
-                  <div>
-                    <p className="entity-kicker">Аккаунт сотрудника</p>
-                    <h3>{account.name}</h3>
-                  </div>
-                  <span className={account.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                    {account.active ? 'Активен' : 'Неактивен'}
-                  </span>
-                </div>
-                <div className="chip-row">
-                  <span className="chip">{account.login}</span>
-                  <span className="chip">{account.role === 'admin' ? 'admin' : 'nomad'}</span>
-                </div>
-                <div className="entity-card__actions entity-card__actions--wrap">
-                  <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectStaffAccount(account)}>
-                    Редактировать
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onToggleStaffAccountActive(account)}
-                    disabled={staffAccountToggleId === account.id}
-                  >
-                    {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
-                  </button>
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() => void onDeleteStaffAccount(account)}
-                    disabled={staffAccountToggleId === account.id}
-                  >
-                    {staffAccountToggleId === account.id ? 'Удаляем...' : 'Удалить'}
-                  </button>
-                </div>
+        <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+          <aside className="entity-list">
+            {telegramOperatorsStatus === 'forbidden' ? (
+              <article className="entity-card entity-card--muted">
+                <p className="entity-kicker">Telegram allowlist</p>
+                <h3>Только для admin</h3>
+                <p className="meta-line">{telegramOperatorsError || 'У вас нет доступа к управлению allowlist.'}</p>
               </article>
-            ))
-          )}
+            ) : (
+              telegramOperators.map((operator) => (
+                <article
+                  className={telegramOperatorEditor.id === operator.id ? 'entity-card entity-card--active' : 'entity-card'}
+                  key={operator.id}
+                >
+                  <div className="entity-card__head">
+                    <div>
+                      <p className="entity-kicker">Telegram allowlist</p>
+                      <h3>{operator.name}</h3>
+                    </div>
+                    <span className={operator.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                      {operator.active ? 'Активен' : 'Неактивен'}
+                    </span>
+                  </div>
+                  <div className="chip-row">
+                    <span className="chip">{operator.phone}</span>
+                    <span className="chip">{operator.linkedChatId ? 'Чат привязан' : 'Ждёт first-link'}</span>
+                  </div>
+                  <p className="meta-line">Чат: {operator.linkedChatId || 'ещё не привязан'}</p>
+                  <p className="meta-line">Последний запрос: {formatDateTimeDisplay(operator.lastCodeRequestedAt)}</p>
+                  <div className="entity-card__actions entity-card__actions--wrap">
+                    <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectTelegramOperator(operator)}>
+                      Редактировать
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onToggleTelegramOperatorActive(operator)}
+                      disabled={telegramOperatorToggleId === operator.id}
+                    >
+                      {telegramOperatorToggleId === operator.id ? 'Сохраняем...' : operator.active ? 'Деактивировать' : 'Активировать'}
+                    </button>
+                    {operator.linkedChatId ? (
+                      <button
+                        className="secondary-button secondary-button--inline"
+                        type="button"
+                        onClick={() => void onClearTelegramOperatorLink(operator)}
+                        disabled={telegramOperatorToggleId === operator.id}
+                      >
+                        {telegramOperatorToggleId === operator.id ? 'Сбрасываем...' : 'Сбросить привязку'}
+                      </button>
+                    ) : null}
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onDeleteTelegramOperator(operator)}
+                      disabled={telegramOperatorToggleId === operator.id}
+                    >
+                      {telegramOperatorToggleId === operator.id ? 'Удаляем...' : 'Удалить'}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
 
-          {staffAccountsStatus !== 'forbidden' && !staffAccounts.length && staffAccountsStatus !== 'loading' ? (
-            <p className="meta-line">Пока нет сотрудников.</p>
-          ) : null}
-        </aside>
+            {telegramOperatorsStatus !== 'forbidden' && !telegramOperators.length && telegramOperatorsStatus !== 'loading' ? (
+              <p className="meta-line">Пока нет операторов в allowlist.</p>
+            ) : null}
+          </aside>
+
+          <article className="editor-card">
+            <div className="entity-card__head">
+              <div>
+                <p className="entity-kicker">{telegramOperatorEditor.id ? 'Редактирование Telegram доступа' : 'Новый Telegram доступ'}</p>
+                <h3>{telegramOperatorEditor.id ? telegramOperatorEditor.name || 'Без имени' : 'Добавить оператора'}</h3>
+              </div>
+              <span className="status-chip">{telegramOperatorEditor.active ? 'Активен' : 'Неактивен'}</span>
+            </div>
+
+            {telegramOperatorsStatus === 'forbidden' ? (
+              <div className="forbidden-panel">
+                <p className="meta-line">Telegram allowlist недоступен для вашей роли.</p>
+              </div>
+            ) : (
+              <form className="admin-form" onSubmit={onSubmitTelegramOperator}>
+                <div className="form-grid form-grid--two">
+                  <label className="field">
+                    <span className="field-label">Имя оператора</span>
+                    <input
+                      className="text-input"
+                      value={telegramOperatorEditor.name}
+                      onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Анна"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Телефон</span>
+                    <input
+                      className="text-input"
+                      value={telegramOperatorEditor.phone}
+                      onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, phone: event.target.value }))}
+                      placeholder="+7 999 123-45-67"
+                    />
+                  </label>
+
+                  <label className="checkbox-field">
+                    <input
+                      type="checkbox"
+                      checked={telegramOperatorEditor.active}
+                      onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, active: event.target.checked }))}
+                    />
+                    <span>Активен</span>
+                  </label>
+                </div>
+
+                <p className="meta-line">
+                  После сохранения оператор сам проходит first-link в боте через кнопку "Поделиться контактом".
+                </p>
+                {telegramOperatorSaveError ? <p className="error-text">{telegramOperatorSaveError}</p> : null}
+
+                <div className="form-actions">
+                  <button className="primary-button primary-button--inline" type="submit" disabled={telegramOperatorSaveStatus === 'loading'}>
+                    {telegramOperatorSaveStatus === 'loading'
+                      ? 'Сохраняем...'
+                      : telegramOperatorEditor.id
+                        ? 'Сохранить доступ'
+                        : 'Добавить в allowlist'}
+                  </button>
+                  <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
+                    Сбросить форму
+                  </button>
+                </div>
+              </form>
+            )}
+          </article>
+        </div>
+
+        <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+          <aside className="entity-list">
+            {staffAccountsStatus === 'forbidden' ? (
+              <article className="entity-card entity-card--muted">
+                <p className="entity-kicker">Master staff accounts</p>
+                <h3>Только для admin</h3>
+                <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению staff accounts.'}</p>
+              </article>
+            ) : (
+              staffAccounts.map((account) => (
+                <article
+                  className={staffAccountEditor.id === account.id ? 'entity-card entity-card--active' : 'entity-card'}
+                  key={account.id}
+                >
+                  <div className="entity-card__head">
+                    <div>
+                      <p className="entity-kicker">Master staff account</p>
+                      <h3>{account.name}</h3>
+                    </div>
+                    <span className={account.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
+                      {account.active ? 'Активен' : 'Неактивен'}
+                    </span>
+                  </div>
+                  <div className="chip-row">
+                    <span className="chip">{account.login}</span>
+                    <span className="chip">{account.role === 'admin' ? 'admin' : 'nomad'}</span>
+                  </div>
+                  <div className="entity-card__actions entity-card__actions--wrap">
+                    <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectStaffAccount(account)}>
+                      Редактировать
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onToggleStaffAccountActive(account)}
+                      disabled={staffAccountToggleId === account.id}
+                    >
+                      {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => void onDeleteStaffAccount(account)}
+                      disabled={staffAccountToggleId === account.id}
+                    >
+                      {staffAccountToggleId === account.id ? 'Удаляем...' : 'Удалить'}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+
+            {staffAccountsStatus !== 'forbidden' && !staffAccounts.length && staffAccountsStatus !== 'loading' ? (
+              <p className="meta-line">Пока нет сотрудников.</p>
+            ) : null}
+          </aside>
+
+          <article className="editor-card">
+            <div className="entity-card__head">
+              <div>
+                <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
+                <h3>{staffAccountEditor.id ? staffAccountEditor.name || 'Без имени' : 'Создать сотрудника'}</h3>
+              </div>
+              <span className="status-chip">{staffAccountEditor.role === 'admin' ? 'admin' : 'nomad'}</span>
+            </div>
+
+            {staffAccountsStatus === 'loading' ? <p className="meta-line">Загружаем сотрудников...</p> : null}
+            {staffAccountsStatus === 'error' ? <p className="error-text">{staffAccountsError}</p> : null}
+            {staffAccountsStatus === 'forbidden' ? <p className="meta-line">{staffAccountsError}</p> : null}
+
+            {staffAccountsStatus !== 'forbidden' ? (
+              <form className="admin-form" onSubmit={onSubmitStaffAccount}>
+                <div className="form-grid form-grid--two">
+                  <label className="field">
+                    <span className="field-label">Логин</span>
+                    <input
+                      className="text-input"
+                      value={staffAccountEditor.login}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
+                      autoComplete="username"
+                      placeholder="nomad"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Имя</span>
+                    <input
+                      className="text-input"
+                      value={staffAccountEditor.name}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
+                      autoComplete="name"
+                      placeholder="Кальянный мастер"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Роль</span>
+                    <select
+                      className="select-input"
+                      value={staffAccountEditor.role}
+                      onChange={(event) =>
+                        setStaffAccountEditor((current) => ({
+                          ...current,
+                          role: event.target.value as StaffUser['role'],
+                        }))
+                      }
+                    >
+                      <option value="admin">admin</option>
+                      <option value="nomad">nomad</option>
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}</span>
+                    <input
+                      className="text-input"
+                      type="password"
+                      value={staffAccountEditor.password}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
+                      autoComplete="new-password"
+                      placeholder="Оставьте пустым, если не менять"
+                    />
+                  </label>
+
+                  <label className="checkbox-field">
+                    <input
+                      type="checkbox"
+                      checked={staffAccountEditor.active}
+                      onChange={(event) => setStaffAccountEditor((current) => ({ ...current, active: event.target.checked }))}
+                    />
+                    <span>Активен</span>
+                  </label>
+                </div>
+
+                {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
+
+                <div className="form-actions">
+                  <button className="primary-button primary-button--inline" type="submit" disabled={staffAccountSaveStatus === 'loading'}>
+                    {staffAccountSaveStatus === 'loading'
+                      ? 'Сохраняем...'
+                      : staffAccountEditor.id
+                        ? 'Сохранить сотрудника'
+                        : 'Создать сотрудника'}
+                  </button>
+                  <button className="secondary-button secondary-button--inline" type="button" onClick={onResetStaffAccountEditor}>
+                    Сбросить форму
+                  </button>
+                  {staffAccountEditor.id ? (
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() =>
+                        void onDeleteStaffAccount({
+                          id: staffAccountEditor.id,
+                          login: staffAccountEditor.login,
+                          name: staffAccountEditor.name,
+                          role: staffAccountEditor.role,
+                          active: staffAccountEditor.active,
+                        })
+                      }
+                      disabled={staffAccountToggleId === staffAccountEditor.id}
+                    >
+                      {staffAccountToggleId === staffAccountEditor.id ? 'Удаляем...' : 'Удалить сотрудника'}
+                    </button>
+                  ) : null}
+                </div>
+              </form>
+            ) : (
+              <div className="forbidden-panel">
+                <p className="meta-line">Staff accounts недоступны для вашей роли.</p>
+              </div>
+            )}
+          </article>
+        </div>
 
         <article className="editor-card">
           <div className="entity-card__head">
             <div>
-              <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
-              <h3>{staffAccountEditor.id ? staffAccountEditor.name || 'Без имени' : 'Создать сотрудника'}</h3>
+              <p className="entity-kicker">Журнал изменений</p>
+              <h3>Последние staff-операции</h3>
             </div>
-            <span className="status-chip">{staffAccountEditor.role === 'admin' ? 'admin' : 'nomad'}</span>
+            <span className="status-chip">/staff/audit/events</span>
           </div>
 
-          {staffAccountsStatus === 'loading' ? <p className="meta-line">Загружаем сотрудников...</p> : null}
-          {staffAccountsStatus === 'error' ? <p className="error-text">{staffAccountsError}</p> : null}
-          {staffAccountsStatus === 'forbidden' ? <p className="meta-line">{staffAccountsError}</p> : null}
+          {auditEventsStatus === 'loading' ? <p className="meta-line">Загружаем журнал изменений...</p> : null}
+          {auditEventsStatus === 'error' ? <p className="error-text">{auditEventsError}</p> : null}
+          {auditEventsStatus === 'forbidden' ? <p className="meta-line">{auditEventsError}</p> : null}
 
-          {staffAccountsStatus !== 'forbidden' ? (
-            <form className="admin-form" onSubmit={onSubmitStaffAccount}>
-              <div className="form-grid form-grid--two">
-                <label className="field">
-                  <span className="field-label">Логин</span>
-                  <input
-                    className="text-input"
-                    value={staffAccountEditor.login}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
-                    autoComplete="username"
-                    placeholder="nomad"
-                  />
-                </label>
+          {auditEventsStatus === 'ready' && !auditEvents.length ? (
+            <p className="meta-line">Пока нет записей аудита.</p>
+          ) : null}
 
-                <label className="field">
-                  <span className="field-label">Имя</span>
-                  <input
-                    className="text-input"
-                    value={staffAccountEditor.name}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
-                    autoComplete="name"
-                    placeholder="Кальянный мастер"
-                  />
-                </label>
-
-                <label className="field">
-                  <span className="field-label">Роль</span>
-                  <select
-                    className="select-input"
-                    value={staffAccountEditor.role}
-                    onChange={(event) =>
-                      setStaffAccountEditor((current) => ({
-                        ...current,
-                        role: event.target.value as StaffUser['role'],
-                      }))
-                    }
-                  >
-                    <option value="admin">admin</option>
-                    <option value="nomad">nomad</option>
-                  </select>
-                </label>
-
-                <label className="field">
-                  <span className="field-label">Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}</span>
-                  <input
-                    className="text-input"
-                    type="password"
-                    value={staffAccountEditor.password}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
-                    autoComplete="new-password"
-                    placeholder="Оставьте пустым, если не менять"
-                  />
-                </label>
-
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={staffAccountEditor.active}
-                    onChange={(event) => setStaffAccountEditor((current) => ({ ...current, active: event.target.checked }))}
-                  />
-                  <span>Активен</span>
-                </label>
-              </div>
-
-              {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
-
-              <div className="form-actions">
-                <button className="primary-button primary-button--inline" type="submit" disabled={staffAccountSaveStatus === 'loading'}>
-                  {staffAccountSaveStatus === 'loading'
-                    ? 'Сохраняем...'
-                    : staffAccountEditor.id
-                      ? 'Сохранить сотрудника'
-                      : 'Создать сотрудника'}
-                </button>
-                <button className="secondary-button secondary-button--inline" type="button" onClick={onResetStaffAccountEditor}>
-                  Сбросить форму
-                </button>
-                {staffAccountEditor.id ? (
-                  <button
-                    className="secondary-button secondary-button--inline"
-                    type="button"
-                    onClick={() =>
-                      void onDeleteStaffAccount({
-                        id: staffAccountEditor.id,
-                        login: staffAccountEditor.login,
-                        name: staffAccountEditor.name,
-                        role: staffAccountEditor.role,
-                        active: staffAccountEditor.active,
-                      })
-                    }
-                    disabled={staffAccountToggleId === staffAccountEditor.id}
-                  >
-                    {staffAccountToggleId === staffAccountEditor.id ? 'Удаляем...' : 'Удалить сотрудника'}
-                  </button>
-                ) : null}
-              </div>
-            </form>
-          ) : (
-            <div className="forbidden-panel">
-              <p className="meta-line">Staff accounts недоступны для вашей роли.</p>
+          {auditEventsStatus !== 'forbidden' && auditEvents.length ? (
+            <div className="audit-list">
+              {auditEvents.map((event) => (
+                <article className="entity-card entity-card--compact" key={event.id}>
+                  <div className="entity-card__head">
+                    <div>
+                      <p className="entity-kicker">
+                        {formatAuditEntityType(event.entityType)} · {formatAuditAction(event.action)}
+                      </p>
+                      <h3>{event.entityLabel || event.entityId}</h3>
+                    </div>
+                    <span className="status-chip">{event.actorRole}</span>
+                  </div>
+                  <p className="meta-line">
+                    {event.actorName || event.actorLogin} ({event.actorLogin}) · {formatDateTimeDisplay(event.createdAt)}
+                  </p>
+                  <div className="chip-row">
+                    <span className="chip">{event.entityType}</span>
+                    <span className="chip">{event.action}</span>
+                    <span className="chip">{event.entityId}</span>
+                  </div>
+                </article>
+              ))}
             </div>
-          )}
+          ) : null}
         </article>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
 
   if (user) {
     return (

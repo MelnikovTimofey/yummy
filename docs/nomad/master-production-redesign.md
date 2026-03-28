@@ -54,7 +54,7 @@
 2. inventory поддерживает только list + toggle `inStock`;
 3. mixes поддерживают list/create/update, но сейчас принимают только `componentIds` вместо явной структуры компонентов с процентами;
 4. rails поддерживают list/create/update; statistical rail уже частично защищён от редактирования, но contracts ещё не отражают `readOnlyReason/editability`;
-5. Telegram automation operationally уже работает, но access model пока построена вокруг `chatId + scope`, без `ФИО + телефон + code delivery` flow.
+5. Telegram automation operationally уже работает, но access model пока должен быть приведён к `phone allowlist + share contact + /code`, а не к `chatId + scope`.
 
 Вероятные schema/contract pressure points:
 
@@ -62,7 +62,7 @@
 2. bulk inventory mutations;
 3. mix component payload с `proportion` и валидацией суммы;
 4. второй automatic statistical rail для лучших оценок;
-5. более богатая access/contact модель, если сохраняется сценарий `ФИО + телефон -> Telegram delivery`.
+5. phone allowlist и привязка chat id после Telegram contact share.
 
 ## Целевой результат
 
@@ -169,12 +169,12 @@
 
 Текущий target state:
 
-1. основной рабочий вход остаётся под одним админом;
-2. admin управляет staff contact data для выдачи кода;
-3. код доступа не создаётся вручную как ежедневная операция;
-4. Telegram-бот должен уметь доставлять code по управляемому backend flow.
-
-Этот блок требует отдельного human review, потому что текущий runtime всё ещё опирается на `staff accounts + Telegram recipients`.
+1. основной рабочий вход в `Мастер` остаётся под текущими staff accounts;
+2. admin управляет allowlist операторов по `имя + телефон`;
+3. daily code создаётся автоматически каждый день;
+4. оператор получает код только через Telegram-бота;
+5. первый вход в бот требует `share contact`, после чего backend привязывает `chatId` к allowlist-номеру;
+6. `Мастер` нужен для allowlist management и observability, а не для ручной отправки кода.
 
 ## Delivery slices
 
