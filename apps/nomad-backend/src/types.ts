@@ -1,4 +1,13 @@
-import type { DashboardSummary, IntroCard, MixView, RailType, RailView } from './state';
+import type {
+  DashboardSummary,
+  IntroCard,
+  InventoryBatchResult,
+  InventoryListResult,
+  InventoryTobaccoView,
+  MixView,
+  RailType,
+  RailView,
+} from './state';
 import type { AuditEventView } from './audit';
 import type {
   DailyAccessCodeView,
@@ -83,6 +92,14 @@ export type StaffMixesResponse = {
 };
 
 export type StaffDashboardSummaryResponse = DashboardSummary;
+
+export type StaffInventoryResponse = InventoryListResult;
+
+export type StaffInventoryMutationResponse = {
+  item: InventoryTobaccoView;
+};
+
+export type StaffInventoryBatchMutationResponse = InventoryBatchResult;
 
 export type StaffRailsResponse = {
   items: RailView[];

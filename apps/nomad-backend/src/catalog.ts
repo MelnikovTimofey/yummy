@@ -21,6 +21,7 @@ export type Tobacco = {
   manufacturer: string;
   flavorProfiles: FlavorProfile[];
   flavors: string[];
+  flavorTags: string[];
   inStock: boolean;
 };
 
@@ -40,6 +41,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Nomad Reserve',
     flavorProfiles: ['fresh', 'citrus', 'sour'],
     flavors: ['лимон', 'грейпфрут', 'лайм'],
+    flavorTags: ['fresh'],
     inStock: true,
   },
   {
@@ -48,6 +50,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Nomad Reserve',
     flavorProfiles: ['berry', 'sweet', 'fruity'],
     flavors: ['малина', 'черника'],
+    flavorTags: ['berry'],
     inStock: true,
   },
   {
@@ -56,6 +59,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Nomad Reserve',
     flavorProfiles: ['dessert', 'sweet'],
     flavors: ['мед', 'ваниль'],
+    flavorTags: ['dessert'],
     inStock: true,
   },
   {
@@ -64,6 +68,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Nomad Reserve',
     flavorProfiles: ['spicy', 'tobacco'],
     flavors: ['корица', 'кардамон'],
+    flavorTags: ['spicy'],
     inStock: true,
   },
   {
@@ -72,6 +77,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Nomad Reserve',
     flavorProfiles: ['fresh', 'minty'],
     flavors: ['мята'],
+    flavorTags: ['minty'],
     inStock: true,
   },
   {
@@ -80,6 +86,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Nomad Reserve',
     flavorProfiles: ['sweet', 'fruity'],
     flavors: ['персик'],
+    flavorTags: ['fruity'],
     inStock: false,
   },
   {
@@ -88,6 +95,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Lounge Garden',
     flavorProfiles: ['fresh', 'floral_herbal'],
     flavors: ['зелёный чай', 'мелисса', 'лайм'],
+    flavorTags: ['herbal'],
     inStock: true,
   },
   {
@@ -96,6 +104,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Lounge Garden',
     flavorProfiles: ['perfume', 'floral_herbal'],
     flavors: ['роза', 'личи'],
+    flavorTags: ['floral'],
     inStock: true,
   },
   {
@@ -104,6 +113,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'North Wind',
     flavorProfiles: ['sour', 'fruity', 'fresh'],
     flavors: ['зелёное яблоко', 'лимон'],
+    flavorTags: ['fruity'],
     inStock: true,
   },
   {
@@ -112,6 +122,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'North Wind',
     flavorProfiles: ['dessert', 'sweet'],
     flavors: ['кокос', 'сливки', 'ваниль'],
+    flavorTags: ['dessert'],
     inStock: true,
   },
   {
@@ -120,6 +131,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Atlas Smoke',
     flavorProfiles: ['berry', 'fruity'],
     flavors: ['виноград', 'ежевика'],
+    flavorTags: ['berry'],
     inStock: true,
   },
   {
@@ -128,6 +140,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Atlas Smoke',
     flavorProfiles: ['tobacco', 'spicy'],
     flavors: ['сухофрукты', 'пряности'],
+    flavorTags: ['tobacco'],
     inStock: true,
   },
   {
@@ -136,6 +149,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Velvet Line',
     flavorProfiles: ['fruity', 'floral_herbal'],
     flavors: ['груша', 'белые цветы'],
+    flavorTags: ['floral'],
     inStock: true,
   },
   {
@@ -144,6 +158,7 @@ export const tobaccos: Tobacco[] = [
     manufacturer: 'Velvet Line',
     flavorProfiles: ['berry', 'minty', 'fresh'],
     flavors: ['слива', 'лёд'],
+    flavorTags: ['minty'],
     inStock: true,
   },
 ];

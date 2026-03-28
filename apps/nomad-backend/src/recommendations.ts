@@ -32,7 +32,7 @@ const normalizeInput = (items: string[]) =>
   unique(items.map((item) => item.trim().toLowerCase()).filter(Boolean));
 
 export const getOnboardingOptions = async () => {
-  const inStockTobaccos = (await getInventoryTobaccos()).filter((item) => item.inStock);
+  const inStockTobaccos = (await getInventoryTobaccos()).items.filter((item) => item.inStock);
 
   return {
     profiles: unique(inStockTobaccos.flatMap((item) => item.flavorProfiles)).sort(),

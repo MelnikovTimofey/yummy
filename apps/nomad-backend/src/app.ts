@@ -35,6 +35,7 @@ import {
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import {
+  batchUpdateTobaccoInStock,
   createMix,
   createRail,
   ensureNomadState,
@@ -48,6 +49,10 @@ import {
   getStaffMixes,
   getStaffRails,
   getAvailableMixCatalog,
+  type InventoryBatchAction,
+  type InventorySortDirection,
+  type InventorySortField,
+  type InventoryStockFilter,
   normalizeDashboardWindowKey,
   recordSmokeCtaEvent,
   rateMix,
@@ -71,6 +76,9 @@ import type {
   StaffAccountMutationResponse,
   StaffAccountsResponse,
   StaffAuthResponse,
+  StaffInventoryBatchMutationResponse,
+  StaffInventoryMutationResponse,
+  StaffInventoryResponse,
   StaffDailyAccessCodeMutationResponse,
   StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
@@ -133,6 +141,7 @@ export const buildApp = () => {
       automationTelegramState: 'GET /automation/telegram/state',
       automationTelegramStateReport: 'POST /automation/telegram/state/report',
       inventoryList: 'GET /staff/inventory/tobaccos',
+      inventoryBatch: 'POST /staff/inventory/tobaccos/batch',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
@@ -1079,9 +1088,83 @@ export const buildApp = () => {
       return;
     }
 
-    return reply.send({
-      items: await getInventoryTobaccos(),
+    const query = request.query as
+      | {
+          search?: unknown;
+          stock?: unknown;
+          manufacturers?: unknown;
+          flavorProfiles?: unknown;
+          flavors?: unknown;
+          flavorTags?: unknown;
+          sort?: unknown;
+          direction?: unknown;
+        }
+      | undefined;
+
+    const response: StaffInventoryResponse = await getInventoryTobaccos({
+      search: typeof query?.search === 'string' ? query.search : '',
+      stock: (typeof query?.stock === 'string' ? query.stock : undefined) as InventoryStockFilter | undefined,
+      manufacturers: readStringList(query?.manufacturers),
+      flavorProfiles: readStringList(query?.flavorProfiles),
+      flavors: readStringList(query?.flavors),
+      flavorTags: readStringList(query?.flavorTags),
+      sort: (typeof query?.sort === 'string' ? query.sort : undefined) as InventorySortField | undefined,
+      direction: (typeof query?.direction === 'string' ? query.direction : undefined) as InventorySortDirection | undefined,
     });
+
+    return reply.send(response);
+  });
+
+  app.post('/staff/inventory/tobaccos/batch', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const body = request.body as { ids?: unknown; action?: unknown } | undefined;
+    const ids = Array.isArray(body?.ids)
+      ? body.ids.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+      : [];
+    const action = typeof body?.action === 'string' ? body.action : '';
+
+    if (!ids.length) {
+      return reply.status(400).send({ error: 'At least one tobacco id is required' } satisfies ApiError);
+    }
+
+    if (action === 'archive') {
+      return reply.status(409).send({
+        error: 'Archive/delete for inventory needs a separate product-approved contract',
+      } satisfies ApiError);
+    }
+
+    if (action !== 'set-in-stock' && action !== 'set-out-of-stock') {
+      return reply.status(400).send({ error: 'Unsupported batch action' } satisfies ApiError);
+    }
+
+    const currentItems = await Promise.all(ids.map(async (id) => [id, await getTobaccoById(id)] as const));
+    const currentMap = new Map(currentItems);
+    const result = await batchUpdateTobaccoInStock(ids, action as Exclude<InventoryBatchAction, 'archive'>);
+    const response: StaffInventoryBatchMutationResponse = result;
+
+    await Promise.all(
+      response.items.map((item) =>
+        recordAuditEvent({
+          actor: user,
+          action: 'toggle',
+          entityType: 'inventory',
+          entityId: item.id,
+          entityLabel: `${item.manufacturer} · ${item.name}`,
+          details: {
+            batchAction: response.action,
+            batchSize: response.ids.length,
+            fromInStock: currentMap.get(item.id)?.inStock ?? null,
+            toInStock: item.inStock,
+          },
+        }),
+      ),
+    );
+
+    return reply.send(response);
   });
 
   app.get('/staff/rails', async (request, reply) => {
@@ -1237,7 +1320,11 @@ export const buildApp = () => {
       },
     });
 
-    return reply.send({ item: updated });
+    const response: StaffInventoryMutationResponse = {
+      item: updated,
+    };
+
+    return reply.send(response);
   });
 
   app.get('/staff/dashboard/summary', async (request, reply) => {

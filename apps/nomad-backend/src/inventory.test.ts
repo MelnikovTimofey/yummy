@@ -24,21 +24,63 @@ test.beforeEach(async () => {
   await resetNomadState();
 });
 
-test('staff inventory endpoints expose and mutate in-memory stock', async () => {
+test('staff inventory endpoints expose filtered inventory with dependent mixes and mutate stock', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
 
   const before = await app.inject({
     method: 'GET',
-    url: '/staff/inventory/tobaccos',
+    url: '/staff/inventory/tobaccos?stock=out-of-stock&manufacturers=Nomad%20Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc',
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
 
   assert.equal(before.statusCode, 200);
-  const beforeBody = before.json() as { items: Array<{ id: string; inStock: boolean }> };
-  assert.equal(beforeBody.items.find((item) => item.id === 'tobacco-peach-silk')?.inStock, false);
+  const beforeBody = before.json() as {
+    items: Array<{
+      id: string;
+      inStock: boolean;
+      flavorTags: string[];
+      dependentMixCount: number;
+      blockedDependentMixCount: number;
+      dependentMixes: Array<{ id: string; guestVisible: boolean }>;
+    }>;
+    filters: {
+      stock: string;
+      manufacturers: string[];
+      flavors: string[];
+      options: {
+        flavorTags: string[];
+      };
+    };
+    sort: {
+      field: string;
+      direction: string;
+    };
+    meta: {
+      totalItems: number;
+      filteredItems: number;
+      inStockCount: number;
+      outOfStockCount: number;
+    };
+  };
+  assert.equal(beforeBody.filters.stock, 'out-of-stock');
+  assert.deepEqual(beforeBody.filters.manufacturers, ['Nomad Reserve']);
+  assert.deepEqual(beforeBody.filters.flavors, ['персик']);
+  assert.equal(beforeBody.sort.field, 'dependentMixes');
+  assert.equal(beforeBody.sort.direction, 'desc');
+  assert.equal(beforeBody.meta.totalItems, seedTobaccos.length);
+  assert.equal(beforeBody.meta.filteredItems, 1);
+  assert.equal(beforeBody.meta.inStockCount, 0);
+  assert.equal(beforeBody.meta.outOfStockCount, 1);
+  assert.equal(beforeBody.items[0]?.id, 'tobacco-peach-silk');
+  assert.equal(beforeBody.items[0]?.inStock, false);
+  assert.equal(beforeBody.items[0]?.dependentMixCount, 1);
+  assert.equal(beforeBody.items[0]?.blockedDependentMixCount, 1);
+  assert.equal(beforeBody.items[0]?.dependentMixes[0]?.id, 'mix-peach-mirage');
+  assert.equal(beforeBody.items[0]?.dependentMixes[0]?.guestVisible, false);
+  assert.equal(beforeBody.filters.options.flavorTags.includes('fruity'), true);
 
   const patch = await app.inject({
     method: 'PATCH',
@@ -78,6 +120,67 @@ test('staff inventory endpoints expose and mutate in-memory stock', async () => 
   assert.equal(recommendations.statusCode, 200);
   const recommendationsBody = recommendations.json() as { items: Array<{ id: string }> };
   assert.equal(recommendationsBody.items[0]?.id, 'mix-peach-mirage');
+
+  await app.close();
+});
+
+test('staff inventory batch endpoint updates stock and rejects archive semantics', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  const batch = await app.inject({
+    method: 'POST',
+    url: '/staff/inventory/tobaccos/batch',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    payload: {
+      ids: ['tobacco-peach-silk', 'tobacco-mint-veil', 'missing-id'],
+      action: 'set-out-of-stock',
+    },
+  });
+
+  assert.equal(batch.statusCode, 200);
+  const batchBody = batch.json() as {
+    action: string;
+    ids: string[];
+    skippedIds: string[];
+    processedCount: number;
+    items: Array<{ id: string; inStock: boolean }>;
+  };
+  assert.equal(batchBody.action, 'set-out-of-stock');
+  assert.deepEqual(batchBody.ids.sort(), ['tobacco-mint-veil', 'tobacco-peach-silk']);
+  assert.deepEqual(batchBody.skippedIds, ['missing-id']);
+  assert.equal(batchBody.processedCount, 2);
+  assert.equal(batchBody.items.every((item) => item.inStock === false), true);
+
+  const inventory = await app.inject({
+    method: 'GET',
+    url: '/staff/inventory/tobaccos?stock=out-of-stock',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+
+  assert.equal(inventory.statusCode, 200);
+  const inventoryBody = inventory.json() as { items: Array<{ id: string }> };
+  assert.equal(inventoryBody.items.some((item) => item.id === 'tobacco-mint-veil'), true);
+  assert.equal(inventoryBody.items.some((item) => item.id === 'tobacco-peach-silk'), true);
+
+  const archive = await app.inject({
+    method: 'POST',
+    url: '/staff/inventory/tobaccos/batch',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    payload: {
+      ids: ['tobacco-peach-silk'],
+      action: 'archive',
+    },
+  });
+
+  assert.equal(archive.statusCode, 409);
+  assert.match(archive.body, /product-approved contract/i);
 
   await app.close();
 });
