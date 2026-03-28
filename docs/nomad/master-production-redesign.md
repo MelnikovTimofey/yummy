@@ -202,7 +202,8 @@ Scope:
 1. новый summary DTO с product/ops separation;
 2. breakdowns по производителям и вкусовым атрибутам;
 3. time-window support;
-4. UI dashboard modules без смешения с inventory CRUD.
+4. UI dashboard modules без смешения с inventory CRUD;
+5. dashboard redesign под baseline `shadcn/ui + premium HoReCa visual layer`.
 
 Human review trigger:
 
@@ -362,5 +363,5 @@ cd tests/nomad-smoke && npm run smoke
 
 Следующий безопасный шаг после этого документа:
 
-1. зафиксировать `Slice 1` payload для dashboard analytics;
-2. только потом выделять frontend/backend workers на реализацию.
+1. запускать `Slice 2` по inventory table, filters и bulk operations;
+2. не смешивать inventory hardening с mix editor и rail manager в одном bounded change-set.

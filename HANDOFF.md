@@ -1,5 +1,44 @@
 # HANDOFF — Yummy
 
+## 1.70) Complete Nomad Master Slice 1 dashboard redesign under shadcn baseline (28 марта 2026)
+
+- Запрос:
+  - зафиксировать, что dashboard ещё не переделан по новым соглашениям;
+  - выполнять slices по порядку, а значит закрыть visual/UI часть `Slice 1` до перехода к `Slice 2`.
+
+- Реализация:
+  - `apps/nomad-master-web/package.json`, `package-lock.json`, `components.json`, `tsconfig.json`, `vite.config.ts`, `src/styles.css`:
+    - добавлен `shadcn/ui` foundation для Vite-приложения;
+    - подключены Tailwind v4, `@/*` alias и базовый theme layer для нового dashboard UI.
+  - добавлены primitives и utilities:
+    - `src/components/ui/button.tsx`
+    - `src/components/ui/card.tsx`
+    - `src/components/ui/badge.tsx`
+    - `src/components/ui/separator.tsx`
+    - `src/lib/utils.ts`
+  - добавлен `src/components/dashboard/dashboard-view.tsx`:
+    - новый dashboard screen на `shadcn/ui`;
+    - тёплый premium visual direction вместо прежней MVP-сводки;
+    - window selector, quick actions в `inventory / mixes / rails / access`, inventory breakdowns, product analytics и ops watchlist.
+  - `src/App.tsx`:
+    - старый dashboard markup заменён на `DashboardView`;
+    - верхний summary strip тоже переведён на новый visual layer, чтобы dashboard не жил внутри старой оболочки.
+  - docs sync:
+    - `docs/nomad/master-production-redesign.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `apps/nomad-master-web/README.md`
+    - теперь `Slice 1` зафиксирован как действительно завершённый, а следующий незакрытый шаг — `Slice 2`.
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `git diff --check`
+
+- Эффект:
+  - dashboard `Nomad Master` теперь соответствует новому baseline по смыслу и по visual layer;
+  - `shadcn/ui` реально вошёл в `nomad-master-web`, а не остался декларацией в issue template;
+  - дальнейшее выполнение slices снова идёт честно по порядку, начиная с `Slice 2`.
+
 ## 1.69) Formalize all Nomad Master redesign slices through nomad-feature issue shape (28 марта 2026)
 
 - Запрос:

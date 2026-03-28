@@ -14,6 +14,16 @@
 2. эти файлы являются локальными issue body mirrors и готовы к переносу в GitHub без переписывания структуры;
 3. для `apps/nomad-master-web` UI/redesign slices baseline по `shadcn/ui` и TIMELESS обязателен.
 
+Текущий статус:
+
+1. `Slice 0` - done
+2. `Slice 1` - done
+3. `Slice 2` - next
+4. `Slice 3` - todo
+5. `Slice 4` - todo
+6. `Slice 5` - todo
+7. `Slice 6` - todo
+
 Список slices:
 
 1. [slice-0-contract-first-redesign.md](/Users/admin/PycharmProjects/yummy/docs/nomad/feature-slices/slice-0-contract-first-redesign.md)

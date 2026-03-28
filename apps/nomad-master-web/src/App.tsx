@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { DashboardView } from '@/components/dashboard/dashboard-view';
 import {
-  dashboardWindowOptions,
   DashboardSummary,
   DashboardWindowKey,
   DailyAccessCodeRecord,
@@ -295,22 +296,6 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
     { label: 'Миксов блокирует наличие', value: summary.ops.blockedByInventoryCount },
     { label: 'Пустых активных рейлов', value: summary.ops.emptyActiveRailsCount },
   ];
-};
-
-const formatDashboardDay = (value: string) => {
-  if (!value) {
-    return 'Нет даты';
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: 'short',
-  }).format(parsed);
 };
 
 const resolveMixComponentSummary = (mix: MixRecord) => {
@@ -1334,280 +1319,14 @@ export const App = () => {
   };
 
   const renderDashboard = () => (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Дашборд</p>
-          <h2>Сводка Nomad</h2>
-          <p className="meta-line">
-            Product и ops-метрики за окно {summary?.window.label ?? dashboardWindowOptions.find((item) => item.key === dashboardWindow)?.label}.
-          </p>
-        </div>
-        <div className="status-chip">Операционный обзор</div>
-      </div>
-
-      {summaryStatus === 'loading' ? <p className="meta-line">Загружаем сводку...</p> : null}
-      {summaryError ? <p className="error-text">{summaryError}</p> : null}
-
-      <div className="dashboard-toolbar">
-        <div className="window-toggle-group">
-          {dashboardWindowOptions.map((option) => (
-            <button
-              className={dashboardWindow === option.key ? 'window-toggle window-toggle--active' : 'window-toggle'}
-              type="button"
-              key={option.key}
-              onClick={() => void onSelectDashboardWindow(option.key)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <section className="summary-grid summary-grid--dashboard">
-        {readSummaryCards(summary).map((card) => (
-          <article className="metric-card" key={card.label}>
-            <span className="metric-label">{card.label}</span>
-            <strong className="metric-value">{formatMetricValue(card.value)}</strong>
-          </article>
-        ))}
-      </section>
-
-      <div className="quick-actions">
-        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('mixes')}>
-          Перейти в менеджер миксов
-        </button>
-        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('rails')}>
-          Перейти в менеджер рейлов
-        </button>
-        <button className="secondary-button secondary-button--inline" type="button" onClick={() => setActiveTab('access')}>
-          Перейти в доступ
-        </button>
-      </div>
-
-      <div className="dashboard-breakdown-grid">
-        <article className="editor-card dashboard-panel">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">Склад</p>
-              <h3>Производители</h3>
-            </div>
-            <span className="status-chip">Inventory</span>
-          </div>
-
-          <div className="breakdown-list">
-            {(summary?.inventory.manufacturers ?? []).map((item) => (
-              <div className="breakdown-row" key={`manufacturer:${item.key}`}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <p className="meta-line">
-                    В наличии {formatMetricValue(item.inStockCount)} из {formatMetricValue(item.total)}
-                  </p>
-                </div>
-                <span className="status-chip">{formatMetricValue(item.total)}</span>
-              </div>
-            ))}
-            {!summary?.inventory.manufacturers.length ? <p className="meta-line">Пока нет разреза по производителям.</p> : null}
-          </div>
-        </article>
-
-        <article className="editor-card dashboard-panel">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">Профили</p>
-              <h3>Категории вкуса</h3>
-            </div>
-            <span className="status-chip">Profiles</span>
-          </div>
-
-          <div className="breakdown-list">
-            {(summary?.inventory.flavorProfiles ?? []).map((item) => (
-              <div className="breakdown-row" key={`profile:${item.key}`}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <p className="meta-line">Нет в наличии: {formatMetricValue(item.outOfStockCount)}</p>
-                </div>
-                <span className="status-chip">{formatMetricValue(item.total)}</span>
-              </div>
-            ))}
-            {!summary?.inventory.flavorProfiles.length ? <p className="meta-line">Пока нет разреза по профилям.</p> : null}
-          </div>
-        </article>
-
-        <article className="editor-card dashboard-panel">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">Вкусы</p>
-              <h3>Топ вкусов</h3>
-            </div>
-            <span className="status-chip">Flavors</span>
-          </div>
-
-          <div className="breakdown-list">
-            {(summary?.inventory.topFlavors ?? []).map((item) => (
-              <div className="breakdown-row" key={`flavor:${item.key}`}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <p className="meta-line">В наличии: {formatMetricValue(item.inStockCount)}</p>
-                </div>
-                <span className="status-chip">{formatMetricValue(item.total)}</span>
-              </div>
-            ))}
-            {!summary?.inventory.topFlavors.length ? <p className="meta-line">Пока нет разреза по вкусам.</p> : null}
-          </div>
-        </article>
-      </div>
-
-      <div className="dashboard-panels">
-        <article className="editor-card dashboard-panel">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">Продукт</p>
-              <h3>Выборы и оценки гостей</h3>
-            </div>
-            <span className="status-chip">Product metrics</span>
-          </div>
-
-          <div className="summary-grid summary-grid--nested">
-            <article className="metric-card">
-              <span className="metric-label">Нажатия Выбрать</span>
-              <strong className="metric-value">{formatMetricValue(summary?.smokeCtaTotal ?? 0)}</strong>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">Оценок</span>
-              <strong className="metric-value">{formatMetricValue(summary?.ratingsTotal ?? 0)}</strong>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">Средняя guest-оценка</span>
-              <strong className="metric-value">{summary?.avgGuestRating ? summary.avgGuestRating.toFixed(1) : '0.0'}</strong>
-            </article>
-          </div>
-
-          <div className="dashboard-split">
-            <section className="dashboard-subsection">
-              <h4>Топ по выбору</h4>
-              <div className="breakdown-list">
-                {(summary?.topMixes ?? []).map((mix) => (
-                  <div className="breakdown-row" key={`top:${mix.mixId}`}>
-                    <div>
-                      <strong>{mix.name}</strong>
-                      <p className="meta-line">Рейтинг {mix.avgRating.toFixed(1)} · оценок {formatMetricValue(mix.ratingsCount)}</p>
-                    </div>
-                    <span className="status-chip">{formatMetricValue(mix.smokeCtaCount)}</span>
-                  </div>
-                ))}
-                {!summary?.topMixes.length ? <p className="meta-line">Пока нет данных по выборам.</p> : null}
-              </div>
-            </section>
-
-            <section className="dashboard-subsection">
-              <h4>Топ по оценкам</h4>
-              <div className="breakdown-list">
-                {(summary?.topRatedMixes ?? []).map((mix) => (
-                  <div className="breakdown-row" key={`rated:${mix.mixId}`}>
-                    <div>
-                      <strong>{mix.name}</strong>
-                      <p className="meta-line">Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}</p>
-                    </div>
-                    <span className="status-chip">{mix.avgRating.toFixed(1)}</span>
-                  </div>
-                ))}
-                {!summary?.topRatedMixes.length ? <p className="meta-line">Пока нет guest-оценок за окно.</p> : null}
-              </div>
-            </section>
-          </div>
-
-          <section className="dashboard-subsection">
-            <h4>Распределение оценок</h4>
-            <div className="rating-distribution">
-              {(summary?.ratingDistribution ?? []).map((item) => (
-                <div className="rating-pill" key={`rating:${item.value}`}>
-                  <span>{item.value}★</span>
-                  <strong>{formatMetricValue(item.count)}</strong>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="dashboard-subsection">
-            <h4>Динамика по дням</h4>
-            <div className="activity-list">
-              {(summary?.activity ?? []).map((item) => (
-                <div className="activity-row" key={item.date}>
-                  <strong>{formatDashboardDay(item.date)}</strong>
-                  <p className="meta-line">
-                    Выборов {formatMetricValue(item.smokeCtaCount)} · оценок {formatMetricValue(item.ratingsCount)}
-                  </p>
-                </div>
-              ))}
-              {!summary?.activity.length ? <p className="meta-line">Пока нет динамики по дням.</p> : null}
-            </div>
-          </section>
-        </article>
-
-        <article className="editor-card dashboard-panel">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">Операции</p>
-              <h3>Сигналы для команды</h3>
-            </div>
-            <span className="status-chip">Ops metrics</span>
-          </div>
-
-          <div className="summary-grid summary-grid--nested">
-            <article className="metric-card">
-              <span className="metric-label">Гостю видимо</span>
-              <strong className="metric-value">{formatMetricValue(summary?.ops.guestVisibleMixesCount ?? 0)}</strong>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">Скрыто вручную</span>
-              <strong className="metric-value">{formatMetricValue(summary?.ops.hiddenMixesCount ?? 0)}</strong>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">Активных рейлов</span>
-              <strong className="metric-value">{formatMetricValue(summary?.ops.activeRailsCount ?? 0)}</strong>
-            </article>
-          </div>
-
-          <section className="dashboard-subsection">
-            <h4>Миксы, которые режет наличие</h4>
-            <div className="breakdown-list">
-              {(summary?.ops.blockedMixes ?? []).map((mix) => (
-                <div className="breakdown-row breakdown-row--stacked" key={`blocked:${mix.mixId}`}>
-                  <div>
-                    <strong>{mix.name}</strong>
-                    <p className="meta-line">Нет в наличии: {mix.missingComponents.join(', ') || 'не указано'}</p>
-                    <p className="meta-line">Рейлы: {mix.railNames.join(', ') || 'не участвует'}</p>
-                  </div>
-                  <span className="status-chip">Выборов {formatMetricValue(mix.smokeCtaCount)}</span>
-                </div>
-              ))}
-              {!summary?.ops.blockedMixes.length ? <p className="meta-line">Пока нет миксов, заблокированных наличием.</p> : null}
-            </div>
-          </section>
-
-          <section className="dashboard-subsection">
-            <h4>Состояние рейлов</h4>
-            <div className="breakdown-list">
-              {(summary?.ops.railHealth ?? []).map((rail) => (
-                <div className="breakdown-row" key={`rail-health:${rail.railId}`}>
-                  <div>
-                    <strong>{rail.name}</strong>
-                    <p className="meta-line">
-                      Видимых миксов {formatMetricValue(rail.visibleMixCount)} из {formatMetricValue(rail.totalMixCount)}
-                    </p>
-                  </div>
-                  <span className={rail.hiddenMixCount ? 'stock-pill stock-pill--out' : 'stock-pill stock-pill--in'}>
-                    {rail.hiddenMixCount ? `Скрыто ${formatMetricValue(rail.hiddenMixCount)}` : 'Без блокировок'}
-                  </span>
-                </div>
-              ))}
-              {!summary?.ops.railHealth.length ? <p className="meta-line">Пока нет данных по рейлам.</p> : null}
-            </div>
-          </section>
-        </article>
-      </div>
-    </section>
+    <DashboardView
+      summary={summary}
+      summaryStatus={summaryStatus}
+      summaryError={summaryError}
+      dashboardWindow={dashboardWindow}
+      onSelectDashboardWindow={onSelectDashboardWindow}
+      onNavigate={(tab) => setActiveTab(tab)}
+    />
   );
 
   const renderInventory = () => (
@@ -2626,12 +2345,18 @@ export const App = () => {
           </div>
         </section>
 
-        <section className="summary-grid">
+        <section className="mx-auto grid w-full max-w-[1180px] gap-3 md:grid-cols-2 xl:grid-cols-6">
           {readSummaryCards(summary).map((card) => (
-            <article className="metric-card" key={card.label}>
-              <span className="metric-label">{card.label}</span>
-              <strong className="metric-value">{formatMetricValue(card.value)}</strong>
-            </article>
+            <Card
+              key={card.label}
+              size="sm"
+              className="rounded-[1.55rem] border-white/58 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,249,244,0.7))] shadow-[0_18px_42px_rgba(43,24,21,0.07)] backdrop-blur-lg"
+            >
+              <CardContent className="space-y-2 pt-3.5">
+                <div className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{card.label}</div>
+                <div className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
+              </CardContent>
+            </Card>
           ))}
         </section>
 

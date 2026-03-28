@@ -102,4 +102,6 @@ npm run dev
 3. breakdown по производителям, flavor profiles и вкусам;
 4. топ по выборам, топ по guest-оценкам и распределение оценок;
 5. daily activity trend;
-6. операционные сигналы по blocked mixes и состоянию rails.
+6. операционные сигналы по blocked mixes и состоянию rails;
+7. `shadcn/ui` foundation для `nomad-master-web` как новый UI baseline;
+8. visual redesign dashboard под premium HoReCa direction вместо прежней MVP-сводки.

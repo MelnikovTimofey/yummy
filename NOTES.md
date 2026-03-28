@@ -1,3 +1,34 @@
+Обновление от 28 марта 2026 (nomad master: complete slice 1 dashboard redesign under shadcn baseline):
+- Проблема:
+  - формально `Slice 1` уже считался завершённым по analytics contract, но сам dashboard ещё не был переделан по новым соглашениям;
+  - `nomad-master-web` не использовал `shadcn/ui`, а дашборд оставался локальным монолитным экраном на старом card/grid слое;
+  - backlog требовал выполнения slices по порядку, а значит следующим реальным шагом был не `Slice 2`, а закрытие visual/UI части `Slice 1`.
+- Изменение:
+  - `apps/nomad-master-web/package.json`, `package-lock.json`, `components.json`, `tsconfig.json`, `vite.config.ts`, `src/styles.css`:
+    - добавлен `shadcn/ui` foundation для Vite-проекта;
+    - подключены Tailwind v4, alias `@/*`, базовые design tokens и generated primitives.
+  - добавлены UI-примитивы:
+    - `apps/nomad-master-web/src/components/ui/button.tsx`
+    - `apps/nomad-master-web/src/components/ui/card.tsx`
+    - `apps/nomad-master-web/src/components/ui/badge.tsx`
+    - `apps/nomad-master-web/src/components/ui/separator.tsx`
+    - `apps/nomad-master-web/src/lib/utils.ts`
+  - добавлен `apps/nomad-master-web/src/components/dashboard/dashboard-view.tsx`:
+    - новый dashboard screen на `shadcn/ui` с premium HoReCa visual direction;
+    - hero-блок, window toggles, action routing, inventory atlas, product analytics и ops watchlist.
+  - `apps/nomad-master-web/src/App.tsx`:
+    - старый dashboard markup заменён на новый `DashboardView`;
+    - верхний summary strip тоже переведён на новый visual layer.
+  - backlog/docs:
+    - `docs/nomad/master-production-redesign.md`, `docs/nomad/feature-slices/README.md`, `apps/nomad-master-web/README.md` синхронизированы так, что `Slice 1` теперь действительно закрыт, а следующий незакрытый шаг — `Slice 2`.
+- Проверки:
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `git diff --check`
+- Эффект:
+  - `Slice 1` больше не является только contract slice; теперь у него есть и production-ready visual layer;
+  - следующий шаг по порядку действительно стал `Slice 2`, а не исправление старого долга по dashboard redesign.
+
 Обновление от 28 марта 2026 (nomad master: formalize all redesign slices through nomad-feature issue shape):
 - Проблема:
   - `Nomad Master production redesign` уже был разложен на `Slice 0-6` в одном markdown-документе, но сами slices ещё не существовали как отдельные issue-shaped артефакты;
