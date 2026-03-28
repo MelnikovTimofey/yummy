@@ -1,0 +1,53 @@
+name: "Nomad Ops / Runtime"
+description: "Env, deploy, runtime, bot или release задача для Nomad"
+title: "[Nomad Ops] "
+labels:
+  - "contour:nomad"
+  - "type:ops"
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: "Runtime surface"
+      options:
+        - "apps/nomad-backend"
+        - "apps/nomad-aroma-web"
+        - "apps/nomad-master-web"
+        - "services/nomad-telegram-bot"
+        - "cross-surface Nomad ops"
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: "Requested ops change"
+      description: "Что нужно изменить в env / deploy / runtime?"
+    validations:
+      required: true
+  - type: textarea
+    id: env-impact
+    attributes:
+      label: "Env / secret impact"
+      description: "Какие env vars, secrets или runtime paths затрагиваются?"
+    validations:
+      required: true
+  - type: textarea
+    id: rollout
+    attributes:
+      label: "Rollout checks"
+      description: "Какие smoke checks должны быть выполнены?"
+      placeholder: |
+        backend health
+        automation access
+        guest flow
+        master login
+        telegram bot
+    validations:
+      required: true
+  - type: textarea
+    id: stop
+    attributes:
+      label: "Stop conditions"
+      description: "Что должно остановить rollout и перевести задачу в Human Review / incident mode?"
+    validations:
+      required: true

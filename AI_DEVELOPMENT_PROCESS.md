@@ -294,6 +294,24 @@ Merge допустим, если:
 4. проверка неполная;
 5. возникло сомнение по продуктовой трактовке.
 
+## GitHub Governance
+
+Nomad GitHub-layer хранится в `.github/`.
+
+Для Nomad использовать:
+
+1. issue templates из `.github/ISSUE_TEMPLATE/`;
+2. PR template из `.github/pull_request_template.md`;
+3. review policy из `.github/NOMAD_REVIEW_POLICY.md`;
+4. labels source of truth из `.github/labels.md`;
+5. `CODEOWNERS` только для Nomad и process paths.
+
+Nomad PR по умолчанию должен идти в:
+
+1. `codex/nomad-parallel-track`
+
+Auto-merge для Nomad не включать, пока это явно не изменено в `WORKFLOW_NOMAD.md` и `.github/NOMAD_REVIEW_POLICY.md`.
+
 ## Система скиллов
 
 ### Что считать скиллом

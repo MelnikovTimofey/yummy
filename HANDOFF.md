@@ -1,5 +1,40 @@
 # HANDOFF — Yummy
 
+## 1.63) Add Nomad-only GitHub governance layer with templates, policy, and CI (28 марта 2026)
+
+- Запрос:
+  - реализовать GitHub-layer только для Nomad: issue templates, PR template, CODEOWNERS, labels source of truth, review policy и Nomad-only Actions.
+
+- Реализация:
+  - `.github/`:
+    - добавлены `ISSUE_TEMPLATE/nomad-feature.yml`, `nomad-bug.yml`, `nomad-ops.yml`;
+    - добавлен `pull_request_template.md` с обязательными секциями для Nomad PR;
+    - добавлен `CODEOWNERS` только для Nomad и process paths;
+    - добавлены `labels.md` и `NOMAD_REVIEW_POLICY.md`.
+  - `.github/workflows/nomad-pr-checks.yml`:
+    - path-filtered builds/tests для `apps/nomad-aroma-web`, `apps/nomad-master-web`, `apps/nomad-backend`, `services/nomad-telegram-bot`;
+    - `nomad-docs-check`, который требует `NOTES.md` и `HANDOFF.md` в PR с process/workflow changes;
+    - auto-labeling PR по доступным Nomad labels и risk flagging для `schema/auth/env/runtime/process` paths.
+  - `.github/workflows/nomad-docs-lint.yml`:
+    - YAML syntax check через Ruby;
+    - проверка структуры `.codex/skills/*`;
+    - проверка на placeholder markers;
+    - `git diff --check`.
+  - `WORKFLOW_NOMAD.md`:
+    - добавлена обязательная ссылка на `.github/NOMAD_REVIEW_POLICY.md` для задач по GitHub governance.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - добавлен раздел `GitHub Governance`.
+
+- Проверки:
+  - `git diff --check`
+  - `ruby -e 'require "yaml"; Dir[".github/**/*.yml"].sort.each { |file| YAML.load_file(file); puts "OK #{file}" }'`
+  - ручной review `.github/NOMAD_REVIEW_POLICY.md`, `labels.md`, `CODEOWNERS`, issue/PR templates и Actions
+
+- Эффект:
+  - Nomad получил отдельный GitHub governance layer без нормализации legacy-контура;
+  - review policy, labels и CI теперь описаны и лежат рядом с repo source of truth;
+  - phase 1 готова к применению в GitHub UI, phase 2 branch protection можно включать после стабилизации checks.
+
 ## 1.62) Add UI visual review skill for Nomad consistency and style (28 марта 2026)
 
 - Запрос:

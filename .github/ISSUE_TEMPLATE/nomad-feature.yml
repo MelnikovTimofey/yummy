@@ -1,0 +1,63 @@
+name: "Nomad Feature Slice"
+description: "Новый bounded feature slice для Nomad"
+title: "[Nomad] "
+labels:
+  - "contour:nomad"
+  - "type:feature"
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: "Primary scope"
+      description: "Выберите основной bounded context"
+      options:
+        - "apps/nomad-aroma-web"
+        - "apps/nomad-master-web"
+        - "apps/nomad-backend"
+        - "services/nomad-telegram-bot"
+        - "repo ops / docs"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem"
+      description: "Какую конкретную проблему должен решить этот bounded feature slice?"
+      placeholder: "Один feature slice = один проверяемый результат."
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: "Success criteria"
+      description: "Что должно быть проверяемым результатом?"
+      placeholder: "Опишите acceptance criteria коротко и проверяемо."
+    validations:
+      required: true
+  - type: textarea
+    id: active-scope
+    attributes:
+      label: "Active scope"
+      description: "Какие пути можно менять?"
+      placeholder: |
+        apps/nomad-aroma-web/...
+        apps/nomad-backend/...
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: "Out of scope"
+      description: "Что точно не должно входить в эту задачу?"
+    validations:
+      required: true
+  - type: checkboxes
+    id: risk
+    attributes:
+      label: "Risk flags"
+      description: "Отметьте всё, что применимо"
+      options:
+        - label: "Нужен Human Review из-за schema/auth/env/runtime"
+        - label: "Задача затрагивает public contract"
+        - label: "Задача меняет process/workflow/docs rules"
+        - label: "Можно делать как локальный bounded slice без cross-app rewrite"

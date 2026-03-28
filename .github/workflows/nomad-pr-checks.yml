@@ -1,0 +1,281 @@
+name: Nomad PR Checks
+
+on:
+  pull_request:
+    branches:
+      - codex/nomad-parallel-track
+    paths:
+      - apps/nomad-aroma-web/**
+      - apps/nomad-master-web/**
+      - apps/nomad-backend/**
+      - services/nomad-telegram-bot/**
+      - .github/**
+      - .codex/skills/**
+      - AGENTS.md
+      - AI_DEVELOPMENT_PROCESS.md
+      - WORKFLOW_NOMAD.md
+      - NOMAD_*.md
+      - NOTES.md
+      - HANDOFF.md
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: nomad-pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      aroma: ${{ steps.filter.outputs.aroma }}
+      master: ${{ steps.filter.outputs.master }}
+      backend: ${{ steps.filter.outputs.backend }}
+      backend_prisma: ${{ steps.filter.outputs.backend_prisma }}
+      backend_auth: ${{ steps.filter.outputs.backend_auth }}
+      bot: ${{ steps.filter.outputs.bot }}
+      runtime: ${{ steps.filter.outputs.runtime }}
+      process_core: ${{ steps.filter.outputs.process_core }}
+      notes: ${{ steps.filter.outputs.notes }}
+      handoff: ${{ steps.filter.outputs.handoff }}
+    steps:
+      - name: Detect changed Nomad scopes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            aroma:
+              - 'apps/nomad-aroma-web/**'
+            master:
+              - 'apps/nomad-master-web/**'
+            backend:
+              - 'apps/nomad-backend/**'
+            backend_prisma:
+              - 'apps/nomad-backend/prisma/**'
+            backend_auth:
+              - 'apps/nomad-backend/src/auth.ts'
+              - 'apps/nomad-backend/src/auth.test.ts'
+              - 'apps/nomad-backend/src/access.ts'
+              - 'apps/nomad-backend/src/access.test.ts'
+              - 'apps/nomad-backend/src/config.ts'
+              - 'apps/nomad-backend/scripts/bootstrap-admin.ts'
+              - 'apps/nomad-backend/.env.example'
+            bot:
+              - 'services/nomad-telegram-bot/**'
+            runtime:
+              - 'services/nomad-telegram-bot/ops/**'
+              - 'services/nomad-telegram-bot/.env.example'
+              - 'NOMAD_ENV_MATRIX.md'
+              - 'NOMAD_DEPLOYMENT_SMOKE_CHECKLIST.md'
+            process_core:
+              - '.github/**'
+              - '.codex/skills/**'
+              - 'AGENTS.md'
+              - 'AI_DEVELOPMENT_PROCESS.md'
+              - 'WORKFLOW_NOMAD.md'
+              - 'NOMAD_*.md'
+            notes:
+              - 'NOTES.md'
+            handoff:
+              - 'HANDOFF.md'
+
+  nomad-review-flags:
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply available Nomad labels
+        uses: actions/github-script@v7
+        env:
+          AROMA: ${{ needs.changes.outputs.aroma }}
+          MASTER: ${{ needs.changes.outputs.master }}
+          BACKEND: ${{ needs.changes.outputs.backend }}
+          BOT: ${{ needs.changes.outputs.bot }}
+          PROCESS_CORE: ${{ needs.changes.outputs.process_core }}
+          BACKEND_PRISMA: ${{ needs.changes.outputs.backend_prisma }}
+          BACKEND_AUTH: ${{ needs.changes.outputs.backend_auth }}
+          RUNTIME: ${{ needs.changes.outputs.runtime }}
+        with:
+          script: |
+            const issue_number = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            const existingNames = new Set(existing.map((label) => label.name));
+
+            const desired = new Set(["contour:nomad"]);
+            if (process.env.AROMA === "true") desired.add("scope:aroma-web");
+            if (process.env.MASTER === "true") desired.add("scope:master-web");
+            if (process.env.BACKEND === "true") desired.add("scope:backend");
+            if (process.env.BOT === "true") desired.add("scope:telegram-bot");
+            if (process.env.PROCESS_CORE === "true") desired.add("scope:repo-ops");
+
+            const needsHumanReview =
+              process.env.BACKEND_PRISMA === "true" ||
+              process.env.BACKEND_AUTH === "true" ||
+              process.env.RUNTIME === "true" ||
+              process.env.PROCESS_CORE === "true";
+
+            desired.add(needsHumanReview ? "risk:human-review" : "risk:safe");
+
+            const addable = Array.from(desired).filter((name) => existingNames.has(name));
+            const missing = Array.from(desired).filter((name) => !existingNames.has(name));
+
+            if (addable.length > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: addable,
+              });
+            }
+
+            for (const opposite of ["risk:human-review", "risk:safe"]) {
+              if (!existingNames.has(opposite) || desired.has(opposite)) {
+                continue;
+              }
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number,
+                  name: opposite,
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+
+            const summary = [
+              "## Nomad review flags",
+              `Human review required: ${needsHumanReview ? "yes" : "no"}`,
+              `Applied labels: ${addable.length > 0 ? addable.join(", ") : "none"}`,
+              `Missing labels in repo settings: ${missing.length > 0 ? missing.join(", ") : "none"}`,
+            ].join("\n");
+
+            core.summary.addRaw(summary, true);
+            await core.summary.write();
+
+  nomad-aroma-build:
+    name: nomad-aroma-build
+    needs: changes
+    if: needs.changes.outputs.aroma == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/nomad-aroma-web/package-lock.json
+      - name: Install dependencies
+        working-directory: apps/nomad-aroma-web
+        run: npm ci
+      - name: Build
+        working-directory: apps/nomad-aroma-web
+        run: npm run build
+
+  nomad-master-build:
+    name: nomad-master-build
+    needs: changes
+    if: needs.changes.outputs.master == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/nomad-master-web/package-lock.json
+      - name: Install dependencies
+        working-directory: apps/nomad-master-web
+        run: npm ci
+      - name: Test
+        working-directory: apps/nomad-master-web
+        run: npm test
+      - name: Build
+        working-directory: apps/nomad-master-web
+        run: npm run build
+
+  nomad-backend-build:
+    name: nomad-backend-build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/nomad-backend/package-lock.json
+      - name: Install dependencies
+        working-directory: apps/nomad-backend
+        run: npm ci
+      - name: Test
+        working-directory: apps/nomad-backend
+        run: npm test
+      - name: Build
+        working-directory: apps/nomad-backend
+        run: npm run build
+
+  nomad-bot-build:
+    name: nomad-bot-build
+    needs: changes
+    if: needs.changes.outputs.bot == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: services/nomad-telegram-bot/package-lock.json
+      - name: Install dependencies
+        working-directory: services/nomad-telegram-bot
+        run: npm ci
+      - name: Test
+        working-directory: services/nomad-telegram-bot
+        run: npm test
+      - name: Build
+        working-directory: services/nomad-telegram-bot
+        run: npm run build
+
+  nomad-docs-check:
+    name: nomad-docs-check
+    needs: changes
+    if: needs.changes.outputs.process_core == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require NOTES.md and HANDOFF.md for Nomad process changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NOTES_CHANGED: ${{ needs.changes.outputs.notes }}
+          HANDOFF_CHANGED: ${{ needs.changes.outputs.handoff }}
+        run: |
+          set -eu
+          echo "Comparing ${BASE_SHA}..${HEAD_SHA}"
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}"
+
+          if [ "${NOTES_CHANGED}" != "true" ]; then
+            echo "Nomad process change requires NOTES.md update"
+            exit 1
+          fi
+
+          if [ "${HANDOFF_CHANGED}" != "true" ]; then
+            echo "Nomad process change requires HANDOFF.md update"
+            exit 1
+          fi
+
+          echo "NOTES.md and HANDOFF.md are present in this process PR"

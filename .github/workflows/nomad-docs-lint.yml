@@ -1,0 +1,75 @@
+name: Nomad Docs Lint
+
+on:
+  pull_request:
+    branches:
+      - codex/nomad-parallel-track
+    paths:
+      - .github/**
+      - .codex/skills/**
+      - AGENTS.md
+      - AI_DEVELOPMENT_PROCESS.md
+      - WORKFLOW_NOMAD.md
+      - NOMAD_*.md
+      - NOTES.md
+      - HANDOFF.md
+  push:
+    branches:
+      - codex/nomad-parallel-track
+    paths:
+      - .github/**
+      - .codex/skills/**
+      - AGENTS.md
+      - AI_DEVELOPMENT_PROCESS.md
+      - WORKFLOW_NOMAD.md
+      - NOMAD_*.md
+      - NOTES.md
+      - HANDOFF.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nomad-docs-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nomad-docs-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate YAML syntax
+        run: |
+          set -eu
+          ruby -e 'require "yaml"; Dir[".github/**/*.yml"].sort.each { |file| YAML.load_file(file); puts "OK #{file}" }'
+      - name: Validate repo-specific skill structure
+        run: |
+          set -eu
+          for skill_dir in .codex/skills/*; do
+            [ -d "${skill_dir}" ] || continue
+            test -f "${skill_dir}/SKILL.md" || { echo "Missing ${skill_dir}/SKILL.md"; exit 1; }
+            test -f "${skill_dir}/agents/openai.yaml" || { echo "Missing ${skill_dir}/agents/openai.yaml"; exit 1; }
+          done
+      - name: Reject placeholder TODO markers
+        run: |
+          set -eu
+          if rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .codex/skills .github; then
+            echo "Placeholder markers found in docs or skills"
+            exit 1
+          fi
+      - name: Check whitespace errors in changed diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            git diff --check "${BASE_SHA}" "${HEAD_SHA}"
+          else
+            git diff --check "${BEFORE_SHA}" "${GITHUB_SHA}"
+          fi

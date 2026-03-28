@@ -1,0 +1,59 @@
+name: "Nomad Bug"
+description: "Баг в Nomad UI, backend или bot"
+title: "[Nomad Bug] "
+labels:
+  - "contour:nomad"
+  - "type:bug"
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: "Affected scope"
+      options:
+        - "apps/nomad-aroma-web"
+        - "apps/nomad-master-web"
+        - "apps/nomad-backend"
+        - "services/nomad-telegram-bot"
+        - "repo ops / docs"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Actual behavior"
+      description: "Что происходит сейчас?"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected behavior"
+      description: "Что должно происходить?"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: "Reproduction steps"
+      description: "Как воспроизвести баг?"
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Evidence"
+      description: "Скриншоты, логи, URL, viewport, affected endpoint"
+    validations:
+      required: false
+  - type: checkboxes
+    id: risk
+    attributes:
+      label: "Risk flags"
+      options:
+        - label: "Баг затрагивает auth/env/runtime"
+        - label: "Баг затрагивает public contract"
+        - label: "Баг требует Human Review"

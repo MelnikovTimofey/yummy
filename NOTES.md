@@ -1,3 +1,40 @@
+Обновление от 28 марта 2026 (github: add Nomad-only GitHub governance layer):
+- Проблема:
+  - в репозитории уже были локальные Nomad workflow и AI process docs, но не было GitHub-layer для Nomad issues, PR review и CI;
+  - из-за этого Nomad-задачи не имели формализованных issue templates, PR shape, CODEOWNERS, labels source of truth и Nomad-only Actions;
+  - review policy существовала только в repo docs и не была вынесена в `.github/` как отдельный operating слой.
+- Изменение:
+  - добавлен `.github/` Nomad-first слой:
+    - `ISSUE_TEMPLATE/nomad-feature.yml`
+    - `ISSUE_TEMPLATE/nomad-bug.yml`
+    - `ISSUE_TEMPLATE/nomad-ops.yml`
+    - `pull_request_template.md`
+    - `CODEOWNERS`
+    - `labels.md`
+    - `NOMAD_REVIEW_POLICY.md`
+  - добавлены GitHub Actions:
+    - `.github/workflows/nomad-pr-checks.yml`
+      - path-filtered Nomad builds/tests;
+      - `nomad-docs-check` для process/workflow PR;
+      - auto-labeling по доступным Nomad labels и auto-flag `risk:human-review` для risk paths.
+    - `.github/workflows/nomad-docs-lint.yml`
+      - проверка YAML syntax;
+      - проверка структуры `.codex/skills/*`;
+      - запрет placeholder `TODO`;
+      - `git diff --check`.
+  - `WORKFLOW_NOMAD.md`:
+    - добавлена обязательная ссылка на `.github/NOMAD_REVIEW_POLICY.md` для задач по Nomad GitHub governance.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - добавлен раздел `GitHub Governance` с Nomad PR target, templates и policy docs.
+- Проверки:
+  - `git diff --check`
+  - `ruby -e 'require "yaml"; Dir[".github/**/*.yml"].sort.each { |file| YAML.load_file(file); puts "OK #{file}" }'`
+  - ручной review `.github/` и workflow conditions
+- Эффект:
+  - Nomad получил отдельный GitHub operating layer без изменения legacy governance;
+  - Nomad PR review и CI теперь можно развивать поэтапно от templates и checks к branch protection;
+  - repo docs и GitHub policy перестали жить в разных логических слоях.
+
 Обновление от 28 марта 2026 (skills: add visual review skill for Nomad UI consistency and style):
 - Проблема:
   - в repo-specific skill layer уже были delivery и product guard skills, но не было отдельного review skill для визуальной непротиворечивости UI;
