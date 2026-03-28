@@ -108,6 +108,16 @@ npm run dev
 3. shell-level visual hierarchy теперь ближе к premium HoReCa console, но без изменения product semantics, staff/admin boundaries и API contracts;
 4. targeted Playwright smoke для `Master` синхронизирован с новым shell contract и проходит против локального runtime.
 
+## Issue #3. Harmonize operational surfaces across Master modules
+
+Реализован второй GitHub-backed redesign slice по унификации модульных operational surfaces:
+
+1. `Inventory` и `Mixes` уже использовали общий `ops-surface` язык для headers, stats, toolbars, table shells и editor surfaces;
+2. `Rails` подтянут к этому же visual contract: section header со stats, отдельный operational toolbar, единый surface для списка рейлов, editor и состава рейла;
+3. `Access` больше не выглядит как набор несвязанных admin-блоков: daily code, bot observability, allowlist, staff accounts и audit приведены к одному surface rhythm;
+4. admin-only и `nomad`-restricted панели сохранили текущие role boundaries, менялся только visual/system layer;
+5. targeted Playwright smoke для `Master` проходит и после harmonization `Rails`/`Access`.
+
 ## Slice 1. Dashboard analytics
 
 Реализован первый production-hardening slice для дашборда:

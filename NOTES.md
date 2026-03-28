@@ -1,3 +1,28 @@
+Обновление от 29 марта 2026 (nomad master: issue #3 operational surfaces harmonization):
+- Проблема:
+  - после закрытия `Issue #2` `Master` получил цельный shell, но `Rails` и `Access` всё ещё визуально жили как отдельные локальные CRUD-экраны и выбивались из общего operational language;
+  - `Inventory` и `Mixes` уже были переведены на `ops-surface` headers/toolbars/table shells, а content/access-модули оставались на более раннем visual contract;
+  - без этого `Issue #3` нельзя было честно считать завершённым: shell был единым, а модульные surfaces нет.
+- Изменение:
+  - `apps/nomad-master-web/src/App.tsx`:
+    - `Rails` получил `section-head--surface`, summary stats, отдельный `ops-toolbar`, унифицированные rail cards, editor surface и table-shell для состава рейла;
+    - `Access` приведён к тому же visual rhythm: surface header со stats, unified summary cards, flow panel, allowlist/staff editors и audit shell;
+    - `Telegram allowlist` phone field возвращён к `type="tel"` и `autocomplete="tel"` внутри harmonized editor surface.
+  - `apps/nomad-master-web/src/styles.css`:
+    - добавлены shared patterns `ops-toolbar--split`, `ops-management-grid`, `ops-surface__card`, `ops-surface__summary`, `ops-flow-list`, `info-banner--ops`;
+    - responsive rules расширены так, чтобы split toolbars и новые surfaces не ломались на узких viewport.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5178' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+- Эффект:
+  - `Rails` и `Access` больше не выбиваются из shell-level redesign и собраны в один operational visual language вместе с `Inventory` и `Mixes`;
+  - role boundaries и product semantics не менялись, поэтому `Issue #3` остаётся bounded UI slice;
+  - следующий безопасный шаг смещается в `Issue #4` на visual polish, responsive hardening и design sign-off.
+
 Обновление от 29 марта 2026 (nomad master: complete issue #2 shell foundation):
 - Проблема:
   - `Nomad Master` уже имел рабочие staff-модули, но авторизованный контур оставался hero-stack из разрозненных блоков и не ощущался как цельная premium HoReCa console;
