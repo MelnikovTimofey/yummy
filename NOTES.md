@@ -1,3 +1,57 @@
+Обновление от 28 марта 2026 (nomad: add solo-agent enablement, thin smoke suite, and accessibility review skill):
+- Проблема:
+  - Nomad governance и repo-specific skills уже существовали, но для одного оператора всё ещё не хватало reproducible local bootstrap, формального task intake, handoff template и репозиторного browser smoke;
+  - из-за этого local startup оставался в формате “вспомнить нужные команды”, а UI verification жила в ручных договорённостях и Playwright CLI артефактах вне отдельного Nomad smoke package;
+  - accessibility-review для Nomad UI не была оформлена как отдельный reusable skill.
+- Изменение:
+  - добавлен `CONTRIBUTING_NOMAD.md`:
+    - зафиксирован solo-agent operating flow для одного `AI Lead / Integrator`;
+    - описаны active Nomad scope, branch policy, canonical local ports, dev credentials и verification baseline.
+  - добавлены templates:
+    - `docs/templates/ai-task-brief.md`
+    - `docs/templates/agent-handoff.md`
+  - добавлен `scripts/nomad/bootstrap-local.sh`:
+    - ставит зависимости в Nomad-пакетах;
+    - поднимает local Postgres;
+    - запускает `prisma:generate`, `prisma:dbpush -- --force-reset`, `prisma:seed`;
+    - сам подставляет default `DATABASE_URL` для Prisma CLI, чтобы bootstrap не требовал ручного env export.
+  - добавлен изолированный smoke package `tests/nomad-smoke/`:
+    - `package.json` с `@playwright/test`;
+    - `playwright.config.ts`;
+    - `tests/aroma-smoke.spec.ts`;
+    - `tests/master-smoke.spec.ts`.
+  - добавлен workflow `.github/workflows/nomad-smoke.yml`:
+    - path-filtered Nomad smoke для PR в `codex/nomad-parallel-track`;
+    - локальный stack `backend + aroma + master`;
+    - upload artifacts в `output/playwright/nomad-quality`.
+  - добавлен skill `.codex/skills/nomad-accessibility-review`:
+    - отдельный checklist для focus order, keyboard reachability, contrast, readable copy, form semantics и role-sensitive UI.
+  - добавлен `docs/skills/forward-testing.md` с protocol для валидации repo-specific skills на трёх классах задач.
+  - синхронизированы process/governance docs:
+    - `AI_DEVELOPMENT_PROCESS.md`
+    - `WORKFLOW_NOMAD.md`
+    - `.github/NOMAD_REVIEW_POLICY.md`
+    - `.github/CODEOWNERS`
+    - `.github/workflows/nomad-pr-checks.yml`
+    - `.github/workflows/nomad-docs-lint.yml`
+- Проверки:
+  - `git diff --check`
+  - `ruby -e 'require "yaml"; Dir[".github/**/*.yml"].sort.each { |file| YAML.load_file(file); puts "OK #{file}" }'`
+  - `bash -n scripts/nomad/bootstrap-local.sh`
+  - `rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md`
+  - `cd tests/nomad-smoke && npx playwright test --list`
+  - `./scripts/nomad/bootstrap-local.sh`
+  - `cd tests/nomad-smoke && npm run smoke`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+- Эффект:
+  - у Nomad появился полноценный solo-agent baseline для одного оператора без ручного поиска startup и handoff-практик;
+  - browser smoke теперь живёт в отдельном репозиторном Nomad suite, а не только в ad-hoc CLI smoke;
+  - accessibility review и forward-testing skills получили собственный операционный слой.
+
 Обновление от 28 марта 2026 (github: add Nomad-only GitHub governance layer):
 - Проблема:
   - в репозитории уже были локальные Nomad workflow и AI process docs, но не было GitHub-layer для Nomad issues, PR review и CI;

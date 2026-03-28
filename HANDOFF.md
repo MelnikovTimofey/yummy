@@ -1,5 +1,67 @@
 # HANDOFF — Yummy
 
+## 1.64) Add solo-agent Nomad bootstrap, thin smoke suite, and accessibility review skill (28 марта 2026)
+
+- Запрос:
+  - внедрить поверх существующего Nomad governance layer практический solo-agent контур для одного оператора:
+    - reproducible local startup;
+    - task intake и handoff templates;
+    - тонкий browser smoke;
+    - отдельный accessibility-review skill;
+    - protocol для forward-testing repo-specific skills.
+
+- Реализация:
+  - `CONTRIBUTING_NOMAD.md`:
+    - добавлен как главный entrypoint для Nomad solo-agent flow;
+    - описывает active scope, branch policy, canonical ports, dev credentials и verification baseline.
+  - `docs/templates/ai-task-brief.md`, `docs/templates/agent-handoff.md`:
+    - добавлены формальные markdown contracts для intake и handoff.
+  - `scripts/nomad/bootstrap-local.sh`:
+    - собирает local Nomad setup;
+    - запускает `npm ci` по Nomad packages;
+    - поднимает local Postgres;
+    - прогоняет `prisma:generate`, `prisma:dbpush -- --force-reset`, `prisma:seed`;
+    - экспортирует fallback `DATABASE_URL`, чтобы Prisma CLI не падал на первом bootstrap.
+  - `tests/nomad-smoke/`:
+    - добавлен отдельный Playwright package;
+    - `aroma-smoke.spec.ts` покрывает guest access-code flow и доступность `Витрины`/`Каталога`;
+    - `master-smoke.spec.ts` покрывает admin login и restricted `nomad` role state в `Доступе`.
+  - `.github/workflows/nomad-smoke.yml`:
+    - добавлен отдельный Nomad smoke workflow для PR;
+    - поднимает `backend + aroma + master`;
+    - публикует артефакты в `output/playwright/nomad-quality`.
+  - `.codex/skills/nomad-accessibility-review`:
+    - добавлен repo-specific skill для keyboard/focus/contrast/form/role-sensitive accessibility review.
+  - `docs/skills/forward-testing.md`:
+    - добавлен protocol для validation repo-specific skills на `backend slice`, `frontend/UI slice`, `docs/process slice`.
+  - синхронизированы process/governance docs:
+    - `AI_DEVELOPMENT_PROCESS.md`
+    - `WORKFLOW_NOMAD.md`
+    - `.github/NOMAD_REVIEW_POLICY.md`
+    - `.github/CODEOWNERS`
+    - `.github/workflows/nomad-pr-checks.yml`
+    - `.github/workflows/nomad-docs-lint.yml`
+
+- Проверки:
+  - `git diff --check`
+  - `ruby -e 'require "yaml"; Dir[".github/**/*.yml"].sort.each { |file| YAML.load_file(file); puts "OK #{file}" }'`
+  - `bash -n scripts/nomad/bootstrap-local.sh`
+  - `rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md`
+  - `cd tests/nomad-smoke && npx playwright test --list`
+  - `./scripts/nomad/bootstrap-local.sh`
+  - `cd tests/nomad-smoke && npm run smoke`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-aroma-web && npm run build`
+
+- Эффект:
+  - Nomad получил self-contained local startup path для одного оператора;
+  - intake и handoff перестали быть устной договорённостью и получили явные templates;
+  - thin browser smoke теперь существует как отдельный репозиторный suite и CI workflow;
+  - accessibility review и skill forward-testing стали частью явного процесса, а не только follow-up идеей.
+
 ## 1.63) Add Nomad-only GitHub governance layer with templates, policy, and CI (28 марта 2026)
 
 - Запрос:

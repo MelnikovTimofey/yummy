@@ -276,6 +276,31 @@ Read-only роль. Полезна для аудита legacy, поиска по
 10. Handoff:
    зафиксировать итог, риски, команды проверки и дальнейшие шаги.
 
+## Solo + Agents Mode
+
+Для Nomad допустим упрощённый режим `one human operator + agents`.
+
+Он нужен, если:
+
+1. задачи ставит и закрывает один человек;
+2. merge-решение принимает один владелец;
+3. формальный second reviewer не участвует в каждом change-set;
+4. агенты используются как execution layer, а не как автономная команда без контроля.
+
+В этом режиме человек выступает как `AI Lead / Integrator` и обязан:
+
+1. запускать заметные задачи через краткий intake brief;
+2. фиксировать scope и verification gate до начала реализации;
+3. делать self-review перед merge;
+4. явно отмечать, где verification неполный и нужен `Human Review`.
+
+Source of truth для этого режима:
+
+1. `CONTRIBUTING_NOMAD.md`
+2. `docs/templates/ai-task-brief.md`
+3. `docs/templates/agent-handoff.md`
+4. `scripts/nomad/bootstrap-local.sh`
+
 ## Merge Policy
 
 Merge допустим, если:
@@ -305,6 +330,12 @@ Nomad GitHub-layer хранится в `.github/`.
 3. review policy из `.github/NOMAD_REVIEW_POLICY.md`;
 4. labels source of truth из `.github/labels.md`;
 5. `CODEOWNERS` только для Nomad и process paths.
+
+Process-документы Nomad для local startup, templates и skill validation хранить в:
+
+1. `CONTRIBUTING_NOMAD.md`
+2. `docs/templates/`
+3. `docs/skills/`
 
 Nomad PR по умолчанию должен идти в:
 
@@ -361,9 +392,11 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
    env matrix, bot/runtime checks, release smoke, rollback notes.
 8. `nomad-ui-visual-review`
    visual consistency, style review, hierarchy, spacing, and polish checks for Nomad UI.
-9. `nomad-design-to-code`
-   Figma workflow, visual fidelity rules, asset handling.
-10. `repo-docs-and-handoff`
+9. `nomad-accessibility-review`
+   keyboard reachability, focus order, contrast, readable copy, form semantics, and role-sensitive UI checks.
+10. `nomad-design-to-code`
+    Figma workflow, visual fidelity rules, asset handling.
+11. `repo-docs-and-handoff`
    когда и как обновлять `NOTES.md`, `HANDOFF.md`, README и process docs.
 
 ### Матрица ролей и скиллов
@@ -384,12 +417,14 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
 5. `QA Agent`
    - `nomad-qa-and-smoke`
    - `playwright`
+   - `nomad-accessibility-review`
 6. `DevOps / Release Agent`
    - `nomad-release-ops`
    - `repo-docs-and-handoff`
 7. `Design / UX Agent`
    - `figma`
    - `nomad-ui-visual-review`
+   - `nomad-accessibility-review`
    - `nomad-design-to-code`
 
 ### Как проектировать новый скилл
@@ -432,6 +467,23 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
 5. Если скилл требует scripts или templates, они должны лежать рядом со скиллом, а не быть разбросаны по репозиторию.
 6. Если скилл изменяет operating model, нужно синхронизировать `AGENTS.md` и этот документ.
 
+Forward-testing protocol для repo-specific skills хранить в:
+
+1. `docs/skills/forward-testing.md`
+
+Минимальный набор классов задач для forward-testing:
+
+1. `backend slice`
+2. `frontend/UI slice`
+3. `docs/process slice`
+
+После каждого прогона нужно зафиксировать:
+
+1. какой skill применялся;
+2. где guidance оказался лишним;
+3. где guidance оказался недостаточным;
+4. нужен ли update skill body, references или scripts.
+
 ## RACI для нетривиальной задачи
 
 ### Разработка feature slice
@@ -458,6 +510,8 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
 3. Не создавать skill ради одной задачи.
 4. Не позволять worker-агентам менять process rules по собственной инициативе.
 5. Любое изменение repo-процесса должно отражаться минимум в `NOTES.md` и `HANDOFF.md`.
+6. Для Nomad local startup не полагаться на неформальную последовательность команд, если есть `scripts/nomad/bootstrap-local.sh`.
+7. Для нетривиальной задачи не пропускать intake и handoff templates из `docs/templates/`.
 
 ## Что делать дальше
 
@@ -473,11 +527,13 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
    - `nomad-qa-and-smoke`
    - `nomad-release-ops`
    - `nomad-ui-visual-review`
+   - `nomad-accessibility-review`
    - `repo-docs-and-handoff`
 
 Рекомендуемый следующий шаг:
 
-1. forward-test каждый скилл минимум на двух реальных задачах;
-2. после этого добавлять новые repo-скиллы только под реально повторяющиеся workflows;
-3. решить, нужен ли отдельный repo-specific `nomad-design-to-code`, или пока достаточно комбинации `figma` + `nomad-ui-visual-review`;
-4. расширять текущие skeleton’ы reference-файлами и scripts только после реального повторного использования.
+1. использовать `CONTRIBUTING_NOMAD.md` и `scripts/nomad/bootstrap-local.sh` как default local startup path;
+2. запускать заметные задачи через `docs/templates/ai-task-brief.md` и `docs/templates/agent-handoff.md`;
+3. forward-test каждый repo-specific skill минимум на трёх классах задач по `docs/skills/forward-testing.md`;
+4. после этого добавлять новые repo-скиллы только под реально повторяющиеся workflows;
+5. решить, нужен ли отдельный repo-specific `nomad-design-to-code`, или пока достаточно комбинации `figma` + `nomad-ui-visual-review` + `nomad-accessibility-review`.

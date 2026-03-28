@@ -53,10 +53,12 @@ Issue description:
 3. Read `.github/NOMAD_REVIEW_POLICY.md` before changing Nomad GitHub workflow, PR policy, labels, CODEOWNERS, or CI governance.
 4. Read `NOMAD_PARALLEL_EXECUTION_PLAN.md` before making architecture or repo-structure decisions.
 5. Read `NOMAD_ROADMAP.md` before choosing issue priority or batching work.
-6. Work only inside the current Nomad issue scope.
-7. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
+6. Read `CONTRIBUTING_NOMAD.md` before changing Nomad startup, task intake, handoff templates, or solo-agent operating flow.
+7. Use `docs/templates/ai-task-brief.md` and `docs/templates/agent-handoff.md` when the task needs a formal intake or a structured handoff.
+8. Work only inside the current Nomad issue scope.
+9. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
    Stop, explain the question or options, and hand off to `Human Review`.
-8. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
+10. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
 
 ## Roadmap-driven execution
 
@@ -142,6 +144,7 @@ If a task changes more than one Nomad project, run the matching build command in
 
 Expanded checks:
 - If Nomad UI behavior changed and the environment is ready, run a targeted browser smoke for the touched flow.
+- If `tests/nomad-smoke/` is available and the local stack is up, prefer `cd tests/nomad-smoke && npm run smoke`.
 - If automated browser checks are unavailable, do a manual smoke pass and say so in the handoff.
 - Backend behavior beyond build remains manual unless an automated test is explicitly added.
 
@@ -173,6 +176,7 @@ If the change affects Nomad repo rules, workflow, startup, handoff, or operating
 - update `AGENTS.md` only if agent rules truly changed
 - update `AI_DEVELOPMENT_PROCESS.md` if the AI operating model or skill lifecycle changed
 - update `.github/NOMAD_REVIEW_POLICY.md` if Nomad GitHub governance changed
+- update `CONTRIBUTING_NOMAD.md` if local startup, task intake, smoke, or solo-agent flow changed
 
 ## Git and completion
 

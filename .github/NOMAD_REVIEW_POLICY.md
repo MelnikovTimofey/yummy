@@ -67,6 +67,9 @@ PR должен считаться `needs-human-review`, если затрону
    - `WORKFLOW_NOMAD.md`
    - `AGENTS.md`
    - `AI_DEVELOPMENT_PROCESS.md`
+   - `CONTRIBUTING_NOMAD.md`
+   - `docs/**`
+   - `tests/nomad-smoke/**`
    - `.github/**`
    - `.codex/skills/**`
 
@@ -117,6 +120,7 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 3. `nomad-backend-build`
 4. `nomad-bot-build`
 5. `nomad-docs-check`
+6. `nomad-smoke`
 
 Если используется GitHub ruleset с path targeting, применять эти checks только для Nomad paths.
 
@@ -128,6 +132,7 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 2. `HANDOFF.md`
 3. `WORKFLOW_NOMAD.md`
 4. `AI_DEVELOPMENT_PROCESS.md`, если меняется operating model
+5. `CONTRIBUTING_NOMAD.md`, если меняется local startup, solo-agent loop или task intake
 
 ## Non-goals
 

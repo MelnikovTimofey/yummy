@@ -9,12 +9,15 @@ on:
       - apps/nomad-master-web/**
       - apps/nomad-backend/**
       - services/nomad-telegram-bot/**
+      - tests/nomad-smoke/**
       - .github/**
       - .codex/skills/**
       - AGENTS.md
       - AI_DEVELOPMENT_PROCESS.md
+      - CONTRIBUTING_NOMAD.md
       - WORKFLOW_NOMAD.md
       - NOMAD_*.md
+      - docs/**
       - NOTES.md
       - HANDOFF.md
 
@@ -72,10 +75,13 @@ jobs:
             process_core:
               - '.github/**'
               - '.codex/skills/**'
+              - 'tests/nomad-smoke/**'
               - 'AGENTS.md'
               - 'AI_DEVELOPMENT_PROCESS.md'
+              - 'CONTRIBUTING_NOMAD.md'
               - 'WORKFLOW_NOMAD.md'
               - 'NOMAD_*.md'
+              - 'docs/**'
             notes:
               - 'NOTES.md'
             handoff:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad Accessibility Review"
+  short_description: "Accessibility review for Nomad UI and role-sensitive flows"
+  default_prompt: "Use $nomad-accessibility-review to review a Nomad UI change for keyboard access, readability, form semantics, and role-sensitive accessibility issues before sign-off."
