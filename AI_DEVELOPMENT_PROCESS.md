@@ -378,31 +378,34 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
 
 1. `yummy-repo-guard`
    правила контуров, active scopes, reuse-policy, документы-источники.
-2. `nomad-product-guardrails`
+2. `nomad-task-intake`
+   guided task brief formation, missing-field questioning, and normalized Nomad intake before implementation.
+3. `nomad-product-guardrails`
    ключевые продуктовые ограничения `Арома Ателье`, `Мастер`, access-code, analytics semantics.
-3. `nomad-backend-delivery`
+4. `nomad-backend-delivery`
    backend contracts, build/test/smoke, state/content/update patterns.
-4. `nomad-aroma-web-delivery`
+5. `nomad-aroma-web-delivery`
    guest flow, UI invariants, build/smoke, mobile-first checks.
-5. `nomad-master-web-delivery`
+6. `nomad-master-web-delivery`
    staff/admin UX, role boundaries, operational checks.
-6. `nomad-qa-and-smoke`
+7. `nomad-qa-and-smoke`
    smoke matrix, playwright/manual fallback, артефакты проверок.
-7. `nomad-release-ops`
+8. `nomad-release-ops`
    env matrix, bot/runtime checks, release smoke, rollback notes.
-8. `nomad-ui-visual-review`
+9. `nomad-ui-visual-review`
    visual consistency, style review, hierarchy, spacing, and polish checks for Nomad UI.
-9. `nomad-accessibility-review`
+10. `nomad-accessibility-review`
    keyboard reachability, focus order, contrast, readable copy, form semantics, and role-sensitive UI checks.
-10. `nomad-design-to-code`
+11. `nomad-design-to-code`
     Figma workflow, visual fidelity rules, asset handling.
-11. `repo-docs-and-handoff`
+12. `repo-docs-and-handoff`
    когда и как обновлять `NOTES.md`, `HANDOFF.md`, README и process docs.
 
 ### Матрица ролей и скиллов
 
 1. `AI Lead / Integrator`
    - `yummy-repo-guard`
+   - `nomad-task-intake`
    - `repo-docs-and-handoff`
    - `product-discovery`
 2. `System Analyst`

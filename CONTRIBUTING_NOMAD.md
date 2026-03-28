@@ -148,6 +148,8 @@ npm run smoke
 
 Если этого нет, сначала заполнить [docs/templates/ai-task-brief.md](/Users/admin/PycharmProjects/yummy/docs/templates/ai-task-brief.md).
 
+Если хотите, чтобы агент сам задал недостающие вопросы и собрал brief по шаблону, используйте `$nomad-task-intake`.
+
 ## Handoff Minimum
 
 После каждого логического блока нужен handoff со следующими секциями:

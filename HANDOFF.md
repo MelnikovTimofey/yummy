@@ -1,5 +1,29 @@
 # HANDOFF — Yummy
 
+## 1.65) Add guided Nomad task intake skill for brief formation (28 марта 2026)
+
+- Запрос:
+  - добавить skill для формирования задачи, который можно вызывать и который будет задавать недостающие вопросы по шаблону.
+
+- Реализация:
+  - добавлен `.codex/skills/nomad-task-intake`:
+    - `SKILL.md` описывает guided intake workflow, stop condition на этапе brief formation и правила safe defaults/escalation;
+    - `agents/openai.yaml` добавляет UI metadata;
+    - `references/intake-checklist.md` фиксирует field order, default checks и escalation cases.
+  - `CONTRIBUTING_NOMAD.md`:
+    - в `Task Intake Minimum` добавлена ссылка на `$nomad-task-intake` как на стандартный способ собрать brief через вопросы.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - `nomad-task-intake` добавлен в минимальный набор repo-specific skills;
+    - `AI Lead / Integrator` обязан использовать intake skill как часть нормализованного Nomad task intake.
+
+- Проверки:
+  - `rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md`
+  - `git diff --check`
+
+- Эффект:
+  - формирование задачи для Nomad теперь можно запускать как отдельный reusable skill;
+  - brief собирается по одному и тому же шаблону, а не из свободного текста.
+
 ## 1.64) Add solo-agent Nomad bootstrap, thin smoke suite, and accessibility review skill (28 марта 2026)
 
 - Запрос:

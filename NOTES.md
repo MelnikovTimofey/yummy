@@ -1,3 +1,24 @@
+Обновление от 28 марта 2026 (skills: add guided Nomad task intake skill):
+- Проблема:
+  - в репозитории уже существовали `CONTRIBUTING_NOMAD.md` и `docs/templates/ai-task-brief.md`, но не было отдельного repo-specific skill для guided task intake;
+  - из-за этого формирование brief по шаблону зависело от ручной дисциплины и не вызывалось как отдельный reusable workflow.
+- Изменение:
+  - добавлен `.codex/skills/nomad-task-intake`:
+    - `SKILL.md` задаёт workflow для кратких intake-вопросов, safe defaults и stop condition на этапе brief formation;
+    - `agents/openai.yaml` добавляет UI metadata;
+    - `references/intake-checklist.md` фиксирует field order, escalation cases и default checks.
+  - `CONTRIBUTING_NOMAD.md`:
+    - добавлена явная ссылка на `$nomad-task-intake` как на способ собрать task brief через guided intake.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - `nomad-task-intake` добавлен в минимальный набор repo-скиллов;
+    - `AI Lead / Integrator` теперь обязан использовать intake skill вместе с repo guard и docs/handoff discipline.
+- Проверки:
+  - `rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md`
+  - `git diff --check`
+- Эффект:
+  - guided task intake теперь существует как отдельный repo-specific workflow;
+  - задачу можно формировать через вызов skill, а не только через ручное заполнение markdown template.
+
 Обновление от 28 марта 2026 (nomad: add solo-agent enablement, thin smoke suite, and accessibility review skill):
 - Проблема:
   - Nomad governance и repo-specific skills уже существовали, но для одного оператора всё ещё не хватало reproducible local bootstrap, формального task intake, handoff template и репозиторного browser smoke;
