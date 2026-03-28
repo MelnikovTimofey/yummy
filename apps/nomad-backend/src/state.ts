@@ -1695,7 +1695,7 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
     });
 };
 
-const buildStatisticalRail = async (): Promise<RailView> => {
+const buildMostSelectedRail = async (): Promise<RailView> => {
   const [mixes, events] = await Promise.all([
     getAvailableMixCatalog(),
     prisma.nomadSmokeCtaEvent.findMany({
@@ -1745,6 +1745,42 @@ const buildStatisticalRail = async (): Promise<RailView> => {
     isSystem: true,
   };
 };
+
+const buildTopRatedRail = async (): Promise<RailView> => {
+  const mixes = await getAvailableMixCatalog();
+
+  const ranked = mixes
+    .filter((mix) => mix.guestVisible)
+    .sort((left, right) => {
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
+      }
+
+      if (right.ratingsCount !== left.ratingsCount) {
+        return right.ratingsCount - left.ratingsCount;
+      }
+
+      if (right.popularity !== left.popularity) {
+        return right.popularity - left.popularity;
+      }
+
+      return left.name.localeCompare(right.name, 'ru');
+    })
+    .slice(0, 3);
+
+  return {
+    id: 'rail-statistical-rated',
+    name: 'Лучшие оценки',
+    description: 'Миксы с самыми сильными оценками гостей и устойчивым качеством вкуса.',
+    type: 'statistical',
+    active: true,
+    mixIds: ranked.map((mix) => mix.id),
+    mixes: ranked,
+    isSystem: true,
+  };
+};
+
+const buildStatisticalRails = async (): Promise<RailView[]> => [await buildMostSelectedRail(), await buildTopRatedRail()];
 
 const statisticalRailReadOnlyReason = 'Статистический рейл формируется автоматически и доступен только для просмотра.';
 
@@ -1806,7 +1842,7 @@ const buildRailViews = async (guestOnly: boolean) => {
 };
 
 export const getGuestHomeRails = async () => {
-  const rails = [await buildStatisticalRail(), ...(await buildRailViews(true))];
+  const rails = [...(await buildStatisticalRails()), ...(await buildRailViews(true))];
   return rails.filter((rail) => rail.type === 'statistical' || rail.mixes.length > 0);
 };
 
@@ -1999,7 +2035,7 @@ export const updateMix = async (id: string, payload: MixPatch) => {
 };
 
 export const getStaffRails = async (): Promise<StaffRailView[]> => {
-  return [await buildStatisticalRail(), ...(await buildRailViews(false))].map(toStaffRailView);
+  return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
 };
 
 export const createRail = async (payload: Partial<RailInput>) => {

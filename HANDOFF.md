@@ -1,5 +1,50 @@
 # HANDOFF — Yummy
 
+## 1.74) Complete Nomad Master Slice 4 rail manager hardening (28 марта 2026)
+
+- Запрос:
+  - выполнить `Slice 4` до конца;
+  - по возможности двигаться дальше по slice backlog только если это не конфликтует с product stop-conditions.
+
+- Реализация:
+  - backend auto rails:
+    - `apps/nomad-backend/src/state.ts`
+    - `apps/nomad-backend/src/content.test.ts`
+    - добавлен второй statistical rail `Лучшие оценки`;
+    - guest/staff rail lists теперь возвращают два auto rail перед ручными витринами;
+    - поведение не расширено дальше уже существующих метрик `avgRating / ratingsCount / popularity`, поэтому guest semantics не выходят за рамки утверждённого slice.
+  - frontend rail composer:
+    - `apps/nomad-master-web/src/App.tsx`
+    - `apps/nomad-master-web/src/styles.css`
+    - string-based `mixIds` textarea удалён из rail editor;
+    - добавлен отдельный operational flow выбора миксов: full rail mix catalog, поиск, add/remove и reorder `вверх/вниз`;
+    - для composer введён отдельный `railMixCatalog`, чтобы состав rail не зависел от временных фильтров на вкладке `Миксы`.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `NOTES.md`
+    - `Slice 4` переведён в `done`.
+  - backlog boundary:
+    - `Slice 5` автоматически не запускался: `master-production-redesign.md` по-прежнему помечает access/Telegram redesign как human-review-sensitive contour;
+    - `Slice 6` не открывался как отдельная поставка, но targeted smoke по rail manager уже выполнен как часть sign-off для `Slice 4`.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - targeted browser smoke:
+    - `http://127.0.0.1:5176` -> `Рейлы`
+    - проверены оба auto rail `Больше всего выбирают` и `Лучшие оценки`
+    - проверен read-only state и причина блокировки
+    - проверен новый rail composer: `Редактировать -> Убрать -> Добавить микс`, без сохранения в backend
+  - `git diff --check`
+
+- Эффект:
+  - `Nomad Master Slice 4` завершён не только по contract, но и по operational UI;
+  - rail manager больше не зависит от сырого `mixIds` ввода и больше не смешивает auto-generated rails с editable rails;
+  - дальнейшее продолжение backlog требует явного решения по `Slice 5`, а не просто следующего автоматического шага.
+
 ## 1.73) Start Nomad Master Slice 4 rail contract hardening (28 марта 2026)
 
 - Запрос:

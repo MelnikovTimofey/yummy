@@ -1,3 +1,36 @@
+Обновление от 28 марта 2026 (nomad master: complete slice 4 rail manager hardening):
+- Проблема:
+  - предыдущий под-срез `Slice 4` закрыл только staff editability contract и create semantics, но сам rail manager ещё не был доведён до полного redesign outcome;
+  - backend всё ещё отдавал только один statistical rail, а rail composition в `Мастере` формально уже был read-only aware, но всё равно не давал полноценного select/reorder flow;
+  - из-за этого slice нельзя было честно считать завершённым.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/content.test.ts`:
+    - добавлен второй auto rail `Лучшие оценки`;
+    - `getGuestHomeRails` и `getStaffRails` теперь возвращают оба statistical rail в явном порядке перед ручными витринами;
+    - backend tests подтверждают оба statistical rail и read-only behavior.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - rail editor больше не использует строковый `mixIds`;
+    - добавлен отдельный rail mix builder с full rail mix catalog, поиском, add/remove, reorder `вверх/вниз` и счётчиком состава;
+    - selection flow отвязан от текущих фильтров mix catalog за счёт отдельного `railMixCatalog`, чтобы рейлы не зависели от временного состояния вкладки `Миксы`.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - targeted browser smoke на `http://127.0.0.1:5176`:
+    - проверено наличие обоих auto rail `Больше всего выбирают` и `Лучшие оценки`;
+    - проверен read-only state для statistical rails;
+    - проверен новый rail composer: `Редактировать -> Убрать -> Добавить микс`, без сохранения в backend;
+  - `git diff --check`
+- Эффект:
+  - `Slice 4` закрыт целиком, а rail manager теперь действительно соответствует redesign contract;
+  - следующий slice `5` по access/Telegram всё ещё упирается в human review из `master-production-redesign.md`, поэтому автоматически продолжать backlog дальше без отдельного решения нельзя;
+  - частично начат `Slice 6` в виде targeted smoke, но не как отдельная поставка.
+
 Обновление от 28 марта 2026 (nomad master: start slice 4 rail contract hardening):
 - Проблема:
   - `Nomad Master` показывал statistical rails почти как обычные редактируемые объекты: UI не видел ни явного `editable`-статуса, ни причины блокировки;

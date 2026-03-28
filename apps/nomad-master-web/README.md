@@ -131,7 +131,8 @@ Mixes переведены в новый contract-first flow:
 Rails переведены на более явный staff contract:
 
 1. `GET /staff/rails` теперь несёт `editable` и `readOnlyReason`, поэтому statistical rails больше не выглядят как обычный CRUD-объект;
-2. create flow больше не просит выбирать `type`: новый rail всегда создаётся как editable master-curated rail;
-3. в менеджере рейлов read-only rails визуально отделены от редактируемых и открываются в режиме просмотра с объяснением причины блокировки;
-4. существующие prepared и curated rails остаются редактируемыми без изменения guest semantics;
-5. следующий bounded шаг внутри `Slice 4` — отдельный reorder/select flow для составов rail и затем второй auto-rail по оценкам.
+2. в guest и staff rail surfaces теперь есть два auto rail: `Больше всего выбирают` и `Лучшие оценки`;
+3. create flow больше не просит выбирать `type`: новый rail всегда создаётся как editable master-curated rail;
+4. в менеджере рейлов read-only rails визуально отделены от редактируемых и открываются в режиме просмотра с объяснением причины блокировки;
+5. состав rail больше не редактируется строкой `mixIds`: staff работает через отдельный select/reorder flow с добавлением, удалением и изменением порядка миксов;
+6. существующие prepared и curated rails остаются редактируемыми без изменения guest semantics.

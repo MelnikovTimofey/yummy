@@ -109,7 +109,7 @@ test('guest catalog filters available mixes and rating updates change averages',
   }
 });
 
-test('guest home rails include the statistical rail ranked by CTA and rating', async () => {
+test('guest home rails include statistical rails for CTA and ratings', async () => {
   const app = buildApp();
 
   try {
@@ -152,12 +152,16 @@ test('guest home rails include the statistical rail ranked by CTA and rating', a
 
     assert.equal(response.statusCode, 200);
     const body = response.json() as {
-      items: Array<{ type: string; mixes: Array<{ id: string; avgRating: number }> }>;
+      items: Array<{ id: string; type: string; mixes: Array<{ id: string; avgRating: number }> }>;
     };
 
-    const statisticalRail = body.items.find((item) => item.type === 'statistical');
-    assert.equal(statisticalRail?.mixes[0]?.id, 'mix-berry-dawn');
-    assert.equal(statisticalRail?.mixes[0]?.avgRating, 5);
+    const ctaRail = body.items.find((item) => item.id === 'rail-statistical-top');
+    const ratedRail = body.items.find((item) => item.id === 'rail-statistical-rated');
+    assert.equal(ctaRail?.type, 'statistical');
+    assert.equal(ratedRail?.type, 'statistical');
+    assert.equal(ctaRail?.mixes[0]?.id, 'mix-berry-dawn');
+    assert.equal(ratedRail?.mixes[0]?.id, 'mix-berry-dawn');
+    assert.equal(ratedRail?.mixes[0]?.avgRating, 5);
   } finally {
     await app.close();
   }
@@ -328,6 +332,7 @@ test('staff can manage mixes and rails', async () => {
       ),
       true,
     );
+    assert.equal(staffRailsBody.items.some((item) => item.id === 'rail-statistical-rated' && item.editable === false), true);
     assert.equal(staffRailsBody.items.some((item) => item.id === createdRailBody.item.id), true);
   } finally {
     await app.close();
