@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad QA And Smoke"
+  short_description: "Nomad smoke, QA, and verification flow"
+  default_prompt: "Use $nomad-qa-and-smoke to plan or run the correct smoke and regression checks for a Nomad change."

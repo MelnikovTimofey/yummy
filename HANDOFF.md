@@ -1,5 +1,35 @@
 # HANDOFF — Yummy
 
+## 1.60) Create repo-specific skill skeletons for AI delivery (28 марта 2026)
+
+- Запрос:
+  - сформировать стартовые skeleton’ы repo-specific skills для процесса AI-разработки внутри проекта.
+
+- Реализация:
+  - добавлены локальные skills в `.codex/skills/`:
+    - `yummy-repo-guard`
+    - `nomad-backend-delivery`
+    - `nomad-qa-and-smoke`
+    - `repo-docs-and-handoff`
+  - для каждого скилла созданы:
+    - `SKILL.md` с trigger conditions, workflow, output contract и stop conditions;
+    - `agents/openai.yaml` с UI metadata;
+    - `references/*.md` с decision matrix или verification checklist.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - обновлён с указанием, что repo-specific skills хранятся в `.codex/skills/`;
+    - стартовый bootstrap packet skills отмечен как уже созданный.
+  - `AGENTS.md`:
+    - добавлено правило про расположение repo-specific skills.
+
+- Проверки:
+  - `rg -n "TODO" .codex/skills`
+  - `git diff --check`
+  - ручной review структуры skill directories
+
+- Эффект:
+  - стартовый набор repo-specific skills теперь существует в самом репозитории;
+  - backend, QA, docs/handoff и repo-guard получили reusable skeleton’ы вместо разовых договорённостей.
+
 ## 1.59) Formalize AI development operating model and skill lifecycle (28 марта 2026)
 
 - Запрос:

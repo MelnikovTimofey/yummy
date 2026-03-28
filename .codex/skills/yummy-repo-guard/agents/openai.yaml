@@ -1,0 +1,4 @@
+interface:
+  display_name: "Yummy Repo Guard"
+  short_description: "Repo boundaries and process guardrails"
+  default_prompt: "Use $yummy-repo-guard to validate scope, contour boundaries, and repo-level constraints before making changes."

@@ -136,6 +136,7 @@
 2. Создавай или обновляй repo-specific skill только для повторяемого workflow с высокой ценой ошибки или сложным локальным контекстом.
 3. Новый repo-specific skill должен иметь явные trigger conditions, expected outputs и verification path.
 4. Если изменяется стандартный набор repo-скиллов или правила их применения, синхронизируй `AI_DEVELOPMENT_PROCESS.md`, `NOTES.md` и `HANDOFF.md`.
+5. Repo-specific skills этого проекта размещаются в `.codex/skills/`.
 
 
 ## Главное правило

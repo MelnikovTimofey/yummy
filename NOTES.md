@@ -1,3 +1,28 @@
+Обновление от 28 марта 2026 (skills: add repo-specific skill skeletons for AI delivery):
+- Проблема:
+  - operating model уже определял рекомендуемый набор repo-specific skills, но в репозитории ещё не было самих skill skeletons;
+  - из-за этого роли `AI Lead`, backend, QA и docs/handoff оставались без локального reusable workflow-слоя.
+- Изменение:
+  - добавлены skeleton’ы в `.codex/skills/`:
+    - `yummy-repo-guard`
+    - `nomad-backend-delivery`
+    - `nomad-qa-and-smoke`
+    - `repo-docs-and-handoff`
+  - для каждого скилла созданы:
+    - `SKILL.md` c trigger conditions, workflow, required outputs и stop conditions;
+    - `agents/openai.yaml` c UI metadata;
+    - reference-файл с checklist/matrix для короткого основного skill body.
+  - `AI_DEVELOPMENT_PROCESS.md` и `AGENTS.md`:
+    - синхронизированы с правилом, что repo-specific skills живут в `.codex/skills/`;
+    - стартовый пакет skills отмечен как созданный bootstrap layer.
+- Проверки:
+  - `rg -n "TODO" .codex/skills`
+  - `git diff --check`
+  - ручной review структуры `.codex/skills/*`
+- Эффект:
+  - в репозитории появился первый локальный пакет skills для полного AI delivery loop;
+  - следующий этап можно вести уже не от пустых шаблонов, а от согласованных skeleton’ов.
+
 Обновление от 28 марта 2026 (docs: formalize AI development operating model and skill lifecycle):
 - Проблема:
   - в репозитории уже были зафиксированы отдельные правила для `Nomad`, `Symphony` и vertical slices, но не было единого source of truth по модели `leader + specialists`;
