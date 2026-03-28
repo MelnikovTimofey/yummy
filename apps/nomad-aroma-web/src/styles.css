@@ -716,7 +716,7 @@ select:focus-visible {
 
 .home-rail {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .home-rail-head {
@@ -753,16 +753,18 @@ select:focus-visible {
 .home-rail-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(24px, 6.2vw, 30px);
-  line-height: 0.96;
+  font-size: clamp(21px, 5.2vw, 25px);
+  line-height: 1.02;
   letter-spacing: 0;
   text-wrap: balance;
+  max-width: 12ch;
 }
 
 .home-rail-title-btn .hint {
   margin-top: 0;
-  max-width: 42ch;
-  line-height: 1.45;
+  max-width: 40ch;
+  line-height: 1.4;
+  font-size: 13px;
 }
 
 .home-link-btn {
@@ -779,7 +781,7 @@ select:focus-visible {
 
 .home-rail-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: none;
@@ -865,6 +867,11 @@ select:focus-visible {
   overflow: hidden;
 }
 
+.mix-unified-card-rail .mix-unified-meta {
+  -webkit-line-clamp: 2;
+  min-height: 2.4em;
+}
+
 .mix-unified-tags {
   min-height: 26px;
   display: flex;
@@ -872,6 +879,11 @@ select:focus-visible {
   flex-wrap: nowrap;
   gap: 6px;
   overflow: hidden;
+}
+
+.mix-unified-card-rail .mix-unified-tags {
+  min-height: 0;
+  flex-wrap: wrap;
 }
 
 .mix-unified-tags .profile-tag {
@@ -908,6 +920,25 @@ select:focus-visible {
 .onboarding-copy-card .card-text {
   max-width: 31ch;
   margin-top: 6px;
+}
+
+.recommendation-empty-card {
+  gap: 12px;
+}
+
+.recommendation-empty-head {
+  display: grid;
+  gap: 8px;
+}
+
+.recommendation-empty-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recommendation-empty-actions {
+  margin-top: 2px;
 }
 
 .selected-mix-bar {
@@ -1295,7 +1326,7 @@ select:focus-visible {
   }
 
   .mix-unified-card-rail {
-    min-width: 210px;
+    min-width: 228px;
   }
 
   .mix-info-name,
@@ -1321,20 +1352,22 @@ select:focus-visible {
   }
 
   .tab {
-    min-height: 38px;
+    min-height: 40px;
     padding: 8px 10px;
-    font-size: 10px;
-    letter-spacing: 0.05em;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    font-weight: 500;
   }
 
   .home-rail-title {
-    font-size: 22px;
-    line-height: 1;
+    font-size: 20px;
+    line-height: 1.04;
+    max-width: none;
   }
 
   .home-rail-title-btn .hint {
     max-width: none;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .home-rail-row {

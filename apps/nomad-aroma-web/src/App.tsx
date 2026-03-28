@@ -1671,15 +1671,31 @@ export const App = () => {
       </Card>
 
       {recommendationError ? <p className="screen-status error">{recommendationError}</p> : null}
-      {!recommendations.length && recommendationStatus === 'ready' ? (
-        <Card className="card compact-card">
-          <p className="card-title">Ничего не найдено</p>
-          <p className="card-text">Попробуйте изменить профили и вкусы или сразу перейти в каталог.</p>
-          <div className="cinema-actions">
-            <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('onboarding')}>
-              Изменить предпочтения
+      {!recommendations.length && recommendationStatus !== 'loading' ? (
+        <Card className="card compact-card recommendation-empty-card">
+          <div className="recommendation-empty-head">
+            <Badge className="filter-pill muted">
+              {recommendationStatus === 'ready' ? 'Подбор не найден' : 'Подбор пока пуст'}
+            </Badge>
+            <p className="card-title">
+              {recommendationStatus === 'ready' ? 'Ничего не найдено' : 'Сначала выберите вкусы'}
+            </p>
+          </div>
+          <p className="card-text">
+            {recommendationStatus === 'ready'
+              ? 'Попробуйте изменить профили и вкусы или сразу перейти в каталог.'
+              : 'Откройте предпочтения, чтобы мы собрали подбор под текущее настроение, или сразу посмотрите весь каталог.'}
+          </p>
+          <div className="recommendation-empty-points">
+            <span className="selection-chip">Профили вкуса</span>
+            <span className="selection-chip">Витрина мастеров</span>
+            <span className="selection-chip">Каталог без входа</span>
+          </div>
+          <div className="cinema-actions recommendation-empty-actions">
+            <Button className="search-button" type="button" onClick={() => setView('onboarding')}>
+              {recommendationStatus === 'ready' ? 'Изменить вкусы' : 'Открыть предпочтения'}
             </Button>
-            <Button className="search-button" type="button" onClick={() => setView('catalog')}>
+            <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
               Открыть каталог
             </Button>
           </div>
@@ -1692,17 +1708,19 @@ export const App = () => {
         ))}
       </section>
 
-      <div className="cinema-actions">
-        <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('showcase')}>
-          Перейти в витрину
-        </Button>
-        <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
-          Открыть каталог
-        </Button>
-        <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('onboarding')}>
-          Изменить вкусы
-        </Button>
-      </div>
+      {recommendations.length ? (
+        <div className="cinema-actions">
+          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('showcase')}>
+            Перейти в витрину
+          </Button>
+          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
+            Открыть каталог
+          </Button>
+          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('onboarding')}>
+            Изменить вкусы
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 
