@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView } from '@/components/inventory/inventory-view';
@@ -74,13 +74,16 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 
 type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
-const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string }> = [
-  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка' },
-  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие' },
-  { id: 'mixes', label: 'Миксы', kicker: 'Каталог' },
-  { id: 'rails', label: 'Рейлы', kicker: 'Витрина' },
-  { id: 'access', label: 'Доступ', kicker: 'Бот и allowlist' },
+const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; detail: string }> = [
+  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка', detail: 'Ключевые guest и ops сигналы за смену.' },
+  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие', detail: 'Контроль табаков, фильтров и batch-операций.' },
+  { id: 'mixes', label: 'Миксы', kicker: 'Каталог', detail: 'Каталог миксов, компоненты и доступность для гостя.' },
+  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Авто- и мастерские подборки для guest surface.' },
+  { id: 'access', label: 'Доступ', kicker: 'Бот и allowlist', detail: 'Daily code, staff access и Telegram observability.' },
 ];
+
+const getWorkspaceTabId = (tab: WorkspaceTab) => `workspace-tab-${tab}`;
+const getWorkspacePanelId = (tab: WorkspaceTab) => `workspace-panel-${tab}`;
 
 type MixEditorState = {
   id: string;
@@ -377,6 +380,13 @@ export const App = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState('');
   const [token, setToken] = useState(() => readStoredToken());
+  const workspaceTabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
+    dashboard: null,
+    inventory: null,
+    mixes: null,
+    rails: null,
+    access: null,
+  });
   const [user, setUser] = useState<StaffUser | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
@@ -454,6 +464,49 @@ export const App = () => {
   const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
   const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
+
+  const focusWorkspaceTab = (tab: WorkspaceTab) => {
+    requestAnimationFrame(() => {
+      workspaceTabRefs.current[tab]?.focus();
+    });
+  };
+
+  const onWorkspaceTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentTab: WorkspaceTab) => {
+    const currentIndex = workspaceTabs.findIndex((tab) => tab.id === currentTab);
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    let nextTab: WorkspaceTab | null = null;
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextTab = workspaceTabs[(currentIndex + 1) % workspaceTabs.length]?.id ?? null;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextTab = workspaceTabs[(currentIndex - 1 + workspaceTabs.length) % workspaceTabs.length]?.id ?? null;
+        break;
+      case 'Home':
+        nextTab = workspaceTabs[0]?.id ?? null;
+        break;
+      case 'End':
+        nextTab = workspaceTabs[workspaceTabs.length - 1]?.id ?? null;
+        break;
+      default:
+        break;
+    }
+
+    if (!nextTab) {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveTab(nextTab);
+    focusWorkspaceTab(nextTab);
+  };
 
   const loadInventory = async (
     nextToken: string,
@@ -2817,71 +2870,127 @@ export const App = () => {
     );
   };
 
+  const renderActiveWorkspace = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return renderDashboard();
+      case 'inventory':
+        return renderInventory();
+      case 'mixes':
+        return renderMixes();
+      case 'rails':
+        return renderRails();
+      case 'access':
+        return renderAccess();
+      default:
+        return null;
+    }
+  };
+
   if (user) {
+    const activeWorkspace = workspaceTabs.find((tab) => tab.id === activeTab) ?? workspaceTabs[0];
+
     return (
-      <main className="shell shell--master">
-        <section className="hero hero--master">
-          <p className="eyebrow">Nomad Master</p>
-          <h1>Панель персонала</h1>
-          <p className="lead">
-            Вы вошли как {user.name} ({user.role}). Здесь обновляются инвентарь, миксы, рейлы, коды доступа и
-            сводка по действиям гостей.
-          </p>
-          <div className="hero-meta">
-            <span className="status-chip status-chip--inverse">{formatRoleLabel(user.role)}</span>
-            <span className="status-chip status-chip--inverse">{formatWorkspaceTab(activeTab)}</span>
-            <span className="status-chip status-chip--inverse">Postgres-backed runtime</span>
-          </div>
-        </section>
-
-        <section className="mx-auto grid w-full max-w-[1180px] gap-3 md:grid-cols-2 xl:grid-cols-6">
-          {readSummaryCards(summary).map((card) => (
-            <Card
-              key={card.label}
-              size="sm"
-              className="rounded-[1.55rem] border-white/58 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,249,244,0.7))] shadow-[0_18px_42px_rgba(43,24,21,0.07)] backdrop-blur-lg"
-            >
-              <CardContent className="space-y-2 pt-3.5">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{card.label}</div>
-                <div className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-
-        <section className="card card--compact">
-          <div className="section-head section-head--compact">
-            <div>
-              <p className="eyebrow">Рабочие разделы</p>
-              <h2>Операционный маршрут смены</h2>
+      <main className="shell shell--master shell--master-auth">
+        <aside className="master-sidebar">
+          <section className="master-sidebar__panel">
+            <p className="eyebrow">Nomad Master</p>
+            <h1>Операционный контур</h1>
+            <p className="master-sidebar__lead">
+              Вы вошли как {user.name}. Этот shell собирает дашборд, инвентарь, миксы, рейлы и контур доступа в
+              единую рабочую консоль.
+            </p>
+            <div className="master-sidebar__meta">
+              <span className="status-chip status-chip--inverse">{formatRoleLabel(user.role)}</span>
+              <span className="status-chip status-chip--inverse">Postgres-backed runtime</span>
             </div>
-            <div className="status-chip">Текущий модуль: {formatWorkspaceTab(activeTab)}</div>
-          </div>
-          <div className="workspace-tabs">
-            {workspaceTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-                onClick={() => setActiveTab(tab.id)}
+          </section>
+
+          <section className="master-sidebar__panel master-sidebar__panel--muted">
+            <div className="master-sidebar__section-head">
+              <div>
+                <p className="eyebrow">Рабочий фокус</p>
+                <h2>Маршрут смены</h2>
+              </div>
+              <span className="status-chip">{activeWorkspace.label}</span>
+            </div>
+
+            <nav className="master-sidebar__nav" aria-label="Рабочие разделы Мастера">
+              <div className="workspace-tabs workspace-tabs--sidebar" role="tablist" aria-label="Рабочие разделы Мастера">
+                {workspaceTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    id={getWorkspaceTabId(tab.id)}
+                    ref={(node) => {
+                      workspaceTabRefs.current[tab.id] = node;
+                    }}
+                    type="button"
+                    className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    aria-controls={getWorkspacePanelId(tab.id)}
+                    tabIndex={activeTab === tab.id ? 0 : -1}
+                    onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
+                  >
+                    <span className="workspace-tab__kicker">{tab.kicker}</span>
+                    <strong>{tab.label}</strong>
+                    <span className="workspace-tab__detail">{tab.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </nav>
+          </section>
+
+          <section className="master-sidebar__panel master-sidebar__panel--compact">
+            <div className="master-runtime-card">
+              <span className="master-runtime-card__label">Текущий контекст</span>
+              <strong>{activeWorkspace.kicker}</strong>
+              <p>{activeWorkspace.detail}</p>
+            </div>
+
+            <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
+              Выйти
+            </button>
+          </section>
+        </aside>
+
+        <section className="master-stage">
+          <header className="master-stage__header">
+            <div className="master-stage__copy">
+              <p className="eyebrow">Активный модуль</p>
+              <h2>{activeWorkspace.label}</h2>
+              <p className="meta-line">{activeWorkspace.detail}</p>
+            </div>
+            <div className="master-stage__status">
+              <span className="status-chip">Смена: {formatWorkspaceTab(activeTab)}</span>
+              <span className="status-chip">Роль: {formatRoleLabel(user.role)}</span>
+            </div>
+          </header>
+
+          <section className="master-summary-strip" aria-label="Ключевые метрики смены">
+            {readSummaryCards(summary).map((card) => (
+              <Card
+                key={card.label}
+                size="sm"
+                className="rounded-[1.55rem] border-white/58 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,249,244,0.7))] shadow-[0_18px_42px_rgba(43,24,21,0.07)] backdrop-blur-lg"
               >
-                <span className="workspace-tab__kicker">{tab.kicker}</span>
-                <strong>{tab.label}</strong>
-              </button>
+                <CardContent className="space-y-2 pt-3.5">
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{card.label}</div>
+                  <div className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
+                </CardContent>
+              </Card>
             ))}
+          </section>
+
+          <div
+            className="master-stage__panel"
+            id={getWorkspacePanelId(activeTab)}
+            role="tabpanel"
+            aria-labelledby={getWorkspaceTabId(activeTab)}
+          >
+            {renderActiveWorkspace()}
           </div>
-        </section>
-
-        {activeTab === 'dashboard' ? renderDashboard() : null}
-        {activeTab === 'inventory' ? renderInventory() : null}
-        {activeTab === 'mixes' ? renderMixes() : null}
-        {activeTab === 'rails' ? renderRails() : null}
-        {activeTab === 'access' ? renderAccess() : null}
-
-        <section className="card card--compact">
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
-            Выйти
-          </button>
         </section>
       </main>
     );

@@ -93,6 +93,21 @@ npm run dev
 
 1. `docs/nomad/master-production-redesign.md`
 
+Текущий GitHub-backed redesign sequence:
+
+1. `#2` — `Master shell foundation under TIMELESS TIS benchmark`
+2. `#3` — `Harmonize operational surfaces across Master modules`
+3. `#4` — `Master visual polish, responsive hardening and design sign-off`
+
+## Issue #2. Master shell foundation
+
+Реализован первый GitHub-backed redesign slice по shell-level visual system:
+
+1. авторизованный `Master` больше не рендерится как hero-stack поверх отдельных блоков, а собирается в console shell с тёмным sidebar и отдельным stage для активного модуля;
+2. workspace navigation встроена в sidebar как основной маршрут смены, а summary metrics вынесены в отдельный strip внутри рабочего stage;
+3. shell-level visual hierarchy теперь ближе к premium HoReCa console, но без изменения product semantics, staff/admin boundaries и API contracts;
+4. targeted Playwright smoke для `Master` синхронизирован с новым shell contract и проходит против локального runtime.
+
 ## Slice 1. Dashboard analytics
 
 Реализован первый production-hardening slice для дашборда:

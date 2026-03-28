@@ -1,5 +1,43 @@
 # HANDOFF — Yummy
 
+## 1.78) Complete Nomad Master Issue #2 shell foundation (29 марта 2026)
+
+- Запрос:
+  - довести `Issue #2` до честно закрываемого состояния;
+  - отделить shell foundation от грязного worktree и подтвердить его реальным runtime smoke.
+
+- Реализация:
+  - shell foundation:
+    - `apps/nomad-master-web/src/App.tsx`
+    - авторизованный `Master` переведён из hero-stack в console shell;
+    - добавлены тёмный sidebar, stage-header активного модуля и summary strip;
+    - workspace navigation встроена в sidebar как основной маршрут смены;
+    - tabs получили keyboard navigation и semantic `tablist/tab/tabpanel`.
+  - visual layer:
+    - `apps/nomad-master-web/src/styles.css`
+    - добавлены `shell--master-auth`, `master-sidebar`, `master-stage`, runtime card и responsive layout под новый shell;
+    - визуальный акцент смещён к premium HoReCa console без изменения модульной семантики.
+  - runtime verification:
+    - `tests/nomad-smoke/tests/master-smoke.spec.ts`
+    - smoke обновлён под новый shell contract;
+    - проверяются login, keyboard navigation по workspace tabs, inventory batch, mix editor, rails read-only и access restrictions для роли `nomad`.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `NOTES.md`
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5176' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+
+- Остаточный риск:
+  - отдельный visual polish по всем viewport/state combinations остаётся за `Issue #4`;
+  - harmonization tables/forms/toolbars по модулям остаётся за `Issue #3`.
+
+- Эффект:
+  - `Issue #2` закрывает именно shell-level redesign и больше не зависит от локального грязного worktree;
+  - `Master` получил верифицированный console shell, на который можно безопасно наслаивать следующие visual slices.
+
 ## 1.77) Add shadcn/ui foundation to Nomad Aroma guest components (28 марта 2026)
 
 - Запрос:

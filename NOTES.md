@@ -1,3 +1,31 @@
+Обновление от 29 марта 2026 (nomad master: complete issue #2 shell foundation):
+- Проблема:
+  - `Nomad Master` уже имел рабочие staff-модули, но авторизованный контур оставался hero-stack из разрозненных блоков и не ощущался как цельная premium HoReCa console;
+  - большой redesign уже был разложен на GitHub issues `#2/#3/#4`, но `Issue #2` нужно было честно довести до состояния source-of-truth implementation с runtime verification, а не оставлять как локальную незакоммиченную работу;
+  - существующий smoke для `Master` был привязан к старому shell contract и не подтверждал новый layout.
+- Изменение:
+  - `apps/nomad-master-web/src/App.tsx`:
+    - авторизованный `Master` переведён в console shell с тёмным sidebar, stage-header активного модуля и summary strip;
+    - workspace navigation встроена в sidebar как основной маршрут смены;
+    - добавлены keyboard navigation и semantic `tablist/tab/tabpanel` для shell navigation.
+  - `apps/nomad-master-web/src/styles.css`:
+    - добавлены `shell--master-auth`, `master-sidebar`, `master-stage`, sidebar panels, runtime card и responsive rules для нового shell;
+    - visual hierarchy смещена от MVP hero-stack к более цельному premium console layout.
+  - `tests/nomad-smoke/tests/master-smoke.spec.ts`:
+    - smoke синхронизирован с новым shell contract;
+    - после login проверяется `Операционный контур`, keyboard path по workspace tabs и критические admin/nomad сценарии.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5176' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+- Эффект:
+  - `Issue #2` теперь закрывает именно shell foundation, а не абстрактное намерение на redesign;
+  - `Master` получил цельный auth-shell без изменения product semantics и role boundaries;
+  - следующий безопасный шаг остаётся в `Issue #3` по harmonization модульных surfaces.
+
 Обновление от 28 марта 2026 (nomad aroma: add shadcn/ui foundation for guest components):
 - Проблема:
   - `apps/nomad-aroma-web` оставался монолитным Vite/React экраном без локального component layer;
