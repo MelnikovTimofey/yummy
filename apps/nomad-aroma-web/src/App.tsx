@@ -1,5 +1,13 @@
 import { FormEvent, UIEvent, useEffect, useRef, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
 type GuestView = 'access' | 'intro' | 'onboarding' | 'recommendations' | 'showcase' | 'catalog' | 'rail';
 type AppTab = 'recommendations' | 'showcase' | 'catalog';
 type JourneyTab = 'intro' | 'onboarding';
@@ -526,39 +534,40 @@ const MixTile = ({
   const dominantProfile = getDominantProfile(mix);
 
   return (
-    <article
-      className={`mix-unified-card mix-unified-card-${size} interactive`}
-      onClick={() => onOpen(mix)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpen(mix);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      style={{
-        background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
-      }}
-      data-testid={`mix-card-${mix.id}`}
-    >
-      <div className="mix-unified-overlay">
-        <div className="mix-unified-head">
-          <div className="mix-unified-title-wrap">
-            <p className="mix-unified-title">{mix.name}</p>
+    <Card asChild className={`mix-unified-card mix-unified-card-${size} interactive`}>
+      <article
+        onClick={() => onOpen(mix)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpen(mix);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        style={{
+          background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
+        }}
+        data-testid={`mix-card-${mix.id}`}
+      >
+        <div className="mix-unified-overlay">
+          <div className="mix-unified-head">
+            <div className="mix-unified-title-wrap">
+              <p className="mix-unified-title">{mix.name}</p>
+            </div>
+            {!mix.available ? <Badge className="filter-pill muted">Нет в наличии</Badge> : null}
           </div>
-          {!mix.available ? <span className="filter-pill muted">Нет в наличии</span> : null}
-        </div>
-        <div className="mix-unified-body">
-          <p className="mix-unified-meta">{mix.flavors.length ? mix.flavors.slice(0, 3).join(' · ') : mix.description}</p>
-          <div className="mix-unified-tags">
-            <span className="profile-tag mix-rating-tag">{formatRatingTag(mix)}</span>
-            {dominantProfile ? <span className="profile-tag">{formatProfileLabel(dominantProfile)}</span> : null}
+          <div className="mix-unified-body">
+            <p className="mix-unified-meta">{mix.flavors.length ? mix.flavors.slice(0, 3).join(' · ') : mix.description}</p>
+            <div className="mix-unified-tags">
+              <Badge className="profile-tag mix-rating-tag">{formatRatingTag(mix)}</Badge>
+              {dominantProfile ? <Badge className="profile-tag">{formatProfileLabel(dominantProfile)}</Badge> : null}
+            </div>
+            <p className="mix-ratings mix-unified-footer">{getMixFooterText(mix)}</p>
           </div>
-          <p className="mix-ratings mix-unified-footer">{getMixFooterText(mix)}</p>
         </div>
-      </div>
-    </article>
+      </article>
+    </Card>
   );
 };
 
@@ -587,11 +596,13 @@ const MixDetailModal = ({
   onChoose: () => void;
   onRate: (value: number) => void;
 }) => {
-  if (!state) {
+  const mix = state?.mix;
+  const source = state?.source;
+
+  if (!mix || !source) {
     return null;
   }
 
-  const { mix, source } = state;
   const isSelected = selectedMixId === mix.id;
   const tobaccoRows = [...mix.components]
     .sort((left, right) => right.proportion - left.proportion)
@@ -603,34 +614,32 @@ const MixDetailModal = ({
   const profileRows = buildEqualShareRows(mix.flavorProfiles).slice(0, 4);
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <div
+    <Dialog open={Boolean(state)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
         className="mix-info-modal-shell guest-mix-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="guest-mix-modal-title"
-        onClick={(event) => event.stopPropagation()}
       >
         <div className="mix-info-modal">
+          <DialogDescription className="sr-only">Карточка выбранного микса с составом, рейтингом и действием выбора.</DialogDescription>
           <div className="mix-detail-top-row">
             <div className="mix-detail-top-main">
               <p className="card-title">{mixSourceLabels[source]}</p>
-              <h3 className="mix-info-name" id="guest-mix-modal-title">
+              <DialogTitle className="mix-info-name" id="guest-mix-modal-title">
                 {mix.name}
-              </h3>
+              </DialogTitle>
             </div>
             <div className="mix-detail-top-actions">
-              <button
+              <Button
                 className="search-button recommendation-session mix-detail-select-btn"
                 type="button"
                 onClick={() => onChoose()}
                 disabled={!mix.available || chooseStatus === 'loading' || isSelected}
               >
                 {chooseStatus === 'loading' ? 'Выбираем...' : isSelected ? 'Выбранный микс' : 'Выбрать микс'}
-              </button>
-              <button className="ghost-button mix-info-close-btn" type="button" onClick={onClose}>
+              </Button>
+              <Button className="ghost-button mix-info-close-btn" variant="outline" type="button" onClick={onClose}>
                 Закрыть
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -638,12 +647,12 @@ const MixDetailModal = ({
             <p className="mix-info-section-title">О миксе</p>
             <p className="mix-info-description">{mix.description || 'Описание пока не добавлено.'}</p>
             <div className="mix-detail-tags">
-              <span className="profile-tag mix-rating-tag">{formatRatingTag(mix)}</span>
-              <span className="profile-tag">Выборов: {mix.popularity}</span>
+              <Badge className="profile-tag mix-rating-tag">{formatRatingTag(mix)}</Badge>
+              <Badge className="profile-tag">Выборов: {mix.popularity}</Badge>
               {mix.flavorProfiles.slice(0, 3).map((profile) => (
-                <span className="profile-tag" key={`${mix.id}:${profile}`}>
+                <Badge className="profile-tag" key={`${mix.id}:${profile}`}>
                   {formatProfileLabel(profile)}
-                </span>
+                </Badge>
               ))}
             </div>
           </section>
@@ -712,15 +721,17 @@ const MixDetailModal = ({
             <p className="mix-info-section-title">Оценка</p>
             <div className="session-rating-row" role="group" aria-label="Оценка микса">
               {[1, 2, 3, 4, 5].map((value) => (
-                <button
+                <Button
                   key={value}
-                  className={ratingValue === value ? 'score-btn active' : 'score-btn'}
+                  className={cn('score-btn', ratingValue === value && 'active')}
+                  variant="outline"
+                  size="icon"
                   type="button"
                   onClick={() => onRate(value)}
                   disabled={ratingStatus === 'loading'}
                 >
                   {value}
-                </button>
+                </Button>
               ))}
             </div>
             <div className="recommendation-actions">
@@ -732,8 +743,8 @@ const MixDetailModal = ({
             </div>
           </section>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -1299,25 +1310,26 @@ export const App = () => {
   const introProgress = introCards.length ? `${introIndex + 1} из ${introCards.length}` : 'Загрузка';
 
   const renderBrand = () => (
-    <button type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
+    <Button variant="ghost" type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
       <div>
         <p className="brand">nomad</p>
         <p className="tagline">лаунж · арома ателье</p>
       </div>
-    </button>
+    </Button>
   );
 
   const renderJourneyNav = (activeTab: JourneyTab) => (
     <nav className="topbar-nav-list guest-stage-nav" aria-label="Маршрут знакомства">
       {(['intro', 'onboarding'] as JourneyTab[]).map((item) => (
-        <button
+        <Button
           key={item}
-          className={activeTab === item ? 'tab active' : 'tab'}
+          className={cn('tab', activeTab === item && 'active')}
+          variant="ghost"
           type="button"
           onClick={() => setView(item)}
         >
           {item === 'intro' ? 'Знакомство' : 'Предпочтения'}
-        </button>
+        </Button>
       ))}
     </nav>
   );
@@ -1329,14 +1341,15 @@ export const App = () => {
         { key: 'showcase', label: 'Витрина' },
         { key: 'catalog', label: 'Каталог' },
       ] as Array<{ key: AppTab; label: string }>).map((item) => (
-        <button
+        <Button
           key={item.key}
-          className={activeTab === item.key ? 'tab active' : 'tab'}
+          className={cn('tab', activeTab === item.key && 'active')}
+          variant="ghost"
           type="button"
           onClick={() => setView(item.key)}
         >
           {item.label}
-        </button>
+        </Button>
       ))}
     </nav>
   );
@@ -1368,19 +1381,19 @@ export const App = () => {
         <div className="topbar-main-row topbar-main-row-compact">
           {renderBrand()}
           <div className="topbar-right">
-            <button className="header-auth-btn" type="button" onClick={onResetAccess}>
+            <Button className="header-auth-btn" variant="outline" type="button" onClick={onResetAccess}>
               Новый код
-            </button>
+            </Button>
           </div>
         </div>
         {view === 'intro' || view === 'onboarding' ? renderJourneyNav(view) : null}
         {activeTab ? renderAppNav(activeTab) : null}
         {view === 'rail' && selectedRail ? (
           <div className="rail-breadcrumb">
-            <button className="ghost-button screen-back-btn" type="button" onClick={() => setView('showcase')}>
+            <Button className="ghost-button screen-back-btn" variant="outline" type="button" onClick={() => setView('showcase')}>
               Назад к витрине
-            </button>
-            <span className="filter-pill">{selectedRail.name}</span>
+            </Button>
+            <Badge className="filter-pill">{selectedRail.name}</Badge>
           </div>
         ) : null}
       </header>
@@ -1389,14 +1402,14 @@ export const App = () => {
 
   const renderAccessView = () => (
     <section className="auth-layout">
-      <article className="auth-card guest-auth-card">
+      <Card className="auth-card guest-auth-card">
         <p className="card-title">Код доступа</p>
         <p className="card-text">
           Введите код, который подскажет команда зала. После этого откроется знакомство, подбор и гостевая витрина.
         </p>
         <form className="form" onSubmit={onSubmitAccessCode}>
           <label htmlFor="guest-access-code">Код</label>
-          <input
+          <Input
             id="guest-access-code"
             type="text"
             value={code}
@@ -1405,27 +1418,26 @@ export const App = () => {
             autoComplete="one-time-code"
           />
           <label className="checkbox-row">
-            <input
+            <Checkbox
+              id="guest-access-confirmation"
               className="checkbox-input"
-              type="checkbox"
               checked={ageConfirmed}
-              onChange={(event) => setAgeConfirmed(event.target.checked)}
+              onCheckedChange={(checked) => setAgeConfirmed(checked === true)}
             />
-            <span className="checkbox-box" aria-hidden="true" />
             <span>Мне уже исполнилось 18 лет</span>
           </label>
-          <button type="submit" disabled={accessStatus === 'loading'}>
+          <Button type="submit" disabled={accessStatus === 'loading'}>
             {accessStatus === 'loading' ? 'Проверяем код...' : 'Далее'}
-          </button>
+          </Button>
           {accessError ? <p className="screen-status error">{accessError}</p> : null}
         </form>
-      </article>
-      <article className="card compact-card">
+      </Card>
+      <Card className="card compact-card">
         <p className="card-title">Что внутри</p>
         <p className="card-text">
           Сначала сервис познакомит с механикой, затем поможет выбрать вкусовые профили, соберёт рекомендации и покажет витрину с подборками.
         </p>
-      </article>
+      </Card>
     </section>
   );
 
@@ -1448,10 +1460,10 @@ export const App = () => {
             }}
           >
             {introCards.map((card) => (
-              <article className="card intro-slide intro-slide-fullscreen" key={card.id}>
+              <Card className="card intro-slide intro-slide-fullscreen" key={card.id}>
                 <div className="intro-slide-kicker-row">
                   <p className="card-title">Шаг {card.step}</p>
-                  <span className="filter-pill muted">Карточка {introProgress}</span>
+                  <Badge className="filter-pill muted">Карточка {introProgress}</Badge>
                 </div>
                 <h3 className="intro-slide-title">{card.title}</h3>
                 <p className="card-text">{card.description}</p>
@@ -1460,15 +1472,17 @@ export const App = () => {
                     <li key={`${card.id}:${bullet}`}>{bullet}</li>
                   ))}
                 </ul>
-              </article>
+              </Card>
             ))}
           </div>
           <div className="intro-slider-controls">
             <div className="intro-dots">
               {introCards.map((card, index) => (
-                <button
+                <Button
                   key={card.id}
-                  className={index === introIndex ? 'intro-dot active' : 'intro-dot'}
+                  className={cn('intro-dot', index === introIndex && 'active')}
+                  variant="ghost"
+                  size="icon"
                   type="button"
                   onClick={() => {
                     const track = introTrackRef.current;
@@ -1487,10 +1501,10 @@ export const App = () => {
               ))}
             </div>
             <div className="cinema-actions">
-              <button className="ghost-button" type="button" onClick={finishIntro}>
+              <Button className="ghost-button" variant="outline" type="button" onClick={finishIntro}>
                 Пропустить
-              </button>
-              <button
+              </Button>
+              <Button
                 className="search-button"
                 type="button"
                 onClick={() => {
@@ -1513,7 +1527,7 @@ export const App = () => {
                 }}
               >
                 {introIndex >= introCards.length - 1 ? 'Далее к выбору вкусов' : 'Далее'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1523,10 +1537,10 @@ export const App = () => {
 
   const renderOnboardingView = () => (
     <section className="catalog-layout">
-      <article className="card compact-card onboarding-copy-card">
+      <Card className="card compact-card onboarding-copy-card">
         <p className="card-title">Предпочтения</p>
         <p className="card-text">Выберите профили и вкусы. По ним мы соберём подбор и подсветим релевантный каталог.</p>
-      </article>
+      </Card>
 
       <form className="catalog-controls cinema-controls" onSubmit={onSubmitOnboarding}>
         <div className="catalog-tools-row">
@@ -1536,9 +1550,9 @@ export const App = () => {
                 <span className="selection-group-label">Профили</span>
                 <div className="selection-chip-grid">
                   {likedProfiles.map((item) => (
-                    <span className="selection-chip" key={item}>
+                    <Badge className="selection-chip" key={item}>
                       {formatProfileLabel(item)}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -1548,14 +1562,14 @@ export const App = () => {
                 <span className="selection-group-label">Вкусы</span>
                 <div className="selection-chip-grid">
                   {likedFlavors.map((item) => (
-                    <span className="selection-chip" key={item}>
+                    <Badge className="selection-chip" key={item}>
                       {item}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
             ) : null}
-            {!likedProfiles.length && !likedFlavors.length ? <span className="filter-pill muted">Ничего не выбрано</span> : null}
+            {!likedProfiles.length && !likedFlavors.length ? <Badge className="filter-pill muted">Ничего не выбрано</Badge> : null}
           </div>
         </div>
 
@@ -1564,9 +1578,10 @@ export const App = () => {
           {optionsStatus === 'loading' ? <p className="screen-status">Подтягиваем доступные профили...</p> : null}
           <div className="filter-scrollbox">
             {availableProfileOptions.map((option) => (
-              <button
+              <Button
                 key={option.value}
-                className={likedProfiles.includes(option.value) ? 'filter-option active' : 'filter-option'}
+                className={cn('filter-option', likedProfiles.includes(option.value) && 'active')}
+                variant="outline"
                 type="button"
                 onClick={() =>
                   setLikedProfiles((current) =>
@@ -1577,7 +1592,7 @@ export const App = () => {
                 }
               >
                 {option.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -1586,9 +1601,10 @@ export const App = () => {
           <span>Вкусы</span>
           <div className="filter-scrollbox">
             {options.flavors.map((flavor) => (
-              <button
+              <Button
                 key={flavor}
-                className={likedFlavors.includes(flavor) ? 'filter-option active' : 'filter-option'}
+                className={cn('filter-option', likedFlavors.includes(flavor) && 'active')}
+                variant="outline"
                 type="button"
                 onClick={() =>
                   setLikedFlavors((current) =>
@@ -1597,7 +1613,7 @@ export const App = () => {
                 }
               >
                 {flavor}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -1606,12 +1622,12 @@ export const App = () => {
         {recommendationError ? <p className="screen-status error">{recommendationError}</p> : null}
 
         <div className="cinema-actions">
-          <button className="search-button" type="submit" disabled={recommendationStatus === 'loading' || optionsStatus !== 'ready'}>
+          <Button className="search-button" type="submit" disabled={recommendationStatus === 'loading' || optionsStatus !== 'ready'}>
             {recommendationStatus === 'loading' ? 'Собираем подбор...' : 'Показать рекомендации'}
-          </button>
-          <button className="ghost-button" type="button" onClick={() => setView('catalog')}>
+          </Button>
+          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
             Открыть каталог сразу
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -1620,7 +1636,7 @@ export const App = () => {
   const renderSelectedMixBar = () =>
     selectedMixCard && selectedMix ? (
       <div className="selected-mix-shell">
-        <article className="card compact-card selected-mix-bar">
+        <Card className="card compact-card selected-mix-bar">
           <div>
             <p className="card-title">Выбранный микс</p>
             <p className="card-text">
@@ -1628,21 +1644,22 @@ export const App = () => {
             </p>
           </div>
           <div className="cinema-actions">
-            <button
+            <Button
               className="ghost-button"
+              variant="outline"
               type="button"
               onClick={() => openMix(selectedMixCard, selectedMix.source)}
             >
               Открыть карточку
-            </button>
+            </Button>
           </div>
-        </article>
+        </Card>
       </div>
     ) : null;
 
   const renderRecommendationsView = () => (
     <section className="recommendations-layout">
-      <article className="card catalog-summary">
+      <Card className="card catalog-summary">
         <p className="card-title">Подбор для вас</p>
         <p className="card-text">
           {recommendationStatus === 'loading'
@@ -1651,22 +1668,22 @@ export const App = () => {
               ? `Найдено ${recommendations.length} вариантов. Откройте карточку микса и посмотрите состав, рейтинг и детали.`
               : 'После выбора вкусов здесь появится персональный подбор.'}
         </p>
-      </article>
+      </Card>
 
       {recommendationError ? <p className="screen-status error">{recommendationError}</p> : null}
       {!recommendations.length && recommendationStatus === 'ready' ? (
-        <article className="card compact-card">
+        <Card className="card compact-card">
           <p className="card-title">Ничего не найдено</p>
           <p className="card-text">Попробуйте изменить профили и вкусы или сразу перейти в каталог.</p>
           <div className="cinema-actions">
-            <button className="ghost-button" type="button" onClick={() => setView('onboarding')}>
+            <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('onboarding')}>
               Изменить предпочтения
-            </button>
-            <button className="search-button" type="button" onClick={() => setView('catalog')}>
+            </Button>
+            <Button className="search-button" type="button" onClick={() => setView('catalog')}>
               Открыть каталог
-            </button>
+            </Button>
           </div>
-        </article>
+        </Card>
       ) : null}
 
       <section className="list-grid cinema-grid">
@@ -1676,27 +1693,27 @@ export const App = () => {
       </section>
 
       <div className="cinema-actions">
-        <button className="ghost-button" type="button" onClick={() => setView('showcase')}>
+        <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('showcase')}>
           Перейти в витрину
-        </button>
-        <button className="ghost-button" type="button" onClick={() => setView('catalog')}>
+        </Button>
+        <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
           Открыть каталог
-        </button>
-        <button className="ghost-button" type="button" onClick={() => setView('onboarding')}>
+        </Button>
+        <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('onboarding')}>
           Изменить вкусы
-        </button>
+        </Button>
       </div>
     </section>
   );
 
   const renderShowcaseView = () => (
     <section className="home-layout">
-      <article className="card compact-card">
+      <Card className="card compact-card">
         <p className="card-title">Витрина</p>
         <p className="card-text">
           Здесь собраны готовые подборки, выбор от наших мастеров и миксы, которые чаще выбирают гости.
         </p>
-      </article>
+      </Card>
 
       {showcaseStatus === 'loading' ? <p className="screen-status">Загружаем витрину...</p> : null}
       {showcaseError ? <p className="screen-status error">{showcaseError}</p> : null}
@@ -1705,24 +1722,24 @@ export const App = () => {
       {showcaseRails.map((rail) => (
         <section className="home-rail" key={rail.id}>
           <div className="home-rail-head">
-            <button className="home-rail-title-btn" type="button" onClick={() => {
+            <Button className="home-rail-title-btn" variant="ghost" type="button" onClick={() => {
               setSelectedRail(rail);
               setRailSearch('');
               setView('rail');
             }}>
               <div className="home-rail-title-line">
                 <h3 className="home-rail-title">{rail.name}</h3>
-                <span className="filter-pill">{railToneLabels[rail.type]}</span>
+                <Badge className="filter-pill">{railToneLabels[rail.type]}</Badge>
               </div>
               <p className="hint">{rail.description || railDescriptions[rail.type]}</p>
-            </button>
-            <button className="home-link-btn" type="button" onClick={() => {
+            </Button>
+            <Button className="home-link-btn" variant="link" type="button" onClick={() => {
               setSelectedRail(rail);
               setRailSearch('');
               setView('rail');
             }}>
               Смотреть всё
-            </button>
+            </Button>
           </div>
           <div className="home-rail-row">
             {rail.mixes.map((mix) => (
@@ -1736,12 +1753,12 @@ export const App = () => {
 
   const renderRailView = () => (
     <section className="catalog-layout">
-      <article className="card catalog-summary">
+      <Card className="card catalog-summary">
         <p className="card-title">{selectedRail ? railToneLabels[selectedRail.type] : 'Подборка'}</p>
         <p className="card-text">
           {selectedRail?.description || 'Откройте подборку и выберите микс, который хочется показать мастеру.'}
         </p>
-      </article>
+      </Card>
 
       <section className="catalog-body">
         <form
@@ -1751,7 +1768,7 @@ export const App = () => {
           }}
         >
           <div className="search-row">
-            <input
+            <Input
               className="search-input"
               type="search"
               value={railSearch}
@@ -1784,7 +1801,7 @@ export const App = () => {
           }}
         >
           <div className="search-row">
-            <input
+            <Input
               className="search-input"
               type="search"
               value={queryDraft}
@@ -1792,25 +1809,26 @@ export const App = () => {
               placeholder="Поиск по названию и описанию"
             />
             {!isCompactFilters ? (
-              <button className="search-button catalog-find-btn" type="submit">
+              <Button className="search-button catalog-find-btn" type="submit">
                 Найти
-              </button>
+              </Button>
             ) : null}
           </div>
 
           {isCompactFilters ? (
             <div className="catalog-mobile-tools">
-              <button
+              <Button
                 className="ghost-button catalog-mobile-filters-toggle"
+                variant="outline"
                 type="button"
                 onClick={() => setFiltersOpen((current) => !current)}
                 aria-expanded={filtersOpen}
               >
                 {filtersOpen ? 'Скрыть фильтры' : hasCatalogFilters ? `Фильтры: ${activeFilterLabels.length}` : 'Показать фильтры'}
-              </button>
-              <button className="search-button catalog-mobile-inline-submit" type="submit">
+              </Button>
+              <Button className="search-button catalog-mobile-inline-submit" type="submit">
                 Найти
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -1818,17 +1836,17 @@ export const App = () => {
             <div className="catalog-active-filters" aria-live="polite">
               {activeFilterLabels.length ? (
                 activeFilterLabels.map((label) => (
-                  <span className="filter-pill" key={label}>
+                  <Badge className="filter-pill" key={label}>
                     {label}
-                  </span>
+                  </Badge>
                 ))
               ) : (
-                <span className="filter-pill muted">Фильтры не заданы</span>
+                <Badge className="filter-pill muted">Фильтры не заданы</Badge>
               )}
             </div>
-            <button className="ghost-button catalog-reset-btn" type="button" onClick={resetCatalogFilters} disabled={!hasCatalogFilters}>
+            <Button className="ghost-button catalog-reset-btn" variant="outline" type="button" onClick={resetCatalogFilters} disabled={!hasCatalogFilters}>
               Сбросить фильтры
-            </button>
+            </Button>
           </div>
 
           {!isCompactFilters || filtersOpen ? (
@@ -1848,7 +1866,7 @@ export const App = () => {
 
               <div className="filter-field">
                 <span>Профили вкуса</span>
-                <input
+                <Input
                   className="search-input"
                   type="search"
                   value={profileSearchDraft}
@@ -1856,17 +1874,19 @@ export const App = () => {
                   placeholder="Поиск профиля"
                 />
                 <div className="filter-scrollbox">
-                  <button
-                    className={selectedCatalogProfiles.length === 0 ? 'filter-option active' : 'filter-option'}
+                  <Button
+                    className={cn('filter-option', selectedCatalogProfiles.length === 0 && 'active')}
+                    variant="outline"
                     type="button"
                     onClick={() => setSelectedCatalogProfiles([])}
                   >
                     Любой профиль
-                  </button>
+                  </Button>
                   {filteredProfileOptions.map((option) => (
-                    <button
+                    <Button
                       key={option.value}
-                      className={selectedCatalogProfiles.includes(option.value) ? 'filter-option active' : 'filter-option'}
+                      className={cn('filter-option', selectedCatalogProfiles.includes(option.value) && 'active')}
+                      variant="outline"
                       type="button"
                       onClick={() =>
                         setSelectedCatalogProfiles((current) =>
@@ -1877,14 +1897,14 @@ export const App = () => {
                       }
                     >
                       {option.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
 
               <div className="filter-field">
                 <span>Вкусы</span>
-                <input
+                <Input
                   className="search-input"
                   type="search"
                   value={flavorSearchDraft}
@@ -1892,17 +1912,19 @@ export const App = () => {
                   placeholder="Поиск вкуса"
                 />
                 <div className="filter-scrollbox">
-                  <button
-                    className={selectedCatalogFlavors.length === 0 ? 'filter-option active' : 'filter-option'}
+                  <Button
+                    className={cn('filter-option', selectedCatalogFlavors.length === 0 && 'active')}
+                    variant="outline"
                     type="button"
                     onClick={() => setSelectedCatalogFlavors([])}
                   >
                     Любой вкус
-                  </button>
+                  </Button>
                   {filteredFlavorOptions.map((option) => (
-                    <button
+                    <Button
                       key={option}
-                      className={selectedCatalogFlavors.includes(option) ? 'filter-option active' : 'filter-option'}
+                      className={cn('filter-option', selectedCatalogFlavors.includes(option) && 'active')}
+                      variant="outline"
                       type="button"
                       onClick={() =>
                         setSelectedCatalogFlavors((current) =>
@@ -1911,7 +1933,7 @@ export const App = () => {
                       }
                     >
                       {option}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -1919,7 +1941,7 @@ export const App = () => {
               <div className="filters-row">
                 <label className="filter-field">
                   <span>Производитель</span>
-                  <input
+                  <Input
                     className="search-input"
                     type="search"
                     value={manufacturerSearchDraft}
@@ -1927,17 +1949,19 @@ export const App = () => {
                     placeholder="Поиск бренда"
                   />
                   <div className="filter-scrollbox">
-                    <button
-                      className={selectedManufacturerIds.length === 0 ? 'filter-option active' : 'filter-option'}
+                    <Button
+                      className={cn('filter-option', selectedManufacturerIds.length === 0 && 'active')}
+                      variant="outline"
                       type="button"
                       onClick={() => setSelectedManufacturerIds([])}
                     >
                       Все бренды
-                    </button>
+                    </Button>
                     {filteredManufacturerOptions.map((item) => (
-                      <button
+                      <Button
                         key={item.id}
-                        className={selectedManufacturerIds.includes(item.id) ? 'filter-option active' : 'filter-option'}
+                        className={cn('filter-option', selectedManufacturerIds.includes(item.id) && 'active')}
+                        variant="outline"
                         type="button"
                         onClick={() =>
                           setSelectedManufacturerIds((current) =>
@@ -1946,14 +1970,14 @@ export const App = () => {
                         }
                       >
                         {item.label}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </label>
 
                 <label className="filter-field">
                   <span>Табак</span>
-                  <input
+                  <Input
                     className="search-input"
                     type="search"
                     value={tobaccoSearchDraft}
@@ -1961,17 +1985,19 @@ export const App = () => {
                     placeholder="Поиск табака"
                   />
                   <div className="filter-scrollbox">
-                    <button
-                      className={selectedTobaccoIds.length === 0 ? 'filter-option active' : 'filter-option'}
+                    <Button
+                      className={cn('filter-option', selectedTobaccoIds.length === 0 && 'active')}
+                      variant="outline"
                       type="button"
                       onClick={() => setSelectedTobaccoIds([])}
                     >
                       Любой табак
-                    </button>
+                    </Button>
                     {filteredTobaccoOptions.map((item) => (
-                      <button
+                      <Button
                         key={item.id}
-                        className={selectedTobaccoIds.includes(item.id) ? 'filter-option active' : 'filter-option'}
+                        className={cn('filter-option', selectedTobaccoIds.includes(item.id) && 'active')}
+                        variant="outline"
                         type="button"
                         onClick={() =>
                           setSelectedTobaccoIds((current) =>
@@ -1980,7 +2006,7 @@ export const App = () => {
                         }
                       >
                         {item.label}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </label>
@@ -1990,14 +2016,14 @@ export const App = () => {
         </form>
 
         <section className="catalog-results">
-          <article className="card catalog-summary">
+          <Card className="card catalog-summary">
             <p className="card-title">Результат</p>
             <p className="card-text">
               {catalogStatus === 'loading'
                 ? 'Обновляем каталог...'
                 : `${filteredCatalogMixes.length} миксов${hasCatalogFilters ? ' · фильтры активны' : ''}`}
             </p>
-          </article>
+          </Card>
 
           {catalogError ? <p className="screen-status error">{catalogError}</p> : null}
           {!filteredCatalogMixes.length && catalogStatus === 'ready' ? (

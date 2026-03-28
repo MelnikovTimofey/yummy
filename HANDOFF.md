@@ -1,5 +1,107 @@
 # HANDOFF — Yummy
 
+## 1.77) Add shadcn/ui foundation to Nomad Aroma guest components (28 марта 2026)
+
+- Запрос:
+  - внедрить `shadcn/ui` для компонентов `apps/nomad-aroma-web`;
+  - сделать это как локальный Nomad UI-срез без изменения guest semantics и без захода в другие контуры репозитория.
+
+- Реализация:
+  - foundation:
+    - `apps/nomad-aroma-web/package.json`
+    - `apps/nomad-aroma-web/package-lock.json`
+    - `apps/nomad-aroma-web/components.json`
+    - `apps/nomad-aroma-web/tsconfig.json`
+    - `apps/nomad-aroma-web/vite.config.ts`
+    - `apps/nomad-aroma-web/src/styles.css`
+    - подключены `shadcn/ui`, `Tailwind CSS v4`, path alias `@/*` и theme bridge к текущей палитре `Aroma`;
+    - существующий бордово-янтарный visual language сохранён, а не заменён на дефолтный внешний стиль.
+  - UI primitives:
+    - `apps/nomad-aroma-web/src/lib/utils.ts`
+    - `apps/nomad-aroma-web/src/components/ui/button.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/card.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/badge.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/input.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/checkbox.tsx`
+    - `apps/nomad-aroma-web/src/components/ui/dialog.tsx`
+    - создан локальный набор примитивов для кнопок, карточек, badges, inputs, checkbox и modal-dialog.
+  - guest app migration:
+    - `apps/nomad-aroma-web/src/App.tsx`
+    - экран кода, intro-actions, onboarding chips, каталог, rail controls, верхняя навигация и selected mix bar переведены на новые primitives;
+    - карточка микса переведена на `Dialog` и `Badge/Button`;
+    - карточные guest surfaces переведены на локальный `Card`.
+  - docs sync:
+    - `apps/nomad-aroma-web/README.md`
+    - `NOTES.md`
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build`
+  - `cd tests/nomad-smoke && npm run smoke`
+
+- Остаточный риск:
+  - smoke подтвердил сценарий guest flow, но не заменяет отдельный visual pass по всем mobile viewport states;
+  - `shadcn/ui` добавлен как новая dependency-base, поэтому следующие UI-срезы стоит держать в рамках локальных primitives, а не смешивать новый слой с новыми hand-rolled controls.
+
+- Эффект:
+  - `Nomad Aroma Web` получил поддерживаемый component layer и перестал зависеть только от сырого HTML в монолитном `App.tsx`;
+  - guest flow остался без авторизации, избранного и прочих запрещённых product-сущностей;
+  - дальнейшая сборка интерфейса теперь может опираться на единый UI baseline внутри самого приложения.
+
+## 1.76) Complete Nomad Master Slice 6 hardening and QA (28 марта 2026)
+
+- Запрос:
+  - реализовать `Slice 6`;
+  - закрыть hardening-pass по `Nomad Master` через smoke, accessibility/visual review и release-ready handoff, а не через новый feature redesign.
+
+- Реализация:
+  - smoke suite:
+    - `tests/nomad-smoke/tests/master-smoke.spec.ts`
+    - устаревший thin smoke заменён на сценарии по `dashboard`, `inventory`, `mixes`, `rails`, `access`;
+    - добавлены проверки keyboard navigation по workspace tabs;
+    - admin smoke теперь покрывает inventory batch action, mix editor contract, read-only statistical rail и access observability;
+    - `nomad` smoke отдельно подтверждает admin-only restrictions без утечки admin surface.
+  - shell accessibility hardening:
+    - `apps/nomad-master-web/src/App.tsx`
+    - `apps/nomad-master-web/src/styles.css`
+    - workspace navigation переведён на `tablist/tab/tabpanel`;
+    - добавлена keyboard navigation по `ArrowLeft/Right/Up/Down`, `Home`, `End`;
+    - добавлен явный `focus-visible` style для tabs и основных action buttons;
+    - phone input в allowlist editor получил `type="tel"` и `autocomplete="tel"`.
+  - semantic UI fix:
+    - `apps/nomad-master-web/src/components/ui/card.tsx`
+    - `CardTitle` больше не рендерится как `div`, а `CardDescription` больше не рендерится как `div`;
+    - dashboard и связанные card-surface теперь лучше соответствуют semantic structure, что устраняет найденный accessibility gap.
+  - docs sync:
+    - `docs/nomad/feature-slices/README.md`
+    - `NOTES.md`
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd services/nomad-telegram-bot && npm test`
+  - `cd services/nomad-telegram-bot && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5177' NOMAD_AROMA_URL='http://127.0.0.1:5175' npm run smoke`
+  - `git diff --check`
+
+- Review outcome:
+  - accessibility:
+    - найден и исправлен реальный gap в shell navigation: tabs были несемантичными и без стабильного keyboard-focus path;
+    - найден и исправлен semantic gap в card titles/descriptions.
+  - visual review:
+    - на проверенном desktop smoke critical visual regressions не найдено;
+    - `Master` сохраняет текущий premium-ops baseline и не выглядит как откат в generic default admin UI.
+
+- Остаточный риск:
+  - не проводился отдельный mobile visual pass для всех admin-only screens;
+  - не добавлялся внешний automated a11y scanner уровня axe, поэтому review остаётся smoke-oriented, а не exhaustive.
+
+- Эффект:
+  - `Slice 6` закрыт как самостоятельный QA/hardening slice;
+  - Nomad backlog по `Master` теперь не держится на устаревшем thin smoke;
+  - следующий шаг можно брать уже как новый bounded slice, а не как догоняющий sign-off к предыдущим redesign changes.
+
 ## 1.75) Complete Nomad Master Slice 5 access and Telegram redesign (28 марта 2026)
 
 - Запрос:

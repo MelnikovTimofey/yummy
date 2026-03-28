@@ -1,4 +1,54 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-ui);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.7);
+  --radius-md: calc(var(--radius) * 0.9);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+}
+
 :root {
+  --radius: 0.95rem;
+  --background: #130807;
+  --foreground: #f8eee8;
+  --card: #1b0d0e;
+  --card-foreground: #f8eee8;
+  --popover: #1b0d0e;
+  --popover-foreground: #f8eee8;
+  --primary: #d8ab68;
+  --primary-foreground: #23120d;
+  --secondary: rgba(63, 20, 20, 0.62);
+  --secondary-foreground: #f8eee8;
+  --muted: rgba(67, 27, 24, 0.66);
+  --muted-foreground: #d0b5a3;
+  --accent-ui: rgba(240, 183, 125, 0.14);
+  --accent-foreground: #fff2dd;
+  --destructive: #df6f5b;
+  --border: rgba(193, 141, 106, 0.22);
+  --input: rgba(193, 141, 106, 0.26);
+  --ring: rgba(242, 213, 165, 0.7);
   --bg: #130807;
   --surface: #1b0d0e;
   --surface-alt: #271314;
@@ -15,6 +65,16 @@
   --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 *,
@@ -421,49 +481,25 @@ select:focus-visible {
 }
 
 .checkbox-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.checkbox-box {
-  position: relative;
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
   border-radius: 5px;
   border: 1px solid rgba(242, 213, 165, 0.24);
   background: rgba(52, 22, 20, 0.82);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 242, 232, 0.04);
 }
 
-.checkbox-box::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--accent-soft);
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.18s ease;
-}
-
-.checkbox-input:checked + .checkbox-box {
+.checkbox-input[data-state="checked"] {
   border-color: var(--accent);
   background: linear-gradient(180deg, #6c1e1b 0%, #4f1613 100%);
   box-shadow: 0 0 0 1px rgba(201, 168, 106, 0.2);
 }
 
-.checkbox-input:checked + .checkbox-box::after {
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.checkbox-input:focus-visible + .checkbox-box {
+.checkbox-input:focus-visible {
   outline: 2px solid var(--accent-soft);
   outline-offset: 2px;
 }
