@@ -1,5 +1,49 @@
 # HANDOFF — Yummy
 
+## 1.73) Start Nomad Master Slice 4 rail contract hardening (28 марта 2026)
+
+- Запрос:
+  - продолжить работу по `feature-slices`;
+  - после multi-agent discovery взять следующий безопасный под-срез `Slice 4`, не смешивая его со вторым auto-rail и большим reorder-flow.
+
+- Реализация:
+  - repo frame:
+    - execution mode оставлен `single-agent`, потому что снова меняется backend/frontend public contract для staff rail manager;
+    - результаты параллельных агентов использованы как вход в интеграцию: QA подтвердил реальный `Slice 3` smoke и runtime drift, discovery сузил `Slice 4` до `rail contract hardening + create semantics`.
+  - backend rail contract:
+    - `apps/nomad-backend/src/state.ts`
+    - `apps/nomad-backend/src/app.ts`
+    - `apps/nomad-backend/src/types.ts`
+    - `apps/nomad-backend/src/content.test.ts`
+    - `GET /staff/rails` и rail mutation responses теперь возвращают `editable` и `readOnlyReason`;
+    - create flow больше не зависит от client-supplied `type`: новый rail всегда создаётся как `curated`;
+    - patch для statistical rail теперь отвечает явной read-only ошибкой `Статистический рейл формируется автоматически и доступен только для просмотра.`
+  - frontend rail surface:
+    - `apps/nomad-master-web/src/contracts.ts`
+    - `apps/nomad-master-web/src/contracts.test.ts`
+    - `apps/nomad-master-web/src/App.tsx`
+    - `apps/nomad-master-web/src/styles.css`
+    - `RailRecord` расширен полями `editable` и `readOnlyReason`;
+    - rails manager визуально разделяет editable и read-only rails через badges/chips и muted card state;
+    - create form больше не содержит выбор `Тип`, а statistical rail открывается в режиме просмотра с disabled controls и объяснением причины.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+    - `NOTES.md`
+    - `Slice 4` отмечен как `in progress`, потому что editability contract и create semantics уже внедрены, но reorder/select flow и второй auto-rail ещё впереди.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `git diff --check`
+
+- Эффект:
+  - `Nomad Master` перестал смешивать auto-generated и editable rails в одном псевдо-CRUD сценарии;
+  - staff contract по editability стал явным и синхронизирован между backend и frontend;
+  - следующий bounded шаг: отдельный flow выбора/порядка миксов внутри rail и затем второй auto-rail `Лучшие оценки`.
+
 ## 1.72) Start Nomad Master Slice 3 mix catalog and component editor (28 марта 2026)
 
 - Запрос:

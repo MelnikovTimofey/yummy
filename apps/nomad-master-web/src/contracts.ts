@@ -435,6 +435,8 @@ export type RailRecord = {
   mixIds: string[];
   mixes: RailMixReference[];
   active: boolean;
+  editable: boolean;
+  readOnlyReason: string;
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -851,15 +853,22 @@ export const normalizeRailRecord = (value: unknown): RailRecord => {
   const raw = isRecord(value) ? value : {};
   const mixes = readListPayload<unknown>(raw.mixes).map(normalizeRailMixReference);
   const mixIds = uniqueStrings([...toStringList(raw.mixIds), ...mixes.map((mix) => mix.id)]);
+  const type = toRailType(raw.type);
+  const editable = toBoolean(raw.editable, type !== 'statistical');
+  const readOnlyReason = String(
+    raw.readOnlyReason ?? (editable ? '' : 'Статистический рейл формируется автоматически и доступен только для просмотра.'),
+  );
 
   return {
     id: String(raw.id ?? raw.railId ?? ''),
     name: String(raw.name ?? 'Без названия'),
-    type: toRailType(raw.type),
+    type,
     description: String(raw.description ?? ''),
     mixIds,
     mixes,
     active: toBoolean(raw.active, true),
+    editable,
+    readOnlyReason,
   };
 };
 

@@ -54,7 +54,6 @@ import {
   normalizeTelegramRecipientRecord,
   parseDelimitedList,
   parseDateTimeLocalInput,
-  railTypeOptions,
   readEntityPayload,
   readListPayload,
   sortDailyAccessCodes,
@@ -100,6 +99,8 @@ type RailEditorState = {
   type: 'statistical' | 'prepared' | 'curated';
   mixIds: string;
   active: boolean;
+  editable: boolean;
+  readOnlyReason: string;
 };
 
 type DailyCodeEditorState = {
@@ -151,9 +152,11 @@ const emptyRailEditor = (): RailEditorState => ({
   id: '',
   name: '',
   description: '',
-  type: 'prepared',
+  type: 'curated',
   mixIds: '',
   active: true,
+  editable: true,
+  readOnlyReason: '',
 });
 
 const emptyDailyCodeEditor = (): DailyCodeEditorState => ({
@@ -200,6 +203,8 @@ const toRailEditorState = (rail: RailRecord): RailEditorState => ({
   type: rail.type,
   mixIds: formatDelimitedList(rail.mixIds),
   active: rail.active,
+  editable: rail.editable,
+  readOnlyReason: rail.readOnlyReason,
 });
 
 const toDailyCodeEditorState = (code: DailyAccessCodeRecord): DailyCodeEditorState => ({
@@ -1200,6 +1205,12 @@ export const App = () => {
     const description = railEditor.description.trim();
     const mixIds = parseDelimitedList(railEditor.mixIds);
 
+    if (railEditor.id && !railEditor.editable) {
+      setRailSaveError(railEditor.readOnlyReason || 'Этот рейл доступен только для просмотра');
+      setRailSaveStatus('error');
+      return;
+    }
+
     if (!name) {
       setRailSaveError('Введите название рейла');
       setRailSaveStatus('error');
@@ -1218,7 +1229,6 @@ export const App = () => {
     const payload = {
       name,
       description,
-      type: railEditor.type,
       mixIds,
       active: railEditor.active,
     };
@@ -1746,6 +1756,13 @@ export const App = () => {
     />
   );
 
+  const railEditorLocked = Boolean(railEditor.id) && !railEditor.editable;
+  const railEditorStatusLabel = railEditorLocked
+    ? 'Только просмотр'
+    : railEditor.active
+      ? 'Активен'
+      : 'Неактивен';
+
   const renderRails = () => (
     <section className="card">
       <div className="section-head">
@@ -1769,7 +1786,11 @@ export const App = () => {
         <aside className="entity-list">
           {rails.map((rail) => (
             <article
-              className={railEditor.id === rail.id ? 'entity-card entity-card--active' : 'entity-card'}
+              className={[
+                'entity-card',
+                railEditor.id === rail.id ? 'entity-card--active' : '',
+                rail.editable ? '' : 'entity-card--muted',
+              ].filter(Boolean).join(' ')}
               key={rail.id}
             >
               <div className="entity-card__head">
@@ -1783,12 +1804,16 @@ export const App = () => {
               </div>
               <div className="chip-row">
                 <span className="chip">{formatRailType(rail.type)}</span>
+                <span className={rail.editable ? 'chip chip--editable' : 'chip chip--readonly'}>
+                  {rail.editable ? 'Редактируемый' : 'Только просмотр'}
+                </span>
               </div>
               <p className="meta-line">{rail.description || 'Без описания'}</p>
+              {!rail.editable && rail.readOnlyReason ? <p className="meta-line">{rail.readOnlyReason}</p> : null}
               <p className="meta-line">Миксы: {resolveRailMixSummary(rail, mixes)}</p>
               <div className="entity-card__actions">
                 <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectRail(rail)}>
-                  Редактировать
+                  {rail.editable ? 'Редактировать' : 'Просмотр'}
                 </button>
               </div>
             </article>
@@ -1803,10 +1828,21 @@ export const App = () => {
               <p className="entity-kicker">{railEditor.id ? 'Редактирование рейла' : 'Новый рейл'}</p>
               <h3>{railEditor.id ? railEditor.name || 'Без названия' : 'Создать рейл'}</h3>
             </div>
-            <span className="status-chip">{railEditor.active ? 'Активен' : 'Неактивен'}</span>
+            <span className={railEditorLocked ? 'status-chip status-chip--locked' : 'status-chip'}>{railEditorStatusLabel}</span>
           </div>
 
           <form className="admin-form" onSubmit={onSubmitRail}>
+            {railEditor.id ? (
+              <div className="info-banner">
+                Тип рейла: {formatRailType(railEditor.type)}.
+                {!railEditor.editable && railEditor.readOnlyReason ? ` ${railEditor.readOnlyReason}` : ''}
+              </div>
+            ) : (
+              <div className="info-banner">
+                Новый рейл всегда создаётся как мастерский curated rail. Выбор типа на этапе создания больше не нужен.
+              </div>
+            )}
+
             <div className="form-grid form-grid--two">
               <label className="field">
                 <span className="field-label">Название</span>
@@ -1815,28 +1851,14 @@ export const App = () => {
                   value={railEditor.name}
                   onChange={(event) => setRailEditor((current) => ({ ...current, name: event.target.value }))}
                   placeholder="Например, Топ по статистике"
+                  disabled={railEditorLocked}
                 />
               </label>
 
-              <label className="field">
+              <div className="field">
                 <span className="field-label">Тип</span>
-                <select
-                  className="select-input"
-                  value={railEditor.type}
-                  onChange={(event) =>
-                    setRailEditor((current) => ({
-                      ...current,
-                      type: event.target.value as RailEditorState['type'],
-                    }))
-                  }
-                >
-                  {railTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <div className="info-banner">{formatRailType(railEditor.type)}</div>
+              </div>
 
               <label className="field field--wide">
                 <span className="field-label">Описание</span>
@@ -1846,6 +1868,7 @@ export const App = () => {
                   onChange={(event) => setRailEditor((current) => ({ ...current, description: event.target.value }))}
                   placeholder="Короткое описание рейла"
                   rows={4}
+                  disabled={railEditorLocked}
                 />
               </label>
 
@@ -1857,6 +1880,7 @@ export const App = () => {
                   onChange={(event) => setRailEditor((current) => ({ ...current, mixIds: event.target.value }))}
                   placeholder="mix-1, mix-2"
                   rows={3}
+                  disabled={railEditorLocked}
                 />
               </label>
 
@@ -1865,6 +1889,7 @@ export const App = () => {
                   type="checkbox"
                   checked={railEditor.active}
                   onChange={(event) => setRailEditor((current) => ({ ...current, active: event.target.checked }))}
+                  disabled={railEditorLocked}
                 />
                 <span>Активен в витрине</span>
               </label>
@@ -1873,11 +1898,13 @@ export const App = () => {
             {railSaveError ? <p className="error-text">{railSaveError}</p> : null}
 
             <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={railSaveStatus === 'loading'}>
-                {railSaveStatus === 'loading' ? 'Сохраняем...' : railEditor.id ? 'Сохранить рейл' : 'Создать рейл'}
-              </button>
+              {!railEditorLocked ? (
+                <button className="primary-button primary-button--inline" type="submit" disabled={railSaveStatus === 'loading'}>
+                  {railSaveStatus === 'loading' ? 'Сохраняем...' : railEditor.id ? 'Сохранить рейл' : 'Создать рейл'}
+                </button>
+              ) : null}
               <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
-                Сбросить форму
+                {railEditorLocked ? 'Создать новый рейл' : 'Сбросить форму'}
               </button>
             </div>
           </form>

@@ -96,7 +96,7 @@ import type {
   StaffRailsResponse,
 } from './types';
 import type { StaffRole } from './auth';
-import type { MixView, RailView } from './state';
+import type { MixView, RailView, StaffRailView } from './state';
 
 export const buildApp = () => {
   const app = Fastify({ logger: true });
@@ -1244,7 +1244,6 @@ export const buildApp = () => {
       | {
           name?: string;
           description?: string;
-          type?: 'prepared' | 'curated' | 'statistical';
           mixIds?: string[];
           active?: boolean;
         }
@@ -1253,7 +1252,6 @@ export const buildApp = () => {
     const created = await createRail({
       name: payload?.name ?? '',
       description: payload?.description ?? '',
-      type: payload?.type,
       mixIds: Array.isArray(payload?.mixIds) ? payload!.mixIds : [],
       active: payload?.active,
     });
@@ -1263,7 +1261,7 @@ export const buildApp = () => {
     }
 
     const response: StaffRailMutationResponse = {
-      item: created as RailView,
+      item: created as StaffRailView,
     };
 
     await recordAuditEvent({
@@ -1320,7 +1318,7 @@ export const buildApp = () => {
     }
 
     const response: StaffRailMutationResponse = {
-      item: updated as RailView,
+      item: updated as StaffRailView,
     };
 
     await recordAuditEvent({

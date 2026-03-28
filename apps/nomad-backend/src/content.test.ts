@@ -253,7 +253,7 @@ test('staff can manage mixes and rails', async () => {
       payload: {
         name: 'Новая витрина',
         description: 'Ручная подборка для VIP-зала',
-        type: 'curated',
+        type: 'prepared',
         mixIds: [createdMixBody.item.id],
         active: true,
       },
@@ -261,12 +261,14 @@ test('staff can manage mixes and rails', async () => {
 
     assert.equal(createdRail.statusCode, 201);
     const createdRailBody = createdRail.json() as {
-      item: { id: string; type: string; active: boolean; mixIds: string[] };
+      item: { id: string; type: string; active: boolean; mixIds: string[]; editable: boolean; readOnlyReason: string };
     };
 
     assert.equal(createdRailBody.item.type, 'curated');
     assert.equal(createdRailBody.item.active, true);
     assert.deepEqual(createdRailBody.item.mixIds, [createdMixBody.item.id]);
+    assert.equal(createdRailBody.item.editable, true);
+    assert.equal(createdRailBody.item.readOnlyReason, '');
 
     const patchedRail = await app.inject({
       method: 'PATCH',
@@ -287,6 +289,23 @@ test('staff can manage mixes and rails', async () => {
     assert.equal(patchedRailBody.item.id, createdRailBody.item.id);
     assert.equal(patchedRailBody.item.active, false);
 
+    const patchStatisticalRail = await app.inject({
+      method: 'PATCH',
+      url: '/staff/rails/rail-statistical-top',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        description: 'Попытка редактирования',
+      },
+    });
+
+    assert.equal(patchStatisticalRail.statusCode, 400);
+    assert.equal(
+      (patchStatisticalRail.json() as { error: string }).error,
+      'Статистический рейл формируется автоматически и доступен только для просмотра.',
+    );
+
     const staffRails = await app.inject({
       method: 'GET',
       url: '/staff/rails',
@@ -297,10 +316,18 @@ test('staff can manage mixes and rails', async () => {
 
     assert.equal(staffRails.statusCode, 200);
     const staffRailsBody = staffRails.json() as {
-      items: Array<{ type: string; id: string }>;
+      items: Array<{ type: string; id: string; editable: boolean; readOnlyReason: string }>;
     };
 
-    assert.equal(staffRailsBody.items.some((item) => item.type === 'statistical'), true);
+    assert.equal(
+      staffRailsBody.items.some(
+        (item) =>
+          item.type === 'statistical'
+          && item.editable === false
+          && item.readOnlyReason === 'Статистический рейл формируется автоматически и доступен только для просмотра.',
+      ),
+      true,
+    );
     assert.equal(staffRailsBody.items.some((item) => item.id === createdRailBody.item.id), true);
   } finally {
     await app.close();

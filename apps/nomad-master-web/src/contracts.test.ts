@@ -312,15 +312,32 @@ test('normalizeRailRecord accepts mix refs and active alias', () => {
       },
     ],
     active: false,
+    editable: true,
+    readOnlyReason: '',
   });
 
   assert.equal(rail.id, 'rail-1');
   assert.equal(rail.active, false);
+  assert.equal(rail.editable, true);
+  assert.equal(rail.readOnlyReason, '');
   assert.deepEqual(rail.mixIds, ['mix-1']);
   assert.deepEqual(rail.mixes[0], {
     id: 'mix-1',
     name: 'Цитрусовый караван',
   });
+});
+
+test('normalizeRailRecord falls back to read-only semantics for statistical rails', () => {
+  const rail = normalizeRailRecord({
+    id: 'rail-statistical-top',
+    name: 'Больше всего выбирают',
+    type: 'statistical',
+    description: 'Автоматическая витрина',
+    active: true,
+  });
+
+  assert.equal(rail.editable, false);
+  assert.equal(rail.readOnlyReason, 'Статистический рейл формируется автоматически и доступен только для просмотра.');
 });
 
 test('normalizeDashboardSummary supports nested inventory payload', () => {

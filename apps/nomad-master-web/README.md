@@ -125,3 +125,13 @@ Mixes переведены в новый contract-first flow:
 3. staff получил table-first экран каталога миксов с rail membership summary, статусами `виден гостю / скрыт / заблокирован наличием` и быстрым переходом в редактор;
 4. editor компонентов больше не требует ручного ввода `componentIds`: оператор выбирает табаки из catalog-backed списка, задаёт доли, меняет порядок строк и может распределить проценты поровну;
 5. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.
+
+## Slice 4. Rail contract hardening
+
+Rails переведены на более явный staff contract:
+
+1. `GET /staff/rails` теперь несёт `editable` и `readOnlyReason`, поэтому statistical rails больше не выглядят как обычный CRUD-объект;
+2. create flow больше не просит выбирать `type`: новый rail всегда создаётся как editable master-curated rail;
+3. в менеджере рейлов read-only rails визуально отделены от редактируемых и открываются в режиме просмотра с объяснением причины блокировки;
+4. существующие prepared и curated rails остаются редактируемыми без изменения guest semantics;
+5. следующий bounded шаг внутри `Slice 4` — отдельный reorder/select flow для составов rail и затем второй auto-rail по оценкам.

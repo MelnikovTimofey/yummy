@@ -414,6 +414,11 @@ p {
   color: #fff8f3;
 }
 
+.status-chip--locked {
+  background: rgba(149, 61, 39, 0.12);
+  color: #8f3824;
+}
+
 .meta-line {
   color: rgba(36, 22, 21, 0.72);
   font-size: 0.94rem;
@@ -603,6 +608,16 @@ p {
   background: rgba(85, 24, 23, 0.08);
   color: var(--nomad-primary);
   font-size: 13px;
+}
+
+.chip--editable {
+  background: rgba(53, 119, 74, 0.1);
+  color: #2f6a41;
+}
+
+.chip--readonly {
+  background: rgba(149, 61, 39, 0.12);
+  color: #8f3824;
 }
 
 .manager-layout {

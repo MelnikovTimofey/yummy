@@ -8,6 +8,7 @@ import type {
   MixView,
   RailType,
   RailView,
+  StaffRailView,
 } from './state';
 import type { AuditEventView } from './audit';
 import type {
@@ -103,7 +104,7 @@ export type StaffInventoryMutationResponse = {
 export type StaffInventoryBatchMutationResponse = InventoryBatchResult;
 
 export type StaffRailsResponse = {
-  items: RailView[];
+  items: StaffRailView[];
 };
 
 export type StaffDailyAccessCodesResponse = {
@@ -176,7 +177,7 @@ export type StaffMixMutationResponse = {
 };
 
 export type StaffRailMutationResponse = {
-  item: RailView;
+  item: StaffRailView;
 };
 
 export type GuestRatingMutationResponse = GuestMixRatingResponse;

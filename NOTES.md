@@ -1,3 +1,35 @@
+Обновление от 28 марта 2026 (nomad master: start slice 4 rail contract hardening):
+- Проблема:
+  - `Nomad Master` показывал statistical rails почти как обычные редактируемые объекты: UI не видел ни явного `editable`-статуса, ни причины блокировки;
+  - create flow по рейлам всё ещё требовал ручной выбор `type`, хотя по redesign contract новые rails должны всегда создаваться как мастерские curated rails;
+  - это размывало staff semantics и мешало отделить auto-generated rails от operator-managed витрин.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`, `apps/nomad-backend/src/content.test.ts`:
+    - `GET /staff/rails` и rail mutation responses теперь несут `editable` и `readOnlyReason`;
+    - statistical rails возвращаются как explicit read-only surface с человекочитаемой причиной;
+    - create contract больше не зависит от client-supplied `type`: новый rail всегда создаётся как `curated`;
+    - patch по auto rail теперь возвращает явный read-only error вместо неявного поведения.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - `RailRecord` расширен полями `editable` и `readOnlyReason`;
+    - parser научен корректно fallback-ить read-only semantics даже для старого statistical payload.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - rails manager визуально разделяет editable и read-only rails;
+    - create form убран от ручного выбора типа и теперь объясняет, что новый rail создаётся как curated;
+    - statistical rail открывается в режиме просмотра с disabled form controls и причиной блокировки, а не как ложный edit flow.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `docs/nomad/feature-slices/README.md`
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+  - `git diff --check`
+- Эффект:
+  - `Slice 4` сдвинут из backlog в реальную поставку без захода в спорную guest ranking semantics;
+  - staff contract по rail editability стал явным и тестируемым;
+  - следующий bounded шаг по этому же slice: reorder/select flow для составов rail и затем второй auto-rail `Лучшие оценки`.
+
 Обновление от 28 марта 2026 (nomad master: start slice 3 mix catalog and component editor):
 - Проблема:
   - `Nomad Master` всё ещё держал миксы на примитивном CRUD: staff редактировал `componentIds` строкой, не видел rail membership и не мог работать с каталогом как с table-first операционным экраном;

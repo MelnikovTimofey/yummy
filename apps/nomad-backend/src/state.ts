@@ -63,6 +63,11 @@ export type RailView = {
   isSystem: boolean;
 };
 
+export type StaffRailView = RailView & {
+  editable: boolean;
+  readOnlyReason: string;
+};
+
 export type SmokeCtaEvent = {
   mixId: string;
   createdAt: string;
@@ -1253,17 +1258,11 @@ const normalizeRailMixIds = async (mixIds: string[]) => {
 const validateRailInput = async (payload: Partial<RailInput>) => {
   const name = payload.name?.trim();
   const description = payload.description?.trim();
-  const type = payload.type;
 
   if (!name || !description) {
     return { error: 'Name and description are required' };
   }
 
-  if (type && type === 'statistical') {
-    return { error: 'Statistical rails are read-only' };
-  }
-
-  const railType: Exclude<RailType, 'statistical'> = type ?? 'prepared';
   const railMixIds = await normalizeRailMixIds(payload.mixIds ?? []);
   if ('error' in railMixIds) {
     return { error: railMixIds.error };
@@ -1272,7 +1271,7 @@ const validateRailInput = async (payload: Partial<RailInput>) => {
   return {
     name,
     description,
-    type: railType,
+    type: 'curated' as const,
     mixIds: railMixIds.mixIds,
     active: payload.active ?? true,
   };
@@ -1747,6 +1746,14 @@ const buildStatisticalRail = async (): Promise<RailView> => {
   };
 };
 
+const statisticalRailReadOnlyReason = 'Статистический рейл формируется автоматически и доступен только для просмотра.';
+
+const toStaffRailView = (rail: RailView): StaffRailView => ({
+  ...rail,
+  editable: rail.type !== 'statistical',
+  readOnlyReason: rail.type === 'statistical' ? statisticalRailReadOnlyReason : '',
+});
+
 const buildRailViews = async (guestOnly: boolean) => {
   await ensureNomadState();
 
@@ -1991,7 +1998,9 @@ export const updateMix = async (id: string, payload: MixPatch) => {
   return getMixById(id);
 };
 
-export const getStaffRails = async () => [await buildStatisticalRail(), ...(await buildRailViews(false))];
+export const getStaffRails = async (): Promise<StaffRailView[]> => {
+  return [await buildStatisticalRail(), ...(await buildRailViews(false))].map(toStaffRailView);
+};
 
 export const createRail = async (payload: Partial<RailInput>) => {
   await ensureNomadState();
@@ -2030,8 +2039,8 @@ export const createRail = async (payload: Partial<RailInput>) => {
 export const updateRail = async (id: string, payload: RailPatch) => {
   await ensureNomadState();
 
-  if (id === 'rail-statistical-top') {
-    return { error: 'Statistical rail is read-only' };
+  if (id.startsWith('rail-statistical-')) {
+    return { error: statisticalRailReadOnlyReason };
   }
 
   const current = await prisma.nomadRail.findUnique({
@@ -2056,7 +2065,7 @@ export const updateRail = async (id: string, payload: RailPatch) => {
 
   const nextType = payload.type ?? (isRailType(current.type) ? current.type : 'prepared');
   if (nextType === 'statistical') {
-    return { error: 'Statistical rails are read-only' };
+    return { error: statisticalRailReadOnlyReason };
   }
 
   const nextMixIds = Array.isArray(payload.mixIds)
