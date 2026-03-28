@@ -1119,14 +1119,6 @@ select:focus-visible {
   gap: 5px;
 }
 
-.mix-info-list {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-}
-
 .mix-info-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

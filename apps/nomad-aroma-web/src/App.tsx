@@ -649,7 +649,7 @@ const MixDetailModal = ({
           </section>
 
           <section className="mix-info-section">
-            <p className="mix-info-section-title">Инфографика</p>
+            <p className="mix-info-section-title">Что внутри микса</p>
             <div className="mix-ratio-stack">
               <div className="mix-ratio-group">
                 <p className="mix-ratio-title">Табаки</p>
@@ -706,27 +706,6 @@ const MixDetailModal = ({
                 </div>
               ) : null}
             </div>
-          </section>
-
-          <section className="mix-info-section">
-            <p className="mix-info-section-title">Состав</p>
-            <ul className="mix-info-list">
-              {mix.components.map((component) => (
-                <li className="mix-info-row" key={`${mix.id}:${component.id}`}>
-                  <span className="mix-info-label">
-                    {component.manufacturer} {component.name}
-                  </span>
-                  <span className="mix-info-value">{formatPercent(component.proportion)}</span>
-                </li>
-              ))}
-            </ul>
-            <ul className="mix-info-list">
-              {mix.flavors.map((flavor) => (
-                <li className="mix-info-row" key={`${mix.id}:flavor:${flavor}`}>
-                  <span className="mix-info-label">{flavor}</span>
-                </li>
-              ))}
-            </ul>
           </section>
 
           <section className="mix-info-section">
