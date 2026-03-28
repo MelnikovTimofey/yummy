@@ -1,3 +1,29 @@
+Обновление от 29 марта 2026 (nomad master: issue #4 desktop polish and sign-off):
+- Проблема:
+  - после `Issue #3` operational surfaces уже были унифицированы, но desktop `Rails`/`Access` всё ещё давали локальные визуальные провалы: пустые dead zones в split headers, недостаточно явные destructive states и слабое различение restricted panels;
+  - по актуальному решению рабочий интерфейс `Master` трактуется как desktop-only, поэтому тратить время на mobile/tablet polish в этом slice не требовалось;
+  - для честного sign-off нужно было подтвердить не только compile/smoke, но и desktop visual/accessibility pass на admin и nomad сценариях.
+- Изменение:
+  - `apps/nomad-master-web/src/App.tsx`:
+    - для `Rails` и `Access` добавлен desktop split-header contract;
+    - destructive actions в access surfaces помечены отдельным visual variant через `secondary-button--danger`.
+  - `apps/nomad-master-web/src/styles.css`:
+    - добавлены `section-head--surface-split` и desktop layout rules для header/stats rhythm;
+    - усилены focus-visible states для tabs, toggles, toolbar inputs/selects и dense control surfaces;
+    - forbidden panels получили более явный restricted-state appearance;
+    - destructive secondary actions получили отдельную палитру и focus ring.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `HANDOFF.md`
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:4179' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+- Эффект:
+  - `Issue #4` закрывает финальный desktop polish/sign-off для `Master` без изменения product semantics и role boundaries;
+  - `admin` и `nomad` access states теперь визуально читаются увереннее и последовательнее;
+  - mobile/tablet intentionally не были частью этого sign-off, потому что текущий рабочий контур считается desktop-only.
+
 Обновление от 29 марта 2026 (nomad master: issue #3 operational surfaces harmonization):
 - Проблема:
   - после закрытия `Issue #2` `Master` получил цельный shell, но `Rails` и `Access` всё ещё визуально жили как отдельные локальные CRUD-экраны и выбивались из общего operational language;
