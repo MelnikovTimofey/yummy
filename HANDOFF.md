@@ -1,5 +1,44 @@
 # HANDOFF — Yummy
 
+## 1.69) Formalize all Nomad Master redesign slices through nomad-feature issue shape (28 марта 2026)
+
+- Запрос:
+  - оформить все `Slice 0-6` для `Nomad Master production redesign` через структуру `nomad-feature.yml`, а не оставлять только общим списком в одном redesign document.
+
+- Реализация:
+  - добавлен каталог `docs/nomad/feature-slices/`:
+    - `README.md` объясняет, что это локальные issue body mirrors для `.github/ISSUE_TEMPLATE/nomad-feature.yml`;
+    - созданы отдельные issue-shaped документы:
+      - `slice-0-contract-first-redesign.md`
+      - `slice-1-dashboard-analytics.md`
+      - `slice-2-inventory-operations.md`
+      - `slice-3-mix-catalog-and-component-editor.md`
+      - `slice-4-rail-manager-hardening.md`
+      - `slice-5-access-and-telegram-redesign.md`
+      - `slice-6-hardening-and-qa.md`
+  - каждый slice теперь содержит полный набор полей из `nomad-feature.yml`:
+    - `Primary scope`
+    - `Problem`
+    - `Success criteria`
+    - `Active scope`
+    - `Out of scope`
+    - `Constraints`
+    - `Design / UX baseline`
+    - `References`
+    - `Checks`
+    - `Risk flags`
+  - `docs/nomad/master-production-redesign.md`:
+    - дополнен ссылкой на новый каталог локальных issue-shaped mirrors.
+
+- Проверки:
+  - ручной review структуры и полноты файлов в `docs/nomad/feature-slices/`
+  - `git diff --check`
+
+- Эффект:
+  - весь пакет `Nomad Master production redesign` теперь оформлен в issue-first формате;
+  - slices готовы к отдельному переносу в GitHub issues без повторного переписывания backlog;
+  - `Nomad Master` UI/redesign slices уже зафиксированы с baseline по `shadcn/ui` и TIMELESS / TIS.
+
 ## 1.68) Make nomad-feature issue template the default intake path and lock Master redesign baseline (28 марта 2026)
 
 - Запрос:

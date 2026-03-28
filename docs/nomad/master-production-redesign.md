@@ -4,6 +4,8 @@
 
 Этот документ фиксирует contract-first пакет для преобразования `Nomad Master` из MVP в production-ready staff/admin контур.
 
+Локальные issue-shaped mirrors для каждого slice лежат в [docs/nomad/feature-slices/README.md](/Users/admin/PycharmProjects/yummy/docs/nomad/feature-slices/README.md) и повторяют поля `.github/ISSUE_TEMPLATE/nomad-feature.yml`.
+
 Документ нужен до начала широкого рефакторинга, чтобы:
 
 1. не смешать discovery, product decisions и кодинг в одном change-set;

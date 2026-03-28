@@ -1,3 +1,31 @@
+Обновление от 28 марта 2026 (nomad master: formalize all redesign slices through nomad-feature issue shape):
+- Проблема:
+  - `Nomad Master production redesign` уже был разложен на `Slice 0-6` в одном markdown-документе, но сами slices ещё не существовали как отдельные issue-shaped артефакты;
+  - из-за этого backlog было неудобно переносить в GitHub, назначать по одному bounded context и проверять на полноту полей `Constraints`, `Design / UX baseline`, `References`, `Checks`;
+  - baseline flow уже был переведён на `nomad-feature.yml`, но весь пакет `Nomad Master` ещё не был оформлен в этом формате.
+- Изменение:
+  - добавлен каталог `docs/nomad/feature-slices/` как локальный backlog для issue body mirrors;
+  - созданы отдельные markdown-документы для `Slice 0-6`, повторяющие поля `.github/ISSUE_TEMPLATE/nomad-feature.yml`:
+    - `Primary scope`
+    - `Problem`
+    - `Success criteria`
+    - `Active scope`
+    - `Out of scope`
+    - `Constraints`
+    - `Design / UX baseline`
+    - `References`
+    - `Checks`
+    - `Risk flags`
+  - `docs/nomad/master-production-redesign.md`:
+    - дополнен ссылкой на локальные issue-shaped mirrors.
+- Проверки:
+  - review структуры и полноты всех файлов в `docs/nomad/feature-slices/`
+  - `git diff --check`
+- Эффект:
+  - весь backlog `Nomad Master` теперь оформлен по `nomad-feature.yml`, а не только описан как список slices;
+  - каждый slice можно перенести в GitHub issue без повторного нормализующего прохода;
+  - UI/redesign slices уже несут обязательный baseline по `shadcn/ui` и TIMELESS / TIS.
+
 Обновление от 28 марта 2026 (nomad process: make nomad-feature issue template the default intake path):
 - Проблема:
   - формально в репозитории уже были Nomad issue templates, но базовый flow всё ещё допускал старт feature-задач напрямую от локального brief;
