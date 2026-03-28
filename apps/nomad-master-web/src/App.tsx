@@ -2161,12 +2161,36 @@ export const App = () => {
 
   const renderRails = () => (
     <section className="card">
-      <div className="section-head">
-        <div>
+      <div className="section-head section-head--surface">
+        <div className="ops-surface__intro">
           <p className="eyebrow">Менеджер рейлов</p>
           <h2>Рейлы Nomad</h2>
           <p className="meta-line">Управление витринами для гостя: статистика, заготовки и авторские подборки.</p>
         </div>
+        <div className="summary-grid summary-grid--nested ops-surface__stats">
+          <article className="metric-card ops-surface__stat">
+            <p className="metric-label">Всего рейлов</p>
+            <p className="metric-value metric-value--compact">{rails.length}</p>
+            <p className="meta-line">Каталог витрин для гостевого контура.</p>
+          </article>
+          <article className="metric-card ops-surface__stat">
+            <p className="metric-label">Активны в витрине</p>
+            <p className="metric-value metric-value--compact">{rails.filter((rail) => rail.active).length}</p>
+            <p className="meta-line">Показываются гостю в текущем runtime.</p>
+          </article>
+          <article className="metric-card ops-surface__stat">
+            <p className="metric-label">Только просмотр</p>
+            <p className="metric-value metric-value--compact">{rails.filter((rail) => !rail.editable).length}</p>
+            <p className="meta-line">Системные рейлы, защищённые от случайного редактирования.</p>
+          </article>
+        </div>
+      </div>
+
+      <div className="ops-toolbar ops-toolbar--split">
+        <p className="meta-line">
+          Контентный модуль держит подборки плотными и управляемыми: заготовки, авторские рейлы и финальный порядок показа
+          живут в одном operational surface.
+        </p>
         <div className="section-actions">
           <span className="status-chip">Витрина гостя</span>
           <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
@@ -2178,12 +2202,13 @@ export const App = () => {
       {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
       {railsError ? <p className="error-text">{railsError}</p> : null}
 
-      <div className="manager-layout">
+      <div className="manager-layout ops-management-grid">
         <aside className="entity-list">
           {rails.map((rail) => (
             <article
               className={[
                 'entity-card',
+                'ops-surface__card',
                 railEditor.id === rail.id ? 'entity-card--active' : '',
                 rail.editable ? '' : 'entity-card--muted',
               ].filter(Boolean).join(' ')}
@@ -2218,7 +2243,7 @@ export const App = () => {
           {!rails.length && railsStatus !== 'loading' ? <p className="meta-line">Пока нет рейлов.</p> : null}
         </aside>
 
-        <article className="editor-card">
+        <article className="editor-card ops-editor">
           <div className="entity-card__head">
             <div>
               <p className="entity-kicker">{railEditor.id ? 'Редактирование рейла' : 'Новый рейл'}</p>
@@ -2271,7 +2296,7 @@ export const App = () => {
               <div className="field field--wide">
                 <span className="field-label">Состав рейла</span>
                 <div className="rail-mix-builder">
-                  <div className="rail-mix-builder__toolbar">
+                  <div className="rail-mix-builder__toolbar ops-toolbar">
                     <input
                       className="text-input"
                       value={railMixSearch}
@@ -2302,14 +2327,14 @@ export const App = () => {
                     </button>
                   </div>
 
-                  <div className="rail-mix-builder__summary">
+                  <div className="rail-mix-builder__summary ops-surface__summary">
                     <span className="meta-line">В рейле: {railEditor.mixIds.length}</span>
                     <span className="meta-line">Доступно для добавления: {availableRailMixOptions.length}</span>
                   </div>
 
-                  <div className="rail-mix-list">
+                  <div className="rail-mix-list ops-table-shell">
                     {selectedRailMixEntries.length ? selectedRailMixEntries.map(({ mixId, index, mix }) => (
-                      <article className="rail-mix-row" key={mixId}>
+                      <article className="rail-mix-row ops-surface__card" key={mixId}>
                         <div className="rail-mix-row__order">{index + 1}</div>
                         <div className="rail-mix-row__content">
                           <strong>{mix?.name ?? mixId}</strong>
@@ -2347,7 +2372,7 @@ export const App = () => {
                         </div>
                       </article>
                     )) : (
-                      <div className="rail-mix-empty">
+                      <div className="rail-mix-empty ops-empty-state">
                         <p className="meta-line">Добавьте хотя бы один микс, чтобы собрать рейл и задать порядок показа.</p>
                       </div>
                     )}
@@ -2404,16 +2429,47 @@ export const App = () => {
     const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
     const activeOperators = telegramOperators.filter((item) => item.active);
     const linkedOperatorsCount = activeOperators.filter((item) => item.linkedChatId).length;
+    const activeStaffAccounts = staffAccounts.filter((account) => account.active).length;
+    const adminAccountsCount = staffAccounts.filter((account) => account.role === 'admin').length;
 
     return (
       <section className="card">
-        <div className="section-head">
-          <div>
+        <div className="section-head section-head--surface">
+          <div className="ops-surface__intro">
             <p className="eyebrow">Доступ</p>
             <h2>Daily code и Telegram allowlist</h2>
             <p className="meta-line">
               Daily code выпускается автоматически каждый день, а оператор получает его только через Telegram-бота.
             </p>
+          </div>
+          <div className="summary-grid summary-grid--nested ops-surface__stats">
+            <article className="metric-card ops-surface__stat">
+              <p className="metric-label">Активный код</p>
+              <p className="metric-value metric-value--compact">{currentDailyCode?.codeValue || 'Нет кода'}</p>
+              <p className="meta-line">Текущее окно выдачи для смены.</p>
+            </article>
+            <article className="metric-card ops-surface__stat">
+              <p className="metric-label">Активный allowlist</p>
+              <p className="metric-value metric-value--compact">{activeOperators.length}</p>
+              <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
+            </article>
+            <article className="metric-card ops-surface__stat">
+              <p className="metric-label">Staff accounts</p>
+              <p className="metric-value metric-value--compact">{activeStaffAccounts}</p>
+              <p className="meta-line">Admin: {adminAccountsCount}</p>
+            </article>
+            <article className="metric-card ops-surface__stat">
+              <p className="metric-label">Аудит</p>
+              <p className="metric-value metric-value--compact">{auditEvents.length}</p>
+              <p className="meta-line">Последние операции staff/admin.</p>
+            </article>
+          </div>
+        </div>
+
+        <div className="ops-toolbar ops-toolbar--split">
+          <div className="info-banner info-banner--ops">
+            <strong>Новая схема:</strong> оператор впервые пишет боту, делится контактом, бот сверяет номер с allowlist и после
+            привязки отдаёт `/code`. Ручной отправки и переотправки из `Мастера` нет.
           </div>
           <div className="section-actions">
             <span className="status-chip">Bot request flow</span>
@@ -2425,13 +2481,8 @@ export const App = () => {
           </div>
         </div>
 
-        <div className="info-banner">
-          <strong>Новая схема:</strong> оператор впервые пишет боту, делится контактом, бот сверяет номер с allowlist и после
-          привязки отдаёт `/code`. Ручной отправки и переотправки из `Мастера` нет.
-        </div>
-
-        <div className="summary-grid automation-grid">
-          <article className="metric-card automation-card">
+        <div className="summary-grid summary-grid--nested">
+          <article className="metric-card automation-card ops-surface__card">
             <p className="metric-label">Текущий daily code</p>
             <p className="metric-value metric-value--compact">{currentDailyCode?.codeValue || 'Нет активного кода'}</p>
             <p className="meta-line">Подпись: {currentDailyCode?.codeLabel || 'Не задано'}</p>
@@ -2442,7 +2493,7 @@ export const App = () => {
             {dailyCodesError ? <p className="error-text">{dailyCodesError}</p> : null}
           </article>
 
-          <article className="metric-card automation-card">
+          <article className="metric-card automation-card ops-surface__card">
             <p className="metric-label">Состояние бота</p>
             <p className="metric-value metric-value--compact">
               {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
@@ -2468,7 +2519,7 @@ export const App = () => {
             {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
           </article>
 
-          <article className="metric-card automation-card">
+          <article className="metric-card automation-card ops-surface__card">
             <p className="metric-label">Последний запрос кода</p>
             <p className="meta-line">Время: {formatDateTimeDisplay(telegramAutomationState?.lastRequestAt ?? '')}</p>
             <p className="meta-line">Оператор: {telegramAutomationState?.lastRequestOperatorName || 'Не было запросов'}</p>
@@ -2477,7 +2528,7 @@ export const App = () => {
             <p className="meta-line">Код: {telegramAutomationState?.lastRequestCodeValue || currentDailyCode?.codeValue || 'Не указан'}</p>
           </article>
 
-          <article className="metric-card automation-card">
+          <article className="metric-card automation-card ops-surface__card">
             <p className="metric-label">Allowlist</p>
             <p className="meta-line">Активных номеров: {activeOperators.length}</p>
             <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
@@ -2489,7 +2540,7 @@ export const App = () => {
           </article>
         </div>
 
-        <article className="editor-card">
+        <article className="editor-card ops-editor">
           <div className="entity-card__head">
             <div>
               <p className="entity-kicker">Как это работает</p>
@@ -2497,24 +2548,24 @@ export const App = () => {
             </div>
             <span className="status-chip">Автоматический daily code</span>
           </div>
-          <div className="audit-list">
+          <div className="audit-list ops-flow-list">
             {[
               '1. Admin добавляет оператора в allowlist по имени и телефону.',
               '2. Оператор впервые пишет боту и жмёт "Поделиться контактом".',
               '3. Бот привязывает текущий chat id к allowlist-номеру.',
               '4. После привязки оператор получает актуальный daily code через /code.',
             ].map((item) => (
-              <article className="entity-card entity-card--compact" key={item}>
+              <article className="entity-card entity-card--compact ops-surface__card" key={item}>
                 <p className="meta-line">{item}</p>
               </article>
             ))}
           </div>
         </article>
 
-        <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+        <div className="manager-layout manager-layout--stacked manager-layout--spaced ops-management-grid">
           <aside className="entity-list">
             {telegramOperatorsStatus === 'forbidden' ? (
-              <article className="entity-card entity-card--muted">
+              <article className="entity-card entity-card--muted ops-surface__card">
                 <p className="entity-kicker">Telegram allowlist</p>
                 <h3>Только для admin</h3>
                 <p className="meta-line">{telegramOperatorsError || 'У вас нет доступа к управлению allowlist.'}</p>
@@ -2522,7 +2573,11 @@ export const App = () => {
             ) : (
               telegramOperators.map((operator) => (
                 <article
-                  className={telegramOperatorEditor.id === operator.id ? 'entity-card entity-card--active' : 'entity-card'}
+                  className={[
+                    'entity-card',
+                    'ops-surface__card',
+                    telegramOperatorEditor.id === operator.id ? 'entity-card--active' : '',
+                  ].filter(Boolean).join(' ')}
                   key={operator.id}
                 >
                   <div className="entity-card__head">
@@ -2580,7 +2635,7 @@ export const App = () => {
             ) : null}
           </aside>
 
-          <article className="editor-card">
+          <article className="editor-card ops-editor">
             <div className="entity-card__head">
               <div>
                 <p className="entity-kicker">{telegramOperatorEditor.id ? 'Редактирование Telegram доступа' : 'Новый Telegram доступ'}</p>
@@ -2610,8 +2665,10 @@ export const App = () => {
                     <span className="field-label">Телефон</span>
                     <input
                       className="text-input"
+                      type="tel"
                       value={telegramOperatorEditor.phone}
                       onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, phone: event.target.value }))}
+                      autoComplete="tel"
                       placeholder="+7 999 123-45-67"
                     />
                   </label>
@@ -2648,10 +2705,10 @@ export const App = () => {
           </article>
         </div>
 
-        <div className="manager-layout manager-layout--stacked manager-layout--spaced">
+        <div className="manager-layout manager-layout--stacked manager-layout--spaced ops-management-grid">
           <aside className="entity-list">
             {staffAccountsStatus === 'forbidden' ? (
-              <article className="entity-card entity-card--muted">
+              <article className="entity-card entity-card--muted ops-surface__card">
                 <p className="entity-kicker">Master staff accounts</p>
                 <h3>Только для admin</h3>
                 <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению staff accounts.'}</p>
@@ -2659,7 +2716,11 @@ export const App = () => {
             ) : (
               staffAccounts.map((account) => (
                 <article
-                  className={staffAccountEditor.id === account.id ? 'entity-card entity-card--active' : 'entity-card'}
+                  className={[
+                    'entity-card',
+                    'ops-surface__card',
+                    staffAccountEditor.id === account.id ? 'entity-card--active' : '',
+                  ].filter(Boolean).join(' ')}
                   key={account.id}
                 >
                   <div className="entity-card__head">
@@ -2705,7 +2766,7 @@ export const App = () => {
             ) : null}
           </aside>
 
-          <article className="editor-card">
+          <article className="editor-card ops-editor">
             <div className="entity-card__head">
               <div>
                 <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
@@ -2823,7 +2884,7 @@ export const App = () => {
           </article>
         </div>
 
-        <article className="editor-card">
+        <article className="editor-card ops-table-shell">
           <div className="entity-card__head">
             <div>
               <p className="entity-kicker">Журнал изменений</p>
@@ -2843,7 +2904,7 @@ export const App = () => {
           {auditEventsStatus !== 'forbidden' && auditEvents.length ? (
             <div className="audit-list">
               {auditEvents.map((event) => (
-                <article className="entity-card entity-card--compact" key={event.id}>
+                <article className="entity-card entity-card--compact ops-surface__card" key={event.id}>
                   <div className="entity-card__head">
                     <div>
                       <p className="entity-kicker">

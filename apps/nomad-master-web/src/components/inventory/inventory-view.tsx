@@ -93,8 +93,8 @@ export const InventoryView = ({
 
   return (
     <section className="card inventory-panel">
-      <div className="section-head">
-        <div>
+      <div className="section-head section-head--surface">
+        <div className="ops-surface__intro">
           <p className="eyebrow">Инвентаризация</p>
           <h2>Таблица остатков и зависимых миксов</h2>
           <p className="meta-line">
@@ -102,23 +102,23 @@ export const InventoryView = ({
             наличия табака.
           </p>
         </div>
-        <div className="inventory-panel__stats">
-          <div className="inventory-stat">
+        <div className="inventory-panel__stats ops-surface__stats">
+          <div className="inventory-stat ops-surface__stat">
             <span>Показано</span>
             <strong>{formatMetricValue(meta.filteredItems)}</strong>
           </div>
-          <div className="inventory-stat">
+          <div className="inventory-stat ops-surface__stat">
             <span>В наличии</span>
             <strong>{formatMetricValue(meta.inStockCount)}</strong>
           </div>
-          <div className="inventory-stat">
+          <div className="inventory-stat ops-surface__stat">
             <span>Нет наличия</span>
             <strong>{formatMetricValue(meta.outOfStockCount)}</strong>
           </div>
         </div>
       </div>
 
-      <div className="inventory-toolbar">
+      <div className="inventory-toolbar ops-toolbar">
         <label className="inventory-search">
           <span className="inventory-toolbar__label">Поиск</span>
           <input
@@ -170,7 +170,7 @@ export const InventoryView = ({
         </Button>
       </div>
 
-      <div className="inventory-filter-groups">
+      <div className="inventory-filter-groups ops-filter-groups">
         {filterGroups.map((group) => {
           const options = filters.options[group.key];
           const selected = filters[group.key];
@@ -180,7 +180,7 @@ export const InventoryView = ({
           }
 
           return (
-            <div className="inventory-filter-group" key={group.key}>
+            <div className="inventory-filter-group ops-filter-group" key={group.key}>
               <p className="inventory-filter-group__title">{group.title}</p>
               <div className="inventory-filter-group__chips">
                 {options.map((option) => {
@@ -240,7 +240,7 @@ export const InventoryView = ({
       {status === 'loading' ? <p className="meta-line">Загружаем inventory table...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
-      <div className="inventory-table-shell">
+      <div className="inventory-table-shell ops-table-shell">
         <table className="inventory-table">
           <thead>
             <tr>

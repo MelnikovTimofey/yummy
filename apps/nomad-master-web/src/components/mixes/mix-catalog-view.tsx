@@ -143,35 +143,35 @@ export const MixCatalogView = ({
 
   return (
     <section className="card mixes-panel">
-      <div className="section-head">
-        <div>
+      <div className="section-head section-head--surface">
+        <div className="ops-surface__intro">
           <p className="eyebrow">Менеджер миксов</p>
           <h2>Каталог миксов и component editor</h2>
           <p className="meta-line">
             Table-first каталог для staff: фильтры по вкусовым атрибутам, участие в рейлах и прозрачная работа с долями.
           </p>
         </div>
-        <div className="mixes-panel__stats">
-          <div className="mixes-stat">
+        <div className="mixes-panel__stats ops-surface__stats">
+          <div className="mixes-stat ops-surface__stat">
             <span>Показано</span>
             <strong>{formatMetricValue(meta.filteredItems)}</strong>
           </div>
-          <div className="mixes-stat">
+          <div className="mixes-stat ops-surface__stat">
             <span>Видно гостю</span>
             <strong>{formatMetricValue(meta.guestVisibleCount)}</strong>
           </div>
-          <div className="mixes-stat">
+          <div className="mixes-stat ops-surface__stat">
             <span>В рейлах</span>
             <strong>{formatMetricValue(meta.inRailsCount)}</strong>
           </div>
-          <div className="mixes-stat">
+          <div className="mixes-stat ops-surface__stat">
             <span>Заблокировано наличием</span>
             <strong>{formatMetricValue(meta.blockedCount)}</strong>
           </div>
         </div>
       </div>
 
-      <div className="mixes-toolbar">
+      <div className="mixes-toolbar ops-toolbar">
         <label className="mixes-search">
           <span className="mixes-toolbar__label">Поиск</span>
           <input
@@ -231,7 +231,7 @@ export const MixCatalogView = ({
         </Button>
       </div>
 
-      <div className="mixes-filter-groups">
+      <div className="mixes-filter-groups ops-filter-groups">
         {mixFilterGroups.map((group) => {
           const options = filters.options[group.key];
           const selected = filters[group.key];
@@ -241,7 +241,7 @@ export const MixCatalogView = ({
           }
 
           return (
-            <div className="mixes-filter-group" key={group.key}>
+            <div className="mixes-filter-group ops-filter-group" key={group.key}>
               <p className="mixes-filter-group__title">{group.title}</p>
               <div className="mixes-filter-group__chips">
                 {options.map((option) => {
@@ -267,7 +267,7 @@ export const MixCatalogView = ({
       {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
-      <div className="mixes-table-shell">
+      <div className="mixes-table-shell ops-table-shell">
         <table className="mixes-table">
           <thead>
             <tr>
@@ -360,7 +360,7 @@ export const MixCatalogView = ({
         </table>
       </div>
 
-      <article className="mixes-editor">
+      <article className="mixes-editor ops-editor">
         <div className="entity-card__head">
           <div>
             <p className="entity-kicker">{editor.id ? 'Редактирование микса' : 'Новый микс'}</p>

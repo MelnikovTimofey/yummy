@@ -1,5 +1,46 @@
 # HANDOFF — Yummy
 
+## 1.79) Harmonize Nomad Master operational surfaces for Issue #3 (29 марта 2026)
+
+- Запрос:
+  - продолжить redesign отдельно от закрытого `Issue #2`;
+  - добрать `Issue #3` в чистом worktree без смешивания с прежним грязным `Master` workspace.
+
+- Реализация:
+  - rails surface:
+    - `apps/nomad-master-web/src/App.tsx`
+    - `Rails` переведён на `ops-surface` contract;
+    - добавлены surface header со stats, split-toolbar, унифицированные rail cards, editor surface и table-shell для состава рейла.
+  - access surface:
+    - `apps/nomad-master-web/src/App.tsx`
+    - `Access` собран в тот же visual rhythm для daily code, bot observability, allowlist, staff accounts и audit;
+    - admin-only и `nomad`-restricted панели не меняли semantics, только visual/system presentation;
+    - phone input в Telegram allowlist снова использует `type="tel"` и `autocomplete="tel"`.
+  - shared visual layer:
+    - `apps/nomad-master-web/src/styles.css`
+    - добавлены `ops-toolbar--split`, `ops-management-grid`, `ops-surface__card`, `ops-surface__summary`, `ops-flow-list`, `info-banner--ops`;
+    - responsive rules синхронизированы с новыми split toolbars и surface cards.
+  - already-carried issue-3 surfaces:
+    - `apps/nomad-master-web/src/components/inventory/inventory-view.tsx`
+    - `apps/nomad-master-web/src/components/mixes/mix-catalog-view.tsx`
+    - `Inventory` и `Mixes` уже использовали тот же `ops-surface` language и стали частью единого slice.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `NOTES.md`
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:5178' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+
+- Остаточный риск:
+  - отдельный design sign-off и final responsive polish по всем viewport/state combinations остаётся за `Issue #4`;
+  - build/smoke в isolated worktree шли через shared `node_modules` из основного workspace, потому что сам worktree создавался без локальной установки зависимостей.
+
+- Эффект:
+  - `Issue #3` теперь закрывает не только `Inventory`/`Mixes`, но и `Rails`/`Access`, поэтому `Master` выглядит как единая premium operational console;
+  - следующий PR можно готовить уже как отдельную delivery unit для `Issue #3`, не смешивая её с закрытым `Issue #2`.
+
 ## 1.78) Complete Nomad Master Issue #2 shell foundation (29 марта 2026)
 
 - Запрос:
