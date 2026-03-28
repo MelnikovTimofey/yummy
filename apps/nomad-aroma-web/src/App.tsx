@@ -1722,7 +1722,7 @@ export const App = () => {
       {showcaseRails.map((rail) => (
         <section className="home-rail" key={rail.id}>
           <div className="home-rail-head">
-            <Button className="home-rail-title-btn" variant="ghost" type="button" onClick={() => {
+            <button className="home-rail-title-btn" type="button" onClick={() => {
               setSelectedRail(rail);
               setRailSearch('');
               setView('rail');
@@ -1732,7 +1732,7 @@ export const App = () => {
                 <Badge className="filter-pill">{railToneLabels[rail.type]}</Badge>
               </div>
               <p className="hint">{rail.description || railDescriptions[rail.type]}</p>
-            </Button>
+            </button>
             <Button className="home-link-btn" variant="link" type="button" onClick={() => {
               setSelectedRail(rail);
               setRailSearch('');
