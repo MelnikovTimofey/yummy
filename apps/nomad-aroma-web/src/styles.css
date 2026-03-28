@@ -680,20 +680,21 @@ select:focus-visible {
 
 .home-rail {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .home-rail-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .home-rail-title-line {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-end;
+  column-gap: 10px;
+  row-gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -711,24 +712,27 @@ select:focus-visible {
 .home-rail-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.1;
+  font-size: clamp(26px, 7vw, 30px);
+  line-height: 1;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
 .home-rail-title-btn .hint {
-  margin-top: 8px;
+  margin-top: 6px;
+  max-width: 34ch;
 }
 
 .home-link-btn {
   border: 1px solid rgba(242, 213, 165, 0.16);
   background: rgba(64, 23, 21, 0.66);
   color: var(--accent-soft);
-  font-size: 14px;
+  font-size: 13px;
   padding: 8px 12px;
   border-radius: 999px;
   min-height: 40px;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .home-rail-row {
