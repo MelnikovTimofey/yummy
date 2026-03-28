@@ -2161,7 +2161,7 @@ export const App = () => {
 
   const renderRails = () => (
     <section className="card">
-      <div className="section-head section-head--surface">
+      <div className="section-head section-head--surface section-head--surface-split">
         <div className="ops-surface__intro">
           <p className="eyebrow">Менеджер рейлов</p>
           <h2>Рейлы Nomad</h2>
@@ -2434,7 +2434,7 @@ export const App = () => {
 
     return (
       <section className="card">
-        <div className="section-head section-head--surface">
+        <div className="section-head section-head--surface section-head--surface-split">
           <div className="ops-surface__intro">
             <p className="eyebrow">Доступ</p>
             <h2>Daily code и Telegram allowlist</h2>
@@ -2609,7 +2609,7 @@ export const App = () => {
                     </button>
                     {operator.linkedChatId ? (
                       <button
-                        className="secondary-button secondary-button--inline"
+                        className="secondary-button secondary-button--inline secondary-button--danger"
                         type="button"
                         onClick={() => void onClearTelegramOperatorLink(operator)}
                         disabled={telegramOperatorToggleId === operator.id}
@@ -2618,7 +2618,7 @@ export const App = () => {
                       </button>
                     ) : null}
                     <button
-                      className="secondary-button secondary-button--inline"
+                      className="secondary-button secondary-button--inline secondary-button--danger"
                       type="button"
                       onClick={() => void onDeleteTelegramOperator(operator)}
                       disabled={telegramOperatorToggleId === operator.id}
@@ -2749,7 +2749,7 @@ export const App = () => {
                       {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
                     </button>
                     <button
-                      className="secondary-button secondary-button--inline"
+                      className="secondary-button secondary-button--inline secondary-button--danger"
                       type="button"
                       onClick={() => void onDeleteStaffAccount(account)}
                       disabled={staffAccountToggleId === account.id}
@@ -2858,7 +2858,7 @@ export const App = () => {
                   </button>
                   {staffAccountEditor.id ? (
                     <button
-                      className="secondary-button secondary-button--inline"
+                      className="secondary-button secondary-button--inline secondary-button--danger"
                       type="button"
                       onClick={() =>
                         void onDeleteStaffAccount({

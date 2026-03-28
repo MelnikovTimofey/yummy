@@ -118,6 +118,16 @@ npm run dev
 4. admin-only и `nomad`-restricted панели сохранили текущие role boundaries, менялся только visual/system layer;
 5. targeted Playwright smoke для `Master` проходит и после harmonization `Rails`/`Access`.
 
+## Issue #4. Master visual polish and desktop sign-off
+
+Реализован финальный desktop-oriented polish pass для `Master`:
+
+1. `Rails` и `Access` получили split-header layout, чтобы intro и operational stats не создавали пустые dead zones на desktop;
+2. destructive actions в `Access` теперь визуально отделены от обычных secondary actions;
+3. restricted panels для роли `nomad` стали считываться как intentional forbidden state, а не как случайный пустой блок;
+4. keyboard/focus path усилен для dense control surfaces: filters, toggles, tabs и destructive actions;
+5. финальный sign-off для этого slice выполнен как desktop-only по актуальному рабочему допущению интерфейса `Master`.
+
 ## Slice 1. Dashboard analytics
 
 Реализован первый production-hardening slice для дашборда:

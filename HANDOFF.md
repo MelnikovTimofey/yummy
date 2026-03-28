@@ -1,5 +1,42 @@
 # HANDOFF — Yummy
 
+## 1.80) Finish Nomad Master Issue #4 desktop polish and sign-off (29 марта 2026)
+
+- Запрос:
+  - перейти к `Issue #4` после отдельного `Issue #3`;
+  - не тратить время на mobile/tablet и сделать финальный sign-off только для desktop-контура `Master`.
+
+- Реализация:
+  - desktop visual polish:
+    - `apps/nomad-master-web/src/App.tsx`
+    - для `Rails` и `Access` добавлен split-header contract, чтобы intro и stats не создавали пустые desktop dead zones;
+    - destructive access actions (`delete`, `clear link`) переведены на отдельный visual variant.
+  - desktop interaction polish:
+    - `apps/nomad-master-web/src/styles.css`
+    - усилены focus-visible states для tabs, toggles, filters и dense control surfaces;
+    - forbidden panels получили более явный restricted-state appearance;
+    - destructive secondary actions получили отдельную палитру, hover и focus ring.
+  - visual/accessibility sign-off:
+    - desktop preview вручную проверен для `admin` и `nomad` scenarios в `Access`;
+    - restricted panels у роли `nomad` подтверждены как читаемые и намеренные;
+    - mobile/tablet intentionally не входили в этот pass.
+  - docs sync:
+    - `apps/nomad-master-web/README.md`
+    - `NOTES.md`
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd tests/nomad-smoke && NOMAD_MASTER_URL='http://127.0.0.1:4179' npx playwright test tests/master-smoke.spec.ts --project=master-chromium`
+  - `git diff --check`
+
+- Остаточный риск:
+  - sign-off ограничен desktop-only scope по актуальному продуктово-операционному решению;
+  - отдельный cross-browser visual pass не делался, проверка шла через local Chrome preview runtime.
+
+- Эффект:
+  - `Issue #4` завершает redesign sequence `#2/#3/#4` как bounded desktop delivery;
+  - `Master` доведён до более цельного premium operational console без захода в backend/contracts.
+
 ## 1.79) Harmonize Nomad Master operational surfaces for Issue #3 (29 марта 2026)
 
 - Запрос:
