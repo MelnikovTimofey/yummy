@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad UI Visual Review"
+  short_description: "Visual consistency and style review for Nomad UI"
+  default_prompt: "Use $nomad-ui-visual-review to review a Nomad UI change for visual consistency, style alignment, layout rhythm, and polish before sign-off."

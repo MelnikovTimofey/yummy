@@ -1,3 +1,23 @@
+Обновление от 28 марта 2026 (skills: add visual review skill for Nomad UI consistency and style):
+- Проблема:
+  - в repo-specific skill layer уже были delivery и product guard skills, но не было отдельного review skill для визуальной непротиворечивости UI;
+  - из-за этого visual polish и style-review оставались размазанными между frontend, QA и общими замечаниями без явного checklist-а.
+- Изменение:
+  - добавлен `.codex/skills/nomad-ui-visual-review`:
+    - `SKILL.md` описывает trigger conditions, review workflow, review axes и reporting rules;
+    - `references/visual-checklist.md` фиксирует tone map для `Арома Ателье` и `Мастера`, а также checklist по rhythm, typography, palette, components и states.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - `nomad-ui-visual-review` добавлен в рекомендуемый набор repo-скиллов;
+    - для `Design / UX Agent` зафиксирована связка `figma` + `nomad-ui-visual-review`;
+    - вопрос по отдельному `nomad-design-to-code` уточнён как отдельное решение поверх этой связки.
+- Проверки:
+  - `rg -n "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills/nomad-ui-visual-review`
+  - `git diff --check`
+  - ручной review `SKILL.md` и `references/visual-checklist.md`
+- Эффект:
+  - в репозитории появился отдельный skill для визуального QA и style-consistency review;
+  - visual review теперь можно выполнять по явному checklist-у, а не по вкусовым комментариям.
+
 Обновление от 28 марта 2026 (skills: add second repo-specific skill package for Nomad product, frontend, and release ops):
 - Проблема:
   - после первого skill bootstrap в репозитории всё ещё не хватало локальных workflows для продуктовых инвариантов Nomad, двух frontend-контуров и release/runtime операций;

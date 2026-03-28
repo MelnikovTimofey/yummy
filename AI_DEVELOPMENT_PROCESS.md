@@ -341,9 +341,11 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
    smoke matrix, playwright/manual fallback, артефакты проверок.
 7. `nomad-release-ops`
    env matrix, bot/runtime checks, release smoke, rollback notes.
-8. `nomad-design-to-code`
+8. `nomad-ui-visual-review`
+   visual consistency, style review, hierarchy, spacing, and polish checks for Nomad UI.
+9. `nomad-design-to-code`
    Figma workflow, visual fidelity rules, asset handling.
-9. `repo-docs-and-handoff`
+10. `repo-docs-and-handoff`
    когда и как обновлять `NOTES.md`, `HANDOFF.md`, README и process docs.
 
 ### Матрица ролей и скиллов
@@ -369,6 +371,7 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
    - `repo-docs-and-handoff`
 7. `Design / UX Agent`
    - `figma`
+   - `nomad-ui-visual-review`
    - `nomad-design-to-code`
 
 ### Как проектировать новый скилл
@@ -451,11 +454,12 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
    - `nomad-master-web-delivery`
    - `nomad-qa-and-smoke`
    - `nomad-release-ops`
+   - `nomad-ui-visual-review`
    - `repo-docs-and-handoff`
 
 Рекомендуемый следующий шаг:
 
 1. forward-test каждый скилл минимум на двух реальных задачах;
 2. после этого добавлять новые repo-скиллы только под реально повторяющиеся workflows;
-3. решить, нужен ли отдельный repo-specific `nomad-design-to-code`, или пока достаточно platform skill `figma`;
+3. решить, нужен ли отдельный repo-specific `nomad-design-to-code`, или пока достаточно комбинации `figma` + `nomad-ui-visual-review`;
 4. расширять текущие skeleton’ы reference-файлами и scripts только после реального повторного использования.

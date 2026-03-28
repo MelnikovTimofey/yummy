@@ -1,5 +1,27 @@
 # HANDOFF — Yummy
 
+## 1.62) Add UI visual review skill for Nomad consistency and style (28 марта 2026)
+
+- Запрос:
+  - добавить repo-specific skill для проверки UI на визуальную непротиворечивость и общий стиль.
+
+- Реализация:
+  - добавлен `.codex/skills/nomad-ui-visual-review`:
+    - `SKILL.md` описывает отдельный review workflow для visual consistency, hierarchy, spacing, typography, palette и component consistency;
+    - `references/visual-checklist.md` фиксирует tone map для `Арома Ателье` и `Мастера` и список типовых visual failure modes.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - `nomad-ui-visual-review` добавлен в рекомендуемый набор repo-specific skills;
+    - для `Design / UX Agent` зафиксирована связка `figma` + `nomad-ui-visual-review`.
+
+- Проверки:
+  - `rg -n "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills/nomad-ui-visual-review`
+  - `git diff --check`
+  - ручной review visual-review checklist
+
+- Эффект:
+  - визуальная проверка UI теперь вынесена в отдельный reusable skill;
+  - проверки на стиль и визуальную согласованность получили формальный checklist и единый язык findings.
+
 ## 1.61) Add second repo-specific skill package for Nomad product, frontend, and release ops (28 марта 2026)
 
 - Запрос:
