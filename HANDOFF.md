@@ -1,5 +1,67 @@
 # HANDOFF — Yummy
 
+## 1.67) Implement Nomad Master Slice 1 dashboard analytics (28 марта 2026)
+
+- Запрос:
+  - реализовать `Slice 1` из `master-production-redesign`: production-ready dashboard analytics для `Nomad Master`.
+
+- Реализация:
+  - `apps/nomad-backend/src/state.ts`:
+    - добавлен новый `getDashboardSummary(window)` с окнами `7d/14d/30d`;
+    - добавлены inventory breakdowns по производителям, flavor profiles и вкусам;
+    - добавлены `product metrics`: top by smoke CTA, top by guest rating, rating distribution, daily activity;
+    - добавлены `ops metrics`: guest-visible mixes, hidden mixes, blocked mixes by inventory, rail health;
+    - daily activity переведена на local day keys, чтобы trend не ломался от timezone offset.
+  - `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`:
+    - `GET /staff/dashboard/summary` теперь отдаёт новый nested contract и принимает query `window`.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - frontend parser и типы расширены под новый DTO;
+    - добавлены dashboard window options.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - dashboard переделан в новый layout с window selector, inventory breakdown cards, product section, ops section и daily trend;
+    - summary автоматически рефрешится после inventory/mix/rail изменений.
+  - `apps/nomad-master-web/README.md`:
+    - добавлена секция про реализованный `Slice 1`.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+
+- Эффект:
+  - dashboard `Nomad Master` больше не является только KPI-сводкой MVP;
+  - staff/admin получили usable analytics surface для решений по ассортименту и витринам;
+  - следующий рекомендованный шаг: `Slice 2` inventory table + filters + bulk operations.
+
+## 1.66) Lock Nomad Master production redesign contract before implementation (28 марта 2026)
+
+- Запрос:
+  - перейти от rough MVP `Nomad Master` к production-ready продукту и зафиксировать план работ, agent frame и execution flow для большого преобразования.
+
+- Реализация:
+  - добавлен `docs/nomad/master-production-redesign.md`:
+    - зафиксированы текущие ограничения frontend и backend/telegram surfaces;
+    - описан целевой результат для `dashboard`, `inventory`, `mixes`, `rails`, `access`;
+    - redesign разложен на `Slice 0-6`;
+    - определены human-review checkpoints, verification path и multi-agent write scopes.
+  - `NOMAD_IMPLEMENTATION_PLAN.md`:
+    - добавлена отдельная note про `Master production redesign` как программу hardening, а не один broad rewrite.
+  - `NOMAD_ROADMAP.md`:
+    - направление `Master Operations` дополнено table-first и bulk-operation требованиями;
+    - направление `Analytics And Rails` дополнено read-only contract для automatic rails и вторым statistical rail;
+    - добавлена ссылка на новый execution contract.
+  - `apps/nomad-master-web/README.md`:
+    - текущая стадия явно переименована в рабочий MVP, чтобы README не создавал ложное ощущение завершённого hardening.
+
+- Проверки:
+  - `git diff --check`
+  - review markdown-согласованности между `docs/nomad/master-production-redesign.md`, `NOMAD_IMPLEMENTATION_PLAN.md`, `NOMAD_ROADMAP.md`, `apps/nomad-master-web/README.md`
+
+- Эффект:
+  - теперь у `Nomad Master` есть формальный execution contract для большой переделки;
+  - следующий исполнитель может запускать `Slice 1` по dashboard analytics уже от зафиксированных требований, agent roles и stop conditions.
+
 ## 1.65) Add guided Nomad task intake skill for brief formation (28 марта 2026)
 
 - Запрос:

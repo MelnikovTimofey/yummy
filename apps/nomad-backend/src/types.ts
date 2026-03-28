@@ -1,4 +1,4 @@
-import type { IntroCard, MixView, RailType, RailView } from './state';
+import type { DashboardSummary, IntroCard, MixView, RailType, RailView } from './state';
 import type { AuditEventView } from './audit';
 import type {
   DailyAccessCodeView,
@@ -81,6 +81,8 @@ export type StaffAuthResponse = {
 export type StaffMixesResponse = {
   items: MixView[];
 };
+
+export type StaffDashboardSummaryResponse = DashboardSummary;
 
 export type StaffRailsResponse = {
   items: RailView[];

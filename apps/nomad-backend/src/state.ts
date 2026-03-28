@@ -55,6 +55,92 @@ export type SmokeCtaEvent = {
   createdAt: string;
 };
 
+export type DashboardWindowKey = '7d' | '14d' | '30d';
+
+export type DashboardWindow = {
+  key: DashboardWindowKey;
+  label: string;
+  days: number;
+  startsAt: string;
+  endsAt: string;
+};
+
+export type DashboardBreakdownItem = {
+  key: string;
+  label: string;
+  total: number;
+  inStockCount: number;
+  outOfStockCount: number;
+};
+
+export type DashboardMixMetric = {
+  mixId: string;
+  mixName: string;
+  smokeCtaCount: number;
+  avgRating: number;
+  ratingsCount: number;
+  popularity: number;
+};
+
+export type DashboardRatingDistributionItem = {
+  value: number;
+  count: number;
+};
+
+export type DashboardActivityPoint = {
+  date: string;
+  smokeCtaCount: number;
+  ratingsCount: number;
+};
+
+export type DashboardBlockedMix = {
+  mixId: string;
+  mixName: string;
+  missingComponents: string[];
+  railNames: string[];
+  smokeCtaCount: number;
+};
+
+export type DashboardRailHealthItem = {
+  railId: string;
+  name: string;
+  type: RailType;
+  active: boolean;
+  totalMixCount: number;
+  visibleMixCount: number;
+  hiddenMixCount: number;
+};
+
+export type DashboardSummary = {
+  window: DashboardWindow;
+  inventory: {
+    total: number;
+    inStockCount: number;
+    outOfStockCount: number;
+    manufacturers: DashboardBreakdownItem[];
+    flavorProfiles: DashboardBreakdownItem[];
+    topFlavors: DashboardBreakdownItem[];
+  };
+  product: {
+    smokeCtaTotal: number;
+    ratingsTotal: number;
+    avgGuestRating: number;
+    topMixes: DashboardMixMetric[];
+    topRatedMixes: DashboardMixMetric[];
+    ratingDistribution: DashboardRatingDistributionItem[];
+    activity: DashboardActivityPoint[];
+  };
+  ops: {
+    guestVisibleMixesCount: number;
+    hiddenMixesCount: number;
+    blockedByInventoryCount: number;
+    activeRailsCount: number;
+    emptyActiveRailsCount: number;
+    blockedMixes: DashboardBlockedMix[];
+    railHealth: DashboardRailHealthItem[];
+  };
+};
+
 export type MixInput = {
   name: string;
   description: string;
@@ -223,6 +309,27 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 48) || 'item';
 
+const dashboardWindowConfig: Record<DashboardWindowKey, { label: string; days: number }> = {
+  '7d': { label: '7 дней', days: 7 },
+  '14d': { label: '14 дней', days: 14 },
+  '30d': { label: '30 дней', days: 30 },
+};
+
+const flavorProfileLabels: Record<string, string> = {
+  sweet: 'Сладкие',
+  sour: 'Кислые',
+  spicy: 'Пряные',
+  fresh: 'Свежие',
+  dessert: 'Десертные',
+  tobacco: 'Табачные',
+  minty: 'Мятные',
+  fruity: 'Фруктовые',
+  floral_herbal: 'Цветочно-травяные',
+  citrus: 'Цитрусовые',
+  berry: 'Ягодные',
+  perfume: 'Парфюмные',
+};
+
 const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));
 
 const parseList = (value: string | null | undefined) => {
@@ -242,6 +349,95 @@ const parseList = (value: string | null | undefined) => {
   } catch {
     return [];
   }
+};
+
+const isDashboardWindowKey = (value: string): value is DashboardWindowKey =>
+  value === '7d' || value === '14d' || value === '30d';
+
+export const normalizeDashboardWindowKey = (value: unknown): DashboardWindowKey => {
+  if (typeof value !== 'string') {
+    return '14d';
+  }
+
+  return isDashboardWindowKey(value) ? value : '14d';
+};
+
+const startOfDay = (value: Date) => {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const endOfDay = (value: Date) => {
+  const next = new Date(value);
+  next.setHours(23, 59, 59, 999);
+  return next;
+};
+
+const toDayKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const buildDashboardWindow = (key: DashboardWindowKey) => {
+  const config = dashboardWindowConfig[key];
+  const endsAtDate = endOfDay(new Date());
+  const startsAtDate = startOfDay(new Date());
+  startsAtDate.setDate(startsAtDate.getDate() - (config.days - 1));
+
+  return {
+    key,
+    label: config.label,
+    days: config.days,
+    startsAtDate,
+    endsAtDate,
+    startsAt: startsAtDate.toISOString(),
+    endsAt: endsAtDate.toISOString(),
+  };
+};
+
+const buildInventoryBreakdown = (
+  values: Array<{
+    key: string;
+    label: string;
+    inStock: boolean;
+  }>,
+): DashboardBreakdownItem[] => {
+  const stats = new Map<string, DashboardBreakdownItem>();
+
+  for (const value of values) {
+    const current = stats.get(value.key) ?? {
+      key: value.key,
+      label: value.label,
+      total: 0,
+      inStockCount: 0,
+      outOfStockCount: 0,
+    };
+
+    current.total += 1;
+    if (value.inStock) {
+      current.inStockCount += 1;
+    } else {
+      current.outOfStockCount += 1;
+    }
+
+    stats.set(value.key, current);
+  }
+
+  return [...stats.values()].sort((left, right) => {
+    if (right.total !== left.total) {
+      return right.total - left.total;
+    }
+
+    if (right.inStockCount !== left.inStockCount) {
+      return right.inStockCount - left.inStockCount;
+    }
+
+    return left.label.localeCompare(right.label, 'ru');
+  });
 };
 
 const mapIntroCardRecord = (record: {
@@ -1246,5 +1442,310 @@ export const getSmokeCtaSummary = async () => {
   return {
     smokeCtaTotal: events.length,
     topMixes,
+  };
+};
+
+export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d'): Promise<DashboardSummary> => {
+  await ensureNomadState();
+
+  const window = buildDashboardWindow(windowKey);
+  const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents, blockedMixRecords] = await Promise.all([
+    prisma.nomadTobacco.findMany({
+      orderBy: [{ manufacturer: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        manufacturer: true,
+        name: true,
+        flavorProfiles: true,
+        flavors: true,
+        inStock: true,
+      },
+    }),
+    getAvailableMixCatalog(),
+    getStaffRails(),
+    prisma.nomadSmokeCtaEvent.findMany({
+      where: {
+        createdAt: {
+          gte: window.startsAtDate,
+          lte: window.endsAtDate,
+        },
+      },
+      select: {
+        mixId: true,
+        createdAt: true,
+      },
+    }),
+    prisma.nomadMixRating.findMany({
+      where: {
+        createdAt: {
+          gte: window.startsAtDate,
+          lte: window.endsAtDate,
+        },
+      },
+      select: {
+        mixId: true,
+        value: true,
+        createdAt: true,
+      },
+    }),
+    prisma.nomadMix.findMany({
+      where: {
+        available: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            tobacco: {
+              select: {
+                name: true,
+                inStock: true,
+              },
+            },
+          },
+        },
+        railMixes: {
+          select: {
+            rail: {
+              select: {
+                name: true,
+                active: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const smokeCounts = smokeEvents.reduce<Record<string, number>>((acc, event) => {
+    acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const ratingStats = ratingEvents.reduce<Record<string, { sum: number; count: number }>>((acc, event) => {
+    const current = acc[event.mixId] ?? { sum: 0, count: 0 };
+    current.sum += event.value;
+    current.count += 1;
+    acc[event.mixId] = current;
+    return acc;
+  }, {});
+
+  const activityByDay = new Map<string, DashboardActivityPoint>();
+  for (let dayOffset = 0; dayOffset < window.days; dayOffset += 1) {
+    const current = startOfDay(window.startsAtDate);
+    current.setDate(window.startsAtDate.getDate() + dayOffset);
+    const date = toDayKey(current);
+    activityByDay.set(date, {
+      date,
+      smokeCtaCount: 0,
+      ratingsCount: 0,
+    });
+  }
+
+  for (const event of smokeEvents) {
+    const key = toDayKey(event.createdAt);
+    const current = activityByDay.get(key);
+    if (current) {
+      current.smokeCtaCount += 1;
+    }
+  }
+
+  for (const event of ratingEvents) {
+    const key = toDayKey(event.createdAt);
+    const current = activityByDay.get(key);
+    if (current) {
+      current.ratingsCount += 1;
+    }
+  }
+
+  const manufacturers = buildInventoryBreakdown(
+    inventoryRecords.map((item) => ({
+      key: item.manufacturer,
+      label: item.manufacturer,
+      inStock: item.inStock,
+    })),
+  );
+
+  const flavorProfiles = buildInventoryBreakdown(
+    inventoryRecords.flatMap((item) =>
+      parseList(item.flavorProfiles).map((profile) => ({
+        key: profile,
+        label: flavorProfileLabels[profile] ?? profile,
+        inStock: item.inStock,
+      })),
+    ),
+  );
+
+  const topFlavors = buildInventoryBreakdown(
+    inventoryRecords.flatMap((item) =>
+      parseList(item.flavors).map((flavor) => ({
+        key: flavor,
+        label: flavor,
+        inStock: item.inStock,
+      })),
+    ),
+  ).slice(0, 8);
+
+  const topMixes = mixes
+    .map((mix) => ({
+      mixId: mix.id,
+      mixName: mix.name,
+      smokeCtaCount: smokeCounts[mix.id] ?? 0,
+      avgRating: mix.avgRating,
+      ratingsCount: mix.ratingsCount,
+      popularity: mix.popularity,
+    }))
+    .filter((item) => item.smokeCtaCount > 0)
+    .sort((left, right) => {
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
+      }
+
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
+      }
+
+      if (right.popularity !== left.popularity) {
+        return right.popularity - left.popularity;
+      }
+
+      return left.mixName.localeCompare(right.mixName, 'ru');
+    })
+    .slice(0, 5);
+
+  const topRatedMixes = mixes
+    .map((mix) => {
+      const stats = ratingStats[mix.id];
+      const avgRating = stats ? Number((stats.sum / stats.count).toFixed(1)) : 0;
+
+      return {
+        mixId: mix.id,
+        mixName: mix.name,
+        smokeCtaCount: smokeCounts[mix.id] ?? 0,
+        avgRating,
+        ratingsCount: stats?.count ?? 0,
+        popularity: mix.popularity,
+      };
+    })
+    .filter((item) => item.ratingsCount > 0)
+    .sort((left, right) => {
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
+      }
+
+      if (right.ratingsCount !== left.ratingsCount) {
+        return right.ratingsCount - left.ratingsCount;
+      }
+
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
+      }
+
+      return left.mixName.localeCompare(right.mixName, 'ru');
+    })
+    .slice(0, 5);
+
+  const ratingDistribution: DashboardRatingDistributionItem[] = [5, 4, 3, 2, 1].map((value) => ({
+    value,
+    count: ratingEvents.filter((item) => item.value === value).length,
+  }));
+
+  const blockedMixes = blockedMixRecords
+    .map((mix) => {
+      const missingComponents = mix.components
+        .filter((component) => !component.tobacco.inStock)
+        .map((component) => component.tobacco.name);
+
+      return {
+        mixId: mix.id,
+        mixName: mix.name,
+        missingComponents,
+        railNames: unique(
+          mix.railMixes
+            .filter((item) => item.rail.active)
+            .map((item) => item.rail.name),
+        ),
+        smokeCtaCount: smokeCounts[mix.id] ?? 0,
+      } satisfies DashboardBlockedMix;
+    })
+    .filter((mix) => mix.missingComponents.length > 0)
+    .sort((left, right) => {
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
+      }
+
+      if (right.missingComponents.length !== left.missingComponents.length) {
+        return right.missingComponents.length - left.missingComponents.length;
+      }
+
+      return left.mixName.localeCompare(right.mixName, 'ru');
+    })
+    .slice(0, 5);
+
+  const railHealth = rails
+    .map((rail) => {
+      const visibleMixCount = rail.mixes.filter((mix) => mix.guestVisible).length;
+
+      return {
+        railId: rail.id,
+        name: rail.name,
+        type: rail.type,
+        active: rail.active,
+        totalMixCount: rail.mixIds.length,
+        visibleMixCount,
+        hiddenMixCount: Math.max(rail.mixIds.length - visibleMixCount, 0),
+      } satisfies DashboardRailHealthItem;
+    })
+    .sort((left, right) => {
+      if (left.active !== right.active) {
+        return left.active ? -1 : 1;
+      }
+
+      if (left.hiddenMixCount !== right.hiddenMixCount) {
+        return right.hiddenMixCount - left.hiddenMixCount;
+      }
+
+      return left.name.localeCompare(right.name, 'ru');
+    });
+
+  const totalRatingsValue = ratingEvents.reduce((sum, item) => sum + item.value, 0);
+
+  return {
+    window: {
+      key: window.key,
+      label: window.label,
+      days: window.days,
+      startsAt: window.startsAt,
+      endsAt: window.endsAt,
+    },
+    inventory: {
+      total: inventoryRecords.length,
+      inStockCount: inventoryRecords.filter((item) => item.inStock).length,
+      outOfStockCount: inventoryRecords.filter((item) => !item.inStock).length,
+      manufacturers: manufacturers.slice(0, 6),
+      flavorProfiles: flavorProfiles.slice(0, 6),
+      topFlavors,
+    },
+    product: {
+      smokeCtaTotal: smokeEvents.length,
+      ratingsTotal: ratingEvents.length,
+      avgGuestRating: ratingEvents.length ? Number((totalRatingsValue / ratingEvents.length).toFixed(1)) : 0,
+      topMixes,
+      topRatedMixes,
+      ratingDistribution,
+      activity: [...activityByDay.values()],
+    },
+    ops: {
+      guestVisibleMixesCount: mixes.filter((mix) => mix.guestVisible).length,
+      hiddenMixesCount: mixes.filter((mix) => !mix.available).length,
+      blockedByInventoryCount: mixes.filter((mix) => mix.available && !mix.guestVisible).length,
+      activeRailsCount: railHealth.filter((rail) => rail.active).length,
+      emptyActiveRailsCount: railHealth.filter((rail) => rail.active && rail.visibleMixCount === 0).length,
+      blockedMixes,
+      railHealth: railHealth.slice(0, 6),
+    },
   };
 };

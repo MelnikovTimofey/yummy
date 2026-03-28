@@ -120,7 +120,8 @@ Definition of done:
 2. улучшить менеджер рейлов, включая порядок миксов;
 3. расширить dashboard по inventory в нужных разрезах;
 4. добавить admin-view по состоянию Telegram automation;
-5. привести CRUD-экраны к единому operational UX.
+5. привести CRUD-экраны к единому operational UX;
+6. перевести inventory и mixes из card-first MVP в table-first operational workflow с bulk actions.
 
 Definition of done:
 
@@ -141,12 +142,17 @@ Definition of done:
 2. расширить дашборд по `Выбрать`, оценкам и популярности;
 3. стабилизировать statistical rails как операционный инструмент;
 4. при необходимости добавить anti-top / declining mixes;
-5. отделить product metrics от ops metrics.
+5. отделить product metrics от ops metrics;
+6. зафиксировать read-only contract для automatic rails и добавить второй rail по лучшим оценкам.
 
 Definition of done:
 
 1. staff и admin могут принимать решения по данным;
 2. statistical rails не выглядят случайными и объяснимы по данным.
+
+См. детальный execution contract:
+
+1. `docs/nomad/master-production-redesign.md`
 
 ### Направление E. Telegram And Automation
 

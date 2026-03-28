@@ -38,6 +38,7 @@ import {
   createMix,
   createRail,
   ensureNomadState,
+  getDashboardSummary,
   getInventorySummary,
   getInventoryTobaccos,
   getTobaccoById,
@@ -46,8 +47,8 @@ import {
   getGuestIntroCards,
   getStaffMixes,
   getStaffRails,
-  getSmokeCtaSummary,
   getAvailableMixCatalog,
+  normalizeDashboardWindowKey,
   recordSmokeCtaEvent,
   rateMix,
   updateMix,
@@ -78,6 +79,7 @@ import type {
   StaffTelegramRecipientsResponse,
   StaffTelegramAutomationStateResponse,
   StaffAuditEventsResponse,
+  StaffDashboardSummaryResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
@@ -1244,14 +1246,10 @@ export const buildApp = () => {
       return;
     }
 
-    const inventory = await getInventorySummary();
-    const smoke = await getSmokeCtaSummary();
+    const query = request.query as { window?: unknown } | undefined;
+    const response: StaffDashboardSummaryResponse = await getDashboardSummary(normalizeDashboardWindowKey(query?.window));
 
-    return reply.send({
-      inventory,
-      smokeCtaTotal: smoke.smokeCtaTotal,
-      topMixes: smoke.topMixes,
-    });
+    return reply.send(response);
   });
 
   app.get('/staff/auth/me', async (request, reply) => {

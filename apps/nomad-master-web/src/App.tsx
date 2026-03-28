@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import {
+  dashboardWindowOptions,
   DashboardSummary,
+  DashboardWindowKey,
   DailyAccessCodeRecord,
   InventoryTobacco,
   MixRecord,
@@ -278,17 +280,37 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
     return [
       { label: 'Всего табаков', value: 0 },
       { label: 'В наличии', value: 0 },
-      { label: 'Не в наличии', value: 0 },
       { label: 'Нажатия Выбрать', value: 0 },
+      { label: 'Оценок гостей', value: 0 },
+      { label: 'Миксов блокирует наличие', value: 0 },
+      { label: 'Пустых активных рейлов', value: 0 },
     ];
   }
 
   return [
     { label: 'Всего табаков', value: summary.totalTobaccos },
     { label: 'В наличии', value: summary.inStockCount },
-    { label: 'Не в наличии', value: summary.outOfStockCount },
     { label: 'Нажатия Выбрать', value: summary.smokeCtaTotal },
+    { label: 'Оценок гостей', value: summary.ratingsTotal },
+    { label: 'Миксов блокирует наличие', value: summary.ops.blockedByInventoryCount },
+    { label: 'Пустых активных рейлов', value: summary.ops.emptyActiveRailsCount },
   ];
+};
+
+const formatDashboardDay = (value: string) => {
+  if (!value) {
+    return 'Нет даты';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+  }).format(parsed);
 };
 
 const resolveMixComponentSummary = (mix: MixRecord) => {
@@ -327,6 +349,7 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
   const [mixes, setMixes] = useState<MixRecord[]>([]);
   const [rails, setRails] = useState<RailRecord[]>([]);
   const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
@@ -395,12 +418,12 @@ export const App = () => {
     }
   };
 
-  const loadSummary = async (nextToken: string) => {
+  const loadSummary = async (nextToken: string, windowKey: DashboardWindowKey = dashboardWindow) => {
     setSummaryStatus('loading');
     setSummaryError('');
 
     try {
-      const response = await requestJson<unknown>('/staff/dashboard/summary', {}, nextToken);
+      const response = await requestJson<unknown>(`/staff/dashboard/summary?window=${windowKey}`, {}, nextToken);
       setSummary(normalizeDashboardSummary(response));
       setSummaryStatus('ready');
     } catch (cause) {
@@ -565,7 +588,7 @@ export const App = () => {
         setUser(profile.user);
         await Promise.all([
           loadInventory(token),
-          loadSummary(token),
+          loadSummary(token, dashboardWindow),
           loadMixes(token),
           loadRails(token),
           loadDailyCodes(token),
@@ -609,7 +632,7 @@ export const App = () => {
       setUser(profile.user);
       await Promise.all([
         loadInventory(auth.accessToken),
-        loadSummary(auth.accessToken),
+        loadSummary(auth.accessToken, dashboardWindow),
         loadMixes(auth.accessToken),
         loadRails(auth.accessToken),
         loadDailyCodes(auth.accessToken),
@@ -625,12 +648,23 @@ export const App = () => {
     }
   };
 
+  const onSelectDashboardWindow = async (windowKey: DashboardWindowKey) => {
+    setDashboardWindow(windowKey);
+
+    if (!token || !user) {
+      return;
+    }
+
+    await loadSummary(token, windowKey);
+  };
+
   const onSignOut = () => {
     storeToken('');
     setToken('');
     setUser(null);
     setInventory([]);
     setSummary(null);
+    setDashboardWindow('14d');
     setMixes([]);
     setRails([]);
     setStatus('idle');
@@ -714,8 +748,13 @@ export const App = () => {
         return {
           ...current,
           ...inventorySummary,
+          inventory: {
+            ...current.inventory,
+            ...inventorySummary,
+          },
         };
       });
+      void loadSummary(token, dashboardWindow);
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить наличие');
@@ -787,6 +826,7 @@ export const App = () => {
 
       setMixes((current) => sortMixes(replaceOrInsert(current, savedMix)));
       setMixEditor(toMixEditorState(savedMix));
+      void loadSummary(token, dashboardWindow);
       setMixSaveStatus('ready');
       setActiveTab('mixes');
     } catch (cause) {
@@ -858,6 +898,7 @@ export const App = () => {
 
       setRails((current) => sortRails(replaceOrInsert(current, savedRail)));
       setRailEditor(toRailEditorState(savedRail));
+      void loadSummary(token, dashboardWindow);
       setRailSaveStatus('ready');
       setActiveTab('rails');
     } catch (cause) {
@@ -1298,7 +1339,9 @@ export const App = () => {
         <div>
           <p className="eyebrow">Дашборд</p>
           <h2>Сводка Nomad</h2>
-          <p className="meta-line">Ключевые метрики смены и быстрые переходы к рабочим разделам.</p>
+          <p className="meta-line">
+            Product и ops-метрики за окно {summary?.window.label ?? dashboardWindowOptions.find((item) => item.key === dashboardWindow)?.label}.
+          </p>
         </div>
         <div className="status-chip">Операционный обзор</div>
       </div>
@@ -1306,7 +1349,22 @@ export const App = () => {
       {summaryStatus === 'loading' ? <p className="meta-line">Загружаем сводку...</p> : null}
       {summaryError ? <p className="error-text">{summaryError}</p> : null}
 
-      <section className="summary-grid summary-grid--stacked">
+      <div className="dashboard-toolbar">
+        <div className="window-toggle-group">
+          {dashboardWindowOptions.map((option) => (
+            <button
+              className={dashboardWindow === option.key ? 'window-toggle window-toggle--active' : 'window-toggle'}
+              type="button"
+              key={option.key}
+              onClick={() => void onSelectDashboardWindow(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section className="summary-grid summary-grid--dashboard">
         {readSummaryCards(summary).map((card) => (
           <article className="metric-card" key={card.label}>
             <span className="metric-label">{card.label}</span>
@@ -1327,18 +1385,227 @@ export const App = () => {
         </button>
       </div>
 
-      <div className="top-mixes">
-        {(summary?.topMixes ?? []).length ? (
-          summary.topMixes.map((mix) => (
-            <article className="top-mix-card" key={mix.mixId}>
-              <span className="metric-label">Топ по выбору</span>
-              <h3>{mix.name}</h3>
-              <strong className="metric-value">{formatMetricValue(mix.smokeCtaCount)}</strong>
+      <div className="dashboard-breakdown-grid">
+        <article className="editor-card dashboard-panel">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Склад</p>
+              <h3>Производители</h3>
+            </div>
+            <span className="status-chip">Inventory</span>
+          </div>
+
+          <div className="breakdown-list">
+            {(summary?.inventory.manufacturers ?? []).map((item) => (
+              <div className="breakdown-row" key={`manufacturer:${item.key}`}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <p className="meta-line">
+                    В наличии {formatMetricValue(item.inStockCount)} из {formatMetricValue(item.total)}
+                  </p>
+                </div>
+                <span className="status-chip">{formatMetricValue(item.total)}</span>
+              </div>
+            ))}
+            {!summary?.inventory.manufacturers.length ? <p className="meta-line">Пока нет разреза по производителям.</p> : null}
+          </div>
+        </article>
+
+        <article className="editor-card dashboard-panel">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Профили</p>
+              <h3>Категории вкуса</h3>
+            </div>
+            <span className="status-chip">Profiles</span>
+          </div>
+
+          <div className="breakdown-list">
+            {(summary?.inventory.flavorProfiles ?? []).map((item) => (
+              <div className="breakdown-row" key={`profile:${item.key}`}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <p className="meta-line">Нет в наличии: {formatMetricValue(item.outOfStockCount)}</p>
+                </div>
+                <span className="status-chip">{formatMetricValue(item.total)}</span>
+              </div>
+            ))}
+            {!summary?.inventory.flavorProfiles.length ? <p className="meta-line">Пока нет разреза по профилям.</p> : null}
+          </div>
+        </article>
+
+        <article className="editor-card dashboard-panel">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Вкусы</p>
+              <h3>Топ вкусов</h3>
+            </div>
+            <span className="status-chip">Flavors</span>
+          </div>
+
+          <div className="breakdown-list">
+            {(summary?.inventory.topFlavors ?? []).map((item) => (
+              <div className="breakdown-row" key={`flavor:${item.key}`}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <p className="meta-line">В наличии: {formatMetricValue(item.inStockCount)}</p>
+                </div>
+                <span className="status-chip">{formatMetricValue(item.total)}</span>
+              </div>
+            ))}
+            {!summary?.inventory.topFlavors.length ? <p className="meta-line">Пока нет разреза по вкусам.</p> : null}
+          </div>
+        </article>
+      </div>
+
+      <div className="dashboard-panels">
+        <article className="editor-card dashboard-panel">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Продукт</p>
+              <h3>Выборы и оценки гостей</h3>
+            </div>
+            <span className="status-chip">Product metrics</span>
+          </div>
+
+          <div className="summary-grid summary-grid--nested">
+            <article className="metric-card">
+              <span className="metric-label">Нажатия Выбрать</span>
+              <strong className="metric-value">{formatMetricValue(summary?.smokeCtaTotal ?? 0)}</strong>
             </article>
-          ))
-        ) : (
-          <p className="meta-line">Пока нет данных по нажатиям `Выбрать`.</p>
-        )}
+            <article className="metric-card">
+              <span className="metric-label">Оценок</span>
+              <strong className="metric-value">{formatMetricValue(summary?.ratingsTotal ?? 0)}</strong>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Средняя guest-оценка</span>
+              <strong className="metric-value">{summary?.avgGuestRating ? summary.avgGuestRating.toFixed(1) : '0.0'}</strong>
+            </article>
+          </div>
+
+          <div className="dashboard-split">
+            <section className="dashboard-subsection">
+              <h4>Топ по выбору</h4>
+              <div className="breakdown-list">
+                {(summary?.topMixes ?? []).map((mix) => (
+                  <div className="breakdown-row" key={`top:${mix.mixId}`}>
+                    <div>
+                      <strong>{mix.name}</strong>
+                      <p className="meta-line">Рейтинг {mix.avgRating.toFixed(1)} · оценок {formatMetricValue(mix.ratingsCount)}</p>
+                    </div>
+                    <span className="status-chip">{formatMetricValue(mix.smokeCtaCount)}</span>
+                  </div>
+                ))}
+                {!summary?.topMixes.length ? <p className="meta-line">Пока нет данных по выборам.</p> : null}
+              </div>
+            </section>
+
+            <section className="dashboard-subsection">
+              <h4>Топ по оценкам</h4>
+              <div className="breakdown-list">
+                {(summary?.topRatedMixes ?? []).map((mix) => (
+                  <div className="breakdown-row" key={`rated:${mix.mixId}`}>
+                    <div>
+                      <strong>{mix.name}</strong>
+                      <p className="meta-line">Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}</p>
+                    </div>
+                    <span className="status-chip">{mix.avgRating.toFixed(1)}</span>
+                  </div>
+                ))}
+                {!summary?.topRatedMixes.length ? <p className="meta-line">Пока нет guest-оценок за окно.</p> : null}
+              </div>
+            </section>
+          </div>
+
+          <section className="dashboard-subsection">
+            <h4>Распределение оценок</h4>
+            <div className="rating-distribution">
+              {(summary?.ratingDistribution ?? []).map((item) => (
+                <div className="rating-pill" key={`rating:${item.value}`}>
+                  <span>{item.value}★</span>
+                  <strong>{formatMetricValue(item.count)}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="dashboard-subsection">
+            <h4>Динамика по дням</h4>
+            <div className="activity-list">
+              {(summary?.activity ?? []).map((item) => (
+                <div className="activity-row" key={item.date}>
+                  <strong>{formatDashboardDay(item.date)}</strong>
+                  <p className="meta-line">
+                    Выборов {formatMetricValue(item.smokeCtaCount)} · оценок {formatMetricValue(item.ratingsCount)}
+                  </p>
+                </div>
+              ))}
+              {!summary?.activity.length ? <p className="meta-line">Пока нет динамики по дням.</p> : null}
+            </div>
+          </section>
+        </article>
+
+        <article className="editor-card dashboard-panel">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Операции</p>
+              <h3>Сигналы для команды</h3>
+            </div>
+            <span className="status-chip">Ops metrics</span>
+          </div>
+
+          <div className="summary-grid summary-grid--nested">
+            <article className="metric-card">
+              <span className="metric-label">Гостю видимо</span>
+              <strong className="metric-value">{formatMetricValue(summary?.ops.guestVisibleMixesCount ?? 0)}</strong>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Скрыто вручную</span>
+              <strong className="metric-value">{formatMetricValue(summary?.ops.hiddenMixesCount ?? 0)}</strong>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Активных рейлов</span>
+              <strong className="metric-value">{formatMetricValue(summary?.ops.activeRailsCount ?? 0)}</strong>
+            </article>
+          </div>
+
+          <section className="dashboard-subsection">
+            <h4>Миксы, которые режет наличие</h4>
+            <div className="breakdown-list">
+              {(summary?.ops.blockedMixes ?? []).map((mix) => (
+                <div className="breakdown-row breakdown-row--stacked" key={`blocked:${mix.mixId}`}>
+                  <div>
+                    <strong>{mix.name}</strong>
+                    <p className="meta-line">Нет в наличии: {mix.missingComponents.join(', ') || 'не указано'}</p>
+                    <p className="meta-line">Рейлы: {mix.railNames.join(', ') || 'не участвует'}</p>
+                  </div>
+                  <span className="status-chip">Выборов {formatMetricValue(mix.smokeCtaCount)}</span>
+                </div>
+              ))}
+              {!summary?.ops.blockedMixes.length ? <p className="meta-line">Пока нет миксов, заблокированных наличием.</p> : null}
+            </div>
+          </section>
+
+          <section className="dashboard-subsection">
+            <h4>Состояние рейлов</h4>
+            <div className="breakdown-list">
+              {(summary?.ops.railHealth ?? []).map((rail) => (
+                <div className="breakdown-row" key={`rail-health:${rail.railId}`}>
+                  <div>
+                    <strong>{rail.name}</strong>
+                    <p className="meta-line">
+                      Видимых миксов {formatMetricValue(rail.visibleMixCount)} из {formatMetricValue(rail.totalMixCount)}
+                    </p>
+                  </div>
+                  <span className={rail.hiddenMixCount ? 'stock-pill stock-pill--out' : 'stock-pill stock-pill--in'}>
+                    {rail.hiddenMixCount ? `Скрыто ${formatMetricValue(rail.hiddenMixCount)}` : 'Без блокировок'}
+                  </span>
+                </div>
+              ))}
+              {!summary?.ops.railHealth.length ? <p className="meta-line">Пока нет данных по рейлам.</p> : null}
+            </div>
+          </section>
+        </article>
       </div>
     </section>
   );

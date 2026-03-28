@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildInventorySummary,
+  dashboardWindowOptions,
   formatDateTimeLocalInput,
   normalizeDashboardSummary,
   normalizeDailyAccessCodeRecord,
@@ -107,34 +108,177 @@ test('normalizeRailRecord accepts mix refs and active alias', () => {
 
 test('normalizeDashboardSummary supports nested inventory payload', () => {
   const summary = normalizeDashboardSummary({
+    window: {
+      key: '7d',
+      label: '7 дней',
+      days: 7,
+      startsAt: '2026-03-22T00:00:00.000Z',
+      endsAt: '2026-03-28T23:59:59.000Z',
+    },
     inventory: {
       total: 6,
       inStockCount: 5,
       outOfStockCount: 1,
+      manufacturers: [
+        {
+          key: 'Nomad Reserve',
+          label: 'Nomad Reserve',
+          total: 4,
+          inStockCount: 3,
+          outOfStockCount: 1,
+        },
+      ],
     },
-    smokeCtaTotal: 7,
-    topMixes: [
-      {
-        mixId: 'mix-1',
-        mixName: 'Цитрусовый караван',
-        count: 3,
-      },
-    ],
+    product: {
+      smokeCtaTotal: 7,
+      ratingsTotal: 2,
+      avgGuestRating: 4,
+      topMixes: [
+        {
+          mixId: 'mix-1',
+          mixName: 'Цитрусовый караван',
+          count: 3,
+          avgRating: 4.8,
+          ratingsCount: 2,
+          popularity: 12,
+        },
+      ],
+      topRatedMixes: [
+        {
+          mixId: 'mix-2',
+          mixName: 'Ягодный рассвет',
+          avgRating: 5,
+          ratingsCount: 1,
+          smokeCtaCount: 1,
+          popularity: 10,
+        },
+      ],
+      ratingDistribution: [
+        { value: 5, count: 1 },
+        { value: 4, count: 1 },
+      ],
+      activity: [
+        { date: '2026-03-28T00:00:00.000Z', smokeCtaCount: 7, ratingsCount: 2 },
+      ],
+    },
+    ops: {
+      guestVisibleMixesCount: 8,
+      hiddenMixesCount: 1,
+      blockedByInventoryCount: 1,
+      activeRailsCount: 4,
+      emptyActiveRailsCount: 0,
+      blockedMixes: [
+        {
+          mixId: 'mix-3',
+          mixName: 'Персиковый мираж',
+          missingComponents: ['Peach Silk'],
+          railNames: ['Фруктовые открытия'],
+          smokeCtaCount: 2,
+        },
+      ],
+      railHealth: [
+        {
+          railId: 'rail-1',
+          name: 'Больше всего выбирают',
+          type: 'statistical',
+          active: true,
+          totalMixCount: 3,
+          visibleMixCount: 3,
+          hiddenMixCount: 0,
+        },
+      ],
+    },
   });
 
   assert.deepEqual(summary, {
+    window: {
+      key: '7d',
+      label: '7 дней',
+      days: 7,
+      startsAt: '2026-03-22T00:00:00.000Z',
+      endsAt: '2026-03-28T23:59:59.000Z',
+    },
     totalTobaccos: 6,
     inStockCount: 5,
     outOfStockCount: 1,
     smokeCtaTotal: 7,
+    ratingsTotal: 2,
+    avgGuestRating: 4,
     topMixes: [
       {
         mixId: 'mix-1',
         name: 'Цитрусовый караван',
         smokeCtaCount: 3,
+        avgRating: 4.8,
+        ratingsCount: 2,
+        popularity: 12,
       },
     ],
+    topRatedMixes: [
+      {
+        mixId: 'mix-2',
+        name: 'Ягодный рассвет',
+        smokeCtaCount: 1,
+        avgRating: 5,
+        ratingsCount: 1,
+        popularity: 10,
+      },
+    ],
+    ratingDistribution: [
+      { value: 5, count: 1 },
+      { value: 4, count: 1 },
+    ],
+    activity: [
+      { date: '2026-03-28T00:00:00.000Z', smokeCtaCount: 7, ratingsCount: 2 },
+    ],
+    inventory: {
+      totalTobaccos: 6,
+      inStockCount: 5,
+      outOfStockCount: 1,
+      manufacturers: [
+        {
+          key: 'Nomad Reserve',
+          label: 'Nomad Reserve',
+          total: 4,
+          inStockCount: 3,
+          outOfStockCount: 1,
+        },
+      ],
+      flavorProfiles: [],
+      topFlavors: [],
+    },
+    ops: {
+      guestVisibleMixesCount: 8,
+      hiddenMixesCount: 1,
+      blockedByInventoryCount: 1,
+      activeRailsCount: 4,
+      emptyActiveRailsCount: 0,
+      blockedMixes: [
+        {
+          mixId: 'mix-3',
+          name: 'Персиковый мираж',
+          missingComponents: ['Peach Silk'],
+          railNames: ['Фруктовые открытия'],
+          smokeCtaCount: 2,
+        },
+      ],
+      railHealth: [
+        {
+          railId: 'rail-1',
+          name: 'Больше всего выбирают',
+          type: 'statistical',
+          active: true,
+          totalMixCount: 3,
+          visibleMixCount: 3,
+          hiddenMixCount: 0,
+        },
+      ],
+    },
   });
+});
+
+test('dashboardWindowOptions keep supported dashboard windows in order', () => {
+  assert.deepEqual(dashboardWindowOptions.map((item) => item.key), ['7d', '14d', '30d']);
 });
 
 test('sortMixes keeps available items and popularity first', () => {

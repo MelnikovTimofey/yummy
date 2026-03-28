@@ -1,3 +1,64 @@
+Обновление от 28 марта 2026 (nomad master: implement slice 1 dashboard analytics contract):
+- Проблема:
+  - после фиксации `master-production-redesign` у `Nomad Master` всё ещё оставался примитивный dashboard:
+    - только базовые KPI по inventory и `Покурить`;
+    - без окна аналитики;
+    - без breakdown по производителям и вкусовым атрибутам;
+    - без разведения `product metrics` и `ops metrics`;
+    - без сигналов по blocked mixes и health rail-контуров.
+- Изменение:
+  - `apps/nomad-backend/src/state.ts`, `apps/nomad-backend/src/app.ts`, `apps/nomad-backend/src/types.ts`:
+    - `GET /staff/dashboard/summary` расширен до нового nested payload;
+    - добавлено окно `7d | 14d | 30d`;
+    - добавлены inventory breakdowns, product analytics, rating distribution, daily activity и ops signals;
+    - тренд по дням приведён к timezone-stable local day keys.
+  - `apps/nomad-backend/src/inventory.test.ts`:
+    - обновлены contract tests для нового dashboard summary.
+  - `apps/nomad-master-web/src/contracts.ts`, `apps/nomad-master-web/src/contracts.test.ts`:
+    - расширен parser `DashboardSummary`;
+    - добавлены поддержка dashboard windows и nested dashboard sections.
+  - `apps/nomad-master-web/src/App.tsx`, `apps/nomad-master-web/src/styles.css`:
+    - dashboard переведён в production-oriented layout;
+    - добавлены window toggles, breakdown cards, product/ops blocks и daily trend;
+    - summary автоматически перезагружается после inventory/mix/rail мутаций.
+  - `apps/nomad-master-web/README.md`:
+    - добавлено описание реализованного `Slice 1`.
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+  - `cd apps/nomad-master-web && npm test`
+  - `cd apps/nomad-master-web && npm run build`
+- Эффект:
+  - `Nomad Master` получил первый production-ready analytics slice;
+  - следующий безопасный шаг теперь `Slice 2` по inventory table и bulk operations.
+
+Обновление от 28 марта 2026 (nomad master: fix production redesign contract before broad rewrite):
+- Проблема:
+  - `Nomad Master` уже покрывает базовые staff/admin сценарии, но остаётся сырым MVP:
+    - dashboard даёт только минимальную сводку;
+    - inventory, mixes и rails работают как card-first CRUD, а не как production-ready operational tools;
+    - access/Telegram flow не совпадает с целевым упрощённым admin-сценарием;
+    - frontend и backend уже монолитны настолько, что большой rewrite без contract-first этапа создаст конфликтующие write scopes.
+- Изменение:
+  - добавлен `docs/nomad/master-production-redesign.md`:
+    - зафиксированы текущие ограничения frontend/backend;
+    - описан целевой результат по `dashboard`, `inventory`, `mixes`, `rails`, `access`;
+    - redesign разложен на `Slice 0-6` с явными human-review checkpoints;
+    - определены agent roles, non-overlapping write scopes и verification path.
+  - `NOMAD_IMPLEMENTATION_PLAN.md`:
+    - добавлена `Master production redesign note` с правилом не запускать параллельную реализацию без slice-level contracts.
+  - `NOMAD_ROADMAP.md`:
+    - уточнены приоритеты по `Master Operations` и `Analytics And Rails`;
+    - добавлена ссылка на новый execution contract.
+  - `apps/nomad-master-web/README.md`:
+    - текущая стадия переопределена как рабочий MVP, а не завершённый production-hardening.
+- Проверки:
+  - review markdown-структуры и согласованности с `AGENTS.md`, `AI_DEVELOPMENT_PROCESS.md`, `WORKFLOW_NOMAD.md`
+  - `git diff --check`
+- Эффект:
+  - дальнейшее масштабное преобразование `Nomad Master` теперь можно вести по поэтапному contract-first сценарию;
+  - запуск нескольких агентов больше не требует придумывать scope и stop conditions на лету.
+
 Обновление от 28 марта 2026 (skills: add guided Nomad task intake skill):
 - Проблема:
   - в репозитории уже существовали `CONTRIBUTING_NOMAD.md` и `docs/templates/ai-task-brief.md`, но не было отдельного repo-specific skill для guided task intake;

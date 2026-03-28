@@ -87,4 +87,19 @@ npm run dev
 
 ## Стадия
 
-Текущая стадия: Phase 4 staff operations + content managers + access management + Telegram provisioning + Telegram automation status + audit trail + Master Polish с более выразительной operational console подачей.
+Текущая стадия: рабочий MVP для staff/admin операций.
+
+Для перехода из MVP в production-ready backoffice зафиксирован отдельный redesign contract:
+
+1. `docs/nomad/master-production-redesign.md`
+
+## Slice 1. Dashboard analytics
+
+Реализован первый production-hardening slice для дашборда:
+
+1. окно аналитики `7 / 14 / 30` дней;
+2. разделение `product metrics` и `ops metrics`;
+3. breakdown по производителям, flavor profiles и вкусам;
+4. топ по выборам, топ по guest-оценкам и распределение оценок;
+5. daily activity trend;
+6. операционные сигналы по blocked mixes и состоянию rails.
