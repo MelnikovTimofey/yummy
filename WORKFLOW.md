@@ -51,11 +51,12 @@ The main goal is predictable delivery in the active path: `YummyWeb`, `backend`,
 ## Required order of work
 
 1. Read the root `AGENTS.md` first.
-2. Work only within the current issue scope.
-3. If the task touches product logic, UI copy, or catalog structure, follow the invariants from `AGENTS.md`.
-4. If the task is ambiguous or requires an architectural choice, do not decide silently.
+2. Read `AI_DEVELOPMENT_PROCESS.md` before using multi-agent or changing repo-level process or skill rules.
+3. Work only within the current issue scope.
+4. If the task touches product logic, UI copy, or catalog structure, follow the invariants from `AGENTS.md`.
+5. If the task is ambiguous or requires an architectural choice, do not decide silently.
    Stop, explain the question or options, and hand off to `Human Review`.
-5. Keep changes small. Prefer extraction, deduplication, and local simplification over large rewrites.
+6. Keep changes small. Prefer extraction, deduplication, and local simplification over large rewrites.
 
 ## Active scope
 
@@ -192,6 +193,7 @@ If the change affects repo rules, developer workflow, startup, handoff, or opera
 - update `NOTES.md`
 - update `HANDOFF.md`
 - update `AGENTS.md` only if agent rules truly changed
+- update `AI_DEVELOPMENT_PROCESS.md` if the AI operating model or skill lifecycle changed
 
 If the task does not change repo rules or operations, do not edit those files without reason.
 

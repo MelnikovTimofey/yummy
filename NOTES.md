@@ -1,3 +1,23 @@
+Обновление от 28 марта 2026 (docs: formalize AI development operating model and skill lifecycle):
+- Проблема:
+  - в репозитории уже были зафиксированы отдельные правила для `Nomad`, `Symphony` и vertical slices, но не было единого source of truth по модели `leader + specialists`;
+  - отсутствовал формальный процесс, который определяет роли агентов, contract-first декомпозицию, merge responsibility и lifecycle repo-specific skills;
+  - из-за этого multi-agent и skill-инициативы рисковали развиваться ситуативно и по-разному трактоваться в legacy и Nomad контурах.
+- Изменение:
+  - добавлен `AI_DEVELOPMENT_PROCESS.md`:
+    - зафиксированы operating model, роли агентов, контракт запуска подзадачи, delivery loop, merge policy и система скиллов;
+    - определён минимальный набор рекомендуемых repo-specific skills для полного цикла разработки.
+  - `AGENTS.md`:
+    - добавлены обязательные правила для владельца-интегратора, безопасного multi-agent запуска и lifecycle repo-specific skills.
+  - `WORKFLOW.md`, `WORKFLOW_NOMAD.md`:
+    - оба workflow теперь явно ссылаются на `AI_DEVELOPMENT_PROCESS.md`, если меняется operating model или skill lifecycle.
+- Проверки:
+  - review markdown-структуры и согласованности правил между `AI_DEVELOPMENT_PROCESS.md`, `AGENTS.md`, `WORKFLOW.md`, `WORKFLOW_NOMAD.md`
+- Эффект:
+  - в репозитории появился единый операционный документ по AI-разработке;
+  - multi-agent работа стала завязана на явного интегратора и write scopes;
+  - развитие скиллов переведено из ad-hoc режима в управляемый lifecycle.
+
 Обновление от 23 марта 2026 (nomad visual cleanup for brand, cta and checkbox):
 - Проблема:
   - после `Nomad Lounge` visual pass brand-icon `n` в шапке выглядел лишним;

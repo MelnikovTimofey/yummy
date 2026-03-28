@@ -49,12 +49,13 @@ Issue description:
 ## Required order of work
 
 1. Read the root `AGENTS.md` first.
-2. Read `NOMAD_PARALLEL_EXECUTION_PLAN.md` before making architecture or repo-structure decisions.
-3. Read `NOMAD_ROADMAP.md` before choosing issue priority or batching work.
-4. Work only inside the current Nomad issue scope.
-5. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
+2. Read `AI_DEVELOPMENT_PROCESS.md` before using multi-agent, Symphony batching, or changing skill/process rules.
+3. Read `NOMAD_PARALLEL_EXECUTION_PLAN.md` before making architecture or repo-structure decisions.
+4. Read `NOMAD_ROADMAP.md` before choosing issue priority or batching work.
+5. Work only inside the current Nomad issue scope.
+6. If the task is ambiguous or requires a repo-level or architecture decision, do not decide silently.
    Stop, explain the question or options, and hand off to `Human Review`.
-6. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
+7. Keep changes small and vertical. Prefer scaffold completion and bounded slices over broad rewrites.
 
 ## Roadmap-driven execution
 
@@ -169,6 +170,7 @@ If the change affects Nomad repo rules, workflow, startup, handoff, or operating
 - update `NOTES.md`
 - update `HANDOFF.md`
 - update `AGENTS.md` only if agent rules truly changed
+- update `AI_DEVELOPMENT_PROCESS.md` if the AI operating model or skill lifecycle changed
 
 ## Git and completion
 

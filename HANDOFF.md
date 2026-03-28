@@ -1,5 +1,29 @@
 # HANDOFF — Yummy
 
+## 1.59) Formalize AI development operating model and skill lifecycle (28 марта 2026)
+
+- Запрос:
+  - сформировать внутри проекта понятный процесс AI-разработки с фокусом на мультиагентную модель и системное использование скиллов.
+
+- Реализация:
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - добавлен единый operating model для репозитория;
+    - описаны роли `AI Lead`, `System Analyst`, `Architect`, `Backend`, `Frontend`, `QA`, `DevOps`, `Design`, `Explorer`;
+    - зафиксированы contract-first правила декомпозиции, запуск worker-агентов, merge policy и lifecycle repo-specific skills;
+    - определён минимальный рекомендуемый набор repo-скиллов для полного цикла разработки.
+  - `AGENTS.md`:
+    - добавлены обязательные repo-правила про владельца-интегратора, safe multi-agent и применение repo-specific skills.
+  - `WORKFLOW.md`, `WORKFLOW_NOMAD.md`:
+    - workflow теперь ссылаются на `AI_DEVELOPMENT_PROCESS.md` при изменении process/skill правил.
+
+- Проверки:
+  - ручная проверка согласованности правил между `AI_DEVELOPMENT_PROCESS.md`, `AGENTS.md`, `WORKFLOW.md`, `WORKFLOW_NOMAD.md`
+
+- Эффект:
+  - у репозитория появился единый и воспроизводимый AI delivery process;
+  - multi-agent работа теперь формализована через лид-агента и непересекающиеся write scopes;
+  - развитие скиллов стало частью операционной модели, а не разовыми договорённостями.
+
 ## 1.58) Clean up Nomad header icon, primary CTA and checkbox alignment (23 марта 2026)
 
 - Запрос:
