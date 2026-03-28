@@ -1,5 +1,33 @@
 # HANDOFF — Yummy
 
+## 1.61) Add second repo-specific skill package for Nomad product, frontend, and release ops (28 марта 2026)
+
+- Запрос:
+  - сформировать второй пакет repo-specific skills поверх уже созданного bootstrap layer.
+
+- Реализация:
+  - добавлены skills в `.codex/skills/`:
+    - `nomad-product-guardrails`
+    - `nomad-aroma-web-delivery`
+    - `nomad-master-web-delivery`
+    - `nomad-release-ops`
+  - для каждого скилла созданы:
+    - `SKILL.md` с trigger conditions, workflow, output contract и stop conditions;
+    - `agents/openai.yaml`;
+    - `references/*.md` с product invariants, frontend checklist или release checklist.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - bootstrap packet skills расширен до почти полного набора из recommended list;
+    - в качестве следующего решения оставлен отдельный вопрос про `nomad-design-to-code`.
+
+- Проверки:
+  - `rg -n "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills`
+  - `git diff --check`
+  - ручной review второго skill package
+
+- Эффект:
+  - Nomad получил локальные skills для product guardrails, двух frontend-контуров и release ops;
+  - repo-specific skill layer теперь покрывает почти весь целевой delivery cycle.
+
 ## 1.60) Create repo-specific skill skeletons for AI delivery (28 марта 2026)
 
 - Запрос:

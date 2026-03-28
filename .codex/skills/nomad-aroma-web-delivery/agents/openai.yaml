@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad Aroma Web Delivery"
+  short_description: "Guest web flow delivery for Aroma Atelier"
+  default_prompt: "Use $nomad-aroma-web-delivery to implement or review a bounded Aroma Atelier frontend slice with the correct UI invariants and verification path."

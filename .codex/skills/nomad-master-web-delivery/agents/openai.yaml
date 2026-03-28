@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad Master Web Delivery"
+  short_description: "Staff web delivery for Nomad Master UI"
+  default_prompt: "Use $nomad-master-web-delivery to implement or review a bounded Nomad Master frontend slice with the correct operational UX and checks."

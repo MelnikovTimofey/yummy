@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nomad Product Guardrails"
+  short_description: "Product constraints and semantics for Nomad"
+  default_prompt: "Use $nomad-product-guardrails to validate a Nomad change against the current PRD, guest-flow rules, and product semantics before implementation."

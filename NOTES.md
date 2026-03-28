@@ -1,3 +1,28 @@
+Обновление от 28 марта 2026 (skills: add second repo-specific skill package for Nomad product, frontend, and release ops):
+- Проблема:
+  - после первого skill bootstrap в репозитории всё ещё не хватало локальных workflows для продуктовых инвариантов Nomad, двух frontend-контуров и release/runtime операций;
+  - из-за этого `Арома Ателье`, `Мастер` и ops-задачи всё ещё оставались слишком зависимыми от общего контекста вместо явных repo-specific skills.
+- Изменение:
+  - добавлен второй пакет skills в `.codex/skills/`:
+    - `nomad-product-guardrails`
+    - `nomad-aroma-web-delivery`
+    - `nomad-master-web-delivery`
+    - `nomad-release-ops`
+  - для каждого скилла созданы:
+    - `SKILL.md` с trigger conditions, workflow, required outputs и stop conditions;
+    - `agents/openai.yaml`;
+    - reference-файл с invariants, frontend checklist или release checklist.
+  - `AI_DEVELOPMENT_PROCESS.md`:
+    - bootstrap skill package расширен до product, frontend и ops-слоя;
+    - следующим осознанным шагом оставлен вопрос о необходимости отдельного `nomad-design-to-code`.
+- Проверки:
+  - `rg -n "TODO|Structuring This Skill|Resources \\(optional\\)" .codex/skills`
+  - `git diff --check`
+  - ручной review структуры и контента второго skill package
+- Эффект:
+  - Nomad-контур получил локальные repo-specific skills почти для всего полного delivery loop;
+  - незакрытым остаётся только вопрос, нужен ли отдельный design-to-code wrapper поверх platform `figma`.
+
 Обновление от 28 марта 2026 (skills: add repo-specific skill skeletons for AI delivery):
 - Проблема:
   - operating model уже определял рекомендуемый набор repo-specific skills, но в репозитории ещё не было самих skill skeletons;

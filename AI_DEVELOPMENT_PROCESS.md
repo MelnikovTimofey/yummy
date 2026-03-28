@@ -443,14 +443,19 @@ Repo-specific skills этого проекта хранятся в `.codex/skill
 Текущее состояние:
 
 1. operating model зафиксирован;
-2. стартовый пакет repo-скиллов уже создан в `.codex/skills/`:
+2. bootstrap-пакет repo-скиллов уже создан в `.codex/skills/`:
    - `yummy-repo-guard`
+   - `nomad-product-guardrails`
    - `nomad-backend-delivery`
+   - `nomad-aroma-web-delivery`
+   - `nomad-master-web-delivery`
    - `nomad-qa-and-smoke`
+   - `nomad-release-ops`
    - `repo-docs-and-handoff`
 
 Рекомендуемый следующий шаг:
 
 1. forward-test каждый скилл минимум на двух реальных задачах;
 2. после этого добавлять новые repo-скиллы только под реально повторяющиеся workflows;
-3. расширять текущие skeleton’ы reference-файлами и scripts только после реального повторного использования.
+3. решить, нужен ли отдельный repo-specific `nomad-design-to-code`, или пока достаточно platform skill `figma`;
+4. расширять текущие skeleton’ы reference-файлами и scripts только после реального повторного использования.
