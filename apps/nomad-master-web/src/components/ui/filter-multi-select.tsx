@@ -6,26 +6,30 @@ type FilterMultiSelectProps = {
   title: string;
   options: string[];
   selected: string[];
+  formatOptionLabel?: (value: string) => string;
   onToggleOption: (value: string) => void;
   onClearGroup: () => void;
 };
 
-const buildSummary = (selected: string[]) => {
+const buildSummary = (selected: string[], formatOptionLabel: (value: string) => string) => {
+  const labels = selected.map(formatOptionLabel);
+
   if (selected.length === 0) {
     return 'Все варианты';
   }
 
   if (selected.length <= 2) {
-    return selected.join(', ');
+    return labels.join(', ');
   }
 
-  return `${selected[0]}, ${selected[1]} +${selected.length - 2}`;
+  return `${labels[0]}, ${labels[1]} +${selected.length - 2}`;
 };
 
 export const FilterMultiSelect = ({
   title,
   options,
   selected,
+  formatOptionLabel = (value) => value,
   onToggleOption,
   onClearGroup,
 }: FilterMultiSelectProps) => {
@@ -37,13 +41,17 @@ export const FilterMultiSelect = ({
   const normalizedQuery = query.trim().toLocaleLowerCase('ru-RU');
   const selectedSet = new Set(selected);
   const matchingOptions = normalizedQuery
-    ? options.filter((option) => option.toLocaleLowerCase('ru-RU').includes(normalizedQuery))
+    ? options.filter((option) => {
+        const rawLabel = option.toLocaleLowerCase('ru-RU');
+        const formattedLabel = formatOptionLabel(option).toLocaleLowerCase('ru-RU');
+        return rawLabel.includes(normalizedQuery) || formattedLabel.includes(normalizedQuery);
+      })
     : options;
   const visibleOptions = [
     ...matchingOptions.filter((option) => selectedSet.has(option)),
     ...matchingOptions.filter((option) => !selectedSet.has(option)),
   ];
-  const summary = buildSummary(selected);
+  const summary = buildSummary(selected, formatOptionLabel);
 
   useEffect(() => {
     if (!open) {
@@ -139,7 +147,7 @@ export const FilterMultiSelect = ({
                       type="checkbox"
                       onChange={() => onToggleOption(option)}
                     />
-                    <span className="ops-filter-select__option-label">{option}</span>
+                    <span className="ops-filter-select__option-label">{formatOptionLabel(option)}</span>
                     {active ? <Check aria-hidden="true" className="ops-filter-select__check" /> : null}
                   </label>
                 );

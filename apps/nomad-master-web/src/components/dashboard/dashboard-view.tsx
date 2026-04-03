@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { dashboardWindowOptions, DashboardBreakdownItem, DashboardSummary, DashboardWindowKey, formatMetricValue } from '@/contracts';
+import { dashboardWindowOptions, DashboardBreakdownItem, DashboardSummary, DashboardWindowKey, formatFlavorProfileLabel, formatMetricValue } from '@/contracts';
 
 type DashboardViewProps = {
   summary: DashboardSummary | null;
@@ -102,12 +102,14 @@ const BreakdownPanel = ({
   items,
   emptyText,
   stockLine,
+  formatItemLabel = (label: string) => label,
 }: {
   title: string;
   kicker: string;
   items: DashboardBreakdownItem[];
   emptyText: string;
   stockLine: (item: DashboardBreakdownItem) => string;
+  formatItemLabel?: (label: string) => string;
 }) => {
   const max = items.reduce((acc, item) => Math.max(acc, item.total), 0);
 
@@ -130,7 +132,7 @@ const BreakdownPanel = ({
             >
               <div className="mb-2.5 flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="text-sm font-semibold text-[var(--nomad-ink)]">{item.label}</div>
+                  <div className="text-sm font-semibold text-[var(--nomad-ink)]">{formatItemLabel(item.label)}</div>
                   <div className="text-xs leading-5 text-[rgba(241,229,215,0.56)]">{stockLine(item)}</div>
                 </div>
                 <Badge variant="secondary" className="rounded-full bg-[rgba(226,172,123,0.08)] px-2.5 py-0.5 text-[rgba(241,229,215,0.84)]">
@@ -319,6 +321,7 @@ export function DashboardView({
           items={summary?.inventory.flavorProfiles ?? []}
           emptyText="Пока нет разреза по профилям."
           stockLine={(item) => `Нет наличия ${formatMetricValue(item.outOfStockCount)} позиции`}
+          formatItemLabel={formatFlavorProfileLabel}
         />
         <BreakdownPanel
           title="Топ вкусов"

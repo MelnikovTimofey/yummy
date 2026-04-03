@@ -1373,6 +1373,35 @@ export const formatRailType = (value: RailType) => {
   return railTypeOptions.find((item) => item.value === value)?.label ?? 'Предзаготовленный';
 };
 
+const flavorProfileLabels: Record<string, string> = {
+  berry: 'Ягодные',
+  citrus: 'Цитрусовые',
+  dessert: 'Десертные',
+  floral_herbal: 'Цветочно-травяные',
+  fresh: 'Свежие',
+  fruity: 'Фруктовые',
+  spicy: 'Пряные',
+  tropical: 'Тропические',
+  creamy: 'Сливочные',
+  sweet: 'Сладкие',
+  tea: 'Чайные',
+  mint: 'Мятные',
+  tart: 'Терпкие',
+  woody: 'Древесные',
+  nutty: 'Ореховые',
+  caramel: 'Карамельные',
+  vanilla: 'Ванильные',
+  floral: 'Цветочные',
+  herbal: 'Травяные',
+  candy: 'Конфетные',
+  beverage: 'Напитки',
+};
+
+export const formatFlavorProfileLabel = (value: string) => {
+  const normalized = value.trim().toLocaleLowerCase('en-US');
+  return flavorProfileLabels[normalized] ?? value;
+};
+
 export const formatTelegramRecipientScope = (value: TelegramRecipientScope) => {
   return telegramRecipientScopeOptions.find((item) => item.value === value)?.label ?? 'Разрешённые чаты';
 };

@@ -17,6 +17,7 @@ import type {
   MixStatusFilter,
 } from '@/contracts';
 import {
+  formatFlavorProfileLabel,
   formatMetricValue,
   formatRailType,
   mixRailFilterOptions,
@@ -105,6 +106,14 @@ const formatMixUpdatedAt = (value?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+};
+
+const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
+  if (key === 'flavorProfiles') {
+    return formatFlavorProfileLabel(value);
+  }
+
+  return value;
 };
 
 const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => {
@@ -503,6 +512,7 @@ export const MixCatalogView = ({
               title={group.title}
               options={options}
               selected={filters[group.key]}
+              formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
               onToggleOption={(option) => onToggleFilterValue(group.key, option)}
               onClearGroup={() => onClearFilterGroup(group.key)}
             />
@@ -552,7 +562,7 @@ export const MixCatalogView = ({
                   <div className="mixes-cell mixes-cell__chips">
                     {mix.flavorProfiles.map((profile) => (
                       <Badge key={`${mix.id}:profile:${profile}`} variant="secondary">
-                        {profile}
+                        {formatFlavorProfileLabel(profile)}
                       </Badge>
                     ))}
                     {mix.flavors.map((flavor) => (

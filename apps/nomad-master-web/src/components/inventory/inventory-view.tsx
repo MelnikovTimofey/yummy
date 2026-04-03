@@ -16,6 +16,7 @@ import type {
   InventoryTobacco,
 } from '@/contracts';
 import {
+  formatFlavorProfileLabel,
   formatInventoryBatchAction,
   formatMetricValue,
   inventorySortDirectionOptions,
@@ -107,6 +108,14 @@ const formatMixCardStatus = (mix: NonNullable<InventoryTobacco['dependentMixes']
   }
 
   return 'Виден гостю';
+};
+
+const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
+  if (key === 'flavorProfiles') {
+    return formatFlavorProfileLabel(value);
+  }
+
+  return value;
 };
 
 export const InventoryView = ({
@@ -295,7 +304,7 @@ export const InventoryView = ({
                 {(activeItem.flavorProfiles ?? []).length ? (
                   (activeItem.flavorProfiles ?? []).map((profile) => (
                     <Badge key={`${activeItem.id}:detail:profile:${profile}`} variant="outline">
-                      {profile}
+                      {formatFlavorProfileLabel(profile)}
                     </Badge>
                   ))
                 ) : (
@@ -462,6 +471,7 @@ export const InventoryView = ({
               title={group.title}
               options={options}
               selected={filters[group.key]}
+              formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
               onToggleOption={(option) => onToggleFilterValue(group.key, option)}
               onClearGroup={() => onClearFilterGroup(group.key)}
             />
@@ -574,7 +584,7 @@ export const InventoryView = ({
                         <div className="inventory-cell__chips">
                           {(item.flavorProfiles ?? []).map((profile) => (
                             <Badge key={`${item.id}:profile:${profile}`} variant="outline">
-                              {profile}
+                              {formatFlavorProfileLabel(profile)}
                             </Badge>
                           ))}
                         </div>
