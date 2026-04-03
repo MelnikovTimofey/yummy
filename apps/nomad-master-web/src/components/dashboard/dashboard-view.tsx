@@ -112,13 +112,13 @@ const BreakdownPanel = ({
   const max = items.reduce((acc, item) => Math.max(acc, item.total), 0);
 
   return (
-    <Card className="rounded-[1.6rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.92),rgba(252,245,239,0.84))] shadow-[0_14px_36px_rgba(62,27,24,0.06)] backdrop-blur-xl">
+    <Card className="rounded-[1.6rem] border-[rgba(226,172,123,0.12)] bg-[radial-gradient(circle_at_top_right,rgba(226,172,123,0.08),transparent_26%),linear-gradient(180deg,rgba(23,20,23,0.96),rgba(15,14,17,0.92))] shadow-[0_18px_42px_rgba(0,0,0,0.3)] backdrop-blur-xl">
       <CardHeader className="space-y-1.5">
-        <Badge variant="outline" className="w-fit rounded-full border-stone-800/10 bg-white/70 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] text-stone-600">
+        <Badge variant="outline" className="w-fit rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[rgba(226,172,123,0.78)]">
           {kicker}
         </Badge>
         <div className="space-y-1">
-          <CardTitle className="text-[1.75rem] font-semibold tracking-[-0.03em] text-stone-950">{title}</CardTitle>
+          <CardTitle className="text-[1.75rem] font-semibold tracking-[-0.03em] text-[var(--nomad-ink)]">{title}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -126,18 +126,18 @@ const BreakdownPanel = ({
           items.map((item) => (
             <div
               key={`${kicker}:${item.key}`}
-              className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/82 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+              className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
             >
               <div className="mb-2.5 flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="text-sm font-semibold text-stone-900">{item.label}</div>
-                  <div className="text-xs leading-5 text-stone-500">{stockLine(item)}</div>
+                  <div className="text-sm font-semibold text-[var(--nomad-ink)]">{item.label}</div>
+                  <div className="text-xs leading-5 text-[rgba(241,229,215,0.56)]">{stockLine(item)}</div>
                 </div>
-                <Badge variant="secondary" className="rounded-full bg-stone-900/6 px-2.5 py-0.5 text-stone-700">
+                <Badge variant="secondary" className="rounded-full bg-[rgba(226,172,123,0.08)] px-2.5 py-0.5 text-[rgba(241,229,215,0.84)]">
                   {formatMetricValue(item.total)}
                 </Badge>
               </div>
-              <div className="h-2 rounded-full bg-stone-950/8">
+              <div className="h-2 rounded-full bg-[rgba(255,255,255,0.06)]">
                 <div
                   className="h-full rounded-full bg-[linear-gradient(90deg,rgba(115,47,34,0.92),rgba(183,139,74,0.88))]"
                   style={{ width: `${percent(item.total, max)}%` }}
@@ -146,7 +146,7 @@ const BreakdownPanel = ({
             </div>
           ))
         ) : (
-          <div className="rounded-[1.2rem] border border-dashed border-stone-900/10 bg-white/70 p-4 text-sm leading-6 text-stone-500">
+          <div className="rounded-[1.2rem] border border-dashed border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-6 text-[rgba(241,229,215,0.56)]">
             {emptyText}
           </div>
         )}
@@ -156,9 +156,9 @@ const BreakdownPanel = ({
 };
 
 const signalToneClass: Record<'inventory' | 'product' | 'ops', string> = {
-  inventory: 'from-emerald-500/18 via-emerald-500/6 to-white',
-  product: 'from-amber-500/20 via-amber-500/7 to-white',
-  ops: 'from-rose-500/18 via-rose-500/6 to-white',
+  inventory: 'from-emerald-500/10 via-emerald-500/4 to-transparent',
+  product: 'from-amber-500/12 via-amber-500/4 to-transparent',
+  ops: 'from-rose-500/10 via-rose-500/4 to-transparent',
 };
 
 export function DashboardView({
@@ -282,21 +282,21 @@ export function DashboardView({
             <Card
               key={card.label}
               className={cn(
-                'rounded-[1.15rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.9),rgba(250,243,238,0.76))] shadow-[0_10px_24px_rgba(62,27,24,0.06)] backdrop-blur-xl',
+                'rounded-[1.15rem] border-[rgba(226,172,123,0.1)] bg-[linear-gradient(180deg,rgba(23,20,23,0.96),rgba(16,15,18,0.9))] shadow-[0_16px_34px_rgba(0,0,0,0.26)] backdrop-blur-xl',
                 signalToneClass[card.tone],
               )}
             >
               <CardContent className="flex items-start justify-between gap-3 py-1.5">
                 <div className="space-y-1.5">
-                  <Badge variant="outline" className="rounded-full border-stone-900/10 bg-white/72 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-stone-500">
+                  <Badge variant="outline" className="rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-[rgba(226,172,123,0.78)]">
                     {card.tone === 'inventory' ? 'Наличие' : card.tone === 'product' ? 'Спрос' : 'Операции'}
                   </Badge>
                   <div className="space-y-1">
-                    <div className="text-[1.55rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
-                    <div className="text-[13px] leading-4.5 text-stone-600">{card.label}</div>
+                    <div className="text-[1.55rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">{formatMetricValue(card.value)}</div>
+                    <div className="text-[13px] leading-4.5 text-[rgba(241,229,215,0.58)]">{card.label}</div>
                   </div>
                 </div>
-                <div className="flex size-8 items-center justify-center rounded-[0.85rem] border border-stone-900/8 bg-white/70 text-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                <div className="flex size-8 items-center justify-center rounded-[0.85rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] text-[rgba(241,229,215,0.72)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <Icon className="size-4" />
                 </div>
               </CardContent>
@@ -330,125 +330,125 @@ export function DashboardView({
       </div>
 
       <div className="grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card className="rounded-[1.4rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.92),rgba(249,241,236,0.82))] shadow-[0_14px_34px_rgba(62,27,24,0.06)] backdrop-blur-xl">
+        <Card className="rounded-[1.4rem] border-[rgba(226,172,123,0.12)] bg-[radial-gradient(circle_at_top_right,rgba(226,172,123,0.08),transparent_28%),linear-gradient(180deg,rgba(23,20,23,0.96),rgba(15,14,17,0.92))] shadow-[0_18px_42px_rgba(0,0,0,0.3)] backdrop-blur-xl">
           <CardHeader className="space-y-1.5 p-5">
-            <Badge variant="outline" className="w-fit rounded-full border-amber-900/10 bg-white/72 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-stone-500">
+            <Badge variant="outline" className="w-fit rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.78)]">
               Спрос гостей
             </Badge>
             <div className="space-y-1">
-              <CardTitle className="text-[1.5rem] font-semibold tracking-[-0.04em] text-stone-950">Выборы и оценки гостей</CardTitle>
-              <CardDescription className="text-[13px] leading-5 text-stone-600">Выборы, оценки и дневной ритм.</CardDescription>
+              <CardTitle className="text-[1.5rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">Выборы и оценки гостей</CardTitle>
+              <CardDescription className="text-[13px] leading-5 text-[rgba(241,229,215,0.58)]">Выборы, оценки и дневной ритм.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-2.5 md:grid-cols-3">
-              <div className="rounded-[1.1rem] border border-amber-900/8 bg-white/82 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Выборы</div>
-                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.smokeCtaTotal ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.74)]">Выборы</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">{formatMetricValue(summary?.smokeCtaTotal ?? 0)}</div>
               </div>
-              <div className="rounded-[1.1rem] border border-amber-900/8 bg-white/82 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Оценки</div>
-                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ratingsTotal ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.74)]">Оценки</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">{formatMetricValue(summary?.ratingsTotal ?? 0)}</div>
               </div>
-              <div className="rounded-[1.1rem] border border-amber-900/8 bg-white/82 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Средняя оценка</div>
-                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.74)]">Средняя оценка</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">
                   {summary?.avgGuestRating ? summary.avgGuestRating.toFixed(1) : '0.0'}
                 </div>
               </div>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-2">
-              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+              <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[13px] font-semibold text-stone-900">Топ по выбору</div>
-                    <div className="text-[11px] leading-4.5 text-stone-500">Где больше всего кликов на «Покурить».</div>
+                    <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Топ по выбору</div>
+                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Где больше всего кликов на «Покурить».</div>
                   </div>
-                  <ChartColumnIncreasing className="size-4 text-stone-500" />
+                  <ChartColumnIncreasing className="size-4 text-[rgba(241,229,215,0.48)]" />
                 </div>
                 <div className="space-y-2">
                   {(summary?.topMixes ?? []).map((mix) => (
-                    <div key={`top:${mix.mixId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
+                    <div key={`top:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <div className="text-[13px] font-semibold text-stone-900">{mix.name}</div>
-                          <div className="text-[11px] leading-4.5 text-stone-500">
+                          <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
+                          <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
                             Рейтинг {mix.avgRating.toFixed(1)} · оценок {formatMetricValue(mix.ratingsCount)}
                           </div>
                         </div>
-                        <Badge className="rounded-full bg-amber-500/14 px-2.5 py-0.5 text-[11px] text-amber-900">{formatMetricValue(mix.smokeCtaCount)}</Badge>
+                        <Badge className="rounded-full bg-amber-500/16 px-2.5 py-0.5 text-[11px] text-amber-100">{formatMetricValue(mix.smokeCtaCount)}</Badge>
                       </div>
                     </div>
                   ))}
-                  {!summary?.topMixes.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет данных по выборам.</div> : null}
+                  {!summary?.topMixes.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет данных по выборам.</div> : null}
                 </div>
               </div>
 
-              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+              <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[13px] font-semibold text-stone-900">Топ по оценкам</div>
-                    <div className="text-[11px] leading-4.5 text-stone-500">Какие миксы получают лучший отклик гостей.</div>
+                    <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Топ по оценкам</div>
+                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Какие миксы получают лучший отклик гостей.</div>
                   </div>
-                  <Star className="size-4 text-stone-500" />
+                  <Star className="size-4 text-[rgba(241,229,215,0.48)]" />
                 </div>
                 <div className="space-y-2">
                   {(summary?.topRatedMixes ?? []).map((mix) => (
-                    <div key={`rated:${mix.mixId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
+                    <div key={`rated:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <div className="text-[13px] font-semibold text-stone-900">{mix.name}</div>
-                          <div className="text-[11px] leading-4.5 text-stone-500">
+                          <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
+                          <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
                             Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}
                           </div>
                         </div>
-                        <Badge className="rounded-full bg-emerald-500/14 px-2.5 py-0.5 text-[11px] text-emerald-900">{mix.avgRating.toFixed(1)}</Badge>
+                        <Badge className="rounded-full bg-emerald-500/16 px-2.5 py-0.5 text-[11px] text-emerald-100">{mix.avgRating.toFixed(1)}</Badge>
                       </div>
                     </div>
                   ))}
-                  {!summary?.topRatedMixes.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет оценок гостей за выбранное окно.</div> : null}
+                  {!summary?.topRatedMixes.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет оценок гостей за выбранное окно.</div> : null}
                 </div>
               </div>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-[0.7fr_1.3fr]">
-              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+              <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[13px] font-semibold text-stone-900">Распределение оценок</div>
-                    <div className="text-[11px] leading-4.5 text-stone-500">Показывает, как распределяется обратная связь гостей.</div>
+                    <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Распределение оценок</div>
+                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Показывает, как распределяется обратная связь гостей.</div>
                   </div>
-                  <Sparkles className="size-4 text-stone-500" />
+                  <Sparkles className="size-4 text-[rgba(241,229,215,0.48)]" />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {(summary?.ratingDistribution ?? []).map((item) => (
-                    <Badge key={`rating:${item.value}`} variant="outline" className="rounded-full border-stone-900/8 bg-white px-2.5 py-1 text-[11px] text-stone-700">
+                    <Badge key={`rating:${item.value}`} variant="outline" className="rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2.5 py-1 text-[11px] text-[rgba(241,229,215,0.82)]">
                       {item.value}★ · {formatMetricValue(item.count)}
                     </Badge>
                   ))}
-                  {!summary?.ratingDistribution.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет распределения оценок.</div> : null}
+                  {!summary?.ratingDistribution.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет распределения оценок.</div> : null}
                 </div>
               </div>
 
-              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+              <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[13px] font-semibold text-stone-900">Динамика по дням</div>
-                    <div className="text-[11px] leading-4.5 text-stone-500">Смотрим не только абсолют, но и ритм спроса.</div>
+                    <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Динамика по дням</div>
+                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Смотрим не только абсолют, но и ритм спроса.</div>
                   </div>
-                  <Flame className="size-4 text-stone-500" />
+                  <Flame className="size-4 text-[rgba(241,229,215,0.48)]" />
                 </div>
                 <div className="space-y-2">
                   {(summary?.activity ?? []).map((item) => (
-                    <div key={item.date} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
+                    <div key={item.date} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <div className="text-[13px] font-semibold text-stone-900">{formatDashboardDay(item.date)}</div>
-                        <div className="text-[11px] text-stone-500">
+                        <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{formatDashboardDay(item.date)}</div>
+                        <div className="text-[11px] text-[rgba(241,229,215,0.56)]">
                           Выборов {formatMetricValue(item.smokeCtaCount)} · оценок {formatMetricValue(item.ratingsCount)}
                         </div>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-stone-950/8">
+                      <div className="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                         <div
                           className="h-full rounded-full bg-[linear-gradient(90deg,rgba(109,49,36,0.94),rgba(218,164,83,0.9))]"
                           style={{ width: `${percent(item.smokeCtaCount + item.ratingsCount, activityMax)}%` }}
@@ -456,96 +456,96 @@ export function DashboardView({
                       </div>
                     </div>
                   ))}
-                  {!summary?.activity.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет динамики по дням.</div> : null}
+                  {!summary?.activity.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет динамики по дням.</div> : null}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[1.4rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.92),rgba(249,241,236,0.82))] shadow-[0_14px_34px_rgba(62,27,24,0.06)] backdrop-blur-xl">
+        <Card className="rounded-[1.4rem] border-[rgba(226,172,123,0.12)] bg-[radial-gradient(circle_at_top_right,rgba(226,172,123,0.08),transparent_28%),linear-gradient(180deg,rgba(23,20,23,0.96),rgba(15,14,17,0.92))] shadow-[0_18px_42px_rgba(0,0,0,0.3)] backdrop-blur-xl">
           <CardHeader className="space-y-1.5 p-5">
-            <Badge variant="outline" className="w-fit rounded-full border-amber-900/10 bg-white/72 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-stone-500">
+            <Badge variant="outline" className="w-fit rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.78)]">
               Операции
             </Badge>
             <div className="space-y-1">
-              <CardTitle className="text-[1.5rem] font-semibold tracking-[-0.04em] text-stone-950">Сигналы для команды</CardTitle>
-              <CardDescription className="text-[13px] leading-5 text-stone-600">Блокировки витрины и состояние рейлов.</CardDescription>
+              <CardTitle className="text-[1.5rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">Сигналы для команды</CardTitle>
+              <CardDescription className="text-[13px] leading-5 text-[rgba(241,229,215,0.58)]">Блокировки витрины и состояние рейлов.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-2.5 sm:grid-cols-3">
-              <div className="rounded-[1.1rem] border border-stone-900/8 bg-white/82 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Гостю видно</div>
-                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.guestVisibleMixesCount ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.74)]">Гостю видно</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">{formatMetricValue(summary?.ops.guestVisibleMixesCount ?? 0)}</div>
               </div>
-              <div className="rounded-[1.1rem] border border-stone-900/8 bg-white/82 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Скрыто вручную</div>
-                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.hiddenMixesCount ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.74)]">Скрыто вручную</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">{formatMetricValue(summary?.ops.hiddenMixesCount ?? 0)}</div>
               </div>
-              <div className="rounded-[1.1rem] border border-stone-900/8 bg-white/82 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Активных рейлов</div>
-                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.activeRailsCount ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.74)]">Активных рейлов</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">{formatMetricValue(summary?.ops.activeRailsCount ?? 0)}</div>
               </div>
             </div>
 
-            <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+            <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-[13px] font-semibold text-stone-900">Миксы, которые режет наличие</div>
-                  <div className="text-[11px] leading-4.5 text-stone-500">Здесь спрос уже упирается в инвентарь.</div>
+                  <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Миксы, которые режет наличие</div>
+                  <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Здесь спрос уже упирается в инвентарь.</div>
                 </div>
-                <TriangleAlert className="size-4 text-stone-500" />
+                <TriangleAlert className="size-4 text-[rgba(241,229,215,0.48)]" />
               </div>
               <div className="space-y-2">
                 {(summary?.ops.blockedMixes ?? []).map((mix) => (
-                  <div key={`blocked:${mix.mixId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
+                  <div key={`blocked:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <div className="text-[13px] font-semibold text-stone-900">{mix.name}</div>
-                        <div className="text-[11px] leading-4.5 text-stone-500">
+                        <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
+                        <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
                           Нет наличия: {mix.missingComponents.join(', ') || 'не указано'}
                         </div>
-                        <div className="text-[11px] leading-4.5 text-stone-500">
+                        <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
                           Рейлы: {mix.railNames.join(', ') || 'не участвует'}
                         </div>
                       </div>
-                      <Badge className="rounded-full bg-rose-500/14 px-2.5 py-0.5 text-[11px] text-rose-900">{formatMetricValue(mix.smokeCtaCount)}</Badge>
+                      <Badge className="rounded-full bg-rose-500/16 px-2.5 py-0.5 text-[11px] text-rose-100">{formatMetricValue(mix.smokeCtaCount)}</Badge>
                     </div>
                   </div>
                 ))}
-                {!summary?.ops.blockedMixes.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет миксов, заблокированных наличием.</div> : null}
+                {!summary?.ops.blockedMixes.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет миксов, заблокированных наличием.</div> : null}
               </div>
             </div>
 
-            <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+            <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-[13px] font-semibold text-stone-900">Состояние рейлов</div>
-                  <div className="text-[11px] leading-4.5 text-stone-500">Понимаем, где витрина ослаблена скрытыми или пустыми позициями.</div>
+                  <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Состояние рейлов</div>
+                  <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Понимаем, где витрина ослаблена скрытыми или пустыми позициями.</div>
                 </div>
-                <Waypoints className="size-4 text-stone-500" />
+                <Waypoints className="size-4 text-[rgba(241,229,215,0.48)]" />
               </div>
               <div className="space-y-2">
                 {(summary?.ops.railHealth ?? []).map((rail) => (
-                  <div key={`rail-health:${rail.railId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
+                  <div key={`rail-health:${rail.railId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <div className="text-[13px] font-semibold text-stone-900">{rail.name}</div>
-                          <Badge variant="outline" className="rounded-full border-stone-900/8 bg-white px-2 py-0.5 text-[10px] text-stone-600">
+                          <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{rail.name}</div>
+                          <Badge variant="outline" className="rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[10px] text-[rgba(241,229,215,0.72)]">
                             {rail.type}
                           </Badge>
                         </div>
-                        <div className="text-[11px] leading-4.5 text-stone-500">
+                        <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
                           Видимых миксов {formatMetricValue(rail.visibleMixCount)} из {formatMetricValue(rail.totalMixCount)}
                         </div>
                       </div>
-                      <Badge className={cn('rounded-full px-2.5 py-0.5 text-[11px]', rail.hiddenMixCount ? 'bg-rose-500/14 text-rose-900' : 'bg-emerald-500/14 text-emerald-900')}>
+                      <Badge className={cn('rounded-full px-2.5 py-0.5 text-[11px]', rail.hiddenMixCount ? 'bg-rose-500/16 text-rose-100' : 'bg-emerald-500/16 text-emerald-100')}>
                         {rail.hiddenMixCount ? `Скрыто ${formatMetricValue(rail.hiddenMixCount)}` : 'Без блокировок'}
                       </Badge>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-stone-950/8">
+                    <div className="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                       <div
                         className="h-full rounded-full bg-[linear-gradient(90deg,rgba(61,95,78,0.9),rgba(196,164,98,0.88))]"
                         style={{ width: `${percent(rail.visibleMixCount, rail.totalMixCount)}%` }}
@@ -553,26 +553,26 @@ export function DashboardView({
                     </div>
                   </div>
                 ))}
-                {!summary?.ops.railHealth.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет данных по рейлам.</div> : null}
+                {!summary?.ops.railHealth.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет данных по рейлам.</div> : null}
               </div>
             </div>
 
             <div className="grid gap-2.5 sm:grid-cols-2">
-              <div className="rounded-[1.1rem] border border-stone-900/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,244,236,0.84))] p-3">
-                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-stone-900">
-                  <Factory className="size-4 text-stone-500" />
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-[var(--nomad-ink)]">
+                  <Factory className="size-4 text-[rgba(241,229,215,0.48)]" />
                   Инвентарь
                 </div>
-                <div className="text-[13px] leading-5 text-stone-600">
+                <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.58)]">
                   Переключись в инвентаризацию, если растёт число заблокированных миксов или падает покрытие по ключевым профилям.
                 </div>
               </div>
-              <div className="rounded-[1.1rem] border border-stone-900/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,244,236,0.84))] p-3">
-                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-stone-900">
-                  <ShieldCheck className="size-4 text-stone-500" />
+              <div className="rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-[var(--nomad-ink)]">
+                  <ShieldCheck className="size-4 text-[rgba(241,229,215,0.48)]" />
                   Витрина
                 </div>
-                <div className="text-[13px] leading-5 text-stone-600">
+                <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.58)]">
                   Переключись в рейлы, если растёт число скрытых позиций или активные подборки теряют наполненность.
                 </div>
               </div>

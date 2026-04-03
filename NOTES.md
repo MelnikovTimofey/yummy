@@ -27,11 +27,13 @@
 ### Nomad Master
 
 - В `Inventory` и `Mixes` giant tag walls заменены на компактные searchable multi-select фильтры.
-- Создание нового микса вынесено в отдельный экран внутри вкладки `Миксы`; быстрое редактирование существующего микса остаётся рядом с каталогом.
-- Последний UX pass уплотнил shell и navigation:
-  - меньше пустого chrome;
-  - top navigation вместо тяжёлого sidebar;
-  - desktop-first operational layout без изменения backend/contracts.
+- Создание и редактирование микса вынесены в отдельные экраны внутри вкладки `Миксы`; широкий каталог больше не конкурирует с боковым editor panel.
+- Последний visual pass перевёл `Master` в новый premium editorial backoffice direction:
+  - навигация возвращена наверх как compact top nav, чтобы не съедать ширину у больших operational tables;
+  - дубль активной секции убран: topbar снова про продукт и runtime, а модульный header отвечает за текущий slice;
+  - dashboard surfaces затемнены и приведены к shell baseline без светлых `shadcn/tailwind` карточек;
+  - palette стала тёмной copper-black с более выраженным focus на active module и статусах;
+  - desktop-first operational layout сохранён без изменения backend/contracts и role semantics.
 
 ### Nomad Backend / HTReviews
 
@@ -66,6 +68,15 @@
 - Компактные multi-select фильтры для `Inventory` и `Mixes`.
 - Отдельный экран создания микса.
 - Проверки в полном журнале: `npm test`, `npm run build`, `git diff --check`, targeted browser pass.
+
+### 3 апреля 2026 — Nomad Master shell redesign
+
+- Весь shell `nomad-master-web` переведён в premium editorial backoffice direction для роли `nomad`.
+- Левый operator rail убран; вместо него используется compact верхняя навигация для широких таблиц `Inventory` и `Mixes`.
+- Дублирование активной секции убрано: topbar больше не повторяет title текущего модуля.
+- Edit-flow миксов переведён из бокового sticky editor в отдельный workspace-screen.
+- Dashboard summary и breakdown panels переведены в тёмный copper-black visual system без светлых карточек.
+- Проверка: `cd apps/nomad-master-web && npm run build`
 
 ### 3 апреля 2026 — HTReviews live catalog и enrichment
 

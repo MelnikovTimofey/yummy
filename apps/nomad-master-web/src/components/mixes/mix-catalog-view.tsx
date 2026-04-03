@@ -42,7 +42,7 @@ export type MixEditorViewState = {
   railMemberships: MixRailMembership[];
 };
 
-export type MixCatalogMode = 'catalog' | 'create';
+export type MixCatalogMode = 'catalog' | 'create' | 'edit';
 
 type MixCatalogViewProps = {
   mode: MixCatalogMode;
@@ -343,24 +343,30 @@ export const MixCatalogView = ({
           </>
         ) : (
           <Button type="button" variant="outline" size="sm" onClick={onResetEditor}>
-            Закрыть редактор
+            Вернуться в каталог
           </Button>
         )}
       </div>
     </form>
   );
 
-  if (mode === 'create') {
+  if (mode === 'create' || mode === 'edit') {
+    const isEditMode = mode === 'edit';
+
     return (
       <section className="card mixes-panel">
         <div className="section-head section-head--surface">
           <div className="ops-surface__intro">
             <p className="eyebrow">Менеджер миксов</p>
-            <h2>Создание микса</h2>
-            <p className="meta-line">Новый микс настраивается отдельно от каталога.</p>
+            <h2>{isEditMode ? 'Редактирование микса' : 'Создание микса'}</h2>
+            <p className="meta-line">
+              {isEditMode
+                ? 'Правки состава и доступности выполняются отдельно от каталога, чтобы не конфликтовать с широкой таблицей.'
+                : 'Новый микс настраивается отдельно от каталога.'}
+            </p>
           </div>
           <div className="section-actions">
-            <Button type="button" variant="outline" size="sm" onClick={onCancelCreate}>
+            <Button type="button" variant="outline" size="sm" onClick={isEditMode ? onResetEditor : onCancelCreate}>
               Вернуться в каталог
             </Button>
           </div>
@@ -369,13 +375,21 @@ export const MixCatalogView = ({
         <article className="mixes-editor mixes-create-screen ops-editor">
           <div className="entity-card__head">
             <div>
-              <p className="entity-kicker">Новый микс</p>
-              <h3>Создать микс</h3>
+              <p className="entity-kicker">{isEditMode ? 'Редактура состава' : 'Новый микс'}</p>
+              <h3>{isEditMode ? editor.name || 'Без названия' : 'Создать микс'}</h3>
             </div>
-            {renderAvailabilityStatus(editor.available)}
+            {isEditMode && selectedMix ? (
+              editor.railMemberships.length ? (
+                <Badge variant="outline">В рейлах: {editor.railMemberships.length}</Badge>
+              ) : (
+                renderMixStatus(selectedMix)
+              )
+            ) : (
+              renderAvailabilityStatus(editor.available)
+            )}
           </div>
 
-          {renderMixForm('create')}
+          {renderMixForm(isEditMode ? 'edit' : 'create')}
         </article>
       </section>
     );
@@ -499,126 +513,106 @@ export const MixCatalogView = ({
       {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
-      <div className={selectedMix ? 'manager-layout mixes-workspace' : ''}>
-        <div className="mixes-table-shell ops-table-shell">
-          <table className="mixes-table">
-            <thead>
-              <tr>
-                <th>Микс</th>
-                <th>Компоненты</th>
-                <th>Вкусовой профиль</th>
-                <th>Рейлы</th>
-                <th>Статус</th>
-                <th>Метрики</th>
-                <th className="mixes-table__actions">Действие</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((mix) => (
-                <tr key={mix.id}>
-                  <td>
-                    <div className="mixes-cell">
-                      <strong>{mix.name}</strong>
-                      <span>{mix.description || 'Без описания'}</span>
-                      <span>Обновлено: {formatMixUpdatedAt(mix.updatedAt)}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="mixes-cell mixes-cell__stack">
-                      {mix.components.map((component) => (
-                        <div className="mixes-component-chip" key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}`}>
-                          <strong>{component.name}</strong>
+      <div className="mixes-table-shell ops-table-shell">
+        <table className="mixes-table">
+          <thead>
+            <tr>
+              <th>Микс</th>
+              <th>Компоненты</th>
+              <th>Вкусовой профиль</th>
+              <th>Рейлы</th>
+              <th>Статус</th>
+              <th>Метрики</th>
+              <th className="mixes-table__actions">Действие</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((mix) => (
+              <tr key={mix.id}>
+                <td>
+                  <div className="mixes-cell">
+                    <strong>{mix.name}</strong>
+                    <span>{mix.description || 'Без описания'}</span>
+                    <span>Обновлено: {formatMixUpdatedAt(mix.updatedAt)}</span>
+                  </div>
+                </td>
+                <td>
+                  <div className="mixes-cell mixes-cell__stack">
+                    {mix.components.map((component) => (
+                      <div className="mixes-component-chip" key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}`}>
+                        <strong>{component.name}</strong>
+                        <span>
+                          {component.manufacturer} · {component.proportion}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </td>
+                <td>
+                  <div className="mixes-cell mixes-cell__chips">
+                    {mix.flavorProfiles.map((profile) => (
+                      <Badge key={`${mix.id}:profile:${profile}`} variant="secondary">
+                        {profile}
+                      </Badge>
+                    ))}
+                    {mix.flavors.map((flavor) => (
+                      <Badge key={`${mix.id}:flavor:${flavor}`} variant="outline">
+                        {flavor}
+                      </Badge>
+                    ))}
+                  </div>
+                </td>
+                <td>
+                  <div className="mixes-cell mixes-cell__stack">
+                    {mix.railMemberships.length ? (
+                      mix.railMemberships.map((membership) => (
+                        <div className="mixes-rail-chip" key={`${mix.id}:${membership.id}`}>
+                          <strong>{membership.name}</strong>
                           <span>
-                            {component.manufacturer} · {component.proportion}%
+                            {formatRailType(membership.type)} · {membership.active ? 'Активен' : 'Неактивен'}
                           </span>
                         </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="mixes-cell mixes-cell__chips">
-                      {mix.flavorProfiles.map((profile) => (
-                        <Badge key={`${mix.id}:profile:${profile}`} variant="secondary">
-                          {profile}
-                        </Badge>
-                      ))}
-                      {mix.flavors.map((flavor) => (
-                        <Badge key={`${mix.id}:flavor:${flavor}`} variant="outline">
-                          {flavor}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="mixes-cell mixes-cell__stack">
-                      {mix.railMemberships.length ? (
-                        mix.railMemberships.map((membership) => (
-                          <div className="mixes-rail-chip" key={`${mix.id}:${membership.id}`}>
-                            <strong>{membership.name}</strong>
-                            <span>
-                              {formatRailType(membership.type)} · {membership.active ? 'Активен' : 'Неактивен'}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <span>Пока не входит ни в один рейл</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>{renderMixStatus(mix)}</td>
-                  <td>
-                    <div className="mixes-cell">
-                      <strong>Популярность {formatMetricValue(mix.popularity)}</strong>
-                      <span>
-                        Рейтинг {mix.avgRating.toFixed(1)} · Оценок {formatMetricValue(mix.ratingsCount)}
-                      </span>
-                      <span>Рейлов: {formatMetricValue(mix.railCount)}</span>
-                    </div>
-                  </td>
-                  <td className="mixes-table__actions">
-                    <Button type="button" variant="outline" size="sm" onClick={() => onSelectMix(mix)}>
-                      Редактировать
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {!items.length && status !== 'loading' ? (
-                <tr>
-                  <td className="mixes-table__empty" colSpan={7}>
-                    По текущим фильтрам миксов нет.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-
-        <ListPagination
-          page={meta.page}
-          pageSize={meta.pageSize}
-          totalPages={meta.totalPages}
-          filteredItems={meta.filteredItems}
-          onPageChange={onPageChange}
-        />
-
-        {selectedMix ? (
-          <article className="mixes-editor ops-editor">
-            <div className="entity-card__head">
-              <div>
-                <p className="entity-kicker">Редактирование микса</p>
-                <h3>{editor.name || 'Без названия'}</h3>
-              </div>
-              {editor.railMemberships.length ? (
-                <Badge variant="outline">В рейлах: {editor.railMemberships.length}</Badge>
-              ) : (
-                renderMixStatus(selectedMix)
-              )}
-            </div>
-
-            {renderMixForm('edit')}
-          </article>
-        ) : null}
+                      ))
+                    ) : (
+                      <span>Пока не входит ни в один рейл</span>
+                    )}
+                  </div>
+                </td>
+                <td>{renderMixStatus(mix)}</td>
+                <td>
+                  <div className="mixes-cell">
+                    <strong>Популярность {formatMetricValue(mix.popularity)}</strong>
+                    <span>
+                      Рейтинг {mix.avgRating.toFixed(1)} · Оценок {formatMetricValue(mix.ratingsCount)}
+                    </span>
+                    <span>Рейлов: {formatMetricValue(mix.railCount)}</span>
+                  </div>
+                </td>
+                <td className="mixes-table__actions">
+                  <Button type="button" variant="outline" size="sm" onClick={() => onSelectMix(mix)}>
+                    Редактировать
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {!items.length && status !== 'loading' ? (
+              <tr>
+                <td className="mixes-table__empty" colSpan={7}>
+                  По текущим фильтрам миксов нет.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
       </div>
+
+      <ListPagination
+        page={meta.page}
+        pageSize={meta.pageSize}
+        totalPages={meta.totalPages}
+        filteredItems={meta.filteredItems}
+        onPageChange={onPageChange}
+      />
     </section>
   );
 };

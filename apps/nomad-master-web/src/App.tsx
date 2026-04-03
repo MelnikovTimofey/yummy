@@ -1,4 +1,13 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import {
+  Blend,
+  GalleryVerticalEnd,
+  LayoutDashboard,
+  LogOut,
+  ShieldCheck,
+  Warehouse,
+  type LucideIcon,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView } from '@/components/inventory/inventory-view';
@@ -71,15 +80,16 @@ import {
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
+const apiHostLabel = apiBaseUrl.replace(/^https?:\/\//, '');
 
 type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
-const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; detail: string }> = [
-  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка', detail: 'Спрос, витрина и блокировки.' },
-  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие', detail: 'Остатки, фильтры и batch-действия.' },
-  { id: 'mixes', label: 'Миксы', kicker: 'Каталог', detail: 'Состав, доступность и рейлы.' },
-  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Подборки и состояние витрины.' },
-  { id: 'access', label: 'Доступ', kicker: 'Бот и доступ', detail: 'Коды, роли и Telegram-бот.' },
+const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; detail: string; icon: LucideIcon }> = [
+  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', detail: 'Спрос, витрина и блокировки в одном контуре.', icon: LayoutDashboard },
+  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие и стоп-лист', detail: 'Остатки, фильтры и быстрые действия без лишней высоты.', icon: Warehouse },
+  { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', detail: 'Состав, доступность и рабочая редактура миксов.', icon: Blend },
+  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Подборки и состояние гостевой поверхности.', icon: GalleryVerticalEnd },
+  { id: 'access', label: 'Доступ', kicker: 'Telegram и роли', detail: 'Коды, allowlist и staff-контроль без разрыва контекста.', icon: ShieldCheck },
 ];
 
 const getWorkspaceTabId = (tab: WorkspaceTab) => `workspace-tab-${tab}`;
@@ -1109,7 +1119,7 @@ export const App = () => {
 
   const onSelectMix = (mix: MixRecord) => {
     setMixEditor(toMixEditorState(mix));
-    setMixesScreen('catalog');
+    setMixesScreen('edit');
     setMixSaveError('');
     setMixSaveStatus('idle');
     setActiveTab('mixes');
@@ -1132,6 +1142,7 @@ export const App = () => {
 
   const onResetMixEditor = () => {
     setMixEditor(emptyMixEditor());
+    setMixesScreen('catalog');
     setMixSaveError('');
     setMixSaveStatus('idle');
   };
@@ -3046,62 +3057,77 @@ export const App = () => {
           return 'Ожидает загрузки';
       }
     })();
-
     return (
       <main className="shell shell--master shell--master-workspace">
         <header className="master-topbar">
           <div className="master-topbar__brand">
-            <p className="eyebrow">Nomad Master</p>
-            <h1>Операционный контур</h1>
+            <p className="eyebrow">Premium Editorial Backoffice</p>
+            <h1>Nomad Master</h1>
+            <p className="meta-line">
+              Операторский shell с верхней навигацией для широких таблиц, плотных CRUD-поверхностей и быстрого
+              переключения между модулями.
+            </p>
           </div>
 
           <div className="master-topbar__meta">
             <div className="master-topbar__identity">
               <strong>{user.name}</strong>
-              <span>{user.login}</span>
+              <span>{formatRoleLabel(user.role)}</span>
             </div>
-            <span className="status-chip">{formatRoleLabel(user.role)}</span>
-            <span className="status-chip">API подключено</span>
-            <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
-              Выйти
+            <span className="status-chip status-chip--inverse">API online</span>
+            <span className="status-chip">Статус: {activeWorkspaceStatus}</span>
+            <button className="secondary-button secondary-button--inline secondary-button--shell" type="button" onClick={onSignOut}>
+              <LogOut size={15} strokeWidth={1.8} />
+              <span>Выйти</span>
             </button>
           </div>
         </header>
 
-        <nav className="master-nav" aria-label="Рабочие разделы Мастера">
-          <div className="workspace-tabs workspace-tabs--menu" role="tablist" aria-label="Рабочие разделы Мастера">
-            {workspaceTabs.map((tab) => (
-              <button
-                key={tab.id}
-                id={getWorkspaceTabId(tab.id)}
-                ref={(node) => {
-                  workspaceTabRefs.current[tab.id] = node;
-                }}
-                type="button"
-                className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={getWorkspacePanelId(tab.id)}
-                tabIndex={activeTab === tab.id ? 0 : -1}
-                onClick={() => setActiveTab(tab.id)}
-                onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
-              >
-                <span className="workspace-tab__kicker">{tab.kicker}</span>
-                <strong>{tab.label}</strong>
-              </button>
-            ))}
+        <nav className="master-nav master-nav--workspace" aria-label="Рабочие разделы Мастера">
+          <div className="workspace-tabs workspace-tabs--workspace-bar" role="tablist" aria-label="Рабочие разделы Мастера">
+            {workspaceTabs.map((tab) => {
+              const TabIcon = tab.icon;
+
+              return (
+                <button
+                  key={tab.id}
+                  id={getWorkspaceTabId(tab.id)}
+                  ref={(node) => {
+                    workspaceTabRefs.current[tab.id] = node;
+                  }}
+                  type="button"
+                  className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={getWorkspacePanelId(tab.id)}
+                  tabIndex={activeTab === tab.id ? 0 : -1}
+                  onClick={() => setActiveTab(tab.id)}
+                  onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
+                >
+                  <span className="workspace-tab__head">
+                    <span className="workspace-tab__icon" aria-hidden="true">
+                      <TabIcon size={15} strokeWidth={1.9} />
+                    </span>
+                    <span className="workspace-tab__copy">
+                      <strong>{tab.label}</strong>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </nav>
 
         <section className="master-stage">
           <header className="master-stage__header">
             <div className="master-stage__copy">
+              <p className="eyebrow">{activeWorkspace.kicker}</p>
               <h2>{activeWorkspace.label}</h2>
               <p className="meta-line">{activeWorkspace.detail}</p>
             </div>
             <div className="master-stage__status">
-              <span className="status-chip">Статус: {activeWorkspaceStatus}</span>
               <span className="status-chip">Роль: {formatRoleLabel(user.role)}</span>
+              <span className="status-chip">Контур: {apiHostLabel}</span>
             </div>
           </header>
 
@@ -3111,11 +3137,11 @@ export const App = () => {
                 <Card
                   key={card.label}
                   size="sm"
-                  className="master-summary-card rounded-[1.3rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,251,247,0.9),rgba(250,244,239,0.76))] shadow-[0_10px_26px_rgba(62,27,24,0.06)] backdrop-blur-lg"
+                  className="master-summary-card rounded-[1.45rem] border-white/8 bg-[linear-gradient(180deg,rgba(21,18,20,0.94),rgba(29,24,26,0.9))] shadow-[0_22px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl"
                 >
                   <CardContent className="space-y-1.5 pt-2.5">
-                    <div className="master-summary-card__label text-[10px] uppercase tracking-[0.18em] text-stone-500">{card.label}</div>
-                    <div className="master-summary-card__value text-2xl font-semibold tracking-[-0.04em] text-stone-950">
+                    <div className="master-summary-card__label text-[10px] uppercase tracking-[0.18em] text-white/44">{card.label}</div>
+                    <div className="master-summary-card__value text-2xl font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">
                       {formatMetricValue(card.value)}
                     </div>
                   </CardContent>

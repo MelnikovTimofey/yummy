@@ -33,11 +33,12 @@
 ### Nomad Master
 
 - `Inventory` и `Mixes` переведены на компактные searchable multi-select фильтры вместо длинных облаков тегов.
-- Создание нового микса вынесено в отдельный экран; быстрый edit-flow существующих миксов остаётся рядом с каталогом.
-- Последний UX pass уплотнил shell:
-  - top navigation вместо тяжёлого sidebar;
-  - меньше пустого chrome;
-  - более плотные toolbars, stats и form surfaces.
+- Создание и редактирование микса вынесены в отдельные экраны; каталог снова работает во всю ширину без бокового sticky editor.
+- Последний visual pass перевёл shell в новый premium editorial backoffice direction:
+  - compact верхний nav вместо левого rail, потому что `Inventory` и `Mixes` содержат широкие таблицы;
+  - topbar больше не дублирует active section, а stage header отвечает за текущий модуль;
+  - dashboard surfaces затемнены и приведены к общему copper-black baseline;
+  - тёмный copper-black visual system и плотный status-first topbar сохранены.
 
 Проверенный контур:
 - `cd apps/nomad-master-web && npm test`
@@ -46,6 +47,7 @@
 
 Остаточный риск:
 - `Master` всё ещё desktop-first; отдельный mobile/tablet sign-off не был целью последних pass'ов.
+- Не было отдельного browser-based visual smoke по длинной реальной таблице и full edit-flow микса после перевода navigation наверх; сейчас есть только `npm run build`.
 
 ### HTReviews / Nomad Backend
 
