@@ -49,6 +49,18 @@
 - `Master` всё ещё desktop-first; отдельный mobile/tablet sign-off не был целью последних pass'ов.
 - Не было отдельного browser-based visual smoke по длинной реальной таблице и full edit-flow микса после перевода navigation наверх; сейчас есть только `npm run build`.
 
+### Aroma guest contract sync
+
+- `nomad-aroma-web` теперь отправляет `POST /guest/events/smoke-cta` только по явному действию `Покурить`, а не при простом открытии карточки.
+- Верхняя закреплённая панель переименована в `Карточка для мастера`, чтобы guest-flow был согласован с текущей backend-семантикой CTA.
+- Гостевой каталог перечитывается с backend-фильтрами `profiles` и `flavors`; это удерживает каталог синхронным с онбордингом и текущим guest API.
+
+Проверенный контур:
+- `cd apps/nomad-aroma-web && npm run build`
+
+Остаточный риск:
+- для полного smoke-pass ещё полезно руками подтвердить сценарий: онбординг -> `Покурить` -> повторное открытие карточки -> переход в каталог с активными вкусовыми фильтрами.
+
 ### HTReviews / Nomad Backend
 
 - Добавлен изолированный integration foundation для `https://htreviews.org`.
