@@ -19,6 +19,11 @@ type OnboardingOptions = {
   flavors: string[];
 };
 
+type CatalogFilters = {
+  profiles?: string[];
+  flavors?: string[];
+};
+
 type GuestAccessSuccess = {
   ok: true;
   accessGranted: true;
@@ -232,6 +237,20 @@ const extractErrorMessage = (payload: unknown, fallback: string) => {
   }
 
   return fallback;
+};
+
+const buildCatalogQuery = (filters: CatalogFilters) => {
+  const params = new URLSearchParams();
+
+  unique((filters.profiles ?? []).map((item) => item.trim()).filter(Boolean)).forEach((profile) => {
+    params.append('profiles', profile);
+  });
+  unique((filters.flavors ?? []).map((item) => item.trim()).filter(Boolean)).forEach((flavor) => {
+    params.append('flavors', flavor);
+  });
+
+  const query = params.toString();
+  return query ? `?${query}` : '';
 };
 
 const buildManufacturerKey = (value: string) => normalizeToken(value);
@@ -473,8 +492,8 @@ const fetchHomeRails = async () => {
   return extractCollection(payload, ['items', 'rails']).map((item, index) => normalizeRail(item, index));
 };
 
-const fetchCatalogMixes = async () => {
-  const payload = await requestJson<unknown>('/guest/catalog/mixes');
+const fetchCatalogMixes = async (filters: CatalogFilters = {}) => {
+  const payload = await requestJson<unknown>(`/guest/catalog/mixes${buildCatalogQuery(filters)}`);
   return extractCollection(payload, ['items', 'mixes', 'catalog']).map((item, index) => normalizeMix(item, index));
 };
 
@@ -620,7 +639,7 @@ const MixDetailModal = ({
         className="mix-info-modal-shell guest-mix-modal"
       >
         <div className="mix-info-modal">
-          <DialogDescription className="sr-only">Карточка выбранного микса с составом, рейтингом и действием выбора.</DialogDescription>
+          <DialogDescription className="sr-only">Карточка микса с составом, рейтингом и действием Покурить.</DialogDescription>
           <div className="mix-detail-top-row">
             <div className="mix-detail-top-main">
               <p className="card-title">{mixSourceLabels[source]}</p>
@@ -635,7 +654,7 @@ const MixDetailModal = ({
                 onClick={() => onChoose()}
                 disabled={!mix.available || chooseStatus === 'loading' || isSelected}
               >
-                {chooseStatus === 'loading' ? 'Выбираем...' : isSelected ? 'Выбранный микс' : 'Выбрать микс'}
+                {chooseStatus === 'loading' ? 'Фиксируем...' : isSelected ? 'Уже в карточке' : 'Покурить'}
               </Button>
               <Button className="ghost-button mix-info-close-btn" variant="outline" type="button" onClick={onClose}>
                 Закрыть
@@ -785,6 +804,7 @@ export const App = () => {
   const [catalogSourceMixes, setCatalogSourceMixes] = useState<MixCard[]>([]);
   const [catalogStatus, setCatalogStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [catalogError, setCatalogError] = useState('');
+  const catalogRequestRef = useRef(0);
 
   const [selectedMix, setSelectedMix] = useState<SelectedMix | null>(null);
   const [mixModalState, setMixModalState] = useState<MixModalState | null>(null);
@@ -921,15 +941,23 @@ export const App = () => {
     }
   };
 
-  const loadCatalog = async () => {
+  const loadCatalog = async (filters: CatalogFilters = {}) => {
+    const requestId = catalogRequestRef.current + 1;
+    catalogRequestRef.current = requestId;
     setCatalogStatus('loading');
     setCatalogError('');
 
     try {
-      const mixes = await fetchCatalogMixes();
+      const mixes = await fetchCatalogMixes(filters);
+      if (catalogRequestRef.current !== requestId) {
+        return;
+      }
       setCatalogSourceMixes(mixes);
       setCatalogStatus('ready');
     } catch (cause) {
+      if (catalogRequestRef.current !== requestId) {
+        return;
+      }
       setCatalogStatus('error');
       setCatalogError(cause instanceof Error ? cause.message : 'Не удалось загрузить каталог');
     }
@@ -952,10 +980,18 @@ export const App = () => {
       void loadShowcase();
     }
 
-    if (catalogStatus === 'idle') {
-      void loadCatalog();
+  }, [accessGranted, introStatus, optionsStatus, showcaseStatus]);
+
+  useEffect(() => {
+    if (!accessGranted) {
+      return;
     }
-  }, [accessGranted, introStatus, optionsStatus, showcaseStatus, catalogStatus]);
+
+    void loadCatalog({
+      profiles: appliedCatalogProfiles,
+      flavors: appliedCatalogFlavors,
+    });
+  }, [accessGranted, appliedCatalogProfiles, appliedCatalogFlavors]);
 
   const updateMixInList = (items: MixCard[], mixId: string, updater: (mix: MixCard) => MixCard) =>
     items.map((mix) => (mix.id === mixId ? updater(mix) : mix));
@@ -1102,24 +1138,24 @@ export const App = () => {
     setRatingError('');
     setRatingMessage('');
     setRatingValue(null);
-    void sendSmokeCta(mix.id).catch(() => {
-      // Ignore analytics errors in the guest flow so card opening stays instant.
-    });
   };
 
   const onChooseMix = async (mix: MixCard, source: MixSource) => {
     setChooseStatus('loading');
     setChooseError('');
+    const previousMix = selectedMix;
 
     try {
+      await sendSmokeCta(mix.id);
       setSelectedMix({
         id: mix.id,
         source,
       });
       setChooseStatus('ready');
     } catch (cause) {
+      setSelectedMix(previousMix);
       setChooseStatus('error');
-      setChooseError(cause instanceof Error ? cause.message : 'Не удалось сохранить выбор.');
+      setChooseError(cause instanceof Error ? cause.message : 'Не удалось зафиксировать "Покурить".');
     }
   };
 
@@ -1638,7 +1674,7 @@ export const App = () => {
       <div className="selected-mix-shell">
         <Card className="card compact-card selected-mix-bar">
           <div>
-            <p className="card-title">Выбранный микс</p>
+            <p className="card-title">Карточка для мастера</p>
             <p className="card-text">
               {selectedMixCard.name} · {mixSourceLabels[selectedMix.source]}
             </p>
