@@ -41,6 +41,9 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
     items: Array<{
       id: string;
       inStock: boolean;
+      description: string | null;
+      country: string | null;
+      productionStatus: string | null;
       flavorTags: string[];
       dependentMixCount: number;
       blockedDependentMixCount: number;
@@ -63,6 +66,11 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
       filteredItems: number;
       inStockCount: number;
       outOfStockCount: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
     };
   };
   assert.equal(beforeBody.filters.stock, 'out-of-stock');
@@ -74,8 +82,16 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
   assert.equal(beforeBody.meta.filteredItems, 1);
   assert.equal(beforeBody.meta.inStockCount, 0);
   assert.equal(beforeBody.meta.outOfStockCount, 1);
+  assert.equal(beforeBody.meta.page, 1);
+  assert.equal(beforeBody.meta.pageSize, 1);
+  assert.equal(beforeBody.meta.totalPages, 1);
+  assert.equal(beforeBody.meta.hasNextPage, false);
+  assert.equal(beforeBody.meta.hasPreviousPage, false);
   assert.equal(beforeBody.items[0]?.id, 'tobacco-peach-silk');
   assert.equal(beforeBody.items[0]?.inStock, false);
+  assert.equal(beforeBody.items[0]?.description, null);
+  assert.equal(beforeBody.items[0]?.country, null);
+  assert.equal(beforeBody.items[0]?.productionStatus, null);
   assert.equal(beforeBody.items[0]?.dependentMixCount, 1);
   assert.equal(beforeBody.items[0]?.blockedDependentMixCount, 1);
   assert.equal(beforeBody.items[0]?.dependentMixes[0]?.id, 'mix-peach-mirage');
@@ -122,6 +138,44 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
   assert.equal(recommendationsBody.items[0]?.id, 'mix-peach-mirage');
 
   await app.close();
+});
+
+test('staff inventory list paginates filtered results', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const paged = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?page=2&pageSize=2&sort=name&direction=asc',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(paged.statusCode, 200);
+    const body = paged.json() as {
+      items: Array<{ id: string }>;
+      meta: {
+        filteredItems: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+      };
+    };
+
+    assert.equal(body.items.length, 2);
+    assert.equal(body.meta.filteredItems, seedTobaccos.length);
+    assert.equal(body.meta.page, 2);
+    assert.equal(body.meta.pageSize, 2);
+    assert.equal(body.meta.totalPages, Math.ceil(seedTobaccos.length / 2));
+    assert.equal(body.meta.hasNextPage, true);
+    assert.equal(body.meta.hasPreviousPage, true);
+  } finally {
+    await app.close();
+  }
 });
 
 test('staff inventory batch endpoint updates stock and rejects archive semantics', async () => {

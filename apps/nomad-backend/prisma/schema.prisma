@@ -120,8 +120,20 @@ model NomadAuditEvent {
 model NomadTobacco {
   id              String            @id
   manufacturer    String
+  lineName        String            @default("")
   name            String
+  alias           String?
   description     String?
+  sourceKind      String?
+  sourceUrl       String?
+  sourceExternalId String?          @unique
+  sourceNumericId String?
+  country         String?
+  officialStrength String?
+  communityStrength String?
+  productionStatus String?
+  imageUrl        String?
+  rawSourceTags   String?
   flavorProfiles  String
   flavors         String
   flavorTags      String
@@ -130,8 +142,50 @@ model NomadTobacco {
   updatedAt       DateTime          @updatedAt
   mixComponents   NomadMixComponent[]
 
-  @@unique([manufacturer, name])
+  @@unique([manufacturer, lineName, name])
   @@index([inStock])
+  @@index([sourceKind])
+}
+
+model NomadFlavorProfileCatalog {
+  key         String   @id
+  label       String
+  tobaccoCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NomadFlavorCatalog {
+  key         String   @id
+  label       String
+  tobaccoCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NomadFlavorTagCatalog {
+  key         String   @id
+  label       String
+  tobaccoCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NomadSourceTagMapping {
+  id                  String   @id
+  sourceKind          String
+  sourceTag           String
+  normalizedSourceTag String
+  flavorProfiles      String
+  flavors             String
+  flavorTags          String
+  tobaccoCount        Int      @default(0)
+  unmapped            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([sourceKind, normalizedSourceTag])
+  @@index([sourceKind])
 }
 
 model NomadMix {

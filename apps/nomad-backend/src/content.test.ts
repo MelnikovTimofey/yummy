@@ -441,6 +441,9 @@ test('staff mixes list supports filters and validates component proportions', as
       meta: {
         filteredItems: number;
         inRailsCount: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
       };
     };
 
@@ -457,6 +460,47 @@ test('staff mixes list supports filters and validates component proportions', as
     assert.equal(filteredBody.sort.direction, 'desc');
     assert.equal(filteredBody.meta.filteredItems >= 1, true);
     assert.equal(filteredBody.meta.inRailsCount >= 1, true);
+    assert.equal(filteredBody.meta.page, 1);
+    assert.equal(filteredBody.meta.pageSize, filteredBody.meta.filteredItems);
+    assert.equal(filteredBody.meta.totalPages >= 1, true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('staff mixes list paginates catalog results', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/staff/mixes?page=2&pageSize=2&sort=name&direction=asc',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as {
+      items: Array<{ id: string }>;
+      meta: {
+        filteredItems: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+      };
+    };
+
+    assert.equal(body.items.length, 2);
+    assert.equal(body.meta.filteredItems >= body.items.length, true);
+    assert.equal(body.meta.page, 2);
+    assert.equal(body.meta.pageSize, 2);
+    assert.equal(body.meta.totalPages >= 2, true);
+    assert.equal(body.meta.hasNextPage, true);
+    assert.equal(body.meta.hasPreviousPage, true);
   } finally {
     await app.close();
   }

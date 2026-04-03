@@ -14,6 +14,12 @@ export type InventoryTobacco = {
   id: string;
   name: string;
   manufacturer: string;
+  lineName?: string;
+  country?: string | null;
+  officialStrength?: string | null;
+  communityStrength?: string | null;
+  productionStatus?: string | null;
+  description?: string | null;
   inStock: boolean;
   flavorProfiles?: string[];
   flavors?: string[];
@@ -64,6 +70,11 @@ export type InventoryListMeta = {
   filteredItems: number;
   inStockCount: number;
   outOfStockCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 };
 
 export type InventoryListResponse = {
@@ -110,6 +121,11 @@ export const defaultInventoryListResponse: InventoryListResponse = {
     filteredItems: 0,
     inStockCount: 0,
     outOfStockCount: 0,
+    page: 1,
+    pageSize: 25,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
   },
 };
 
@@ -150,6 +166,11 @@ export type MixListMeta = {
   blockedCount: number;
   inRailsCount: number;
   withoutRailsCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 };
 
 export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
@@ -230,6 +251,11 @@ export const defaultMixListResponse: MixListResponse = {
     blockedCount: 0,
     inRailsCount: 0,
     withoutRailsCount: 0,
+    page: 1,
+    pageSize: 25,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
   },
 };
 
@@ -804,6 +830,12 @@ export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
     id: String(raw.id ?? raw.tobaccoId ?? ''),
     name: String(raw.name ?? ''),
     manufacturer: String(raw.manufacturer ?? ''),
+    lineName: String(raw.lineName ?? ''),
+    country: raw.country == null ? null : String(raw.country),
+    officialStrength: raw.officialStrength == null ? null : String(raw.officialStrength),
+    communityStrength: raw.communityStrength == null ? null : String(raw.communityStrength),
+    productionStatus: raw.productionStatus == null ? null : String(raw.productionStatus),
+    description: raw.description == null ? null : String(raw.description),
     inStock: toBoolean(raw.inStock, true),
     flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
     flavors: uniqueStrings(toStringList(raw.flavors)),
@@ -890,6 +922,11 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       blockedCount: toNumber(meta.blockedCount, 0),
       inRailsCount: toNumber(meta.inRailsCount, 0),
       withoutRailsCount: toNumber(meta.withoutRailsCount, 0),
+      page: Math.max(1, toNumber(meta.page, 1)),
+      pageSize: Math.max(1, toNumber(meta.pageSize, 25)),
+      totalPages: Math.max(1, toNumber(meta.totalPages, 1)),
+      hasNextPage: toBoolean(meta.hasNextPage, false),
+      hasPreviousPage: toBoolean(meta.hasPreviousPage, false),
     },
   };
 };
@@ -1068,6 +1105,11 @@ export const normalizeInventoryListResponse = (value: unknown): InventoryListRes
       filteredItems: toNumber(meta.filteredItems, 0),
       inStockCount: toNumber(meta.inStockCount, 0),
       outOfStockCount: toNumber(meta.outOfStockCount, 0),
+      page: Math.max(1, toNumber(meta.page, 1)),
+      pageSize: Math.max(1, toNumber(meta.pageSize, 25)),
+      totalPages: Math.max(1, toNumber(meta.totalPages, 1)),
+      hasNextPage: toBoolean(meta.hasNextPage, false),
+      hasPreviousPage: toBoolean(meta.hasPreviousPage, false),
     },
   };
 };
@@ -1086,7 +1128,12 @@ export const normalizeInventoryBatchResponse = (value: unknown): InventoryBatchR
   };
 };
 
-export const buildInventoryRequestQuery = (filters: InventoryListFilters, sort: InventoryListSort) => {
+export const buildInventoryRequestQuery = (
+  filters: InventoryListFilters,
+  sort: InventoryListSort,
+  page: number,
+  pageSize: number,
+) => {
   const params = new URLSearchParams();
 
   if (filters.search.trim()) {
@@ -1115,6 +1162,8 @@ export const buildInventoryRequestQuery = (filters: InventoryListFilters, sort: 
 
   params.set('sort', sort.field);
   params.set('direction', sort.direction);
+  params.set('page', String(Math.max(1, Math.trunc(page))));
+  params.set('pageSize', String(Math.max(1, Math.trunc(pageSize))));
 
   return params.toString();
 };
@@ -1127,7 +1176,12 @@ export const toggleInventoryFilterValue = (values: string[], value: string) => {
   return uniqueStrings(next);
 };
 
-export const buildMixRequestQuery = (filters: MixListFilters, sort: MixListSort) => {
+export const buildMixRequestQuery = (
+  filters: MixListFilters,
+  sort: MixListSort,
+  page: number,
+  pageSize: number,
+) => {
   const params = new URLSearchParams();
 
   if (filters.search.trim()) {
@@ -1160,6 +1214,8 @@ export const buildMixRequestQuery = (filters: MixListFilters, sort: MixListSort)
 
   params.set('sort', sort.field);
   params.set('direction', sort.direction);
+  params.set('page', String(Math.max(1, Math.trunc(page))));
+  params.set('pageSize', String(Math.max(1, Math.trunc(pageSize))));
 
   return params.toString();
 };

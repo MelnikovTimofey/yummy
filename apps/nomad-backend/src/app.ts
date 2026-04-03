@@ -1197,6 +1197,8 @@ export const buildApp = () => {
           flavorTags?: unknown;
           sort?: unknown;
           direction?: unknown;
+          page?: unknown;
+          pageSize?: unknown;
         }
       | undefined;
 
@@ -1226,6 +1228,8 @@ export const buildApp = () => {
           : undefined,
       sort: (typeof query?.sort === 'string' ? query.sort : undefined) as MixSortField | undefined,
       direction: (typeof query?.direction === 'string' ? query.direction : undefined) as MixSortDirection | undefined,
+      page: query?.page === undefined ? undefined : Number(query.page),
+      pageSize: query?.pageSize === undefined ? undefined : Number(query.pageSize),
     });
 
     return reply.send(response);
@@ -1366,6 +1370,8 @@ export const buildApp = () => {
           flavorTags?: unknown;
           sort?: unknown;
           direction?: unknown;
+          page?: unknown;
+          pageSize?: unknown;
         }
       | undefined;
 
@@ -1378,6 +1384,8 @@ export const buildApp = () => {
       flavorTags: readStringList(query?.flavorTags),
       sort: (typeof query?.sort === 'string' ? query.sort : undefined) as InventorySortField | undefined,
       direction: (typeof query?.direction === 'string' ? query.direction : undefined) as InventorySortDirection | undefined,
+      page: query?.page === undefined ? undefined : Number(query.page),
+      pageSize: query?.pageSize === undefined ? undefined : Number(query.pageSize),
     });
 
     return reply.send(response);

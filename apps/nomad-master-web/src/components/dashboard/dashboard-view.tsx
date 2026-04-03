@@ -112,31 +112,28 @@ const BreakdownPanel = ({
   const max = items.reduce((acc, item) => Math.max(acc, item.total), 0);
 
   return (
-    <Card className="rounded-[1.9rem] border-white/60 bg-white/82 shadow-[0_24px_60px_rgba(42,24,20,0.09)] backdrop-blur-xl">
-      <CardHeader className="space-y-2">
-        <Badge variant="outline" className="w-fit rounded-full border-stone-800/10 bg-white/70 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-stone-600">
+    <Card className="rounded-[1.6rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.92),rgba(252,245,239,0.84))] shadow-[0_14px_36px_rgba(62,27,24,0.06)] backdrop-blur-xl">
+      <CardHeader className="space-y-1.5">
+        <Badge variant="outline" className="w-fit rounded-full border-stone-800/10 bg-white/70 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] text-stone-600">
           {kicker}
         </Badge>
         <div className="space-y-1">
-          <CardTitle className="font-serif text-2xl font-semibold tracking-[-0.03em] text-stone-950">{title}</CardTitle>
-          <CardDescription className="text-sm leading-6 text-stone-600">
-            Production-ready срез, чтобы переходить к действиям без перехода в raw CRUD.
-          </CardDescription>
+          <CardTitle className="text-[1.75rem] font-semibold tracking-[-0.03em] text-stone-950">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {items.length ? (
           items.map((item) => (
             <div
               key={`${kicker}:${item.key}`}
-              className="rounded-[1.45rem] border border-stone-900/6 bg-stone-50/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+              className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/82 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
             >
-              <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="mb-2.5 flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="text-sm font-semibold text-stone-900">{item.label}</div>
                   <div className="text-xs leading-5 text-stone-500">{stockLine(item)}</div>
                 </div>
-                <Badge variant="secondary" className="rounded-full bg-stone-900/6 px-3 py-1 text-stone-700">
+                <Badge variant="secondary" className="rounded-full bg-stone-900/6 px-2.5 py-0.5 text-stone-700">
                   {formatMetricValue(item.total)}
                 </Badge>
               </div>
@@ -149,7 +146,7 @@ const BreakdownPanel = ({
             </div>
           ))
         ) : (
-          <div className="rounded-[1.45rem] border border-dashed border-stone-900/10 bg-white/70 p-5 text-sm leading-6 text-stone-500">
+          <div className="rounded-[1.2rem] border border-dashed border-stone-900/10 bg-white/70 p-4 text-sm leading-6 text-stone-500">
             {emptyText}
           </div>
         )}
@@ -179,42 +176,41 @@ export function DashboardView({
   );
 
   return (
-    <section className="mx-auto grid w-full max-w-[1180px] gap-5">
-      <Card className="overflow-hidden rounded-[2rem] border-none bg-[radial-gradient(circle_at_top_right,rgba(219,173,96,0.26),transparent_26%),linear-gradient(145deg,rgba(70,25,22,0.97),rgba(111,56,37,0.96)_52%,rgba(136,93,45,0.95))] text-white shadow-[0_32px_90px_rgba(42,21,19,0.28)]">
-        <CardHeader className="space-y-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl space-y-4">
+    <section className="grid w-full gap-4">
+      <Card className="overflow-hidden rounded-[1.45rem] border-none bg-[radial-gradient(circle_at_top_right,rgba(216,171,104,0.2),transparent_24%),linear-gradient(145deg,rgba(89,28,25,0.96),rgba(119,43,38,0.95)_52%,rgba(163,111,69,0.9))] text-white shadow-[0_18px_46px_rgba(57,22,20,0.2)]">
+        <CardHeader className="space-y-3 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl space-y-2">
               <div className="flex flex-wrap gap-2">
-                <Badge className="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-white">
-                  Dashboard / Product pulse
+                <Badge className="rounded-full border border-white/12 bg-white/10 px-2.5 py-0.5 text-[9px] uppercase tracking-[0.22em] text-white">
+                  Дашборд / сигналы смены
                 </Badge>
-                <Badge className="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-white/88">
+                <Badge className="rounded-full border border-white/12 bg-white/10 px-2.5 py-0.5 text-[9px] uppercase tracking-[0.22em] text-white/88">
                   {summary?.window.label ?? dashboardWindowOptions.find((item) => item.key === dashboardWindow)?.label}
                 </Badge>
               </div>
-              <div className="space-y-3">
-                <CardTitle className="font-serif text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
-                  Сигналы смены, а не просто сводка.
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-semibold tracking-[-0.04em] text-white md:text-[1.7rem]">
+                  Что требует внимания в этой смене.
                 </CardTitle>
-                <CardDescription className="max-w-2xl text-base leading-7 text-white/78">
-                  Дашборд собран как точка входа в решения по ассортименту, витринам и операционным блокировкам.
-                  Product и ops-метрики разведены, чтобы команда видела не только цифры, но и следующий шаг.
+                <CardDescription className="max-w-2xl text-[13px] leading-5 text-white/76">
+                  Ключевые сигналы по спросу, витрине и блокировкам.
                 </CardDescription>
               </div>
             </div>
 
-            <div className="min-w-0 rounded-[1.6rem] border border-white/12 bg-white/8 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md lg:max-w-sm">
+            <div className="min-w-0 rounded-[1.05rem] border border-white/12 bg-white/8 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md lg:max-w-[16rem]">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-white/58">Окно анализа</div>
-                  <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-white/58">Окно анализа</div>
+                  <div className="mt-1 text-base font-semibold text-white">
                     {summary?.window.label ?? dashboardWindowOptions.find((item) => item.key === dashboardWindow)?.label}
                   </div>
                 </div>
-                <Sparkles className="size-5 text-white/74" />
+                <Sparkles className="size-4 text-white/74" />
               </div>
-              <Separator className="my-4 bg-white/12" />
-              <div className="grid gap-3 text-sm text-white/74">
+              <Separator className="my-3 bg-white/12" />
+              <div className="grid gap-2 text-[13px] text-white/74">
                 <div className="flex items-center justify-between gap-4">
                   <span>Период</span>
                   <strong className="text-right font-medium text-white">{formatRange(summary?.window.startsAt ?? '', summary?.window.endsAt ?? '')}</strong>
@@ -229,7 +225,7 @@ export function DashboardView({
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-2">
               {dashboardWindowOptions.map((option) => (
                 <Button
@@ -237,7 +233,7 @@ export function DashboardView({
                   type="button"
                   variant={dashboardWindow === option.key ? 'secondary' : 'ghost'}
                   className={cn(
-                    'rounded-full border border-white/12 px-4 text-sm',
+                    'h-8 rounded-full border border-white/12 px-3 text-xs',
                     dashboardWindow === option.key
                       ? 'bg-white text-stone-950 hover:bg-white/92'
                       : 'bg-white/8 text-white hover:bg-white/14 hover:text-white',
@@ -250,19 +246,19 @@ export function DashboardView({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="ghost" className="rounded-full border border-white/10 bg-white/8 text-white hover:bg-white/14" onClick={() => onNavigate('inventory')}>
-                Инвентарь
+              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('inventory')}>
+                Инвентаризация
                 <ArrowRight className="size-4" />
               </Button>
-              <Button type="button" variant="ghost" className="rounded-full border border-white/10 bg-white/8 text-white hover:bg-white/14" onClick={() => onNavigate('mixes')}>
+              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('mixes')}>
                 Миксы
                 <ArrowRight className="size-4" />
               </Button>
-              <Button type="button" variant="ghost" className="rounded-full border border-white/10 bg-white/8 text-white hover:bg-white/14" onClick={() => onNavigate('rails')}>
+              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('rails')}>
                 Рейлы
                 <ArrowRight className="size-4" />
               </Button>
-              <Button type="button" variant="ghost" className="rounded-full border border-white/10 bg-white/8 text-white hover:bg-white/14" onClick={() => onNavigate('access')}>
+              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('access')}>
                 Доступ
                 <ArrowRight className="size-4" />
               </Button>
@@ -278,7 +274,7 @@ export function DashboardView({
         </CardHeader>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
         {summaryCards.map((card) => {
           const Icon = card.icon;
 
@@ -286,22 +282,22 @@ export function DashboardView({
             <Card
               key={card.label}
               className={cn(
-                'rounded-[1.8rem] border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(255,252,248,0.72))] shadow-[0_22px_56px_rgba(46,26,22,0.08)] backdrop-blur-xl',
+                'rounded-[1.15rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.9),rgba(250,243,238,0.76))] shadow-[0_10px_24px_rgba(62,27,24,0.06)] backdrop-blur-xl',
                 signalToneClass[card.tone],
               )}
             >
-              <CardContent className="flex items-start justify-between gap-4 pt-4">
-                <div className="space-y-3">
-                  <Badge variant="outline" className="rounded-full border-stone-900/10 bg-white/72 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-stone-500">
-                    {card.tone === 'inventory' ? 'Inventory' : card.tone === 'product' ? 'Product' : 'Ops'}
+              <CardContent className="flex items-start justify-between gap-3 py-1.5">
+                <div className="space-y-1.5">
+                  <Badge variant="outline" className="rounded-full border-stone-900/10 bg-white/72 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-stone-500">
+                    {card.tone === 'inventory' ? 'Наличие' : card.tone === 'product' ? 'Спрос' : 'Операции'}
                   </Badge>
                   <div className="space-y-1">
-                    <div className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
-                    <div className="text-sm leading-6 text-stone-600">{card.label}</div>
+                    <div className="text-[1.55rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
+                    <div className="text-[13px] leading-4.5 text-stone-600">{card.label}</div>
                   </div>
                 </div>
-                <div className="flex size-11 items-center justify-center rounded-2xl border border-stone-900/8 bg-white/70 text-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                  <Icon className="size-5" />
+                <div className="flex size-8 items-center justify-center rounded-[0.85rem] border border-stone-900/8 bg-white/70 text-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                  <Icon className="size-4" />
                 </div>
               </CardContent>
             </Card>
@@ -309,148 +305,146 @@ export function DashboardView({
         })}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr_0.8fr]">
+      <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <BreakdownPanel
           title="Производители"
-          kicker="Inventory"
+          kicker="Наличие"
           items={summary?.inventory.manufacturers ?? []}
           emptyText="Пока нет разреза по производителям."
           stockLine={(item) => `В наличии ${formatMetricValue(item.inStockCount)} из ${formatMetricValue(item.total)}`}
         />
         <BreakdownPanel
           title="Категории вкуса"
-          kicker="Profiles"
+          kicker="Категории"
           items={summary?.inventory.flavorProfiles ?? []}
           emptyText="Пока нет разреза по профилям."
           stockLine={(item) => `Нет наличия ${formatMetricValue(item.outOfStockCount)} позиции`}
         />
         <BreakdownPanel
           title="Топ вкусов"
-          kicker="Flavors"
+          kicker="Вкусы"
           items={summary?.inventory.topFlavors ?? []}
           emptyText="Пока нет разреза по вкусам."
           stockLine={(item) => `В наличии ${formatMetricValue(item.inStockCount)} позиции`}
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card className="rounded-[2rem] border-white/60 bg-[linear-gradient(180deg,rgba(255,252,247,0.92),rgba(255,248,240,0.82))] shadow-[0_26px_62px_rgba(46,26,22,0.08)] backdrop-blur-xl">
-          <CardHeader className="space-y-3">
-            <Badge variant="outline" className="w-fit rounded-full border-amber-900/10 bg-white/72 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-stone-500">
-              Product metrics
+      <div className="grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
+        <Card className="rounded-[1.4rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.92),rgba(249,241,236,0.82))] shadow-[0_14px_34px_rgba(62,27,24,0.06)] backdrop-blur-xl">
+          <CardHeader className="space-y-1.5 p-5">
+            <Badge variant="outline" className="w-fit rounded-full border-amber-900/10 bg-white/72 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-stone-500">
+              Спрос гостей
             </Badge>
             <div className="space-y-1">
-              <CardTitle className="font-serif text-3xl font-semibold tracking-[-0.04em] text-stone-950">Выборы и оценки гостей</CardTitle>
-              <CardDescription className="text-sm leading-6 text-stone-600">
-                Что выбирают гости, как они оценивают миксы и где меняется динамика по дням.
-              </CardDescription>
+              <CardTitle className="text-[1.5rem] font-semibold tracking-[-0.04em] text-stone-950">Выборы и оценки гостей</CardTitle>
+              <CardDescription className="text-[13px] leading-5 text-stone-600">Выборы, оценки и дневной ритм.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-[1.4rem] border border-amber-900/8 bg-white/82 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-stone-500">Выборы</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.smokeCtaTotal ?? 0)}</div>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2.5 md:grid-cols-3">
+              <div className="rounded-[1.1rem] border border-amber-900/8 bg-white/82 p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Выборы</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.smokeCtaTotal ?? 0)}</div>
               </div>
-              <div className="rounded-[1.4rem] border border-amber-900/8 bg-white/82 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-stone-500">Оценки</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ratingsTotal ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-amber-900/8 bg-white/82 p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Оценки</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ratingsTotal ?? 0)}</div>
               </div>
-              <div className="rounded-[1.4rem] border border-amber-900/8 bg-white/82 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-stone-500">Средняя оценка</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-stone-950">
+              <div className="rounded-[1.1rem] border border-amber-900/8 bg-white/82 p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Средняя оценка</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">
                   {summary?.avgGuestRating ? summary.avgGuestRating.toFixed(1) : '0.0'}
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[1.55rem] border border-stone-900/6 bg-white/74 p-4">
-                <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-stone-900">Топ по выбору</div>
-                    <div className="text-xs leading-5 text-stone-500">Где больше всего кликов на «Покурить».</div>
+                    <div className="text-[13px] font-semibold text-stone-900">Топ по выбору</div>
+                    <div className="text-[11px] leading-4.5 text-stone-500">Где больше всего кликов на «Покурить».</div>
                   </div>
                   <ChartColumnIncreasing className="size-4 text-stone-500" />
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {(summary?.topMixes ?? []).map((mix) => (
-                    <div key={`top:${mix.mixId}`} className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/88 p-3.5">
+                    <div key={`top:${mix.mixId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <div className="text-sm font-semibold text-stone-900">{mix.name}</div>
-                          <div className="text-xs leading-5 text-stone-500">
+                          <div className="text-[13px] font-semibold text-stone-900">{mix.name}</div>
+                          <div className="text-[11px] leading-4.5 text-stone-500">
                             Рейтинг {mix.avgRating.toFixed(1)} · оценок {formatMetricValue(mix.ratingsCount)}
                           </div>
                         </div>
-                        <Badge className="rounded-full bg-amber-500/14 px-3 py-1 text-amber-900">{formatMetricValue(mix.smokeCtaCount)}</Badge>
+                        <Badge className="rounded-full bg-amber-500/14 px-2.5 py-0.5 text-[11px] text-amber-900">{formatMetricValue(mix.smokeCtaCount)}</Badge>
                       </div>
                     </div>
                   ))}
-                  {!summary?.topMixes.length ? <div className="text-sm leading-6 text-stone-500">Пока нет данных по выборам.</div> : null}
+                  {!summary?.topMixes.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет данных по выборам.</div> : null}
                 </div>
               </div>
 
-              <div className="rounded-[1.55rem] border border-stone-900/6 bg-white/74 p-4">
-                <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-stone-900">Топ по оценкам</div>
-                    <div className="text-xs leading-5 text-stone-500">Какие миксы получают лучший отклик гостей.</div>
+                    <div className="text-[13px] font-semibold text-stone-900">Топ по оценкам</div>
+                    <div className="text-[11px] leading-4.5 text-stone-500">Какие миксы получают лучший отклик гостей.</div>
                   </div>
                   <Star className="size-4 text-stone-500" />
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {(summary?.topRatedMixes ?? []).map((mix) => (
-                    <div key={`rated:${mix.mixId}`} className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/88 p-3.5">
+                    <div key={`rated:${mix.mixId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <div className="text-sm font-semibold text-stone-900">{mix.name}</div>
-                          <div className="text-xs leading-5 text-stone-500">
+                          <div className="text-[13px] font-semibold text-stone-900">{mix.name}</div>
+                          <div className="text-[11px] leading-4.5 text-stone-500">
                             Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}
                           </div>
                         </div>
-                        <Badge className="rounded-full bg-emerald-500/14 px-3 py-1 text-emerald-900">{mix.avgRating.toFixed(1)}</Badge>
+                        <Badge className="rounded-full bg-emerald-500/14 px-2.5 py-0.5 text-[11px] text-emerald-900">{mix.avgRating.toFixed(1)}</Badge>
                       </div>
                     </div>
                   ))}
-                  {!summary?.topRatedMixes.length ? <div className="text-sm leading-6 text-stone-500">Пока нет guest-оценок за окно.</div> : null}
+                  {!summary?.topRatedMixes.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет оценок гостей за выбранное окно.</div> : null}
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[0.7fr_1.3fr]">
-              <div className="rounded-[1.55rem] border border-stone-900/6 bg-white/74 p-4">
-                <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="grid gap-3 lg:grid-cols-[0.7fr_1.3fr]">
+              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-stone-900">Распределение оценок</div>
-                    <div className="text-xs leading-5 text-stone-500">Где концентрируется guest feedback.</div>
+                    <div className="text-[13px] font-semibold text-stone-900">Распределение оценок</div>
+                    <div className="text-[11px] leading-4.5 text-stone-500">Показывает, как распределяется обратная связь гостей.</div>
                   </div>
                   <Sparkles className="size-4 text-stone-500" />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {(summary?.ratingDistribution ?? []).map((item) => (
-                    <Badge key={`rating:${item.value}`} variant="outline" className="rounded-full border-stone-900/8 bg-white px-3 py-1.5 text-stone-700">
+                    <Badge key={`rating:${item.value}`} variant="outline" className="rounded-full border-stone-900/8 bg-white px-2.5 py-1 text-[11px] text-stone-700">
                       {item.value}★ · {formatMetricValue(item.count)}
                     </Badge>
                   ))}
-                  {!summary?.ratingDistribution.length ? <div className="text-sm leading-6 text-stone-500">Пока нет распределения оценок.</div> : null}
+                  {!summary?.ratingDistribution.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет распределения оценок.</div> : null}
                 </div>
               </div>
 
-              <div className="rounded-[1.55rem] border border-stone-900/6 bg-white/74 p-4">
-                <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-stone-900">Динамика по дням</div>
-                    <div className="text-xs leading-5 text-stone-500">Смотрим не только абсолют, но и ритм спроса.</div>
+                    <div className="text-[13px] font-semibold text-stone-900">Динамика по дням</div>
+                    <div className="text-[11px] leading-4.5 text-stone-500">Смотрим не только абсолют, но и ритм спроса.</div>
                   </div>
                   <Flame className="size-4 text-stone-500" />
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {(summary?.activity ?? []).map((item) => (
-                    <div key={item.date} className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/88 p-3.5">
+                    <div key={item.date} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
                       <div className="mb-2 flex items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-stone-900">{formatDashboardDay(item.date)}</div>
-                        <div className="text-xs text-stone-500">
+                        <div className="text-[13px] font-semibold text-stone-900">{formatDashboardDay(item.date)}</div>
+                        <div className="text-[11px] text-stone-500">
                           Выборов {formatMetricValue(item.smokeCtaCount)} · оценок {formatMetricValue(item.ratingsCount)}
                         </div>
                       </div>
@@ -462,94 +456,92 @@ export function DashboardView({
                       </div>
                     </div>
                   ))}
-                  {!summary?.activity.length ? <div className="text-sm leading-6 text-stone-500">Пока нет динамики по дням.</div> : null}
+                  {!summary?.activity.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет динамики по дням.</div> : null}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[2rem] border-white/60 bg-[linear-gradient(180deg,rgba(252,248,244,0.92),rgba(247,239,232,0.82))] shadow-[0_26px_62px_rgba(46,26,22,0.08)] backdrop-blur-xl">
-          <CardHeader className="space-y-3">
-            <Badge variant="outline" className="w-fit rounded-full border-amber-900/10 bg-white/72 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-stone-500">
-              Ops metrics
+        <Card className="rounded-[1.4rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,250,246,0.92),rgba(249,241,236,0.82))] shadow-[0_14px_34px_rgba(62,27,24,0.06)] backdrop-blur-xl">
+          <CardHeader className="space-y-1.5 p-5">
+            <Badge variant="outline" className="w-fit rounded-full border-amber-900/10 bg-white/72 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-stone-500">
+              Операции
             </Badge>
             <div className="space-y-1">
-              <CardTitle className="font-serif text-3xl font-semibold tracking-[-0.04em] text-stone-950">Сигналы для команды</CardTitle>
-              <CardDescription className="text-sm leading-6 text-stone-600">
-                Что мешает продажам сейчас и где надо действовать в инвентаре или витрине.
-              </CardDescription>
+              <CardTitle className="text-[1.5rem] font-semibold tracking-[-0.04em] text-stone-950">Сигналы для команды</CardTitle>
+              <CardDescription className="text-[13px] leading-5 text-stone-600">Блокировки витрины и состояние рейлов.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/82 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-stone-500">Гостю видно</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.guestVisibleMixesCount ?? 0)}</div>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <div className="rounded-[1.1rem] border border-stone-900/8 bg-white/82 p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Гостю видно</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.guestVisibleMixesCount ?? 0)}</div>
               </div>
-              <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/82 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-stone-500">Скрыто вручную</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.hiddenMixesCount ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-stone-900/8 bg-white/82 p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Скрыто вручную</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.hiddenMixesCount ?? 0)}</div>
               </div>
-              <div className="rounded-[1.4rem] border border-stone-900/8 bg-white/82 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-stone-500">Активных рейлов</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.activeRailsCount ?? 0)}</div>
+              <div className="rounded-[1.1rem] border border-stone-900/8 bg-white/82 p-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Активных рейлов</div>
+                <div className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(summary?.ops.activeRailsCount ?? 0)}</div>
               </div>
             </div>
 
-            <div className="rounded-[1.55rem] border border-stone-900/6 bg-white/74 p-4">
-              <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-stone-900">Миксы, которые режет наличие</div>
-                  <div className="text-xs leading-5 text-stone-500">Здесь спрос уже упирается в инвентарь.</div>
+                  <div className="text-[13px] font-semibold text-stone-900">Миксы, которые режет наличие</div>
+                  <div className="text-[11px] leading-4.5 text-stone-500">Здесь спрос уже упирается в инвентарь.</div>
                 </div>
                 <TriangleAlert className="size-4 text-stone-500" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {(summary?.ops.blockedMixes ?? []).map((mix) => (
-                  <div key={`blocked:${mix.mixId}`} className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/88 p-3.5">
+                  <div key={`blocked:${mix.mixId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <div className="text-sm font-semibold text-stone-900">{mix.name}</div>
-                        <div className="text-xs leading-5 text-stone-500">
+                        <div className="text-[13px] font-semibold text-stone-900">{mix.name}</div>
+                        <div className="text-[11px] leading-4.5 text-stone-500">
                           Нет наличия: {mix.missingComponents.join(', ') || 'не указано'}
                         </div>
-                        <div className="text-xs leading-5 text-stone-500">
+                        <div className="text-[11px] leading-4.5 text-stone-500">
                           Рейлы: {mix.railNames.join(', ') || 'не участвует'}
                         </div>
                       </div>
-                      <Badge className="rounded-full bg-rose-500/14 px-3 py-1 text-rose-900">{formatMetricValue(mix.smokeCtaCount)}</Badge>
+                      <Badge className="rounded-full bg-rose-500/14 px-2.5 py-0.5 text-[11px] text-rose-900">{formatMetricValue(mix.smokeCtaCount)}</Badge>
                     </div>
                   </div>
                 ))}
-                {!summary?.ops.blockedMixes.length ? <div className="text-sm leading-6 text-stone-500">Пока нет миксов, заблокированных наличием.</div> : null}
+                {!summary?.ops.blockedMixes.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет миксов, заблокированных наличием.</div> : null}
               </div>
             </div>
 
-            <div className="rounded-[1.55rem] border border-stone-900/6 bg-white/74 p-4">
-              <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="rounded-[1.2rem] border border-stone-900/6 bg-white/74 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-stone-900">Состояние рейлов</div>
-                  <div className="text-xs leading-5 text-stone-500">Понимаем, где витрина ослаблена скрытыми или пустыми позициями.</div>
+                  <div className="text-[13px] font-semibold text-stone-900">Состояние рейлов</div>
+                  <div className="text-[11px] leading-4.5 text-stone-500">Понимаем, где витрина ослаблена скрытыми или пустыми позициями.</div>
                 </div>
                 <Waypoints className="size-4 text-stone-500" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {(summary?.ops.railHealth ?? []).map((rail) => (
-                  <div key={`rail-health:${rail.railId}`} className="rounded-[1.2rem] border border-stone-900/6 bg-stone-50/88 p-3.5">
+                  <div key={`rail-health:${rail.railId}`} className="rounded-[1rem] border border-stone-900/6 bg-stone-50/88 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <div className="text-sm font-semibold text-stone-900">{rail.name}</div>
-                          <Badge variant="outline" className="rounded-full border-stone-900/8 bg-white px-2.5 py-0.5 text-[11px] text-stone-600">
+                          <div className="text-[13px] font-semibold text-stone-900">{rail.name}</div>
+                          <Badge variant="outline" className="rounded-full border-stone-900/8 bg-white px-2 py-0.5 text-[10px] text-stone-600">
                             {rail.type}
                           </Badge>
                         </div>
-                        <div className="text-xs leading-5 text-stone-500">
+                        <div className="text-[11px] leading-4.5 text-stone-500">
                           Видимых миксов {formatMetricValue(rail.visibleMixCount)} из {formatMetricValue(rail.totalMixCount)}
                         </div>
                       </div>
-                      <Badge className={cn('rounded-full px-3 py-1', rail.hiddenMixCount ? 'bg-rose-500/14 text-rose-900' : 'bg-emerald-500/14 text-emerald-900')}>
+                      <Badge className={cn('rounded-full px-2.5 py-0.5 text-[11px]', rail.hiddenMixCount ? 'bg-rose-500/14 text-rose-900' : 'bg-emerald-500/14 text-emerald-900')}>
                         {rail.hiddenMixCount ? `Скрыто ${formatMetricValue(rail.hiddenMixCount)}` : 'Без блокировок'}
                       </Badge>
                     </div>
@@ -561,27 +553,27 @@ export function DashboardView({
                     </div>
                   </div>
                 ))}
-                {!summary?.ops.railHealth.length ? <div className="text-sm leading-6 text-stone-500">Пока нет данных по рейлам.</div> : null}
+                {!summary?.ops.railHealth.length ? <div className="text-[13px] leading-5 text-stone-500">Пока нет данных по рейлам.</div> : null}
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[1.45rem] border border-stone-900/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,244,236,0.84))] p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-900">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <div className="rounded-[1.1rem] border border-stone-900/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,244,236,0.84))] p-3">
+                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-stone-900">
                   <Factory className="size-4 text-stone-500" />
                   Инвентарь
                 </div>
-                <div className="text-sm leading-6 text-stone-600">
-                  Переключись в инвентаризацию, если blocked mixes растут или падает in-stock coverage по ключевым профилям.
+                <div className="text-[13px] leading-5 text-stone-600">
+                  Переключись в инвентаризацию, если растёт число заблокированных миксов или падает покрытие по ключевым профилям.
                 </div>
               </div>
-              <div className="rounded-[1.45rem] border border-stone-900/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,244,236,0.84))] p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-900">
+              <div className="rounded-[1.1rem] border border-stone-900/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,244,236,0.84))] p-3">
+                <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-stone-900">
                   <ShieldCheck className="size-4 text-stone-500" />
                   Витрина
                 </div>
-                <div className="text-sm leading-6 text-stone-600">
-                  Переключись в рейлы, если растёт hidden count или активные rail-подборки теряют наполненность.
+                <div className="text-[13px] leading-5 text-stone-600">
+                  Переключись в рейлы, если растёт число скрытых позиций или активные подборки теряют наполненность.
                 </div>
               </div>
             </div>

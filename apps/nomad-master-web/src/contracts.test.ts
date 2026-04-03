@@ -65,6 +65,12 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
         id: 'tobacco-peach-silk',
         name: 'Peach Silk',
         manufacturer: 'Nomad Reserve',
+        lineName: 'Основная',
+        country: 'Россия',
+        officialStrength: 'Лёгкая',
+        communityStrength: 'Средняя',
+        productionStatus: 'Выпускается',
+        description: 'Сладкий персиковый профиль.',
         inStock: false,
         flavorProfiles: ['Сладкие'],
         flavors: ['персик'],
@@ -103,15 +109,29 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
       filteredItems: 1,
       inStockCount: 0,
       outOfStockCount: 1,
+      page: 2,
+      pageSize: 20,
+      totalPages: 3,
+      hasNextPage: true,
+      hasPreviousPage: true,
     },
   });
 
   assert.equal(response.items[0]?.dependentMixes?.[0]?.id, 'mix-peach-mirage');
   assert.equal(response.items[0]?.blockedDependentMixCount, 1);
+  assert.equal(response.items[0]?.lineName, 'Основная');
+  assert.equal(response.items[0]?.country, 'Россия');
+  assert.equal(response.items[0]?.officialStrength, 'Лёгкая');
+  assert.equal(response.items[0]?.communityStrength, 'Средняя');
+  assert.equal(response.items[0]?.productionStatus, 'Выпускается');
+  assert.equal(response.items[0]?.description, 'Сладкий персиковый профиль.');
   assert.equal(response.filters.stock, 'out-of-stock');
   assert.deepEqual(response.filters.options.flavorTags, ['fruity']);
   assert.equal(response.sort.field, 'dependentMixes');
   assert.equal(response.meta.filteredItems, 1);
+  assert.equal(response.meta.page, 2);
+  assert.equal(response.meta.pageSize, 20);
+  assert.equal(response.meta.totalPages, 3);
 });
 
 test('normalizeInventoryListResponse falls back to defaults', () => {
@@ -156,11 +176,13 @@ test('buildInventoryRequestQuery serializes selected filters and sort', () => {
       field: 'dependentMixes',
       direction: 'desc',
     },
+    3,
+    25,
   );
 
   assert.equal(
     query,
-    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc',
+    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=25',
   );
 });
 
@@ -264,6 +286,11 @@ test('normalizeMixListResponse supports filters, meta and rail memberships', () 
       blockedCount: 0,
       inRailsCount: 1,
       withoutRailsCount: 0,
+      page: 1,
+      pageSize: 25,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPreviousPage: false,
     },
   });
 
@@ -272,6 +299,7 @@ test('normalizeMixListResponse supports filters, meta and rail memberships', () 
   assert.equal(response.filters.railState, 'in-rails');
   assert.equal(response.sort.field, 'rails');
   assert.equal(response.meta.inRailsCount, 1);
+  assert.equal(response.meta.pageSize, 25);
 });
 
 test('buildMixRequestQuery serializes mix filters and sort', () => {
@@ -288,11 +316,13 @@ test('buildMixRequestQuery serializes mix filters and sort', () => {
       field: 'rails',
       direction: 'desc',
     },
+    2,
+    50,
   );
 
   assert.equal(
     query,
-    'search=%D1%8F%D0%B3%D0%BE%D0%B4%D0%B0&status=guest-visible&railState=in-rails&manufacturers=Nomad+Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc',
+    'search=%D1%8F%D0%B3%D0%BE%D0%B4%D0%B0&status=guest-visible&railState=in-rails&manufacturers=Nomad+Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc&page=2&pageSize=50',
   );
 });
 

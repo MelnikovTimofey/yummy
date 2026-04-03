@@ -148,6 +148,9 @@ export type InventoryTobaccoView = {
   id: string;
   name: string;
   manufacturer: string;
+  lineName: string;
+  officialStrength: string | null;
+  communityStrength: string | null;
   flavorProfiles: string[];
   flavors: string[];
   flavorTags: string[];
@@ -167,6 +170,8 @@ export type InventoryListQuery = {
   flavorTags?: string[];
   sort?: InventorySortField;
   direction?: InventorySortDirection;
+  page?: number;
+  pageSize?: number;
 };
 
 export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
@@ -187,6 +192,8 @@ export type MixListQuery = {
   flavorTags?: string[];
   sort?: MixSortField;
   direction?: MixSortDirection;
+  page?: number;
+  pageSize?: number;
 };
 
 export type MixListResult = {
@@ -218,6 +225,11 @@ export type MixListResult = {
     blockedCount: number;
     inRailsCount: number;
     withoutRailsCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
   };
 };
 
@@ -248,6 +260,11 @@ export type InventoryListResult = {
     filteredItems: number;
     inStockCount: number;
     outOfStockCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
   };
 };
 
@@ -479,6 +496,10 @@ const defaultRails: SeedRail[] = [
 ];
 
 let bootstrapPromise: Promise<void> | null = null;
+
+const canResetNomadState = () =>
+  process.env.NODE_ENV === 'test'
+  || process.env.NOMAD_ALLOW_STATE_RESET === '1';
 
 const unique = (items: string[]) => Array.from(new Set(items));
 
@@ -718,6 +739,12 @@ const mapTobacco = (record: {
   id: string;
   name: string;
   manufacturer: string;
+  lineName: string;
+  country: string | null;
+  officialStrength: string | null;
+  communityStrength: string | null;
+  productionStatus: string | null;
+  description: string | null;
   flavorProfiles: string;
   flavors: string;
   flavorTags: string;
@@ -727,6 +754,12 @@ const mapTobacco = (record: {
   id: record.id,
   name: record.name,
   manufacturer: record.manufacturer,
+  lineName: record.lineName,
+  country: record.country,
+  officialStrength: record.officialStrength,
+  communityStrength: record.communityStrength,
+  productionStatus: record.productionStatus,
+  description: record.description,
   flavorProfiles: parseList(record.flavorProfiles),
   flavors: parseList(record.flavors),
   flavorTags: parseList(record.flavorTags),
@@ -981,6 +1014,24 @@ const normalizeInventorySortDirection = (value: unknown): InventorySortDirection
 
 const normalizeInventorySelections = (items: string[] | undefined) =>
   unique((items ?? []).map(normalizeToken).filter(Boolean));
+
+const DEFAULT_STAFF_PAGE_SIZE = 25;
+const MAX_STAFF_PAGE_SIZE = 100;
+
+const normalizePositiveInteger = (value: unknown, fallback: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  const normalized = Math.trunc(parsed);
+  return normalized >= 1 ? normalized : fallback;
+};
+
+const normalizeStaffPage = (value: unknown) => normalizePositiveInteger(value, 1);
+
+const normalizeStaffPageSize = (value: unknown) =>
+  Math.min(MAX_STAFF_PAGE_SIZE, normalizePositiveInteger(value, DEFAULT_STAFF_PAGE_SIZE));
 
 const resolveInventorySelections = (options: string[], selected: string[]) => {
   if (!selected.length) {
@@ -1498,6 +1549,10 @@ export const ensureNomadState = async () => {
 };
 
 export const resetNomadState = async () => {
+  if (!canResetNomadState()) {
+    throw new Error('resetNomadState is disabled outside test mode. Set NOMAD_ALLOW_STATE_RESET=1 for explicit maintenance runs.');
+  }
+
   await seedNomadStorage();
 };
 
@@ -1531,6 +1586,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   const flavorTags = normalizeInventorySelections(query.flavorTags);
   const sort = normalizeInventorySortField(query.sort);
   const direction = normalizeInventorySortDirection(query.direction);
+  const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
   const searchTokens = search
     .split(/\s+/)
     .map(normalizeToken)
@@ -1569,6 +1625,9 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
       const haystack = [
         item.name,
         item.manufacturer,
+        item.lineName,
+        item.officialStrength ?? '',
+        item.communityStrength ?? '',
         ...item.flavorProfiles,
         ...item.flavors,
         ...item.flavorTags,
@@ -1581,6 +1640,13 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     })
     .sort((left, right) => inventoryTobaccoSort(left, right, sort, direction));
 
+  const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
+  const requestedPage = paginationEnabled ? normalizeStaffPage(query.page) : 1;
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const start = (page - 1) * pageSize;
+  const paginatedItems = filteredItems.slice(start, start + pageSize);
+
   const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort((left, right) => left.localeCompare(right, 'ru'));
   const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort((left, right) =>
     left.localeCompare(right, 'ru'),
@@ -1589,7 +1655,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru'));
 
   return {
-    items: filteredItems,
+    items: paginatedItems,
     filters: {
       search,
       stock,
@@ -1613,6 +1679,11 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
       filteredItems: filteredItems.length,
       inStockCount: filteredItems.filter((item) => item.inStock).length,
       outOfStockCount: filteredItems.filter((item) => !item.inStock).length,
+      page,
+      pageSize,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
     },
   };
 };
@@ -1903,6 +1974,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
   const flavorTags = normalizeInventorySelections(query.flavorTags);
   const sortField = normalizeMixSortField(query.sort);
   const sortDirection = normalizeMixSortDirection(query.direction);
+  const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
   const allItems = await getAvailableMixCatalog();
 
   const options = {
@@ -1940,8 +2012,15 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags))
     .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
 
+  const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
+  const requestedPage = paginationEnabled ? normalizeStaffPage(query.page) : 1;
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const start = (page - 1) * pageSize;
+  const paginatedItems = filteredItems.slice(start, start + pageSize);
+
   return {
-    items: filteredItems,
+    items: paginatedItems,
     filters: {
       search,
       status,
@@ -1964,6 +2043,11 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
       blockedCount: filteredItems.filter((item) => item.available && !item.guestVisible).length,
       inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
       withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
+      page,
+      pageSize,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
     },
   };
 };

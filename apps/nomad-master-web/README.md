@@ -13,6 +13,19 @@ Staff/admin frontend для продукта `Мастер`.
 5. аналитические дашборды;
 6. управление доступом и Telegram allowlist.
 
+## UX audit и redesign pass
+
+Последний pass сфокусирован на качестве операционного опыта, а не на смене backend-семантики:
+
+1. shell стал строже и ближе к control-surface, а не к lounge-like hero UI;
+2. авторизация переведена в более понятный split-layout с явным контекстом среды и роли сценария;
+3. широкий sidebar убран: основная навигация теперь работает как верхнее меню, а активный модуль читается без потери полезной ширины;
+4. palette смещена в muted-наследника `Арома Ателье`: бордово-янтарные акценты сохранены, но сам backoffice остаётся спокойнее и утилитарнее;
+5. dashboard, filters, stats и editor-surfaces уплотнены: меньше лишнего текста, меньше пустой высоты, глобальная KPI-полоска остаётся только на `Дашборде`;
+6. toolbar filters переведены в более жёсткую desktop-сетку без наложений, а filter-groups больше не растягиваются в равновысотные пустые блоки;
+7. создание микса открывается как отдельный экран без таблицы, а редактирование выбранного микса остаётся рядом с каталогом;
+8. product semantics, role boundaries и API contracts при этом не менялись.
+
 ## Phase 1
 
 В текущем спринте реализован минимальный staff login flow:
@@ -101,12 +114,12 @@ npm run dev
 
 ## Issue #2. Master shell foundation
 
-Реализован первый GitHub-backed redesign slice по shell-level visual system:
+Первый GitHub-backed redesign slice позже был дополнительно пересобран по итогам UX audit:
 
-1. авторизованный `Master` больше не рендерится как hero-stack поверх отдельных блоков, а собирается в console shell с тёмным sidebar и отдельным stage для активного модуля;
-2. workspace navigation встроена в sidebar как основной маршрут смены, а summary metrics вынесены в отдельный strip внутри рабочего stage;
-3. shell-level visual hierarchy теперь ближе к premium HoReCa console, но без изменения product semantics, staff/admin boundaries и API contracts;
-4. targeted Playwright smoke для `Master` синхронизирован с новым shell contract и проходит против локального runtime.
+1. авторизованный `Master` остаётся console shell, но основной маршрут смены теперь вынесен в верхнее horizontal menu вместо тяжёлого sidebar;
+2. shell-level hierarchy стала компактнее: identity, runtime status и active module summary считываются в одном верхнем ряду;
+3. полезная ширина рабочего полотна возвращена в `Dashboard`, `Inventory`, `Mixes`, `Rails` и `Access`, поэтому dense CRUD/table flows меньше теряют место на chrome;
+4. product semantics, staff/admin boundaries и API contracts не менялись.
 
 ## Issue #3. Harmonize operational surfaces across Master modules
 
@@ -145,21 +158,23 @@ npm run dev
 
 Inventory переведён в новый operational flow:
 
-1. `GET /staff/inventory/tobaccos` поддерживает `search`, `stock`, фильтры по производителям, `flavorProfiles`, вкусам и `flavorTags`, а также server-side sort;
+1. `GET /staff/inventory/tobaccos` поддерживает `search`, `stock`, фильтры по производителям, `flavorProfiles`, вкусам и `flavorTags`, server-side sort и paginated staff list contract (`page`, `pageSize`);
 2. строки инвентаризации показывают dependent mixes, blocked mix count и время последнего изменения;
 3. staff получил table-first экран с filters bar, bulk selection и batch actions `вернуть в наличие / убрать из наличия`;
-4. после inventory update frontend синхронно перезагружает и `dashboard`, и `mixes`, чтобы UI не жил на устаревшем состоянии;
-5. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
+4. после inventory update frontend сначала обновляет сам inventory, а `dashboard`, `mixes` и связанные справочники синхронизирует в фоне, чтобы staff-действия не блокировались лишними запросами;
+5. таблица inventory работает постранично и не перерисовывает весь staff-каталог разом; текстовый поиск отправляется с debounce;
+6. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
 
 ## Slice 3. Mix catalog and component editor
 
 Mixes переведены в новый contract-first flow:
 
-1. `GET /staff/mixes` поддерживает `search`, `status`, `railState`, фильтры по производителям компонентов, `flavorProfiles`, вкусам и `flavorTags`, а также server-side sort;
+1. `GET /staff/mixes` поддерживает `search`, `status`, `railState`, фильтры по производителям компонентов, `flavorProfiles`, вкусам и `flavorTags`, server-side sort и paginated staff list contract (`page`, `pageSize`);
 2. backend create/update для миксов принимает `components[]` с `tobaccoId`, `proportion` и `sortOrder`, а сумма процентов валидируется строго до `100%`;
-3. staff получил table-first экран каталога миксов с rail membership summary, статусами `виден гостю / скрыт / заблокирован наличием` и быстрым переходом в редактор;
+3. staff получил table-first экран каталога миксов с rail membership summary, статусами `виден гостю / скрыт / заблокирован наличием`, быстрым переходом в редактор и отдельным экраном создания нового микса;
 4. editor компонентов больше не требует ручного ввода `componentIds`: оператор выбирает табаки из catalog-backed списка, задаёт доли, меняет порядок строк и может распределить проценты поровну;
-5. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.
+5. каталог миксов теперь открывается и фильтруется постранично, а текстовый поиск идёт через debounce вместо запроса на каждый символ;
+6. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.
 
 ## Slice 4. Rail contract hardening
 

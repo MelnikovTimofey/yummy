@@ -2,7 +2,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView } from '@/components/inventory/inventory-view';
-import { MixCatalogView, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
+import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import {
   AuditEventRecord,
   DailyAccessCodeRecord,
@@ -75,11 +75,11 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
 const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; detail: string }> = [
-  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка', detail: 'Ключевые guest и ops сигналы за смену.' },
-  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие', detail: 'Контроль табаков, фильтров и batch-операций.' },
-  { id: 'mixes', label: 'Миксы', kicker: 'Каталог', detail: 'Каталог миксов, компоненты и доступность для гостя.' },
-  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Авто- и мастерские подборки для guest surface.' },
-  { id: 'access', label: 'Доступ', kicker: 'Бот и allowlist', detail: 'Daily code, staff access и Telegram observability.' },
+  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка', detail: 'Спрос, витрина и блокировки.' },
+  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие', detail: 'Остатки, фильтры и batch-действия.' },
+  { id: 'mixes', label: 'Миксы', kicker: 'Каталог', detail: 'Состав, доступность и рейлы.' },
+  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Подборки и состояние витрины.' },
+  { id: 'access', label: 'Доступ', kicker: 'Бот и доступ', detail: 'Коды, роли и Telegram-бот.' },
 ];
 
 const getWorkspaceTabId = (tab: WorkspaceTab) => `workspace-tab-${tab}`;
@@ -95,6 +95,8 @@ type MixEditorState = {
   available: boolean;
   railMemberships: MixRailMembership[];
 };
+
+type MixesScreenMode = MixCatalogMode;
 
 type RailEditorState = {
   id: string;
@@ -374,6 +376,19 @@ const formatWorkspaceTab = (value: WorkspaceTab) => workspaceTabs.find((item) =>
 
 const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
 
+const formatLoadStatus = (status: 'idle' | 'loading' | 'ready' | 'error') => {
+  switch (status) {
+    case 'loading':
+      return 'Обновляем';
+    case 'ready':
+      return 'Данные готовы';
+    case 'error':
+      return 'Есть ошибка';
+    default:
+      return 'Ожидает загрузки';
+  }
+};
+
 export const App = () => {
   const [login, setLogin] = useState('admin');
   const [password, setPassword] = useState('');
@@ -440,6 +455,7 @@ export const App = () => {
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
+  const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
   const [railEditor, setRailEditor] = useState<RailEditorState>(emptyRailEditor);
@@ -512,12 +528,14 @@ export const App = () => {
     nextToken: string,
     nextFilters: InventoryListFilters = inventoryFilters,
     nextSort: InventoryListSort = inventorySort,
+    nextPage: number = inventoryMeta.page,
+    nextPageSize: number = inventoryMeta.pageSize,
   ) => {
     setInventoryStatus('loading');
     setInventoryError('');
 
     try {
-      const query = buildInventoryRequestQuery(nextFilters, nextSort);
+      const query = buildInventoryRequestQuery(nextFilters, nextSort, nextPage, nextPageSize);
       const response = await requestJson<unknown>(`/staff/inventory/tobaccos${query ? `?${query}` : ''}`, {}, nextToken);
       const payload = normalizeInventoryListResponse(response);
       setInventory(payload.items);
@@ -553,12 +571,14 @@ export const App = () => {
     nextToken: string,
     nextFilters: MixListFilters = mixesFilters,
     nextSort: MixListSort = mixesSort,
+    nextPage: number = mixesMeta.page,
+    nextPageSize: number = mixesMeta.pageSize,
   ) => {
     setMixesStatus('loading');
     setMixesError('');
 
     try {
-      const query = buildMixRequestQuery(nextFilters, nextSort);
+      const query = buildMixRequestQuery(nextFilters, nextSort, nextPage, nextPageSize);
       const response = await requestJson<unknown>(`/staff/mixes${query ? `?${query}` : ''}`, {}, nextToken);
       const payload = normalizeMixListResponse(response);
       setMixes(sortMixes(payload.items));
@@ -592,6 +612,15 @@ export const App = () => {
     } catch {
       setRailMixCatalog([]);
     }
+  };
+
+  const refreshInventoryDependents = async (nextToken: string) => {
+    await Promise.allSettled([
+      loadSummary(nextToken, dashboardWindow),
+      loadMixes(nextToken, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize),
+      loadMixTobaccos(nextToken),
+      loadRailMixCatalog(nextToken),
+    ]);
   };
 
   const loadRails = async (nextToken: string) => {
@@ -833,12 +862,13 @@ export const App = () => {
   const refreshInventorySurface = async (
     nextFilters: InventoryListFilters = inventoryFilters,
     nextSort: InventoryListSort = inventorySort,
+    nextPage: number = inventoryMeta.page,
   ) => {
     if (!token) {
       return;
     }
 
-    await loadInventory(token, nextFilters, nextSort);
+    await loadInventory(token, nextFilters, nextSort, nextPage, inventoryMeta.pageSize);
   };
 
   const onInventorySearchChange = async (value: string) => {
@@ -847,7 +877,7 @@ export const App = () => {
       search: value,
     };
     setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort);
+    await refreshInventorySurface(nextFilters, inventorySort, 1);
   };
 
   const onInventoryStockChange = async (value: InventoryListFilters['stock']) => {
@@ -856,7 +886,7 @@ export const App = () => {
       stock: value,
     };
     setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort);
+    await refreshInventorySurface(nextFilters, inventorySort, 1);
   };
 
   const onInventorySortFieldChange = async (field: InventoryListSort['field']) => {
@@ -865,7 +895,7 @@ export const App = () => {
       field,
     };
     setInventorySort(nextSort);
-    await refreshInventorySurface(inventoryFilters, nextSort);
+    await refreshInventorySurface(inventoryFilters, nextSort, 1);
   };
 
   const onInventorySortDirectionChange = async (direction: InventoryListSort['direction']) => {
@@ -874,7 +904,7 @@ export const App = () => {
       direction,
     };
     setInventorySort(nextSort);
-    await refreshInventorySurface(inventoryFilters, nextSort);
+    await refreshInventorySurface(inventoryFilters, nextSort, 1);
   };
 
   const onInventoryToggleFilterValue = async (key: InventoryFilterKey, value: string) => {
@@ -883,7 +913,20 @@ export const App = () => {
       [key]: toggleInventoryFilterValue(inventoryFilters[key], value),
     };
     setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort);
+    await refreshInventorySurface(nextFilters, inventorySort, 1);
+  };
+
+  const onInventoryClearFilterGroup = async (key: InventoryFilterKey) => {
+    if (inventoryFilters[key].length === 0) {
+      return;
+    }
+
+    const nextFilters = {
+      ...inventoryFilters,
+      [key]: [],
+    };
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort, 1);
   };
 
   const onInventoryResetFilters = async () => {
@@ -895,7 +938,11 @@ export const App = () => {
     setSelectedInventoryIds([]);
     setInventoryFilters(nextFilters);
     setInventorySort(nextSort);
-    await refreshInventorySurface(nextFilters, nextSort);
+    await refreshInventorySurface(nextFilters, nextSort, 1);
+  };
+
+  const onInventoryPageChange = async (page: number) => {
+    await refreshInventorySurface(inventoryFilters, inventorySort, page);
   };
 
   const onSignOut = () => {
@@ -991,13 +1038,9 @@ export const App = () => {
         },
         token,
       );
-      await Promise.all([
-        loadInventory(token, inventoryFilters, inventorySort),
-        loadSummary(token, dashboardWindow),
-        loadMixes(token),
-        loadMixTobaccos(token),
-        loadRailMixCatalog(token),
-      ]);
+      const dependentRefresh = refreshInventoryDependents(token);
+      await loadInventory(token, inventoryFilters, inventorySort);
+      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить наличие');
@@ -1042,13 +1085,9 @@ export const App = () => {
         setInventoryError(`Часть позиций пропущена backend: ${batch.skippedIds.join(', ')}`);
       }
       setSelectedInventoryIds([]);
-      await Promise.all([
-        loadInventory(token, inventoryFilters, inventorySort),
-        loadSummary(token, dashboardWindow),
-        loadMixes(token),
-        loadMixTobaccos(token),
-        loadRailMixCatalog(token),
-      ]);
+      const dependentRefresh = refreshInventoryDependents(token);
+      await loadInventory(token, inventoryFilters, inventorySort);
+      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить batch действие');
@@ -1070,9 +1109,25 @@ export const App = () => {
 
   const onSelectMix = (mix: MixRecord) => {
     setMixEditor(toMixEditorState(mix));
+    setMixesScreen('catalog');
     setMixSaveError('');
     setMixSaveStatus('idle');
     setActiveTab('mixes');
+  };
+
+  const onStartCreateMix = () => {
+    setMixEditor(emptyMixEditor());
+    setMixesScreen('create');
+    setMixSaveError('');
+    setMixSaveStatus('idle');
+    setActiveTab('mixes');
+  };
+
+  const onCancelCreateMix = () => {
+    setMixEditor(emptyMixEditor());
+    setMixesScreen('catalog');
+    setMixSaveError('');
+    setMixSaveStatus('idle');
   };
 
   const onResetMixEditor = () => {
@@ -1084,12 +1139,13 @@ export const App = () => {
   const refreshMixesSurface = async (
     nextFilters: MixListFilters = mixesFilters,
     nextSort: MixListSort = mixesSort,
+    nextPage: number = mixesMeta.page,
   ) => {
     if (!token) {
       return;
     }
 
-    await loadMixes(token, nextFilters, nextSort);
+    await loadMixes(token, nextFilters, nextSort, nextPage, mixesMeta.pageSize);
   };
 
   const onMixSearchChange = async (value: string) => {
@@ -1098,7 +1154,7 @@ export const App = () => {
       search: value,
     };
     setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort);
+    await refreshMixesSurface(nextFilters, mixesSort, 1);
   };
 
   const onMixStatusChange = async (value: MixStatusFilter) => {
@@ -1107,7 +1163,7 @@ export const App = () => {
       status: value,
     };
     setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort);
+    await refreshMixesSurface(nextFilters, mixesSort, 1);
   };
 
   const onMixRailStateChange = async (value: MixRailFilter) => {
@@ -1116,7 +1172,7 @@ export const App = () => {
       railState: value,
     };
     setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort);
+    await refreshMixesSurface(nextFilters, mixesSort, 1);
   };
 
   const onMixSortFieldChange = async (field: MixSortField) => {
@@ -1125,7 +1181,7 @@ export const App = () => {
       field,
     };
     setMixesSort(nextSort);
-    await refreshMixesSurface(mixesFilters, nextSort);
+    await refreshMixesSurface(mixesFilters, nextSort, 1);
   };
 
   const onMixSortDirectionChange = async (direction: MixSortDirection) => {
@@ -1134,7 +1190,7 @@ export const App = () => {
       direction,
     };
     setMixesSort(nextSort);
-    await refreshMixesSurface(mixesFilters, nextSort);
+    await refreshMixesSurface(mixesFilters, nextSort, 1);
   };
 
   const onMixToggleFilterValue = async (key: MixFilterKey, value: string) => {
@@ -1143,7 +1199,20 @@ export const App = () => {
       [key]: toggleMixFilterValue(mixesFilters[key], value),
     };
     setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort);
+    await refreshMixesSurface(nextFilters, mixesSort, 1);
+  };
+
+  const onMixClearFilterGroup = async (key: MixFilterKey) => {
+    if (mixesFilters[key].length === 0) {
+      return;
+    }
+
+    const nextFilters = {
+      ...mixesFilters,
+      [key]: [],
+    };
+    setMixesFilters(nextFilters);
+    await refreshMixesSurface(nextFilters, mixesSort, 1);
   };
 
   const onMixResetFilters = async () => {
@@ -1154,7 +1223,11 @@ export const App = () => {
     const nextSort = defaultMixListResponse.sort;
     setMixesFilters(nextFilters);
     setMixesSort(nextSort);
-    await refreshMixesSurface(nextFilters, nextSort);
+    await refreshMixesSurface(nextFilters, nextSort, 1);
+  };
+
+  const onMixPageChange = async (page: number) => {
+    await refreshMixesSurface(mixesFilters, mixesSort, page);
   };
 
   const onChangeMixEditorField = (field: 'name' | 'description' | 'avgRating' | 'popularity', value: string) => {
@@ -1306,6 +1379,7 @@ export const App = () => {
       }
 
       setMixEditor(toMixEditorState(savedMix));
+      setMixesScreen('catalog');
       await Promise.all([
         loadMixes(token, mixesFilters, mixesSort),
         loadRailMixCatalog(token),
@@ -2078,12 +2152,14 @@ export const App = () => {
       selectedIds={selectedInventoryIds}
       pendingRowId={toggleId}
       pendingBatchAction={inventoryBatchAction}
-      onSearchChange={(value) => void onInventorySearchChange(value)}
+      onSearchChange={onInventorySearchChange}
       onStockChange={(value) => void onInventoryStockChange(value)}
       onSortFieldChange={(value) => void onInventorySortFieldChange(value)}
       onSortDirectionChange={(value) => void onInventorySortDirectionChange(value)}
       onToggleFilterValue={(key, value) => void onInventoryToggleFilterValue(key, value)}
+      onClearFilterGroup={(key) => void onInventoryClearFilterGroup(key)}
       onResetFilters={() => void onInventoryResetFilters()}
+      onPageChange={onInventoryPageChange}
       onToggleSelection={onToggleInventorySelection}
       onToggleSelectAll={onToggleSelectAllInventory}
       onToggleStock={(item) => void onToggleStock(item)}
@@ -2094,6 +2170,7 @@ export const App = () => {
 
   const renderMixes = () => (
     <MixCatalogView
+      mode={mixesScreen}
       items={mixes}
       tobaccoOptions={mixTobaccos}
       status={mixesStatus}
@@ -2104,14 +2181,18 @@ export const App = () => {
       editor={mixEditor}
       saveStatus={mixSaveStatus}
       saveError={mixSaveError}
-      onSearchChange={(value) => void onMixSearchChange(value)}
+      onSearchChange={onMixSearchChange}
       onStatusChange={(value) => void onMixStatusChange(value)}
       onRailStateChange={(value) => void onMixRailStateChange(value)}
       onSortFieldChange={(value) => void onMixSortFieldChange(value)}
       onSortDirectionChange={(value) => void onMixSortDirectionChange(value)}
       onToggleFilterValue={(key, value) => void onMixToggleFilterValue(key, value)}
+      onClearFilterGroup={(key) => void onMixClearFilterGroup(key)}
       onResetFilters={() => void onMixResetFilters()}
+      onPageChange={onMixPageChange}
       onSelectMix={onSelectMix}
+      onStartCreate={onStartCreateMix}
+      onCancelCreate={onCancelCreateMix}
       onResetEditor={onResetMixEditor}
       onEditorFieldChange={onChangeMixEditorField}
       onEditorAvailabilityChange={onChangeMixEditorAvailability}
@@ -2160,37 +2241,34 @@ export const App = () => {
       : 'Неактивен';
 
   const renderRails = () => (
-    <section className="card">
-      <div className="section-head section-head--surface section-head--surface-split">
-        <div className="ops-surface__intro">
-          <p className="eyebrow">Менеджер рейлов</p>
-          <h2>Рейлы Nomad</h2>
-          <p className="meta-line">Управление витринами для гостя: статистика, заготовки и авторские подборки.</p>
-        </div>
-        <div className="summary-grid summary-grid--nested ops-surface__stats">
-          <article className="metric-card ops-surface__stat">
+    <section className="card rails-surface">
+        <div className="section-head section-head--surface section-head--surface-split rails-surface__header">
+          <div className="ops-surface__intro">
+            <p className="eyebrow">Менеджер рейлов</p>
+            <h2>Рейлы Nomad</h2>
+            <p className="meta-line">Состав и порядок показа подборок для гостевой витрины.</p>
+          </div>
+        <div className="summary-grid summary-grid--nested ops-surface__stats rails-surface__stats">
+          <article className="metric-card ops-surface__stat rails-surface__stat">
             <p className="metric-label">Всего рейлов</p>
             <p className="metric-value metric-value--compact">{rails.length}</p>
-            <p className="meta-line">Каталог витрин для гостевого контура.</p>
+            <p className="meta-line">Все подборки гостевой витрины.</p>
           </article>
-          <article className="metric-card ops-surface__stat">
+          <article className="metric-card ops-surface__stat rails-surface__stat">
             <p className="metric-label">Активны в витрине</p>
             <p className="metric-value metric-value--compact">{rails.filter((rail) => rail.active).length}</p>
-            <p className="meta-line">Показываются гостю в текущем runtime.</p>
+              <p className="meta-line">Показываются гостю сейчас.</p>
           </article>
-          <article className="metric-card ops-surface__stat">
+          <article className="metric-card ops-surface__stat rails-surface__stat">
             <p className="metric-label">Только просмотр</p>
             <p className="metric-value metric-value--compact">{rails.filter((rail) => !rail.editable).length}</p>
-            <p className="meta-line">Системные рейлы, защищённые от случайного редактирования.</p>
+            <p className="meta-line">Системные подборки без ручного редактирования.</p>
           </article>
         </div>
       </div>
 
-      <div className="ops-toolbar ops-toolbar--split">
-        <p className="meta-line">
-          Контентный модуль держит подборки плотными и управляемыми: заготовки, авторские рейлы и финальный порядок показа
-          живут в одном operational surface.
-        </p>
+      <div className="ops-toolbar ops-toolbar--split rails-surface__toolbar">
+        <p className="meta-line">Собирай подборки, меняй порядок и быстро отделяй системные рейлы от редактируемых.</p>
         <div className="section-actions">
           <span className="status-chip">Витрина гостя</span>
           <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
@@ -2202,13 +2280,14 @@ export const App = () => {
       {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
       {railsError ? <p className="error-text">{railsError}</p> : null}
 
-      <div className="manager-layout ops-management-grid">
-        <aside className="entity-list">
+      <div className="manager-layout ops-management-grid rails-surface__grid">
+        <aside className="entity-list rails-surface__list">
           {rails.map((rail) => (
             <article
               className={[
                 'entity-card',
                 'ops-surface__card',
+                'rails-surface__card',
                 railEditor.id === rail.id ? 'entity-card--active' : '',
                 rail.editable ? '' : 'entity-card--muted',
               ].filter(Boolean).join(' ')}
@@ -2243,7 +2322,7 @@ export const App = () => {
           {!rails.length && railsStatus !== 'loading' ? <p className="meta-line">Пока нет рейлов.</p> : null}
         </aside>
 
-        <article className="editor-card ops-editor">
+        <article className="editor-card ops-editor rails-surface__editor">
           <div className="entity-card__head">
             <div>
               <p className="entity-kicker">{railEditor.id ? 'Редактирование рейла' : 'Новый рейл'}</p>
@@ -2254,13 +2333,13 @@ export const App = () => {
 
           <form className="admin-form" onSubmit={onSubmitRail}>
             {railEditor.id ? (
-              <div className="info-banner">
+              <div className="info-banner rails-surface__banner">
                 Тип рейла: {formatRailType(railEditor.type)}.
                 {!railEditor.editable && railEditor.readOnlyReason ? ` ${railEditor.readOnlyReason}` : ''}
               </div>
             ) : (
-              <div className="info-banner">
-                Новый рейл всегда создаётся как мастерский curated rail. Выбор типа на этапе создания больше не нужен.
+              <div className="info-banner rails-surface__banner">
+                Новый рейл создаётся как мастерская подборка. Тип вручную выбирать не нужно.
               </div>
             )}
 
@@ -2288,15 +2367,15 @@ export const App = () => {
                   value={railEditor.description}
                   onChange={(event) => setRailEditor((current) => ({ ...current, description: event.target.value }))}
                   placeholder="Короткое описание рейла"
-                  rows={4}
+                  rows={3}
                   disabled={railEditorLocked}
                 />
               </label>
 
               <div className="field field--wide">
                 <span className="field-label">Состав рейла</span>
-                <div className="rail-mix-builder">
-                  <div className="rail-mix-builder__toolbar ops-toolbar">
+                <div className="rail-mix-builder rails-surface__mix-builder">
+                  <div className="rail-mix-builder__toolbar ops-toolbar rails-surface__mix-toolbar">
                     <input
                       className="text-input"
                       value={railMixSearch}
@@ -2327,14 +2406,14 @@ export const App = () => {
                     </button>
                   </div>
 
-                  <div className="rail-mix-builder__summary ops-surface__summary">
+                  <div className="rail-mix-builder__summary ops-surface__summary rails-surface__mix-summary">
                     <span className="meta-line">В рейле: {railEditor.mixIds.length}</span>
                     <span className="meta-line">Доступно для добавления: {availableRailMixOptions.length}</span>
                   </div>
 
-                  <div className="rail-mix-list ops-table-shell">
+                  <div className="rail-mix-list ops-table-shell rails-surface__mix-list">
                     {selectedRailMixEntries.length ? selectedRailMixEntries.map(({ mixId, index, mix }) => (
-                      <article className="rail-mix-row ops-surface__card" key={mixId}>
+                      <article className="rail-mix-row ops-surface__card rails-surface__mix-row" key={mixId}>
                         <div className="rail-mix-row__order">{index + 1}</div>
                         <div className="rail-mix-row__content">
                           <strong>{mix?.name ?? mixId}</strong>
@@ -2438,9 +2517,7 @@ export const App = () => {
           <div className="ops-surface__intro">
             <p className="eyebrow">Доступ</p>
             <h2>Daily code и Telegram allowlist</h2>
-            <p className="meta-line">
-              Daily code выпускается автоматически каждый день, а оператор получает его только через Telegram-бота.
-            </p>
+            <p className="meta-line">Telegram-доступ, daily code и staff-учётки.</p>
           </div>
           <div className="summary-grid summary-grid--nested ops-surface__stats">
             <article className="metric-card ops-surface__stat">
@@ -2449,7 +2526,7 @@ export const App = () => {
               <p className="meta-line">Текущее окно выдачи для смены.</p>
             </article>
             <article className="metric-card ops-surface__stat">
-              <p className="metric-label">Активный allowlist</p>
+              <p className="metric-label">Активный список</p>
               <p className="metric-value metric-value--compact">{activeOperators.length}</p>
               <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
             </article>
@@ -2468,11 +2545,10 @@ export const App = () => {
 
         <div className="ops-toolbar ops-toolbar--split">
           <div className="info-banner info-banner--ops">
-            <strong>Новая схема:</strong> оператор впервые пишет боту, делится контактом, бот сверяет номер с allowlist и после
-            привязки отдаёт `/code`. Ручной отправки и переотправки из `Мастера` нет.
+            Оператор получает код только через Telegram-бота после привязки контакта.
           </div>
           <div className="section-actions">
-            <span className="status-chip">Bot request flow</span>
+            <span className="status-chip">Telegram flow</span>
             {user?.role === 'admin' ? (
               <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
                 Новый оператор
@@ -2532,9 +2608,9 @@ export const App = () => {
             <p className="metric-label">Allowlist</p>
             <p className="meta-line">Активных номеров: {activeOperators.length}</p>
             <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
-            <p className="meta-line">Ожидают first-link: {Math.max(activeOperators.length - linkedOperatorsCount, 0)}</p>
+            <p className="meta-line">Ждут привязку: {Math.max(activeOperators.length - linkedOperatorsCount, 0)}</p>
             <p className="meta-line">Всего записей: {telegramOperators.length}</p>
-            {telegramOperatorsStatus === 'loading' ? <p className="meta-line">Загружаем allowlist...</p> : null}
+            {telegramOperatorsStatus === 'loading' ? <p className="meta-line">Загружаем список...</p> : null}
             {telegramOperatorsStatus === 'error' ? <p className="error-text">{telegramOperatorsError}</p> : null}
             {telegramOperatorsStatus === 'forbidden' ? <p className="meta-line">{telegramOperatorsError}</p> : null}
           </article>
@@ -2542,17 +2618,17 @@ export const App = () => {
 
         <article className="editor-card ops-editor">
           <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">Как это работает</p>
-              <h3>Bot-request flow</h3>
-            </div>
-            <span className="status-chip">Автоматический daily code</span>
+              <div>
+                <p className="entity-kicker">Как это работает</p>
+                <h3>Сценарий выдачи кода</h3>
+              </div>
+              <span className="status-chip">Автоматический daily code</span>
           </div>
           <div className="audit-list ops-flow-list">
             {[
-              '1. Admin добавляет оператора в allowlist по имени и телефону.',
+              '1. Администратор добавляет оператора по имени и телефону.',
               '2. Оператор впервые пишет боту и жмёт "Поделиться контактом".',
-              '3. Бот привязывает текущий chat id к allowlist-номеру.',
+              '3. Бот привязывает текущий chat id к номеру из списка.',
               '4. После привязки оператор получает актуальный daily code через /code.',
             ].map((item) => (
               <article className="entity-card entity-card--compact ops-surface__card" key={item}>
@@ -2566,9 +2642,9 @@ export const App = () => {
           <aside className="entity-list">
             {telegramOperatorsStatus === 'forbidden' ? (
               <article className="entity-card entity-card--muted ops-surface__card">
-                <p className="entity-kicker">Telegram allowlist</p>
+                <p className="entity-kicker">Telegram доступ</p>
                 <h3>Только для admin</h3>
-                <p className="meta-line">{telegramOperatorsError || 'У вас нет доступа к управлению allowlist.'}</p>
+                <p className="meta-line">{telegramOperatorsError || 'У вас нет доступа к управлению списком.'}</p>
               </article>
             ) : (
               telegramOperators.map((operator) => (
@@ -2582,7 +2658,7 @@ export const App = () => {
                 >
                   <div className="entity-card__head">
                     <div>
-                      <p className="entity-kicker">Telegram allowlist</p>
+                      <p className="entity-kicker">Telegram доступ</p>
                       <h3>{operator.name}</h3>
                     </div>
                     <span className={operator.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
@@ -2591,7 +2667,7 @@ export const App = () => {
                   </div>
                   <div className="chip-row">
                     <span className="chip">{operator.phone}</span>
-                    <span className="chip">{operator.linkedChatId ? 'Чат привязан' : 'Ждёт first-link'}</span>
+                    <span className="chip">{operator.linkedChatId ? 'Чат привязан' : 'Ждёт привязку'}</span>
                   </div>
                   <p className="meta-line">Чат: {operator.linkedChatId || 'ещё не привязан'}</p>
                   <p className="meta-line">Последний запрос: {formatDateTimeDisplay(operator.lastCodeRequestedAt)}</p>
@@ -2631,7 +2707,7 @@ export const App = () => {
             )}
 
             {telegramOperatorsStatus !== 'forbidden' && !telegramOperators.length && telegramOperatorsStatus !== 'loading' ? (
-              <p className="meta-line">Пока нет операторов в allowlist.</p>
+              <p className="meta-line">Пока нет операторов в списке.</p>
             ) : null}
           </aside>
 
@@ -2684,7 +2760,7 @@ export const App = () => {
                 </div>
 
                 <p className="meta-line">
-                  После сохранения оператор сам проходит first-link в боте через кнопку "Поделиться контактом".
+                  После сохранения оператор проходит привязку в боте через кнопку "Поделиться контактом".
                 </p>
                 {telegramOperatorSaveError ? <p className="error-text">{telegramOperatorSaveError}</p> : null}
 
@@ -2694,7 +2770,7 @@ export const App = () => {
                       ? 'Сохраняем...'
                       : telegramOperatorEditor.id
                         ? 'Сохранить доступ'
-                        : 'Добавить в allowlist'}
+                        : 'Добавить в список'}
                   </button>
                   <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
                     Сбросить форму
@@ -2709,9 +2785,9 @@ export const App = () => {
           <aside className="entity-list">
             {staffAccountsStatus === 'forbidden' ? (
               <article className="entity-card entity-card--muted ops-surface__card">
-                <p className="entity-kicker">Master staff accounts</p>
+                <p className="entity-kicker">Учётные записи</p>
                 <h3>Только для admin</h3>
-                <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению staff accounts.'}</p>
+                <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению учётными записями.'}</p>
               </article>
             ) : (
               staffAccounts.map((account) => (
@@ -2950,99 +3026,103 @@ export const App = () => {
 
   if (user) {
     const activeWorkspace = workspaceTabs.find((tab) => tab.id === activeTab) ?? workspaceTabs[0];
+    const activeWorkspaceStatus = (() => {
+      switch (activeTab) {
+        case 'dashboard':
+          return formatLoadStatus(summaryStatus);
+        case 'inventory':
+          return formatLoadStatus(inventoryStatus);
+        case 'mixes':
+          return formatLoadStatus(mixesStatus);
+        case 'rails':
+          return formatLoadStatus(railsStatus);
+        case 'access':
+          return telegramAutomationStateStatus === 'error' || dailyCodesStatus === 'error'
+            ? 'Есть ошибка'
+            : telegramAutomationStateStatus === 'loading' || dailyCodesStatus === 'loading'
+              ? 'Обновляем'
+              : 'Данные готовы';
+        default:
+          return 'Ожидает загрузки';
+      }
+    })();
 
     return (
-      <main className="shell shell--master shell--master-auth">
-        <aside className="master-sidebar">
-          <section className="master-sidebar__panel">
+      <main className="shell shell--master shell--master-workspace">
+        <header className="master-topbar">
+          <div className="master-topbar__brand">
             <p className="eyebrow">Nomad Master</p>
             <h1>Операционный контур</h1>
-            <p className="master-sidebar__lead">
-              Вы вошли как {user.name}. Этот shell собирает дашборд, инвентарь, миксы, рейлы и контур доступа в
-              единую рабочую консоль.
-            </p>
-            <div className="master-sidebar__meta">
-              <span className="status-chip status-chip--inverse">{formatRoleLabel(user.role)}</span>
-              <span className="status-chip status-chip--inverse">Postgres-backed runtime</span>
+          </div>
+
+          <div className="master-topbar__meta">
+            <div className="master-topbar__identity">
+              <strong>{user.name}</strong>
+              <span>{user.login}</span>
             </div>
-          </section>
-
-          <section className="master-sidebar__panel master-sidebar__panel--muted">
-            <div className="master-sidebar__section-head">
-              <div>
-                <p className="eyebrow">Рабочий фокус</p>
-                <h2>Маршрут смены</h2>
-              </div>
-              <span className="status-chip">{activeWorkspace.label}</span>
-            </div>
-
-            <nav className="master-sidebar__nav" aria-label="Рабочие разделы Мастера">
-              <div className="workspace-tabs workspace-tabs--sidebar" role="tablist" aria-label="Рабочие разделы Мастера">
-                {workspaceTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    id={getWorkspaceTabId(tab.id)}
-                    ref={(node) => {
-                      workspaceTabRefs.current[tab.id] = node;
-                    }}
-                    type="button"
-                    className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    aria-controls={getWorkspacePanelId(tab.id)}
-                    tabIndex={activeTab === tab.id ? 0 : -1}
-                    onClick={() => setActiveTab(tab.id)}
-                    onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
-                  >
-                    <span className="workspace-tab__kicker">{tab.kicker}</span>
-                    <strong>{tab.label}</strong>
-                    <span className="workspace-tab__detail">{tab.detail}</span>
-                  </button>
-                ))}
-              </div>
-            </nav>
-          </section>
-
-          <section className="master-sidebar__panel master-sidebar__panel--compact">
-            <div className="master-runtime-card">
-              <span className="master-runtime-card__label">Текущий контекст</span>
-              <strong>{activeWorkspace.kicker}</strong>
-              <p>{activeWorkspace.detail}</p>
-            </div>
-
+            <span className="status-chip">{formatRoleLabel(user.role)}</span>
+            <span className="status-chip">API подключено</span>
             <button className="secondary-button secondary-button--inline" type="button" onClick={onSignOut}>
               Выйти
             </button>
-          </section>
-        </aside>
+          </div>
+        </header>
+
+        <nav className="master-nav" aria-label="Рабочие разделы Мастера">
+          <div className="workspace-tabs workspace-tabs--menu" role="tablist" aria-label="Рабочие разделы Мастера">
+            {workspaceTabs.map((tab) => (
+              <button
+                key={tab.id}
+                id={getWorkspaceTabId(tab.id)}
+                ref={(node) => {
+                  workspaceTabRefs.current[tab.id] = node;
+                }}
+                type="button"
+                className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={getWorkspacePanelId(tab.id)}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
+              >
+                <span className="workspace-tab__kicker">{tab.kicker}</span>
+                <strong>{tab.label}</strong>
+              </button>
+            ))}
+          </div>
+        </nav>
 
         <section className="master-stage">
           <header className="master-stage__header">
             <div className="master-stage__copy">
-              <p className="eyebrow">Активный модуль</p>
               <h2>{activeWorkspace.label}</h2>
               <p className="meta-line">{activeWorkspace.detail}</p>
             </div>
             <div className="master-stage__status">
-              <span className="status-chip">Смена: {formatWorkspaceTab(activeTab)}</span>
+              <span className="status-chip">Статус: {activeWorkspaceStatus}</span>
               <span className="status-chip">Роль: {formatRoleLabel(user.role)}</span>
             </div>
           </header>
 
-          <section className="master-summary-strip" aria-label="Ключевые метрики смены">
-            {readSummaryCards(summary).map((card) => (
-              <Card
-                key={card.label}
-                size="sm"
-                className="rounded-[1.55rem] border-white/58 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,249,244,0.7))] shadow-[0_18px_42px_rgba(43,24,21,0.07)] backdrop-blur-lg"
-              >
-                <CardContent className="space-y-2 pt-3.5">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{card.label}</div>
-                  <div className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">{formatMetricValue(card.value)}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          {activeTab === 'dashboard' ? (
+            <section className="master-summary-strip" aria-label="Ключевые метрики смены">
+              {readSummaryCards(summary).map((card) => (
+                <Card
+                  key={card.label}
+                  size="sm"
+                  className="master-summary-card rounded-[1.3rem] border-white/45 bg-[linear-gradient(180deg,rgba(255,251,247,0.9),rgba(250,244,239,0.76))] shadow-[0_10px_26px_rgba(62,27,24,0.06)] backdrop-blur-lg"
+                >
+                  <CardContent className="space-y-1.5 pt-2.5">
+                    <div className="master-summary-card__label text-[10px] uppercase tracking-[0.18em] text-stone-500">{card.label}</div>
+                    <div className="master-summary-card__value text-2xl font-semibold tracking-[-0.04em] text-stone-950">
+                      {formatMetricValue(card.value)}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </section>
+          ) : null}
 
           <div
             className="master-stage__panel"
@@ -3058,19 +3138,45 @@ export const App = () => {
   }
 
   return (
-    <main className="shell shell--master">
-      <section className="hero hero--master">
-        <p className="eyebrow">Nomad Master</p>
-        <h1>Вход для персонала</h1>
-        <p className="lead">Операционная консоль для кальянных мастеров и администратора Nomad. Используйте учётные данные `admin` или `nomad`.</p>
-        <div className="hero-meta">
-          <span className="status-chip status-chip--inverse">Инвентаризация</span>
-          <span className="status-chip status-chip--inverse">Контент и рейлы</span>
-          <span className="status-chip status-chip--inverse">Доступ и Telegram</span>
+    <main className="shell shell--master shell--master-login">
+      <section className="hero hero--master auth-hero">
+        <div className="auth-hero__copy">
+          <p className="eyebrow">Nomad Master</p>
+          <h1>Вход для персонала</h1>
+          <p className="lead">
+            Операционная консоль для кальянных мастеров и администратора. После входа доступны дашборд смены,
+            инвентаризация, миксы, рейлы и контроль Telegram-доступа.
+          </p>
+          <div className="hero-meta">
+            <span className="status-chip status-chip--inverse">Сводка смены</span>
+            <span className="status-chip status-chip--inverse">Инвентарь и витрина</span>
+            <span className="status-chip status-chip--inverse">Telegram и staff-доступ</span>
+          </div>
+        </div>
+
+        <div className="auth-hero__rail">
+          <article className="auth-panel">
+            <span className="master-runtime-card__label">Что внутри</span>
+            <strong>Одна консоль вместо разрозненных операционных экранов</strong>
+            <p>Маршрут работы собран по приоритету: сначала сигналы, затем действие, затем верификация состояния.</p>
+          </article>
+          <article className="auth-panel auth-panel--muted">
+            <span className="master-runtime-card__label">Среда</span>
+            <strong>{apiBaseUrl}</strong>
+            <p>Используйте учётные данные `admin` или `nomad`. Токен хранится локально в `sessionStorage`.</p>
+          </article>
         </div>
       </section>
 
-      <section className="card">
+      <section className="card auth-card">
+        <div className="auth-card__head">
+          <div>
+            <p className="eyebrow">Авторизация</p>
+            <h2>Войти в рабочую смену</h2>
+          </div>
+          <span className="status-chip">Локальная среда</span>
+        </div>
+
         <form className="guest-form" onSubmit={onSubmit}>
           <label className="field">
             <span className="field-label">Логин</span>
@@ -3099,11 +3205,6 @@ export const App = () => {
             {status === 'loading' ? 'Входим...' : 'Войти'}
           </button>
         </form>
-      </section>
-
-      <section className="card card--compact">
-        <div className="status-chip">SessionStorage bearer token</div>
-        <p className="meta-line">Локально подключено к {apiBaseUrl}. После входа загрузятся inventory, dashboard, access и контентные менеджеры.</p>
       </section>
     </main>
   );

@@ -125,6 +125,17 @@
 2. managed runtime templates для Telegram-бота;
 3. env matrix и deployment smoke checklist на уровне Nomad-контура.
 
+На этапе подготовки интеграции HTReviews дополнительно есть:
+
+1. изолированный HTML adapter для `https://htreviews.org` внутри `src/integrations/htreviews`;
+2. CLI dry-run import без записи в runtime-каталог Nomad;
+3. preview snapshot, который можно использовать как staging-вход для будущей актуализации табаков;
+4. rule-based candidate mapping в Nomad taxonomy:
+   - `flavorProfiles`
+   - `flavors`
+   - `flavorTags`
+5. отдельный sync path для наполнения текущей Nomad БД с безопасным default `inStock=false`.
+
 Параметры локального Postgres-контура:
 
 1. порт `5433`;
@@ -212,6 +223,151 @@ npm run dev
 
 По умолчанию backend слушает `3021`.
 
+## HTReviews preview import
+
+Подготовительный import работает отдельно от runtime backend и не меняет текущий seed автоматически.
+
+Базовый запуск:
+
+```bash
+cd apps/nomad-backend
+npm run import:htreviews:preview
+```
+
+По умолчанию preview сохраняется в:
+
+```text
+apps/nomad-backend/data/imports/htreviews/preview.json
+```
+
+Поддерживаемые env-параметры:
+
+1. `HTREVIEWS_BRAND_LIMIT` - ограничить число брендов для dry-run.
+2. `HTREVIEWS_TOBACCO_LIMIT` - ограничить общее число вкусов.
+3. `HTREVIEWS_FETCH_DETAILS` - `true/false`, тянуть ли detail pages.
+4. `HTREVIEWS_DELAY_MS` - пауза между запросами.
+5. `HTREVIEWS_BRAND_URLS` - CSV со списком brand URLs, если нужно обойти только выбранные бренды.
+6. `HTREVIEWS_OUTPUT_PATH` - путь для snapshot файла.
+
+Пример минимального smoke-run:
+
+```bash
+cd apps/nomad-backend
+HTREVIEWS_BRAND_URLS='https://htreviews.org/tobaccos/musthave' \
+HTREVIEWS_TOBACCO_LIMIT=3 \
+HTREVIEWS_DELAY_MS=100 \
+npm run import:htreviews:preview
+```
+
+Ограничения текущего foundation-среза:
+
+1. используется только публичный HTML, без `/api/*`;
+2. import не апдейтит `NomadTobacco` автоматически;
+3. результат нужно просматривать как staging snapshot перед будущим sync-контуром;
+4. taxonomy mapping пока кандидатный и должен проходить product/data review.
+
+## HTReviews DB sync
+
+Если нужно не только preview, а реальное наполнение текущей Nomad БД:
+
+```bash
+cd apps/nomad-backend
+DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
+HTREVIEWS_BRAND_URLS='https://htreviews.org/tobaccos/musthave' \
+HTREVIEWS_TOBACCO_LIMIT=20 \
+npm run sync:htreviews
+```
+
+Поведение sync:
+
+1. импорт идемпотентный: повторный прогон делает upsert по source IDs и fallback `brand + line + name`;
+2. новые позиции по умолчанию попадают в каталог как `out-of-stock`, чтобы не ломать guest recommendations;
+3. если позиция уже есть в Nomad БД, её текущий `inStock` сохраняется;
+4. для imported tobacco теперь хранятся:
+   - `lineName`
+   - `sourceKind`
+   - `sourceUrl`
+   - `sourceExternalId`
+   - `country`
+   - strength/status metadata
+   - raw HTReviews tags
+
+Дополнительный env:
+
+1. `HTREVIEWS_DEFAULT_IN_STOCK=true|false` - default stock flag для новых импортированных записей.
+
+## HTReviews detail backfill
+
+Если каталог уже импортирован в `NomadTobacco`, но большая часть записей осталась summary-only без вкусов и крепости, используйте detail backfill:
+
+```bash
+cd apps/nomad-backend
+DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
+HTREVIEWS_DELAY_MS=10 \
+HTREVIEWS_CONCURRENCY=8 \
+HTREVIEWS_REQUEST_TIMEOUT_MS=20000 \
+npm run backfill:htreviews:details
+```
+
+Что делает backfill:
+
+1. проходит по уже импортированным `sourceKind='htreviews'` строкам;
+2. тянет detail page каждого табака;
+3. обновляет:
+   - `description`
+   - `country`
+   - `officialStrength`
+   - `communityStrength`
+   - `productionStatus`
+   - `rawSourceTags`
+   - `flavorProfiles`
+   - `flavors`
+   - `flavorTags`
+4. не меняет `inStock`;
+5. после обновления табаков пересчитывает taxonomy у существующих `NomadMix` по их компонентам.
+
+Дополнительный env:
+
+1. `HTREVIEWS_TOBACCO_LIMIT` - ограничить число detail updates для smoke-run.
+2. `HTREVIEWS_CONCURRENCY` - число параллельных worker'ов.
+3. `HTREVIEWS_ONLY_MISSING_DESCRIPTION=1` - пройти только по строкам с пустым `description`.
+4. `HTREVIEWS_ONLY_INCOMPLETE=1` - пройти только по строкам, где пуст хотя бы один core-атрибут (`country`, `officialStrength`, `communityStrength`, `productionStatus`, `description`).
+
+## Live catalog rebuild
+
+Если нужно очистить текущую `public` schema от seed/test inventory и пересобрать рабочие mixes/rails уже поверх HTReviews-каталога, используйте отдельный операционный скрипт:
+
+```bash
+cd apps/nomad-backend
+DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
+HTREVIEWS_DELAY_MS=5 \
+HTREVIEWS_REQUEST_TIMEOUT_MS=15000 \
+npm run rebuild:live-catalog
+```
+
+Что делает rebuild:
+
+1. обновляет HTReviews-каталог в `NomadTobacco` через публичный HTML;
+2. удаляет seed tobacco (`sourceKind IS NULL`) и test product-data:
+   - `NomadMix`
+   - `NomadMixComponent`
+   - `NomadRail`
+   - `NomadRailMix`
+   - `NomadSmokeCtaEvent`
+   - `NomadMixRating`
+   - `NomadAuditEvent`
+3. пересобирает текущие `11` mix templates на реальных HTReviews tobacco;
+4. пересоздаёт текущие `3` operational rails;
+5. переводит в `inStock=true` только tobacco, которые реально используются как mix components.
+
+Фактический live-state после rebuild в этой сессии:
+
+1. `1674` tobacco rows в `public`;
+2. `1674` rows с `sourceKind='htreviews'`;
+3. `0` seed tobacco rows;
+4. `14` tobacco rows помечены `inStock=true` как рабочий ассортимент для mix components;
+5. `11` mixes и `3` rails пересобраны на импортированных HTReviews tobacco.
+
 ## Bootstrap admin
 
 Для production не нужно опираться на dev seed `admin/admin`.
@@ -244,6 +400,14 @@ NOMAD_AUTOMATION_KEY=nomad-local-automation-key
 NOMAD_TOKEN_SECRET=change-me
 NOMAD_TOKEN_TTL_HOURS=24
 ```
+
+Для backend tests по умолчанию используется отдельная Prisma schema:
+
+```bash
+DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=nomad_test"
+```
+
+`npm test` сам подготавливает `nomad_test` через `prisma db push` и не должен затрагивать рабочую `public` schema.
 
 Отдельные bootstrap-only переменные для `npm run bootstrap:admin`:
 
