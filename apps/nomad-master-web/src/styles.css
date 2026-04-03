@@ -2543,6 +2543,40 @@ p {
   color: var(--nomad-ink-soft);
 }
 
+.mixes-component-select {
+  min-width: 0;
+}
+
+.mixes-component-select__trigger {
+  min-height: 42px;
+}
+
+.mixes-component-select__panel {
+  gap: 10px;
+}
+
+.mixes-component-select__clear {
+  justify-self: start;
+  color: var(--nomad-ink-soft);
+}
+
+.mixes-component-select__clear:hover {
+  color: var(--nomad-ink);
+}
+
+.mixes-component-select__option-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.mixes-component-select__option-meta {
+  color: var(--nomad-ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .mixes-filter-group__chips,
 .mixes-cell__chips,
 .mixes-editor__section-actions,

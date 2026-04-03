@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEventHandler } from 'react';
+import { useEffect, useId, useRef, useState, type FormEventHandler } from 'react';
+import { Check, ChevronDown, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -106,6 +107,161 @@ const formatMixUpdatedAt = (value?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+};
+
+const formatTobaccoOptionSummary = (option: InventoryTobacco) => {
+  const parts = [option.name, option.manufacturer];
+  if (option.lineName?.trim()) {
+    parts.push(option.lineName.trim());
+  }
+  parts.push(option.inStock ? 'в наличии' : 'нет наличия');
+  return parts.join(' · ');
+};
+
+type MixComponentSelectProps = {
+  value: string;
+  options: InventoryTobacco[];
+  onSelect: (value: string) => void;
+};
+
+const MixComponentSelect = ({ value, options, onSelect }: MixComponentSelectProps) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const panelId = useId();
+  const selectedOption = options.find((option) => option.id === value) ?? null;
+  const normalizedQuery = query.trim().toLocaleLowerCase('ru-RU');
+  const matchingOptions = normalizedQuery
+    ? options.filter((option) => {
+        const searchValue = [option.name, option.manufacturer, option.lineName ?? '', option.inStock ? 'в наличии' : 'нет наличия']
+          .join(' ')
+          .toLocaleLowerCase('ru-RU');
+        return searchValue.includes(normalizedQuery);
+      })
+    : options;
+  const visibleOptions = selectedOption
+    ? [selectedOption, ...matchingOptions.filter((option) => option.id !== selectedOption.id)]
+    : matchingOptions;
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      return;
+    }
+
+    searchRef.current?.focus();
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="ops-filter-select mixes-component-select" ref={rootRef}>
+      <Button
+        aria-controls={panelId}
+        aria-expanded={open}
+        className="ops-filter-select__trigger mixes-component-select__trigger"
+        type="button"
+        variant="outline"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="ops-filter-select__trigger-copy">
+          <strong
+            className={
+              selectedOption
+                ? 'ops-filter-select__summary'
+                : 'ops-filter-select__summary ops-filter-select__summary--placeholder'
+            }
+          >
+            {selectedOption ? selectedOption.name : 'Выберите табак'}
+          </strong>
+          <span className="ops-filter-select__meta">
+            {selectedOption ? `${selectedOption.manufacturer}${selectedOption.lineName ? ` · ${selectedOption.lineName}` : ''}` : 'Поиск по названию, бренду или линейке'}
+          </span>
+        </span>
+        <ChevronDown aria-hidden="true" className="ops-filter-select__chevron" />
+      </Button>
+
+      {open ? (
+        <div className="ops-filter-select__panel mixes-component-select__panel" id={panelId}>
+          <label className="ops-filter-select__search">
+            <Search aria-hidden="true" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Поиск табака"
+            />
+          </label>
+
+          {selectedOption ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mixes-component-select__clear"
+              onClick={() => {
+                onSelect('');
+                setOpen(false);
+              }}
+            >
+              <X aria-hidden="true" />
+              Очистить выбор
+            </Button>
+          ) : null}
+
+          <div className="ops-filter-select__list" role="listbox" aria-label="Табаки для компонента микса">
+            {visibleOptions.length ? (
+              visibleOptions.map((option) => {
+                const active = option.id === value;
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    className={active ? 'ops-filter-select__option ops-filter-select__option--active' : 'ops-filter-select__option'}
+                    onClick={() => {
+                      onSelect(option.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="mixes-component-select__option-copy">
+                      <span className="ops-filter-select__option-label">{option.name}</span>
+                      <span className="mixes-component-select__option-meta">{formatTobaccoOptionSummary(option)}</span>
+                    </span>
+                    {active ? <Check aria-hidden="true" className="ops-filter-select__check" /> : null}
+                  </button>
+                );
+              })
+            ) : (
+              <p className="ops-filter-select__empty">Ничего не найдено.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 };
 
 const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
@@ -264,17 +420,11 @@ export const MixCatalogView = ({
             <div className="mixes-component-row" key={component.key}>
               <label className="mixes-component-row__field">
                 <span className="mixes-toolbar__label">Табак</span>
-                <select
+                <MixComponentSelect
                   value={component.tobaccoId}
-                  onChange={(event) => onUpdateComponent(component.key, { tobaccoId: event.target.value })}
-                >
-                  <option value="">Выберите табак</option>
-                  {tobaccoOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name} · {option.manufacturer} · {option.inStock ? 'в наличии' : 'нет наличия'}
-                    </option>
-                  ))}
-                </select>
+                  options={tobaccoOptions}
+                  onSelect={(value) => onUpdateComponent(component.key, { tobaccoId: value })}
+                />
               </label>
 
               <label className="mixes-component-row__field mixes-component-row__field--small">
