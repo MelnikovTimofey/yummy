@@ -177,12 +177,12 @@ test('buildInventoryRequestQuery serializes selected filters and sort', () => {
       direction: 'desc',
     },
     3,
-    25,
+    100,
   );
 
   assert.equal(
     query,
-    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=25',
+    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=100',
   );
 });
 
