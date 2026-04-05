@@ -161,9 +161,10 @@ Inventory переведён в новый operational flow:
 1. `GET /staff/inventory/tobaccos` поддерживает `search`, `stock`, фильтры по производителям, `flavorProfiles`, вкусам и `flavorTags`, server-side sort и paginated staff list contract (`page`, `pageSize`);
 2. строки инвентаризации показывают dependent mixes, blocked mix count и время последнего изменения;
 3. staff получил table-first экран с filters bar, bulk selection и batch actions `вернуть в наличие / убрать из наличия`;
-4. после inventory update frontend сначала обновляет сам inventory, а `dashboard`, `mixes` и связанные справочники синхронизирует в фоне, чтобы staff-действия не блокировались лишними запросами;
-5. таблица inventory работает постранично и не перерисовывает весь staff-каталог разом; текстовый поиск отправляется с debounce;
-6. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
+4. создание нового табака теперь доступно прямо из `Inventory`: inline-форма сохраняет позицию через `POST /staff/inventory/tobaccos` и сразу делает её доступной в редакторе миксов;
+5. после inventory update frontend сначала обновляет сам inventory, а `dashboard`, `mixes` и связанные справочники синхронизирует в фоне, чтобы staff-действия не блокировались лишними запросами;
+6. таблица inventory работает постранично и не перерисовывает весь staff-каталог разом; текстовый поиск отправляется с debounce;
+7. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
 
 ## Slice 3. Mix catalog and component editor
 
@@ -173,8 +174,9 @@ Mixes переведены в новый contract-first flow:
 2. backend create/update для миксов принимает `components[]` с `tobaccoId`, `proportion` и `sortOrder`, а сумма процентов валидируется строго до `100%`;
 3. staff получил table-first экран каталога миксов с rail membership summary, статусами `виден гостю / скрыт / заблокирован наличием`, быстрым переходом в редактор и отдельным экраном создания нового микса;
 4. editor компонентов больше не требует ручного ввода `componentIds`: оператор выбирает табаки из catalog-backed списка, задаёт доли, меняет порядок строк и может распределить проценты поровну;
-5. каталог миксов теперь открывается и фильтруется постранично, а текстовый поиск идёт через debounce вместо запроса на каждый символ;
-6. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.
+5. оператор больше не заполняет вручную `популярность` и `базовый рейтинг`: эти метрики остаются производными от аналитики и оценок;
+6. каталог миксов теперь открывается и фильтруется постранично, а текстовый поиск идёт через debounce вместо запроса на каждый символ;
+7. после rail update frontend синхронно перезагружает `mixes`, чтобы rail membership в каталоге не устаревал.
 
 ## Slice 4. Rail contract hardening
 
@@ -185,4 +187,5 @@ Rails переведены на более явный staff contract:
 3. create flow больше не просит выбирать `type`: новый rail всегда создаётся как editable master-curated rail;
 4. в менеджере рейлов read-only rails визуально отделены от редактируемых и открываются в режиме просмотра с объяснением причины блокировки;
 5. состав rail больше не редактируется строкой `mixIds`: staff работает через отдельный select/reorder flow с добавлением, удалением и изменением порядка миксов;
-6. существующие prepared и curated rails остаются редактируемыми без изменения guest semantics.
+6. selector добавления миксов в rail теперь использует тот же searchable picker pattern, что и выбор табаков в редакторе микса;
+7. существующие prepared и curated rails остаются редактируемыми без изменения guest semantics.

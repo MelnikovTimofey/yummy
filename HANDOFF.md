@@ -1,5 +1,39 @@
 # HANDOFF — Yummy
 
+## 2.22) Nomad Master (5 апреля 2026) — создание табака, cleanup формы микса и unified rail selector
+
+- Запрос:
+  - добавить создание табака из `Inventory`;
+  - убрать ручное заполнение `популярности` и `базового рейтинга` в форме микса;
+  - сделать selector миксов в `Rails` таким же searchable, как selector табаков в `Mixes`.
+
+- Реализация:
+  - backend:
+    - добавлен `POST /staff/inventory/tobaccos`;
+    - в state-layer добавлен create flow для `NomadTobacco` с валидацией обязательных полей и возвратом staff inventory view;
+    - добавлен integration test на создание табака;
+  - frontend:
+    - в `Inventory` добавлены кнопка `Новый табак` и inline-форма с сохранением;
+    - после create новый табак сразу синхронизируется в inventory list, dashboard-зависимостях и selector'ах редактора миксов;
+    - из формы микса удалены поля `Популярность` и `Базовый рейтинг`;
+    - selector добавления микса в rail переведён на тот же reusable searchable picker, что и selector табака в компоненте микса;
+  - docs:
+    - обновлены `NOTES.md`, `HANDOFF.md`, `apps/nomad-master-web/README.md`.
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+
+- Остаточный риск:
+  - create flow табака пока не редактирует уже созданную tobacco-карточку; доступно только создание и переключение `in stock`;
+  - taxonomy в create-форме вводится строками через запятую, поэтому для новых `flavorProfiles` нужен аккуратный ручной ввод ключей.
+
+- Эффект:
+  - staff может заводить новый табак без выхода из `Мастера`;
+  - mix form больше не просит руками вводить аналитические метрики;
+  - rails/mixes получили единый searchable selection pattern.
+
 ## 2.21) Docs (3 апреля 2026) — сократить `NOTES.md` и `HANDOFF.md`, полную историю вынести в архив
 
 - Запрос:
@@ -32,6 +66,9 @@
 
 ### Nomad Master
 
+- В `Inventory` добавлен create flow для нового табака с сохранением через backend.
+- В `Mixes` убраны ручные поля `популярность` и `базовый рейтинг`.
+- В `Rails` selector добавления миксов переведён на тот же searchable picker pattern, что и selector табаков в `Mixes`.
 - `Inventory` и `Mixes` переведены на компактные searchable multi-select фильтры вместо длинных облаков тегов.
 - Создание и редактирование микса вынесены в отдельные экраны; каталог снова работает во всю ширину без бокового sticky editor.
 - Последний visual pass перевёл shell в новый premium editorial backoffice direction:

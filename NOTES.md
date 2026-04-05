@@ -26,6 +26,9 @@
 
 ### Nomad Master
 
+- В `Inventory` появился create flow для новых табаков: кнопка, inline-форма и сохранение через backend-контракт `POST /staff/inventory/tobaccos`.
+- В `Mixes` operator больше не вводит вручную `популярность` и `базовый рейтинг`; эти поля остаются производными от аналитики и guest-оценок.
+- В `Rails` selector добавления миксов переведён на тот же searchable picker pattern, что и выбор табаков в редакторе микса.
 - В `Inventory` и `Mixes` giant tag walls заменены на компактные searchable multi-select фильтры.
 - Создание и редактирование микса вынесены в отдельные экраны внутри вкладки `Миксы`; широкий каталог больше не конкурирует с боковым editor panel.
 - Последний visual pass перевёл `Master` в новый premium editorial backoffice direction:
@@ -62,6 +65,19 @@
   - `3` rails.
 
 ## Последние значимые блоки
+
+### 5 апреля 2026 — Nomad Master inventory create + mixes/rails form cleanup
+
+- В `Inventory` добавлен create flow для табака:
+  - новый backend endpoint `POST /staff/inventory/tobaccos`;
+  - inline-форма в `nomad-master-web`;
+  - после сохранения новый табак сразу попадает в inventory list и в selector компонентов микса.
+- Из формы создания и редактирования микса убраны ручные поля `популярность` и `базовый рейтинг`.
+- В `Rails` selector добавления миксов переведён на searchable picker и теперь визуально/поведенчески совпадает с selector'ом табаков в `Mixes`.
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
 
 ### 3 апреля 2026 — Nomad Aroma guest contract sync
 

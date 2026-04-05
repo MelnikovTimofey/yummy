@@ -178,6 +178,76 @@ test('staff inventory list paginates filtered results', async () => {
   }
 });
 
+test('staff can create tobacco entries for inventory and mix editors', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/staff/inventory/tobaccos',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        manufacturer: 'Darkside',
+        lineName: 'Core',
+        name: 'Bounty Hunter',
+        description: 'Кокосово-шоколадный профиль для новых миксов',
+        country: 'Россия',
+        officialStrength: 'medium',
+        communityStrength: 'выше средней',
+        productionStatus: 'в производстве',
+        flavorProfiles: ['sweet'],
+        flavors: ['кокос', 'шоколад'],
+        flavorTags: ['dessert', 'coconut'],
+        inStock: false,
+      },
+    });
+
+    assert.equal(created.statusCode, 201);
+    const createdBody = created.json() as {
+      item: {
+        id: string;
+        manufacturer: string;
+        lineName: string;
+        name: string;
+        inStock: boolean;
+        flavorProfiles: string[];
+        flavors: string[];
+        flavorTags: string[];
+      };
+    };
+
+    assert.equal(createdBody.item.manufacturer, 'Darkside');
+    assert.equal(createdBody.item.lineName, 'Core');
+    assert.equal(createdBody.item.name, 'Bounty Hunter');
+    assert.equal(createdBody.item.inStock, false);
+    assert.deepEqual(createdBody.item.flavorProfiles, ['sweet']);
+    assert.deepEqual(createdBody.item.flavors, ['кокос', 'шоколад']);
+    assert.deepEqual(createdBody.item.flavorTags, ['dessert', 'coconut']);
+
+    const inventory = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?search=Darkside',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(inventory.statusCode, 200);
+    const inventoryBody = inventory.json() as {
+      items: Array<{ id: string; manufacturer: string; name: string }>;
+    };
+    assert.equal(
+      inventoryBody.items.some((item) => item.id === createdBody.item.id && item.manufacturer === 'Darkside' && item.name === 'Bounty Hunter'),
+      true,
+    );
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff inventory batch endpoint updates stock and rejects archive semantics', async () => {
   const app = buildApp();
   const token = await loginStaff(app);

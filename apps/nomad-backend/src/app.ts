@@ -43,6 +43,7 @@ import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import {
   batchUpdateTobaccoInStock,
+  createTobacco,
   createMix,
   createRail,
   ensureNomadState,
@@ -158,6 +159,7 @@ export const buildApp = () => {
       automationTelegramState: 'GET /automation/telegram/state',
       automationTelegramStateReport: 'POST /automation/telegram/state/report',
       inventoryList: 'GET /staff/inventory/tobaccos',
+      inventoryCreate: 'POST /staff/inventory/tobaccos',
       inventoryBatch: 'POST /staff/inventory/tobaccos/batch',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       dashboardSummary: 'GET /staff/dashboard/summary',
@@ -1389,6 +1391,74 @@ export const buildApp = () => {
     });
 
     return reply.send(response);
+  });
+
+  app.post('/staff/inventory/tobaccos', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const payload = request.body as
+      | {
+          manufacturer?: string;
+          lineName?: string;
+          name?: string;
+          description?: string;
+          country?: string;
+          officialStrength?: string;
+          communityStrength?: string;
+          productionStatus?: string;
+          flavorProfiles?: string[];
+          flavors?: string[];
+          flavorTags?: string[];
+          inStock?: boolean;
+        }
+      | undefined;
+
+    const created = await createTobacco({
+      manufacturer: payload?.manufacturer ?? '',
+      lineName: payload?.lineName,
+      name: payload?.name ?? '',
+      description: payload?.description,
+      country: payload?.country,
+      officialStrength: payload?.officialStrength,
+      communityStrength: payload?.communityStrength,
+      productionStatus: payload?.productionStatus,
+      flavorProfiles: Array.isArray(payload?.flavorProfiles) ? payload.flavorProfiles : undefined,
+      flavors: Array.isArray(payload?.flavors) ? payload.flavors : undefined,
+      flavorTags: Array.isArray(payload?.flavorTags) ? payload.flavorTags : undefined,
+      inStock: payload?.inStock,
+    });
+
+    if (!created) {
+      return reply.status(500).send({ error: 'Inventory tobacco was created but not returned by backend' } satisfies ApiError);
+    }
+
+    if (isApiError(created)) {
+      return reply.status(400).send(created);
+    }
+
+    const response: StaffInventoryMutationResponse = {
+      item: created,
+    };
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'create',
+      entityType: 'inventory',
+      entityId: response.item.id,
+      entityLabel: `${response.item.manufacturer} · ${response.item.name}`,
+      details: {
+        lineName: response.item.lineName,
+        inStock: response.item.inStock,
+        flavorProfiles: response.item.flavorProfiles,
+        flavors: response.item.flavors,
+        flavorTags: response.item.flavorTags,
+      },
+    });
+
+    return reply.status(201).send(response);
   });
 
   app.post('/staff/inventory/tobaccos/batch', async (request, reply) => {

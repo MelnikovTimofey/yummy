@@ -149,8 +149,11 @@ export type InventoryTobaccoView = {
   name: string;
   manufacturer: string;
   lineName: string;
+  country: string | null;
   officialStrength: string | null;
   communityStrength: string | null;
+  productionStatus: string | null;
+  description: string | null;
   flavorProfiles: string[];
   flavors: string[];
   flavorTags: string[];
@@ -172,6 +175,21 @@ export type InventoryListQuery = {
   direction?: InventorySortDirection;
   page?: number;
   pageSize?: number;
+};
+
+export type TobaccoInput = {
+  manufacturer: string;
+  lineName?: string;
+  name: string;
+  description?: string;
+  country?: string;
+  officialStrength?: string;
+  communityStrength?: string;
+  productionStatus?: string;
+  flavorProfiles?: string[];
+  flavors?: string[];
+  flavorTags?: string[];
+  inStock?: boolean;
 };
 
 export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
@@ -504,6 +522,14 @@ const canResetNomadState = () =>
 const unique = (items: string[]) => Array.from(new Set(items));
 
 const normalizeToken = (value: string) => value.trim().toLowerCase();
+
+const normalizeOptionalText = (value: string | undefined) => {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+};
+
+const normalizeTextList = (items: string[] | undefined) =>
+  unique((items ?? []).map((item) => item.trim()).filter(Boolean));
 
 const slugify = (value: string) =>
   normalizeToken(value)
@@ -1369,6 +1395,19 @@ const nextMixId = async (name: string) => {
   return `${prefix}-${total + 1}`;
 };
 
+const nextTobaccoId = async (manufacturer: string, lineName: string, name: string) => {
+  const prefix = `tobacco-${slugify(`${manufacturer} ${lineName} ${name}`)}`;
+  const total = await prisma.nomadTobacco.count({
+    where: {
+      id: {
+        startsWith: prefix,
+      },
+    },
+  });
+
+  return `${prefix}-${total + 1}`;
+};
+
 const nextRailId = async (name: string) => {
   const prefix = `rail-${slugify(name)}`;
   const total = await prisma.nomadRail.count({
@@ -1696,6 +1735,55 @@ export const getTobaccoById = async (id: string) => {
   });
 
   return tobacco ? mapTobacco(tobacco) : null;
+};
+
+export const createTobacco = async (payload: Partial<TobaccoInput>) => {
+  await ensureNomadState();
+
+  const manufacturer = payload.manufacturer?.trim();
+  const name = payload.name?.trim();
+  const lineName = payload.lineName?.trim() ?? '';
+
+  if (!manufacturer || !name) {
+    return { error: 'Manufacturer and name are required' };
+  }
+
+  const existing = await prisma.nomadTobacco.findFirst({
+    where: {
+      manufacturer,
+      lineName,
+      name,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existing) {
+    return { error: 'Такой табак уже существует в каталоге' };
+  }
+
+  const id = await nextTobaccoId(manufacturer, lineName, name);
+
+  await prisma.nomadTobacco.create({
+    data: {
+      id,
+      manufacturer,
+      lineName,
+      name,
+      description: normalizeOptionalText(payload.description),
+      country: normalizeOptionalText(payload.country),
+      officialStrength: normalizeOptionalText(payload.officialStrength),
+      communityStrength: normalizeOptionalText(payload.communityStrength),
+      productionStatus: normalizeOptionalText(payload.productionStatus),
+      flavorProfiles: serializeList(normalizeTextList(payload.flavorProfiles)),
+      flavors: serializeList(normalizeTextList(payload.flavors)),
+      flavorTags: serializeList(normalizeTextList(payload.flavorTags)),
+      inStock: typeof payload.inStock === 'boolean' ? payload.inStock : true,
+    },
+  });
+
+  return (await getInventoryTobaccos({ sort: 'name', direction: 'asc' })).items.find((item) => item.id === id) ?? null;
 };
 
 export const updateTobaccoInStock = async (id: string, inStock: boolean) => {

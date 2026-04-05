@@ -194,7 +194,6 @@ test('staff can manage mixes and rails', async () => {
           },
         ],
         available: true,
-        popularity: 33,
       },
     });
 

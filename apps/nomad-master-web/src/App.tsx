@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { InventoryView } from '@/components/inventory/inventory-view';
+import { InventoryView, type InventoryCreateInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
+import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
 import {
   AuditEventRecord,
   DailyAccessCodeRecord,
@@ -100,8 +101,6 @@ type MixEditorState = {
   name: string;
   description: string;
   components: MixEditorComponentInput[];
-  avgRating: string;
-  popularity: string;
   available: boolean;
   railMemberships: MixRailMembership[];
 };
@@ -165,8 +164,6 @@ const emptyMixEditor = (): MixEditorState => ({
   name: '',
   description: '',
   components: [],
-  avgRating: '0',
-  popularity: '0',
   available: true,
   railMemberships: [],
 });
@@ -220,8 +217,6 @@ const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   name: mix.name,
   description: mix.description,
   components: mix.components.map((component) => createMixEditorComponent(component.tobaccoId, String(component.proportion))),
-  avgRating: String(mix.avgRating),
-  popularity: String(mix.popularity),
   available: mix.available,
   railMemberships: mix.railMemberships,
 });
@@ -380,8 +375,6 @@ const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   return resolvedNames.join(', ') || 'Миксы не заданы';
 };
 
-const normalizeRailMixSearch = (value: string) => value.trim().toLowerCase();
-
 const formatWorkspaceTab = (value: WorkspaceTab) => workspaceTabs.find((item) => item.id === value)?.label ?? value;
 
 const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
@@ -464,12 +457,13 @@ export const App = () => {
   const [auditEventsError, setAuditEventsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
+  const [inventoryCreateStatus, setInventoryCreateStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [inventoryCreateError, setInventoryCreateError] = useState('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
   const [railEditor, setRailEditor] = useState<RailEditorState>(emptyRailEditor);
-  const [railMixSearch, setRailMixSearch] = useState('');
   const [railMixCandidateId, setRailMixCandidateId] = useState('');
   const [railSaveStatus, setRailSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railSaveError, setRailSaveError] = useState('');
@@ -1107,6 +1101,67 @@ export const App = () => {
     }
   };
 
+  const onResetInventoryCreateFeedback = () => {
+    setInventoryCreateStatus('idle');
+    setInventoryCreateError('');
+  };
+
+  const onCreateTobacco = async (payload: InventoryCreateInput) => {
+    if (!token) {
+      return;
+    }
+
+    const manufacturer = payload.manufacturer.trim();
+    const name = payload.name.trim();
+
+    if (!manufacturer) {
+      setInventoryCreateError('Укажите производителя');
+      setInventoryCreateStatus('error');
+      return;
+    }
+
+    if (!name) {
+      setInventoryCreateError('Укажите название табака');
+      setInventoryCreateStatus('error');
+      return;
+    }
+
+    setInventoryCreateStatus('loading');
+    setInventoryCreateError('');
+
+    try {
+      await requestJson<unknown>(
+        '/staff/inventory/tobaccos',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            manufacturer,
+            lineName: payload.lineName.trim(),
+            name,
+            description: payload.description.trim(),
+            country: payload.country.trim(),
+            officialStrength: payload.officialStrength.trim(),
+            communityStrength: payload.communityStrength.trim(),
+            productionStatus: payload.productionStatus.trim(),
+            flavorProfiles: payload.flavorProfiles,
+            flavors: payload.flavors,
+            flavorTags: payload.flavorTags,
+            inStock: payload.inStock,
+          }),
+        },
+        token,
+      );
+
+      const dependentRefresh = refreshInventoryDependents(token);
+      await loadInventory(token, inventoryFilters, inventorySort);
+      void dependentRefresh;
+      setInventoryCreateStatus('ready');
+    } catch (cause) {
+      setInventoryCreateError(cause instanceof Error ? cause.message : 'Не удалось создать табак');
+      setInventoryCreateStatus('error');
+    }
+  };
+
   const onOpenInventoryMix = (mixId: string) => {
     const mix = mixes.find((item) => item.id === mixId);
     if (mix) {
@@ -1241,7 +1296,7 @@ export const App = () => {
     await refreshMixesSurface(mixesFilters, mixesSort, page);
   };
 
-  const onChangeMixEditorField = (field: 'name' | 'description' | 'avgRating' | 'popularity', value: string) => {
+  const onChangeMixEditorField = (field: 'name' | 'description', value: string) => {
     setMixEditor((current) => ({
       ...current,
       [field]: value,
@@ -1369,8 +1424,6 @@ export const App = () => {
       name,
       description,
       components,
-      avgRating: parseNumberInput(mixEditor.avgRating, 0),
-      popularity: parseNumberInput(mixEditor.popularity, 0),
       available: mixEditor.available,
     };
 
@@ -1407,7 +1460,6 @@ export const App = () => {
 
   const onSelectRail = (rail: RailRecord) => {
     setRailEditor(toRailEditorState(rail));
-    setRailMixSearch('');
     setRailMixCandidateId('');
     setRailSaveError('');
     setRailSaveStatus('idle');
@@ -1416,7 +1468,6 @@ export const App = () => {
 
   const onResetRailEditor = () => {
     setRailEditor(emptyRailEditor());
-    setRailMixSearch('');
     setRailMixCandidateId('');
     setRailSaveError('');
     setRailSaveStatus('idle');
@@ -2176,6 +2227,10 @@ export const App = () => {
       onToggleStock={(item) => void onToggleStock(item)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
       onOpenMix={onOpenInventoryMix}
+      createStatus={inventoryCreateStatus}
+      createError={inventoryCreateError}
+      onCreateTobacco={onCreateTobacco}
+      onResetCreateFeedback={onResetInventoryCreateFeedback}
     />
   );
 
@@ -2216,34 +2271,23 @@ export const App = () => {
     />
   );
 
-  const normalizedRailMixSearch = normalizeRailMixSearch(railMixSearch);
   const selectedRailMixEntries = railEditor.mixIds.map((mixId, index) => ({
     mixId,
     index,
     mix: railMixCatalog.find((item) => item.id === mixId) ?? mixes.find((item) => item.id === mixId) ?? null,
   }));
   const availableRailMixOptions = railMixCatalog
-    .filter((mix) => {
-      if (railEditor.mixIds.includes(mix.id)) {
-        return false;
-      }
-
-      if (!normalizedRailMixSearch) {
-        return true;
-      }
-
-      return [
-        mix.name,
-        mix.description,
-        ...mix.flavorProfiles,
-        ...mix.flavors,
-        ...mix.flavorTags,
-      ].some((value) => normalizeRailMixSearch(value).includes(normalizedRailMixSearch));
-    })
+    .filter((mix) => !railEditor.mixIds.includes(mix.id))
     .sort((left, right) => left.name.localeCompare(right.name, 'ru'));
   const effectiveRailMixCandidateId = availableRailMixOptions.some((mix) => mix.id === railMixCandidateId)
     ? railMixCandidateId
     : (availableRailMixOptions[0]?.id ?? '');
+  const railMixPickerOptions = availableRailMixOptions.map((mix) => ({
+    id: mix.id,
+    title: mix.name,
+    subtitle: `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`,
+    keywords: [mix.description, ...mix.flavorProfiles, ...mix.flavors, ...mix.flavorTags],
+  }));
   const railEditorLocked = Boolean(railEditor.id) && !railEditor.editable;
   const railEditorStatusLabel = railEditorLocked
     ? 'Только просмотр'
@@ -2387,26 +2431,17 @@ export const App = () => {
                 <span className="field-label">Состав рейла</span>
                 <div className="rail-mix-builder rails-surface__mix-builder">
                   <div className="rail-mix-builder__toolbar ops-toolbar rails-surface__mix-toolbar">
-                    <input
-                      className="text-input"
-                      value={railMixSearch}
-                      onChange={(event) => setRailMixSearch(event.target.value)}
-                      placeholder="Поиск миксов по названию, вкусу или описанию"
-                      disabled={railEditorLocked}
-                    />
-                    <select
-                      className="select-input"
+                    <SearchableEntitySelect
                       value={effectiveRailMixCandidateId}
-                      onChange={(event) => setRailMixCandidateId(event.target.value)}
-                      disabled={railEditorLocked || !availableRailMixOptions.length}
-                    >
-                      {availableRailMixOptions.length ? null : <option value="">Нет доступных миксов</option>}
-                      {availableRailMixOptions.map((mix) => (
-                        <option key={mix.id} value={mix.id}>
-                          {mix.name} · {mix.available ? 'виден гостю' : 'скрыт или заблокирован'}
-                        </option>
-                      ))}
-                    </select>
+                      options={railMixPickerOptions}
+                      placeholder="Выберите микс"
+                      searchPlaceholder="Поиск микса по названию, вкусу или описанию"
+                      emptyLabel="Нет доступных миксов."
+                      clearLabel="Очистить выбор"
+                      listAriaLabel="Миксы для состава рейла"
+                      disabled={railEditorLocked || !railMixPickerOptions.length}
+                      onSelect={setRailMixCandidateId}
+                    />
                     <button
                       className="secondary-button secondary-button--inline"
                       type="button"

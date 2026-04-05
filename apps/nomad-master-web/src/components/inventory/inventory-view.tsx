@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,10 @@ type InventoryViewProps = {
   onRunBatchAction: (action: Exclude<InventoryBatchAction, 'archive'>) => void;
   onOpenMix: (mixId: string) => void;
   onPageChange: (page: number) => void;
+  createStatus: 'idle' | 'loading' | 'ready' | 'error';
+  createError: string;
+  onCreateTobacco: (payload: InventoryCreateInput) => Promise<void>;
+  onResetCreateFeedback: () => void;
 };
 
 const filterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
@@ -118,6 +122,54 @@ const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
   return value;
 };
 
+const parseCommaSeparatedValues = (value: string) =>
+  Array.from(new Set(value.split(',').map((item) => item.trim()).filter(Boolean)));
+
+export type InventoryCreateInput = {
+  manufacturer: string;
+  lineName: string;
+  name: string;
+  description: string;
+  country: string;
+  officialStrength: string;
+  communityStrength: string;
+  productionStatus: string;
+  flavorProfiles: string[];
+  flavors: string[];
+  flavorTags: string[];
+  inStock: boolean;
+};
+
+type InventoryCreateDraft = {
+  manufacturer: string;
+  lineName: string;
+  name: string;
+  description: string;
+  country: string;
+  officialStrength: string;
+  communityStrength: string;
+  productionStatus: string;
+  flavorProfiles: string;
+  flavors: string;
+  flavorTags: string;
+  inStock: boolean;
+};
+
+const emptyInventoryCreateDraft = (): InventoryCreateDraft => ({
+  manufacturer: '',
+  lineName: '',
+  name: '',
+  description: '',
+  country: '',
+  officialStrength: '',
+  communityStrength: '',
+  productionStatus: '',
+  flavorProfiles: '',
+  flavors: '',
+  flavorTags: '',
+  inStock: true,
+});
+
 export const InventoryView = ({
   items,
   status,
@@ -141,9 +193,15 @@ export const InventoryView = ({
   onRunBatchAction,
   onOpenMix,
   onPageChange,
+  createStatus,
+  createError,
+  onCreateTobacco,
+  onResetCreateFeedback,
 }: InventoryViewProps) => {
   const [activeItemId, setActiveItemId] = useState('');
   const [searchValue, setSearchValue] = useState(filters.search);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDraft, setCreateDraft] = useState<InventoryCreateDraft>(emptyInventoryCreateDraft());
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
   const activeDialogTitleId = activeItem ? `inventory-detail-title-${activeItem.id}` : undefined;
@@ -196,6 +254,45 @@ export const InventoryView = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [activeItem]);
+
+  useEffect(() => {
+    if (createStatus !== 'ready') {
+      return;
+    }
+
+    setCreateDraft(emptyInventoryCreateDraft());
+    setCreateOpen(false);
+  }, [createStatus]);
+
+  const updateCreateDraft = <Key extends keyof InventoryCreateDraft>(key: Key, value: InventoryCreateDraft[Key]) => {
+    if (createError || createStatus !== 'idle') {
+      onResetCreateFeedback();
+    }
+
+    setCreateDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  };
+
+  const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    await onCreateTobacco({
+      manufacturer: createDraft.manufacturer,
+      lineName: createDraft.lineName,
+      name: createDraft.name,
+      description: createDraft.description,
+      country: createDraft.country,
+      officialStrength: createDraft.officialStrength,
+      communityStrength: createDraft.communityStrength,
+      productionStatus: createDraft.productionStatus,
+      flavorProfiles: parseCommaSeparatedValues(createDraft.flavorProfiles),
+      flavors: parseCommaSeparatedValues(createDraft.flavors),
+      flavorTags: parseCommaSeparatedValues(createDraft.flavorTags),
+      inStock: createDraft.inStock,
+    });
+  };
 
   const detailModal = activeItem ? (
     <div className="inventory-detail-modal" onClick={() => setActiveItemId('')}>
@@ -403,6 +500,25 @@ export const InventoryView = ({
             <strong>{formatMetricValue(meta.outOfStockCount)}</strong>
           </div>
         </div>
+        <div className="section-actions">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              if (createOpen) {
+                setCreateDraft(emptyInventoryCreateDraft());
+                setCreateOpen(false);
+                onResetCreateFeedback();
+                return;
+              }
+
+              onResetCreateFeedback();
+              setCreateOpen(true);
+            }}
+          >
+            {createOpen ? 'Скрыть форму' : 'Новый табак'}
+          </Button>
+        </div>
       </div>
 
       <div className="inventory-toolbar ops-toolbar">
@@ -456,6 +572,182 @@ export const InventoryView = ({
           Сбросить
         </Button>
       </div>
+
+      {createOpen ? (
+        <article className="editor-card ops-editor inventory-create-card">
+          <div className="entity-card__head">
+            <div>
+              <p className="entity-kicker">Новый табак</p>
+              <h3>{createDraft.name.trim() || 'Добавить позицию в каталог'}</h3>
+            </div>
+            <Badge variant={createDraft.inStock ? 'default' : 'secondary'}>
+              {createDraft.inStock ? 'Сразу в наличии' : 'Сразу вне наличия'}
+            </Badge>
+          </div>
+
+          <form className="admin-form" onSubmit={(event) => void handleCreateSubmit(event)}>
+            <div className="form-grid form-grid--two">
+              <label className="field">
+                <span className="field-label">Производитель</span>
+                <input
+                  className="text-input"
+                  value={createDraft.manufacturer}
+                  onChange={(event) => updateCreateDraft('manufacturer', event.target.value)}
+                  placeholder="Например, Black Burn"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Название</span>
+                <input
+                  className="text-input"
+                  value={createDraft.name}
+                  onChange={(event) => updateCreateDraft('name', event.target.value)}
+                  placeholder="Например, Peach Rings"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Линейка</span>
+                <input
+                  className="text-input"
+                  value={createDraft.lineName}
+                  onChange={(event) => updateCreateDraft('lineName', event.target.value)}
+                  placeholder="Например, Core"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Страна</span>
+                <input
+                  className="text-input"
+                  value={createDraft.country}
+                  onChange={(event) => updateCreateDraft('country', event.target.value)}
+                  placeholder="Например, Россия"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Официальная крепость</span>
+                <input
+                  className="text-input"
+                  value={createDraft.officialStrength}
+                  onChange={(event) => updateCreateDraft('officialStrength', event.target.value)}
+                  placeholder="Например, medium"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Комьюнити-крепость</span>
+                <input
+                  className="text-input"
+                  value={createDraft.communityStrength}
+                  onChange={(event) => updateCreateDraft('communityStrength', event.target.value)}
+                  placeholder="Например, выше средней"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Статус производства</span>
+                <input
+                  className="text-input"
+                  value={createDraft.productionStatus}
+                  onChange={(event) => updateCreateDraft('productionStatus', event.target.value)}
+                  placeholder="Например, в производстве"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Категории</span>
+                <input
+                  className="text-input"
+                  value={createDraft.flavorProfiles}
+                  onChange={(event) => updateCreateDraft('flavorProfiles', event.target.value)}
+                  placeholder="sweet, fresh"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Вкусы</span>
+                <input
+                  className="text-input"
+                  value={createDraft.flavors}
+                  onChange={(event) => updateCreateDraft('flavors', event.target.value)}
+                  placeholder="персик, кольца"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">Мета-теги</span>
+                <input
+                  className="text-input"
+                  value={createDraft.flavorTags}
+                  onChange={(event) => updateCreateDraft('flavorTags', event.target.value)}
+                  placeholder="fruity, candy"
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field field--wide">
+                <span className="field-label">Описание</span>
+                <textarea
+                  className="textarea-input"
+                  value={createDraft.description}
+                  onChange={(event) => updateCreateDraft('description', event.target.value)}
+                  placeholder="Короткое описание табака для инвентаризации и каталога"
+                  rows={3}
+                  disabled={createStatus === 'loading'}
+                />
+              </label>
+
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={createDraft.inStock}
+                  onChange={(event) => updateCreateDraft('inStock', event.target.checked)}
+                  disabled={createStatus === 'loading'}
+                />
+                <span>Сразу отметить как «в наличии»</span>
+              </label>
+            </div>
+
+            <p className="meta-line">
+              Категории, вкусы и мета-теги вводятся через запятую. Для категорий используй ключи каталога, например `sweet`,
+              `fresh`, `spicy`.
+            </p>
+
+            {createError ? <p className="error-text">{createError}</p> : null}
+
+            <div className="form-actions">
+              <Button type="submit" size="sm" disabled={createStatus === 'loading'}>
+                {createStatus === 'loading' ? 'Сохраняем...' : 'Создать табак'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={createStatus === 'loading'}
+                onClick={() => {
+                  setCreateDraft(emptyInventoryCreateDraft());
+                  setCreateOpen(false);
+                  onResetCreateFeedback();
+                }}
+              >
+                Отмена
+              </Button>
+            </div>
+          </form>
+        </article>
+      ) : null}
 
       <div className="inventory-filter-groups ops-filter-groups">
         {filterGroups.map((group) => {
