@@ -565,6 +565,12 @@ select:focus-visible {
   gap: 10px;
 }
 
+.catalog-tools-row-compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
 .selection-summary {
   display: grid;
   gap: 8px;
@@ -631,6 +637,11 @@ select:focus-visible {
   gap: 8px;
 }
 
+.catalog-active-filters-compact {
+  gap: 6px;
+  align-items: center;
+}
+
 .filter-pill,
 .profile-tag,
 .chip {
@@ -651,6 +662,25 @@ select:focus-visible {
   border-color: var(--line);
   background: rgba(28, 14, 13, 0.88);
   color: var(--text-1);
+}
+
+.catalog-filter-pill {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.catalog-filter-pill-compact {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.catalog-reset-btn-compact {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
 }
 
 .filters-row {
@@ -1304,6 +1334,25 @@ select:focus-visible {
 
   .content {
     padding: 12px 12px calc(12px + var(--safe-bottom));
+  }
+
+  .catalog-controls {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .catalog-mobile-tools {
+    gap: 6px;
+  }
+
+  .catalog-mobile-inline-submit,
+  .catalog-mobile-filters-toggle {
+    min-height: 40px;
+  }
+
+  .catalog-tools-row-compact {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .content-intro {

@@ -1315,6 +1315,8 @@ export const App = () => {
     ...(appliedCatalogFlavors.length ? [`Вкусы: ${appliedCatalogFlavors.length}`] : []),
     ...(appliedSortBy !== 'popularity' ? [sortOptions.find((item) => item.value === appliedSortBy)?.label ?? 'Сортировка'] : []),
   ];
+  const compactActiveFilterLabels = isCompactFilters && !filtersOpen ? activeFilterLabels.slice(0, 2) : activeFilterLabels;
+  const hiddenActiveFiltersCount = activeFilterLabels.length - compactActiveFilterLabels.length;
 
   const hasCatalogFilters =
     Boolean(query) ||
@@ -1886,22 +1888,40 @@ export const App = () => {
             </div>
           ) : null}
 
-          <div className="catalog-tools-row">
-            <div className="catalog-active-filters" aria-live="polite">
-              {activeFilterLabels.length ? (
-                activeFilterLabels.map((label) => (
-                  <Badge className="filter-pill" key={label}>
-                    {label}
+          {!isCompactFilters || filtersOpen || hasCatalogFilters ? (
+            <div className={cn('catalog-tools-row', isCompactFilters && 'catalog-tools-row-compact')}>
+              <div
+                className={cn('catalog-active-filters', isCompactFilters && 'catalog-active-filters-compact')}
+                aria-live="polite"
+              >
+                {activeFilterLabels.length ? (
+                  compactActiveFilterLabels.map((label) => (
+                    <Badge className={cn('filter-pill', 'catalog-filter-pill', isCompactFilters && 'catalog-filter-pill-compact')} key={label}>
+                      {label}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge className={cn('filter-pill', 'muted', 'catalog-filter-pill', isCompactFilters && 'catalog-filter-pill-compact')}>
+                    Фильтры не заданы
                   </Badge>
-                ))
-              ) : (
-                <Badge className="filter-pill muted">Фильтры не заданы</Badge>
+                )}
+                {hiddenActiveFiltersCount > 0 ? (
+                  <Badge className={cn('filter-pill', 'catalog-filter-pill', 'catalog-filter-pill-compact')}>+{hiddenActiveFiltersCount}</Badge>
+                ) : null}
+              </div>
+              {(!isCompactFilters || filtersOpen || hasCatalogFilters) && (
+                <Button
+                  className={cn('ghost-button', 'catalog-reset-btn', isCompactFilters && 'catalog-reset-btn-compact')}
+                  variant="outline"
+                  type="button"
+                  onClick={resetCatalogFilters}
+                  disabled={!hasCatalogFilters}
+                >
+                  {isCompactFilters ? 'Сбросить' : 'Сбросить фильтры'}
+                </Button>
               )}
             </div>
-            <Button className="ghost-button catalog-reset-btn" variant="outline" type="button" onClick={resetCatalogFilters} disabled={!hasCatalogFilters}>
-              Сбросить фильтры
-            </Button>
-          </div>
+          ) : null}
 
           {!isCompactFilters || filtersOpen ? (
             <div className="catalog-advanced-filters">
