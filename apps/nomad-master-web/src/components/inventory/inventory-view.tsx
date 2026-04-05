@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
 
 type InventoryViewProps = {
   items: InventoryTobacco[];
+  catalogOptions: InventoryTobacco[];
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: string;
   filters: InventoryListFilters;
@@ -47,10 +48,10 @@ type InventoryViewProps = {
   onRunBatchAction: (action: Exclude<InventoryBatchAction, 'archive'>) => void;
   onOpenMix: (mixId: string) => void;
   onPageChange: (page: number) => void;
-  createStatus: 'idle' | 'loading' | 'ready' | 'error';
-  createError: string;
-  onCreateTobacco: (payload: InventoryCreateInput) => Promise<void>;
-  onResetCreateFeedback: () => void;
+  saveStatus: 'idle' | 'loading' | 'ready' | 'error';
+  saveError: string;
+  onSaveTobacco: (payload: InventoryEditorInput) => Promise<void>;
+  onResetSaveFeedback: () => void;
 };
 
 const filterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
@@ -122,10 +123,14 @@ const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
   return value;
 };
 
-const parseCommaSeparatedValues = (value: string) =>
-  Array.from(new Set(value.split(',').map((item) => item.trim()).filter(Boolean)));
+const uniqueStrings = (items: string[]) =>
+  Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 
-export type InventoryCreateInput = {
+const buildSuggestionOptions = (items: Array<string | null | undefined>) =>
+  uniqueStrings(items.map((item) => item ?? '')).sort((left, right) => left.localeCompare(right, 'ru'));
+
+export type InventoryEditorInput = {
+  id: string;
   manufacturer: string;
   lineName: string;
   name: string;
@@ -140,22 +145,201 @@ export type InventoryCreateInput = {
   inStock: boolean;
 };
 
-type InventoryCreateDraft = {
-  manufacturer: string;
-  lineName: string;
-  name: string;
-  description: string;
-  country: string;
-  officialStrength: string;
-  communityStrength: string;
-  productionStatus: string;
-  flavorProfiles: string;
-  flavors: string;
-  flavorTags: string;
-  inStock: boolean;
+type InventoryEditorDraft = InventoryEditorInput;
+
+type InventoryTokenEditorProps = {
+  label: string;
+  selected: string[];
+  suggestions: string[];
+  placeholder: string;
+  formatValue?: (value: string) => string;
+  disabled?: boolean;
+  onChange: (next: string[]) => void;
 };
 
-const emptyInventoryCreateDraft = (): InventoryCreateDraft => ({
+const InventoryTokenEditor = ({
+  label,
+  selected,
+  suggestions,
+  placeholder,
+  formatValue = (value) => value,
+  disabled = false,
+  onChange,
+}: InventoryTokenEditorProps) => {
+  const [draftValue, setDraftValue] = useState('');
+
+  const addValue = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const existing = suggestions.find((item) => item.toLocaleLowerCase('ru-RU') === trimmed.toLocaleLowerCase('ru-RU'));
+    const nextValue = existing ?? trimmed;
+    const currentNormalized = selected.map((item) => item.toLocaleLowerCase('ru-RU'));
+
+    if (currentNormalized.includes(nextValue.toLocaleLowerCase('ru-RU'))) {
+      setDraftValue('');
+      return;
+    }
+
+    onChange([...selected, nextValue]);
+    setDraftValue('');
+  };
+
+  const toggleSuggestion = (value: string) => {
+    const normalized = value.toLocaleLowerCase('ru-RU');
+    if (selected.some((item) => item.toLocaleLowerCase('ru-RU') === normalized)) {
+      onChange(selected.filter((item) => item.toLocaleLowerCase('ru-RU') !== normalized));
+      return;
+    }
+
+    onChange([...selected, value]);
+  };
+
+  const filteredSuggestions = suggestions
+    .filter((item) => {
+      if (!draftValue.trim()) {
+        return true;
+      }
+
+      return item.toLocaleLowerCase('ru-RU').includes(draftValue.trim().toLocaleLowerCase('ru-RU'));
+    })
+    .slice(0, 8);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' && event.key !== ',') {
+      return;
+    }
+
+    event.preventDefault();
+    addValue(draftValue);
+  };
+
+  return (
+    <div className="field field--wide inventory-editor__token-field">
+      <span className="field-label">{label}</span>
+      <div className="inventory-editor__token-input">
+        <input
+          className="text-input"
+          value={draftValue}
+          onChange={(event) => setDraftValue(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+        <Button type="button" size="sm" variant="outline" disabled={disabled || !draftValue.trim()} onClick={() => addValue(draftValue)}>
+          Добавить
+        </Button>
+      </div>
+      {selected.length ? (
+        <div className="inventory-editor__chips">
+          {selected.map((value) => (
+            <button
+              key={`${label}:${value}`}
+              type="button"
+              className="chip chip--editable"
+              disabled={disabled}
+              onClick={() => onChange(selected.filter((item) => item !== value))}
+            >
+              {formatValue(value)} ×
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {filteredSuggestions.length ? (
+        <div className="inventory-editor__chips">
+          {filteredSuggestions.map((value) => {
+            const active = selected.includes(value);
+            return (
+              <button
+                key={`${label}:suggestion:${value}`}
+                type="button"
+                className={active ? 'chip chip--editable inventory-editor__chip--active' : 'chip'}
+                disabled={disabled}
+                onClick={() => toggleSuggestion(value)}
+              >
+                {formatValue(value)}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+type InventorySuggestionInputProps = {
+  label: string;
+  value: string;
+  suggestions: string[];
+  placeholder: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+};
+
+const InventorySuggestionInput = ({
+  label,
+  value,
+  suggestions,
+  placeholder,
+  disabled = false,
+  onChange,
+}: InventorySuggestionInputProps) => {
+  const listId = useId();
+
+  return (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <input
+        className="text-input"
+        list={suggestions.length ? listId : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+      {suggestions.length ? (
+        <datalist id={listId}>
+          {suggestions.map((option) => (
+            <option key={`${label}:${option}`} value={option} />
+          ))}
+        </datalist>
+      ) : null}
+    </label>
+  );
+};
+
+type InventoryProductionStatusSelectProps = {
+  value: string;
+  options: string[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+};
+
+const InventoryProductionStatusSelect = ({
+  value,
+  options,
+  disabled = false,
+  onChange,
+}: InventoryProductionStatusSelectProps) => (
+  <label className="field">
+    <span className="field-label">Статус производства</span>
+    <select className="select-input" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
+      <option value="">Не указан</option>
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
+type InventoryEditorMode = 'create' | 'edit';
+
+const emptyInventoryEditorDraft = (): InventoryEditorDraft => ({
+  id: '',
   manufacturer: '',
   lineName: '',
   name: '',
@@ -164,14 +348,31 @@ const emptyInventoryCreateDraft = (): InventoryCreateDraft => ({
   officialStrength: '',
   communityStrength: '',
   productionStatus: '',
-  flavorProfiles: '',
-  flavors: '',
-  flavorTags: '',
+  flavorProfiles: [],
+  flavors: [],
+  flavorTags: [],
   inStock: true,
+});
+
+const toInventoryEditorDraft = (item: InventoryTobacco): InventoryEditorDraft => ({
+  id: item.id,
+  manufacturer: item.manufacturer,
+  lineName: item.lineName ?? '',
+  name: item.name,
+  description: item.description ?? '',
+  country: item.country ?? '',
+  officialStrength: item.officialStrength ?? '',
+  communityStrength: item.communityStrength ?? '',
+  productionStatus: item.productionStatus ?? '',
+  flavorProfiles: item.flavorProfiles ?? [],
+  flavors: item.flavors ?? [],
+  flavorTags: item.flavorTags ?? [],
+  inStock: item.inStock,
 });
 
 export const InventoryView = ({
   items,
+  catalogOptions,
   status,
   error,
   filters,
@@ -193,18 +394,26 @@ export const InventoryView = ({
   onRunBatchAction,
   onOpenMix,
   onPageChange,
-  createStatus,
-  createError,
-  onCreateTobacco,
-  onResetCreateFeedback,
+  saveStatus,
+  saveError,
+  onSaveTobacco,
+  onResetSaveFeedback,
 }: InventoryViewProps) => {
   const [activeItemId, setActiveItemId] = useState('');
   const [searchValue, setSearchValue] = useState(filters.search);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createDraft, setCreateDraft] = useState<InventoryCreateDraft>(emptyInventoryCreateDraft());
+  const [editorMode, setEditorMode] = useState<InventoryEditorMode>('create');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
   const activeDialogTitleId = activeItem ? `inventory-detail-title-${activeItem.id}` : undefined;
+  const manufacturerOptions = buildSuggestionOptions(catalogOptions.map((item) => item.manufacturer));
+  const lineNameOptions = buildSuggestionOptions(catalogOptions.map((item) => item.lineName));
+  const countryOptions = buildSuggestionOptions(catalogOptions.map((item) => item.country));
+  const productionStatusOptions = buildSuggestionOptions(catalogOptions.map((item) => item.productionStatus));
+  const flavorProfileOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorProfiles ?? []));
+  const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
+  const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
 
   useEffect(() => {
     setSearchValue(filters.search);
@@ -256,42 +465,51 @@ export const InventoryView = ({
   }, [activeItem]);
 
   useEffect(() => {
-    if (createStatus !== 'ready') {
+    if (saveStatus !== 'ready') {
       return;
     }
 
-    setCreateDraft(emptyInventoryCreateDraft());
-    setCreateOpen(false);
-  }, [createStatus]);
+    setEditorDraft(emptyInventoryEditorDraft());
+    setEditorOpen(false);
+    setEditorMode('create');
+  }, [saveStatus]);
 
-  const updateCreateDraft = <Key extends keyof InventoryCreateDraft>(key: Key, value: InventoryCreateDraft[Key]) => {
-    if (createError || createStatus !== 'idle') {
-      onResetCreateFeedback();
+  const openCreateEditor = () => {
+    onResetSaveFeedback();
+    setEditorMode('create');
+    setEditorDraft(emptyInventoryEditorDraft());
+    setEditorOpen(true);
+  };
+
+  const openEditEditor = (item: InventoryTobacco) => {
+    onResetSaveFeedback();
+    setEditorMode('edit');
+    setEditorDraft(toInventoryEditorDraft(item));
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    onResetSaveFeedback();
+    setEditorDraft(emptyInventoryEditorDraft());
+    setEditorMode('create');
+    setEditorOpen(false);
+  };
+
+  const updateEditorDraft = <Key extends keyof InventoryEditorDraft>(key: Key, value: InventoryEditorDraft[Key]) => {
+    if (saveError || saveStatus !== 'idle') {
+      onResetSaveFeedback();
     }
 
-    setCreateDraft((current) => ({
+    setEditorDraft((current) => ({
       ...current,
       [key]: value,
     }));
   };
 
-  const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleEditorSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    await onCreateTobacco({
-      manufacturer: createDraft.manufacturer,
-      lineName: createDraft.lineName,
-      name: createDraft.name,
-      description: createDraft.description,
-      country: createDraft.country,
-      officialStrength: createDraft.officialStrength,
-      communityStrength: createDraft.communityStrength,
-      productionStatus: createDraft.productionStatus,
-      flavorProfiles: parseCommaSeparatedValues(createDraft.flavorProfiles),
-      flavors: parseCommaSeparatedValues(createDraft.flavors),
-      flavorTags: parseCommaSeparatedValues(createDraft.flavorTags),
-      inStock: createDraft.inStock,
-    });
+    await onSaveTobacco(editorDraft);
   };
 
   const detailModal = activeItem ? (
@@ -351,6 +569,17 @@ export const InventoryView = ({
                   onClick={() => onToggleSelection(activeItem.id)}
                 >
                   {selectedIds.includes(activeItem.id) ? 'Убрать из выбора' : 'Добавить в выбор'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    openEditEditor(activeItem);
+                    setActiveItemId('');
+                  }}
+                >
+                  Редактировать
                 </Button>
               </div>
             </section>
@@ -505,18 +734,15 @@ export const InventoryView = ({
             type="button"
             size="sm"
             onClick={() => {
-              if (createOpen) {
-                setCreateDraft(emptyInventoryCreateDraft());
-                setCreateOpen(false);
-                onResetCreateFeedback();
+              if (editorOpen) {
+                closeEditor();
                 return;
               }
 
-              onResetCreateFeedback();
-              setCreateOpen(true);
+              openCreateEditor();
             }}
           >
-            {createOpen ? 'Скрыть форму' : 'Новый табак'}
+            {editorOpen ? 'Скрыть форму' : 'Новый табак'}
           </Button>
         </div>
       </div>
@@ -573,72 +799,66 @@ export const InventoryView = ({
         </Button>
       </div>
 
-      {createOpen ? (
+      {editorOpen ? (
         <article className="editor-card ops-editor inventory-create-card">
           <div className="entity-card__head">
             <div>
-              <p className="entity-kicker">Новый табак</p>
-              <h3>{createDraft.name.trim() || 'Добавить позицию в каталог'}</h3>
+              <p className="entity-kicker">{editorMode === 'edit' ? 'Редактирование табака' : 'Новый табак'}</p>
+              <h3>{editorDraft.name.trim() || (editorMode === 'edit' ? 'Обновить позицию' : 'Добавить позицию в каталог')}</h3>
             </div>
-            <Badge variant={createDraft.inStock ? 'default' : 'secondary'}>
-              {createDraft.inStock ? 'Сразу в наличии' : 'Сразу вне наличия'}
+            <Badge variant={editorDraft.inStock ? 'default' : 'secondary'}>
+              {editorDraft.inStock ? 'В наличии' : 'Нет наличия'}
             </Badge>
           </div>
 
-          <form className="admin-form" onSubmit={(event) => void handleCreateSubmit(event)}>
+          <form className="admin-form" onSubmit={(event) => void handleEditorSubmit(event)}>
             <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Производитель</span>
-                <input
-                  className="text-input"
-                  value={createDraft.manufacturer}
-                  onChange={(event) => updateCreateDraft('manufacturer', event.target.value)}
-                  placeholder="Например, Black Burn"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventorySuggestionInput
+                label="Производитель"
+                value={editorDraft.manufacturer}
+                suggestions={manufacturerOptions}
+                placeholder="Например, Black Burn"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('manufacturer', value)}
+              />
 
               <label className="field">
                 <span className="field-label">Название</span>
                 <input
                   className="text-input"
-                  value={createDraft.name}
-                  onChange={(event) => updateCreateDraft('name', event.target.value)}
+                  value={editorDraft.name}
+                  onChange={(event) => updateEditorDraft('name', event.target.value)}
                   placeholder="Например, Peach Rings"
-                  disabled={createStatus === 'loading'}
+                  disabled={saveStatus === 'loading'}
                 />
               </label>
 
-              <label className="field">
-                <span className="field-label">Линейка</span>
-                <input
-                  className="text-input"
-                  value={createDraft.lineName}
-                  onChange={(event) => updateCreateDraft('lineName', event.target.value)}
-                  placeholder="Например, Core"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventorySuggestionInput
+                label="Линейка"
+                value={editorDraft.lineName}
+                suggestions={lineNameOptions}
+                placeholder="Например, Core"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('lineName', value)}
+              />
 
-              <label className="field">
-                <span className="field-label">Страна</span>
-                <input
-                  className="text-input"
-                  value={createDraft.country}
-                  onChange={(event) => updateCreateDraft('country', event.target.value)}
-                  placeholder="Например, Россия"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventorySuggestionInput
+                label="Страна"
+                value={editorDraft.country}
+                suggestions={countryOptions}
+                placeholder="Например, Россия"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('country', value)}
+              />
 
               <label className="field">
                 <span className="field-label">Официальная крепость</span>
                 <input
                   className="text-input"
-                  value={createDraft.officialStrength}
-                  onChange={(event) => updateCreateDraft('officialStrength', event.target.value)}
+                  value={editorDraft.officialStrength}
+                  onChange={(event) => updateEditorDraft('officialStrength', event.target.value)}
                   placeholder="Например, medium"
-                  disabled={createStatus === 'loading'}
+                  disabled={saveStatus === 'loading'}
                 />
               </label>
 
@@ -646,101 +866,88 @@ export const InventoryView = ({
                 <span className="field-label">Комьюнити-крепость</span>
                 <input
                   className="text-input"
-                  value={createDraft.communityStrength}
-                  onChange={(event) => updateCreateDraft('communityStrength', event.target.value)}
+                  value={editorDraft.communityStrength}
+                  onChange={(event) => updateEditorDraft('communityStrength', event.target.value)}
                   placeholder="Например, выше средней"
-                  disabled={createStatus === 'loading'}
+                  disabled={saveStatus === 'loading'}
                 />
               </label>
 
-              <label className="field">
-                <span className="field-label">Статус производства</span>
-                <input
-                  className="text-input"
-                  value={createDraft.productionStatus}
-                  onChange={(event) => updateCreateDraft('productionStatus', event.target.value)}
-                  placeholder="Например, в производстве"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventoryProductionStatusSelect
+                value={editorDraft.productionStatus}
+                options={productionStatusOptions}
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('productionStatus', value)}
+              />
 
-              <label className="field">
-                <span className="field-label">Категории</span>
-                <input
-                  className="text-input"
-                  value={createDraft.flavorProfiles}
-                  onChange={(event) => updateCreateDraft('flavorProfiles', event.target.value)}
-                  placeholder="sweet, fresh"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventoryTokenEditor
+                label="Категории"
+                selected={editorDraft.flavorProfiles}
+                suggestions={flavorProfileOptions}
+                placeholder="Выбери или добавь category key"
+                formatValue={formatFlavorProfileLabel}
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('flavorProfiles', value)}
+              />
 
-              <label className="field">
-                <span className="field-label">Вкусы</span>
-                <input
-                  className="text-input"
-                  value={createDraft.flavors}
-                  onChange={(event) => updateCreateDraft('flavors', event.target.value)}
-                  placeholder="персик, кольца"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventoryTokenEditor
+                label="Вкусы"
+                selected={editorDraft.flavors}
+                suggestions={flavorOptions}
+                placeholder="Выбери или добавь вкус"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('flavors', value)}
+              />
 
-              <label className="field">
-                <span className="field-label">Мета-теги</span>
-                <input
-                  className="text-input"
-                  value={createDraft.flavorTags}
-                  onChange={(event) => updateCreateDraft('flavorTags', event.target.value)}
-                  placeholder="fruity, candy"
-                  disabled={createStatus === 'loading'}
-                />
-              </label>
+              <InventoryTokenEditor
+                label="Мета-теги"
+                selected={editorDraft.flavorTags}
+                suggestions={flavorTagOptions}
+                placeholder="Выбери или добавь мета-тег"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('flavorTags', value)}
+              />
 
               <label className="field field--wide">
                 <span className="field-label">Описание</span>
                 <textarea
                   className="textarea-input"
-                  value={createDraft.description}
-                  onChange={(event) => updateCreateDraft('description', event.target.value)}
+                  value={editorDraft.description}
+                  onChange={(event) => updateEditorDraft('description', event.target.value)}
                   placeholder="Короткое описание табака для инвентаризации и каталога"
                   rows={3}
-                  disabled={createStatus === 'loading'}
+                  disabled={saveStatus === 'loading'}
                 />
               </label>
 
               <label className="checkbox-field">
                 <input
                   type="checkbox"
-                  checked={createDraft.inStock}
-                  onChange={(event) => updateCreateDraft('inStock', event.target.checked)}
-                  disabled={createStatus === 'loading'}
+                  checked={editorDraft.inStock}
+                  onChange={(event) => updateEditorDraft('inStock', event.target.checked)}
+                  disabled={saveStatus === 'loading'}
                 />
-                <span>Сразу отметить как «в наличии»</span>
+                <span>{editorMode === 'edit' ? 'Табак сейчас в наличии' : 'Сразу отметить как «в наличии»'}</span>
               </label>
             </div>
 
             <p className="meta-line">
-              Категории, вкусы и мета-теги вводятся через запятую. Для категорий используй ключи каталога, например `sweet`,
-              `fresh`, `spicy`.
+              Для `Производителя`, `Линейки`, `Страны`, `Категорий`, `Вкусов` и `Мета-тегов` можно выбрать текущее значение или
+              добавить новое. `Статус производства` ограничен уже существующими значениями.
             </p>
 
-            {createError ? <p className="error-text">{createError}</p> : null}
+            {saveError ? <p className="error-text">{saveError}</p> : null}
 
             <div className="form-actions">
-              <Button type="submit" size="sm" disabled={createStatus === 'loading'}>
-                {createStatus === 'loading' ? 'Сохраняем...' : 'Создать табак'}
+              <Button type="submit" size="sm" disabled={saveStatus === 'loading'}>
+                {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить табак' : 'Создать табак'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={createStatus === 'loading'}
-                onClick={() => {
-                  setCreateDraft(emptyInventoryCreateDraft());
-                  setCreateOpen(false);
-                  onResetCreateFeedback();
-                }}
+                disabled={saveStatus === 'loading'}
+                onClick={closeEditor}
               >
                 Отмена
               </Button>
@@ -910,15 +1117,20 @@ export const InventoryView = ({
                       </Badge>
                     </td>
                     <td className="inventory-table__actions">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={item.inStock ? 'secondary' : 'default'}
-                        onClick={() => onToggleStock(item)}
-                        disabled={pendingRowId === item.id || pendingBatchAction !== ''}
-                      >
-                        {pendingRowId === item.id ? 'Сохраняем...' : item.inStock ? 'Убрать' : 'Вернуть'}
-                      </Button>
+                      <div className="entity-card__actions entity-card__actions--wrap">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={item.inStock ? 'secondary' : 'default'}
+                          onClick={() => onToggleStock(item)}
+                          disabled={pendingRowId === item.id || pendingBatchAction !== ''}
+                        >
+                          {pendingRowId === item.id ? 'Сохраняем...' : item.inStock ? 'Убрать' : 'Вернуть'}
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => openEditEditor(item)}>
+                          Редактировать
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );

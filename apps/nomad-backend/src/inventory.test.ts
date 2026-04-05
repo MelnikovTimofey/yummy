@@ -243,6 +243,47 @@ test('staff can create tobacco entries for inventory and mix editors', async () 
       inventoryBody.items.some((item) => item.id === createdBody.item.id && item.manufacturer === 'Darkside' && item.name === 'Bounty Hunter'),
       true,
     );
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/staff/inventory/tobaccos/${createdBody.item.id}`,
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        manufacturer: 'Darkside',
+        lineName: 'Shot',
+        name: 'Bounty Hunter Remix',
+        description: 'Обновлённый десертный профиль',
+        country: 'Россия',
+        officialStrength: 'strong',
+        communityStrength: 'высокая',
+        productionStatus: 'limited',
+        flavorProfiles: ['sweet', 'tobacco'],
+        flavors: ['кокос', 'шоколад', 'орех'],
+        flavorTags: ['dessert', 'limited'],
+        inStock: true,
+      },
+    });
+
+    assert.equal(updated.statusCode, 200);
+    const updatedBody = updated.json() as {
+      item: {
+        lineName: string;
+        name: string;
+        inStock: boolean;
+        productionStatus: string | null;
+        flavorProfiles: string[];
+        flavors: string[];
+      };
+    };
+
+    assert.equal(updatedBody.item.lineName, 'Shot');
+    assert.equal(updatedBody.item.name, 'Bounty Hunter Remix');
+    assert.equal(updatedBody.item.inStock, true);
+    assert.equal(updatedBody.item.productionStatus, 'limited');
+    assert.deepEqual(updatedBody.item.flavorProfiles, ['sweet', 'tobacco']);
+    assert.deepEqual(updatedBody.item.flavors, ['кокос', 'шоколад', 'орех']);
   } finally {
     await app.close();
   }

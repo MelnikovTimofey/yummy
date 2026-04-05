@@ -192,6 +192,8 @@ export type TobaccoInput = {
   inStock?: boolean;
 };
 
+export type TobaccoPatch = Partial<TobaccoInput>;
+
 export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
@@ -1780,6 +1782,76 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
       flavors: serializeList(normalizeTextList(payload.flavors)),
       flavorTags: serializeList(normalizeTextList(payload.flavorTags)),
       inStock: typeof payload.inStock === 'boolean' ? payload.inStock : true,
+    },
+  });
+
+  return (await getInventoryTobaccos({ sort: 'name', direction: 'asc' })).items.find((item) => item.id === id) ?? null;
+};
+
+export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadTobacco.findUnique({
+    where: { id },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const manufacturer = typeof payload.manufacturer === 'string' ? payload.manufacturer.trim() : current.manufacturer;
+  const lineName = typeof payload.lineName === 'string' ? payload.lineName.trim() : current.lineName;
+  const name = typeof payload.name === 'string' ? payload.name.trim() : current.name;
+
+  if (!manufacturer || !name) {
+    return { error: 'Manufacturer and name are required' };
+  }
+
+  const duplicate = await prisma.nomadTobacco.findFirst({
+    where: {
+      manufacturer,
+      lineName,
+      name,
+      NOT: {
+        id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (duplicate) {
+    return { error: 'Такой табак уже существует в каталоге' };
+  }
+
+  await prisma.nomadTobacco.update({
+    where: { id },
+    data: {
+      manufacturer,
+      lineName,
+      name,
+      description: typeof payload.description === 'string' ? normalizeOptionalText(payload.description) : current.description,
+      country: typeof payload.country === 'string' ? normalizeOptionalText(payload.country) : current.country,
+      officialStrength: typeof payload.officialStrength === 'string'
+        ? normalizeOptionalText(payload.officialStrength)
+        : current.officialStrength,
+      communityStrength: typeof payload.communityStrength === 'string'
+        ? normalizeOptionalText(payload.communityStrength)
+        : current.communityStrength,
+      productionStatus: typeof payload.productionStatus === 'string'
+        ? normalizeOptionalText(payload.productionStatus)
+        : current.productionStatus,
+      flavorProfiles: Array.isArray(payload.flavorProfiles)
+        ? serializeList(normalizeTextList(payload.flavorProfiles))
+        : current.flavorProfiles,
+      flavors: Array.isArray(payload.flavors)
+        ? serializeList(normalizeTextList(payload.flavors))
+        : current.flavors,
+      flavorTags: Array.isArray(payload.flavorTags)
+        ? serializeList(normalizeTextList(payload.flavorTags))
+        : current.flavorTags,
+      inStock: typeof payload.inStock === 'boolean' ? payload.inStock : current.inStock,
     },
   });
 

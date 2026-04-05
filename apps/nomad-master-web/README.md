@@ -161,10 +161,11 @@ Inventory переведён в новый operational flow:
 1. `GET /staff/inventory/tobaccos` поддерживает `search`, `stock`, фильтры по производителям, `flavorProfiles`, вкусам и `flavorTags`, server-side sort и paginated staff list contract (`page`, `pageSize`);
 2. строки инвентаризации показывают dependent mixes, blocked mix count и время последнего изменения;
 3. staff получил table-first экран с filters bar, bulk selection и batch actions `вернуть в наличие / убрать из наличия`;
-4. создание нового табака теперь доступно прямо из `Inventory`: inline-форма сохраняет позицию через `POST /staff/inventory/tobaccos` и сразу делает её доступной в редакторе миксов;
-5. после inventory update frontend сначала обновляет сам inventory, а `dashboard`, `mixes` и связанные справочники синхронизирует в фоне, чтобы staff-действия не блокировались лишними запросами;
-6. таблица inventory работает постранично и не перерисовывает весь staff-каталог разом; текстовый поиск отправляется с debounce;
-7. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
+4. создание и редактирование табака теперь доступны прямо из `Inventory`: editor сохраняет позицию через `POST /staff/inventory/tobaccos` и `PATCH /staff/inventory/tobaccos/:id`;
+5. для `производителя`, `линейки`, `страны`, `категорий`, `вкусов` и `мета-тегов` editor позволяет выбрать текущее значение из каталога или добавить новое; `статус производства` ограничен существующими значениями;
+6. после inventory save frontend сначала обновляет сам inventory, а `dashboard`, `mixes` и связанные справочники синхронизирует в фоне, чтобы staff-действия не блокировались лишними запросами;
+7. таблица inventory работает постранично и не перерисовывает весь staff-каталог разом; текстовый поиск отправляется с debounce;
+8. `archive/delete` для inventory намеренно не включён без отдельного product-approved contract по semantics.
 
 ## Slice 3. Mix catalog and component editor
 

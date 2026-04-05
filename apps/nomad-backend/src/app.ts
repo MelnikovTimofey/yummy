@@ -69,6 +69,7 @@ import {
   recordSmokeCtaEvent,
   rateMix,
   updateMix,
+  updateTobacco,
   updateTobaccoInStock,
   updateRail,
 } from './state';
@@ -1636,31 +1637,75 @@ export const buildApp = () => {
     }
 
     const tobaccoId = (request.params as { id?: string }).id?.trim();
-    const body = request.body as { inStock?: boolean } | undefined;
+    const body = request.body as
+      | {
+          manufacturer?: string;
+          lineName?: string;
+          name?: string;
+          description?: string;
+          country?: string;
+          officialStrength?: string;
+          communityStrength?: string;
+          productionStatus?: string;
+          flavorProfiles?: string[];
+          flavors?: string[];
+          flavorTags?: string[];
+          inStock?: boolean;
+        }
+      | undefined;
 
     if (!tobaccoId) {
       return reply.status(400).send({ error: 'Tobacco id is required' } satisfies ApiError);
     }
 
-    if (typeof body?.inStock !== 'boolean') {
-      return reply.status(400).send({ error: 'inStock must be boolean' } satisfies ApiError);
+    if (!body || Object.keys(body).length === 0) {
+      return reply.status(400).send({ error: 'At least one tobacco field is required' } satisfies ApiError);
     }
 
     const current = await getTobaccoById(tobaccoId);
-    const updated = await updateTobaccoInStock(tobaccoId, body.inStock);
+    const updated = (
+      body
+      && typeof body.inStock === 'boolean'
+      && Object.keys(body).length === 1
+    )
+      ? await updateTobaccoInStock(tobaccoId, body.inStock)
+      : await updateTobacco(tobaccoId, {
+          manufacturer: body.manufacturer,
+          lineName: body.lineName,
+          name: body.name,
+          description: body.description,
+          country: body.country,
+          officialStrength: body.officialStrength,
+          communityStrength: body.communityStrength,
+          productionStatus: body.productionStatus,
+          flavorProfiles: Array.isArray(body.flavorProfiles) ? body.flavorProfiles : undefined,
+          flavors: Array.isArray(body.flavors) ? body.flavors : undefined,
+          flavorTags: Array.isArray(body.flavorTags) ? body.flavorTags : undefined,
+          inStock: body.inStock,
+        });
     if (!updated) {
       return reply.status(404).send({ error: 'Tobacco not found' } satisfies ApiError);
     }
 
+    if (isApiError(updated)) {
+      return reply.status(400).send(updated);
+    }
+
     await recordAuditEvent({
       actor: user,
-      action: 'toggle',
+      action: body && typeof body.inStock === 'boolean' && Object.keys(body).length === 1 ? 'toggle' : 'update',
       entityType: 'inventory',
       entityId: updated.id,
       entityLabel: `${updated.manufacturer} · ${updated.name}`,
       details: {
         fromInStock: current?.inStock ?? null,
         toInStock: updated.inStock,
+        fromManufacturer: current?.manufacturer ?? null,
+        toManufacturer: updated.manufacturer,
+        fromLineName: current?.lineName ?? null,
+        toLineName: updated.lineName,
+        fromName: current?.name ?? null,
+        toName: updated.name,
       },
     });
 

@@ -2027,6 +2027,27 @@ p {
   white-space: nowrap;
 }
 
+.inventory-editor__token-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.inventory-editor__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inventory-editor__token-field {
+  gap: 8px;
+}
+
+.inventory-editor__chip--active {
+  border-color: rgba(226, 172, 123, 0.42);
+  background: rgba(196, 109, 68, 0.16);
+}
+
 .inventory-filter-groups {
   display: flex;
   flex-wrap: wrap;

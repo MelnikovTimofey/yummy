@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { InventoryView, type InventoryCreateInput } from '@/components/inventory/inventory-view';
+import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
 import {
@@ -457,8 +457,8 @@ export const App = () => {
   const [auditEventsError, setAuditEventsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
-  const [inventoryCreateStatus, setInventoryCreateStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [inventoryCreateError, setInventoryCreateError] = useState('');
+  const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [inventorySaveError, setInventorySaveError] = useState('');
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -1101,12 +1101,12 @@ export const App = () => {
     }
   };
 
-  const onResetInventoryCreateFeedback = () => {
-    setInventoryCreateStatus('idle');
-    setInventoryCreateError('');
+  const onResetInventorySaveFeedback = () => {
+    setInventorySaveStatus('idle');
+    setInventorySaveError('');
   };
 
-  const onCreateTobacco = async (payload: InventoryCreateInput) => {
+  const onSaveTobacco = async (payload: InventoryEditorInput) => {
     if (!token) {
       return;
     }
@@ -1115,25 +1115,25 @@ export const App = () => {
     const name = payload.name.trim();
 
     if (!manufacturer) {
-      setInventoryCreateError('Укажите производителя');
-      setInventoryCreateStatus('error');
+      setInventorySaveError('Укажите производителя');
+      setInventorySaveStatus('error');
       return;
     }
 
     if (!name) {
-      setInventoryCreateError('Укажите название табака');
-      setInventoryCreateStatus('error');
+      setInventorySaveError('Укажите название табака');
+      setInventorySaveStatus('error');
       return;
     }
 
-    setInventoryCreateStatus('loading');
-    setInventoryCreateError('');
+    setInventorySaveStatus('loading');
+    setInventorySaveError('');
 
     try {
       await requestJson<unknown>(
-        '/staff/inventory/tobaccos',
+        payload.id ? `/staff/inventory/tobaccos/${payload.id}` : '/staff/inventory/tobaccos',
         {
-          method: 'POST',
+          method: payload.id ? 'PATCH' : 'POST',
           body: JSON.stringify({
             manufacturer,
             lineName: payload.lineName.trim(),
@@ -1155,10 +1155,10 @@ export const App = () => {
       const dependentRefresh = refreshInventoryDependents(token);
       await loadInventory(token, inventoryFilters, inventorySort);
       void dependentRefresh;
-      setInventoryCreateStatus('ready');
+      setInventorySaveStatus('ready');
     } catch (cause) {
-      setInventoryCreateError(cause instanceof Error ? cause.message : 'Не удалось создать табак');
-      setInventoryCreateStatus('error');
+      setInventorySaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить табак');
+      setInventorySaveStatus('error');
     }
   };
 
@@ -2206,6 +2206,7 @@ export const App = () => {
   const renderInventory = () => (
     <InventoryView
       items={inventory}
+      catalogOptions={mixTobaccos}
       status={inventoryStatus}
       error={inventoryError}
       filters={inventoryFilters}
@@ -2227,10 +2228,10 @@ export const App = () => {
       onToggleStock={(item) => void onToggleStock(item)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
       onOpenMix={onOpenInventoryMix}
-      createStatus={inventoryCreateStatus}
-      createError={inventoryCreateError}
-      onCreateTobacco={onCreateTobacco}
-      onResetCreateFeedback={onResetInventoryCreateFeedback}
+      saveStatus={inventorySaveStatus}
+      saveError={inventorySaveError}
+      onSaveTobacco={onSaveTobacco}
+      onResetSaveFeedback={onResetInventorySaveFeedback}
     />
   );
 

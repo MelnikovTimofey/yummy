@@ -26,6 +26,9 @@
 
 ### Nomad Master
 
+- В `Inventory` editor табака стал полным create/edit flow.
+- Для `производителя`, `линейки`, `страны`, `категорий`, `вкусов` и `мета-тегов` теперь можно выбрать текущее значение из каталога или добавить новое.
+- `Статус производства` в tobacco editor ограничен текущими значениями каталога.
 - В `Inventory` появился create flow для новых табаков: кнопка, inline-форма и сохранение через backend-контракт `POST /staff/inventory/tobaccos`.
 - В `Mixes` operator больше не вводит вручную `популярность` и `базовый рейтинг`; эти поля остаются производными от аналитики и guest-оценок.
 - В `Rails` selector добавления миксов переведён на тот же searchable picker pattern, что и выбор табаков в редакторе микса.
@@ -44,6 +47,9 @@
   - preview import;
   - live sync в текущую Nomad DB;
   - detail backfill для вкусов, тегов и крепости.
+- Глобальный discovery HTReviews больше не ограничен первым HTML-срезом `/tobaccos/brands`:
+  - import дополнительно читает paginated brand pages через публичный `getData?action=brands`;
+  - это закрывает кейсы вроде `Overdose`, которые существуют на HTReviews, но не попадали в Nomad snapshot из-за infinite-scroll выдачи.
 - `NomadTobacco` расширен source-полями (`lineName`, source metadata, strength, status, country, image/raw tags).
 - Новые HTReviews tobacco по умолчанию импортируются с `inStock=false`.
 - Тестовый backend-контур вынесен в отдельную Prisma schema `nomad_test`; `resetNomadState()` запрещён вне test-mode без явного opt-in.
@@ -66,6 +72,15 @@
 
 ## Последние значимые блоки
 
+### 5 апреля 2026 — HTReviews brand discovery pagination fix
+
+- Исправлен дефект качества выгрузки HTReviews в `nomad-backend`: глобальный import пропускал бренды, которые не попадали в первый HTML-ответ `/tobaccos/brands`.
+- Discovery брендов теперь дополняется paginated запросами к публичному `getData?action=brands` для вкладок `position` и `others`.
+- Добавлен автоматический тест на сценарий, где бренд присутствует только в paginated discovery, но отсутствует в initial HTML slice.
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+
 ### 5 апреля 2026 — Nomad Master inventory create + mixes/rails form cleanup
 
 - В `Inventory` добавлен create flow для табака:
@@ -74,6 +89,17 @@
   - после сохранения новый табак сразу попадает в inventory list и в selector компонентов микса.
 - Из формы создания и редактирования микса убраны ручные поля `популярность` и `базовый рейтинг`.
 - В `Rails` selector добавления миксов переведён на searchable picker и теперь визуально/поведенчески совпадает с selector'ом табаков в `Mixes`.
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+
+### 5 апреля 2026 — Nomad Master tobacco editor suggestions + edit flow
+
+- `Inventory` получил edit flow для существующих табаков через тот же editor surface, что и create.
+- `Производитель`, `Линейка`, `Страна`, `Категории`, `Вкусы` и `Мета-теги` теперь работают как choose-or-create поля поверх текущего inventory catalog.
+- `Статус производства` переведён в select только по уже существующим значениям.
+- Backend `PATCH /staff/inventory/tobaccos/:id` расширен с простого toggle наличия до полного update табачной карточки.
 - Проверки:
   - `cd apps/nomad-master-web && npm run build`
   - `cd apps/nomad-backend && npm test`

@@ -1,5 +1,64 @@
 # HANDOFF — Yummy
 
+## 2.24) Nomad Master (5 апреля 2026) — editable tobacco editor с choose-or-create полями
+
+- Запрос:
+  - для создания табака дать возможность не только ввести новые значения, но и выбрать существующие для `производителя`, `линейки`, `вкусов`, `страны`, `категорий`, `мета-тегов`;
+  - ограничить `статус производства` текущими значениями;
+  - добавить редактирование уже созданного табака.
+
+- Реализация:
+  - backend:
+    - `PATCH /staff/inventory/tobaccos/:id` расширен до полного update табачной карточки, а не только toggle `inStock`;
+    - добавлена проверка дубликата по `manufacturer + lineName + name`;
+    - inventory tests расширены сценарием create + edit;
+  - frontend:
+    - `Inventory` переведён с create-only формы на единый create/edit editor;
+    - edit доступен из таблицы и из popup-карточки табака;
+    - `производитель`, `линейка`, `страна` работают как `input + suggestions` по текущему inventory catalog;
+    - `категории`, `вкусы`, `мета-теги` переведены на choose-or-create token editor с текущими подсказками и возможностью добавить новое значение;
+    - `статус производства` переведён в select только по существующим значениям каталога;
+  - docs:
+    - обновлены `NOTES.md`, `HANDOFF.md`, `apps/nomad-master-web/README.md`.
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm run build`
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+
+- Остаточный риск:
+  - single-value поля (`производитель`, `линейка`, `страна`) используют native `datalist`, поэтому UX выбора зависит от браузера и менее управляем, чем у custom searchable select;
+  - `статус производства` нельзя ввести вручную, пока в каталоге не появится первое значение этого статуса через backend/import.
+
+- Эффект:
+  - staff может и заводить, и корректировать tobacco-карточки прямо в `Мастере`;
+  - справочные значения переиспользуются без ручного копипаста;
+  - inventory editor остаётся bounded внутри одного operational surface, без отдельного экрана и без нового list API.
+
+## 2.23) Nomad Backend (5 апреля 2026) — HTReviews paginated brand discovery fix
+
+- Запрос:
+  - проверить качество HTReviews выгрузки;
+  - закрыть кейс, где бренд `Overdose` есть на источнике, но отсутствует в текущем global import Nomad.
+
+- Реализация:
+  - в `apps/nomad-backend/src/integrations/htreviews/client.ts` добавлен JSON fetch path для публичных HTReviews list endpoints;
+  - в `apps/nomad-backend/src/integrations/htreviews/catalog.ts` global discovery брендов дополнен paginated запросами к `getData?action=brands` для режимов `position` и `others`;
+  - initial HTML discovery сохранён, но больше не является единственным источником списка брендов;
+  - добавлен regression test, который подтверждает импорт бренда, доступного только через paginated discovery.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test`
+  - `cd apps/nomad-backend && npm run build`
+
+- Остаточный риск:
+  - live rebuild каталога после фикса отдельно не запускался, поэтому зафиксированные historical counts в notes/handoff пока относятся к последнему pre-fix rebuild;
+  - интеграция всё ещё зависит от публичной структуры HTReviews `getData`; если сайт сменит payload или query semantics, discovery потребует повторной адаптации.
+
+- Эффект:
+  - global preview/sync больше не должны обрезаться примерно первыми `20 + 20` брендами из `/tobaccos/brands`;
+  - бренды вроде `Overdose` становятся достижимыми без ручного `HTREVIEWS_BRAND_URLS`.
+
 ## 2.22) Nomad Master (5 апреля 2026) — создание табака, cleanup формы микса и unified rail selector
 
 - Запрос:
@@ -66,6 +125,9 @@
 
 ### Nomad Master
 
+- `Inventory` теперь поддерживает и создание, и редактирование табака через единый editor surface.
+- `Производитель`, `Линейка`, `Страна`, `Категории`, `Вкусы` и `Мета-теги` в tobacco editor работают как choose-or-create поля поверх текущего каталога.
+- `Статус производства` в tobacco editor ограничен уже существующими значениями.
 - В `Inventory` добавлен create flow для нового табака с сохранением через backend.
 - В `Mixes` убраны ручные поля `популярность` и `базовый рейтинг`.
 - В `Rails` selector добавления миксов переведён на тот же searchable picker pattern, что и selector табаков в `Mixes`.
@@ -107,6 +169,7 @@
   - `npm run rebuild:live-catalog`
   - `npm run backfill:htreviews:details`
 - `NomadTobacco` расширен source metadata, line-level identity и табачными атрибутами.
+- Global HTReviews discovery теперь дополняется paginated brand list через публичный `getData?action=brands`, чтобы не терять бренды вне первого HTML-среза `/tobaccos/brands`.
 - Backend tests переведены в отдельную Prisma schema `nomad_test`.
 - `resetNomadState()` запрещён вне test-mode без явного opt-in.
 
