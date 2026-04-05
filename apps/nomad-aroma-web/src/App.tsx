@@ -1315,9 +1315,6 @@ export const App = () => {
     ...(appliedCatalogFlavors.length ? [`Вкусы: ${appliedCatalogFlavors.length}`] : []),
     ...(appliedSortBy !== 'popularity' ? [sortOptions.find((item) => item.value === appliedSortBy)?.label ?? 'Сортировка'] : []),
   ];
-  const compactActiveFilterLabels = isCompactFilters && !filtersOpen ? activeFilterLabels.slice(0, 2) : activeFilterLabels;
-  const hiddenActiveFiltersCount = activeFilterLabels.length - compactActiveFilterLabels.length;
-
   const hasCatalogFilters =
     Boolean(query) ||
     appliedManufacturerIds.length > 0 ||
@@ -1888,14 +1885,14 @@ export const App = () => {
             </div>
           ) : null}
 
-          {!isCompactFilters || filtersOpen || hasCatalogFilters ? (
+          {!isCompactFilters || filtersOpen ? (
             <div className={cn('catalog-tools-row', isCompactFilters && 'catalog-tools-row-compact')}>
               <div
                 className={cn('catalog-active-filters', isCompactFilters && 'catalog-active-filters-compact')}
                 aria-live="polite"
               >
                 {activeFilterLabels.length ? (
-                  compactActiveFilterLabels.map((label) => (
+                  activeFilterLabels.map((label) => (
                     <Badge className={cn('filter-pill', 'catalog-filter-pill', isCompactFilters && 'catalog-filter-pill-compact')} key={label}>
                       {label}
                     </Badge>
@@ -1905,21 +1902,16 @@ export const App = () => {
                     Фильтры не заданы
                   </Badge>
                 )}
-                {hiddenActiveFiltersCount > 0 ? (
-                  <Badge className={cn('filter-pill', 'catalog-filter-pill', 'catalog-filter-pill-compact')}>+{hiddenActiveFiltersCount}</Badge>
-                ) : null}
               </div>
-              {(!isCompactFilters || filtersOpen || hasCatalogFilters) && (
-                <Button
-                  className={cn('ghost-button', 'catalog-reset-btn', isCompactFilters && 'catalog-reset-btn-compact')}
-                  variant="outline"
-                  type="button"
-                  onClick={resetCatalogFilters}
-                  disabled={!hasCatalogFilters}
-                >
-                  {isCompactFilters ? 'Сбросить' : 'Сбросить фильтры'}
-                </Button>
-              )}
+              <Button
+                className={cn('ghost-button', 'catalog-reset-btn', isCompactFilters && 'catalog-reset-btn-compact')}
+                variant="outline"
+                type="button"
+                onClick={resetCatalogFilters}
+                disabled={!hasCatalogFilters}
+              >
+                {isCompactFilters ? 'Сбросить' : 'Сбросить фильтры'}
+              </Button>
             </div>
           ) : null}
 
