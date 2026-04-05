@@ -639,7 +639,7 @@ const MixDetailModal = ({
         className="mix-info-modal-shell guest-mix-modal"
       >
         <div className="mix-info-modal">
-          <DialogDescription className="sr-only">Карточка микса с составом, рейтингом и действием Покурить.</DialogDescription>
+          <DialogDescription className="sr-only">Карточка микса с составом, рейтингом и действием Выбрать.</DialogDescription>
           <div className="mix-detail-top-row">
             <div className="mix-detail-top-main">
               <p className="card-title">{mixSourceLabels[source]}</p>
@@ -654,7 +654,7 @@ const MixDetailModal = ({
                 onClick={() => onChoose()}
                 disabled={!mix.available || chooseStatus === 'loading' || isSelected}
               >
-                {chooseStatus === 'loading' ? 'Фиксируем...' : isSelected ? 'Уже в карточке' : 'Покурить'}
+                {chooseStatus === 'loading' ? 'Фиксируем...' : isSelected ? 'Уже в карточке' : 'Выбрать'}
               </Button>
               <Button className="ghost-button mix-info-close-btn" variant="outline" type="button" onClick={onClose}>
                 Закрыть
@@ -1155,7 +1155,7 @@ export const App = () => {
     } catch (cause) {
       setSelectedMix(previousMix);
       setChooseStatus('error');
-      setChooseError(cause instanceof Error ? cause.message : 'Не удалось зафиксировать "Покурить".');
+      setChooseError(cause instanceof Error ? cause.message : 'Не удалось зафиксировать "Выбрать".');
     }
   };
 
