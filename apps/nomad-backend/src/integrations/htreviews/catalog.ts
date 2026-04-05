@@ -12,6 +12,8 @@ import type {
 } from './types';
 
 const DISCOVERY_PATHS = ['/tobaccos', '/tobaccos/new', '/tobaccos/brands', '/tobaccos/lines'];
+const HTREVIEWS_DISCOVERY_PAGE_SIZE = 20;
+const HTREVIEWS_BRAND_DISCOVERY_MODES = ['position', 'others'] as const;
 
 const takeLimit = <T>(items: T[], limit: number | undefined) => {
   if (!limit || limit < 1) {
@@ -89,6 +91,78 @@ const safeFetchText = async (client: HtReviewsClient, url: string) => {
   }
 };
 
+const safeFetchJson = async <T>(client: HtReviewsClient, url: string) => {
+  try {
+    return await client.fetchJson<T>(url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[htreviews] skipped ${url}: ${message}`);
+    return null;
+  }
+};
+
+const toBrandRefFromDiscoveryItem = (client: HtReviewsClient, item: unknown): HtReviewsBrandRef | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const slug = typeof (item as { slug?: unknown }).slug === 'string'
+    ? (item as { slug: string }).slug.trim()
+    : '';
+  const name = typeof (item as { name?: unknown }).name === 'string'
+    ? (item as { name: string }).name.trim()
+    : '';
+
+  if (!slug || !name) {
+    return null;
+  }
+
+  return {
+    name,
+    slug,
+    url: new URL(`/tobaccos/${slug}`, client.baseUrl).toString(),
+  };
+};
+
+const fetchAdditionalBrandRefs = async (client: HtReviewsClient) => {
+  const brands: HtReviewsBrandRef[] = [];
+  const seenUrls = new Set<string>();
+
+  for (const mode of HTREVIEWS_BRAND_DISCOVERY_MODES) {
+    for (let offset = HTREVIEWS_DISCOVERY_PAGE_SIZE; ; offset += HTREVIEWS_DISCOVERY_PAGE_SIZE) {
+      const params = new URLSearchParams({
+        action: 'brands',
+        r: mode,
+        s: 'rating',
+        d: 'desc',
+        o: String(offset),
+      });
+      const entries = await safeFetchJson<unknown[]>(client, `${client.baseUrl}/getData?${params.toString()}`);
+      if (!entries?.length) {
+        break;
+      }
+
+      let addedOnPage = 0;
+      for (const entry of entries) {
+        const brand = toBrandRefFromDiscoveryItem(client, entry);
+        if (!brand || seenUrls.has(brand.url)) {
+          continue;
+        }
+
+        seenUrls.add(brand.url);
+        brands.push(brand);
+        addedOnPage += 1;
+      }
+
+      if (entries.length < HTREVIEWS_DISCOVERY_PAGE_SIZE || addedOnPage === 0) {
+        break;
+      }
+    }
+  }
+
+  return brands;
+};
+
 export const fetchHtReviewsCatalogSnapshot = async (
   options: HtReviewsImportOptions = {},
 ): Promise<HtReviewsCatalogSnapshot> => {
@@ -116,6 +190,9 @@ export const fetchHtReviewsCatalogSnapshot = async (
       }
       if (path.endsWith('/brands')) {
         for (const brand of parseBrandIndexPage(html, client.baseUrl)) {
+          discoveryBrandUrls.add(brand.url);
+        }
+        for (const brand of await fetchAdditionalBrandRefs(client)) {
           discoveryBrandUrls.add(brand.url);
         }
       }

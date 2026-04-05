@@ -266,6 +266,12 @@ npm run import:htreviews:preview
 3. результат нужно просматривать как staging snapshot перед будущим sync-контуром;
 4. taxonomy mapping пока кандидатный и должен проходить product/data review.
 
+Особенность текущего discovery:
+
+1. initial brand list читается из HTML `/tobaccos/brands`;
+2. если HTReviews держит часть брендов только в infinite-scroll выдаче, import дополнительно догружает их через публичный `getData?action=brands`;
+3. это нужно для брендов, которые не попадают в первый server-rendered slice страницы.
+
 ## HTReviews DB sync
 
 Если нужно не только preview, а реальное наполнение текущей Nomad БД:
@@ -283,7 +289,8 @@ npm run sync:htreviews
 1. импорт идемпотентный: повторный прогон делает upsert по source IDs и fallback `brand + line + name`;
 2. новые позиции по умолчанию попадают в каталог как `out-of-stock`, чтобы не ломать guest recommendations;
 3. если позиция уже есть в Nomad БД, её текущий `inStock` сохраняется;
-4. для imported tobacco теперь хранятся:
+4. global discovery брендов не ограничен первым HTML-срезом `/tobaccos/brands` и добирает paginated brand pages через публичный `getData`;
+5. для imported tobacco теперь хранятся:
    - `lineName`
    - `sourceKind`
    - `sourceUrl`

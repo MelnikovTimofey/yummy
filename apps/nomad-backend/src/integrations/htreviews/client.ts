@@ -22,7 +22,7 @@ export class HtReviewsClient {
     this.delayMs = options.delayMs ?? DEFAULT_DELAY_MS;
   }
 
-  async fetchText(url: string) {
+  private async fetchResponse(url: string, accept: string) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
@@ -30,22 +30,31 @@ export class HtReviewsClient {
       const response = await fetch(url, {
         headers: {
           'user-agent': this.userAgent,
-          accept: 'text/html,application/xhtml+xml',
+          accept,
         },
         signal: controller.signal,
       });
-      const body = await response.text();
 
       if (!response.ok) {
         throw new Error(`HTReviews responded ${response.status} for ${url}`);
       }
 
-      return body;
+      return response;
     } finally {
       clearTimeout(timeout);
       if (this.delayMs > 0) {
         await delay(this.delayMs);
       }
     }
+  }
+
+  async fetchText(url: string) {
+    const response = await this.fetchResponse(url, 'text/html,application/xhtml+xml');
+    return response.text();
+  }
+
+  async fetchJson<T>(url: string) {
+    const response = await this.fetchResponse(url, 'application/json,text/plain,*/*');
+    return response.json() as Promise<T>;
   }
 }
