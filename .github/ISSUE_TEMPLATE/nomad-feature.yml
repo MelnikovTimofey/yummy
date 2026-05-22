@@ -10,7 +10,7 @@ body:
       value: |
         Базовый intake flow для Nomad feature work:
         - для bounded feature slice использовать этот шаблон как source of truth;
-        - `docs/templates/ai-task-brief.md` использовать только как локальный fallback, если issue ещё не создан;
+        - этот issue фиксирует bounded context, scope и проверки до написания кода;
         - для UI/redesign задач в `apps/nomad-master-web` обязательно заполнить `Design / UX baseline`.
   - type: dropdown
     id: scope
@@ -77,7 +77,7 @@ body:
       placeholder: |
         Для `apps/nomad-master-web`:
         - использовать `shadcn/ui` там, где это уместно и не ломает bounded slice;
-        - не оставлять default Codex-generated UI как финальный visual layer;
+        - не оставлять generic auto-generated UI как финальный visual layer;
         - целиться в stylish premium HoReCa console, а не в generic SaaS;
         - использовать TIMELESS / TIS как visual benchmark:
           https://vc.ru/offline/1765963-osnovatel-timeless-kak-delat-next-gen-v-horeca

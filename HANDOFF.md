@@ -1,5 +1,55 @@
 # HANDOFF — Yummy
 
+## 2.26) Repo (22 мая 2026) — миграция с Codex на Claude Code
+
+- Запрос:
+  - отказаться от Symphony;
+  - мигрировать репозиторий с инструментария Codex на Claude Code;
+  - процесс разработки: мультиагентность с ролями, GitHub issues, KISS, TDD;
+  - сократить число md-инструкций и артефактов.
+
+- Реализация:
+  - создан единый `CLAUDE.md` — консолидация `AGENTS.md`, ключевого из
+    `AI_DEVELOPMENT_PROCESS.md` и `CONTRIBUTING_NOMAD.md` (8 разделов: проект,
+    KISS, TDD, агенты и роли, процесс issue→PR, изоляция контуров, инварианты,
+    документация);
+  - заведён каталог `.claude/`:
+    - `agents/` — 4 субагента-роли: `planner`, `backend-dev`, `frontend-dev`,
+      `qa-tdd` (заменяют 9-ролевую модель Codex);
+    - `skills/` — 4 консолидированных скилла (`nomad-delivery`,
+      `nomad-product-guardrails`, `nomad-qa-and-smoke`, `nomad-release-ops`)
+      вместо 10 Codex-скиллов, без `agents/openai.yaml`;
+    - `settings.json` — allowlist частых dev-команд;
+  - удалены: `.codex/`, `AGENTS.md`, `AI_DEVELOPMENT_PROCESS.md`,
+    `CONTRIBUTING_NOMAD.md`, `WORKFLOW.md`, `WORKFLOW_NOMAD.md` (Symphony + Linear),
+    `docs/templates/`, `docs/skills/`, `docs/nomad/feature-slices/`;
+  - `NOMAD_ROADMAP.md` → `docs/nomad/roadmap.md`, Symphony-секции переписаны под
+    GitHub-issue процесс;
+  - `.github/` синхронизирован: workflows (`nomad-docs-lint`, `nomad-pr-checks`,
+    `nomad-smoke`), `CODEOWNERS`, `NOMAD_REVIEW_POLICY.md`, PR- и issue-шаблоны
+    переведены с `.codex`/`AGENTS`/`WORKFLOW` на `.claude`/`CLAUDE.md`;
+    из CI убрано обязательное требование менять `NOTES.md`;
+  - добавлен корневой `README.md` как human-facing индекс;
+  - корень репозитория: 16 md-файлов → 4 (`CLAUDE.md`, `README.md`, `PRD.md`,
+    `HANDOFF.md`).
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test && npm run build` — 40/40 тестов, build ok;
+  - `cd apps/nomad-master-web && npm run build`; `cd apps/nomad-aroma-web && npm run build`;
+  - YAML-lint всех `.github/**/*.yml`;
+  - симуляция CI-проверки структуры `.claude/skills/` и frontmatter агентов;
+  - `git diff --check`.
+
+- Остаточный риск:
+  - физический split legacy-контура в отдельный репозиторий — отдельная будущая
+    задача; legacy-код пока в этом репозитории;
+  - branch protection (Phase 2 из `NOMAD_REVIEW_POLICY.md`) не включался.
+
+- Эффект:
+  - репозиторий работает по инструментарию Claude Code; Symphony и Linear убраны;
+  - процесс: GitHub issue → вертикальный срез по KISS/TDD → PR; роли — субагенты;
+  - артефактов и md-инструкций существенно меньше.
+
 ## 2.24) Nomad Master (5 апреля 2026) — editable tobacco editor с choose-or-create полями
 
 - Запрос:

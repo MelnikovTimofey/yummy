@@ -37,7 +37,7 @@
 
 1. `.github/ISSUE_TEMPLATE/nomad-feature.yml`
 
-`docs/templates/ai-task-brief.md` допустим как локальный fallback только если issue ещё не создан.
+Каждая нетривиальная задача начинается с issue до написания кода.
 
 Каждый Nomad feature issue должен зафиксировать:
 
@@ -54,7 +54,7 @@
 1. `Design / UX baseline`
 2. visual references
 3. явное ожидание по `shadcn/ui`, если его нужно использовать в slice
-4. указание, что benchmark не должен скатываться в default Codex-generated UI
+4. указание, что benchmark не должен скатываться в generic auto-generated UI
 
 ## Required PR fields
 
@@ -86,17 +86,14 @@ PR должен считаться `needs-human-review`, если затрону
 3. runtime / env / bot operation paths:
    - `services/nomad-telegram-bot/ops/**`
    - `services/nomad-telegram-bot/.env.example`
-   - `NOMAD_ENV_MATRIX.md`
-   - `NOMAD_DEPLOYMENT_SMOKE_CHECKLIST.md`
+   - `docs/nomad/env-matrix.md`
+   - `docs/nomad/deployment-smoke-checklist.md`
 4. process-governance files:
-   - `WORKFLOW_NOMAD.md`
-   - `AGENTS.md`
-   - `AI_DEVELOPMENT_PROCESS.md`
-   - `CONTRIBUTING_NOMAD.md`
+   - `CLAUDE.md`
    - `docs/**`
    - `tests/nomad-smoke/**`
    - `.github/**`
-   - `.codex/skills/**`
+   - `.claude/**`
 
 Если GitHub label `risk:human-review` существует, workflow пытается применить его автоматически.
 
@@ -153,11 +150,9 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 
 Если GitHub governance для Nomad меняется, обновлять:
 
-1. `NOTES.md`
-2. `HANDOFF.md`
-3. `WORKFLOW_NOMAD.md`
-4. `AI_DEVELOPMENT_PROCESS.md`, если меняется operating model
-5. `CONTRIBUTING_NOMAD.md`, если меняется local startup, solo-agent loop или task intake
+1. `HANDOFF.md`
+2. `CLAUDE.md`, если меняются правила агента, процесс или operating model
+3. `.claude/agents/` или `.claude/skills/`, если меняются роли или скиллы
 
 ## Non-goals
 

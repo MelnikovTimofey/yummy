@@ -4,13 +4,9 @@
 /apps/nomad-backend/ @MelnikovTimofey
 /services/nomad-telegram-bot/ @MelnikovTimofey
 /tests/nomad-smoke/ @MelnikovTimofey
-/AGENTS.md @MelnikovTimofey
-/AI_DEVELOPMENT_PROCESS.md @MelnikovTimofey
-/CONTRIBUTING_NOMAD.md @MelnikovTimofey
-/WORKFLOW_NOMAD.md @MelnikovTimofey
-/NOMAD_*.md @MelnikovTimofey
-/NOTES.md @MelnikovTimofey
+/CLAUDE.md @MelnikovTimofey
+/PRD.md @MelnikovTimofey
 /HANDOFF.md @MelnikovTimofey
 /docs/ @MelnikovTimofey
 /.github/ @MelnikovTimofey
-/.codex/skills/ @MelnikovTimofey
+/.claude/ @MelnikovTimofey

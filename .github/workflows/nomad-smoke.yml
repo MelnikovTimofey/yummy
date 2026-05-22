@@ -9,10 +9,8 @@ on:
       - apps/nomad-master-web/**
       - apps/nomad-backend/**
       - tests/nomad-smoke/**
-      - AGENTS.md
-      - AI_DEVELOPMENT_PROCESS.md
-      - WORKFLOW_NOMAD.md
-      - NOMAD_*.md
+      - .claude/**
+      - CLAUDE.md
 
 permissions:
   contents: read

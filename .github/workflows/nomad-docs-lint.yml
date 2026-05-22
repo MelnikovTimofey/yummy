@@ -6,28 +6,18 @@ on:
       - codex/nomad-parallel-track
     paths:
       - .github/**
-      - .codex/skills/**
-      - AGENTS.md
-      - AI_DEVELOPMENT_PROCESS.md
-      - CONTRIBUTING_NOMAD.md
-      - WORKFLOW_NOMAD.md
-      - NOMAD_*.md
+      - .claude/**
+      - CLAUDE.md
       - docs/**
-      - NOTES.md
       - HANDOFF.md
   push:
     branches:
       - codex/nomad-parallel-track
     paths:
       - .github/**
-      - .codex/skills/**
-      - AGENTS.md
-      - AI_DEVELOPMENT_PROCESS.md
-      - CONTRIBUTING_NOMAD.md
-      - WORKFLOW_NOMAD.md
-      - NOMAD_*.md
+      - .claude/**
+      - CLAUDE.md
       - docs/**
-      - NOTES.md
       - HANDOFF.md
 
 permissions:
@@ -51,15 +41,21 @@ jobs:
       - name: Validate repo-specific skill structure
         run: |
           set -eu
-          for skill_dir in .codex/skills/*; do
+          for skill_dir in .claude/skills/*; do
             [ -d "${skill_dir}" ] || continue
             test -f "${skill_dir}/SKILL.md" || { echo "Missing ${skill_dir}/SKILL.md"; exit 1; }
-            test -f "${skill_dir}/agents/openai.yaml" || { echo "Missing ${skill_dir}/agents/openai.yaml"; exit 1; }
+          done
+      - name: Validate agent definitions
+        run: |
+          set -eu
+          for agent_file in .claude/agents/*.md; do
+            [ -f "${agent_file}" ] || continue
+            head -1 "${agent_file}" | grep -q '^---$' || { echo "Missing frontmatter in ${agent_file}"; exit 1; }
           done
       - name: Reject placeholder TODO markers
         run: |
           set -eu
-          if rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .codex/skills .github docs CONTRIBUTING_NOMAD.md; then
+          if rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .claude .github docs CLAUDE.md; then
             echo "Placeholder markers found in docs or skills"
             exit 1
           fi

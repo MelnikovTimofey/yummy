@@ -66,6 +66,5 @@
 
 - `git diff --check`
 - `git status --short`
-- `NOTES.md` обновлён
 - `HANDOFF.md` обновлён
-- Linear-задачи переведены в `Human Review`
+- PR открыт в `codex/nomad-parallel-track` и помечен для ревью

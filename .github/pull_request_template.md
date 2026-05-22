@@ -34,11 +34,9 @@ cd apps/nomad-backend && npm run build
 
 Отметьте, какие документы были обновлены:
 
-- [ ] `NOTES.md`
 - [ ] `HANDOFF.md`
-- [ ] `WORKFLOW_NOMAD.md`
-- [ ] `AI_DEVELOPMENT_PROCESS.md`
-- [ ] `AGENTS.md`
+- [ ] `CLAUDE.md`
+- [ ] `.claude/` (агенты или скиллы)
 - [ ] `README.md`
 - [ ] `no docs changes required`
 

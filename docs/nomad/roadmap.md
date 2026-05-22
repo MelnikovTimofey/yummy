@@ -216,105 +216,37 @@ Definition of done:
 1. `Aroma Atelier Product Polish`
 2. вынос общего кода в `packages/shared-*` только после явной повторяемости
 
-## 5. Symphony-модель реализации
+## 5. Порядок реализации
 
-Symphony не должен вести Nomad как один длинный epic без структуры.
+Работа ведётся через GitHub issues (см. `CLAUDE.md`): 1 issue = 1 bounded context =
+1 проверяемый результат. Крупные изменения схемы/auth/UI/инфры не сводятся в один
+issue; repo-wide архитектурные решения и extract shared package оформляются отдельно.
+Параллельные агенты — только при непересекающихся write-scope.
 
-Рекомендуемая модель:
+Рекомендуемые батчи:
 
 ### Batch 1. Release Foundation
 
-Включать только:
-
-1. deployment/runbook;
-2. managed bot runtime;
-3. bootstrap admin;
-4. env/ops hardening.
-
-Почему:
-это критический путь к реальному запуску.
+deployment/runbook, managed bot runtime, bootstrap admin, env/ops hardening —
+критический путь к реальному запуску.
 
 ### Batch 2. Master Operations
 
-Включать:
-
-1. улучшения inventory UX;
-2. mix/rail operations;
-3. admin access tooling;
-4. Telegram automation panel.
+inventory UX, mix/rail operations, admin access tooling, Telegram automation panel.
 
 ### Batch 3. Analytics And Rails
 
-Включать:
-
-1. metrics cleanup;
-2. dashboard slices;
-3. statistical rail improvements.
+metrics cleanup, dashboard slices, statistical rail improvements.
 
 ### Batch 4. Quality And Hardening
 
-Включать:
-
-1. e2e;
-2. audit trail;
-3. release acceptance checks.
+e2e, audit trail, release acceptance checks.
 
 ### Batch 5. Aroma Polish
 
-Включать:
+visual polish, copy polish, guest UX refinements.
 
-1. visual polish;
-2. copy polish;
-3. guest UX refinements.
-
-## 6. Правила дробления задач для Symphony
-
-### Разрешённый формат задачи
-
-1. `1 issue = 1 bounded context = 1 проверяемый результат`
-2. по умолчанию один active scope:
-   - `apps/nomad-aroma-web/`
-   - `apps/nomad-master-web/`
-   - `apps/nomad-backend/`
-   - `services/nomad-telegram-bot/`
-3. multi-agent использовать только для непересекающихся write scopes.
-
-### Что можно пускать в Symphony
-
-1. изолированные backend contracts;
-2. локальные UI slices;
-3. test-only tasks;
-4. docs/runbook tasks;
-5. bot tasks без repo-level перестройки.
-
-### Что не пускать в Symphony
-
-1. крупные schema/auth/ui/infra изменения в одном issue;
-2. repo-wide architecture decisions;
-3. shared package extraction до явного решения;
-4. изменения legacy-контуров без отдельного подтверждения.
-
-## 7. Рекомендуемая первая очередь Symphony issues
-
-### Queue 1
-
-1. `Nomad / Ops / Managed bot runtime`
-2. `Nomad / Ops / Production env matrix`
-3. `Nomad / Master / Telegram automation status panel`
-
-### Queue 2
-
-1. `Nomad / Backend / Audit trail for access and inventory`
-2. `Nomad / QA / Guest flow e2e smoke`
-3. `Nomad / QA / Master flow e2e smoke`
-
-### Queue 3
-
-1. `Nomad / Analytics / Dashboard metric cleanup`
-2. `Nomad / Rails / Statistical rails refinement`
-3. `Nomad / Aroma / UX and copy polish`
-
-## 8. Exit Criteria For Roadmap Stage
+## 6. Exit Criteria For Roadmap Stage
 
 Nomad можно считать готовым к следующей стадии, если:
 

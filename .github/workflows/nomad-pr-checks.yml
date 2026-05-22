@@ -11,14 +11,9 @@ on:
       - services/nomad-telegram-bot/**
       - tests/nomad-smoke/**
       - .github/**
-      - .codex/skills/**
-      - AGENTS.md
-      - AI_DEVELOPMENT_PROCESS.md
-      - CONTRIBUTING_NOMAD.md
-      - WORKFLOW_NOMAD.md
-      - NOMAD_*.md
+      - .claude/**
+      - CLAUDE.md
       - docs/**
-      - NOTES.md
       - HANDOFF.md
 
 permissions:
@@ -41,7 +36,6 @@ jobs:
       bot: ${{ steps.filter.outputs.bot }}
       runtime: ${{ steps.filter.outputs.runtime }}
       process_core: ${{ steps.filter.outputs.process_core }}
-      notes: ${{ steps.filter.outputs.notes }}
       handoff: ${{ steps.filter.outputs.handoff }}
     steps:
       - name: Detect changed Nomad scopes
@@ -70,20 +64,14 @@ jobs:
             runtime:
               - 'services/nomad-telegram-bot/ops/**'
               - 'services/nomad-telegram-bot/.env.example'
-              - 'NOMAD_ENV_MATRIX.md'
-              - 'NOMAD_DEPLOYMENT_SMOKE_CHECKLIST.md'
+              - 'docs/nomad/env-matrix.md'
+              - 'docs/nomad/deployment-smoke-checklist.md'
             process_core:
               - '.github/**'
-              - '.codex/skills/**'
+              - '.claude/**'
               - 'tests/nomad-smoke/**'
-              - 'AGENTS.md'
-              - 'AI_DEVELOPMENT_PROCESS.md'
-              - 'CONTRIBUTING_NOMAD.md'
-              - 'WORKFLOW_NOMAD.md'
-              - 'NOMAD_*.md'
+              - 'CLAUDE.md'
               - 'docs/**'
-            notes:
-              - 'NOTES.md'
             handoff:
               - 'HANDOFF.md'
 
@@ -277,25 +265,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Require NOTES.md and HANDOFF.md for Nomad process changes
+      - name: Require HANDOFF.md for Nomad process changes
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          NOTES_CHANGED: ${{ needs.changes.outputs.notes }}
           HANDOFF_CHANGED: ${{ needs.changes.outputs.handoff }}
         run: |
           set -eu
           echo "Comparing ${BASE_SHA}..${HEAD_SHA}"
           git diff --name-only "${BASE_SHA}" "${HEAD_SHA}"
 
-          if [ "${NOTES_CHANGED}" != "true" ]; then
-            echo "Nomad process change requires NOTES.md update"
-            exit 1
-          fi
-
           if [ "${HANDOFF_CHANGED}" != "true" ]; then
             echo "Nomad process change requires HANDOFF.md update"
             exit 1
           fi
 
-          echo "NOTES.md and HANDOFF.md are present in this process PR"
+          echo "HANDOFF.md is present in this process PR"

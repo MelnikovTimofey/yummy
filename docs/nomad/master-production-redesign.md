@@ -4,7 +4,7 @@
 
 Этот документ фиксирует contract-first пакет для преобразования `Nomad Master` из MVP в production-ready staff/admin контур.
 
-Локальные issue-shaped mirrors для каждого slice лежат в [docs/nomad/feature-slices/README.md](/Users/admin/PycharmProjects/yummy/docs/nomad/feature-slices/README.md) и повторяют поля `.github/ISSUE_TEMPLATE/nomad-feature.yml`.
+Каждый slice ведётся как отдельный GitHub issue по шаблону `.github/ISSUE_TEMPLATE/nomad-feature.yml`.
 
 Документ нужен до начала широкого рефакторинга, чтобы:
 
@@ -71,7 +71,7 @@
 Для `Nomad Master` redesign использовать следующий baseline:
 
 1. предпочитать `shadcn/ui` для базовых UI primitives там, где это ускоряет delivery и не тянет широкий UI rewrite;
-2. не оставлять default Codex-generated components как финальный visual слой;
+2. не оставлять generic auto-generated components как финальный visual слой;
 3. целиться не в generic admin SaaS, а в premium HoReCa console;
 4. использовать TIMELESS / TIS как visual benchmark:
    - [Основатель TIMELESS: как делать next-gen в HoReCa](https://vc.ru/offline/1765963-osnovatel-timeless-kak-delat-next-gen-v-horeca)
@@ -183,7 +183,7 @@
 Результат:
 
 1. этот документ;
-2. синхронизация `NOMAD_IMPLEMENTATION_PLAN.md` и `NOMAD_ROADMAP.md`;
+2. синхронизация `docs/nomad/implementation-plan.md` и `docs/nomad/roadmap.md`;
 3. фиксация verification gates и agent scopes.
 
 Stop condition:

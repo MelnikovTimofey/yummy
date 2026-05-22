@@ -72,7 +72,7 @@ NOMAD_DAILY_BROADCAST_MINUTE=0
 NOMAD_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
 ```
 
-Полная operating matrix по всем Nomad-сервисам зафиксирована в `NOMAD_ENV_MATRIX.md`.
+Полная operating matrix по всем Nomad-сервисам зафиксирована в `docs/nomad/env-matrix.md`.
 
 ## Стадия
 
