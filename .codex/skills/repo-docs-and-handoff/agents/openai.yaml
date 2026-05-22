@@ -1,4 +1,0 @@
-interface:
-  display_name: "Repo Docs And Handoff"
-  short_description: "Docs, notes, and handoff update rules"
-  default_prompt: "Use $repo-docs-and-handoff to decide which repo docs must be updated and how to record the change cleanly."

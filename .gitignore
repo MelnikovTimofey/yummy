@@ -34,3 +34,6 @@ tests/*/node_modules/
 services/nomad-telegram-bot/node_modules/
 services/nomad-telegram-bot/dist/
 services/nomad-telegram-bot/.env
+
+# Claude Code local settings (personal, not shared)
+.claude/settings.local.json

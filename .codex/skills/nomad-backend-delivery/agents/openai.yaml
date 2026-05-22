@@ -1,4 +1,0 @@
-interface:
-  display_name: "Nomad Backend Delivery"
-  short_description: "Nomad backend contracts and delivery checks"
-  default_prompt: "Use $nomad-backend-delivery to implement or review a Nomad backend slice with the correct contract, scope, and verification path."

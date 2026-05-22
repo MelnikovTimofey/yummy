@@ -1,4 +1,0 @@
-interface:
-  display_name: "Nomad Release Ops"
-  short_description: "Nomad release, env, and runtime operations"
-  default_prompt: "Use $nomad-release-ops to plan or review Nomad release readiness, environment setup, runtime checks, and rollback notes."
