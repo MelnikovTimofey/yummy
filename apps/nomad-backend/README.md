@@ -249,6 +249,13 @@ apps/nomad-backend/data/imports/htreviews/preview.json
 5. `HTREVIEWS_BRAND_URLS` - CSV со списком brand URLs, если нужно обойти только выбранные бренды.
 6. `HTREVIEWS_OUTPUT_PATH` - путь для snapshot файла.
 
+Техническое замечание по источнику:
+
+- HTReviews не всегда отдает полный список брендов и вкусов в initial HTML.
+- Discovery брендов догружается через `getData?action=brands`.
+- Для brand/line pages integration дополнительно ходит в `POST /postData` с `objectByBrand` / `objectByLine`, чтобы забрать вкусы за пределом первого `20`-элементного батча.
+- В источнике встречаются разные HTReviews-карточки с одинаковыми `manufacturer + line + name`, поэтому source identity опирается на `sourceNumericId`, а не только на display name.
+
 Пример минимального smoke-run:
 
 ```bash

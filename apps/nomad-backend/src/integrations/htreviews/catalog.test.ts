@@ -43,6 +43,32 @@ const buildBrandPage = (brandSlug: string, brandName: string, tobaccoName: strin
   </div>
 `;
 
+const buildPaginatedBrandPage = (brandSlug: string, brandName: string, tobaccoName: string, tobaccoSlug: string) => `
+  <div class="object_wrapper" data-id="203"></div>
+  <div class="tobacco_list_items" data-target="5" data-offset="20" data-count="21">
+    <div class="tobacco_list_item " data-id="190397">
+      <a class="tobacco_list_item_image" href="https://htreviews.org/tobaccos/${brandSlug}/main/${tobaccoSlug}">
+        <img data-src="https://htreviews.org/uploads/${tobaccoSlug}.webp" alt="${tobaccoName}">
+      </a>
+      <div class="tobacco_list_item_name">
+        <a class="tobacco_list_item_slug" href="https://htreviews.org/tobaccos/${brandSlug}/main/${tobaccoSlug}">
+          <span>${tobaccoName}</span>
+        </a>
+        <a class="tobacco_list_item_brand_slug" href="https://htreviews.org/tobaccos/${brandSlug}">
+          <span>${brandName}</span>
+        </a>
+        <a class="tobacco_list_item_line_slug" href="https://htreviews.org/tobaccos/${brandSlug}/main">
+          <span>Основная</span>
+        </a>
+      </div>
+      <div class="list_item_rating"><span>4.7</span></div>
+      <div class="list_item_ratings_count"><span>237</span></div>
+      <div class="list_item_reviews"><span>208</span></div>
+      <div class="list_item_stats"><span>20.7k</span></div>
+    </div>
+  </div>
+`;
+
 test('fetchHtReviewsCatalogSnapshot extends brand discovery via paginated getData results', async (t) => {
   const originalFetch = globalThis.fetch;
   const fetchCalls: string[] = [];
@@ -114,4 +140,79 @@ test('fetchHtReviewsCatalogSnapshot extends brand discovery via paginated getDat
   assert.ok(
     fetchCalls.includes('https://htreviews.org/getData?action=brands&r=position&s=rating&d=desc&o=20'),
   );
+});
+
+test('fetchHtReviewsCatalogSnapshot extends brand pages via paginated postData results', async (t) => {
+  const originalFetch = globalThis.fetch;
+  const postBodies: Array<Record<string, unknown>> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    if (url === 'https://htreviews.org/tobaccos/overdose') {
+      return htmlResponse(buildPaginatedBrandPage('overdose', 'Overdose', 'Kashmir Citrus', 'kashmir-citrus'));
+    }
+
+    if (url === 'https://htreviews.org/postData') {
+      assert.equal(init?.method, 'POST');
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      postBodies.push(body);
+
+      return jsonResponse([
+        {
+          id: '194992',
+          slug: 'overdose/overdose-main/bali-mango',
+          name: 'Bali Mango',
+          alt_name: 'Балийский манго',
+          media: 'uploads/objects/bali-mango.webp',
+          line: 'Основная',
+          line_slug: 'overdose/overdose-main',
+          brand: 'Overdose',
+          brand_slug: 'overdose',
+          rating: '4.1',
+          ratings_count: '26',
+          reviews: '25',
+          views: '4.1k',
+        },
+      ]);
+    }
+
+    throw new Error(`Unexpected fetch url in test: ${url}`);
+  }) as typeof globalThis.fetch;
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const snapshot = await fetchHtReviewsCatalogSnapshot({
+    brandUrls: ['https://htreviews.org/tobaccos/overdose'],
+    fetchDetails: false,
+    delayMs: 0,
+    requestTimeoutMs: 100,
+  });
+
+  assert.equal(snapshot.brandCount, 1);
+  assert.equal(snapshot.items.length, 2);
+  assert.ok(
+    snapshot.items.some((item) => item.manufacturer === 'Overdose' && item.name === 'Bali Mango'),
+  );
+  assert.deepEqual(postBodies, [
+    {
+      action: 'objectByBrand',
+      data: {
+        id: '203',
+        limit: 20,
+        offset: 20,
+        sort: {
+          s: 'rating',
+          d: 'desc',
+        },
+      },
+    },
+  ]);
 });

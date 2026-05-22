@@ -142,7 +142,8 @@ model NomadTobacco {
   updatedAt       DateTime          @updatedAt
   mixComponents   NomadMixComponent[]
 
-  @@unique([manufacturer, lineName, name])
+  @@unique([sourceKind, sourceNumericId])
+  @@index([manufacturer, lineName, name])
   @@index([inStock])
   @@index([sourceKind])
 }

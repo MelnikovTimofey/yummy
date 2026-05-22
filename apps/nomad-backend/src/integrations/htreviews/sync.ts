@@ -63,6 +63,31 @@ const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
     }
   }
 
+  const byStableId = await prisma.nomadTobacco.findUnique({
+    where: {
+      id: toStableId(item),
+    },
+  });
+  if (byStableId) {
+    return byStableId;
+  }
+
+  const bySourceUrl = await prisma.nomadTobacco.findFirst({
+    where: {
+      sourceUrl: item.sourceUrl,
+    },
+  });
+  if (bySourceUrl) {
+    return bySourceUrl;
+  }
+
+  // HTReviews can legitimately expose duplicate manufacturer/line/name combinations
+  // with different source IDs and URLs, so only fall back to the name key when the
+  // source identity is genuinely missing.
+  if (item.sourceExternalId || item.sourceNumericId) {
+    return null;
+  }
+
   return prisma.nomadTobacco.findFirst({
     where: {
       manufacturer: item.manufacturer,

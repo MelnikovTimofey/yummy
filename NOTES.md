@@ -76,7 +76,12 @@
 
 - Исправлен дефект качества выгрузки HTReviews в `nomad-backend`: глобальный import пропускал бренды, которые не попадали в первый HTML-ответ `/tobaccos/brands`.
 - Discovery брендов теперь дополняется paginated запросами к публичному `getData?action=brands` для вкладок `position` и `others`.
+- Импорт brand/line pages теперь также добирает скрытые вкусы через `POST /postData` с `objectByBrand` / `objectByLine`, когда HTReviews отдает только первые `20` карточек в initial HTML и догружает хвост infinite-scroll'ом.
+- Prisma schema `NomadTobacco` больше не считает `(manufacturer, lineName, name)` абсолютным уникальным ключом для source-import:
+  - уникальность для HTReviews держится на `sourceKind + sourceNumericId`;
+  - это позволяет сохранить реальные source duplicates вроде двух отдельных карточек `Overdose / Основная / Kashmir Citrus`.
 - Добавлен автоматический тест на сценарий, где бренд присутствует только в paginated discovery, но отсутствует в initial HTML slice.
+- Добавлен автоматический тест на сценарий, где второй батч вкусов бренда доступен только через `postData`.
 - Проверки:
   - `cd apps/nomad-backend && npm test`
   - `cd apps/nomad-backend && npm run build`

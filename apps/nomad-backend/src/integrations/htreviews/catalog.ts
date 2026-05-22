@@ -1,6 +1,13 @@
 import { HtReviewsClient } from './client';
 import { buildHtReviewsDescription } from './description';
-import { extractCatalogEntryUrls, parseBrandIndexPage, parseBrandPage, parseTobaccoPage } from './parser';
+import {
+  extractCatalogEntryUrls,
+  parseBrandIndexPage,
+  parseBrandPage,
+  parseObjectListMeta,
+  parseObjectListResponse,
+  parseTobaccoPage,
+} from './parser';
 import { buildNomadTaxonomyCandidate } from './taxonomy';
 import type {
   HtReviewsBrandRef,
@@ -101,6 +108,16 @@ const safeFetchJson = async <T>(client: HtReviewsClient, url: string) => {
   }
 };
 
+const safePostJson = async <T>(client: HtReviewsClient, url: string, body: unknown) => {
+  try {
+    return await client.postJson<T>(url, body);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[htreviews] skipped ${url}: ${message}`);
+    return null;
+  }
+};
+
 const toBrandRefFromDiscoveryItem = (client: HtReviewsClient, item: unknown): HtReviewsBrandRef | null => {
   if (!item || typeof item !== 'object') {
     return null;
@@ -163,6 +180,50 @@ const fetchAdditionalBrandRefs = async (client: HtReviewsClient) => {
   return brands;
 };
 
+const fetchAdditionalObjectPageSummaries = async (
+  client: HtReviewsClient,
+  html: string,
+  pageUrl: string,
+) => {
+  const meta = parseObjectListMeta(html, pageUrl);
+  if (!meta || meta.offset >= meta.count) {
+    return [];
+  }
+
+  const page = new URL(pageUrl);
+  const sort = {
+    s: page.searchParams.get('s') ?? 'rating',
+    d: page.searchParams.get('d') ?? 'desc',
+  };
+  const summaries: HtReviewsTobaccoSummary[] = [];
+
+  for (let offset = meta.offset; offset < meta.count; offset += HTREVIEWS_DISCOVERY_PAGE_SIZE) {
+    const entries = await safePostJson<unknown[]>(
+      client,
+      `${client.baseUrl}/postData`,
+      {
+        action: meta.action,
+        data: {
+          id: meta.objectId,
+          limit: HTREVIEWS_DISCOVERY_PAGE_SIZE,
+          offset,
+          sort,
+        },
+      },
+    );
+    if (!entries?.length) {
+      break;
+    }
+
+    summaries.push(...parseObjectListResponse(entries, client.baseUrl));
+    if (entries.length < HTREVIEWS_DISCOVERY_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return summaries;
+};
+
 export const fetchHtReviewsCatalogSnapshot = async (
   options: HtReviewsImportOptions = {},
 ): Promise<HtReviewsCatalogSnapshot> => {
@@ -209,6 +270,10 @@ export const fetchHtReviewsCatalogSnapshot = async (
         summaryMap.set(summary.url, summary);
         discoveryBrandUrls.add(summary.brand.url);
       }
+      for (const summary of await fetchAdditionalObjectPageSummaries(client, html, lineUrl)) {
+        summaryMap.set(summary.url, summary);
+        discoveryBrandUrls.add(summary.brand.url);
+      }
       if (options.tobaccoLimit && summaryMap.size >= options.tobaccoLimit) {
         break;
       }
@@ -226,6 +291,9 @@ export const fetchHtReviewsCatalogSnapshot = async (
       continue;
     }
     for (const summary of parseBrandPage(html, client.baseUrl)) {
+      summaryMap.set(summary.url, summary);
+    }
+    for (const summary of await fetchAdditionalObjectPageSummaries(client, html, brand.url)) {
       summaryMap.set(summary.url, summary);
     }
     if (options.tobaccoLimit && summaryMap.size >= options.tobaccoLimit) {

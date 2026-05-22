@@ -57,4 +57,33 @@ export class HtReviewsClient {
     const response = await this.fetchResponse(url, 'application/json,text/plain,*/*');
     return response.json() as Promise<T>;
   }
+
+  async postJson<T>(url: string, body: unknown) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'user-agent': this.userAgent,
+          accept: 'application/json,text/plain,*/*',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTReviews responded ${response.status} for ${url}`);
+      }
+
+      return response.json() as Promise<T>;
+    } finally {
+      clearTimeout(timeout);
+      if (this.delayMs > 0) {
+        await delay(this.delayMs);
+      }
+    }
+  }
 }

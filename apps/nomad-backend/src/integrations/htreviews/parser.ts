@@ -254,6 +254,110 @@ export const parseBrandPage = (html: string, baseUrl: string): HtReviewsTobaccoS
   return items;
 };
 
+type HtReviewsObjectListItem = {
+  id?: string | number | null;
+  slug?: string | null;
+  name?: string | null;
+  alt_name?: string | null;
+  media?: string | null;
+  line?: string | null;
+  line_slug?: string | null;
+  brand?: string | null;
+  brand_slug?: string | null;
+  rating?: string | number | null;
+  ratings_count?: string | number | null;
+  reviews?: string | number | null;
+  views?: string | number | null;
+};
+
+export type HtReviewsObjectListMeta = {
+  objectId: string;
+  action: 'objectByBrand' | 'objectByLine';
+  offset: number;
+  count: number;
+};
+
+const parseObjectListItem = (item: unknown, baseUrl: string): HtReviewsTobaccoSummary | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const payload = item as HtReviewsObjectListItem;
+  const slug = typeof payload.slug === 'string' ? payload.slug.trim() : '';
+  const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+  const brandSlug = typeof payload.brand_slug === 'string' ? payload.brand_slug.trim() : '';
+  const brandName = typeof payload.brand === 'string' ? payload.brand.trim() : '';
+
+  if (!slug || !name || !brandSlug || !brandName) {
+    return null;
+  }
+
+  const url = resolveAbsoluteUrl(baseUrl, `/tobaccos/${slug}`);
+  const brandUrl = resolveAbsoluteUrl(baseUrl, `/tobaccos/${brandSlug}`);
+  if (!url || !brandUrl) {
+    return null;
+  }
+
+  const lineSlug = typeof payload.line_slug === 'string' ? payload.line_slug.trim() : '';
+  const lineUrl = lineSlug ? resolveAbsoluteUrl(baseUrl, `/tobaccos/${lineSlug}`) : null;
+  const lineName = typeof payload.line === 'string' ? payload.line.trim() : null;
+  const alias = typeof payload.alt_name === 'string' ? payload.alt_name.trim() : null;
+  const sourceNumericId =
+    payload.id === null || payload.id === undefined
+      ? null
+      : String(payload.id).trim() || null;
+
+  return {
+    sourceNumericId,
+    name,
+    alias: alias && alias !== name ? alias : null,
+    url,
+    imageUrl: resolveAbsoluteUrl(baseUrl, payload.media ?? null),
+    brand: parseBrandRef(brandUrl, brandName),
+    line: parseLineRef(lineUrl, lineName),
+    rating: parseNumber(payload.rating === null || payload.rating === undefined ? null : String(payload.rating)),
+    ratingsCount: parseNumber(
+      payload.ratings_count === null || payload.ratings_count === undefined ? null : String(payload.ratings_count),
+    ),
+    reviewsCount: parseNumber(
+      payload.reviews === null || payload.reviews === undefined ? null : String(payload.reviews),
+    ),
+    viewsCount: parseNumber(
+      payload.views === null || payload.views === undefined ? null : String(payload.views),
+    ),
+  };
+};
+
+export const parseObjectListMeta = (html: string, pageUrl: string): HtReviewsObjectListMeta | null => {
+  const objectId = html.match(/<div class="object_wrapper" data-id="(\d+)"/i)?.[1] ?? null;
+  const listMatch = html.match(/<div class="tobacco_list_items"[^>]*data-offset="(\d+)"[^>]*data-count="(\d+)"/i);
+  if (!objectId || !listMatch) {
+    return null;
+  }
+
+  let action: 'objectByBrand' | 'objectByLine' = 'objectByBrand';
+  try {
+    const segments = new URL(pageUrl).pathname.split('/').filter(Boolean);
+    if (segments[0] === 'tobaccos' && segments.length > 2) {
+      action = 'objectByLine';
+    }
+  } catch {
+    action = 'objectByBrand';
+  }
+
+  return {
+    objectId,
+    action,
+    offset: Number.parseInt(listMatch[1] ?? '0', 10) || 0,
+    count: Number.parseInt(listMatch[2] ?? '0', 10) || 0,
+  };
+};
+
+export const parseObjectListResponse = (items: unknown[], baseUrl: string): HtReviewsTobaccoSummary[] =>
+  items
+    .map((item) => parseObjectListItem(item, baseUrl))
+    .filter((item): item is HtReviewsTobaccoSummary => item !== null);
+
 export const parseTobaccoPage = (html: string, baseUrl: string, fallbackUrl: string): HtReviewsTobaccoDetail => {
   const product = extractJsonLdProduct(html);
   const pageUrl = resolveAbsoluteUrl(baseUrl, String(product?.url ?? fallbackUrl)) ?? fallbackUrl;

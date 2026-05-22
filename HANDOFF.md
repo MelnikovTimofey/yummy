@@ -44,20 +44,27 @@
 - Реализация:
   - в `apps/nomad-backend/src/integrations/htreviews/client.ts` добавлен JSON fetch path для публичных HTReviews list endpoints;
   - в `apps/nomad-backend/src/integrations/htreviews/catalog.ts` global discovery брендов дополнен paginated запросами к `getData?action=brands` для режимов `position` и `others`;
+  - import brand/line pages дополнен paginated `POST /postData` запросами с `objectByBrand` / `objectByLine`, чтобы не терять вкусы за пределом первого HTML-батча;
+  - в `apps/nomad-backend/src/integrations/htreviews/parser.ts` добавлен маппинг JSON-элементов `postData` в `HtReviewsTobaccoSummary`;
+  - в `apps/nomad-backend/prisma/schema.prisma` уникальность `NomadTobacco` для source-import переведена с `(manufacturer, lineName, name)` на `sourceKind + sourceNumericId`, потому что HTReviews может содержать несколько разных карточек с одинаковыми brand/line/name;
+  - sync-слой теперь при наличии source identity не схлопывает такие записи по fallback-ключу имени;
   - initial HTML discovery сохранён, но больше не является единственным источником списка брендов;
-  - добавлен regression test, который подтверждает импорт бренда, доступного только через paginated discovery.
+  - добавлены regression tests для обоих кейсов:
+    - бренд доступен только через paginated discovery;
+    - дополнительные вкусы бренда доступны только через `postData`.
 
 - Проверки:
   - `cd apps/nomad-backend && npm test`
   - `cd apps/nomad-backend && npm run build`
 
 - Остаточный риск:
-  - live rebuild каталога после фикса отдельно не запускался, поэтому зафиксированные historical counts в notes/handoff пока относятся к последнему pre-fix rebuild;
-  - интеграция всё ещё зависит от публичной структуры HTReviews `getData`; если сайт сменит payload или query semantics, discovery потребует повторной адаптации.
+  - live rebuild каталога после brand-page фикса нужно прогнать отдельно, чтобы выровнять текущую БД с полным HTReviews inventory;
+  - интеграция всё ещё зависит от HTReviews payload для `getData` и `postData`; если сайт сменит структуру ответа, discovery/import потребуют повторной адаптации.
 
 - Эффект:
   - global preview/sync больше не должны обрезаться примерно первыми `20 + 20` брендами из `/tobaccos/brands`;
-  - бренды вроде `Overdose` становятся достижимыми без ручного `HTREVIEWS_BRAND_URLS`.
+  - бренды вроде `Overdose` становятся достижимыми без ручного `HTREVIEWS_BRAND_URLS`;
+  - brand pages вроде `https://htreviews.org/tobaccos/overdose` больше не должны останавливаться на первых `20` вкусах.
 
 ## 2.22) Nomad Master (5 апреля 2026) — создание табака, cleanup формы микса и unified rail selector
 
