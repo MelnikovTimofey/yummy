@@ -67,4 +67,4 @@
 - `git diff --check`
 - `git status --short`
 - `HANDOFF.md` обновлён
-- PR открыт в `codex/nomad-parallel-track` и помечен для ревью
+- PR открыт в `main` (с ветки `feature/*` или `bug/*`) и помечен для ревью

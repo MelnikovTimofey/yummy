@@ -3,7 +3,7 @@ name: Nomad PR Checks
 on:
   pull_request:
     branches:
-      - codex/nomad-parallel-track
+      - main
     paths:
       - apps/nomad-aroma-web/**
       - apps/nomad-master-web/**

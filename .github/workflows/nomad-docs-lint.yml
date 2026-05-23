@@ -3,7 +3,7 @@ name: Nomad Docs Lint
 on:
   pull_request:
     branches:
-      - codex/nomad-parallel-track
+      - main
     paths:
       - .github/**
       - .claude/**
@@ -12,7 +12,7 @@ on:
       - HANDOFF.md
   push:
     branches:
-      - codex/nomad-parallel-track
+      - main
     paths:
       - .github/**
       - .claude/**

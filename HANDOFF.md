@@ -1,5 +1,51 @@
 # HANDOFF — Nomad
 
+## 2.28) Repo (23 мая 2026) — production-ветка `main` и соглашение о ветках
+
+- Запрос:
+  - сделать production-веткой `main`;
+  - зафиксировать соглашение: `feature/*` — фичи/рефакторинг/доки,
+    `bug/*` — баг-фиксы.
+
+- Реализация:
+  - на GitHub выполнен атомарный rename
+    `codex/nomad-parallel-track` → `main` через
+    `POST /repos/.../branches/codex%2Fnomad-parallel-track/rename` — default
+    branch автоматически переставлен на `main`, открытые PR были бы
+    перенацелены автоматически (на момент rename открытых PR не было);
+  - локально удалена устаревшая ветка `main` (предыдущий pre-Nomad pivot),
+    `codex/nomad-parallel-track` переименована в `main`, tracking
+    перепривязан, `git remote set-head origin main`;
+  - удалена merged remote-ветка `chore/legacy-split`;
+  - `CLAUDE.md` §1 — «production-ветка `main`»; §5 — описан branch flow
+    (`feature/<slug>` или `bug/<slug>` от `main`, PR в `main`);
+  - `README.md` — раздел «Разработка» переписан под `main` и новый branch
+    naming;
+  - `.github/NOMAD_REVIEW_POLICY.md` — `Base branch` указывает на `main`,
+    добавлена секция `Branch naming`, Phase 2 protection — для `main`;
+  - `.github/workflows/nomad-docs-lint.yml`, `nomad-pr-checks.yml`,
+    `nomad-smoke.yml` — триггеры с `codex/nomad-parallel-track` на `main`;
+  - `docs/nomad/acceptance-checklist.md` — handoff-чек обновлён.
+
+- Проверки:
+  - `gh repo view --json defaultBranchRef` → `main`;
+  - `git ls-remote --heads origin` → только `main` и feature-ветки;
+  - `grep -rln codex/nomad-parallel-track` в живых docs — пусто (исторические
+    упоминания в HANDOFF §2.26/§2.27 и `docs/artifacts/archive/` оставлены
+    как есть).
+
+- Остаточный риск:
+  - branch protection для `main` ещё не включён (Phase 2 в
+    `NOMAD_REVIEW_POLICY.md`);
+  - локально у разработчиков останутся stale `codex/*` ветки с
+    `origin/...: gone`-tracking — безопасно удалить вручную через
+    `git fetch --prune && git branch -vv | awk '/: gone\]/ {print $1}' | xargs git branch -D`.
+
+- Эффект:
+  - production-ветка соответствует индустриальному соглашению (`main`);
+  - branch naming `feature/*` / `bug/*` явно зафиксирован и закрывает
+    раньше неявную часть процесса.
+
 ## 2.27) Repo (23 мая 2026) — физический split legacy Yummy в отдельный репозиторий
 
 - Запрос: вынести legacy-контур в отдельный репозиторий, оставить текущий репо

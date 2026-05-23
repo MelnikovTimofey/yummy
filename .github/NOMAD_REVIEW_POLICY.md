@@ -2,7 +2,7 @@
 
 ## Назначение
 
-Этот документ фиксирует GitHub-layer для Nomad внутри монорепозитория `Yummy + Nomad parallel track`.
+Этот документ фиксирует GitHub-layer для репозитория Nomad.
 
 Цель:
 
@@ -13,11 +13,16 @@
 
 ## Base branch
 
-Для Nomad PR использовать base branch:
+Для Nomad PR использовать base branch `main` — production-ветка репозитория.
 
-1. `codex/nomad-parallel-track`
+## Branch naming
 
-Не использовать `main` как default merge target для Nomad, пока это отдельно не изменено в repo docs.
+1. `feature/<short-slug>` — новый функционал, рефакторинг, обновление документации/процесса;
+2. `bug/<short-slug>` — исправление багов.
+
+Slug — короткое имя в kebab-case (например `feature/master-shell-foundation`,
+`bug/onboarding-empty-state`). Допустимо префиксом включать issue номер
+(`feature/123-master-shell`), если это помогает trace.
 
 ## PR shape
 
@@ -28,8 +33,7 @@
 В одном PR не смешивать без явного интеграционного шага:
 
 1. schema + auth + UI + infra;
-2. Nomad и legacy runtime changes;
-3. process-governance changes и unrelated feature work.
+2. process-governance changes и unrelated feature work.
 
 ## Issue shape
 
@@ -128,7 +132,7 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 
 ### Phase 2
 
-После стабилизации CI вручную включить branch protection или ruleset для `codex/nomad-parallel-track`:
+После стабилизации CI вручную включить branch protection или ruleset для `main`:
 
 1. require 1 approving review;
 2. require `CODEOWNERS` review для Nomad process files;

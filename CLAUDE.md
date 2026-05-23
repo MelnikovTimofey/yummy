@@ -12,7 +12,7 @@ smoke-тесты в `tests/nomad-smoke`.
 [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy) и здесь больше
 не присутствует. Состояние монорепо до split — tag `pre-legacy-split`.
 
-Текущая рабочая ветка Nomad: `codex/nomad-parallel-track`.
+Production-ветка репозитория — `main`. Соглашение по именам рабочих веток см. §5.
 
 Продукт Nomad (детали — в `PRD.md`, `docs/nomad/`):
 
@@ -75,9 +75,14 @@ smoke-тесты в `tests/nomad-smoke`.
 1. Нетривиальная задача начинается с GitHub issue
    (`.github/ISSUE_TEMPLATE/nomad-feature.yml` / `nomad-bug.yml` / `nomad-ops.yml`).
    Issue фиксирует bounded context, scope, критерии и проверки.
-2. Ветка от `codex/nomad-parallel-track`, один вертикальный срез.
+2. Ветка от `main` по соглашению:
+   - `feature/<slug>` — новый функционал, рефакторинг, обновление документации/процесса;
+   - `bug/<slug>` — исправление бага.
+
+   `<slug>` в kebab-case, при необходимости с issue-номером
+   (`feature/123-master-shell`). Один вертикальный срез на ветку.
 3. TDD-цикл и зелёный verification gate (раздел 3).
-4. PR в `codex/nomad-parallel-track` по `.github/pull_request_template.md`:
+4. PR в `main` по `.github/pull_request_template.md`:
    **1 PR = 1 bounded context**, без смешения схемы/auth/UI/инфры.
 5. Self-review до merge. Изменения схемы/auth/env/контракта/процесса требуют
    человеческого ревью — см. `.github/NOMAD_REVIEW_POLICY.md`.
