@@ -1,17 +1,16 @@
 # CLAUDE.md
 
-Инструкция для Claude Code и субагентов в репозитории **Yummy + Nomad**.
+Инструкция для Claude Code и субагентов в репозитории **Nomad**.
 
 ## 1. Проект
 
-В репозитории два изолированных контура:
+Репозиторий содержит контур Nomad. Каталоги: `apps/nomad-aroma-web`,
+`apps/nomad-master-web`, `apps/nomad-backend`, `services/nomad-telegram-bot`,
+smoke-тесты в `tests/nomad-smoke`.
 
-1. **Nomad** — активный продукт. Каталоги: `apps/nomad-aroma-web`,
-   `apps/nomad-master-web`, `apps/nomad-backend`, `services/nomad-telegram-bot`,
-   smoke-тесты в `tests/nomad-smoke`.
-2. **legacy Yummy** — заморожен, read-only. Каталоги: `Yummy/`, `YummyExpo/`,
-   `YummyWeb/`, `backend/`, `services/catalog-updater/`, `ml/`. Планируется вынести
-   в отдельный репозиторий; здесь его не развиваем и не переписываем.
+Исходный продукт **legacy Yummy** вынесен в архивный репозиторий
+[MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy) и здесь больше
+не присутствует. Состояние монорепо до split — tag `pre-legacy-split`.
 
 Текущая рабочая ветка Nomad: `codex/nomad-parallel-track`.
 
@@ -84,13 +83,14 @@
    человеческого ревью — см. `.github/NOMAD_REVIEW_POLICY.md`.
 6. Коммит после каждого логического блока.
 
-## 6. Изоляция контуров
+## 6. Отношения с legacy Yummy
 
-- Не переписывать `YummyWeb/`, `backend/`, `services/catalog-updater/` под Nomad.
-- Не шарить одну Prisma schema и одну продуктовую БД между legacy и Nomad.
-- Не использовать feature-флаги как способ совместить legacy и Nomad в одном приложении.
-- Переиспользование из legacy — осознанный выбор: `copy with adaptation`,
-  `extract shared module` или `keep separate`. Чтение legacy для идей разрешено.
+- Legacy-код живёт отдельно: [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy).
+  В этом репозитории его нет и сюда он не возвращается.
+- Не копировать legacy-каталоги (`Yummy/`, `YummyWeb/`, `backend/`, `ml/`,
+  `services/catalog-updater/`) обратно в `apps/`/`services/`.
+- Переиспользование идей из legacy — осознанный выбор: чтение по ссылке,
+  `copy with adaptation` или `extract shared module`. Не зеркалить файлы.
 
 ## 7. Продуктовые инварианты Nomad
 

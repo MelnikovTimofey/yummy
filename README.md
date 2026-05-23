@@ -1,18 +1,21 @@
-# Yummy + Nomad
+# Nomad
 
-Монорепозиторий с двумя изолированными продуктовыми контурами.
+Репозиторий продукта Nomad — каталог кальянных табаков и миксов.
 
-## Контуры
+## Поверхности
 
-- **Nomad** — активный продукт. Каталог кальянных табаков и миксов:
-  - `apps/nomad-aroma-web` — гостевой `Арома Ателье` (без авторизации);
-  - `apps/nomad-master-web` — backoffice `Мастер`;
-  - `apps/nomad-backend` — Node/TypeScript + Prisma + Postgres;
-  - `services/nomad-telegram-bot` — Telegram-бот;
-  - `tests/nomad-smoke` — smoke-тесты.
-- **legacy Yummy** — заморожен, read-only (`Yummy/`, `YummyExpo/`, `YummyWeb/`,
-  `backend/`, `services/catalog-updater/`, `ml/`). Планируется вынести в отдельный
-  репозиторий.
+- `apps/nomad-aroma-web` — гостевой `Арома Ателье` (без авторизации);
+- `apps/nomad-master-web` — backoffice `Мастер`;
+- `apps/nomad-backend` — Node/TypeScript + Prisma + Postgres;
+- `services/nomad-telegram-bot` — Telegram-бот;
+- `tests/nomad-smoke` — smoke-тесты.
+
+## Legacy Yummy
+
+Исходный продукт Yummy вынесен в отдельный архивный репозиторий
+[MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy) с сохранением
+истории. В этом репозитории legacy-код больше не поддерживается. Состояние
+монорепо до split зафиксировано tag-ом `pre-legacy-split`.
 
 ## Документация
 
