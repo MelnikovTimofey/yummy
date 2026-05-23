@@ -1,4 +1,49 @@
-# HANDOFF — Yummy
+# HANDOFF — Nomad
+
+## 2.27) Repo (23 мая 2026) — физический split legacy Yummy в отдельный репозиторий
+
+- Запрос: вынести legacy-контур в отдельный репозиторий, оставить текущий репо
+  под активную разработку Nomad. См. ADR-001 в обсуждении.
+
+- Реализация:
+  - на текущем `codex/nomad-parallel-track` создан аннотированный tag
+    `pre-legacy-split` (запушен в `origin`) — единственная точка отката;
+  - в свежем clone выполнен `git filter-repo --force --path Yummy --path
+    YummyExpo --path YummyWeb --path backend --path ml --path
+    services/catalog-updater --path docker-compose.yml --path
+    scripts/symphony_auto_merge_done.sh` (141 коммит legacy-истории сохранён);
+  - в новом репо добавлен `README.md` (архив, ссылка на активный nomad-yummy),
+    ветка переименована в `main`, push в
+    [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy);
+  - в текущем репо на ветке `chore/legacy-split` удалены: `Yummy/`, `YummyExpo/`,
+    `YummyWeb/`, `backend/`, `ml/`, `services/catalog-updater/`,
+    корневой `docker-compose.yml`, `scripts/symphony_auto_merge_done.sh`;
+  - обновлены `README.md` (Nomad-only, ссылка на архив), `CLAUDE.md` §1/§6
+    (`Yummy + Nomad` → `Nomad`, изоляция контуров переписана под «legacy живёт
+    отдельно»), `.gitignore` (убраны legacy-only записи).
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test && npm run build`;
+  - `cd apps/nomad-master-web && npm run build`;
+  - `cd apps/nomad-aroma-web && npm run build`;
+  - `cd services/nomad-telegram-bot && npm test && npm run build`;
+  - `git diff --check` на ветке `chore/legacy-split`.
+
+- Остаточный риск:
+  - на диске у разработчика остаются untracked артефакты в удалённых каталогах
+    (`Yummy/ios`, `YummyWeb/node_modules`, `backend/dist`, ...) — безопасно
+    удалить вручную, в git они уже не отслеживаются;
+  - `tests/nomad-smoke` поднимается через отдельный
+    `apps/nomad-backend/docker-compose.yml`; корневой `docker-compose.yml` был
+    только legacy, его удаление Nomad не затрагивает;
+  - архивный репо ещё не помечен `archived: true` в GitHub — оставлено владельцу
+    на 4–8 недель верификации, что нет регулярных обращений к legacy.
+
+- Эффект:
+  - в текущем репо нет legacy: clone и индексация быстрее, агентский `grep`/
+    `Explore` перестаёт находить legacy-совпадения;
+  - blame legacy сохранён в [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy);
+  - физическая изоляция вместо «правил в `CLAUDE.md` §6».
 
 ## 2.26) Repo (22 мая 2026) — миграция с Codex на Claude Code
 
