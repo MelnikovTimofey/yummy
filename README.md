@@ -17,6 +17,82 @@
 истории. В этом репозитории legacy-код больше не поддерживается. Состояние
 монорепо до split зафиксировано tag-ом `pre-legacy-split`.
 
+## Запуск
+
+### Через Docker Compose (рекомендуется)
+
+Полный контур (Postgres + backend + оба веба) — одной командой из корня:
+
+```bash
+cp .env.example .env       # отредактировать секреты при необходимости
+docker compose up --build
+```
+
+После старта:
+
+- `Арома Ателье` — http://localhost:4174
+- `Мастер` — http://localhost:4175
+- Backend API — http://localhost:3021
+- Postgres — `localhost:5433` (логин/пароль `nomad/nomad`, db `nomad`)
+
+Telegram-бот вынесен в profile `bot`, т.к. требует `TELEGRAM_BOT_TOKEN`:
+
+```bash
+docker compose --profile bot up --build telegram-bot
+```
+
+Полезные команды:
+
+```bash
+docker compose up backend aroma-web       # частичный стек
+docker compose logs -f backend            # логи сервиса
+docker compose down                       # стоп
+docker compose down -v                    # стоп + сброс данных (volume nomad_db)
+```
+
+`VITE_API_BASE_URL` зашивается в bundle на этапе сборки (build-arg); по
+умолчанию указывает на `http://localhost:3021`. Меняется через
+`AROMA_VITE_API_BASE_URL` / `MASTER_VITE_API_BASE_URL` в `.env` — после
+изменения нужен `docker compose build aroma-web master-web`.
+
+### Без Docker (нативно)
+
+Требования: Node.js 20+, npm 10+, локально доступный Postgres 16 (или
+поднять только БД через docker: `cd apps/nomad-backend && npm run db:start`).
+
+```bash
+# 1. БД (если нет своей)
+cd apps/nomad-backend
+npm run db:start             # docker compose up -d db (порт 5433)
+
+# 2. Backend (отдельный терминал)
+cd apps/nomad-backend
+npm install
+export DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public'
+npx prisma db push
+npm run dev                  # http://localhost:3021
+
+# 3. Aroma web (отдельный терминал)
+cd apps/nomad-aroma-web
+npm install
+npm run dev                  # http://localhost:5174
+
+# 4. Master web (отдельный терминал)
+cd apps/nomad-master-web
+npm install
+npm run dev                  # http://localhost:5176
+
+# 5. Telegram-бот (опционально, отдельный терминал)
+cd services/nomad-telegram-bot
+npm install
+export TELEGRAM_BOT_TOKEN=...
+export NOMAD_BACKEND_URL=http://localhost:3021
+export NOMAD_BACKEND_AUTOMATION_TOKEN=nomad-local-automation-key
+npm run dev
+```
+
+Полный список переменных окружения — в [`.env.example`](.env.example).
+
 ## Документация
 
 - [`CLAUDE.md`](CLAUDE.md) — правила разработки, процесс, роли агентов (читать первым).

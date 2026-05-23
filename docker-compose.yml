@@ -1,0 +1,78 @@
+# Запуск всего контура Nomad: db + backend + master-web + aroma-web + telegram-bot.
+# Веб-приложения публикуются на localhost; VITE_API_BASE_URL зашивается на build,
+# поэтому браузер ходит в backend через проброшенный порт хоста (3021).
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: nomad
+      POSTGRES_PASSWORD: nomad
+      POSTGRES_DB: nomad
+    ports:
+      - "5433:5432"
+    volumes:
+      - nomad_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nomad -d nomad"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./apps/nomad-backend
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3021"
+      DATABASE_URL: postgresql://nomad:nomad@db:5432/nomad?schema=public
+      NOMAD_AUTOMATION_KEY: ${NOMAD_AUTOMATION_KEY:-nomad-local-automation-key}
+      NOMAD_TOKEN_SECRET: ${NOMAD_TOKEN_SECRET:-nomad-local-secret}
+      NOMAD_TOKEN_TTL_HOURS: ${NOMAD_TOKEN_TTL_HOURS:-24}
+    ports:
+      - "3021:3021"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  aroma-web:
+    build:
+      context: ./apps/nomad-aroma-web
+      args:
+        VITE_API_BASE_URL: ${AROMA_VITE_API_BASE_URL:-http://localhost:3021}
+    ports:
+      - "4174:4174"
+    depends_on:
+      - backend
+
+  master-web:
+    build:
+      context: ./apps/nomad-master-web
+      args:
+        VITE_API_BASE_URL: ${MASTER_VITE_API_BASE_URL:-http://localhost:3021}
+    ports:
+      - "4175:4175"
+    depends_on:
+      - backend
+
+  telegram-bot:
+    # Требует TELEGRAM_BOT_TOKEN. Запускается отдельно: `docker compose --profile bot up`.
+    profiles: ["bot"]
+    build:
+      context: ./services/nomad-telegram-bot
+    environment:
+      NOMAD_BACKEND_URL: http://backend:3021
+      NOMAD_BACKEND_AUTOMATION_TOKEN: ${NOMAD_AUTOMATION_KEY:-nomad-local-automation-key}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      NOMAD_TELEGRAM_ALLOWED_CHAT_IDS: ${NOMAD_TELEGRAM_ALLOWED_CHAT_IDS:-}
+      NOMAD_TELEGRAM_BROADCAST_CHAT_IDS: ${NOMAD_TELEGRAM_BROADCAST_CHAT_IDS:-}
+      NOMAD_TELEGRAM_ROTATE_CHAT_IDS: ${NOMAD_TELEGRAM_ROTATE_CHAT_IDS:-}
+      NOMAD_BOT_STATE_PATH: /data/nomad-telegram-bot-state.json
+    volumes:
+      - nomad_bot_state:/data
+    depends_on:
+      - backend
+
+volumes:
+  nomad_db:
+  nomad_bot_state:

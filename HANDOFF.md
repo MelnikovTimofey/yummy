@@ -1,5 +1,49 @@
 # HANDOFF — Nomad
 
+## 2.30) Ops + Process (23 мая 2026) — root docker compose stack и жёсткий запрет правок в `main`
+
+- Запрос: «Генерация docker compose для запуска сервисов продукта nomad yummy»
+  + после того как изменения были записаны в `main` напрямую, пользователь
+  попросил вынести их в отдельную ветку и усилить правило в CLAUDE.md.
+
+- Реализация (PR #11, ветка `feature/docker-compose-stack`):
+  - `docker-compose.yml` в корне: `db` (Postgres 16, проброс `5433:5432` для
+    совместимости с `apps/nomad-backend/docker-compose.yml`), `backend`,
+    `aroma-web`, `master-web` и `telegram-bot` под profile `bot`
+    (требует `TELEGRAM_BOT_TOKEN`, поэтому не входит в дефолтный `up`).
+  - Multi-stage Dockerfile + `.dockerignore` для каждого сервиса:
+    - backend — на старте `prisma db push --skip-generate && node dist/index.js`,
+      потому что Prisma-миграций в репо нет, схема накатывается напрямую;
+    - aroma/master — vite build с `VITE_API_BASE_URL` как build-arg, runtime
+      через `vite preview` (`--host 0.0.0.0`, порты 4174/4175 из package.json);
+    - telegram-bot — node runtime, состояние в named volume `nomad_bot_state`
+      (`NOMAD_BOT_STATE_PATH=/data/...`).
+  - `.env.example` с переменными для backend secrets, build-args веба и токенов
+    Telegram.
+  - CLAUDE.md §5 и «Главное правило» усилены отдельным блоком про запрет
+    Edit/Write в `main` — триггер: я сам нарушил это правило при первой версии
+    PR. Добавлена явная инструкция перед первым `Edit`/`Write` проверять
+    `git rev-parse --abbrev-ref HEAD` и заводить `feature/<slug>`.
+
+- Проверки:
+  - `docker compose config --quiet` — валидный compose;
+  - `docker compose up --build` локально не запускался (длинная сборка
+    образов), только `config` gate;
+  - smoke / unit тесты не затронуты — инфраструктурное изменение.
+
+- Остаточный риск:
+  - Backend в compose использует `prisma db push` вместо миграций — для
+    локального dev'a ок, но при появлении формальных миграций надо переключить
+    на `prisma migrate deploy`;
+  - `vite preview` в проде не предполагается; контейнеры рассчитаны на
+    локальный/CI запуск всего контура, не на production-deploy.
+
+- Эффект:
+  - один `docker compose up` поднимает весь контур Nomad — упрощает
+    онбординг и e2e-проверки;
+  - правило «правок в `main` не делать» теперь дублировано (CLAUDE.md §5,
+    «Главное правило», memory) — должно сработать даже при беглом чтении.
+
 ## 2.29) Smoke (23 мая 2026) — обновление stale assertions после редизайнов master/aroma
 
 - Запрос: разобраться, почему smoke упал после restart CI на `main` (PR #9, #10).
