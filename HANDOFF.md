@@ -1,5 +1,42 @@
 # HANDOFF — Nomad
 
+## 2.29) Smoke (23 мая 2026) — обновление stale assertions после редизайнов master/aroma
+
+- Запрос: разобраться, почему smoke упал после restart CI на `main` (PR #9, #10).
+
+- Причина: smoke job был орфан с 28 марта (последний успешный run на
+  `codex/issue-2-close`). Между мартом и маем UI Master/Aroma полировался, но
+  smoke на этих PR не запускался — три assertion'а накопили drift.
+
+- Реализация (PR #10, ветка `bug/smoke-stale-assertions`):
+  - `tests/nomad-smoke/tests/master-smoke.spec.ts`:
+    - `signIn` helper: heading `Операционный контур` → `Nomad Master` (level 1)
+      — h1 поменялся в `fd3365e` (3 апреля, *Refine Nomad Master shell*);
+    - mix-editor: проверка табака через `combobox.toHaveValue('tobacco-...')`
+      заменена на `toContainText('Citrus Breeze' / 'Mint Veil')` —
+      `MixComponentSelect` стал searchable button-picker'ом, а не native select;
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`:
+    - каталог: text `Фильтры не заданы` → `Результат`. На viewport-е Pixel 5
+      badge скрыт внутри collapsed compact-фильтров; `Результат` — label
+      счётчика миксов, всегда видим.
+
+- Проверки:
+  - `npx playwright test --list` — обе спеки парсятся, 4 теста как раньше;
+  - local smoke не запускался (требует полный стек: db + backend + 2 фронта);
+  - финальный gate — зелёный CI smoke job на PR #10.
+
+- Остаточный риск:
+  - smoke остаётся хрупким к рефакторингу UI: assertion'ы по тексту/классам.
+    Long-term — выделить ARIA-стабильные testid/role в master-shell и
+    aroma-catalog, чтобы drift ловился раньше или вообще исключался;
+  - доп. слои защиты (branch protection с required smoke check) не включены
+    — см. NOMAD_REVIEW_POLICY.md Phase 2.
+
+- Эффект:
+  - smoke job снова зелёный — CI снова даёт сигнал по поведенческой регрессии
+    Master/Aroma;
+  - впервые применили новое branch-naming соглашение (`bug/*`) из ADR §2.28.
+
 ## 2.28) Repo (23 мая 2026) — production-ветка `main` и соглашение о ветках
 
 - Запрос:

@@ -6,7 +6,7 @@ const signIn = async (login: string, password: string, page: Page) => {
   await page.getByLabel('Логин').fill(login);
   await page.getByLabel('Пароль').fill(password);
   await page.getByRole('button', { name: 'Войти' }).click();
-  await expect(page.getByRole('heading', { name: 'Операционный контур' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nomad Master', level: 1 })).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
 };
 
@@ -75,8 +75,8 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(page.getByRole('heading', { name: 'Цитрусовый караван' })).toBeVisible();
   await expect(page.getByText('Сумма долей: 100%')).toBeVisible();
   await expect(page.getByText('Готово к сохранению')).toBeVisible();
-  await expect(page.locator('.mixes-component-row').nth(0).getByRole('combobox')).toHaveValue('tobacco-citrus-breeze');
-  await expect(page.locator('.mixes-component-row').nth(1).getByRole('combobox')).toHaveValue('tobacco-mint-veil');
+  await expect(page.locator('.mixes-component-row').nth(0)).toContainText('Citrus Breeze');
+  await expect(page.locator('.mixes-component-row').nth(1)).toContainText('Mint Veil');
 
   await openWorkspace(page, 'Рейлы');
   const statisticalRail = page.locator('article').filter({
@@ -90,7 +90,7 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await openWorkspace(page, 'Доступ');
   await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Новый оператор' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Добавить в allowlist' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Добавить в список' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Последние staff-операции' })).toBeVisible();
 });
 
