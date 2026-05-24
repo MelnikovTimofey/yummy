@@ -3,9 +3,9 @@ import { FormEvent, UIEvent, useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { CTA } from '@/components/aroma';
 import { cn } from '@/lib/utils';
 
 type GuestView = 'access' | 'intro' | 'onboarding' | 'recommendations' | 'showcase' | 'catalog' | 'rail';
@@ -1391,13 +1391,7 @@ export const App = () => {
 
   const renderTopbar = () => {
     if (!accessGranted) {
-      return (
-        <header className="topbar">
-          <div className="topbar-main-row topbar-main-row-compact">
-            {renderBrand()}
-          </div>
-        </header>
-      );
+      return null;
     }
 
     if (view === 'intro') {
@@ -1435,46 +1429,79 @@ export const App = () => {
     );
   };
 
-  const renderAccessView = () => (
-    <section className="auth-layout">
-      <Card className="auth-card guest-auth-card">
-        <p className="card-title">Код доступа</p>
-        <p className="card-text">
-          Введите код, который подскажет команда зала. После этого откроется знакомство, подбор и гостевая витрина.
-        </p>
-        <form className="form" onSubmit={onSubmitAccessCode}>
-          <label htmlFor="guest-access-code">Код</label>
-          <Input
-            id="guest-access-code"
-            type="text"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="Например, NOMAD-2026"
-            autoComplete="one-time-code"
-          />
-          <label className="checkbox-row">
-            <Checkbox
-              id="guest-access-confirmation"
-              className="checkbox-input"
-              checked={ageConfirmed}
-              onCheckedChange={(checked) => setAgeConfirmed(checked === true)}
-            />
-            <span>Мне уже исполнилось 18 лет</span>
-          </label>
-          <Button type="submit" disabled={accessStatus === 'loading'}>
-            {accessStatus === 'loading' ? 'Проверяем код...' : 'Далее'}
-          </Button>
-          {accessError ? <p className="screen-status error">{accessError}</p> : null}
-        </form>
-      </Card>
-      <Card className="card compact-card">
-        <p className="card-title">Что внутри</p>
-        <p className="card-text">
-          Сначала сервис познакомит с механикой, затем поможет выбрать вкусовые профили, соберёт рекомендации и покажет витрину с подборками.
-        </p>
-      </Card>
-    </section>
-  );
+  const renderAccessView = () => {
+    const codeReady = code.length >= 4;
+    const cantSubmit = !ageConfirmed || !codeReady || accessStatus === 'loading';
+
+    return (
+      <section className="aroma-access">
+        <div className="aroma-access-halo" aria-hidden />
+        <div className="aroma-access-body">
+          <div>
+            <span className="aroma-access-brand">nomad</span>
+            <p className="aroma-access-tagline">Арома Ателье · Лаундж</p>
+          </div>
+
+          <form className="aroma-access-form" onSubmit={onSubmitAccessCode}>
+            <div className="aroma-access-code-block">
+              <label htmlFor="guest-access-code" className="aroma-caps aroma-access-code-label">
+                Код мастера
+              </label>
+              <input
+                id="guest-access-code"
+                className="aroma-access-code-input"
+                type="text"
+                inputMode="text"
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={6}
+                value={code}
+                onChange={(event) =>
+                  setCode(event.target.value.toUpperCase().slice(0, 6))
+                }
+              />
+              <p className="aroma-access-code-hint">
+                Спросите у мастера зала — действует до 06:00.
+              </p>
+            </div>
+
+            <label className="aroma-access-age">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={ageConfirmed}
+                className={cn(
+                  'aroma-access-age-dot',
+                  ageConfirmed && 'aroma-access-age-dot-on',
+                )}
+                onClick={() => setAgeConfirmed(!ageConfirmed)}
+              >
+                {ageConfirmed ? <span aria-hidden>✓</span> : null}
+              </button>
+              <span className="aroma-access-age-text">
+                Мне есть 18. Понимаю, что курение вредит здоровью.
+              </span>
+            </label>
+
+            <CTA
+              type="submit"
+              disabled={cantSubmit}
+              pulse={!cantSubmit}
+            >
+              {accessStatus === 'loading' ? 'Проверяем код…' : 'Войти в Ателье'}
+            </CTA>
+
+            {accessError ? (
+              <p className="screen-status error aroma-access-error">{accessError}</p>
+            ) : null}
+          </form>
+
+          <p className="aroma-access-footer">18+ · Курение вредит здоровью</p>
+        </div>
+      </section>
+    );
+  };
 
   const renderIntroView = () => (
     <section className="intro-stage">
@@ -2111,17 +2138,22 @@ export const App = () => {
       <div className="halo-top" />
       <div className="halo-bottom" />
       <div className="phone-shell">
-        {renderTopbar()}
-        {accessGranted && view !== 'intro' ? renderSelectedMixBar() : null}
-        <main className={view === 'intro' ? 'content content-intro' : 'content'}>
-          {!accessGranted ? renderAccessView() : null}
-          {accessGranted && view === 'intro' ? renderIntroView() : null}
-          {accessGranted && view === 'onboarding' ? renderOnboardingView() : null}
-          {accessGranted && view === 'recommendations' ? renderRecommendationsView() : null}
-          {accessGranted && view === 'showcase' ? renderShowcaseView() : null}
-          {accessGranted && view === 'catalog' ? renderCatalogView() : null}
-          {accessGranted && view === 'rail' ? renderRailView() : null}
-        </main>
+        {!accessGranted ? (
+          renderAccessView()
+        ) : (
+          <>
+            {renderTopbar()}
+            {view !== 'intro' ? renderSelectedMixBar() : null}
+            <main className={view === 'intro' ? 'content content-intro' : 'content'}>
+              {view === 'intro' ? renderIntroView() : null}
+              {view === 'onboarding' ? renderOnboardingView() : null}
+              {view === 'recommendations' ? renderRecommendationsView() : null}
+              {view === 'showcase' ? renderShowcaseView() : null}
+              {view === 'catalog' ? renderCatalogView() : null}
+              {view === 'rail' ? renderRailView() : null}
+            </main>
+          </>
+        )}
       </div>
 
       <MixDetailModal

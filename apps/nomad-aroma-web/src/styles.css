@@ -1332,6 +1332,163 @@ select:focus-visible {
   }
 }
 
+.aroma-caps {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.aroma-access {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.aroma-access-halo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.92;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(140, 45, 36, 0.6) 0%, transparent 38%),
+    radial-gradient(circle at 12% 90%, rgba(238, 157, 69, 0.22) 0%, transparent 40%),
+    radial-gradient(circle at 90% 86%, rgba(140, 45, 36, 0.18) 0%, transparent 38%);
+}
+
+.aroma-access-body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: calc(70px + var(--safe-top)) 28px calc(28px + var(--safe-bottom));
+  gap: 36px;
+}
+
+.aroma-access-brand {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  color: var(--text-0);
+  text-transform: lowercase;
+}
+
+.aroma-access-tagline {
+  margin: 12px 0 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+
+.aroma-access-form {
+  display: grid;
+  gap: 24px;
+  margin-top: auto;
+}
+
+.aroma-access-code-block {
+  display: grid;
+  gap: 0;
+}
+
+.aroma-access-code-label {
+  text-align: left;
+}
+
+.aroma-access-code-input {
+  width: 100%;
+  margin-top: 8px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  color: var(--text-0);
+  font-family: var(--font-display);
+  font-size: 40px;
+  letter-spacing: 0.32em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  caret-color: var(--accent-soft);
+}
+
+.aroma-access-code-input:focus-visible {
+  border-bottom-color: var(--accent-soft);
+}
+
+.aroma-access-code-hint {
+  margin: 10px 0 0;
+  color: var(--text-2);
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.aroma-access-age {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.aroma-access-age-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #23120d;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.aroma-access-age-dot-on {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.aroma-access-age-text {
+  font-size: 13px;
+  color: var(--text-1);
+  line-height: 1.3;
+}
+
+.aroma-access-error {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+}
+
+.aroma-access-footer {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 10.5px;
+  line-height: 1.4;
+  text-align: center;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 768px) {
   .search-row,
   .filters-row {

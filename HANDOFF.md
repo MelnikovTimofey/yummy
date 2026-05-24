@@ -1,5 +1,49 @@
 # HANDOFF — Nomad
 
+## 2.34) Aroma-web (24 мая 2026) — step 4: AuthMinimal по design handoff
+
+- Запрос: первый продуктовый экран из 12-шагового рефактора
+  `design/design_handoff_aroma_atelier/README.md`. После foundation
+  (PR #21) и backend-prereq (PR #22) — заменить `view === 'access'` на
+  гайд-точный **AuthMinimal** (вариант C из `aroma/auth.jsx`).
+
+- Реализация (PR #23, ветка `feature/aroma-auth-minimal`):
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - `renderTopbar()` возвращает `null` при `!accessGranted` (handoff:
+      «Topbar нет»).
+    - Outer-tree рестрактурен: access-view выходит за `<main.content>` и
+      сам управляет padding/halo на всём phone-shell.
+    - `renderAccessView()` целиком переписан под AuthMinimal: serif `nomad`
+      44px + caps tagline, native code input (bottom-border, fontSize 40,
+      letter-spacing 0.32em, center, uppercase, maxLength 6), круглый
+      18+ checkbox (button role=checkbox), CTA «Войти в Ателье» с
+      ember-pulse, footer caps.
+    - setCode применяет `.toUpperCase().slice(0,6)`.
+    - shadcn `Checkbox` импорт удалён (больше не используется).
+  - `apps/nomad-aroma-web/src/styles.css`: добавлены `.aroma-caps` +
+    12 классов `.aroma-access*` (halo с 3 radial-gradients, body, brand,
+    tagline, form, code-block, age dot/text, error, footer). safe-top/
+    safe-bottom учтены в padding.
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`: «Код доступа»→«Код
+    мастера», `.locator('.checkbox-row')`→`getByRole('checkbox')`,
+    «Далее»→«Войти в Ателье». UI-drift полечен в этом же PR
+    (CLAUDE.md §3).
+
+- Проверки:
+  - `cd apps/nomad-aroma-web && npm run build` — 1808 модулей, CSS
+    39.37 → 44.76 kB, JS 308 → 304 kB (выкинут Checkbox).
+  - `npx tsc --noEmit` — мои файлы чистые. Pre-existing dead-comparison
+    `App.tsx:1418 view === 'intro'` остался — out of scope этого PR.
+  - `nomad-smoke` на CI — **pass** (1m53s); AuthMinimal проходит
+    весь гостевой flow.
+
+- Остаточный риск:
+  - Onboarding/Recommendations/Catalog/Showcase/Rail/MixCard/SmokeCard
+    ещё на старой разметке. Steps 5–12 идут отдельными PR'ами; smoke
+    каждый раз — обязательный gate.
+  - Шаг 4 не вводит новых API-контрактов и не меняет state-flow доступа,
+    поэтому low-risk даже до review.
+
 ## 2.33) Backend + Smoke (24 мая 2026) — daily access code сжат до 6 hex-чаров
 
 - Запрос: подготовка к UX-рефактору Aroma (PR #21 → step 4 AuthMinimal).

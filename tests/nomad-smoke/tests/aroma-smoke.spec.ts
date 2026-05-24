@@ -3,10 +3,10 @@ import { expect, test } from '@playwright/test';
 test('Aroma guest flow opens after daily code and exposes showcase/catalog without login', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByText('Код доступа')).toBeVisible();
-  await page.getByLabel('Код').fill('NMD7');
-  await page.locator('.checkbox-row').click();
-  await page.getByRole('button', { name: 'Далее' }).click();
+  await expect(page.getByText('Код мастера')).toBeVisible();
+  await page.getByLabel('Код мастера').fill('NMD7');
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
 
   await expect(page.getByRole('button', { name: 'Пропустить' })).toBeVisible();
   await page.getByRole('button', { name: 'Пропустить' }).click();
