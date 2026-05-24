@@ -15,7 +15,7 @@ test('guest access code is verified from persisted daily code storage', async ()
       method: 'POST',
       url: '/guest/access-code/verify',
       payload: {
-        code: 'NMD7',
+        code: '1234',
       },
     });
 

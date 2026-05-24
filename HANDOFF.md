@@ -1,5 +1,47 @@
 # HANDOFF — Nomad
 
+## 2.39) Backend + Aroma-web (24 мая 2026) — daily access code → 4-значный числовой
+
+- Запрос (баг #1 после визуальной проверки 12-шагового рефактора):
+  «Нужно на бэке перейти четырёхзначный код — числовой». До этого
+  PR #22 ввёл 6-hex-чаров формат (`crypto.randomBytes(3).toString('hex')`).
+  Гости не запоминают 6 hex'ов на слух — нужно 4 цифры.
+
+- Реализация (PR #?, ветка `bug/numeric-daily-code`):
+  - `apps/nomad-backend/src/daily-code.ts`: `createNomadDailyCodeValue`
+    теперь `crypto.randomInt(0, 10000).toString().padStart(4, '0')` —
+    4 цифры с ведущими нулями (`'0000'`–`'9999'`, равномерно).
+  - Seed (`state.ts` + `prisma/seed.ts`): `'NMD7'` → `'1234'`.
+  - `automation.test.ts`: assertion `length === 4`, `/^[0-9]{4}$/`.
+  - `auth.test.ts` + `access.test.ts`: код `'1234'`.
+  - `README.md`: seed-подсказка обновлена.
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`: `fill('1234')`.
+  - `apps/nomad-aroma-web/src/App.tsx` (AuthMinimal):
+    - `inputMode="numeric"` + `pattern="[0-9]*"` (мобильная цифровая
+      клавиатура);
+    - `autoCapitalize="off"` (раньше `characters` — для цифр бессмысленно);
+    - `maxLength={4}`;
+    - `setCode(event.target.value.replace(/\D/g, '').slice(0, 4))`
+      (раньше `toUpperCase().slice(0, 6)` — теперь отсекаем нецифры
+      и режем на 4).
+    - `codeReady = code.length >= 4` остался без изменений — корректно
+      работает для maxLength 4.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test` — **40/40 ✓**, `npm run build` ✓.
+  - `cd apps/nomad-aroma-web && npm run build` — ✓, `npx tsc --noEmit`
+    чистый. CSS bundle тот же (48.51 kB).
+
+- Остаточный риск:
+  - 10000 возможных кодов — для дневной ротации этого хватает с запасом
+    (вероятность коллизии в течение дня ≈ 0, рабочий период один день).
+    Если когда-нибудь захочется усилить — можно поднять до 6 цифр
+    (1 млн комбинаций), но это снова не помещается в дизайн (maxLength 4
+    в `aroma-access-code-input`).
+  - Mock-codes в тестах (`'NOMAD-2027'`, `'NOMAD-AUDIT'`, etc) остаются
+    как valid string-inputs для negative-path — backend не валидирует
+    формат access-кода, только сверяет с хешем seed.
+
 ## 2.38) Aroma-web (24 мая 2026) — step 9: ShowcaseTabs по design handoff
 
 - Запрос: продолжение 12-шагового рефактора. После steps 4–8 — переписать

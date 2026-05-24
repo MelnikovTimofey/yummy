@@ -34,8 +34,8 @@ test('daily code windows are aligned to the Moscow day boundary', () => {
   assert.equal(window.startsAt.toISOString(), '2026-03-23T21:00:00.000Z');
   assert.equal(window.endsAt.toISOString(), '2026-03-24T21:00:00.000Z');
   const generated = createNomadDailyCodeValue(referenceDate);
-  assert.equal(generated.length, 6);
-  assert.match(generated, /^[0-9A-F]{6}$/);
+  assert.equal(generated.length, 4);
+  assert.match(generated, /^[0-9]{4}$/);
 });
 
 test('automation endpoints require the automation key', async () => {
@@ -79,7 +79,7 @@ test('automation can read, ensure and rotate the current daily code', async () =
       window: { startsAt: string; endsAt: string };
     };
 
-    assert.equal(currentBody.item?.codeValue, 'NMD7');
+    assert.equal(currentBody.item?.codeValue, '1234');
     assert.equal(currentBody.item?.active, true);
     assert.ok(currentBody.window.startsAt.endsWith('Z'));
     assert.ok(currentBody.window.endsAt.endsWith('Z'));

@@ -1255,14 +1255,15 @@ export const App = () => {
                 id="guest-access-code"
                 className="aroma-access-code-input"
                 type="text"
-                inputMode="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 autoComplete="one-time-code"
-                autoCapitalize="characters"
+                autoCapitalize="off"
                 spellCheck={false}
-                maxLength={6}
+                maxLength={4}
                 value={code}
                 onChange={(event) =>
-                  setCode(event.target.value.toUpperCase().slice(0, 6))
+                  setCode(event.target.value.replace(/\D/g, '').slice(0, 4))
                 }
               />
               <p className="aroma-access-code-hint">

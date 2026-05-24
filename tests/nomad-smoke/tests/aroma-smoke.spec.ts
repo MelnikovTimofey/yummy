@@ -4,7 +4,7 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   await page.goto('/');
 
   await expect(page.getByText('Код мастера')).toBeVisible();
-  await page.getByLabel('Код мастера').fill('NMD7');
+  await page.getByLabel('Код мастера').fill('1234');
   await page.getByRole('checkbox').click();
   await page.getByRole('button', { name: 'Войти в Ателье' }).click();
 

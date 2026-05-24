@@ -460,8 +460,8 @@ const seedStaffAccounts: SeedStaffAccount[] = [
 const seedDailyAccessCodes: SeedDailyAccessCode[] = [
   {
     id: 'daily-code-default',
-    code: 'NMD7',
-    codeValue: 'NMD7',
+    code: '1234',
+    codeValue: '1234',
     codeSalt: 'seed:daily-code-default',
     codeLabel: 'Базовый daily code',
     active: true,

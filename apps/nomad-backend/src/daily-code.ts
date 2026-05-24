@@ -24,4 +24,4 @@ export const getNomadDailyCodeWindow = (referenceDate = new Date()): NomadDailyC
 };
 
 export const createNomadDailyCodeValue = (_referenceDate: Date = new Date()) =>
-  crypto.randomBytes(3).toString('hex').toUpperCase();
+  crypto.randomInt(0, 10000).toString().padStart(4, '0');
