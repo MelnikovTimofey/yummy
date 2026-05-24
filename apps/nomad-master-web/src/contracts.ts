@@ -1465,7 +1465,7 @@ export const sortInventoryItems = (items: InventoryTobacco[]) => {
 };
 
 export const inventoryStockFilterOptions: Array<{ value: InventoryStockFilter; label: string }> = [
-  { value: 'all', label: 'Нет наличия' },
+  { value: 'all', label: 'Все' },
   { value: 'in-stock', label: 'Только в наличии' },
   { value: 'out-of-stock', label: 'Только нет наличия' },
 ];

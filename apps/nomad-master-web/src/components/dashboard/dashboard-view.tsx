@@ -12,12 +12,34 @@ import {
   Waypoints,
 } from 'lucide-react';
 
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { dashboardWindowOptions, DashboardBreakdownItem, DashboardSummary, DashboardWindowKey, formatFlavorProfileLabel, formatMetricValue } from '@/contracts';
+
+const activityChartConfig = {
+  smokeCta: { label: 'Выборы', color: 'var(--accent-copper)' },
+  ratings: { label: 'Оценки', color: 'var(--accent-sand)' },
+} satisfies ChartConfig;
+
+const ratingChartConfig = {
+  count: { label: 'Оценок', color: 'var(--accent-sand)' },
+} satisfies ChartConfig;
+
+const manufacturersChartConfig = {
+  inStock: { label: 'В наличии', color: 'var(--accent-sand)' },
+  outOfStock: { label: 'Нет наличия', color: 'rgba(206,106,90,0.7)' },
+} satisfies ChartConfig;
 
 type DashboardViewProps = {
   summary: DashboardSummary | null;
@@ -73,14 +95,6 @@ const formatRange = (startsAt: string, endsAt: string) => {
   return `${formatter.format(start)} - ${formatter.format(end)}`;
 };
 
-const percent = (value: number, max: number) => {
-  if (!max || value <= 0) {
-    return 0;
-  }
-
-  return Math.max(12, Math.round((value / max) * 100));
-};
-
 const readSummaryCards = (summary: DashboardSummary | null) => {
   if (!summary) {
     return zeroSummaryCards;
@@ -96,61 +110,66 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
   ];
 };
 
-const BreakdownPanel = ({
+const StockBreakdownChart = ({
   title,
   kicker,
+  description,
   items,
   emptyText,
-  stockLine,
   formatItemLabel = (label: string) => label,
 }: {
   title: string;
   kicker: string;
+  description: string;
   items: DashboardBreakdownItem[];
   emptyText: string;
-  stockLine: (item: DashboardBreakdownItem) => string;
   formatItemLabel?: (label: string) => string;
 }) => {
-  const max = items.reduce((acc, item) => Math.max(acc, item.total), 0);
-
   return (
-    <Card className="rounded-[1.6rem] border-[rgba(226,172,123,0.12)] bg-[radial-gradient(circle_at_top_right,rgba(226,172,123,0.08),transparent_26%),linear-gradient(180deg,rgba(23,20,23,0.96),rgba(15,14,17,0.92))] shadow-[0_18px_42px_rgba(0,0,0,0.3)] backdrop-blur-xl">
-      <CardHeader className="space-y-1.5">
-        <Badge variant="outline" className="w-fit rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[rgba(226,172,123,0.78)]">
+    <Card className="flex h-full flex-col rounded-[1.4rem] border-[rgba(226,172,123,0.1)] bg-[linear-gradient(180deg,rgba(23,20,23,0.96),rgba(15,14,17,0.92))] shadow-[0_18px_42px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+      <CardHeader className="space-y-1.5 p-5 pb-2">
+        <Badge variant="outline" className="w-fit rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.78)]">
           {kicker}
         </Badge>
-        <div className="space-y-1">
-          <CardTitle className="text-[1.75rem] font-semibold tracking-[-0.03em] text-[var(--nomad-ink)]">{title}</CardTitle>
-        </div>
+        <CardTitle className="text-[1.3rem] font-semibold tracking-[-0.03em] text-[var(--nomad-ink)]">{title}</CardTitle>
+        <CardDescription className="text-[13px] leading-5 text-[rgba(241,229,215,0.58)]">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex-1 px-5 pb-5">
         {items.length ? (
-          items.map((item) => (
-            <div
-              key={`${kicker}:${item.key}`}
-              className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+          <ChartContainer config={manufacturersChartConfig} className="h-[300px] w-full">
+            <BarChart
+              data={items.map((item) => ({
+                name: formatItemLabel(item.label),
+                inStock: item.inStockCount,
+                outOfStock: item.outOfStockCount,
+              }))}
+              layout="vertical"
+              margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
             >
-              <div className="mb-2.5 flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="text-sm font-semibold text-[var(--nomad-ink)]">{formatItemLabel(item.label)}</div>
-                  <div className="text-xs leading-5 text-[rgba(241,229,215,0.56)]">{stockLine(item)}</div>
-                </div>
-                <Badge variant="secondary" className="rounded-full bg-[rgba(226,172,123,0.08)] px-2.5 py-0.5 text-[rgba(241,229,215,0.84)]">
-                  {formatMetricValue(item.total)}
-                </Badge>
-              </div>
-              <div className="h-2 rounded-full bg-[rgba(255,255,255,0.06)]">
-                <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,rgba(115,47,34,0.92),rgba(183,139,74,0.88))]"
-                  style={{ width: `${percent(item.total, max)}%` }}
-                />
-              </div>
-            </div>
-          ))
+              <CartesianGrid horizontal={false} stroke="rgba(226,172,123,0.08)" />
+              <XAxis
+                type="number"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: 'rgba(241,229,215,0.4)', fontSize: 10 }}
+                allowDecimals={false}
+              />
+              <YAxis
+                dataKey="name"
+                type="category"
+                tickLine={false}
+                axisLine={false}
+                width={130}
+                tick={{ fill: 'rgba(241,229,215,0.72)', fontSize: 11 }}
+                interval={0}
+              />
+              <ChartTooltip cursor={{ fill: 'rgba(226,172,123,0.06)' }} content={<ChartTooltipContent indicator="dot" />} />
+              <Bar dataKey="inStock" stackId="stock" fill="var(--color-inStock)" radius={[4, 0, 0, 4]} />
+              <Bar dataKey="outOfStock" stackId="stock" fill="var(--color-outOfStock)" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ChartContainer>
         ) : (
-          <div className="rounded-[1.2rem] border border-dashed border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-6 text-[rgba(241,229,215,0.56)]">
-            {emptyText}
-          </div>
+          <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">{emptyText}</div>
         )}
       </CardContent>
     </Card>
@@ -172,109 +191,38 @@ export function DashboardView({
   onNavigate,
 }: DashboardViewProps) {
   const summaryCards = readSummaryCards(summary);
-  const activityMax = (summary?.activity ?? []).reduce(
-    (acc, item) => Math.max(acc, item.smokeCtaCount + item.ratingsCount),
-    0,
-  );
 
   return (
     <section className="grid w-full gap-4">
-      <Card className="overflow-hidden rounded-[1.45rem] border-none bg-[radial-gradient(circle_at_top_right,rgba(216,171,104,0.2),transparent_24%),linear-gradient(145deg,rgba(89,28,25,0.96),rgba(119,43,38,0.95)_52%,rgba(163,111,69,0.9))] text-white shadow-[0_18px_46px_rgba(57,22,20,0.2)]">
-        <CardHeader className="space-y-3 p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl space-y-2">
-              <div className="flex flex-wrap gap-2">
-                <Badge className="rounded-full border border-white/12 bg-white/10 px-2.5 py-0.5 text-[9px] uppercase tracking-[0.22em] text-white">
-                  Дашборд / сигналы смены
-                </Badge>
-                <Badge className="rounded-full border border-white/12 bg-white/10 px-2.5 py-0.5 text-[9px] uppercase tracking-[0.22em] text-white/88">
-                  {summary?.window.label ?? dashboardWindowOptions.find((item) => item.key === dashboardWindow)?.label}
-                </Badge>
-              </div>
-              <div className="space-y-1">
-                <CardTitle className="text-xl font-semibold tracking-[-0.04em] text-white md:text-[1.7rem]">
-                  Что требует внимания в этой смене.
-                </CardTitle>
-                <CardDescription className="max-w-2xl text-[13px] leading-5 text-white/76">
-                  Ключевые сигналы по спросу, витрине и блокировкам.
-                </CardDescription>
-              </div>
-            </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(20,18,21,0.94),rgba(15,14,17,0.88))] px-4 py-2.5 shadow-[0_12px_24px_rgba(0,0,0,0.22)]">
+        <div className="flex flex-wrap items-center gap-2">
+          {dashboardWindowOptions.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className={cn(
+                'window-toggle',
+                dashboardWindow === option.key && 'window-toggle--active',
+              )}
+              onClick={() => void onSelectDashboardWindow(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[12px] text-[rgba(241,229,215,0.7)]">
+          <Sparkles className="size-3.5 text-[var(--accent-sand)]" />
+          <span>Окно: <strong className="text-[var(--nomad-ink)]">{formatRange(summary?.window.startsAt ?? '', summary?.window.endsAt ?? '')}</strong></span>
+          <span aria-hidden="true" className="text-[rgba(241,229,215,0.4)]">·</span>
+          <span>{summaryStatus === 'loading' ? 'Обновляем' : summaryStatus === 'ready' ? 'Актуально' : 'Ожидает'}</span>
+        </div>
+      </div>
 
-            <div className="min-w-0 rounded-[1.05rem] border border-white/12 bg-white/8 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md lg:max-w-[16rem]">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-white/58">Окно анализа</div>
-                  <div className="mt-1 text-base font-semibold text-white">
-                    {summary?.window.label ?? dashboardWindowOptions.find((item) => item.key === dashboardWindow)?.label}
-                  </div>
-                </div>
-                <Sparkles className="size-4 text-white/74" />
-              </div>
-              <Separator className="my-3 bg-white/12" />
-              <div className="grid gap-2 text-[13px] text-white/74">
-                <div className="flex items-center justify-between gap-4">
-                  <span>Период</span>
-                  <strong className="text-right font-medium text-white">{formatRange(summary?.window.startsAt ?? '', summary?.window.endsAt ?? '')}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span>Статус данных</span>
-                  <strong className="text-right font-medium text-white">
-                    {summaryStatus === 'loading' ? 'Обновляем' : summaryStatus === 'ready' ? 'Актуально' : 'Ожидает'}
-                  </strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {dashboardWindowOptions.map((option) => (
-                <Button
-                  key={option.key}
-                  type="button"
-                  variant={dashboardWindow === option.key ? 'secondary' : 'ghost'}
-                  className={cn(
-                    'h-8 rounded-full border border-white/12 px-3 text-xs',
-                    dashboardWindow === option.key
-                      ? 'bg-white text-stone-950 hover:bg-white/92'
-                      : 'bg-white/8 text-white hover:bg-white/14 hover:text-white',
-                  )}
-                  onClick={() => void onSelectDashboardWindow(option.key)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('inventory')}>
-                Инвентаризация
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('mixes')}>
-                Миксы
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('rails')}>
-                Рейлы
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button type="button" variant="ghost" className="h-8 rounded-full border border-white/10 bg-white/8 px-3 text-xs text-white hover:bg-white/14" onClick={() => onNavigate('access')}>
-                Доступ
-                <ArrowRight className="size-4" />
-              </Button>
-            </div>
-          </div>
-
-          {summaryStatus === 'loading' ? <div className="text-sm text-white/72">Загружаем свежую сводку...</div> : null}
-          {summaryError ? (
-            <div className="rounded-[1.2rem] border border-rose-200/24 bg-rose-500/12 px-4 py-3 text-sm text-white">
-              {summaryError}
-            </div>
-          ) : null}
-        </CardHeader>
-      </Card>
+      {summaryError ? (
+        <div className="rounded-[1.1rem] border border-rose-200/24 bg-rose-500/10 px-4 py-3 text-sm text-[var(--nomad-ink)]">
+          {summaryError}
+        </div>
+      ) : null}
 
       <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
         {summaryCards.map((card) => {
@@ -307,32 +255,32 @@ export function DashboardView({
         })}
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr_0.8fr]">
-        <BreakdownPanel
+      <div className="grid gap-3 xl:auto-rows-fr xl:grid-cols-3">
+        <StockBreakdownChart
           title="Производители"
           kicker="Наличие"
+          description="В наличии vs нет наличия по линейкам."
           items={summary?.inventory.manufacturers ?? []}
           emptyText="Пока нет разреза по производителям."
-          stockLine={(item) => `В наличии ${formatMetricValue(item.inStockCount)} из ${formatMetricValue(item.total)}`}
         />
-        <BreakdownPanel
+        <StockBreakdownChart
           title="Категории вкуса"
           kicker="Категории"
+          description="Покрытие категорий по наличию."
           items={summary?.inventory.flavorProfiles ?? []}
           emptyText="Пока нет разреза по профилям."
-          stockLine={(item) => `Нет наличия ${formatMetricValue(item.outOfStockCount)} позиции`}
           formatItemLabel={formatFlavorProfileLabel}
         />
-        <BreakdownPanel
+        <StockBreakdownChart
           title="Топ вкусов"
           kicker="Вкусы"
+          description="Где собирается спрос гостей."
           items={summary?.inventory.topFlavors ?? []}
           emptyText="Пока нет разреза по вкусам."
-          stockLine={(item) => `В наличии ${formatMetricValue(item.inStockCount)} позиции`}
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
+      <div className="grid gap-3 xl:grid-cols-2 xl:auto-rows-fr">
         <Card className="rounded-[1.4rem] border-[rgba(226,172,123,0.12)] bg-[radial-gradient(circle_at_top_right,rgba(226,172,123,0.08),transparent_28%),linear-gradient(180deg,rgba(23,20,23,0.96),rgba(15,14,17,0.92))] shadow-[0_18px_42px_rgba(0,0,0,0.3)] backdrop-blur-xl">
           <CardHeader className="space-y-1.5 p-5">
             <Badge variant="outline" className="w-fit rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-[rgba(226,172,123,0.78)]">
@@ -361,106 +309,157 @@ export function DashboardView({
               </div>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-2">
-              <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Топ по выбору</div>
-                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Где больше всего кликов на «Покурить».</div>
-                  </div>
-                  <ChartColumnIncreasing className="size-4 text-[rgba(241,229,215,0.48)]" />
-                </div>
-                <div className="space-y-2">
-                  {(summary?.topMixes ?? []).map((mix) => (
-                    <div key={`top:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
-                          <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
-                            Рейтинг {mix.avgRating.toFixed(1)} · оценок {formatMetricValue(mix.ratingsCount)}
+            {summary?.topMixes.length || summary?.topRatedMixes.length ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {summary?.topMixes.length ? (
+                  <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Топ по выбору</div>
+                        <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Где больше всего кликов на «Покурить».</div>
+                      </div>
+                      <ChartColumnIncreasing className="size-4 text-[rgba(241,229,215,0.48)]" />
+                    </div>
+                    <div className="space-y-2">
+                      {summary.topMixes.map((mix) => (
+                        <div key={`top:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
+                              <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
+                                Рейтинг {mix.avgRating.toFixed(1)} · оценок {formatMetricValue(mix.ratingsCount)}
+                              </div>
+                            </div>
+                            <Badge className="rounded-full bg-amber-500/16 px-2.5 py-0.5 text-[11px] text-amber-100">{formatMetricValue(mix.smokeCtaCount)}</Badge>
                           </div>
                         </div>
-                        <Badge className="rounded-full bg-amber-500/16 px-2.5 py-0.5 text-[11px] text-amber-100">{formatMetricValue(mix.smokeCtaCount)}</Badge>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                  {!summary?.topMixes.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет данных по выборам.</div> : null}
-                </div>
-              </div>
-
-              <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Топ по оценкам</div>
-                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Какие миксы получают лучший отклик гостей.</div>
                   </div>
-                  <Star className="size-4 text-[rgba(241,229,215,0.48)]" />
-                </div>
-                <div className="space-y-2">
-                  {(summary?.topRatedMixes ?? []).map((mix) => (
-                    <div key={`rated:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
-                          <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
-                            Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}
+                ) : null}
+
+                {summary?.topRatedMixes.length ? (
+                  <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Топ по оценкам</div>
+                        <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Какие миксы получают лучший отклик гостей.</div>
+                      </div>
+                      <Star className="size-4 text-[rgba(241,229,215,0.48)]" />
+                    </div>
+                    <div className="space-y-2">
+                      {summary.topRatedMixes.map((mix) => (
+                        <div key={`rated:${mix.mixId}`} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{mix.name}</div>
+                              <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">
+                                Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}
+                              </div>
+                            </div>
+                            <Badge className="rounded-full bg-emerald-500/16 px-2.5 py-0.5 text-[11px] text-emerald-100">{mix.avgRating.toFixed(1)}</Badge>
                           </div>
                         </div>
-                        <Badge className="rounded-full bg-emerald-500/16 px-2.5 py-0.5 text-[11px] text-emerald-100">{mix.avgRating.toFixed(1)}</Badge>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                  {!summary?.topRatedMixes.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет оценок гостей за выбранное окно.</div> : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
-            </div>
+            ) : null}
 
-            <div className="grid gap-3 lg:grid-cols-[0.7fr_1.3fr]">
+            <div className="grid gap-3">
               <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Распределение оценок</div>
-                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Показывает, как распределяется обратная связь гостей.</div>
+                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Как гости оценивают миксы.</div>
                   </div>
                   <Sparkles className="size-4 text-[rgba(241,229,215,0.48)]" />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {(summary?.ratingDistribution ?? []).map((item) => (
-                    <Badge key={`rating:${item.value}`} variant="outline" className="rounded-full border-[rgba(226,172,123,0.12)] bg-[rgba(255,255,255,0.04)] px-2.5 py-1 text-[11px] text-[rgba(241,229,215,0.82)]">
-                      {item.value}★ · {formatMetricValue(item.count)}
-                    </Badge>
-                  ))}
-                  {!summary?.ratingDistribution.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет распределения оценок.</div> : null}
-                </div>
+                {summary?.ratingDistribution.length && summary.ratingDistribution.some((r) => r.count > 0) ? (
+                  <ChartContainer config={ratingChartConfig} className="h-[180px] w-full">
+                    <BarChart
+                      data={[...summary.ratingDistribution].sort((a, b) => a.value - b.value).map((item) => ({
+                        rating: `${item.value}★`,
+                        count: item.count,
+                      }))}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid vertical={false} stroke="rgba(226,172,123,0.08)" />
+                      <XAxis
+                        dataKey="rating"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: 'rgba(241,229,215,0.58)', fontSize: 11 }}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        width={28}
+                        tick={{ fill: 'rgba(241,229,215,0.4)', fontSize: 10 }}
+                        allowDecimals={false}
+                      />
+                      <ChartTooltip cursor={{ fill: 'rgba(226,172,123,0.06)' }} content={<ChartTooltipContent indicator="dot" />} />
+                      <Bar dataKey="count" fill="var(--color-count)" radius={6} />
+                    </BarChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет распределения оценок.</div>
+                )}
               </div>
 
               <div className="rounded-[1.2rem] border border-[rgba(226,172,123,0.08)] bg-[linear-gradient(180deg,rgba(28,24,27,0.94),rgba(18,16,19,0.88))] p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">Динамика по дням</div>
-                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Смотрим не только абсолют, но и ритм спроса.</div>
+                    <div className="text-[11px] leading-4.5 text-[rgba(241,229,215,0.56)]">Выборы и оценки гостей в одном окне.</div>
                   </div>
                   <Flame className="size-4 text-[rgba(241,229,215,0.48)]" />
                 </div>
-                <div className="space-y-2">
-                  {(summary?.activity ?? []).map((item) => (
-                    <div key={item.date} className="rounded-[1rem] border border-[rgba(226,172,123,0.08)] bg-[rgba(255,255,255,0.04)] p-3">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <div className="text-[13px] font-semibold text-[var(--nomad-ink)]">{formatDashboardDay(item.date)}</div>
-                        <div className="text-[11px] text-[rgba(241,229,215,0.56)]">
-                          Выборов {formatMetricValue(item.smokeCtaCount)} · оценок {formatMetricValue(item.ratingsCount)}
-                        </div>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
-                        <div
-                          className="h-full rounded-full bg-[linear-gradient(90deg,rgba(109,49,36,0.94),rgba(218,164,83,0.9))]"
-                          style={{ width: `${percent(item.smokeCtaCount + item.ratingsCount, activityMax)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  {!summary?.activity.length ? <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет динамики по дням.</div> : null}
-                </div>
+                {summary?.activity.length && summary.activity.some((d) => d.smokeCtaCount > 0 || d.ratingsCount > 0) ? (
+                  <ChartContainer config={activityChartConfig} className="h-[220px] w-full">
+                    <AreaChart
+                      data={summary.activity.map((item) => ({
+                        date: formatDashboardDay(item.date),
+                        smokeCta: item.smokeCtaCount,
+                        ratings: item.ratingsCount,
+                      }))}
+                      margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="fillSmokeCta" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-smokeCta)" stopOpacity={0.55} />
+                          <stop offset="100%" stopColor="var(--color-smokeCta)" stopOpacity={0.08} />
+                        </linearGradient>
+                        <linearGradient id="fillRatings" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-ratings)" stopOpacity={0.45} />
+                          <stop offset="100%" stopColor="var(--color-ratings)" stopOpacity={0.04} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="rgba(226,172,123,0.08)" />
+                      <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: 'rgba(241,229,215,0.58)', fontSize: 11 }}
+                        interval="preserveStartEnd"
+                        minTickGap={28}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        width={28}
+                        tick={{ fill: 'rgba(241,229,215,0.4)', fontSize: 10 }}
+                        allowDecimals={false}
+                      />
+                      <ChartTooltip cursor={{ stroke: 'rgba(226,172,123,0.2)' }} content={<ChartTooltipContent indicator="line" />} />
+                      <Area type="monotone" dataKey="smokeCta" stroke="var(--color-smokeCta)" strokeWidth={2} fill="url(#fillSmokeCta)" stackId="1" />
+                      <Area type="monotone" dataKey="ratings" stroke="var(--color-ratings)" strokeWidth={2} fill="url(#fillRatings)" stackId="1" />
+                    </AreaChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="text-[13px] leading-5 text-[rgba(241,229,215,0.56)]">Пока нет динамики по дням.</div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -551,7 +550,7 @@ export function DashboardView({
                     <div className="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                       <div
                         className="h-full rounded-full bg-[linear-gradient(90deg,rgba(61,95,78,0.9),rgba(196,164,98,0.88))]"
-                        style={{ width: `${percent(rail.visibleMixCount, rail.totalMixCount)}%` }}
+                        style={{ width: `${rail.totalMixCount ? Math.max(12, Math.round((rail.visibleMixCount / rail.totalMixCount) * 100)) : 0}%` }}
                       />
                     </div>
                   </div>

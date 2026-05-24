@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import type {
   InventoryTobacco,
   MixFilterKey,
@@ -367,34 +368,36 @@ export const MixCatalogView = ({
     </form>
   );
 
-  if (mode === 'create' || mode === 'edit') {
-    const isEditMode = mode === 'edit';
+  const isEditorOpen = mode === 'create' || mode === 'edit';
+  const isEditMode = mode === 'edit';
 
-    return (
-      <section className="card mixes-panel">
-        <div className="section-head section-head--surface">
-          <div className="ops-surface__intro">
-            <p className="eyebrow">Менеджер миксов</p>
-            <h2>{isEditMode ? 'Редактирование микса' : 'Создание микса'}</h2>
-            <p className="meta-line">
-              {isEditMode
-                ? 'Правки состава и доступности выполняются отдельно от каталога, чтобы не конфликтовать с широкой таблицей.'
-                : 'Новый микс настраивается отдельно от каталога.'}
-            </p>
-          </div>
-          <div className="section-actions">
-            <Button type="button" variant="outline" size="sm" onClick={isEditMode ? onResetEditor : onCancelCreate}>
-              Вернуться в каталог
-            </Button>
-          </div>
-        </div>
+  const editorSheet = (
+    <Sheet
+      open={isEditorOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          if (isEditMode) {
+            onResetEditor();
+          } else {
+            onCancelCreate();
+          }
+        }
+      }}
+    >
+      <SheetContent side="right" className="mixes-editor-sheet">
+        <SheetHeader>
+          <SheetTitle>
+            {isEditMode ? editor.name || 'Редактирование микса' : 'Новый микс'}
+          </SheetTitle>
+          <SheetDescription>
+            {isEditMode
+              ? 'Правки состава и доступности.'
+              : 'Соберите состав микса и пометьте доступность.'}
+          </SheetDescription>
+        </SheetHeader>
 
-        <article className="mixes-editor mixes-create-screen ops-editor">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">{isEditMode ? 'Редактура состава' : 'Новый микс'}</p>
-              <h3>{isEditMode ? editor.name || 'Без названия' : 'Создать микс'}</h3>
-            </div>
+        <article className="mixes-editor mixes-create-screen mixes-create-screen--sheet ops-editor">
+          <div className="entity-card__head entity-card__head--sheet">
             {isEditMode && selectedMix ? (
               editor.railMemberships.length ? (
                 <Badge variant="outline">В рейлах: {editor.railMemberships.length}</Badge>
@@ -408,17 +411,18 @@ export const MixCatalogView = ({
 
           {renderMixForm(isEditMode ? 'edit' : 'create')}
         </article>
-      </section>
-    );
-  }
+      </SheetContent>
+    </Sheet>
+  );
 
   return (
+    <>
+    {editorSheet}
     <section className="card mixes-panel">
       <div className="section-head section-head--surface">
         <div className="ops-surface__intro">
           <p className="eyebrow">Менеджер миксов</p>
           <h2>Каталог миксов</h2>
-          <p className="meta-line">Каталог, состав, доступность и участие в рейлах.</p>
         </div>
         <div className="section-actions">
           <Button type="button" size="sm" onClick={onStartCreate}>
@@ -632,5 +636,6 @@ export const MixCatalogView = ({
         onPageChange={onPageChange}
       />
     </section>
+    </>
   );
 };

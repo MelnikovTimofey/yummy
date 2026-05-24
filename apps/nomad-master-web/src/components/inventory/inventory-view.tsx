@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import type {
   InventoryBatchAction,
   InventoryFilterKey,
@@ -730,19 +731,8 @@ export const InventoryView = ({
           </div>
         </div>
         <div className="section-actions">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              if (editorOpen) {
-                closeEditor();
-                return;
-              }
-
-              openCreateEditor();
-            }}
-          >
-            {editorOpen ? 'Скрыть форму' : 'Новый табак'}
+          <Button type="button" size="sm" onClick={openCreateEditor}>
+            Новый табак
           </Button>
         </div>
       </div>
@@ -799,16 +789,34 @@ export const InventoryView = ({
         </Button>
       </div>
 
-      {editorOpen ? (
-        <article className="editor-card ops-editor inventory-create-card">
+      <Sheet
+        open={editorOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEditor();
+          }
+        }}
+      >
+        <SheetContent side="right" className="inventory-editor-sheet">
+          <SheetHeader>
+            <SheetTitle>
+              {editorMode === 'edit'
+                ? editorDraft.name.trim() || 'Редактирование табака'
+                : 'Новый табак'}
+            </SheetTitle>
+            <SheetDescription>
+              {editorMode === 'edit'
+                ? 'Обновите позицию каталога.'
+                : 'Добавьте позицию в каталог.'}
+            </SheetDescription>
+          </SheetHeader>
+          <article className="editor-card ops-editor inventory-create-card inventory-create-card--sheet">
           <div className="entity-card__head">
             <div>
-              <p className="entity-kicker">{editorMode === 'edit' ? 'Редактирование табака' : 'Новый табак'}</p>
-              <h3>{editorDraft.name.trim() || (editorMode === 'edit' ? 'Обновить позицию' : 'Добавить позицию в каталог')}</h3>
+              <Badge variant={editorDraft.inStock ? 'default' : 'secondary'}>
+                {editorDraft.inStock ? 'В наличии' : 'Нет наличия'}
+              </Badge>
             </div>
-            <Badge variant={editorDraft.inStock ? 'default' : 'secondary'}>
-              {editorDraft.inStock ? 'В наличии' : 'Нет наличия'}
-            </Badge>
           </div>
 
           <form className="admin-form" onSubmit={(event) => void handleEditorSubmit(event)}>
@@ -953,8 +961,9 @@ export const InventoryView = ({
               </Button>
             </div>
           </form>
-        </article>
-      ) : null}
+          </article>
+        </SheetContent>
+      </Sheet>
 
       <div className="inventory-filter-groups ops-filter-groups">
         {filterGroups.map((group) => {
@@ -1079,7 +1088,6 @@ export const InventoryView = ({
                     </td>
                     <td>
                       <div className="inventory-cell">
-                        <strong>{formatMetricValue(item.dependentMixCount ?? 0)} микс.</strong>
                         <div className="inventory-cell__chips">
                           {(item.flavorProfiles ?? []).map((profile) => (
                             <Badge key={`${item.id}:profile:${profile}`} variant="outline">
@@ -1091,20 +1099,27 @@ export const InventoryView = ({
                     </td>
                     <td>
                       <div className="inventory-cell">
-                        <strong>
-                          {formatMetricValue(item.dependentMixCount ?? 0)} всего / {formatMetricValue(item.blockedDependentMixCount ?? 0)}{' '}
-                          блокируется
+                        <strong className="inventory-cell__count" aria-label={`Всего миксов: ${item.dependentMixCount ?? 0}, заблокировано: ${item.blockedDependentMixCount ?? 0}`}>
+                          <span>
+                            {formatMetricValue(item.dependentMixCount ?? 0)} {(item.dependentMixCount ?? 0) === 1 ? 'микс' : 'миксов'}
+                          </span>
+                          {(item.blockedDependentMixCount ?? 0) > 0 ? (
+                            <span className="inventory-cell__count-blocked" title="Заблокировано">
+                              ⊘ {formatMetricValue(item.blockedDependentMixCount ?? 0)}
+                            </span>
+                          ) : null}
                         </strong>
                         <div className="inventory-cell__mixes">
                           {(item.dependentMixes ?? []).slice(0, 3).map((mix) => (
                             <button
-                              className="inventory-mix-link"
+                              className={`inventory-mix-link ${mix.guestVisible ? 'inventory-mix-link--visible' : 'inventory-mix-link--blocked'}`}
                               key={`${item.id}:mix:${mix.id}`}
                               type="button"
                               onClick={() => onOpenMix(mix.id)}
+                              aria-label={`${mix.name}${mix.guestVisible ? ' — виден гостю' : ' — заблокирован'}`}
+                              title={mix.guestVisible ? 'Виден гостю' : 'Заблокирован'}
                             >
                               {mix.name}
-                              <span>{mix.guestVisible ? 'виден гостю' : 'заблокирован'}</span>
                             </button>
                           ))}
                         </div>

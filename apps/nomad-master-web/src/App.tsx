@@ -9,6 +9,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
@@ -82,15 +84,23 @@ import {
 const STORAGE_KEY = 'nomad-master-auth-v1';
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 const apiHostLabel = apiBaseUrl.replace(/^https?:\/\//, '');
+const envLabel = (() => {
+  const explicit = import.meta.env.VITE_ENV_NAME as string | undefined;
+  if (explicit) return explicit;
+  const host = apiHostLabel.toLowerCase();
+  if (host.includes('localhost') || host.startsWith('127.')) return 'local';
+  if (host.includes('stage') || host.includes('staging')) return 'stage';
+  return 'prod';
+})();
 
 type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
 
-const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; detail: string; icon: LucideIcon }> = [
-  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', detail: 'Спрос, витрина и блокировки в одном контуре.', icon: LayoutDashboard },
-  { id: 'inventory', label: 'Инвентаризация', kicker: 'Наличие и стоп-лист', detail: 'Остатки, фильтры и быстрые действия без лишней высоты.', icon: Warehouse },
-  { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', detail: 'Состав, доступность и рабочая редактура миксов.', icon: Blend },
-  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', detail: 'Подборки и состояние гостевой поверхности.', icon: GalleryVerticalEnd },
-  { id: 'access', label: 'Доступ', kicker: 'Telegram и роли', detail: 'Коды, allowlist и staff-контроль без разрыва контекста.', icon: ShieldCheck },
+const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; icon: LucideIcon }> = [
+  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', icon: LayoutDashboard },
+  { id: 'inventory', label: 'Табаки', kicker: 'Наличие и стоп-лист', icon: Warehouse },
+  { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', icon: Blend },
+  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', icon: GalleryVerticalEnd },
+  { id: 'access', label: 'Доступ', kicker: 'Telegram и роли', icon: ShieldCheck },
 ];
 
 const getWorkspaceTabId = (tab: WorkspaceTab) => `workspace-tab-${tab}`;
@@ -484,6 +494,8 @@ export const App = () => {
   const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
   const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
+  const [railEditorSheetOpen, setRailEditorSheetOpen] = useState(false);
+  const [telegramOperatorDialogOpen, setTelegramOperatorDialogOpen] = useState(false);
 
   const focusWorkspaceTab = (tab: WorkspaceTab) => {
     requestAnimationFrame(() => {
@@ -1622,6 +1634,7 @@ export const App = () => {
       ]);
       setRailSaveStatus('ready');
       setActiveTab('rails');
+      setRailEditorSheetOpen(false);
     } catch (cause) {
       setRailSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить рейл');
       setRailSaveStatus('error');
@@ -1982,6 +1995,7 @@ export const App = () => {
       setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
       setTelegramOperatorSaveStatus('ready');
       setActiveTab('access');
+      setTelegramOperatorDialogOpen(false);
     } catch (cause) {
       setTelegramOperatorSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить Telegram доступ');
       setTelegramOperatorSaveStatus('error');
@@ -2368,7 +2382,14 @@ export const App = () => {
         <p className="meta-line">Собирай подборки, меняй порядок и быстро отделяй системные рейлы от редактируемых.</p>
         <div className="section-actions">
           <span className="status-chip">Витрина гостя</span>
-          <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
+          <button
+            className="primary-button primary-button--inline"
+            type="button"
+            onClick={() => {
+              onResetRailEditor();
+              setRailEditorSheetOpen(true);
+            }}
+          >
             Новый рейл
           </button>
         </div>
@@ -2377,7 +2398,7 @@ export const App = () => {
       {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
       {railsError ? <p className="error-text">{railsError}</p> : null}
 
-      <div className="manager-layout ops-management-grid rails-surface__grid">
+      <div className="manager-layout ops-management-grid rails-surface__grid rails-surface__grid--single">
         <aside className="entity-list rails-surface__list">
           {rails.map((rail) => (
             <article
@@ -2409,7 +2430,14 @@ export const App = () => {
               {!rail.editable && rail.readOnlyReason ? <p className="meta-line">{rail.readOnlyReason}</p> : null}
               <p className="meta-line">Миксы: {resolveRailMixSummary(rail, railMixCatalog)}</p>
               <div className="entity-card__actions">
-                <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectRail(rail)}>
+                <button
+                  className="secondary-button secondary-button--inline"
+                  type="button"
+                  onClick={() => {
+                    onSelectRail(rail);
+                    setRailEditorSheetOpen(true);
+                  }}
+                >
                   {rail.editable ? 'Редактировать' : 'Просмотр'}
                 </button>
               </div>
@@ -2418,13 +2446,30 @@ export const App = () => {
 
           {!rails.length && railsStatus !== 'loading' ? <p className="meta-line">Пока нет рейлов.</p> : null}
         </aside>
+      </div>
 
-        <article className="editor-card ops-editor rails-surface__editor">
-          <div className="entity-card__head">
-            <div>
-              <p className="entity-kicker">{railEditor.id ? 'Редактирование рейла' : 'Новый рейл'}</p>
-              <h3>{railEditor.id ? railEditor.name || 'Без названия' : 'Создать рейл'}</h3>
-            </div>
+      <Sheet
+        open={railEditorSheetOpen}
+        onOpenChange={(open) => {
+          setRailEditorSheetOpen(open);
+          if (!open) {
+            onResetRailEditor();
+          }
+        }}
+      >
+        <SheetContent side="right" className="rails-surface__sheet">
+          <SheetHeader>
+            <SheetTitle>
+              {railEditor.id ? railEditor.name || 'Без названия' : 'Новый рейл'}
+            </SheetTitle>
+            <SheetDescription>
+              {railEditor.id
+                ? 'Редактирование рейла. Состав влияет на гостевую витрину.'
+                : 'Соберите подборку миксов для гостевой витрины.'}
+            </SheetDescription>
+          </SheetHeader>
+          <article className="editor-card ops-editor rails-surface__editor rails-surface__editor--sheet">
+          <div className="entity-card__head entity-card__head--sheet">
             <span className={railEditorLocked ? 'status-chip status-chip--locked' : 'status-chip'}>{railEditorStatusLabel}</span>
           </div>
 
@@ -2566,13 +2611,21 @@ export const App = () => {
                   {railSaveStatus === 'loading' ? 'Сохраняем...' : railEditor.id ? 'Сохранить рейл' : 'Создать рейл'}
                 </button>
               ) : null}
-              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetRailEditor}>
-                {railEditorLocked ? 'Создать новый рейл' : 'Сбросить форму'}
+              <button
+                className="secondary-button secondary-button--inline"
+                type="button"
+                onClick={() => {
+                  setRailEditorSheetOpen(false);
+                  onResetRailEditor();
+                }}
+              >
+                Закрыть
               </button>
             </div>
           </form>
         </article>
-      </div>
+        </SheetContent>
+      </Sheet>
     </section>
   );
 
@@ -2638,7 +2691,14 @@ export const App = () => {
           <div className="section-actions">
             <span className="status-chip">Telegram flow</span>
             {user?.role === 'admin' ? (
-              <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
+              <button
+                className="primary-button primary-button--inline"
+                type="button"
+                onClick={() => {
+                  onResetTelegramOperatorEditor();
+                  setTelegramOperatorDialogOpen(true);
+                }}
+              >
                 Новый оператор
               </button>
             ) : null}
@@ -2726,7 +2786,7 @@ export const App = () => {
           </div>
         </article>
 
-        <div className="manager-layout manager-layout--stacked manager-layout--spaced ops-management-grid">
+        <div className="manager-layout manager-layout--single manager-layout--spaced ops-management-grid">
           <aside className="entity-list">
             {telegramOperatorsStatus === 'forbidden' ? (
               <article className="entity-card entity-card--muted ops-surface__card">
@@ -2760,7 +2820,14 @@ export const App = () => {
                   <p className="meta-line">Чат: {operator.linkedChatId || 'ещё не привязан'}</p>
                   <p className="meta-line">Последний запрос: {formatDateTimeDisplay(operator.lastCodeRequestedAt)}</p>
                   <div className="entity-card__actions entity-card__actions--wrap">
-                    <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectTelegramOperator(operator)}>
+                    <button
+                      className="secondary-button secondary-button--inline"
+                      type="button"
+                      onClick={() => {
+                        onSelectTelegramOperator(operator);
+                        setTelegramOperatorDialogOpen(true);
+                      }}
+                    >
                       Редактировать
                     </button>
                     <button
@@ -2798,15 +2865,28 @@ export const App = () => {
               <p className="meta-line">Пока нет операторов в списке.</p>
             ) : null}
           </aside>
+        </div>
 
-          <article className="editor-card ops-editor">
-            <div className="entity-card__head">
-              <div>
-                <p className="entity-kicker">{telegramOperatorEditor.id ? 'Редактирование Telegram доступа' : 'Новый Telegram доступ'}</p>
-                <h3>{telegramOperatorEditor.id ? telegramOperatorEditor.name || 'Без имени' : 'Добавить оператора'}</h3>
-              </div>
-              <span className="status-chip">{telegramOperatorEditor.active ? 'Активен' : 'Неактивен'}</span>
-            </div>
+        <Dialog
+          open={telegramOperatorDialogOpen}
+          onOpenChange={(open) => {
+            setTelegramOperatorDialogOpen(open);
+            if (!open) {
+              onResetTelegramOperatorEditor();
+            }
+          }}
+        >
+          <DialogContent className="telegram-operator-dialog">
+            <DialogHeader>
+              <DialogTitle>
+                {telegramOperatorEditor.id
+                  ? telegramOperatorEditor.name || 'Редактирование оператора'
+                  : 'Новый оператор Telegram'}
+              </DialogTitle>
+              <DialogDescription>
+                После сохранения оператор привязывает контакт через бота.
+              </DialogDescription>
+            </DialogHeader>
 
             {telegramOperatorsStatus === 'forbidden' ? (
               <div className="forbidden-panel">
@@ -2847,9 +2927,6 @@ export const App = () => {
                   </label>
                 </div>
 
-                <p className="meta-line">
-                  После сохранения оператор проходит привязку в боте через кнопку "Поделиться контактом".
-                </p>
                 {telegramOperatorSaveError ? <p className="error-text">{telegramOperatorSaveError}</p> : null}
 
                 <div className="form-actions">
@@ -2860,14 +2937,21 @@ export const App = () => {
                         ? 'Сохранить доступ'
                         : 'Добавить в список'}
                   </button>
-                  <button className="secondary-button secondary-button--inline" type="button" onClick={onResetTelegramOperatorEditor}>
-                    Сбросить форму
+                  <button
+                    className="secondary-button secondary-button--inline"
+                    type="button"
+                    onClick={() => {
+                      setTelegramOperatorDialogOpen(false);
+                      onResetTelegramOperatorEditor();
+                    }}
+                  >
+                    Отмена
                   </button>
                 </div>
               </form>
             )}
-          </article>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="manager-layout manager-layout--stacked manager-layout--spaced ops-management-grid">
           <aside className="entity-list">
@@ -3134,34 +3218,22 @@ export const App = () => {
           return 'Ожидает загрузки';
       }
     })();
+    const activeWorkspaceStatusTone: 'ready' | 'loading' | 'error' = (() => {
+      const text = activeWorkspaceStatus;
+      if (text.includes('ошибка') || text.includes('Ошибка')) return 'error';
+      if (text.includes('Обновляем') || text.includes('Загрузка') || text.includes('Ожидает')) return 'loading';
+      return 'ready';
+    })();
     return (
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
-        <header className="master-topbar">
-          <div className="master-topbar__brand">
-            <p className="eyebrow">Premium Editorial Backoffice</p>
-            <p className="master-topbar__brand-name">Nomad Master</p>
-            <p className="meta-line">
-              Операторский shell с верхней навигацией для широких таблиц, плотных CRUD-поверхностей и быстрого
-              переключения между модулями.
-            </p>
-          </div>
-
-          <div className="master-topbar__meta">
-            <div className="master-topbar__identity">
-              <strong>{user.name}</strong>
-              <span>{formatRoleLabel(user.role)}</span>
-            </div>
-            <span className="status-chip status-chip--inverse">API online</span>
-            <span className="status-chip">Статус: {activeWorkspaceStatus}</span>
-            <button className="secondary-button secondary-button--inline secondary-button--shell" type="button" onClick={onSignOut}>
-              <LogOut size={15} strokeWidth={1.8} />
-              <span>Выйти</span>
-            </button>
-          </div>
-        </header>
 
         <nav className="master-nav master-nav--workspace" aria-label="Рабочие разделы Мастера">
+          <div className="master-nav__brand" aria-hidden="false">
+            <span className="master-nav__logo" aria-hidden="true">N</span>
+            <span className="master-nav__brand-name">Nomad Master</span>
+          </div>
+
           <div className="workspace-tabs workspace-tabs--workspace-bar" role="tablist" aria-label="Рабочие разделы Мастера">
             {workspaceTabs.map((tab) => {
               const TabIcon = tab.icon;
@@ -3194,39 +3266,45 @@ export const App = () => {
               );
             })}
           </div>
+
+          <div className="master-nav__meta">
+            <span
+              className="status-chip status-chip--inverse"
+              title={`Статус данных: ${activeWorkspaceStatus}`}
+              aria-label={`Статус данных: ${activeWorkspaceStatus}`}
+            >
+              <span className={`status-dot status-dot--${activeWorkspaceStatusTone}`} aria-hidden="true" />
+              {activeWorkspaceStatus}
+            </span>
+            <div className="master-nav__user" aria-label="Текущий пользователь">
+              <strong>{user.name}</strong>
+              <span>{formatRoleLabel(user.role)}</span>
+            </div>
+            <button
+              className="secondary-button secondary-button--inline secondary-button--shell"
+              type="button"
+              onClick={onSignOut}
+              aria-label="Выйти"
+            >
+              <LogOut size={15} strokeWidth={1.8} />
+              <span>Выйти</span>
+            </button>
+          </div>
         </nav>
 
         <section className="master-stage">
-          <header className="master-stage__header">
+          <header className="master-stage__header master-stage__header--compact">
             <div className="master-stage__copy">
-              <p className="eyebrow">{activeWorkspace.kicker}</p>
               <h1>{activeWorkspace.label}</h1>
-              <p className="meta-line">{activeWorkspace.detail}</p>
             </div>
             <div className="master-stage__status">
-              <span className="status-chip">Роль: {formatRoleLabel(user.role)}</span>
-              <span className="status-chip">Контур: {apiHostLabel}</span>
+              <span className="status-chip" title={`API: ${apiHostLabel}`}>
+                <span className={`status-dot status-dot--${activeWorkspaceStatusTone}`} aria-hidden="true" />
+                {envLabel}
+              </span>
             </div>
           </header>
 
-          {activeTab === 'dashboard' ? (
-            <section className="master-summary-strip" aria-label="Ключевые метрики смены">
-              {readSummaryCards(summary).map((card) => (
-                <Card
-                  key={card.label}
-                  size="sm"
-                  className="master-summary-card rounded-[1.45rem] border-white/8 bg-[linear-gradient(180deg,rgba(21,18,20,0.94),rgba(29,24,26,0.9))] shadow-[0_22px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-                >
-                  <CardContent className="space-y-1.5 pt-2.5">
-                    <div className="master-summary-card__label text-[10px] uppercase tracking-[0.18em] text-white/44">{card.label}</div>
-                    <div className="master-summary-card__value text-2xl font-semibold tracking-[-0.04em] text-[var(--nomad-ink)]">
-                      {formatMetricValue(card.value)}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </section>
-          ) : null}
 
           <div
             className="master-stage__panel"
