@@ -281,50 +281,6 @@ const getDominantProfile = (mix: MixCard) => mix.flavorProfiles[0] ?? null;
 const formatRatingTag = (mix: MixCard) => `★ ${mix.avgRating.toFixed(1).replace('.', ',')}`;
 const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().replace('.', ',')}%`;
 
-const buildWeightedRows = (
-  mix: MixCard,
-  extractor: (component: MixCard['components'][number]) => string[],
-) => {
-  const weighted = new Map<string, number>();
-
-  for (const component of mix.components) {
-    const keys = unique(
-      extractor(component)
-        .map((item) => item.trim())
-        .filter(Boolean),
-    );
-
-    if (!keys.length) {
-      continue;
-    }
-
-    const share = component.proportion / keys.length;
-
-    for (const key of keys) {
-      weighted.set(key, (weighted.get(key) ?? 0) + share);
-    }
-  }
-
-  return Array.from(weighted.entries())
-    .map(([key, percent]) => ({ key, percent }))
-    .sort((left, right) => right.percent - left.percent);
-};
-
-const buildEqualShareRows = (values: string[]) => {
-  const items = unique(
-    values
-      .map((item) => item.trim())
-      .filter(Boolean),
-  );
-
-  if (!items.length) {
-    return [] as Array<{ key: string; percent: number }>;
-  }
-
-  const share = 100 / items.length;
-  return items.map((key) => ({ key, percent: share }));
-};
-
 const normalizeIntroCard = (item: unknown, index: number): IntroCard => {
   const record = isRecord(item) ? item : {};
 
@@ -591,6 +547,8 @@ const MixTile = ({
   );
 };
 
+const COMPOSITION_PALETTE = ['#d8ab68', '#c08a4a', '#a23048', '#7a9560', '#7fb5a3'];
+
 const MixDetailModal = ({
   state,
   selectedMixId,
@@ -624,144 +582,162 @@ const MixDetailModal = ({
   }
 
   const isSelected = selectedMixId === mix.id;
-  const tobaccoRows = [...mix.components]
-    .sort((left, right) => right.proportion - left.proportion)
-    .map((component) => ({
-      key: `${component.manufacturer} ${component.name}`,
-      percent: component.proportion,
-    }));
-  const flavorRows = buildWeightedRows(mix, (component) => component.flavors).slice(0, 4);
-  const profileRows = buildEqualShareRows(mix.flavorProfiles).slice(0, 4);
+  const components = [...mix.components].sort(
+    (left, right) => right.proportion - left.proportion,
+  );
+  const totalProportion = components.reduce((sum, item) => sum + item.proportion, 0) || 1;
+  const haloColor = getProfileColor(mix.flavorProfiles[0]);
 
   return (
     <Dialog open={Boolean(state)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="mix-info-modal-shell guest-mix-modal"
+        className="aroma-mix-sheet"
+        style={{
+          top: 'auto',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'min(calc(100vw - 16px), 540px)',
+          maxHeight: '92dvh',
+          padding: '12px 20px calc(20px + env(safe-area-inset-bottom))',
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
+          overflowY: 'auto',
+          background: `radial-gradient(circle at 88% 0%, ${haloColor}50 0%, transparent 50%), linear-gradient(180deg, rgba(40,15,16,0.98) 0%, rgba(20,9,10,0.98) 100%)`,
+        }}
       >
-        <div className="mix-info-modal">
-          <DialogDescription className="sr-only">Карточка микса с составом, рейтингом и действием Выбрать.</DialogDescription>
-          <div className="mix-detail-top-row">
-            <div className="mix-detail-top-main">
-              <p className="card-title">{mixSourceLabels[source]}</p>
-              <DialogTitle className="mix-info-name" id="guest-mix-modal-title">
-                {mix.name}
-              </DialogTitle>
-            </div>
-            <div className="mix-detail-top-actions">
-              <Button
-                className="search-button recommendation-session mix-detail-select-btn"
-                type="button"
-                onClick={() => onChoose()}
-                disabled={!mix.available || chooseStatus === 'loading' || isSelected}
-              >
-                {chooseStatus === 'loading' ? 'Фиксируем...' : isSelected ? 'Уже в карточке' : 'Выбрать'}
-              </Button>
-              <Button className="ghost-button mix-info-close-btn" variant="outline" type="button" onClick={onClose}>
-                Закрыть
-              </Button>
-            </div>
-          </div>
+        <span className="aroma-mix-sheet-handle" aria-hidden />
+        <DialogDescription className="sr-only">
+          Карточка микса с составом, рейтингом и действием «Покурить».
+        </DialogDescription>
 
-          <section className="mix-info-section">
-            <p className="mix-info-section-title">О миксе</p>
-            <p className="mix-info-description">{mix.description || 'Описание пока не добавлено.'}</p>
-            <div className="mix-detail-tags">
-              <Badge className="profile-tag mix-rating-tag">{formatRatingTag(mix)}</Badge>
-              <Badge className="profile-tag">Выборов: {mix.popularity}</Badge>
-              {mix.flavorProfiles.slice(0, 3).map((profile) => (
-                <Badge className="profile-tag" key={`${mix.id}:${profile}`}>
-                  {formatProfileLabel(profile)}
-                </Badge>
+        <div className="aroma-mix-sheet-head">
+          <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
+          <div className="aroma-mix-sheet-head-text">
+            <p className="aroma-caps">{mixSourceLabels[source]}</p>
+            <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
+            <SignatureBar profiles={mix.flavorProfiles} height={4} />
+          </div>
+        </div>
+
+        {mix.description ? (
+          <p className="aroma-mix-sheet-desc">{mix.description}</p>
+        ) : null}
+
+        {mix.flavorProfiles.length || mix.flavors.length ? (
+          <div className="aroma-mix-sheet-tags">
+            {mix.flavorProfiles.slice(0, 3).map((profile) => (
+              <Chip
+                key={`profile-${profile}`}
+                tier="lg"
+                active
+                color={getProfileColor(profile)}
+              >
+                {formatProfileLabel(profile)}
+              </Chip>
+            ))}
+            {mix.flavors.slice(0, 6).map((flavor) => (
+              <Chip key={`flavor-${flavor}`}>{flavor}</Chip>
+            ))}
+          </div>
+        ) : null}
+
+        {components.length ? (
+          <section className="aroma-mix-sheet-composition">
+            <p className="aroma-caps">Состав микса</p>
+            <div className="aroma-mix-sheet-stack">
+              {components.map((component, index) => (
+                <span
+                  key={component.id}
+                  className="aroma-mix-sheet-stack-segment"
+                  style={{
+                    flexGrow: component.proportion / totalProportion,
+                    background: COMPOSITION_PALETTE[index % COMPOSITION_PALETTE.length],
+                  }}
+                  aria-hidden
+                />
               ))}
             </div>
+            <ul className="aroma-mix-sheet-comp-list">
+              {components.map((component, index) => (
+                <li key={component.id} className="aroma-mix-sheet-comp-row">
+                  <span
+                    className="aroma-mix-sheet-comp-dot"
+                    style={{
+                      background: COMPOSITION_PALETTE[index % COMPOSITION_PALETTE.length],
+                    }}
+                    aria-hidden
+                  />
+                  <span className="aroma-caps aroma-mix-sheet-comp-maker">
+                    {component.manufacturer}
+                  </span>
+                  <span className="aroma-mix-sheet-comp-name">{component.name}</span>
+                  <span className="aroma-mix-sheet-comp-share">
+                    {formatPercent(component.proportion)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
+        ) : null}
 
-          <section className="mix-info-section">
-            <p className="mix-info-section-title">Что внутри микса</p>
-            <div className="mix-ratio-stack">
-              <div className="mix-ratio-group">
-                <p className="mix-ratio-title">Табаки</p>
-                <div className="mix-ratio-list">
-                  {tobaccoRows.map((item) => (
-                    <div className="mix-ratio-item" key={`${mix.id}:ratio:tobacco:${item.key}`}>
-                      <div className="mix-info-row mix-info-row-compact">
-                        <span className="mix-info-label">{item.key}</span>
-                        <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                      </div>
-                      <div className="rail-ratio-bar compact" aria-hidden="true">
-                        <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#f0c27b' }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {flavorRows.length ? (
-                <div className="mix-ratio-group">
-                  <p className="mix-ratio-title">Вкусы</p>
-                  <div className="mix-ratio-list">
-                    {flavorRows.map((item) => (
-                      <div className="mix-ratio-item" key={`${mix.id}:ratio:flavor:${item.key}`}>
-                        <div className="mix-info-row mix-info-row-compact">
-                          <span className="mix-info-label">{item.key}</span>
-                          <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                        </div>
-                        <div className="rail-ratio-bar compact" aria-hidden="true">
-                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#d17f43' }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {profileRows.length ? (
-                <div className="mix-ratio-group">
-                  <p className="mix-ratio-title">Профили</p>
-                  <div className="mix-ratio-list">
-                    {profileRows.map((item) => (
-                      <div className="mix-ratio-item" key={`${mix.id}:ratio:profile:${item.key}`}>
-                        <div className="mix-info-row mix-info-row-compact">
-                          <span className="mix-info-label">{formatProfileLabel(item.key)}</span>
-                          <span className="mix-info-value">{formatPercent(item.percent)}</span>
-                        </div>
-                        <div className="rail-ratio-bar compact" aria-hidden="true">
-                          <span className="rail-ratio-segment" style={{ width: `${item.percent}%`, background: '#8a3028' }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="mix-info-section">
-            <p className="mix-info-section-title">Оценка</p>
-            <div className="session-rating-row" role="group" aria-label="Оценка микса">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <Button
+        <section className="aroma-mix-sheet-rating">
+          <p className="aroma-caps">Ваша оценка</p>
+          <div
+            className="aroma-mix-sheet-stars"
+            role="group"
+            aria-label="Оценка микса"
+          >
+            {[1, 2, 3, 4, 5].map((value) => {
+              const filled = ratingValue !== null && ratingValue >= value;
+              return (
+                <button
                   key={value}
-                  className={cn('score-btn', ratingValue === value && 'active')}
-                  variant="outline"
-                  size="icon"
                   type="button"
+                  className={cn(
+                    'aroma-mix-sheet-star',
+                    filled && 'aroma-mix-sheet-star-on',
+                  )}
                   onClick={() => onRate(value)}
                   disabled={ratingStatus === 'loading'}
+                  aria-label={`Оценить на ${value}`}
                 >
-                  {value}
-                </Button>
-              ))}
-            </div>
-            <div className="recommendation-actions">
-              {!mix.available ? <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p> : null}
-              {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
-              {ratingError ? <p className="screen-status error">{ratingError}</p> : null}
-              {ratingStatus === 'loading' ? <p className="screen-status">Сохраняем оценку...</p> : null}
-              {ratingMessage ? <p className="status ok">{ratingMessage}</p> : null}
-            </div>
-          </section>
+                  ★
+                </button>
+              );
+            })}
+          </div>
+          {ratingMessage ? <p className="status ok">{ratingMessage}</p> : null}
+          {ratingError ? <p className="screen-status error">{ratingError}</p> : null}
+        </section>
+
+        {!mix.available ? (
+          <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p>
+        ) : null}
+        {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
+
+        <div className="aroma-mix-sheet-actions">
+          <button
+            type="button"
+            className="aroma-mix-sheet-ghost"
+            onClick={onClose}
+          >
+            Закрыть
+          </button>
+          <CTA
+            pulse={mix.available && !isSelected && chooseStatus !== 'loading'}
+            disabled={!mix.available || chooseStatus === 'loading' || isSelected}
+            onClick={onChoose}
+          >
+            {chooseStatus === 'loading'
+              ? 'Сохраняем…'
+              : isSelected
+                ? 'Уже в карточке'
+                : 'Покурить'}
+          </CTA>
         </div>
       </DialogContent>
     </Dialog>

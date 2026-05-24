@@ -2221,6 +2221,168 @@ select:focus-visible {
   justify-self: center;
 }
 
+.aroma-mix-sheet {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.6);
+}
+
+.aroma-mix-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(216, 171, 104, 0.32);
+  margin: 0 auto 6px;
+}
+
+.aroma-mix-sheet-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.aroma-mix-sheet-head-text {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+.aroma-mix-sheet-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.05;
+  color: var(--text-0);
+}
+
+.aroma-mix-sheet-desc {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.aroma-mix-sheet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aroma-mix-sheet-composition {
+  display: grid;
+  gap: 10px;
+}
+
+.aroma-mix-sheet-stack {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.aroma-mix-sheet-stack-segment {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+}
+
+.aroma-mix-sheet-comp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.aroma-mix-sheet-comp-row {
+  display: grid;
+  grid-template-columns: 10px auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.aroma-mix-sheet-comp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  align-self: center;
+}
+
+.aroma-mix-sheet-comp-maker {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+.aroma-mix-sheet-comp-name {
+  font-size: 13px;
+  color: var(--text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aroma-mix-sheet-comp-share {
+  font-size: 13px;
+  color: var(--accent-soft);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.aroma-mix-sheet-rating {
+  display: grid;
+  gap: 8px;
+}
+
+.aroma-mix-sheet-stars {
+  display: flex;
+  gap: 8px;
+}
+
+.aroma-mix-sheet-star {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(45, 20, 19, 0.9);
+  color: var(--text-2);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.aroma-mix-sheet-star-on {
+  border-color: var(--primary);
+  background: linear-gradient(180deg, rgba(216, 171, 104, 0.24) 0%, rgba(140, 45, 36, 0.18) 100%);
+  color: var(--accent-soft);
+}
+
+.aroma-mix-sheet-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.aroma-mix-sheet-ghost {
+  border: 1px solid var(--line);
+  background: rgba(40, 18, 18, 0.5);
+  color: var(--text-0);
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .search-row,
   .filters-row {
