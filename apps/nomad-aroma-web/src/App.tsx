@@ -557,6 +557,14 @@ const MixTile = ({
 
 const COMPOSITION_PALETTE = ['#d8ab68', '#c08a4a', '#a23048', '#7a9560', '#7fb5a3'];
 
+const pluralizeMixes = (count: number) => {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'микс';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'микса';
+  return 'миксов';
+};
+
 const MixDetailModal = ({
   state,
   selectedMixId,
@@ -827,6 +835,7 @@ export const App = () => {
   );
   const [catalogPopoverOpen, setCatalogPopoverOpen] = useState(false);
   const [activeShowcaseRailId, setActiveShowcaseRailId] = useState<string | null>(null);
+  const [railProfileFilters, setRailProfileFilters] = useState<string[]>([]);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -997,6 +1006,10 @@ export const App = () => {
       setActiveShowcaseRailId(showcaseRails[0].id);
     }
   }, [showcaseRails, activeShowcaseRailId]);
+
+  useEffect(() => {
+    setRailProfileFilters([]);
+  }, [selectedRail?.id]);
 
   const updateMixInList = (items: MixCard[], mixId: string, updater: (mix: MixCard) => MixCard) =>
     items.map((mix) => (mix.id === mixId ? updater(mix) : mix));
@@ -1336,17 +1349,6 @@ export const App = () => {
           .find((mix) => mix.id === selectedMix.id) ?? null
       : null;
 
-  const railItems = selectedRail
-    ? selectedRail.mixes.filter((mix) => {
-        if (!railSearch.trim()) {
-          return true;
-        }
-
-        const haystack = `${mix.name} ${mix.description} ${mix.flavors.join(' ')}`.toLowerCase();
-        return haystack.includes(railSearch.trim().toLowerCase());
-      })
-    : [];
-
   const renderBrand = () => (
     <Button variant="ghost" type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
       <div>
@@ -1428,12 +1430,14 @@ export const App = () => {
       return null;
     }
 
+    if (view === 'rail') {
+      return null;
+    }
+
     const activeTab: AppTab | null =
       view === 'recommendations' || view === 'showcase' || view === 'catalog'
         ? view
-        : view === 'rail'
-          ? 'showcase'
-          : null;
+        : null;
 
     return (
       <header className="topbar">
@@ -1448,14 +1452,6 @@ export const App = () => {
         {view === 'intro' ? renderJourneyNav('intro') : null}
         {view === 'onboarding' ? renderOnboardingProgress() : null}
         {activeTab ? renderAppNav(activeTab) : null}
-        {view === 'rail' && selectedRail ? (
-          <div className="rail-breadcrumb">
-            <Button className="ghost-button screen-back-btn" variant="outline" type="button" onClick={() => setView('showcase')}>
-              Назад к витрине
-            </Button>
-            <Badge className="filter-pill">{selectedRail.name}</Badge>
-          </div>
-        ) : null}
       </header>
     );
   };
@@ -2030,44 +2026,122 @@ export const App = () => {
     );
   };
 
-  const renderRailView = () => (
-    <section className="catalog-layout">
-      <Card className="card catalog-summary">
-        <p className="card-title">{selectedRail ? railToneLabels[selectedRail.type] : 'Подборка'}</p>
-        <p className="card-text">
-          {selectedRail?.description || 'Откройте подборку и выберите микс, который хочется показать мастеру.'}
-        </p>
-      </Card>
-
-      <section className="catalog-body">
-        <form
-          className="catalog-controls cinema-controls"
-          onSubmit={(event) => {
-            event.preventDefault();
-          }}
-        >
-          <div className="search-row">
-            <Input
-              className="search-input"
-              type="search"
-              value={railSearch}
-              onChange={(event) => setRailSearch(event.target.value)}
-              placeholder="Поиск внутри подборки"
-            />
-          </div>
-        </form>
-
-        <section className="catalog-results">
-          {!railItems.length ? <p className="screen-status">По этой подборке ничего не найдено.</p> : null}
-          <section className="list-grid cinema-grid">
-            {railItems.map((mix) => (
-              <MixTile key={mix.id} mix={mix} onOpen={(currentMix) => openMix(currentMix, 'rail')} />
-            ))}
-          </section>
+  const renderRailView = () => {
+    if (!selectedRail) {
+      return (
+        <section className="aroma-rail">
+          <p className="screen-status">Подборка не выбрана.</p>
+          <CTA onClick={() => setView('showcase')}>К витрине</CTA>
         </section>
+      );
+    }
+
+    const rail = selectedRail;
+    const railProfileSet = new Set<string>();
+    rail.mixes.forEach((mix) => {
+      mix.flavorProfiles.forEach((profile) => railProfileSet.add(profile));
+    });
+    const railProfileOptions = Array.from(railProfileSet);
+
+    const toggleRailProfile = (profile: string) =>
+      setRailProfileFilters((current) =>
+        current.includes(profile)
+          ? current.filter((item) => item !== profile)
+          : [...current, profile],
+      );
+
+    const visibleMixes = railProfileFilters.length
+      ? rail.mixes.filter((mix) =>
+          mix.flavorProfiles.some((profile) => railProfileFilters.includes(profile)),
+        )
+      : rail.mixes;
+
+    return (
+      <section className="aroma-rail">
+        <header className="aroma-rail-topbar">
+          <button
+            type="button"
+            className="aroma-rail-back"
+            onClick={() => setView('showcase')}
+            aria-label="Назад к витрине"
+          >
+            ←
+          </button>
+          <div className="aroma-rail-topbar-text">
+            <p className="aroma-caps">
+              {`Витрина · ${railToneLabels[rail.type]}`}
+            </p>
+            <p className="aroma-rail-meta">
+              {`${rail.mixes.length} ${pluralizeMixes(rail.mixes.length)}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="aroma-rail-code"
+            onClick={onResetAccess}
+          >
+            Новый код
+          </button>
+        </header>
+
+        <div className="aroma-rail-intro">
+          <h1 className="aroma-rail-title">{rail.name}</h1>
+          {rail.description ? (
+            <p className="aroma-rail-desc">{rail.description}</p>
+          ) : null}
+        </div>
+
+        {railProfileOptions.length ? (
+          <div className="aroma-rail-chip-scroll">
+            <Chip
+              tier="lg"
+              active={railProfileFilters.length === 0}
+              onClick={() => setRailProfileFilters([])}
+            >
+              Все
+            </Chip>
+            {railProfileOptions.map((profile) => (
+              <Chip
+                key={profile}
+                tier="lg"
+                color={getProfileColor(profile)}
+                active={railProfileFilters.includes(profile)}
+                onClick={() => toggleRailProfile(profile)}
+              >
+                {formatProfileLabel(profile)}
+              </Chip>
+            ))}
+          </div>
+        ) : null}
+
+        {!visibleMixes.length ? (
+          <p className="screen-status">По выбранным профилям ничего не найдено.</p>
+        ) : null}
+
+        <div className="aroma-rail-list">
+          {visibleMixes.map((mix) => (
+            <button
+              key={`${rail.id}:${mix.id}`}
+              type="button"
+              className="aroma-rail-row"
+              onClick={() => openMix(mix, 'rail')}
+            >
+              <ProfileGlyph profiles={mix.flavorProfiles} size={60} />
+              <div className="aroma-rail-row-main">
+                <h3 className="aroma-rail-row-name">{mix.name}</h3>
+                {mix.flavors.length ? (
+                  <p className="aroma-rail-row-flavors">
+                    {mix.flavors.slice(0, 3).join(' · ')}
+                  </p>
+                ) : null}
+              </div>
+              <RatingPill rating={mix.avgRating} />
+            </button>
+          ))}
+        </div>
       </section>
-    </section>
-  );
+    );
+  };
 
   const renderCatalogView = () => {
     const toggleCatalogProfile = (value: string) =>

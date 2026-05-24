@@ -2507,6 +2507,145 @@ select:focus-visible {
   margin-top: auto;
 }
 
+.aroma-rail {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: calc(12px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
+  overflow-y: auto;
+}
+
+.aroma-rail-topbar {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.aroma-rail-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(56, 24, 22, 0.54);
+  color: var(--text-0);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.aroma-rail-topbar-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.aroma-rail-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.aroma-rail-code {
+  border: 1px solid rgba(242, 213, 165, 0.2);
+  background: rgba(63, 20, 20, 0.62);
+  color: var(--accent-soft);
+  border-radius: 999px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.aroma-rail-intro {
+  display: grid;
+  gap: 6px;
+}
+
+.aroma-rail-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.05;
+  color: var(--text-0);
+}
+
+.aroma-rail-desc {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 36ch;
+}
+
+.aroma-rail-chip-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.aroma-rail-chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.aroma-rail-chip-scroll > button {
+  flex: 0 0 auto;
+}
+
+.aroma-rail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.aroma-rail-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(28, 13, 13, 0.84);
+  color: var(--text-0);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+
+.aroma-rail-row:hover {
+  border-color: rgba(216, 171, 104, 0.4);
+}
+
+.aroma-rail-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.aroma-rail-row-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.15;
+  color: var(--text-0);
+}
+
+.aroma-rail-row-flavors {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .search-row,
   .filters-row {
