@@ -841,6 +841,7 @@ export const App = () => {
   const [filtersOpen, setFiltersOpen] = useState(() =>
     typeof window === 'undefined' ? true : !window.matchMedia('(max-width: 768px)').matches,
   );
+  const [catalogPopoverOpen, setCatalogPopoverOpen] = useState(false);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -1945,268 +1946,154 @@ export const App = () => {
     </section>
   );
 
-  const renderCatalogView = () => (
-    <section className="catalog-layout">
-      <section className="catalog-body">
-        <form
-          className="catalog-controls cinema-controls"
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyCatalogFilters();
-          }}
-        >
-          <div className="search-row">
-            <Input
-              className="search-input"
+  const renderCatalogView = () => {
+    const toggleCatalogProfile = (value: string) =>
+      setAppliedCatalogProfiles((current) =>
+        current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      );
+    const toggleCatalogFlavor = (value: string) =>
+      setAppliedCatalogFlavors((current) =>
+        current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      );
+    const hasPopoverIndicator =
+      appliedCatalogFlavors.length > 0 || appliedSortBy !== 'popularity';
+    const hasAnyFilter =
+      Boolean(query) ||
+      appliedCatalogProfiles.length > 0 ||
+      appliedCatalogFlavors.length > 0 ||
+      appliedSortBy !== 'popularity';
+
+    return (
+      <section className="aroma-catalog">
+        <div className="aroma-catalog-rail">
+          <div className="aroma-catalog-search-row">
+            <input
               type="search"
-              value={queryDraft}
-              onChange={(event) => setQueryDraft(event.target.value)}
+              className="aroma-catalog-search"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setQueryDraft(event.target.value);
+              }}
               placeholder="Поиск по названию и описанию"
+              autoComplete="off"
             />
-            {!isCompactFilters ? (
-              <Button className="search-button catalog-find-btn" type="submit">
-                Найти
-              </Button>
-            ) : null}
+            <button
+              type="button"
+              className="aroma-catalog-icon-btn"
+              onClick={() => setCatalogPopoverOpen((current) => !current)}
+              aria-label="Фильтры и сортировка"
+              aria-expanded={catalogPopoverOpen}
+            >
+              <span aria-hidden>⚙</span>
+              {hasPopoverIndicator ? (
+                <span className="aroma-catalog-icon-dot" aria-hidden />
+              ) : null}
+            </button>
           </div>
-
-          {isCompactFilters ? (
-            <div className="catalog-mobile-tools">
-              <Button
-                className="ghost-button catalog-mobile-filters-toggle"
-                variant="outline"
-                type="button"
-                onClick={() => setFiltersOpen((current) => !current)}
-                aria-expanded={filtersOpen}
+          <div className="aroma-catalog-chip-scroll">
+            {availableProfileOptions.map((option) => (
+              <Chip
+                key={option.value}
+                tier="lg"
+                color={getProfileColor(option.value)}
+                active={appliedCatalogProfiles.includes(option.value)}
+                onClick={() => toggleCatalogProfile(option.value)}
               >
-                {filtersOpen ? 'Скрыть фильтры' : hasCatalogFilters ? `Фильтры: ${activeFilterLabels.length}` : 'Показать фильтры'}
-              </Button>
-              <Button className="search-button catalog-mobile-inline-submit" type="submit">
-                Найти
-              </Button>
-            </div>
-          ) : null}
-
-          {!isCompactFilters || filtersOpen ? (
-            <div className={cn('catalog-tools-row', isCompactFilters && 'catalog-tools-row-compact')}>
-              <div
-                className={cn('catalog-active-filters', isCompactFilters && 'catalog-active-filters-compact')}
-                aria-live="polite"
-              >
-                {activeFilterLabels.length ? (
-                  activeFilterLabels.map((label) => (
-                    <Badge className={cn('filter-pill', 'catalog-filter-pill', isCompactFilters && 'catalog-filter-pill-compact')} key={label}>
-                      {label}
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge className={cn('filter-pill', 'muted', 'catalog-filter-pill', isCompactFilters && 'catalog-filter-pill-compact')}>
-                    Фильтры не заданы
-                  </Badge>
-                )}
-              </div>
-              <Button
-                className={cn('ghost-button', 'catalog-reset-btn', isCompactFilters && 'catalog-reset-btn-compact')}
-                variant="outline"
-                type="button"
-                onClick={resetCatalogFilters}
-                disabled={!hasCatalogFilters}
-              >
-                {isCompactFilters ? 'Сбросить' : 'Сбросить фильтры'}
-              </Button>
-            </div>
-          ) : null}
-
-          {!isCompactFilters || filtersOpen ? (
-            <div className="catalog-advanced-filters">
-              <div className="filters-row">
-                <label className="filter-field">
-                  <span>Сортировка</span>
-                  <select value={sortBy} onChange={(event) => setSortBy(event.target.value as CatalogSort)}>
-                    {sortOptions.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="filter-field">
-                <span>Профили вкуса</span>
-                <Input
-                  className="search-input"
-                  type="search"
-                  value={profileSearchDraft}
-                  onChange={(event) => setProfileSearchDraft(event.target.value)}
-                  placeholder="Поиск профиля"
-                />
-                <div className="filter-scrollbox">
-                  <Button
-                    className={cn('filter-option', selectedCatalogProfiles.length === 0 && 'active')}
-                    variant="outline"
-                    type="button"
-                    onClick={() => setSelectedCatalogProfiles([])}
-                  >
-                    Любой профиль
-                  </Button>
-                  {filteredProfileOptions.map((option) => (
-                    <Button
-                      key={option.value}
-                      className={cn('filter-option', selectedCatalogProfiles.includes(option.value) && 'active')}
-                      variant="outline"
-                      type="button"
-                      onClick={() =>
-                        setSelectedCatalogProfiles((current) =>
-                          current.includes(option.value)
-                            ? current.filter((item) => item !== option.value)
-                            : [...current, option.value],
-                        )
-                      }
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="filter-field">
-                <span>Вкусы</span>
-                <Input
-                  className="search-input"
-                  type="search"
-                  value={flavorSearchDraft}
-                  onChange={(event) => setFlavorSearchDraft(event.target.value)}
-                  placeholder="Поиск вкуса"
-                />
-                <div className="filter-scrollbox">
-                  <Button
-                    className={cn('filter-option', selectedCatalogFlavors.length === 0 && 'active')}
-                    variant="outline"
-                    type="button"
-                    onClick={() => setSelectedCatalogFlavors([])}
-                  >
-                    Любой вкус
-                  </Button>
-                  {filteredFlavorOptions.map((option) => (
-                    <Button
-                      key={option}
-                      className={cn('filter-option', selectedCatalogFlavors.includes(option) && 'active')}
-                      variant="outline"
-                      type="button"
-                      onClick={() =>
-                        setSelectedCatalogFlavors((current) =>
-                          current.includes(option) ? current.filter((item) => item !== option) : [...current, option],
-                        )
-                      }
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="filters-row">
-                <label className="filter-field">
-                  <span>Производитель</span>
-                  <Input
-                    className="search-input"
-                    type="search"
-                    value={manufacturerSearchDraft}
-                    onChange={(event) => setManufacturerSearchDraft(event.target.value)}
-                    placeholder="Поиск бренда"
-                  />
-                  <div className="filter-scrollbox">
-                    <Button
-                      className={cn('filter-option', selectedManufacturerIds.length === 0 && 'active')}
-                      variant="outline"
-                      type="button"
-                      onClick={() => setSelectedManufacturerIds([])}
-                    >
-                      Все бренды
-                    </Button>
-                    {filteredManufacturerOptions.map((item) => (
-                      <Button
-                        key={item.id}
-                        className={cn('filter-option', selectedManufacturerIds.includes(item.id) && 'active')}
-                        variant="outline"
-                        type="button"
-                        onClick={() =>
-                          setSelectedManufacturerIds((current) =>
-                            current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id],
-                          )
-                        }
-                      >
-                        {item.label}
-                      </Button>
-                    ))}
-                  </div>
-                </label>
-
-                <label className="filter-field">
-                  <span>Табак</span>
-                  <Input
-                    className="search-input"
-                    type="search"
-                    value={tobaccoSearchDraft}
-                    onChange={(event) => setTobaccoSearchDraft(event.target.value)}
-                    placeholder="Поиск табака"
-                  />
-                  <div className="filter-scrollbox">
-                    <Button
-                      className={cn('filter-option', selectedTobaccoIds.length === 0 && 'active')}
-                      variant="outline"
-                      type="button"
-                      onClick={() => setSelectedTobaccoIds([])}
-                    >
-                      Любой табак
-                    </Button>
-                    {filteredTobaccoOptions.map((item) => (
-                      <Button
-                        key={item.id}
-                        className={cn('filter-option', selectedTobaccoIds.includes(item.id) && 'active')}
-                        variant="outline"
-                        type="button"
-                        onClick={() =>
-                          setSelectedTobaccoIds((current) =>
-                            current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id],
-                          )
-                        }
-                      >
-                        {item.label}
-                      </Button>
-                    ))}
-                  </div>
-                </label>
-              </div>
-            </div>
-          ) : null}
-        </form>
-
-        <section className="catalog-results">
-          <Card className="card catalog-summary">
-            <p className="card-title">Результат</p>
-            <p className="card-text">
-              {catalogStatus === 'loading'
-                ? 'Обновляем каталог...'
-                : `${filteredCatalogMixes.length} миксов${hasCatalogFilters ? ' · фильтры активны' : ''}`}
-            </p>
-          </Card>
-
-          {catalogError ? <p className="screen-status error">{catalogError}</p> : null}
-          {!filteredCatalogMixes.length && catalogStatus === 'ready' ? (
-            <p className="screen-status">По выбранным фильтрам ничего не найдено.</p>
-          ) : null}
-
-          <section className="list-grid cinema-grid">
-            {filteredCatalogMixes.map((mix) => (
-              <MixTile key={mix.id} mix={mix} onOpen={(currentMix) => openMix(currentMix, 'catalog')} />
+                {option.label}
+              </Chip>
             ))}
-          </section>
-        </section>
+          </div>
+        </div>
+
+        {catalogPopoverOpen ? (
+          <div className="aroma-catalog-popover" role="dialog" aria-label="Фильтры каталога">
+            <p className="aroma-caps">Сортировка</p>
+            <div className="aroma-catalog-sort">
+              {sortOptions.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={cn(
+                    'aroma-catalog-sort-btn',
+                    appliedSortBy === item.value && 'aroma-catalog-sort-btn-on',
+                  )}
+                  onClick={() => {
+                    setAppliedSortBy(item.value);
+                    setSortBy(item.value);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <p className="aroma-caps">Вкусы</p>
+            <div className="aroma-catalog-flavor-wrap">
+              {options.flavors.map((flavor) => (
+                <Chip
+                  key={flavor}
+                  active={appliedCatalogFlavors.includes(flavor)}
+                  onClick={() => toggleCatalogFlavor(flavor)}
+                >
+                  {flavor}
+                </Chip>
+              ))}
+            </div>
+            <CTA onClick={() => setCatalogPopoverOpen(false)}>Готово</CTA>
+          </div>
+        ) : null}
+
+        <div className="aroma-catalog-meta">
+          <p className="aroma-caps">
+            {catalogStatus === 'loading'
+              ? 'Обновляем…'
+              : `Найдено · ${filteredCatalogMixes.length}`}
+          </p>
+          {hasAnyFilter ? (
+            <button
+              type="button"
+              className="aroma-onboarding-skip"
+              onClick={resetCatalogFilters}
+            >
+              Сбросить
+            </button>
+          ) : null}
+        </div>
+
+        {catalogError ? <p className="screen-status error">{catalogError}</p> : null}
+        {!filteredCatalogMixes.length && catalogStatus === 'ready' ? (
+          <p className="screen-status">По выбранным фильтрам ничего не найдено.</p>
+        ) : null}
+
+        <div className="aroma-catalog-list">
+          {filteredCatalogMixes.map((mix) => (
+            <button
+              key={mix.id}
+              type="button"
+              className="aroma-catalog-row"
+              onClick={() => openMix(mix, 'catalog')}
+            >
+              <ProfileGlyph profiles={mix.flavorProfiles} size={44} />
+              <div className="aroma-catalog-row-main">
+                <h3 className="aroma-catalog-row-name">{mix.name}</h3>
+                {mix.flavors.length ? (
+                  <p className="aroma-catalog-row-flavors">
+                    {mix.flavors.slice(0, 3).join(' · ')}
+                  </p>
+                ) : null}
+              </div>
+              <RatingPill rating={mix.avgRating} />
+            </button>
+          ))}
+        </div>
       </section>
-    </section>
-  );
+    );
+  };
+
 
   return (
     <div className="app-bg">

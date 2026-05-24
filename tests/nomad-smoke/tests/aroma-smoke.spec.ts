@@ -22,6 +22,6 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
 
   await page.getByRole('button', { name: 'Каталог' }).click();
   await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();
-  await expect(page.getByText('Результат')).toBeVisible();
+  await expect(page.getByText(/Найдено/)).toBeVisible();
   await expect(page.getByText('Вход для персонала')).toHaveCount(0);
 });

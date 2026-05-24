@@ -1,5 +1,52 @@
 # HANDOFF — Nomad
 
+## 2.37) Aroma-web (24 мая 2026) — step 8: CatalogInline по design handoff
+
+- Запрос: продолжение 12-шагового рефактора. После steps 4–7 — переписать
+  `view === 'catalog'` под вариант B из
+  `design/design_handoff_aroma_atelier/aroma/catalog.jsx`: control rail
+  (search + sliders-icon), горизонтальные profile chips, popover за
+  иконкой (сортировка + вкусы), vertical list с ProfileGlyph 44.
+
+- Реализация (PR #?, ветка `feature/aroma-catalog-inline`):
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - новый local state `catalogPopoverOpen: boolean`;
+    - `renderCatalogView()` целиком переписан: snapshot из 8 секций
+      (sticky control rail с search + icon-btn, profile chip horizontal-
+      scroll, popover с Сортировка+Вкусы+Готово CTA, meta-row caps «Найдено
+      · N» + Сбросить, list с aroma-catalog-row + ProfileGlyph 44 + name +
+      flavors + RatingPill);
+    - **product decision**: manufacturer-фильтр (`selectedManufacturerIds`)
+      убран из UI этого экрана (см. open question §3 из handoff). State
+      переменные оставлены в файле (используются в `resetCatalogFilters`,
+      `primeCatalogFromOnboarding`) но никогда не получают значения.
+      Tobacco-фильтр тоже скрыт — handoff §5 не показывает его.
+    - Снят `<form onSubmit={applyCatalogFilters}>` и двухстадийный
+      `selected*` → `applied*` подход. Чипы биндятся напрямую на
+      `appliedCatalogProfiles/Flavors`, сорт — на `appliedSortBy`.
+      `loadCatalog` уже триггерится по существующему useEffect на смену
+      applied-state.
+  - `apps/nomad-aroma-web/src/styles.css`: `.aroma-catalog*` (~18 классов:
+    sticky rail, search-row, icon-btn с dot-индикатором, chip-scroll,
+    popover, sort-grid, flavor-wrap max-height 132 scroll, meta-row,
+    list с 52|1fr|auto grid).
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`:
+    `getByText('Результат')` → `getByText(/Найдено/)` (старая
+    catalog-summary карточка убрана, осталась только caps-метка).
+
+- Проверки:
+  - `npm run build` — 1808 модулей, CSS 50.96 → 53.57 kB.
+  - `npx tsc --noEmit` — чистый.
+  - `nomad-smoke` локально не запускался; CI gate.
+
+- Остаточный риск:
+  - Дешёвый `query` биндинг — каждый keystroke filterит client-side
+    список без debounce. На 100+ миксах может ощущаться лагом, но в
+    реальных продах сейчас 20–30 миксов. Debounce — отдельная задача.
+  - `selectedManufacturerIds`/`selectedTobaccoIds`/`applied*` state и
+    `manufacturerOptions`/`tobaccoOptions` derived остаются как «мёртвые»
+    хвосты в App.tsx. Чистка — после step 12.
+
 ## 2.36) Aroma-web (24 мая 2026) — step 6: OnboardingSteps по design handoff
 
 - Запрос: продолжение 12-шагового рефактора. После steps 4–5 (AuthMinimal,
