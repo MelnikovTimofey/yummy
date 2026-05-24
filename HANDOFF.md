@@ -1,5 +1,53 @@
 # HANDOFF — Nomad
 
+## 2.36) Aroma-web (24 мая 2026) — step 6: OnboardingSteps по design handoff
+
+- Запрос: продолжение 12-шагового рефактора. После steps 4–5 (AuthMinimal,
+  IntroSwipe) — переписать `view === 'onboarding'` под вариант B из
+  `design/design_handoff_aroma_atelier/aroma/onboarding.jsx`: два шага
+  (профили → вкусы), sticky CTA, прогресс-бар в topbar и pip'ы в dock.
+
+- Реализация (PR #?, ветка `feature/aroma-onboarding-steps`):
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - новый state `onboardingStep: 1 | 2` + useEffect, который сбрасывает
+      его в 1 при заходе на `view === 'onboarding'`;
+    - `renderTopbar()`: на onboarding теперь рендерится новый
+      `renderOnboardingProgress()` (back-arrow + progress-bar + caps "N/2"),
+      а старый `renderJourneyNav` остался только для intro;
+    - `renderOnboardingView()` целиком переписан: step 1 — caps «Шаг 1 ·
+      Профили», H1 «С чего начнём?», 2-col grid карточек 52px с цветным
+      dot'ом по `getProfileColor`; step 2 — caps «Шаг 2 · Вкусы»,
+      H1 «Любимые ноты», Chip sm-tier wrap, секция «Сейчас выбрано» с
+      read-only profile-тегами;
+    - Sticky BottomDock: 2 pip-прогресса, CTA «Далее» / «Показать подбор»
+      (pulse на step 2), текст-кнопка «Открыть каталог сразу» доступна
+      на ОБОИХ шагах (продуктовое решение пользователя — open question
+      §2 из handoff README);
+    - `<form onSubmit={onSubmitOnboarding}>` снят, переход на onClick
+      хендлеры; `onSubmitOnboarding` → `submitOnboarding` (без event-arg).
+  - `apps/nomad-aroma-web/src/styles.css`: добавлены `.aroma-onboarding*`
+    и `.aroma-profile-card*` (≈18 классов: topbar progress-row,
+    body/title/hint, profile-card grid с active warm-gradient, flavor
+    wrap, selected-row, dock, pips, skip).
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`:
+    - `getByRole('button', { name: 'Предпочтения' })` → `getByText('С
+      чего начнём?')`. «Предпочтения» tab убран из topbar на onboarding
+      (handoff даёт back+progress+counter вместо журней-nav'а).
+
+- Проверки:
+  - `npm run build` — 1808 модулей, CSS 46.08 → 48.80 kB.
+  - `npx tsc --noEmit` — чистый.
+  - `nomad-smoke` локально не запускался; CI gate.
+
+- Остаточный риск:
+  - Старые селекторы `.filter-option`, `.filter-scrollbox`, `.selection-*`,
+    `.onboarding-copy-card` больше не используются на onboarding-экране,
+    но остаются в `styles.css` (часть из них шарится с catalog/showcase).
+    Уборка — после step 12.
+  - На step 2 CTA «Показать подбор» без числа N, как было в handoff
+    («Показать подбор · N»). N требует backend-preview (сколько миксов
+    совпадёт) — out of scope.
+
 ## 2.35) CI (24 мая 2026) — `--wait` для Postgres в nomad-smoke job
 
 - Запрос: при попытке смерджить step 6 OnboardingSteps (PR #25)
@@ -11,14 +59,14 @@
   коммитом `b198f3d` — добавили `--wait` в `docker compose up -d db`.
   Smoke job этот фикс не получил.
 
-- Реализация (PR #?, ветка `bug/smoke-postgres-wait`):
+- Реализация (PR #26, ветка `bug/smoke-postgres-wait`):
   - `.github/workflows/nomad-smoke.yml`: `docker compose -f
     docker-compose.yml up -d db` → `... up -d --wait db`. Комментарий
     со ссылкой на `b198f3d` для будущей discoverability.
 
 - Проверки:
   - Изменение чисто YAML, нет тестов; финальный gate — зелёный
-    nomad-smoke на самом PR.
+    nomad-smoke на следующих PR'ах.
 
 - Эффект:
   - step 6+ unblocked, прежние PR'ы перестанут спорадически падать на

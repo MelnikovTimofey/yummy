@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { CTA } from '@/components/aroma';
+import { Chip, CTA } from '@/components/aroma';
+import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 
 type GuestView = 'access' | 'intro' | 'onboarding' | 'recommendations' | 'showcase' | 'catalog' | 'rail';
@@ -791,6 +792,7 @@ export const App = () => {
   const [optionsError, setOptionsError] = useState('');
   const [likedProfiles, setLikedProfiles] = useState<string[]>([]);
   const [likedFlavors, setLikedFlavors] = useState<string[]>([]);
+  const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1);
 
   const [recommendations, setRecommendations] = useState<MixCard[]>([]);
   const [recommendationStatus, setRecommendationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -992,6 +994,12 @@ export const App = () => {
     });
   }, [accessGranted, appliedCatalogProfiles, appliedCatalogFlavors]);
 
+  useEffect(() => {
+    if (view === 'onboarding') {
+      setOnboardingStep(1);
+    }
+  }, [view]);
+
   const updateMixInList = (items: MixCard[], mixId: string, updater: (mix: MixCard) => MixCard) =>
     items.map((mix) => (mix.id === mixId ? updater(mix) : mix));
 
@@ -1102,9 +1110,7 @@ export const App = () => {
     }
   };
 
-  const onSubmitOnboarding = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const submitOnboarding = async () => {
     if (!likedProfiles.length && !likedFlavors.length) {
       setRecommendationStatus('error');
       setRecommendationError('Выберите хотя бы один профиль или вкус.');
@@ -1366,6 +1372,33 @@ export const App = () => {
     </nav>
   );
 
+  const renderOnboardingProgress = () => {
+    const percent = onboardingStep === 1 ? 50 : 100;
+    const onBack = () => {
+      if (onboardingStep === 2) {
+        setOnboardingStep(1);
+      } else {
+        setView('intro');
+      }
+    };
+    return (
+      <div className="aroma-onboarding-progress" aria-label="Прогресс онбординга">
+        <button
+          type="button"
+          className="aroma-onboarding-back"
+          onClick={onBack}
+          aria-label="Назад"
+        >
+          ←
+        </button>
+        <div className="aroma-onboarding-bar" role="progressbar" aria-valuemin={0} aria-valuemax={2} aria-valuenow={onboardingStep}>
+          <span className="aroma-onboarding-bar-fill" style={{ width: `${percent}%` }} />
+        </div>
+        <span className="aroma-caps aroma-onboarding-count">{`${onboardingStep}/2`}</span>
+      </div>
+    );
+  };
+
   const renderAppNav = (activeTab: AppTab) => (
     <nav className="topbar-nav-list guest-app-nav" aria-label="Гостевая навигация">
       {([
@@ -1408,7 +1441,8 @@ export const App = () => {
             </Button>
           </div>
         </div>
-        {view === 'intro' || view === 'onboarding' ? renderJourneyNav(view) : null}
+        {view === 'intro' ? renderJourneyNav('intro') : null}
+        {view === 'onboarding' ? renderOnboardingProgress() : null}
         {activeTab ? renderAppNav(activeTab) : null}
         {view === 'rail' && selectedRail ? (
           <div className="rail-breadcrumb">
@@ -1560,103 +1594,136 @@ export const App = () => {
     );
   };
 
-  const renderOnboardingView = () => (
-    <section className="catalog-layout">
-      <Card className="card compact-card onboarding-copy-card">
-        <p className="card-title">Предпочтения</p>
-        <p className="card-text">Выберите профили и вкусы. По ним мы соберём подбор и подсветим релевантный каталог.</p>
-      </Card>
+  const renderOnboardingView = () => {
+    const toggleProfile = (value: string) =>
+      setLikedProfiles((current) =>
+        current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      );
+    const toggleFlavor = (value: string) =>
+      setLikedFlavors((current) =>
+        current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      );
+    const goNext = () => {
+      if (onboardingStep === 1) {
+        setOnboardingStep(2);
+        return;
+      }
+      void submitOnboarding();
+    };
+    const ctaDisabled =
+      onboardingStep === 1
+        ? optionsStatus !== 'ready'
+        : recommendationStatus === 'loading' || optionsStatus !== 'ready';
+    const ctaLabel =
+      onboardingStep === 1
+        ? 'Далее'
+        : recommendationStatus === 'loading'
+          ? 'Собираем подбор…'
+          : 'Показать подбор';
 
-      <form className="catalog-controls cinema-controls" onSubmit={onSubmitOnboarding}>
-        <div className="catalog-tools-row">
-          <div className="selection-summary">
-            {likedProfiles.length ? (
-              <div className="selection-group">
-                <span className="selection-group-label">Профили</span>
-                <div className="selection-chip-grid">
-                  {likedProfiles.map((item) => (
-                    <Badge className="selection-chip" key={item}>
-                      {formatProfileLabel(item)}
-                    </Badge>
-                  ))}
-                </div>
+    return (
+      <div className="aroma-onboarding">
+        <div className="aroma-onboarding-body">
+          {onboardingStep === 1 ? (
+            <>
+              <p className="aroma-caps">Шаг 1 · Профили</p>
+              <h1 className="aroma-onboarding-title">С чего начнём?</h1>
+              <p className="aroma-onboarding-hint">
+                Несколько касаний по профилям, и мы поймём, в какую сторону смотреть.
+              </p>
+              {optionsStatus === 'loading' ? (
+                <p className="screen-status">Подтягиваем доступные профили…</p>
+              ) : null}
+              <div className="aroma-onboarding-profile-grid">
+                {availableProfileOptions.map((option) => {
+                  const active = likedProfiles.includes(option.value);
+                  const color = getProfileColor(option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={cn('aroma-profile-card', active && 'aroma-profile-card-on')}
+                      onClick={() => toggleProfile(option.value)}
+                      aria-pressed={active}
+                    >
+                      <span
+                        className="aroma-profile-card-dot"
+                        style={{
+                          background: color,
+                          boxShadow: active ? `0 0 0 4px ${color}22` : undefined,
+                        }}
+                        aria-hidden
+                      />
+                      <span className="aroma-profile-card-label">{option.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-            ) : null}
-            {likedFlavors.length ? (
-              <div className="selection-group">
-                <span className="selection-group-label">Вкусы</span>
-                <div className="selection-chip-grid">
-                  {likedFlavors.map((item) => (
-                    <Badge className="selection-chip" key={item}>
-                      {item}
-                    </Badge>
-                  ))}
-                </div>
+            </>
+          ) : (
+            <>
+              <p className="aroma-caps">Шаг 2 · Вкусы</p>
+              <h1 className="aroma-onboarding-title">Любимые ноты</h1>
+              <p className="aroma-onboarding-hint">
+                Опционально — но так подбор станет точнее.
+              </p>
+              <div className="aroma-onboarding-flavor-wrap">
+                {options.flavors.map((flavor) => (
+                  <Chip
+                    key={flavor}
+                    active={likedFlavors.includes(flavor)}
+                    onClick={() => toggleFlavor(flavor)}
+                  >
+                    {flavor}
+                  </Chip>
+                ))}
               </div>
-            ) : null}
-            {!likedProfiles.length && !likedFlavors.length ? <Badge className="filter-pill muted">Ничего не выбрано</Badge> : null}
-          </div>
+              {likedProfiles.length ? (
+                <div className="aroma-onboarding-selected">
+                  <p className="aroma-caps">Сейчас выбрано</p>
+                  <div className="aroma-onboarding-selected-row">
+                    {likedProfiles.map((profileId) => (
+                      <span key={profileId} className="aroma-onboarding-profile-tag">
+                        <span
+                          className="aroma-onboarding-profile-tag-dot"
+                          style={{ background: getProfileColor(profileId) }}
+                          aria-hidden
+                        />
+                        {formatProfileLabel(profileId)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+          {optionsError ? <p className="screen-status error">{optionsError}</p> : null}
+          {recommendationError ? <p className="screen-status error">{recommendationError}</p> : null}
         </div>
 
-        <div className="filter-field">
-          <span>Профили вкуса</span>
-          {optionsStatus === 'loading' ? <p className="screen-status">Подтягиваем доступные профили...</p> : null}
-          <div className="filter-scrollbox">
-            {availableProfileOptions.map((option) => (
-              <Button
-                key={option.value}
-                className={cn('filter-option', likedProfiles.includes(option.value) && 'active')}
-                variant="outline"
-                type="button"
-                onClick={() =>
-                  setLikedProfiles((current) =>
-                    current.includes(option.value)
-                      ? current.filter((item) => item !== option.value)
-                      : [...current, option.value],
-                  )
-                }
-              >
-                {option.label}
-              </Button>
-            ))}
+        <div className="aroma-onboarding-dock">
+          <div className="aroma-onboarding-pips" aria-hidden>
+            <span className={cn('aroma-onboarding-pip', onboardingStep >= 1 && 'aroma-onboarding-pip-on')} />
+            <span className={cn('aroma-onboarding-pip', onboardingStep >= 2 && 'aroma-onboarding-pip-on')} />
           </div>
-        </div>
-
-        <div className="filter-field">
-          <span>Вкусы</span>
-          <div className="filter-scrollbox">
-            {options.flavors.map((flavor) => (
-              <Button
-                key={flavor}
-                className={cn('filter-option', likedFlavors.includes(flavor) && 'active')}
-                variant="outline"
-                type="button"
-                onClick={() =>
-                  setLikedFlavors((current) =>
-                    current.includes(flavor) ? current.filter((item) => item !== flavor) : [...current, flavor],
-                  )
-                }
-              >
-                {flavor}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {optionsError ? <p className="screen-status error">{optionsError}</p> : null}
-        {recommendationError ? <p className="screen-status error">{recommendationError}</p> : null}
-
-        <div className="cinema-actions">
-          <Button className="search-button" type="submit" disabled={recommendationStatus === 'loading' || optionsStatus !== 'ready'}>
-            {recommendationStatus === 'loading' ? 'Собираем подбор...' : 'Показать рекомендации'}
-          </Button>
-          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
+          <CTA pulse={onboardingStep === 2 && !ctaDisabled} onClick={goNext} disabled={ctaDisabled}>
+            {ctaLabel}
+          </CTA>
+          <button
+            type="button"
+            className="aroma-onboarding-skip"
+            onClick={() => setView('catalog')}
+          >
             Открыть каталог сразу
-          </Button>
+          </button>
         </div>
-      </form>
-    </section>
-  );
+      </div>
+    );
+  };
 
   const renderSelectedMixBar = () =>
     selectedMixCard && selectedMix ? (
