@@ -63,7 +63,10 @@ jobs:
 
       - name: Start backend database
         working-directory: apps/nomad-backend
-        run: docker compose -f docker-compose.yml up -d db
+        # --wait ждёт healthcheck `pg_isready`, чтобы `prisma db push` не падал
+        # с P1001 на ещё не открытом порту (тот же фикс, что в b198f3d для
+        # nomad-backend-build job'а).
+        run: docker compose -f docker-compose.yml up -d --wait db
 
       - name: Prepare backend schema and seed
         working-directory: apps/nomad-backend

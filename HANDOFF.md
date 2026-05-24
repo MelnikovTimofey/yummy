@@ -1,5 +1,29 @@
 # HANDOFF — Nomad
 
+## 2.35) CI (24 мая 2026) — `--wait` для Postgres в nomad-smoke job
+
+- Запрос: при попытке смерджить step 6 OnboardingSteps (PR #25)
+  `nomad-smoke` job упал с `P1001: Can't reach database server at
+  127.0.0.1:5433` на «Prepare backend schema and seed». Retrigger
+  повторил ту же гонку.
+
+- Контекст: backend-build job ранее имел тот же баг и был починен
+  коммитом `b198f3d` — добавили `--wait` в `docker compose up -d db`.
+  Smoke job этот фикс не получил.
+
+- Реализация (PR #?, ветка `bug/smoke-postgres-wait`):
+  - `.github/workflows/nomad-smoke.yml`: `docker compose -f
+    docker-compose.yml up -d db` → `... up -d --wait db`. Комментарий
+    со ссылкой на `b198f3d` для будущей discoverability.
+
+- Проверки:
+  - Изменение чисто YAML, нет тестов; финальный gate — зелёный
+    nomad-smoke на самом PR.
+
+- Эффект:
+  - step 6+ unblocked, прежние PR'ы перестанут спорадически падать на
+    флаки db.
+
 ## 2.34) Aroma-web (24 мая 2026) — step 4: AuthMinimal по design handoff
 
 - Запрос: первый продуктовый экран из 12-шагового рефактора
