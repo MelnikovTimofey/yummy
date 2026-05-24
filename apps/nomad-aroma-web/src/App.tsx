@@ -1,4 +1,4 @@
-import { FormEvent, UIEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -785,7 +785,6 @@ export const App = () => {
   const [introStatus, setIntroStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [introError, setIntroError] = useState('');
   const [introIndex, setIntroIndex] = useState(0);
-  const introTrackRef = useRef<HTMLDivElement | null>(null);
 
   const [options, setOptions] = useState<OnboardingOptions>({ profiles: [], flavors: [] });
   const [optionsStatus, setOptionsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -1342,8 +1341,6 @@ export const App = () => {
       })
     : [];
 
-  const introProgress = introCards.length ? `${introIndex + 1} из ${introCards.length}` : 'Загрузка';
-
   const renderBrand = () => (
     <Button variant="ghost" type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
       <div>
@@ -1391,10 +1388,6 @@ export const App = () => {
 
   const renderTopbar = () => {
     if (!accessGranted) {
-      return null;
-    }
-
-    if (view === 'intro') {
       return null;
     }
 
@@ -1503,99 +1496,69 @@ export const App = () => {
     );
   };
 
-  const renderIntroView = () => (
-    <section className="intro-stage">
-      {introStatus === 'loading' ? <p className="screen-status">Загружаем знакомство...</p> : null}
-      {introError ? <p className="screen-status error">{introError}</p> : null}
+  const renderIntroView = () => {
+    if (introStatus === 'loading') {
+      return <p className="screen-status">Загружаем знакомство...</p>;
+    }
+    if (introError) {
+      return <p className="screen-status error">{introError}</p>;
+    }
+    if (!introCards.length) {
+      return null;
+    }
 
-      {introCards.length ? (
-        <div className="intro-slider-wrap">
-          <div
-            className="intro-slider-track"
-            ref={introTrackRef}
-            onScroll={(event: UIEvent<HTMLDivElement>) => {
-              const node = event.currentTarget;
-              const nextIndex = Math.round(node.scrollLeft / Math.max(1, node.clientWidth));
-              if (nextIndex !== introIndex) {
-                setIntroIndex(nextIndex);
-              }
-            }}
-          >
-            {introCards.map((card) => (
-              <Card className="card intro-slide intro-slide-fullscreen" key={card.id}>
-                <div className="intro-slide-kicker-row">
-                  <p className="card-title">Шаг {card.step}</p>
-                  <Badge className="filter-pill muted">Карточка {introProgress}</Badge>
-                </div>
-                <h3 className="intro-slide-title">{card.title}</h3>
-                <p className="card-text">{card.description}</p>
-                <ul className="intro-bullets">
-                  {card.bullets.map((bullet) => (
-                    <li key={`${card.id}:${bullet}`}>{bullet}</li>
-                  ))}
-                </ul>
-              </Card>
-            ))}
-          </div>
-          <div className="intro-slider-controls">
-            <div className="intro-dots">
-              {introCards.map((card, index) => (
-                <Button
-                  key={card.id}
-                  className={cn('intro-dot', index === introIndex && 'active')}
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  onClick={() => {
-                    const track = introTrackRef.current;
-                    if (!track) {
-                      return;
-                    }
+    const currentIndex = Math.min(introIndex, introCards.length - 1);
+    const card = introCards[currentIndex];
+    const isLast = currentIndex === introCards.length - 1;
+    const totalLabel = String(introCards.length).padStart(2, '0');
+    const stepLabel = String(currentIndex + 1).padStart(2, '0');
 
-                    track.scrollTo({
-                      left: track.clientWidth * index,
-                      behavior: 'smooth',
-                    });
-                    setIntroIndex(index);
-                  }}
-                  aria-label={`Открыть карточку ${index + 1}`}
-                />
-              ))}
-            </div>
-            <div className="cinema-actions">
-              <Button className="ghost-button" variant="outline" type="button" onClick={finishIntro}>
-                Пропустить
-              </Button>
-              <Button
-                className="search-button"
-                type="button"
-                onClick={() => {
-                  if (introIndex >= introCards.length - 1) {
-                    finishIntro();
-                    return;
-                  }
+    const goNext = () => {
+      if (isLast) {
+        finishIntro();
+        return;
+      }
+      setIntroIndex(currentIndex + 1);
+    };
 
-                  const track = introTrackRef.current;
-                  if (!track) {
-                    return;
-                  }
+    return (
+      <div className="aroma-intro">
+        <span className="aroma-intro-watermark" aria-hidden>{stepLabel}</span>
 
-                  const nextIndex = introIndex + 1;
-                  track.scrollTo({
-                    left: track.clientWidth * nextIndex,
-                    behavior: 'smooth',
-                  });
-                  setIntroIndex(nextIndex);
-                }}
-              >
-                {introIndex >= introCards.length - 1 ? 'Далее к выбору вкусов' : 'Далее'}
-              </Button>
-            </div>
+        <div className="aroma-intro-body">
+          <p className="aroma-caps aroma-intro-caps">{`Шаг ${stepLabel} · из ${totalLabel}`}</p>
+          <div className="aroma-intro-content">
+            <h1 className="aroma-intro-title">{card.title}</h1>
+            <p className="aroma-intro-text">{card.description}</p>
           </div>
         </div>
-      ) : null}
-    </section>
-  );
+
+        <div className="aroma-intro-dock">
+          <div className="aroma-intro-pips" role="tablist" aria-label="Прогресс знакомства">
+            {introCards.map((_, i) => (
+              <span
+                key={i}
+                className={cn('aroma-intro-pip', i === currentIndex && 'aroma-intro-pip-active')}
+                aria-hidden
+              />
+            ))}
+          </div>
+          <CTA pulse={isLast} onClick={goNext}>
+            {isLast ? 'Перейти к подбору' : 'Дальше'}
+          </CTA>
+          {!isLast && (
+            <button
+              type="button"
+              className="aroma-intro-skip"
+              onClick={finishIntro}
+            >
+              Пропустить знакомство
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderOnboardingView = () => (
     <section className="catalog-layout">
