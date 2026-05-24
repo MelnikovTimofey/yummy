@@ -65,8 +65,8 @@ const staffAccounts = [
 const dailyAccessCodes = [
   {
     id: 'daily-code-default',
-    code: 'NOMAD-2026',
-    codeValue: 'NOMAD-2026',
+    code: 'NMD7',
+    codeValue: 'NMD7',
     codeSalt: 'seed:daily-code-default',
     codeLabel: 'Базовый daily code',
     active: true,

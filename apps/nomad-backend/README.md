@@ -21,7 +21,7 @@
 4. seed создаёт стартовые записи:
    - login `admin` / password `admin`,
    - login `nomad` / password `nomad`,
-   - daily code `NOMAD-2026`.
+   - daily code `NMD7`.
 
 На Phase 2 дополнительно есть:
 

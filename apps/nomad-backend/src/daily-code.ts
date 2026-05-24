@@ -23,18 +23,5 @@ export const getNomadDailyCodeWindow = (referenceDate = new Date()): NomadDailyC
   };
 };
 
-export const formatNomadDailyCodeStamp = (referenceDate = new Date()) => {
-  const moscowDate = toMoscowDate(referenceDate);
-  const year = moscowDate.getUTCFullYear();
-  const month = String(moscowDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(moscowDate.getUTCDate()).padStart(2, '0');
-
-  return `${year}${month}${day}`;
-};
-
-export const createNomadDailyCodeValue = (referenceDate = new Date()) => {
-  const stamp = formatNomadDailyCodeStamp(referenceDate);
-  const suffix = crypto.randomBytes(3).toString('hex').toUpperCase();
-
-  return `NOMAD-${stamp}-${suffix}`;
-};
+export const createNomadDailyCodeValue = (_referenceDate: Date = new Date()) =>
+  crypto.randomBytes(3).toString('hex').toUpperCase();

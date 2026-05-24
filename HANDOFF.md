@@ -1,5 +1,46 @@
 # HANDOFF — Nomad
 
+## 2.33) Backend + Smoke (24 мая 2026) — daily access code сжат до 6 hex-чаров
+
+- Запрос: подготовка к UX-рефактору Aroma (PR #21 → step 4 AuthMinimal).
+  Дизайн гостевого `view === 'access'` (см. `design/design_handoff_aroma_atelier/
+  README.md` §Экраны §1) даёт ровно один code-input maxLength 6 с fontSize 40
+  и `letter-spacing: 0.32em` — прежний формат `NOMAD-YYYYMMDD-XXXXXX` (~20
+  чаров) физически не помещается и противоречит интенту «короткий код,
+  который мастер называет голосом».
+
+- Реализация (PR #22, ветка `feature/aroma-short-daily-code`):
+  - `apps/nomad-backend/src/daily-code.ts`: `createNomadDailyCodeValue` теперь
+    возвращает `crypto.randomBytes(3).toString('hex').toUpperCase()` — ровно
+    6 hex-чаров. `formatNomadDailyCodeStamp` удалён (не было внешних
+    потребителей).
+  - Seed (`apps/nomad-backend/src/state.ts` + `apps/nomad-backend/prisma/seed.ts`):
+    `'NOMAD-2026'` → `'NMD7'`.
+  - `apps/nomad-backend/src/automation.test.ts`: ассертим length=6 и
+    `/^[0-9A-F]{6}$/` вместо `startsWith('NOMAD-20260324-')`.
+  - `apps/nomad-backend/src/{auth,access}.test.ts` + `apps/nomad-backend/README.md`:
+    seed-код подняли до `'NMD7'`.
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`: `fill('NOMAD-2026')` →
+    `fill('NMD7')`. UI-разметка и тексты прежние — поэтому label `'Код'`,
+    кнопка `'Далее'`, текст `'Код доступа'` остались.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test` — 40/40 зелёных.
+  - `cd apps/nomad-backend && npm run build` — чистый tsc.
+  - `cd services/nomad-telegram-bot && npm test` — 9/9; build чистый.
+  - Telegram-broadcast не зависит от длины — `bot.ts:66 buildDailyCodeMessage`
+    подставляет `codeValue` в шаблон as-is. Mock-codes в `backend.test.ts`
+    оставлены как есть (не проверяются ассертами).
+
+- Остаточный риск:
+  - В тестах остаются строки-моки `'NOMAD-2026'`, `'NOMAD-2027'`,
+    `'NOMAD-AUDIT'` и пр. — это валидные input-строки, на длину access-кода
+    backend не валидирует. Заходить и переименовывать их = churn без
+    выгоды; правлю только seed-литералы и реальные формат-ассерты.
+  - До merge PR step 4 (AuthMinimal UI) гость по-прежнему вводит код в
+    старом шадсн-инпуте без maxLength — это безопасно, бэкенд короткий код
+    примет.
+
 ## 2.32) Smoke + Process (24 мая 2026) — освежить master-smoke и зафиксировать правило «smoke после правок фронта»
 
 - Запрос: после merge [PR #17](https://github.com/MelnikovTimofey/nomad-yummy/pull/17)

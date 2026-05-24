@@ -41,7 +41,7 @@ test('daily codes CRUD is available to admin and nomad', async () => {
 
       assert.equal(list.statusCode, 200);
       const listBody = list.json() as { items: Array<{ codeValue: string; codeLabel: string }> };
-      assert.equal(listBody.items[0].codeValue, 'NOMAD-2026');
+      assert.equal(listBody.items[0].codeValue, 'NMD7');
       assert.equal(listBody.items[0].codeLabel, 'Базовый daily code');
     }
 
