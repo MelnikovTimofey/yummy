@@ -772,6 +772,47 @@ export const App = () => {
     }
   };
 
+  const hashSkipRef = useRef(false);
+
+  useEffect(() => {
+    if (!user) {
+      document.title = 'Nomad Master — вход';
+      return;
+    }
+    const tab = workspaceTabs.find((item) => item.id === activeTab) ?? workspaceTabs[0];
+    document.title = `${tab.label} — Nomad Master`;
+  }, [user, activeTab]);
+
+  useEffect(() => {
+    if (!user) return;
+    const slug = window.location.hash.replace(/^#/, '');
+    if (slug === activeTab) return;
+    if (hashSkipRef.current) {
+      hashSkipRef.current = false;
+      return;
+    }
+    window.history.pushState(null, '', `#${activeTab}`);
+  }, [user, activeTab]);
+
+  useEffect(() => {
+    if (!user) return;
+    const slug = window.location.hash.replace(/^#/, '');
+    if (workspaceTabs.some((item) => item.id === slug) && slug !== activeTab) {
+      hashSkipRef.current = true;
+      setActiveTab(slug as WorkspaceTab);
+    }
+    const onPop = () => {
+      const next = window.location.hash.replace(/^#/, '');
+      if (workspaceTabs.some((item) => item.id === next)) {
+        hashSkipRef.current = true;
+        setActiveTab(next as WorkspaceTab);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   useEffect(() => {
     const hydrate = async () => {
       if (!token) {
@@ -3094,11 +3135,12 @@ export const App = () => {
       }
     })();
     return (
-      <main className="shell shell--master shell--master-workspace">
+      <main className="shell shell--master shell--master-workspace" id="main-content">
+        <a className="skip-link" href="#main-content">Перейти к содержимому</a>
         <header className="master-topbar">
           <div className="master-topbar__brand">
             <p className="eyebrow">Premium Editorial Backoffice</p>
-            <h1>Nomad Master</h1>
+            <p className="master-topbar__brand-name">Nomad Master</p>
             <p className="meta-line">
               Операторский shell с верхней навигацией для широких таблиц, плотных CRUD-поверхностей и быстрого
               переключения между модулями.
@@ -3158,7 +3200,7 @@ export const App = () => {
           <header className="master-stage__header">
             <div className="master-stage__copy">
               <p className="eyebrow">{activeWorkspace.kicker}</p>
-              <h2>{activeWorkspace.label}</h2>
+              <h1>{activeWorkspace.label}</h1>
               <p className="meta-line">{activeWorkspace.detail}</p>
             </div>
             <div className="master-stage__status">
@@ -3200,7 +3242,8 @@ export const App = () => {
   }
 
   return (
-    <main className="shell shell--master shell--master-login">
+    <main className="shell shell--master shell--master-login" id="main-content">
+      <a className="skip-link" href="#main-content">Перейти к содержимому</a>
       <section className="hero hero--master auth-hero">
         <div className="auth-hero__copy">
           <p className="eyebrow">Nomad Master</p>
