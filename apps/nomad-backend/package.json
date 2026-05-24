@@ -12,7 +12,6 @@
     "import:htreviews:preview": "tsx scripts/import-htreviews.ts",
     "sync:htreviews": "tsx scripts/sync-htreviews.ts",
     "backfill:htreviews:details": "tsx scripts/backfill-htreviews-details.ts",
-    "rebuild:live-catalog": "tsx scripts/rebuild-live-catalog.ts",
     "db:start": "docker compose -f docker-compose.yml up -d db",
     "db:stop": "docker compose -f docker-compose.yml down",
     "prisma:generate": "prisma generate",

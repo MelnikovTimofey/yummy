@@ -21,5 +21,9 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev && npx prisma generate
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/scripts ./scripts
+# scripts/sync-htreviews.ts (seeder profile) импортирует ts-исходники из src,
+# поэтому src обязан присутствовать в runtime-образе. Запуск идёт через `npx tsx`.
+COPY --from=build /app/src ./src
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 EXPOSE 3021
 CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]

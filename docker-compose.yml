@@ -65,6 +65,26 @@ services:
     depends_on:
       - backend
 
+  seeder:
+    # Одноразовое наполнение каталога табаков из htreviews.org.
+    # Запуск: `docker compose --profile seed run --rm seeder`.
+    profiles: ["seed"]
+    build:
+      context: ./apps/nomad-backend
+    environment:
+      DATABASE_URL: postgresql://nomad:nomad@db:5432/nomad?schema=public
+      HTREVIEWS_DELAY_MS: ${HTREVIEWS_DELAY_MS:-250}
+      HTREVIEWS_REQUEST_TIMEOUT_MS: ${HTREVIEWS_REQUEST_TIMEOUT_MS:-20000}
+      HTREVIEWS_FETCH_DETAILS: ${HTREVIEWS_FETCH_DETAILS:-1}
+      HTREVIEWS_BRAND_LIMIT: ${HTREVIEWS_BRAND_LIMIT:-}
+      HTREVIEWS_TOBACCO_LIMIT: ${HTREVIEWS_TOBACCO_LIMIT:-}
+      HTREVIEWS_BRAND_URLS: ${HTREVIEWS_BRAND_URLS:-}
+      HTREVIEWS_DEFAULT_IN_STOCK: ${HTREVIEWS_DEFAULT_IN_STOCK:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "npx prisma db push --skip-generate && npx tsx scripts/sync-htreviews.ts"]
+
   telegram-bot:
     # Требует TELEGRAM_BOT_TOKEN. Запускается отдельно: `docker compose --profile bot up`.
     profiles: ["bot"]

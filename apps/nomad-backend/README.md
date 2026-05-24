@@ -347,40 +347,37 @@ npm run backfill:htreviews:details
 3. `HTREVIEWS_ONLY_MISSING_DESCRIPTION=1` - пройти только по строкам с пустым `description`.
 4. `HTREVIEWS_ONLY_INCOMPLETE=1` - пройти только по строкам, где пуст хотя бы один core-атрибут (`country`, `officialStrength`, `communityStrength`, `productionStatus`, `description`).
 
-## Live catalog rebuild
+## Live catalog seed (этап 1)
 
-Если нужно очистить текущую `public` schema от seed/test inventory и пересобрать рабочие mixes/rails уже поверх HTReviews-каталога, используйте отдельный операционный скрипт:
+Production-БД при первом запуске не содержит seed-каталога. `ensureNomadState`
+ставит только staff/коды/recipients/operators/intro; `NomadTobacco`,
+`NomadMix`, `NomadMixComponent`, `NomadRail`, `NomadRailMix` стартуют пустыми
+и наполняются отдельно из htreviews.org.
+
+Чтобы налить каталог табаков в локальный продуктивный контур:
 
 ```bash
-cd apps/nomad-backend
-DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
-HTREVIEWS_DELAY_MS=5 \
-HTREVIEWS_REQUEST_TIMEOUT_MS=15000 \
-npm run rebuild:live-catalog
+docker compose up -d db backend
+docker compose --profile seed run --rm seeder
 ```
 
-Что делает rebuild:
+Сервис `seeder` использует тот же образ, что и `backend`, и под капотом
+вызывает `npm run sync:htreviews`. Полный прогон сканирует все бренды
+htreviews.org с подгрузкой деталей; контролируйте темп через env:
 
-1. обновляет HTReviews-каталог в `NomadTobacco` через публичный HTML;
-2. удаляет seed tobacco (`sourceKind IS NULL`) и test product-data:
-   - `NomadMix`
-   - `NomadMixComponent`
-   - `NomadRail`
-   - `NomadRailMix`
-   - `NomadSmokeCtaEvent`
-   - `NomadMixRating`
-   - `NomadAuditEvent`
-3. пересобирает текущие `11` mix templates на реальных HTReviews tobacco;
-4. пересоздаёт текущие `3` operational rails;
-5. переводит в `inStock=true` только tobacco, которые реально используются как mix components.
+| Переменная | Назначение |
+| --- | --- |
+| `HTREVIEWS_DELAY_MS` | задержка между HTTP-запросами (по умолчанию 250 мс) |
+| `HTREVIEWS_REQUEST_TIMEOUT_MS` | таймаут на запрос |
+| `HTREVIEWS_BRAND_LIMIT` | top-N брендов (для smoke-прогона) |
+| `HTREVIEWS_TOBACCO_LIMIT` | top-N табаков на бренд |
+| `HTREVIEWS_FETCH_DETAILS` | `0`/`1`, подгружать страницу табака |
+| `HTREVIEWS_BRAND_URLS` | список URL'ов брендов через запятую (точечный seed) |
 
-Фактический live-state после rebuild в этой сессии:
-
-1. `1674` tobacco rows в `public`;
-2. `1674` rows с `sourceKind='htreviews'`;
-3. `0` seed tobacco rows;
-4. `14` tobacco rows помечены `inStock=true` как рабочий ассортимент для mix components;
-5. `11` mixes и `3` rails пересобраны на импортированных HTReviews tobacco.
+После прогона `prisma.nomadTobacco.count()` > 0; вторичные вызовы
+`sync:htreviews` идут upsert'ом, не теряя `inStock`. Миксы (`NomadMix`) и
+rails (`NomadRail`) на этом этапе остаются пустыми — они будут наполнены на
+этапах 2-3.
 
 ## Bootstrap admin
 

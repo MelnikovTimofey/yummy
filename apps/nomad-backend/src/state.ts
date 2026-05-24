@@ -1423,149 +1423,174 @@ const nextRailId = async (name: string) => {
   return `${prefix}-${total + 1}`;
 };
 
-const seedNomadStorage = async () => {
+type NomadStorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+const wipeNomadStorage = async (tx: NomadStorageTx) => {
+  await tx.nomadSmokeCtaEvent.deleteMany();
+  await tx.nomadMixRating.deleteMany();
+  await tx.nomadRailMix.deleteMany();
+  await tx.nomadMixComponent.deleteMany();
+  await tx.nomadRail.deleteMany();
+  await tx.nomadMix.deleteMany();
+  await tx.nomadTobacco.deleteMany();
+  await tx.nomadIntroCard.deleteMany();
+  await tx.nomadDailyAccessCode.deleteMany();
+  await tx.nomadTelegramRecipient.deleteMany();
+  await tx.nomadTelegramOperator.deleteMany();
+  await tx.nomadTelegramAutomationState.deleteMany();
+  await tx.nomadAuditEvent.deleteMany();
+  await tx.nomadStaffAccount.deleteMany();
+};
+
+const insertNomadOperationalState = async (
+  tx: NomadStorageTx,
+  currentCodeWindow: ReturnType<typeof getNomadDailyCodeWindow>,
+) => {
+  await tx.nomadStaffAccount.createMany({
+    data: seedStaffAccounts.map((account) => ({
+      id: account.id,
+      login: account.login,
+      passwordHash: createSecretHash(account.password, account.passwordSalt),
+      passwordSalt: account.passwordSalt,
+      name: account.name,
+      role: account.role,
+      active: account.active,
+    })),
+  });
+
+  await tx.nomadDailyAccessCode.createMany({
+    data: seedDailyAccessCodes.map((code) => ({
+      id: code.id,
+      codeValue: code.code,
+      codeHash: createSecretHash(code.code, code.codeSalt),
+      codeSalt: code.codeSalt,
+      codeLabel: code.codeLabel,
+      active: code.active,
+      startsAt: currentCodeWindow.startsAt,
+      endsAt: currentCodeWindow.endsAt,
+    })),
+  });
+
+  await tx.nomadTelegramRecipient.createMany({
+    data: seedTelegramRecipients.map((recipient) => ({
+      id: recipient.id,
+      chatId: recipient.chatId,
+      label: recipient.label,
+      scope: recipient.scope,
+      active: recipient.active,
+    })),
+  });
+
+  await tx.nomadTelegramOperator.createMany({
+    data: seedTelegramOperators.map((operator) => ({
+      id: operator.id,
+      name: operator.name,
+      phone: operator.phone,
+      active: operator.active,
+      linkedChatId: operator.linkedChatId ?? null,
+      linkedTelegramUserId: operator.linkedTelegramUserId ?? null,
+      linkedUsername: operator.linkedUsername ?? null,
+      linkedDisplayName: operator.linkedDisplayName ?? null,
+      linkedAt: operator.linkedAt ? new Date(operator.linkedAt) : null,
+      lastCodeRequestedAt: operator.lastCodeRequestedAt ? new Date(operator.lastCodeRequestedAt) : null,
+    })),
+  });
+
+  await tx.nomadIntroCard.createMany({
+    data: introCards.map((card) => ({
+      id: card.id,
+      step: card.step,
+      title: card.title,
+      description: card.description,
+      bullets: serializeList(card.bullets),
+    })),
+  });
+};
+
+const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
+  await tx.nomadTobacco.createMany({
+    data: seedTobaccos.map((tobacco) => ({
+      id: tobacco.id,
+      manufacturer: tobacco.manufacturer,
+      name: tobacco.name,
+      description: null,
+      flavorProfiles: serializeList(tobacco.flavorProfiles),
+      flavors: serializeList(tobacco.flavors),
+      flavorTags: serializeList(tobacco.flavorTags),
+      inStock: tobacco.inStock,
+    })),
+  });
+
+  await tx.nomadMix.createMany({
+    data: seedMixes.map((mix) => {
+      const components = mix.componentIds
+        .map((componentId) => seedTobaccos.find((item) => item.id === componentId))
+        .filter((item): item is (typeof seedTobaccos)[number] => Boolean(item));
+
+      return {
+        id: mix.id,
+        name: mix.name,
+        description: mix.description,
+        flavorProfiles: serializeList(unique(components.flatMap((item) => item.flavorProfiles))),
+        flavors: serializeList(unique(components.flatMap((item) => item.flavors))),
+        flavorTags: serializeList(unique(components.flatMap((item) => item.flavorTags))),
+        available: true,
+        popularity: mix.popularity,
+        baseAvgRating: mix.avgRating,
+      };
+    }),
+  });
+
+  await tx.nomadMixComponent.createMany({
+    data: seedMixes.flatMap((mix) =>
+      distributeMixComponentProportions(mix.componentIds).map((component) => ({
+        mixId: mix.id,
+        tobaccoId: component.tobaccoId,
+        proportion: component.proportion,
+        sortOrder: component.sortOrder,
+      })),
+    ),
+  });
+
+  await tx.nomadRail.createMany({
+    data: defaultRails.map((rail) => ({
+      id: rail.id,
+      name: rail.name,
+      description: rail.description,
+      type: rail.type,
+      active: rail.active,
+      isSystem: rail.isSystem,
+    })),
+  });
+
+  await tx.nomadRailMix.createMany({
+    data: defaultRails.flatMap((rail) =>
+      rail.mixIds.map((mixId, index) => ({
+        railId: rail.id,
+        mixId,
+        sortOrder: index,
+      })),
+    ),
+  });
+};
+
+// Production-bootstrap: только staff/коды/recipients/operators/intro. Каталог
+// табаков и миксы наполняются отдельно через `npm run sync:htreviews`. Этап 1
+// разводит production-данные и тестовую фикстуру seed-каталога.
+const bootstrapNomadOperationalState = async () => {
   const currentCodeWindow = getNomadDailyCodeWindow();
-
   await prisma.$transaction(async (tx) => {
-    await tx.nomadSmokeCtaEvent.deleteMany();
-    await tx.nomadMixRating.deleteMany();
-    await tx.nomadRailMix.deleteMany();
-    await tx.nomadMixComponent.deleteMany();
-    await tx.nomadRail.deleteMany();
-    await tx.nomadMix.deleteMany();
-    await tx.nomadTobacco.deleteMany();
-    await tx.nomadIntroCard.deleteMany();
-    await tx.nomadDailyAccessCode.deleteMany();
-    await tx.nomadTelegramRecipient.deleteMany();
-    await tx.nomadTelegramOperator.deleteMany();
-    await tx.nomadTelegramAutomationState.deleteMany();
-    await tx.nomadAuditEvent.deleteMany();
-    await tx.nomadStaffAccount.deleteMany();
+    await insertNomadOperationalState(tx, currentCodeWindow);
+  });
+};
 
-    await tx.nomadStaffAccount.createMany({
-      data: seedStaffAccounts.map((account) => ({
-        id: account.id,
-        login: account.login,
-        passwordHash: createSecretHash(account.password, account.passwordSalt),
-        passwordSalt: account.passwordSalt,
-        name: account.name,
-        role: account.role,
-        active: account.active,
-      })),
-    });
-
-    await tx.nomadDailyAccessCode.createMany({
-      data: seedDailyAccessCodes.map((code) => ({
-        id: code.id,
-        codeValue: code.code,
-        codeHash: createSecretHash(code.code, code.codeSalt),
-        codeSalt: code.codeSalt,
-        codeLabel: code.codeLabel,
-        active: code.active,
-        startsAt: currentCodeWindow.startsAt,
-        endsAt: currentCodeWindow.endsAt,
-      })),
-    });
-
-    await tx.nomadTelegramRecipient.createMany({
-      data: seedTelegramRecipients.map((recipient) => ({
-        id: recipient.id,
-        chatId: recipient.chatId,
-        label: recipient.label,
-        scope: recipient.scope,
-        active: recipient.active,
-      })),
-    });
-
-    await tx.nomadTelegramOperator.createMany({
-      data: seedTelegramOperators.map((operator) => ({
-        id: operator.id,
-        name: operator.name,
-        phone: operator.phone,
-        active: operator.active,
-        linkedChatId: operator.linkedChatId ?? null,
-        linkedTelegramUserId: operator.linkedTelegramUserId ?? null,
-        linkedUsername: operator.linkedUsername ?? null,
-        linkedDisplayName: operator.linkedDisplayName ?? null,
-        linkedAt: operator.linkedAt ? new Date(operator.linkedAt) : null,
-        lastCodeRequestedAt: operator.lastCodeRequestedAt ? new Date(operator.lastCodeRequestedAt) : null,
-      })),
-    });
-
-    await tx.nomadIntroCard.createMany({
-      data: introCards.map((card) => ({
-        id: card.id,
-        step: card.step,
-        title: card.title,
-        description: card.description,
-        bullets: serializeList(card.bullets),
-      })),
-    });
-
-    await tx.nomadTobacco.createMany({
-      data: seedTobaccos.map((tobacco) => ({
-        id: tobacco.id,
-        manufacturer: tobacco.manufacturer,
-        name: tobacco.name,
-        description: null,
-        flavorProfiles: serializeList(tobacco.flavorProfiles),
-        flavors: serializeList(tobacco.flavors),
-        flavorTags: serializeList(tobacco.flavorTags),
-        inStock: tobacco.inStock,
-      })),
-    });
-
-    await tx.nomadMix.createMany({
-      data: seedMixes.map((mix) => {
-        const components = mix.componentIds
-          .map((componentId) => seedTobaccos.find((item) => item.id === componentId))
-          .filter((item): item is (typeof seedTobaccos)[number] => Boolean(item));
-
-        return {
-          id: mix.id,
-          name: mix.name,
-          description: mix.description,
-          flavorProfiles: serializeList(unique(components.flatMap((item) => item.flavorProfiles))),
-          flavors: serializeList(unique(components.flatMap((item) => item.flavors))),
-          flavorTags: serializeList(unique(components.flatMap((item) => item.flavorTags))),
-          available: true,
-          popularity: mix.popularity,
-          baseAvgRating: mix.avgRating,
-        };
-      }),
-    });
-
-    await tx.nomadMixComponent.createMany({
-      data: seedMixes.flatMap((mix) =>
-        distributeMixComponentProportions(mix.componentIds).map((component) => ({
-          mixId: mix.id,
-          tobaccoId: component.tobaccoId,
-          proportion: component.proportion,
-          sortOrder: component.sortOrder,
-        })),
-      ),
-    });
-
-    await tx.nomadRail.createMany({
-      data: defaultRails.map((rail) => ({
-        id: rail.id,
-        name: rail.name,
-        description: rail.description,
-        type: rail.type,
-        active: rail.active,
-        isSystem: rail.isSystem,
-      })),
-    });
-
-    await tx.nomadRailMix.createMany({
-      data: defaultRails.flatMap((rail) =>
-        rail.mixIds.map((mixId, index) => ({
-          railId: rail.id,
-          mixId,
-          sortOrder: index,
-        })),
-      ),
-    });
+// Полный test-reset: чистит всё и переустанавливает seed-каталог как фикстуру.
+const resetNomadStorageWithSeedCatalog = async () => {
+  const currentCodeWindow = getNomadDailyCodeWindow();
+  await prisma.$transaction(async (tx) => {
+    await wipeNomadStorage(tx);
+    await insertNomadOperationalState(tx, currentCodeWindow);
+    await insertNomadSeedCatalog(tx);
   });
 };
 
@@ -1576,9 +1601,9 @@ export const ensureNomadState = async () => {
   }
 
   bootstrapPromise = (async () => {
-    const tobaccoCount = await prisma.nomadTobacco.count();
-    if (!tobaccoCount) {
-      await seedNomadStorage();
+    const staffAccountCount = await prisma.nomadStaffAccount.count();
+    if (!staffAccountCount) {
+      await bootstrapNomadOperationalState();
     }
   })();
 
@@ -1594,7 +1619,7 @@ export const resetNomadState = async () => {
     throw new Error('resetNomadState is disabled outside test mode. Set NOMAD_ALLOW_STATE_RESET=1 for explicit maintenance runs.');
   }
 
-  await seedNomadStorage();
+  await resetNomadStorageWithSeedCatalog();
 };
 
 export const getGuestIntroCards = async () => {

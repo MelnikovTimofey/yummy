@@ -1,3 +1,7 @@
+// Test fixture only: эти константы используются для resetNomadState() в тестах
+// и проверки инвентаря. Production-БД питается из htreviews.org через
+// `npm run sync:htreviews` и эти значения в неё не попадают.
+
 export const flavorProfiles = [
   'sweet',
   'sour',

@@ -1,5 +1,83 @@
 # HANDOFF — Nomad
 
+## 2.31) Backend + Ops (24 мая 2026) — Этап 1: production-БД питается из htreviews
+
+- Запрос: «Наполнение базы данными продуктивного контура» — стадии: (1) каталог
+  табаков, (2) миксы холодного старта, (3) пара редакторских rails. Эта запись
+  фиксирует первую стадию.
+
+- Контекст (issue #16, ветка `feature/16-live-tobacco-catalog`):
+  - До правок `ensureNomadState()` срабатывал по триггеру `tobaccoCount === 0`,
+    звал `seedNomadStorage()` и наливал 12 синтетических seed-табаков
+    + 11 миксов + 3 rails. Production-БД из docker compose стартовала с этой
+    же фикстурой, что нарушало продуктовый инвариант «каталог из htreviews».
+  - В репо уже есть рабочий `npm run sync:htreviews` →
+    `syncHtReviewsCatalogToNomad`, который сканирует htreviews.org и upsert'ит
+    `NomadTobacco`. Этап 1 — отвязать production-bootstrap от seed-каталога и
+    дать docker compose явный one-shot профиль для прогона sync.
+
+- Реализация (PR #?, ветка `feature/16-live-tobacco-catalog`):
+  - `apps/nomad-backend/src/state.ts`:
+    - вместо одного `seedNomadStorage` теперь три хелпера —
+      `wipeNomadStorage`, `insertNomadOperationalState`, `insertNomadSeedCatalog`;
+    - production-путь `bootstrapNomadOperationalState()` вставляет только
+      staff/коды/recipients/operators/intro и не делает `deleteMany`;
+    - test-путь `resetNomadStorageWithSeedCatalog()` сохраняет прежнее
+      поведение (полный wipe + seed-каталог как фикстура);
+    - `ensureNomadState()` триггерится по `staffAccountCount === 0`, чтобы
+      пустой каталог не повторно ронял staff/коды на каждом API-запросе;
+    - `resetNomadState()` (test-only, `NOMAD_ALLOW_STATE_RESET=1`) продолжает
+      звать полный reset — все 5 тестовых файлов (`inventory/access/content/
+      recommendations/automation`) идут без изменений.
+  - `apps/nomad-backend/src/catalog.ts` — добавлен header «test fixture only».
+  - `apps/nomad-backend/scripts/rebuild-live-catalog.ts` — удалён вместе с
+    `npm run rebuild:live-catalog` в `package.json` и README-разделом про него;
+    его роль (мост seed↔htreviews) теряет смысл после изоляции production.
+  - `apps/nomad-backend/Dockerfile` — runtime stage теперь копирует `src` и
+    `tsconfig.json`, чтобы `npx tsx scripts/sync-htreviews.ts` отрабатывал из
+    seeder-контейнера (он импортирует `../src/integrations/...`).
+  - `docker-compose.yml` (корень) — новый сервис `seeder` под profile `seed`:
+    тот же образ, что backend, command =
+    `npx prisma db push --skip-generate && npx tsx scripts/sync-htreviews.ts`,
+    env `HTREVIEWS_*` пробрасываются из `.env`. Backend и aroma/master-web
+    дефолтного `up` не задевает.
+  - `.env.example` — добавлен блок переменных для seeder.
+  - `apps/nomad-backend/README.md` — раздел «Live catalog seed (этап 1)»
+    описывает контракт: `docker compose up -d db backend` →
+    `docker compose --profile seed run --rm seeder` → live-каталог в БД.
+
+- Проверки:
+  - `cd apps/nomad-backend && npm test` — 40/40 зелёных (resetNomadState
+    оставлен под тесты, поэтому ни один из existing seed-IDs тестов не
+    сломался);
+  - `cd apps/nomad-backend && npm run build` — чистый tsc;
+  - `docker compose config --quiet` — валидный compose;
+  - реальный live-прогон seeder против htreviews.org **не выполнялся** в этой
+    сессии (длинный network-bound прогон); проверка остаётся на момент
+    реального наполнения продуктивного контура.
+
+- Остаточный риск:
+  - seeder сейчас полагается на `npx tsx` и `npx prisma` — оба грузятся в
+    runtime-контейнере при первом вызове. Для продакшен-наполнения это
+    приемлемо (одноразовая операция), но если потребуется частый перезапуск
+    — стоит вынести `tsx`/`prisma` в `dependencies` или скомпилировать
+    `scripts/` в `dist/`;
+  - этапы 2-3 (миксы и rails) пока обслуживаются только тестовой фикстурой
+    в `resetNomadState` — после их доставки нужно будет ещё раз пройтись по
+    bootstrap-контракту;
+  - `seedNomadStorage`-композиция теперь шире, чем была — стоит проверить,
+    что test-reset продолжает работать при добавлении новых таблиц в схему.
+
+- Эффект:
+  - первый `docker compose up` поднимает Postgres с пустыми
+    `NomadTobacco/Mix/MixComponent/Rail/RailMix`; ни одной синтетической
+    seed-записи в production нет;
+  - `docker compose --profile seed run --rm seeder` за один шаг наполняет
+    каталог из htreviews.org (~сотни брендов × десятки SKU; темп
+    контролируется `HTREVIEWS_*`);
+  - все backend-тесты остались валидны без переписывания (seed-фикстура
+    живёт только внутри `resetNomadState`).
+
 ## 2.30) Ops + Process (23 мая 2026) — root docker compose stack и жёсткий запрет правок в `main`
 
 - Запрос: «Генерация docker compose для запуска сервисов продукта nomad yummy»
