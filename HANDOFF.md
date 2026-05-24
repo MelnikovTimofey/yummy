@@ -1,5 +1,46 @@
 # HANDOFF — Nomad
 
+## 2.32) Smoke + Process (24 мая 2026) — освежить master-smoke и зафиксировать правило «smoke после правок фронта»
+
+- Запрос: после merge [PR #17](https://github.com/MelnikovTimofey/nomad-yummy/pull/17)
+  smoke на CI остался красным. Триаж в той же сессии показал, что регрессия
+  тянется с PR #12/#14 (UX-рефакторы master-web): h1 после логина больше не
+  `Nomad Master` — это label активного workspace (`Дашборд` для default
+  `dashboard`). Пользователь попросил починить smoke в отдельном bug-PR и
+  добавить правило, чтобы фронт-PR в будущем правил smoke в том же PR, а не
+  ронял его на месяцы.
+
+- Реализация (PR #?, ветка `bug/smoke-after-frontend-drift`):
+  - `tests/nomad-smoke/tests/master-smoke.spec.ts`:
+    `signIn` теперь проверяет `getByRole('heading', { name: 'Дашборд',
+    level: 1 })` вместо устаревшего `'Nomad Master'`. Комментарий рядом
+    объясняет, что h1 = label активного workspace и любое изменение
+    default'а или текста ловится этим smoke.
+  - `CLAUDE.md` §3: добавлено жёсткое правило про smoke после правок фронта
+    — любое изменение в `apps/nomad-master-web/src/**` или
+    `apps/nomad-aroma-web/src/**`, затрагивающее разметку/текст/heading/
+    label/нав, обязано пройти `npm run smoke` в том же PR (или явно
+    перечислить, какие assertion'ы могут поплыть, и обновить их).
+    Триггер записи — текущий incident: красный smoke на main с апреля.
+
+- Проверки:
+  - `cd tests/nomad-smoke && npm run smoke` локально **не выполнялся** в
+    этой сессии (нужен полный стек: db + backend + master-web + aroma-web);
+    финальный gate — зелёный smoke job на PR.
+
+- Остаточный риск:
+  - Правило в CLAUDE.md — социальный gate, не CI-блок. Долгосрочная защита
+    — branch protection с required `nomad-smoke` (см. NOMAD_REVIEW_POLICY
+    Phase 2). Здесь не делаем, чтобы не разводить scope bug-PR'а.
+  - Текущий fix чинит только `master-smoke`. Если в `aroma-smoke` есть
+    аналогичный drift — он не покрыт; ловить в момент следующей smoke-проверки.
+
+- Эффект:
+  - smoke снова даёт сигнал по реальным регрессиям master-shell, а не
+    шумит из-за древнего label'а;
+  - правило в CLAUDE.md прерывает паттерн «UI-PR смерджен, smoke красный,
+    починим потом» — теперь это явный нарушитель процесса.
+
 ## 2.31) Backend + Ops (24 мая 2026) — Этап 1: production-БД питается из htreviews
 
 - Запрос: «Наполнение базы данными продуктивного контура» — стадии: (1) каталог

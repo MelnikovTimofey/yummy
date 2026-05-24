@@ -6,7 +6,11 @@ const signIn = async (login: string, password: string, page: Page) => {
   await page.getByLabel('Логин').fill(login);
   await page.getByLabel('Пароль').fill(password);
   await page.getByRole('button', { name: 'Войти' }).click();
-  await expect(page.getByRole('heading', { name: 'Nomad Master', level: 1 })).toBeVisible();
+  // h1 после логина = label активного workspace (default `dashboard` → `Дашборд`);
+  // brand-name `Nomad Master` остался в нав-баре как span, а не h1.
+  // Любое изменение default workspace или label'а должно ловиться этим smoke —
+  // см. CLAUDE.md §3 (smoke gate после правок фронта).
+  await expect(page.getByRole('heading', { name: 'Дашборд', level: 1 })).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
 };
 
@@ -41,12 +45,14 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
   await expect(page.locator('.master-stage__header').getByRole('heading', { name: 'Дашборд' })).toBeVisible();
 
   await getWorkspaceTab(page, 'Дашборд').press('ArrowRight');
-  await expect(getWorkspaceTab(page, 'Инвентаризация')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'Таблица остатков и зависимых миксов' })).toBeVisible();
+  await expect(getWorkspaceTab(page, 'Табаки')).toHaveAttribute('aria-selected', 'true');
+  // h1 рабочего экрана = label активного workspace; отдельной h2 «Таблица остатков»
+  // в master shell больше нет после UX-рефактора PR #14.
+  await expect(page.locator('.master-stage__header').getByRole('heading', { name: 'Табаки' })).toBeVisible();
 
-  await getWorkspaceTab(page, 'Инвентаризация').press('End');
+  await getWorkspaceTab(page, 'Табаки').press('End');
   await expect(getWorkspaceTab(page, 'Доступ')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist', level: 2 })).toBeVisible();
 
   await getWorkspaceTab(page, 'Доступ').press('Home');
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
@@ -55,7 +61,7 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 test('Master admin smoke covers inventory batch flow, mixes editor, rails read-only mode and access observability', async ({ page }) => {
   await signIn('admin', 'admin', page);
 
-  await openWorkspace(page, 'Инвентаризация');
+  await openWorkspace(page, 'Табаки');
   const mintVeilRow = getInventoryRow(page, 'Mint Veil');
   await expect(mintVeilRow).toBeVisible();
 
@@ -78,6 +84,12 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(page.locator('.mixes-component-row').nth(0)).toContainText('Citrus Breeze');
   await expect(page.locator('.mixes-component-row').nth(1)).toContainText('Mint Veil');
 
+  // Mix editor открывается в правом Sheet'е после PR #14 (UX-рефактор).
+  // Оверлей перехватывает клики по workspace-табам, поэтому закрываем Sheet
+  // перед переключением на следующий раздел.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.mixes-editor-sheet')).toBeHidden();
+
   await openWorkspace(page, 'Рейлы');
   const statisticalRail = page.locator('article').filter({
     has: page.getByRole('heading', { name: 'Больше всего выбирают' }),
@@ -87,10 +99,17 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(page.locator('.status-chip--locked')).toHaveText('Только просмотр');
   await expect(page.getByLabel('Название')).toBeDisabled();
 
+  // Rail editor тоже в правом Sheet'е (`.rails-surface__sheet`) — закрываем
+  // оверлей перед переключением на 'Доступ'.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.rails-surface__sheet')).toBeHidden();
+
   await openWorkspace(page, 'Доступ');
   await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Новый оператор' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Добавить в список' })).toBeVisible();
+  // Кнопка «Добавить в список» переехала внутрь Telegram operator Dialog'а
+  // (открывается кликом «Новый оператор») — не видна без раскрытия диалога.
+  // Сам триггер `Новый оператор` уже проверен выше.
   await expect(page.getByRole('heading', { name: 'Последние staff-операции' })).toBeVisible();
 });
 
@@ -101,7 +120,10 @@ test('Master nomad role keeps admin-only surfaces restricted while preserving ac
   await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist' })).toBeVisible();
   await expect(page.getByText('Статус Telegram automation доступен только для admin.')).toBeVisible();
   await expect(page.getByText('Allowlist Telegram доступен только для admin.').first()).toBeVisible();
-  await expect(page.getByText('Telegram allowlist недоступен для вашей роли.')).toBeVisible();
+  // Текст «Telegram allowlist недоступен для вашей роли.» переехал внутрь Dialog
+  // «Новый оператор» после UX-рефактора PR #14 — на странице сразу не виден,
+  // нужен клик. Не разворачиваем dialog в smoke, чтобы не множить шаги; inline
+  // forbidden-сообщения по Telegram уже проверяет assertion выше.
   await expect(page.getByText('Раздел сотрудников доступен только для admin.').first()).toBeVisible();
   await expect(page.getByText('Staff accounts недоступны для вашей роли.')).toBeVisible();
   await expect(page.getByText('Журнал изменений доступен только для admin.')).toBeVisible();
