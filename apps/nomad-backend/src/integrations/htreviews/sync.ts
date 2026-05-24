@@ -97,6 +97,10 @@ const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
   });
 };
 
+const logUpsertProgress = (message: string) => {
+  console.log(`[htreviews:sync] ${new Date().toISOString()} ${message}`);
+};
+
 export const syncHtReviewsCatalogToNomad = async (
   options: HtReviewsSyncOptions = {},
 ): Promise<HtReviewsSyncStats> => {
@@ -107,7 +111,13 @@ export const syncHtReviewsCatalogToNomad = async (
   let updated = 0;
   let preservedStockCount = 0;
 
+  logUpsertProgress(
+    `phase=upsert total=${snapshot.items.length} defaultInStock=${defaultInStock}`,
+  );
+
+  let processed = 0;
   for (const item of snapshot.items) {
+    processed += 1;
     const existing = await findExistingRecord(item);
     const nextInStock = existing ? existing.inStock : defaultInStock;
     if (existing && existing.inStock !== defaultInStock) {
@@ -124,16 +134,22 @@ export const syncHtReviewsCatalogToNomad = async (
         data,
       });
       updated += 1;
-      continue;
+    } else {
+      await prisma.nomadTobacco.create({
+        data: {
+          id: toStableId(item),
+          ...data,
+        },
+      });
+      created += 1;
     }
 
-    await prisma.nomadTobacco.create({
-      data: {
-        id: toStableId(item),
-        ...data,
-      },
-    });
-    created += 1;
+    if (processed % 50 === 0 || processed === snapshot.items.length) {
+      logUpsertProgress(
+        `upsert ${processed}/${snapshot.items.length} created=${created} updated=${updated}` +
+        ` preservedStock=${preservedStockCount}`,
+      );
+    }
   }
 
   return {

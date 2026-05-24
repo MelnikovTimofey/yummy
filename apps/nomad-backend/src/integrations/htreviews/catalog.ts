@@ -224,6 +224,13 @@ const fetchAdditionalObjectPageSummaries = async (
   return summaries;
 };
 
+// Прогресс-логирование рассчитано на длинный scrape (часы): без него
+// `docker compose run seeder` выглядит «зависшим». Логи stdout-only, чтобы
+// docker compose их подхватывал в реальном времени.
+const logProgress = (message: string) => {
+  console.log(`[htreviews] ${new Date().toISOString()} ${message}`);
+};
+
 export const fetchHtReviewsCatalogSnapshot = async (
   options: HtReviewsImportOptions = {},
 ): Promise<HtReviewsCatalogSnapshot> => {
@@ -233,8 +240,18 @@ export const fetchHtReviewsCatalogSnapshot = async (
   const discoveryLineUrls = new Set<string>();
   const summaryMap = new Map<string, HtReviewsTobaccoSummary>();
 
+  logProgress(
+    `phase=start delayMs=${client.delayMs} timeoutMs=${client.requestTimeoutMs}` +
+    ` brandLimit=${options.brandLimit ?? 'none'} tobaccoLimit=${options.tobaccoLimit ?? 'none'}` +
+    ` fetchDetails=${options.fetchDetails !== false}` +
+    ` explicitBrands=${explicitBrands?.length ?? 0}`,
+  );
+
   if (!explicitBrands) {
+    logProgress(`phase=discovery paths=${DISCOVERY_PATHS.length}`);
+    let pathIndex = 0;
     for (const path of DISCOVERY_PATHS) {
+      pathIndex += 1;
       const html = await safeFetchText(client, `${client.baseUrl}${path}`);
       if (!html) {
         continue;
@@ -257,11 +274,19 @@ export const fetchHtReviewsCatalogSnapshot = async (
           discoveryBrandUrls.add(brand.url);
         }
       }
+      logProgress(
+        `discovery ${pathIndex}/${DISCOVERY_PATHS.length} ${path}` +
+        ` brands=${discoveryBrandUrls.size} lines=${discoveryLineUrls.size} summaries=${summaryMap.size}`,
+      );
     }
   }
 
   if (!explicitBrands && !options.brandLimit) {
-    for (const lineUrl of discoveryLineUrls) {
+    const lineUrls = Array.from(discoveryLineUrls);
+    logProgress(`phase=lines total=${lineUrls.length}`);
+    let lineIndex = 0;
+    for (const lineUrl of lineUrls) {
+      lineIndex += 1;
       const html = await safeFetchText(client, lineUrl);
       if (!html) {
         continue;
@@ -274,7 +299,14 @@ export const fetchHtReviewsCatalogSnapshot = async (
         summaryMap.set(summary.url, summary);
         discoveryBrandUrls.add(summary.brand.url);
       }
+      if (lineIndex % 10 === 0 || lineIndex === lineUrls.length) {
+        logProgress(
+          `lines ${lineIndex}/${lineUrls.length}` +
+          ` brands=${discoveryBrandUrls.size} summaries=${summaryMap.size}`,
+        );
+      }
       if (options.tobaccoLimit && summaryMap.size >= options.tobaccoLimit) {
+        logProgress(`lines stopped at tobaccoLimit=${options.tobaccoLimit}`);
         break;
       }
     }
@@ -285,7 +317,11 @@ export const fetchHtReviewsCatalogSnapshot = async (
     options.brandLimit,
   );
 
+  logProgress(`phase=brands total=${brands.length}`);
+  let brandIndex = 0;
   for (const brand of brands) {
+    brandIndex += 1;
+    const before = summaryMap.size;
     const html = await safeFetchText(client, brand.url);
     if (!html) {
       continue;
@@ -296,7 +332,15 @@ export const fetchHtReviewsCatalogSnapshot = async (
     for (const summary of await fetchAdditionalObjectPageSummaries(client, html, brand.url)) {
       summaryMap.set(summary.url, summary);
     }
+    const added = summaryMap.size - before;
+    if (brandIndex % 10 === 0 || added > 0 || brandIndex === brands.length) {
+      logProgress(
+        `brands ${brandIndex}/${brands.length} ${brand.name}` +
+        ` +${added} (summaries=${summaryMap.size})`,
+      );
+    }
     if (options.tobaccoLimit && summaryMap.size >= options.tobaccoLimit) {
+      logProgress(`brands stopped at tobaccoLimit=${options.tobaccoLimit}`);
       break;
     }
   }
@@ -308,7 +352,15 @@ export const fetchHtReviewsCatalogSnapshot = async (
 
   const items: HtReviewsImportedTobacco[] = [];
 
+  if (options.fetchDetails === false) {
+    logProgress(`phase=details skipped (fetchDetails=false) total=${limitedSummaries.length}`);
+  } else {
+    logProgress(`phase=details total=${limitedSummaries.length}`);
+  }
+
+  let detailIndex = 0;
   for (const summary of limitedSummaries) {
+    detailIndex += 1;
     const detailHtml =
       options.fetchDetails === false
         ? null
@@ -318,7 +370,17 @@ export const fetchHtReviewsCatalogSnapshot = async (
         ? parseTobaccoPage(detailHtml, client.baseUrl, summary.url)
         : null;
     items.push(mergeSummaryAndDetail(summary, detail));
+    if (
+      options.fetchDetails !== false &&
+      (detailIndex % 25 === 0 || detailIndex === limitedSummaries.length)
+    ) {
+      logProgress(`details ${detailIndex}/${limitedSummaries.length}`);
+    }
   }
+
+  logProgress(
+    `phase=snapshot-ready brands=${brands.length} tobaccos=${items.length}`,
+  );
 
   return {
     source: 'htreviews',

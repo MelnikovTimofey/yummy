@@ -33,6 +33,9 @@ async function main() {
     .map((item) => item.trim())
     .filter(Boolean);
 
+  const startedAt = Date.now();
+  console.log(`[htreviews:sync] ${new Date().toISOString()} starting against ${process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':***@') ?? '<no DATABASE_URL>'}`);
+
   const stats = await syncHtReviewsCatalogToNomad({
     brandLimit: toInt(process.env.HTREVIEWS_BRAND_LIMIT),
     tobaccoLimit: toInt(process.env.HTREVIEWS_TOBACCO_LIMIT),
@@ -42,7 +45,8 @@ async function main() {
     brandUrls,
   });
 
-  console.log('[htreviews:sync] completed');
+  const elapsedMs = Date.now() - startedAt;
+  console.log(`[htreviews:sync] ${new Date().toISOString()} completed in ${Math.round(elapsedMs / 1000)}s`);
   console.log(JSON.stringify(stats, null, 2));
 }
 
