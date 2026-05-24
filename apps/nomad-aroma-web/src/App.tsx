@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Chip, CTA } from '@/components/aroma';
+import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 
@@ -1749,72 +1749,117 @@ export const App = () => {
       </div>
     ) : null;
 
-  const renderRecommendationsView = () => (
-    <section className="recommendations-layout">
-      <Card className="card catalog-summary">
-        <p className="card-title">Подбор для вас</p>
-        <p className="card-text">
-          {recommendationStatus === 'loading'
-            ? 'Собираем список миксов под выбранные вкусы...'
-            : recommendations.length
-              ? `Найдено ${recommendations.length} вариантов. Откройте карточку микса и посмотрите состав, рейтинг и детали.`
-              : 'После выбора вкусов здесь появится персональный подбор.'}
-        </p>
-      </Card>
-
-      {recommendationError ? <p className="screen-status error">{recommendationError}</p> : null}
-      {!recommendations.length && recommendationStatus !== 'loading' ? (
-        <Card className="card compact-card recommendation-empty-card">
-          <div className="recommendation-empty-head">
-            <Badge className="filter-pill muted">
-              {recommendationStatus === 'ready' ? 'Подбор не найден' : 'Подбор пока пуст'}
-            </Badge>
-            <p className="card-title">
-              {recommendationStatus === 'ready' ? 'Ничего не найдено' : 'Сначала выберите вкусы'}
-            </p>
-          </div>
-          <p className="card-text">
+  const renderRecommendationsView = () => {
+    if (recommendationStatus === 'loading') {
+      return <p className="screen-status">Собираем подбор…</p>;
+    }
+    if (recommendationError) {
+      return <p className="screen-status error">{recommendationError}</p>;
+    }
+    if (!recommendations.length) {
+      return (
+        <section className="aroma-recs-empty">
+          <p className="aroma-caps">
+            {recommendationStatus === 'ready' ? 'Подбор не найден' : 'Подбор пока пуст'}
+          </p>
+          <h1 className="aroma-recs-empty-title">
+            {recommendationStatus === 'ready' ? 'Ничего не найдено' : 'Сначала выберите вкусы'}
+          </h1>
+          <p className="aroma-recs-empty-text">
             {recommendationStatus === 'ready'
               ? 'Попробуйте изменить профили и вкусы или сразу перейти в каталог.'
               : 'Откройте предпочтения, чтобы мы собрали подбор под текущее настроение, или сразу посмотрите весь каталог.'}
           </p>
-          <div className="recommendation-empty-points">
-            <span className="selection-chip">Профили вкуса</span>
-            <span className="selection-chip">Витрина мастеров</span>
-            <span className="selection-chip">Каталог без входа</span>
-          </div>
-          <div className="cinema-actions recommendation-empty-actions">
-            <Button className="search-button" type="button" onClick={() => setView('onboarding')}>
+          <div className="aroma-recs-empty-actions">
+            <CTA onClick={() => setView('onboarding')}>
               {recommendationStatus === 'ready' ? 'Изменить вкусы' : 'Открыть предпочтения'}
-            </Button>
-            <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
+            </CTA>
+            <button
+              type="button"
+              className="aroma-onboarding-skip"
+              onClick={() => setView('catalog')}
+            >
               Открыть каталог
-            </Button>
+            </button>
           </div>
-        </Card>
-      ) : null}
+        </section>
+      );
+    }
 
-      <section className="list-grid cinema-grid">
-        {recommendations.map((mix) => (
-          <MixTile key={mix.id} mix={mix} onOpen={(currentMix) => openMix(currentMix, 'recommendations')} />
-        ))}
+    const [hero, ...rest] = recommendations;
+    const heroColor = getProfileColor(hero.flavorProfiles[0]);
+    const heroComponents = [...hero.components]
+      .sort((left, right) => right.proportion - left.proportion)
+      .slice(0, 4);
+
+    return (
+      <section className="aroma-recs">
+        <p className="aroma-caps">Лучшее совпадение</p>
+        <article
+          className="aroma-recs-hero"
+          style={{
+            background: `radial-gradient(circle at 80% 0%, ${heroColor}55 0%, transparent 55%), linear-gradient(180deg, rgba(34,15,16,0.96) 0%, rgba(22,11,12,0.88) 100%)`,
+          }}
+        >
+          <div className="aroma-recs-hero-head">
+            <ProfileGlyph profiles={hero.flavorProfiles} size={64} />
+            <div className="aroma-recs-hero-head-text">
+              <h2 className="aroma-recs-hero-title">{hero.name}</h2>
+              <p className="aroma-recs-hero-desc">{hero.description}</p>
+            </div>
+          </div>
+          <SignatureBar profiles={hero.flavorProfiles} height={6} />
+          {heroComponents.length ? (
+            <div className="aroma-recs-composition">
+              {heroComponents.map((component) => (
+                <div className="aroma-recs-comp-row" key={component.id}>
+                  <span className="aroma-caps aroma-recs-comp-maker">{component.manufacturer}</span>
+                  <span className="aroma-recs-comp-name">{component.name}</span>
+                  <span className="aroma-recs-comp-share">{Math.round(component.proportion)}%</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="aroma-recs-hero-meta">
+            <RatingPill rating={hero.avgRating} />
+            <span className="aroma-caps">{`${hero.popularity} выборов`}</span>
+          </div>
+          <CTA
+            pulse
+            disabled={chooseStatus === 'loading'}
+            onClick={() => void onChooseMix(hero, 'recommendations')}
+          >
+            {chooseStatus === 'loading' && selectedMix?.id === hero.id ? 'Сохраняем…' : 'Покурить'}
+          </CTA>
+        </article>
+
+        {rest.length ? (
+          <>
+            <p className="aroma-caps">Тоже подходят</p>
+            <div className="aroma-recs-list">
+              {rest.slice(0, 4).map((mix) => (
+                <button
+                  key={mix.id}
+                  type="button"
+                  className="aroma-recs-row"
+                  onClick={() => openMix(mix, 'recommendations')}
+                >
+                  <div className="aroma-recs-row-main">
+                    <h3 className="aroma-recs-row-name">{mix.name}</h3>
+                    <SignatureBar profiles={mix.flavorProfiles} height={3} />
+                    <p className="aroma-recs-row-flavors">
+                      {mix.flavors.slice(0, 3).join(' · ')}
+                    </p>
+                  </div>
+                  <RatingPill rating={mix.avgRating} />
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
       </section>
-
-      {recommendations.length ? (
-        <div className="cinema-actions">
-          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('showcase')}>
-            Перейти в витрину
-          </Button>
-          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('catalog')}>
-            Открыть каталог
-          </Button>
-          <Button className="ghost-button" variant="outline" type="button" onClick={() => setView('onboarding')}>
-            Изменить вкусы
-          </Button>
-        </div>
-      ) : null}
-    </section>
-  );
+    );
+  };
 
   const renderShowcaseView = () => (
     <section className="home-layout">

@@ -1774,6 +1774,167 @@ select:focus-visible {
   cursor: pointer;
 }
 
+.aroma-recs,
+.aroma-recs-empty {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px calc(20px + var(--safe-bottom));
+}
+
+.aroma-recs-empty {
+  align-content: center;
+  text-align: center;
+  min-height: 50dvh;
+}
+
+.aroma-recs-empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.05;
+  color: var(--text-0);
+}
+
+.aroma-recs-empty-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-1);
+  max-width: 30ch;
+  margin-inline: auto;
+}
+
+.aroma-recs-empty-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.aroma-recs-hero {
+  border-radius: 22px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 236, 0.04),
+    0 18px 36px rgba(0, 0, 0, 0.18);
+}
+
+.aroma-recs-hero-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.aroma-recs-hero-head-text {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.aroma-recs-hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--text-0);
+}
+
+.aroma-recs-hero-desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+
+.aroma-recs-composition {
+  display: grid;
+  gap: 6px;
+}
+
+.aroma-recs-comp-row {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.aroma-recs-comp-maker {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+.aroma-recs-comp-name {
+  font-size: 13px;
+  color: var(--text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aroma-recs-comp-share {
+  font-size: 13px;
+  color: var(--accent-soft);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.aroma-recs-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.aroma-recs-list {
+  display: grid;
+  gap: 8px;
+}
+
+.aroma-recs-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(28, 13, 13, 0.84);
+  color: var(--text-0);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+}
+
+.aroma-recs-row:hover {
+  border-color: rgba(216, 171, 104, 0.4);
+}
+
+.aroma-recs-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.aroma-recs-row-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  line-height: 1.15;
+  color: var(--text-0);
+}
+
+.aroma-recs-row-flavors {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .search-row,
   .filters-row {
