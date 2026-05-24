@@ -50,6 +50,50 @@ docker compose down                       # стоп
 docker compose down -v                    # стоп + сброс данных (volume nomad_db)
 ```
 
+### Наполнение каталога табаков (PROD-данные)
+
+Свежий `docker compose up` поднимает БД с **пустым** каталогом
+(`NomadTobacco`, `NomadMix`, `NomadRail` и связанные таблицы). Чтобы налить
+production-каталог из `htreviews.org` — одноразовый прогон seeder-профиля:
+
+```bash
+# Поднять минимум — db + backend
+docker compose up -d db backend
+
+# Налить полный live-каталог htreviews (~сотни брендов × десятки SKU)
+docker compose --profile seed run --rm seeder
+```
+
+Прогон идемпотентен: повторный запуск делает upsert и не теряет `inStock`.
+
+Темп и охват — через переменные в `.env` (см. [`.env.example`](.env.example)):
+
+| Переменная | Назначение |
+| --- | --- |
+| `HTREVIEWS_DELAY_MS` | задержка между HTTP-запросами (по умолчанию 250 мс) |
+| `HTREVIEWS_REQUEST_TIMEOUT_MS` | таймаут на запрос |
+| `HTREVIEWS_BRAND_LIMIT` | top-N брендов (для smoke-прогона) |
+| `HTREVIEWS_TOBACCO_LIMIT` | top-N табаков на бренд |
+| `HTREVIEWS_FETCH_DETAILS` | `0`/`1`, подгружать страницу табака |
+| `HTREVIEWS_BRAND_URLS` | список URL'ов брендов через запятую (точечный seed) |
+
+Быстрый smoke (1 бренд × 10 SKU, ~минута):
+
+```bash
+HTREVIEWS_BRAND_LIMIT=1 HTREVIEWS_TOBACCO_LIMIT=10 \
+  docker compose --profile seed run --rm seeder
+```
+
+Проверить наполнение:
+
+```bash
+docker compose exec db psql -U nomad -d nomad \
+  -c "SELECT COUNT(*) FROM \"NomadTobacco\" WHERE \"sourceKind\" = 'htreviews';"
+```
+
+Миксы и rails (`NomadMix`, `NomadRail`) на этом этапе остаются пустыми —
+они закрываются этапами 2-3 наполнения PROD-данными.
+
 `VITE_API_BASE_URL` зашивается в bundle на этапе сборки (build-arg); по
 умолчанию указывает на `http://localhost:3021`. Меняется через
 `AROMA_VITE_API_BASE_URL` / `MASTER_VITE_API_BASE_URL` в `.env` — после
