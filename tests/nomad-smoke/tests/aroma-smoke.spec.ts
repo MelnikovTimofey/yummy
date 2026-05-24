@@ -18,7 +18,7 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   await expect(page.getByRole('button', { name: 'Каталог' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Витрина' }).click();
-  await expect(page.getByText('Здесь собраны готовые подборки')).toBeVisible();
+  await expect(page.getByText('Выбор гостей').first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Каталог' }).click();
   await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();

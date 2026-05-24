@@ -1,5 +1,43 @@
 # HANDOFF — Nomad
 
+## 2.38) Aroma-web (24 мая 2026) — step 9: ShowcaseTabs по design handoff
+
+- Запрос: продолжение 12-шагового рефактора. После steps 4–8 — переписать
+  `view === 'showcase'` под вариант B из
+  `design/design_handoff_aroma_atelier/aroma/showcase.jsx`: category
+  switcher из rails, hero первой строки + плоские остальные.
+
+- Реализация (PR #?, ветка `feature/aroma-showcase-tabs`):
+  - `apps/nomad-aroma-web/src/App.tsx`:
+    - state `activeShowcaseRailId: string | null` + useEffect, который
+      инициализирует и переинициализирует active rail при изменении
+      `showcaseRails` (например после первой загрузки);
+    - renderShowcaseView переписан: tab-row (caps `railToneLabels[type]` +
+      serif title 19, active = border-bottom 2px primary), vertical
+      list для миксов активного рейла, первая строка hero (60 glyph
+      + radial-halo от цвета первого профиля), остальные — плоский фон;
+    - линка «Смотреть весь рейл» внизу — переключает на `view === 'rail'`
+      с выбранным рейлом (поведение step 12 не меняется).
+  - `apps/nomad-aroma-web/src/styles.css`: `.aroma-showcase*` (~12 классов:
+    tabs/tab/kicker/title/list/row/row-hero/main/name/flavors/rail-link).
+  - `tests/nomad-smoke/tests/aroma-smoke.spec.ts`:
+    `getByText('Здесь собраны готовые подборки')` → `getByText('Мастера')`
+    (старая «Витрина» card убрана; «Мастера» — стабильный caps из
+    defaultRails seed с `type: 'curated'`).
+
+- Проверки:
+  - `npm run build` — CSS 53.57 → 55.11 kB.
+  - `npx tsc --noEmit` — чистый.
+  - `nomad-smoke` локально не запускался; CI gate.
+
+- Остаточный риск:
+  - Если все rails вдруг окажутся не-curated (например, при пустом seed
+    + только statistical), assertion «Мастера» поплывёт. На production
+    seed (state.ts:511) всегда есть curated.
+  - Старые `.home-rail*`, `.home-layout`, `.home-link-btn`, `MixTile`-
+    компонент остаются на rail-view (step 12); рефактор их трогать
+    не будет, чистка после.
+
 ## 2.37) Aroma-web (24 мая 2026) — step 8: CatalogInline по design handoff
 
 - Запрос: продолжение 12-шагового рефактора. После steps 4–7 — переписать

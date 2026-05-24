@@ -842,6 +842,7 @@ export const App = () => {
     typeof window === 'undefined' ? true : !window.matchMedia('(max-width: 768px)').matches,
   );
   const [catalogPopoverOpen, setCatalogPopoverOpen] = useState(false);
+  const [activeShowcaseRailId, setActiveShowcaseRailId] = useState<string | null>(null);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -1000,6 +1001,18 @@ export const App = () => {
       setOnboardingStep(1);
     }
   }, [view]);
+
+  useEffect(() => {
+    if (!showcaseRails.length) {
+      if (activeShowcaseRailId !== null) {
+        setActiveShowcaseRailId(null);
+      }
+      return;
+    }
+    if (!showcaseRails.some((rail) => rail.id === activeShowcaseRailId)) {
+      setActiveShowcaseRailId(showcaseRails[0].id);
+    }
+  }, [showcaseRails, activeShowcaseRailId]);
 
   const updateMixInList = (items: MixCard[], mixId: string, updater: (mix: MixCard) => MixCard) =>
     items.map((mix) => (mix.id === mixId ? updater(mix) : mix));
@@ -1862,50 +1875,98 @@ export const App = () => {
     );
   };
 
-  const renderShowcaseView = () => (
-    <section className="home-layout">
-      <Card className="card compact-card">
-        <p className="card-title">Витрина</p>
-        <p className="card-text">
-          Здесь собраны готовые подборки, выбор от наших мастеров и миксы, которые чаще выбирают гости.
-        </p>
-      </Card>
+  const renderShowcaseView = () => {
+    if (showcaseStatus === 'loading') {
+      return <p className="screen-status">Загружаем витрину…</p>;
+    }
+    if (showcaseError) {
+      return <p className="screen-status error">{showcaseError}</p>;
+    }
+    if (!showcaseRails.length) {
+      return <p className="screen-status">Подборки пока не опубликованы.</p>;
+    }
 
-      {showcaseStatus === 'loading' ? <p className="screen-status">Загружаем витрину...</p> : null}
-      {showcaseError ? <p className="screen-status error">{showcaseError}</p> : null}
-      {!showcaseRails.length && showcaseStatus === 'ready' ? <p className="screen-status">Подборки пока не опубликованы.</p> : null}
+    const activeRail =
+      showcaseRails.find((rail) => rail.id === activeShowcaseRailId) ?? showcaseRails[0];
 
-      {showcaseRails.map((rail) => (
-        <section className="home-rail" key={rail.id}>
-          <div className="home-rail-head">
-            <button className="home-rail-title-btn" type="button" onClick={() => {
-              setSelectedRail(rail);
-              setRailSearch('');
-              setView('rail');
-            }}>
-              <div className="home-rail-title-line">
-                <h3 className="home-rail-title">{rail.name}</h3>
-                <Badge className="filter-pill">{railToneLabels[rail.type]}</Badge>
-              </div>
-              <p className="hint">{rail.description || railDescriptions[rail.type]}</p>
-            </button>
-            <Button className="home-link-btn" variant="link" type="button" onClick={() => {
-              setSelectedRail(rail);
-              setRailSearch('');
-              setView('rail');
-            }}>
-              Смотреть всё
-            </Button>
-          </div>
-          <div className="home-rail-row">
-            {rail.mixes.map((mix) => (
-              <MixTile key={`${rail.id}:${mix.id}`} mix={mix} size="rail" onOpen={(currentMix) => openMix(currentMix, 'showcase')} />
-            ))}
-          </div>
-        </section>
-      ))}
-    </section>
-  );
+    const openRail = () => {
+      setSelectedRail(activeRail);
+      setRailSearch('');
+      setView('rail');
+    };
+
+    return (
+      <section className="aroma-showcase">
+        <div className="aroma-showcase-tabs" role="tablist">
+          {showcaseRails.map((rail) => {
+            const isActive = rail.id === activeRail.id;
+            return (
+              <button
+                key={rail.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={cn(
+                  'aroma-showcase-tab',
+                  isActive && 'aroma-showcase-tab-on',
+                )}
+                onClick={() => setActiveShowcaseRailId(rail.id)}
+              >
+                <span className="aroma-caps aroma-showcase-tab-kicker">
+                  {railToneLabels[rail.type]}
+                </span>
+                <span className="aroma-showcase-tab-title">{rail.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="aroma-showcase-list">
+          {activeRail.mixes.map((mix, index) => {
+            const isHero = index === 0;
+            const profileColor = getProfileColor(mix.flavorProfiles[0]);
+            return (
+              <button
+                key={`${activeRail.id}:${mix.id}`}
+                type="button"
+                className={cn(
+                  'aroma-showcase-row',
+                  isHero && 'aroma-showcase-row-hero',
+                )}
+                onClick={() => openMix(mix, 'showcase')}
+                style={
+                  isHero
+                    ? {
+                        background: `radial-gradient(circle at 80% 0%, ${profileColor}44 0%, transparent 55%), rgba(28,13,13,0.84)`,
+                      }
+                    : undefined
+                }
+              >
+                <ProfileGlyph profiles={mix.flavorProfiles} size={isHero ? 60 : 44} />
+                <div className="aroma-showcase-row-main">
+                  <h3 className="aroma-showcase-row-name">{mix.name}</h3>
+                  {mix.flavors.length ? (
+                    <p className="aroma-showcase-row-flavors">
+                      {mix.flavors.slice(0, 3).join(' · ')}
+                    </p>
+                  ) : null}
+                </div>
+                <RatingPill rating={mix.avgRating} />
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          className="aroma-onboarding-skip aroma-showcase-rail-link"
+          onClick={openRail}
+        >
+          Смотреть весь рейл
+        </button>
+      </section>
+    );
+  };
 
   const renderRailView = () => (
     <section className="catalog-layout">
