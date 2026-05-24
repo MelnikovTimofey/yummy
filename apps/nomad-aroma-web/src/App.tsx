@@ -9,7 +9,15 @@ import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 
-type GuestView = 'access' | 'intro' | 'onboarding' | 'recommendations' | 'showcase' | 'catalog' | 'rail';
+type GuestView =
+  | 'access'
+  | 'intro'
+  | 'onboarding'
+  | 'recommendations'
+  | 'showcase'
+  | 'catalog'
+  | 'rail'
+  | 'smoke-confirmation';
 type AppTab = 'recommendations' | 'showcase' | 'catalog';
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
@@ -1147,6 +1155,8 @@ export const App = () => {
         source,
       });
       setChooseStatus('ready');
+      setMixModalState(null);
+      setView('smoke-confirmation');
     } catch (cause) {
       setSelectedMix(previousMix);
       setChooseStatus('error');
@@ -1411,6 +1421,10 @@ export const App = () => {
 
   const renderTopbar = () => {
     if (!accessGranted) {
+      return null;
+    }
+
+    if (view === 'smoke-confirmation') {
       return null;
     }
 
@@ -1944,6 +1958,78 @@ export const App = () => {
     );
   };
 
+  const renderSmokeConfirmationView = () => {
+    if (!selectedMixCard) {
+      return (
+        <section className="aroma-smoke-confirmation">
+          <p className="screen-status">Микс не выбран.</p>
+          <CTA onClick={() => setView('recommendations')}>К рекомендациям</CTA>
+        </section>
+      );
+    }
+
+    const mix = selectedMixCard;
+    const components = [...mix.components].sort(
+      (left, right) => right.proportion - left.proportion,
+    );
+    const profileLabels = mix.flavorProfiles.map(formatProfileLabel).join(' · ');
+
+    return (
+      <section className="aroma-smoke-confirmation">
+        <div className="aroma-smoke-confirmation-topbar">
+          <button
+            type="button"
+            className="aroma-smoke-confirmation-done"
+            onClick={() => setView('recommendations')}
+          >
+            Готово
+          </button>
+        </div>
+
+        <div className="aroma-smoke-confirmation-stack">
+          <p className="aroma-caps aroma-smoke-confirmation-kicker">Покажите мастеру</p>
+          <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
+          <h1 className="aroma-smoke-confirmation-title">{mix.name}</h1>
+          {profileLabels ? (
+            <p className="aroma-caps aroma-smoke-confirmation-profiles">{profileLabels}</p>
+          ) : null}
+          <SignatureBar profiles={mix.flavorProfiles} height={3} />
+        </div>
+
+        {components.length ? (
+          <section className="aroma-smoke-confirmation-composition">
+            <p className="aroma-caps">Состав</p>
+            <ul className="aroma-smoke-confirmation-comp-list">
+              {components.map((component) => (
+                <li key={component.id} className="aroma-smoke-confirmation-comp-row">
+                  <div className="aroma-smoke-confirmation-comp-text">
+                    <span className="aroma-smoke-confirmation-comp-name">
+                      {component.name}
+                    </span>
+                    <span className="aroma-caps aroma-smoke-confirmation-comp-maker">
+                      {component.manufacturer}
+                    </span>
+                  </div>
+                  <span className="aroma-smoke-confirmation-comp-share">
+                    {formatPercent(component.proportion)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <button
+          type="button"
+          className="aroma-mix-sheet-ghost aroma-smoke-confirmation-rate"
+          onClick={() => setView('recommendations')}
+        >
+          Оценить, когда соберут
+        </button>
+      </section>
+    );
+  };
+
   const renderRailView = () => (
     <section className="catalog-layout">
       <Card className="card catalog-summary">
@@ -2139,6 +2225,8 @@ export const App = () => {
       <div className="phone-shell">
         {!accessGranted ? (
           renderAccessView()
+        ) : view === 'smoke-confirmation' ? (
+          renderSmokeConfirmationView()
         ) : (
           <>
             {renderTopbar()}
