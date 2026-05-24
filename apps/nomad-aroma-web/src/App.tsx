@@ -1,10 +1,8 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
@@ -161,9 +159,8 @@ const railDescriptions: Record<RailType, string> = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const unique = (items: string[]) => Array.from(new Set(items));
+const unique = (items: string[]): string[] => Array.from(new Set(items));
 
-const normalizeToken = (value: string) => value.trim().toLowerCase();
 
 const formatPlainLabel = (value: string) =>
   value
@@ -262,31 +259,6 @@ const buildCatalogQuery = (filters: CatalogFilters) => {
   return query ? `?${query}` : '';
 };
 
-const buildManufacturerKey = (value: string) => normalizeToken(value);
-
-const getMixTone = (mix: MixCard) => {
-  const palette = ['#6a1718', '#7d241c', '#8f3f22', '#5a1712', '#7b3021', '#4a1a16'];
-  const source = `${mix.name}:${mix.id}`;
-  const hash = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return palette[hash % palette.length];
-};
-
-const getMixFooterText = (mix: MixCard) => {
-  const componentNames = unique(mix.components.map((item) => item.name));
-  if (componentNames.length) {
-    return componentNames.slice(0, 2).join(' · ');
-  }
-
-  if (mix.flavors.length) {
-    return mix.flavors.slice(0, 3).join(' · ');
-  }
-
-  return 'Состав уточняется';
-};
-
-const getDominantProfile = (mix: MixCard) => mix.flavorProfiles[0] ?? null;
-
-const formatRatingTag = (mix: MixCard) => `★ ${mix.avgRating.toFixed(1).replace('.', ',')}`;
 const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().replace('.', ',')}%`;
 
 const normalizeIntroCard = (item: unknown, index: number): IntroCard => {
@@ -504,55 +476,6 @@ const sendMixRating = async (mixId: string, value: number) => {
     ratingCount: toNumber(record.ratingCount ?? ratingRecord.ratingsCount ?? itemRecord.ratingsCount, Number.NaN),
     message: typeof record.message === 'string' ? record.message : undefined,
   } satisfies MixRatingResult;
-};
-
-const MixTile = ({
-  mix,
-  size = 'grid',
-  onOpen,
-}: {
-  mix: MixCard;
-  size?: 'rail' | 'grid';
-  onOpen: (mix: MixCard) => void;
-}) => {
-  const dominantProfile = getDominantProfile(mix);
-
-  return (
-    <Card asChild className={`mix-unified-card mix-unified-card-${size} interactive`}>
-      <article
-        onClick={() => onOpen(mix)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            onOpen(mix);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        style={{
-          background: `linear-gradient(145deg, ${getMixTone(mix)}b0 0%, #1a1715 74%, #120f0d 100%)`,
-        }}
-        data-testid={`mix-card-${mix.id}`}
-      >
-        <div className="mix-unified-overlay">
-          <div className="mix-unified-head">
-            <div className="mix-unified-title-wrap">
-              <p className="mix-unified-title">{mix.name}</p>
-            </div>
-            {!mix.available ? <Badge className="filter-pill muted">Нет в наличии</Badge> : null}
-          </div>
-          <div className="mix-unified-body">
-            <p className="mix-unified-meta">{mix.flavors.length ? mix.flavors.slice(0, 3).join(' · ') : mix.description}</p>
-            <div className="mix-unified-tags">
-              <Badge className="profile-tag mix-rating-tag">{formatRatingTag(mix)}</Badge>
-              {dominantProfile ? <Badge className="profile-tag">{formatProfileLabel(dominantProfile)}</Badge> : null}
-            </div>
-            <p className="mix-ratings mix-unified-footer">{getMixFooterText(mix)}</p>
-          </div>
-        </div>
-      </article>
-    </Card>
-  );
 };
 
 const COMPOSITION_PALETTE = ['#d8ab68', '#c08a4a', '#a23048', '#7a9560', '#7fb5a3'];
@@ -809,30 +732,11 @@ export const App = () => {
   const [ratingMessage, setRatingMessage] = useState('');
 
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
-  const [railSearch, setRailSearch] = useState('');
 
-  const [queryDraft, setQueryDraft] = useState('');
   const [query, setQuery] = useState('');
-  const [manufacturerSearchDraft, setManufacturerSearchDraft] = useState('');
-  const [tobaccoSearchDraft, setTobaccoSearchDraft] = useState('');
-  const [profileSearchDraft, setProfileSearchDraft] = useState('');
-  const [flavorSearchDraft, setFlavorSearchDraft] = useState('');
-  const [selectedManufacturerIds, setSelectedManufacturerIds] = useState<string[]>([]);
-  const [selectedTobaccoIds, setSelectedTobaccoIds] = useState<string[]>([]);
-  const [selectedCatalogProfiles, setSelectedCatalogProfiles] = useState<string[]>([]);
-  const [selectedCatalogFlavors, setSelectedCatalogFlavors] = useState<string[]>([]);
-  const [appliedManufacturerIds, setAppliedManufacturerIds] = useState<string[]>([]);
-  const [appliedTobaccoIds, setAppliedTobaccoIds] = useState<string[]>([]);
   const [appliedCatalogProfiles, setAppliedCatalogProfiles] = useState<string[]>([]);
   const [appliedCatalogFlavors, setAppliedCatalogFlavors] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<CatalogSort>('popularity');
   const [appliedSortBy, setAppliedSortBy] = useState<CatalogSort>('popularity');
-  const [isCompactFilters, setIsCompactFilters] = useState(() =>
-    typeof window === 'undefined' ? true : window.matchMedia('(max-width: 768px)').matches,
-  );
-  const [filtersOpen, setFiltersOpen] = useState(() =>
-    typeof window === 'undefined' ? true : !window.matchMedia('(max-width: 768px)').matches,
-  );
   const [catalogPopoverOpen, setCatalogPopoverOpen] = useState(false);
   const [activeShowcaseRailId, setActiveShowcaseRailId] = useState<string | null>(null);
   const [railProfileFilters, setRailProfileFilters] = useState<string[]>([]);
@@ -871,29 +775,6 @@ export const App = () => {
       setView(introSeen ? 'onboarding' : 'intro');
     }
   }, [accessGranted, introSeen, view]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const media = window.matchMedia('(max-width: 768px)');
-    const sync = () => {
-      setIsCompactFilters(media.matches);
-      if (!media.matches) {
-        setFiltersOpen(true);
-      }
-    };
-
-    sync();
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', sync);
-      return () => media.removeEventListener('change', sync);
-    }
-
-    media.addListener(sync);
-    return () => media.removeListener(sync);
-  }, []);
 
   const loadIntroCards = async () => {
     setIntroStatus('loading');
@@ -1041,49 +922,17 @@ export const App = () => {
     );
   };
 
-  const applyCatalogFilters = () => {
-    setQuery(queryDraft.trim());
-    setAppliedManufacturerIds(selectedManufacturerIds);
-    setAppliedTobaccoIds(selectedTobaccoIds);
-    setAppliedCatalogProfiles(selectedCatalogProfiles);
-    setAppliedCatalogFlavors(selectedCatalogFlavors);
-    setAppliedSortBy(sortBy);
-    if (isCompactFilters) {
-      setFiltersOpen(false);
-    }
-  };
-
   const resetCatalogFilters = () => {
-    setQueryDraft('');
     setQuery('');
-    setManufacturerSearchDraft('');
-    setTobaccoSearchDraft('');
-    setProfileSearchDraft('');
-    setFlavorSearchDraft('');
-    setSelectedManufacturerIds([]);
-    setSelectedTobaccoIds([]);
-    setSelectedCatalogProfiles([]);
-    setSelectedCatalogFlavors([]);
-    setAppliedManufacturerIds([]);
-    setAppliedTobaccoIds([]);
     setAppliedCatalogProfiles([]);
     setAppliedCatalogFlavors([]);
-    setSortBy('popularity');
     setAppliedSortBy('popularity');
   };
 
   const primeCatalogFromOnboarding = (profiles: string[], flavors: string[]) => {
-    setSelectedManufacturerIds([]);
-    setSelectedTobaccoIds([]);
-    setSelectedCatalogProfiles(profiles);
-    setSelectedCatalogFlavors(flavors);
-    setAppliedManufacturerIds([]);
-    setAppliedTobaccoIds([]);
     setAppliedCatalogProfiles(profiles);
     setAppliedCatalogFlavors(flavors);
-    setQueryDraft('');
     setQuery('');
-    setSortBy('popularity');
     setAppliedSortBy('popularity');
   };
 
@@ -1219,59 +1068,11 @@ export const App = () => {
     setRatingMessage('');
     setRatingValue(null);
     setSelectedRail(null);
-    setRailSearch('');
     resetCatalogFilters();
   };
 
   const availableProfileOptions = profileOptions.filter((option) =>
     !options.profiles.length || options.profiles.includes(option.value),
-  );
-
-  const availableCatalogProfileOptions = profileOptions.filter((option) =>
-    catalogSourceMixes.some((mix) => mix.flavorProfiles.includes(option.value)),
-  );
-
-  const catalogManufacturers: Array<{ id: string; label: string }> = unique(
-    catalogSourceMixes.flatMap((mix) => mix.components.map((component) => component.manufacturer)),
-  )
-    .sort((left, right) => left.localeCompare(right, 'ru'))
-    .map((label) => ({
-      id: buildManufacturerKey(label),
-      label,
-    }));
-
-  const catalogTobaccos: Array<{ id: string; label: string }> = unique(
-    catalogSourceMixes.flatMap((mix) => mix.components.map((component) => component.id)),
-  )
-    .map((id) => {
-      const component = catalogSourceMixes.flatMap((mix) => mix.components).find((item) => item.id === id);
-      return component
-        ? {
-            id,
-            label: `${component.manufacturer} · ${component.name}`,
-          }
-        : null;
-    })
-    .filter((item): item is { id: string; label: string } => Boolean(item))
-    .sort((left, right) => left.label.localeCompare(right.label, 'ru'));
-
-  const catalogFlavorOptions = unique(catalogSourceMixes.flatMap((mix) => mix.flavors)).sort((left, right) =>
-    left.localeCompare(right, 'ru'),
-  );
-
-  const filteredManufacturerOptions = catalogManufacturers.filter((item) =>
-    manufacturerSearchDraft.trim()
-      ? item.label.toLowerCase().includes(manufacturerSearchDraft.trim().toLowerCase())
-      : true,
-  );
-  const filteredTobaccoOptions = catalogTobaccos.filter((item) =>
-    tobaccoSearchDraft.trim() ? item.label.toLowerCase().includes(tobaccoSearchDraft.trim().toLowerCase()) : true,
-  );
-  const filteredProfileOptions = availableCatalogProfileOptions.filter((item) =>
-    profileSearchDraft.trim() ? item.label.toLowerCase().includes(profileSearchDraft.trim().toLowerCase()) : true,
-  );
-  const filteredFlavorOptions = catalogFlavorOptions.filter((item) =>
-    flavorSearchDraft.trim() ? item.toLowerCase().includes(flavorSearchDraft.trim().toLowerCase()) : true,
   );
 
   const filteredCatalogMixes = catalogSourceMixes
@@ -1293,14 +1094,6 @@ export const App = () => {
 
       return haystack.includes(query.toLowerCase());
     })
-    .filter((mix) =>
-      !appliedManufacturerIds.length
-        ? true
-        : mix.components.some((component) => appliedManufacturerIds.includes(buildManufacturerKey(component.manufacturer))),
-    )
-    .filter((mix) =>
-      !appliedTobaccoIds.length ? true : mix.components.some((component) => appliedTobaccoIds.includes(component.id)),
-    )
     .filter((mix) =>
       !appliedCatalogProfiles.length ? true : mix.flavorProfiles.some((profile) => appliedCatalogProfiles.includes(profile)),
     )
@@ -1324,22 +1117,6 @@ export const App = () => {
 
       return left.name.localeCompare(right.name, 'ru');
     });
-
-  const activeFilterLabels = [
-    ...(query ? [`Поиск: ${query}`] : []),
-    ...(appliedManufacturerIds.length ? [`Бренды: ${appliedManufacturerIds.length}`] : []),
-    ...(appliedTobaccoIds.length ? [`Табаки: ${appliedTobaccoIds.length}`] : []),
-    ...(appliedCatalogProfiles.length ? [`Профили: ${appliedCatalogProfiles.length}`] : []),
-    ...(appliedCatalogFlavors.length ? [`Вкусы: ${appliedCatalogFlavors.length}`] : []),
-    ...(appliedSortBy !== 'popularity' ? [sortOptions.find((item) => item.value === appliedSortBy)?.label ?? 'Сортировка'] : []),
-  ];
-  const hasCatalogFilters =
-    Boolean(query) ||
-    appliedManufacturerIds.length > 0 ||
-    appliedTobaccoIds.length > 0 ||
-    appliedCatalogProfiles.length > 0 ||
-    appliedCatalogFlavors.length > 0 ||
-    appliedSortBy !== 'popularity';
 
   const selectedMixCard =
     selectedMix?.id
@@ -1877,7 +1654,6 @@ export const App = () => {
 
     const openRail = () => {
       setSelectedRail(activeRail);
-      setRailSearch('');
       setView('rail');
     };
 
@@ -2172,10 +1948,7 @@ export const App = () => {
               type="search"
               className="aroma-catalog-search"
               value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setQueryDraft(event.target.value);
-              }}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Поиск по названию и описанию"
               autoComplete="off"
             />
@@ -2219,10 +1992,7 @@ export const App = () => {
                     'aroma-catalog-sort-btn',
                     appliedSortBy === item.value && 'aroma-catalog-sort-btn-on',
                   )}
-                  onClick={() => {
-                    setAppliedSortBy(item.value);
-                    setSortBy(item.value);
-                  }}
+                  onClick={() => setAppliedSortBy(item.value)}
                 >
                   {item.label}
                 </button>
