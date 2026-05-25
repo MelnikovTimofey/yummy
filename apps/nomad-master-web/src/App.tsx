@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
+import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
 import { MasterTopBar, type MasterTopBarStatusTone } from '@/components/shell/topbar';
 import {
   getWorkspacePanelId,
@@ -12,6 +13,7 @@ import {
   workspaceTabs,
   type WorkspaceTab,
 } from '@/components/shell/workspace-tabs';
+import { useCmdK } from '@/hooks/use-cmdk';
 import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
 import {
   AuditEventRecord,
@@ -392,6 +394,7 @@ export const App = () => {
   const [error, setError] = useState('');
   const [token, setToken] = useState(() => readStoredToken());
   const [user, setUser] = useState<StaffUser | null>(null);
+  const cmdK = useCmdK(user !== null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
   const [inventoryFilters, setInventoryFilters] = useState<InventoryListFilters>(defaultInventoryListResponse.filters);
@@ -3157,6 +3160,63 @@ export const App = () => {
       if (text.includes('Обновляем') || text.includes('Загрузка') || text.includes('Ожидает')) return 'loading';
       return 'ready';
     })();
+
+    const commandPaletteItems: CommandPaletteItem[] = [
+      ...workspaceTabs.map((tab) => ({
+        id: `nav:${tab.id}`,
+        label: `Перейти: ${tab.label}`,
+        group: 'Навигация',
+        hint: tab.kicker,
+        icon: tab.icon,
+        keywords: `${tab.label} ${tab.kicker}`,
+        onSelect: () => setActiveTab(tab.id),
+      })),
+      {
+        id: 'action:new-mix',
+        label: 'Новый микс',
+        group: 'Действия',
+        keywords: 'создать новый микс mix',
+        onSelect: () => onStartCreateMix(),
+      },
+      {
+        id: 'action:sign-out',
+        label: 'Выйти',
+        group: 'Действия',
+        keywords: 'logout sign out выйти',
+        onSelect: () => onSignOut(),
+      },
+      ...mixes.map((mix) => ({
+        id: `mix:${mix.id}`,
+        label: mix.name,
+        group: 'Открыть микс',
+        hint: 'микс',
+        keywords: `${mix.name} ${mix.description ?? ''}`,
+        searchOnly: true,
+        onSelect: () => onSelectMix(mix),
+      })),
+      ...rails.map((rail) => ({
+        id: `rail:${rail.id}`,
+        label: rail.name,
+        group: 'Открыть рейл',
+        hint: 'рейл',
+        keywords: `${rail.name} ${rail.description ?? ''}`,
+        searchOnly: true,
+        onSelect: () => {
+          onSelectRail(rail);
+          setRailEditorSheetOpen(true);
+        },
+      })),
+      ...inventory.map((tobacco) => ({
+        id: `tobacco:${tobacco.id}`,
+        label: tobacco.name,
+        group: 'Открыть табак',
+        hint: tobacco.manufacturer || 'табак',
+        keywords: `${tobacco.name} ${tobacco.manufacturer}`,
+        searchOnly: true,
+        onSelect: () => setActiveTab('inventory'),
+      })),
+    ];
+
     return (
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
@@ -3194,6 +3254,8 @@ export const App = () => {
             {renderActiveWorkspace()}
           </div>
         </section>
+
+        <CommandPalette open={cmdK.open} onOpenChange={cmdK.setOpen} items={commandPaletteItems} />
       </main>
     );
   }
