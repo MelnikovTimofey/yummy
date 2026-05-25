@@ -78,17 +78,19 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   const citrusMixRow = getMixRow(page, 'Цитрусовый караван');
   await expect(citrusMixRow).toBeVisible();
   await citrusMixRow.getByRole('button', { name: 'Редактировать' }).click();
+  // MixBuilder открывается full-page (3-колоночный layout) — Sheet удалён
+  // в шаге 5 рефактора по design/design_handoff_master_refactor §Микс —
+  // конструктор. Имя микса — `<h2>` в sticky-breadcrumb сверху-слева.
   await expect(page.getByRole('heading', { name: 'Цитрусовый караван' })).toBeVisible();
   await expect(page.getByText('Сумма долей: 100%')).toBeVisible();
-  await expect(page.getByText('Готово к сохранению')).toBeVisible();
-  await expect(page.locator('.mixes-component-row').nth(0)).toContainText('Citrus Breeze');
-  await expect(page.locator('.mixes-component-row').nth(1)).toContainText('Mint Veil');
+  await expect(page.locator('.mix-builder__component').nth(0)).toContainText('Citrus Breeze');
+  await expect(page.locator('.mix-builder__component').nth(1)).toContainText('Mint Veil');
 
-  // Mix editor открывается в правом Sheet'е после PR #14 (UX-рефактор).
-  // Оверлей перехватывает клики по workspace-табам, поэтому закрываем Sheet
-  // перед переключением на следующий раздел.
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.mixes-editor-sheet')).toBeHidden();
+  // Возвращаемся в каталог через кнопку «Отмена» в шапке MixBuilder —
+  // полноэкранный layout не оверлей, но всё равно прячем его перед
+  // переключением на следующий раздел.
+  await page.getByRole('button', { name: 'Отмена' }).click();
+  await expect(page.locator('.mix-builder')).toBeHidden();
 
   await openWorkspace(page, 'Рейлы');
   const statisticalRail = page.locator('article').filter({

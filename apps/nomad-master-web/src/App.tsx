@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
+import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
+import { rebalanceTo100 } from '@/components/mixes/mix-builder/rebalance';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
 import { RailEditor, type RailEditorState } from '@/components/rails/rail-editor';
 import { RailsView } from '@/components/rails/rails-view';
@@ -951,6 +953,33 @@ export const App = () => {
     }));
   };
 
+  // MixBuilder добавляет компонент по конкретному tobaccoId и сразу
+  // ребалансирует доли так, чтобы сумма = 100%.
+  const onAddMixComponentById = (tobaccoId: string) => {
+    if (!tobaccoId) return;
+    setMixEditor((current) => {
+      if (current.components.some((component) => component.tobaccoId === tobaccoId)) {
+        return current;
+      }
+      const next = [...current.components, createMixEditorComponent(tobaccoId, '')];
+      return { ...current, components: rebalanceTo100(next) };
+    });
+  };
+
+  // ProportionBar drag-resize меняет весь массив компонентов разом —
+  // даём отдельный setter, который принимает уже посчитанный список.
+  const onReplaceMixComponents = (components: MixEditorComponentInput[]) => {
+    setMixEditor((current) => ({ ...current, components }));
+  };
+
+  // MixBuilder remove: ребалансируем после удаления так же, как в прототипе.
+  const onRemoveMixComponentRebalanced = (key: string) => {
+    setMixEditor((current) => ({
+      ...current,
+      components: rebalanceTo100(current.components.filter((component) => component.key !== key)),
+    }));
+  };
+
   const onUpdateMixComponent = (key: string, patch: Partial<Omit<MixEditorComponentInput, 'key'>>) => {
     setMixEditor((current) => ({
       ...current,
@@ -1280,42 +1309,65 @@ export const App = () => {
     />
   );
 
-  const renderMixes = () => (
-    <MixCatalogView
-      mode={mixesScreen}
-      items={mixes}
-      tobaccoOptions={mixTobaccos}
-      status={mixesStatus}
-      error={mixesError}
-      filters={mixesFilters}
-      meta={mixesMeta}
-      sort={mixesSort}
-      editor={mixEditor}
-      saveStatus={mixSaveStatus}
-      saveError={mixSaveError}
-      onSearchChange={onMixSearchChange}
-      onStatusChange={(value) => void onMixStatusChange(value)}
-      onRailStateChange={(value) => void onMixRailStateChange(value)}
-      onSortFieldChange={(value) => void onMixSortFieldChange(value)}
-      onSortDirectionChange={(value) => void onMixSortDirectionChange(value)}
-      onToggleFilterValue={(key, value) => void onMixToggleFilterValue(key, value)}
-      onClearFilterGroup={(key) => void onMixClearFilterGroup(key)}
-      onResetFilters={() => void onMixResetFilters()}
-      onPageChange={onMixPageChange}
-      onSelectMix={onSelectMix}
-      onStartCreate={onStartCreateMix}
-      onCancelCreate={onCancelCreateMix}
-      onResetEditor={onResetMixEditor}
-      onEditorFieldChange={onChangeMixEditorField}
-      onEditorAvailabilityChange={onChangeMixEditorAvailability}
-      onAddComponent={onAddMixComponent}
-      onUpdateComponent={onUpdateMixComponent}
-      onMoveComponent={onMoveMixComponent}
-      onRemoveComponent={onRemoveMixComponent}
-      onRebalanceComponents={onRebalanceMixComponents}
-      onSubmit={onSubmitMix}
-    />
-  );
+  const renderMixes = () => {
+    if (mixesScreen === 'edit' || mixesScreen === 'create') {
+      return (
+        <MixBuilder
+          mode={mixesScreen}
+          editor={mixEditor}
+          tobaccos={mixTobaccos}
+          mixes={mixes}
+          saveStatus={mixSaveStatus}
+          saveError={mixSaveError}
+          onFieldChange={onChangeMixEditorField}
+          onAvailabilityChange={onChangeMixEditorAvailability}
+          onAddComponent={onAddMixComponentById}
+          onUpdateComponent={onUpdateMixComponent}
+          onRemoveComponent={onRemoveMixComponentRebalanced}
+          onReplaceComponents={onReplaceMixComponents}
+          onSubmit={onSubmitMix}
+          onCancel={mixesScreen === 'create' ? onCancelCreateMix : onResetMixEditor}
+        />
+      );
+    }
+
+    return (
+      <MixCatalogView
+        mode="catalog"
+        items={mixes}
+        tobaccoOptions={mixTobaccos}
+        status={mixesStatus}
+        error={mixesError}
+        filters={mixesFilters}
+        meta={mixesMeta}
+        sort={mixesSort}
+        editor={mixEditor}
+        saveStatus={mixSaveStatus}
+        saveError={mixSaveError}
+        onSearchChange={onMixSearchChange}
+        onStatusChange={(value) => void onMixStatusChange(value)}
+        onRailStateChange={(value) => void onMixRailStateChange(value)}
+        onSortFieldChange={(value) => void onMixSortFieldChange(value)}
+        onSortDirectionChange={(value) => void onMixSortDirectionChange(value)}
+        onToggleFilterValue={(key, value) => void onMixToggleFilterValue(key, value)}
+        onClearFilterGroup={(key) => void onMixClearFilterGroup(key)}
+        onResetFilters={() => void onMixResetFilters()}
+        onPageChange={onMixPageChange}
+        onSelectMix={onSelectMix}
+        onStartCreate={onStartCreateMix}
+        onCancelCreate={onCancelCreateMix}
+        onResetEditor={onResetMixEditor}
+        onEditorFieldChange={onChangeMixEditorField}
+        onEditorAvailabilityChange={onChangeMixEditorAvailability}
+        onAddComponent={onAddMixComponent}
+        onUpdateComponent={onUpdateMixComponent}
+        onMoveComponent={onMoveMixComponent}
+        onRemoveComponent={onRemoveMixComponent}
+        onRebalanceComponents={onRebalanceMixComponents}
+        onSubmit={onSubmitMix}
+      />
+    );
+  };
 
   const renderRails = () => (
     <>

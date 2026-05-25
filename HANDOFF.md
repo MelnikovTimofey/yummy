@@ -1,5 +1,82 @@
 # HANDOFF — Nomad
 
+## 2.40) Master-web (25 мая 2026) — step 5 рефактора: MixBuilder full-page
+
+- Запрос: продолжение 7-шагового рефактора по
+  `design/design_handoff_master_refactor/README.md`. После steps 1–4
+  (shell-extract, cmd-k, access-split a+b, rails-split) — step 5
+  по §Order of work + §Микс — конструктор: переключить редактор миксов
+  из правого `Sheet` в полноэкранный 3-колоночный layout (composition /
+  preview / library), с sticky breadcrumb-баром и интерактивной
+  ProportionBar. Handoff явно отметил это как поведенческое изменение
+  («требует ревью»).
+
+- Реализация (PR #42, ветка `feature/master-mix-builder-fullpage`):
+  - Новая папка `apps/nomad-master-web/src/components/mixes/mix-builder/`
+    (7 файлов, ~785 строк):
+    - `color-for-tobacco.ts` — детерминированный hue по id (алгоритм
+      1-в-1 из прототипа `design/.../master/data.jsx`,
+      `COMPONENT_HUES`).
+    - `rebalance.ts` — `rebalanceTo100` / `redistributeAround` /
+      `resizeFromHandle` (три чистые функции, работают с
+      `proportion: string`).
+    - `co-occurrence-suggest.ts` — score-based подсказки топ-4
+      («Часто берут с …»).
+    - `proportion-bar.tsx` — pointerdown/pointermove drag-handles,
+      цвет сегмента из `colorForTobacco`, min 1% на сегмент.
+    - `component-card.tsx` — brand-pill (двухбуквенная плитка из
+      `manufacturer`), +/− input процента, remove, цветной border-left.
+    - `tobacco-library.tsx` — search + чекбокс «только в наличии» +
+      sort (alpha/manufacturer) + co-occurrence-блок + список табаков.
+      Клик → `onAdd(tobaccoId)`. `data-in-mix` для уже-добавленных.
+    - `mix-builder.tsx` — композер: sticky-header (back-arrow +
+      breadcrumb `<h2>` с именем микса + чипы «Сумма долей: 100%» /
+      «Сумма: переполнено» / «блокируется наличием» + Доступен +
+      Отмена/Сохранить) + 3-col grid.
+  - CSS (`src/styles.css`, +~430 строк перед `@layer base`): полностью
+    новый namespace `.mix-builder*` под full-page. `grid-template-
+    columns: minmax(280px, 1fr) minmax(0, 1.4fr) minmax(280px, 320px)`,
+    с медиа-запросом стека под 1100px. Использует только существующие
+    CSS-переменные shadcn (`--card`, `--border`, `--primary`,
+    `--destructive` etc) — без новой палитры.
+  - App.tsx (`renderMixes`) ветвится: при `mixesScreen === 'edit' |
+    'create'` отдаёт `<MixBuilder/>`, иначе `<MixCatalogView mode="catalog"/>`.
+  - 3 новые обёртки над state-хэндлерами:
+    - `onAddMixComponentById(tobaccoId)` — добавляет конкретный
+      tobaccoId + ребалансирует через `rebalanceTo100`;
+    - `onReplaceMixComponents(components)` — для ProportionBar
+      drag-resize (передаёт уже-посчитанный массив);
+    - `onRemoveMixComponentRebalanced(key)` — удаляет + ребалансирует.
+  - Smoke (`tests/nomad-smoke/tests/master-smoke.spec.ts`): обновлены
+    4 ассерта под новый UI:
+    - `.mixes-component-row` → `.mix-builder__component`;
+    - закрытие Sheet'ом (Escape + `.mixes-editor-sheet`-hidden) →
+      кнопка Отмена + `.mix-builder`-hidden;
+    - удалён ассерт «Готово к сохранению» (в новом UI нет эквивалента;
+      Save-кнопка просто становится enabled);
+    - heading-ассерт остался (имя микса теперь в `<h2>`).
+
+- Проверки:
+  - `cd apps/nomad-master-web && npm test` — **29/29 ✓**,
+    `npm run build` ✓ (strict TS).
+  - CI `nomad-smoke` ✓ после fix-коммита (первый прогон упал на
+    старых селекторах, я по CLAUDE.md §3 обновил их в том же PR).
+
+- Остаточный риск / scope:
+  - Sheet-код в `mix-catalog-view.tsx` (renderMixForm, editorSheet,
+    renderAvailabilityStatus) формально стал недостижимым — App.tsx
+    всегда передаёт `mode="catalog"`. Чистка — отдельный потенциальный PR.
+  - Hash-роутинг `#mixes/edit/<id>` и `#mixes/create` — handoff
+    упоминает `/mixes/:id/edit`, но в проде нет роутера; добавлять
+    react-router ради одной фичи — overkill. Отдельный PR при
+    необходимости.
+  - `hooks/use-mixes.ts` (экстракт state/handlers в хук, аналог 3b для
+    access) — не делал в этом PR, чтобы не размывать scope.
+  - Поведенческое изменение: у операторов изменится мышечная память —
+    вместо открытия Sheet справа теперь full-page. Возврат через стрелку
+    «Назад» или «Отмена».
+  - От исходного монолита (3394 строки) App.tsx ужался до 1675 (-51%).
+
 ## 2.39) Backend + Aroma-web (24 мая 2026) — daily access code → 4-значный числовой
 
 - Запрос (баг #1 после визуальной проверки 12-шагового рефактора):
