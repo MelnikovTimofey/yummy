@@ -69,6 +69,59 @@
   --sidebar-accent-foreground: #f1e5d7;
   --sidebar-border: rgba(226, 172, 123, 0.14);
   --sidebar-ring: rgba(226, 172, 123, 0.24);
+
+  /* Density atom (handoff §Design tokens → §Плотность). Один токен
+     правит все списочные строки. По умолчанию — 36px («default»).
+     Для смены — `data-density` на <html>: см. useDensity. */
+  --row-h: 36px;
+}
+
+[data-density="compact"] {
+  --row-h: 32px;
+}
+
+[data-density="cozy"] {
+  --row-h: 48px;
+}
+
+.master-density-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nomad-border-strong);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.master-density-toggle__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--nomad-ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.master-density-toggle__button:hover {
+  color: var(--nomad-ink);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.master-density-toggle__button--active {
+  background: var(--nomad-primary);
+  color: var(--primary-foreground);
+}
+
+.master-density-toggle__button--active:hover {
+  background: var(--nomad-primary);
+  color: var(--primary-foreground);
 }
 
 * {
@@ -2083,6 +2136,10 @@ p {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Density: прокидываем --row-h в Tailwind v4 spacing-шкалу.
+     В JSX используется как `h-row`/`min-h-row`. */
+  --spacing-row: var(--row-h);
 }
 
 .dark {
@@ -2381,14 +2438,20 @@ p {
 
 .inventory-table th,
 .inventory-table td {
-  padding: 9px 12px;
+  /* min-height = --row-h: даёт density-токену (compact/default/cozy)
+     управлять плотностью таблицы. padding-y подобран так, чтобы default
+     (36px) сохранял прежнюю визуальную плотность. */
+  height: var(--row-h);
+  padding: 6px 12px;
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
   border-bottom: 1px solid rgba(226, 172, 123, 0.08);
 }
 
+
 .inventory-table tbody td .inventory-cell {
   gap: 4px;
+  line-height: 1.25;
 }
 
 .inventory-table thead th {

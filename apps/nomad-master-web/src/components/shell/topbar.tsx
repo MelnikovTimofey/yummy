@@ -1,5 +1,6 @@
 import { KeyboardEvent, useRef } from 'react';
 import { LogOut } from 'lucide-react';
+import type { Density } from '@/hooks/use-density';
 import {
   getWorkspacePanelId,
   getWorkspaceTabId,
@@ -17,7 +18,15 @@ type MasterTopBarProps = {
   statusText: string;
   statusTone: MasterTopBarStatusTone;
   onSignOut: () => void;
+  density: Density;
+  onDensityChange: (next: Density) => void;
 };
+
+const densityOptions: Array<{ value: Density; label: string; title: string }> = [
+  { value: 'compact', label: 'C', title: 'Компактная плотность (32px на строку) — режим «зал кипит»' },
+  { value: 'default', label: '·', title: 'Обычная плотность (36px на строку)' },
+  { value: 'cozy', label: 'L', title: 'Просторная плотность (48px на строку)' },
+];
 
 export const MasterTopBar = ({
   activeTab,
@@ -27,6 +36,8 @@ export const MasterTopBar = ({
   statusText,
   statusTone,
   onSignOut,
+  density,
+  onDensityChange,
 }: MasterTopBarProps) => {
   const tabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     dashboard: null,
@@ -117,6 +128,29 @@ export const MasterTopBar = ({
       </div>
 
       <div className="master-nav__meta">
+        <div
+          className="master-density-toggle"
+          role="group"
+          aria-label="Плотность списков"
+        >
+          {densityOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={
+                density === option.value
+                  ? 'master-density-toggle__button master-density-toggle__button--active'
+                  : 'master-density-toggle__button'
+              }
+              onClick={() => onDensityChange(option.value)}
+              title={option.title}
+              aria-label={option.title}
+              aria-pressed={density === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <span
           className="status-chip status-chip--inverse"
           title={`Статус данных: ${statusText}`}
