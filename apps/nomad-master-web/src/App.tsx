@@ -1,9 +1,11 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
-import type {
-  StaffAccountEditorState,
-  TelegramOperatorEditorState,
-} from '@/components/access/types';
+import { apiBaseUrl, apiHostLabel, envLabel, requestJson } from '@/lib/api-client';
+import { replaceOrInsert } from '@/lib/utils';
+import { useAuditEvents } from '@/hooks/use-audit-events';
+import { useDailyCode } from '@/hooks/use-daily-code';
+import { useStaffAccounts } from '@/hooks/use-staff-accounts';
+import { useTelegramOperators } from '@/hooks/use-telegram-operators';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
@@ -86,16 +88,6 @@ import {
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
-const apiHostLabel = apiBaseUrl.replace(/^https?:\/\//, '');
-const envLabel = (() => {
-  const explicit = import.meta.env.VITE_ENV_NAME as string | undefined;
-  if (explicit) return explicit;
-  const host = apiHostLabel.toLowerCase();
-  if (host.includes('localhost') || host.startsWith('127.')) return 'local';
-  if (host.includes('stage') || host.includes('staging')) return 'stage';
-  return 'prod';
-})();
 
 type MixEditorState = {
   id: string;
@@ -119,14 +111,6 @@ type RailEditorState = {
   readOnlyReason: string;
 };
 
-type DailyCodeEditorState = {
-  id: string;
-  codeValue: string;
-  codeLabel: string;
-  startsAt: string;
-  endsAt: string;
-  active: boolean;
-};
 
 type TelegramRecipientEditorState = {
   id: string;
@@ -164,23 +148,7 @@ const emptyRailEditor = (): RailEditorState => ({
   readOnlyReason: '',
 });
 
-const emptyDailyCodeEditor = (): DailyCodeEditorState => ({
-  id: '',
-  codeValue: '',
-  codeLabel: '',
-  startsAt: '',
-  endsAt: '',
-  active: true,
-});
 
-const emptyStaffAccountEditor = (): StaffAccountEditorState => ({
-  id: '',
-  login: '',
-  name: '',
-  role: 'nomad',
-  password: '',
-  active: true,
-});
 
 const emptyTelegramRecipientEditor = (): TelegramRecipientEditorState => ({
   id: '',
@@ -190,12 +158,6 @@ const emptyTelegramRecipientEditor = (): TelegramRecipientEditorState => ({
   active: true,
 });
 
-const emptyTelegramOperatorEditor = (): TelegramOperatorEditorState => ({
-  id: '',
-  name: '',
-  phone: '',
-  active: true,
-});
 
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
@@ -217,23 +179,7 @@ const toRailEditorState = (rail: RailRecord): RailEditorState => ({
   readOnlyReason: rail.readOnlyReason,
 });
 
-const toDailyCodeEditorState = (code: DailyAccessCodeRecord): DailyCodeEditorState => ({
-  id: code.id,
-  codeValue: code.codeValue,
-  codeLabel: code.codeLabel,
-  startsAt: formatDateTimeLocalInput(code.startsAt),
-  endsAt: formatDateTimeLocalInput(code.endsAt),
-  active: code.active,
-});
 
-const toStaffAccountEditorState = (account: StaffAccountRecord): StaffAccountEditorState => ({
-  id: account.id,
-  login: account.login,
-  name: account.name,
-  role: account.role,
-  password: '',
-  active: account.active,
-});
 
 const toTelegramRecipientEditorState = (recipient: TelegramRecipientRecord): TelegramRecipientEditorState => ({
   id: recipient.id,
@@ -243,29 +189,12 @@ const toTelegramRecipientEditorState = (recipient: TelegramRecipientRecord): Tel
   active: recipient.active,
 });
 
-const toTelegramOperatorEditorState = (operator: TelegramOperatorRecord): TelegramOperatorEditorState => ({
-  id: operator.id,
-  name: operator.name,
-  phone: operator.phone,
-  active: operator.active,
-});
 
 const parseNumberInput = (value: string, fallback = 0) => {
   const parsed = Number(value.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const replaceOrInsert = <T extends { id: string }>(items: T[], nextItem: T) => {
-  const index = items.findIndex((item) => item.id === nextItem.id);
-
-  if (index === -1) {
-    return [...items, nextItem];
-  }
-
-  const nextItems = [...items];
-  nextItems[index] = nextItem;
-  return nextItems;
-};
 
 const readStoredToken = () => {
   if (typeof window === 'undefined') {
@@ -288,43 +217,6 @@ const storeToken = (token: string) => {
   window.sessionStorage.setItem(STORAGE_KEY, token);
 };
 
-const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: string): Promise<T> => {
-  const hasBody = options.body !== undefined;
-  const headers = new Headers(options.headers ?? {});
-
-  if (hasBody && !headers.has('content-type')) {
-    headers.set('content-type', 'application/json');
-  }
-
-  if (token) {
-    headers.set('authorization', `Bearer ${token}`);
-  }
-
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers,
-  });
-
-  const text = await response.text();
-  let payload: { error?: string } | unknown = null;
-
-  if (text) {
-    try {
-      payload = JSON.parse(text) as { error?: string } | unknown;
-    } catch {
-      payload = null;
-    }
-  }
-
-  if (!response.ok) {
-    const error = payload && typeof payload === 'object' && 'error' in payload ? String(payload.error) : 'Запрос не выполнен';
-    const wrapped = new Error(error) as Error & { status?: number };
-    wrapped.status = response.status;
-    throw wrapped;
-  }
-
-  return (payload ?? {}) as T;
-};
 
 const readSummaryCards = (summary: DashboardSummary | null) => {
   if (!summary) {
@@ -384,6 +276,12 @@ export const App = () => {
   const [user, setUser] = useState<StaffUser | null>(null);
   const cmdK = useCmdK(user !== null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
+
+  const onAfterAccessSubmit = () => setActiveTab('access');
+  const auditEventsState = useAuditEvents();
+  const dailyCode = useDailyCode();
+  const staff = useStaffAccounts({ onAfterSubmit: onAfterAccessSubmit });
+  const telegramOps = useTelegramOperators({ onAfterSubmit: onAfterAccessSubmit });
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
   const [inventoryFilters, setInventoryFilters] = useState<InventoryListFilters>(defaultInventoryListResponse.filters);
   const [inventorySort, setInventorySort] = useState<InventoryListSort>(defaultInventoryListResponse.sort);
@@ -398,40 +296,19 @@ export const App = () => {
   const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
   const [railMixCatalog, setRailMixCatalog] = useState<MixRecord[]>([]);
   const [rails, setRails] = useState<RailRecord[]>([]);
-  const [dailyCodes, setDailyCodes] = useState<DailyAccessCodeRecord[]>([]);
-  const [staffAccounts, setStaffAccounts] = useState<StaffAccountRecord[]>([]);
-  const [telegramOperators, setTelegramOperators] = useState<TelegramOperatorRecord[]>([]);
   const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
-  const [telegramAutomationState, setTelegramAutomationState] = useState<TelegramAutomationStateRecord | null>(null);
-  const [auditEvents, setAuditEvents] = useState<AuditEventRecord[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railsStatus, setRailsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [dailyCodesStatus, setDailyCodesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [staffAccountsStatus, setStaffAccountsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
-    'idle',
-  );
-  const [telegramOperatorsStatus, setTelegramOperatorsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
-    'idle',
-  );
   const [telegramRecipientsStatus, setTelegramRecipientsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
     'idle',
   );
-  const [telegramAutomationStateStatus, setTelegramAutomationStateStatus] = useState<
-    'idle' | 'loading' | 'ready' | 'forbidden' | 'error'
-  >('idle');
-  const [auditEventsStatus, setAuditEventsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>('idle');
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
   const [railsError, setRailsError] = useState('');
-  const [dailyCodesError, setDailyCodesError] = useState('');
-  const [staffAccountsError, setStaffAccountsError] = useState('');
-  const [telegramOperatorsError, setTelegramOperatorsError] = useState('');
   const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
-  const [telegramAutomationStateError, setTelegramAutomationStateError] = useState('');
-  const [auditEventsError, setAuditEventsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -444,25 +321,12 @@ export const App = () => {
   const [railMixCandidateId, setRailMixCandidateId] = useState('');
   const [railSaveStatus, setRailSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railSaveError, setRailSaveError] = useState('');
-  const [dailyCodeEditor, setDailyCodeEditor] = useState<DailyCodeEditorState>(emptyDailyCodeEditor);
-  const [dailyCodeSaveStatus, setDailyCodeSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [dailyCodeSaveError, setDailyCodeSaveError] = useState('');
-  const [dailyCodeToggleId, setDailyCodeToggleId] = useState('');
-  const [staffAccountEditor, setStaffAccountEditor] = useState<StaffAccountEditorState>(emptyStaffAccountEditor);
-  const [staffAccountSaveStatus, setStaffAccountSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [staffAccountSaveError, setStaffAccountSaveError] = useState('');
-  const [staffAccountToggleId, setStaffAccountToggleId] = useState('');
-  const [telegramOperatorEditor, setTelegramOperatorEditor] = useState<TelegramOperatorEditorState>(emptyTelegramOperatorEditor);
-  const [telegramOperatorSaveStatus, setTelegramOperatorSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [telegramOperatorSaveError, setTelegramOperatorSaveError] = useState('');
-  const [telegramOperatorToggleId, setTelegramOperatorToggleId] = useState('');
   const [telegramRecipientEditor, setTelegramRecipientEditor] =
     useState<TelegramRecipientEditorState>(emptyTelegramRecipientEditor);
   const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
   const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
   const [railEditorSheetOpen, setRailEditorSheetOpen] = useState(false);
-  const [telegramOperatorDialogOpen, setTelegramOperatorDialogOpen] = useState(false);
 
   const loadInventory = async (
     nextToken: string,
@@ -579,67 +443,8 @@ export const App = () => {
     }
   };
 
-  const loadDailyCodes = async (nextToken: string) => {
-    setDailyCodesStatus('loading');
-    setDailyCodesError('');
 
-    try {
-      const response = await requestJson<unknown>('/staff/access/daily-codes', {}, nextToken);
-      const items = sortDailyAccessCodes(readListPayload<unknown>(response).map(normalizeDailyAccessCodeRecord));
-      setDailyCodes(items);
-      setDailyCodesStatus('ready');
-    } catch (cause) {
-      setDailyCodes([]);
-      setDailyCodesStatus('error');
-      setDailyCodesError(cause instanceof Error ? cause.message : 'Не удалось загрузить коды доступа');
-    }
-  };
 
-  const loadStaffAccounts = async (nextToken: string, role: StaffUser['role']) => {
-    if (role !== 'admin') {
-      setStaffAccounts([]);
-      setStaffAccountsStatus('forbidden');
-      setStaffAccountsError('Раздел сотрудников доступен только для admin.');
-      return;
-    }
-
-    setStaffAccountsStatus('loading');
-    setStaffAccountsError('');
-
-    try {
-      const response = await requestJson<unknown>('/staff/access/accounts', {}, nextToken);
-      const items = sortStaffAccounts(readListPayload<unknown>(response).map(normalizeStaffAccountRecord));
-      setStaffAccounts(items);
-      setStaffAccountsStatus('ready');
-    } catch (cause) {
-      setStaffAccounts([]);
-      setStaffAccountsStatus('error');
-      setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось загрузить сотрудников');
-    }
-  };
-
-  const loadTelegramOperators = async (nextToken: string, role: StaffUser['role']) => {
-    if (role !== 'admin') {
-      setTelegramOperators([]);
-      setTelegramOperatorsStatus('forbidden');
-      setTelegramOperatorsError('Allowlist Telegram доступен только для admin.');
-      return;
-    }
-
-    setTelegramOperatorsStatus('loading');
-    setTelegramOperatorsError('');
-
-    try {
-      const response = await requestJson<unknown>('/staff/access/telegram-operators', {}, nextToken);
-      const items = sortTelegramOperators(readListPayload<unknown>(response).map(normalizeTelegramOperatorRecord));
-      setTelegramOperators(items);
-      setTelegramOperatorsStatus('ready');
-    } catch (cause) {
-      setTelegramOperators([]);
-      setTelegramOperatorsStatus('error');
-      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось загрузить Telegram allowlist');
-    }
-  };
 
   const loadTelegramRecipients = async (nextToken: string, role: StaffUser['role']) => {
     if (role !== 'admin') {
@@ -664,49 +469,7 @@ export const App = () => {
     }
   };
 
-  const loadTelegramAutomationState = async (nextToken: string, role: StaffUser['role']) => {
-    if (role !== 'admin') {
-      setTelegramAutomationState(null);
-      setTelegramAutomationStateStatus('forbidden');
-      setTelegramAutomationStateError('Статус Telegram automation доступен только для admin.');
-      return;
-    }
 
-    setTelegramAutomationStateStatus('loading');
-    setTelegramAutomationStateError('');
-
-    try {
-      const response = await requestJson<unknown>('/staff/access/telegram-automation-state', {}, nextToken);
-      setTelegramAutomationState(normalizeTelegramAutomationStateRecord(readEntityPayload<unknown>(response)));
-      setTelegramAutomationStateStatus('ready');
-    } catch (cause) {
-      setTelegramAutomationState(null);
-      setTelegramAutomationStateStatus('error');
-      setTelegramAutomationStateError(cause instanceof Error ? cause.message : 'Не удалось загрузить статус Telegram automation');
-    }
-  };
-
-  const loadAuditEvents = async (nextToken: string, role: StaffUser['role']) => {
-    if (role !== 'admin') {
-      setAuditEvents([]);
-      setAuditEventsStatus('forbidden');
-      setAuditEventsError('Журнал изменений доступен только для admin.');
-      return;
-    }
-
-    setAuditEventsStatus('loading');
-    setAuditEventsError('');
-
-    try {
-      const response = await requestJson<unknown>('/staff/audit/events?limit=25', {}, nextToken);
-      setAuditEvents(readListPayload<unknown>(response).map(normalizeAuditEventRecord));
-      setAuditEventsStatus('ready');
-    } catch (cause) {
-      setAuditEvents([]);
-      setAuditEventsStatus('error');
-      setAuditEventsError(cause instanceof Error ? cause.message : 'Не удалось загрузить журнал изменений');
-    }
-  };
 
   const hashSkipRef = useRef(false);
 
@@ -771,11 +534,10 @@ export const App = () => {
           loadMixTobaccos(token),
           loadRailMixCatalog(token),
           loadRails(token),
-          loadDailyCodes(token),
-          loadStaffAccounts(token, profile.user.role),
-          loadTelegramOperators(token, profile.user.role),
-          loadTelegramAutomationState(token, profile.user.role),
-          loadAuditEvents(token, profile.user.role),
+          dailyCode.reload(token),
+          staff.reload(token, profile.user.role),
+          telegramOps.reload(token, profile.user.role),
+          auditEventsState.reload(token, profile.user.role),
         ]);
         setStatus('ready');
       } catch {
@@ -817,11 +579,10 @@ export const App = () => {
         loadMixTobaccos(auth.accessToken),
         loadRailMixCatalog(auth.accessToken),
         loadRails(auth.accessToken),
-        loadDailyCodes(auth.accessToken),
-        loadStaffAccounts(auth.accessToken, profile.user.role),
-        loadTelegramOperators(auth.accessToken, profile.user.role),
-        loadTelegramAutomationState(auth.accessToken, profile.user.role),
-        loadAuditEvents(auth.accessToken, profile.user.role),
+        dailyCode.reload(auth.accessToken),
+        staff.reload(auth.accessToken, profile.user.role),
+        telegramOps.reload(auth.accessToken, profile.user.role),
+        auditEventsState.reload(auth.accessToken, profile.user.role),
       ]);
       setStatus('ready');
     } catch (cause) {
@@ -927,6 +688,10 @@ export const App = () => {
   };
 
   const onSignOut = () => {
+    dailyCode.reset();
+    staff.reset();
+    telegramOps.reset();
+    auditEventsState.reset();
     storeToken('');
     setToken('');
     setUser(null);
@@ -952,22 +717,12 @@ export const App = () => {
     setSummaryStatus('idle');
     setMixesStatus('idle');
     setRailsStatus('idle');
-    setDailyCodesStatus('idle');
-    setStaffAccountsStatus('idle');
-    setTelegramOperatorsStatus('idle');
     setTelegramRecipientsStatus('idle');
-    setTelegramAutomationStateStatus('idle');
-    setAuditEventsStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
     setRailsError('');
-    setDailyCodesError('');
-    setStaffAccountsError('');
-    setTelegramOperatorsError('');
     setTelegramRecipientsError('');
-    setTelegramAutomationStateError('');
-    setAuditEventsError('');
     setToggleId('');
     setInventoryBatchAction('');
     setMixEditor(emptyMixEditor());
@@ -978,24 +733,7 @@ export const App = () => {
     setRailMixCandidateId('');
     setRailSaveStatus('idle');
     setRailSaveError('');
-    setDailyCodeEditor(emptyDailyCodeEditor());
-    setDailyCodeSaveStatus('idle');
-    setDailyCodeSaveError('');
-    setDailyCodeToggleId('');
-    setStaffAccountEditor(emptyStaffAccountEditor());
-    setStaffAccountSaveStatus('idle');
-    setStaffAccountSaveError('');
-    setStaffAccountToggleId('');
-    setDailyCodes([]);
-    setStaffAccounts([]);
-    setTelegramOperators([]);
     setTelegramRecipients([]);
-    setTelegramAutomationState(null);
-    setAuditEvents([]);
-    setTelegramOperatorEditor(emptyTelegramOperatorEditor());
-    setTelegramOperatorSaveStatus('idle');
-    setTelegramOperatorSaveError('');
-    setTelegramOperatorToggleId('');
     setTelegramRecipientEditor(emptyTelegramRecipientEditor());
     setTelegramRecipientSaveStatus('idle');
     setTelegramRecipientSaveError('');
@@ -1565,477 +1303,21 @@ export const App = () => {
     }
   };
 
-  const onSelectDailyCode = (code: DailyAccessCodeRecord) => {
-    setDailyCodeEditor(toDailyCodeEditorState(code));
-    setDailyCodeSaveError('');
-    setDailyCodeSaveStatus('idle');
-    setActiveTab('access');
-  };
 
-  const onResetDailyCodeEditor = () => {
-    setDailyCodeEditor(emptyDailyCodeEditor());
-    setDailyCodeSaveError('');
-    setDailyCodeSaveStatus('idle');
-  };
 
-  const onSubmitDailyCode = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
 
-    const codeValue = dailyCodeEditor.codeValue.trim();
-    const codeLabel = dailyCodeEditor.codeLabel.trim();
-    const startsAt = parseDateTimeLocalInput(dailyCodeEditor.startsAt);
-    const endsAt = parseDateTimeLocalInput(dailyCodeEditor.endsAt);
 
-    if (!codeValue) {
-      setDailyCodeSaveError('Введите код доступа');
-      setDailyCodeSaveStatus('error');
-      return;
-    }
 
-    if (!startsAt || !endsAt) {
-      setDailyCodeSaveError('Укажите корректные даты начала и окончания');
-      setDailyCodeSaveStatus('error');
-      return;
-    }
 
-    setDailyCodeSaveStatus('loading');
-    setDailyCodeSaveError('');
 
-    const payload = {
-      codeValue,
-      codeLabel: codeLabel || 'Код доступа',
-      active: dailyCodeEditor.active,
-      startsAt,
-      endsAt,
-    };
 
-    try {
-      const response = await requestJson<unknown>(
-        dailyCodeEditor.id ? `/staff/access/daily-codes/${dailyCodeEditor.id}` : '/staff/access/daily-codes',
-        {
-          method: dailyCodeEditor.id ? 'PATCH' : 'POST',
-          body: JSON.stringify(payload),
-        },
-        token,
-      );
 
-      const savedCode = normalizeDailyAccessCodeRecord(readEntityPayload<unknown>(response));
-      if (!savedCode.id) {
-        throw new Error('Backend вернул пустой код доступа');
-      }
 
-      setDailyCodes((current) => sortDailyAccessCodes(replaceOrInsert(current, savedCode)));
-      setDailyCodeEditor(toDailyCodeEditorState(savedCode));
-      setDailyCodeSaveStatus('ready');
-      setActiveTab('access');
-    } catch (cause) {
-      setDailyCodeSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить код доступа');
-      setDailyCodeSaveStatus('error');
-    }
-  };
 
-  const onToggleDailyCodeActive = async (code: DailyAccessCodeRecord) => {
-    if (!token) {
-      return;
-    }
 
-    setDailyCodeToggleId(code.id);
-    setDailyCodesError('');
 
-    try {
-      const response = await requestJson<unknown>(
-        `/staff/access/daily-codes/${code.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            codeValue: code.codeValue,
-            codeLabel: code.codeLabel,
-            active: !code.active,
-            startsAt: code.startsAt,
-            endsAt: code.endsAt,
-          }),
-        },
-        token,
-      );
 
-      const savedCode = normalizeDailyAccessCodeRecord(readEntityPayload<unknown>(response));
-      if (!savedCode.id) {
-        throw new Error('Backend вернул пустой код доступа');
-      }
 
-      setDailyCodes((current) => sortDailyAccessCodes(replaceOrInsert(current, savedCode)));
-      if (dailyCodeEditor.id === code.id) {
-        setDailyCodeEditor(toDailyCodeEditorState(savedCode));
-      }
-      setDailyCodesStatus('ready');
-    } catch (cause) {
-      setDailyCodesError(cause instanceof Error ? cause.message : 'Не удалось обновить код доступа');
-      setDailyCodesStatus('error');
-    } finally {
-      setDailyCodeToggleId('');
-    }
-  };
-
-  const onDeleteDailyCode = async (code: DailyAccessCodeRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setDailyCodeToggleId(code.id);
-    setDailyCodesError('');
-
-    try {
-      await requestJson(
-        `/staff/access/daily-codes/${code.id}`,
-        {
-          method: 'DELETE',
-        },
-        token,
-      );
-
-      setDailyCodes((current) => sortDailyAccessCodes(current.filter((item) => item.id !== code.id)));
-      if (dailyCodeEditor.id === code.id) {
-        onResetDailyCodeEditor();
-      }
-      setDailyCodesStatus('ready');
-    } catch (cause) {
-      setDailyCodesError(cause instanceof Error ? cause.message : 'Не удалось удалить код доступа');
-      setDailyCodesStatus('error');
-    } finally {
-      setDailyCodeToggleId('');
-    }
-  };
-
-  const onSelectStaffAccount = (account: StaffAccountRecord) => {
-    setStaffAccountEditor(toStaffAccountEditorState(account));
-    setStaffAccountSaveError('');
-    setStaffAccountSaveStatus('idle');
-    setActiveTab('access');
-  };
-
-  const onResetStaffAccountEditor = () => {
-    setStaffAccountEditor(emptyStaffAccountEditor());
-    setStaffAccountSaveError('');
-    setStaffAccountSaveStatus('idle');
-  };
-
-  const onSubmitStaffAccount = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
-    const loginValue = staffAccountEditor.login.trim();
-    const name = staffAccountEditor.name.trim();
-    const password = staffAccountEditor.password.trim();
-
-    if (!loginValue) {
-      setStaffAccountSaveError('Введите логин');
-      setStaffAccountSaveStatus('error');
-      return;
-    }
-
-    if (!name) {
-      setStaffAccountSaveError('Введите имя');
-      setStaffAccountSaveStatus('error');
-      return;
-    }
-
-    if (!staffAccountEditor.id && !password) {
-      setStaffAccountSaveError('Для нового сотрудника нужен пароль');
-      setStaffAccountSaveStatus('error');
-      return;
-    }
-
-    setStaffAccountSaveStatus('loading');
-    setStaffAccountSaveError('');
-
-    const payload = {
-      login: loginValue,
-      name,
-      role: staffAccountEditor.role,
-      active: staffAccountEditor.active,
-      ...(password ? { password } : {}),
-    };
-
-    try {
-      const response = await requestJson<unknown>(
-        staffAccountEditor.id ? `/staff/access/accounts/${staffAccountEditor.id}` : '/staff/access/accounts',
-        {
-          method: staffAccountEditor.id ? 'PATCH' : 'POST',
-          body: JSON.stringify(payload),
-        },
-        token,
-      );
-
-      const savedAccount = normalizeStaffAccountRecord(readEntityPayload<unknown>(response));
-      if (!savedAccount.id) {
-        throw new Error('Backend вернул пустого сотрудника');
-      }
-
-      setStaffAccounts((current) => sortStaffAccounts(replaceOrInsert(current, savedAccount)));
-      setStaffAccountEditor(toStaffAccountEditorState(savedAccount));
-      setStaffAccountSaveStatus('ready');
-      setActiveTab('access');
-    } catch (cause) {
-      setStaffAccountSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить сотрудника');
-      setStaffAccountSaveStatus('error');
-    }
-  };
-
-  const onToggleStaffAccountActive = async (account: StaffAccountRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setStaffAccountToggleId(account.id);
-    setStaffAccountsError('');
-
-    try {
-      const response = await requestJson<unknown>(
-        `/staff/access/accounts/${account.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            login: account.login,
-            name: account.name,
-            role: account.role,
-            active: !account.active,
-          }),
-        },
-        token,
-      );
-
-      const savedAccount = normalizeStaffAccountRecord(readEntityPayload<unknown>(response));
-      if (!savedAccount.id) {
-        throw new Error('Backend вернул пустого сотрудника');
-      }
-
-      setStaffAccounts((current) => sortStaffAccounts(replaceOrInsert(current, savedAccount)));
-      if (staffAccountEditor.id === account.id) {
-        setStaffAccountEditor(toStaffAccountEditorState(savedAccount));
-      }
-      setStaffAccountsStatus('ready');
-    } catch (cause) {
-      setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось обновить сотрудника');
-      setStaffAccountsStatus('error');
-    } finally {
-      setStaffAccountToggleId('');
-    }
-  };
-
-  const onDeleteStaffAccount = async (account: StaffAccountRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setStaffAccountToggleId(account.id);
-    setStaffAccountsError('');
-
-    try {
-      await requestJson(
-        `/staff/access/accounts/${account.id}`,
-        {
-          method: 'DELETE',
-        },
-        token,
-      );
-
-      setStaffAccounts((current) => sortStaffAccounts(current.filter((item) => item.id !== account.id)));
-      if (staffAccountEditor.id === account.id) {
-        onResetStaffAccountEditor();
-      }
-      setStaffAccountsStatus('ready');
-    } catch (cause) {
-      setStaffAccountsError(cause instanceof Error ? cause.message : 'Не удалось удалить сотрудника');
-      setStaffAccountsStatus('error');
-    } finally {
-      setStaffAccountToggleId('');
-    }
-  };
-
-  const onSelectTelegramOperator = (operator: TelegramOperatorRecord) => {
-    setTelegramOperatorEditor(toTelegramOperatorEditorState(operator));
-    setTelegramOperatorSaveError('');
-    setTelegramOperatorSaveStatus('idle');
-    setActiveTab('access');
-  };
-
-  const onResetTelegramOperatorEditor = () => {
-    setTelegramOperatorEditor(emptyTelegramOperatorEditor());
-    setTelegramOperatorSaveError('');
-    setTelegramOperatorSaveStatus('idle');
-  };
-
-  const onSubmitTelegramOperator = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
-    const name = telegramOperatorEditor.name.trim();
-    const phone = telegramOperatorEditor.phone.trim();
-
-    if (!name) {
-      setTelegramOperatorSaveError('Укажите имя оператора');
-      setTelegramOperatorSaveStatus('error');
-      return;
-    }
-
-    if (!phone) {
-      setTelegramOperatorSaveError('Укажите номер телефона');
-      setTelegramOperatorSaveStatus('error');
-      return;
-    }
-
-    setTelegramOperatorSaveStatus('loading');
-    setTelegramOperatorSaveError('');
-
-    try {
-      const response = await requestJson<unknown>(
-        telegramOperatorEditor.id
-          ? `/staff/access/telegram-operators/${telegramOperatorEditor.id}`
-          : '/staff/access/telegram-operators',
-        {
-          method: telegramOperatorEditor.id ? 'PATCH' : 'POST',
-          body: JSON.stringify({
-            name,
-            phone,
-            active: telegramOperatorEditor.active,
-          }),
-        },
-        token,
-      );
-
-      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
-      if (!savedOperator.id) {
-        throw new Error('Backend вернул пустую запись Telegram доступа');
-      }
-
-      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
-      setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
-      setTelegramOperatorSaveStatus('ready');
-      setActiveTab('access');
-      setTelegramOperatorDialogOpen(false);
-    } catch (cause) {
-      setTelegramOperatorSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить Telegram доступ');
-      setTelegramOperatorSaveStatus('error');
-    }
-  };
-
-  const onToggleTelegramOperatorActive = async (operator: TelegramOperatorRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setTelegramOperatorToggleId(operator.id);
-    setTelegramOperatorsError('');
-
-    try {
-      const response = await requestJson<unknown>(
-        `/staff/access/telegram-operators/${operator.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            name: operator.name,
-            phone: operator.phone,
-            active: !operator.active,
-          }),
-        },
-        token,
-      );
-
-      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
-      if (!savedOperator.id) {
-        throw new Error('Backend вернул пустую запись Telegram доступа');
-      }
-
-      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
-      if (telegramOperatorEditor.id === operator.id) {
-        setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
-      }
-      setTelegramOperatorsStatus('ready');
-    } catch (cause) {
-      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось обновить Telegram доступ');
-      setTelegramOperatorsStatus('error');
-    } finally {
-      setTelegramOperatorToggleId('');
-    }
-  };
-
-  const onClearTelegramOperatorLink = async (operator: TelegramOperatorRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setTelegramOperatorToggleId(operator.id);
-    setTelegramOperatorsError('');
-
-    try {
-      const response = await requestJson<unknown>(
-        `/staff/access/telegram-operators/${operator.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            name: operator.name,
-            phone: operator.phone,
-            active: operator.active,
-            clearLink: true,
-          }),
-        },
-        token,
-      );
-
-      const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
-      if (!savedOperator.id) {
-        throw new Error('Backend вернул пустую запись Telegram доступа');
-      }
-
-      setTelegramOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
-      if (telegramOperatorEditor.id === operator.id) {
-        setTelegramOperatorEditor(toTelegramOperatorEditorState(savedOperator));
-      }
-      setTelegramOperatorsStatus('ready');
-    } catch (cause) {
-      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось сбросить привязку Telegram');
-      setTelegramOperatorsStatus('error');
-    } finally {
-      setTelegramOperatorToggleId('');
-    }
-  };
-
-  const onDeleteTelegramOperator = async (operator: TelegramOperatorRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setTelegramOperatorToggleId(operator.id);
-    setTelegramOperatorsError('');
-
-    try {
-      await requestJson(
-        `/staff/access/telegram-operators/${operator.id}`,
-        {
-          method: 'DELETE',
-        },
-        token,
-      );
-
-      setTelegramOperators((current) => sortTelegramOperators(current.filter((item) => item.id !== operator.id)));
-      if (telegramOperatorEditor.id === operator.id) {
-        onResetTelegramOperatorEditor();
-      }
-      setTelegramOperatorsStatus('ready');
-    } catch (cause) {
-      setTelegramOperatorsError(cause instanceof Error ? cause.message : 'Не удалось удалить Telegram доступ');
-      setTelegramOperatorsStatus('error');
-    } finally {
-      setTelegramOperatorToggleId('');
-    }
-  };
 
   const onSelectTelegramRecipient = (recipient: TelegramRecipientRecord) => {
     setTelegramRecipientEditor(toTelegramRecipientEditorState(recipient));
@@ -2553,49 +1835,54 @@ export const App = () => {
     </section>
   );
 
-  const renderAccess = () => (
-    <AccessView
-      user={user}
-      dailyCodes={dailyCodes}
-      dailyCodesStatus={dailyCodesStatus}
-      dailyCodesError={dailyCodesError}
-      telegramAutomationState={telegramAutomationState}
-      telegramAutomationStateStatus={telegramAutomationStateStatus}
-      telegramAutomationStateError={telegramAutomationStateError}
-      telegramOperators={telegramOperators}
-      telegramOperatorsStatus={telegramOperatorsStatus}
-      telegramOperatorsError={telegramOperatorsError}
-      telegramOperatorEditor={telegramOperatorEditor}
-      telegramOperatorSaveStatus={telegramOperatorSaveStatus}
-      telegramOperatorSaveError={telegramOperatorSaveError}
-      telegramOperatorToggleId={telegramOperatorToggleId}
-      telegramOperatorDialogOpen={telegramOperatorDialogOpen}
-      setTelegramOperatorDialogOpen={setTelegramOperatorDialogOpen}
-      setTelegramOperatorEditor={setTelegramOperatorEditor}
-      onSelectTelegramOperator={onSelectTelegramOperator}
-      onResetTelegramOperatorEditor={onResetTelegramOperatorEditor}
-      onSubmitTelegramOperator={onSubmitTelegramOperator}
-      onToggleTelegramOperatorActive={onToggleTelegramOperatorActive}
-      onClearTelegramOperatorLink={onClearTelegramOperatorLink}
-      onDeleteTelegramOperator={onDeleteTelegramOperator}
-      staffAccounts={staffAccounts}
-      staffAccountsStatus={staffAccountsStatus}
-      staffAccountsError={staffAccountsError}
-      staffAccountEditor={staffAccountEditor}
-      staffAccountSaveStatus={staffAccountSaveStatus}
-      staffAccountSaveError={staffAccountSaveError}
-      staffAccountToggleId={staffAccountToggleId}
-      setStaffAccountEditor={setStaffAccountEditor}
-      onSelectStaffAccount={onSelectStaffAccount}
-      onResetStaffAccountEditor={onResetStaffAccountEditor}
-      onSubmitStaffAccount={onSubmitStaffAccount}
-      onToggleStaffAccountActive={onToggleStaffAccountActive}
-      onDeleteStaffAccount={onDeleteStaffAccount}
-      auditEvents={auditEvents}
-      auditEventsStatus={auditEventsStatus}
-      auditEventsError={auditEventsError}
-    />
-  );
+  const renderAccess = () => {
+    if (!token) {
+      return null;
+    }
+    return (
+      <AccessView
+        user={user}
+        dailyCodes={dailyCode.dailyCodes}
+        dailyCodesStatus={dailyCode.status}
+        dailyCodesError={dailyCode.error}
+        telegramAutomationState={telegramOps.automationState}
+        telegramAutomationStateStatus={telegramOps.automationStatus}
+        telegramAutomationStateError={telegramOps.automationError}
+        telegramOperators={telegramOps.operators}
+        telegramOperatorsStatus={telegramOps.status}
+        telegramOperatorsError={telegramOps.error}
+        telegramOperatorEditor={telegramOps.editor}
+        telegramOperatorSaveStatus={telegramOps.saveStatus}
+        telegramOperatorSaveError={telegramOps.saveError}
+        telegramOperatorToggleId={telegramOps.toggleId}
+        telegramOperatorDialogOpen={telegramOps.dialogOpen}
+        setTelegramOperatorDialogOpen={telegramOps.setDialogOpen}
+        setTelegramOperatorEditor={telegramOps.setEditor}
+        onSelectTelegramOperator={telegramOps.onSelect}
+        onResetTelegramOperatorEditor={telegramOps.onReset}
+        onSubmitTelegramOperator={(event) => telegramOps.onSubmit(event, token)}
+        onToggleTelegramOperatorActive={(operator) => telegramOps.onToggleActive(operator, token)}
+        onClearTelegramOperatorLink={(operator) => telegramOps.onClearLink(operator, token)}
+        onDeleteTelegramOperator={(operator) => telegramOps.onDelete(operator, token)}
+        staffAccounts={staff.staffAccounts}
+        staffAccountsStatus={staff.status}
+        staffAccountsError={staff.error}
+        staffAccountEditor={staff.editor}
+        staffAccountSaveStatus={staff.saveStatus}
+        staffAccountSaveError={staff.saveError}
+        staffAccountToggleId={staff.toggleId}
+        setStaffAccountEditor={staff.setEditor}
+        onSelectStaffAccount={staff.onSelect}
+        onResetStaffAccountEditor={staff.onReset}
+        onSubmitStaffAccount={(event) => staff.onSubmit(event, token)}
+        onToggleStaffAccountActive={(account) => staff.onToggleActive(account, token)}
+        onDeleteStaffAccount={(account) => staff.onDelete(account, token)}
+        auditEvents={auditEventsState.auditEvents}
+        auditEventsStatus={auditEventsState.status}
+        auditEventsError={auditEventsState.error}
+      />
+    );
+  };
 
   const renderActiveWorkspace = () => {
     switch (activeTab) {
@@ -2627,9 +1914,9 @@ export const App = () => {
         case 'rails':
           return formatLoadStatus(railsStatus);
         case 'access':
-          return telegramAutomationStateStatus === 'error' || dailyCodesStatus === 'error'
+          return telegramOps.automationStatus === 'error' || dailyCode.status === 'error'
             ? 'Есть ошибка'
-            : telegramAutomationStateStatus === 'loading' || dailyCodesStatus === 'loading'
+            : telegramOps.automationStatus === 'loading' || dailyCode.status === 'loading'
               ? 'Обновляем'
               : 'Данные готовы';
         default:
