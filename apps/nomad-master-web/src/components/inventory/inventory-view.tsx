@@ -407,6 +407,12 @@ export const InventoryView = ({
   const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
+  // «В миксах» считаем по показанным записям. Backend пока не возвращает
+  // глобальный счётчик в meta — при снятых фильтрах число совпадает с
+  // глобальным, при фильтре отражает текущий срез.
+  const usedInMixesCount = items.filter(
+    (item) => (item.dependentMixCount ?? 0) > 0,
+  ).length;
   const activeDialogTitleId = activeItem ? `inventory-detail-title-${activeItem.id}` : undefined;
   const manufacturerOptions = buildSuggestionOptions(catalogOptions.map((item) => item.manufacturer));
   const lineNameOptions = buildSuggestionOptions(catalogOptions.map((item) => item.lineName));
@@ -717,16 +723,23 @@ export const InventoryView = ({
           <p className="meta-line">Остатки, фильтры и зависимые миксы.</p>
         </div>
         <div className="inventory-panel__stats ops-surface__stats">
-          <div className="inventory-stat ops-surface__stat">
-            <span>Показано</span>
-            <strong>{formatMetricValue(meta.filteredItems)}</strong>
+          <div className="inventory-stat ops-surface__stat" title="Всего табаков в каталоге (без учёта фильтров)">
+            <span>Всего</span>
+            <strong>{formatMetricValue(meta.totalItems)}</strong>
           </div>
-          <div className="inventory-stat ops-surface__stat">
+          <div className="inventory-stat ops-surface__stat" title="Сейчас в наличии (по всему каталогу)">
             <span>В наличии</span>
             <strong>{formatMetricValue(meta.inStockCount)}</strong>
           </div>
-          <div className="inventory-stat ops-surface__stat">
-            <span>Нет наличия</span>
+          <div
+            className="inventory-stat ops-surface__stat"
+            title="Сколько табаков из показанных входят хотя бы в один микс"
+          >
+            <span>В миксах</span>
+            <strong>{formatMetricValue(usedInMixesCount)}</strong>
+          </div>
+          <div className="inventory-stat ops-surface__stat" title="Сейчас в стоп-листе / нет наличия (по всему каталогу)">
+            <span>Стоп-лист</span>
             <strong>{formatMetricValue(meta.outOfStockCount)}</strong>
           </div>
         </div>
