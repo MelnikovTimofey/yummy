@@ -1,19 +1,17 @@
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import {
-  Blend,
-  GalleryVerticalEnd,
-  LayoutDashboard,
-  LogOut,
-  ShieldCheck,
-  Warehouse,
-  type LucideIcon,
-} from 'lucide-react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
+import { MasterTopBar, type MasterTopBarStatusTone } from '@/components/shell/topbar';
+import {
+  getWorkspacePanelId,
+  getWorkspaceTabId,
+  workspaceTabs,
+  type WorkspaceTab,
+} from '@/components/shell/workspace-tabs';
 import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
 import {
   AuditEventRecord,
@@ -92,19 +90,6 @@ const envLabel = (() => {
   if (host.includes('stage') || host.includes('staging')) return 'stage';
   return 'prod';
 })();
-
-type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
-
-const workspaceTabs: Array<{ id: WorkspaceTab; label: string; kicker: string; icon: LucideIcon }> = [
-  { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', icon: LayoutDashboard },
-  { id: 'inventory', label: 'Табаки', kicker: 'Наличие и стоп-лист', icon: Warehouse },
-  { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', icon: Blend },
-  { id: 'rails', label: 'Рейлы', kicker: 'Витрина', icon: GalleryVerticalEnd },
-  { id: 'access', label: 'Доступ', kicker: 'Telegram и роли', icon: ShieldCheck },
-];
-
-const getWorkspaceTabId = (tab: WorkspaceTab) => `workspace-tab-${tab}`;
-const getWorkspacePanelId = (tab: WorkspaceTab) => `workspace-panel-${tab}`;
 
 type MixEditorState = {
   id: string;
@@ -385,8 +370,6 @@ const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   return resolvedNames.join(', ') || 'Миксы не заданы';
 };
 
-const formatWorkspaceTab = (value: WorkspaceTab) => workspaceTabs.find((item) => item.id === value)?.label ?? value;
-
 const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
 
 const formatLoadStatus = (status: 'idle' | 'loading' | 'ready' | 'error') => {
@@ -408,13 +391,6 @@ export const App = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState('');
   const [token, setToken] = useState(() => readStoredToken());
-  const workspaceTabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
-    dashboard: null,
-    inventory: null,
-    mixes: null,
-    rails: null,
-    access: null,
-  });
   const [user, setUser] = useState<StaffUser | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
@@ -496,49 +472,6 @@ export const App = () => {
   const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
   const [railEditorSheetOpen, setRailEditorSheetOpen] = useState(false);
   const [telegramOperatorDialogOpen, setTelegramOperatorDialogOpen] = useState(false);
-
-  const focusWorkspaceTab = (tab: WorkspaceTab) => {
-    requestAnimationFrame(() => {
-      workspaceTabRefs.current[tab]?.focus();
-    });
-  };
-
-  const onWorkspaceTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentTab: WorkspaceTab) => {
-    const currentIndex = workspaceTabs.findIndex((tab) => tab.id === currentTab);
-
-    if (currentIndex === -1) {
-      return;
-    }
-
-    let nextTab: WorkspaceTab | null = null;
-
-    switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        nextTab = workspaceTabs[(currentIndex + 1) % workspaceTabs.length]?.id ?? null;
-        break;
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        nextTab = workspaceTabs[(currentIndex - 1 + workspaceTabs.length) % workspaceTabs.length]?.id ?? null;
-        break;
-      case 'Home':
-        nextTab = workspaceTabs[0]?.id ?? null;
-        break;
-      case 'End':
-        nextTab = workspaceTabs[workspaceTabs.length - 1]?.id ?? null;
-        break;
-      default:
-        break;
-    }
-
-    if (!nextTab) {
-      return;
-    }
-
-    event.preventDefault();
-    setActiveTab(nextTab);
-    focusWorkspaceTab(nextTab);
-  };
 
   const loadInventory = async (
     nextToken: string,
@@ -3218,7 +3151,7 @@ export const App = () => {
           return 'Ожидает загрузки';
       }
     })();
-    const activeWorkspaceStatusTone: 'ready' | 'loading' | 'error' = (() => {
+    const activeWorkspaceStatusTone: MasterTopBarStatusTone = (() => {
       const text = activeWorkspaceStatus;
       if (text.includes('ошибка') || text.includes('Ошибка')) return 'error';
       if (text.includes('Обновляем') || text.includes('Загрузка') || text.includes('Ожидает')) return 'loading';
@@ -3228,69 +3161,15 @@ export const App = () => {
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
-        <nav className="master-nav master-nav--workspace" aria-label="Рабочие разделы Мастера">
-          <div className="master-nav__brand" aria-hidden="false">
-            <span className="master-nav__logo" aria-hidden="true">N</span>
-            <span className="master-nav__brand-name">Nomad Master</span>
-          </div>
-
-          <div className="workspace-tabs workspace-tabs--workspace-bar" role="tablist" aria-label="Рабочие разделы Мастера">
-            {workspaceTabs.map((tab) => {
-              const TabIcon = tab.icon;
-
-              return (
-                <button
-                  key={tab.id}
-                  id={getWorkspaceTabId(tab.id)}
-                  ref={(node) => {
-                    workspaceTabRefs.current[tab.id] = node;
-                  }}
-                  type="button"
-                  className={activeTab === tab.id ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-controls={getWorkspacePanelId(tab.id)}
-                  tabIndex={activeTab === tab.id ? 0 : -1}
-                  onClick={() => setActiveTab(tab.id)}
-                  onKeyDown={(event) => onWorkspaceTabKeyDown(event, tab.id)}
-                >
-                  <span className="workspace-tab__head">
-                    <span className="workspace-tab__icon" aria-hidden="true">
-                      <TabIcon size={15} strokeWidth={1.9} />
-                    </span>
-                    <span className="workspace-tab__copy">
-                      <strong>{tab.label}</strong>
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="master-nav__meta">
-            <span
-              className="status-chip status-chip--inverse"
-              title={`Статус данных: ${activeWorkspaceStatus}`}
-              aria-label={`Статус данных: ${activeWorkspaceStatus}`}
-            >
-              <span className={`status-dot status-dot--${activeWorkspaceStatusTone}`} aria-hidden="true" />
-              {activeWorkspaceStatus}
-            </span>
-            <div className="master-nav__user" aria-label="Текущий пользователь">
-              <strong>{user.name}</strong>
-              <span>{formatRoleLabel(user.role)}</span>
-            </div>
-            <button
-              className="secondary-button secondary-button--inline secondary-button--shell"
-              type="button"
-              onClick={onSignOut}
-              aria-label="Выйти"
-            >
-              <LogOut size={15} strokeWidth={1.8} />
-              <span>Выйти</span>
-            </button>
-          </div>
-        </nav>
+        <MasterTopBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          userName={user.name}
+          userRoleLabel={formatRoleLabel(user.role)}
+          statusText={activeWorkspaceStatus}
+          statusTone={activeWorkspaceStatusTone}
+          onSignOut={onSignOut}
+        />
 
         <section className="master-stage">
           <header className="master-stage__header master-stage__header--compact">
