@@ -1,5 +1,47 @@
 # HANDOFF — Nomad
 
+## 2.41) Process (25 мая 2026) — легализовать `chore/<slug>` как третий тип ветки
+
+- Запрос: «давай в соглашение добавим тип ветки chore». До этого PR
+  `CLAUDE.md §5` разрешал только `feature/<slug>` и `bug/<slug>`, но
+  де-факто за последние сессии появилось третье — `chore/<slug>` для
+  технической уборки без продуктового эффекта. Уже смерженные PR этого
+  типа: #39 (`chore/master-web-remove-dead-telegram-recipients`) и #41
+  (`chore/master-web-remove-dead-set-rail-mix-search`).
+
+- Реализация (PR #45, ветка `feature/process-add-chore-branch-type`):
+  Изменения только в `CLAUDE.md`, три места:
+  - **Hard-rule §5 (top of section)**: разрешённые префиксы расширены
+    до `feature/<slug>`, `bug/<slug>` или `chore/<slug>`. Команда
+    `git checkout -b` теперь упоминает выбор префикса со ссылкой на §5.2.
+  - **§5.2 description**: третий пункт `chore/<slug>` с явным
+    определением «техническая уборка без продуктового эффекта»:
+    dead-code, осиротевшие ссылки, dependency-updates, CI/lint/format-
+    tweaks, переименование внутренних идентификаторов.
+  - **Явное исключение из chore**: схема данных, публичный контракт,
+    auth — эти изменения идут через `feature/` и попадают под human
+    review (`.github/NOMAD_REVIEW_POLICY.md`).
+  - **Rule-of-thumb** для разрешения сомнений feature vs chore: PR-
+    описание «удалить/убрать/починить опечатку/обновить версию» без
+    UX-эффекта → `chore`; добавляет/улучшает функциональность → `feature`.
+  - **Финальное правило в конце документа**: «всегда `feature/<slug>`,
+    `bug/<slug>` или `chore/<slug>`».
+
+- Контекст триггера записи: первый CI run PR #45 упал на
+  `nomad-docs-check` («Nomad process change requires HANDOFF.md
+  update»). Эта запись и есть тот апдейт. Это второй раз, когда я
+  сталкиваюсь с правилом — первый был на step 5 рефактора (PR #42).
+  Правило надёжное; в будущем сразу добавлять HANDOFF-запись для
+  любого PR, который трогает `CLAUDE.md` / `.claude/` / `.github/`.
+
+- Категория ревью: **process/workflow** — требует human review по
+  `.github/NOMAD_REVIEW_POLICY.md`. Сам не мержу.
+
+- Остаточный риск: существующие смерженные `chore/*` PR (#39, #41)
+  задним числом становятся легитимными — это и есть цель PR. Никакого
+  кода не трогается; CI gate в этом PR только smoke и docs-check
+  (master-build skipping — не задеты master-web src).
+
 ## 2.40) Master-web (25 мая 2026) — step 5 рефактора: MixBuilder full-page
 
 - Запрос: продолжение 7-шагового рефактора по
