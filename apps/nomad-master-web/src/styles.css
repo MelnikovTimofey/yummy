@@ -104,8 +104,6 @@
   border: 0;
   background: transparent;
   color: var(--nomad-ink-soft);
-  font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
 }
 

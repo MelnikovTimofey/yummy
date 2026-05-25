@@ -1,5 +1,5 @@
 import { KeyboardEvent, useRef } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Rows2, Rows3, Rows4, type LucideIcon } from 'lucide-react';
 import type { Density } from '@/hooks/use-density';
 import {
   getWorkspacePanelId,
@@ -22,10 +22,10 @@ type MasterTopBarProps = {
   onDensityChange: (next: Density) => void;
 };
 
-const densityOptions: Array<{ value: Density; label: string; title: string }> = [
-  { value: 'compact', label: 'C', title: 'Компактная плотность (32px на строку) — режим «зал кипит»' },
-  { value: 'default', label: '·', title: 'Обычная плотность (36px на строку)' },
-  { value: 'cozy', label: 'L', title: 'Просторная плотность (48px на строку)' },
+const densityOptions: Array<{ value: Density; icon: LucideIcon; title: string }> = [
+  { value: 'compact', icon: Rows3, title: 'Компактная плотность (32px на строку) — режим «зал кипит»' },
+  { value: 'default', icon: Rows4, title: 'Обычная плотность (36px на строку)' },
+  { value: 'cozy', icon: Rows2, title: 'Просторная плотность (48px на строку)' },
 ];
 
 export const MasterTopBar = ({
@@ -133,23 +133,26 @@ export const MasterTopBar = ({
           role="group"
           aria-label="Плотность списков"
         >
-          {densityOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={
-                density === option.value
-                  ? 'master-density-toggle__button master-density-toggle__button--active'
-                  : 'master-density-toggle__button'
-              }
-              onClick={() => onDensityChange(option.value)}
-              title={option.title}
-              aria-label={option.title}
-              aria-pressed={density === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
+          {densityOptions.map((option) => {
+            const DensityIcon = option.icon;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={
+                  density === option.value
+                    ? 'master-density-toggle__button master-density-toggle__button--active'
+                    : 'master-density-toggle__button'
+                }
+                onClick={() => onDensityChange(option.value)}
+                title={option.title}
+                aria-label={option.title}
+                aria-pressed={density === option.value}
+              >
+                <DensityIcon size={14} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            );
+          })}
         </div>
         <span
           className="status-chip status-chip--inverse"
