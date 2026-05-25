@@ -884,14 +884,6 @@ export const App = () => {
     }));
   };
 
-  const onAddMixComponent = () => {
-    const fallbackId = mixTobaccos.find((item) => !mixEditor.components.some((component) => component.tobaccoId === item.id))?.id ?? '';
-    setMixEditor((current) => ({
-      ...current,
-      components: [...current.components, createMixEditorComponent(fallbackId, '')],
-    }));
-  };
-
   // MixBuilder добавляет компонент по конкретному tobaccoId и сразу
   // ребалансирует доли так, чтобы сумма = 100%.
   const onAddMixComponentById = (tobaccoId: string) => {
@@ -926,55 +918,6 @@ export const App = () => {
         component.key === key ? { ...component, ...patch } : component
       )),
     }));
-  };
-
-  const onMoveMixComponent = (key: string, direction: 'up' | 'down') => {
-    setMixEditor((current) => {
-      const index = current.components.findIndex((component) => component.key === key);
-      if (index === -1) {
-        return current;
-      }
-
-      const nextIndex = direction === 'up' ? index - 1 : index + 1;
-      if (nextIndex < 0 || nextIndex >= current.components.length) {
-        return current;
-      }
-
-      const nextComponents = [...current.components];
-      const [item] = nextComponents.splice(index, 1);
-      nextComponents.splice(nextIndex, 0, item);
-
-      return {
-        ...current,
-        components: nextComponents,
-      };
-    });
-  };
-
-  const onRemoveMixComponent = (key: string) => {
-    setMixEditor((current) => ({
-      ...current,
-      components: current.components.filter((component) => component.key !== key),
-    }));
-  };
-
-  const onRebalanceMixComponents = () => {
-    setMixEditor((current) => {
-      if (!current.components.length) {
-        return current;
-      }
-
-      const base = Math.floor(100 / current.components.length);
-      const remainder = 100 - base * current.components.length;
-
-      return {
-        ...current,
-        components: current.components.map((component, index) => ({
-          ...component,
-          proportion: String(base + (index < remainder ? 1 : 0)),
-        })),
-      };
-    });
   };
 
   const onSubmitMix = async (event: FormEvent<HTMLFormElement>) => {
@@ -1142,17 +1085,12 @@ export const App = () => {
 
     return (
       <MixCatalogView
-        mode="catalog"
         items={mixes}
-        tobaccoOptions={mixTobaccos}
         status={mixesStatus}
         error={mixesError}
         filters={mixesFilters}
         meta={mixesMeta}
         sort={mixesSort}
-        editor={mixEditor}
-        saveStatus={mixSaveStatus}
-        saveError={mixSaveError}
         onSearchChange={onMixSearchChange}
         onStatusChange={(value) => void onMixStatusChange(value)}
         onRailStateChange={(value) => void onMixRailStateChange(value)}
@@ -1164,16 +1102,6 @@ export const App = () => {
         onPageChange={onMixPageChange}
         onSelectMix={onSelectMix}
         onStartCreate={onStartCreateMix}
-        onCancelCreate={onCancelCreateMix}
-        onResetEditor={onResetMixEditor}
-        onEditorFieldChange={onChangeMixEditorField}
-        onEditorAvailabilityChange={onChangeMixEditorAvailability}
-        onAddComponent={onAddMixComponent}
-        onUpdateComponent={onUpdateMixComponent}
-        onMoveComponent={onMoveMixComponent}
-        onRemoveComponent={onRemoveMixComponent}
-        onRebalanceComponents={onRebalanceMixComponents}
-        onSubmit={onSubmitMix}
       />
     );
   };
