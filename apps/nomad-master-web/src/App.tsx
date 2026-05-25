@@ -250,6 +250,15 @@ export const App = () => {
 
 
   const hashSkipRef = useRef(false);
+  const pendingMixEditIdRef = useRef<string | null>(null);
+  const mixesApiRef = useRef(mixes);
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    mixesApiRef.current = mixes;
+  }, [mixes]);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   useEffect(() => {
     if (!user) {
@@ -262,33 +271,97 @@ export const App = () => {
 
   useEffect(() => {
     if (!user) return;
-    const slug = window.location.hash.replace(/^#/, '');
-    if (slug === activeTab) return;
     if (hashSkipRef.current) {
       hashSkipRef.current = false;
       return;
     }
-    window.history.pushState(null, '', `#${activeTab}`);
-  }, [user, activeTab]);
+    let desired = `#${activeTab}`;
+    if (activeTab === 'mixes') {
+      if (mixes.mixesScreen === 'edit' && mixes.mixEditor.id) {
+        desired = `#mixes/edit/${mixes.mixEditor.id}`;
+      } else if (mixes.mixesScreen === 'create') {
+        desired = '#mixes/create';
+      }
+    }
+    if (window.location.hash === desired) return;
+    window.history.pushState(null, '', desired);
+  }, [user, activeTab, mixes.mixesScreen, mixes.mixEditor.id]);
 
   useEffect(() => {
     if (!user) return;
-    const slug = window.location.hash.replace(/^#/, '');
-    if (workspaceTabs.some((item) => item.id === slug) && slug !== activeTab) {
-      hashSkipRef.current = true;
-      setActiveTab(slug as WorkspaceTab);
-    }
-    const onPop = () => {
-      const next = window.location.hash.replace(/^#/, '');
-      if (workspaceTabs.some((item) => item.id === next)) {
+
+    const applyHash = () => {
+      const raw = window.location.hash.replace(/^#/, '');
+      if (!raw) return;
+      const parts = raw.split('/');
+      const api = mixesApiRef.current;
+
+      if (parts[0] === 'mixes' && parts[1] === 'create') {
         hashSkipRef.current = true;
-        setActiveTab(next as WorkspaceTab);
+        pendingMixEditIdRef.current = null;
+        setActiveTab('mixes');
+        api.onStartCreate();
+        return;
+      }
+
+      if (parts[0] === 'mixes' && parts[1] === 'edit' && parts[2]) {
+        const targetId = parts[2];
+        const mix = api.mixes.find((item) => item.id === targetId);
+        if (mix) {
+          hashSkipRef.current = true;
+          pendingMixEditIdRef.current = null;
+          setActiveTab('mixes');
+          api.onSelectMix(mix);
+        } else {
+          pendingMixEditIdRef.current = targetId;
+          if (activeTabRef.current !== 'mixes') {
+            hashSkipRef.current = true;
+            setActiveTab('mixes');
+          }
+        }
+        return;
+      }
+
+      if (workspaceTabs.some((item) => item.id === raw)) {
+        const nextTab = raw as WorkspaceTab;
+        pendingMixEditIdRef.current = null;
+        if (api.mixesScreen !== 'catalog') {
+          hashSkipRef.current = true;
+          api.onResetEditor();
+        }
+        if (nextTab !== activeTabRef.current) {
+          hashSkipRef.current = true;
+          setActiveTab(nextTab);
+        }
       }
     };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+
+    applyHash();
+    window.addEventListener('popstate', applyHash);
+    return () => window.removeEventListener('popstate', applyHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const pendingId = pendingMixEditIdRef.current;
+    if (!pendingId) return;
+    if (activeTab !== 'mixes') {
+      pendingMixEditIdRef.current = null;
+      return;
+    }
+    if (mixes.mixesStatus !== 'ready') return;
+    const mix = mixes.mixes.find((item) => item.id === pendingId);
+    pendingMixEditIdRef.current = null;
+    if (mix) {
+      hashSkipRef.current = true;
+      mixes.onSelectMix(mix);
+    } else {
+      console.warn(`[master-web] mix with id="${pendingId}" not found, falling back to catalog`);
+      hashSkipRef.current = true;
+      window.history.replaceState(null, '', '#mixes');
+    }
+  }, [user, mixes.mixes, mixes.mixesStatus, mixes.onSelectMix, activeTab]);
 
   useEffect(() => {
     const hydrate = async () => {
