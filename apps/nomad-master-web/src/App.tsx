@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
 import { apiBaseUrl, apiHostLabel, envLabel, requestJson } from '@/lib/api-client';
-import { replaceOrInsert } from '@/lib/utils';
 import { useAuditEvents } from '@/hooks/use-audit-events';
 import { useDailyCode } from '@/hooks/use-daily-code';
+import { useRails } from '@/hooks/use-rails';
 import { useStaffAccounts } from '@/hooks/use-staff-accounts';
 import { useTelegramOperators } from '@/hooks/use-telegram-operators';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } fro
 import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
 import { rebalanceTo100 } from '@/components/mixes/mix-builder/rebalance';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
-import { RailEditor, type RailEditorState } from '@/components/rails/rail-editor';
+import { RailEditor } from '@/components/rails/rail-editor';
 import { RailsView } from '@/components/rails/rails-view';
 import { MasterTopBar, type MasterTopBarStatusTone } from '@/components/shell/topbar';
 import {
@@ -68,7 +68,6 @@ import {
   normalizeDailyAccessCodeRecord,
   normalizeMixListResponse,
   normalizeMixRecord,
-  normalizeRailRecord,
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
   normalizeTelegramOperatorRecord,
@@ -77,7 +76,6 @@ import {
   readListPayload,
   sortDailyAccessCodes,
   sortMixes,
-  sortRails,
   sortStaffAccounts,
   sortTelegramOperators,
   toggleInventoryFilterValue,
@@ -99,9 +97,6 @@ type MixEditorState = {
 
 type MixesScreenMode = MixCatalogMode;
 
-// RailEditorState переехал в components/rails/rail-editor
-
-
 let mixEditorComponentDraftId = 0;
 
 const createMixEditorComponent = (tobaccoId = '', proportion = ''): MixEditorComponentInput => ({
@@ -119,19 +114,6 @@ const emptyMixEditor = (): MixEditorState => ({
   railMemberships: [],
 });
 
-const emptyRailEditor = (): RailEditorState => ({
-  id: '',
-  name: '',
-  description: '',
-  type: 'curated',
-  mixIds: [],
-  active: true,
-  editable: true,
-  readOnlyReason: '',
-});
-
-
-
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
   name: mix.name,
@@ -139,17 +121,6 @@ const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   components: mix.components.map((component) => createMixEditorComponent(component.tobaccoId, String(component.proportion))),
   available: mix.available,
   railMemberships: mix.railMemberships,
-});
-
-const toRailEditorState = (rail: RailRecord): RailEditorState => ({
-  id: rail.id,
-  name: rail.name,
-  description: rail.description,
-  type: rail.type,
-  mixIds: [...rail.mixIds],
-  active: rail.active,
-  editable: rail.editable,
-  readOnlyReason: rail.readOnlyReason,
 });
 
 
@@ -248,6 +219,16 @@ export const App = () => {
   const staff = useStaffAccounts({ onAfterSubmit: onAfterAccessSubmit });
   const telegramOps = useTelegramOperators({ onAfterSubmit: onAfterAccessSubmit });
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
+  const refreshRailSiblings = async (nextToken: string) => {
+    await Promise.all([
+      loadSummary(nextToken, dashboardWindow),
+      loadMixes(nextToken, mixesFilters, mixesSort),
+    ]);
+  };
+  const rails = useRails({
+    onAfterSubmit: () => setActiveTab('rails'),
+    onRefreshSiblings: refreshRailSiblings,
+  });
   const [inventoryFilters, setInventoryFilters] = useState<InventoryListFilters>(defaultInventoryListResponse.filters);
   const [inventorySort, setInventorySort] = useState<InventoryListSort>(defaultInventoryListResponse.sort);
   const [inventoryMeta, setInventoryMeta] = useState<InventoryListMeta>(defaultInventoryListResponse.meta);
@@ -259,16 +240,12 @@ export const App = () => {
   const [mixesSort, setMixesSort] = useState<MixListSort>(defaultMixListResponse.sort);
   const [mixesMeta, setMixesMeta] = useState<MixListMeta>(defaultMixListResponse.meta);
   const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
-  const [railMixCatalog, setRailMixCatalog] = useState<MixRecord[]>([]);
-  const [rails, setRails] = useState<RailRecord[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [railsStatus, setRailsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
-  const [railsError, setRailsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -277,11 +254,6 @@ export const App = () => {
   const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
   const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
-  const [railEditor, setRailEditor] = useState<RailEditorState>(emptyRailEditor);
-  const [railMixCandidateId, setRailMixCandidateId] = useState('');
-  const [railSaveStatus, setRailSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [railSaveError, setRailSaveError] = useState('');
-  const [railEditorSheetOpen, setRailEditorSheetOpen] = useState(false);
 
   const loadInventory = async (
     nextToken: string,
@@ -363,39 +335,13 @@ export const App = () => {
     }
   };
 
-  const loadRailMixCatalog = async (nextToken: string) => {
-    try {
-      const response = await requestJson<unknown>('/staff/mixes?sort=name&direction=asc', {}, nextToken);
-      const payload = normalizeMixListResponse(response);
-      setRailMixCatalog(payload.items);
-    } catch {
-      setRailMixCatalog([]);
-    }
-  };
-
   const refreshInventoryDependents = async (nextToken: string) => {
     await Promise.allSettled([
       loadSummary(nextToken, dashboardWindow),
       loadMixes(nextToken, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize),
       loadMixTobaccos(nextToken),
-      loadRailMixCatalog(nextToken),
+      rails.reloadCatalog(nextToken),
     ]);
-  };
-
-  const loadRails = async (nextToken: string) => {
-    setRailsStatus('loading');
-    setRailsError('');
-
-    try {
-      const response = await requestJson<unknown>('/staff/rails', {}, nextToken);
-      const items = readListPayload<unknown>(response).map(normalizeRailRecord);
-      setRails(sortRails(items));
-      setRailsStatus('ready');
-    } catch (cause) {
-      setRails([]);
-      setRailsStatus('error');
-      setRailsError(cause instanceof Error ? cause.message : 'Не удалось загрузить рейлы');
-    }
   };
 
 
@@ -462,8 +408,7 @@ export const App = () => {
           loadSummary(token, dashboardWindow),
           loadMixes(token),
           loadMixTobaccos(token),
-          loadRailMixCatalog(token),
-          loadRails(token),
+          rails.reload(token),
           dailyCode.reload(token),
           staff.reload(token, profile.user.role),
           telegramOps.reload(token, profile.user.role),
@@ -507,8 +452,7 @@ export const App = () => {
         loadSummary(auth.accessToken, dashboardWindow),
         loadMixes(auth.accessToken),
         loadMixTobaccos(auth.accessToken),
-        loadRailMixCatalog(auth.accessToken),
-        loadRails(auth.accessToken),
+        rails.reload(auth.accessToken),
         dailyCode.reload(auth.accessToken),
         staff.reload(auth.accessToken, profile.user.role),
         telegramOps.reload(auth.accessToken, profile.user.role),
@@ -618,6 +562,7 @@ export const App = () => {
   };
 
   const onSignOut = () => {
+    rails.reset();
     dailyCode.reset();
     staff.reset();
     telegramOps.reset();
@@ -637,8 +582,6 @@ export const App = () => {
     setMixesSort(defaultMixListResponse.sort);
     setMixesMeta(defaultMixListResponse.meta);
     setMixTobaccos([]);
-    setRailMixCatalog([]);
-    setRails([]);
     setStatus('idle');
     setError('');
     setPassword('');
@@ -646,20 +589,14 @@ export const App = () => {
     setInventoryStatus('idle');
     setSummaryStatus('idle');
     setMixesStatus('idle');
-    setRailsStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
-    setRailsError('');
     setToggleId('');
     setInventoryBatchAction('');
     setMixEditor(emptyMixEditor());
     setMixSaveStatus('idle');
     setMixSaveError('');
-    setRailEditor(emptyRailEditor());
-    setRailMixCandidateId('');
-    setRailSaveStatus('idle');
-    setRailSaveError('');
   };
 
   const onToggleStock = async (item: InventoryTobacco) => {
@@ -1110,8 +1047,7 @@ export const App = () => {
       setMixesScreen('catalog');
       await Promise.all([
         loadMixes(token, mixesFilters, mixesSort),
-        loadRailMixCatalog(token),
-        loadRails(token),
+        rails.reload(token),
         loadSummary(token, dashboardWindow),
       ]);
       setMixSaveStatus('ready');
@@ -1122,135 +1058,6 @@ export const App = () => {
     }
   };
 
-  const onSelectRail = (rail: RailRecord) => {
-    setRailEditor(toRailEditorState(rail));
-    setRailMixCandidateId('');
-    setRailSaveError('');
-    setRailSaveStatus('idle');
-    setActiveTab('rails');
-  };
-
-  const onResetRailEditor = () => {
-    setRailEditor(emptyRailEditor());
-    setRailMixCandidateId('');
-    setRailSaveError('');
-    setRailSaveStatus('idle');
-  };
-
-  const onAddRailMix = (mixId: string) => {
-    if (!mixId) {
-      return;
-    }
-
-    setRailEditor((current) => (
-      current.mixIds.includes(mixId)
-        ? current
-        : {
-            ...current,
-            mixIds: [...current.mixIds, mixId],
-          }
-    ));
-  };
-
-  const onRemoveRailMix = (mixId: string) => {
-    setRailEditor((current) => ({
-      ...current,
-      mixIds: current.mixIds.filter((item) => item !== mixId),
-    }));
-  };
-
-  const onMoveRailMix = (mixId: string, direction: 'up' | 'down') => {
-    setRailEditor((current) => {
-      const index = current.mixIds.indexOf(mixId);
-      if (index < 0) {
-        return current;
-      }
-
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= current.mixIds.length) {
-        return current;
-      }
-
-      const nextMixIds = [...current.mixIds];
-      const [item] = nextMixIds.splice(index, 1);
-      nextMixIds.splice(targetIndex, 0, item);
-
-      return {
-        ...current,
-        mixIds: nextMixIds,
-      };
-    });
-  };
-
-  const onSubmitRail = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
-    const name = railEditor.name.trim();
-    const description = railEditor.description.trim();
-    const mixIds = railEditor.mixIds;
-
-    if (railEditor.id && !railEditor.editable) {
-      setRailSaveError(railEditor.readOnlyReason || 'Этот рейл доступен только для просмотра');
-      setRailSaveStatus('error');
-      return;
-    }
-
-    if (!name) {
-      setRailSaveError('Введите название рейла');
-      setRailSaveStatus('error');
-      return;
-    }
-
-    if (!mixIds.length) {
-      setRailSaveError('Добавьте хотя бы один микс');
-      setRailSaveStatus('error');
-      return;
-    }
-
-    setRailSaveStatus('loading');
-    setRailSaveError('');
-
-    const payload = {
-      name,
-      description,
-      mixIds,
-      active: railEditor.active,
-    };
-
-    try {
-      const response = await requestJson<unknown>(
-        railEditor.id ? `/staff/rails/${railEditor.id}` : '/staff/rails',
-        {
-          method: railEditor.id ? 'PATCH' : 'POST',
-          body: JSON.stringify(payload),
-        },
-        token,
-      );
-
-      const savedRail = normalizeRailRecord(readEntityPayload<unknown>(response));
-      if (!savedRail.id) {
-        throw new Error('Backend вернул пустой рейл');
-      }
-
-      setRails((current) => sortRails(replaceOrInsert(current, savedRail)));
-      setRailEditor(toRailEditorState(savedRail));
-      await Promise.all([
-        loadSummary(token, dashboardWindow),
-        loadMixes(token, mixesFilters, mixesSort),
-        loadRailMixCatalog(token),
-        loadRails(token),
-      ]);
-      setRailSaveStatus('ready');
-      setActiveTab('rails');
-      setRailEditorSheetOpen(false);
-    } catch (cause) {
-      setRailSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить рейл');
-      setRailSaveStatus('error');
-    }
-  };
 
 
 
@@ -1374,36 +1181,36 @@ export const App = () => {
   const renderRails = () => (
     <>
       <RailsView
-        rails={rails}
-        railMixCatalog={railMixCatalog}
-        railsStatus={railsStatus}
-        railsError={railsError}
-        activeEditorId={railEditor.id}
+        rails={rails.rails}
+        railMixCatalog={rails.railMixCatalog}
+        railsStatus={rails.railsStatus}
+        railsError={rails.railsError}
+        activeEditorId={rails.railEditor.id}
         onCreateRail={() => {
-          onResetRailEditor();
-          setRailEditorSheetOpen(true);
+          rails.onResetRailEditor();
+          rails.setRailEditorSheetOpen(true);
         }}
         onOpenRail={(rail) => {
-          onSelectRail(rail);
-          setRailEditorSheetOpen(true);
+          rails.onSelectRail(rail);
+          rails.setRailEditorSheetOpen(true);
         }}
       />
       <RailEditor
-        open={railEditorSheetOpen}
-        onOpenChange={setRailEditorSheetOpen}
-        editor={railEditor}
-        setEditor={setRailEditor}
-        railMixCatalog={railMixCatalog}
+        open={rails.railEditorSheetOpen}
+        onOpenChange={rails.setRailEditorSheetOpen}
+        editor={rails.railEditor}
+        setEditor={rails.setRailEditor}
+        railMixCatalog={rails.railMixCatalog}
         mixes={mixes}
-        railMixCandidateId={railMixCandidateId}
-        setRailMixCandidateId={setRailMixCandidateId}
-        saveStatus={railSaveStatus}
-        saveError={railSaveError}
-        onSubmit={onSubmitRail}
-        onAddMix={onAddRailMix}
-        onRemoveMix={onRemoveRailMix}
-        onMoveMix={onMoveRailMix}
-        onReset={onResetRailEditor}
+        railMixCandidateId={rails.railMixCandidateId}
+        setRailMixCandidateId={rails.setRailMixCandidateId}
+        saveStatus={rails.railSaveStatus}
+        saveError={rails.railSaveError}
+        onSubmit={(event) => rails.onSubmitRail(event, token)}
+        onAddMix={rails.onAddRailMix}
+        onRemoveMix={rails.onRemoveRailMix}
+        onMoveMix={rails.onMoveRailMix}
+        onReset={rails.onResetRailEditor}
       />
     </>
   );
@@ -1485,7 +1292,7 @@ export const App = () => {
         case 'mixes':
           return formatLoadStatus(mixesStatus);
         case 'rails':
-          return formatLoadStatus(railsStatus);
+          return formatLoadStatus(rails.railsStatus);
         case 'access':
           return telegramOps.automationStatus === 'error' || dailyCode.status === 'error'
             ? 'Есть ошибка'
@@ -1536,7 +1343,7 @@ export const App = () => {
         searchOnly: true,
         onSelect: () => onSelectMix(mix),
       })),
-      ...rails.map((rail) => ({
+      ...rails.rails.map((rail) => ({
         id: `rail:${rail.id}`,
         label: rail.name,
         group: 'Открыть рейл',
@@ -1544,8 +1351,8 @@ export const App = () => {
         keywords: `${rail.name} ${rail.description ?? ''}`,
         searchOnly: true,
         onSelect: () => {
-          onSelectRail(rail);
-          setRailEditorSheetOpen(true);
+          rails.onSelectRail(rail);
+          rails.setRailEditorSheetOpen(true);
         },
       })),
       ...inventory.map((tobacco) => ({
