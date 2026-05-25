@@ -66,5 +66,4 @@
 
 - `git diff --check`
 - `git status --short`
-- `HANDOFF.md` обновлён
 - PR открыт в `main` (с ветки `feature/*` или `bug/*`) и помечен для ревью

@@ -34,7 +34,6 @@ cd apps/nomad-backend && npm run build
 
 Отметьте, какие документы были обновлены:
 
-- [ ] `HANDOFF.md`
 - [ ] `CLAUDE.md`
 - [ ] `.claude/` (агенты или скиллы)
 - [ ] `README.md`

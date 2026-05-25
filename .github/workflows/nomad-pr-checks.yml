@@ -14,7 +14,6 @@ on:
       - .claude/**
       - CLAUDE.md
       - docs/**
-      - HANDOFF.md
 
 permissions:
   contents: read
@@ -36,7 +35,6 @@ jobs:
       bot: ${{ steps.filter.outputs.bot }}
       runtime: ${{ steps.filter.outputs.runtime }}
       process_core: ${{ steps.filter.outputs.process_core }}
-      handoff: ${{ steps.filter.outputs.handoff }}
     steps:
       - name: Detect changed Nomad scopes
         id: filter
@@ -72,8 +70,6 @@ jobs:
               - 'tests/nomad-smoke/**'
               - 'CLAUDE.md'
               - 'docs/**'
-            handoff:
-              - 'HANDOFF.md'
 
   nomad-review-flags:
     needs: changes
@@ -257,29 +253,3 @@ jobs:
       - name: Build
         working-directory: services/nomad-telegram-bot
         run: npm run build
-
-  nomad-docs-check:
-    name: nomad-docs-check
-    needs: changes
-    if: needs.changes.outputs.process_core == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Require HANDOFF.md for Nomad process changes
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          HANDOFF_CHANGED: ${{ needs.changes.outputs.handoff }}
-        run: |
-          set -eu
-          echo "Comparing ${BASE_SHA}..${HEAD_SHA}"
-          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}"
-
-          if [ "${HANDOFF_CHANGED}" != "true" ]; then
-            echo "Nomad process change requires HANDOFF.md update"
-            exit 1
-          fi
-
-          echo "HANDOFF.md is present in this process PR"

@@ -145,8 +145,7 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 2. `nomad-master-build`
 3. `nomad-backend-build`
 4. `nomad-bot-build`
-5. `nomad-docs-check`
-6. `nomad-smoke`
+5. `nomad-smoke`
 
 Если используется GitHub ruleset с path targeting, применять эти checks только для Nomad paths.
 
@@ -154,9 +153,10 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 
 Если GitHub governance для Nomad меняется, обновлять:
 
-1. `HANDOFF.md`
-2. `CLAUDE.md`, если меняются правила агента, процесс или operating model
-3. `.claude/agents/` или `.claude/skills/`, если меняются роли или скиллы
+1. `CLAUDE.md`, если меняются правила агента, процесс или operating model
+2. `.claude/agents/` или `.claude/skills/`, если меняются роли или скиллы
+
+`HANDOFF.md` — архив прошлых решений; новые записи в нём не ведутся, обновлять не требуется.
 
 ## Non-goals
 

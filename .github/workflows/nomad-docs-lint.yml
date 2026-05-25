@@ -9,7 +9,6 @@ on:
       - .claude/**
       - CLAUDE.md
       - docs/**
-      - HANDOFF.md
   push:
     branches:
       - main
@@ -18,7 +17,6 @@ on:
       - .claude/**
       - CLAUDE.md
       - docs/**
-      - HANDOFF.md
 
 permissions:
   contents: read
