@@ -653,7 +653,6 @@ export const App = () => {
     setMixSaveStatus('idle');
     setMixSaveError('');
     setRailEditor(emptyRailEditor());
-    setRailMixSearch('');
     setRailMixCandidateId('');
     setRailSaveStatus('idle');
     setRailSaveError('');
