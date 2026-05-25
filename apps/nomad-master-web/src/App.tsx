@@ -48,8 +48,6 @@ import {
   StaffUser,
   TelegramAutomationStateRecord,
   TelegramOperatorRecord,
-  TelegramRecipientRecord,
-  TelegramRecipientScope,
   buildInventoryRequestQuery,
   buildMixRequestQuery,
   formatDateTimeLocalInput,
@@ -58,7 +56,6 @@ import {
   formatMetricValue,
   formatRailType,
   formatTelegramAutomationHealth,
-  formatTelegramRecipientScope,
   normalizeAuditEventRecord,
   normalizeDashboardSummary,
   normalizeInventoryBatchResponse,
@@ -70,7 +67,6 @@ import {
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
   normalizeTelegramOperatorRecord,
-  normalizeTelegramRecipientRecord,
   parseDateTimeLocalInput,
   readEntityPayload,
   readListPayload,
@@ -79,8 +75,6 @@ import {
   sortRails,
   sortStaffAccounts,
   sortTelegramOperators,
-  sortTelegramRecipients,
-  telegramRecipientScopeOptions,
   toggleInventoryFilterValue,
   toggleMixFilterValue,
   defaultInventoryListResponse,
@@ -112,14 +106,6 @@ type RailEditorState = {
 };
 
 
-type TelegramRecipientEditorState = {
-  id: string;
-  chatId: string;
-  label: string;
-  scope: TelegramRecipientScope;
-  active: boolean;
-};
-
 let mixEditorComponentDraftId = 0;
 
 const createMixEditorComponent = (tobaccoId = '', proportion = ''): MixEditorComponentInput => ({
@@ -150,15 +136,6 @@ const emptyRailEditor = (): RailEditorState => ({
 
 
 
-const emptyTelegramRecipientEditor = (): TelegramRecipientEditorState => ({
-  id: '',
-  chatId: '',
-  label: '',
-  scope: 'allowed',
-  active: true,
-});
-
-
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   id: mix.id,
   name: mix.name,
@@ -179,15 +156,6 @@ const toRailEditorState = (rail: RailRecord): RailEditorState => ({
   readOnlyReason: rail.readOnlyReason,
 });
 
-
-
-const toTelegramRecipientEditorState = (recipient: TelegramRecipientRecord): TelegramRecipientEditorState => ({
-  id: recipient.id,
-  chatId: recipient.chatId,
-  label: recipient.label,
-  scope: recipient.scope,
-  active: recipient.active,
-});
 
 
 const parseNumberInput = (value: string, fallback = 0) => {
@@ -296,19 +264,14 @@ export const App = () => {
   const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
   const [railMixCatalog, setRailMixCatalog] = useState<MixRecord[]>([]);
   const [rails, setRails] = useState<RailRecord[]>([]);
-  const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipientRecord[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railsStatus, setRailsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [telegramRecipientsStatus, setTelegramRecipientsStatus] = useState<'idle' | 'loading' | 'ready' | 'forbidden' | 'error'>(
-    'idle',
-  );
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [mixesError, setMixesError] = useState('');
   const [railsError, setRailsError] = useState('');
-  const [telegramRecipientsError, setTelegramRecipientsError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -321,11 +284,6 @@ export const App = () => {
   const [railMixCandidateId, setRailMixCandidateId] = useState('');
   const [railSaveStatus, setRailSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [railSaveError, setRailSaveError] = useState('');
-  const [telegramRecipientEditor, setTelegramRecipientEditor] =
-    useState<TelegramRecipientEditorState>(emptyTelegramRecipientEditor);
-  const [telegramRecipientSaveStatus, setTelegramRecipientSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [telegramRecipientSaveError, setTelegramRecipientSaveError] = useState('');
-  const [telegramRecipientToggleId, setTelegramRecipientToggleId] = useState('');
   const [railEditorSheetOpen, setRailEditorSheetOpen] = useState(false);
 
   const loadInventory = async (
@@ -443,31 +401,6 @@ export const App = () => {
     }
   };
 
-
-
-
-  const loadTelegramRecipients = async (nextToken: string, role: StaffUser['role']) => {
-    if (role !== 'admin') {
-      setTelegramRecipients([]);
-      setTelegramRecipientsStatus('forbidden');
-      setTelegramRecipientsError('Чаты Telegram доступны только для admin.');
-      return;
-    }
-
-    setTelegramRecipientsStatus('loading');
-    setTelegramRecipientsError('');
-
-    try {
-      const response = await requestJson<unknown>('/staff/access/telegram-recipients', {}, nextToken);
-      const items = sortTelegramRecipients(readListPayload<unknown>(response).map(normalizeTelegramRecipientRecord));
-      setTelegramRecipients(items);
-      setTelegramRecipientsStatus('ready');
-    } catch (cause) {
-      setTelegramRecipients([]);
-      setTelegramRecipientsStatus('error');
-      setTelegramRecipientsError(cause instanceof Error ? cause.message : 'Не удалось загрузить чаты Telegram');
-    }
-  };
 
 
 
@@ -717,12 +650,10 @@ export const App = () => {
     setSummaryStatus('idle');
     setMixesStatus('idle');
     setRailsStatus('idle');
-    setTelegramRecipientsStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setMixesError('');
     setRailsError('');
-    setTelegramRecipientsError('');
     setToggleId('');
     setInventoryBatchAction('');
     setMixEditor(emptyMixEditor());
@@ -733,11 +664,6 @@ export const App = () => {
     setRailMixCandidateId('');
     setRailSaveStatus('idle');
     setRailSaveError('');
-    setTelegramRecipients([]);
-    setTelegramRecipientEditor(emptyTelegramRecipientEditor());
-    setTelegramRecipientSaveStatus('idle');
-    setTelegramRecipientSaveError('');
-    setTelegramRecipientToggleId('');
   };
 
   const onToggleStock = async (item: InventoryTobacco) => {
@@ -1318,140 +1244,6 @@ export const App = () => {
 
 
 
-
-  const onSelectTelegramRecipient = (recipient: TelegramRecipientRecord) => {
-    setTelegramRecipientEditor(toTelegramRecipientEditorState(recipient));
-    setTelegramRecipientSaveError('');
-    setTelegramRecipientSaveStatus('idle');
-    setActiveTab('access');
-  };
-
-  const onResetTelegramRecipientEditor = () => {
-    setTelegramRecipientEditor(emptyTelegramRecipientEditor());
-    setTelegramRecipientSaveError('');
-    setTelegramRecipientSaveStatus('idle');
-  };
-
-  const onSubmitTelegramRecipient = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
-    const chatId = telegramRecipientEditor.chatId.trim();
-    const label = telegramRecipientEditor.label.trim();
-
-    if (!chatId) {
-      setTelegramRecipientSaveError('Укажите chat id Telegram');
-      setTelegramRecipientSaveStatus('error');
-      return;
-    }
-
-    setTelegramRecipientSaveStatus('loading');
-    setTelegramRecipientSaveError('');
-
-    try {
-      const response = await requestJson<unknown>(
-        telegramRecipientEditor.id
-          ? `/staff/access/telegram-recipients/${telegramRecipientEditor.id}`
-          : '/staff/access/telegram-recipients',
-        {
-          method: telegramRecipientEditor.id ? 'PATCH' : 'POST',
-          body: JSON.stringify({
-            chatId,
-            label,
-            scope: telegramRecipientEditor.scope,
-            active: telegramRecipientEditor.active,
-          }),
-        },
-        token,
-      );
-
-      const savedRecipient = normalizeTelegramRecipientRecord(readEntityPayload<unknown>(response));
-      if (!savedRecipient.id) {
-        throw new Error('Backend вернул пустую запись чата Telegram');
-      }
-
-      setTelegramRecipients((current) => sortTelegramRecipients(replaceOrInsert(current, savedRecipient)));
-      setTelegramRecipientEditor(toTelegramRecipientEditorState(savedRecipient));
-      setTelegramRecipientSaveStatus('ready');
-      setActiveTab('access');
-    } catch (cause) {
-      setTelegramRecipientSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить чат Telegram');
-      setTelegramRecipientSaveStatus('error');
-    }
-  };
-
-  const onToggleTelegramRecipientActive = async (recipient: TelegramRecipientRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setTelegramRecipientToggleId(recipient.id);
-    setTelegramRecipientsError('');
-
-    try {
-      const response = await requestJson<unknown>(
-        `/staff/access/telegram-recipients/${recipient.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            chatId: recipient.chatId,
-            label: recipient.label,
-            scope: recipient.scope,
-            active: !recipient.active,
-          }),
-        },
-        token,
-      );
-
-      const savedRecipient = normalizeTelegramRecipientRecord(readEntityPayload<unknown>(response));
-      if (!savedRecipient.id) {
-        throw new Error('Backend вернул пустую запись чата Telegram');
-      }
-
-      setTelegramRecipients((current) => sortTelegramRecipients(replaceOrInsert(current, savedRecipient)));
-      if (telegramRecipientEditor.id === recipient.id) {
-        setTelegramRecipientEditor(toTelegramRecipientEditorState(savedRecipient));
-      }
-      setTelegramRecipientsStatus('ready');
-    } catch (cause) {
-      setTelegramRecipientsError(cause instanceof Error ? cause.message : 'Не удалось обновить чат Telegram');
-      setTelegramRecipientsStatus('error');
-    } finally {
-      setTelegramRecipientToggleId('');
-    }
-  };
-
-  const onDeleteTelegramRecipient = async (recipient: TelegramRecipientRecord) => {
-    if (!token) {
-      return;
-    }
-
-    setTelegramRecipientToggleId(recipient.id);
-    setTelegramRecipientsError('');
-
-    try {
-      await requestJson(
-        `/staff/access/telegram-recipients/${recipient.id}`,
-        {
-          method: 'DELETE',
-        },
-        token,
-      );
-
-      setTelegramRecipients((current) => sortTelegramRecipients(current.filter((item) => item.id !== recipient.id)));
-      if (telegramRecipientEditor.id === recipient.id) {
-        onResetTelegramRecipientEditor();
-      }
-      setTelegramRecipientsStatus('ready');
-    } catch (cause) {
-      setTelegramRecipientsError(cause instanceof Error ? cause.message : 'Не удалось удалить чат Telegram');
-      setTelegramRecipientsStatus('error');
-    } finally {
-      setTelegramRecipientToggleId('');
-    }
-  };
 
   const renderDashboard = () => (
     <DashboardView
