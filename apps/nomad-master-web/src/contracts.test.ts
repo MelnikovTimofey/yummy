@@ -109,6 +109,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
       filteredItems: 1,
       inStockCount: 0,
       outOfStockCount: 1,
+      inMixesCount: 9,
       page: 2,
       pageSize: 20,
       totalPages: 3,
@@ -129,6 +130,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
   assert.deepEqual(response.filters.options.flavorTags, ['fruity']);
   assert.equal(response.sort.field, 'dependentMixes');
   assert.equal(response.meta.filteredItems, 1);
+  assert.equal(response.meta.inMixesCount, 9);
   assert.equal(response.meta.page, 2);
   assert.equal(response.meta.pageSize, 20);
   assert.equal(response.meta.totalPages, 3);

@@ -66,6 +66,7 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
       filteredItems: number;
       inStockCount: number;
       outOfStockCount: number;
+      inMixesCount: number;
       page: number;
       pageSize: number;
       totalPages: number;
@@ -82,6 +83,9 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
   assert.equal(beforeBody.meta.filteredItems, 1);
   assert.equal(beforeBody.meta.inStockCount, 0);
   assert.equal(beforeBody.meta.outOfStockCount, 1);
+  // inMixesCount всегда глобальный — не зависит от текущих фильтров.
+  // В seed все 14 табаков входят хотя бы в один микс.
+  assert.equal(beforeBody.meta.inMixesCount, seedTobaccos.length);
   assert.equal(beforeBody.meta.page, 1);
   assert.equal(beforeBody.meta.pageSize, 1);
   assert.equal(beforeBody.meta.totalPages, 1);

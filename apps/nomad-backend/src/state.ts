@@ -280,6 +280,7 @@ export type InventoryListResult = {
     filteredItems: number;
     inStockCount: number;
     outOfStockCount: number;
+    inMixesCount: number;
     page: number;
     pageSize: number;
     totalPages: number;
@@ -1745,6 +1746,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
       filteredItems: filteredItems.length,
       inStockCount: filteredItems.filter((item) => item.inStock).length,
       outOfStockCount: filteredItems.filter((item) => !item.inStock).length,
+      inMixesCount: items.filter((item) => item.dependentMixCount > 0).length,
       page,
       pageSize,
       totalPages,

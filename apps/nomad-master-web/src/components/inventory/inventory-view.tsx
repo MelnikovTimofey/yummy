@@ -407,12 +407,6 @@ export const InventoryView = ({
   const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
-  // «В миксах» считаем по показанным записям. Backend пока не возвращает
-  // глобальный счётчик в meta — при снятых фильтрах число совпадает с
-  // глобальным, при фильтре отражает текущий срез.
-  const usedInMixesCount = items.filter(
-    (item) => (item.dependentMixCount ?? 0) > 0,
-  ).length;
   const activeDialogTitleId = activeItem ? `inventory-detail-title-${activeItem.id}` : undefined;
   const manufacturerOptions = buildSuggestionOptions(catalogOptions.map((item) => item.manufacturer));
   const lineNameOptions = buildSuggestionOptions(catalogOptions.map((item) => item.lineName));
@@ -733,10 +727,10 @@ export const InventoryView = ({
           </div>
           <div
             className="inventory-stat ops-surface__stat"
-            title="Сколько табаков из показанных входят хотя бы в один микс"
+            title="Сколько табаков в каталоге используются хотя бы в одном миксе (по всему каталогу)"
           >
             <span>В миксах</span>
-            <strong>{formatMetricValue(usedInMixesCount)}</strong>
+            <strong>{formatMetricValue(meta.inMixesCount)}</strong>
           </div>
           <div className="inventory-stat ops-surface__stat" title="Сейчас в стоп-листе / нет наличия (по всему каталогу)">
             <span>Стоп-лист</span>

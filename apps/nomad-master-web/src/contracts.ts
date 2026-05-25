@@ -70,6 +70,7 @@ export type InventoryListMeta = {
   filteredItems: number;
   inStockCount: number;
   outOfStockCount: number;
+  inMixesCount: number;
   page: number;
   pageSize: number;
   totalPages: number;
@@ -121,6 +122,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
     filteredItems: 0,
     inStockCount: 0,
     outOfStockCount: 0,
+    inMixesCount: 0,
     page: 1,
     pageSize: 100,
     totalPages: 1,
@@ -1105,6 +1107,7 @@ export const normalizeInventoryListResponse = (value: unknown): InventoryListRes
       filteredItems: toNumber(meta.filteredItems, 0),
       inStockCount: toNumber(meta.inStockCount, 0),
       outOfStockCount: toNumber(meta.outOfStockCount, 0),
+      inMixesCount: toNumber(meta.inMixesCount, 0),
       page: Math.max(1, toNumber(meta.page, 1)),
       pageSize: Math.max(1, toNumber(meta.pageSize, 100)),
       totalPages: Math.max(1, toNumber(meta.totalPages, 1)),
