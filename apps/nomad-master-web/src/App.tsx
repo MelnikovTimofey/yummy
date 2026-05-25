@@ -3,6 +3,7 @@ import { AccessView } from '@/components/access/access-view';
 import { apiBaseUrl, apiHostLabel, envLabel, requestJson } from '@/lib/api-client';
 import { useAuditEvents } from '@/hooks/use-audit-events';
 import { useDailyCode } from '@/hooks/use-daily-code';
+import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
 import { useStaffAccounts } from '@/hooks/use-staff-accounts';
 import { useTelegramOperators } from '@/hooks/use-telegram-operators';
@@ -10,9 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
-import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
+import { MixCatalogView } from '@/components/mixes/mix-catalog-view';
 import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
-import { rebalanceTo100 } from '@/components/mixes/mix-builder/rebalance';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
 import { RailEditor } from '@/components/rails/rail-editor';
 import { RailsView } from '@/components/rails/rails-view';
@@ -37,16 +37,7 @@ import {
   InventoryListMeta,
   InventoryListSort,
   InventoryTobacco,
-  MixFilterKey,
-  MixListFilters,
-  MixListMeta,
-  MixListSort,
-  MixRailMembership,
   MixRecord,
-  MixRailFilter,
-  MixSortDirection,
-  MixSortField,
-  MixStatusFilter,
   RailRecord,
   StaffAccountRecord,
   StaffAuthResponse,
@@ -54,7 +45,6 @@ import {
   TelegramAutomationStateRecord,
   TelegramOperatorRecord,
   buildInventoryRequestQuery,
-  buildMixRequestQuery,
   formatDateTimeLocalInput,
   formatAuditAction,
   formatAuditEntityType,
@@ -66,8 +56,6 @@ import {
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
-  normalizeMixListResponse,
-  normalizeMixRecord,
   normalizeStaffAccountRecord,
   normalizeTelegramAutomationStateRecord,
   normalizeTelegramOperatorRecord,
@@ -75,61 +63,13 @@ import {
   readEntityPayload,
   readListPayload,
   sortDailyAccessCodes,
-  sortMixes,
   sortStaffAccounts,
   sortTelegramOperators,
   toggleInventoryFilterValue,
-  toggleMixFilterValue,
   defaultInventoryListResponse,
-  defaultMixListResponse,
 } from './contracts';
 
 const STORAGE_KEY = 'nomad-master-auth-v1';
-
-type MixEditorState = {
-  id: string;
-  name: string;
-  description: string;
-  components: MixEditorComponentInput[];
-  available: boolean;
-  railMemberships: MixRailMembership[];
-};
-
-type MixesScreenMode = MixCatalogMode;
-
-let mixEditorComponentDraftId = 0;
-
-const createMixEditorComponent = (tobaccoId = '', proportion = ''): MixEditorComponentInput => ({
-  key: `mix-component-${mixEditorComponentDraftId += 1}`,
-  tobaccoId,
-  proportion,
-});
-
-const emptyMixEditor = (): MixEditorState => ({
-  id: '',
-  name: '',
-  description: '',
-  components: [],
-  available: true,
-  railMemberships: [],
-});
-
-const toMixEditorState = (mix: MixRecord): MixEditorState => ({
-  id: mix.id,
-  name: mix.name,
-  description: mix.description,
-  components: mix.components.map((component) => createMixEditorComponent(component.tobaccoId, String(component.proportion))),
-  available: mix.available,
-  railMemberships: mix.railMemberships,
-});
-
-
-
-const parseNumberInput = (value: string, fallback = 0) => {
-  const parsed = Number(value.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
 
 const readStoredToken = () => {
   if (typeof window === 'undefined') {
@@ -219,10 +159,20 @@ export const App = () => {
   const staff = useStaffAccounts({ onAfterSubmit: onAfterAccessSubmit });
   const telegramOps = useTelegramOperators({ onAfterSubmit: onAfterAccessSubmit });
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
+  const mixes = useMixes({
+    token,
+    onAfterSubmit: () => setActiveTab('mixes'),
+    onRefreshSiblings: async (nextToken: string) => {
+      await Promise.all([
+        loadSummary(nextToken, dashboardWindow),
+        rails.reload(nextToken),
+      ]);
+    },
+  });
   const refreshRailSiblings = async (nextToken: string) => {
     await Promise.all([
       loadSummary(nextToken, dashboardWindow),
-      loadMixes(nextToken, mixesFilters, mixesSort),
+      mixes.loadMixes(nextToken, mixes.mixesFilters, mixes.mixesSort),
     ]);
   };
   const rails = useRails({
@@ -235,25 +185,14 @@ export const App = () => {
   const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
-  const [mixes, setMixes] = useState<MixRecord[]>([]);
-  const [mixesFilters, setMixesFilters] = useState<MixListFilters>(defaultMixListResponse.filters);
-  const [mixesSort, setMixesSort] = useState<MixListSort>(defaultMixListResponse.sort);
-  const [mixesMeta, setMixesMeta] = useState<MixListMeta>(defaultMixListResponse.meta);
-  const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [mixesStatus, setMixesStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
-  const [mixesError, setMixesError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
   const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [inventorySaveError, setInventorySaveError] = useState('');
-  const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
-  const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
-  const [mixSaveStatus, setMixSaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [mixSaveError, setMixSaveError] = useState('');
 
   const loadInventory = async (
     nextToken: string,
@@ -298,48 +237,11 @@ export const App = () => {
     }
   };
 
-  const loadMixes = async (
-    nextToken: string,
-    nextFilters: MixListFilters = mixesFilters,
-    nextSort: MixListSort = mixesSort,
-    nextPage: number = mixesMeta.page,
-    nextPageSize: number = mixesMeta.pageSize,
-  ) => {
-    setMixesStatus('loading');
-    setMixesError('');
-
-    try {
-      const query = buildMixRequestQuery(nextFilters, nextSort, nextPage, nextPageSize);
-      const response = await requestJson<unknown>(`/staff/mixes${query ? `?${query}` : ''}`, {}, nextToken);
-      const payload = normalizeMixListResponse(response);
-      setMixes(sortMixes(payload.items));
-      setMixesFilters(payload.filters);
-      setMixesSort(payload.sort);
-      setMixesMeta(payload.meta);
-      setMixesStatus('ready');
-    } catch (cause) {
-      setMixes([]);
-      setMixesMeta(defaultMixListResponse.meta);
-      setMixesStatus('error');
-      setMixesError(cause instanceof Error ? cause.message : 'Не удалось загрузить миксы');
-    }
-  };
-
-  const loadMixTobaccos = async (nextToken: string) => {
-    try {
-      const response = await requestJson<unknown>('/staff/inventory/tobaccos?sort=name&direction=asc', {}, nextToken);
-      const payload = normalizeInventoryListResponse(response);
-      setMixTobaccos(payload.items);
-    } catch {
-      setMixTobaccos([]);
-    }
-  };
-
   const refreshInventoryDependents = async (nextToken: string) => {
     await Promise.allSettled([
       loadSummary(nextToken, dashboardWindow),
-      loadMixes(nextToken, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize),
-      loadMixTobaccos(nextToken),
+      mixes.loadMixes(nextToken, mixes.mixesFilters, mixes.mixesSort, mixes.mixesMeta.page, mixes.mixesMeta.pageSize),
+      mixes.loadMixTobaccos(nextToken),
       rails.reloadCatalog(nextToken),
     ]);
   };
@@ -406,8 +308,7 @@ export const App = () => {
         await Promise.all([
           loadInventory(token),
           loadSummary(token, dashboardWindow),
-          loadMixes(token),
-          loadMixTobaccos(token),
+          mixes.reload(token),
           rails.reload(token),
           dailyCode.reload(token),
           staff.reload(token, profile.user.role),
@@ -450,8 +351,7 @@ export const App = () => {
       await Promise.all([
         loadInventory(auth.accessToken),
         loadSummary(auth.accessToken, dashboardWindow),
-        loadMixes(auth.accessToken),
-        loadMixTobaccos(auth.accessToken),
+        mixes.reload(auth.accessToken),
         rails.reload(auth.accessToken),
         dailyCode.reload(auth.accessToken),
         staff.reload(auth.accessToken, profile.user.role),
@@ -562,6 +462,7 @@ export const App = () => {
   };
 
   const onSignOut = () => {
+    mixes.reset();
     rails.reset();
     dailyCode.reset();
     staff.reset();
@@ -577,26 +478,16 @@ export const App = () => {
     setSelectedInventoryIds([]);
     setSummary(null);
     setDashboardWindow('14d');
-    setMixes([]);
-    setMixesFilters(defaultMixListResponse.filters);
-    setMixesSort(defaultMixListResponse.sort);
-    setMixesMeta(defaultMixListResponse.meta);
-    setMixTobaccos([]);
     setStatus('idle');
     setError('');
     setPassword('');
     setActiveTab('dashboard');
     setInventoryStatus('idle');
     setSummaryStatus('idle');
-    setMixesStatus('idle');
     setInventoryError('');
     setSummaryError('');
-    setMixesError('');
     setToggleId('');
     setInventoryBatchAction('');
-    setMixEditor(emptyMixEditor());
-    setMixSaveStatus('idle');
-    setMixSaveError('');
   };
 
   const onToggleStock = async (item: InventoryTobacco) => {
@@ -736,269 +627,24 @@ export const App = () => {
     }
   };
 
+  const onSelectMix = (mix: MixRecord) => {
+    mixes.onSelectMix(mix);
+    setActiveTab('mixes');
+  };
+
+  const onStartCreateMix = () => {
+    mixes.onStartCreate();
+    setActiveTab('mixes');
+  };
+
   const onOpenInventoryMix = (mixId: string) => {
-    const mix = mixes.find((item) => item.id === mixId);
+    const mix = mixes.mixes.find((item) => item.id === mixId);
     if (mix) {
       onSelectMix(mix);
       return;
     }
 
     setActiveTab('mixes');
-  };
-
-  const onSelectMix = (mix: MixRecord) => {
-    setMixEditor(toMixEditorState(mix));
-    setMixesScreen('edit');
-    setMixSaveError('');
-    setMixSaveStatus('idle');
-    setActiveTab('mixes');
-  };
-
-  const onStartCreateMix = () => {
-    setMixEditor(emptyMixEditor());
-    setMixesScreen('create');
-    setMixSaveError('');
-    setMixSaveStatus('idle');
-    setActiveTab('mixes');
-  };
-
-  const onCancelCreateMix = () => {
-    setMixEditor(emptyMixEditor());
-    setMixesScreen('catalog');
-    setMixSaveError('');
-    setMixSaveStatus('idle');
-  };
-
-  const onResetMixEditor = () => {
-    setMixEditor(emptyMixEditor());
-    setMixesScreen('catalog');
-    setMixSaveError('');
-    setMixSaveStatus('idle');
-  };
-
-  const refreshMixesSurface = async (
-    nextFilters: MixListFilters = mixesFilters,
-    nextSort: MixListSort = mixesSort,
-    nextPage: number = mixesMeta.page,
-  ) => {
-    if (!token) {
-      return;
-    }
-
-    await loadMixes(token, nextFilters, nextSort, nextPage, mixesMeta.pageSize);
-  };
-
-  const onMixSearchChange = async (value: string) => {
-    const nextFilters = {
-      ...mixesFilters,
-      search: value,
-    };
-    setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort, 1);
-  };
-
-  const onMixStatusChange = async (value: MixStatusFilter) => {
-    const nextFilters = {
-      ...mixesFilters,
-      status: value,
-    };
-    setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort, 1);
-  };
-
-  const onMixRailStateChange = async (value: MixRailFilter) => {
-    const nextFilters = {
-      ...mixesFilters,
-      railState: value,
-    };
-    setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort, 1);
-  };
-
-  const onMixSortFieldChange = async (field: MixSortField) => {
-    const nextSort = {
-      ...mixesSort,
-      field,
-    };
-    setMixesSort(nextSort);
-    await refreshMixesSurface(mixesFilters, nextSort, 1);
-  };
-
-  const onMixSortDirectionChange = async (direction: MixSortDirection) => {
-    const nextSort = {
-      ...mixesSort,
-      direction,
-    };
-    setMixesSort(nextSort);
-    await refreshMixesSurface(mixesFilters, nextSort, 1);
-  };
-
-  const onMixToggleFilterValue = async (key: MixFilterKey, value: string) => {
-    const nextFilters = {
-      ...mixesFilters,
-      [key]: toggleMixFilterValue(mixesFilters[key], value),
-    };
-    setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort, 1);
-  };
-
-  const onMixClearFilterGroup = async (key: MixFilterKey) => {
-    if (mixesFilters[key].length === 0) {
-      return;
-    }
-
-    const nextFilters = {
-      ...mixesFilters,
-      [key]: [],
-    };
-    setMixesFilters(nextFilters);
-    await refreshMixesSurface(nextFilters, mixesSort, 1);
-  };
-
-  const onMixResetFilters = async () => {
-    const nextFilters = {
-      ...defaultMixListResponse.filters,
-      options: mixesFilters.options,
-    };
-    const nextSort = defaultMixListResponse.sort;
-    setMixesFilters(nextFilters);
-    setMixesSort(nextSort);
-    await refreshMixesSurface(nextFilters, nextSort, 1);
-  };
-
-  const onMixPageChange = async (page: number) => {
-    await refreshMixesSurface(mixesFilters, mixesSort, page);
-  };
-
-  const onChangeMixEditorField = (field: 'name' | 'description', value: string) => {
-    setMixEditor((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
-  const onChangeMixEditorAvailability = (value: boolean) => {
-    setMixEditor((current) => ({
-      ...current,
-      available: value,
-    }));
-  };
-
-  // MixBuilder добавляет компонент по конкретному tobaccoId и сразу
-  // ребалансирует доли так, чтобы сумма = 100%.
-  const onAddMixComponentById = (tobaccoId: string) => {
-    if (!tobaccoId) return;
-    setMixEditor((current) => {
-      if (current.components.some((component) => component.tobaccoId === tobaccoId)) {
-        return current;
-      }
-      const next = [...current.components, createMixEditorComponent(tobaccoId, '')];
-      return { ...current, components: rebalanceTo100(next) };
-    });
-  };
-
-  // ProportionBar drag-resize меняет весь массив компонентов разом —
-  // даём отдельный setter, который принимает уже посчитанный список.
-  const onReplaceMixComponents = (components: MixEditorComponentInput[]) => {
-    setMixEditor((current) => ({ ...current, components }));
-  };
-
-  // MixBuilder remove: ребалансируем после удаления так же, как в прототипе.
-  const onRemoveMixComponentRebalanced = (key: string) => {
-    setMixEditor((current) => ({
-      ...current,
-      components: rebalanceTo100(current.components.filter((component) => component.key !== key)),
-    }));
-  };
-
-  const onUpdateMixComponent = (key: string, patch: Partial<Omit<MixEditorComponentInput, 'key'>>) => {
-    setMixEditor((current) => ({
-      ...current,
-      components: current.components.map((component) => (
-        component.key === key ? { ...component, ...patch } : component
-      )),
-    }));
-  };
-
-  const onSubmitMix = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
-    const name = mixEditor.name.trim();
-    const description = mixEditor.description.trim();
-    const components = mixEditor.components
-      .map((component, index) => ({
-        tobaccoId: component.tobaccoId.trim(),
-        proportion: parseNumberInput(component.proportion, 0),
-        sortOrder: index,
-      }))
-      .filter((component) => component.tobaccoId);
-
-    if (!name) {
-      setMixSaveError('Введите название микса');
-      setMixSaveStatus('error');
-      return;
-    }
-
-    if (!description) {
-      setMixSaveError('Добавьте описание микса');
-      setMixSaveStatus('error');
-      return;
-    }
-
-    if (!components.length) {
-      setMixSaveError('Добавьте хотя бы один компонент');
-      setMixSaveStatus('error');
-      return;
-    }
-
-    const total = components.reduce((sum, component) => sum + component.proportion, 0);
-    if (total !== 100) {
-      setMixSaveError('Сумма долей должна быть ровно 100%');
-      setMixSaveStatus('error');
-      return;
-    }
-
-    setMixSaveStatus('loading');
-    setMixSaveError('');
-
-    const payload = {
-      name,
-      description,
-      components,
-      available: mixEditor.available,
-    };
-
-    try {
-      const response = await requestJson<unknown>(
-        mixEditor.id ? `/staff/mixes/${mixEditor.id}` : '/staff/mixes',
-        {
-          method: mixEditor.id ? 'PATCH' : 'POST',
-          body: JSON.stringify(payload),
-        },
-        token,
-      );
-
-      const savedMix = normalizeMixRecord(readEntityPayload<unknown>(response));
-      if (!savedMix.id) {
-        throw new Error('Backend вернул пустой микс');
-      }
-
-      setMixEditor(toMixEditorState(savedMix));
-      setMixesScreen('catalog');
-      await Promise.all([
-        loadMixes(token, mixesFilters, mixesSort),
-        rails.reload(token),
-        loadSummary(token, dashboardWindow),
-      ]);
-      setMixSaveStatus('ready');
-      setActiveTab('mixes');
-    } catch (cause) {
-      setMixSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить микс');
-      setMixSaveStatus('error');
-    }
   };
 
 
@@ -1032,7 +678,7 @@ export const App = () => {
   const renderInventory = () => (
     <InventoryView
       items={inventory}
-      catalogOptions={mixTobaccos}
+      catalogOptions={mixes.mixTobaccos}
       status={inventoryStatus}
       error={inventoryError}
       filters={inventoryFilters}
@@ -1062,44 +708,44 @@ export const App = () => {
   );
 
   const renderMixes = () => {
-    if (mixesScreen === 'edit' || mixesScreen === 'create') {
+    if (mixes.mixesScreen === 'edit' || mixes.mixesScreen === 'create') {
       return (
         <MixBuilder
-          mode={mixesScreen}
-          editor={mixEditor}
-          tobaccos={mixTobaccos}
-          mixes={mixes}
-          saveStatus={mixSaveStatus}
-          saveError={mixSaveError}
-          onFieldChange={onChangeMixEditorField}
-          onAvailabilityChange={onChangeMixEditorAvailability}
-          onAddComponent={onAddMixComponentById}
-          onUpdateComponent={onUpdateMixComponent}
-          onRemoveComponent={onRemoveMixComponentRebalanced}
-          onReplaceComponents={onReplaceMixComponents}
-          onSubmit={onSubmitMix}
-          onCancel={mixesScreen === 'create' ? onCancelCreateMix : onResetMixEditor}
+          mode={mixes.mixesScreen}
+          editor={mixes.mixEditor}
+          tobaccos={mixes.mixTobaccos}
+          mixes={mixes.mixes}
+          saveStatus={mixes.mixSaveStatus}
+          saveError={mixes.mixSaveError}
+          onFieldChange={mixes.onChangeEditorField}
+          onAvailabilityChange={mixes.onChangeEditorAvailability}
+          onAddComponent={mixes.onAddComponentById}
+          onUpdateComponent={mixes.onUpdateComponent}
+          onRemoveComponent={mixes.onRemoveComponentRebalanced}
+          onReplaceComponents={mixes.onReplaceComponents}
+          onSubmit={mixes.onSubmitMix}
+          onCancel={mixes.mixesScreen === 'create' ? mixes.onCancelCreate : mixes.onResetEditor}
         />
       );
     }
 
     return (
       <MixCatalogView
-        items={mixes}
-        status={mixesStatus}
-        error={mixesError}
-        filters={mixesFilters}
-        meta={mixesMeta}
-        sort={mixesSort}
-        onSearchChange={onMixSearchChange}
-        onStatusChange={(value) => void onMixStatusChange(value)}
-        onRailStateChange={(value) => void onMixRailStateChange(value)}
-        onSortFieldChange={(value) => void onMixSortFieldChange(value)}
-        onSortDirectionChange={(value) => void onMixSortDirectionChange(value)}
-        onToggleFilterValue={(key, value) => void onMixToggleFilterValue(key, value)}
-        onClearFilterGroup={(key) => void onMixClearFilterGroup(key)}
-        onResetFilters={() => void onMixResetFilters()}
-        onPageChange={onMixPageChange}
+        items={mixes.mixes}
+        status={mixes.mixesStatus}
+        error={mixes.mixesError}
+        filters={mixes.mixesFilters}
+        meta={mixes.mixesMeta}
+        sort={mixes.mixesSort}
+        onSearchChange={mixes.onSearchChange}
+        onStatusChange={(value) => void mixes.onStatusChange(value)}
+        onRailStateChange={(value) => void mixes.onRailStateChange(value)}
+        onSortFieldChange={(value) => void mixes.onSortFieldChange(value)}
+        onSortDirectionChange={(value) => void mixes.onSortDirectionChange(value)}
+        onToggleFilterValue={(key, value) => void mixes.onToggleFilterValue(key, value)}
+        onClearFilterGroup={(key) => void mixes.onClearFilterGroup(key)}
+        onResetFilters={() => void mixes.onResetFilters()}
+        onPageChange={mixes.onPageChange}
         onSelectMix={onSelectMix}
         onStartCreate={onStartCreateMix}
       />
@@ -1129,7 +775,7 @@ export const App = () => {
         editor={rails.railEditor}
         setEditor={rails.setRailEditor}
         railMixCatalog={rails.railMixCatalog}
-        mixes={mixes}
+        mixes={mixes.mixes}
         railMixCandidateId={rails.railMixCandidateId}
         setRailMixCandidateId={rails.setRailMixCandidateId}
         saveStatus={rails.railSaveStatus}
@@ -1218,7 +864,7 @@ export const App = () => {
         case 'inventory':
           return formatLoadStatus(inventoryStatus);
         case 'mixes':
-          return formatLoadStatus(mixesStatus);
+          return formatLoadStatus(mixes.mixesStatus);
         case 'rails':
           return formatLoadStatus(rails.railsStatus);
         case 'access':
@@ -1262,7 +908,7 @@ export const App = () => {
         keywords: 'logout sign out выйти',
         onSelect: () => onSignOut(),
       },
-      ...mixes.map((mix) => ({
+      ...mixes.mixes.map((mix) => ({
         id: `mix:${mix.id}`,
         label: mix.name,
         group: 'Открыть микс',
