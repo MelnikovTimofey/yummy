@@ -12,6 +12,8 @@ import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView, type MixCatalogMode, type MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
+import { RailEditor, type RailEditorState } from '@/components/rails/rail-editor';
+import { RailsView } from '@/components/rails/rails-view';
 import { MasterTopBar, type MasterTopBarStatusTone } from '@/components/shell/topbar';
 import {
   getWorkspacePanelId,
@@ -94,16 +96,7 @@ type MixEditorState = {
 
 type MixesScreenMode = MixCatalogMode;
 
-type RailEditorState = {
-  id: string;
-  name: string;
-  description: string;
-  type: 'statistical' | 'prepared' | 'curated';
-  mixIds: string[];
-  active: boolean;
-  editable: boolean;
-  readOnlyReason: string;
-};
+// RailEditorState переехал в components/rails/rail-editor
 
 
 let mixEditorComponentDraftId = 0;
@@ -1325,306 +1318,41 @@ export const App = () => {
     />
   );
 
-  const selectedRailMixEntries = railEditor.mixIds.map((mixId, index) => ({
-    mixId,
-    index,
-    mix: railMixCatalog.find((item) => item.id === mixId) ?? mixes.find((item) => item.id === mixId) ?? null,
-  }));
-  const availableRailMixOptions = railMixCatalog
-    .filter((mix) => !railEditor.mixIds.includes(mix.id))
-    .sort((left, right) => left.name.localeCompare(right.name, 'ru'));
-  const effectiveRailMixCandidateId = availableRailMixOptions.some((mix) => mix.id === railMixCandidateId)
-    ? railMixCandidateId
-    : (availableRailMixOptions[0]?.id ?? '');
-  const railMixPickerOptions = availableRailMixOptions.map((mix) => ({
-    id: mix.id,
-    title: mix.name,
-    subtitle: `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`,
-    keywords: [mix.description, ...mix.flavorProfiles, ...mix.flavors, ...mix.flavorTags],
-  }));
-  const railEditorLocked = Boolean(railEditor.id) && !railEditor.editable;
-  const railEditorStatusLabel = railEditorLocked
-    ? 'Только просмотр'
-    : railEditor.active
-      ? 'Активен'
-      : 'Неактивен';
-
   const renderRails = () => (
-    <section className="card rails-surface">
-        <div className="section-head section-head--surface section-head--surface-split rails-surface__header">
-          <div className="ops-surface__intro">
-            <p className="eyebrow">Менеджер рейлов</p>
-            <h2>Рейлы Nomad</h2>
-            <p className="meta-line">Состав и порядок показа подборок для гостевой витрины.</p>
-          </div>
-        <div className="summary-grid summary-grid--nested ops-surface__stats rails-surface__stats">
-          <article className="metric-card ops-surface__stat rails-surface__stat">
-            <p className="metric-label">Всего рейлов</p>
-            <p className="metric-value metric-value--compact">{rails.length}</p>
-            <p className="meta-line">Все подборки гостевой витрины.</p>
-          </article>
-          <article className="metric-card ops-surface__stat rails-surface__stat">
-            <p className="metric-label">Активны в витрине</p>
-            <p className="metric-value metric-value--compact">{rails.filter((rail) => rail.active).length}</p>
-              <p className="meta-line">Показываются гостю сейчас.</p>
-          </article>
-          <article className="metric-card ops-surface__stat rails-surface__stat">
-            <p className="metric-label">Только просмотр</p>
-            <p className="metric-value metric-value--compact">{rails.filter((rail) => !rail.editable).length}</p>
-            <p className="meta-line">Системные подборки без ручного редактирования.</p>
-          </article>
-        </div>
-      </div>
-
-      <div className="ops-toolbar ops-toolbar--split rails-surface__toolbar">
-        <p className="meta-line">Собирай подборки, меняй порядок и быстро отделяй системные рейлы от редактируемых.</p>
-        <div className="section-actions">
-          <span className="status-chip">Витрина гостя</span>
-          <button
-            className="primary-button primary-button--inline"
-            type="button"
-            onClick={() => {
-              onResetRailEditor();
-              setRailEditorSheetOpen(true);
-            }}
-          >
-            Новый рейл
-          </button>
-        </div>
-      </div>
-
-      {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
-      {railsError ? <p className="error-text">{railsError}</p> : null}
-
-      <div className="manager-layout ops-management-grid rails-surface__grid rails-surface__grid--single">
-        <aside className="entity-list rails-surface__list">
-          {rails.map((rail) => (
-            <article
-              className={[
-                'entity-card',
-                'ops-surface__card',
-                'rails-surface__card',
-                railEditor.id === rail.id ? 'entity-card--active' : '',
-                rail.editable ? '' : 'entity-card--muted',
-              ].filter(Boolean).join(' ')}
-              key={rail.id}
-            >
-              <div className="entity-card__head">
-                <div>
-                  <p className="entity-kicker">Рейл</p>
-                  <h3>{rail.name}</h3>
-                </div>
-                <span className={rail.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                  {rail.active ? 'Активен' : 'Неактивен'}
-                </span>
-              </div>
-              <div className="chip-row">
-                <span className="chip">{formatRailType(rail.type)}</span>
-                <span className={rail.editable ? 'chip chip--editable' : 'chip chip--readonly'}>
-                  {rail.editable ? 'Редактируемый' : 'Только просмотр'}
-                </span>
-              </div>
-              <p className="meta-line">{rail.description || 'Без описания'}</p>
-              {!rail.editable && rail.readOnlyReason ? <p className="meta-line">{rail.readOnlyReason}</p> : null}
-              <p className="meta-line">Миксы: {resolveRailMixSummary(rail, railMixCatalog)}</p>
-              <div className="entity-card__actions">
-                <button
-                  className="secondary-button secondary-button--inline"
-                  type="button"
-                  onClick={() => {
-                    onSelectRail(rail);
-                    setRailEditorSheetOpen(true);
-                  }}
-                >
-                  {rail.editable ? 'Редактировать' : 'Просмотр'}
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {!rails.length && railsStatus !== 'loading' ? <p className="meta-line">Пока нет рейлов.</p> : null}
-        </aside>
-      </div>
-
-      <Sheet
-        open={railEditorSheetOpen}
-        onOpenChange={(open) => {
-          setRailEditorSheetOpen(open);
-          if (!open) {
-            onResetRailEditor();
-          }
+    <>
+      <RailsView
+        rails={rails}
+        railMixCatalog={railMixCatalog}
+        railsStatus={railsStatus}
+        railsError={railsError}
+        activeEditorId={railEditor.id}
+        onCreateRail={() => {
+          onResetRailEditor();
+          setRailEditorSheetOpen(true);
         }}
-      >
-        <SheetContent side="right" className="rails-surface__sheet">
-          <SheetHeader>
-            <SheetTitle>
-              {railEditor.id ? railEditor.name || 'Без названия' : 'Новый рейл'}
-            </SheetTitle>
-            <SheetDescription>
-              {railEditor.id
-                ? 'Редактирование рейла. Состав влияет на гостевую витрину.'
-                : 'Соберите подборку миксов для гостевой витрины.'}
-            </SheetDescription>
-          </SheetHeader>
-          <article className="editor-card ops-editor rails-surface__editor rails-surface__editor--sheet">
-          <div className="entity-card__head entity-card__head--sheet">
-            <span className={railEditorLocked ? 'status-chip status-chip--locked' : 'status-chip'}>{railEditorStatusLabel}</span>
-          </div>
-
-          <form className="admin-form" onSubmit={onSubmitRail}>
-            {railEditor.id ? (
-              <div className="info-banner rails-surface__banner">
-                Тип рейла: {formatRailType(railEditor.type)}.
-                {!railEditor.editable && railEditor.readOnlyReason ? ` ${railEditor.readOnlyReason}` : ''}
-              </div>
-            ) : (
-              <div className="info-banner rails-surface__banner">
-                Новый рейл создаётся как мастерская подборка. Тип вручную выбирать не нужно.
-              </div>
-            )}
-
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Название</span>
-                <input
-                  className="text-input"
-                  value={railEditor.name}
-                  onChange={(event) => setRailEditor((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Например, Топ по статистике"
-                  disabled={railEditorLocked}
-                />
-              </label>
-
-              <div className="field">
-                <span className="field-label">Тип</span>
-                <div className="info-banner">{formatRailType(railEditor.type)}</div>
-              </div>
-
-              <label className="field field--wide">
-                <span className="field-label">Описание</span>
-                <textarea
-                  className="textarea-input"
-                  value={railEditor.description}
-                  onChange={(event) => setRailEditor((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Короткое описание рейла"
-                  rows={3}
-                  disabled={railEditorLocked}
-                />
-              </label>
-
-              <div className="field field--wide">
-                <span className="field-label">Состав рейла</span>
-                <div className="rail-mix-builder rails-surface__mix-builder">
-                  <div className="rail-mix-builder__toolbar ops-toolbar rails-surface__mix-toolbar">
-                    <SearchableEntitySelect
-                      value={effectiveRailMixCandidateId}
-                      options={railMixPickerOptions}
-                      placeholder="Выберите микс"
-                      searchPlaceholder="Поиск микса по названию, вкусу или описанию"
-                      emptyLabel="Нет доступных миксов."
-                      clearLabel="Очистить выбор"
-                      listAriaLabel="Миксы для состава рейла"
-                      disabled={railEditorLocked || !railMixPickerOptions.length}
-                      onSelect={setRailMixCandidateId}
-                    />
-                    <button
-                      className="secondary-button secondary-button--inline"
-                      type="button"
-                      onClick={() => onAddRailMix(effectiveRailMixCandidateId)}
-                      disabled={railEditorLocked || !effectiveRailMixCandidateId}
-                    >
-                      Добавить микс
-                    </button>
-                  </div>
-
-                  <div className="rail-mix-builder__summary ops-surface__summary rails-surface__mix-summary">
-                    <span className="meta-line">В рейле: {railEditor.mixIds.length}</span>
-                    <span className="meta-line">Доступно для добавления: {availableRailMixOptions.length}</span>
-                  </div>
-
-                  <div className="rail-mix-list ops-table-shell rails-surface__mix-list">
-                    {selectedRailMixEntries.length ? selectedRailMixEntries.map(({ mixId, index, mix }) => (
-                      <article className="rail-mix-row ops-surface__card rails-surface__mix-row" key={mixId}>
-                        <div className="rail-mix-row__order">{index + 1}</div>
-                        <div className="rail-mix-row__content">
-                          <strong>{mix?.name ?? mixId}</strong>
-                          <p className="meta-line">
-                            {mix
-                              ? `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`
-                              : 'Микс не найден в актуальном каталоге, но сохранён в составе рейла.'}
-                          </p>
-                        </div>
-                        <div className="rail-mix-row__actions">
-                          <button
-                            className="secondary-button secondary-button--inline"
-                            type="button"
-                            onClick={() => onMoveRailMix(mixId, 'up')}
-                            disabled={railEditorLocked || index === 0}
-                          >
-                            Вверх
-                          </button>
-                          <button
-                            className="secondary-button secondary-button--inline"
-                            type="button"
-                            onClick={() => onMoveRailMix(mixId, 'down')}
-                            disabled={railEditorLocked || index === selectedRailMixEntries.length - 1}
-                          >
-                            Вниз
-                          </button>
-                          <button
-                            className="secondary-button secondary-button--inline"
-                            type="button"
-                            onClick={() => onRemoveRailMix(mixId)}
-                            disabled={railEditorLocked}
-                          >
-                            Убрать
-                          </button>
-                        </div>
-                      </article>
-                    )) : (
-                      <div className="rail-mix-empty ops-empty-state">
-                        <p className="meta-line">Добавьте хотя бы один микс, чтобы собрать рейл и задать порядок показа.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={railEditor.active}
-                  onChange={(event) => setRailEditor((current) => ({ ...current, active: event.target.checked }))}
-                  disabled={railEditorLocked}
-                />
-                <span>Активен в витрине</span>
-              </label>
-            </div>
-
-            {railSaveError ? <p className="error-text">{railSaveError}</p> : null}
-
-            <div className="form-actions">
-              {!railEditorLocked ? (
-                <button className="primary-button primary-button--inline" type="submit" disabled={railSaveStatus === 'loading'}>
-                  {railSaveStatus === 'loading' ? 'Сохраняем...' : railEditor.id ? 'Сохранить рейл' : 'Создать рейл'}
-                </button>
-              ) : null}
-              <button
-                className="secondary-button secondary-button--inline"
-                type="button"
-                onClick={() => {
-                  setRailEditorSheetOpen(false);
-                  onResetRailEditor();
-                }}
-              >
-                Закрыть
-              </button>
-            </div>
-          </form>
-        </article>
-        </SheetContent>
-      </Sheet>
-    </section>
+        onOpenRail={(rail) => {
+          onSelectRail(rail);
+          setRailEditorSheetOpen(true);
+        }}
+      />
+      <RailEditor
+        open={railEditorSheetOpen}
+        onOpenChange={setRailEditorSheetOpen}
+        editor={railEditor}
+        setEditor={setRailEditor}
+        railMixCatalog={railMixCatalog}
+        mixes={mixes}
+        railMixCandidateId={railMixCandidateId}
+        setRailMixCandidateId={setRailMixCandidateId}
+        saveStatus={railSaveStatus}
+        saveError={railSaveError}
+        onSubmit={onSubmitRail}
+        onAddMix={onAddRailMix}
+        onRemoveMix={onRemoveRailMix}
+        onMoveMix={onMoveRailMix}
+        onReset={onResetRailEditor}
+      />
+    </>
   );
 
   const renderAccess = () => {
