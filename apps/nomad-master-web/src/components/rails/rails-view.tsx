@@ -1,7 +1,14 @@
+import { Eye } from 'lucide-react';
 import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
+
+const AROMA_WEB_URL = 'http://localhost:5174';
+
+const openGuestShowcase = () => {
+  window.open(AROMA_WEB_URL, '_blank', 'noopener,noreferrer');
+};
 
 const railTypeChipTone: Record<RailType, string> = {
   statistical: 'chip--tone-info',
@@ -71,13 +78,24 @@ export const RailsView = ({
       title="Рейлы Nomad"
       subtitle="Состав и порядок подборок для гостевой витрины."
       actions={
-        <button
-          className="primary-button primary-button--inline"
-          type="button"
-          onClick={onCreateRail}
-        >
-          Новый рейл
-        </button>
+        <>
+          <button
+            className="secondary-button secondary-button--inline"
+            type="button"
+            onClick={openGuestShowcase}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Eye size={14} aria-hidden />
+            Витрина гостя
+          </button>
+          <button
+            className="primary-button primary-button--inline"
+            type="button"
+            onClick={onCreateRail}
+          >
+            Новый рейл
+          </button>
+        </>
       }
     />
 

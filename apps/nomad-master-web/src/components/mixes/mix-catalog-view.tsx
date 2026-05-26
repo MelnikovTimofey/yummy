@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Bookmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -194,9 +195,15 @@ export const MixCatalogView = ({
         title="Каталог миксов"
         subtitle="Подборки для гостевой витрины — поиск, фильтры, быстрые действия."
         actions={
-          <Button type="button" size="sm" onClick={onStartCreate}>
-            Новый микс
-          </Button>
+          <>
+            <Button type="button" size="sm" variant="outline" disabled title="В разработке">
+              <Bookmark aria-hidden />
+              Сохранённые виды
+            </Button>
+            <Button type="button" size="sm" onClick={onStartCreate}>
+              Новый микс
+            </Button>
+          </>
         }
       />
 

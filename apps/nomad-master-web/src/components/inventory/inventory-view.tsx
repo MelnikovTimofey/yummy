@@ -762,9 +762,14 @@ export const InventoryView = ({
         title="Табаки"
         subtitle="Наличие, компоненты миксов и связанные позиции витрины."
         actions={
-          <Button type="button" size="sm" onClick={openCreateEditor}>
-            Новый табак
-          </Button>
+          <>
+            <Button type="button" size="sm" variant="outline" disabled title="В разработке">
+              Поставка
+            </Button>
+            <Button type="button" size="sm" onClick={openCreateEditor}>
+              Новый табак
+            </Button>
+          </>
         }
       />
 
