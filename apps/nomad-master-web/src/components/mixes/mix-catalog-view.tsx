@@ -362,130 +362,120 @@ export const MixCatalogView = ({
           </Button>
         </div>
       ) : (
-        <div className="mixes-cards" role="list">
-          {items.map((mix) => {
-            const totalProportion = mix.components.reduce(
-              (sum, component) => sum + component.proportion,
-              0,
-            );
-            const visibleProfiles = mix.flavorProfiles.slice(0, 3);
-            const profileOverflow = mix.flavorProfiles.length - visibleProfiles.length;
-            const popularityWidth = Math.min(100, Math.max(0, mix.popularity));
-            const activeRails = mix.railMemberships.filter((membership) => membership.active).length;
-            return (
-              <article
-                className="mixes-card"
-                role="listitem"
-                data-blocked={!mix.available || undefined}
-                data-hidden={mix.available && !mix.guestVisible ? true : undefined}
-                key={mix.id}
-              >
-                <div
-                  className="mixes-card__brand-strip"
-                  aria-label="Доли компонентов микса"
-                >
-                  {mix.components.length === 0 ? (
-                    <span className="mixes-card__brand-strip-empty" aria-hidden="true" />
-                  ) : (
-                    mix.components.map((component) => {
-                      const color = colorForTobacco(component.tobaccoId);
-                      const widthPct = totalProportion > 0
-                        ? (component.proportion / totalProportion) * 100
-                        : 100 / mix.components.length;
-                      return (
-                        <span
-                          key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}`}
-                          className="mixes-card__brand-segment"
-                          style={{
-                            flexBasis: `${widthPct}%`,
-                            background: color.fill,
-                          }}
-                          title={`${component.name} · ${component.proportion}%`}
-                        />
-                      );
-                    })
-                  )}
-                </div>
-
-                <header className="mixes-card__head">
-                  <h3 className="mixes-card__name">{mix.name}</h3>
-                  {renderMixStatus(mix)}
-                </header>
-
-                <p className="mixes-card__description">
-                  {mix.description || 'Без описания'}
-                </p>
-
-                {visibleProfiles.length || mix.flavors.length ? (
-                  <div className="mixes-card__flavors">
-                    {visibleProfiles.map((profile) => (
-                      <Badge
-                        key={`${mix.id}:profile:${profile}`}
-                        variant="secondary"
+        <div className="mixes-table-shell ops-table-shell">
+          <table className="mixes-table">
+            <thead>
+              <tr>
+                <th scope="col">Микс</th>
+                <th scope="col">Состав</th>
+                <th scope="col">Профиль</th>
+                <th scope="col">Статус</th>
+                <th scope="col">Метрики</th>
+                <th scope="col" className="mixes-table__actions-col">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((mix) => {
+                const totalProportion = mix.components.reduce(
+                  (sum, component) => sum + component.proportion,
+                  0,
+                );
+                const visibleProfiles = mix.flavorProfiles.slice(0, 3);
+                const profileOverflow = mix.flavorProfiles.length - visibleProfiles.length;
+                return (
+                  <tr key={mix.id} data-blocked={!mix.available || undefined} data-hidden={mix.available && !mix.guestVisible ? true : undefined}>
+                    <td>
+                      <div className="mixes-cell">
+                        <strong>{mix.name}</strong>
+                        {mix.description ? <span>{mix.description}</span> : null}
+                        <span className="mixes-cell__updated">
+                          Обновлено: {formatMixUpdatedAt(mix.updatedAt)}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="mixes-cell mixes-cell__components">
+                        <div className="mixes-cell__pills" aria-hidden="true">
+                          {mix.components.map((component) => {
+                            const color = colorForTobacco(component.tobaccoId);
+                            return (
+                              <span
+                                key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}:pill`}
+                                className="mixes-cell__pill"
+                                style={{
+                                  background: color.soft,
+                                  borderColor: color.border,
+                                  color: color.text,
+                                }}
+                                title={`${component.manufacturer} · ${component.name}`}
+                              >
+                                {component.manufacturer.slice(0, 2).toUpperCase()}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <span className="mixes-cell__component-line">
+                          {mix.components
+                            .map((component) => {
+                              const ratio = totalProportion > 0
+                                ? Math.round((component.proportion / totalProportion) * 100)
+                                : Math.round(100 / mix.components.length);
+                              return `${component.name} ${ratio}%`;
+                            })
+                            .join(' + ')}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="mixes-cell mixes-cell__chips">
+                        {visibleProfiles.map((profile) => (
+                          <Badge key={`${mix.id}:profile:${profile}`} variant="secondary">
+                            {formatFlavorProfileLabel(profile)}
+                          </Badge>
+                        ))}
+                        {profileOverflow > 0 ? (
+                          <Badge variant="outline">+{profileOverflow}</Badge>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td>{renderMixStatus(mix)}</td>
+                    <td>
+                      <div className="mixes-cell mixes-cell__metrics">
+                        <span className="mixes-cell__metric" title="Популярность микса">
+                          <span aria-hidden="true">🔥</span> {formatMetricValue(mix.popularity)}
+                        </span>
+                        <span className="mixes-cell__metric" title="Средний рейтинг гостей">
+                          <span aria-hidden="true">★</span> {mix.avgRating.toFixed(1)}
+                          {mix.ratingsCount > 0 ? (
+                            <span className="mixes-cell__metric-meta">
+                              ({formatMetricValue(mix.ratingsCount)})
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="mixes-cell__metric mixes-cell__metric--rails" title={
+                          mix.railMemberships.length
+                            ? mix.railMemberships.map((membership) => membership.name).join(', ')
+                            : 'Пока не входит ни в один рейл'
+                        }>
+                          В рейлах: {formatMetricValue(mix.railCount)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="mixes-table__actions">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onSelectMix(mix)}
                       >
-                        {formatFlavorProfileLabel(profile)}
-                      </Badge>
-                    ))}
-                    {profileOverflow > 0 ? (
-                      <Badge variant="outline">+{profileOverflow}</Badge>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="mixes-card__metrics">
-                  <span className="mixes-card__rating" title="Средний рейтинг гостей">
-                    ★ {mix.avgRating.toFixed(1)}
-                    {mix.ratingsCount > 0 ? (
-                      <span className="mixes-card__rating-count">
-                        · {formatMetricValue(mix.ratingsCount)}
-                      </span>
-                    ) : null}
-                  </span>
-                  <div
-                    className="mixes-card__popularity"
-                    role="meter"
-                    aria-label="Популярность микса"
-                    aria-valuenow={mix.popularity}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    title={`Популярность: ${formatMetricValue(mix.popularity)}`}
-                  >
-                    <span
-                      className="mixes-card__popularity-fill"
-                      style={{ width: `${popularityWidth}%` }}
-                      aria-hidden="true"
-                    />
-                  </div>
-                </div>
-
-                <footer className="mixes-card__actions">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => onSelectMix(mix)}
-                  >
-                    Открыть
-                  </Button>
-                  <span
-                    className="mixes-card__rails-meta"
-                    title={
-                      mix.railMemberships.length
-                        ? mix.railMemberships.map((membership) => membership.name).join(', ')
-                        : 'Пока не входит ни в один рейл'
-                    }
-                  >
-                    В рейлах: {formatMetricValue(mix.railCount)}
-                    {activeRails > 0 && activeRails !== mix.railCount
-                      ? ` · активных ${activeRails}`
-                      : ''}
-                  </span>
-                  <span className="mixes-card__updated">
-                    {formatMixUpdatedAt(mix.updatedAt)}
-                  </span>
-                </footer>
-              </article>
-            );
-          })}
+                        Открыть
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

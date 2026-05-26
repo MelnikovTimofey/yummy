@@ -32,13 +32,12 @@ const getInventoryRow = (page: Page, name: string): Locator =>
     has: page.getByRole('cell', { name }),
   });
 
-// Каталог миксов после редизайна (handoff §Миксы → «Карточка микса (compact)»)
-// рендерится как grid <article.mixes-card>, не как <table tr>. Helper ищет
-// карточку по h3 с именем микса. Если в будущем мы вернёмся к таблице или
-// поменяем разметку — этот селектор первым ловит drift.
+// Каталог миксов = таблица с богатой row-композицией (МИКС / СОСТАВ /
+// ПРОФИЛЬ / СТАТУС / МЕТРИКИ / ДЕЙСТВИЯ) — соответствует mockups.html.
+// PR #63 раньше попытался card-grid; PR-B вернул table back.
 const getMixRow = (page: Page, name: string): Locator =>
-  page.locator('article.mixes-card').filter({
-    has: page.getByRole('heading', { name, level: 3 }),
+  page.locator('table.mixes-table tbody tr').filter({
+    has: page.getByText(name, { exact: true }),
   });
 
 test('Master workspace tabs support keyboard navigation for critical admin sections', async ({ page }) => {
