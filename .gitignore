@@ -14,6 +14,9 @@ tobaccos.xml
 test-results
 tests/*/node_modules/
 
+# local design handoff materials (Figma exports и т.п.)
+design/
+
 # Nomad service local artifacts
 services/nomad-telegram-bot/node_modules/
 services/nomad-telegram-bot/dist/
