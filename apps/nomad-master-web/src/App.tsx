@@ -134,7 +134,7 @@ const formatLoadStatus = (status: 'idle' | 'loading' | 'ready' | 'error') => {
     case 'loading':
       return 'Обновляем';
     case 'ready':
-      return 'Данные готовы';
+      return 'Данные актуальны';
     case 'error':
       return 'Есть ошибка';
     default:
@@ -946,7 +946,7 @@ export const App = () => {
             ? 'Есть ошибка'
             : telegramOps.automationStatus === 'loading' || dailyCode.status === 'loading'
               ? 'Обновляем'
-              : 'Данные готовы';
+              : 'Данные актуальны';
         default:
           return 'Ожидает загрузки';
       }
@@ -1028,6 +1028,7 @@ export const App = () => {
           onSignOut={onSignOut}
           density={density}
           onDensityChange={setDensity}
+          onOpenCommandPalette={() => cmdK.setOpen(true)}
         />
 
         <section className="master-stage">

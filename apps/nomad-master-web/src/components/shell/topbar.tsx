@@ -1,5 +1,5 @@
 import { KeyboardEvent, useRef } from 'react';
-import { LogOut, Rows2, Rows3, Rows4, type LucideIcon } from 'lucide-react';
+import { LogOut, Rows2, Rows3, Rows4, Search, type LucideIcon } from 'lucide-react';
 import { apiHostLabel, envLabel } from '@/lib/api-client';
 import type { Density } from '@/hooks/use-density';
 import {
@@ -21,6 +21,7 @@ type MasterTopBarProps = {
   onSignOut: () => void;
   density: Density;
   onDensityChange: (next: Density) => void;
+  onOpenCommandPalette: () => void;
 };
 
 const densityOptions: Array<{ value: Density; icon: LucideIcon; title: string }> = [
@@ -39,6 +40,7 @@ export const MasterTopBar = ({
   onSignOut,
   density,
   onDensityChange,
+  onOpenCommandPalette,
 }: MasterTopBarProps) => {
   const tabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     dashboard: null,
@@ -155,6 +157,16 @@ export const MasterTopBar = ({
             );
           })}
         </div>
+        <button
+          type="button"
+          className="master-nav__cmdk"
+          aria-label="Открыть командную палитру"
+          onClick={onOpenCommandPalette}
+        >
+          <Search size={14} aria-hidden />
+          <span className="master-nav__cmdk-label">Найти или сделать</span>
+          <kbd className="master-nav__cmdk-kbd">⌘K</kbd>
+        </button>
         <span
           className="master-nav__env"
           title={`API: ${apiHostLabel}`}
