@@ -857,6 +857,7 @@ export const App = () => {
         onAddMix={rails.onAddRailMix}
         onRemoveMix={rails.onRemoveRailMix}
         onMoveMix={rails.onMoveRailMix}
+        onReorderMixes={rails.onReorderRailMixes}
         onReset={rails.onResetRailEditor}
       />
     </>

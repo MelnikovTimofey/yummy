@@ -1,4 +1,4 @@
-import { useMemo, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { useMemo, useState, type DragEvent, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
 import type { MixRecord, RailRecord } from '@/contracts';
@@ -30,6 +30,7 @@ type RailEditorProps = {
   onAddMix: (mixId: string) => void;
   onRemoveMix: (mixId: string) => void;
   onMoveMix: (mixId: string, direction: 'up' | 'down') => void;
+  onReorderMixes: (sourceId: string, targetId: string) => void;
   onReset: () => void;
 };
 
@@ -48,8 +49,10 @@ export const RailEditor = ({
   onAddMix,
   onRemoveMix,
   onMoveMix,
+  onReorderMixes,
   onReset,
 }: RailEditorProps) => {
+  const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   // useMemo стоит ДО любых условных return — следуем предупреждению handoff
   // (исторический баг RailEditor с hooks-order).
   const selectedRailMixEntries = useMemo(
@@ -191,7 +194,33 @@ export const RailEditor = ({
 
                   <div className="rail-mix-list ops-table-shell rails-surface__mix-list">
                     {selectedRailMixEntries.length ? selectedRailMixEntries.map(({ mixId, index, mix }) => (
-                      <article className="rail-mix-row ops-surface__card rails-surface__mix-row" key={mixId}>
+                      <article
+                        className={[
+                          'rail-mix-row',
+                          'ops-surface__card',
+                          'rails-surface__mix-row',
+                          dragSourceId === mixId ? 'rails-surface__mix-row--dragging' : '',
+                        ].filter(Boolean).join(' ')}
+                        key={mixId}
+                        draggable={!railEditorLocked}
+                        onDragStart={(event: DragEvent<HTMLElement>) => {
+                          if (railEditorLocked) return;
+                          setDragSourceId(mixId);
+                          event.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(event: DragEvent<HTMLElement>) => {
+                          if (railEditorLocked || !dragSourceId) return;
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = 'move';
+                        }}
+                        onDrop={(event: DragEvent<HTMLElement>) => {
+                          if (railEditorLocked || !dragSourceId) return;
+                          event.preventDefault();
+                          onReorderMixes(dragSourceId, mixId);
+                          setDragSourceId(null);
+                        }}
+                        onDragEnd={() => setDragSourceId(null)}
+                      >
                         <div className="rail-mix-row__order">{index + 1}</div>
                         <div className="rail-mix-row__content">
                           <strong>{mix?.name ?? mixId}</strong>
@@ -246,6 +275,30 @@ export const RailEditor = ({
                 />
                 <span>Активен в витрине</span>
               </label>
+
+              <div className="field field--wide rails-surface__guest-preview" aria-hidden="true">
+                <span className="field-label">Как увидит гость</span>
+                <div className="rails-surface__guest-phone">
+                  <div className="rails-surface__guest-rail">
+                    <p className="rails-surface__guest-title">{editor.name || 'Название рейла'}</p>
+                    {editor.description ? (
+                      <p className="rails-surface__guest-subtitle">{editor.description}</p>
+                    ) : null}
+                    <div className="rails-surface__guest-strip">
+                      {selectedRailMixEntries.length ? (
+                        selectedRailMixEntries.slice(0, 3).map(({ mixId, mix }) => (
+                          <div className="rails-surface__guest-card" key={mixId}>
+                            <div className="rails-surface__guest-card-art" />
+                            <p className="rails-surface__guest-card-name">{mix?.name ?? '—'}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="meta-line">Добавьте миксы — гость увидит их здесь.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {saveError ? <p className="error-text">{saveError}</p> : null}

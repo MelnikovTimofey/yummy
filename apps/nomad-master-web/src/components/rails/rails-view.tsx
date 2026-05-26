@@ -1,5 +1,11 @@
-import type { MixRecord, RailRecord } from '@/contracts';
+import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
+
+const railTypeChipTone: Record<RailType, string> = {
+  statistical: 'chip--tone-info',
+  prepared: 'chip--tone-warning',
+  curated: 'chip--tone-accent',
+};
 
 const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   if (rail.mixes.length) {
@@ -98,7 +104,7 @@ export const RailsView = ({
               </span>
             </div>
             <div className="chip-row">
-              <span className="chip">{formatRailType(rail.type)}</span>
+              <span className={`chip ${railTypeChipTone[rail.type]}`}>{formatRailType(rail.type)}</span>
               <span className={rail.editable ? 'chip chip--editable' : 'chip chip--readonly'}>
                 {rail.editable ? 'Редактируемый' : 'Только просмотр'}
               </span>

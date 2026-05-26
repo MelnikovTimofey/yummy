@@ -116,6 +116,24 @@ export const useRails = ({ onAfterSubmit, onRefreshSiblings }: UseRailsOptions =
     }));
   }, []);
 
+  const onReorderRailMixes = useCallback((sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return;
+
+    setRailEditor((current) => {
+      const sourceIndex = current.mixIds.indexOf(sourceId);
+      const targetIndex = current.mixIds.indexOf(targetId);
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return current;
+      }
+
+      const nextMixIds = current.mixIds.filter((id) => id !== sourceId);
+      const insertAt = nextMixIds.indexOf(targetId);
+      nextMixIds.splice(insertAt < 0 ? nextMixIds.length : insertAt, 0, sourceId);
+
+      return { ...current, mixIds: nextMixIds };
+    });
+  }, []);
+
   const onMoveRailMix = useCallback((mixId: string, direction: 'up' | 'down') => {
     setRailEditor((current) => {
       const index = current.mixIds.indexOf(mixId);
@@ -238,6 +256,7 @@ export const useRails = ({ onAfterSubmit, onRefreshSiblings }: UseRailsOptions =
     onAddRailMix,
     onRemoveRailMix,
     onMoveRailMix,
+    onReorderRailMixes,
     onSubmitRail,
     reset,
   };
