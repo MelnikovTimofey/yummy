@@ -9,8 +9,12 @@ const signIn = async (login: string, password: string, page: Page) => {
   // h1 после логина = label активного workspace (default `dashboard` → `Дашборд`);
   // brand-name `Nomad Master` остался в нав-баре как span, а не h1.
   // Любое изменение default workspace или label'а должно ловиться этим smoke —
-  // см. CLAUDE.md §3 (smoke gate после правок фронта).
-  await expect(page.getByRole('heading', { name: 'Дашборд', level: 1 })).toBeVisible();
+  // см. CLAUDE.md §3 (smoke gate после правок фронта). Скоупим в
+  // `.master-stage__header`, потому что DashboardView теперь сам рендерит
+  // h1 «Дашборд смены» (MasterPageHeader под mockups.html master-refactor).
+  await expect(
+    page.locator('.master-stage__header').getByRole('heading', { name: 'Дашборд', level: 1 }),
+  ).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
 };
 

@@ -742,8 +742,6 @@ export const App = () => {
       summary={summary}
       summaryStatus={summaryStatus}
       summaryError={summaryError}
-      dashboardWindow={dashboardWindow}
-      onSelectDashboardWindow={onSelectDashboardWindow}
       onNavigate={(tab) => setActiveTab(tab)}
     />
   );
