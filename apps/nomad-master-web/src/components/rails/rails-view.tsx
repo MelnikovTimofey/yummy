@@ -1,5 +1,7 @@
 import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
+import { MasterPageHeader } from '@/components/shell/master-page-header';
+import { MasterStatsRow } from '@/components/shell/master-stats-row';
 
 const railTypeChipTone: Record<RailType, string> = {
   statistical: 'chip--tone-info',
@@ -7,16 +9,41 @@ const railTypeChipTone: Record<RailType, string> = {
   curated: 'chip--tone-accent',
 };
 
-const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
+const pluralizeMixCount = (count: number) => {
+  const lastTwo = count % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return 'миксов';
+  const last = count % 10;
+  if (last === 1) return 'микс';
+  if (last >= 2 && last <= 4) return 'микса';
+  return 'миксов';
+};
+
+type RailMixToken = {
+  id: string;
+  name: string;
+  state: 'active' | 'hidden';
+};
+
+const resolveRailMixTokens = (rail: RailRecord, mixes: MixRecord[]): RailMixToken[] => {
   if (rail.mixes.length) {
-    return rail.mixes.map((mix) => mix.name).join(', ');
+    return rail.mixes.map((mix) => ({
+      id: mix.id,
+      name: mix.name,
+      state: mix.guestVisible && mix.available ? 'active' : 'hidden',
+    }));
   }
 
-  const resolvedNames = rail.mixIds
-    .map((mixId) => mixes.find((mix) => mix.id === mixId)?.name ?? mixId)
-    .filter(Boolean);
-
-  return resolvedNames.join(', ') || 'Миксы не заданы';
+  return rail.mixIds.map((mixId) => {
+    const resolved = mixes.find((mix) => mix.id === mixId);
+    if (!resolved) {
+      return { id: mixId, name: mixId, state: 'hidden' as const };
+    }
+    return {
+      id: resolved.id,
+      name: resolved.name,
+      state: resolved.guestVisible && resolved.available ? 'active' : 'hidden',
+    };
+  });
 };
 
 type RailsViewProps = {
@@ -39,35 +66,11 @@ export const RailsView = ({
   onOpenRail,
 }: RailsViewProps) => (
   <section className="card rails-surface">
-    <div className="section-head section-head--surface section-head--surface-split rails-surface__header">
-      <div className="ops-surface__intro">
-        <p className="eyebrow">Менеджер рейлов</p>
-        <h2>Рейлы Nomad</h2>
-        <p className="meta-line">Состав и порядок показа подборок для гостевой витрины.</p>
-      </div>
-      <div className="summary-grid summary-grid--nested ops-surface__stats rails-surface__stats">
-        <article className="metric-card ops-surface__stat rails-surface__stat">
-          <p className="metric-label">Всего рейлов</p>
-          <p className="metric-value metric-value--compact">{rails.length}</p>
-          <p className="meta-line">Все подборки гостевой витрины.</p>
-        </article>
-        <article className="metric-card ops-surface__stat rails-surface__stat">
-          <p className="metric-label">Активны в витрине</p>
-          <p className="metric-value metric-value--compact">{rails.filter((rail) => rail.active).length}</p>
-          <p className="meta-line">Показываются гостю сейчас.</p>
-        </article>
-        <article className="metric-card ops-surface__stat rails-surface__stat">
-          <p className="metric-label">Только просмотр</p>
-          <p className="metric-value metric-value--compact">{rails.filter((rail) => !rail.editable).length}</p>
-          <p className="meta-line">Системные подборки без ручного редактирования.</p>
-        </article>
-      </div>
-    </div>
-
-    <div className="ops-toolbar ops-toolbar--split rails-surface__toolbar">
-      <p className="meta-line">Собирай подборки, меняй порядок и быстро отделяй системные рейлы от редактируемых.</p>
-      <div className="section-actions">
-        <span className="status-chip">Витрина гостя</span>
+    <MasterPageHeader
+      eyebrow="МЕНЕДЖЕР РЕЙЛОВ"
+      title="Рейлы Nomad"
+      subtitle="Состав и порядок подборок для гостевой витрины."
+      actions={
         <button
           className="primary-button primary-button--inline"
           type="button"
@@ -75,54 +78,93 @@ export const RailsView = ({
         >
           Новый рейл
         </button>
-      </div>
-    </div>
+      }
+    />
+
+    <MasterStatsRow
+      tiles={[
+        {
+          label: 'Всего рейлов',
+          value: rails.length,
+          hint: 'все подборки витрины',
+        },
+        {
+          label: 'Активны в витрине',
+          value: rails.filter((rail) => rail.active).length,
+          hint: 'показываются гостю',
+          tone: 'success',
+        },
+        {
+          label: 'Только просмотр',
+          value: rails.filter((rail) => !rail.editable).length,
+          hint: 'системные, без ручной правки',
+        },
+      ]}
+    />
 
     {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
     {railsError ? <p className="error-text">{railsError}</p> : null}
 
     <div className="manager-layout ops-management-grid rails-surface__grid rails-surface__grid--single">
       <aside className="entity-list rails-surface__list">
-        {rails.map((rail) => (
-          <article
-            className={[
-              'entity-card',
-              'ops-surface__card',
-              'rails-surface__card',
-              activeEditorId === rail.id ? 'entity-card--active' : '',
-              rail.editable ? '' : 'entity-card--muted',
-            ].filter(Boolean).join(' ')}
-            key={rail.id}
-          >
-            <div className="entity-card__head">
-              <div>
-                <p className="entity-kicker">Рейл</p>
-                <h3>{rail.name}</h3>
+        {rails.map((rail) => {
+          const mixTokens = resolveRailMixTokens(rail, railMixCatalog);
+          return (
+            <article
+              className={[
+                'entity-card',
+                'ops-surface__card',
+                'rails-surface__card',
+                activeEditorId === rail.id ? 'entity-card--active' : '',
+                rail.editable ? '' : 'entity-card--muted',
+              ].filter(Boolean).join(' ')}
+              key={rail.id}
+            >
+              <div className="rails-surface__card-main">
+                <div className="rails-surface__card-tags">
+                  <span className="entity-kicker rails-surface__card-kicker">Рейл</span>
+                  <span className={`chip ${railTypeChipTone[rail.type]}`}>{formatRailType(rail.type)}</span>
+                  {!rail.editable ? <span className="chip chip--ghost">только просмотр</span> : null}
+                  {rail.active ? <span className="chip chip--tone-success">активен</span> : null}
+                </div>
+                <h3 className="rails-surface__card-name">{rail.name}</h3>
+                {rail.description ? (
+                  <p className="rails-surface__card-description">{rail.description}</p>
+                ) : null}
+                {!rail.editable && rail.readOnlyReason ? (
+                  <p className="meta-line rails-surface__card-readonly-reason">{rail.readOnlyReason}</p>
+                ) : null}
+                {mixTokens.length ? (
+                  <ul className="rails-surface__mix-tokens">
+                    {mixTokens.map((token) => (
+                      <li className="rails-surface__mix-token" key={token.id}>
+                        <span
+                          className={`rails-surface__mix-dot rails-surface__mix-dot--${token.state}`}
+                          aria-hidden="true"
+                        />
+                        <span className="rails-surface__mix-token-name">{token.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="meta-line">Миксы не заданы</p>
+                )}
               </div>
-              <span className={rail.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                {rail.active ? 'Активен' : 'Неактивен'}
-              </span>
-            </div>
-            <div className="chip-row">
-              <span className={`chip ${railTypeChipTone[rail.type]}`}>{formatRailType(rail.type)}</span>
-              <span className={rail.editable ? 'chip chip--editable' : 'chip chip--readonly'}>
-                {rail.editable ? 'Редактируемый' : 'Только просмотр'}
-              </span>
-            </div>
-            <p className="meta-line">{rail.description || 'Без описания'}</p>
-            {!rail.editable && rail.readOnlyReason ? <p className="meta-line">{rail.readOnlyReason}</p> : null}
-            <p className="meta-line">Миксы: {resolveRailMixSummary(rail, railMixCatalog)}</p>
-            <div className="entity-card__actions">
-              <button
-                className="secondary-button secondary-button--inline"
-                type="button"
-                onClick={() => onOpenRail(rail)}
-              >
-                {rail.editable ? 'Редактировать' : 'Просмотр'}
-              </button>
-            </div>
-          </article>
-        ))}
+              <div className="rails-surface__card-aside">
+                <span className="rails-surface__mix-count">
+                  {rail.mixIds.length} {pluralizeMixCount(rail.mixIds.length)}
+                </span>
+                <button
+                  className="secondary-button secondary-button--inline rails-surface__card-action"
+                  type="button"
+                  onClick={() => onOpenRail(rail)}
+                >
+                  {rail.editable ? 'Редактировать' : 'Просмотр'}
+                </button>
+              </div>
+            </article>
+          );
+        })}
 
         {!rails.length && railsStatus !== 'loading' ? <p className="meta-line">Пока нет рейлов.</p> : null}
       </aside>
