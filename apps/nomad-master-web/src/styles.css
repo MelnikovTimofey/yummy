@@ -3749,88 +3749,11 @@ p {
 }
 
 .mixes-filter-group__chips,
-.mixes-cell__chips,
 .mixes-editor__section-actions,
 .mixes-editor__rails {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.mixes-table-shell {
-  overflow-x: auto;
-  border: 1px solid rgba(226, 172, 123, 0.08);
-  border-radius: 20px;
-  background: rgba(15, 14, 17, 0.88);
-}
-
-.mixes-table {
-  width: 100%;
-  min-width: 1180px;
-  border-collapse: collapse;
-}
-
-.mixes-table th,
-.mixes-table td {
-  padding: 11px 12px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid rgba(226, 172, 123, 0.08);
-}
-
-.mixes-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: rgba(20, 18, 21, 0.96);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--nomad-ink-soft);
-}
-
-.mixes-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.mixes-table__actions {
-  width: 118px;
-}
-
-.mixes-table__empty {
-  text-align: center;
-  color: var(--nomad-ink-soft);
-}
-
-.mixes-cell {
-  display: grid;
-  gap: 6px;
-}
-
-.mixes-cell span {
-  color: var(--nomad-ink-soft);
-  font-size: 0.82rem;
-}
-
-.mixes-cell__stack {
-  align-content: start;
-}
-
-.mixes-component-chip,
-.mixes-rail-chip {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 7px 9px;
-  border: 1px solid rgba(226, 172, 123, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.mixes-component-chip span,
-.mixes-rail-chip span {
-  color: var(--nomad-ink-soft);
-  font-size: 0.72rem;
 }
 
 .mixes-editor {
@@ -4613,6 +4536,205 @@ p {
   border-radius: 6px;
   background: var(--muted);
   color: var(--foreground);
+}
+
+/* =====================================================================
+   MixCatalog cards (handoff §Миксы → «Карточка микса (compact)»).
+   Заменяют table-row layout — каждый микс это <article.mixes-card> с
+   brand-strip (пропорциональные цветные плитки компонентов), name,
+   description (1 line), 3 chip-categories + overflow, rating,
+   popularity-bar, action-row (Открыть + meta).
+   ===================================================================== */
+
+.mixes-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 4px 0 8px;
+}
+
+.mixes-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+.mixes-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.mixes-card[data-blocked='true'] {
+  border-color: color-mix(in oklch, var(--destructive) 40%, var(--border) 60%);
+  background: color-mix(in oklch, var(--destructive) 6%, var(--card) 94%);
+}
+
+.mixes-card[data-hidden='true'] {
+  opacity: 0.78;
+  border-style: dashed;
+}
+
+.mixes-card__brand-strip {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--muted);
+}
+
+.mixes-card__brand-strip-empty {
+  flex: 1;
+  background: var(--muted);
+}
+
+.mixes-card__brand-segment {
+  height: 100%;
+  min-width: 4px;
+}
+
+.mixes-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mixes-card__name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  font-family: var(--font-display, inherit);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mixes-card__description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.mixes-card__flavors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mixes-card__metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.mixes-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.mixes-card__rating-count {
+  font-weight: 400;
+  color: var(--muted-foreground);
+  margin-left: 2px;
+}
+
+.mixes-card__popularity {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.mixes-card__popularity-fill {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: inherit;
+  transition: width 200ms ease;
+}
+
+.mixes-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.mixes-card__rails-meta {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mixes-card__updated {
+  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mixes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 32px 24px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--muted-foreground);
+}
+
+.mixes-empty__eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.mixes-empty__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.mixes-empty__hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 520px;
 }
 
 @layer base {

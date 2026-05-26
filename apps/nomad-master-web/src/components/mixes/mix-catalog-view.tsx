@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
+import { colorForTobacco } from '@/components/mixes/mix-builder/color-for-tobacco';
 import type {
   MixFilterKey,
   MixListFilters,
@@ -18,7 +19,6 @@ import type {
 import {
   formatFlavorProfileLabel,
   formatMetricValue,
-  formatRailType,
   mixRailFilterOptions,
   mixSortDirectionOptions,
   mixSortFieldOptions,
@@ -104,11 +104,11 @@ const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
 
 const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => {
   if (!mix.available) {
-    return <Badge variant="secondary">Скрыт оператором</Badge>;
+    return <Badge variant="destructive">Блокирован</Badge>;
   }
 
   if (!mix.guestVisible) {
-    return <Badge variant="outline">Заблокирован наличием</Badge>;
+    return <Badge variant="secondary">Скрыт</Badge>;
   }
 
   return <Badge>Виден гостю</Badge>;
@@ -349,98 +349,145 @@ export const MixCatalogView = ({
       {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
-      <div className="mixes-table-shell ops-table-shell">
-        <table className="mixes-table">
-          <thead>
-            <tr>
-              <th>Микс</th>
-              <th>Компоненты</th>
-              <th>Вкусовой профиль</th>
-              <th>Рейлы</th>
-              <th>Статус</th>
-              <th>Метрики</th>
-              <th className="mixes-table__actions">Действие</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((mix) => (
-              <tr key={mix.id}>
-                <td>
-                  <div className="mixes-cell">
-                    <strong>{mix.name}</strong>
-                    <span>{mix.description || 'Без описания'}</span>
-                    <span>Обновлено: {formatMixUpdatedAt(mix.updatedAt)}</span>
-                  </div>
-                </td>
-                <td>
-                  <div className="mixes-cell mixes-cell__stack">
-                    {mix.components.map((component) => (
-                      <div className="mixes-component-chip" key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}`}>
-                        <strong>{component.name}</strong>
-                        <span>
-                          {component.manufacturer} · {component.proportion}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </td>
-                <td>
-                  <div className="mixes-cell mixes-cell__chips">
-                    {mix.flavorProfiles.map((profile) => (
-                      <Badge key={`${mix.id}:profile:${profile}`} variant="secondary">
+      {!items.length && status !== 'loading' ? (
+        <div className="mixes-empty">
+          <p className="mixes-empty__eyebrow">Пока пусто</p>
+          <p className="mixes-empty__title">По текущим фильтрам миксов нет</p>
+          <p className="mixes-empty__hint">
+            Очистите фильтры или создайте первый микс — это самый быстрый способ оживить
+            витрину гостя.
+          </p>
+          <Button type="button" onClick={onStartCreate}>
+            Новый микс
+          </Button>
+        </div>
+      ) : (
+        <div className="mixes-cards" role="list">
+          {items.map((mix) => {
+            const totalProportion = mix.components.reduce(
+              (sum, component) => sum + component.proportion,
+              0,
+            );
+            const visibleProfiles = mix.flavorProfiles.slice(0, 3);
+            const profileOverflow = mix.flavorProfiles.length - visibleProfiles.length;
+            const popularityWidth = Math.min(100, Math.max(0, mix.popularity));
+            const activeRails = mix.railMemberships.filter((membership) => membership.active).length;
+            return (
+              <article
+                className="mixes-card"
+                role="listitem"
+                data-blocked={!mix.available || undefined}
+                data-hidden={mix.available && !mix.guestVisible ? true : undefined}
+                key={mix.id}
+              >
+                <div
+                  className="mixes-card__brand-strip"
+                  aria-label="Доли компонентов микса"
+                >
+                  {mix.components.length === 0 ? (
+                    <span className="mixes-card__brand-strip-empty" aria-hidden="true" />
+                  ) : (
+                    mix.components.map((component) => {
+                      const color = colorForTobacco(component.tobaccoId);
+                      const widthPct = totalProportion > 0
+                        ? (component.proportion / totalProportion) * 100
+                        : 100 / mix.components.length;
+                      return (
+                        <span
+                          key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}`}
+                          className="mixes-card__brand-segment"
+                          style={{
+                            flexBasis: `${widthPct}%`,
+                            background: color.fill,
+                          }}
+                          title={`${component.name} · ${component.proportion}%`}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+
+                <header className="mixes-card__head">
+                  <h3 className="mixes-card__name">{mix.name}</h3>
+                  {renderMixStatus(mix)}
+                </header>
+
+                <p className="mixes-card__description">
+                  {mix.description || 'Без описания'}
+                </p>
+
+                {visibleProfiles.length || mix.flavors.length ? (
+                  <div className="mixes-card__flavors">
+                    {visibleProfiles.map((profile) => (
+                      <Badge
+                        key={`${mix.id}:profile:${profile}`}
+                        variant="secondary"
+                      >
                         {formatFlavorProfileLabel(profile)}
                       </Badge>
                     ))}
-                    {mix.flavors.map((flavor) => (
-                      <Badge key={`${mix.id}:flavor:${flavor}`} variant="outline">
-                        {flavor}
-                      </Badge>
-                    ))}
+                    {profileOverflow > 0 ? (
+                      <Badge variant="outline">+{profileOverflow}</Badge>
+                    ) : null}
                   </div>
-                </td>
-                <td>
-                  <div className="mixes-cell mixes-cell__stack">
-                    {mix.railMemberships.length ? (
-                      mix.railMemberships.map((membership) => (
-                        <div className="mixes-rail-chip" key={`${mix.id}:${membership.id}`}>
-                          <strong>{membership.name}</strong>
-                          <span>
-                            {formatRailType(membership.type)} · {membership.active ? 'Активен' : 'Неактивен'}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <span>Пока не входит ни в один рейл</span>
-                    )}
+                ) : null}
+
+                <div className="mixes-card__metrics">
+                  <span className="mixes-card__rating" title="Средний рейтинг гостей">
+                    ★ {mix.avgRating.toFixed(1)}
+                    {mix.ratingsCount > 0 ? (
+                      <span className="mixes-card__rating-count">
+                        · {formatMetricValue(mix.ratingsCount)}
+                      </span>
+                    ) : null}
+                  </span>
+                  <div
+                    className="mixes-card__popularity"
+                    role="meter"
+                    aria-label="Популярность микса"
+                    aria-valuenow={mix.popularity}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    title={`Популярность: ${formatMetricValue(mix.popularity)}`}
+                  >
+                    <span
+                      className="mixes-card__popularity-fill"
+                      style={{ width: `${popularityWidth}%` }}
+                      aria-hidden="true"
+                    />
                   </div>
-                </td>
-                <td>{renderMixStatus(mix)}</td>
-                <td>
-                  <div className="mixes-cell">
-                    <strong>Популярность {formatMetricValue(mix.popularity)}</strong>
-                    <span>
-                      Рейтинг {mix.avgRating.toFixed(1)} · Оценок {formatMetricValue(mix.ratingsCount)}
-                    </span>
-                    <span>Рейлов: {formatMetricValue(mix.railCount)}</span>
-                  </div>
-                </td>
-                <td className="mixes-table__actions">
-                  <Button type="button" variant="outline" size="sm" onClick={() => onSelectMix(mix)}>
-                    Редактировать
+                </div>
+
+                <footer className="mixes-card__actions">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onSelectMix(mix)}
+                  >
+                    Открыть
                   </Button>
-                </td>
-              </tr>
-            ))}
-            {!items.length && status !== 'loading' ? (
-              <tr>
-                <td className="mixes-table__empty" colSpan={7}>
-                  По текущим фильтрам миксов нет.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+                  <span
+                    className="mixes-card__rails-meta"
+                    title={
+                      mix.railMemberships.length
+                        ? mix.railMemberships.map((membership) => membership.name).join(', ')
+                        : 'Пока не входит ни в один рейл'
+                    }
+                  >
+                    В рейлах: {formatMetricValue(mix.railCount)}
+                    {activeRails > 0 && activeRails !== mix.railCount
+                      ? ` · активных ${activeRails}`
+                      : ''}
+                  </span>
+                  <span className="mixes-card__updated">
+                    {formatMixUpdatedAt(mix.updatedAt)}
+                  </span>
+                </footer>
+              </article>
+            );
+          })}
+        </div>
+      )}
 
       <ListPagination
         page={meta.page}

@@ -32,9 +32,13 @@ const getInventoryRow = (page: Page, name: string): Locator =>
     has: page.getByRole('cell', { name }),
   });
 
+// Каталог миксов после редизайна (handoff §Миксы → «Карточка микса (compact)»)
+// рендерится как grid <article.mixes-card>, не как <table tr>. Helper ищет
+// карточку по h3 с именем микса. Если в будущем мы вернёмся к таблице или
+// поменяем разметку — этот селектор первым ловит drift.
 const getMixRow = (page: Page, name: string): Locator =>
-  page.locator('tbody tr').filter({
-    has: page.getByRole('cell', { name }),
+  page.locator('article.mixes-card').filter({
+    has: page.getByRole('heading', { name, level: 3 }),
   });
 
 test('Master workspace tabs support keyboard navigation for critical admin sections', async ({ page }) => {
@@ -77,7 +81,7 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await openWorkspace(page, 'Миксы');
   const citrusMixRow = getMixRow(page, 'Цитрусовый караван');
   await expect(citrusMixRow).toBeVisible();
-  await citrusMixRow.getByRole('button', { name: 'Редактировать' }).click();
+  await citrusMixRow.getByRole('button', { name: 'Открыть' }).click();
   // MixBuilder открывается full-page (3-колоночный layout) — Sheet удалён
   // в шаге 5 рефактора по design/design_handoff_master_refactor §Микс —
   // конструктор. Имя микса — `<h2>` в sticky-breadcrumb сверху-слева.
