@@ -54,12 +54,23 @@ type InventoryViewProps = {
   onResetSaveFeedback: () => void;
 };
 
-const filterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
-  { key: 'manufacturers', title: 'Производители' },
+// Manufacturers фильтруется через brand-chip row (PR2). Здесь только
+// дополнительные таксономические фильтры — таб формы свёрнут в
+// `<details>` блок «Доп. фильтры».
+const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
   { key: 'flavorProfiles', title: 'Категории' },
   { key: 'flavors', title: 'Вкусы' },
   { key: 'flavorTags', title: 'Мета-теги' },
 ];
+
+const STRENGTH_DASH = '—';
+
+const formatStrengthCompact = (item: InventoryTobacco) => {
+  const value = item.officialStrength?.trim() || item.communityStrength?.trim();
+  return value || STRENGTH_DASH;
+};
+
+const formatProfileRest = (count: number) => `+${count}`;
 
 const formatUpdatedAt = (value?: string) => {
   if (!value) {
@@ -77,25 +88,6 @@ const formatUpdatedAt = (value?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
-};
-
-const formatStrength = (item: InventoryTobacco) => {
-  const official = item.officialStrength?.trim();
-  const community = item.communityStrength?.trim();
-
-  if (official && community) {
-    return `Крепость: офиц. ${official} / по оценкам ${community}`;
-  }
-
-  if (official) {
-    return `Крепость: офиц. ${official}`;
-  }
-
-  if (community) {
-    return `Крепость: по оценкам ${community}`;
-  }
-
-  return '';
 };
 
 const formatDetailValue = (value?: string | null, fallback = 'Не указано') => {
@@ -1069,27 +1061,39 @@ export const InventoryView = ({
         </SheetContent>
       </Sheet>
 
-      <div className="inventory-filter-groups ops-filter-groups">
-        {filterGroups.map((group) => {
-          const options = filters.options[group.key];
+      {extraFilterGroups.some((group) => filters.options[group.key].length) ? (
+        <details className="inventory-extra-filters">
+          <summary className="inventory-extra-filters__trigger">
+            Доп. фильтры
+            <span className="inventory-extra-filters__count" aria-hidden="true">
+              {formatMetricValue(
+                extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0),
+              )}
+            </span>
+          </summary>
+          <div className="inventory-filter-groups ops-filter-groups">
+            {extraFilterGroups.map((group) => {
+              const options = filters.options[group.key];
 
-          if (!options.length) {
-            return null;
-          }
+              if (!options.length) {
+                return null;
+              }
 
-          return (
-            <FilterMultiSelect
-              key={group.key}
-              title={group.title}
-              options={options}
-              selected={filters[group.key]}
-              formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
-              onToggleOption={(option) => onToggleFilterValue(group.key, option)}
-              onClearGroup={() => onClearFilterGroup(group.key)}
-            />
-          );
-        })}
-      </div>
+              return (
+                <FilterMultiSelect
+                  key={group.key}
+                  title={group.title}
+                  options={options}
+                  selected={filters[group.key]}
+                  formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
+                  onToggleOption={(option) => onToggleFilterValue(group.key, option)}
+                  onClearGroup={() => onClearFilterGroup(group.key)}
+                />
+              );
+            })}
+          </div>
+        </details>
+      ) : null}
 
       {selectedIds.length ? (
         <div className="inventory-batch-bar">
@@ -1128,10 +1132,10 @@ export const InventoryView = ({
       {error ? <p className="error-text">{error}</p> : null}
 
       <div className="inventory-table-shell ops-table-shell">
-        <table className="inventory-table">
+        <table className="inventory-table inventory-table--redesign">
           <thead>
             <tr>
-              <th className="inventory-table__check">
+              <th className="inventory-table__brand" scope="col">
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
@@ -1139,29 +1143,49 @@ export const InventoryView = ({
                   aria-label="Выбрать все позиции"
                 />
               </th>
-              <th>Табак</th>
-              <th>Вкусовой профиль</th>
-              <th>Зависимые миксы</th>
-              <th>Обновлено</th>
-              <th>Статус</th>
-              <th className="inventory-table__actions">Действие</th>
+              <th scope="col">Табак</th>
+              <th scope="col">Бренд</th>
+              <th scope="col">Вкус / профиль</th>
+              <th className="inventory-table__stock" scope="col">В наличии</th>
+              <th className="inventory-table__mixes" scope="col">Миксов</th>
+              <th className="inventory-table__actions" scope="col" aria-label="Действия">
+                <span aria-hidden="true">⋯</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {items.length ? (
               items.map((item) => {
-                const strength = formatStrength(item);
                 const isActive = item.id === activeItemId;
+                const profiles = item.flavorProfiles ?? [];
+                const profileShown = profiles.slice(0, 3);
+                const profileRest = profiles.length - profileShown.length;
+                const strengthLabel = formatStrengthCompact(item);
+                const flavorsTop3 = (item.flavors ?? []).slice(0, 3).join(', ');
+                const stockBusy = pendingRowId === item.id || pendingBatchAction !== '';
+                const stockLabel = item.inStock ? 'В наличии' : 'Нет наличия';
+                const dependentCount = item.dependentMixCount ?? 0;
+                const blockedCount = item.blockedDependentMixCount ?? 0;
+                const brandShort = buildBrandShort(item.manufacturer);
 
                 return (
                   <tr key={item.id} data-active={isActive}>
-                    <td className="inventory-table__check">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => onToggleSelection(item.id)}
-                        aria-label={`Выбрать ${item.name}`}
-                      />
+                    <td className="inventory-table__brand">
+                      <label
+                        className="inventory-brand-cell"
+                        title={item.manufacturer}
+                      >
+                        <input
+                          type="checkbox"
+                          className="inventory-brand-cell__check"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => onToggleSelection(item.id)}
+                          aria-label={`Выбрать ${item.name}`}
+                        />
+                        <span className="inventory-brand-cell__pill" aria-hidden="true">
+                          {brandShort}
+                        </span>
+                      </label>
                     </td>
                     <td>
                       <button
@@ -1170,86 +1194,108 @@ export const InventoryView = ({
                         onClick={() => setActiveItemId((current) => (current === item.id ? '' : item.id))}
                         aria-expanded={isActive}
                       >
-                        <div className="inventory-cell">
+                        <div className="inventory-cell inventory-cell--primary">
                           <strong>{item.name}</strong>
-                          <span>{item.manufacturer}</span>
-                          {item.lineName ? <span>{item.lineName}</span> : null}
-                          {strength ? <span>{strength}</span> : null}
-                          <div className="inventory-cell__chips">
-                            {(item.flavors ?? []).map((flavor) => (
-                              <Badge key={`${item.id}:flavor:${flavor}`} variant="outline">
-                                {flavor}
-                              </Badge>
-                            ))}
-                            {(item.flavorTags ?? []).map((tag) => (
-                              <Badge key={`${item.id}:tag:${tag}`} variant="secondary">
-                                #{tag}
-                              </Badge>
-                            ))}
-                          </div>
+                          <span className="inventory-cell__sub">
+                            {strengthLabel}
+                            {flavorsTop3 ? ` · ${flavorsTop3}` : ''}
+                          </span>
                         </div>
                       </button>
                     </td>
                     <td>
-                      <div className="inventory-cell">
-                        <div className="inventory-cell__chips">
-                          {(item.flavorProfiles ?? []).map((profile) => (
+                      <div className="inventory-cell inventory-cell--brand">
+                        <span>{item.manufacturer}</span>
+                        {item.lineName ? (
+                          <span className="inventory-cell__faint">· {item.lineName}</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="inventory-cell__chips">
+                        {profileShown.length ? (
+                          profileShown.map((profile) => (
                             <Badge key={`${item.id}:profile:${profile}`} variant="outline">
                               {formatFlavorProfileLabel(profile)}
                             </Badge>
-                          ))}
-                        </div>
+                          ))
+                        ) : (
+                          <span className="inventory-cell__faint">{STRENGTH_DASH}</span>
+                        )}
+                        {profileRest > 0 ? (
+                          <Badge
+                            variant="secondary"
+                            title={profiles.slice(3).map(formatFlavorProfileLabel).join(', ')}
+                          >
+                            {formatProfileRest(profileRest)}
+                          </Badge>
+                        ) : null}
                       </div>
                     </td>
-                    <td>
-                      <div className="inventory-cell">
-                        <strong className="inventory-cell__count" aria-label={`Всего миксов: ${item.dependentMixCount ?? 0}, заблокировано: ${item.blockedDependentMixCount ?? 0}`}>
-                          <span>
-                            {formatMetricValue(item.dependentMixCount ?? 0)} {(item.dependentMixCount ?? 0) === 1 ? 'микс' : 'миксов'}
-                          </span>
-                          {(item.blockedDependentMixCount ?? 0) > 0 ? (
+                    <td className="inventory-table__stock">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={item.inStock}
+                        aria-label={`${stockLabel}: переключить наличие для ${item.name}`}
+                        onClick={() => onToggleStock(item)}
+                        disabled={stockBusy}
+                        className={`row-toggle ${item.inStock ? 'row-toggle--on' : 'row-toggle--off'}${stockBusy ? ' row-toggle--busy' : ''}`}
+                      >
+                        <span className="row-toggle__track" aria-hidden="true">
+                          <span className="row-toggle__thumb" />
+                        </span>
+                        <span className="row-toggle__label">
+                          {pendingRowId === item.id ? 'Сохраняем...' : stockLabel}
+                        </span>
+                      </button>
+                    </td>
+                    <td className="inventory-table__mixes">
+                      {dependentCount > 0 ? (
+                        <span
+                          className="inventory-cell__count"
+                          aria-label={`Зависимых миксов: ${dependentCount}${blockedCount > 0 ? `, заблокировано: ${blockedCount}` : ''}`}
+                        >
+                          <span>{formatMetricValue(dependentCount)}</span>
+                          {blockedCount > 0 ? (
                             <span className="inventory-cell__count-blocked" title="Заблокировано">
-                              ⊘ {formatMetricValue(item.blockedDependentMixCount ?? 0)}
+                              ⊘ {formatMetricValue(blockedCount)}
                             </span>
                           ) : null}
-                        </strong>
-                        <div className="inventory-cell__mixes">
-                          {(item.dependentMixes ?? []).slice(0, 3).map((mix) => (
-                            <button
-                              className={`inventory-mix-link ${mix.guestVisible ? 'inventory-mix-link--visible' : 'inventory-mix-link--blocked'}`}
-                              key={`${item.id}:mix:${mix.id}`}
-                              type="button"
-                              onClick={() => onOpenMix(mix.id)}
-                              aria-label={`${mix.name}${mix.guestVisible ? ' — виден гостю' : ' — заблокирован'}`}
-                              title={mix.guestVisible ? 'Виден гостю' : 'Заблокирован'}
-                            >
-                              {mix.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                    <td>{formatUpdatedAt(item.updatedAt)}</td>
-                    <td>
-                      <Badge variant={item.inStock ? 'default' : 'destructive'}>
-                        {item.inStock ? 'В наличии' : 'Нет наличия'}
-                      </Badge>
+                        </span>
+                      ) : (
+                        <span className="inventory-cell__faint" aria-label="Не используется в миксах">
+                          {STRENGTH_DASH}
+                        </span>
+                      )}
                     </td>
                     <td className="inventory-table__actions">
-                      <div className="entity-card__actions entity-card__actions--wrap">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={item.inStock ? 'secondary' : 'default'}
-                          onClick={() => onToggleStock(item)}
-                          disabled={pendingRowId === item.id || pendingBatchAction !== ''}
+                      <details className="inventory-actions">
+                        <summary
+                          className="inventory-actions__trigger"
+                          aria-label={`Действия для ${item.name}`}
                         >
-                          {pendingRowId === item.id ? 'Сохраняем...' : item.inStock ? 'Убрать' : 'Вернуть'}
-                        </Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => openEditEditor(item)}>
-                          Редактировать
-                        </Button>
-                      </div>
+                          <span aria-hidden="true">⋯</span>
+                        </summary>
+                        <div className="inventory-actions__menu" role="menu">
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="inventory-actions__item"
+                            onClick={() => setActiveItemId(item.id)}
+                          >
+                            Профиль
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="inventory-actions__item"
+                            onClick={() => openEditEditor(item)}
+                          >
+                            Редактировать
+                          </button>
+                        </div>
+                      </details>
                     </td>
                   </tr>
                 );
