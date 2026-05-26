@@ -2401,10 +2401,6 @@ p {
   margin: 0 0 6px;
 }
 
-.rails-surface__card-readonly-reason {
-  margin: 0 0 6px;
-}
-
 .rails-surface__mix-tokens {
   display: flex;
   flex-wrap: wrap;
@@ -2440,8 +2436,9 @@ p {
 }
 
 .rails-surface__mix-dot--hidden {
-  background: #b85a3d;
-  box-shadow: 0 0 0 3px rgba(184, 90, 61, 0.18);
+  background: #4f9c69;
+  box-shadow: 0 0 0 3px rgba(79, 156, 105, 0.18);
+  opacity: 0.45;
 }
 
 .rails-surface__mix-token-name {

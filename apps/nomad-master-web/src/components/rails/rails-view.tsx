@@ -1,8 +1,7 @@
-import { Eye } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterStatsRow } from '@/components/shell/master-stats-row';
 
 const AROMA_WEB_URL = 'http://localhost:5174';
 
@@ -99,27 +98,6 @@ export const RailsView = ({
       }
     />
 
-    <MasterStatsRow
-      tiles={[
-        {
-          label: 'Всего рейлов',
-          value: rails.length,
-          hint: 'все подборки витрины',
-        },
-        {
-          label: 'Активны в витрине',
-          value: rails.filter((rail) => rail.active).length,
-          hint: 'показываются гостю',
-          tone: 'success',
-        },
-        {
-          label: 'Только просмотр',
-          value: rails.filter((rail) => !rail.editable).length,
-          hint: 'системные, без ручной правки',
-        },
-      ]}
-    />
-
     {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
     {railsError ? <p className="error-text">{railsError}</p> : null}
 
@@ -149,9 +127,6 @@ export const RailsView = ({
                 {rail.description ? (
                   <p className="rails-surface__card-description">{rail.description}</p>
                 ) : null}
-                {!rail.editable && rail.readOnlyReason ? (
-                  <p className="meta-line rails-surface__card-readonly-reason">{rail.readOnlyReason}</p>
-                ) : null}
                 {mixTokens.length ? (
                   <ul className="rails-surface__mix-tokens">
                     {mixTokens.map((token) => (
@@ -176,7 +151,13 @@ export const RailsView = ({
                   className="secondary-button secondary-button--inline rails-surface__card-action"
                   type="button"
                   onClick={() => onOpenRail(rail)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
+                  {rail.editable ? (
+                    <Pencil size={14} aria-hidden />
+                  ) : (
+                    <Eye size={14} aria-hidden />
+                  )}
                   {rail.editable ? 'Редактировать' : 'Просмотр'}
                 </button>
               </div>
