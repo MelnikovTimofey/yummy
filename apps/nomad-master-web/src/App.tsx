@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
-import { apiBaseUrl, apiHostLabel, envLabel, requestJson } from '@/lib/api-client';
+import { apiBaseUrl, requestJson } from '@/lib/api-client';
 import { useAuditEvents } from '@/hooks/use-audit-events';
 import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
@@ -931,7 +931,6 @@ export const App = () => {
   };
 
   if (user) {
-    const activeWorkspace = workspaceTabs.find((tab) => tab.id === activeTab) ?? workspaceTabs[0];
     const activeWorkspaceStatus = (() => {
       switch (activeTab) {
         case 'dashboard':
@@ -1032,19 +1031,6 @@ export const App = () => {
         />
 
         <section className="master-stage">
-          <header className="master-stage__header master-stage__header--compact">
-            <div className="master-stage__copy">
-              <h1>{activeWorkspace.label}</h1>
-            </div>
-            <div className="master-stage__status">
-              <span className="status-chip" title={`API: ${apiHostLabel}`}>
-                <span className={`status-dot status-dot--${activeWorkspaceStatusTone}`} aria-hidden="true" />
-                {envLabel}
-              </span>
-            </div>
-          </header>
-
-
           <div
             className="master-stage__panel"
             id={getWorkspacePanelId(activeTab)}

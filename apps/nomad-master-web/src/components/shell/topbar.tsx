@@ -1,5 +1,6 @@
 import { KeyboardEvent, useRef } from 'react';
 import { LogOut, Rows2, Rows3, Rows4, type LucideIcon } from 'lucide-react';
+import { apiHostLabel, envLabel } from '@/lib/api-client';
 import type { Density } from '@/hooks/use-density';
 import {
   getWorkspacePanelId,
@@ -154,6 +155,14 @@ export const MasterTopBar = ({
             );
           })}
         </div>
+        <span
+          className="master-nav__env"
+          title={`API: ${apiHostLabel}`}
+          aria-label={`API: ${apiHostLabel}`}
+        >
+          <span className={`status-dot status-dot--${statusTone}`} aria-hidden="true" />
+          {envLabel}
+        </span>
         <span
           className="status-chip status-chip--inverse"
           title={`Статус данных: ${statusText}`}

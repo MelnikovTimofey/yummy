@@ -6,14 +6,13 @@ const signIn = async (login: string, password: string, page: Page) => {
   await page.getByLabel('Логин').fill(login);
   await page.getByLabel('Пароль').fill(password);
   await page.getByRole('button', { name: 'Войти' }).click();
-  // h1 после логина = label активного workspace (default `dashboard` → `Дашборд`);
-  // brand-name `Nomad Master` остался в нав-баре как span, а не h1.
-  // Любое изменение default workspace или label'а должно ловиться этим smoke —
-  // см. CLAUDE.md §3 (smoke gate после правок фронта). Скоупим в
-  // `.master-stage__header`, потому что DashboardView теперь сам рендерит
-  // h1 «Дашборд смены» (MasterPageHeader под mockups.html master-refactor).
+  // h1 после логина = title из MasterPageHeader (default `dashboard` →
+  // «Дашборд смены»). Route-шапка `.master-stage__header` удалена в
+  // chore/master-stage-header-cleanup — единственный h1 живёт внутри
+  // MasterPageHeader каждого workspace-view (см. CLAUDE.md §3, smoke gate
+  // после правок фронта).
   await expect(
-    page.locator('.master-stage__header').getByRole('heading', { name: 'Дашборд', level: 1 }),
+    page.getByRole('heading', { name: 'Дашборд смены', level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
 };
@@ -49,13 +48,17 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('.master-stage__header').getByRole('heading', { name: 'Дашборд' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
 
   await getWorkspaceTab(page, 'Дашборд').press('ArrowRight');
   await expect(getWorkspaceTab(page, 'Табаки')).toHaveAttribute('aria-selected', 'true');
-  // h1 рабочего экрана = label активного workspace; отдельной h2 «Таблица остатков»
-  // в master shell больше нет после UX-рефактора PR #14.
-  await expect(page.locator('.master-stage__header').getByRole('heading', { name: 'Табаки' })).toBeVisible();
+  // На текущем main (до merge PR-C `feature/master-apply-shared-primitives`)
+  // у InventoryView нет MasterPageHeader, в шапке остался прежний h2
+  // «Таблица остатков и зависимых миксов». После merge PR-C ассерт
+  // станет `{ name: 'Табаки', level: 1 }`.
+  await expect(
+    page.getByRole('heading', { name: 'Таблица остатков и зависимых миксов', level: 2 }),
+  ).toBeVisible();
 
   await getWorkspaceTab(page, 'Табаки').press('End');
   await expect(getWorkspaceTab(page, 'Доступ')).toHaveAttribute('aria-selected', 'true');
