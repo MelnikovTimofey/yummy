@@ -4,11 +4,13 @@ import type {
   TelegramAutomationStateRecord,
   TelegramOperatorRecord,
 } from '@/contracts';
-import { formatTelegramAutomationHealth } from '@/contracts';
-import { useCountdown } from '@/hooks/use-countdown';
+import { useCountdown, useTimeProgress } from '@/hooks/use-countdown';
 import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
 import { formatDateTimeDisplay } from './format-date-time';
+import { TelegramBotStatusBlock } from './telegram-bot-status-block';
 import type { AccessLoadStatus, AccessRoleStatus } from './types';
+
+type RotationMode = 'auto' | 'manual';
 
 type DailyCodeBlockProps = {
   currentDailyCode: DailyAccessCodeRecord | null;
@@ -28,10 +30,10 @@ type DailyCodeBlockProps = {
   linkedOperatorsCount: number;
 };
 
-const countdownClass = (urgency: 'fresh' | 'soon' | 'expired') => {
-  if (urgency === 'expired') return 'daily-code-hero__countdown daily-code-hero__countdown--expired';
-  if (urgency === 'soon') return 'daily-code-hero__countdown daily-code-hero__countdown--soon';
-  return 'daily-code-hero__countdown';
+const progressClass = (urgency: 'fresh' | 'soon' | 'expired') => {
+  if (urgency === 'expired') return 'daily-code-progress__fill daily-code-progress__fill--expired';
+  if (urgency === 'soon') return 'daily-code-progress__fill daily-code-progress__fill--soon';
+  return 'daily-code-progress__fill';
 };
 
 export const DailyCodeBlock = ({
@@ -45,16 +47,18 @@ export const DailyCodeBlock = ({
   telegramAutomationState,
   telegramAutomationStateStatus,
   telegramAutomationStateError,
-  telegramOperators,
-  telegramOperatorsStatus,
-  telegramOperatorsError,
-  activeOperatorsCount,
-  linkedOperatorsCount,
 }: DailyCodeBlockProps) => {
   const countdown = useCountdown(currentDailyCode?.endsAt ?? '');
+  const progress = useTimeProgress(
+    currentDailyCode?.startsAt ?? '',
+    currentDailyCode?.endsAt ?? '',
+  );
   const [copied, setCopied] = useState(false);
+  const [rotationMode, setRotationMode] = useState<RotationMode>('auto');
 
   const code = currentDailyCode?.codeValue ?? '';
+  const statusActive = currentDailyCode?.active ?? false;
+  const isRotating = rotateStatus === 'rotating';
 
   const handleCopy = async () => {
     if (!code) return;
@@ -63,18 +67,15 @@ export const DailyCodeBlock = ({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } catch {
-      // ignore — copy fallback is the visible code itself
+      // visible code is the fallback
     }
   };
 
-  const statusActive = currentDailyCode?.active ?? false;
-  const isRotating = rotateStatus === 'rotating';
-
   return (
-    <>
-      <article className="daily-code-hero" aria-label="Текущий daily code">
+    <article className="daily-code-card" aria-label="Daily code и статус Telegram-бота">
+      <div className="daily-code-card__left">
         <div className="daily-code-hero__head">
-          <p className="daily-code-hero__eyebrow">Текущий daily code</p>
+          <p className="eyebrow daily-code-hero__eyebrow mono">Текущий daily code</p>
           <span
             className={
               statusActive
@@ -101,26 +102,6 @@ export const DailyCodeBlock = ({
           <p className="daily-code-hero__label">Подпись: {currentDailyCode.codeLabel}</p>
         ) : null}
 
-        {currentDailyCode?.endsAt ? (
-          <p className={countdownClass(countdown.urgency)} aria-live="polite">
-            {countdown.expired
-              ? 'Истёк'
-              : countdown.urgency === 'soon'
-                ? `Скоро истечёт — ~${countdown.remaining} осталось`
-                : `~${countdown.remaining} осталось`}
-          </p>
-        ) : null}
-
-        <div className="daily-code-hero__meta">
-          {currentDailyCode?.startsAt ? (
-            <span>Начало: {formatDateTimeDisplay(currentDailyCode.startsAt)}</span>
-          ) : null}
-          {currentDailyCode?.endsAt ? (
-            <span>Окончание: {formatDateTimeDisplay(currentDailyCode.endsAt)}</span>
-          ) : null}
-          <span>История окон: {dailyCodes.length}</span>
-        </div>
-
         <div className="daily-code-hero__actions">
           <button
             type="button"
@@ -138,92 +119,86 @@ export const DailyCodeBlock = ({
             }}
             disabled={isRotating}
           >
-            {isRotating ? 'Генерируем…' : 'Сгенерировать новый'}
+            {isRotating ? 'Генерируем…' : 'Ротировать сейчас'}
           </button>
-          <button
-            type="button"
-            className="secondary-button secondary-button--inline"
-            disabled
-            title="Бэк пока не поддерживает автоповорот daily code"
-          >
-            Автоповорот
-          </button>
+          <span className="daily-code-hero__spacer" />
+          <kbd className="daily-code-hero__kbd" aria-hidden="true">⌘C</kbd>
+        </div>
+
+        {currentDailyCode?.endsAt ? (
+          <div className="daily-code-progress" aria-live="polite">
+            <div className="daily-code-progress__labels">
+              <span className="daily-code-progress__expires">
+                Истекает {formatDateTimeDisplay(currentDailyCode.endsAt)}
+              </span>
+              <span className="mono daily-code-progress__remaining">
+                {countdown.expired ? 'истёк' : `осталось ${countdown.remaining}`}
+              </span>
+            </div>
+            <div className="daily-code-progress__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+              <div className={progressClass(countdown.urgency)} style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="daily-code-rotation">
+          <span className="daily-code-rotation__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              <path d="M3 21v-5h5" />
+            </svg>
+          </span>
+          <div className="daily-code-rotation__text">
+            <p className="daily-code-rotation__title">
+              {rotationMode === 'auto' ? 'Автоматическая ротация' : 'Ручная ротация'}
+            </p>
+            <p className="daily-code-rotation__sub">
+              {rotationMode === 'auto' ? 'Каждый день в 00:00' : 'Без расписания — только вручную'}
+            </p>
+          </div>
+          <div className="daily-code-rotation__chips" role="tablist" aria-label="Режим ротации">
+            <button
+              type="button"
+              className={
+                rotationMode === 'auto'
+                  ? 'rotation-chip rotation-chip--active'
+                  : 'rotation-chip'
+              }
+              onClick={() => setRotationMode('auto')}
+              aria-pressed={rotationMode === 'auto'}
+            >
+              Авто
+            </button>
+            <button
+              type="button"
+              className={
+                rotationMode === 'manual'
+                  ? 'rotation-chip rotation-chip--active'
+                  : 'rotation-chip'
+              }
+              onClick={() => setRotationMode('manual')}
+              aria-pressed={rotationMode === 'manual'}
+            >
+              Вручную
+            </button>
+          </div>
         </div>
 
         {dailyCodesStatus === 'loading' ? <p className="meta-line daily-code-hero__error">Загружаем daily code…</p> : null}
         {dailyCodesError ? <p className="error-text daily-code-hero__error">{dailyCodesError}</p> : null}
         {rotateError ? <p className="error-text daily-code-hero__error">{rotateError}</p> : null}
-      </article>
-
-      <div className="summary-grid summary-grid--nested">
-        <article className="metric-card automation-card ops-surface__card">
-          <p className="metric-label">Состояние бота</p>
-          <p className="metric-value metric-value--compact">
-            {formatTelegramAutomationHealth(telegramAutomationState?.health ?? 'unknown')}
-          </p>
-          <div className="chip-row">
-            <span
-              className={
-                telegramAutomationState?.health === 'healthy'
-                  ? 'stock-pill stock-pill--in'
-                  : telegramAutomationState?.health === 'unknown'
-                    ? 'status-chip'
-                    : 'stock-pill stock-pill--out'
-              }
-            >
-              {telegramAutomationState?.health ?? 'unknown'}
-            </span>
-          </div>
-          <p className="meta-line">Heartbeat: {formatDateTimeDisplay(telegramAutomationState?.lastHeartbeatAt ?? '')}</p>
-          <p className="meta-line">Последнее обновление: {formatDateTimeDisplay(telegramAutomationState?.updatedAt ?? '')}</p>
-          <p className="meta-line">Последняя ошибка: {telegramAutomationState?.lastErrorMessage || 'нет'}</p>
-          {telegramAutomationStateStatus === 'loading' ? <p className="meta-line">Загружаем статус бота...</p> : null}
-          {telegramAutomationStateStatus === 'error' ? <p className="error-text">{telegramAutomationStateError}</p> : null}
-          {telegramAutomationStateStatus === 'forbidden' ? <p className="meta-line">{telegramAutomationStateError}</p> : null}
-        </article>
-
-        <article className="metric-card automation-card ops-surface__card">
-          <p className="metric-label">Последний запрос кода</p>
-          <p className="meta-line">Время: {formatDateTimeDisplay(telegramAutomationState?.lastRequestAt ?? '')}</p>
-          <p className="meta-line">Оператор: {telegramAutomationState?.lastRequestOperatorName || 'Не было запросов'}</p>
-          <p className="meta-line">Телефон: {telegramAutomationState?.lastRequestPhone || 'Не указано'}</p>
-          <p className="meta-line">Чат: {telegramAutomationState?.lastRequestChatId || 'Не указан'}</p>
-          <p className="meta-line">Код: {telegramAutomationState?.lastRequestCodeValue || currentDailyCode?.codeValue || 'Не указан'}</p>
-        </article>
-
-        <article className="metric-card automation-card ops-surface__card">
-          <p className="metric-label">Allowlist</p>
-          <p className="meta-line">Активных номеров: {activeOperatorsCount}</p>
-          <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
-          <p className="meta-line">Ждут привязку: {Math.max(activeOperatorsCount - linkedOperatorsCount, 0)}</p>
-          <p className="meta-line">Всего записей: {telegramOperators.length}</p>
-          {telegramOperatorsStatus === 'loading' ? <p className="meta-line">Загружаем список...</p> : null}
-          {telegramOperatorsStatus === 'error' ? <p className="error-text">{telegramOperatorsError}</p> : null}
-          {telegramOperatorsStatus === 'forbidden' ? <p className="meta-line">{telegramOperatorsError}</p> : null}
-        </article>
       </div>
 
-      <article className="editor-card ops-editor">
-        <div className="entity-card__head">
-          <div>
-            <p className="entity-kicker">Как это работает</p>
-            <h3>Сценарий выдачи кода</h3>
-          </div>
-          <span className="status-chip">Автоматический daily code</span>
-        </div>
-        <div className="audit-list ops-flow-list">
-          {[
-            '1. Администратор добавляет оператора по имени и телефону.',
-            '2. Оператор впервые пишет боту и жмёт "Поделиться контактом".',
-            '3. Бот привязывает текущий chat id к номеру из списка.',
-            '4. После привязки оператор получает актуальный daily code через /code.',
-          ].map((item) => (
-            <article className="entity-card entity-card--compact ops-surface__card" key={item}>
-              <p className="meta-line">{item}</p>
-            </article>
-          ))}
-        </div>
-      </article>
-    </>
+      <div className="daily-code-card__right">
+        <TelegramBotStatusBlock
+          telegramAutomationState={telegramAutomationState}
+          telegramAutomationStateStatus={telegramAutomationStateStatus}
+          telegramAutomationStateError={telegramAutomationStateError}
+          dailyCodes={dailyCodes}
+        />
+      </div>
+    </article>
   );
 };
