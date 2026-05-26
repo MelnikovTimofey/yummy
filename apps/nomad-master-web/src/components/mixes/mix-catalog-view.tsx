@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -22,7 +22,6 @@ import {
   mixRailFilterOptions,
   mixSortDirectionOptions,
   mixSortFieldOptions,
-  mixStatusFilterOptions,
 } from '@/contracts';
 
 export type MixEditorComponentInput = {
@@ -62,12 +61,20 @@ type MixCatalogViewProps = {
   onStartCreate: () => void;
 };
 
+// flavorProfiles вынесены из multi-select-фильтров — отдельная chip-полоса
+// `mixes-profile-filter` сверху таблицы; остальные таксономии остаются как
+// раскрывающиеся FilterMultiSelect.
 const mixFilterGroups: Array<{ key: MixFilterKey; title: string }> = [
   { key: 'manufacturers', title: 'Производители компонентов' },
-  { key: 'flavorProfiles', title: 'Категории' },
   { key: 'flavors', title: 'Вкусы' },
   { key: 'flavorTags', title: 'Мета-теги' },
 ];
+
+type MixStatusChip = {
+  value: MixStatusFilter;
+  label: string;
+  count: number;
+};
 
 const formatMixUpdatedAt = (value?: string) => {
   if (!value) {
@@ -146,6 +153,38 @@ export const MixCatalogView = ({
     };
   }, [searchValue, filters.search, onSearchChange]);
 
+  const statusChips: MixStatusChip[] = [
+    { value: 'all', label: 'Все', count: meta.totalItems },
+    { value: 'guest-visible', label: 'Видны', count: meta.guestVisibleCount },
+    { value: 'hidden', label: 'Скрыты', count: meta.hiddenCount },
+    { value: 'blocked', label: 'Заблокированы', count: meta.blockedCount },
+  ];
+
+  // Counts считаем по текущей странице items — глобальный per-profile-counter
+  // потребует расширения MixListMeta на бэке; пока достаточно подсветить
+  // распределение в видимой выборке. Options берём из backend-стороны, чтобы
+  // чипы не исчезали при пустой странице.
+  const profileChips = useMemo(() => {
+    const counts = new Map<string, number>();
+    items.forEach((mix) => {
+      mix.flavorProfiles.forEach((profile) => {
+        counts.set(profile, (counts.get(profile) ?? 0) + 1);
+      });
+    });
+
+    const known = new Set<string>(filters.options.flavorProfiles);
+    filters.flavorProfiles.forEach((profile) => known.add(profile));
+    counts.forEach((_, profile) => known.add(profile));
+
+    return Array.from(known)
+      .map((value) => ({ value, count: counts.get(value) ?? 0 }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return formatFlavorProfileLabel(a.value).localeCompare(formatFlavorProfileLabel(b.value), 'ru');
+      })
+      .slice(0, 8);
+  }, [items, filters.options.flavorProfiles, filters.flavorProfiles]);
+
   return (
     <section className="card mixes-panel">
       <div className="section-head section-head--surface">
@@ -162,8 +201,8 @@ export const MixCatalogView = ({
 
       <div className="mixes-panel__stats ops-surface__stats">
         <div className="mixes-stat ops-surface__stat">
-          <span>Показано</span>
-          <strong>{formatMetricValue(meta.filteredItems)}</strong>
+          <span>Всего</span>
+          <strong>{formatMetricValue(meta.totalItems)}</strong>
         </div>
         <div className="mixes-stat ops-surface__stat">
           <span>Видно гостю</span>
@@ -174,10 +213,46 @@ export const MixCatalogView = ({
           <strong>{formatMetricValue(meta.inRailsCount)}</strong>
         </div>
         <div className="mixes-stat ops-surface__stat">
-          <span>Заблокировано наличием</span>
+          <span>Заблокировано</span>
           <strong>{formatMetricValue(meta.blockedCount)}</strong>
         </div>
       </div>
+
+      {profileChips.length ? (
+        <div className="mixes-profile-filter" role="group" aria-label="Фильтр по категориям">
+          <span className="mixes-profile-filter__eyebrow">Категории</span>
+          <div className="mixes-profile-filter__scroll">
+            {profileChips.map((chip) => {
+              const active = filters.flavorProfiles.includes(chip.value);
+              return (
+                <button
+                  key={`profile-chip:${chip.value}`}
+                  type="button"
+                  className={
+                    active
+                      ? 'mixes-profile-chip mixes-profile-chip--active'
+                      : 'mixes-profile-chip'
+                  }
+                  aria-pressed={active}
+                  onClick={() => onToggleFilterValue('flavorProfiles', chip.value)}
+                >
+                  <span>{formatFlavorProfileLabel(chip.value)}</span>
+                  <span className="mixes-profile-chip__count">{formatMetricValue(chip.count)}</span>
+                </button>
+              );
+            })}
+            {filters.flavorProfiles.length ? (
+              <button
+                type="button"
+                className="mixes-profile-chip mixes-profile-chip--reset"
+                onClick={() => onClearFilterGroup('flavorProfiles')}
+              >
+                Сбросить категории
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mixes-toolbar ops-toolbar">
         <label className="mixes-search">
@@ -190,16 +265,26 @@ export const MixCatalogView = ({
           />
         </label>
 
-        <label className="mixes-toolbar__control">
+        <div className="mixes-status-chips" role="group" aria-label="Фильтр по статусу">
           <span className="mixes-toolbar__label">Статус</span>
-          <select value={filters.status} onChange={(event) => onStatusChange(event.target.value as MixStatusFilter)}>
-            {mixStatusFilterOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="mixes-status-chips__row">
+            {statusChips.map((chip) => {
+              const active = filters.status === chip.value;
+              return (
+                <button
+                  key={`status-chip:${chip.value}`}
+                  type="button"
+                  className={active ? 'mixes-status-chip mixes-status-chip--active' : 'mixes-status-chip'}
+                  aria-pressed={active}
+                  onClick={() => onStatusChange(chip.value)}
+                >
+                  <span>{chip.label}</span>
+                  <span className="mixes-status-chip__count">{formatMetricValue(chip.count)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <label className="mixes-toolbar__control">
           <span className="mixes-toolbar__label">Участие в рейлах</span>
