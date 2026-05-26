@@ -59,7 +59,12 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 
   await getWorkspaceTab(page, 'Табаки').press('End');
   await expect(getWorkspaceTab(page, 'Доступ')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist', level: 2 })).toBeVisible();
+  // AccessView теперь рендерит свой MasterPageHeader с h1 «Daily code и staff»
+  // (PR-C, под mockups.html). Бывший section-head h2 «Daily code и Telegram
+  // allowlist» удалён.
+  await expect(
+    page.getByRole('heading', { name: 'Daily code и staff', level: 1 }),
+  ).toBeVisible();
 
   await getWorkspaceTab(page, 'Доступ').press('Home');
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
@@ -114,7 +119,7 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(page.locator('.rails-surface__sheet')).toBeHidden();
 
   await openWorkspace(page, 'Доступ');
-  await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Daily code и staff', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Новый оператор' })).toBeVisible();
   // Кнопка «Добавить в список» переехала внутрь Telegram operator Dialog'а
   // (открывается кликом «Новый оператор») — не видна без раскрытия диалога.
@@ -126,7 +131,7 @@ test('Master nomad role keeps admin-only surfaces restricted while preserving ac
   await signIn('nomad', 'nomad', page);
 
   await openWorkspace(page, 'Доступ');
-  await expect(page.getByRole('heading', { name: 'Daily code и Telegram allowlist' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Daily code и staff', level: 1 })).toBeVisible();
   await expect(page.getByText('Статус Telegram automation доступен только для admin.')).toBeVisible();
   await expect(page.getByText('Allowlist Telegram доступен только для admin.').first()).toBeVisible();
   // Текст «Telegram allowlist недоступен для вашей роли.» переехал внутрь Dialog

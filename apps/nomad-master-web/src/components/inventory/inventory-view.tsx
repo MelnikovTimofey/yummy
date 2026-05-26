@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { MasterPageHeader } from '@/components/shell/master-page-header';
+import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import type {
   InventoryBatchAction,
   InventoryFilterKey,
@@ -755,48 +757,43 @@ export const InventoryView = ({
 
   return (
     <section className="card inventory-panel">
-      <div className="section-head section-head--surface">
-        <div className="ops-surface__intro">
-          <p className="eyebrow">Инвентаризация</p>
-          <h2>Таблица остатков и зависимых миксов</h2>
-          <p className="meta-line">Остатки, фильтры и зависимые миксы.</p>
-        </div>
-        <div className="section-actions">
+      <MasterPageHeader
+        eyebrow="ИНВЕНТАРИЗАЦИЯ"
+        title="Табаки"
+        subtitle="Наличие, компоненты миксов и связанные позиции витрины."
+        actions={
           <Button type="button" size="sm" onClick={openCreateEditor}>
             Новый табак
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="inventory-hero-stats">
-        <div className="inventory-hero-stat" title="Всего табаков в каталоге (без учёта фильтров)">
-          <span className="inventory-hero-stat__label">В каталоге</span>
-          <strong className="inventory-hero-stat__value">{formatMetricValue(meta.totalItems)}</strong>
-          <span className="inventory-hero-stat__sub">всего позиций</span>
-        </div>
-        <div className="inventory-hero-stat" title="Сейчас в наличии (по всему каталогу)">
-          <span className="inventory-hero-stat__label">В наличии</span>
-          <strong className="inventory-hero-stat__value inventory-hero-stat__value--positive">
-            {formatMetricValue(meta.inStockCount)}
-          </strong>
-          <span className="inventory-hero-stat__sub">сейчас на кухне</span>
-        </div>
-        <div className="inventory-hero-stat" title="Сейчас в стоп-листе / нет наличия (по всему каталогу)">
-          <span className="inventory-hero-stat__label">Нет в наличии</span>
-          <strong className="inventory-hero-stat__value inventory-hero-stat__value--warning">
-            {formatMetricValue(meta.outOfStockCount)}
-          </strong>
-          <span className="inventory-hero-stat__sub">требуют пополнения</span>
-        </div>
-        <div
-          className="inventory-hero-stat"
-          title="Сколько табаков в каталоге используются хотя бы в одном миксе (по всему каталогу)"
-        >
-          <span className="inventory-hero-stat__label">В составе миксов</span>
-          <strong className="inventory-hero-stat__value">{formatMetricValue(meta.inMixesCount)}</strong>
-          <span className="inventory-hero-stat__sub">активно используется</span>
-        </div>
-      </div>
+      <MasterStatsRow
+        tiles={[
+          {
+            label: 'В каталоге',
+            value: formatMetricValue(meta.totalItems),
+            hint: 'всего позиций',
+          },
+          {
+            label: 'В наличии',
+            value: formatMetricValue(meta.inStockCount),
+            hint: 'сейчас на кухне',
+            tone: 'success',
+          },
+          {
+            label: 'Нет в наличии',
+            value: formatMetricValue(meta.outOfStockCount),
+            hint: 'требуют пополнения',
+            tone: 'warning',
+          },
+          {
+            label: 'В составе миксов',
+            value: formatMetricValue(meta.inMixesCount),
+            hint: 'активно используется',
+          },
+        ]}
+      />
 
       <div className="master-toolbar inventory-toolbar inventory-toolbar--row ops-toolbar">
         <label className="inventory-search">

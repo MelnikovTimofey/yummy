@@ -3,6 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
+import { MasterPageHeader } from '@/components/shell/master-page-header';
+import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import { colorForTobacco } from '@/components/mixes/mix-builder/color-for-tobacco';
 import type {
   MixFilterKey,
@@ -187,36 +189,43 @@ export const MixCatalogView = ({
 
   return (
     <section className="card mixes-panel">
-      <div className="section-head section-head--surface">
-        <div className="ops-surface__intro">
-          <p className="eyebrow">Менеджер миксов</p>
-          <h2>Каталог миксов</h2>
-        </div>
-        <div className="section-actions">
+      <MasterPageHeader
+        eyebrow="МЕНЕДЖЕР МИКСОВ"
+        title="Каталог миксов"
+        subtitle="Подборки для гостевой витрины — поиск, фильтры, быстрые действия."
+        actions={
           <Button type="button" size="sm" onClick={onStartCreate}>
             Новый микс
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="mixes-panel__stats ops-surface__stats">
-        <div className="mixes-stat ops-surface__stat">
-          <span>Всего</span>
-          <strong>{formatMetricValue(meta.totalItems)}</strong>
-        </div>
-        <div className="mixes-stat ops-surface__stat">
-          <span>Видно гостю</span>
-          <strong>{formatMetricValue(meta.guestVisibleCount)}</strong>
-        </div>
-        <div className="mixes-stat ops-surface__stat">
-          <span>В рейлах</span>
-          <strong>{formatMetricValue(meta.inRailsCount)}</strong>
-        </div>
-        <div className="mixes-stat ops-surface__stat">
-          <span>Заблокировано</span>
-          <strong>{formatMetricValue(meta.blockedCount)}</strong>
-        </div>
-      </div>
+      <MasterStatsRow
+        tiles={[
+          {
+            label: 'Всего',
+            value: formatMetricValue(meta.totalItems),
+            hint: 'в каталоге',
+          },
+          {
+            label: 'Видно гостю',
+            value: formatMetricValue(meta.guestVisibleCount),
+            hint: 'сейчас на витрине',
+            tone: 'success',
+          },
+          {
+            label: 'В рейлах',
+            value: formatMetricValue(meta.inRailsCount),
+            hint: 'опубликованы в подборках',
+          },
+          {
+            label: 'Заблокировано',
+            value: formatMetricValue(meta.blockedCount),
+            hint: 'режет наличие табака',
+            tone: 'warning',
+          },
+        ]}
+      />
 
       {profileChips.length ? (
         <div className="mixes-profile-filter" role="group" aria-label="Фильтр по категориям">

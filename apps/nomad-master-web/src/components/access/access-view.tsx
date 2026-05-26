@@ -10,6 +10,8 @@ import { AuditBlock } from './audit-block';
 import { DailyCodeBlock } from './daily-code-block';
 import { OperatorsBlock } from './operators-block';
 import { StaffBlock } from './staff-block';
+import { MasterPageHeader } from '@/components/shell/master-page-header';
+import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
 import type {
   AccessLoadStatus,
@@ -97,37 +99,58 @@ export const AccessView = (props: AccessViewProps) => {
   const activeStaffAccounts = staffAccounts.filter((account) => account.active).length;
   const adminAccountsCount = staffAccounts.filter((account) => account.role === 'admin').length;
 
+  const dailyCodeHint = (() => {
+    if (!currentDailyCode?.endsAt) {
+      return 'окно не задано';
+    }
+    const end = new Date(currentDailyCode.endsAt);
+    if (Number.isNaN(end.getTime())) {
+      return 'окно не задано';
+    }
+    return `до ${new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(end)}`;
+  })();
+
   return (
     <section className="card">
-      <div className="section-head section-head--surface section-head--surface-split">
-        <div className="ops-surface__intro">
-          <p className="eyebrow">Доступ</p>
-          <h2>Daily code и Telegram allowlist</h2>
-          <p className="meta-line">Telegram-доступ, daily code и staff-учётки.</p>
-        </div>
-        <div className="summary-grid summary-grid--nested ops-surface__stats">
-          <article className="metric-card ops-surface__stat">
-            <p className="metric-label">Активный код</p>
-            <p className="metric-value metric-value--compact">{currentDailyCode?.codeValue || 'Нет кода'}</p>
-            <p className="meta-line">Текущее окно выдачи для смены.</p>
-          </article>
-          <article className="metric-card ops-surface__stat">
-            <p className="metric-label">Активный список</p>
-            <p className="metric-value metric-value--compact">{activeOperators.length}</p>
-            <p className="meta-line">Привязанных чатов: {linkedOperatorsCount}</p>
-          </article>
-          <article className="metric-card ops-surface__stat">
-            <p className="metric-label">Staff accounts</p>
-            <p className="metric-value metric-value--compact">{activeStaffAccounts}</p>
-            <p className="meta-line">Admin: {adminAccountsCount}</p>
-          </article>
-          <article className="metric-card ops-surface__stat">
-            <p className="metric-label">Аудит</p>
-            <p className="metric-value metric-value--compact">{auditEvents.length}</p>
-            <p className="meta-line">Последние операции staff/admin.</p>
-          </article>
-        </div>
-      </div>
+      <MasterPageHeader
+        eyebrow="ДОСТУП"
+        title="Daily code и staff"
+        subtitle="Управление гостевым кодом, операторами Telegram-бота и учётками Master."
+        meta="/staff/audit/events"
+      />
+
+      <MasterStatsRow
+        tiles={[
+          {
+            label: 'Активный код',
+            value: currentDailyCode?.codeValue ?? 'Нет кода',
+            hint: dailyCodeHint,
+            tone: 'mono',
+          },
+          {
+            label: 'Операторы',
+            value: activeOperators.length,
+            hint: `привязано чатов: ${linkedOperatorsCount}`,
+            tone: 'success',
+          },
+          {
+            label: 'Master-учётки',
+            value: activeStaffAccounts,
+            hint: `admin: ${adminAccountsCount}`,
+            tone: 'success',
+          },
+          {
+            label: 'События за сутки',
+            value: auditEvents.length,
+            hint: 'в журнале',
+          },
+        ]}
+      />
 
       <div className="ops-toolbar ops-toolbar--split">
         <div className="info-banner info-banner--ops">
