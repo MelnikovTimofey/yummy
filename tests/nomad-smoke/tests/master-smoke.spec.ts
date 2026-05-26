@@ -2,9 +2,11 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const signIn = async (login: string, password: string, page: Page) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Вход для персонала' })).toBeVisible();
-  await page.getByLabel('Логин').fill(login);
-  await page.getByLabel('Пароль').fill(password);
+  await expect(page.getByRole('heading', { name: 'Войти в смену' })).toBeVisible();
+  // exact-match: иначе getByLabel('Пароль') резолвится в 2 элемента —
+  // сам input и кнопку-«глаз» с aria-label «Показать пароль» (strict mode).
+  await page.getByLabel('Логин', { exact: true }).fill(login);
+  await page.getByLabel('Пароль', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Войти' }).click();
   // h1 после логина = title из MasterPageHeader (default `dashboard` →
   // «Дашборд смены»). Route-шапка `.master-stage__header` удалена в
@@ -52,12 +54,11 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 
   await getWorkspaceTab(page, 'Дашборд').press('ArrowRight');
   await expect(getWorkspaceTab(page, 'Табаки')).toHaveAttribute('aria-selected', 'true');
-  // На текущем main (до merge PR-C `feature/master-apply-shared-primitives`)
-  // у InventoryView нет MasterPageHeader, в шапке остался прежний h2
-  // «Таблица остатков и зависимых миксов». После merge PR-C ассерт
-  // станет `{ name: 'Табаки', level: 1 }`.
+  // PR-C `feature/master-apply-shared-primitives` уже смержён: InventoryView
+  // рендерит MasterPageHeader с h1 «Табаки», прежний h2 «Таблица остатков
+  // и зависимых миксов» удалён.
   await expect(
-    page.getByRole('heading', { name: 'Таблица остатков и зависимых миксов', level: 2 }),
+    page.getByRole('heading', { name: 'Табаки', level: 1 }),
   ).toBeVisible();
 
   await getWorkspaceTab(page, 'Табаки').press('End');

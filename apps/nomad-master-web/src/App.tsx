@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
-import { apiBaseUrl, requestJson } from '@/lib/api-client';
+import { LoginScreen } from '@/components/auth/login-screen';
+import { requestJson } from '@/lib/api-client';
 import { useAuditEvents } from '@/hooks/use-audit-events';
 import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
@@ -403,6 +404,11 @@ export const App = () => {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!login.trim() || !password) {
+      setError('Введите логин и пароль');
+      setStatus('error');
+      return;
+    }
     setStatus('loading');
     setError('');
 
@@ -1047,76 +1053,24 @@ export const App = () => {
     );
   }
 
+  const handleLoginChange = (value: string) => {
+    setLogin(value);
+    if (error) setError('');
+  };
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (error) setError('');
+  };
+
   return (
-    <main className="shell shell--master shell--master-login" id="main-content">
-      <a className="skip-link" href="#main-content">Перейти к содержимому</a>
-      <section className="hero hero--master auth-hero">
-        <div className="auth-hero__copy">
-          <p className="eyebrow">Nomad Master</p>
-          <h1>Вход для персонала</h1>
-          <p className="lead">
-            Операционная консоль для кальянных мастеров и администратора. После входа доступны дашборд смены,
-            инвентаризация, миксы, рейлы и контроль Telegram-доступа.
-          </p>
-          <div className="hero-meta">
-            <span className="status-chip status-chip--inverse">Сводка смены</span>
-            <span className="status-chip status-chip--inverse">Инвентарь и витрина</span>
-            <span className="status-chip status-chip--inverse">Telegram и staff-доступ</span>
-          </div>
-        </div>
-
-        <div className="auth-hero__rail">
-          <article className="auth-panel">
-            <span className="master-runtime-card__label">Что внутри</span>
-            <strong>Одна консоль вместо разрозненных операционных экранов</strong>
-            <p>Маршрут работы собран по приоритету: сначала сигналы, затем действие, затем верификация состояния.</p>
-          </article>
-          <article className="auth-panel auth-panel--muted">
-            <span className="master-runtime-card__label">Среда</span>
-            <strong>{apiBaseUrl}</strong>
-            <p>Используйте учётные данные `admin` или `nomad`. Токен хранится локально в `sessionStorage`.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="card auth-card">
-        <div className="auth-card__head">
-          <div>
-            <p className="eyebrow">Авторизация</p>
-            <h2>Войти в рабочую смену</h2>
-          </div>
-          <span className="status-chip">Локальная среда</span>
-        </div>
-
-        <form className="guest-form" onSubmit={onSubmit}>
-          <label className="field">
-            <span className="field-label">Логин</span>
-            <input
-              className="text-input"
-              value={login}
-              onChange={(event) => setLogin(event.target.value)}
-              autoComplete="username"
-            />
-          </label>
-
-          <label className="field">
-            <span className="field-label">Пароль</span>
-            <input
-              className="text-input"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              type="password"
-            />
-          </label>
-
-          {error ? <p className="error-text">{error}</p> : null}
-
-          <button className="primary-button" type="submit" disabled={status === 'loading'}>
-            {status === 'loading' ? 'Входим...' : 'Войти'}
-          </button>
-        </form>
-      </section>
-    </main>
+    <LoginScreen
+      login={login}
+      password={password}
+      status={status}
+      error={error}
+      onLoginChange={handleLoginChange}
+      onPasswordChange={handlePasswordChange}
+      onSubmit={onSubmit}
+    />
   );
 };
