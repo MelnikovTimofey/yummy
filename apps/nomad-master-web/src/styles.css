@@ -1739,6 +1739,123 @@ p {
   align-content: start;
 }
 
+.daily-code-hero {
+  display: grid;
+  gap: 18px;
+  padding: 26px 28px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(226, 172, 123, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(226, 172, 123, 0.18);
+}
+
+.daily-code-hero__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.daily-code-hero__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.daily-code-hero__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--nomad-ink-soft);
+}
+
+.daily-code-hero__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #6fb37a;
+  box-shadow: 0 0 0 4px rgba(111, 179, 122, 0.18);
+}
+
+.daily-code-hero__status--inactive .daily-code-hero__status-dot {
+  background: var(--muted-foreground);
+  box-shadow: 0 0 0 4px rgba(160, 160, 160, 0.16);
+}
+
+.daily-code-hero__code {
+  font-family: ui-monospace, 'JetBrains Mono', 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+  font-size: clamp(56px, 9vw, 80px);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  line-height: 1;
+  color: var(--nomad-ink);
+  margin: 4px 0 0;
+  text-align: center;
+  padding-left: 0.32em;
+}
+
+.daily-code-hero__code--empty {
+  letter-spacing: 0.04em;
+  font-size: clamp(28px, 4vw, 36px);
+  color: var(--muted-foreground);
+}
+
+.daily-code-hero__label {
+  text-align: center;
+  font-size: 13px;
+  color: var(--nomad-ink-soft);
+  margin: 0;
+}
+
+.daily-code-hero__countdown {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-family: ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+  font-size: 14px;
+  color: var(--nomad-ink-soft);
+}
+
+.daily-code-hero__countdown--soon {
+  color: #d6a05a;
+}
+
+.daily-code-hero__countdown--expired {
+  color: var(--destructive);
+}
+
+.daily-code-hero__meta {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.daily-code-hero__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.daily-code-hero__actions button {
+  min-height: 38px;
+}
+
+.daily-code-hero__error {
+  text-align: center;
+  margin: 0;
+}
+
 .info-banner {
   padding: 10px 12px;
   border-radius: 14px;

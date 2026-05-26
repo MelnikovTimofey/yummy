@@ -10,6 +10,7 @@ import { AuditBlock } from './audit-block';
 import { DailyCodeBlock } from './daily-code-block';
 import { OperatorsBlock } from './operators-block';
 import { StaffBlock } from './staff-block';
+import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
 import type {
   AccessLoadStatus,
   AccessRoleStatus,
@@ -25,6 +26,9 @@ type AccessViewProps = {
   dailyCodes: DailyAccessCodeRecord[];
   dailyCodesStatus: AccessLoadStatus;
   dailyCodesError: string;
+  dailyCodeRotateStatus: DailyCodeRotateStatus;
+  dailyCodeRotateError: string;
+  onRotateDailyCode: () => void | Promise<void>;
 
   telegramAutomationState: TelegramAutomationStateRecord | null;
   telegramAutomationStateStatus: AccessRoleStatus;
@@ -72,6 +76,9 @@ export const AccessView = (props: AccessViewProps) => {
     dailyCodes,
     dailyCodesStatus,
     dailyCodesError,
+    dailyCodeRotateStatus,
+    dailyCodeRotateError,
+    onRotateDailyCode,
     telegramAutomationState,
     telegramAutomationStateStatus,
     telegramAutomationStateError,
@@ -148,6 +155,9 @@ export const AccessView = (props: AccessViewProps) => {
         dailyCodes={dailyCodes}
         dailyCodesStatus={dailyCodesStatus}
         dailyCodesError={dailyCodesError}
+        rotateStatus={dailyCodeRotateStatus}
+        rotateError={dailyCodeRotateError}
+        onRotate={onRotateDailyCode}
         telegramAutomationState={telegramAutomationState}
         telegramAutomationStateStatus={telegramAutomationStateStatus}
         telegramAutomationStateError={telegramAutomationStateError}

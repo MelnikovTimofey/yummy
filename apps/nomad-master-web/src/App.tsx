@@ -873,6 +873,9 @@ export const App = () => {
         dailyCodes={dailyCode.dailyCodes}
         dailyCodesStatus={dailyCode.status}
         dailyCodesError={dailyCode.error}
+        dailyCodeRotateStatus={dailyCode.rotateStatus}
+        dailyCodeRotateError={dailyCode.rotateError}
+        onRotateDailyCode={() => dailyCode.rotate(token)}
         telegramAutomationState={telegramOps.automationState}
         telegramAutomationStateStatus={telegramOps.automationStatus}
         telegramAutomationStateError={telegramOps.automationError}
