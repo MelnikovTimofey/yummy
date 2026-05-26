@@ -127,6 +127,49 @@ const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
 const uniqueStrings = (items: string[]) =>
   Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 
+const buildBrandShort = (name: string) => {
+  const normalized = name.trim();
+  if (!normalized) {
+    return '··';
+  }
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length >= 2) {
+    return (tokens[0][0] + tokens[1][0]).toLocaleUpperCase('ru-RU');
+  }
+
+  return normalized.slice(0, 2).toLocaleUpperCase('ru-RU');
+};
+
+const BRAND_CHIPS_TOP_LIMIT = 8;
+
+type BrandChipEntry = {
+  name: string;
+  count: number;
+  short: string;
+};
+
+const buildBrandChips = (catalog: InventoryTobacco[]): BrandChipEntry[] => {
+  const counts = new Map<string, number>();
+  for (const item of catalog) {
+    const manufacturer = item.manufacturer?.trim();
+    if (!manufacturer) {
+      continue;
+    }
+    counts.set(manufacturer, (counts.get(manufacturer) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .sort((left, right) => {
+      if (right[1] !== left[1]) {
+        return right[1] - left[1];
+      }
+      return left[0].localeCompare(right[0], 'ru');
+    })
+    .slice(0, BRAND_CHIPS_TOP_LIMIT)
+    .map(([name, count]) => ({ name, count, short: buildBrandShort(name) }));
+};
+
 const buildSuggestionOptions = (items: Array<string | null | undefined>) =>
   uniqueStrings(items.map((item) => item ?? '')).sort((left, right) => left.localeCompare(right, 'ru'));
 
@@ -415,6 +458,11 @@ export const InventoryView = ({
   const flavorProfileOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorProfiles ?? []));
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
+  const brandChips = buildBrandChips(catalogOptions);
+  const brandChipsCountIsApproximate = catalogOptions.length < meta.totalItems;
+  const brandChipsTooltip = brandChipsCountIsApproximate
+    ? 'Счётчик показывает, сколько раз бренд встречается в загруженных позициях каталога (без учёта пагинации).'
+    : 'Счётчик показывает, сколько позиций бренда в каталоге.';
 
   useEffect(() => {
     setSearchValue(filters.search);
@@ -795,6 +843,33 @@ export const InventoryView = ({
           Сбросить
         </Button>
       </div>
+
+      {brandChips.length ? (
+        <div className="inventory-brand-row" role="group" aria-label="Фильтр по бренду">
+          <span className="inventory-brand-row__eyebrow">Бренд</span>
+          <div className="inventory-brand-row__scroller">
+            {brandChips.map(({ name, count, short }) => {
+              const active = filters.manufacturers.includes(name);
+              return (
+                <button
+                  key={`brand-chip:${name}`}
+                  type="button"
+                  className={`brand-chip${active ? ' brand-chip--active' : ''}`}
+                  aria-pressed={active}
+                  title={brandChipsTooltip}
+                  onClick={() => onToggleFilterValue('manufacturers', name)}
+                >
+                  <span className="brand-chip__avatar" aria-hidden="true">
+                    {short}
+                  </span>
+                  <span className="brand-chip__name">{name}</span>
+                  <span className="brand-chip__count">{formatMetricValue(count)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <Sheet
         open={editorOpen}

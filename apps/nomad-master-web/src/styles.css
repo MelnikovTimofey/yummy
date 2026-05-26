@@ -2256,6 +2256,96 @@ p {
   white-space: nowrap;
 }
 
+.inventory-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-top: 1px solid rgba(226, 172, 123, 0.08);
+  border-bottom: 1px solid rgba(226, 172, 123, 0.08);
+}
+
+.inventory-brand-row__eyebrow {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(241, 229, 215, 0.5);
+}
+
+.inventory-brand-row__scroller {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  padding-bottom: 2px;
+}
+
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid rgba(226, 172, 123, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(241, 229, 215, 0.82);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.brand-chip:hover {
+  background: rgba(226, 172, 123, 0.1);
+  color: #f8ecdf;
+}
+
+.brand-chip__avatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(226, 172, 123, 0.18);
+  font-family: var(--nomad-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(241, 229, 215, 0.7);
+}
+
+.brand-chip__name {
+  white-space: nowrap;
+}
+
+.brand-chip__count {
+  font-family: var(--nomad-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(241, 229, 215, 0.55);
+}
+
+.brand-chip--active {
+  background: var(--nomad-primary, #cb784c);
+  color: #fff;
+  border-color: transparent;
+}
+
+.brand-chip--active .brand-chip__avatar {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.brand-chip--active .brand-chip__count {
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .inventory-editor__token-input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
