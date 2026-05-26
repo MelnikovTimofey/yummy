@@ -1088,18 +1088,32 @@ export const InventoryView = ({
             {saveError ? <p className="error-text">{saveError}</p> : null}
 
             <div className="form-actions inventory-editor-foot">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={saveStatus === 'loading'}
-                onClick={closeEditor}
-              >
-                Отмена
-              </Button>
-              <Button type="submit" size="sm" disabled={saveStatus === 'loading'}>
-                {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
-              </Button>
+              {editorMode === 'edit' ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inventory-editor-foot__delete"
+                  disabled
+                  title="Удаление позиций каталога ждёт отдельного продуктового решения"
+                >
+                  Удалить
+                </Button>
+              ) : null}
+              <div className="inventory-editor-foot__primary">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={saveStatus === 'loading'}
+                  onClick={closeEditor}
+                >
+                  Отмена
+                </Button>
+                <Button type="submit" size="sm" disabled={saveStatus === 'loading'}>
+                  {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
+                </Button>
+              </div>
             </div>
           </form>
           </article>
@@ -1214,8 +1228,13 @@ export const InventoryView = ({
                 const brandShort = buildBrandShort(item.manufacturer);
 
                 return (
-                  <tr key={item.id} data-active={isActive}>
-                    <td className="inventory-table__brand">
+                  <tr
+                    key={item.id}
+                    data-active={isActive}
+                    className="inventory-table__row"
+                    onClick={() => openEditEditor(item)}
+                  >
+                    <td className="inventory-table__brand" onClick={(event) => event.stopPropagation()}>
                       <label
                         className="inventory-brand-cell"
                         title={item.manufacturer}
@@ -1233,20 +1252,13 @@ export const InventoryView = ({
                       </label>
                     </td>
                     <td>
-                      <button
-                        className="inventory-item-trigger"
-                        type="button"
-                        onClick={() => setActiveItemId((current) => (current === item.id ? '' : item.id))}
-                        aria-expanded={isActive}
-                      >
-                        <div className="inventory-cell inventory-cell--primary">
-                          <strong>{item.name}</strong>
-                          <span className="inventory-cell__sub">
-                            {strengthLabel}
-                            {flavorsTop3 ? ` · ${flavorsTop3}` : ''}
-                          </span>
-                        </div>
-                      </button>
+                      <div className="inventory-cell inventory-cell--primary">
+                        <strong>{item.name}</strong>
+                        <span className="inventory-cell__sub">
+                          {strengthLabel}
+                          {flavorsTop3 ? ` · ${flavorsTop3}` : ''}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <div className="inventory-cell inventory-cell--brand">
@@ -1277,7 +1289,7 @@ export const InventoryView = ({
                         ) : null}
                       </div>
                     </td>
-                    <td className="inventory-table__stock">
+                    <td className="inventory-table__stock" onClick={(event) => event.stopPropagation()}>
                       <button
                         type="button"
                         role="switch"
@@ -1314,7 +1326,7 @@ export const InventoryView = ({
                         </span>
                       )}
                     </td>
-                    <td className="inventory-table__actions">
+                    <td className="inventory-table__actions" onClick={(event) => event.stopPropagation()}>
                       <div className="inventory-row-actions">
                         <button
                           type="button"
