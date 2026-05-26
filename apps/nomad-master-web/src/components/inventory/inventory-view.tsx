@@ -73,6 +73,8 @@ const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
 
 const STRENGTH_DASH = '—';
 
+const STRENGTH_PRESETS = ['Лёгкий', 'Средний', 'Крепкий'];
+
 const formatStrengthCompact = (item: InventoryTobacco) => {
   const value = item.officialStrength?.trim() || item.communityStrength?.trim();
   return value || STRENGTH_DASH;
@@ -768,14 +770,9 @@ export const InventoryView = ({
         title="Табаки"
         subtitle="Наличие, компоненты миксов и связанные позиции витрины."
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" disabled title="В разработке">
-              Поставка
-            </Button>
-            <Button type="button" size="sm" onClick={openCreateEditor}>
-              Новый табак
-            </Button>
-          </>
+          <Button type="button" size="sm" onClick={openCreateEditor}>
+            Новый табак
+          </Button>
         }
       />
 
@@ -883,159 +880,214 @@ export const InventoryView = ({
           }
         }}
       >
-        <SheetContent side="right" className="inventory-editor-sheet">
-          <SheetHeader>
-            <SheetTitle>
+        <SheetContent side="right" className="inventory-editor-sheet inventory-editor-drawer">
+          <SheetHeader className="inventory-editor-drawer__head">
+            <p className="eyebrow">
+              {editorMode === 'edit' ? 'Редактирование' : 'Новый табак'}
+            </p>
+            <SheetTitle className="inventory-editor-drawer__title">
               {editorMode === 'edit'
-                ? editorDraft.name.trim() || 'Редактирование табака'
-                : 'Новый табак'}
+                ? editorDraft.name.trim() || 'Без названия'
+                : 'Добавить табак'}
             </SheetTitle>
-            <SheetDescription>
+            <SheetDescription className="sr-only">
               {editorMode === 'edit'
                 ? 'Обновите позицию каталога.'
                 : 'Добавьте позицию в каталог.'}
             </SheetDescription>
           </SheetHeader>
           <article className="editor-card ops-editor inventory-create-card inventory-create-card--sheet">
-          <div className="entity-card__head">
-            <div>
-              <Badge variant={editorDraft.inStock ? 'default' : 'secondary'}>
-                {editorDraft.inStock ? 'В наличии' : 'Нет наличия'}
-              </Badge>
+
+          <form className="admin-form inventory-editor-form" onSubmit={(event) => void handleEditorSubmit(event)}>
+            <div className="inventory-editor-identity">
+              <div className="inventory-editor-identity__col">
+                <div className="section-h">Наличие</div>
+                <div className="inventory-editor-identity__toggle">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={editorDraft.inStock}
+                    className={`toggle ${editorDraft.inStock ? 'toggle--on' : 'toggle--off'}`}
+                    onClick={() => updateEditorDraft('inStock', !editorDraft.inStock)}
+                    disabled={saveStatus === 'loading'}
+                    title={editorDraft.inStock ? 'В наличии' : 'Нет на кухне'}
+                  >
+                    <span className="toggle__track" aria-hidden="true">
+                      <span className="toggle__thumb" />
+                    </span>
+                  </button>
+                  <span
+                    className="inventory-editor-identity__status"
+                    data-tone={editorDraft.inStock ? 'success' : 'muted'}
+                  >
+                    {editorDraft.inStock ? 'В наличии' : 'Нет на кухне'}
+                  </span>
+                </div>
+              </div>
+              <div className="inventory-editor-identity__col">
+                <div className="section-h">Крепость</div>
+                <div className="inventory-editor-identity__chips">
+                  {STRENGTH_PRESETS.map((preset) => {
+                    const active =
+                      editorDraft.officialStrength.trim().toLocaleLowerCase('ru-RU') ===
+                      preset.toLocaleLowerCase('ru-RU');
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        className={active ? 'editor-chip editor-chip--active' : 'editor-chip'}
+                        aria-pressed={active}
+                        onClick={() =>
+                          updateEditorDraft('officialStrength', active ? '' : preset)
+                        }
+                        disabled={saveStatus === 'loading'}
+                      >
+                        {preset}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
 
-          <form className="admin-form" onSubmit={(event) => void handleEditorSubmit(event)}>
-            <div className="form-grid form-grid--two">
-              <InventorySuggestionInput
-                label="Производитель"
-                value={editorDraft.manufacturer}
-                suggestions={manufacturerOptions}
-                placeholder="Например, Black Burn"
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('manufacturer', value)}
-              />
-
-              <label className="field">
+            <div className="inventory-editor-fields">
+              <label className="field field--wide">
                 <span className="field-label">Название</span>
                 <input
-                  className="text-input"
+                  className="text-input text-input--lg"
                   value={editorDraft.name}
                   onChange={(event) => updateEditorDraft('name', event.target.value)}
-                  placeholder="Например, Peach Rings"
+                  placeholder="Например, Citrus Breeze"
                   disabled={saveStatus === 'loading'}
                 />
               </label>
 
-              <InventorySuggestionInput
-                label="Линейка"
-                value={editorDraft.lineName}
-                suggestions={lineNameOptions}
-                placeholder="Например, Core"
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('lineName', value)}
-              />
-
-              <InventorySuggestionInput
-                label="Страна"
-                value={editorDraft.country}
-                suggestions={countryOptions}
-                placeholder="Например, Россия"
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('country', value)}
-              />
-
-              <label className="field">
-                <span className="field-label">Официальная крепость</span>
-                <input
-                  className="text-input"
-                  value={editorDraft.officialStrength}
-                  onChange={(event) => updateEditorDraft('officialStrength', event.target.value)}
-                  placeholder="Например, medium"
+              <div className="form-grid form-grid--two">
+                <InventorySuggestionInput
+                  label="Производитель"
+                  value={editorDraft.manufacturer}
+                  suggestions={manufacturerOptions}
+                  placeholder="Nomad Reserve"
                   disabled={saveStatus === 'loading'}
+                  onChange={(value) => updateEditorDraft('manufacturer', value)}
                 />
-              </label>
 
-              <label className="field">
-                <span className="field-label">Комьюнити-крепость</span>
-                <input
-                  className="text-input"
-                  value={editorDraft.communityStrength}
-                  onChange={(event) => updateEditorDraft('communityStrength', event.target.value)}
-                  placeholder="Например, выше средней"
+                <InventorySuggestionInput
+                  label="Линейка"
+                  value={editorDraft.lineName}
+                  suggestions={lineNameOptions}
+                  placeholder="Signature"
                   disabled={saveStatus === 'loading'}
+                  onChange={(value) => updateEditorDraft('lineName', value)}
                 />
-              </label>
+              </div>
 
-              <InventoryProductionStatusSelect
-                value={editorDraft.productionStatus}
-                options={productionStatusOptions}
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('productionStatus', value)}
-              />
-
-              <InventoryTokenEditor
-                label="Категории"
-                selected={editorDraft.flavorProfiles}
-                suggestions={flavorProfileOptions}
-                placeholder="Выбери или добавь category key"
-                formatValue={formatFlavorProfileLabel}
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('flavorProfiles', value)}
-              />
-
-              <InventoryTokenEditor
-                label="Вкусы"
-                selected={editorDraft.flavors}
-                suggestions={flavorOptions}
-                placeholder="Выбери или добавь вкус"
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('flavors', value)}
-              />
-
-              <InventoryTokenEditor
-                label="Мета-теги"
-                selected={editorDraft.flavorTags}
-                suggestions={flavorTagOptions}
-                placeholder="Выбери или добавь мета-тег"
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('flavorTags', value)}
-              />
+              <div className="field field--wide">
+                <span className="field-label">Категория вкуса · можно несколько</span>
+                <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
+                  {flavorProfileOptions.map((profile) => {
+                    const active = editorDraft.flavorProfiles.includes(profile);
+                    return (
+                      <button
+                        key={profile}
+                        type="button"
+                        className={active ? 'editor-chip editor-chip--active' : 'editor-chip'}
+                        aria-pressed={active}
+                        onClick={() =>
+                          updateEditorDraft(
+                            'flavorProfiles',
+                            active
+                              ? editorDraft.flavorProfiles.filter((item) => item !== profile)
+                              : [...editorDraft.flavorProfiles, profile],
+                          )
+                        }
+                        disabled={saveStatus === 'loading'}
+                      >
+                        {formatFlavorProfileLabel(profile)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <label className="field field--wide">
-                <span className="field-label">Описание</span>
+                <span className="field-label">Вкусы · через запятую</span>
+                <input
+                  className="text-input"
+                  value={editorDraft.flavors.join(', ')}
+                  onChange={(event) =>
+                    updateEditorDraft(
+                      'flavors',
+                      event.target.value
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter(Boolean),
+                    )
+                  }
+                  placeholder="лимон, мята, лайм"
+                  disabled={saveStatus === 'loading'}
+                />
+              </label>
+
+              <label className="field field--wide">
+                <span className="field-label">Описание для команды</span>
                 <textarea
                   className="textarea-input"
                   value={editorDraft.description}
                   onChange={(event) => updateEditorDraft('description', event.target.value)}
-                  placeholder="Короткое описание табака для инвентаризации и каталога"
+                  placeholder="Например: подходит к цитрусовым миксам, не миксуй с табачными"
                   rows={3}
                   disabled={saveStatus === 'loading'}
                 />
               </label>
 
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={editorDraft.inStock}
-                  onChange={(event) => updateEditorDraft('inStock', event.target.checked)}
-                  disabled={saveStatus === 'loading'}
-                />
-                <span>{editorMode === 'edit' ? 'Табак сейчас в наличии' : 'Сразу отметить как «в наличии»'}</span>
-              </label>
-            </div>
+              <details className="inventory-extra-filters inventory-editor-extra">
+                <summary className="inventory-extra-filters__trigger">
+                  Дополнительно
+                </summary>
+                <div className="form-grid form-grid--two inventory-editor-extra__grid">
+                  <InventorySuggestionInput
+                    label="Страна"
+                    value={editorDraft.country}
+                    suggestions={countryOptions}
+                    placeholder="Например, Россия"
+                    disabled={saveStatus === 'loading'}
+                    onChange={(value) => updateEditorDraft('country', value)}
+                  />
 
-            <p className="meta-line">
-              Для `Производителя`, `Линейки`, `Страны`, `Категорий`, `Вкусов` и `Мета-тегов` можно выбрать текущее значение или
-              добавить новое. `Статус производства` ограничен уже существующими значениями.
-            </p>
+                  <label className="field">
+                    <span className="field-label">Комьюнити-крепость</span>
+                    <input
+                      className="text-input"
+                      value={editorDraft.communityStrength}
+                      onChange={(event) => updateEditorDraft('communityStrength', event.target.value)}
+                      placeholder="Например, выше средней"
+                      disabled={saveStatus === 'loading'}
+                    />
+                  </label>
+
+                  <InventoryProductionStatusSelect
+                    value={editorDraft.productionStatus}
+                    options={productionStatusOptions}
+                    disabled={saveStatus === 'loading'}
+                    onChange={(value) => updateEditorDraft('productionStatus', value)}
+                  />
+
+                  <InventoryTokenEditor
+                    label="Мета-теги"
+                    selected={editorDraft.flavorTags}
+                    suggestions={flavorTagOptions}
+                    placeholder="Выбери или добавь мета-тег"
+                    disabled={saveStatus === 'loading'}
+                    onChange={(value) => updateEditorDraft('flavorTags', value)}
+                  />
+                </div>
+              </details>
+            </div>
 
             {saveError ? <p className="error-text">{saveError}</p> : null}
 
-            <div className="form-actions">
-              <Button type="submit" size="sm" disabled={saveStatus === 'loading'}>
-                {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить табак' : 'Создать табак'}
-              </Button>
+            <div className="form-actions inventory-editor-foot">
               <Button
                 type="button"
                 variant="outline"
@@ -1044,6 +1096,9 @@ export const InventoryView = ({
                 onClick={closeEditor}
               >
                 Отмена
+              </Button>
+              <Button type="submit" size="sm" disabled={saveStatus === 'loading'}>
+                {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
               </Button>
             </div>
           </form>
@@ -1230,12 +1285,12 @@ export const InventoryView = ({
                         aria-label={`${stockLabel}: переключить наличие для ${item.name}`}
                         onClick={() => onToggleStock(item)}
                         disabled={stockBusy}
-                        className={`row-toggle ${item.inStock ? 'row-toggle--on' : 'row-toggle--off'}${stockBusy ? ' row-toggle--busy' : ''}`}
+                        className={`row-toggle row-toggle--icon ${item.inStock ? 'row-toggle--on' : 'row-toggle--off'}${stockBusy ? ' row-toggle--busy' : ''}`}
                       >
                         <span className="row-toggle__track" aria-hidden="true">
                           <span className="row-toggle__thumb" />
                         </span>
-                        <span className="row-toggle__label">
+                        <span className="sr-only">
                           {pendingRowId === item.id ? 'Сохраняем...' : stockLabel}
                         </span>
                       </button>
@@ -1260,32 +1315,47 @@ export const InventoryView = ({
                       )}
                     </td>
                     <td className="inventory-table__actions">
-                      <details className="inventory-actions">
-                        <summary
-                          className="inventory-actions__trigger"
-                          aria-label={`Действия для ${item.name}`}
+                      <div className="inventory-row-actions">
+                        <button
+                          type="button"
+                          className="inventory-row-actions__btn"
+                          title="Редактировать"
+                          aria-label={`Редактировать ${item.name}`}
+                          onClick={() => openEditEditor(item)}
                         >
-                          <span aria-hidden="true">⋯</span>
-                        </summary>
-                        <div className="inventory-actions__menu" role="menu">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="inventory-actions__item"
-                            onClick={() => setActiveItemId(item.id)}
+                          <svg
+                            className="inventory-row-actions__icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
                           >
-                            Профиль
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="inventory-actions__item"
-                            onClick={() => openEditEditor(item)}
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                          </svg>
+                        </button>
+                        <details className="inventory-actions">
+                          <summary
+                            className="inventory-actions__trigger"
+                            aria-label={`Действия для ${item.name}`}
                           >
-                            Редактировать
-                          </button>
-                        </div>
-                      </details>
+                            <span aria-hidden="true">⋯</span>
+                          </summary>
+                          <div className="inventory-actions__menu" role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="inventory-actions__item"
+                              onClick={() => setActiveItemId(item.id)}
+                            >
+                              Профиль
+                            </button>
+                          </div>
+                        </details>
+                      </div>
                     </td>
                   </tr>
                 );
