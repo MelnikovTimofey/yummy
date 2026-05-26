@@ -1830,6 +1830,13 @@ p {
   margin: 0;
 }
 
+.daily-code-hero__helper {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--nomad-ink-soft);
+  margin: 4px 0 0;
+}
+
 .daily-code-hero__actions {
   display: flex;
   align-items: center;

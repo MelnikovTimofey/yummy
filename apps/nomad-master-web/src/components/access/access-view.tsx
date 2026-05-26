@@ -96,8 +96,10 @@ export const AccessView = (props: AccessViewProps) => {
   const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
   const activeOperators = telegramOperators.filter((item) => item.active);
   const linkedOperatorsCount = activeOperators.filter((item) => item.linkedChatId).length;
+  const pendingOperatorsCount = activeOperators.length - linkedOperatorsCount;
   const activeStaffAccounts = staffAccounts.filter((account) => account.active).length;
-  const adminAccountsCount = staffAccounts.filter((account) => account.role === 'admin').length;
+  // adminAccountsCount раньше отдавался в caption «admin: N». В mockup-варианте
+  // под Master-учётками — «с доступом в систему», без отдельного admin-счётчика.
 
   const dailyCodeHint = (() => {
     if (!currentDailyCode?.endsAt) {
@@ -122,6 +124,20 @@ export const AccessView = (props: AccessViewProps) => {
         title="Daily code и staff"
         subtitle="Управление гостевым кодом, операторами Telegram-бота и учётками Master."
         meta="/staff/audit/events"
+        actions={
+          user?.role === 'admin' ? (
+            <button
+              className="primary-button primary-button--inline"
+              type="button"
+              onClick={() => {
+                onResetTelegramOperatorEditor();
+                setTelegramOperatorDialogOpen(true);
+              }}
+            >
+              Новый оператор
+            </button>
+          ) : null
+        }
       />
 
       <MasterStatsRow
@@ -135,13 +151,18 @@ export const AccessView = (props: AccessViewProps) => {
           {
             label: 'Операторы',
             value: activeOperators.length,
-            hint: `привязано чатов: ${linkedOperatorsCount}`,
+            hint:
+              pendingOperatorsCount > 0
+                ? `+${pendingOperatorsCount} ждут привязки`
+                : activeOperators.length > 0
+                  ? 'все привязаны'
+                  : 'нет активных',
             tone: 'success',
           },
           {
             label: 'Master-учётки',
             value: activeStaffAccounts,
-            hint: `admin: ${adminAccountsCount}`,
+            hint: 'с доступом в систему',
             tone: 'success',
           },
           {
@@ -152,28 +173,8 @@ export const AccessView = (props: AccessViewProps) => {
         ]}
       />
 
-      <div className="ops-toolbar ops-toolbar--split">
-        <div className="info-banner info-banner--ops">
-          Оператор получает код только через Telegram-бота после привязки контакта.
-        </div>
-        <div className="section-actions">
-          <span className="status-chip">Telegram flow</span>
-          {user?.role === 'admin' ? (
-            <button
-              className="primary-button primary-button--inline"
-              type="button"
-              onClick={() => {
-                onResetTelegramOperatorEditor();
-                setTelegramOperatorDialogOpen(true);
-              }}
-            >
-              Новый оператор
-            </button>
-          ) : null}
-        </div>
-      </div>
-
       <DailyCodeBlock
+        helper="Оператор получает код только через Telegram-бота после привязки контакта."
         currentDailyCode={currentDailyCode}
         dailyCodes={dailyCodes}
         dailyCodesStatus={dailyCodesStatus}
