@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bookmark } from 'lucide-react';
+import { Bookmark, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
+import { MasterSortPill } from '@/components/shell/master-sort-pill';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
+import {
+  buildSortPillOptions,
+  composeSortKey,
+  parseSortKey,
+} from '@/components/shell/master-sort-pill.helpers';
 import { colorForTobacco } from '@/components/mixes/mix-builder/color-for-tobacco';
 import type {
   MixFilterKey,
@@ -158,9 +164,9 @@ export const MixCatalogView = ({
 
   const statusChips: MixStatusChip[] = [
     { value: 'all', label: 'Все', count: meta.totalItems },
-    { value: 'guest-visible', label: 'Видны', count: meta.guestVisibleCount },
-    { value: 'hidden', label: 'Скрыты', count: meta.hiddenCount },
-    { value: 'blocked', label: 'Заблокированы', count: meta.blockedCount },
+    { value: 'guest-visible', label: 'Виден гостю', count: meta.guestVisibleCount },
+    { value: 'hidden', label: 'Скрыт', count: meta.hiddenCount },
+    { value: 'blocked', label: 'Блокирован', count: meta.blockedCount },
   ];
 
   // Counts считаем по текущей странице items — глобальный per-profile-counter
@@ -236,7 +242,7 @@ export const MixCatalogView = ({
 
       {profileChips.length ? (
         <div className="mixes-profile-filter" role="group" aria-label="Фильтр по категориям">
-          <span className="mixes-profile-filter__eyebrow">Категории</span>
+          <span className="mixes-profile-filter__eyebrow">Профиль</span>
           <div className="mixes-profile-filter__scroll">
             {profileChips.map((chip) => {
               const active = filters.flavorProfiles.includes(chip.value);
@@ -302,65 +308,61 @@ export const MixCatalogView = ({
           </div>
         </div>
 
-        <label className="mixes-toolbar__control">
-          <span className="mixes-toolbar__label">Участие в рейлах</span>
-          <select value={filters.railState} onChange={(event) => onRailStateChange(event.target.value as MixRailFilter)}>
-            {mixRailFilterOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="mixes-toolbar__control">
-          <span className="mixes-toolbar__label">Сортировка</span>
-          <select value={sort.field} onChange={(event) => onSortFieldChange(event.target.value as MixSortField)}>
-            {mixSortFieldOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="mixes-toolbar__control">
-          <span className="mixes-toolbar__label">Порядок</span>
-          <select value={sort.direction} onChange={(event) => onSortDirectionChange(event.target.value as MixSortDirection)}>
-            {mixSortDirectionOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <Button className="mixes-toolbar__reset" type="button" variant="outline" size="sm" onClick={onResetFilters}>
-          Сбросить
-        </Button>
+        <MasterSortPill
+          ariaLabel="Сортировка миксов"
+          value={composeSortKey(sort.field, sort.direction)}
+          options={buildSortPillOptions(mixSortFieldOptions, mixSortDirectionOptions)}
+          onChange={(key) => {
+            const { field, direction } = parseSortKey<MixSortField>(key);
+            onSortFieldChange(field);
+            onSortDirectionChange(direction as MixSortDirection);
+          }}
+        />
       </div>
 
-      <div className="mixes-filter-groups ops-filter-groups">
-        {mixFilterGroups.map((group) => {
-          const options = filters.options[group.key];
+      <details className="master-filter-details">
+        <summary className="master-filter-details__summary">
+          Расширенный фильтр
+          <ChevronDown aria-hidden="true" className="master-filter-details__chevron" />
+        </summary>
+        <div className="master-filter-details__body">
+          <label className="mixes-toolbar__control">
+            <span className="mixes-toolbar__label">Участие в рейлах</span>
+            <select
+              value={filters.railState}
+              onChange={(event) => onRailStateChange(event.target.value as MixRailFilter)}
+            >
+              {mixRailFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-          if (!options.length) {
-            return null;
-          }
+          <div className="mixes-filter-groups ops-filter-groups">
+            {mixFilterGroups.map((group) => {
+              const options = filters.options[group.key];
 
-          return (
-            <FilterMultiSelect
-              key={group.key}
-              title={group.title}
-              options={options}
-              selected={filters[group.key]}
-              formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
-              onToggleOption={(option) => onToggleFilterValue(group.key, option)}
-              onClearGroup={() => onClearFilterGroup(group.key)}
-            />
-          );
-        })}
-      </div>
+              if (!options.length) {
+                return null;
+              }
+
+              return (
+                <FilterMultiSelect
+                  key={group.key}
+                  title={group.title}
+                  options={options}
+                  selected={filters[group.key]}
+                  formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
+                  onToggleOption={(option) => onToggleFilterValue(group.key, option)}
+                  onClearGroup={() => onClearFilterGroup(group.key)}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </details>
 
       {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов...</p> : null}
       {error ? <p className="error-text">{error}</p> : null}

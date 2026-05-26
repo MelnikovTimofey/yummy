@@ -5602,3 +5602,140 @@ p {
     @apply font-sans;
   }
 }
+
+/* MasterSortPill — единый pill-popover на месте Сортировка+Порядок+Сбросить. */
+.master-sort-pill {
+  position: relative;
+  display: inline-block;
+}
+
+.master-sort-pill__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--nomad-border-strong);
+  background: transparent;
+  color: var(--nomad-ink-soft);
+  font-size: 0.82rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.master-sort-pill__trigger:hover {
+  color: var(--nomad-ink);
+  border-color: var(--nomad-primary-2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.master-sort-pill__trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(216, 171, 104, 0.18);
+  border-color: var(--nomad-primary-2);
+  color: var(--nomad-ink);
+}
+
+.master-sort-pill__trigger[aria-expanded='true'] {
+  color: var(--nomad-ink);
+  border-color: var(--nomad-primary-2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.master-sort-pill__value {
+  letter-spacing: -0.005em;
+}
+
+.master-sort-pill__chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.18s ease;
+}
+
+.master-sort-pill__chevron--open {
+  transform: rotate(180deg);
+}
+
+.master-sort-pill__popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  min-width: 240px;
+  max-width: 320px;
+  border-radius: 12px;
+  border: 1px solid var(--nomad-border-strong);
+  background: var(--nomad-surface-elevated, var(--nomad-card, #1b1814));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+}
+
+.master-sort-pill__option {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--nomad-ink-soft);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.master-sort-pill__option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--nomad-ink);
+}
+
+.master-sort-pill__option--selected {
+  background: rgba(216, 171, 104, 0.14);
+  color: var(--nomad-ink);
+}
+
+/* Расширенный фильтр на странице миксов — общий стиль <details>-summary. */
+.master-filter-details {
+  border: 1px dashed rgba(226, 172, 123, 0.18);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.master-filter-details[open] {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.master-filter-details__summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--nomad-ink-soft);
+  list-style: none;
+}
+
+.master-filter-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.master-filter-details[open] .master-filter-details__summary {
+  color: var(--nomad-ink);
+  margin-bottom: 8px;
+}
+
+.master-filter-details__chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.18s ease;
+}
+
+.master-filter-details[open] .master-filter-details__chevron {
+  transform: rotate(180deg);
+}
+
+.master-filter-details__body {
+  display: grid;
+  gap: 12px;
+}
+

@@ -6,7 +6,13 @@ import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
+import { MasterSortPill } from '@/components/shell/master-sort-pill';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
+import {
+  buildSortPillOptions,
+  composeSortKey,
+  parseSortKey,
+} from '@/components/shell/master-sort-pill.helpers';
 import type {
   InventoryBatchAction,
   InventoryFilterKey,
@@ -830,34 +836,16 @@ export const InventoryView = ({
           })}
         </div>
 
-        <label className="inventory-toolbar__control">
-          <span className="inventory-toolbar__label">Сортировка</span>
-          <select value={sort.field} onChange={(event) => onSortFieldChange(event.target.value as InventorySortField)}>
-            {inventorySortFieldOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="inventory-toolbar__control">
-          <span className="inventory-toolbar__label">Порядок</span>
-          <select
-            value={sort.direction}
-            onChange={(event) => onSortDirectionChange(event.target.value as InventorySortDirection)}
-          >
-            {inventorySortDirectionOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <Button className="inventory-toolbar__reset" type="button" variant="outline" size="sm" onClick={onResetFilters}>
-          Сбросить
-        </Button>
+        <MasterSortPill
+          ariaLabel="Сортировка инвентаря"
+          value={composeSortKey(sort.field, sort.direction)}
+          options={buildSortPillOptions(inventorySortFieldOptions, inventorySortDirectionOptions)}
+          onChange={(key) => {
+            const { field, direction } = parseSortKey<InventorySortField>(key);
+            onSortFieldChange(field);
+            onSortDirectionChange(direction as InventorySortDirection);
+          }}
+        />
       </div>
 
       {brandChips.length ? (
