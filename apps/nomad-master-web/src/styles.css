@@ -5139,12 +5139,6 @@ p {
   line-height: 1.35;
 }
 
-.mixes-cell__updated {
-  font-family: ui-monospace, 'JetBrains Mono', monospace;
-  font-size: 11px !important;
-  letter-spacing: 0.02em;
-}
-
 .mixes-cell__components {
   gap: 8px;
 }
@@ -5193,10 +5187,6 @@ p {
   font-size: 12px !important;
   font-variant-numeric: tabular-nums;
   color: var(--foreground) !important;
-}
-
-.mixes-cell__metric--rails {
-  color: var(--muted-foreground) !important;
 }
 
 .mixes-cell__metric-meta {

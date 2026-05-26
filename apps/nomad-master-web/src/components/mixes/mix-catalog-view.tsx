@@ -85,23 +85,14 @@ type MixStatusChip = {
   count: number;
 };
 
-const formatMixUpdatedAt = (value?: string) => {
-  if (!value) {
-    return 'Нет даты';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Нет даты';
-  }
-
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-};
+const brandShort = (manufacturer: string) =>
+  manufacturer
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '·';
 
 const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
   if (key === 'flavorProfiles') {
@@ -120,7 +111,7 @@ const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => 
     return <Badge variant="secondary">Скрыт</Badge>;
   }
 
-  return <Badge>Виден гостю</Badge>;
+  return <Badge>Виден</Badge>;
 };
 
 export const MixCatalogView = ({
@@ -394,10 +385,6 @@ export const MixCatalogView = ({
             </thead>
             <tbody>
               {items.map((mix) => {
-                const totalProportion = mix.components.reduce(
-                  (sum, component) => sum + component.proportion,
-                  0,
-                );
                 const visibleProfiles = mix.flavorProfiles.slice(0, 3);
                 const profileOverflow = mix.flavorProfiles.length - visibleProfiles.length;
                 return (
@@ -406,9 +393,6 @@ export const MixCatalogView = ({
                       <div className="mixes-cell">
                         <strong>{mix.name}</strong>
                         {mix.description ? <span>{mix.description}</span> : null}
-                        <span className="mixes-cell__updated">
-                          Обновлено: {formatMixUpdatedAt(mix.updatedAt)}
-                        </span>
                       </div>
                     </td>
                     <td>
@@ -427,20 +411,13 @@ export const MixCatalogView = ({
                                 }}
                                 title={`${component.manufacturer} · ${component.name}`}
                               >
-                                {component.manufacturer.slice(0, 2).toUpperCase()}
+                                {brandShort(component.manufacturer)}
                               </span>
                             );
                           })}
                         </div>
                         <span className="mixes-cell__component-line">
-                          {mix.components
-                            .map((component) => {
-                              const ratio = totalProportion > 0
-                                ? Math.round((component.proportion / totalProportion) * 100)
-                                : Math.round(100 / mix.components.length);
-                              return `${component.name} ${ratio}%`;
-                            })
-                            .join(' + ')}
+                          {mix.components.map((component) => component.name).join(' + ')}
                         </span>
                       </div>
                     </td>
@@ -469,13 +446,6 @@ export const MixCatalogView = ({
                               ({formatMetricValue(mix.ratingsCount)})
                             </span>
                           ) : null}
-                        </span>
-                        <span className="mixes-cell__metric mixes-cell__metric--rails" title={
-                          mix.railMemberships.length
-                            ? mix.railMemberships.map((membership) => membership.name).join(', ')
-                            : 'Пока не входит ни в один рейл'
-                        }>
-                          В рейлах: {formatMetricValue(mix.railCount)}
                         </span>
                       </div>
                     </td>
