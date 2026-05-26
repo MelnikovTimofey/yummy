@@ -22,7 +22,6 @@ import {
   formatMetricValue,
   inventorySortDirectionOptions,
   inventorySortFieldOptions,
-  inventoryStockFilterOptions,
 } from '@/contracts';
 
 type InventoryViewProps = {
@@ -756,6 +755,12 @@ export const InventoryView = ({
     </div>
   ) : null;
 
+  const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
+    { value: 'all', label: 'Все', count: meta.totalItems, ariaLabel: 'Фильтр: Все' },
+    { value: 'in-stock', label: 'В наличии', count: meta.inStockCount, ariaLabel: 'Фильтр: В наличии' },
+    { value: 'out-of-stock', label: 'Нет наличия', count: meta.outOfStockCount, ariaLabel: 'Фильтр: Нет наличия' },
+  ];
+
   return (
     <section className="card inventory-panel">
       <div className="section-head section-head--surface">
@@ -764,27 +769,6 @@ export const InventoryView = ({
           <h2>Таблица остатков и зависимых миксов</h2>
           <p className="meta-line">Остатки, фильтры и зависимые миксы.</p>
         </div>
-        <div className="inventory-panel__stats ops-surface__stats">
-          <div className="inventory-stat ops-surface__stat" title="Всего табаков в каталоге (без учёта фильтров)">
-            <span>Всего</span>
-            <strong>{formatMetricValue(meta.totalItems)}</strong>
-          </div>
-          <div className="inventory-stat ops-surface__stat" title="Сейчас в наличии (по всему каталогу)">
-            <span>В наличии</span>
-            <strong>{formatMetricValue(meta.inStockCount)}</strong>
-          </div>
-          <div
-            className="inventory-stat ops-surface__stat"
-            title="Сколько табаков в каталоге используются хотя бы в одном миксе (по всему каталогу)"
-          >
-            <span>В миксах</span>
-            <strong>{formatMetricValue(meta.inMixesCount)}</strong>
-          </div>
-          <div className="inventory-stat ops-surface__stat" title="Сейчас в стоп-листе / нет наличия (по всему каталогу)">
-            <span>Стоп-лист</span>
-            <strong>{formatMetricValue(meta.outOfStockCount)}</strong>
-          </div>
-        </div>
         <div className="section-actions">
           <Button type="button" size="sm" onClick={openCreateEditor}>
             Новый табак
@@ -792,7 +776,37 @@ export const InventoryView = ({
         </div>
       </div>
 
-      <div className="inventory-toolbar ops-toolbar">
+      <div className="inventory-hero-stats">
+        <div className="inventory-hero-stat" title="Всего табаков в каталоге (без учёта фильтров)">
+          <span className="inventory-hero-stat__label">В каталоге</span>
+          <strong className="inventory-hero-stat__value">{formatMetricValue(meta.totalItems)}</strong>
+          <span className="inventory-hero-stat__sub">всего позиций</span>
+        </div>
+        <div className="inventory-hero-stat" title="Сейчас в наличии (по всему каталогу)">
+          <span className="inventory-hero-stat__label">В наличии</span>
+          <strong className="inventory-hero-stat__value inventory-hero-stat__value--positive">
+            {formatMetricValue(meta.inStockCount)}
+          </strong>
+          <span className="inventory-hero-stat__sub">сейчас на кухне</span>
+        </div>
+        <div className="inventory-hero-stat" title="Сейчас в стоп-листе / нет наличия (по всему каталогу)">
+          <span className="inventory-hero-stat__label">Нет в наличии</span>
+          <strong className="inventory-hero-stat__value inventory-hero-stat__value--warning">
+            {formatMetricValue(meta.outOfStockCount)}
+          </strong>
+          <span className="inventory-hero-stat__sub">требуют пополнения</span>
+        </div>
+        <div
+          className="inventory-hero-stat"
+          title="Сколько табаков в каталоге используются хотя бы в одном миксе (по всему каталогу)"
+        >
+          <span className="inventory-hero-stat__label">В составе миксов</span>
+          <strong className="inventory-hero-stat__value">{formatMetricValue(meta.inMixesCount)}</strong>
+          <span className="inventory-hero-stat__sub">активно используется</span>
+        </div>
+      </div>
+
+      <div className="master-toolbar inventory-toolbar inventory-toolbar--row ops-toolbar">
         <label className="inventory-search">
           <span className="inventory-toolbar__label">Поиск</span>
           <input
@@ -803,16 +817,24 @@ export const InventoryView = ({
           />
         </label>
 
-        <label className="inventory-toolbar__control">
-          <span className="inventory-toolbar__label">Наличие</span>
-          <select value={filters.stock} onChange={(event) => onStockChange(event.target.value as InventoryStockFilter)}>
-            {inventoryStockFilterOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="inventory-status-chips" role="group" aria-label="Фильтр по наличию">
+          {stockFilterTabs.map((tab) => {
+            const active = filters.stock === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                className={active ? 'chip-pill chip-pill--active' : 'chip-pill'}
+                aria-pressed={active}
+                aria-label={tab.ariaLabel}
+                onClick={() => onStockChange(tab.value)}
+              >
+                <span className="chip-pill__label">{tab.label}</span>
+                <span className="chip-pill__count">{formatMetricValue(tab.count)}</span>
+              </button>
+            );
+          })}
+        </div>
 
         <label className="inventory-toolbar__control">
           <span className="inventory-toolbar__label">Сортировка</span>
