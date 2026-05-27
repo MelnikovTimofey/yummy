@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Bookmark, ChevronDown } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bookmark, ChevronDown, Copy, Eye, EyeOff, ListFilter, Pencil, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -68,6 +68,9 @@ type MixCatalogViewProps = {
   onPageChange: (page: number) => void;
   onSelectMix: (mix: MixRecord) => void;
   onStartCreate: () => void;
+  onCopyMix: (mix: MixRecord) => void;
+  onToggleMixAvailable: (mix: MixRecord) => void;
+  rowPendingId?: string;
 };
 
 // flavorProfiles вынесены из multi-select-фильтров — отдельная chip-полоса
@@ -132,8 +135,25 @@ export const MixCatalogView = ({
   onPageChange,
   onSelectMix,
   onStartCreate,
+  onCopyMix,
+  onToggleMixAvailable,
+  rowPendingId = '',
 }: MixCatalogViewProps) => {
   const [searchValue, setSearchValue] = useState(filters.search);
+  const [extendedOpen, setExtendedOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   useEffect(() => {
     setSearchValue(filters.search);
@@ -231,6 +251,68 @@ export const MixCatalogView = ({
         ]}
       />
 
+      <div className="mixes-toolbar mixes-toolbar--bar ops-toolbar">
+        <label className="mixes-search mixes-search--inline">
+          <span className="sr-only">Поиск</span>
+          <Search aria-hidden="true" className="mixes-search__icon" size={16} />
+          <input
+            ref={searchInputRef}
+            type="search"
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            placeholder="Микс, табак, вкус…"
+          />
+          <kbd className="mixes-search__kbd" aria-hidden="true">/</kbd>
+        </label>
+
+        <div className="mixes-status-chips mixes-status-chips--inline" role="group" aria-label="Фильтр по статусу">
+          {statusChips.map((chip) => {
+            const active = filters.status === chip.value;
+            return (
+              <button
+                key={`status-chip:${chip.value}`}
+                type="button"
+                className={active ? 'mixes-status-chip mixes-status-chip--active' : 'mixes-status-chip'}
+                aria-pressed={active}
+                onClick={() => onStatusChange(chip.value)}
+              >
+                <span>{chip.label}</span>
+                {active ? <span className="mixes-status-chip__divider" aria-hidden="true">|</span> : null}
+                <span className="mixes-status-chip__count">{formatMetricValue(chip.count)}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          className={
+            extendedOpen
+              ? 'mixes-filter-toggle mixes-filter-toggle--active'
+              : 'mixes-filter-toggle'
+          }
+          aria-pressed={extendedOpen}
+          aria-expanded={extendedOpen}
+          aria-controls="mixes-extended-filter"
+          title="Расширенный фильтр"
+          onClick={() => setExtendedOpen((value) => !value)}
+        >
+          <ListFilter size={16} aria-hidden="true" />
+          <span className="sr-only">Расширенный фильтр</span>
+        </button>
+
+        <MasterSortPill
+          ariaLabel="Сортировка миксов"
+          value={composeSortKey(sort.field, sort.direction)}
+          options={buildSortPillOptions(mixSortFieldOptions, mixSortDirectionOptions)}
+          onChange={(key) => {
+            const { field, direction } = parseSortKey<MixSortField>(key);
+            onSortFieldChange(field);
+            onSortDirectionChange(direction as MixSortDirection);
+          }}
+        />
+      </div>
+
       {profileChips.length ? (
         <div className="mixes-profile-filter" role="group" aria-label="Фильтр по категориям">
           <span className="mixes-profile-filter__eyebrow">Профиль</span>
@@ -267,51 +349,12 @@ export const MixCatalogView = ({
         </div>
       ) : null}
 
-      <div className="mixes-toolbar ops-toolbar">
-        <label className="mixes-search">
-          <span className="mixes-toolbar__label">Поиск</span>
-          <input
-            type="search"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Микс, описание, компонент, вкус или рейл"
-          />
-        </label>
-
-        <div className="mixes-status-chips" role="group" aria-label="Фильтр по статусу">
-          <span className="mixes-toolbar__label">Статус</span>
-          <div className="mixes-status-chips__row">
-            {statusChips.map((chip) => {
-              const active = filters.status === chip.value;
-              return (
-                <button
-                  key={`status-chip:${chip.value}`}
-                  type="button"
-                  className={active ? 'mixes-status-chip mixes-status-chip--active' : 'mixes-status-chip'}
-                  aria-pressed={active}
-                  onClick={() => onStatusChange(chip.value)}
-                >
-                  <span>{chip.label}</span>
-                  <span className="mixes-status-chip__count">{formatMetricValue(chip.count)}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <MasterSortPill
-          ariaLabel="Сортировка миксов"
-          value={composeSortKey(sort.field, sort.direction)}
-          options={buildSortPillOptions(mixSortFieldOptions, mixSortDirectionOptions)}
-          onChange={(key) => {
-            const { field, direction } = parseSortKey<MixSortField>(key);
-            onSortFieldChange(field);
-            onSortDirectionChange(direction as MixSortDirection);
-          }}
-        />
-      </div>
-
-      <details className="master-filter-details">
+      <details
+        id="mixes-extended-filter"
+        className="master-filter-details"
+        open={extendedOpen}
+        onToggle={(event) => setExtendedOpen((event.currentTarget as HTMLDetailsElement).open)}
+      >
         <summary className="master-filter-details__summary">
           Расширенный фильтр
           <ChevronDown aria-hidden="true" className="master-filter-details__chevron" />
@@ -387,11 +430,28 @@ export const MixCatalogView = ({
               {items.map((mix) => {
                 const visibleProfiles = mix.flavorProfiles.slice(0, 3);
                 const profileOverflow = mix.flavorProfiles.length - visibleProfiles.length;
+                const ratioLabel = mix.components.length
+                  ? mix.components.map((component) => component.proportion).join('/')
+                  : '';
+                const rowBusy = rowPendingId === mix.id;
                 return (
-                  <tr key={mix.id} data-blocked={!mix.available || undefined} data-hidden={mix.available && !mix.guestVisible ? true : undefined}>
+                  <tr
+                    key={mix.id}
+                    data-blocked={!mix.available || undefined}
+                    data-hidden={mix.available && !mix.guestVisible ? true : undefined}
+                    className="mixes-table__row"
+                    onClick={() => onSelectMix(mix)}
+                  >
                     <td>
                       <div className="mixes-cell">
-                        <strong>{mix.name}</strong>
+                        <div className="mixes-cell__title">
+                          <strong>{mix.name}</strong>
+                          {ratioLabel ? (
+                            <span className="mixes-cell__ratio" aria-hidden="true">
+                              {ratioLabel}
+                            </span>
+                          ) : null}
+                        </div>
                         {mix.description ? <span>{mix.description}</span> : null}
                       </div>
                     </td>
@@ -449,15 +509,50 @@ export const MixCatalogView = ({
                         </span>
                       </div>
                     </td>
-                    <td className="mixes-table__actions">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onSelectMix(mix)}
-                      >
-                        Открыть
-                      </Button>
+                    <td
+                      className="mixes-table__actions"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <div className="mixes-row-actions">
+                        <button
+                          type="button"
+                          className="mixes-row-actions__btn"
+                          title="Редактировать"
+                          aria-label={`Открыть ${mix.name}`}
+                          onClick={() => onSelectMix(mix)}
+                          disabled={rowBusy}
+                        >
+                          <Pencil size={14} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="mixes-row-actions__btn"
+                          title="Дублировать"
+                          aria-label={`Дублировать ${mix.name}`}
+                          onClick={() => onCopyMix(mix)}
+                          disabled={rowBusy}
+                        >
+                          <Copy size={14} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="mixes-row-actions__btn"
+                          title={mix.available ? 'Скрыть с витрины' : 'Вернуть на витрину'}
+                          aria-label={
+                            mix.available
+                              ? `Скрыть ${mix.name} с витрины`
+                              : `Вернуть ${mix.name} на витрину`
+                          }
+                          onClick={() => onToggleMixAvailable(mix)}
+                          disabled={rowBusy}
+                        >
+                          {mix.available ? (
+                            <EyeOff size={14} aria-hidden="true" />
+                          ) : (
+                            <Eye size={14} aria-hidden="true" />
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

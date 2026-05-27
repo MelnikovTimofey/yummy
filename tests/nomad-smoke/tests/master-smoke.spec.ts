@@ -93,12 +93,15 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await openWorkspace(page, 'Миксы');
   const citrusMixRow = getMixRow(page, 'Цитрусовый караван');
   await expect(citrusMixRow).toBeVisible();
-  await citrusMixRow.getByRole('button', { name: 'Открыть' }).click();
+  // Row-click открывает редактор (drawer-pattern из mockup'а Master).
+  // Прежняя кнопка «Открыть» в actions-cell заменена на icon edit/copy/hide;
+  // edit-icon скрыт до hover, поэтому кликаем по самой строке.
+  await citrusMixRow.click();
   // MixBuilder открывается full-page (3-колоночный layout) — Sheet удалён
   // в шаге 5 рефактора по design/design_handoff_master_refactor §Микс —
   // конструктор. Имя микса — `<h2>` в sticky-breadcrumb сверху-слева.
   await expect(page.getByRole('heading', { name: 'Цитрусовый караван' })).toBeVisible();
-  await expect(page.getByText('Сумма долей: 100%')).toBeVisible();
+  await expect(page.getByText('сумма = 100%')).toBeVisible();
   await expect(page.locator('.mix-builder__component').nth(0)).toContainText('Citrus Breeze');
   await expect(page.locator('.mix-builder__component').nth(1)).toContainText('Mint Veil');
 

@@ -86,6 +86,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
   const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
   const [mixSaveStatus, setMixSaveStatus] = useState<MixesSaveStatus>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
+  const [mixRowPendingId, setMixRowPendingId] = useState('');
 
   const loadMixes = useCallback(
     async (
@@ -221,6 +222,65 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     setMixSaveError('');
     setMixSaveStatus('idle');
   }, []);
+
+  // Открывает редактор в режиме «новый микс», но prefill'ом из существующего —
+  // быстрый «дубликат» из row-action каталога. id пустой, имя с суффиксом
+  // «(копия)» чтобы оператор сразу видел, что это draft.
+  const onStartCopy = useCallback((mix: MixRecord) => {
+    const draft: MixEditorState = {
+      id: '',
+      name: `${mix.name} (копия)`,
+      description: mix.description,
+      components: mix.components.map((component) =>
+        createMixEditorComponent(component.tobaccoId, String(component.proportion)),
+      ),
+      available: mix.available,
+      railMemberships: [],
+    };
+    setMixEditor(draft);
+    setMixesScreen('create');
+    setMixSaveError('');
+    setMixSaveStatus('idle');
+  }, []);
+
+  // Toggle «Виден/Блокирован» прямо из строки каталога (без открытия editor'а).
+  // В backend нет отдельного PATCH visibility — `guestVisible` производный
+  // (available + все табаки in-stock). Меняем `available`: false = блок, true
+  // = вернуть в витрину (при условии наличия табаков). Re-fetch после.
+  const onToggleMixAvailable = useCallback(
+    async (mix: MixRecord) => {
+      if (!token) return;
+      setMixRowPendingId(mix.id);
+      try {
+        await requestJson<unknown>(
+          `/staff/mixes/${mix.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: mix.name,
+              description: mix.description,
+              components: mix.components.map((component, index) => ({
+                tobaccoId: component.tobaccoId,
+                proportion: component.proportion,
+                sortOrder: index,
+              })),
+              available: !mix.available,
+            }),
+          },
+          token,
+        );
+        await loadMixes(token, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize);
+        if (onRefreshSiblings) {
+          await onRefreshSiblings(token);
+        }
+      } catch (cause) {
+        setMixesError(cause instanceof Error ? cause.message : 'Не удалось обновить видимость микса');
+      } finally {
+        setMixRowPendingId('');
+      }
+    },
+    [token, loadMixes, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
+  );
 
   const onCancelCreate = useCallback(() => {
     setMixEditor(emptyMixEditor());
@@ -390,6 +450,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     mixesScreen,
     mixSaveStatus,
     mixSaveError,
+    mixRowPendingId,
     reload,
     loadMixes,
     loadMixTobaccos,
@@ -404,6 +465,8 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     onPageChange,
     onSelectMix,
     onStartCreate,
+    onStartCopy,
+    onToggleMixAvailable,
     onCancelCreate,
     onResetEditor,
     onChangeEditorField,

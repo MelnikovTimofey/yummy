@@ -716,6 +716,11 @@ export const App = () => {
     setActiveTab('mixes');
   };
 
+  const onCopyMix = (mix: MixRecord) => {
+    mixes.onStartCopy(mix);
+    setActiveTab('mixes');
+  };
+
   const onOpenInventoryMix = (mixId: string) => {
     const mix = mixes.mixes.find((item) => item.id === mixId);
     if (mix) {
@@ -791,7 +796,6 @@ export const App = () => {
           mode={mixes.mixesScreen}
           editor={mixes.mixEditor}
           tobaccos={mixes.mixTobaccos}
-          mixes={mixes.mixes}
           saveStatus={mixes.mixSaveStatus}
           saveError={mixes.mixSaveError}
           onFieldChange={mixes.onChangeEditorField}
@@ -825,6 +829,9 @@ export const App = () => {
         onPageChange={mixes.onPageChange}
         onSelectMix={onSelectMix}
         onStartCreate={onStartCreateMix}
+        onCopyMix={onCopyMix}
+        onToggleMixAvailable={(mix) => void mixes.onToggleMixAvailable(mix)}
+        rowPendingId={mixes.mixRowPendingId}
       />
     );
   };

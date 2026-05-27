@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Check, Plus, Search, Sparkles } from 'lucide-react';
-import type { InventoryTobacco, MixRecord } from '@/contracts';
-import { getCoOccurrenceSuggestions } from './co-occurrence-suggest';
+import { Check, Plus, Search } from 'lucide-react';
+import type { InventoryTobacco } from '@/contracts';
 
 type TobaccoLibraryProps = {
   tobaccos: InventoryTobacco[];
-  mixes: MixRecord[];
   currentIds: string[];
   onAdd: (tobaccoId: string) => void;
 };
@@ -28,15 +26,10 @@ const matchesQuery = (tobacco: InventoryTobacco, query: string) => {
   return hay.includes(q);
 };
 
-export const TobaccoLibrary = ({ tobaccos, mixes, currentIds, onAdd }: TobaccoLibraryProps) => {
+export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryProps) => {
   const [search, setSearch] = useState('');
   const [inStockOnly, setInStockOnly] = useState(true);
   const [sort, setSort] = useState<LibrarySort>('name');
-
-  const suggestions = useMemo(
-    () => getCoOccurrenceSuggestions(currentIds, mixes, tobaccos),
-    [currentIds, mixes, tobaccos],
-  );
 
   const filtered = useMemo(() => {
     let list = tobaccos.filter((t) => matchesQuery(t, search));
@@ -87,29 +80,6 @@ export const TobaccoLibrary = ({ tobaccos, mixes, currentIds, onAdd }: TobaccoLi
           {filtered.length} из {tobaccos.length}
         </p>
       </div>
-
-      {suggestions.length ? (
-        <section className="mix-builder__suggestions" aria-label="Подсказки по составу">
-          <header className="mix-builder__suggestions-head">
-            <Sparkles size={12} aria-hidden="true" />
-            <span>Часто берут с этим составом</span>
-          </header>
-          <ul className="mix-builder__suggestions-list">
-            {suggestions.map((suggestion) => (
-              <li key={suggestion.tobacco.id}>
-                <button
-                  type="button"
-                  className="mix-builder__suggestion"
-                  onClick={() => onAdd(suggestion.tobacco.id)}
-                >
-                  <span className="mix-builder__suggestion-name">{suggestion.tobacco.name}</span>
-                  <span className="mix-builder__suggestion-reason">{suggestion.reason}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <div className="mix-builder__library-list" role="listbox" aria-label="Все табаки">
         {filtered.length === 0 ? (
