@@ -116,9 +116,14 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
     has: page.getByRole('heading', { name: 'Больше всего выбирают' }),
   });
   await statisticalRail.getByRole('button', { name: 'Просмотр' }).click();
+  // Read-only drawer (статистический рейл): eyebrop «Редактирование рейла»,
+  // h2 заголовок = имя рейла, ghost-tag «только просмотр» внутри шапки,
+  // поле «Название рейла» дизаблено. Кнопки «Сохранить» нет, только
+  // «Закрыть».
   await expect(page.getByRole('heading', { name: 'Больше всего выбирают' }).last()).toBeVisible();
-  await expect(page.locator('.status-chip--locked')).toHaveText('Только просмотр');
-  await expect(page.getByLabel('Название')).toBeDisabled();
+  await expect(page.locator('.rail-drawer__head').getByText('только просмотр')).toBeVisible();
+  await expect(page.getByLabel('Название рейла')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Сохранить' })).toHaveCount(0);
 
   // Rail editor тоже в правом Sheet'е (`.rails-surface__sheet`) — закрываем
   // оверлей перед переключением на 'Доступ'.

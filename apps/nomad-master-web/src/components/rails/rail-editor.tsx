@@ -1,6 +1,13 @@
-import { useMemo, useState, type DragEvent, type Dispatch, type FormEvent, type SetStateAction } from 'react';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
+import {
+  useMemo,
+  useState,
+  type DragEvent,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from 'react';
+import { Check, ChevronDown, ChevronUp, GripVertical, Plus, Search, X } from 'lucide-react';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatRailType } from '@/contracts';
 
@@ -22,6 +29,7 @@ type RailEditorProps = {
   setEditor: Dispatch<SetStateAction<RailEditorState>>;
   railMixCatalog: MixRecord[];
   mixes: MixRecord[];
+  /** Legacy: single-candidate API заменён на live-поиск в picker'е. */
   railMixCandidateId: string;
   setRailMixCandidateId: (id: string) => void;
   saveStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -41,8 +49,6 @@ export const RailEditor = ({
   setEditor,
   railMixCatalog,
   mixes,
-  railMixCandidateId,
-  setRailMixCandidateId,
   saveStatus,
   saveError,
   onSubmit,
@@ -53,47 +59,53 @@ export const RailEditor = ({
   onReset,
 }: RailEditorProps) => {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
-  // useMemo стоит ДО любых условных return — следуем предупреждению handoff
-  // (исторический баг RailEditor с hooks-order).
+  const [pickerQuery, setPickerQuery] = useState('');
+
+  // useMemo до условных return — следуем предупреждению handoff (баг RailEditor с hooks-order).
   const selectedRailMixEntries = useMemo(
     () =>
       editor.mixIds.map((mixId, index) => ({
         mixId,
         index,
-        mix: railMixCatalog.find((item) => item.id === mixId) ?? mixes.find((item) => item.id === mixId) ?? null,
+        mix:
+          railMixCatalog.find((item) => item.id === mixId) ??
+          mixes.find((item) => item.id === mixId) ??
+          null,
       })),
     [editor.mixIds, railMixCatalog, mixes],
   );
 
-  const availableRailMixOptions = useMemo(
-    () =>
-      railMixCatalog
-        .filter((mix) => !editor.mixIds.includes(mix.id))
-        .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
-    [railMixCatalog, editor.mixIds],
-  );
+  const availableRailMixOptions = useMemo(() => {
+    const have = new Set(editor.mixIds);
+    const q = pickerQuery.trim().toLowerCase();
+    return railMixCatalog
+      .filter((mix) => !have.has(mix.id))
+      .filter((mix) => {
+        if (!q) return true;
+        return (
+          mix.name.toLowerCase().includes(q) ||
+          mix.description.toLowerCase().includes(q) ||
+          mix.flavorProfiles.some((tag) => tag.toLowerCase().includes(q)) ||
+          mix.flavors.some((tag) => tag.toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  }, [railMixCatalog, editor.mixIds, pickerQuery]);
 
-  const effectiveRailMixCandidateId = availableRailMixOptions.some((mix) => mix.id === railMixCandidateId)
-    ? railMixCandidateId
-    : (availableRailMixOptions[0]?.id ?? '');
+  const locked = Boolean(editor.id) && !editor.editable;
+  const headerEyebrow = editor.id ? 'Редактирование рейла' : 'Новый рейл';
+  const headerTitle = editor.name || (editor.id ? 'Без названия' : 'Новый рейл');
+  const submitLabel = saveStatus === 'loading'
+    ? 'Сохраняем…'
+    : editor.id
+      ? 'Сохранить'
+      : 'Создать';
 
-  const railMixPickerOptions = useMemo(
-    () =>
-      availableRailMixOptions.map((mix) => ({
-        id: mix.id,
-        title: mix.name,
-        subtitle: `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`,
-        keywords: [mix.description, ...mix.flavorProfiles, ...mix.flavors, ...mix.flavorTags],
-      })),
-    [availableRailMixOptions],
-  );
-
-  const railEditorLocked = Boolean(editor.id) && !editor.editable;
-  const railEditorStatusLabel = railEditorLocked
-    ? 'Только просмотр'
-    : editor.active
-      ? 'Активен'
-      : 'Неактивен';
+  const handleClose = () => {
+    onOpenChange(false);
+    onReset();
+    setPickerQuery('');
+  };
 
   return (
     <Sheet
@@ -102,226 +114,285 @@ export const RailEditor = ({
         onOpenChange(next);
         if (!next) {
           onReset();
+          setPickerQuery('');
         }
       }}
     >
-      <SheetContent side="right" className="rails-surface__sheet">
-        <SheetHeader>
-          <SheetTitle>
-            {editor.id ? editor.name || 'Без названия' : 'Новый рейл'}
-          </SheetTitle>
-          <SheetDescription>
-            {editor.id
-              ? 'Редактирование рейла. Состав влияет на гостевую витрину.'
-              : 'Соберите подборку миксов для гостевой витрины.'}
-          </SheetDescription>
-        </SheetHeader>
-        <article className="editor-card ops-editor rails-surface__editor rails-surface__editor--sheet">
-          <div className="entity-card__head entity-card__head--sheet">
-            <span className={railEditorLocked ? 'status-chip status-chip--locked' : 'status-chip'}>{railEditorStatusLabel}</span>
+      <SheetContent
+        side="right"
+        className="rails-surface__sheet rail-drawer"
+        showCloseButton={false}
+      >
+        <header className="rail-drawer__head">
+          <div className="rail-drawer__head-copy">
+            <p className="rail-drawer__eyebrow">{headerEyebrow}</p>
+            <SheetTitle className="rail-drawer__title">{headerTitle}</SheetTitle>
+            {locked && editor.readOnlyReason ? (
+              <p className="rail-drawer__lock">{editor.readOnlyReason}</p>
+            ) : null}
           </div>
+          <div className="rail-drawer__head-meta">
+            <span className="rails-tag" data-tone={editor.type === 'statistical' ? 'info' : editor.type === 'prepared' ? 'warning' : 'accent'}>
+              {formatRailType(editor.type)}
+            </span>
+            {locked ? <span className="rails-tag rails-tag--ghost">только просмотр</span> : null}
+          </div>
+          <button
+            type="button"
+            className="rail-drawer__close"
+            onClick={handleClose}
+            aria-label="Закрыть"
+          >
+            <X size={16} aria-hidden />
+          </button>
+        </header>
 
-          <form className="admin-form" onSubmit={onSubmit}>
-            {editor.id ? (
-              <div className="info-banner rails-surface__banner">
-                Тип рейла: {formatRailType(editor.type)}.
-                {!editor.editable && editor.readOnlyReason ? ` ${editor.readOnlyReason}` : ''}
-              </div>
-            ) : (
-              <div className="info-banner rails-surface__banner">
-                Новый рейл создаётся как мастерская подборка. Тип вручную выбирать не нужно.
-              </div>
-            )}
-
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Название</span>
-                <input
-                  className="text-input"
-                  value={editor.name}
-                  onChange={(event) => setEditor((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Например, Топ по статистике"
-                  disabled={railEditorLocked}
-                />
+        <form className="rail-drawer__form" onSubmit={onSubmit}>
+          <div className="rail-drawer__body">
+            {/* Column 1 — название, подзаголовок, состав */}
+            <section className="rail-drawer__col">
+              <label className="rail-drawer__field">
+                <span className="rail-drawer__label">Название рейла</span>
+                <div className="rail-drawer__input rail-drawer__input--lg">
+                  <input
+                    value={editor.name}
+                    onChange={(event) => setEditor((current) => ({ ...current, name: event.target.value }))}
+                    placeholder="Например, Быстрый старт"
+                    disabled={locked}
+                  />
+                </div>
               </label>
 
-              <div className="field">
-                <span className="field-label">Тип</span>
-                <div className="info-banner">{formatRailType(editor.type)}</div>
-              </div>
-
-              <label className="field field--wide">
-                <span className="field-label">Описание</span>
-                <textarea
-                  className="textarea-input"
-                  value={editor.description}
-                  onChange={(event) => setEditor((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Короткое описание рейла"
-                  rows={3}
-                  disabled={railEditorLocked}
-                />
+              <label className="rail-drawer__field">
+                <span className="rail-drawer__label">Подзаголовок для гостя</span>
+                <div className="rail-drawer__input">
+                  <input
+                    value={editor.description}
+                    onChange={(event) =>
+                      setEditor((current) => ({ ...current, description: event.target.value }))
+                    }
+                    placeholder="Лёгкие и понятные миксы для первого выбора."
+                    disabled={locked}
+                  />
+                </div>
               </label>
 
-              <div className="field field--wide">
-                <span className="field-label">Состав рейла</span>
-                <div className="rail-mix-builder rails-surface__mix-builder">
-                  <div className="rail-mix-builder__toolbar ops-toolbar rails-surface__mix-toolbar">
-                    <SearchableEntitySelect
-                      value={effectiveRailMixCandidateId}
-                      options={railMixPickerOptions}
-                      placeholder="Выберите микс"
-                      searchPlaceholder="Поиск микса по названию, вкусу или описанию"
-                      emptyLabel="Нет доступных миксов."
-                      clearLabel="Очистить выбор"
-                      listAriaLabel="Миксы для состава рейла"
-                      disabled={railEditorLocked || !railMixPickerOptions.length}
-                      onSelect={setRailMixCandidateId}
-                    />
-                    <button
-                      className="secondary-button secondary-button--inline"
-                      type="button"
-                      onClick={() => onAddMix(effectiveRailMixCandidateId)}
-                      disabled={railEditorLocked || !effectiveRailMixCandidateId}
-                    >
-                      Добавить микс
-                    </button>
-                  </div>
+              <div className="rail-drawer__field">
+                <div className="rail-drawer__section-head">
+                  <h3 className="rail-drawer__section-title">
+                    Состав рейла · {editor.mixIds.length}
+                  </h3>
+                  {!locked && selectedRailMixEntries.length > 1 ? (
+                    <span className="rail-drawer__hint">тяни ↕ для порядка</span>
+                  ) : null}
+                </div>
 
-                  <div className="rail-mix-builder__summary ops-surface__summary rails-surface__mix-summary">
-                    <span className="meta-line">В рейле: {editor.mixIds.length}</span>
-                    <span className="meta-line">Доступно для добавления: {availableRailMixOptions.length}</span>
-                  </div>
-
-                  <div className="rail-mix-list ops-table-shell rails-surface__mix-list">
-                    {selectedRailMixEntries.length ? selectedRailMixEntries.map(({ mixId, index, mix }) => (
-                      <article
-                        className={[
-                          'rail-mix-row',
-                          'ops-surface__card',
-                          'rails-surface__mix-row',
-                          dragSourceId === mixId ? 'rails-surface__mix-row--dragging' : '',
-                        ].filter(Boolean).join(' ')}
+                <div className="rail-drawer__mix-list">
+                  {selectedRailMixEntries.length === 0 ? (
+                    <div className="rail-drawer__empty">
+                      {locked
+                        ? 'В рейле нет миксов.'
+                        : 'Добавь миксы из списка справа →'}
+                    </div>
+                  ) : (
+                    selectedRailMixEntries.map(({ mixId, index, mix }) => (
+                      <div
                         key={mixId}
-                        draggable={!railEditorLocked}
-                        onDragStart={(event: DragEvent<HTMLElement>) => {
-                          if (railEditorLocked) return;
+                        className={[
+                          'rail-drawer__mix-row',
+                          dragSourceId === mixId ? 'rail-drawer__mix-row--dragging' : '',
+                        ].filter(Boolean).join(' ')}
+                        draggable={!locked}
+                        onDragStart={(event: DragEvent<HTMLDivElement>) => {
+                          if (locked) return;
                           setDragSourceId(mixId);
                           event.dataTransfer.effectAllowed = 'move';
                         }}
-                        onDragOver={(event: DragEvent<HTMLElement>) => {
-                          if (railEditorLocked || !dragSourceId) return;
+                        onDragOver={(event: DragEvent<HTMLDivElement>) => {
+                          if (locked || !dragSourceId) return;
                           event.preventDefault();
                           event.dataTransfer.dropEffect = 'move';
                         }}
-                        onDrop={(event: DragEvent<HTMLElement>) => {
-                          if (railEditorLocked || !dragSourceId) return;
+                        onDrop={(event: DragEvent<HTMLDivElement>) => {
+                          if (locked || !dragSourceId) return;
                           event.preventDefault();
                           onReorderMixes(dragSourceId, mixId);
                           setDragSourceId(null);
                         }}
                         onDragEnd={() => setDragSourceId(null)}
                       >
-                        <div className="rail-mix-row__order">{index + 1}</div>
-                        <div className="rail-mix-row__content">
-                          <strong>{mix?.name ?? mixId}</strong>
-                          <p className="meta-line">
+                        <span className="rail-drawer__mix-order">{index + 1}</span>
+                        <span className="rail-drawer__mix-grip" aria-hidden>
+                          <GripVertical size={14} />
+                        </span>
+                        <div className="rail-drawer__mix-body">
+                          <div className="rail-drawer__mix-name">{mix?.name ?? mixId}</div>
+                          <div className="rail-drawer__mix-meta">
                             {mix
-                              ? `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`
-                              : 'Микс не найден в актуальном каталоге, но сохранён в составе рейла.'}
-                          </p>
+                              ? mix.description ||
+                                `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)}`
+                              : 'Микс не найден в актуальном каталоге.'}
+                          </div>
                         </div>
-                        <div className="rail-mix-row__actions">
+                        <div className="rail-drawer__mix-actions">
+                          {mix && !mix.available ? (
+                            <span className="rails-tag" data-tone="warning">блокирован</span>
+                          ) : null}
+                          {mix && !mix.guestVisible && mix.available ? (
+                            <span className="rails-tag rails-tag--ghost">скрыт</span>
+                          ) : null}
                           <button
-                            className="secondary-button secondary-button--inline"
                             type="button"
+                            className="rail-drawer__icon-btn"
                             onClick={() => onMoveMix(mixId, 'up')}
-                            disabled={railEditorLocked || index === 0}
+                            disabled={locked || index === 0}
+                            aria-label="Выше"
                           >
-                            Вверх
+                            <ChevronUp size={14} aria-hidden />
                           </button>
                           <button
-                            className="secondary-button secondary-button--inline"
                             type="button"
+                            className="rail-drawer__icon-btn"
                             onClick={() => onMoveMix(mixId, 'down')}
-                            disabled={railEditorLocked || index === selectedRailMixEntries.length - 1}
+                            disabled={locked || index === selectedRailMixEntries.length - 1}
+                            aria-label="Ниже"
                           >
-                            Вниз
+                            <ChevronDown size={14} aria-hidden />
                           </button>
                           <button
-                            className="secondary-button secondary-button--inline"
                             type="button"
+                            className="rail-drawer__icon-btn"
                             onClick={() => onRemoveMix(mixId)}
-                            disabled={railEditorLocked}
+                            disabled={locked}
+                            aria-label="Убрать"
                           >
-                            Убрать
+                            <X size={14} aria-hidden />
                           </button>
                         </div>
-                      </article>
-                    )) : (
-                      <div className="rail-mix-empty ops-empty-state">
-                        <p className="meta-line">Добавьте хотя бы один микс, чтобы собрать рейл и задать порядок показа.</p>
                       </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Column 2 — поиск + добавление */}
+            <section className="rail-drawer__col">
+              <h3 className="rail-drawer__section-title">Добавить миксы</h3>
+              <div className="rail-drawer__input">
+                <Search size={14} aria-hidden />
+                <input
+                  value={pickerQuery}
+                  onChange={(event) => setPickerQuery(event.target.value)}
+                  placeholder="Поиск микса…"
+                  disabled={locked}
+                />
+              </div>
+
+              <div className="rail-drawer__picker">
+                {availableRailMixOptions.length === 0 ? (
+                  <div className="rail-drawer__empty">
+                    {pickerQuery ? 'Ничего не найдено.' : 'Все миксы уже в рейле.'}
+                  </div>
+                ) : (
+                  availableRailMixOptions.map((mix) => (
+                    <button
+                      key={mix.id}
+                      type="button"
+                      className="rail-drawer__picker-row"
+                      onClick={() => !locked && onAddMix(mix.id)}
+                      disabled={locked}
+                    >
+                      <div className="rail-drawer__picker-body">
+                        <div className="rail-drawer__mix-name">{mix.name}</div>
+                        <div className="rail-drawer__mix-meta">
+                          {mix.description || `Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`}
+                        </div>
+                      </div>
+                      <span className="rail-drawer__picker-action" aria-hidden>
+                        <Plus size={14} />
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* Column 3 — preview гостя */}
+            <aside className="rail-drawer__col rail-drawer__col--preview">
+              <h3 className="rail-drawer__section-title">Как увидит гость</h3>
+              <div className="rail-drawer__preview">
+                <div className="rail-drawer__phone">
+                  <h4 className="rail-drawer__preview-title">
+                    {editor.name || 'Название рейла'}
+                  </h4>
+                  {editor.description ? (
+                    <p className="rail-drawer__preview-desc">{editor.description}</p>
+                  ) : null}
+                  <div className="rail-drawer__preview-strip">
+                    {selectedRailMixEntries.length ? (
+                      selectedRailMixEntries.slice(0, 6).map(({ mixId, mix }) => (
+                        <div className="rail-drawer__preview-card" key={mixId}>
+                          <div className="rail-drawer__preview-art" />
+                          <div className="rail-drawer__preview-card-name">
+                            {mix?.name ?? '—'}
+                          </div>
+                          {mix?.description ? (
+                            <div className="rail-drawer__preview-card-desc">{mix.description}</div>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="rail-drawer__preview-empty">
+                        Пока пусто. Добавь миксы — гость увидит здесь.
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
+            </aside>
+          </div>
 
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={editor.active}
-                  onChange={(event) => setEditor((current) => ({ ...current, active: event.target.checked }))}
-                  disabled={railEditorLocked}
-                />
-                <span>Активен в витрине</span>
-              </label>
+          {saveError ? <p className="rail-drawer__error">{saveError}</p> : null}
 
-              <div className="field field--wide rails-surface__guest-preview" aria-hidden="true">
-                <span className="field-label">Как увидит гость</span>
-                <div className="rails-surface__guest-phone">
-                  <div className="rails-surface__guest-rail">
-                    <p className="rails-surface__guest-title">{editor.name || 'Название рейла'}</p>
-                    {editor.description ? (
-                      <p className="rails-surface__guest-subtitle">{editor.description}</p>
-                    ) : null}
-                    <div className="rails-surface__guest-strip">
-                      {selectedRailMixEntries.length ? (
-                        selectedRailMixEntries.slice(0, 3).map(({ mixId, mix }) => (
-                          <div className="rails-surface__guest-card" key={mixId}>
-                            <div className="rails-surface__guest-card-art" />
-                            <p className="rails-surface__guest-card-name">{mix?.name ?? '—'}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="meta-line">Добавьте миксы — гость увидит их здесь.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <footer className="rail-drawer__foot">
+            <div className="rail-drawer__foot-left">
+              <button
+                type="button"
+                className="rail-drawer__toggle"
+                data-on={editor.active}
+                onClick={() =>
+                  !locked && setEditor((current) => ({ ...current, active: !current.active }))
+                }
+                aria-pressed={editor.active}
+                aria-label="Активен"
+                disabled={locked}
+              />
+              <span className="rail-drawer__foot-hint">
+                {editor.active ? 'Активен — гость видит на витрине' : 'Скрыт от гостя'}
+              </span>
             </div>
-
-            {saveError ? <p className="error-text">{saveError}</p> : null}
-
-            <div className="form-actions">
-              {!railEditorLocked ? (
-                <button className="primary-button primary-button--inline" type="submit" disabled={saveStatus === 'loading'}>
-                  {saveStatus === 'loading' ? 'Сохраняем...' : editor.id ? 'Сохранить рейл' : 'Создать рейл'}
+            <div className="rail-drawer__foot-actions">
+              <button
+                type="button"
+                className="rails-btn rails-btn--ghost"
+                onClick={handleClose}
+              >
+                {locked ? 'Закрыть' : 'Отмена'}
+              </button>
+              {!locked ? (
+                <button
+                  type="submit"
+                  className="rails-btn rails-btn--primary"
+                  disabled={saveStatus === 'loading'}
+                >
+                  <Check size={14} aria-hidden />
+                  {submitLabel}
                 </button>
               ) : null}
-              <button
-                className="secondary-button secondary-button--inline"
-                type="button"
-                onClick={() => {
-                  onOpenChange(false);
-                  onReset();
-                }}
-              >
-                Закрыть
-              </button>
             </div>
-          </form>
-        </article>
+          </footer>
+        </form>
       </SheetContent>
     </Sheet>
   );
