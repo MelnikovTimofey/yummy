@@ -210,21 +210,21 @@ p {
 
 .shell {
   min-height: 100vh;
-  padding: 14px 14px 22px;
+  padding: 24px 32px 60px;
 }
 
 .shell--master {
   display: grid;
-  gap: 12px;
+  gap: 24px;
   align-content: start;
 }
 
 .shell--master-workspace {
-  width: min(100%, 1680px);
+  width: min(100%, 1480px);
   margin: 0 auto;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 12px;
+  gap: 24px;
 }
 
 .shell--master-auth {
