@@ -69,17 +69,13 @@ export const MasterTopBar = ({
   };
 
   return (
-    <nav className="master-nav master-nav--workspace" aria-label="Рабочие разделы Мастера">
-      <div className="master-nav__brand" aria-hidden="false">
-        <span className="master-nav__logo" aria-hidden="true">N</span>
-        <span className="master-nav__brand-name">Nomad Master</span>
+    <header className="topbar" aria-label="Рабочие разделы Мастера">
+      <div className="brand">
+        <span className="brand__mark" aria-hidden="true">N</span>
+        <span className="brand__name">Nomad Master</span>
       </div>
 
-      <div
-        className="workspace-tabs workspace-tabs--workspace-bar"
-        role="tablist"
-        aria-label="Рабочие разделы Мастера"
-      >
+      <nav className="nav" role="tablist" aria-label="Рабочие разделы Мастера">
         {workspaceTabs.map((tab) => {
           const TabIcon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -91,7 +87,8 @@ export const MasterTopBar = ({
                 tabRefs.current[tab.id] = node;
               }}
               type="button"
-              className={isActive ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+              className="nav__item"
+              data-active={isActive ? 'true' : 'false'}
               role="tab"
               aria-selected={isActive}
               aria-controls={getWorkspacePanelId(tab.id)}
@@ -99,44 +96,41 @@ export const MasterTopBar = ({
               onClick={() => onTabChange(tab.id)}
               onKeyDown={(event) => onTabKeyDown(event, tab.id)}
             >
-              <span className="workspace-tab__head">
-                <span className="workspace-tab__icon" aria-hidden="true">
-                  <TabIcon size={15} strokeWidth={1.9} />
-                </span>
-                <span className="workspace-tab__copy">
-                  <strong>{tab.label}</strong>
-                </span>
-              </span>
+              <TabIcon className="nav__item-icon" size={14} strokeWidth={1.9} aria-hidden />
+              <span>{tab.label}</span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      <div className="master-nav__meta">
+      <div className="topbar__spacer" />
+
+      <div className="topbar__right">
         <button
           type="button"
-          className="master-nav__cmdk"
+          className="status-pill status-pill--button"
           aria-label="Открыть командную палитру"
           onClick={onOpenCommandPalette}
         >
-          <Search size={14} aria-hidden />
-          <span className="master-nav__cmdk-label">Найти или сделать</span>
-          <kbd className="master-nav__cmdk-kbd">⌘K</kbd>
+          <Search size={12} aria-hidden />
+          <kbd className="kbd">⌘K</kbd>
         </button>
-        <div className="master-nav__user" aria-label="Текущий пользователь">
-          <strong>{userName}</strong>
-          <span>{userRoleLabel}</span>
+
+        <div className="user-chip" aria-label="Текущий пользователь">
+          <span className="user-chip__name">{userName}</span>
+          <span className="user-chip__tag">{userRoleLabel}</span>
         </div>
+
         <button
-          className="secondary-button secondary-button--inline secondary-button--shell"
           type="button"
+          className="topbar__logout"
           onClick={onSignOut}
           aria-label="Выйти"
         >
-          <LogOut size={15} strokeWidth={1.8} />
+          <LogOut size={15} strokeWidth={1.8} aria-hidden />
           <span>Выйти</span>
         </button>
       </div>
-    </nav>
+    </header>
   );
 };
