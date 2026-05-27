@@ -2626,146 +2626,294 @@ p {
   gap: 10px;
 }
 
-.rails-surface__card {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 18px;
-  padding: 24px;
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
+/* =====================================================================
+   Rails list page — структура и токены под mockup Nomad Master · Refactor.
+   Scoped в .rails-page namespace, чтобы не цеплять глобальные .card / .btn.
+   Rail editor (sheet) использует отдельный .rails-surface__* набор ниже.
+   ===================================================================== */
 
-.rails-surface__card::after {
-  display: none;
-}
-
-.rails-surface__card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px -22px rgba(15, 14, 17, 0.65);
-}
-
-.rails-surface__card-tags .chip--tone-info {
-  border: 1px solid rgba(108, 156, 196, 0.32);
-}
-
-.rails-surface__card-tags .chip--tone-warning {
-  border: 1px solid rgba(212, 154, 70, 0.32);
-}
-
-.rails-surface__card-tags .chip--tone-accent {
-  border: 1px solid rgba(149, 61, 39, 0.32);
-}
-
-.rails-surface__card-tags .chip--tone-success {
-  border: 1px solid rgba(53, 119, 74, 0.34);
-}
-
-.rails-surface__card-tags .chip--ghost {
-  border-color: rgba(226, 172, 123, 0.24);
-}
-
-.rails-surface__editor h3 {
-  font-size: clamp(1rem, 1.5vw, 1.28rem);
-}
-
-.rails-surface__card-main {
+.rails-page {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 1 1 auto;
+  gap: 20px;
+  padding: 24px 32px 60px;
+}
+
+.rails-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.rails-page__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
 }
 
-.rails-surface__card-tags {
+.rails-page__eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.rails-page__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-3xl);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.rails-page__subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+
+.rails-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rails-page__notice {
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  margin: 0;
+}
+
+.rails-page__notice--error {
+  color: oklch(0.78 0.14 25);
+}
+
+.rails-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- Buttons ---------------------------------------------------------- */
+
+.rails-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.rails-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+}
+
+.rails-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.rails-btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.rails-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.rails-btn--ghost:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+/* --- Tags ------------------------------------------------------------- */
+
+.rails-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r-xs);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.rails-tag[data-tone="info"] {
+  background: var(--info-soft);
+  border-color: oklch(0.72 0.1 230 / 0.4);
+  color: var(--info);
+}
+
+.rails-tag[data-tone="success"] {
+  background: var(--success-soft);
+  border-color: oklch(0.75 0.13 155 / 0.4);
+  color: var(--success);
+}
+
+.rails-tag[data-tone="warning"] {
+  background: var(--warning-soft);
+  border-color: oklch(0.82 0.13 75 / 0.4);
+  color: var(--warning);
+}
+
+.rails-tag[data-tone="accent"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.rails-tag--ghost {
+  background: transparent;
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+
+/* --- Card ------------------------------------------------------------- */
+
+.rails-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+}
+
+.rails-card__main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rails-card__tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
-.rails-surface__card-kicker {
+.rails-card__kicker {
   margin: 0;
 }
 
-.rails-surface__card-name {
-  font-family: var(--font-display);
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
+.rails-card__name {
+  margin: 2px 0 4px;
+  font-family: var(--font-serif);
+  font-size: 22px;
   font-weight: 500;
-  line-height: 1.1;
-  margin: 2px 0 0;
+  line-height: 1.15;
+  color: var(--text-primary);
 }
 
-.rails-surface__card-description {
-  color: var(--nomad-ink-soft);
-  font-size: 0.95rem;
-  line-height: 1.45;
-  margin: 0 0 6px;
+.rails-card__description {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  line-height: 1.5;
 }
 
-.rails-surface__mix-tokens {
+.rails-card__mixes {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 4px 0 0;
+  gap: 4px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.rails-surface__mix-token {
+.rails-card__mix {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 26px;
   padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.rails-card__mix-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: rgba(226, 172, 123, 0.06);
-  border: 1px solid rgba(226, 172, 123, 0.14);
-  font-size: 0.8rem;
-  color: var(--nomad-primary-2);
-}
-
-.rails-surface__mix-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
-.rails-surface__mix-dot--active {
-  background: #4f9c69;
-  box-shadow: 0 0 0 3px rgba(79, 156, 105, 0.18);
+.rails-card__mix-dot--active {
+  background: var(--success);
 }
 
-.rails-surface__mix-dot--hidden {
-  background: #4f9c69;
-  box-shadow: 0 0 0 3px rgba(79, 156, 105, 0.18);
-  opacity: 0.45;
+.rails-card__mix-dot--hidden {
+  background: var(--text-faint, oklch(0.48 0.014 45));
 }
 
-.rails-surface__mix-token-name {
+.rails-card__mix-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  max-width: 220px;
 }
 
-.rails-surface__card-aside {
+.rails-card__aside {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
-  min-width: 120px;
 }
 
-.rails-surface__mix-count {
-  font-size: 0.85rem;
-  color: var(--nomad-ink-soft);
+.rails-card__count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
-.rails-surface__card-action {
-  white-space: nowrap;
+@media (max-width: 720px) {
+  .rails-page__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rails-card {
+    flex-direction: column;
+  }
+
+  .rails-card__aside {
+    align-items: flex-start;
+  }
 }
 
 .rails-surface__editor {

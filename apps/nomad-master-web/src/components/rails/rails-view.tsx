@@ -1,7 +1,6 @@
 import { Eye, Pencil, Plus } from 'lucide-react';
 import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
-import { MasterPageHeader } from '@/components/shell/master-page-header';
 
 const AROMA_WEB_URL = 'http://localhost:5174';
 
@@ -9,10 +8,12 @@ const openGuestShowcase = () => {
   window.open(AROMA_WEB_URL, '_blank', 'noopener,noreferrer');
 };
 
-const railTypeChipTone: Record<RailType, string> = {
-  statistical: 'chip--tone-info',
-  prepared: 'chip--tone-warning',
-  curated: 'chip--tone-accent',
+type TagTone = 'info' | 'warning' | 'accent';
+
+const railTypeTone: Record<RailType, TagTone> = {
+  statistical: 'info',
+  prepared: 'warning',
+  curated: 'accent',
 };
 
 const pluralizeMixCount = (count: number) => {
@@ -67,108 +68,105 @@ export const RailsView = ({
   railMixCatalog,
   railsStatus,
   railsError,
-  activeEditorId,
   onCreateRail,
   onOpenRail,
 }: RailsViewProps) => (
-  <section className="card rails-surface">
-    <MasterPageHeader
-      eyebrow="МЕНЕДЖЕР РЕЙЛОВ"
-      title="Рейлы Nomad"
-      subtitle="Состав и порядок подборок для гостевой витрины."
-      actions={
-        <>
-          <button
-            className="secondary-button secondary-button--inline"
-            type="button"
-            onClick={openGuestShowcase}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <Eye size={14} aria-hidden />
-            Витрина гостя
-          </button>
-          <button
-            className="primary-button primary-button--inline"
-            type="button"
-            onClick={onCreateRail}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <Plus size={14} aria-hidden />
-            Новый рейл
-          </button>
-        </>
-      }
-    />
+  <section className="rails-page">
+    <header className="rails-page__header">
+      <div className="rails-page__copy">
+        <p className="rails-page__eyebrow">Менеджер рейлов</p>
+        <h1 className="rails-page__title">Рейлы Nomad</h1>
+        <p className="rails-page__subtitle">
+          Состав и порядок подборок для гостевой витрины.
+        </p>
+      </div>
+      <div className="rails-page__actions">
+        <button
+          type="button"
+          className="rails-btn rails-btn--ghost"
+          onClick={openGuestShowcase}
+        >
+          <Eye size={14} aria-hidden />
+          Витрина гостя
+        </button>
+        <button
+          type="button"
+          className="rails-btn rails-btn--primary"
+          onClick={onCreateRail}
+        >
+          <Plus size={14} aria-hidden />
+          Новый рейл
+        </button>
+      </div>
+    </header>
 
-    {railsStatus === 'loading' ? <p className="meta-line">Загружаем рейлы...</p> : null}
-    {railsError ? <p className="error-text">{railsError}</p> : null}
+    {railsStatus === 'loading' ? (
+      <p className="rails-page__notice">Загружаем рейлы...</p>
+    ) : null}
+    {railsError ? <p className="rails-page__notice rails-page__notice--error">{railsError}</p> : null}
 
-    <div className="manager-layout ops-management-grid rails-surface__grid rails-surface__grid--single">
-      <aside className="entity-list rails-surface__list">
-        {rails.map((rail) => {
-          const mixTokens = resolveRailMixTokens(rail, railMixCatalog);
-          return (
-            <article
-              className={[
-                'entity-card',
-                'ops-surface__card',
-                'rails-surface__card',
-                activeEditorId === rail.id ? 'entity-card--active' : '',
-                rail.editable ? '' : 'entity-card--muted',
-              ].filter(Boolean).join(' ')}
-              key={rail.id}
-            >
-              <div className="rails-surface__card-main">
-                <div className="rails-surface__card-tags">
-                  <span className="entity-kicker rails-surface__card-kicker">Рейл</span>
-                  <span className={`chip ${railTypeChipTone[rail.type]}`}>{formatRailType(rail.type)}</span>
-                  {!rail.editable ? <span className="chip chip--ghost">только просмотр</span> : null}
-                  {rail.active ? <span className="chip chip--tone-success">активен</span> : null}
-                </div>
-                <h3 className="rails-surface__card-name">{rail.name}</h3>
-                {rail.description ? (
-                  <p className="rails-surface__card-description">{rail.description}</p>
-                ) : null}
-                {mixTokens.length ? (
-                  <ul className="rails-surface__mix-tokens">
-                    {mixTokens.map((token) => (
-                      <li className="rails-surface__mix-token" key={token.id}>
-                        <span
-                          className={`rails-surface__mix-dot rails-surface__mix-dot--${token.state}`}
-                          aria-hidden="true"
-                        />
-                        <span className="rails-surface__mix-token-name">{token.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="meta-line">Миксы не заданы</p>
-                )}
-              </div>
-              <div className="rails-surface__card-aside">
-                <span className="rails-surface__mix-count">
-                  {rail.mixIds.length} {pluralizeMixCount(rail.mixIds.length)}
+    <div className="rails-page__list">
+      {rails.map((rail) => {
+        const tokens = resolveRailMixTokens(rail, railMixCatalog);
+        return (
+          <article className="rails-card" key={rail.id}>
+            <div className="rails-card__main">
+              <div className="rails-card__tags">
+                <span className="rails-page__eyebrow rails-card__kicker">Рейл</span>
+                <span className="rails-tag" data-tone={railTypeTone[rail.type]}>
+                  {formatRailType(rail.type)}
                 </span>
-                <button
-                  className="secondary-button secondary-button--inline rails-surface__card-action"
-                  type="button"
-                  onClick={() => onOpenRail(rail)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  {rail.editable ? (
-                    <Pencil size={14} aria-hidden />
-                  ) : (
-                    <Eye size={14} aria-hidden />
-                  )}
-                  {rail.editable ? 'Редактировать' : 'Просмотр'}
-                </button>
+                {!rail.editable ? (
+                  <span className="rails-tag rails-tag--ghost">только просмотр</span>
+                ) : null}
+                {rail.active ? (
+                  <span className="rails-tag" data-tone="success">активен</span>
+                ) : null}
               </div>
-            </article>
-          );
-        })}
+              <h3 className="rails-card__name">{rail.name}</h3>
+              {rail.description ? (
+                <p className="rails-card__description">{rail.description}</p>
+              ) : null}
+              {tokens.length ? (
+                <ul className="rails-card__mixes">
+                  {tokens.map((token) => (
+                    <li className="rails-card__mix" key={token.id}>
+                      <span
+                        className={`rails-card__mix-dot rails-card__mix-dot--${token.state}`}
+                        aria-hidden="true"
+                      />
+                      <span className="rails-card__mix-name">{token.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rails-page__notice">Миксы не заданы</p>
+              )}
+            </div>
+            <aside className="rails-card__aside">
+              <div className="rails-card__count">
+                {rail.mixIds.length} {pluralizeMixCount(rail.mixIds.length)}
+              </div>
+              <button
+                type="button"
+                className="rails-btn"
+                onClick={() => onOpenRail(rail)}
+              >
+                {rail.editable ? (
+                  <Pencil size={14} aria-hidden />
+                ) : (
+                  <Eye size={14} aria-hidden />
+                )}
+                {rail.editable ? 'Редактировать' : 'Просмотр'}
+              </button>
+            </aside>
+          </article>
+        );
+      })}
 
-        {!rails.length && railsStatus !== 'loading' ? <p className="meta-line">Пока нет рейлов.</p> : null}
-      </aside>
+      {!rails.length && railsStatus !== 'loading' ? (
+        <p className="rails-page__notice">Пока нет рейлов.</p>
+      ) : null}
     </div>
   </section>
 );
