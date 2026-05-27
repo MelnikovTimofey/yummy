@@ -3889,8 +3889,8 @@ p {
 
 /* =====================================================================
    Tobaccos page (Inventory list) — обёртка без .card, page padding
-   как у dashboard/rails. Внутренняя таблица оставлена как есть (большой
-   custom-функционал: brand-chips, batch-bar, multi-select).
+   как у dashboard/rails. Внутренняя таблица — в единой .tobaccos-list
+   обёртке под mockup _standalone_ § TobaccosList.
    ===================================================================== */
 
 .tobaccos-page {
@@ -3901,6 +3901,244 @@ p {
   max-width: 1480px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* --- .tobaccos-list: единый контейнер (toolbar + brand + table) ------- */
+
+.tobaccos-list {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tobaccos-list__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.tobaccos-list__search {
+  flex: 1 1 280px;
+  min-width: 220px;
+  background: transparent;
+  border: 0;
+  height: 30px;
+  padding: 0 4px;
+  box-shadow: none;
+}
+
+.tobaccos-list__search:focus-within {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.tobaccos-list__filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tobaccos-list__sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+}
+
+.tobaccos-list__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.tobaccos-list__sort > svg {
+  flex-shrink: 0;
+}
+
+.tobaccos-list__sort select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  padding-right: 4px;
+}
+
+.tobaccos-list__sort select:hover {
+  color: var(--text-primary);
+}
+
+.tobaccos-list__brands {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tobaccos-list__brands-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-right: 4px;
+}
+
+/* --- Filter chip (toolbar + brand pills) ----------------------------- */
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.filter-chip:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.filter-chip--active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.filter-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-chip--active .filter-chip__count {
+  background: oklch(0 0 0 / 0.18);
+  color: var(--accent);
+}
+
+/* --- Table inside .tobaccos-list: нейтральная палитра ----------------- */
+
+.tobaccos-list .inventory-table-shell,
+.tobaccos-list .ops-table-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow-x: auto;
+}
+
+.tobaccos-list .inventory-table {
+  width: 100%;
+  min-width: 1080px;
+}
+
+.tobaccos-list .inventory-table thead th {
+  background: oklch(0.18 0.012 45);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tobaccos-list .inventory-table th,
+.tobaccos-list .inventory-table td {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tobaccos-list .inventory-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tobaccos-list .inventory-table tbody tr:hover {
+  background: var(--bg-elevated);
+}
+
+.tobaccos-list .inventory-table tbody tr[data-active='true'] {
+  background: var(--accent-soft);
+}
+
+.tobaccos-list .inventory-table__empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* --- Доп. фильтры details — под мокап (внутри .tobaccos-list) -------- */
+
+.tobaccos-list .inventory-extra-filters {
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.tobaccos-list .inventory-extra-filters__trigger {
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+}
+
+.tobaccos-list .inventory-extra-filters__trigger:hover {
+  color: var(--text-primary);
+}
+
+.tobaccos-list .inventory-extra-filters__count {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.tobaccos-list .inventory-filter-groups {
+  padding: 8px 12px 12px;
+  background: transparent;
+  border: 0;
+}
+
+/* --- Batch bar inside .tobaccos-list -------------------------------- */
+
+.tobaccos-list .inventory-batch-bar {
+  background: var(--accent-soft);
+  border-top: 1px solid var(--accent-border);
+  border-radius: 0;
+  padding: 10px 12px;
 }
 
 /* Mixes page — обёртка без .card, padding/header/stats как у tobaccos. */

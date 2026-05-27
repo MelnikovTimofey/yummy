@@ -1,12 +1,11 @@
 import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { Plus } from 'lucide-react';
+import { ChevronDown, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterSortPill } from '@/components/shell/master-sort-pill';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import {
   buildSortPillOptions,
@@ -827,74 +826,85 @@ export const InventoryView = ({
         ]}
       />
 
-      <div className="master-toolbar inventory-toolbar inventory-toolbar--row ops-toolbar">
-        <label className="inventory-search">
-          <span className="inventory-toolbar__label">Поиск</span>
-          <input
-            type="search"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Табак, производитель, вкус или зависимый микс"
-          />
-        </label>
+      <div className="tobaccos-list">
+        <div className="tobaccos-list__toolbar">
+          <div className="input tobaccos-list__search">
+            <Search size={14} aria-hidden />
+            <input
+              type="search"
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Название, бренд, вкус…"
+            />
+          </div>
 
-        <div className="inventory-status-chips" role="group" aria-label="Фильтр по наличию">
-          {stockFilterTabs.map((tab) => {
-            const active = filters.stock === tab.value;
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                className={active ? 'chip-pill chip-pill--active' : 'chip-pill'}
-                aria-pressed={active}
-                aria-label={tab.ariaLabel}
-                onClick={() => onStockChange(tab.value)}
-              >
-                <span className="chip-pill__label">{tab.label}</span>
-                <span className="chip-pill__count">{formatMetricValue(tab.count)}</span>
-              </button>
-            );
-          })}
+          <div className="tobaccos-list__filters" role="group" aria-label="Фильтр по наличию">
+            {stockFilterTabs.map((tab) => {
+              const active = filters.stock === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
+                  aria-pressed={active}
+                  aria-label={tab.ariaLabel}
+                  onClick={() => onStockChange(tab.value)}
+                >
+                  <span>{tab.label}</span>
+                  <span className="filter-chip__count">{formatMetricValue(tab.count)}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <span className="tobaccos-list__sep" aria-hidden />
+
+          <label className="tobaccos-list__sort">
+            <ChevronDown size={12} aria-hidden />
+            <select
+              aria-label="Сортировка инвентаря"
+              value={composeSortKey(sort.field, sort.direction)}
+              onChange={(event) => {
+                const { field, direction } = parseSortKey<InventorySortField>(event.target.value);
+                onSortFieldChange(field);
+                onSortDirectionChange(direction as InventorySortDirection);
+              }}
+            >
+              {buildSortPillOptions(inventorySortFieldOptions, inventorySortDirectionOptions).map(
+                (opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
         </div>
 
-        <MasterSortPill
-          ariaLabel="Сортировка инвентаря"
-          value={composeSortKey(sort.field, sort.direction)}
-          options={buildSortPillOptions(inventorySortFieldOptions, inventorySortDirectionOptions)}
-          onChange={(key) => {
-            const { field, direction } = parseSortKey<InventorySortField>(key);
-            onSortFieldChange(field);
-            onSortDirectionChange(direction as InventorySortDirection);
-          }}
-        />
-      </div>
-
-      {brandChips.length ? (
-        <div className="inventory-brand-row" role="group" aria-label="Фильтр по бренду">
-          <span className="inventory-brand-row__eyebrow">Бренд</span>
-          <div className="inventory-brand-row__scroller">
-            {brandChips.map(({ name, count, short }) => {
+        {brandChips.length ? (
+          <div className="tobaccos-list__brands" role="group" aria-label="Фильтр по бренду">
+            <span className="tobaccos-list__brands-label">Бренд</span>
+            {brandChips.map(({ name, count }) => {
               const active = filters.manufacturers.includes(name);
               return (
                 <button
                   key={`brand-chip:${name}`}
                   type="button"
-                  className={`brand-chip${active ? ' brand-chip--active' : ''}`}
+                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
                   aria-pressed={active}
                   title={brandChipsTooltip}
                   onClick={() => onToggleFilterValue('manufacturers', name)}
                 >
-                  <span className="brand-chip__avatar" aria-hidden="true">
-                    {short}
-                  </span>
-                  <span className="brand-chip__name">{name}</span>
-                  <span className="brand-chip__count">{formatMetricValue(count)}</span>
+                  <span>{name}</span>
+                  <span className="filter-chip__count">{formatMetricValue(count)}</span>
                 </button>
               );
             })}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+
+        {/* ↓ table + auxiliary blocks live inside .tobaccos-list; portal'ные
+             Sheet'ы (editor, detail) — после закрытия `.tobaccos-list`. */}
 
       <Sheet
         open={editorOpen}
@@ -1429,6 +1439,7 @@ export const InventoryView = ({
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       <ListPagination
