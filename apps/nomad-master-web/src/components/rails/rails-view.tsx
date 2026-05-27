@@ -83,7 +83,8 @@ export const RailsView = ({
       <div className="rails-page__actions">
         <button
           type="button"
-          className="rails-btn rails-btn--ghost"
+          className="btn"
+          data-variant="ghost"
           onClick={openGuestShowcase}
         >
           <Eye size={14} aria-hidden />
@@ -91,7 +92,8 @@ export const RailsView = ({
         </button>
         <button
           type="button"
-          className="rails-btn rails-btn--primary"
+          className="btn"
+          data-variant="primary"
           onClick={onCreateRail}
         >
           <Plus size={14} aria-hidden />
@@ -113,14 +115,14 @@ export const RailsView = ({
             <div className="rails-card__main">
               <div className="rails-card__tags">
                 <span className="rails-page__eyebrow rails-card__kicker">Рейл</span>
-                <span className="rails-tag" data-tone={railTypeTone[rail.type]}>
+                <span className="tag" data-tone={railTypeTone[rail.type]}>
                   {formatRailType(rail.type)}
                 </span>
                 {!rail.editable ? (
-                  <span className="rails-tag rails-tag--ghost">только просмотр</span>
+                  <span className="tag tag--ghost">только просмотр</span>
                 ) : null}
                 {rail.active ? (
-                  <span className="rails-tag" data-tone="success">активен</span>
+                  <span className="tag" data-tone="success">активен</span>
                 ) : null}
               </div>
               <h3 className="rails-card__name">{rail.name}</h3>
@@ -149,7 +151,7 @@ export const RailsView = ({
               </div>
               <button
                 type="button"
-                className="rails-btn"
+                className="btn"
                 onClick={() => onOpenRail(rail)}
               >
                 {rail.editable ? (

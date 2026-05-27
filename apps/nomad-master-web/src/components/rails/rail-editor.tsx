@@ -123,7 +123,7 @@ export const RailEditor = ({
         className="rails-surface__sheet rail-drawer"
         showCloseButton={false}
       >
-        <header className="rail-drawer__head">
+        <header className="drawer__head rail-drawer__head">
           <div className="rail-drawer__head-copy">
             <p className="rail-drawer__eyebrow">{headerEyebrow}</p>
             <SheetTitle className="rail-drawer__title">{headerTitle}</SheetTitle>
@@ -132,10 +132,10 @@ export const RailEditor = ({
             ) : null}
           </div>
           <div className="rail-drawer__head-meta">
-            <span className="rails-tag" data-tone={editor.type === 'statistical' ? 'info' : editor.type === 'prepared' ? 'warning' : 'accent'}>
+            <span className="tag" data-tone={editor.type === 'statistical' ? 'info' : editor.type === 'prepared' ? 'warning' : 'accent'}>
               {formatRailType(editor.type)}
             </span>
-            {locked ? <span className="rails-tag rails-tag--ghost">только просмотр</span> : null}
+            {locked ? <span className="tag tag--ghost">только просмотр</span> : null}
           </div>
           <button
             type="button"
@@ -148,12 +148,12 @@ export const RailEditor = ({
         </header>
 
         <form className="rail-drawer__form" onSubmit={onSubmit}>
-          <div className="rail-drawer__body">
+          <div className="drawer__body rail-drawer__body">
             {/* Column 1 — название, подзаголовок, состав */}
             <section className="rail-drawer__col">
               <label className="rail-drawer__field">
                 <span className="rail-drawer__label">Название рейла</span>
-                <div className="rail-drawer__input rail-drawer__input--lg">
+                <div className="input input--lg">
                   <input
                     value={editor.name}
                     onChange={(event) => setEditor((current) => ({ ...current, name: event.target.value }))}
@@ -165,7 +165,7 @@ export const RailEditor = ({
 
               <label className="rail-drawer__field">
                 <span className="rail-drawer__label">Подзаголовок для гостя</span>
-                <div className="rail-drawer__input">
+                <div className="input">
                   <input
                     value={editor.description}
                     onChange={(event) =>
@@ -189,7 +189,7 @@ export const RailEditor = ({
 
                 <div className="rail-drawer__mix-list">
                   {selectedRailMixEntries.length === 0 ? (
-                    <div className="rail-drawer__empty">
+                    <div className="empty">
                       {locked
                         ? 'В рейле нет миксов.'
                         : 'Добавь миксы из списка справа →'}
@@ -236,14 +236,14 @@ export const RailEditor = ({
                         </div>
                         <div className="rail-drawer__mix-actions">
                           {mix && !mix.available ? (
-                            <span className="rails-tag" data-tone="warning">блокирован</span>
+                            <span className="tag" data-tone="warning">блокирован</span>
                           ) : null}
                           {mix && !mix.guestVisible && mix.available ? (
-                            <span className="rails-tag rails-tag--ghost">скрыт</span>
+                            <span className="tag tag--ghost">скрыт</span>
                           ) : null}
                           <button
                             type="button"
-                            className="rail-drawer__icon-btn"
+                            className="icon-btn"
                             onClick={() => onMoveMix(mixId, 'up')}
                             disabled={locked || index === 0}
                             aria-label="Выше"
@@ -252,7 +252,7 @@ export const RailEditor = ({
                           </button>
                           <button
                             type="button"
-                            className="rail-drawer__icon-btn"
+                            className="icon-btn"
                             onClick={() => onMoveMix(mixId, 'down')}
                             disabled={locked || index === selectedRailMixEntries.length - 1}
                             aria-label="Ниже"
@@ -261,7 +261,7 @@ export const RailEditor = ({
                           </button>
                           <button
                             type="button"
-                            className="rail-drawer__icon-btn"
+                            className="icon-btn"
                             onClick={() => onRemoveMix(mixId)}
                             disabled={locked}
                             aria-label="Убрать"
@@ -279,7 +279,7 @@ export const RailEditor = ({
             {/* Column 2 — поиск + добавление */}
             <section className="rail-drawer__col">
               <h3 className="rail-drawer__section-title">Добавить миксы</h3>
-              <div className="rail-drawer__input">
+              <div className="input">
                 <Search size={14} aria-hidden />
                 <input
                   value={pickerQuery}
@@ -291,7 +291,7 @@ export const RailEditor = ({
 
               <div className="rail-drawer__picker">
                 {availableRailMixOptions.length === 0 ? (
-                  <div className="rail-drawer__empty">
+                  <div className="empty">
                     {pickerQuery ? 'Ничего не найдено.' : 'Все миксы уже в рейле.'}
                   </div>
                 ) : (
@@ -355,19 +355,23 @@ export const RailEditor = ({
 
           {saveError ? <p className="rail-drawer__error">{saveError}</p> : null}
 
-          <footer className="rail-drawer__foot">
+          <footer className="drawer__foot rail-drawer__foot">
             <div className="rail-drawer__foot-left">
               <button
                 type="button"
-                className="rail-drawer__toggle"
-                data-on={editor.active}
+                role="switch"
+                aria-checked={editor.active}
+                className={`toggle ${editor.active ? 'toggle--on' : 'toggle--off'}`}
                 onClick={() =>
                   !locked && setEditor((current) => ({ ...current, active: !current.active }))
                 }
-                aria-pressed={editor.active}
                 aria-label="Активен"
                 disabled={locked}
-              />
+              >
+                <span className="toggle__track" aria-hidden="true">
+                  <span className="toggle__thumb" />
+                </span>
+              </button>
               <span className="rail-drawer__foot-hint">
                 {editor.active ? 'Активен — гость видит на витрине' : 'Скрыт от гостя'}
               </span>
@@ -375,7 +379,8 @@ export const RailEditor = ({
             <div className="rail-drawer__foot-actions">
               <button
                 type="button"
-                className="rails-btn rails-btn--ghost"
+                className="btn"
+                data-variant="ghost"
                 onClick={handleClose}
               >
                 {locked ? 'Закрыть' : 'Отмена'}
@@ -383,7 +388,8 @@ export const RailEditor = ({
               {!locked ? (
                 <button
                   type="submit"
-                  className="rails-btn rails-btn--primary"
+                  className="btn"
+                  data-variant="primary"
                   disabled={saveStatus === 'loading'}
                 >
                   <Check size={14} aria-hidden />
