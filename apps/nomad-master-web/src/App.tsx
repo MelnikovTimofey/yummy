@@ -25,7 +25,6 @@ import {
   type WorkspaceTab,
 } from '@/components/shell/workspace-tabs';
 import { useCmdK } from '@/hooks/use-cmdk';
-import { useDensity } from '@/hooks/use-density';
 import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select';
 import {
   AuditEventRecord,
@@ -138,7 +137,6 @@ export const App = () => {
   const [token, setToken] = useState(() => readStoredToken());
   const [user, setUser] = useState<StaffUser | null>(null);
   const cmdK = useCmdK(user !== null);
-  const { density, setDensity } = useDensity();
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
 
   const onAfterAccessSubmit = () => setActiveTab('access');
@@ -997,8 +995,6 @@ export const App = () => {
           userName={user.name}
           userRoleLabel={formatRoleLabel(user.role)}
           onSignOut={onSignOut}
-          density={density}
-          onDensityChange={setDensity}
           onOpenCommandPalette={() => cmdK.setOpen(true)}
         />
 

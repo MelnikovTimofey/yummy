@@ -1,6 +1,5 @@
 import { KeyboardEvent, useRef } from 'react';
-import { LogOut, Rows2, Rows3, Rows4, Search, type LucideIcon } from 'lucide-react';
-import type { Density } from '@/hooks/use-density';
+import { LogOut, Search } from 'lucide-react';
 import {
   getWorkspacePanelId,
   getWorkspaceTabId,
@@ -14,16 +13,8 @@ type MasterTopBarProps = {
   userName: string;
   userRoleLabel: string;
   onSignOut: () => void;
-  density: Density;
-  onDensityChange: (next: Density) => void;
   onOpenCommandPalette: () => void;
 };
-
-const densityOptions: Array<{ value: Density; icon: LucideIcon; title: string }> = [
-  { value: 'compact', icon: Rows3, title: 'Компактная плотность (32px на строку) — режим «зал кипит»' },
-  { value: 'default', icon: Rows4, title: 'Обычная плотность (36px на строку)' },
-  { value: 'cozy', icon: Rows2, title: 'Просторная плотность (48px на строку)' },
-];
 
 export const MasterTopBar = ({
   activeTab,
@@ -31,8 +22,6 @@ export const MasterTopBar = ({
   userName,
   userRoleLabel,
   onSignOut,
-  density,
-  onDensityChange,
   onOpenCommandPalette,
 }: MasterTopBarProps) => {
   const tabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
@@ -124,32 +113,6 @@ export const MasterTopBar = ({
       </div>
 
       <div className="master-nav__meta">
-        <div
-          className="master-density-toggle"
-          role="group"
-          aria-label="Плотность списков"
-        >
-          {densityOptions.map((option) => {
-            const DensityIcon = option.icon;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={
-                  density === option.value
-                    ? 'master-density-toggle__button master-density-toggle__button--active'
-                    : 'master-density-toggle__button'
-                }
-                onClick={() => onDensityChange(option.value)}
-                title={option.title}
-                aria-label={option.title}
-                aria-pressed={density === option.value}
-              >
-                <DensityIcon size={14} strokeWidth={1.8} aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
         <button
           type="button"
           className="master-nav__cmdk"
