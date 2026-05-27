@@ -7729,7 +7729,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 24px 32px 60px;
+  padding: 5px 12px 60px;
   max-width: 1480px;
   margin: 0 auto;
   width: 100%;
