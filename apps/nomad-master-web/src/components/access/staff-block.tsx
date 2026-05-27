@@ -174,20 +174,31 @@ export const StaffBlock = ({
           {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
 
           <div className="form-actions">
-            <button className="primary-button primary-button--inline" type="submit" disabled={staffAccountSaveStatus === 'loading'}>
+            <button
+              type="submit"
+              className="btn"
+              data-variant="primary"
+              disabled={staffAccountSaveStatus === 'loading'}
+            >
               {staffAccountSaveStatus === 'loading'
                 ? 'Сохраняем...'
                 : staffAccountEditor.id
                   ? 'Сохранить сотрудника'
                   : 'Создать сотрудника'}
             </button>
-            <button className="secondary-button secondary-button--inline" type="button" onClick={onResetStaffAccountEditor}>
+            <button
+              type="button"
+              className="btn"
+              data-variant="ghost"
+              onClick={onResetStaffAccountEditor}
+            >
               Сбросить форму
             </button>
             {staffAccountEditor.id ? (
               <button
-                className="secondary-button secondary-button--inline secondary-button--danger"
                 type="button"
+                className="btn"
+                data-variant="danger"
                 onClick={() =>
                   void onDeleteStaffAccount({
                     id: staffAccountEditor.id,

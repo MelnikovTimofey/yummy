@@ -1,6 +1,5 @@
 import { Flame, Star, TriangleAlert } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow, type MasterStatTile } from '@/components/shell/master-stats-row';
 import { DashboardSummary, formatMetricValue } from '@/contracts';
@@ -38,24 +37,24 @@ const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => 
 
   return [
     {
-      label: 'В НАЛИЧИИ',
+      label: 'В наличии',
       value: formatMetricValue(inStock),
       hint: `из ${formatMetricValue(totalTobaccos)} табаков`,
     },
     {
-      label: 'ВИДЕН ГОСТЮ',
+      label: 'Виден гостю',
       value: formatMetricValue(guestVisible),
       hint: 'миксов на витрине',
       tone: 'success',
     },
     {
-      label: 'ЗАБЛОКИРОВАНО',
+      label: 'Заблокировано',
       value: formatMetricValue(blocked),
       hint: 'режет наличие',
       tone: 'warning',
     },
     {
-      label: 'АКТИВНЫХ РЕЙЛОВ',
+      label: 'Активных рейлов',
       value: formatMetricValue(activeRails),
       hint: 'в гостевой витрине',
     },
@@ -80,7 +79,7 @@ export function DashboardView({
           : 'Ожидает';
 
   return (
-    <section className="dashboard-shift">
+    <section className="dashboard-page">
       <MasterPageHeader
         eyebrow={formatWindowEyebrow(summary?.window.startsAt ?? '', summary?.window.endsAt ?? '')}
         title="Дашборд смены"
@@ -89,35 +88,35 @@ export function DashboardView({
       />
 
       {summaryError ? (
-        <div className="dashboard-shift__error" role="status">
+        <div className="dashboard-page__error" role="status">
           {summaryError}
         </div>
       ) : null}
 
       <MasterStatsRow tiles={buildStatsTiles(summary)} />
 
-      <div className="dashboard-shift__columns">
-        <article className="dashboard-shift__card dashboard-shift__card--demand">
-          <p className="eyebrow">Спрос гостей</p>
-          <h2 className="dashboard-shift__heading">Топ миксов недели</h2>
+      <div className="dashboard-page__columns">
+        <article className="dashboard-page__card">
+          <p className="dashboard-page__eyebrow">Спрос гостей</p>
+          <h3 className="dashboard-page__heading">Топ миксов недели</h3>
           {topMixes.length ? (
-            <ol className="dashboard-shift__list">
+            <ol className="dashboard-page__rows">
               {topMixes.map((mix, index) => (
-                <li key={mix.mixId} className="dashboard-shift__row">
-                  <span className="dashboard-shift__rank">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="dashboard-shift__row-copy">
-                    <p className="dashboard-shift__row-name">{mix.name}</p>
-                    <p className="dashboard-shift__row-meta">
+                <li key={mix.mixId} className="dashboard-page__row">
+                  <span className="dashboard-page__rank">{String(index + 1).padStart(2, '0')}</span>
+                  <div className="dashboard-page__row-copy">
+                    <div className="dashboard-page__row-name">{mix.name}</div>
+                    <div className="dashboard-page__row-meta cell-truncate">
                       Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}
-                    </p>
+                    </div>
                   </div>
-                  <div className="dashboard-shift__row-metrics" aria-label="Спрос и рейтинг">
-                    <span className="dashboard-shift__metric">
-                      <Flame size={12} aria-hidden="true" />
+                  <div className="dashboard-page__row-metrics" aria-label="Спрос и рейтинг">
+                    <span className="dashboard-page__metric">
+                      <Flame size={11} aria-hidden="true" />
                       {formatMetricValue(mix.popularity)}
                     </span>
-                    <span className="dashboard-shift__metric">
-                      <Star size={12} aria-hidden="true" />
+                    <span className="dashboard-page__metric">
+                      <Star size={11} aria-hidden="true" />
                       {mix.avgRating ? mix.avgRating.toFixed(1) : '—'}
                     </span>
                   </div>
@@ -125,34 +124,43 @@ export function DashboardView({
               ))}
             </ol>
           ) : (
-            <p className="dashboard-shift__empty">Пока нет данных по спросу.</p>
+            <p className="empty">Пока нет данных по спросу.</p>
           )}
         </article>
 
-        <aside className="dashboard-shift__card dashboard-shift__card--signals">
-          <p className="eyebrow">Внимание</p>
-          <h2 className="dashboard-shift__heading">Сигналы для команды</h2>
+        <aside className="dashboard-page__card">
+          <p className="dashboard-page__eyebrow">Внимание</p>
+          <h3 className="dashboard-page__heading">Сигналы для команды</h3>
           {blockedMixes.length ? (
-            <ul className="dashboard-shift__signals">
+            <ul className="dashboard-page__signals">
               {blockedMixes.map((mix) => (
-                <li key={mix.mixId} className="dashboard-shift__signal">
-                  <TriangleAlert size={16} aria-hidden="true" className="dashboard-shift__signal-icon" />
-                  <div className="dashboard-shift__signal-copy">
-                    <p className="dashboard-shift__signal-name">{mix.name}</p>
-                    <p className="dashboard-shift__signal-reason">
+                <li key={mix.mixId} className="dashboard-page__signal">
+                  <TriangleAlert
+                    size={14}
+                    aria-hidden="true"
+                    className="dashboard-page__signal-icon"
+                  />
+                  <div className="dashboard-page__row-copy">
+                    <div className="dashboard-page__row-name">{mix.name}</div>
+                    <div className="dashboard-page__row-meta cell-truncate">
                       {mix.missingComponents.length
                         ? `Нет наличия: ${mix.missingComponents.join(', ')}`
                         : 'блокирован отсутствием табака в наличии'}
-                    </p>
+                    </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => onNavigate('mixes')}>
+                  <button
+                    type="button"
+                    className="btn"
+                    data-size="sm"
+                    onClick={() => onNavigate('mixes')}
+                  >
                     Открыть
-                  </Button>
+                  </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="dashboard-shift__empty">Нет блокировок. Витрина чистая.</p>
+            <p className="empty">Нет блокировок. Витрина чистая.</p>
           )}
         </aside>
       </div>

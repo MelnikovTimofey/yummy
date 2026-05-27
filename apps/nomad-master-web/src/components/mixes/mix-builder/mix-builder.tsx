@@ -145,14 +145,14 @@ export const MixBuilder = ({
           <span className="mix-builder__breadcrumb-divider" aria-hidden="true">·</span>
           <span className="mix-builder__breadcrumb-meta">{totalPercent}%</span>
           {totalPercent === 100 ? (
-            <span className="mix-builder__chip mix-builder__chip--success">сумма = 100%</span>
+            <span className="tag" data-tone="success">сумма = 100%</span>
           ) : (
-            <span className="mix-builder__chip mix-builder__chip--warning">
+            <span className="tag" data-tone="warning">
               {totalPercent > 100 ? 'переполнено' : `осталось ${100 - totalPercent}%`}
             </span>
           )}
           {blockedByStock ? (
-            <span className="mix-builder__chip mix-builder__chip--danger">блокируется наличием</span>
+            <span className="tag" data-tone="danger">блокируется наличием</span>
           ) : null}
         </div>
         <div className="mix-builder__actions">
@@ -178,14 +178,16 @@ export const MixBuilder = ({
           </label>
           <button
             type="button"
-            className="secondary-button secondary-button--inline"
+            className="btn"
+            data-variant="ghost"
             onClick={onCancel}
           >
             Отмена
           </button>
           <button
             type="submit"
-            className="primary-button primary-button--inline"
+            className="btn"
+            data-variant="primary"
             disabled={!isValid || saveStatus === 'loading'}
           >
             {saveStatus === 'loading' ? 'Сохраняем...' : mode === 'edit' ? 'Сохранить' : 'Создать микс'}

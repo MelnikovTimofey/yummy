@@ -1859,6 +1859,238 @@ p {
   overscroll-behavior: contain;
 }
 
+/* Tobacco drawer — Sheet с тем же drawer chrome, что rail-drawer, но
+   уже (1100px). Body — 1-кол. форма с заранее существующими fields. */
+.inventory-editor-sheet.tobacco-drawer {
+  width: min(1100px, 100%);
+  max-width: 96vw !important;
+  padding: 0 !important;
+  background: var(--bg-base);
+  border-left: 1px solid var(--border-default);
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tobacco-drawer__head-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tobacco-drawer__eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.tobacco-drawer__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.tobacco-drawer__close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.tobacco-drawer__close:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.tobacco-drawer__form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tobacco-drawer__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tobacco-drawer__error {
+  margin: 0;
+  padding: 10px 18px;
+  font-size: var(--fs-sm);
+  color: oklch(0.78 0.14 25);
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.tobacco-drawer__foot-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tobacco-drawer__foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Tobacco detail drawer — карточка табака с описанием, атрибутами,
+   таксономией и зависимыми миксами. Той же chrome что tobacco-drawer, но
+   уже (720px) и без формы. */
+.inventory-editor-sheet.tobacco-detail-drawer {
+  width: min(720px, 100%);
+  max-width: 96vw !important;
+  padding: 0 !important;
+  background: var(--bg-base);
+  border-left: 1px solid var(--border-default);
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tobacco-detail-drawer__head-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tobacco-detail-drawer__sub {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.tobacco-detail-drawer__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tobacco-detail-drawer__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tobacco-detail-drawer__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tobacco-detail-drawer__description {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.tobacco-detail-drawer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tobacco-detail-drawer__attributes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.tobacco-detail-drawer__attributes > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tobacco-detail-drawer__attributes dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tobacco-detail-drawer__attributes dd {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--text-primary);
+}
+
+.tobacco-detail-drawer__taxonomy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tobacco-detail-drawer__mixes-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tobacco-detail-drawer__mixes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tobacco-detail-drawer__mix-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.tobacco-detail-drawer__mix-link:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+}
+
+.tobacco-detail-drawer__mix-link strong {
+  font-weight: 500;
+  font-size: var(--fs-md);
+  color: var(--text-primary);
+}
+
+.tobacco-detail-drawer__mix-link span {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
 /* Rail drawer (editor / read-only viewer) — override sheet box, content
    живёт в собственной flex-колонке head/body/foot, по мокапу
    Nomad Master · Rail. */
@@ -3655,6 +3887,144 @@ p {
   gap: 14px;
 }
 
+/* =====================================================================
+   Tobaccos page (Inventory list) — обёртка без .card, page padding
+   как у dashboard/rails. Внутренняя таблица оставлена как есть (большой
+   custom-функционал: brand-chips, batch-bar, multi-select).
+   ===================================================================== */
+
+.tobaccos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 32px 60px;
+  max-width: 1480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Mixes page — обёртка без .card, padding/header/stats как у tobaccos. */
+.mixes-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 32px 60px;
+  max-width: 1480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Operator dialog — centered modal под мокап AccessView » OperatorEditor.
+   Eyebrop + serif title + sub, body с toggle-row + 2 fields, footer
+   sticky с Отмена + Сохранить/Добавить. */
+.operator-dialog {
+  max-width: 520px;
+  padding: 0;
+  gap: 0;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.operator-dialog__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.operator-dialog__eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.operator-dialog__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.operator-dialog__sub {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.operator-dialog__form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.operator-dialog__body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.operator-dialog__active-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+}
+
+.operator-dialog__active-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.operator-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.operator-dialog__label {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.operator-dialog__error {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: oklch(0.78 0.14 25);
+}
+
+.operator-dialog__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+}
+
+/* Access page — то же, обёртка без .card, секции как cards внутри. */
+.access-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 32px 60px;
+  max-width: 1480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .inventory-panel__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4845,6 +5215,25 @@ p {
   font-weight: 500;
   line-height: 1;
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__value[data-tone="success"] {
+  color: var(--success);
+}
+
+.stat__value[data-tone="warning"] {
+  color: var(--warning);
+}
+
+.stat__value[data-tone="danger"] {
+  color: var(--danger, oklch(0.66 0.18 25));
+}
+
+.stat__value[data-tone="mono"] {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.04em;
 }
 
 .stat__sub {
@@ -4954,6 +5343,7 @@ p {
 
 .drawer__head {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 16px;
   padding: 14px 18px;
@@ -7050,123 +7440,57 @@ p {
   }
 }
 
-/* =====================================================================
-   MasterStatsRow — единый stats-row (4 ячейки, тонкие разделители
-   между ними, HUGE числа). Заменяет старый паттерн individual cards
-   с border'ами. Tones: default/success/warning/danger/mono.
-   ===================================================================== */
-
-.master-stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  align-items: stretch;
-  gap: 1px;
-  background: var(--border-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-lg);
-  padding: 0;
-  overflow: hidden;
-}
-
-.master-stats-row__tile {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  background: var(--bg-raised);
-  min-width: 0;
-}
-
-.master-stats-row__label {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.master-stats-row__value {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: 26px;
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.master-stats-row__tile[data-tone='success'] .master-stats-row__value {
-  color: var(--success);
-}
-
-.master-stats-row__tile[data-tone='warning'] .master-stats-row__value {
-  color: var(--warning);
-}
-
-.master-stats-row__tile[data-tone='danger'] .master-stats-row__value {
-  color: var(--danger);
-}
-
-.master-stats-row__tile[data-tone='mono'] .master-stats-row__value {
-  font-family: var(--font-mono);
-  font-size: 22px;
-  letter-spacing: 0.04em;
-}
-
-.master-stats-row__hint {
-  margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  color: var(--text-muted);
-}
+/* MasterStatsRow — теперь использует shared .stats / .stat (см. shared
+   primitives). Старые .master-stats-row* классы удалены. */
 
 /* =====================================================================
-   DashboardView (shift) — упрощённый дашборд под mockups.html master-refactor:
-   page-header + stats-row + 2 колонки (топ миксов / сигналы для команды).
-   Без графиков, без manufacturers breakdown — см. design_handoff_master_refactor.
+   DashboardView — Дашборд смены под mockup _standalone_ § DashboardPlaceholder.
+   page-header + stats (4 cells) + 2 cards (Топ миксов / Сигналы).
    ===================================================================== */
 
-.dashboard-shift {
+.dashboard-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 24px 32px 60px;
+  max-width: 1480px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.dashboard-shift__error {
+.dashboard-page__error {
   border-radius: var(--r-md);
-  border: 1px solid var(--danger);
+  border: 1px solid var(--danger, oklch(0.66 0.18 25));
   background: var(--danger-soft);
   padding: 12px 16px;
   font-size: var(--fs-base);
   color: var(--text-primary);
 }
 
-.dashboard-shift__columns {
+.dashboard-page__columns {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 16px;
 }
 
 @media (max-width: 960px) {
-  .dashboard-shift__columns {
+  .dashboard-page__columns {
     grid-template-columns: 1fr;
   }
 }
 
-.dashboard-shift__card {
+.dashboard-page__card {
   background: var(--bg-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-lg);
   padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
-.dashboard-shift__card .eyebrow {
+.dashboard-page__eyebrow {
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -7175,17 +7499,16 @@ p {
   color: var(--accent);
 }
 
-.dashboard-shift__heading {
-  margin: 2px 0 4px;
+.dashboard-page__heading {
+  margin: 2px 0 8px;
   font-family: var(--font-serif);
   font-weight: 500;
   font-size: 22px;
   line-height: 1.15;
-  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
-.dashboard-shift__list {
+.dashboard-page__rows {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -7193,66 +7516,62 @@ p {
   flex-direction: column;
 }
 
-.dashboard-shift__row {
+.dashboard-page__row {
   display: grid;
-  grid-template-columns: 28px 1fr auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.dashboard-shift__row:last-child {
+.dashboard-page__row:last-child {
   border-bottom: 0;
 }
 
-.dashboard-shift__rank {
+.dashboard-page__rank {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-faint);
+  color: var(--text-faint, oklch(0.48 0.014 45));
   letter-spacing: 0.04em;
 }
 
-.dashboard-shift__row-copy {
+.dashboard-page__row-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.dashboard-shift__row-name {
-  margin: 0;
+.dashboard-page__row-name {
   font-weight: 500;
   font-size: var(--fs-md);
   color: var(--text-primary);
 }
 
-.dashboard-shift__row-meta {
-  margin: 0;
+.dashboard-page__row-meta {
   font-size: var(--fs-sm);
   line-height: 1.3;
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.dashboard-shift__row-metrics {
+.dashboard-page__row-metrics {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.dashboard-shift__metric {
+.dashboard-page__metric {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.dashboard-shift__signals {
+.dashboard-page__signals {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -7261,9 +7580,9 @@ p {
   gap: 8px;
 }
 
-.dashboard-shift__signal {
+.dashboard-page__signal {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
@@ -7272,38 +7591,8 @@ p {
   background: var(--bg-base);
 }
 
-.dashboard-shift__signal-icon {
+.dashboard-page__signal-icon {
   color: var(--warning);
-}
-
-.dashboard-shift__signal-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dashboard-shift__signal-name {
-  margin: 0;
-  font-weight: 500;
-  font-size: var(--fs-md);
-  color: var(--text-primary);
-}
-
-.dashboard-shift__signal-reason {
-  margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-shift__empty {
-  margin: 0;
-  font-size: var(--fs-base);
-  color: var(--text-muted);
 }
 
 @layer base {

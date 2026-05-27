@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -563,198 +563,216 @@ export const InventoryView = ({
   };
 
   const detailModal = activeItem ? (
-    <div className="inventory-detail-modal" onClick={() => setActiveItemId('')}>
-      <div
-        className="inventory-detail-modal__dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={activeDialogTitleId}
-        onClick={(event) => event.stopPropagation()}
+    <Sheet
+      open
+      onOpenChange={(open) => {
+        if (!open) setActiveItemId('');
+      }}
+    >
+      <SheetContent
+        side="right"
+        className="inventory-editor-sheet tobacco-detail-drawer"
+        showCloseButton={false}
       >
-        <section className="inventory-detail-card inventory-detail-card--modal">
-          <div className="inventory-detail-card__head">
-            <div className="inventory-detail-card__intro">
-              <p className="eyebrow">Карточка табака</p>
-              <h3 id={activeDialogTitleId}>{activeItem.name}</h3>
-              <p className="meta-line">
-                {activeItem.manufacturer}
-                {activeItem.lineName ? ` • ${activeItem.lineName}` : ''}
-              </p>
+        <SheetHeader className="drawer__head tobacco-drawer__head">
+          <div className="tobacco-drawer__head-copy">
+            <p className="tobacco-drawer__eyebrow">Карточка табака</p>
+            <SheetTitle id={activeDialogTitleId} className="tobacco-drawer__title">
+              {activeItem.name}
+            </SheetTitle>
+            <SheetDescription className="tobacco-detail-drawer__sub">
+              {activeItem.manufacturer}
+              {activeItem.lineName ? ` • ${activeItem.lineName}` : ''}
+            </SheetDescription>
+          </div>
+          <div className="tobacco-detail-drawer__head-meta">
+            <span
+              className="tag"
+              data-tone={activeItem.inStock ? 'success' : 'warning'}
+            >
+              {activeItem.inStock ? 'В наличии' : 'Нет наличия'}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="tobacco-drawer__close"
+            onClick={() => setActiveItemId('')}
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+        </SheetHeader>
+
+        <div className="drawer__body tobacco-detail-drawer__body">
+          <section className="tobacco-detail-drawer__section">
+            <p className="tobacco-detail-drawer__label">Описание</p>
+            <p className="tobacco-detail-drawer__description">
+              {formatDetailValue(activeItem.description, 'Описание пока не заполнено.')}
+            </p>
+          </section>
+
+          <section className="tobacco-detail-drawer__section">
+            <p className="tobacco-detail-drawer__label">Действия</p>
+            <div className="tobacco-detail-drawer__actions">
+              <button
+                type="button"
+                className="btn"
+                data-size="sm"
+                data-variant={activeItem.inStock ? 'ghost' : 'primary'}
+                onClick={() => onToggleStock(activeItem)}
+                disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
+              >
+                {pendingRowId === activeItem.id
+                  ? 'Сохраняем...'
+                  : activeItem.inStock
+                    ? 'Убрать из наличия'
+                    : 'Вернуть в наличие'}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                data-size="sm"
+                onClick={() => onToggleSelection(activeItem.id)}
+              >
+                {selectedIds.includes(activeItem.id)
+                  ? 'Убрать из выбора'
+                  : 'Добавить в выбор'}
+              </button>
             </div>
+          </section>
 
-            <div className="inventory-detail-card__status">
-              <Badge variant={activeItem.inStock ? 'default' : 'destructive'}>
-                {activeItem.inStock ? 'В наличии' : 'Нет наличия'}
-              </Badge>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setActiveItemId('')}>
-                Закрыть
-              </Button>
-            </div>
-          </div>
-
-          <div className="inventory-detail-card__grid">
-            <section className="inventory-detail-card__section">
-              <p className="inventory-detail-card__label">Описание</p>
-              <p className="inventory-detail-card__description">
-                {formatDetailValue(activeItem.description, 'Описание пока не заполнено.')}
-              </p>
-            </section>
-
-            <section className="inventory-detail-card__section">
-              <p className="inventory-detail-card__label">Действия</p>
-              <div className="inventory-detail-card__actions">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={activeItem.inStock ? 'secondary' : 'default'}
-                  onClick={() => onToggleStock(activeItem)}
-                  disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
-                >
-                  {pendingRowId === activeItem.id ? 'Сохраняем...' : activeItem.inStock ? 'Убрать из наличия' : 'Вернуть в наличие'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={selectedIds.includes(activeItem.id) ? 'secondary' : 'outline'}
-                  onClick={() => onToggleSelection(activeItem.id)}
-                >
-                  {selectedIds.includes(activeItem.id) ? 'Убрать из выбора' : 'Добавить в выбор'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    openEditEditor(activeItem);
-                    setActiveItemId('');
-                  }}
-                >
-                  Редактировать
-                </Button>
-              </div>
-            </section>
-
-            <section className="inventory-detail-card__section">
-              <p className="inventory-detail-card__label">Атрибуты</p>
-              <dl className="inventory-detail-card__attributes">
-                <div>
-                  <dt>Производитель</dt>
-                  <dd>{formatDetailValue(activeItem.manufacturer)}</dd>
-                </div>
-                <div>
-                  <dt>Линейка</dt>
-                  <dd>{formatDetailValue(activeItem.lineName)}</dd>
-                </div>
-                <div>
-                  <dt>Страна</dt>
-                  <dd>{formatDetailValue(activeItem.country)}</dd>
-                </div>
-                <div>
-                  <dt>Официальная крепость</dt>
-                  <dd>{formatDetailValue(activeItem.officialStrength)}</dd>
-                </div>
-                <div>
-                  <dt>Комьюнити-крепость</dt>
-                  <dd>{formatDetailValue(activeItem.communityStrength)}</dd>
-                </div>
-                <div>
-                  <dt>Статус производства</dt>
-                  <dd>{formatDetailValue(activeItem.productionStatus)}</dd>
-                </div>
-                <div>
-                  <dt>Обновлено</dt>
-                  <dd>{formatUpdatedAt(activeItem.updatedAt)}</dd>
-                </div>
-                <div>
-                  <dt>Зависимые миксы</dt>
-                  <dd>{formatMetricValue(activeItem.dependentMixCount ?? 0)}</dd>
-                </div>
-              </dl>
-            </section>
-          </div>
-
-          <div className="inventory-detail-card__taxonomy">
-            <section className="inventory-detail-card__section">
-              <p className="inventory-detail-card__label">Категории</p>
-              <div className="inventory-cell__chips">
-                {(activeItem.flavorProfiles ?? []).length ? (
-                  (activeItem.flavorProfiles ?? []).map((profile) => (
-                    <Badge key={`${activeItem.id}:detail:profile:${profile}`} variant="outline">
-                      {formatFlavorProfileLabel(profile)}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="meta-line">Категории не назначены.</span>
-                )}
-              </div>
-            </section>
-
-            <section className="inventory-detail-card__section">
-              <p className="inventory-detail-card__label">Вкусы</p>
-              <div className="inventory-cell__chips">
-                {(activeItem.flavors ?? []).length ? (
-                  (activeItem.flavors ?? []).map((flavor) => (
-                    <Badge key={`${activeItem.id}:detail:flavor:${flavor}`} variant="outline">
-                      {flavor}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="meta-line">Вкусы не назначены.</span>
-                )}
-              </div>
-            </section>
-
-            <section className="inventory-detail-card__section">
-              <p className="inventory-detail-card__label">Мета-теги</p>
-              <div className="inventory-cell__chips">
-                {(activeItem.flavorTags ?? []).length ? (
-                  (activeItem.flavorTags ?? []).map((tag) => (
-                    <Badge key={`${activeItem.id}:detail:tag:${tag}`} variant="secondary">
-                      #{tag}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="meta-line">Мета-теги не назначены.</span>
-                )}
-              </div>
-            </section>
-          </div>
-
-          <section className="inventory-detail-card__section">
-            <div className="inventory-detail-card__mixes-head">
+          <section className="tobacco-detail-drawer__section">
+            <p className="tobacco-detail-drawer__label">Атрибуты</p>
+            <dl className="tobacco-detail-drawer__attributes">
               <div>
-                <p className="inventory-detail-card__label">Зависимые миксы</p>
-                <p className="meta-line">
-                  {formatMetricValue(activeItem.dependentMixCount ?? 0)} всего /{' '}
-                  {formatMetricValue(activeItem.blockedDependentMixCount ?? 0)} блокируется по наличию
-                </p>
+                <dt>Производитель</dt>
+                <dd>{formatDetailValue(activeItem.manufacturer)}</dd>
               </div>
+              <div>
+                <dt>Линейка</dt>
+                <dd>{formatDetailValue(activeItem.lineName)}</dd>
+              </div>
+              <div>
+                <dt>Страна</dt>
+                <dd>{formatDetailValue(activeItem.country)}</dd>
+              </div>
+              <div>
+                <dt>Официальная крепость</dt>
+                <dd>{formatDetailValue(activeItem.officialStrength)}</dd>
+              </div>
+              <div>
+                <dt>Комьюнити-крепость</dt>
+                <dd>{formatDetailValue(activeItem.communityStrength)}</dd>
+              </div>
+              <div>
+                <dt>Статус производства</dt>
+                <dd>{formatDetailValue(activeItem.productionStatus)}</dd>
+              </div>
+              <div>
+                <dt>Обновлено</dt>
+                <dd>{formatUpdatedAt(activeItem.updatedAt)}</dd>
+              </div>
+              <div>
+                <dt>Зависимые миксы</dt>
+                <dd>{formatMetricValue(activeItem.dependentMixCount ?? 0)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="tobacco-detail-drawer__section">
+            <p className="tobacco-detail-drawer__label">Категории · вкусы · теги</p>
+            <div className="tobacco-detail-drawer__taxonomy">
+              {(activeItem.flavorProfiles ?? []).map((profile) => (
+                <span
+                  key={`${activeItem.id}:detail:profile:${profile}`}
+                  className="tag"
+                  data-tone="accent"
+                >
+                  {formatFlavorProfileLabel(profile)}
+                </span>
+              ))}
+              {(activeItem.flavors ?? []).map((flavor) => (
+                <span
+                  key={`${activeItem.id}:detail:flavor:${flavor}`}
+                  className="tag"
+                >
+                  {flavor}
+                </span>
+              ))}
+              {(activeItem.flavorTags ?? []).map((tag) => (
+                <span
+                  key={`${activeItem.id}:detail:tag:${tag}`}
+                  className="tag tag--ghost"
+                >
+                  #{tag}
+                </span>
+              ))}
+              {!(activeItem.flavorProfiles ?? []).length
+                && !(activeItem.flavors ?? []).length
+                && !(activeItem.flavorTags ?? []).length ? (
+                <span className="tobacco-detail-drawer__sub">Не назначены.</span>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="tobacco-detail-drawer__section">
+            <div className="tobacco-detail-drawer__mixes-head">
+              <p className="tobacco-detail-drawer__label">Зависимые миксы</p>
+              <p className="tobacco-detail-drawer__sub">
+                {formatMetricValue(activeItem.dependentMixCount ?? 0)} всего /{' '}
+                {formatMetricValue(activeItem.blockedDependentMixCount ?? 0)} блокируется по наличию
+              </p>
             </div>
 
-            <div className="inventory-detail-card__mixes">
+            <div className="tobacco-detail-drawer__mixes">
               {(activeItem.dependentMixes ?? []).length ? (
                 (activeItem.dependentMixes ?? []).map((mix) => (
                   <button
-                    className="inventory-mix-link inventory-mix-link--detail"
+                    className="tobacco-detail-drawer__mix-link"
                     key={`${activeItem.id}:detail-mix:${mix.id}`}
                     type="button"
                     onClick={() => onOpenMix(mix.id)}
                   >
                     <strong>{mix.name}</strong>
                     <span>{formatMixCardStatus(mix)}</span>
-                    <span>
-                      Рейтинг {mix.avgRating.toFixed(1)} • Популярность {formatMetricValue(mix.popularity)}
+                    <span className="cell-meta">
+                      Рейтинг {mix.avgRating.toFixed(1)} · Популярность {formatMetricValue(mix.popularity)}
                     </span>
                   </button>
                 ))
               ) : (
-                <p className="meta-line">На этот табак сейчас не завязаны миксы.</p>
+                <p className="empty">На этот табак сейчас не завязаны миксы.</p>
               )}
             </div>
           </section>
-        </section>
-      </div>
-    </div>
+        </div>
+
+        <footer className="drawer__foot tobacco-drawer__foot">
+          <div className="tobacco-drawer__foot-left" />
+          <div className="tobacco-drawer__foot-actions">
+            <button
+              type="button"
+              className="btn"
+              data-variant="ghost"
+              onClick={() => setActiveItemId('')}
+            >
+              Закрыть
+            </button>
+            <button
+              type="button"
+              className="btn"
+              data-variant="primary"
+              onClick={() => {
+                openEditEditor(activeItem);
+                setActiveItemId('');
+              }}
+            >
+              Редактировать
+            </button>
+          </div>
+        </footer>
+      </SheetContent>
+    </Sheet>
   ) : null;
 
   const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
@@ -764,15 +782,21 @@ export const InventoryView = ({
   ];
 
   return (
-    <section className="card inventory-panel">
+    <section className="tobaccos-page">
       <MasterPageHeader
-        eyebrow="ИНВЕНТАРИЗАЦИЯ"
+        eyebrow="Инвентаризация"
         title="Табаки"
         subtitle="Наличие, компоненты миксов и связанные позиции витрины."
         actions={
-          <Button type="button" size="sm" onClick={openCreateEditor}>
+          <button
+            type="button"
+            className="btn"
+            data-variant="primary"
+            onClick={openCreateEditor}
+          >
+            <Plus size={14} aria-hidden />
             Новый табак
-          </Button>
+          </button>
         }
       />
 
@@ -880,25 +904,42 @@ export const InventoryView = ({
           }
         }}
       >
-        <SheetContent side="right" className="inventory-editor-sheet inventory-editor-drawer">
-          <SheetHeader className="inventory-editor-drawer__head">
-            <p className="eyebrow">
-              {editorMode === 'edit' ? 'Редактирование' : 'Новый табак'}
-            </p>
-            <SheetTitle className="inventory-editor-drawer__title">
-              {editorMode === 'edit'
-                ? editorDraft.name.trim() || 'Без названия'
-                : 'Добавить табак'}
-            </SheetTitle>
-            <SheetDescription className="sr-only">
-              {editorMode === 'edit'
-                ? 'Обновите позицию каталога.'
-                : 'Добавьте позицию в каталог.'}
-            </SheetDescription>
+        <SheetContent
+          side="right"
+          className="inventory-editor-sheet tobacco-drawer"
+          showCloseButton={false}
+        >
+          <SheetHeader className="drawer__head tobacco-drawer__head">
+            <div className="tobacco-drawer__head-copy">
+              <p className="tobacco-drawer__eyebrow">
+                {editorMode === 'edit' ? 'Редактирование табака' : 'Новый табак'}
+              </p>
+              <SheetTitle className="tobacco-drawer__title">
+                {editorMode === 'edit'
+                  ? editorDraft.name.trim() || 'Без названия'
+                  : 'Добавить табак'}
+              </SheetTitle>
+              <SheetDescription className="sr-only">
+                {editorMode === 'edit'
+                  ? 'Обновите позицию каталога.'
+                  : 'Добавьте позицию в каталог.'}
+              </SheetDescription>
+            </div>
+            <button
+              type="button"
+              className="tobacco-drawer__close"
+              onClick={closeEditor}
+              aria-label="Закрыть"
+            >
+              ✕
+            </button>
           </SheetHeader>
-          <article className="editor-card ops-editor inventory-create-card inventory-create-card--sheet">
 
-          <form className="admin-form inventory-editor-form" onSubmit={(event) => void handleEditorSubmit(event)}>
+          <form
+            className="tobacco-drawer__form admin-form inventory-editor-form"
+            onSubmit={(event) => void handleEditorSubmit(event)}
+          >
+          <div className="drawer__body tobacco-drawer__body">
             <div className="inventory-editor-identity">
               <div className="inventory-editor-identity__col">
                 <div className="section-h">Наличие</div>
@@ -1085,38 +1126,45 @@ export const InventoryView = ({
               </details>
             </div>
 
-            {saveError ? <p className="error-text">{saveError}</p> : null}
+          </div>
 
-            <div className="form-actions inventory-editor-foot">
+          {saveError ? <p className="tobacco-drawer__error">{saveError}</p> : null}
+
+          <footer className="drawer__foot tobacco-drawer__foot">
+            <div className="tobacco-drawer__foot-left">
               {editorMode === 'edit' ? (
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="inventory-editor-foot__delete"
+                  className="btn"
+                  data-variant="danger"
                   disabled
                   title="Удаление позиций каталога ждёт отдельного продуктового решения"
                 >
                   Удалить
-                </Button>
+                </button>
               ) : null}
-              <div className="inventory-editor-foot__primary">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={saveStatus === 'loading'}
-                  onClick={closeEditor}
-                >
-                  Отмена
-                </Button>
-                <Button type="submit" size="sm" disabled={saveStatus === 'loading'}>
-                  {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
-                </Button>
-              </div>
             </div>
+            <div className="tobacco-drawer__foot-actions">
+              <button
+                type="button"
+                className="btn"
+                data-variant="ghost"
+                onClick={closeEditor}
+                disabled={saveStatus === 'loading'}
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                className="btn"
+                data-variant="primary"
+                disabled={saveStatus === 'loading'}
+              >
+                {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
+              </button>
+            </div>
+          </footer>
           </form>
-          </article>
         </SheetContent>
       </Sheet>
 
@@ -1391,7 +1439,7 @@ export const InventoryView = ({
         onPageChange={onPageChange}
       />
 
-      {detailModal ? createPortal(detailModal, document.body) : null}
+      {detailModal}
     </section>
   );
 };

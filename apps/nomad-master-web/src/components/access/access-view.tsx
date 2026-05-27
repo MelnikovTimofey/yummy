@@ -118,16 +118,17 @@ export const AccessView = (props: AccessViewProps) => {
   })();
 
   return (
-    <section className="card">
+    <section className="access-page">
       <MasterPageHeader
-        eyebrow="ДОСТУП"
+        eyebrow="Доступ"
         title="Daily code и staff"
         subtitle="Управление гостевым кодом, операторами Telegram-бота и учётками Master."
         meta="/staff/audit/events"
         actions={
           user?.role === 'admin' ? (
             <button
-              className="primary-button primary-button--inline"
+              className="btn"
+              data-variant="primary"
               type="button"
               onClick={() => {
                 onResetTelegramOperatorEditor();

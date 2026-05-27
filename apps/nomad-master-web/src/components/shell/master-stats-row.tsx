@@ -17,23 +17,20 @@ type MasterStatsRowProps = {
   tiles: MasterStatTile[];
 };
 
-// Единый stats-row под mockups.html прототипа master-refactor: один
-// контейнер с тонкими разделителями между ячейками (а не индивидуальные
-// card-border'ы вокруг каждой плитки). Числа очень крупные (56-64px,
-// font-display), цвет акцент по `tone`. Используется на всех 5 экранах
-// в одинаковой раскладке (обычно 4 плитки).
+// Единый stats-row под mockup Nomad Master · Refactor / _standalone_:
+// .stats grid (1px разделители, 4 ячейки), .stat label/value/sub,
+// data-tone на value для смыслового цвета (success/warning/danger/mono).
+// Используется на всех 5 экранах (Dashboard, Tobaccos, Mixes, Access).
 export const MasterStatsRow = ({ tiles }: MasterStatsRowProps) => (
-  <div className="master-stats-row">
+  <div className="stats">
     {tiles.map((tile, index) => (
-      <article
-        key={`${tile.label}-${index}`}
-        className="master-stats-row__tile"
-        data-tone={tile.tone ?? 'default'}
-      >
-        <p className="master-stats-row__label">{tile.label}</p>
-        <p className="master-stats-row__value">{tile.value}</p>
-        {tile.hint ? <p className="master-stats-row__hint">{tile.hint}</p> : null}
-      </article>
+      <div key={`${tile.label}-${index}`} className="stat">
+        <div className="stat__label">{tile.label}</div>
+        <div className="stat__value" data-tone={tile.tone ?? 'default'}>
+          {tile.value}
+        </div>
+        {tile.hint ? <div className="stat__sub">{tile.hint}</div> : null}
+      </div>
     ))}
   </div>
 );

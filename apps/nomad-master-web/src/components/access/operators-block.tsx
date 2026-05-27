@@ -77,7 +77,8 @@ export const OperatorsBlock = ({
               <p className="meta-line">Последний запрос: {formatDateTimeDisplay(operator.lastCodeRequestedAt)}</p>
               <div className="entity-card__actions entity-card__actions--wrap">
                 <button
-                  className="secondary-button secondary-button--inline"
+                  className="btn"
+                  data-size="sm"
                   type="button"
                   onClick={() => {
                     onSelectTelegramOperator(operator);
@@ -87,7 +88,8 @@ export const OperatorsBlock = ({
                   Редактировать
                 </button>
                 <button
-                  className="secondary-button secondary-button--inline"
+                  className="btn"
+                  data-size="sm"
                   type="button"
                   onClick={() => void onToggleTelegramOperatorActive(operator)}
                   disabled={telegramOperatorToggleId === operator.id}
@@ -96,7 +98,9 @@ export const OperatorsBlock = ({
                 </button>
                 {operator.linkedChatId ? (
                   <button
-                    className="secondary-button secondary-button--inline secondary-button--danger"
+                    className="btn"
+                    data-variant="danger"
+                    data-size="sm"
                     type="button"
                     onClick={() => void onClearTelegramOperatorLink(operator)}
                     disabled={telegramOperatorToggleId === operator.id}
@@ -105,7 +109,9 @@ export const OperatorsBlock = ({
                   </button>
                 ) : null}
                 <button
-                  className="secondary-button secondary-button--inline secondary-button--danger"
+                  className="btn"
+                    data-variant="danger"
+                    data-size="sm"
                   type="button"
                   onClick={() => void onDeleteTelegramOperator(operator)}
                   disabled={telegramOperatorToggleId === operator.id}
@@ -132,70 +138,84 @@ export const OperatorsBlock = ({
         }
       }}
     >
-      <DialogContent className="telegram-operator-dialog">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="operator-dialog">
+        <DialogHeader className="operator-dialog__head">
+          <p className="operator-dialog__eyebrow">
+            {telegramOperatorEditor.id ? 'Редактирование' : 'Новый оператор'}
+          </p>
+          <DialogTitle className="operator-dialog__title">
             {telegramOperatorEditor.id
               ? telegramOperatorEditor.name || 'Редактирование оператора'
-              : 'Новый оператор Telegram'}
+              : 'Добавить оператора'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="operator-dialog__sub">
             После сохранения оператор привязывает контакт через бота.
           </DialogDescription>
         </DialogHeader>
 
         {telegramOperatorsStatus === 'forbidden' ? (
-          <div className="forbidden-panel">
-            <p className="meta-line">Telegram allowlist недоступен для вашей роли.</p>
-          </div>
+          <div className="empty">Telegram allowlist недоступен для вашей роли.</div>
         ) : (
-          <form className="admin-form" onSubmit={onSubmitTelegramOperator}>
-            <div className="form-grid form-grid--two">
-              <label className="field">
-                <span className="field-label">Имя оператора</span>
-                <input
-                  className="text-input"
-                  value={telegramOperatorEditor.name}
-                  onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Анна"
-                />
-              </label>
+          <form className="operator-dialog__form" onSubmit={onSubmitTelegramOperator}>
+            <div className="operator-dialog__body">
+              <div className="operator-dialog__active-row">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={telegramOperatorEditor.active}
+                  className={`toggle ${telegramOperatorEditor.active ? 'toggle--on' : 'toggle--off'}`}
+                  onClick={() =>
+                    setTelegramOperatorEditor((current) => ({ ...current, active: !current.active }))
+                  }
+                  aria-label="Активен"
+                >
+                  <span className="toggle__track" aria-hidden="true">
+                    <span className="toggle__thumb" />
+                  </span>
+                </button>
+                <span className="operator-dialog__active-hint">
+                  {telegramOperatorEditor.active ? 'Получит код по запросу' : 'Не получит код'}
+                </span>
+              </div>
 
-              <label className="field">
-                <span className="field-label">Телефон</span>
-                <input
-                  className="text-input"
-                  type="tel"
-                  value={telegramOperatorEditor.phone}
-                  onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, phone: event.target.value }))}
-                  autoComplete="tel"
-                  placeholder="+7 999 123-45-67"
-                />
-              </label>
+              <div className="operator-dialog__field">
+                <label className="operator-dialog__label">Имя оператора</label>
+                <div className="input input--lg">
+                  <input
+                    value={telegramOperatorEditor.name}
+                    onChange={(event) =>
+                      setTelegramOperatorEditor((current) => ({ ...current, name: event.target.value }))
+                    }
+                    placeholder="Анна"
+                  />
+                </div>
+              </div>
 
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={telegramOperatorEditor.active}
-                  onChange={(event) => setTelegramOperatorEditor((current) => ({ ...current, active: event.target.checked }))}
-                />
-                <span>Активен</span>
-              </label>
+              <div className="operator-dialog__field">
+                <label className="operator-dialog__label">Телефон</label>
+                <div className="input">
+                  <input
+                    type="tel"
+                    value={telegramOperatorEditor.phone}
+                    onChange={(event) =>
+                      setTelegramOperatorEditor((current) => ({ ...current, phone: event.target.value }))
+                    }
+                    autoComplete="tel"
+                    placeholder="+7 999 123-45-67"
+                  />
+                </div>
+              </div>
+
+              {telegramOperatorSaveError ? (
+                <p className="operator-dialog__error">{telegramOperatorSaveError}</p>
+              ) : null}
             </div>
 
-            {telegramOperatorSaveError ? <p className="error-text">{telegramOperatorSaveError}</p> : null}
-
-            <div className="form-actions">
-              <button className="primary-button primary-button--inline" type="submit" disabled={telegramOperatorSaveStatus === 'loading'}>
-                {telegramOperatorSaveStatus === 'loading'
-                  ? 'Сохраняем...'
-                  : telegramOperatorEditor.id
-                    ? 'Сохранить доступ'
-                    : 'Добавить в список'}
-              </button>
+            <footer className="operator-dialog__foot">
               <button
-                className="secondary-button secondary-button--inline"
                 type="button"
+                className="btn"
+                data-variant="ghost"
                 onClick={() => {
                   setTelegramOperatorDialogOpen(false);
                   onResetTelegramOperatorEditor();
@@ -203,7 +223,19 @@ export const OperatorsBlock = ({
               >
                 Отмена
               </button>
-            </div>
+              <button
+                type="submit"
+                className="btn"
+                data-variant="primary"
+                disabled={telegramOperatorSaveStatus === 'loading'}
+              >
+                {telegramOperatorSaveStatus === 'loading'
+                  ? 'Сохраняем...'
+                  : telegramOperatorEditor.id
+                    ? 'Сохранить'
+                    : 'Добавить'}
+              </button>
+            </footer>
           </form>
         )}
       </DialogContent>

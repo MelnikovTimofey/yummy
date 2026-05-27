@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, ChevronDown, Copy, Eye, EyeOff, ListFilter, Pencil, Search } from 'lucide-react';
+import { Bookmark, ChevronDown, Copy, Eye, EyeOff, ListFilter, Pencil, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -206,20 +206,32 @@ export const MixCatalogView = ({
   }, [items, filters.options.flavorProfiles, filters.flavorProfiles]);
 
   return (
-    <section className="card mixes-panel">
+    <section className="mixes-page">
       <MasterPageHeader
-        eyebrow="МЕНЕДЖЕР МИКСОВ"
+        eyebrow="Менеджер миксов"
         title="Каталог миксов"
         subtitle="Подборки для гостевой витрины — поиск, фильтры, быстрые действия."
         actions={
           <>
-            <Button type="button" size="sm" variant="outline" disabled title="В разработке">
-              <Bookmark aria-hidden />
+            <button
+              type="button"
+              className="btn"
+              data-variant="ghost"
+              disabled
+              title="В разработке"
+            >
+              <Bookmark size={14} aria-hidden />
               Сохранённые виды
-            </Button>
-            <Button type="button" size="sm" onClick={onStartCreate}>
+            </button>
+            <button
+              type="button"
+              className="btn"
+              data-variant="primary"
+              onClick={onStartCreate}
+            >
+              <Plus size={14} aria-hidden />
               Новый микс
-            </Button>
+            </button>
           </>
         }
       />
