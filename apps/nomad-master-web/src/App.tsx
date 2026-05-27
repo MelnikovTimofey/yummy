@@ -17,7 +17,7 @@ import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
 import { RailEditor } from '@/components/rails/rail-editor';
 import { RailsView } from '@/components/rails/rails-view';
-import { MasterTopBar, type MasterTopBarStatusTone } from '@/components/shell/topbar';
+import { MasterTopBar } from '@/components/shell/topbar';
 import {
   getWorkspacePanelId,
   getWorkspaceTabId,
@@ -129,19 +129,6 @@ const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
 };
 
 const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
-
-const formatLoadStatus = (status: 'idle' | 'loading' | 'ready' | 'error') => {
-  switch (status) {
-    case 'loading':
-      return 'Обновляем';
-    case 'ready':
-      return 'Данные актуальны';
-    case 'error':
-      return 'Есть ошибка';
-    default:
-      return 'Ожидает загрузки';
-  }
-};
 
 export const App = () => {
   const [login, setLogin] = useState('admin');
@@ -944,33 +931,6 @@ export const App = () => {
   };
 
   if (user) {
-    const activeWorkspaceStatus = (() => {
-      switch (activeTab) {
-        case 'dashboard':
-          return formatLoadStatus(summaryStatus);
-        case 'inventory':
-          return formatLoadStatus(inventoryStatus);
-        case 'mixes':
-          return formatLoadStatus(mixes.mixesStatus);
-        case 'rails':
-          return formatLoadStatus(rails.railsStatus);
-        case 'access':
-          return telegramOps.automationStatus === 'error' || dailyCode.status === 'error'
-            ? 'Есть ошибка'
-            : telegramOps.automationStatus === 'loading' || dailyCode.status === 'loading'
-              ? 'Обновляем'
-              : 'Данные актуальны';
-        default:
-          return 'Ожидает загрузки';
-      }
-    })();
-    const activeWorkspaceStatusTone: MasterTopBarStatusTone = (() => {
-      const text = activeWorkspaceStatus;
-      if (text.includes('ошибка') || text.includes('Ошибка')) return 'error';
-      if (text.includes('Обновляем') || text.includes('Загрузка') || text.includes('Ожидает')) return 'loading';
-      return 'ready';
-    })();
-
     const commandPaletteItems: CommandPaletteItem[] = [
       ...workspaceTabs.map((tab) => ({
         id: `nav:${tab.id}`,
@@ -1036,8 +996,6 @@ export const App = () => {
           onTabChange={setActiveTab}
           userName={user.name}
           userRoleLabel={formatRoleLabel(user.role)}
-          statusText={activeWorkspaceStatus}
-          statusTone={activeWorkspaceStatusTone}
           onSignOut={onSignOut}
           density={density}
           onDensityChange={setDensity}

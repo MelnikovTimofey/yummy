@@ -1,6 +1,5 @@
 import { KeyboardEvent, useRef } from 'react';
 import { LogOut, Rows2, Rows3, Rows4, Search, type LucideIcon } from 'lucide-react';
-import { apiHostLabel, envLabel } from '@/lib/api-client';
 import type { Density } from '@/hooks/use-density';
 import {
   getWorkspacePanelId,
@@ -9,15 +8,11 @@ import {
   type WorkspaceTab,
 } from './workspace-tabs';
 
-export type MasterTopBarStatusTone = 'ready' | 'loading' | 'error';
-
 type MasterTopBarProps = {
   activeTab: WorkspaceTab;
   onTabChange: (tab: WorkspaceTab) => void;
   userName: string;
   userRoleLabel: string;
-  statusText: string;
-  statusTone: MasterTopBarStatusTone;
   onSignOut: () => void;
   density: Density;
   onDensityChange: (next: Density) => void;
@@ -35,8 +30,6 @@ export const MasterTopBar = ({
   onTabChange,
   userName,
   userRoleLabel,
-  statusText,
-  statusTone,
   onSignOut,
   density,
   onDensityChange,
@@ -167,22 +160,6 @@ export const MasterTopBar = ({
           <span className="master-nav__cmdk-label">Найти или сделать</span>
           <kbd className="master-nav__cmdk-kbd">⌘K</kbd>
         </button>
-        <span
-          className="master-nav__env"
-          title={`API: ${apiHostLabel}`}
-          aria-label={`API: ${apiHostLabel}`}
-        >
-          <span className={`status-dot status-dot--${statusTone}`} aria-hidden="true" />
-          {envLabel}
-        </span>
-        <span
-          className="status-chip status-chip--inverse"
-          title={`Статус данных: ${statusText}`}
-          aria-label={`Статус данных: ${statusText}`}
-        >
-          <span className={`status-dot status-dot--${statusTone}`} aria-hidden="true" />
-          {statusText}
-        </span>
         <div className="master-nav__user" aria-label="Текущий пользователь">
           <strong>{userName}</strong>
           <span>{userRoleLabel}</span>

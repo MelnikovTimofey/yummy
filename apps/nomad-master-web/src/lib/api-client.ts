@@ -1,14 +1,4 @@
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
-export const apiHostLabel = apiBaseUrl.replace(/^https?:\/\//, '');
-
-export const envLabel = (() => {
-  const explicit = import.meta.env.VITE_ENV_NAME as string | undefined;
-  if (explicit) return explicit;
-  const host = apiHostLabel.toLowerCase();
-  if (host.includes('localhost') || host.startsWith('127.')) return 'local';
-  if (host.includes('stage') || host.includes('staging')) return 'stage';
-  return 'prod';
-})();
 
 export const requestJson = async <T,>(
   path: string,

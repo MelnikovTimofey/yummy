@@ -742,22 +742,6 @@ p {
   flex-wrap: nowrap;
 }
 
-.master-nav__env {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 8px;
-  border-radius: var(--r-pill);
-  background: var(--bg-raised);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
-  line-height: 1;
-}
-
 .master-nav__cmdk {
   display: inline-flex;
   align-items: center;
@@ -1486,12 +1470,6 @@ p {
   background: var(--bg-raised);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
-}
-
-.status-chip--inverse {
-  border-color: var(--border-subtle);
-  background: var(--bg-raised);
-  color: var(--text-secondary);
 }
 
 .status-chip--locked {
