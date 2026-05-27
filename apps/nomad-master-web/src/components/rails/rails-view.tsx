@@ -1,4 +1,4 @@
-import { Eye, Pencil } from 'lucide-react';
+import { Eye, Pencil, Plus } from 'lucide-react';
 import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
@@ -91,7 +91,9 @@ export const RailsView = ({
             className="primary-button primary-button--inline"
             type="button"
             onClick={onCreateRail}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
+            <Plus size={14} aria-hidden />
             Новый рейл
           </button>
         </>

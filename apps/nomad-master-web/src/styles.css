@@ -2707,9 +2707,33 @@ p {
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
+.rails-surface__card::after {
+  display: none;
+}
+
 .rails-surface__card:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px -22px rgba(15, 14, 17, 0.65);
+}
+
+.rails-surface__card-tags .chip--tone-info {
+  border: 1px solid rgba(108, 156, 196, 0.32);
+}
+
+.rails-surface__card-tags .chip--tone-warning {
+  border: 1px solid rgba(212, 154, 70, 0.32);
+}
+
+.rails-surface__card-tags .chip--tone-accent {
+  border: 1px solid rgba(149, 61, 39, 0.32);
+}
+
+.rails-surface__card-tags .chip--tone-success {
+  border: 1px solid rgba(53, 119, 74, 0.34);
+}
+
+.rails-surface__card-tags .chip--ghost {
+  border-color: rgba(226, 172, 123, 0.24);
 }
 
 .rails-surface__editor h3 {
@@ -2745,7 +2769,7 @@ p {
 }
 
 .rails-surface__card-description {
-  color: var(--nomad-primary-2);
+  color: var(--nomad-ink-soft);
   font-size: 0.95rem;
   line-height: 1.45;
   margin: 0 0 6px;
@@ -2808,11 +2832,8 @@ p {
 }
 
 .rails-surface__mix-count {
-  font-family: var(--nomad-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--nomad-primary-2);
+  font-size: 0.85rem;
+  color: var(--nomad-ink-soft);
 }
 
 .rails-surface__card-action {
