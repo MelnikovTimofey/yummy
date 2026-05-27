@@ -4152,6 +4152,224 @@ p {
   width: 100%;
 }
 
+/* --- .mixes-list: единый контейнер (toolbar + profile chips + extra
+       filters + table) под mockup `Nomad Master · mix.html` § MixesList.
+       Паттерн один в один с .tobaccos-list. ---------------------------- */
+
+.mixes-list {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mixes-list__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.mixes-list__search {
+  flex: 1 1 280px;
+  min-width: 220px;
+  background: transparent;
+  border: 0;
+  height: 30px;
+  padding: 0 4px;
+  box-shadow: none;
+  position: relative;
+}
+
+.mixes-list__search:focus-within {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.mixes-list__kbd {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.mixes-list__filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mixes-list__sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+}
+
+.mixes-list__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.mixes-list__sort > svg {
+  flex-shrink: 0;
+}
+
+.mixes-list__sort select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  padding-right: 4px;
+}
+
+.mixes-list__sort select:hover {
+  color: var(--text-primary);
+}
+
+.mixes-list__profiles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.mixes-list__profiles-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-right: 4px;
+}
+
+.mixes-list__profiles-reset {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+/* --- Table inside .mixes-list: нейтральная палитра ------------------- */
+
+.mixes-list .mixes-table-shell,
+.mixes-list .ops-table-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow-x: auto;
+}
+
+.mixes-list .mixes-table {
+  width: 100%;
+}
+
+.mixes-list .mixes-table thead th {
+  background: oklch(0.18 0.012 45);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.mixes-list .mixes-table th,
+.mixes-list .mixes-table td {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.mixes-list .mixes-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.mixes-list .mixes-table tbody tr:hover {
+  background: var(--bg-elevated);
+}
+
+.mixes-list .mixes-table tbody tr[data-active='true'] {
+  background: var(--accent-soft);
+}
+
+.mixes-list .mixes-table tbody tr[data-blocked='true'] td {
+  background: transparent;
+  opacity: 0.78;
+}
+
+.mixes-list .mixes-table tbody tr[data-hidden='true'] td {
+  opacity: 0.78;
+}
+
+/* --- Доп. фильтры details — внутри .mixes-list ----------------------- */
+
+.mixes-list .inventory-extra-filters {
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.mixes-list .inventory-extra-filters__trigger {
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+}
+
+.mixes-list .inventory-extra-filters__trigger:hover {
+  color: var(--text-primary);
+}
+
+.mixes-list .inventory-extra-filters__count {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.mixes-list .inventory-filter-groups {
+  padding: 8px 12px 12px;
+  background: transparent;
+  border: 0;
+}
+
+/* --- Empty state внутри .mixes-list ---------------------------------- */
+
+.mixes-list .mixes-empty {
+  padding: 32px 16px;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
 /* Operator dialog — centered modal под мокап AccessView » OperatorEditor.
    Eyebrop + serif title + sub, body с toggle-row + 2 fields, footer
    sticky с Отмена + Сохранить/Добавить. */
