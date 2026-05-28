@@ -162,11 +162,17 @@ export const StaffBlock = ({
             </label>
 
             <label className="checkbox-field">
-              <input
-                type="checkbox"
-                checked={staffAccountEditor.active}
-                onChange={(event) => setStaffAccountEditor((current) => ({ ...current, active: event.target.checked }))}
-              />
+              <button
+                type="button"
+                role="switch"
+                aria-checked={staffAccountEditor.active}
+                className={`toggle ${staffAccountEditor.active ? 'toggle--on' : 'toggle--off'}`}
+                onClick={() => setStaffAccountEditor((current) => ({ ...current, active: !current.active }))}
+              >
+                <span className="toggle__track" aria-hidden="true">
+                  <span className="toggle__thumb" />
+                </span>
+              </button>
               <span>Активен</span>
             </label>
           </div>

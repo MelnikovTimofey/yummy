@@ -2244,6 +2244,11 @@ p {
   color: var(--nomad-ink);
 }
 
+/* Checkbox accent — mockup parity (см. design_handoff_master_refactor/master/styles.css:161). */
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
 .form-actions,
 .section-actions {
   display: flex;
@@ -5152,13 +5157,13 @@ p {
 }
 
 .row-toggle--on .row-toggle__track {
-  background: rgba(106, 168, 122, 0.32);
-  border-color: rgba(106, 168, 122, 0.55);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .row-toggle--on .row-toggle__thumb {
   transform: translateX(12px);
-  background: #c5e8c9;
+  background: var(--accent-fg);
 }
 
 .row-toggle--off .row-toggle__label {

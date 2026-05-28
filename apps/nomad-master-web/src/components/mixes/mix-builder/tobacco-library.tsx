@@ -61,11 +61,17 @@ export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryPr
         </label>
         <div className="mix-builder__library-toolbar">
           <label className="mix-builder__library-toggle">
-            <input
-              type="checkbox"
-              checked={inStockOnly}
-              onChange={(event) => setInStockOnly(event.target.checked)}
-            />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={inStockOnly}
+              className={`toggle ${inStockOnly ? 'toggle--on' : 'toggle--off'}`}
+              onClick={() => setInStockOnly(!inStockOnly)}
+            >
+              <span className="toggle__track" aria-hidden="true">
+                <span className="toggle__thumb" />
+              </span>
+            </button>
             <span>Только в наличии</span>
           </label>
           <label className="mix-builder__library-sort">
