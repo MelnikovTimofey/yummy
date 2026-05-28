@@ -74,6 +74,25 @@ const STRENGTH_DASH = '—';
 
 const STRENGTH_PRESETS = ['Лёгкий', 'Средний', 'Крепкий'];
 
+// Канонический список категорий вкуса — должен совпадать с FLAVOR_PROFILES
+// мокапа редактора (12 значений в фиксированном порядке), а не выводиться
+// из загруженного среза каталога: иначе пользователь видит только те
+// категории, что уже есть в catalogOptions, и не может назначить новую.
+const MASTER_FLAVOR_PROFILES = [
+  'Фруктовые',
+  'Ягодные',
+  'Цитрусовые',
+  'Десертные',
+  'Сладкие',
+  'Мятные',
+  'Свежие',
+  'Пряные',
+  'Табачные',
+  'Цветочно-травяные',
+  'Кислые',
+  'Парфюмерные',
+];
+
 const formatStrengthCompact = (item: InventoryTobacco) => {
   const value = item.officialStrength?.trim() || item.communityStrength?.trim();
   return value || STRENGTH_DASH;
@@ -455,7 +474,10 @@ export const InventoryView = ({
   const lineNameOptions = buildSuggestionOptions(catalogOptions.map((item) => item.lineName));
   const countryOptions = buildSuggestionOptions(catalogOptions.map((item) => item.country));
   const productionStatusOptions = buildSuggestionOptions(catalogOptions.map((item) => item.productionStatus));
-  const flavorProfileOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorProfiles ?? []));
+  // Чипы в редакторе — фиксированный мастер-список (parity с мокапом),
+  // не выборка из catalogOptions. catalogOptions всё ещё нужен для прочих
+  // suggestion'ов (manufacturer, lineName и т. п.).
+  const flavorProfileOptions = MASTER_FLAVOR_PROFILES;
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
   const brandChips = buildBrandChips(catalogOptions);
@@ -1005,7 +1027,7 @@ export const InventoryView = ({
               <label className="field field--wide">
                 <span className="field-label">Название</span>
                 <input
-                  className="text-input text-input--lg"
+                  className="text-input text-input--name"
                   value={editorDraft.name}
                   onChange={(event) => updateEditorDraft('name', event.target.value)}
                   placeholder="Например, Citrus Breeze"

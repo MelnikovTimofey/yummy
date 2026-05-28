@@ -1693,10 +1693,11 @@ p {
   overscroll-behavior: contain;
 }
 
-/* Tobacco drawer — Sheet с тем же drawer chrome, что rail-drawer, но
-   уже (1100px). Body — 1-кол. форма с заранее существующими fields. */
+/* Tobacco drawer — Sheet с тем же drawer chrome, что rail-drawer.
+   Ширина 560px — parity с design mockup'ом (.drawer { width: 560px }).
+   Body — 1-кол. форма с заранее существующими fields. */
 .inventory-editor-sheet.tobacco-drawer {
-  width: min(1100px, 100%);
+  width: min(560px, 100%);
   max-width: 96vw !important;
   padding: 0 !important;
   background: var(--bg-base);
@@ -1786,6 +1787,123 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ============================================================
+   Tobacco drawer — parity с design mockup
+   (compact inputs/labels, fixed flavor chips, 2-col producer/line).
+   Скоупим всё под .tobacco-drawer, чтобы глобальный .field-label /
+   .text-input стиль (used by mixes/rails editors) не поплыл.
+   ============================================================ */
+.tobacco-drawer .drawer__body {
+  padding: 18px;
+}
+
+.tobacco-drawer .field {
+  gap: 6px;
+}
+
+.tobacco-drawer .field-label {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  margin-bottom: 0;
+  text-transform: none;
+}
+
+.tobacco-drawer .text-input,
+.tobacco-drawer .textarea-input,
+.tobacco-drawer .select-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+  box-shadow: none;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.tobacco-drawer .textarea-input {
+  height: auto;
+  min-height: 72px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.tobacco-drawer .text-input--name {
+  height: 38px;
+}
+
+.tobacco-drawer .text-input:focus,
+.tobacco-drawer .textarea-input:focus,
+.tobacco-drawer .select-input:focus {
+  outline: 0;
+  border-color: var(--accent-border);
+  background: oklch(0.16 0.012 45);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Identity-row карточка (Наличие + Крепость) — рамка + raised фон */
+.tobacco-drawer .inventory-editor-identity {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+}
+
+.tobacco-drawer .inventory-editor-identity__col .section-h {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+/* Producer/Линейка — держим 2 колонки до самых узких drawer-ов;
+   глобальный 720px breakpoint .inventory-editor-sheet ломает 2-col
+   раньше, чем нужно. Селектор удваиваем (.inventory-editor-sheet.tobacco-drawer)
+   для повышения specificity. */
+.inventory-editor-sheet.tobacco-drawer .form-grid--two {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .inventory-editor-sheet.tobacco-drawer .form-grid--two {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .inventory-editor-sheet.tobacco-drawer .form-grid--two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Footer — мокап показывает плоский фон без gradient'а */
+.tobacco-drawer .drawer__foot {
+  padding: 12px 18px;
+  background: var(--bg-raised);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Удалить — danger ghost variant, парится с мокапом */
+.tobacco-drawer .tobacco-drawer__foot-left .btn[data-variant="danger"] {
+  color: oklch(0.82 0.14 25);
+  border-color: oklch(0.66 0.18 25 / 0.45);
+  background: transparent;
 }
 
 /* Tobacco detail drawer — карточка табака с описанием, атрибутами,
