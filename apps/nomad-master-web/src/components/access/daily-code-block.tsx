@@ -13,9 +13,6 @@ import type { AccessLoadStatus, AccessRoleStatus } from './types';
 type RotationMode = 'auto' | 'manual';
 
 type DailyCodeBlockProps = {
-  /** Подпись-helper под mono-кодом (например, как оператор получает код).
-   *  Переехала сюда из бывшей `info-banner--ops` плашки между stats-row и hero. */
-  helper?: string;
   currentDailyCode: DailyAccessCodeRecord | null;
   dailyCodes: DailyAccessCodeRecord[];
   dailyCodesStatus: AccessLoadStatus;
@@ -40,7 +37,6 @@ const progressClass = (urgency: 'fresh' | 'soon' | 'expired') => {
 };
 
 export const DailyCodeBlock = ({
-  helper,
   currentDailyCode,
   dailyCodes,
   dailyCodesStatus,
@@ -101,12 +97,6 @@ export const DailyCodeBlock = ({
         >
           {code || 'Нет активного кода'}
         </p>
-
-        {currentDailyCode?.codeLabel ? (
-          <p className="daily-code-hero__label">Подпись: {currentDailyCode.codeLabel}</p>
-        ) : null}
-
-        {helper ? <p className="daily-code-hero__helper">{helper}</p> : null}
 
         <div className="daily-code-hero__actions">
           <button

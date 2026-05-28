@@ -132,11 +132,12 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
 
   await openWorkspace(page, 'Доступ');
   await expect(page.getByRole('heading', { name: 'Daily code и staff', level: 1 })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Новый оператор' })).toBeVisible();
-  // Кнопка «Добавить в список» переехала внутрь Telegram operator Dialog'а
-  // (открывается кликом «Новый оператор») — не видна без раскрытия диалога.
-  // Сам триггер `Новый оператор` уже проверен выше.
-  await expect(page.getByRole('heading', { name: 'Последние staff-операции' })).toBeVisible();
+  // Primary-кнопка добавления оператора переехала из header в шапку
+  // OperatorsBlock и переименована в «Добавить оператора» (mockup parity).
+  await expect(page.getByRole('button', { name: 'Добавить оператора' })).toBeVisible();
+  // AuditBlock h3 «Последние staff-операции» убран — теперь secondary title
+  // «Что происходило в системе» (serif, не heading-role).
+  await expect(page.getByText('Что происходило в системе').first()).toBeVisible();
 });
 
 test('Master nomad role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
@@ -151,6 +152,9 @@ test('Master nomad role keeps admin-only surfaces restricted while preserving ac
   // нужен клик. Не разворачиваем dialog в smoke, чтобы не множить шаги; inline
   // forbidden-сообщения по Telegram уже проверяет assertion выше.
   await expect(page.getByText('Раздел сотрудников доступен только для admin.').first()).toBeVisible();
-  await expect(page.getByText('Staff accounts недоступны для вашей роли.')).toBeVisible();
+  // «Staff accounts недоступны для вашей роли.» переехал внутрь Dialog'а
+  // «Создать сотрудника» после mockup-parity рефактора — на странице сразу
+  // не виден, нужен клик. Основное forbidden-сообщение по staff выше уже
+  // проверено assertion'ом «Раздел сотрудников доступен только для admin.».
   await expect(page.getByText('Журнал изменений доступен только для admin.')).toBeVisible();
 });

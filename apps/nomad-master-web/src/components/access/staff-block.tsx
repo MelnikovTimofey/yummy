@@ -1,4 +1,5 @@
-import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { StaffAccountRecord, StaffUser } from '@/contracts';
 import type { AccessRoleStatus, AccessSaveStatus, StaffAccountEditorState } from './types';
 
@@ -18,6 +19,36 @@ type StaffBlockProps = {
   onDeleteStaffAccount: (account: StaffAccountRecord) => void | Promise<void>;
 };
 
+const STAFF_GRID = '32px minmax(160px, 1fr) minmax(120px, 0.8fr) 110px 140px 56px 80px';
+
+const initialOf = (value: string): string => {
+  const trimmed = value?.trim();
+  if (!trimmed) return '?';
+  return trimmed.charAt(0).toUpperCase();
+};
+
+const EditIcon = () => (
+  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 6h18" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12h14" />
+    <path d="M12 5v14" />
+  </svg>
+);
+
 export const StaffBlock = ({
   staffAccounts,
   staffAccountsStatus,
@@ -32,200 +63,322 @@ export const StaffBlock = ({
   onSubmitStaffAccount,
   onToggleStaffAccountActive,
   onDeleteStaffAccount,
-}: StaffBlockProps) => (
-  <div className="manager-layout manager-layout--stacked manager-layout--spaced ops-management-grid">
-    <aside className="entity-list">
-      {staffAccountsStatus === 'forbidden' ? (
-        <article className="entity-card entity-card--muted ops-surface__card">
-          <p className="entity-kicker">Учётные записи</p>
-          <h3>Только для admin</h3>
-          <p className="meta-line">{staffAccountsError || 'У вас нет доступа к управлению учётными записями.'}</p>
-        </article>
-      ) : (
-        staffAccounts.map((account) => (
-          <article
-            className={[
-              'entity-card',
-              'ops-surface__card',
-              staffAccountEditor.id === account.id ? 'entity-card--active' : '',
-            ].filter(Boolean).join(' ')}
-            key={account.id}
-          >
-            <div className="entity-card__head">
-              <div>
-                <p className="entity-kicker">Master staff account</p>
-                <h3>{account.name}</h3>
-              </div>
-              <span className={account.active ? 'stock-pill stock-pill--in' : 'stock-pill stock-pill--out'}>
-                {account.active ? 'Активен' : 'Неактивен'}
-              </span>
-            </div>
-            <div className="chip-row">
-              <span className="chip">{account.login}</span>
-              <span className="chip">{account.role === 'admin' ? 'admin' : 'nomad'}</span>
-            </div>
-            <div className="entity-card__actions entity-card__actions--wrap">
-              <button className="secondary-button secondary-button--inline" type="button" onClick={() => onSelectStaffAccount(account)}>
-                Редактировать
-              </button>
-              <button
-                className="secondary-button secondary-button--inline"
-                type="button"
-                onClick={() => void onToggleStaffAccountActive(account)}
-                disabled={staffAccountToggleId === account.id}
-              >
-                {staffAccountToggleId === account.id ? 'Сохраняем...' : account.active ? 'Деактивировать' : 'Активировать'}
-              </button>
-              <button
-                className="secondary-button secondary-button--inline secondary-button--danger"
-                type="button"
-                onClick={() => void onDeleteStaffAccount(account)}
-                disabled={staffAccountToggleId === account.id}
-              >
-                {staffAccountToggleId === account.id ? 'Удаляем...' : 'Удалить'}
-              </button>
-            </div>
-          </article>
-        ))
-      )}
+}: StaffBlockProps) => {
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-      {staffAccountsStatus !== 'forbidden' && !staffAccounts.length && staffAccountsStatus !== 'loading' ? (
-        <p className="meta-line">Пока нет сотрудников.</p>
-      ) : null}
-    </aside>
+  useEffect(() => {
+    if (staffAccountSaveStatus === 'ready' && dialogOpen) {
+      setDialogOpen(false);
+    }
+  }, [staffAccountSaveStatus, dialogOpen]);
 
-    <article className="editor-card ops-editor">
-      <div className="entity-card__head">
-        <div>
-          <p className="entity-kicker">{staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}</p>
-          <h3>{staffAccountEditor.id ? staffAccountEditor.name || 'Без имени' : 'Создать сотрудника'}</h3>
-        </div>
-        <span className="status-chip">{staffAccountEditor.role === 'admin' ? 'admin' : 'nomad'}</span>
-      </div>
+  const openNewDialog = () => {
+    onResetStaffAccountEditor();
+    setDialogOpen(true);
+  };
 
-      {staffAccountsStatus === 'loading' ? <p className="meta-line">Загружаем сотрудников...</p> : null}
-      {staffAccountsStatus === 'error' ? <p className="error-text">{staffAccountsError}</p> : null}
-      {staffAccountsStatus === 'forbidden' ? <p className="meta-line">{staffAccountsError}</p> : null}
+  const openEditDialog = (account: StaffAccountRecord) => {
+    onSelectStaffAccount(account);
+    setDialogOpen(true);
+  };
 
-      {staffAccountsStatus !== 'forbidden' ? (
-        <form className="admin-form" onSubmit={onSubmitStaffAccount}>
-          <div className="form-grid form-grid--two">
-            <label className="field">
-              <span className="field-label">Логин</span>
-              <input
-                className="text-input"
-                value={staffAccountEditor.login}
-                onChange={(event) => setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))}
-                autoComplete="username"
-                placeholder="nomad"
-              />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Имя</span>
-              <input
-                className="text-input"
-                value={staffAccountEditor.name}
-                onChange={(event) => setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))}
-                autoComplete="name"
-                placeholder="Кальянный мастер"
-              />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Роль</span>
-              <select
-                className="select-input"
-                value={staffAccountEditor.role}
-                onChange={(event) =>
-                  setStaffAccountEditor((current) => ({
-                    ...current,
-                    role: event.target.value as StaffUser['role'],
-                  }))
-                }
-              >
-                <option value="admin">admin</option>
-                <option value="nomad">nomad</option>
-              </select>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}</span>
-              <input
-                className="text-input"
-                type="password"
-                value={staffAccountEditor.password}
-                onChange={(event) => setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))}
-                autoComplete="new-password"
-                placeholder="Оставьте пустым, если не менять"
-              />
-            </label>
-
-            <label className="checkbox-field">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={staffAccountEditor.active}
-                className={`toggle ${staffAccountEditor.active ? 'toggle--on' : 'toggle--off'}`}
-                onClick={() => setStaffAccountEditor((current) => ({ ...current, active: !current.active }))}
-              >
-                <span className="toggle__track" aria-hidden="true">
-                  <span className="toggle__thumb" />
-                </span>
-              </button>
-              <span>Активен</span>
-            </label>
+  return (
+    <>
+      <section className="card access-card" aria-label="Master-учётки">
+        <header className="access-card__head">
+          <div>
+            <p className="eyebrow access-card__eyebrow">Master-учётки</p>
+            <p className="access-card__title-serif">Доступ к Nomad Master</p>
           </div>
-
-          {staffAccountSaveError ? <p className="error-text">{staffAccountSaveError}</p> : null}
-
-          <div className="form-actions">
+          {staffAccountsStatus !== 'forbidden' ? (
             <button
-              type="submit"
               className="btn"
               data-variant="primary"
-              disabled={staffAccountSaveStatus === 'loading'}
-            >
-              {staffAccountSaveStatus === 'loading'
-                ? 'Сохраняем...'
-                : staffAccountEditor.id
-                  ? 'Сохранить сотрудника'
-                  : 'Создать сотрудника'}
-            </button>
-            <button
               type="button"
-              className="btn"
-              data-variant="ghost"
-              onClick={onResetStaffAccountEditor}
+              onClick={openNewDialog}
             >
-              Сбросить форму
+              <PlusIcon />
+              Создать сотрудника
             </button>
-            {staffAccountEditor.id ? (
-              <button
-                type="button"
-                className="btn"
-                data-variant="danger"
-                onClick={() =>
-                  void onDeleteStaffAccount({
-                    id: staffAccountEditor.id,
-                    login: staffAccountEditor.login,
-                    name: staffAccountEditor.name,
-                    role: staffAccountEditor.role,
-                    active: staffAccountEditor.active,
-                  })
-                }
-                disabled={staffAccountToggleId === staffAccountEditor.id}
-              >
-                {staffAccountToggleId === staffAccountEditor.id ? 'Удаляем...' : 'Удалить сотрудника'}
-              </button>
+          ) : null}
+        </header>
+
+        {staffAccountsStatus === 'forbidden' ? (
+          <p className="access-card__forbidden meta-line">
+            {staffAccountsError || 'Раздел сотрудников доступен только для admin.'}
+          </p>
+        ) : (
+          <>
+            <div className="list__head access-list__head" style={{ gridTemplateColumns: STAFF_GRID }}>
+              <div />
+              <div>Имя</div>
+              <div>Логин</div>
+              <div>Роль</div>
+              <div>Последний вход</div>
+              <div style={{ textAlign: 'center' }}>Вкл.</div>
+              <div style={{ textAlign: 'right' }}>Действия</div>
+            </div>
+
+            {staffAccountsStatus === 'loading' && !staffAccounts.length ? (
+              <p className="access-card__empty meta-line">Загружаем сотрудников…</p>
             ) : null}
-          </div>
-        </form>
-      ) : (
-        <div className="forbidden-panel">
-          <p className="meta-line">Staff accounts недоступны для вашей роли.</p>
-        </div>
-      )}
-    </article>
-  </div>
-);
+
+            {staffAccountsStatus === 'ready' && !staffAccounts.length ? (
+              <p className="access-card__empty meta-line">Пока нет сотрудников.</p>
+            ) : null}
+
+            {staffAccounts.map((account) => {
+              const busy = staffAccountToggleId === account.id;
+              const isAdmin = account.role === 'admin';
+              return (
+                <div
+                  key={account.id}
+                  className="list__row access-list__row"
+                  style={{ gridTemplateColumns: STAFF_GRID }}
+                >
+                  <div>
+                    <div
+                      className={
+                        isAdmin
+                          ? 'access-avatar access-avatar--square access-avatar--gradient'
+                          : 'access-avatar access-avatar--square'
+                      }
+                      aria-hidden="true"
+                    >
+                      {initialOf(account.name || account.login)}
+                    </div>
+                  </div>
+                  <div className="cell-primary">{account.name || '—'}</div>
+                  <div className="cell-meta mono access-cell-login">{account.login || '—'}</div>
+                  <div>
+                    {isAdmin ? (
+                      <span className="tag" data-tone="accent">admin</span>
+                    ) : (
+                      <span className="tag">staff</span>
+                    )}
+                  </div>
+                  <div className="cell-meta access-cell-last">
+                    <span className="access-cell-last__empty">—</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={account.active}
+                      aria-label={account.active ? 'Активен' : 'Выключен'}
+                      title={account.active ? 'Активен' : 'Выключен'}
+                      className="toggle"
+                      data-on={account.active}
+                      onClick={() => void onToggleStaffAccountActive(account)}
+                      disabled={busy}
+                    >
+                      <span className="toggle__track" aria-hidden="true">
+                        <span className="toggle__thumb" />
+                      </span>
+                    </button>
+                  </div>
+                  <div className="row-actions">
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      title="Редактировать"
+                      aria-label="Редактировать"
+                      onClick={() => openEditDialog(account)}
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      title="Удалить"
+                      aria-label="Удалить"
+                      onClick={() => void onDeleteStaffAccount(account)}
+                      disabled={busy}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </section>
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            onResetStaffAccountEditor();
+          }
+        }}
+      >
+        <DialogContent className="operator-dialog">
+          <DialogHeader className="operator-dialog__head">
+            <p className="operator-dialog__eyebrow">
+              {staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}
+            </p>
+            <DialogTitle className="operator-dialog__title">
+              {staffAccountEditor.id
+                ? staffAccountEditor.name || 'Без имени'
+                : 'Создать сотрудника'}
+            </DialogTitle>
+            <DialogDescription className="operator-dialog__sub">
+              <strong>Admin</strong> может управлять всем — каталогом, staff-учётками, daily code и журналом.
+            </DialogDescription>
+          </DialogHeader>
+
+          {staffAccountsStatus === 'forbidden' ? (
+            <div className="empty">Staff accounts недоступны для вашей роли.</div>
+          ) : (
+            <form className="operator-dialog__form" onSubmit={onSubmitStaffAccount}>
+              <div className="operator-dialog__body">
+                <div className="operator-dialog__active-row">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={staffAccountEditor.active}
+                    className={`toggle ${staffAccountEditor.active ? 'toggle--on' : 'toggle--off'}`}
+                    onClick={() =>
+                      setStaffAccountEditor((current) => ({ ...current, active: !current.active }))
+                    }
+                    aria-label="Активен"
+                  >
+                    <span className="toggle__track" aria-hidden="true">
+                      <span className="toggle__thumb" />
+                    </span>
+                  </button>
+                  <span className="operator-dialog__active-hint">
+                    {staffAccountEditor.active ? 'Сможет войти в Master' : 'Доступ закрыт'}
+                  </span>
+                </div>
+
+                <div className="operator-dialog__field">
+                  <label className="operator-dialog__label">Имя</label>
+                  <div className="input input--lg">
+                    <input
+                      value={staffAccountEditor.name}
+                      onChange={(event) =>
+                        setStaffAccountEditor((current) => ({ ...current, name: event.target.value }))
+                      }
+                      autoComplete="name"
+                      placeholder="Кальянный мастер"
+                    />
+                  </div>
+                </div>
+
+                <div className="operator-dialog__field">
+                  <label className="operator-dialog__label">Логин</label>
+                  <div className="input">
+                    <input
+                      value={staffAccountEditor.login}
+                      onChange={(event) =>
+                        setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))
+                      }
+                      autoComplete="username"
+                      placeholder="nomad"
+                    />
+                  </div>
+                </div>
+
+                <div className="operator-dialog__field">
+                  <label className="operator-dialog__label">Роль</label>
+                  <div className="operator-dialog__role-switch" role="radiogroup" aria-label="Роль">
+                    {(['admin', 'nomad'] as const).map((roleKey) => {
+                      const active = staffAccountEditor.role === roleKey;
+                      return (
+                        <button
+                          key={roleKey}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          className="chip"
+                          data-active={active}
+                          onClick={() =>
+                            setStaffAccountEditor((current) => ({
+                              ...current,
+                              role: roleKey as StaffUser['role'],
+                            }))
+                          }
+                        >
+                          {roleKey === 'admin' ? 'Admin' : 'Staff'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="operator-dialog__field">
+                  <label className="operator-dialog__label">
+                    Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}
+                  </label>
+                  <div className="input">
+                    <input
+                      type="password"
+                      value={staffAccountEditor.password}
+                      onChange={(event) =>
+                        setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))
+                      }
+                      autoComplete="new-password"
+                      placeholder="Оставьте пустым, если не менять"
+                    />
+                  </div>
+                </div>
+
+                {staffAccountSaveError ? (
+                  <p className="operator-dialog__error">{staffAccountSaveError}</p>
+                ) : null}
+              </div>
+
+              <footer className="operator-dialog__foot">
+                {staffAccountEditor.id ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    data-variant="ghost"
+                    onClick={() => {
+                      void onDeleteStaffAccount({
+                        id: staffAccountEditor.id,
+                        login: staffAccountEditor.login,
+                        name: staffAccountEditor.name,
+                        role: staffAccountEditor.role,
+                        active: staffAccountEditor.active,
+                      });
+                    }}
+                    disabled={staffAccountToggleId === staffAccountEditor.id}
+                  >
+                    Удалить
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn"
+                  data-variant="ghost"
+                  onClick={() => {
+                    setDialogOpen(false);
+                    onResetStaffAccountEditor();
+                  }}
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="btn"
+                  data-variant="primary"
+                  disabled={staffAccountSaveStatus === 'loading'}
+                >
+                  {staffAccountSaveStatus === 'loading'
+                    ? 'Сохраняем...'
+                    : staffAccountEditor.id
+                      ? 'Сохранить'
+                      : 'Создать'}
+                </button>
+              </footer>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};

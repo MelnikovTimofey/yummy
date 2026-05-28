@@ -74,7 +74,6 @@ type AccessViewProps = {
 
 export const AccessView = (props: AccessViewProps) => {
   const {
-    user,
     dailyCodes,
     dailyCodesStatus,
     dailyCodesError,
@@ -89,8 +88,6 @@ export const AccessView = (props: AccessViewProps) => {
     telegramOperatorsError,
     staffAccounts,
     auditEvents,
-    onResetTelegramOperatorEditor,
-    setTelegramOperatorDialogOpen,
   } = props;
 
   const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
@@ -123,21 +120,30 @@ export const AccessView = (props: AccessViewProps) => {
         eyebrow="Доступ"
         title="Daily code и staff"
         subtitle="Управление гостевым кодом, операторами Telegram-бота и учётками Master."
-        meta="/staff/audit/events"
         actions={
-          user?.role === 'admin' ? (
-            <button
-              className="btn"
-              data-variant="primary"
-              type="button"
-              onClick={() => {
-                onResetTelegramOperatorEditor();
-                setTelegramOperatorDialogOpen(true);
-              }}
+          <button
+            className="btn"
+            data-variant="ghost"
+            type="button"
+          >
+            <svg
+              className="lucide"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              Новый оператор
-            </button>
-          ) : null
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M12 7v5l4 2" />
+            </svg>
+            /staff/audit/events
+          </button>
         }
       />
 
@@ -175,7 +181,6 @@ export const AccessView = (props: AccessViewProps) => {
       />
 
       <DailyCodeBlock
-        helper="Оператор получает код только через Telegram-бота после привязки контакта."
         currentDailyCode={currentDailyCode}
         dailyCodes={dailyCodes}
         dailyCodesStatus={dailyCodesStatus}
