@@ -113,6 +113,7 @@ export const MasterTopBar = ({
           onClick={onOpenCommandPalette}
         >
           <Search size={12} aria-hidden />
+          <span className="status-pill__label">Найти или сделать</span>
           <kbd className="kbd">⌘K</kbd>
         </button>
 

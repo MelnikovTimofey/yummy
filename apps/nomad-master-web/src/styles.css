@@ -833,6 +833,10 @@ p {
     display: none;
   }
 
+  .status-pill__label {
+    display: none;
+  }
+
   .status-pill--button {
     gap: 0;
     padding: 6px;
