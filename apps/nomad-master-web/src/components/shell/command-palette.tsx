@@ -168,7 +168,7 @@ export const CommandPalette = ({
                     onMouseEnter={() => setActiveIndex(flatIndex)}
                     onClick={() => runItem(item)}
                   >
-                    <Icon size={14} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+                    <Icon size={14} aria-hidden="true" className="shrink-0" />
                     <span className="flex-1 text-left truncate">{item.label}</span>
                     {item.hint ? (
                       <span className="cmdk__item__hint text-xs text-muted-foreground shrink-0">
