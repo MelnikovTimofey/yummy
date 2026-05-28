@@ -135,9 +135,9 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   // Primary-кнопка добавления оператора переехала из header в шапку
   // OperatorsBlock и переименована в «Добавить оператора» (mockup parity).
   await expect(page.getByRole('button', { name: 'Добавить оператора' })).toBeVisible();
-  // AuditBlock h3 «Последние staff-операции» убран — теперь secondary title
-  // «Что происходило в системе» (serif, не heading-role).
-  await expect(page.getByText('Что происходило в системе').first()).toBeVisible();
+  // AuditBlock убран со страницы целиком (mockup-trim) — журнал теперь
+  // только за пределами Master, через /staff/audit/events API.
+  await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
 });
 
 test('Master nomad role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
@@ -156,5 +156,7 @@ test('Master nomad role keeps admin-only surfaces restricted while preserving ac
   // «Создать сотрудника» после mockup-parity рефактора — на странице сразу
   // не виден, нужен клик. Основное forbidden-сообщение по staff выше уже
   // проверено assertion'ом «Раздел сотрудников доступен только для admin.».
-  await expect(page.getByText('Журнал изменений доступен только для admin.')).toBeVisible();
+  // AuditBlock убран со страницы целиком — forbidden-сообщение по журналу
+  // больше не рендерится на /access.
+  await expect(page.getByText('Журнал изменений доступен только для admin.')).toHaveCount(0);
 });

@@ -1,12 +1,10 @@
 import type {
-  AuditEventRecord,
   DailyAccessCodeRecord,
   StaffAccountRecord,
   StaffUser,
   TelegramAutomationStateRecord,
   TelegramOperatorRecord,
 } from '@/contracts';
-import { AuditBlock } from './audit-block';
 import { DailyCodeBlock } from './daily-code-block';
 import { OperatorsBlock } from './operators-block';
 import { StaffBlock } from './staff-block';
@@ -67,9 +65,6 @@ type AccessViewProps = {
   onToggleStaffAccountActive: (account: StaffAccountRecord) => void | Promise<void>;
   onDeleteStaffAccount: (account: StaffAccountRecord) => void | Promise<void>;
 
-  auditEvents: AuditEventRecord[];
-  auditEventsStatus: AccessRoleStatus;
-  auditEventsError: string;
 };
 
 export const AccessView = (props: AccessViewProps) => {
@@ -87,7 +82,6 @@ export const AccessView = (props: AccessViewProps) => {
     telegramOperatorsStatus,
     telegramOperatorsError,
     staffAccounts,
-    auditEvents,
   } = props;
 
   const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
@@ -172,11 +166,6 @@ export const AccessView = (props: AccessViewProps) => {
             hint: 'с доступом в систему',
             tone: 'success',
           },
-          {
-            label: 'События за сутки',
-            value: auditEvents.length,
-            hint: 'в журнале',
-          },
         ]}
       />
 
@@ -231,12 +220,6 @@ export const AccessView = (props: AccessViewProps) => {
         onSubmitStaffAccount={props.onSubmitStaffAccount}
         onToggleStaffAccountActive={props.onToggleStaffAccountActive}
         onDeleteStaffAccount={props.onDeleteStaffAccount}
-      />
-
-      <AuditBlock
-        auditEvents={props.auditEvents}
-        auditEventsStatus={props.auditEventsStatus}
-        auditEventsError={props.auditEventsError}
       />
     </section>
   );

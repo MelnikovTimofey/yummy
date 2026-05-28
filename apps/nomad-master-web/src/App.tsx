@@ -2,7 +2,6 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
-import { useAuditEvents } from '@/hooks/use-audit-events';
 import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
@@ -140,7 +139,6 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
 
   const onAfterAccessSubmit = () => setActiveTab('access');
-  const auditEventsState = useAuditEvents();
   const dailyCode = useDailyCode();
   const staff = useStaffAccounts({ onAfterSubmit: onAfterAccessSubmit });
   const telegramOps = useTelegramOperators({ onAfterSubmit: onAfterAccessSubmit });
@@ -372,7 +370,6 @@ export const App = () => {
           dailyCode.reload(token),
           staff.reload(token, profile.user.role),
           telegramOps.reload(token, profile.user.role),
-          auditEventsState.reload(token, profile.user.role),
         ]);
         setStatus('ready');
       } catch {
@@ -420,7 +417,6 @@ export const App = () => {
         dailyCode.reload(auth.accessToken),
         staff.reload(auth.accessToken, profile.user.role),
         telegramOps.reload(auth.accessToken, profile.user.role),
-        auditEventsState.reload(auth.accessToken, profile.user.role),
       ]);
       setStatus('ready');
     } catch (cause) {
@@ -531,7 +527,6 @@ export const App = () => {
     dailyCode.reset();
     staff.reset();
     telegramOps.reset();
-    auditEventsState.reset();
     storeToken('');
     setToken('');
     setUser(null);
@@ -904,9 +899,6 @@ export const App = () => {
         onSubmitStaffAccount={(event) => staff.onSubmit(event, token)}
         onToggleStaffAccountActive={(account) => staff.onToggleActive(account, token)}
         onDeleteStaffAccount={(account) => staff.onDelete(account, token)}
-        auditEvents={auditEventsState.auditEvents}
-        auditEventsStatus={auditEventsState.status}
-        auditEventsError={auditEventsState.error}
       />
     );
   };

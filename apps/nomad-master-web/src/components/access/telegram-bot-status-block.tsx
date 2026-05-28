@@ -3,7 +3,6 @@ import type {
   TelegramAutomationStateRecord,
 } from '@/contracts';
 import { formatTelegramAutomationHealth } from '@/contracts';
-import { formatDateTimeDisplay } from './format-date-time';
 import type { AccessRoleStatus } from './types';
 
 type TelegramBotStatusBlockProps = {
@@ -60,12 +59,6 @@ const healthBadgeClass = (
   return { className: 'bot-status__badge bot-status__badge--unknown', label: formatTelegramAutomationHealth(health ?? 'unknown') };
 };
 
-const initialOf = (name: string): string => {
-  const trimmed = name?.trim();
-  if (!trimmed) return '?';
-  return trimmed.charAt(0).toUpperCase();
-};
-
 export const TelegramBotStatusBlock = ({
   telegramAutomationState,
   telegramAutomationStateStatus,
@@ -74,10 +67,6 @@ export const TelegramBotStatusBlock = ({
 }: TelegramBotStatusBlockProps) => {
   const heartbeatIso = telegramAutomationState?.lastHeartbeatAt ?? '';
   const badge = healthBadgeClass(telegramAutomationState?.health, heartbeatIso);
-
-  const lastRequestOperator = telegramAutomationState?.lastRequestOperatorName ?? '';
-  const lastRequestAt = telegramAutomationState?.lastRequestAt ?? '';
-  const lastRequestChat = telegramAutomationState?.lastRequestChatId ?? '';
 
   const history = dailyCodes.slice(0, 5);
 
@@ -108,24 +97,6 @@ export const TelegramBotStatusBlock = ({
       {telegramAutomationStateStatus === 'forbidden' ? (
         <p className="meta-line bot-status__notice">{telegramAutomationStateError}</p>
       ) : null}
-
-      <article className="bot-status__last-request">
-        <p className="eyebrow">Последний запрос кода</p>
-        {lastRequestOperator || lastRequestAt ? (
-          <div className="bot-status__last-request__row">
-            <span className="bot-status__avatar" aria-hidden="true">{initialOf(lastRequestOperator || '—')}</span>
-            <div className="bot-status__last-request__body">
-              <p className="bot-status__last-request__name">{lastRequestOperator || 'Оператор не указан'}</p>
-              <p className="bot-status__last-request__meta mono">
-                {lastRequestChat ? `${lastRequestChat} · ` : ''}{formatTimeOnly(lastRequestAt)}
-              </p>
-            </div>
-            <span className="bot-status__tag bot-status__tag--info mono">/code</span>
-          </div>
-        ) : (
-          <p className="meta-line">Запросов ещё не было</p>
-        )}
-      </article>
 
       <article className="bot-status__history">
         <div className="bot-status__history__head">

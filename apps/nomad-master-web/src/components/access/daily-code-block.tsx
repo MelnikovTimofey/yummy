@@ -36,6 +36,30 @@ const progressClass = (urgency: 'fresh' | 'soon' | 'expired') => {
   return 'daily-code-progress__fill';
 };
 
+const CopyIcon = () => (
+  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M3 21v-5h5" />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M12 7v5l4 2" />
+  </svg>
+);
+
 export const DailyCodeBlock = ({
   currentDailyCode,
   dailyCodes,
@@ -72,10 +96,10 @@ export const DailyCodeBlock = ({
   };
 
   return (
-    <article className="daily-code-card" aria-label="Daily code и статус Telegram-бота">
+    <article className="card daily-code-card" aria-label="Daily code и статус Telegram-бота">
       <div className="daily-code-card__left">
         <div className="daily-code-hero__head">
-          <p className="eyebrow daily-code-hero__eyebrow mono">Текущий daily code</p>
+          <p className="eyebrow">Текущий daily code</p>
           <span
             className={
               statusActive
@@ -83,16 +107,16 @@ export const DailyCodeBlock = ({
                 : 'daily-code-hero__status daily-code-hero__status--inactive'
             }
           >
-            <span className="daily-code-hero__status-dot" />
-            {statusActive ? 'Активен' : 'Нет активного кода'}
+            <span className="status-pill__dot daily-code-hero__status-dot" />
+            <span>{statusActive ? 'Активен' : 'Нет активного кода'}</span>
           </span>
         </div>
 
         <p
           className={
             code
-              ? 'daily-code-hero__code'
-              : 'daily-code-hero__code daily-code-hero__code--empty'
+              ? 'mono daily-code-hero__code'
+              : 'mono daily-code-hero__code daily-code-hero__code--empty'
           }
         >
           {code || 'Нет активного кода'}
@@ -101,24 +125,27 @@ export const DailyCodeBlock = ({
         <div className="daily-code-hero__actions">
           <button
             type="button"
-            className="secondary-button secondary-button--inline"
+            className="btn"
             onClick={handleCopy}
             disabled={!code}
           >
+            <CopyIcon />
             {copied ? 'Скопировано' : 'Скопировать'}
           </button>
           <button
             type="button"
-            className="primary-button primary-button--inline"
+            className="btn"
+            data-variant="ghost"
             onClick={() => {
               void onRotate();
             }}
             disabled={isRotating}
           >
+            <RefreshIcon />
             {isRotating ? 'Генерируем…' : 'Ротировать сейчас'}
           </button>
           <span className="daily-code-hero__spacer" />
-          <kbd className="daily-code-hero__kbd" aria-hidden="true">⌘C</kbd>
+          <kbd className="kbd" aria-hidden="true">⌘C</kbd>
         </div>
 
         {currentDailyCode?.endsAt ? (
@@ -139,12 +166,7 @@ export const DailyCodeBlock = ({
 
         <div className="daily-code-rotation">
           <span className="daily-code-rotation__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-              <path d="M21 3v5h-5" />
-              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-              <path d="M3 21v-5h5" />
-            </svg>
+            <ClockIcon />
           </span>
           <div className="daily-code-rotation__text">
             <p className="daily-code-rotation__title">
@@ -157,11 +179,8 @@ export const DailyCodeBlock = ({
           <div className="daily-code-rotation__chips" role="tablist" aria-label="Режим ротации">
             <button
               type="button"
-              className={
-                rotationMode === 'auto'
-                  ? 'rotation-chip rotation-chip--active'
-                  : 'rotation-chip'
-              }
+              className="chip"
+              data-active={rotationMode === 'auto'}
               onClick={() => setRotationMode('auto')}
               aria-pressed={rotationMode === 'auto'}
             >
@@ -169,11 +188,8 @@ export const DailyCodeBlock = ({
             </button>
             <button
               type="button"
-              className={
-                rotationMode === 'manual'
-                  ? 'rotation-chip rotation-chip--active'
-                  : 'rotation-chip'
-              }
+              className="chip"
+              data-active={rotationMode === 'manual'}
               onClick={() => setRotationMode('manual')}
               aria-pressed={rotationMode === 'manual'}
             >
