@@ -149,7 +149,49 @@ export const RailEditor = ({
 
         <form className="rail-drawer__form" onSubmit={onSubmit}>
           <div className="drawer__body rail-drawer__body">
-            {/* Column 1 — название, подзаголовок, состав */}
+            {/* Column 1 — поиск + добавление */}
+            <section className="rail-drawer__col">
+              <h3 className="rail-drawer__section-title">Добавить миксы</h3>
+              <div className="input">
+                <Search size={14} aria-hidden />
+                <input
+                  value={pickerQuery}
+                  onChange={(event) => setPickerQuery(event.target.value)}
+                  placeholder="Поиск микса…"
+                  disabled={locked}
+                />
+              </div>
+
+              <div className="rail-drawer__picker">
+                {availableRailMixOptions.length === 0 ? (
+                  <div className="empty">
+                    {pickerQuery ? 'Ничего не найдено.' : 'Все миксы уже в рейле.'}
+                  </div>
+                ) : (
+                  availableRailMixOptions.map((mix) => (
+                    <button
+                      key={mix.id}
+                      type="button"
+                      className="rail-drawer__picker-row"
+                      onClick={() => !locked && onAddMix(mix.id)}
+                      disabled={locked}
+                    >
+                      <div className="rail-drawer__picker-body">
+                        <div className="rail-drawer__mix-name">{mix.name}</div>
+                        <div className="rail-drawer__mix-meta">
+                          {mix.description || `Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`}
+                        </div>
+                      </div>
+                      <span className="rail-drawer__picker-action" aria-hidden>
+                        <Plus size={14} />
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* Column 2 — название, подзаголовок, состав */}
             <section className="rail-drawer__col">
               <label className="rail-drawer__field">
                 <span className="rail-drawer__label">Название рейла</span>
@@ -192,7 +234,7 @@ export const RailEditor = ({
                     <div className="empty">
                       {locked
                         ? 'В рейле нет миксов.'
-                        : 'Добавь миксы из списка справа →'}
+                        : '← Добавь миксы из списка слева'}
                     </div>
                   ) : (
                     selectedRailMixEntries.map(({ mixId, index, mix }) => (
@@ -273,48 +315,6 @@ export const RailEditor = ({
                     ))
                   )}
                 </div>
-              </div>
-            </section>
-
-            {/* Column 2 — поиск + добавление */}
-            <section className="rail-drawer__col">
-              <h3 className="rail-drawer__section-title">Добавить миксы</h3>
-              <div className="input">
-                <Search size={14} aria-hidden />
-                <input
-                  value={pickerQuery}
-                  onChange={(event) => setPickerQuery(event.target.value)}
-                  placeholder="Поиск микса…"
-                  disabled={locked}
-                />
-              </div>
-
-              <div className="rail-drawer__picker">
-                {availableRailMixOptions.length === 0 ? (
-                  <div className="empty">
-                    {pickerQuery ? 'Ничего не найдено.' : 'Все миксы уже в рейле.'}
-                  </div>
-                ) : (
-                  availableRailMixOptions.map((mix) => (
-                    <button
-                      key={mix.id}
-                      type="button"
-                      className="rail-drawer__picker-row"
-                      onClick={() => !locked && onAddMix(mix.id)}
-                      disabled={locked}
-                    >
-                      <div className="rail-drawer__picker-body">
-                        <div className="rail-drawer__mix-name">{mix.name}</div>
-                        <div className="rail-drawer__mix-meta">
-                          {mix.description || `Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`}
-                        </div>
-                      </div>
-                      <span className="rail-drawer__picker-action" aria-hidden>
-                        <Plus size={14} />
-                      </span>
-                    </button>
-                  ))
-                )}
               </div>
             </section>
 
