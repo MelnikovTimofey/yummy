@@ -966,7 +966,7 @@ export const InventoryView = ({
             >
               {buildSortPillOptions(inventorySortFieldOptions, inventorySortDirectionOptions).map(
                 (opt) => (
-                  <option key={opt.value} value={opt.value}>
+                  <option key={opt.key} value={opt.key}>
                     {opt.label}
                   </option>
                 ),
