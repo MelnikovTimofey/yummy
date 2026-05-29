@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { ChevronDown, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -349,27 +349,99 @@ const InventorySuggestionInput = ({
   disabled = false,
   onChange,
 }: InventorySuggestionInputProps) => {
-  const listId = useId();
+  const inputId = useId();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const normalized = value.trim().toLocaleLowerCase('ru-RU');
+  const filtered = suggestions
+    .filter((option) => !normalized || option.toLocaleLowerCase('ru-RU').includes(normalized))
+    .slice(0, 8);
 
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
-      <input
-        className="text-input"
-        list={suggestions.length ? listId : undefined}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-      />
-      {suggestions.length ? (
-        <datalist id={listId}>
-          {suggestions.map((option) => (
-            <option key={`${label}:${option}`} value={option} />
-          ))}
-        </datalist>
+    <div className="field combo-suggest" ref={rootRef}>
+      <label className="field-label" htmlFor={inputId}>
+        {label}
+      </label>
+      <div className="combo-suggest__control">
+        <input
+          id={inputId}
+          className="text-input"
+          role="combobox"
+          aria-expanded={open}
+          aria-autocomplete="list"
+          autoComplete="off"
+          value={value}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+        {suggestions.length ? (
+          <button
+            type="button"
+            className="combo-suggest__chevron"
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled={disabled}
+            onClick={() => setOpen((current) => !current)}
+          >
+            <ChevronDown size={14} />
+          </button>
+        ) : null}
+      </div>
+      {open && filtered.length ? (
+        <div className="combo-suggest__panel" role="listbox" aria-label={label}>
+          {filtered.map((option) => {
+            const active = option.toLocaleLowerCase('ru-RU') === normalized;
+            return (
+              <button
+                key={`${label}:${option}`}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={active ? 'combo-suggest__option combo-suggest__option--active' : 'combo-suggest__option'}
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
-    </label>
+    </div>
   );
 };
 
@@ -1083,24 +1155,14 @@ export const InventoryView = ({
                 </div>
               </div>
 
-              <label className="field field--wide">
-                <span className="field-label">Вкусы · через запятую</span>
-                <input
-                  className="text-input"
-                  value={editorDraft.flavors.join(', ')}
-                  onChange={(event) =>
-                    updateEditorDraft(
-                      'flavors',
-                      event.target.value
-                        .split(',')
-                        .map((item) => item.trim())
-                        .filter(Boolean),
-                    )
-                  }
-                  placeholder="лимон, мята, лайм"
-                  disabled={saveStatus === 'loading'}
-                />
-              </label>
+              <InventoryTokenEditor
+                label="Вкусы"
+                selected={editorDraft.flavors}
+                suggestions={flavorOptions}
+                placeholder="Выбери или добавь вкус"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('flavors', value)}
+              />
 
               <label className="field field--wide">
                 <span className="field-label">Описание для команды</span>
@@ -1238,9 +1300,7 @@ export const InventoryView = ({
         <div className="inventory-batch-bar">
           <div>
             <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
-            <p className="meta-line">
-              Массовые действия меняют только наличие. Архивирование остаётся выключенным до отдельного продуктового решения.
-            </p>
+            <p className="meta-line">Массовые действия меняют только наличие.</p>
           </div>
           <div className="inventory-batch-bar__actions">
             <Button
@@ -1260,9 +1320,6 @@ export const InventoryView = ({
             >
               {pendingBatchAction === 'set-out-of-stock' ? 'Обновляем...' : formatInventoryBatchAction('set-out-of-stock')}
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled title="Ждёт отдельного продуктового решения">
-              Архивировать позже
-            </Button>
           </div>
         </div>
       ) : null}
@@ -1275,12 +1332,16 @@ export const InventoryView = ({
           <thead>
             <tr>
               <th className="inventory-table__brand" scope="col">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={onToggleSelectAll}
-                  aria-label="Выбрать все позиции"
-                />
+                <label className="inventory-check">
+                  <input
+                    type="checkbox"
+                    className="inventory-check__input"
+                    checked={allVisibleSelected}
+                    onChange={onToggleSelectAll}
+                    aria-label="Выбрать все позиции"
+                  />
+                  <span className="inventory-check__box" aria-hidden="true" />
+                </label>
               </th>
               <th scope="col">Табак</th>
               <th scope="col">Бренд</th>
