@@ -181,6 +181,19 @@ h3 {
   font-size: clamp(1.08rem, 1.8vw, 1.4rem);
 }
 
+/* DialogTitle (Radix) рендерится как <h2>, поэтому ловит глобальный
+   display-heading scale (clamp до 2.2rem серифом). Возвращаем к единой
+   шкале модальных заголовков (как .rail-drawer__title / .tobacco-drawer__title:
+   serif 22px/500), иначе заголовок диалога выглядит непропорционально крупным. */
+[data-slot="dialog-title"] {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: normal;
+  color: var(--text-primary);
+}
+
 p {
   margin: 0;
 }

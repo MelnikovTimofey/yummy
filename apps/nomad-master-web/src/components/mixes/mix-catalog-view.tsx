@@ -613,7 +613,7 @@ export const MixCatalogView = ({
       />
 
       <Dialog open={mixPendingDelete !== null} onOpenChange={(next) => { if (!next) setMixPendingDelete(null); }}>
-        <DialogContent showCloseButton={false} className="mix-delete-dialog">
+        <DialogContent showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>Удалить микс «{mixPendingDelete?.name}»?</DialogTitle>
             <DialogDescription>
