@@ -1,7 +1,8 @@
 .DS_Store
 
 # web local artifacts
-apps/*/node_modules/
+# без завершающего слэша — чтобы матчился и каталог, и symlink node_modules
+apps/*/node_modules
 apps/*/dist/
 apps/*/.env
 .env
@@ -13,13 +14,13 @@ tobaccos.json
 tobaccos.xml
 .env.local
 test-results
-tests/*/node_modules/
+tests/*/node_modules
 
 # local design handoff materials (Figma exports и т.п.)
 design/
 
 # Nomad service local artifacts
-services/nomad-telegram-bot/node_modules/
+services/nomad-telegram-bot/node_modules
 services/nomad-telegram-bot/dist/
 services/nomad-telegram-bot/.env
 
