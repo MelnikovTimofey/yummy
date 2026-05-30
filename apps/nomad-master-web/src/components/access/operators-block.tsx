@@ -270,13 +270,7 @@ export const OperatorsBlock = ({
                           ) : null}
                         </>
                       ) : (
-                        <>
-                          <span className="tag" data-tone="warning">ждёт /start</span>
-                          <span className="chip access-tg-cell__hint" aria-hidden="true">
-                            <LinkIcon />
-                            Ссылка на бота
-                          </span>
-                        </>
+                        <span className="tag" data-tone="warning">ждёт /start</span>
                       )}
                     </div>
                   </div>
