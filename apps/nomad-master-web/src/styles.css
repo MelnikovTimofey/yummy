@@ -1763,11 +1763,6 @@ button.chip[data-active="true"] .chip__count {
   color: var(--accent-fg);
 }
 
-.chip--editable {
-  background: rgba(53, 119, 74, 0.1);
-  color: #2f6a41;
-}
-
 .chip--readonly {
   background: rgba(149, 61, 39, 0.12);
   color: #8f3824;
@@ -2225,13 +2220,6 @@ button.chip[data-active="true"] .chip__count {
   z-index: 2;
 }
 
-.inventory-editor-sheet .inventory-editor__chips,
-.mixes-editor-sheet .inventory-editor__chips {
-  max-height: 96px;
-  overflow-y: auto;
-  padding: 2px;
-}
-
 @media (max-width: 720px) {
   .inventory-editor-sheet .form-grid--two,
   .mixes-editor-sheet .form-grid--two,
@@ -2257,11 +2245,6 @@ button.chip[data-active="true"] .chip__count {
 .mixes-editor-sheet .field-label,
 .rails-surface__sheet .field-label {
   white-space: nowrap;
-}
-
-.inventory-editor-sheet .inventory-editor__token-input,
-.mixes-editor-sheet .inventory-editor__token-input {
-  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .entity-list {
@@ -4904,25 +4887,141 @@ input[type="checkbox"] {
   color: rgba(255, 255, 255, 0.78);
 }
 
-.inventory-editor__token-input {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.inventory-editor__chips {
-  display: flex;
-  flex-wrap: wrap;
+/* Multiselect: чипы выбранных значений в рамке-контроле + раскрывающийся
+   скроллируемый список опций (уже выбранные приглушены). Рассчитан на
+   большое число значений — список скроллится и фильтруется по вводу. */
+.multiselect {
+  position: relative;
   gap: 6px;
 }
 
-.inventory-editor__token-field {
-  gap: 8px;
+.multiselect__control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-warm);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: text;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-.inventory-editor__chip--active {
-  border-color: rgba(226, 172, 123, 0.42);
-  background: rgba(196, 109, 68, 0.16);
+.multiselect__control[data-open='true'] {
+  border-color: var(--nomad-primary-2);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 4px rgba(226, 172, 123, 0.12);
+}
+
+.multiselect__control[data-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.multiselect__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  border-radius: 999px;
+  background: rgba(226, 172, 123, 0.16);
+  border: 1px solid rgba(226, 172, 123, 0.3);
+  color: var(--nomad-ink);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.multiselect__chip-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--nomad-ink-soft);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.multiselect__chip-remove:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--nomad-ink);
+}
+
+.multiselect__input {
+  flex: 1 1 90px;
+  min-width: 90px;
+  border: none;
+  background: transparent;
+  color: var(--nomad-ink);
+  outline: none;
+  font-size: 0.9rem;
+  padding: 4px 2px;
+}
+
+.multiselect__input::placeholder {
+  color: var(--nomad-ink-soft);
+}
+
+.multiselect__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border-warm);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(28, 24, 27, 0.98), rgba(20, 18, 21, 0.98));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.multiselect__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 11px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--nomad-ink);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.multiselect__option:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.multiselect__option--selected,
+.multiselect__option:disabled {
+  color: var(--nomad-ink-soft);
+  cursor: default;
+}
+
+.multiselect__option--add {
+  color: var(--nomad-primary-2);
+  font-weight: 600;
+}
+
+.multiselect__empty {
+  padding: 9px 11px;
+  color: var(--nomad-ink-soft);
+  font-size: 0.84rem;
 }
 
 .inventory-hero-stats {

@@ -230,6 +230,13 @@ const InventoryTokenEditor = ({
   onChange,
 }: InventoryTokenEditorProps) => {
   const [draftValue, setDraftValue] = useState('');
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const listId = useId();
+
+  const isSelected = (value: string) =>
+    selected.some((item) => item.toLocaleLowerCase('ru-RU') === value.toLocaleLowerCase('ru-RU'));
 
   const addValue = (value: string) => {
     const trimmed = value.trim();
@@ -239,93 +246,143 @@ const InventoryTokenEditor = ({
 
     const existing = suggestions.find((item) => item.toLocaleLowerCase('ru-RU') === trimmed.toLocaleLowerCase('ru-RU'));
     const nextValue = existing ?? trimmed;
-    const currentNormalized = selected.map((item) => item.toLocaleLowerCase('ru-RU'));
 
-    if (currentNormalized.includes(nextValue.toLocaleLowerCase('ru-RU'))) {
-      setDraftValue('');
-      return;
+    if (!isSelected(nextValue)) {
+      onChange([...selected, nextValue]);
     }
-
-    onChange([...selected, nextValue]);
     setDraftValue('');
   };
 
-  const toggleSuggestion = (value: string) => {
-    const normalized = value.toLocaleLowerCase('ru-RU');
-    if (selected.some((item) => item.toLocaleLowerCase('ru-RU') === normalized)) {
-      onChange(selected.filter((item) => item.toLocaleLowerCase('ru-RU') !== normalized));
-      return;
-    }
-
-    onChange([...selected, value]);
+  const removeValue = (value: string) => {
+    onChange(selected.filter((item) => item !== value));
   };
 
-  const filteredSuggestions = suggestions
-    .filter((item) => {
-      if (!draftValue.trim()) {
-        return true;
-      }
-
-      return item.toLocaleLowerCase('ru-RU').includes(draftValue.trim().toLocaleLowerCase('ru-RU'));
-    })
-    .slice(0, 8);
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter' && event.key !== ',') {
+  useEffect(() => {
+    if (!open) {
       return;
     }
 
-    event.preventDefault();
-    addValue(draftValue);
+    const handlePointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const normalizedDraft = draftValue.trim().toLocaleLowerCase('ru-RU');
+  const filteredSuggestions = suggestions.filter(
+    (item) => !normalizedDraft || item.toLocaleLowerCase('ru-RU').includes(normalizedDraft),
+  );
+  const canAddCustom =
+    normalizedDraft.length > 0 && !suggestions.some((item) => item.toLocaleLowerCase('ru-RU') === normalizedDraft);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if ((event.key === 'Enter' || event.key === ',') && draftValue.trim()) {
+      event.preventDefault();
+      addValue(draftValue);
+      return;
+    }
+
+    if (event.key === 'Backspace' && !draftValue && selected.length) {
+      event.preventDefault();
+      removeValue(selected[selected.length - 1]);
+    }
   };
 
   return (
-    <div className="field field--wide inventory-editor__token-field">
+    <div className="field field--wide multiselect" ref={rootRef}>
       <span className="field-label">{label}</span>
-      <div className="inventory-editor__token-input">
+      <div
+        className="multiselect__control"
+        data-open={open}
+        data-disabled={disabled}
+        onMouseDown={(event) => {
+          if (disabled || event.target !== event.currentTarget) {
+            return;
+          }
+          event.preventDefault();
+          inputRef.current?.focus();
+          setOpen(true);
+        }}
+      >
+        {selected.map((value) => (
+          <span key={`${label}:${value}`} className="multiselect__chip">
+            {formatValue(value)}
+            <button
+              type="button"
+              className="multiselect__chip-remove"
+              aria-label={`Убрать ${formatValue(value)}`}
+              disabled={disabled}
+              onClick={() => removeValue(value)}
+            >
+              ×
+            </button>
+          </span>
+        ))}
         <input
-          className="text-input"
+          ref={inputRef}
+          className="multiselect__input"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          autoComplete="off"
           value={draftValue}
-          onChange={(event) => setDraftValue(event.target.value)}
+          onChange={(event) => {
+            setDraftValue(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={selected.length ? '' : placeholder}
           disabled={disabled}
         />
-        <Button type="button" size="sm" variant="outline" disabled={disabled || !draftValue.trim()} onClick={() => addValue(draftValue)}>
-          Добавить
-        </Button>
       </div>
-      {selected.length ? (
-        <div className="inventory-editor__chips">
-          {selected.map((value) => (
-            <button
-              key={`${label}:${value}`}
-              type="button"
-              className="chip chip--editable"
-              disabled={disabled}
-              onClick={() => onChange(selected.filter((item) => item !== value))}
-            >
-              {formatValue(value)} ×
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {filteredSuggestions.length ? (
-        <div className="inventory-editor__chips">
+      {open ? (
+        <div className="multiselect__panel" id={listId} role="listbox" aria-label={label}>
           {filteredSuggestions.map((value) => {
-            const active = selected.includes(value);
+            const active = isSelected(value);
             return (
               <button
-                key={`${label}:suggestion:${value}`}
+                key={`${label}:option:${value}`}
                 type="button"
-                className={active ? 'chip chip--editable inventory-editor__chip--active' : 'chip'}
-                disabled={disabled}
-                onClick={() => toggleSuggestion(value)}
+                role="option"
+                aria-selected={active}
+                disabled={active}
+                className={active ? 'multiselect__option multiselect__option--selected' : 'multiselect__option'}
+                onClick={() => addValue(value)}
               >
-                {formatValue(value)}
+                <span>{formatValue(value)}</span>
+                {active ? <span aria-hidden="true">✓</span> : null}
               </button>
             );
           })}
+          {canAddCustom ? (
+            <button
+              type="button"
+              className="multiselect__option multiselect__option--add"
+              onClick={() => addValue(draftValue)}
+            >
+              Добавить «{draftValue.trim()}»
+            </button>
+          ) : null}
+          {!filteredSuggestions.length && !canAddCustom ? (
+            <p className="multiselect__empty">Ничего не найдено</p>
+          ) : null}
         </div>
       ) : null}
     </div>
