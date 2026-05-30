@@ -309,7 +309,7 @@ export const MixBuilder = ({
               <span className="mix-builder__section-eyebrow">В рейлах</span>
               <ul>
                 {editor.railMemberships.map((membership) => (
-                  <li key={membership.railId}>{membership.railName}</li>
+                  <li key={membership.id}>{membership.name}</li>
                 ))}
               </ul>
             </div>

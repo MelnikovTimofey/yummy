@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, ChevronDown, Copy, Eye, EyeOff, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, Copy, Eye, EyeOff, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogClose,
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
+import { FilterSingleSelect } from '@/components/ui/filter-single-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
@@ -237,27 +238,15 @@ export const MixCatalogView = ({
         title="Каталог миксов"
         subtitle="Подборки для гостевой витрины — поиск, фильтры, быстрые действия."
         actions={
-          <>
-            <button
-              type="button"
-              className="btn"
-              data-variant="ghost"
-              disabled
-              title="В разработке"
-            >
-              <Bookmark size={14} aria-hidden />
-              Сохранённые виды
-            </button>
-            <button
-              type="button"
-              className="btn"
-              data-variant="primary"
-              onClick={onStartCreate}
-            >
-              <Plus size={14} aria-hidden />
-              Новый микс
-            </button>
-          </>
+          <button
+            type="button"
+            className="btn"
+            data-variant="primary"
+            onClick={onStartCreate}
+          >
+            <Plus size={14} aria-hidden />
+            Новый микс
+          </button>
         }
       />
 
@@ -382,19 +371,12 @@ export const MixCatalogView = ({
               </span>
             </summary>
             <div className="inventory-filter-groups ops-filter-groups">
-              <label className="mixes-toolbar__control">
-                <span className="mixes-toolbar__label">Участие в рейлах</span>
-                <select
-                  value={filters.railState}
-                  onChange={(event) => onRailStateChange(event.target.value as MixRailFilter)}
-                >
-                  {mixRailFilterOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FilterSingleSelect
+                title="Участие в рейлах"
+                options={mixRailFilterOptions}
+                value={filters.railState}
+                onChange={onRailStateChange}
+              />
 
               {mixFilterGroups.map((group) => {
                 const options = filters.options[group.key];
