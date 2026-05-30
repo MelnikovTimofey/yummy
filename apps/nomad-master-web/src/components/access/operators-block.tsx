@@ -158,7 +158,7 @@ export const OperatorsBlock = ({
         <header className="access-card__head">
           <div>
             <p className="eyebrow access-card__eyebrow">Telegram-операторы</p>
-            <p className="access-card__title-serif">Allowlist для daily code</p>
+            <p className="access-card__title-serif">Сотрудники с доступом к боту</p>
           </div>
           {telegramOperatorsStatus !== 'forbidden' ? (
             <button
@@ -294,8 +294,7 @@ export const OperatorsBlock = ({
                       aria-checked={operator.active}
                       aria-label={operator.active ? 'Активен' : 'Выключен'}
                       title={operator.active ? 'Активен' : 'Выключен'}
-                      className="toggle"
-                      data-on={operator.active}
+                      className={`toggle ${operator.active ? 'toggle--on' : 'toggle--off'}`}
                       onClick={() => void onToggleTelegramOperatorActive(operator)}
                       disabled={busy}
                     >

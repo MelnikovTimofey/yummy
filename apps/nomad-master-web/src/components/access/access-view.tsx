@@ -112,7 +112,7 @@ export const AccessView = (props: AccessViewProps) => {
     <section className="access-page">
       <MasterPageHeader
         eyebrow="Доступ"
-        title="Daily code и staff"
+        title="Доступ и персонал"
         subtitle="Управление гостевым кодом, операторами Telegram-бота и учётками Master."
         actions={
           <button

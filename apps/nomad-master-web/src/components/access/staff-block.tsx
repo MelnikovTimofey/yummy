@@ -167,8 +167,7 @@ export const StaffBlock = ({
                       aria-checked={account.active}
                       aria-label={account.active ? 'Активен' : 'Выключен'}
                       title={account.active ? 'Активен' : 'Выключен'}
-                      className="toggle"
-                      data-on={account.active}
+                      className={`toggle ${account.active ? 'toggle--on' : 'toggle--off'}`}
                       onClick={() => void onToggleStaffAccountActive(account)}
                       disabled={busy}
                     >
