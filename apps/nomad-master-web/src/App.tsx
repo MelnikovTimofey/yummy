@@ -811,6 +811,7 @@ export const App = () => {
         onStartCreate={onStartCreateMix}
         onCopyMix={onCopyMix}
         onToggleMixAvailable={(mix) => void mixes.onToggleMixAvailable(mix)}
+        onDeleteMix={(mix) => void mixes.onDeleteMix(mix)}
         rowPendingId={mixes.mixRowPendingId}
       />
     );

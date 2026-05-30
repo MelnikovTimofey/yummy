@@ -111,6 +111,21 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await page.getByRole('button', { name: 'Отмена' }).click();
   await expect(page.locator('.mix-builder')).toBeHidden();
 
+  // Удаление микса = подтверждающий диалог, текст которого зависит от
+  // участия микса в рейлах. «Цитрусовый караван» входит в prepared-рейл
+  // «Свежая линия», поэтому предупреждение перечисляет рейлы. Не
+  // подтверждаем (Отмена) — smoke остаётся неразрушающим для остальных
+  // assertion'ов на seed-данных.
+  await citrusMixRow.getByRole('button', { name: 'Удалить Цитрусовый караван' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Удалить микс «Цитрусовый караван»?' }),
+  ).toBeVisible();
+  await expect(page.getByText('Свежая линия')).toBeVisible();
+  await page.getByRole('button', { name: 'Отмена' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(citrusMixRow).toBeVisible();
+
   await openWorkspace(page, 'Рейлы');
   const statisticalRail = page.locator('article').filter({
     has: page.getByRole('heading', { name: 'Больше всего выбирают' }),

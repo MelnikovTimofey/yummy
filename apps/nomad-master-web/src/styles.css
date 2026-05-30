@@ -7992,6 +7992,12 @@ input[type="checkbox"] {
   border-color: var(--border);
 }
 
+.mixes-row-actions__btn--danger:hover {
+  background: color-mix(in oklch, var(--destructive) 14%, transparent);
+  color: var(--destructive);
+  border-color: color-mix(in oklch, var(--destructive) 32%, transparent);
+}
+
 .mixes-row-actions__btn:disabled {
   opacity: 0.5;
   cursor: progress;

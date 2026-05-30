@@ -338,6 +338,111 @@ test('staff can manage mixes and rails', async () => {
   }
 });
 
+test('staff can delete a mix and it disappears from its rails', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const createdMix = await app.inject({
+      method: 'POST',
+      url: '/staff/mixes',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Микс на удаление',
+        description: 'Временный микс для проверки удаления',
+        components: [
+          {
+            tobaccoId: 'tobacco-citrus-breeze',
+            proportion: 50,
+            sortOrder: 0,
+          },
+          {
+            tobaccoId: 'tobacco-mint-veil',
+            proportion: 50,
+            sortOrder: 1,
+          },
+        ],
+        available: true,
+      },
+    });
+
+    assert.equal(createdMix.statusCode, 201);
+    const mixId = createdMix.json().item.id as string;
+
+    const createdRail = await app.inject({
+      method: 'POST',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Рейл с удаляемым миксом',
+        description: 'Подборка, из которой микс уйдёт при удалении',
+        type: 'curated',
+        mixIds: [mixId],
+        active: true,
+      },
+    });
+
+    assert.equal(createdRail.statusCode, 201);
+    const railId = createdRail.json().item.id as string;
+
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/staff/mixes/${mixId}`,
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(deleted.statusCode, 200);
+    assert.equal((deleted.json() as { item: { id: string } }).item.id, mixId);
+
+    const listMixes = await app.inject({
+      method: 'GET',
+      url: '/staff/mixes',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(listMixes.statusCode, 200);
+    assert.equal(
+      (listMixes.json() as { items: Array<{ id: string }> }).items.some((item) => item.id === mixId),
+      false,
+    );
+
+    const staffRails = await app.inject({
+      method: 'GET',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(staffRails.statusCode, 200);
+    const rail = (staffRails.json() as { items: Array<{ id: string; mixIds: string[] }> }).items.find(
+      (item) => item.id === railId,
+    );
+    assert.ok(rail, 'рейл сохраняется после удаления микса');
+    assert.equal(rail!.mixIds.includes(mixId), false);
+
+    const deleteMissing = await app.inject({
+      method: 'DELETE',
+      url: `/staff/mixes/${mixId}`,
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(deleteMissing.statusCode, 404);
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff mixes list supports filters and validates component proportions', async () => {
   const app = buildApp();
   const token = await loginStaff(app);

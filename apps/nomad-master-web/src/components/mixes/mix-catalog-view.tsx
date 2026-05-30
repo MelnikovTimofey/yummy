@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, ChevronDown, Copy, Eye, EyeOff, Pencil, Plus, Search } from 'lucide-react';
+import { Bookmark, ChevronDown, Copy, Eye, EyeOff, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
@@ -67,6 +77,7 @@ type MixCatalogViewProps = {
   onStartCreate: () => void;
   onCopyMix: (mix: MixRecord) => void;
   onToggleMixAvailable: (mix: MixRecord) => void;
+  onDeleteMix: (mix: MixRecord) => void;
   rowPendingId?: string;
 };
 
@@ -142,9 +153,11 @@ export const MixCatalogView = ({
   onStartCreate,
   onCopyMix,
   onToggleMixAvailable,
+  onDeleteMix,
   rowPendingId = '',
 }: MixCatalogViewProps) => {
   const [searchValue, setSearchValue] = useState(filters.search);
+  const [mixPendingDelete, setMixPendingDelete] = useState<MixRecord | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -567,6 +580,16 @@ export const MixCatalogView = ({
                               <Eye size={14} aria-hidden="true" />
                             )}
                           </button>
+                          <button
+                            type="button"
+                            className="mixes-row-actions__btn mixes-row-actions__btn--danger"
+                            title="Удалить"
+                            aria-label={`Удалить ${mix.name}`}
+                            onClick={() => setMixPendingDelete(mix)}
+                            disabled={rowBusy}
+                          >
+                            <Trash2 size={14} aria-hidden="true" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -588,6 +611,41 @@ export const MixCatalogView = ({
         filteredItems={meta.filteredItems}
         onPageChange={onPageChange}
       />
+
+      <Dialog open={mixPendingDelete !== null} onOpenChange={(next) => { if (!next) setMixPendingDelete(null); }}>
+        <DialogContent showCloseButton={false} className="mix-delete-dialog">
+          <DialogHeader>
+            <DialogTitle>Удалить микс «{mixPendingDelete?.name}»?</DialogTitle>
+            <DialogDescription>
+              {mixPendingDelete && mixPendingDelete.railMemberships.length > 0 ? (
+                <>
+                  Микс участвует в рейлах:{' '}
+                  {mixPendingDelete.railMemberships.map((rail) => rail.name).join(', ')}. После
+                  удаления он будет убран из этих рейлов. Действие необратимо.
+                </>
+              ) : (
+                <>Микс будет удалён без возможности восстановления. Действие необратимо.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Отмена</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (mixPendingDelete) {
+                  onDeleteMix(mixPendingDelete);
+                }
+                setMixPendingDelete(null);
+              }}
+            >
+              Удалить микс
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

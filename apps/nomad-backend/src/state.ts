@@ -2349,6 +2349,22 @@ export const updateMix = async (id: string, payload: MixPatch) => {
   return getMixById(id);
 };
 
+// Жёсткое удаление микса. Связи (components, railMixes, ratings, smokeEvents)
+// снимаются каскадом из schema.prisma — поэтому микс автоматически уходит из
+// всех рейлов, в которые входил. Статистические рейлы пересчитываются на лету.
+export const deleteMix = async (id: string): Promise<{ id: string; name: string } | null> => {
+  await ensureNomadState();
+
+  const current = await prisma.nomadMix.findUnique({ where: { id } });
+  if (!current) {
+    return null;
+  }
+
+  await prisma.nomadMix.delete({ where: { id } });
+
+  return { id: current.id, name: current.name };
+};
+
 export const getStaffRails = async (): Promise<StaffRailView[]> => {
   return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
 };

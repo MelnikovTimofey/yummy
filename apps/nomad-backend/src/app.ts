@@ -45,6 +45,7 @@ import {
   batchUpdateTobaccoInStock,
   createTobacco,
   createMix,
+  deleteMix,
   createRail,
   ensureNomadState,
   getDashboardSummary,
@@ -1355,6 +1356,33 @@ export const buildApp = () => {
     });
 
     return reply.send(response);
+  });
+
+  app.delete('/staff/mixes/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const mixId = (request.params as { id?: string }).id?.trim();
+    if (!mixId) {
+      return reply.status(400).send({ error: 'Mix id is required' } satisfies ApiError);
+    }
+
+    const deleted = await deleteMix(mixId);
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
+    }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'mix',
+      entityId: deleted.id,
+      entityLabel: deleted.name,
+    });
+
+    return reply.send({ item: deleted });
   });
 
   app.get('/staff/inventory/tobaccos', async (request, reply) => {

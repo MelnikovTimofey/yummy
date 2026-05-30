@@ -282,6 +282,28 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     [token, loadMixes, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
   );
 
+  // Жёсткое удаление микса из каталога. Backend каскадом снимает его со всех
+  // рейлов — после успеха перечитываем и каталог, и соседние поверхности
+  // (рейлы), чтобы membership-теги и состав рейлов обновились.
+  const onDeleteMix = useCallback(
+    async (mix: MixRecord) => {
+      if (!token) return;
+      setMixRowPendingId(mix.id);
+      try {
+        await requestJson<unknown>(`/staff/mixes/${mix.id}`, { method: 'DELETE' }, token);
+        await loadMixes(token, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize);
+        if (onRefreshSiblings) {
+          await onRefreshSiblings(token);
+        }
+      } catch (cause) {
+        setMixesError(cause instanceof Error ? cause.message : 'Не удалось удалить микс');
+      } finally {
+        setMixRowPendingId('');
+      }
+    },
+    [token, loadMixes, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
+  );
+
   const onCancelCreate = useCallback(() => {
     setMixEditor(emptyMixEditor());
     setMixesScreen('catalog');
@@ -467,6 +489,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     onStartCreate,
     onStartCopy,
     onToggleMixAvailable,
+    onDeleteMix,
     onCancelCreate,
     onResetEditor,
     onChangeEditorField,
