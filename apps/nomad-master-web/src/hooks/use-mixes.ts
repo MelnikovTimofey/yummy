@@ -120,7 +120,11 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
 
   const loadMixTobaccos = useCallback(async (nextToken: string) => {
     try {
-      const response = await requestJson<unknown>('/staff/inventory/tobaccos?sort=name&direction=asc', {}, nextToken);
+      const response = await requestJson<unknown>(
+        '/staff/inventory/tobaccos?sort=name&direction=asc&page=1&pageSize=100',
+        {},
+        nextToken,
+      );
       const payload = normalizeInventoryListResponse(response);
       setMixTobaccos(payload.items);
     } catch {
