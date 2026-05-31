@@ -1081,6 +1081,9 @@ select:focus-visible {
 .aroma-catalog {
   display: grid;
   gap: 12px;
+  /* строки по контенту: при коротком списке свободная высота уходит вниз,
+     а не растягивает чип-рейл в гигантские круги (grid align-content: stretch) */
+  align-content: start;
   padding: 12px 20px calc(20px + var(--safe-bottom));
   position: relative;
 }
