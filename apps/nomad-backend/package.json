@@ -16,6 +16,7 @@
     "db:start": "docker compose -f docker-compose.yml up -d db",
     "db:stop": "docker compose -f docker-compose.yml down",
     "db:clean": "tsx scripts/clean-db.ts",
+    "build:catalog": "tsx scripts/build-catalog-backup.ts",
     "prisma:generate": "prisma generate",
     "prisma:dbpush": "prisma db push",
     "prisma:seed": "prisma db seed"
