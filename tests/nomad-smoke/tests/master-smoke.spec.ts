@@ -90,6 +90,16 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await page.getByRole('button', { name: 'Вернуть в наличие' }).click();
   await expect(mintVeilRow.getByText('В наличии')).toBeVisible();
 
+  // Фильтр «Архив» (issue #129): по умолчанию архивные скрыты, чип не нажат.
+  // Переключаем фильтр и убеждаемся, что он становится активным, затем
+  // возвращаем обратно — неразрушающая проверка для прочих assertion'ов.
+  const archiveFilter = page.getByRole('button', { name: 'Фильтр: Архив' });
+  await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
+  await archiveFilter.click();
+  await expect(archiveFilter).toHaveAttribute('aria-pressed', 'true');
+  await archiveFilter.click();
+  await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
+
   await openWorkspace(page, 'Миксы');
   const citrusMixRow = getMixRow(page, 'Цитрусовый караван');
   await expect(citrusMixRow).toBeVisible();

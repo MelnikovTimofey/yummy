@@ -21,6 +21,7 @@ export type InventoryTobacco = {
   productionStatus?: string | null;
   description?: string | null;
   inStock: boolean;
+  archived: boolean;
   flavorProfiles?: string[];
   flavors?: string[];
   flavorTags?: string[];
@@ -41,6 +42,8 @@ export type InventoryDependentMix = {
 
 export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
 
+export type InventoryArchivedFilter = 'active' | 'archived' | 'all';
+
 export type InventorySortField = 'stock' | 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixes';
 
 export type InventorySortDirection = 'asc' | 'desc';
@@ -48,6 +51,7 @@ export type InventorySortDirection = 'asc' | 'desc';
 export type InventoryListFilters = {
   search: string;
   stock: InventoryStockFilter;
+  archived: InventoryArchivedFilter;
   manufacturers: string[];
   flavorProfiles: string[];
   flavors: string[];
@@ -71,6 +75,7 @@ export type InventoryListMeta = {
   inStockCount: number;
   outOfStockCount: number;
   inMixesCount: number;
+  archivedCount: number;
   page: number;
   pageSize: number;
   totalPages: number;
@@ -85,7 +90,7 @@ export type InventoryListResponse = {
   meta: InventoryListMeta;
 };
 
-export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive';
+export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive' | 'unarchive';
 
 export type InventoryBatchResponse = {
   action: InventoryBatchAction;
@@ -102,6 +107,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
   filters: {
     search: '',
     stock: 'all',
+    archived: 'active',
     manufacturers: [],
     flavorProfiles: [],
     flavors: [],
@@ -123,6 +129,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
     inStockCount: 0,
     outOfStockCount: 0,
     inMixesCount: 0,
+    archivedCount: 0,
     page: 1,
     pageSize: 100,
     totalPages: 1,
@@ -564,6 +571,10 @@ const toInventoryStockFilter = (value: unknown): InventoryStockFilter => {
   return value === 'in-stock' || value === 'out-of-stock' || value === 'all' ? value : 'all';
 };
 
+const toInventoryArchivedFilter = (value: unknown): InventoryArchivedFilter => {
+  return value === 'archived' || value === 'all' || value === 'active' ? value : 'active';
+};
+
 const toInventorySortField = (value: unknown): InventorySortField => {
   return value === 'name'
     || value === 'manufacturer'
@@ -839,6 +850,7 @@ export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
     productionStatus: raw.productionStatus == null ? null : String(raw.productionStatus),
     description: raw.description == null ? null : String(raw.description),
     inStock: toBoolean(raw.inStock, true),
+    archived: toBoolean(raw.archived, false),
     flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
     flavors: uniqueStrings(toStringList(raw.flavors)),
     flavorTags: uniqueStrings(toStringList(raw.flavorTags)),
@@ -1087,6 +1099,7 @@ export const normalizeInventoryListResponse = (value: unknown): InventoryListRes
     filters: {
       search: String(filters.search ?? ''),
       stock: toInventoryStockFilter(filters.stock),
+      archived: toInventoryArchivedFilter(filters.archived),
       manufacturers: uniqueStrings(toStringList(filters.manufacturers)),
       flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
       flavors: uniqueStrings(toStringList(filters.flavors)),
@@ -1108,6 +1121,7 @@ export const normalizeInventoryListResponse = (value: unknown): InventoryListRes
       inStockCount: toNumber(meta.inStockCount, 0),
       outOfStockCount: toNumber(meta.outOfStockCount, 0),
       inMixesCount: toNumber(meta.inMixesCount, 0),
+      archivedCount: toNumber(meta.archivedCount, 0),
       page: Math.max(1, toNumber(meta.page, 1)),
       pageSize: Math.max(1, toNumber(meta.pageSize, 100)),
       totalPages: Math.max(1, toNumber(meta.totalPages, 1)),
@@ -1121,7 +1135,10 @@ export const normalizeInventoryBatchResponse = (value: unknown): InventoryBatchR
   const raw = isRecord(value) ? value : {};
 
   return {
-    action: raw.action === 'set-in-stock' || raw.action === 'set-out-of-stock' || raw.action === 'archive'
+    action: raw.action === 'set-in-stock'
+      || raw.action === 'set-out-of-stock'
+      || raw.action === 'archive'
+      || raw.action === 'unarchive'
       ? raw.action
       : 'set-in-stock',
     ids: uniqueStrings(toStringList(raw.ids)),
@@ -1145,6 +1162,10 @@ export const buildInventoryRequestQuery = (
 
   if (filters.stock !== 'all') {
     params.set('stock', filters.stock);
+  }
+
+  if (filters.archived !== 'active') {
+    params.set('archived', filters.archived);
   }
 
   for (const value of filters.manufacturers) {
@@ -1549,6 +1570,8 @@ export const formatInventoryBatchAction = (value: InventoryBatchAction) => {
       return 'Убрать из наличия';
     case 'archive':
       return 'Архивировать';
+    case 'unarchive':
+      return 'Вернуть из архива';
     default:
       return 'Вернуть в наличие';
   }

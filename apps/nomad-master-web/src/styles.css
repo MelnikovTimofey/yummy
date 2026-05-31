@@ -5547,10 +5547,18 @@ input[type="checkbox"] {
 
 /* Primary cell: name + sub */
 .inventory-cell--primary strong {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   color: var(--nomad-ink);
   font-weight: 600;
   font-size: 0.94rem;
   line-height: 1.15;
+}
+
+.inventory-cell__archived-badge {
+  font-weight: 600;
 }
 
 .inventory-cell__sub {

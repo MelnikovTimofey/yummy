@@ -58,9 +58,9 @@ test('пресеты крепости редактора совпадают со
 
 test('buildInventorySummary counts stock states', () => {
   const summary = buildInventorySummary([
-    { id: '1', name: 'A', manufacturer: 'Nomad', inStock: true },
-    { id: '2', name: 'B', manufacturer: 'Nomad', inStock: false },
-    { id: '3', name: 'C', manufacturer: 'Nomad', inStock: true },
+    { id: '1', name: 'A', manufacturer: 'Nomad', inStock: true, archived: false },
+    { id: '2', name: 'B', manufacturer: 'Nomad', inStock: false, archived: false },
+    { id: '3', name: 'C', manufacturer: 'Nomad', inStock: true, archived: false },
   ]);
 
   assert.deepEqual(summary, {
@@ -72,9 +72,9 @@ test('buildInventorySummary counts stock states', () => {
 
 test('sortInventoryItems places in-stock tobaccos first', () => {
   const sorted = sortInventoryItems([
-    { id: '2', name: 'Zulu', manufacturer: 'Nomad', inStock: false },
-    { id: '1', name: 'Alpha', manufacturer: 'Nomad', inStock: true },
-    { id: '3', name: 'Beta', manufacturer: 'Nomad', inStock: false },
+    { id: '2', name: 'Zulu', manufacturer: 'Nomad', inStock: false, archived: false },
+    { id: '1', name: 'Alpha', manufacturer: 'Nomad', inStock: true, archived: false },
+    { id: '3', name: 'Beta', manufacturer: 'Nomad', inStock: false, archived: false },
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['1', '3', '2']);
@@ -94,6 +94,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
         productionStatus: 'Выпускается',
         description: 'Сладкий персиковый профиль.',
         inStock: false,
+        archived: true,
         flavorProfiles: ['Сладкие'],
         flavors: ['персик'],
         flavorTags: ['fruity'],
@@ -115,6 +116,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
     filters: {
       search: 'персик',
       stock: 'out-of-stock',
+      archived: 'archived',
       manufacturers: ['Nomad Reserve'],
       flavors: ['персик'],
       options: {
@@ -132,6 +134,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
       inStockCount: 0,
       outOfStockCount: 1,
       inMixesCount: 9,
+      archivedCount: 4,
       page: 2,
       pageSize: 20,
       totalPages: 3,
@@ -149,6 +152,9 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
   assert.equal(response.items[0]?.productionStatus, 'Выпускается');
   assert.equal(response.items[0]?.description, 'Сладкий персиковый профиль.');
   assert.equal(response.filters.stock, 'out-of-stock');
+  assert.equal(response.filters.archived, 'archived');
+  assert.equal(response.items[0]?.archived, true);
+  assert.equal(response.meta.archivedCount, 4);
   assert.deepEqual(response.filters.options.flavorTags, ['fruity']);
   assert.equal(response.sort.field, 'dependentMixes');
   assert.equal(response.meta.filteredItems, 1);
@@ -187,12 +193,27 @@ test('normalizeInventoryBatchResponse parses batch mutation payload', () => {
   assert.equal(formatInventoryBatchAction(response.action), 'Убрать из наличия');
 });
 
+test('normalizeInventoryBatchResponse accepts unarchive action and formats it', () => {
+  const response = normalizeInventoryBatchResponse({
+    action: 'unarchive',
+    ids: ['tobacco-1'],
+    skippedIds: [],
+    processedCount: 1,
+    items: [],
+  });
+
+  assert.equal(response.action, 'unarchive');
+  assert.equal(formatInventoryBatchAction('archive'), 'Архивировать');
+  assert.equal(formatInventoryBatchAction('unarchive'), 'Вернуть из архива');
+});
+
 test('buildInventoryRequestQuery serializes selected filters and sort', () => {
   const query = buildInventoryRequestQuery(
     {
       ...defaultInventoryListResponse.filters,
       search: 'персик',
       stock: 'out-of-stock',
+      archived: 'archived',
       manufacturers: ['Nomad Reserve'],
       flavors: ['персик'],
     },
@@ -206,7 +227,7 @@ test('buildInventoryRequestQuery serializes selected filters and sort', () => {
 
   assert.equal(
     query,
-    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=100',
+    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&archived=archived&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=100',
   );
 });
 

@@ -465,6 +465,16 @@ export const App = () => {
     await refreshInventorySurface(nextFilters, inventorySort, 1);
   };
 
+  const onInventoryArchivedChange = async (value: InventoryListFilters['archived']) => {
+    const nextFilters = {
+      ...inventoryFilters,
+      archived: value,
+    };
+    setSelectedInventoryIds([]);
+    setInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySort, 1);
+  };
+
   const onInventorySortFieldChange = async (field: InventoryListSort['field']) => {
     const nextSort = {
       ...inventorySort,
@@ -588,7 +598,36 @@ export const App = () => {
     setSelectedInventoryIds(nextSelection);
   };
 
-  const onRunInventoryBatch = async (action: Exclude<InventoryBatchAction, 'archive'>) => {
+  const onArchiveTobacco = async (item: InventoryTobacco, archived: boolean) => {
+    if (!token) {
+      return;
+    }
+
+    setToggleId(item.id);
+    setInventoryError('');
+
+    try {
+      await requestJson<unknown>(
+        `/staff/inventory/tobaccos/${item.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ archived }),
+        },
+        token,
+      );
+      const dependentRefresh = refreshInventoryDependents(token);
+      await loadInventory(token, inventoryFilters, inventorySort);
+      void dependentRefresh;
+      setInventoryStatus('ready');
+    } catch (cause) {
+      setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить архив');
+      setInventoryStatus('error');
+    } finally {
+      setToggleId('');
+    }
+  };
+
+  const onRunInventoryBatch = async (action: InventoryBatchAction) => {
     if (!token || !selectedInventoryIds.length) {
       return;
     }
@@ -751,6 +790,7 @@ export const App = () => {
       pendingBatchAction={inventoryBatchAction}
       onSearchChange={onInventorySearchChange}
       onStockChange={(value) => void onInventoryStockChange(value)}
+      onArchivedChange={(value) => void onInventoryArchivedChange(value)}
       onSortFieldChange={(value) => void onInventorySortFieldChange(value)}
       onSortDirectionChange={(value) => void onInventorySortDirectionChange(value)}
       onToggleFilterValue={(key, value) => void onInventoryToggleFilterValue(key, value)}
@@ -760,6 +800,7 @@ export const App = () => {
       onToggleSelection={onToggleInventorySelection}
       onToggleSelectAll={onToggleSelectAllInventory}
       onToggleStock={(item) => void onToggleStock(item)}
+      onArchiveTobacco={(item, archived) => void onArchiveTobacco(item, archived)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
       onOpenMix={onOpenInventoryMix}
       saveStatus={inventorySaveStatus}

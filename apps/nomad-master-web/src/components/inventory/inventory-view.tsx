@@ -13,6 +13,7 @@ import {
   parseSortKey,
 } from '@/components/shell/master-sort-pill.helpers';
 import type {
+  InventoryArchivedFilter,
   InventoryBatchAction,
   InventoryFilterKey,
   InventoryListFilters,
@@ -46,6 +47,7 @@ type InventoryViewProps = {
   pendingBatchAction: '' | InventoryBatchAction;
   onSearchChange: (value: string) => void;
   onStockChange: (value: InventoryStockFilter) => void;
+  onArchivedChange: (value: InventoryArchivedFilter) => void;
   onSortFieldChange: (value: InventorySortField) => void;
   onSortDirectionChange: (value: InventorySortDirection) => void;
   onToggleFilterValue: (key: InventoryFilterKey, value: string) => void;
@@ -54,7 +56,8 @@ type InventoryViewProps = {
   onToggleSelection: (id: string) => void;
   onToggleSelectAll: () => void;
   onToggleStock: (item: InventoryTobacco) => void;
-  onRunBatchAction: (action: Exclude<InventoryBatchAction, 'archive'>) => void;
+  onArchiveTobacco: (item: InventoryTobacco, archived: boolean) => void;
+  onRunBatchAction: (action: InventoryBatchAction) => void;
   onOpenMix: (mixId: string) => void;
   onPageChange: (page: number) => void;
   saveStatus: 'idle' | 'loading' | 'ready' | 'error';
@@ -558,6 +561,7 @@ export const InventoryView = ({
   pendingBatchAction,
   onSearchChange,
   onStockChange,
+  onArchivedChange,
   onSortFieldChange,
   onSortDirectionChange,
   onToggleFilterValue,
@@ -566,6 +570,7 @@ export const InventoryView = ({
   onToggleSelection,
   onToggleSelectAll,
   onToggleStock,
+  onArchiveTobacco,
   onRunBatchAction,
   onOpenMix,
   onPageChange,
@@ -582,6 +587,9 @@ export const InventoryView = ({
   const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
+  const editingItem = editorMode === 'edit'
+    ? items.find((item) => item.id === editorDraft.id) ?? null
+    : null;
   const activeDialogTitleId = activeItem ? `inventory-detail-title-${activeItem.id}` : undefined;
   const manufacturerOptions = buildSuggestionOptions(catalogOptions.map((item) => item.manufacturer));
   const lineNameOptions = buildSuggestionOptions(catalogOptions.map((item) => item.lineName));
@@ -927,6 +935,8 @@ export const InventoryView = ({
     { value: 'out-of-stock', label: 'Нет наличия', count: meta.outOfStockCount, ariaLabel: 'Фильтр: Нет наличия' },
   ];
 
+  const archivedActive = filters.archived === 'archived';
+
   return (
     <section className="tobaccos-page">
       <MasterPageHeader
@@ -1002,6 +1012,19 @@ export const InventoryView = ({
                 </button>
               );
             })}
+          </div>
+
+          <div className="tobaccos-list__filters" role="group" aria-label="Фильтр по архиву">
+            <button
+              type="button"
+              className={`filter-chip${archivedActive ? ' filter-chip--active' : ''}`}
+              aria-pressed={archivedActive}
+              aria-label="Фильтр: Архив"
+              onClick={() => onArchivedChange(archivedActive ? 'active' : 'archived')}
+            >
+              <span>Архив</span>
+              <span className="filter-chip__count">{formatMetricValue(meta.archivedCount)}</span>
+            </button>
           </div>
 
           <span className="tobaccos-list__sep" aria-hidden />
@@ -1293,16 +1316,42 @@ export const InventoryView = ({
 
           <footer className="drawer__foot tobacco-drawer__foot">
             <div className="tobacco-drawer__foot-left">
-              {editorMode === 'edit' ? (
-                <button
-                  type="button"
-                  className="btn"
-                  data-variant="danger"
-                  disabled
-                  title="Удаление позиций каталога ждёт отдельного продуктового решения"
-                >
-                  Удалить
-                </button>
+              {editingItem ? (
+                editingItem.archived ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    data-variant="ghost"
+                    disabled={pendingRowId === editingItem.id || saveStatus === 'loading'}
+                    onClick={() => {
+                      onArchiveTobacco(editingItem, false);
+                      closeEditor();
+                    }}
+                  >
+                    Вернуть из архива
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn"
+                    data-variant="danger"
+                    disabled={pendingRowId === editingItem.id || saveStatus === 'loading'}
+                    title="Архивный табак скрывается из каталога и снимается с наличия"
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          `Архивировать «${editingItem.name}»? Табак скроется из каталога и снимется с наличия.`,
+                        )
+                      ) {
+                        return;
+                      }
+                      onArchiveTobacco(editingItem, true);
+                      closeEditor();
+                    }}
+                  >
+                    Архивировать
+                  </button>
+                )
               ) : null}
             </div>
             <div className="tobacco-drawer__foot-actions">
@@ -1367,7 +1416,7 @@ export const InventoryView = ({
         <div className="inventory-batch-bar">
           <div>
             <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
-            <p className="meta-line">Массовые действия меняют только наличие.</p>
+            <p className="meta-line">Массовые действия меняют наличие и архив.</p>
           </div>
           <div className="inventory-batch-bar__actions">
             <Button
@@ -1387,6 +1436,27 @@ export const InventoryView = ({
             >
               {pendingBatchAction === 'set-out-of-stock' ? 'Обновляем...' : formatInventoryBatchAction('set-out-of-stock')}
             </Button>
+            {archivedActive ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => onRunBatchAction('unarchive')}
+                disabled={pendingBatchAction !== ''}
+              >
+                {pendingBatchAction === 'unarchive' ? 'Обновляем...' : formatInventoryBatchAction('unarchive')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => onRunBatchAction('archive')}
+                disabled={pendingBatchAction !== ''}
+              >
+                {pendingBatchAction === 'archive' ? 'Обновляем...' : formatInventoryBatchAction('archive')}
+              </Button>
+            )}
           </div>
         </div>
       ) : null}
@@ -1461,7 +1531,14 @@ export const InventoryView = ({
                     </td>
                     <td>
                       <div className="inventory-cell inventory-cell--primary">
-                        <strong>{item.name}</strong>
+                        <strong>
+                          {item.name}
+                          {item.archived ? (
+                            <Badge variant="secondary" className="inventory-cell__archived-badge">
+                              Архив
+                            </Badge>
+                          ) : null}
+                        </strong>
                         <span className="inventory-cell__sub">
                           {strengthLabel}
                           {flavorsTop3 ? ` · ${flavorsTop3}` : ''}

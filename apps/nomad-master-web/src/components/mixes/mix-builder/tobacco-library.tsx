@@ -32,7 +32,7 @@ export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryPr
   const [sort, setSort] = useState<LibrarySort>('name');
 
   const filtered = useMemo(() => {
-    let list = tobaccos.filter((t) => matchesQuery(t, search));
+    let list = tobaccos.filter((t) => matchesQuery(t, search)).filter((t) => !t.archived);
     if (inStockOnly) list = list.filter((t) => t.inStock);
     if (sort === 'name') {
       list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
