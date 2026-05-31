@@ -1084,18 +1084,24 @@ select:focus-visible {
   /* строки по контенту: при коротком списке свободная высота уходит вниз,
      а не растягивает чип-рейл в гигантские круги (grid align-content: stretch) */
   align-content: start;
-  padding: 12px 20px calc(20px + var(--safe-bottom));
+  padding: 0 20px calc(20px + var(--safe-bottom));
   position: relative;
 }
 
+/* control rail — сплошная полоса под табами (CatalogInline, вариант B):
+   уходит в край экрана отрицательными отступами (−12 main-padding, −20 секция)
+   и держит хайрлайн-разделитель снизу. */
 .aroma-catalog-rail {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   position: sticky;
   top: 0;
   z-index: 2;
-  padding-bottom: 6px;
-  background: linear-gradient(180deg, rgba(19, 8, 7, 0.96) 0%, rgba(19, 8, 7, 0.62) 100%);
+  margin: -12px -32px 2px;
+  padding: 12px 32px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(20, 10, 10, 0.92);
+  backdrop-filter: blur(12px);
 }
 
 .aroma-catalog-search-row {
@@ -1110,7 +1116,7 @@ select:focus-visible {
   height: 38px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(28, 13, 13, 0.84);
+  background: rgba(40, 18, 18, 0.66);
   color: var(--text-0);
   padding: 0 14px;
   font-size: 13px;
@@ -1122,13 +1128,15 @@ select:focus-visible {
 }
 
 .aroma-catalog-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 38px;
   height: 38px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(56, 24, 22, 0.54);
-  color: var(--accent-soft);
-  font-size: 16px;
+  background: rgba(40, 18, 18, 0.66);
+  color: var(--text-1);
   position: relative;
   cursor: pointer;
 }

@@ -1928,7 +1928,14 @@ export const App = () => {
               aria-label="Фильтры и сортировка"
               aria-expanded={catalogPopoverOpen}
             >
-              <span aria-hidden>⚙</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path
+                  d="M2 4h12M5 8h6M7 12h2"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
               {hasPopoverIndicator ? (
                 <span className="aroma-catalog-icon-dot" aria-hidden />
               ) : null}
@@ -1938,7 +1945,6 @@ export const App = () => {
             {availableProfileOptions.map((option) => (
               <Chip
                 key={option.value}
-                tier="lg"
                 color={getProfileColor(option.value)}
                 active={appliedCatalogProfiles.includes(option.value)}
                 onClick={() => toggleCatalogProfile(option.value)}
