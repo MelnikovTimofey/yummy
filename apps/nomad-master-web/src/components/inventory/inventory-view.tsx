@@ -63,11 +63,12 @@ type InventoryViewProps = {
   onResetSaveFeedback: () => void;
 };
 
-// Manufacturers фильтруется через brand-chip row (PR2). Здесь только
-// дополнительные таксономические фильтры — таб формы свёрнут в
-// `<details>` блок «Доп. фильтры».
+// Фильтры в свёрнутом `<details>` блоке «Доп. фильтры». Бренд живёт здесь
+// мультиселектом на весь список брендов (issue #119): чипов-топ-8 не хватало
+// для 279 брендов. Категории, наоборот, вынесены в видимый ряд чипов над
+// таблицей (см. categoryChips).
 const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
-  { key: 'flavorProfiles', title: 'Категории' },
+  { key: 'manufacturers', title: 'Бренд' },
   { key: 'flavors', title: 'Вкусы' },
   { key: 'flavorTags', title: 'Мета-теги' },
 ];
@@ -141,22 +142,24 @@ const buildBrandShort = (name: string) => {
   return normalized.slice(0, 2).toLocaleUpperCase('ru-RU');
 };
 
-const BRAND_CHIPS_TOP_LIMIT = 8;
-
-type BrandChipEntry = {
-  name: string;
+type FilterChipEntry = {
+  value: string;
   count: number;
-  short: string;
 };
 
-const buildBrandChips = (catalog: InventoryTobacco[]): BrandChipEntry[] => {
+// Чипы категорий для видимого ряда фильтров над таблицей. Категорий немного
+// (≤12 канонических), поэтому показываем все встречающиеся — без top-N среза,
+// который раньше прятал бренды (issue #119).
+const buildCategoryChips = (catalog: InventoryTobacco[]): FilterChipEntry[] => {
   const counts = new Map<string, number>();
   for (const item of catalog) {
-    const manufacturer = item.manufacturer?.trim();
-    if (!manufacturer) {
-      continue;
+    for (const profile of item.flavorProfiles ?? []) {
+      const key = profile.trim();
+      if (!key) {
+        continue;
+      }
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    counts.set(manufacturer, (counts.get(manufacturer) ?? 0) + 1);
   }
 
   return Array.from(counts.entries())
@@ -164,10 +167,9 @@ const buildBrandChips = (catalog: InventoryTobacco[]): BrandChipEntry[] => {
       if (right[1] !== left[1]) {
         return right[1] - left[1];
       }
-      return left[0].localeCompare(right[0], 'ru');
+      return formatFlavorProfileLabel(left[0]).localeCompare(formatFlavorProfileLabel(right[0]), 'ru');
     })
-    .slice(0, BRAND_CHIPS_TOP_LIMIT)
-    .map(([name, count]) => ({ name, count, short: buildBrandShort(name) }));
+    .map(([value, count]) => ({ value, count }));
 };
 
 const buildSuggestionOptions = (items: Array<string | null | undefined>) =>
@@ -590,11 +592,11 @@ export const InventoryView = ({
   const flavorProfileOptions = INVENTORY_FLAVOR_PROFILE_KEYS;
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
-  const brandChips = buildBrandChips(catalogOptions);
-  const brandChipsCountIsApproximate = catalogOptions.length < meta.totalItems;
-  const brandChipsTooltip = brandChipsCountIsApproximate
-    ? 'Счётчик показывает, сколько раз бренд встречается в загруженных позициях каталога (без учёта пагинации).'
-    : 'Счётчик показывает, сколько позиций бренда в каталоге.';
+  const categoryChips = buildCategoryChips(catalogOptions);
+  const categoryChipsCountIsApproximate = catalogOptions.length < meta.totalItems;
+  const categoryChipsTooltip = categoryChipsCountIsApproximate
+    ? 'Счётчик показывает, сколько раз категория встречается в загруженных позициях каталога (без учёта пагинации).'
+    : 'Счётчик показывает, сколько позиций в категории.';
 
   useEffect(() => {
     setSearchValue(filters.search);
@@ -1018,21 +1020,21 @@ export const InventoryView = ({
           </label>
         </div>
 
-        {brandChips.length ? (
-          <div className="tobaccos-list__brands" role="group" aria-label="Фильтр по бренду">
-            <span className="tobaccos-list__brands-label">Бренд</span>
-            {brandChips.map(({ name, count }) => {
-              const active = filters.manufacturers.includes(name);
+        {categoryChips.length ? (
+          <div className="tobaccos-list__chip-filter" role="group" aria-label="Фильтр по категории">
+            <span className="tobaccos-list__chip-filter-label">Категории</span>
+            {categoryChips.map(({ value, count }) => {
+              const active = filters.flavorProfiles.includes(value);
               return (
                 <button
-                  key={`brand-chip:${name}`}
+                  key={`category-chip:${value}`}
                   type="button"
                   className={`filter-chip${active ? ' filter-chip--active' : ''}`}
                   aria-pressed={active}
-                  title={brandChipsTooltip}
-                  onClick={() => onToggleFilterValue('manufacturers', name)}
+                  title={categoryChipsTooltip}
+                  onClick={() => onToggleFilterValue('flavorProfiles', value)}
                 >
-                  <span>{name}</span>
+                  <span>{formatFlavorProfileLabel(value)}</span>
                   <span className="filter-chip__count">{formatMetricValue(count)}</span>
                 </button>
               );
