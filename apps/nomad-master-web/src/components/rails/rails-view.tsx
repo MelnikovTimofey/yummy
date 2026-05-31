@@ -1,6 +1,17 @@
-import { Eye, Pencil, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { MixRecord, RailRecord, RailType } from '@/contracts';
 import { formatRailType } from '@/contracts';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const AROMA_WEB_URL = 'http://localhost:5174';
 
@@ -61,6 +72,7 @@ type RailsViewProps = {
   activeEditorId: string;
   onCreateRail: () => void;
   onOpenRail: (rail: RailRecord) => void;
+  onDeleteRail: (rail: RailRecord) => void;
 };
 
 export const RailsView = ({
@@ -70,7 +82,11 @@ export const RailsView = ({
   railsError,
   onCreateRail,
   onOpenRail,
-}: RailsViewProps) => (
+  onDeleteRail,
+}: RailsViewProps) => {
+  const [railPendingDelete, setRailPendingDelete] = useState<RailRecord | null>(null);
+
+  return (
   <section className="rails-page">
     <header className="rails-page__header">
       <div className="rails-page__copy">
@@ -161,6 +177,19 @@ export const RailsView = ({
                 )}
                 {rail.editable ? 'Редактировать' : 'Просмотр'}
               </button>
+              {rail.editable ? (
+                <button
+                  type="button"
+                  className="btn"
+                  data-variant="danger"
+                  title="Удалить"
+                  aria-label={`Удалить ${rail.name}`}
+                  onClick={() => setRailPendingDelete(rail)}
+                >
+                  <Trash2 size={14} aria-hidden />
+                  Удалить
+                </button>
+              ) : null}
             </aside>
           </article>
         );
@@ -170,5 +199,39 @@ export const RailsView = ({
         <p className="rails-page__notice">Пока нет рейлов.</p>
       ) : null}
     </div>
+
+    <Dialog
+      open={railPendingDelete !== null}
+      onOpenChange={(next) => {
+        if (!next) setRailPendingDelete(null);
+      }}
+    >
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>Удалить рейл «{railPendingDelete?.name}»?</DialogTitle>
+          <DialogDescription>
+            Рейл будет удалён без возможности восстановления, а его миксы — убраны из
+            этой подборки. Сами миксы останутся в каталоге. Действие необратимо.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Отмена</Button>
+          </DialogClose>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (railPendingDelete) {
+                onDeleteRail(railPendingDelete);
+              }
+              setRailPendingDelete(null);
+            }}
+          >
+            Удалить рейл
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </section>
-);
+  );
+};

@@ -47,6 +47,7 @@ import {
   createMix,
   deleteMix,
   createRail,
+  deleteRail,
   ensureNomadState,
   getDashboardSummary,
   getInventorySummary,
@@ -1660,6 +1661,37 @@ export const buildApp = () => {
     });
 
     return reply.send(response);
+  });
+
+  app.delete('/staff/rails/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const railId = (request.params as { id?: string }).id?.trim();
+    if (!railId) {
+      return reply.status(400).send({ error: 'Rail id is required' } satisfies ApiError);
+    }
+
+    const deleted = await deleteRail(railId);
+    if (isApiError(deleted)) {
+      return reply.status(400).send(deleted);
+    }
+
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Rail not found' } satisfies ApiError);
+    }
+
+    await recordAuditEvent({
+      actor: user,
+      action: 'delete',
+      entityType: 'rail',
+      entityId: deleted.id,
+      entityLabel: deleted.name,
+    });
+
+    return reply.send({ item: deleted });
   });
 
   app.patch('/staff/inventory/tobaccos/:id', async (request, reply) => {

@@ -874,6 +874,7 @@ export const App = () => {
           rails.onSelectRail(rail);
           rails.setRailEditorSheetOpen(true);
         }}
+        onDeleteRail={(rail) => rails.onDeleteRail(rail, token)}
       />
       <RailEditor
         open={rails.railEditorSheetOpen}

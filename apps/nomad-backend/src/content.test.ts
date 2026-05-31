@@ -443,6 +443,110 @@ test('staff can delete a mix and it disappears from its rails', async () => {
   }
 });
 
+test('staff can delete a non-statistical rail and cannot delete a statistical one', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const createdMix = await app.inject({
+      method: 'POST',
+      url: '/staff/mixes',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Микс для удаляемого рейла',
+        description: 'Временный микс для проверки удаления рейла',
+        components: [
+          {
+            tobaccoId: 'tobacco-citrus-breeze',
+            proportion: 50,
+            sortOrder: 0,
+          },
+          {
+            tobaccoId: 'tobacco-mint-veil',
+            proportion: 50,
+            sortOrder: 1,
+          },
+        ],
+        available: true,
+      },
+    });
+
+    assert.equal(createdMix.statusCode, 201);
+    const mixId = createdMix.json().item.id as string;
+
+    const createdRail = await app.inject({
+      method: 'POST',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: 'Рейл на удаление',
+        description: 'Подборка, которую удалим целиком',
+        type: 'curated',
+        mixIds: [mixId],
+        active: true,
+      },
+    });
+
+    assert.equal(createdRail.statusCode, 201);
+    const railId = createdRail.json().item.id as string;
+
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/staff/rails/${railId}`,
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(deleted.statusCode, 200);
+    assert.equal((deleted.json() as { item: { id: string } }).item.id, railId);
+
+    const staffRails = await app.inject({
+      method: 'GET',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(staffRails.statusCode, 200);
+    assert.equal(
+      (staffRails.json() as { items: Array<{ id: string }> }).items.some((item) => item.id === railId),
+      false,
+    );
+
+    const deleteMissing = await app.inject({
+      method: 'DELETE',
+      url: `/staff/rails/${railId}`,
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(deleteMissing.statusCode, 404);
+
+    const deleteStatistical = await app.inject({
+      method: 'DELETE',
+      url: '/staff/rails/rail-statistical-top',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(deleteStatistical.statusCode, 400);
+    assert.equal(
+      (deleteStatistical.json() as { error: string }).error,
+      'Статистический рейл формируется автоматически и доступен только для просмотра.',
+    );
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff mixes list supports filters and validates component proportions', async () => {
   const app = buildApp();
   const token = await loginStaff(app);

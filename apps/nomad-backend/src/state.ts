@@ -2412,6 +2412,23 @@ export const deleteMix = async (id: string): Promise<{ id: string; name: string 
   return { id: current.id, name: current.name };
 };
 
+export const deleteRail = async (id: string) => {
+  await ensureNomadState();
+
+  if (id.startsWith('rail-statistical-')) {
+    return { error: statisticalRailReadOnlyReason };
+  }
+
+  const current = await prisma.nomadRail.findUnique({ where: { id } });
+  if (!current) {
+    return null;
+  }
+
+  await prisma.nomadRail.delete({ where: { id } });
+
+  return { id: current.id, name: current.name };
+};
+
 export const getStaffRails = async (): Promise<StaffRailView[]> => {
   return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
 };

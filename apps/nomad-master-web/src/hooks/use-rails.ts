@@ -224,6 +224,27 @@ export const useRails = ({ onAfterSubmit, onRefreshSiblings }: UseRailsOptions =
     [railEditor, loadRails, reloadCatalog, onAfterSubmit, onRefreshSiblings],
   );
 
+  // Жёсткое удаление рейла. Backend каскадом снимает связи с миксами и
+  // блокирует статистические рейлы — после успеха перечитываем рейлы,
+  // каталог и соседние поверхности (миксы), чтобы membership-теги обновились.
+  const onDeleteRail = useCallback(
+    async (rail: RailRecord, token: string) => {
+      if (!token) return;
+
+      try {
+        await requestJson<unknown>(`/staff/rails/${rail.id}`, { method: 'DELETE' }, token);
+        await Promise.all([
+          loadRails(token),
+          reloadCatalog(token),
+          onRefreshSiblings ? onRefreshSiblings(token) : Promise.resolve(),
+        ]);
+      } catch (cause) {
+        setRailsError(cause instanceof Error ? cause.message : 'Не удалось удалить рейл');
+      }
+    },
+    [loadRails, reloadCatalog, onRefreshSiblings],
+  );
+
   const reset = useCallback(() => {
     setRails([]);
     setRailsStatus('idle');
@@ -258,6 +279,7 @@ export const useRails = ({ onAfterSubmit, onRefreshSiblings }: UseRailsOptions =
     onMoveRailMix,
     onReorderRailMixes,
     onSubmitRail,
+    onDeleteRail,
     reset,
   };
 };
