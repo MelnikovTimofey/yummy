@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { type PointerEvent as ReactPointerEvent, FormEvent, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -488,6 +488,61 @@ const pluralizeMixes = (count: number) => {
   return 'миксов';
 };
 
+// Порог в пикселях, после которого отпускание пальца закрывает лист.
+const SWIPE_DISMISS_THRESHOLD = 110;
+
+const useSwipeDownToClose = (onDismiss: () => void) => {
+  const drag = useRef({ startY: 0, lastY: 0, active: false, pointerId: -1 });
+  const [offset, setOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  const reset = () => {
+    drag.current = { startY: 0, lastY: 0, active: false, pointerId: -1 };
+    setDragging(false);
+    setOffset(0);
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.currentTarget.scrollTop > 0) return;
+    drag.current = {
+      startY: event.clientY,
+      lastY: event.clientY,
+      active: false,
+      pointerId: event.pointerId,
+    };
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const current = drag.current;
+    if (current.pointerId !== event.pointerId) return;
+    const delta = event.clientY - current.startY;
+    current.lastY = event.clientY;
+    if (!current.active) {
+      if (delta > 8 && event.currentTarget.scrollTop <= 0) {
+        current.active = true;
+        setDragging(true);
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } else {
+        return;
+      }
+    }
+    if (event.cancelable) event.preventDefault();
+    setOffset(Math.max(0, delta));
+  };
+
+  const onPointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const current = drag.current;
+    if (current.pointerId !== event.pointerId) return;
+    const delta = current.lastY - current.startY;
+    const dismissed = current.active && delta > SWIPE_DISMISS_THRESHOLD;
+    reset();
+    if (dismissed) onDismiss();
+  };
+
+  return { offset, dragging, onPointerDown, onPointerMove, onPointerEnd, onPointerCancel: reset };
+};
+
 const MixDetailModal = ({
   state,
   selectedMixId,
@@ -515,6 +570,7 @@ const MixDetailModal = ({
 }) => {
   const mix = state?.mix;
   const source = state?.source;
+  const swipe = useSwipeDownToClose(onClose);
 
   if (!mix || !source) {
     return null;
@@ -527,16 +583,25 @@ const MixDetailModal = ({
   const totalProportion = components.reduce((sum, item) => sum + item.proportion, 0) || 1;
   const haloColor = getProfileColor(mix.flavorProfiles[0]);
 
+  // Свайп вниз закрывает лист. Жест стартует только от верха прокрутки, чтобы не
+  // конфликтовать с чтением длинного состава; ниже порога — лист пружинит назад.
   return (
     <Dialog open={Boolean(state)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
         className="aroma-mix-sheet"
+        data-dragging={swipe.dragging ? 'true' : 'false'}
+        onPointerDown={swipe.onPointerDown}
+        onPointerMove={swipe.onPointerMove}
+        onPointerUp={swipe.onPointerEnd}
+        onPointerCancel={swipe.onPointerCancel}
         style={{
           top: 'auto',
           bottom: 0,
           left: '50%',
-          transform: 'translateX(-50%)',
+          transform: `translateX(-50%) translateY(${swipe.offset}px)`,
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain',
           width: 'min(calc(100vw - 16px), 540px)',
           maxHeight: '92dvh',
           padding: '12px 20px calc(20px + env(safe-area-inset-bottom))',

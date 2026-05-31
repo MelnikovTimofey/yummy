@@ -1430,10 +1430,23 @@ select:focus-visible {
   }
 }
 
+/*
+  Свайп вниз тянет лист через inline transform translateY. Пока палец на экране
+  (data-dragging='true') лист следует за пальцем без транзишена; на отпускании
+  ниже порога — пружинит обратно к translateY(0) этим транзишеном.
+*/
+.aroma-mix-sheet[data-dragging='false'] {
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aroma-mix-sheet[data-state='open'],
   .aroma-mix-sheet[data-state='closed'] {
     animation: none;
+  }
+
+  .aroma-mix-sheet[data-dragging='false'] {
+    transition: none;
   }
 }
 
