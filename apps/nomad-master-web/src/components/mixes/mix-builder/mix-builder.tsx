@@ -11,11 +11,13 @@ type MixBuilderProps = {
   mode: 'create' | 'edit';
   editor: MixEditorViewState;
   tobaccos: InventoryTobacco[];
+  componentTobaccos: InventoryTobacco[];
+  onSearchTobaccos: (query: string) => Promise<InventoryTobacco[]>;
   saveStatus: 'idle' | 'loading' | 'ready' | 'error';
   saveError: string;
   onFieldChange: (field: 'name' | 'description', value: string) => void;
   onAvailabilityChange: (available: boolean) => void;
-  onAddComponent: (tobaccoId: string) => void;
+  onAddComponent: (tobacco: InventoryTobacco) => void;
   onUpdateComponent: (key: string, patch: Partial<Omit<MixEditorComponentInput, 'key'>>) => void;
   onRemoveComponent: (key: string) => void;
   onReplaceComponents: (components: MixEditorComponentInput[]) => void;
@@ -62,6 +64,8 @@ export const MixBuilder = ({
   mode,
   editor,
   tobaccos,
+  componentTobaccos,
+  onSearchTobaccos,
   saveStatus,
   saveError,
   onFieldChange,
@@ -73,11 +77,14 @@ export const MixBuilder = ({
   onSubmit,
   onCancel,
 }: MixBuilderProps) => {
+  // Карточки состава резолвятся из набора данных компонентов (он полон даже
+  // для табаков за пределами загруженной/найденной библиотеки), а не из
+  // поисковой библиотеки слева.
   const tobaccoMap = useMemo(() => {
     const map = new Map<string, InventoryTobacco>();
-    tobaccos.forEach((tobacco) => map.set(tobacco.id, tobacco));
+    componentTobaccos.forEach((tobacco) => map.set(tobacco.id, tobacco));
     return map;
-  }, [tobaccos]);
+  }, [componentTobaccos]);
 
   const currentIds = useMemo(
     () => editor.components.map((component) => component.tobaccoId),
@@ -198,9 +205,10 @@ export const MixBuilder = ({
       <div className="mix-builder__body mix-builder__body--two-col">
         {/* Library (left) */}
         <TobaccoLibrary
-          tobaccos={tobaccos}
+          defaultTobaccos={tobaccos}
           currentIds={currentIds}
           onAdd={onAddComponent}
+          onSearch={onSearchTobaccos}
         />
 
         {/* Preview + composition (right) */}

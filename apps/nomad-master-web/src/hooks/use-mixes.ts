@@ -8,6 +8,7 @@ import type {
 } from '@/components/mixes/mix-catalog-view';
 import type {
   InventoryTobacco,
+  MixComponent,
   MixFilterKey,
   MixListFilters,
   MixListMeta,
@@ -63,6 +64,28 @@ const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   railMemberships: mix.railMemberships,
 });
 
+// Состав микса несёт name/manufacturer/flavors, но не inStock/lineName/
+// flavorProfiles. Сидируем карточки компонентов сразу из записи микса (чтобы
+// не мигало «Табак не найден»), а полные данные дотягиваем запросом по ids.
+const mixComponentToTobacco = (component: MixComponent): InventoryTobacco => ({
+  id: component.tobaccoId,
+  name: component.name,
+  manufacturer: component.manufacturer,
+  inStock: true,
+  archived: false,
+  flavors: component.flavors,
+  flavorProfiles: [],
+});
+
+const mergeTobaccosById = (
+  base: InventoryTobacco[],
+  incoming: InventoryTobacco[],
+): InventoryTobacco[] => {
+  const byId = new Map(base.map((tobacco) => [tobacco.id, tobacco]));
+  incoming.forEach((tobacco) => byId.set(tobacco.id, tobacco));
+  return Array.from(byId.values());
+};
+
 const parseNumberInput = (value: string, fallback = 0) => {
   const parsed = Number(value.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -82,6 +105,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
   const [mixesSort, setMixesSort] = useState<MixListSort>(defaultMixListResponse.sort);
   const [mixesMeta, setMixesMeta] = useState<MixListMeta>(defaultMixListResponse.meta);
   const [mixTobaccos, setMixTobaccos] = useState<InventoryTobacco[]>([]);
+  const [mixComponentTobaccos, setMixComponentTobaccos] = useState<InventoryTobacco[]>([]);
   const [mixEditor, setMixEditor] = useState<MixEditorState>(emptyMixEditor);
   const [mixesScreen, setMixesScreen] = useState<MixesScreenMode>('catalog');
   const [mixSaveStatus, setMixSaveStatus] = useState<MixesSaveStatus>('idle');
@@ -137,6 +161,60 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       await Promise.all([loadMixes(nextToken), loadMixTobaccos(nextToken)]);
     },
     [loadMixes, loadMixTobaccos],
+  );
+
+  // Server-side поиск табаков для библиотеки конструктора: ищем по всему
+  // каталогу (не только по загруженным 100), отдаём первые 100 совпадений.
+  const searchMixTobaccos = useCallback(
+    async (query: string): Promise<InventoryTobacco[]> => {
+      const params = new URLSearchParams({
+        sort: 'name',
+        direction: 'asc',
+        page: '1',
+        pageSize: '100',
+      });
+      const trimmed = query.trim();
+      if (trimmed) {
+        params.set('search', trimmed);
+      }
+      try {
+        const response = await requestJson<unknown>(
+          `/staff/inventory/tobaccos?${params.toString()}`,
+          {},
+          token,
+        );
+        return normalizeInventoryListResponse(response).items;
+      } catch {
+        return [];
+      }
+    },
+    [token],
+  );
+
+  // Полные данные табаков для состава открытого микса — резолвим по точному
+  // набору ids, чтобы карточки компонентов знали наличие/линейку/профили даже
+  // для табаков за пределами загруженной сотни.
+  const resolveComponentTobaccos = useCallback(
+    async (tobaccoIds: string[], nextToken: string) => {
+      const unique = Array.from(new Set(tobaccoIds.filter(Boolean)));
+      if (!unique.length) {
+        return;
+      }
+      try {
+        const response = await requestJson<unknown>(
+          `/staff/inventory/tobaccos?ids=${unique.map(encodeURIComponent).join(',')}`,
+          {},
+          nextToken,
+        );
+        const items = normalizeInventoryListResponse(response).items;
+        if (items.length) {
+          setMixComponentTobaccos((current) => mergeTobaccosById(current, items));
+        }
+      } catch {
+        // оставляем сид из записи микса
+      }
+    },
+    [],
   );
 
   const refreshSurface = async (
@@ -213,15 +291,24 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     await refreshSurface(mixesFilters, mixesSort, page);
   };
 
-  const onSelectMix = useCallback((mix: MixRecord) => {
-    setMixEditor(toMixEditorState(mix));
-    setMixesScreen('edit');
-    setMixSaveError('');
-    setMixSaveStatus('idle');
-  }, []);
+  const onSelectMix = useCallback(
+    (mix: MixRecord) => {
+      setMixEditor(toMixEditorState(mix));
+      setMixComponentTobaccos(mix.components.map(mixComponentToTobacco));
+      setMixesScreen('edit');
+      setMixSaveError('');
+      setMixSaveStatus('idle');
+      void resolveComponentTobaccos(
+        mix.components.map((component) => component.tobaccoId),
+        token,
+      );
+    },
+    [token, resolveComponentTobaccos],
+  );
 
   const onStartCreate = useCallback(() => {
     setMixEditor(emptyMixEditor());
+    setMixComponentTobaccos([]);
     setMixesScreen('create');
     setMixSaveError('');
     setMixSaveStatus('idle');
@@ -242,10 +329,15 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       railMemberships: [],
     };
     setMixEditor(draft);
+    setMixComponentTobaccos(mix.components.map(mixComponentToTobacco));
     setMixesScreen('create');
     setMixSaveError('');
     setMixSaveStatus('idle');
-  }, []);
+    void resolveComponentTobaccos(
+      mix.components.map((component) => component.tobaccoId),
+      token,
+    );
+  }, [token, resolveComponentTobaccos]);
 
   // Toggle «Виден/Блокирован» прямо из строки каталога (без открытия editor'а).
   // В backend нет отдельного PATCH visibility — `guestVisible` производный
@@ -342,6 +434,17 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       return { ...current, components: rebalanceTo100(next) };
     });
   }, []);
+
+  // Добавление из библиотеки несёт полный объект табака — кладём его в пул
+  // данных компонентов, чтобы карточка состава отрисовалась с наличием и
+  // профилями (библиотека теперь поисковая, общего списка для резолва нет).
+  const onAddComponent = useCallback(
+    (tobacco: InventoryTobacco) => {
+      setMixComponentTobaccos((current) => mergeTobaccosById(current, [tobacco]));
+      onAddComponentById(tobacco.id);
+    },
+    [onAddComponentById],
+  );
 
   // ProportionBar drag-resize меняет весь массив компонентов разом —
   // даём отдельный setter, который принимает уже посчитанный список.
@@ -457,6 +560,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     setMixesSort(defaultMixListResponse.sort);
     setMixesMeta(defaultMixListResponse.meta);
     setMixTobaccos([]);
+    setMixComponentTobaccos([]);
     setMixEditor(emptyMixEditor());
     setMixesScreen('catalog');
     setMixSaveStatus('idle');
@@ -471,6 +575,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     mixesSort,
     mixesMeta,
     mixTobaccos,
+    mixComponentTobaccos,
     mixEditor,
     setMixEditor,
     mixesScreen,
@@ -480,6 +585,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     reload,
     loadMixes,
     loadMixTobaccos,
+    searchMixTobaccos,
     onSearchChange,
     onStatusChange,
     onRailStateChange,
@@ -499,6 +605,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     onChangeEditorField,
     onChangeEditorAvailability,
     onAddComponentById,
+    onAddComponent,
     onReplaceComponents,
     onRemoveComponentRebalanced,
     onUpdateComponent,

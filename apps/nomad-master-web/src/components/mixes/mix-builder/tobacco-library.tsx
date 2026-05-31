@@ -1,38 +1,54 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Plus, Search } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
 
 type TobaccoLibraryProps = {
-  tobaccos: InventoryTobacco[];
+  // Список по умолчанию (пустой поиск): первые 100 табаков по алфавиту.
+  defaultTobaccos: InventoryTobacco[];
   currentIds: string[];
-  onAdd: (tobaccoId: string) => void;
+  onAdd: (tobacco: InventoryTobacco) => void;
+  // Поиск по всему каталогу на сервере (не только по загруженным 100).
+  onSearch: (query: string) => Promise<InventoryTobacco[]>;
 };
 
 type LibrarySort = 'name' | 'manufacturer';
 
-const matchesQuery = (tobacco: InventoryTobacco, query: string) => {
-  if (!query) return true;
-  const q = query.toLocaleLowerCase('ru-RU');
-  const hay = [
-    tobacco.name,
-    tobacco.manufacturer,
-    tobacco.lineName ?? '',
-    ...(tobacco.flavors ?? []),
-    ...(tobacco.flavorProfiles ?? []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLocaleLowerCase('ru-RU');
-  return hay.includes(q);
-};
+const SEARCH_DEBOUNCE_MS = 250;
 
-export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryProps) => {
+export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }: TobaccoLibraryProps) => {
   const [search, setSearch] = useState('');
   const [inStockOnly, setInStockOnly] = useState(true);
   const [sort, setSort] = useState<LibrarySort>('name');
+  // null — поиск не активен, показываем defaultTobaccos.
+  const [results, setResults] = useState<InventoryTobacco[] | null>(null);
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const trimmed = search.trim();
+    if (!trimmed) {
+      setResults(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      void onSearch(trimmed).then((items) => {
+        if (!cancelled) {
+          setResults(items);
+          setLoading(false);
+        }
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [search, onSearch]);
+
+  const source = results ?? defaultTobaccos;
   const filtered = useMemo(() => {
-    let list = tobaccos.filter((t) => matchesQuery(t, search)).filter((t) => !t.archived);
+    let list = source.filter((t) => !t.archived);
     if (inStockOnly) list = list.filter((t) => t.inStock);
     if (sort === 'name') {
       list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
@@ -44,7 +60,7 @@ export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryPr
       );
     }
     return list;
-  }, [tobaccos, search, inStockOnly, sort]);
+  }, [source, inStockOnly, sort]);
 
   return (
     <aside className="mix-builder__library" aria-label="Библиотека табаков">
@@ -83,7 +99,7 @@ export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryPr
           </label>
         </div>
         <p className="mix-builder__library-count">
-          {filtered.length} из {tobaccos.length}
+          {loading ? 'Поиск…' : `${filtered.length} из ${source.length}`}
         </p>
       </div>
 
@@ -104,7 +120,7 @@ export const TobaccoLibrary = ({ tobaccos, currentIds, onAdd }: TobaccoLibraryPr
                 data-in-mix={isInMix}
                 data-out-of-stock={!tobacco.inStock}
                 onClick={() => {
-                  if (!isInMix) onAdd(tobacco.id);
+                  if (!isInMix) onAdd(tobacco);
                 }}
                 aria-pressed={isInMix}
                 aria-disabled={isInMix}

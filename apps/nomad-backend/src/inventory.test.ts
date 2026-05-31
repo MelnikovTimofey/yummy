@@ -182,6 +182,34 @@ test('staff inventory list paginates filtered results', async () => {
   }
 });
 
+test('staff inventory list resolves an explicit set of ids regardless of pagination cap', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?ids=tobacco-peach-silk,tobacco-mint-veil',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as {
+      items: Array<{ id: string; inStock: boolean; flavorProfiles: string[] }>;
+    };
+
+    const ids = body.items.map((item) => item.id).sort();
+    assert.deepEqual(ids, ['tobacco-mint-veil', 'tobacco-peach-silk']);
+    // Полные данные табака доступны для резолва карточек состава микса.
+    const peach = body.items.find((item) => item.id === 'tobacco-peach-silk');
+    assert.equal(peach?.inStock, false);
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff inventory list accepts large page sizes up to 1000 and clamps above', async () => {
   const app = buildApp();
   const token = await loginStaff(app);

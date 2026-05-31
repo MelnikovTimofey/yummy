@@ -169,6 +169,7 @@ export type InventoryTobaccoView = {
 
 export type InventoryListQuery = {
   search?: string;
+  ids?: string[];
   stock?: InventoryStockFilter;
   archived?: InventoryArchivedFilter;
   manufacturers?: string[];
@@ -1661,6 +1662,9 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 
   const items = records.map((record) => buildInventoryTobaccoView(mapTobacco(record), mixes));
   const search = typeof query.search === 'string' ? query.search.trim() : '';
+  // Точная выборка по id (редактор микса резолвит табаки своих компонентов с
+  // полными данными). Exact-match, без normalizeToken — id чувствителен к регистру.
+  const ids = new Set((query.ids ?? []).map((id) => id.trim()).filter(Boolean));
   const stock = normalizeInventoryStockFilter(query.stock);
   const archived = normalizeInventoryArchivedFilter(query.archived);
   const manufacturers = normalizeInventorySelections(query.manufacturers);
@@ -1677,6 +1681,12 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 
   const filteredItems = items
     .filter((item) => {
+      // Явный набор id игнорирует остальные фильтры: нужно вернуть именно эти
+      // табаки (в т.ч. архивные/без наличия), чтобы резолвить компоненты микса.
+      if (ids.size) {
+        return ids.has(item.id);
+      }
+
       if (archived === 'active' && item.archived) {
         return false;
       }

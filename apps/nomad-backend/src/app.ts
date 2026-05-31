@@ -1395,6 +1395,7 @@ export const buildApp = () => {
     const query = request.query as
       | {
           search?: unknown;
+          ids?: unknown;
           stock?: unknown;
           archived?: unknown;
           manufacturers?: unknown;
@@ -1410,6 +1411,7 @@ export const buildApp = () => {
 
     const response: StaffInventoryResponse = await getInventoryTobaccos({
       search: typeof query?.search === 'string' ? query.search : '',
+      ids: readStringList(query?.ids),
       stock: (typeof query?.stock === 'string' ? query.stock : undefined) as InventoryStockFilter | undefined,
       archived: (typeof query?.archived === 'string' ? query.archived : undefined) as InventoryArchivedFilter | undefined,
       manufacturers: readStringList(query?.manufacturers),

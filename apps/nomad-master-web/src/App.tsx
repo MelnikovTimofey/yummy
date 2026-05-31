@@ -826,11 +826,13 @@ export const App = () => {
           mode={mixes.mixesScreen}
           editor={mixes.mixEditor}
           tobaccos={mixes.mixTobaccos}
+          componentTobaccos={mixes.mixComponentTobaccos}
+          onSearchTobaccos={mixes.searchMixTobaccos}
           saveStatus={mixes.mixSaveStatus}
           saveError={mixes.mixSaveError}
           onFieldChange={mixes.onChangeEditorField}
           onAvailabilityChange={mixes.onChangeEditorAvailability}
-          onAddComponent={mixes.onAddComponentById}
+          onAddComponent={mixes.onAddComponent}
           onUpdateComponent={mixes.onUpdateComponent}
           onRemoveComponent={mixes.onRemoveComponentRebalanced}
           onReplaceComponents={mixes.onReplaceComponents}
