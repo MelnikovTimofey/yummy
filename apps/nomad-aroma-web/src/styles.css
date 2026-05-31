@@ -1267,7 +1267,7 @@ select:focus-visible {
 
 .aroma-showcase-rail-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding: 0 20px;
 }
@@ -1288,6 +1288,8 @@ select:focus-visible {
   background: rgba(81, 33, 21, 0.5);
   border: 1px solid var(--line-soft);
   color: var(--text-1);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .aroma-showcase-scroller {
