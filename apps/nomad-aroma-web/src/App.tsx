@@ -738,7 +738,6 @@ export const App = () => {
   const [appliedCatalogFlavors, setAppliedCatalogFlavors] = useState<string[]>([]);
   const [appliedSortBy, setAppliedSortBy] = useState<CatalogSort>('popularity');
   const [catalogPopoverOpen, setCatalogPopoverOpen] = useState(false);
-  const [activeShowcaseRailId, setActiveShowcaseRailId] = useState<string | null>(null);
   const [railProfileFilters, setRailProfileFilters] = useState<string[]>([]);
 
   useEffect(() => {
@@ -875,18 +874,6 @@ export const App = () => {
       setOnboardingStep(1);
     }
   }, [view]);
-
-  useEffect(() => {
-    if (!showcaseRails.length) {
-      if (activeShowcaseRailId !== null) {
-        setActiveShowcaseRailId(null);
-      }
-      return;
-    }
-    if (!showcaseRails.some((rail) => rail.id === activeShowcaseRailId)) {
-      setActiveShowcaseRailId(showcaseRails[0].id);
-    }
-  }, [showcaseRails, activeShowcaseRailId]);
 
   useEffect(() => {
     setRailProfileFilters([]);
@@ -1650,83 +1637,64 @@ export const App = () => {
       return <p className="screen-status">Подборки пока не опубликованы.</p>;
     }
 
-    const activeRail =
-      showcaseRails.find((rail) => rail.id === activeShowcaseRailId) ?? showcaseRails[0];
-
-    const openRail = () => {
-      setSelectedRail(activeRail);
-      setView('rail');
-    };
-
     return (
       <section className="aroma-showcase">
-        <div className="aroma-showcase-tabs" role="tablist">
-          {showcaseRails.map((rail) => {
-            const isActive = rail.id === activeRail.id;
-            return (
-              <button
-                key={rail.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={cn(
-                  'aroma-showcase-tab',
-                  isActive && 'aroma-showcase-tab-on',
-                )}
-                onClick={() => setActiveShowcaseRailId(rail.id)}
-              >
-                <span className="aroma-caps aroma-showcase-tab-kicker">
+        {showcaseRails.map((rail) => {
+          const mixes = rail.mixes.filter((mix) => mix.available);
+          const openRail = () => {
+            setSelectedRail(rail);
+            setView('rail');
+          };
+
+          return (
+            <section key={rail.id} className="aroma-showcase-rail">
+              <div className="aroma-showcase-rail-head">
+                <h2 className="aroma-showcase-rail-title">{rail.name}</h2>
+                <span className="aroma-caps aroma-showcase-rail-kind">
                   {railToneLabels[rail.type]}
                 </span>
-                <span className="aroma-showcase-tab-title">{rail.name}</span>
-              </button>
-            );
-          })}
-        </div>
+              </div>
 
-        <div className="aroma-showcase-list">
-          {activeRail.mixes.map((mix, index) => {
-            const isHero = index === 0;
-            const profileColor = getProfileColor(mix.flavorProfiles[0]);
-            return (
-              <button
-                key={`${activeRail.id}:${mix.id}`}
-                type="button"
-                className={cn(
-                  'aroma-showcase-row',
-                  isHero && 'aroma-showcase-row-hero',
-                )}
-                onClick={() => openMix(mix, 'showcase')}
-                style={
-                  isHero
-                    ? {
-                        background: `radial-gradient(circle at 80% 0%, ${profileColor}44 0%, transparent 55%), rgba(28,13,13,0.84)`,
-                      }
-                    : undefined
-                }
-              >
-                <ProfileGlyph profiles={mix.flavorProfiles} size={isHero ? 60 : 44} />
-                <div className="aroma-showcase-row-main">
-                  <h3 className="aroma-showcase-row-name">{mix.name}</h3>
-                  {mix.flavors.length ? (
-                    <p className="aroma-showcase-row-flavors">
-                      {mix.flavors.slice(0, 3).join(' · ')}
-                    </p>
-                  ) : null}
-                </div>
-                <RatingPill rating={mix.avgRating} />
-              </button>
-            );
-          })}
-        </div>
+              <div className="aroma-showcase-scroller">
+                {mixes.map((mix) => {
+                  const profileColor = getProfileColor(mix.flavorProfiles[0]);
+                  return (
+                    <button
+                      key={`${rail.id}:${mix.id}`}
+                      type="button"
+                      className="aroma-showcase-card"
+                      onClick={() => openMix(mix, 'showcase')}
+                      style={{
+                        background: `radial-gradient(circle at 86% 0%, ${profileColor}48 0%, transparent 60%), linear-gradient(180deg, rgba(40,17,17,0.96) 0%, rgba(22,11,12,0.96) 100%)`,
+                      }}
+                    >
+                      <div className="aroma-showcase-card-head">
+                        <ProfileGlyph profiles={mix.flavorProfiles} size={44} />
+                        <RatingPill rating={mix.avgRating} style={{ marginLeft: 'auto' }} />
+                      </div>
+                      <h3 className="aroma-showcase-card-name">{mix.name}</h3>
+                      <SignatureBar profiles={mix.flavorProfiles} height={3} />
+                      {mix.flavors.length ? (
+                        <p className="aroma-showcase-card-flavors">
+                          {mix.flavors.join(' · ')}
+                        </p>
+                      ) : null}
+                    </button>
+                  );
+                })}
 
-        <button
-          type="button"
-          className="aroma-onboarding-skip aroma-showcase-rail-link"
-          onClick={openRail}
-        >
-          Смотреть весь рейл
-        </button>
+                <button
+                  type="button"
+                  className="aroma-showcase-all"
+                  onClick={openRail}
+                  aria-label={`Открыть весь рейл «${rail.name}»`}
+                >
+                  Все
+                </button>
+              </div>
+            </section>
+          );
+        })}
       </section>
     );
   };

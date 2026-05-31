@@ -1256,112 +1256,110 @@ select:focus-visible {
 
 .aroma-showcase {
   display: grid;
-  gap: 14px;
-  padding: 12px 20px calc(20px + var(--safe-bottom));
+  gap: 22px;
+  padding: 16px 0 calc(20px + var(--safe-bottom));
 }
 
-.aroma-showcase-tabs {
+.aroma-showcase-rail {
+  display: grid;
+  gap: 10px;
+}
+
+.aroma-showcase-rail-head {
   display: flex;
-  gap: 14px;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.aroma-showcase-rail-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+  color: var(--text-0);
+}
+
+.aroma-showcase-rail-kind {
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(81, 33, 21, 0.5);
+  border: 1px solid var(--line-soft);
+  color: var(--text-1);
+}
+
+.aroma-showcase-scroller {
+  display: flex;
+  gap: 10px;
   overflow-x: auto;
-  padding: 0 0 4px;
+  padding: 0 20px 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.aroma-showcase-tabs::-webkit-scrollbar {
+.aroma-showcase-scroller::-webkit-scrollbar {
   display: none;
 }
 
-.aroma-showcase-tab {
+.aroma-showcase-card {
   flex: 0 0 auto;
+  width: 196px;
   display: grid;
-  gap: 4px;
-  background: transparent;
-  border: 0;
-  padding: 4px 0 8px;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 236, 0.04), 0 14px 24px rgba(0, 0, 0, 0.22);
+  color: var(--text-0);
   text-align: left;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  color: var(--text-1);
-  min-width: 100px;
 }
 
-.aroma-showcase-tab-on {
-  border-bottom-color: var(--primary);
-  color: var(--text-0);
-}
-
-.aroma-showcase-tab-kicker {
-  margin: 0;
-}
-
-.aroma-showcase-tab-title {
-  font-family: var(--font-display);
-  font-size: 19px;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-.aroma-showcase-list {
-  display: grid;
-  gap: 8px;
-}
-
-.aroma-showcase-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+.aroma-showcase-card-head {
+  display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(28, 13, 13, 0.84);
-  color: var(--text-0);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 120ms;
 }
 
-.aroma-showcase-row-hero {
-  padding: 14px 14px;
-  border-radius: 18px;
-  border-color: var(--primary);
-}
-
-.aroma-showcase-row:hover {
-  border-color: rgba(216, 171, 104, 0.4);
-}
-
-.aroma-showcase-row-main {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.aroma-showcase-row-name {
+.aroma-showcase-card-name {
   margin: 0;
   font-family: var(--font-display);
   font-size: 15.5px;
-  line-height: 1.15;
+  line-height: 1.1;
+  min-height: 2.2em;
   color: var(--text-0);
 }
 
-.aroma-showcase-row-hero .aroma-showcase-row-name {
-  font-size: 18px;
-}
-
-.aroma-showcase-row-flavors {
+.aroma-showcase-card-flavors {
   margin: 0;
   font-size: 11px;
+  line-height: 1.25;
   color: var(--text-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.aroma-showcase-rail-link {
-  justify-self: center;
+.aroma-showcase-all {
+  flex: 0 0 auto;
+  width: 64px;
+  border-radius: 16px;
+  border: 1px dashed var(--line);
+  background: rgba(20, 10, 10, 0.5);
+  color: var(--text-1);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
 }
 
 .aroma-mix-sheet {
