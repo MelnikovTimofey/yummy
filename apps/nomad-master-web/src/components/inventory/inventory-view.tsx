@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { ChevronDown, Plus, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -578,6 +578,7 @@ export const InventoryView = ({
   const [searchValue, setSearchValue] = useState(filters.search);
   const [editorMode, setEditorMode] = useState<InventoryEditorMode>('create');
   const [editorOpen, setEditorOpen] = useState(false);
+  const [extraEditorOpen, setExtraEditorOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
@@ -597,6 +598,13 @@ export const InventoryView = ({
   const categoryChipsTooltip = categoryChipsCountIsApproximate
     ? 'Счётчик показывает, сколько раз категория встречается в загруженных позициях каталога (без учёта пагинации).'
     : 'Счётчик показывает, сколько позиций в категории.';
+
+  // Сколько полей блока «Дополнительно» заполнено — показываем бейджем у
+  // summary, чтобы свёрнутый блок не читался как пустой (issue #126).
+  const extraFieldsFilledCount =
+    [editorDraft.country, editorDraft.communityStrength, editorDraft.productionStatus].filter((value) =>
+      value.trim(),
+    ).length + (editorDraft.flavorTags.length ? 1 : 0);
 
   useEffect(() => {
     setSearchValue(filters.search);
@@ -1221,9 +1229,23 @@ export const InventoryView = ({
                 />
               </label>
 
-              <details className="inventory-extra-filters inventory-editor-extra">
+              <details
+                className="inventory-extra-filters inventory-editor-extra"
+                open={extraEditorOpen}
+                onToggle={(event) => setExtraEditorOpen(event.currentTarget.open)}
+              >
                 <summary className="inventory-extra-filters__trigger">
-                  Дополнительно
+                  {extraEditorOpen ? (
+                    <ChevronUp size={14} aria-hidden className="inventory-editor-extra__chevron" />
+                  ) : (
+                    <ChevronDown size={14} aria-hidden className="inventory-editor-extra__chevron" />
+                  )}
+                  <span>Дополнительно</span>
+                  {extraFieldsFilledCount > 0 ? (
+                    <span className="inventory-extra-filters__count" aria-hidden="true">
+                      {extraFieldsFilledCount}
+                    </span>
+                  ) : null}
                 </summary>
                 <div className="form-grid form-grid--two inventory-editor-extra__grid">
                   <InventorySuggestionInput

@@ -6286,6 +6286,17 @@ input[type="checkbox"] {
   margin-top: 12px;
 }
 
+/* Шеврон-аффорданс: явно показывает, что блок «Дополнительно» раскрывается
+   (issue #126). Иконка переключается ChevronDown↔ChevronUp в разметке. */
+.inventory-editor-extra__chevron {
+  flex: none;
+  color: var(--nomad-ink-soft);
+}
+
+.inventory-editor-extra[open] .inventory-editor-extra__chevron {
+  color: var(--nomad-ink);
+}
+
 .inventory-editor-foot {
   display: flex;
   align-items: center;
