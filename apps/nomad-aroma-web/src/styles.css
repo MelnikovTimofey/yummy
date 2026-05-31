@@ -1371,6 +1371,48 @@ select:focus-visible {
   box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.6);
 }
 
+/*
+  Базовый DialogContent рассчитан на центрированный диалог и несёт enter-анимацию
+  (zoom-in-95), чей keyframe переписывает transform целиком и теряет центрирующий
+  translateX(-50%). Для bottom-sheet задаём свою анимацию, сохраняющую сдвиг.
+*/
+.aroma-mix-sheet[data-state='open'] {
+  animation: aroma-mix-sheet-in 0.24s ease-out;
+}
+
+.aroma-mix-sheet[data-state='closed'] {
+  animation: aroma-mix-sheet-out 0.2s ease-in;
+}
+
+@keyframes aroma-mix-sheet-in {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes aroma-mix-sheet-out {
+  from {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aroma-mix-sheet[data-state='open'],
+  .aroma-mix-sheet[data-state='closed'] {
+    animation: none;
+  }
+}
+
 .aroma-mix-sheet-handle {
   width: 40px;
   height: 4px;
