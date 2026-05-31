@@ -235,6 +235,11 @@ const PROFILE_ONLY_TAGS = new Set([
   'ягоды',
 ]);
 
+// Подмножество PROFILE_ONLY_TAGS — зонтичные категорийные теги htreviews.
+// В fallback'е вкусов (issue #118) их не используем: как «вкус» они звучат
+// грубо и лишь дублируют уже проставленную категорию.
+const UMBRELLA_PROFILE_TAGS = new Set(['фрукты', 'ягоды', 'цитрус', 'десерт']);
+
 const normalizeTag = (value: string) => value.toLowerCase().replace(/ё/g, 'е').trim();
 
 const includesTag = (tag: string, collection: Set<string>) => collection.has(tag);
@@ -307,11 +312,21 @@ export const buildNomadTaxonomyCandidate = (rawTags: string[]): NomadTaxonomyCan
   }
 
   const flavors = normalizedTags.filter((tag) => !PROFILE_ONLY_TAGS.has(tag));
+  // Issue #118: если после фильтра не осталось ни одного вкуса (все теги —
+  // profile-only), отдаём осмысленные profile-only теги (табачный, специи,
+  // цветочный, парфюм, алкоголь, газировка, конфетный, травяной) как вкусы,
+  // чтобы табак не оставался «недозаполненным». Зонтичные категорийные теги
+  // (фрукты/ягоды/цитрус/десерт) во вкусы не возвращаем — они лишь дублируют
+  // категорию. Табаки только с зонтичными тегами (или вовсе без тегов)
+  // остаются без вкусов — это допустимо и обрабатывается в UI мастера.
+  const flavorsWithFallback = flavors.length
+    ? flavors
+    : normalizedTags.filter((tag) => !UMBRELLA_PROFILE_TAGS.has(tag));
   const unmappedSourceTags = normalizedTags.filter((tag) => !matchedSourceTags.has(tag));
 
   return {
     flavorProfiles: Array.from(flavorProfiles).sort(),
-    flavors: Array.from(new Set(flavors)).sort(),
+    flavors: Array.from(new Set(flavorsWithFallback)).sort(),
     flavorTags: Array.from(flavorTags).sort(),
     unmappedSourceTags: Array.from(new Set(unmappedSourceTags)).sort(),
   };

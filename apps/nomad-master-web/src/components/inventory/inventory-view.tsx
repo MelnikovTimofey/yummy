@@ -838,6 +838,11 @@ export const InventoryView = ({
                   #{tag}
                 </span>
               ))}
+              {!(activeItem.flavors ?? []).length
+                && ((activeItem.flavorProfiles ?? []).length
+                  || (activeItem.flavorTags ?? []).length) ? (
+                <span className="tobacco-detail-drawer__sub">вкусы не заданы</span>
+              ) : null}
               {!(activeItem.flavorProfiles ?? []).length
                 && !(activeItem.flavors ?? []).length
                 && !(activeItem.flavorTags ?? []).length ? (
