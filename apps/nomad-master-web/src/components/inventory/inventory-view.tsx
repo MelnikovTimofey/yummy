@@ -1160,6 +1160,18 @@ export const InventoryView = ({
                 />
               </label>
 
+              <label className="field field--wide">
+                <span className="field-label">Описание для команды</span>
+                <textarea
+                  className="textarea-input"
+                  value={editorDraft.description}
+                  onChange={(event) => updateEditorDraft('description', event.target.value)}
+                  placeholder="Например: подходит к цитрусовым миксам, не миксуй с табачными"
+                  rows={3}
+                  disabled={saveStatus === 'loading'}
+                />
+              </label>
+
               <div className="form-grid form-grid--two">
                 <InventorySuggestionInput
                   label="Производитель"
@@ -1216,18 +1228,6 @@ export const InventoryView = ({
                 disabled={saveStatus === 'loading'}
                 onChange={(value) => updateEditorDraft('flavors', value)}
               />
-
-              <label className="field field--wide">
-                <span className="field-label">Описание для команды</span>
-                <textarea
-                  className="textarea-input"
-                  value={editorDraft.description}
-                  onChange={(event) => updateEditorDraft('description', event.target.value)}
-                  placeholder="Например: подходит к цитрусовым миксам, не миксуй с табачными"
-                  rows={3}
-                  disabled={saveStatus === 'loading'}
-                />
-              </label>
 
               <details
                 className="inventory-extra-filters inventory-editor-extra"
