@@ -29,6 +29,8 @@ import {
   formatMetricValue,
   inventorySortDirectionOptions,
   inventorySortFieldOptions,
+  INVENTORY_FLAVOR_PROFILE_KEYS,
+  INVENTORY_STRENGTH_PRESETS,
 } from '@/contracts';
 
 type InventoryViewProps = {
@@ -71,27 +73,6 @@ const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
 ];
 
 const STRENGTH_DASH = '—';
-
-const STRENGTH_PRESETS = ['Лёгкий', 'Средний', 'Крепкий'];
-
-// Канонический список категорий вкуса — должен совпадать с FLAVOR_PROFILES
-// мокапа редактора (12 значений в фиксированном порядке), а не выводиться
-// из загруженного среза каталога: иначе пользователь видит только те
-// категории, что уже есть в catalogOptions, и не может назначить новую.
-const MASTER_FLAVOR_PROFILES = [
-  'Фруктовые',
-  'Ягодные',
-  'Цитрусовые',
-  'Десертные',
-  'Сладкие',
-  'Мятные',
-  'Свежие',
-  'Пряные',
-  'Табачные',
-  'Цветочно-травяные',
-  'Кислые',
-  'Парфюмерные',
-];
 
 const formatStrengthCompact = (item: InventoryTobacco) => {
   const value = item.officialStrength?.trim() || item.communityStrength?.trim();
@@ -606,7 +587,7 @@ export const InventoryView = ({
   // Чипы в редакторе — фиксированный мастер-список (parity с мокапом),
   // не выборка из catalogOptions. catalogOptions всё ещё нужен для прочих
   // suggestion'ов (manufacturer, lineName и т. п.).
-  const flavorProfileOptions = MASTER_FLAVOR_PROFILES;
+  const flavorProfileOptions = INVENTORY_FLAVOR_PROFILE_KEYS;
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
   const brandChips = buildBrandChips(catalogOptions);
@@ -1128,8 +1109,8 @@ export const InventoryView = ({
               </div>
               <div className="inventory-editor-identity__col">
                 <div className="section-h">Крепость</div>
-                <div className="inventory-editor-identity__chips">
-                  {STRENGTH_PRESETS.map((preset) => {
+                <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
+                  {INVENTORY_STRENGTH_PRESETS.map((preset) => {
                     const active =
                       editorDraft.officialStrength.trim().toLocaleLowerCase('ru-RU') ===
                       preset.toLocaleLowerCase('ru-RU');

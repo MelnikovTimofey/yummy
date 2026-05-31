@@ -1396,6 +1396,37 @@ export const formatFlavorProfileLabel = (value: string) => {
   return flavorProfileLabels[normalized] ?? value;
 };
 
+// Канонические ключи категорий вкуса для редактора инвентаря — английские
+// ключи, совпадающие с flavorProfileLabels и с тем, что бэкенд хранит в
+// NomadTobacco.flavorProfiles. Не русские лейблы: иначе выбранная категория не
+// подсветится, а клик запишет в draft русский лейбл и затрёт ключ (issue #117).
+export const INVENTORY_FLAVOR_PROFILE_KEYS = [
+  'fruity',
+  'berry',
+  'citrus',
+  'dessert',
+  'sweet',
+  'minty',
+  'fresh',
+  'spicy',
+  'tobacco',
+  'floral_herbal',
+  'sour',
+  'perfume',
+] as const;
+
+// Шкала крепости htreviews (5 градаций, женский род) — совпадает со значениями
+// officialStrength/communityStrength из парсера каталога. Старые пресеты в
+// мужском роде ('Лёгкий'/'Средний'/'Крепкий') не совпадали ни с одним
+// реальным значением, поэтому чип крепости никогда не подсвечивался (issue #117).
+export const INVENTORY_STRENGTH_PRESETS = [
+  'Лёгкая',
+  'Средне-лёгкая',
+  'Средняя',
+  'Средне-крепкая',
+  'Крепкая',
+] as const;
+
 export const formatTelegramRecipientScope = (value: TelegramRecipientScope) => {
   return telegramRecipientScopeOptions.find((item) => item.value === value)?.label ?? 'Разрешённые чаты';
 };

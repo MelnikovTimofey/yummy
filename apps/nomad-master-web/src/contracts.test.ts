@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  formatFlavorProfileLabel,
+  INVENTORY_FLAVOR_PROFILE_KEYS,
+  INVENTORY_STRENGTH_PRESETS,
   buildMixRequestQuery,
   buildInventoryRequestQuery,
   buildInventorySummary,
@@ -33,6 +36,25 @@ import {
   toggleInventoryFilterValue,
   toggleMixFilterValue,
 } from './contracts';
+
+test('каждый ключ категории вкуса редактора имеет русский лейбл (issue #117)', () => {
+  for (const key of INVENTORY_FLAVOR_PROFILE_KEYS) {
+    // formatFlavorProfileLabel возвращает сам ключ, если маппинга нет —
+    // значит в списке оказался русский лейбл или незамапленный ключ.
+    assert.notEqual(formatFlavorProfileLabel(key), key);
+    assert.match(key, /^[a-z_]+$/);
+  }
+});
+
+test('пресеты крепости редактора совпадают со шкалой htreviews (issue #117)', () => {
+  assert.deepEqual(
+    [...INVENTORY_STRENGTH_PRESETS],
+    ['Лёгкая', 'Средне-лёгкая', 'Средняя', 'Средне-крепкая', 'Крепкая'],
+  );
+  for (const masculine of ['Лёгкий', 'Средний', 'Крепкий']) {
+    assert.equal((INVENTORY_STRENGTH_PRESETS as readonly string[]).includes(masculine), false);
+  }
+});
 
 test('buildInventorySummary counts stock states', () => {
   const summary = buildInventorySummary([
