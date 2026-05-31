@@ -924,6 +924,12 @@ select:focus-visible {
   padding: 16px 20px calc(20px + var(--safe-bottom));
 }
 
+/* Не растягивать строки на всю высоту .content при малом числе элементов —
+   иначе auto-строки грида раздуваются и пушат последнюю карточку в низ экрана. */
+.aroma-recs {
+  align-content: start;
+}
+
 .aroma-recs-empty {
   align-content: center;
   text-align: center;
