@@ -6455,14 +6455,14 @@ input[type="checkbox"] {
 
 /* Extra filters collapsible block */
 .inventory-extra-filters {
-  border: 1px dashed rgba(226, 172, 123, 0.18);
-  border-radius: 12px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--r-md);
   padding: 8px 12px;
 }
 
 .inventory-extra-filters[open] {
   border-style: solid;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-raised);
 }
 
 .inventory-extra-filters__trigger {
@@ -6918,9 +6918,9 @@ input[type="checkbox"] {
 }
 
 .ops-filter-select__title {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--nomad-ink-soft);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .ops-filter-select__clear {
@@ -6932,13 +6932,13 @@ input[type="checkbox"] {
 }
 
 .ops-filter-select__trigger {
-  min-height: 44px;
+  min-height: 36px;
   width: 100%;
   justify-content: space-between;
-  border-radius: 15px;
-  border-color: rgba(226, 172, 123, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border-color: var(--border-default);
+  background: var(--bg-base);
+  padding: 6px 10px;
 }
 
 .ops-filter-select__trigger-copy {
@@ -6952,23 +6952,23 @@ input[type="checkbox"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--nomad-ink);
-  font-size: 0.86rem;
+  color: var(--text-primary);
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 
 .ops-filter-select__summary--placeholder,
 .ops-filter-select__meta {
-  color: var(--nomad-ink-soft);
+  color: var(--text-muted);
 }
 
 .ops-filter-select__meta {
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
 }
 
 .ops-filter-select__chevron {
-  color: var(--nomad-ink-soft);
+  color: var(--text-muted);
   transition: transform 160ms ease;
 }
 
@@ -6985,11 +6985,10 @@ input[type="checkbox"] {
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid rgba(226, 172, 123, 0.12);
-  border-radius: 16px;
-  background: rgba(18, 16, 19, 0.98);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
 }
 
 .ops-filter-select__search {
@@ -7001,17 +7000,24 @@ input[type="checkbox"] {
 .ops-filter-select__search svg {
   position: absolute;
   left: 12px;
-  color: var(--nomad-ink-soft);
+  color: var(--text-muted);
 }
 
 .ops-filter-select__search input {
-  min-height: 36px;
+  min-height: 34px;
   width: 100%;
-  border: 1px solid rgba(226, 172, 123, 0.12);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--nomad-ink);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-base);
+  color: var(--text-primary);
   padding: 0 11px 0 34px;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.ops-filter-select__search input:focus {
+  outline: 0;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .ops-filter-select__list {
@@ -7028,44 +7034,44 @@ input[type="checkbox"] {
   align-items: start;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid rgba(226, 172, 123, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
   cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
 
 .ops-filter-select__option:hover {
-  transform: translateY(-1px);
-  border-color: rgba(226, 172, 123, 0.18);
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
 }
 
 .ops-filter-select__option--active {
-  border-color: rgba(179, 134, 74, 0.34);
-  background: rgba(179, 134, 74, 0.12);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
 }
 
 .ops-filter-select__option input {
   margin-top: 3px;
-  accent-color: rgba(122, 52, 40, 0.92);
+  accent-color: var(--accent);
 }
 
 .ops-filter-select__option-label {
   min-width: 0;
-  color: var(--nomad-ink);
+  color: var(--text-primary);
   word-break: break-word;
 }
 
 .ops-filter-select__check {
   margin-top: 2px;
-  color: rgba(122, 52, 40, 0.92);
+  color: var(--accent);
 }
 
 .ops-filter-select__empty {
   padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--nomad-ink-soft);
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
+  color: var(--text-muted);
 }
 
 .mixes-component-select {
@@ -7073,7 +7079,7 @@ input[type="checkbox"] {
 }
 
 .mixes-component-select__trigger {
-  min-height: 42px;
+  min-height: 36px;
 }
 
 .mixes-component-select__panel {
