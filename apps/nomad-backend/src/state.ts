@@ -131,6 +131,8 @@ export type DashboardRailHealthItem = {
 
 export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
 
+export type InventoryArchivedFilter = 'active' | 'archived' | 'all';
+
 export type InventorySortField = 'stock' | 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixes';
 
 export type InventorySortDirection = 'asc' | 'desc';
@@ -158,6 +160,7 @@ export type InventoryTobaccoView = {
   flavors: string[];
   flavorTags: string[];
   inStock: boolean;
+  archived: boolean;
   updatedAt: string;
   dependentMixCount: number;
   blockedDependentMixCount: number;
@@ -167,6 +170,7 @@ export type InventoryTobaccoView = {
 export type InventoryListQuery = {
   search?: string;
   stock?: InventoryStockFilter;
+  archived?: InventoryArchivedFilter;
   manufacturers?: string[];
   flavorProfiles?: string[];
   flavors?: string[];
@@ -190,6 +194,7 @@ export type TobaccoInput = {
   flavors?: string[];
   flavorTags?: string[];
   inStock?: boolean;
+  archived?: boolean;
 };
 
 export type TobaccoPatch = Partial<TobaccoInput>;
@@ -253,13 +258,14 @@ export type MixListResult = {
   };
 };
 
-export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive';
+export type InventoryBatchAction = 'set-in-stock' | 'set-out-of-stock' | 'archive' | 'unarchive';
 
 export type InventoryListResult = {
   items: InventoryTobaccoView[];
   filters: {
     search: string;
     stock: InventoryStockFilter;
+    archived: InventoryArchivedFilter;
     manufacturers: string[];
     flavorProfiles: string[];
     flavors: string[];
@@ -280,6 +286,7 @@ export type InventoryListResult = {
     filteredItems: number;
     inStockCount: number;
     outOfStockCount: number;
+    archivedCount: number;
     inMixesCount: number;
     page: number;
     pageSize: number;
@@ -290,7 +297,7 @@ export type InventoryListResult = {
 };
 
 export type InventoryBatchResult = {
-  action: Exclude<InventoryBatchAction, 'archive'>;
+  action: InventoryBatchAction;
   ids: string[];
   skippedIds: string[];
   processedCount: number;
@@ -778,6 +785,7 @@ const mapTobacco = (record: {
   flavors: string;
   flavorTags: string;
   inStock: boolean;
+  archived: boolean;
   updatedAt: Date;
 }) => ({
   id: record.id,
@@ -793,6 +801,7 @@ const mapTobacco = (record: {
   flavors: parseList(record.flavors),
   flavorTags: parseList(record.flavorTags),
   inStock: record.inStock,
+  archived: record.archived,
   updatedAt: record.updatedAt.toISOString(),
 });
 
@@ -826,6 +835,7 @@ const mapMixView = (record: {
       flavors: string;
       flavorTags: string;
       inStock: boolean;
+      archived: boolean;
     };
   }>;
   railMixes: Array<{
@@ -844,7 +854,8 @@ const mapMixView = (record: {
   const avgRating = ratingsCount
     ? Number((record.ratings.reduce((sum, item) => sum + item.value, 0) / ratingsCount).toFixed(1))
     : Number(record.baseAvgRating.toFixed(1));
-  const guestVisible = record.available && record.components.every((item) => item.tobacco.inStock);
+  const guestVisible =
+    record.available && record.components.every((item) => item.tobacco.inStock && !item.tobacco.archived);
   const railMemberships = record.railMixes.map((item) => ({
     id: item.rail.id,
     name: item.rail.name,
@@ -1023,6 +1034,10 @@ const normalizeInventoryStockFilter = (value: unknown): InventoryStockFilter => 
   }
 
   return isInventoryStockFilter(value) ? value : 'all';
+};
+
+const normalizeInventoryArchivedFilter = (value: unknown): InventoryArchivedFilter => {
+  return value === 'archived' || value === 'all' ? value : 'active';
 };
 
 const normalizeInventorySortField = (value: unknown): InventorySortField => {
@@ -1647,6 +1662,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   const items = records.map((record) => buildInventoryTobaccoView(mapTobacco(record), mixes));
   const search = typeof query.search === 'string' ? query.search.trim() : '';
   const stock = normalizeInventoryStockFilter(query.stock);
+  const archived = normalizeInventoryArchivedFilter(query.archived);
   const manufacturers = normalizeInventorySelections(query.manufacturers);
   const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
   const flavors = normalizeInventorySelections(query.flavors);
@@ -1661,6 +1677,14 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 
   const filteredItems = items
     .filter((item) => {
+      if (archived === 'active' && item.archived) {
+        return false;
+      }
+
+      if (archived === 'archived' && !item.archived) {
+        return false;
+      }
+
       if (stock === 'in-stock' && !item.inStock) {
         return false;
       }
@@ -1726,6 +1750,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     filters: {
       search,
       stock,
+      archived,
       manufacturers: resolveInventorySelections(manufacturerOptions, manufacturers),
       flavorProfiles: resolveInventorySelections(flavorProfileOptions, flavorProfiles),
       flavors: resolveInventorySelections(flavorOptions, flavors),
@@ -1746,6 +1771,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
       filteredItems: filteredItems.length,
       inStockCount: filteredItems.filter((item) => item.inStock).length,
       outOfStockCount: filteredItems.filter((item) => !item.inStock).length,
+      archivedCount: items.filter((item) => item.archived).length,
       inMixesCount: items.filter((item) => item.dependentMixCount > 0).length,
       page,
       pageSize,
@@ -1809,10 +1835,13 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
       flavors: serializeList(normalizeTextList(payload.flavors)),
       flavorTags: serializeList(normalizeTextList(payload.flavorTags)),
       inStock: typeof payload.inStock === 'boolean' ? payload.inStock : true,
+      archived: typeof payload.archived === 'boolean' ? payload.archived : false,
     },
   });
 
-  return (await getInventoryTobaccos({ sort: 'name', direction: 'asc' })).items.find((item) => item.id === id) ?? null;
+  return (
+    await getInventoryTobaccos({ sort: 'name', direction: 'asc', archived: 'all' })
+  ).items.find((item) => item.id === id) ?? null;
 };
 
 export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
@@ -1833,6 +1862,14 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
   if (!manufacturer || !name) {
     return { error: 'Manufacturer and name are required' };
   }
+
+  const nextArchived = typeof payload.archived === 'boolean' ? payload.archived : current.archived;
+  // Архивация всегда снимает табак с наличия; снятие из архива наличие не возвращает.
+  const nextInStock = nextArchived
+    ? false
+    : typeof payload.inStock === 'boolean'
+      ? payload.inStock
+      : current.inStock;
 
   const duplicate = await prisma.nomadTobacco.findFirst({
     where: {
@@ -1878,11 +1915,14 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
       flavorTags: Array.isArray(payload.flavorTags)
         ? serializeList(normalizeTextList(payload.flavorTags))
         : current.flavorTags,
-      inStock: typeof payload.inStock === 'boolean' ? payload.inStock : current.inStock,
+      inStock: nextInStock,
+      archived: nextArchived,
     },
   });
 
-  return (await getInventoryTobaccos({ sort: 'name', direction: 'asc' })).items.find((item) => item.id === id) ?? null;
+  return (
+    await getInventoryTobaccos({ sort: 'name', direction: 'asc', archived: 'all' })
+  ).items.find((item) => item.id === id) ?? null;
 };
 
 export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
@@ -1901,12 +1941,12 @@ export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
     data: { inStock },
   });
 
-  return (await getInventoryTobaccos()).items.find((item) => item.id === id) ?? null;
+  return (await getInventoryTobaccos({ archived: 'all' })).items.find((item) => item.id === id) ?? null;
 };
 
-export const batchUpdateTobaccoInStock = async (
+export const batchUpdateTobacco = async (
   ids: string[],
-  action: Exclude<InventoryBatchAction, 'archive'>,
+  action: InventoryBatchAction,
 ): Promise<InventoryBatchResult> => {
   await ensureNomadState();
 
@@ -1921,7 +1961,15 @@ export const batchUpdateTobaccoInStock = async (
     };
   }
 
-  const nextInStock = action === 'set-in-stock';
+  // Архивация всегда снимает с наличия; снятие из архива наличие не возвращает.
+  const data =
+    action === 'set-in-stock'
+      ? { inStock: true }
+      : action === 'set-out-of-stock'
+        ? { inStock: false }
+        : action === 'archive'
+          ? { archived: true, inStock: false }
+          : { archived: false };
   const currentItems = await prisma.nomadTobacco.findMany({
     where: {
       id: {
@@ -1938,14 +1986,13 @@ export const batchUpdateTobaccoInStock = async (
         in: currentIds,
       },
     },
-    data: {
-      inStock: nextInStock,
-    },
+    data,
   });
 
   const refreshed = await getInventoryTobaccos({
     sort: 'name',
     direction: 'asc',
+    archived: 'all',
   });
   const items = refreshed.items.filter((item) => currentIds.includes(item.id));
 

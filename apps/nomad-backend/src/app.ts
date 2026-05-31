@@ -42,7 +42,7 @@ import {
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import {
-  batchUpdateTobaccoInStock,
+  batchUpdateTobacco,
   createTobacco,
   createMix,
   deleteMix,
@@ -58,7 +58,7 @@ import {
   getStaffMixes,
   getStaffRails,
   getAvailableMixCatalog,
-  type InventoryBatchAction,
+  type InventoryArchivedFilter,
   type MixRailFilter,
   type MixSortDirection,
   type MixSortField,
@@ -1395,6 +1395,7 @@ export const buildApp = () => {
       | {
           search?: unknown;
           stock?: unknown;
+          archived?: unknown;
           manufacturers?: unknown;
           flavorProfiles?: unknown;
           flavors?: unknown;
@@ -1409,6 +1410,7 @@ export const buildApp = () => {
     const response: StaffInventoryResponse = await getInventoryTobaccos({
       search: typeof query?.search === 'string' ? query.search : '',
       stock: (typeof query?.stock === 'string' ? query.stock : undefined) as InventoryStockFilter | undefined,
+      archived: (typeof query?.archived === 'string' ? query.archived : undefined) as InventoryArchivedFilter | undefined,
       manufacturers: readStringList(query?.manufacturers),
       flavorProfiles: readStringList(query?.flavorProfiles),
       flavors: readStringList(query?.flavors),
@@ -1506,26 +1508,26 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'At least one tobacco id is required' } satisfies ApiError);
     }
 
-    if (action === 'archive') {
-      return reply.status(409).send({
-        error: 'Archive/delete for inventory needs a separate product-approved contract',
-      } satisfies ApiError);
-    }
-
-    if (action !== 'set-in-stock' && action !== 'set-out-of-stock') {
+    if (
+      action !== 'set-in-stock'
+      && action !== 'set-out-of-stock'
+      && action !== 'archive'
+      && action !== 'unarchive'
+    ) {
       return reply.status(400).send({ error: 'Unsupported batch action' } satisfies ApiError);
     }
 
+    const isArchiveAction = action === 'archive' || action === 'unarchive';
     const currentItems = await Promise.all(ids.map(async (id) => [id, await getTobaccoById(id)] as const));
     const currentMap = new Map(currentItems);
-    const result = await batchUpdateTobaccoInStock(ids, action as Exclude<InventoryBatchAction, 'archive'>);
+    const result = await batchUpdateTobacco(ids, action);
     const response: StaffInventoryBatchMutationResponse = result;
 
     await Promise.all(
       response.items.map((item) =>
         recordAuditEvent({
           actor: user,
-          action: 'toggle',
+          action: isArchiveAction ? 'archive' : 'toggle',
           entityType: 'inventory',
           entityId: item.id,
           entityLabel: `${item.manufacturer} · ${item.name}`,
@@ -1534,6 +1536,8 @@ export const buildApp = () => {
             batchSize: response.ids.length,
             fromInStock: currentMap.get(item.id)?.inStock ?? null,
             toInStock: item.inStock,
+            fromArchived: currentMap.get(item.id)?.archived ?? null,
+            toArchived: item.archived,
           },
         }),
       ),
@@ -1679,6 +1683,7 @@ export const buildApp = () => {
           flavors?: string[];
           flavorTags?: string[];
           inStock?: boolean;
+          archived?: boolean;
         }
       | undefined;
 
@@ -1710,6 +1715,7 @@ export const buildApp = () => {
           flavors: Array.isArray(body.flavors) ? body.flavors : undefined,
           flavorTags: Array.isArray(body.flavorTags) ? body.flavorTags : undefined,
           inStock: body.inStock,
+          archived: body.archived,
         });
     if (!updated) {
       return reply.status(404).send({ error: 'Tobacco not found' } satisfies ApiError);
@@ -1719,15 +1725,20 @@ export const buildApp = () => {
       return reply.status(400).send(updated);
     }
 
+    const isStockToggle = typeof body.inStock === 'boolean' && Object.keys(body).length === 1;
+    const isArchiveToggle = typeof body.archived === 'boolean' && Object.keys(body).length === 1;
+
     await recordAuditEvent({
       actor: user,
-      action: body && typeof body.inStock === 'boolean' && Object.keys(body).length === 1 ? 'toggle' : 'update',
+      action: isArchiveToggle ? 'archive' : isStockToggle ? 'toggle' : 'update',
       entityType: 'inventory',
       entityId: updated.id,
       entityLabel: `${updated.manufacturer} · ${updated.name}`,
       details: {
         fromInStock: current?.inStock ?? null,
         toInStock: updated.inStock,
+        fromArchived: current?.archived ?? null,
+        toArchived: updated.archived,
         fromManufacturer: current?.manufacturer ?? null,
         toManufacturer: updated.manufacturer,
         fromLineName: current?.lineName ?? null,

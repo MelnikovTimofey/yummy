@@ -11,7 +11,7 @@ export type AuditEntityType =
   | 'rail'
   | 'inventory';
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'toggle';
+export type AuditAction = 'create' | 'update' | 'delete' | 'toggle' | 'archive';
 
 export type AuditEventView = {
   id: string;
@@ -45,7 +45,11 @@ const isAuditEntityType = (value: string): value is AuditEntityType =>
   || value === 'inventory';
 
 const isAuditAction = (value: string): value is AuditAction =>
-  value === 'create' || value === 'update' || value === 'delete' || value === 'toggle';
+  value === 'create'
+  || value === 'update'
+  || value === 'delete'
+  || value === 'toggle'
+  || value === 'archive';
 
 const parseDetails = (value: string | null) => {
   if (!value) {

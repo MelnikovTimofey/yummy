@@ -138,6 +138,7 @@ model NomadTobacco {
   flavors         String
   flavorTags      String
   inStock         Boolean           @default(true)
+  archived        Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   mixComponents   NomadMixComponent[]
@@ -145,6 +146,7 @@ model NomadTobacco {
   @@unique([sourceKind, sourceNumericId])
   @@index([manufacturer, lineName, name])
   @@index([inStock])
+  @@index([archived])
   @@index([sourceKind])
 }
 

@@ -293,7 +293,7 @@ test('staff can create tobacco entries for inventory and mix editors', async () 
   }
 });
 
-test('staff inventory batch endpoint updates stock and rejects archive semantics', async () => {
+test('staff inventory batch endpoint updates stock', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
 
@@ -336,20 +336,122 @@ test('staff inventory batch endpoint updates stock and rejects archive semantics
   assert.equal(inventoryBody.items.some((item) => item.id === 'tobacco-mint-veil'), true);
   assert.equal(inventoryBody.items.some((item) => item.id === 'tobacco-peach-silk'), true);
 
+  await app.close();
+});
+
+test('archiving a tobacco hides it by default, forces out-of-stock and blocks dependent mixes', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  // Приводим mix-peach-mirage к guest-видимому состоянию: вводим компонент в наличие.
+  await app.inject({
+    method: 'PATCH',
+    url: '/staff/inventory/tobaccos/tobacco-peach-silk',
+    headers: { authorization: `Bearer ${token}` },
+    payload: { inStock: true },
+  });
+  const beforeMixes = await app.inject({
+    method: 'GET',
+    url: '/staff/mixes?status=blocked',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const beforeBody = beforeMixes.json() as { items: Array<{ id: string }> };
+  assert.equal(beforeBody.items.some((mix) => mix.id === 'mix-peach-mirage'), false);
+
+  const archive = await app.inject({
+    method: 'PATCH',
+    url: '/staff/inventory/tobaccos/tobacco-peach-silk',
+    headers: { authorization: `Bearer ${token}` },
+    payload: { archived: true },
+  });
+
+  assert.equal(archive.statusCode, 200);
+  const archiveBody = archive.json() as { item: { id: string; archived: boolean; inStock: boolean } };
+  assert.equal(archiveBody.item.archived, true);
+  // Архивация принудительно снимает с наличия.
+  assert.equal(archiveBody.item.inStock, false);
+
+  // По умолчанию архивный табак скрыт из общего списка.
+  const active = await app.inject({
+    method: 'GET',
+    url: '/staff/inventory/tobaccos?sort=name&direction=asc',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(active.statusCode, 200);
+  const activeBody = active.json() as {
+    items: Array<{ id: string }>;
+    meta: { archivedCount: number };
+  };
+  assert.equal(activeBody.items.some((item) => item.id === 'tobacco-peach-silk'), false);
+  assert.equal(activeBody.meta.archivedCount, 1);
+
+  // Под фильтром archived табак виден.
+  const archived = await app.inject({
+    method: 'GET',
+    url: '/staff/inventory/tobaccos?archived=archived',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const archivedBody = archived.json() as { items: Array<{ id: string; archived: boolean }> };
+  assert.equal(archivedBody.items.length, 1);
+  assert.equal(archivedBody.items[0]?.id, 'tobacco-peach-silk');
+
+  // Зависимый микс блокируется (available, но не guestVisible).
+  const mixes = await app.inject({
+    method: 'GET',
+    url: '/staff/mixes?status=blocked',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(mixes.statusCode, 200);
+  const mixesBody = mixes.json() as { items: Array<{ id: string; available: boolean; guestVisible: boolean }> };
+  const blocked = mixesBody.items.find((mix) => mix.id === 'mix-peach-mirage');
+  assert.equal(blocked?.available, true);
+  assert.equal(blocked?.guestVisible, false);
+
+  // Гость не получает заблокированный микс в рекомендациях.
+  const recommendations = await app.inject({
+    method: 'POST',
+    url: '/guest/onboarding/recommendations',
+    payload: { likedProfiles: ['sweet'], likedFlavors: ['персик'], limit: 5 },
+  });
+  const recommendationsBody = recommendations.json() as { items: Array<{ id: string }> };
+  assert.equal(recommendationsBody.items.some((mix) => mix.id === 'mix-peach-mirage'), false);
+
+  await app.close();
+});
+
+test('batch archive and unarchive toggle archived state', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
   const archive = await app.inject({
     method: 'POST',
     url: '/staff/inventory/tobaccos/batch',
-    headers: {
-      authorization: `Bearer ${token}`,
-    },
-    payload: {
-      ids: ['tobacco-peach-silk'],
-      action: 'archive',
-    },
+    headers: { authorization: `Bearer ${token}` },
+    payload: { ids: ['tobacco-peach-silk', 'tobacco-mint-veil'], action: 'archive' },
   });
+  assert.equal(archive.statusCode, 200);
+  const archiveBody = archive.json() as {
+    action: string;
+    processedCount: number;
+    items: Array<{ id: string; archived: boolean; inStock: boolean }>;
+  };
+  assert.equal(archiveBody.action, 'archive');
+  assert.equal(archiveBody.processedCount, 2);
+  assert.equal(archiveBody.items.every((item) => item.archived === true && item.inStock === false), true);
 
-  assert.equal(archive.statusCode, 409);
-  assert.match(archive.body, /product-approved contract/i);
+  const unarchive = await app.inject({
+    method: 'POST',
+    url: '/staff/inventory/tobaccos/batch',
+    headers: { authorization: `Bearer ${token}` },
+    payload: { ids: ['tobacco-peach-silk'], action: 'unarchive' },
+  });
+  assert.equal(unarchive.statusCode, 200);
+  const unarchiveBody = unarchive.json() as {
+    action: string;
+    items: Array<{ id: string; archived: boolean }>;
+  };
+  assert.equal(unarchiveBody.action, 'unarchive');
+  assert.equal(unarchiveBody.items[0]?.archived, false);
 
   await app.close();
 });
