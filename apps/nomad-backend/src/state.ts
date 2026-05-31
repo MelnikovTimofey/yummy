@@ -1060,7 +1060,7 @@ const normalizeInventorySelections = (items: string[] | undefined) =>
   unique((items ?? []).map(normalizeToken).filter(Boolean));
 
 const DEFAULT_STAFF_PAGE_SIZE = 25;
-const MAX_STAFF_PAGE_SIZE = 100;
+const MAX_STAFF_PAGE_SIZE = 1000;
 
 const normalizePositiveInteger = (value: unknown, fallback: number) => {
   const parsed = Number(value);

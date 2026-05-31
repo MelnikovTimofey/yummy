@@ -182,6 +182,35 @@ test('staff inventory list paginates filtered results', async () => {
   }
 });
 
+test('staff inventory list accepts large page sizes up to 1000 and clamps above', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const large = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?page=1&pageSize=1000',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    assert.equal(large.statusCode, 200);
+    const largeBody = large.json() as { meta: { pageSize: number } };
+    assert.equal(largeBody.meta.pageSize, 1000);
+
+    const clamped = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?page=1&pageSize=5000',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    assert.equal(clamped.statusCode, 200);
+    const clampedBody = clamped.json() as { meta: { pageSize: number } };
+    assert.equal(clampedBody.meta.pageSize, 1000);
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff can create tobacco entries for inventory and mix editors', async () => {
   const app = buildApp();
   const token = await loginStaff(app);

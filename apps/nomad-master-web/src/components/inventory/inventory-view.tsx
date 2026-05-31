@@ -60,6 +60,7 @@ type InventoryViewProps = {
   onRunBatchAction: (action: InventoryBatchAction) => void;
   onOpenMix: (mixId: string) => void;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   saveStatus: 'idle' | 'loading' | 'ready' | 'error';
   saveError: string;
   onSaveTobacco: (payload: InventoryEditorInput) => Promise<void>;
@@ -75,6 +76,8 @@ const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
   { key: 'flavors', title: 'Вкусы' },
   { key: 'flavorTags', title: 'Мета-теги' },
 ];
+
+const inventoryPageSizeOptions = [100, 200, 500, 1000];
 
 const STRENGTH_DASH = '—';
 
@@ -574,6 +577,7 @@ export const InventoryView = ({
   onRunBatchAction,
   onOpenMix,
   onPageChange,
+  onPageSizeChange,
   saveStatus,
   saveError,
   onSaveTobacco,
@@ -1675,6 +1679,8 @@ export const InventoryView = ({
         totalPages={meta.totalPages}
         filteredItems={meta.filteredItems}
         onPageChange={onPageChange}
+        pageSizeOptions={inventoryPageSizeOptions}
+        onPageSizeChange={onPageSizeChange}
       />
 
       {detailModal}

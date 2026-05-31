@@ -531,6 +531,14 @@ export const App = () => {
     await refreshInventorySurface(inventoryFilters, inventorySort, page);
   };
 
+  const onInventoryPageSizeChange = async (pageSize: number) => {
+    if (!token) {
+      return;
+    }
+
+    await loadInventory(token, inventoryFilters, inventorySort, 1, pageSize);
+  };
+
   const onSignOut = () => {
     mixes.reset();
     rails.reset();
@@ -797,6 +805,7 @@ export const App = () => {
       onClearFilterGroup={(key) => void onInventoryClearFilterGroup(key)}
       onResetFilters={() => void onInventoryResetFilters()}
       onPageChange={onInventoryPageChange}
+      onPageSizeChange={(pageSize) => void onInventoryPageSizeChange(pageSize)}
       onToggleSelection={onToggleInventorySelection}
       onToggleSelectAll={onToggleSelectAllInventory}
       onToggleStock={(item) => void onToggleStock(item)}
