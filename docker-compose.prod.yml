@@ -1,0 +1,96 @@
+# Прод-контур Nomad для одного облачного VPS.
+#
+# Отличия от локального docker-compose.yml:
+#   - НЕТ сервиса db: Postgres — managed (облачный), подключение через DATABASE_URL;
+#   - секреты приходят из .env без локальных дефолтов (compose падает, если не заданы);
+#   - фронты собираются с реальным публичным API-доменом (PUBLIC_API_URL, build-arg);
+#   - наружу торчит только Caddy (80/443) с авто-TLS; backend и фронты — внутри сети;
+#   - бот — часть контура (не profile), один automation-токен с backend.
+#
+# Запуск:  docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# Перед первым стартом заполнить .env по образцу .env.prod.example.
+
+services:
+  backend:
+    build:
+      context: ./apps/nomad-backend
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3021"
+      APP_NAME: nomad-backend
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      NOMAD_AUTOMATION_KEY: ${NOMAD_AUTOMATION_KEY:?NOMAD_AUTOMATION_KEY is required}
+      NOMAD_TOKEN_SECRET: ${NOMAD_TOKEN_SECRET:?NOMAD_TOKEN_SECRET is required}
+      NOMAD_TOKEN_TTL_HOURS: ${NOMAD_TOKEN_TTL_HOURS:-24}
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://127.0.0.1:3021/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  aroma-web:
+    build:
+      context: ./apps/nomad-aroma-web
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  master-web:
+    build:
+      context: ./apps/nomad-master-web
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  telegram-bot:
+    build:
+      context: ./services/nomad-telegram-bot
+    environment:
+      NOMAD_BACKEND_URL: http://backend:3021
+      # Один токен на обе стороны: рассинхрон → backend отдаёт 401 боту (red flag).
+      NOMAD_BACKEND_AUTOMATION_TOKEN: ${NOMAD_AUTOMATION_KEY:?NOMAD_AUTOMATION_KEY is required}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
+      NOMAD_BOT_STATE_PATH: /data/nomad-telegram-bot-state.json
+    volumes:
+      - nomad_bot_state:/data
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AROMA_DOMAIN: ${AROMA_DOMAIN:?AROMA_DOMAIN is required}
+      MASTER_DOMAIN: ${MASTER_DOMAIN:?MASTER_DOMAIN is required}
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - aroma-web
+      - master-web
+
+volumes:
+  nomad_bot_state:
+  caddy_data:
+  caddy_config:
