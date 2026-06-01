@@ -50,11 +50,28 @@ docker compose down                       # стоп
 docker compose down -v                    # стоп + сброс данных (volume nomad_db)
 ```
 
-### Наполнение каталога табаков (PROD-данные)
+### Наполнение продуктовыми данными
 
-Свежий `docker compose up` поднимает БД с **пустым** каталогом
-(`NomadTobacco`, `NomadMix`, `NomadRail` и связанные таблицы). Чтобы налить
-production-каталог из `htreviews.org` — одноразовый прогон seeder-профиля:
+Свежий `docker compose up` поднимает БД с **пустыми** контентными таблицами
+(`NomadTobacco`, `NomadMix`, `NomadRail`). Продуктовое наполнение — это два
+шага: сначала каталог табаков из `htreviews.org`, затем миксы и prepared-рейлы
+из [`docs/data/`](docs/data/).
+
+**TL;DR — быстро налить весь продуктовый контент:**
+
+```bash
+docker compose up -d db backend
+docker compose --profile seed run --rm seeder            # 1) каталог табаков htreviews
+cd apps/nomad-backend && npm run build:catalog -- --yes  # 2) миксы + prepared-рейлы
+```
+
+Подробнее по шагам — ниже; полный справочник наполнения и бэкап/restore —
+в [`docs/data/README.md`](docs/data/README.md).
+
+#### Шаг 1. Каталог табаков
+
+Чтобы налить production-каталог из `htreviews.org` — одноразовый прогон
+seeder-профиля:
 
 ```bash
 # Поднять минимум — db + backend
@@ -91,8 +108,23 @@ docker compose exec db psql -U nomad -d nomad \
   -c "SELECT COUNT(*) FROM \"NomadTobacco\" WHERE \"sourceKind\" = 'htreviews';"
 ```
 
-Миксы и rails (`NomadMix`, `NomadRail`) на этом этапе остаются пустыми —
-они закрываются этапами 2-3 наполнения PROD-данными.
+#### Шаг 2. Миксы и prepared-рейлы
+
+Каталог залит — теперь поверх него собираются 20 миксов и 5 prepared-рейлов
+из [`docs/data/`](docs/data/). Скрипт читает источники из рабочего дерева репо,
+поэтому запускается **нативно** против поднятой БД (порт 5433):
+
+```bash
+cd apps/nomad-backend
+npm run build:catalog            # превью: отчёт по матчингу, БД не меняется
+npm run build:catalog -- --yes   # запись: миксы + prepared-рейлы
+```
+
+Прогон идемпотентен; матчит компоненты на реальные `NomadTobacco`, помечает
+каталог `inStock=true` (иначе миксы не видны гостю) и пропускает миксы с
+несопоставленным компонентом (текущий итог — 15/20, пропуски в логе).
+Statistical-рейлы backend синтезирует на лету — их грузить не нужно. Детали и
+проверка наполнения — в [`docs/data/README.md`](docs/data/README.md).
 
 `VITE_API_BASE_URL` зашивается в bundle на этапе сборки (build-arg); по
 умолчанию указывает на `http://localhost:3021`. Меняется через
