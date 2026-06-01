@@ -26,4 +26,4 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/src ./src
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 EXPOSE 3021
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
