@@ -53,20 +53,42 @@ docker compose down -v                    # стоп + сброс данных (
 ### Наполнение продуктовыми данными
 
 Свежий `docker compose up` поднимает БД с **пустыми** контентными таблицами
-(`NomadTobacco`, `NomadMix`, `NomadRail`). Продуктовое наполнение — это два
-шага: сначала каталог табаков из `htreviews.org`, затем миксы и prepared-рейлы
-из [`docs/data/`](docs/data/).
+(`NomadTobacco`, `NomadMix`, `NomadRail`). Налить продуктовые данные можно двумя
+путями: **быстро из снэпшота** (рекомендуется) или **из источников** (свежий
+каталог htreviews + сборка миксов).
 
-**TL;DR — быстро налить весь продуктовый контент:**
+#### Быстрое развёртывание (из снэпшота)
+
+В репозитории лежит готовый снэпшот продуктовых данных
+[`snapshots/nomad-product-data.dump`](snapshots/nomad-product-data.dump)
+(custom-format `pg_restore`, ~1.3 МБ): весь каталог табаков (~11505, все
+`inStock=true`) + 15 миксов + 5 prepared-рейлов. Разворачивается за секунды,
+сеть и краулинг htreviews не нужны:
 
 ```bash
-docker compose up -d db backend
-docker compose --profile seed run --rm seeder            # 1) каталог табаков htreviews
-cd apps/nomad-backend && npm run build:catalog -- --yes  # 2) миксы + prepared-рейлы
+docker compose up -d db
+# 1) схема + операционные данные (staff/intro/daily-код, демо-логин admin/admin)
+cd apps/nomad-backend && npx prisma db push && npm run prisma:seed && cd -
+# 2) заменить демо-контент продуктовыми данными из снэпшота
+docker compose exec -T db psql -U nomad -d nomad \
+  -c 'TRUNCATE "NomadTobacco","NomadMix","NomadMixComponent","NomadRail","NomadRailMix" CASCADE;'
+docker compose exec -T db pg_restore -U nomad -d nomad --no-owner --data-only --disable-triggers \
+  < snapshots/nomad-product-data.dump
+docker compose up -d backend aroma-web master-web
 ```
 
-Подробнее по шагам — ниже; полный справочник наполнения и бэкап/restore —
-в [`docs/data/README.md`](docs/data/README.md).
+> ⚠️ Порядок важен. `prisma:seed` стартует с `deleteMany()` по всем таблицам и
+> заливает **демо**-каталог/миксы — поэтому снэпшот накатывается **после** seed
+> и перезаписывает контентные таблицы (шаг 2). Снэпшот содержит только
+> продуктовые таблицы (без staff/auth), а seed даёт логин и онбординг.
+> `--disable-triggers` нужен, чтобы `--data-only` restore не упирался в FK
+> (порядок загрузки таблиц в архиве). Как пересобрать снэпшот — в
+> [`docs/data/README.md`](docs/data/README.md).
+
+#### Наполнение из источников (свежие данные, медленно)
+
+Когда нужен свежий каталог htreviews или пересборка миксов из
+[`docs/data/`](docs/data/) — два шага ниже.
 
 #### Шаг 1. Каталог табаков
 

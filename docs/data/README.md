@@ -58,10 +58,28 @@ curl -s http://127.0.0.1:3021/health
 curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mixes: (.mixes|length)}'
 ```
 
+## Снэпшот для быстрого развёртывания
+
+В репозитории лежит [`../../snapshots/nomad-product-data.dump`](../../snapshots/nomad-product-data.dump)
+— custom-format `pg_restore` дамп **только продуктовых таблиц** (`NomadTobacco`,
+`NomadMix`, `NomadMixComponent`, `NomadRail`, `NomadRailMix`), ~1.3 МБ. Им
+поднимают готовое наполнение за секунды без краулинга htreviews — см. раздел
+«Быстрое развёртывание (из снэпшота)» в корневом [`README.md`](../../README.md).
+
+Пересобрать снэпшот после обновления данных (БД с актуальным состоянием уже
+поднята на порту 5433):
+
+```bash
+docker exec yummy-db-1 pg_dump -U nomad -d nomad -Fc --no-owner --no-privileges \
+  -t 'public."NomadTobacco"' -t 'public."NomadMix"' -t 'public."NomadMixComponent"' \
+  -t 'public."NomadRail"' -t 'public."NomadRailMix"' -f /tmp/product.dump
+docker cp yummy-db-1:/tmp/product.dump snapshots/nomad-product-data.dump
+```
+
 ## Бэкапы и restore
 
-Снятые дампы этого состояния (каталог + миксы + рейлы) лежат вне репозитория в
-`~/nomad-backups/` (большие бинарные `pg_dump`). Команды restore «из коробки» и
+Полные дампы состояния (включая staff/auth и `nomad_test`) лежат вне репозитория
+в `~/nomad-backups/` (большие бинарные `pg_dump`). Команды restore «из коробки» и
 снятия новых бэкапов — в `~/nomad-backups/README.md`.
 
 ## Соглашения
