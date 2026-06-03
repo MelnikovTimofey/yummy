@@ -94,3 +94,14 @@ volumes:
   nomad_bot_state:
   caddy_data:
   caddy_config:
+
+# IPv6 на сети контура: в РФ IPv4 до api.telegram.org заблокирован, доступен
+# только IPv6. Контейнер telegram-bot ходит в Telegram по IPv6 через NAT66
+# (маскарад ULA-подсети в глобальный IPv6 хоста). Требует включённого IPv6 в
+# демоне Docker (ipv6 + ip6tables, см. docs/nomad/prod-deploy-runbook.md).
+networks:
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: fd00:d0c:e6::/64

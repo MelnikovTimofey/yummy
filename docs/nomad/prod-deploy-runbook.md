@@ -66,6 +66,24 @@ DNS A-записи и открытый `80`/`443`).
 
 ## 4. Telegram-бот — первичная настройка
 
+> ⚠️ **IPv6 для Telegram (российский хостинг).** В РФ IPv4 до `api.telegram.org`
+> заблокирован — доступен только IPv6. Контейнер бота по умолчанию ходит только
+> по IPv4 и падает с `ETIMEDOUT` на `getUpdates`. `docker-compose.prod.yml`
+> включает IPv6 на сети контура (NAT66), но это требует включённого IPv6 в
+> демоне Docker. До старта бота на таком хостинге:
+>
+> ```bash
+> cat > /etc/docker/daemon.json <<'EOF'
+> { "ipv6": true, "fixed-cidr-v6": "fd00:d0c:e5::/64", "ip6tables": true, "experimental": true }
+> EOF
+> systemctl restart docker
+> # проверка: контейнер видит Telegram по IPv6
+> docker compose -f docker-compose.prod.yml exec telegram-bot \
+>   node -e "fetch('https://api.telegram.org').then(r=>console.log('ok',r.status)).catch(e=>console.log('ERR',e.message))"
+> ```
+>
+> Хост должен иметь рабочий IPv6 (`curl -6 https://api.telegram.org` → `302`).
+
 1. Бот поднят (шаг 4) и не в crash-loop: `docker compose -f docker-compose.prod.yml ps`.
 2. Завести allowlist по номерам телефонов в backend (source of truth доступа — backend).
 3. First-link: пользователь шлёт `share contact` → backend привязывает `chatId`.
