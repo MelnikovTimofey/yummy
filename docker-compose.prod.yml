@@ -39,6 +39,9 @@ services:
       context: ./apps/nomad-aroma-web
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    environment:
+      # vite preview блокирует чужой Host — разрешаем прод-домен (за ним Caddy).
+      NOMAD_ALLOWED_HOSTS: ${AROMA_DOMAIN:?AROMA_DOMAIN is required}
     restart: unless-stopped
     depends_on:
       backend:
@@ -49,6 +52,8 @@ services:
       context: ./apps/nomad-master-web
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    environment:
+      NOMAD_ALLOWED_HOSTS: ${MASTER_DOMAIN:?MASTER_DOMAIN is required}
     restart: unless-stopped
     depends_on:
       backend:
