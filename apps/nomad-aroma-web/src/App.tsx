@@ -107,6 +107,18 @@ const storageKeys = {
   ageConfirmed: 'nomad-aroma-age-confirmed',
   accessGranted: 'nomad-aroma-access-granted',
   introSeen: 'nomad-aroma-intro-seen',
+  onboardingDone: 'nomad-aroma-onboarding-done',
+  likedProfiles: 'nomad-aroma-liked-profiles',
+  likedFlavors: 'nomad-aroma-liked-flavors',
+};
+
+const readStoredStringArray = (key: string): string[] => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
@@ -752,10 +764,23 @@ export const App = () => {
   const [ageConfirmed, setAgeConfirmed] = useState(() => localStorage.getItem(storageKeys.ageConfirmed) === 'true');
   const [accessGranted, setAccessGranted] = useState(() => localStorage.getItem(storageKeys.accessGranted) === 'true');
   const [introSeen, setIntroSeen] = useState(() => localStorage.getItem(storageKeys.introSeen) === 'true');
+  const [onboardingDone, setOnboardingDone] = useState(() => localStorage.getItem(storageKeys.onboardingDone) === 'true');
   const [view, setView] = useState<GuestView>(() => {
     const granted = localStorage.getItem(storageKeys.accessGranted) === 'true';
     const seen = localStorage.getItem(storageKeys.introSeen) === 'true';
-    return granted ? (seen ? 'onboarding' : 'intro') : 'access';
+    const done = localStorage.getItem(storageKeys.onboardingDone) === 'true';
+    if (!granted) {
+      return 'access';
+    }
+    if (!seen) {
+      return 'intro';
+    }
+    if (!done) {
+      return 'onboarding';
+    }
+    const hasPreferences = readStoredStringArray(storageKeys.likedProfiles).length > 0
+      || readStoredStringArray(storageKeys.likedFlavors).length > 0;
+    return hasPreferences ? 'recommendations' : 'catalog';
   });
 
   const [code, setCode] = useState('');
@@ -770,8 +795,8 @@ export const App = () => {
   const [options, setOptions] = useState<OnboardingOptions>({ profiles: [], flavors: [] });
   const [optionsStatus, setOptionsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [optionsError, setOptionsError] = useState('');
-  const [likedProfiles, setLikedProfiles] = useState<string[]>([]);
-  const [likedFlavors, setLikedFlavors] = useState<string[]>([]);
+  const [likedProfiles, setLikedProfiles] = useState<string[]>(() => readStoredStringArray(storageKeys.likedProfiles));
+  const [likedFlavors, setLikedFlavors] = useState<string[]>(() => readStoredStringArray(storageKeys.likedFlavors));
   const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1);
 
   const [recommendations, setRecommendations] = useState<MixCard[]>([]);
@@ -830,15 +855,31 @@ export const App = () => {
   }, [introSeen]);
 
   useEffect(() => {
+    if (onboardingDone) {
+      localStorage.setItem(storageKeys.onboardingDone, 'true');
+    } else {
+      localStorage.removeItem(storageKeys.onboardingDone);
+    }
+  }, [onboardingDone]);
+
+  useEffect(() => {
+    localStorage.setItem(storageKeys.likedProfiles, JSON.stringify(likedProfiles));
+  }, [likedProfiles]);
+
+  useEffect(() => {
+    localStorage.setItem(storageKeys.likedFlavors, JSON.stringify(likedFlavors));
+  }, [likedFlavors]);
+
+  useEffect(() => {
     if (!accessGranted) {
       setView('access');
       return;
     }
 
     if (view === 'access') {
-      setView(introSeen ? 'onboarding' : 'intro');
+      setView(introSeen ? (onboardingDone ? 'recommendations' : 'onboarding') : 'intro');
     }
-  }, [accessGranted, introSeen, view]);
+  }, [accessGranted, introSeen, onboardingDone, view]);
 
   const loadIntroCards = async () => {
     setIntroStatus('loading');
@@ -1014,11 +1055,30 @@ export const App = () => {
     try {
       const result = await fetchGuestAccess(code.trim());
       setAccessGranted(true);
-      setView(introSeen ? 'onboarding' : 'intro');
+      setView(introSeen ? (onboardingDone ? 'recommendations' : 'onboarding') : 'intro');
       setAccessStatus('success');
     } catch (cause) {
       setAccessStatus('error');
       setAccessError(cause instanceof Error ? cause.message : 'Не удалось проверить код доступа.');
+    }
+  };
+
+  const loadRecommendations = async (profiles: string[], flavors: string[]) => {
+    setRecommendationStatus('loading');
+    setRecommendationError('');
+
+    try {
+      const nextRecommendations = await fetchRecommendations({
+        likedProfiles: profiles,
+        likedFlavors: flavors,
+      });
+      setRecommendations(nextRecommendations);
+      setRecommendationStatus('ready');
+      return true;
+    } catch (cause) {
+      setRecommendationStatus('error');
+      setRecommendationError(cause instanceof Error ? cause.message : 'Не удалось собрать рекомендации.');
+      return false;
     }
   };
 
@@ -1029,23 +1089,31 @@ export const App = () => {
       return;
     }
 
-    setRecommendationStatus('loading');
-    setRecommendationError('');
-
-    try {
-      const nextRecommendations = await fetchRecommendations({
-        likedProfiles,
-        likedFlavors,
-      });
-      setRecommendations(nextRecommendations);
-      setRecommendationStatus('ready');
+    const ok = await loadRecommendations(likedProfiles, likedFlavors);
+    if (ok) {
+      setOnboardingDone(true);
       setView('recommendations');
       primeCatalogFromOnboarding([...likedProfiles], [...likedFlavors]);
-    } catch (cause) {
-      setRecommendationStatus('error');
-      setRecommendationError(cause instanceof Error ? cause.message : 'Не удалось собрать рекомендации.');
     }
   };
+
+  // После перезагрузки рекомендации теряются (живут только в state) — восстанавливаем
+  // их с бэка по сохранённым предпочтениям, чтобы не гонять гостя через онбординг заново.
+  useEffect(() => {
+    if (!accessGranted || !onboardingDone) {
+      return;
+    }
+    if (recommendationStatus !== 'idle' || recommendations.length) {
+      return;
+    }
+    if (!likedProfiles.length && !likedFlavors.length) {
+      return;
+    }
+
+    void loadRecommendations(likedProfiles, likedFlavors);
+    primeCatalogFromOnboarding([...likedProfiles], [...likedFlavors]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessGranted, onboardingDone]);
 
   const openMix = (mix: MixCard, source: MixSource) => {
     setMixModalState({ mix, source });
@@ -1546,7 +1614,10 @@ export const App = () => {
           <button
             type="button"
             className="aroma-onboarding-skip"
-            onClick={() => setView('catalog')}
+            onClick={() => {
+              setOnboardingDone(true);
+              setView('catalog');
+            }}
           >
             Открыть каталог сразу
           </button>
