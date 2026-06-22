@@ -88,7 +88,7 @@ export const StaffBlock = ({
         <header className="access-card__head">
           <div>
             <p className="eyebrow access-card__eyebrow">Master-учётки</p>
-            <p className="access-card__title-serif">Доступ к Nomad Master</p>
+            <p className="access-card__title-serif">Доступ к Мастеру</p>
           </div>
           {staffAccountsStatus !== 'forbidden' ? (
             <button

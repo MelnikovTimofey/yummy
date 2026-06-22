@@ -42,10 +42,10 @@ export const LoginScreen = ({
       <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
       <div className="auth-screen__container">
-        <div className="auth-screen__brand" aria-label="Nomad Master">
-          <div className="auth-screen__mark" aria-hidden="true">N</div>
+        <div className="auth-screen__brand" aria-label="Ателье · Мастер">
+          <div className="auth-screen__mark" aria-hidden="true">А</div>
           <div className="auth-screen__brand-name">
-            Nomad <em>Master</em>
+            Ателье <em>Мастер</em>
           </div>
         </div>
 

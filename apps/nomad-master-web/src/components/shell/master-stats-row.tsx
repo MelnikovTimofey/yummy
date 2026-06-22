@@ -17,7 +17,7 @@ type MasterStatsRowProps = {
   tiles: MasterStatTile[];
 };
 
-// Единый stats-row под mockup Nomad Master · Refactor / _standalone_:
+// Единый stats-row под mockup Мастер · Refactor / _standalone_:
 // .stats grid (1px разделители, 4 ячейки), .stat label/value/sub,
 // data-tone на value для смыслового цвета (success/warning/danger/mono).
 // Используется на всех 5 экранах (Dashboard, Tobaccos, Mixes, Access).

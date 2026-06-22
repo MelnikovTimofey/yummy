@@ -31,38 +31,38 @@
 
 :root {
   --radius: 0.95rem;
-  --background: #130807;
-  --foreground: #f8eee8;
-  --card: #1b0d0e;
-  --card-foreground: #f8eee8;
-  --popover: #1b0d0e;
-  --popover-foreground: #f8eee8;
-  --primary: #d8ab68;
-  --primary-foreground: #23120d;
-  --secondary: rgba(63, 20, 20, 0.62);
-  --secondary-foreground: #f8eee8;
-  --muted: rgba(67, 27, 24, 0.66);
-  --muted-foreground: #d0b5a3;
-  --accent-ui: rgba(240, 183, 125, 0.14);
-  --accent-foreground: #fff2dd;
-  --destructive: #df6f5b;
-  --border: rgba(193, 141, 106, 0.22);
-  --input: rgba(193, 141, 106, 0.26);
-  --ring: rgba(242, 213, 165, 0.7);
-  --bg: #130807;
-  --surface: #1b0d0e;
-  --surface-alt: #271314;
-  --surface-elevated: #351717;
-  --accent: #d8ab68;
-  --accent-soft: #f2d5a5;
-  --accent-deep: #8c2d24;
-  --ember: #ee9d45;
-  --text-0: #f8eee8;
-  --text-1: #d0b5a3;
-  --text-2: #8e7464;
-  --line: rgba(193, 141, 106, 0.22);
-  --line-soft: rgba(193, 141, 106, 0.12);
-  --danger: #df6f5b;
+  --background: #141417;
+  --foreground: #E8E6E0;
+  --card: #1C1C21;
+  --card-foreground: #E8E6E0;
+  --popover: #1C1C21;
+  --popover-foreground: #E8E6E0;
+  --primary: #B04A3E;
+  --primary-foreground: #F4EFEA;
+  --secondary: rgba(40, 40, 48, 0.62);
+  --secondary-foreground: #E8E6E0;
+  --muted: rgba(40, 40, 48, 0.66);
+  --muted-foreground: #B6B4AE;
+  --accent-ui: rgba(176, 74, 62, 0.14);
+  --accent-foreground: #F4EFEA;
+  --destructive: #CF4F44;
+  --border: rgba(150, 148, 142, 0.16);
+  --input: rgba(150, 148, 142, 0.22);
+  --ring: rgba(176, 74, 62, 0.55);
+  --bg: #141417;
+  --surface: #1C1C21;
+  --surface-alt: #232329;
+  --surface-elevated: #2B2B32;
+  --accent: #B04A3E;
+  --accent-soft: #C25749;
+  --accent-deep: #7E342B;
+  --ember: #C25749;
+  --text-0: #E8E6E0;
+  --text-1: #B6B4AE;
+  --text-2: #8F8D87;
+  --line: rgba(150, 148, 142, 0.16);
+  --line-soft: rgba(150, 148, 142, 0.10);
+  --danger: #CF4F44;
   --profile-citrus: #e8b948;
   --profile-berry: #a23048;
   --profile-floral-herbal: #7a9560;
@@ -110,9 +110,9 @@ body {
   font-family: var(--font-body);
   color: var(--text-0);
   background:
-    radial-gradient(circle at top, rgba(140, 45, 36, 0.28), transparent 28%),
-    radial-gradient(circle at 82% 16%, rgba(238, 157, 69, 0.18), transparent 22%),
-    linear-gradient(180deg, #0d0506 0%, #180809 36%, #130807 100%);
+    radial-gradient(circle at top, rgba(176, 74, 62, 0.16), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(176, 74, 62, 0.10), transparent 22%),
+    linear-gradient(180deg, #0F0F12 0%, #161619 40%, #141417 100%);
   overflow-x: hidden;
 }
 
@@ -145,9 +145,9 @@ select:focus-visible {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 0%, rgba(122, 28, 25, 0.35), transparent 34%),
-    radial-gradient(circle at 80% 18%, rgba(240, 154, 62, 0.12), transparent 24%),
-    linear-gradient(180deg, rgba(18, 8, 7, 0.94) 0%, rgba(18, 8, 7, 1) 100%);
+    radial-gradient(circle at 50% 0%, rgba(176, 74, 62, 0.16), transparent 34%),
+    radial-gradient(circle at 80% 18%, rgba(176, 74, 62, 0.10), transparent 24%),
+    linear-gradient(180deg, rgba(15, 15, 18, 0.94) 0%, rgba(20, 20, 23, 1) 100%);
 }
 
 .phone-shell {
@@ -156,10 +156,10 @@ select:focus-visible {
   height: calc(100dvh - 32px);
   border: 1px solid var(--line);
   border-radius: 28px;
-  background: linear-gradient(180deg, rgba(40, 15, 16, 0.98) 0%, rgba(20, 9, 10, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
   box-shadow:
     0 30px 90px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 233, 214, 0.03);
+    0 0 0 1px rgba(232, 230, 224, 0.03);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -174,7 +174,7 @@ select:focus-visible {
   width: 260px;
   height: 260px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(142, 36, 28, 0.8) 0%, rgba(142, 36, 28, 0) 70%);
+  background: radial-gradient(circle, rgba(176, 74, 62, 0.55) 0%, rgba(176, 74, 62, 0) 70%);
   filter: blur(10px);
   opacity: 0.72;
 }
@@ -186,7 +186,7 @@ select:focus-visible {
   width: 320px;
   height: 320px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(238, 157, 69, 0.24) 0%, rgba(238, 157, 69, 0) 72%);
+  background: radial-gradient(circle, rgba(176, 74, 62, 0.16) 0%, rgba(176, 74, 62, 0) 72%);
   filter: blur(14px);
   opacity: 0.8;
 }
@@ -196,7 +196,7 @@ select:focus-visible {
   gap: 8px;
   padding: calc(12px + var(--safe-top)) 20px 8px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(37, 14, 15, 0.96) 0%, rgba(28, 11, 12, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -242,9 +242,9 @@ select:focus-visible {
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  border: 1px solid rgba(242, 213, 165, 0.22);
-  background: linear-gradient(180deg, #7a1e1a 0%, #541311 100%);
-  color: #fff8f4;
+  border: 1px solid rgba(176, 74, 62, 0.35);
+  background: linear-gradient(180deg, #B04A3E 0%, #7E342B 100%);
+  color: var(--primary-foreground);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -255,17 +255,17 @@ select:focus-visible {
   text-transform: lowercase;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 10px 24px rgba(72, 14, 12, 0.32);
+    0 10px 24px rgba(126, 52, 43, 0.32);
 }
 
 .brand {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 0.9;
-  letter-spacing: 0.02em;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.01em;
   color: var(--text-0);
-  text-transform: lowercase;
+  white-space: nowrap;
 }
 
 .tagline {
@@ -277,8 +277,8 @@ select:focus-visible {
 }
 
 .header-auth-btn {
-  border: 1px solid rgba(242, 213, 165, 0.16);
-  background: rgba(63, 20, 20, 0.62);
+  border: 1px solid var(--line);
+  background: var(--secondary);
   color: var(--accent-soft);
   border-radius: 999px;
   min-height: 40px;
@@ -322,7 +322,7 @@ select:focus-visible {
 
 .content {
   scrollbar-width: thin;
-  scrollbar-color: #4e4034 #181310;
+  scrollbar-color: #3A3A40 #1A1A1D;
 }
 
 .content::-webkit-scrollbar {
@@ -331,23 +331,23 @@ select:focus-visible {
 }
 
 .content::-webkit-scrollbar-track {
-  background: #181310;
+  background: #1A1A1D;
   border-radius: 999px;
 }
 
 .content::-webkit-scrollbar-thumb {
-  background: #4e4034;
+  background: #3A3A40;
   border-radius: 999px;
-  border: 1px solid #231b16;
+  border: 1px solid #232329;
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(34, 15, 16, 0.96) 0%, rgba(24, 11, 12, 0.94) 100%);
+  background: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(24, 24, 28, 0.94) 100%);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 16px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 244, 236, 0.04),
+    inset 0 1px 0 rgba(232, 230, 224, 0.04),
     0 18px 36px rgba(0, 0, 0, 0.16);
 }
 
@@ -360,7 +360,7 @@ select:focus-visible {
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #e1c1aa;
+  color: var(--text-1);
 }
 
 .card-text {
@@ -392,7 +392,7 @@ select:focus-visible {
 .ghost-button {
   margin-top: 0;
   border: 1px solid var(--line);
-  background: rgba(51, 20, 20, 0.54);
+  background: rgba(40, 40, 48, 0.54);
   color: var(--text-0);
   border-radius: 12px;
   min-height: 44px;
@@ -406,7 +406,7 @@ select:focus-visible {
 .tab {
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(56, 24, 22, 0.54);
+  background: rgba(40, 40, 48, 0.54);
   color: var(--text-1);
   font-size: 11px;
   line-height: 1.2;
@@ -418,9 +418,9 @@ select:focus-visible {
 }
 
 .tab.active {
-  background: linear-gradient(180deg, #e0b878 0%, #cb974c 100%);
-  color: #2b160f;
-  border-color: rgba(255, 220, 175, 0.4);
+  background: linear-gradient(180deg, var(--accent-soft) 0%, var(--accent) 100%);
+  color: var(--primary-foreground);
+  border-color: rgba(176, 74, 62, 0.4);
   font-weight: 600;
 }
 
@@ -437,8 +437,8 @@ select:focus-visible {
 
 .selected-mix-shell {
   padding: 8px 20px 0;
-  border-bottom: 1px solid rgba(193, 141, 106, 0.14);
-  background: linear-gradient(180deg, rgba(40, 15, 16, 0.95) 0%, rgba(23, 10, 11, 0.92) 100%);
+  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(28, 28, 33, 0.95) 0%, rgba(20, 20, 23, 0.92) 100%);
 }
 
 .selected-mix-shell .selected-mix-bar {
@@ -450,18 +450,18 @@ select:focus-visible {
 @keyframes aroma-ember {
   0% {
     box-shadow:
-      0 0 0 0 rgba(238, 157, 69, 0.45),
-      0 14px 26px rgba(140, 45, 36, 0.32);
+      0 0 0 0 rgba(176, 74, 62, 0.45),
+      0 14px 26px rgba(176, 74, 62, 0.32);
   }
   60% {
     box-shadow:
-      0 0 0 18px rgba(238, 157, 69, 0),
-      0 14px 26px rgba(140, 45, 36, 0.32);
+      0 0 0 18px rgba(176, 74, 62, 0),
+      0 14px 26px rgba(176, 74, 62, 0.32);
   }
   100% {
     box-shadow:
-      0 0 0 0 rgba(238, 157, 69, 0),
-      0 14px 26px rgba(140, 45, 36, 0.32);
+      0 0 0 0 rgba(176, 74, 62, 0),
+      0 14px 26px rgba(176, 74, 62, 0.32);
   }
 }
 
@@ -501,9 +501,9 @@ select:focus-visible {
   pointer-events: none;
   opacity: 0.92;
   background:
-    radial-gradient(circle at 50% 12%, rgba(140, 45, 36, 0.6) 0%, transparent 38%),
-    radial-gradient(circle at 12% 90%, rgba(238, 157, 69, 0.22) 0%, transparent 40%),
-    radial-gradient(circle at 90% 86%, rgba(140, 45, 36, 0.18) 0%, transparent 38%);
+    radial-gradient(circle at 50% 12%, rgba(176, 74, 62, 0.30) 0%, transparent 38%),
+    radial-gradient(circle at 12% 90%, rgba(176, 74, 62, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 90% 86%, rgba(176, 74, 62, 0.16) 0%, transparent 38%);
 }
 
 .aroma-access-body {
@@ -517,12 +517,12 @@ select:focus-visible {
 }
 
 .aroma-access-brand {
+  display: block;
   font-family: var(--font-display);
-  font-size: 44px;
-  line-height: 0.92;
-  letter-spacing: 0.01em;
+  font-size: 46px;
+  line-height: 0.96;
+  letter-spacing: 0.005em;
   color: var(--text-0);
-  text-transform: lowercase;
 }
 
 .aroma-access-tagline {
@@ -597,7 +597,7 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  color: #23120d;
+  color: var(--primary-foreground);
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
@@ -650,7 +650,7 @@ select:focus-visible {
   font-size: 96px;
   line-height: 1;
   letter-spacing: 0.02em;
-  color: rgba(216, 171, 104, 0.06);
+  color: rgba(176, 74, 62, 0.08);
   pointer-events: none;
 }
 
@@ -697,7 +697,7 @@ select:focus-visible {
   gap: 10px;
   padding: 12px 0 calc(22px + var(--safe-bottom));
   border-top: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, rgba(15, 7, 7, 0) 0%, rgba(15, 7, 7, 0.78) 30%, rgba(15, 7, 7, 0.95) 100%);
+  background: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%);
 }
 
 .aroma-intro-pips {
@@ -710,7 +710,7 @@ select:focus-visible {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(216, 171, 104, 0.3);
+  background: rgba(176, 74, 62, 0.30);
   transition: width 220ms;
 }
 
@@ -743,7 +743,7 @@ select:focus-visible {
   height: 36px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(56, 24, 22, 0.54);
+  background: rgba(40, 40, 48, 0.54);
   color: var(--text-0);
   font-size: 16px;
   line-height: 1;
@@ -753,7 +753,7 @@ select:focus-visible {
 .aroma-onboarding-bar {
   height: 4px;
   border-radius: 999px;
-  background: rgba(193, 141, 106, 0.18);
+  background: rgba(150, 148, 142, 0.16);
   overflow: hidden;
 }
 
@@ -821,7 +821,7 @@ select:focus-visible {
   padding: 8px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(40, 18, 18, 0.6);
+  background: rgba(40, 40, 48, 0.60);
   color: var(--text-1);
   font-size: 13px;
   text-align: left;
@@ -831,7 +831,7 @@ select:focus-visible {
 
 .aroma-profile-card-on {
   border-color: var(--primary);
-  background: linear-gradient(180deg, rgba(216, 171, 104, 0.22) 0%, rgba(140, 45, 36, 0.18) 100%);
+  background: linear-gradient(180deg, rgba(176, 74, 62, 0.24) 0%, rgba(176, 74, 62, 0.14) 100%);
   color: var(--accent-soft);
 }
 
@@ -885,7 +885,7 @@ select:focus-visible {
   gap: 10px;
   padding: 12px 0 calc(22px + var(--safe-bottom));
   border-top: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, rgba(15, 7, 7, 0) 0%, rgba(15, 7, 7, 0.78) 30%, rgba(15, 7, 7, 0.95) 100%);
+  background: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%);
 }
 
 .aroma-onboarding-pips {
@@ -898,7 +898,7 @@ select:focus-visible {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(216, 171, 104, 0.3);
+  background: rgba(176, 74, 62, 0.30);
   transition: background 220ms;
 }
 
@@ -966,7 +966,7 @@ select:focus-visible {
   gap: 14px;
   border: 1px solid var(--line);
   box-shadow:
-    inset 0 1px 0 rgba(255, 244, 236, 0.04),
+    inset 0 1px 0 rgba(232, 230, 224, 0.04),
     0 18px 36px rgba(0, 0, 0, 0.18);
 }
 
@@ -1050,7 +1050,7 @@ select:focus-visible {
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(28, 13, 13, 0.84);
+  background: rgba(28, 28, 33, 0.84);
   color: var(--text-0);
   text-align: left;
   cursor: pointer;
@@ -1058,7 +1058,7 @@ select:focus-visible {
 }
 
 .aroma-recs-row:hover {
-  border-color: rgba(216, 171, 104, 0.4);
+  border-color: rgba(176, 74, 62, 0.40);
 }
 
 .aroma-recs-row-main {
@@ -1106,7 +1106,7 @@ select:focus-visible {
   margin: -12px -32px 2px;
   padding: 12px 20px 10px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(20, 10, 10, 0.92);
+  background: rgba(20, 20, 23, 0.92);
   backdrop-filter: blur(12px);
 }
 
@@ -1122,7 +1122,7 @@ select:focus-visible {
   height: 38px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(40, 18, 18, 0.66);
+  background: rgba(40, 40, 48, 0.66);
   color: var(--text-0);
   padding: 0 14px;
   font-size: 13px;
@@ -1141,7 +1141,7 @@ select:focus-visible {
   height: 38px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(40, 18, 18, 0.66);
+  background: rgba(40, 40, 48, 0.66);
   color: var(--text-1);
   position: relative;
   cursor: pointer;
@@ -1178,7 +1178,7 @@ select:focus-visible {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
-  background: linear-gradient(180deg, rgba(40, 15, 16, 0.98) 0%, rgba(20, 9, 10, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
   display: grid;
   gap: 10px;
@@ -1194,7 +1194,7 @@ select:focus-visible {
   min-height: 36px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(56, 24, 22, 0.54);
+  background: rgba(40, 40, 48, 0.54);
   color: var(--text-1);
   font-size: 12px;
   letter-spacing: 0.04em;
@@ -1205,7 +1205,7 @@ select:focus-visible {
 .aroma-catalog-sort-btn-on {
   border-color: var(--primary);
   color: var(--accent-soft);
-  background: linear-gradient(180deg, rgba(216, 171, 104, 0.22) 0%, rgba(140, 45, 36, 0.18) 100%);
+  background: linear-gradient(180deg, rgba(176, 74, 62, 0.24) 0%, rgba(176, 74, 62, 0.14) 100%);
 }
 
 .aroma-catalog-flavor-wrap {
@@ -1237,7 +1237,7 @@ select:focus-visible {
   padding: 8px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(28, 13, 13, 0.84);
+  background: rgba(28, 28, 33, 0.84);
   color: var(--text-0);
   text-align: left;
   cursor: pointer;
@@ -1245,7 +1245,7 @@ select:focus-visible {
 }
 
 .aroma-catalog-row:hover {
-  border-color: rgba(216, 171, 104, 0.4);
+  border-color: rgba(176, 74, 62, 0.40);
 }
 
 .aroma-catalog-row-main {
@@ -1302,7 +1302,7 @@ select:focus-visible {
   margin: 0;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(81, 33, 21, 0.5);
+  background: rgba(40, 40, 48, 0.50);
   border: 1px solid var(--line-soft);
   color: var(--text-1);
   white-space: nowrap;
@@ -1330,7 +1330,7 @@ select:focus-visible {
   padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 rgba(255, 244, 236, 0.04), 0 14px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 1px 0 rgba(232, 230, 224, 0.04), 0 14px 24px rgba(0, 0, 0, 0.22);
   color: var(--text-0);
   text-align: left;
   cursor: pointer;
@@ -1367,7 +1367,7 @@ select:focus-visible {
   width: 64px;
   border-radius: 16px;
   border: 1px dashed var(--line);
-  background: rgba(20, 10, 10, 0.5);
+  background: rgba(20, 20, 23, 0.50);
   color: var(--text-1);
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -1454,7 +1454,7 @@ select:focus-visible {
   width: 40px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(216, 171, 104, 0.32);
+  background: rgba(176, 74, 62, 0.32);
   margin: 0 auto 6px;
 }
 
@@ -1571,7 +1571,7 @@ select:focus-visible {
   height: 36px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(45, 20, 19, 0.9);
+  background: rgba(40, 40, 48, 0.90);
   color: var(--text-2);
   font-size: 18px;
   cursor: pointer;
@@ -1580,7 +1580,7 @@ select:focus-visible {
 
 .aroma-mix-sheet-star-on {
   border-color: var(--primary);
-  background: linear-gradient(180deg, rgba(216, 171, 104, 0.24) 0%, rgba(140, 45, 36, 0.18) 100%);
+  background: linear-gradient(180deg, rgba(176, 74, 62, 0.24) 0%, rgba(176, 74, 62, 0.14) 100%);
   color: var(--accent-soft);
 }
 
@@ -1593,7 +1593,7 @@ select:focus-visible {
 
 .aroma-mix-sheet-ghost {
   border: 1px solid var(--line);
-  background: rgba(40, 18, 18, 0.5);
+  background: rgba(40, 40, 48, 0.50);
   color: var(--text-0);
   border-radius: 14px;
   min-height: 48px;
@@ -1622,8 +1622,8 @@ select:focus-visible {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 10%, rgba(216, 171, 104, 0.18) 0%, transparent 40%),
-    radial-gradient(circle at 50% 100%, rgba(238, 157, 69, 0.28) 0%, transparent 35%);
+    radial-gradient(circle at 50% 10%, rgba(176, 74, 62, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(176, 74, 62, 0.20) 0%, transparent 35%);
   z-index: 0;
 }
 
@@ -1683,7 +1683,7 @@ select:focus-visible {
   border-radius: 18px;
   padding: 18px;
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(34, 15, 16, 0.96) 0%, rgba(22, 11, 12, 0.88) 100%);
+  background: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(22, 22, 26, 0.88) 100%);
   display: grid;
   gap: 10px;
 }
@@ -1751,7 +1751,7 @@ select:focus-visible {
   height: 36px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(56, 24, 22, 0.54);
+  background: rgba(40, 40, 48, 0.54);
   color: var(--text-0);
   font-size: 18px;
   line-height: 1;
@@ -1771,8 +1771,8 @@ select:focus-visible {
 }
 
 .aroma-rail-code {
-  border: 1px solid rgba(242, 213, 165, 0.2);
-  background: rgba(63, 20, 20, 0.62);
+  border: 1px solid rgba(176, 74, 62, 0.20);
+  background: var(--secondary);
   color: var(--accent-soft);
   border-radius: 999px;
   height: 34px;
@@ -1834,7 +1834,7 @@ select:focus-visible {
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(28, 13, 13, 0.84);
+  background: rgba(28, 28, 33, 0.84);
   color: var(--text-0);
   text-align: left;
   cursor: pointer;
@@ -1842,7 +1842,7 @@ select:focus-visible {
 }
 
 .aroma-rail-row:hover {
-  border-color: rgba(216, 171, 104, 0.4);
+  border-color: rgba(176, 74, 62, 0.40);
 }
 
 .aroma-rail-row-main {
@@ -1897,8 +1897,8 @@ select:focus-visible {
   }
 
   .brand {
-    font-size: 24px;
-    letter-spacing: 3px;
+    font-size: 19px;
+    letter-spacing: 0.01em;
   }
 
   .tagline {

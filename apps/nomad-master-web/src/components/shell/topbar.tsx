@@ -71,8 +71,8 @@ export const MasterTopBar = ({
   return (
     <header className="topbar" aria-label="Рабочие разделы Мастера">
       <div className="brand">
-        <span className="brand__mark" aria-hidden="true">N</span>
-        <span className="brand__name">Nomad Master</span>
+        <span className="brand__mark" aria-hidden="true">А</span>
+        <span className="brand__name">Ателье · Мастер</span>
       </div>
 
       <nav className="nav" role="tablist" aria-label="Рабочие разделы Мастера">
