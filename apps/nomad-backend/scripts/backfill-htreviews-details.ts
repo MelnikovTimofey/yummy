@@ -30,7 +30,7 @@ const parseList = (value: string | null | undefined) => {
 const serializeList = (items: string[]) => JSON.stringify(Array.from(new Set(items)));
 
 const updateMixTaxonomy = async () => {
-  const mixes = await prisma.nomadMix.findMany({
+  const mixes = await prisma.mix.findMany({
     include: {
       components: {
         include: {
@@ -51,7 +51,7 @@ const updateMixTaxonomy = async () => {
     const flavors = Array.from(new Set(mix.components.flatMap((item) => parseList(item.tobacco.flavors)))).sort();
     const flavorTags = Array.from(new Set(mix.components.flatMap((item) => parseList(item.tobacco.flavorTags)))).sort();
 
-    await prisma.nomadMix.update({
+    await prisma.mix.update({
       where: {
         id: mix.id,
       },
@@ -74,7 +74,7 @@ async function main() {
   const onlyMissingDescription = process.env.HTREVIEWS_ONLY_MISSING_DESCRIPTION === '1';
   const onlyIncomplete = process.env.HTREVIEWS_ONLY_INCOMPLETE === '1';
 
-  const sourceRows = await prisma.nomadTobacco.findMany({
+  const sourceRows = await prisma.tobacco.findMany({
     where: {
       sourceKind: 'htreviews',
       sourceUrl: {
@@ -130,7 +130,7 @@ async function main() {
         const detail = parseTobaccoPage(html, client.baseUrl, current.sourceUrl!);
         const taxonomy = buildNomadTaxonomyCandidate(detail.rawTags);
 
-        await prisma.nomadTobacco.update({
+        await prisma.tobacco.update({
           where: {
             id: current.id,
           },

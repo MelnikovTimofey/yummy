@@ -1,7 +1,7 @@
 export type StaffUser = {
   login: string;
   name: string;
-  role: 'admin' | 'nomad';
+  role: 'admin' | 'master';
 };
 
 export type StaffAuthResponse = {
@@ -731,7 +731,7 @@ export const normalizeStaffAccountRecord = (value: unknown): StaffAccountRecord 
     id: String(raw.id ?? raw.accountId ?? ''),
     login: String(raw.login ?? ''),
     name: String(raw.name ?? ''),
-    role: raw.role === 'admin' ? 'admin' : 'nomad',
+    role: raw.role === 'admin' ? 'admin' : 'master',
     active: toBoolean(raw.active, true),
   };
 };
@@ -813,7 +813,7 @@ export const normalizeAuditEventRecord = (value: unknown): AuditEventRecord => {
     id: String(raw.id ?? ''),
     actorLogin: String(raw.actorLogin ?? ''),
     actorName: String(raw.actorName ?? ''),
-    actorRole: raw.actorRole === 'admin' ? 'admin' : 'nomad',
+    actorRole: raw.actorRole === 'admin' ? 'admin' : 'master',
     action,
     entityType,
     entityId: String(raw.entityId ?? ''),
@@ -1325,7 +1325,7 @@ export const sortDailyAccessCodes = (items: DailyAccessCodeRecord[]) => {
 export const sortStaffAccounts = (items: StaffAccountRecord[]) => {
   const roleRank: Record<StaffUser['role'], number> = {
     admin: 0,
-    nomad: 1,
+    master: 1,
   };
 
   const copy = [...items];

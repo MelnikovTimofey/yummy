@@ -86,7 +86,7 @@ export type StaffAuthResponse = {
   user: {
     login: string;
     name: string;
-    role: 'admin' | 'nomad';
+    role: 'admin' | 'master';
   };
 };
 

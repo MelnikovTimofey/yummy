@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { config } from './config';
 import { prisma } from './db';
 
-export type StaffRole = 'admin' | 'nomad';
+export type StaffRole = 'admin' | 'master';
 
 export type StaffUser = {
   login: string;
@@ -30,7 +30,7 @@ const sign = (value: string) => crypto.createHmac('sha256', config.tokenSecret).
 
 const hashSecret = (secret: string, salt: string) => crypto.scryptSync(secret, salt, 64).toString('hex');
 
-const isStaffRole = (value: string): value is StaffRole => value === 'admin' || value === 'nomad';
+const isStaffRole = (value: string): value is StaffRole => value === 'admin' || value === 'master';
 
 const verifySecret = (secret: string, hash: string, salt: string) => {
   const expected = Buffer.from(hash, 'hex');
@@ -86,7 +86,7 @@ export const verifyStaffToken = (token: string): StaffUser | null => {
 };
 
 export const resolveStaffUser = async (login: string, password: string): Promise<StaffUser | null> => {
-  const account = await prisma.nomadStaffAccount.findUnique({
+  const account = await prisma.staffAccount.findUnique({
     where: { login },
     select: {
       login: true,
@@ -119,7 +119,7 @@ export const resolveStaffSession = async (token: string): Promise<StaffUser | nu
     return null;
   }
 
-  const account = await prisma.nomadStaffAccount.findUnique({
+  const account = await prisma.staffAccount.findUnique({
     where: { login: claims.login },
     select: {
       login: true,
@@ -142,7 +142,7 @@ export const resolveStaffSession = async (token: string): Promise<StaffUser | nu
 
 export const verifyGuestAccessCode = async (code: string) => {
   const now = new Date();
-  const codes = await prisma.nomadDailyAccessCode.findMany({
+  const codes = await prisma.dailyAccessCode.findMany({
     where: {
       active: true,
       startsAt: {

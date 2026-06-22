@@ -39,7 +39,7 @@ const main = async () => {
   // таксономия (fallback по profile-only тегам) даёт вкусы из уже сохранённого
   // rawSourceTags. Непустой flavors не трогаем — это защита от затирания ручной
   // курации. flavorProfiles/flavorTags тоже не трогаем: их логика не менялась.
-  const rows = await prisma.nomadTobacco.findMany({
+  const rows = await prisma.tobacco.findMany({
     select: { id: true, name: true, manufacturer: true, rawSourceTags: true, flavors: true },
   });
 
@@ -85,7 +85,7 @@ const main = async () => {
 
   let applied = 0;
   for (const item of updates) {
-    await prisma.nomadTobacco.update({
+    await prisma.tobacco.update({
       where: { id: item.id },
       data: { flavors: serializeList(item.flavors) },
     });

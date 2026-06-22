@@ -668,7 +668,7 @@ test('normalizeDailyAccessCodeRecord preserves display code and dates', () => {
   });
 });
 
-test('normalizeStaffAccountRecord defaults to nomad role', () => {
+test('normalizeStaffAccountRecord defaults to master role', () => {
   const record = normalizeStaffAccountRecord({
     id: 'staff-1',
     login: 'nomad',
@@ -680,7 +680,7 @@ test('normalizeStaffAccountRecord defaults to nomad role', () => {
     id: 'staff-1',
     login: 'nomad',
     name: 'Кальянный мастер',
-    role: 'nomad',
+    role: 'master',
     active: true,
   });
 });
@@ -714,7 +714,7 @@ test('sortStaffAccounts keeps active admins first', () => {
       id: 'staff-2',
       login: 'nomad',
       name: 'Nomad',
-      role: 'nomad',
+      role: 'master',
       active: true,
     },
     {
@@ -728,7 +728,7 @@ test('sortStaffAccounts keeps active admins first', () => {
       id: 'staff-3',
       login: 'guest',
       name: 'Guest',
-      role: 'nomad',
+      role: 'master',
       active: false,
     },
   ]);

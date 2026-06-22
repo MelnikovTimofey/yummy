@@ -284,7 +284,7 @@ export const StaffBlock = ({
                 <div className="operator-dialog__field">
                   <label className="operator-dialog__label">Роль</label>
                   <div className="operator-dialog__role-switch" role="radiogroup" aria-label="Роль">
-                    {(['admin', 'nomad'] as const).map((roleKey) => {
+                    {(['admin', 'master'] as const).map((roleKey) => {
                       const active = staffAccountEditor.role === roleKey;
                       return (
                         <button

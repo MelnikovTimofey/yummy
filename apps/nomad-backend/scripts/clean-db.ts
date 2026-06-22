@@ -19,31 +19,31 @@ const maskDatabaseUrl = (url: string | undefined) =>
 // дети, потом родители. Операционные данные (staff, daily-коды, intro-карточки,
 // telegram-операторы, аудит) НЕ трогаем — иначе будет нечем логиниться и тестировать.
 const targets = [
-  { label: 'smoke-события', run: () => prisma.nomadSmokeCtaEvent.deleteMany() },
-  { label: 'рейтинги миксов', run: () => prisma.nomadMixRating.deleteMany() },
-  { label: 'связи рейл↔микс', run: () => prisma.nomadRailMix.deleteMany() },
-  { label: 'состав миксов', run: () => prisma.nomadMixComponent.deleteMany() },
-  { label: 'рейлы', run: () => prisma.nomadRail.deleteMany() },
-  { label: 'миксы', run: () => prisma.nomadMix.deleteMany() },
-  { label: 'табаки', run: () => prisma.nomadTobacco.deleteMany() },
-  { label: 'каталог профилей вкуса', run: () => prisma.nomadFlavorProfileCatalog.deleteMany() },
-  { label: 'каталог вкусов', run: () => prisma.nomadFlavorCatalog.deleteMany() },
-  { label: 'каталог мета-тегов', run: () => prisma.nomadFlavorTagCatalog.deleteMany() },
-  { label: 'source-tag маппинги', run: () => prisma.nomadSourceTagMapping.deleteMany() },
+  { label: 'smoke-события', run: () => prisma.smokeCtaEvent.deleteMany() },
+  { label: 'рейтинги миксов', run: () => prisma.mixRating.deleteMany() },
+  { label: 'связи рейл↔микс', run: () => prisma.railMix.deleteMany() },
+  { label: 'состав миксов', run: () => prisma.mixComponent.deleteMany() },
+  { label: 'рейлы', run: () => prisma.rail.deleteMany() },
+  { label: 'миксы', run: () => prisma.mix.deleteMany() },
+  { label: 'табаки', run: () => prisma.tobacco.deleteMany() },
+  { label: 'каталог профилей вкуса', run: () => prisma.flavorProfileCatalog.deleteMany() },
+  { label: 'каталог вкусов', run: () => prisma.flavorCatalog.deleteMany() },
+  { label: 'каталог мета-тегов', run: () => prisma.flavorTagCatalog.deleteMany() },
+  { label: 'source-tag маппинги', run: () => prisma.sourceTagMapping.deleteMany() },
 ] as const;
 
 const counts = async () => ({
-  'smoke-события': await prisma.nomadSmokeCtaEvent.count(),
-  'рейтинги миксов': await prisma.nomadMixRating.count(),
-  'связи рейл↔микс': await prisma.nomadRailMix.count(),
-  'состав миксов': await prisma.nomadMixComponent.count(),
-  рейлы: await prisma.nomadRail.count(),
-  миксы: await prisma.nomadMix.count(),
-  табаки: await prisma.nomadTobacco.count(),
-  'каталог профилей вкуса': await prisma.nomadFlavorProfileCatalog.count(),
-  'каталог вкусов': await prisma.nomadFlavorCatalog.count(),
-  'каталог мета-тегов': await prisma.nomadFlavorTagCatalog.count(),
-  'source-tag маппинги': await prisma.nomadSourceTagMapping.count(),
+  'smoke-события': await prisma.smokeCtaEvent.count(),
+  'рейтинги миксов': await prisma.mixRating.count(),
+  'связи рейл↔микс': await prisma.railMix.count(),
+  'состав миксов': await prisma.mixComponent.count(),
+  рейлы: await prisma.rail.count(),
+  миксы: await prisma.mix.count(),
+  табаки: await prisma.tobacco.count(),
+  'каталог профилей вкуса': await prisma.flavorProfileCatalog.count(),
+  'каталог вкусов': await prisma.flavorCatalog.count(),
+  'каталог мета-тегов': await prisma.flavorTagCatalog.count(),
+  'source-tag маппинги': await prisma.sourceTagMapping.count(),
 });
 
 const main = async () => {
@@ -54,12 +54,12 @@ const main = async () => {
   console.table(before);
 
   const sohranyaem = {
-    'staff-аккаунты': await prisma.nomadStaffAccount.count(),
-    'daily-коды': await prisma.nomadDailyAccessCode.count(),
-    'intro-карточки': await prisma.nomadIntroCard.count(),
-    'telegram-операторы': await prisma.nomadTelegramOperator.count(),
-    'telegram-recipients': await prisma.nomadTelegramRecipient.count(),
-    'аудит-события': await prisma.nomadAuditEvent.count(),
+    'staff-аккаунты': await prisma.staffAccount.count(),
+    'daily-коды': await prisma.dailyAccessCode.count(),
+    'intro-карточки': await prisma.introCard.count(),
+    'telegram-операторы': await prisma.telegramOperator.count(),
+    'telegram-recipients': await prisma.telegramRecipient.count(),
+    'аудит-события': await prisma.auditEvent.count(),
   };
   console.log('[clean-db] сохраняется без изменений:');
   console.table(sohranyaem);

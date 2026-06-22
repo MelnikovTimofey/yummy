@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model NomadIntroCard {
+model IntroCard {
   id          String   @id
   step        Int      @unique
   title       String
@@ -17,7 +17,7 @@ model NomadIntroCard {
   updatedAt   DateTime @updatedAt
 }
 
-model NomadStaffAccount {
+model StaffAccount {
   id           String   @id
   login        String   @unique
   passwordHash String
@@ -31,7 +31,7 @@ model NomadStaffAccount {
   @@index([active])
 }
 
-model NomadDailyAccessCode {
+model DailyAccessCode {
   id        String   @id
   codeValue String
   codeHash  String
@@ -46,7 +46,7 @@ model NomadDailyAccessCode {
   @@index([active, startsAt, endsAt])
 }
 
-model NomadTelegramRecipient {
+model TelegramRecipient {
   id        String   @id
   chatId    String
   label     String
@@ -59,7 +59,7 @@ model NomadTelegramRecipient {
   @@index([scope, active])
 }
 
-model NomadTelegramOperator {
+model TelegramOperator {
   id                  String    @id
   name                String
   phone               String    @unique
@@ -77,7 +77,7 @@ model NomadTelegramOperator {
   @@index([linkedChatId])
 }
 
-model NomadTelegramAutomationState {
+model TelegramAutomationState {
   id                    String    @id
   lastHeartbeatAt       DateTime?
   lastRotateAt          DateTime?
@@ -100,7 +100,7 @@ model NomadTelegramAutomationState {
   updatedAt             DateTime  @updatedAt
 }
 
-model NomadAuditEvent {
+model AuditEvent {
   id          String   @id @default(uuid())
   actorLogin  String
   actorName   String
@@ -117,7 +117,7 @@ model NomadAuditEvent {
   @@index([actorLogin, createdAt])
 }
 
-model NomadTobacco {
+model Tobacco {
   id              String            @id
   manufacturer    String
   lineName        String            @default("")
@@ -141,7 +141,7 @@ model NomadTobacco {
   archived        Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  mixComponents   NomadMixComponent[]
+  mixComponents   MixComponent[]
 
   @@unique([sourceKind, sourceNumericId])
   @@index([manufacturer, lineName, name])
@@ -150,7 +150,7 @@ model NomadTobacco {
   @@index([sourceKind])
 }
 
-model NomadFlavorProfileCatalog {
+model FlavorProfileCatalog {
   key         String   @id
   label       String
   tobaccoCount Int     @default(0)
@@ -158,7 +158,7 @@ model NomadFlavorProfileCatalog {
   updatedAt   DateTime @updatedAt
 }
 
-model NomadFlavorCatalog {
+model FlavorCatalog {
   key         String   @id
   label       String
   tobaccoCount Int     @default(0)
@@ -166,7 +166,7 @@ model NomadFlavorCatalog {
   updatedAt   DateTime @updatedAt
 }
 
-model NomadFlavorTagCatalog {
+model FlavorTagCatalog {
   key         String   @id
   label       String
   tobaccoCount Int     @default(0)
@@ -174,7 +174,7 @@ model NomadFlavorTagCatalog {
   updatedAt   DateTime @updatedAt
 }
 
-model NomadSourceTagMapping {
+model SourceTagMapping {
   id                  String   @id
   sourceKind          String
   sourceTag           String
@@ -191,7 +191,7 @@ model NomadSourceTagMapping {
   @@index([sourceKind])
 }
 
-model NomadMix {
+model Mix {
   id              String            @id
   name            String
   description     String
@@ -203,28 +203,28 @@ model NomadMix {
   baseAvgRating   Float             @default(4.5)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  components      NomadMixComponent[]
-  railMixes       NomadRailMix[]
-  ratings         NomadMixRating[]
-  smokeEvents     NomadSmokeCtaEvent[]
+  components      MixComponent[]
+  railMixes       RailMix[]
+  ratings         MixRating[]
+  smokeEvents     SmokeCtaEvent[]
 }
 
-model NomadMixComponent {
+model MixComponent {
   id         String      @id @default(uuid())
   mixId      String
   tobaccoId   String
   proportion  Int         @default(50)
   sortOrder   Int         @default(0)
   createdAt   DateTime    @default(now())
-  mix         NomadMix    @relation(fields: [mixId], references: [id], onDelete: Cascade)
-  tobacco     NomadTobacco @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
+  mix         Mix    @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  tobacco     Tobacco @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
 
   @@unique([mixId, tobaccoId])
   @@index([mixId])
   @@index([tobaccoId])
 }
 
-model NomadRail {
+model Rail {
   id          String         @id
   name        String
   description String
@@ -233,42 +233,42 @@ model NomadRail {
   isSystem    Boolean        @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
-  mixes       NomadRailMix[]
+  mixes       RailMix[]
 
   @@index([type])
   @@index([active])
 }
 
-model NomadRailMix {
+model RailMix {
   id         String    @id @default(uuid())
   railId     String
   mixId      String
   sortOrder  Int       @default(0)
   createdAt  DateTime  @default(now())
-  rail       NomadRail @relation(fields: [railId], references: [id], onDelete: Cascade)
-  mix        NomadMix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  rail       Rail @relation(fields: [railId], references: [id], onDelete: Cascade)
+  mix        Mix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
 
   @@unique([railId, mixId])
   @@index([railId])
   @@index([mixId])
 }
 
-model NomadSmokeCtaEvent {
+model SmokeCtaEvent {
   id        String    @id @default(uuid())
   mixId     String
   createdAt DateTime  @default(now())
-  mix       NomadMix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  mix       Mix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
 
   @@index([mixId])
 }
 
-model NomadMixRating {
+model MixRating {
   id        String    @id @default(uuid())
   mixId     String
   value     Int
   source    String    @default("guest")
   createdAt DateTime  @default(now())
-  mix       NomadMix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  mix       Mix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
 
   @@index([mixId])
   @@index([createdAt])

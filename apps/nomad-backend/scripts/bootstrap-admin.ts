@@ -19,7 +19,7 @@ const main = async () => {
     throw new Error('NOMAD_BOOTSTRAP_ADMIN_PASSWORD is required');
   }
 
-  const current = await prisma.nomadStaffAccount.findUnique({
+  const current = await prisma.staffAccount.findUnique({
     where: { login },
     select: {
       id: true,
@@ -31,7 +31,7 @@ const main = async () => {
   const passwordSalt = `bootstrap:${accountId}:${Date.now()}`;
   const passwordHash = createSecretHash(password, passwordSalt);
 
-  const saved = await prisma.nomadStaffAccount.upsert({
+  const saved = await prisma.staffAccount.upsert({
     where: { login },
     update: {
       name,
