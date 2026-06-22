@@ -91,7 +91,7 @@ export const RailsView = ({
     <header className="rails-page__header">
       <div className="rails-page__copy">
         <p className="rails-page__eyebrow">Менеджер рейлов</p>
-        <h1 className="rails-page__title">Рейлы Nomad</h1>
+        <h1 className="rails-page__title">Рейлы</h1>
         <p className="rails-page__subtitle">
           Состав и порядок подборок для гостевой витрины.
         </p>

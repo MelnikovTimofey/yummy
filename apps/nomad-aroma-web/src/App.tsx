@@ -104,12 +104,12 @@ type ProfileOption = {
 };
 
 const storageKeys = {
-  ageConfirmed: 'nomad-aroma-age-confirmed',
-  accessGranted: 'nomad-aroma-access-granted',
-  introSeen: 'nomad-aroma-intro-seen',
-  onboardingDone: 'nomad-aroma-onboarding-done',
-  likedProfiles: 'nomad-aroma-liked-profiles',
-  likedFlavors: 'nomad-aroma-liked-flavors',
+  ageConfirmed: 'aroma-age-confirmed',
+  accessGranted: 'aroma-access-granted',
+  introSeen: 'aroma-intro-seen',
+  onboardingDone: 'aroma-onboarding-done',
+  likedProfiles: 'aroma-liked-profiles',
+  likedFlavors: 'aroma-liked-flavors',
 };
 
 const readStoredStringArray = (key: string): string[] => {
@@ -164,7 +164,7 @@ const sortOptions: Array<{ value: CatalogSort; label: string }> = [
 
 const railDescriptions: Record<RailType, string> = {
   statistical: 'Миксы, к которым гости возвращаются чаще всего.',
-  prepared: 'Подборка для быстрого старта в стилистике Nomad Lounge.',
+  prepared: 'Подборка для быстрого старта в фирменной стилистике ателье.',
   curated: 'Выразительные сочетания, которые чаще советуют мастера зала.',
 };
 
@@ -313,7 +313,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
         manufacturer:
           typeof componentRecord.manufacturer === 'string' && componentRecord.manufacturer
             ? componentRecord.manufacturer
-            : 'Nomad',
+            : '—',
         flavors: toStringList(componentRecord.flavors),
         proportion: toNumber(componentRecord.proportion, Math.round(100 / Math.max(1, extractCollection(record, ['components']).length))),
       };
@@ -1249,8 +1249,8 @@ export const App = () => {
   const renderBrand = () => (
     <Button variant="ghost" type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
       <div>
-        <p className="brand">nomad</p>
-        <p className="tagline">лаунж · арома ателье</p>
+        <p className="brand">Арома Ателье</p>
+        <p className="tagline">подбор миксов</p>
       </div>
     </Button>
   );
@@ -1362,8 +1362,8 @@ export const App = () => {
         <div className="aroma-access-halo" aria-hidden />
         <div className="aroma-access-body">
           <div>
-            <span className="aroma-access-brand">nomad</span>
-            <p className="aroma-access-tagline">Арома Ателье · Лаундж</p>
+            <span className="aroma-access-brand">Арома<br />Ателье</span>
+            <p className="aroma-access-tagline">подбор кальянных миксов</p>
           </div>
 
           <form className="aroma-access-form" onSubmit={onSubmitAccessCode}>

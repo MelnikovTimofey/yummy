@@ -246,11 +246,11 @@ export const App = () => {
 
   useEffect(() => {
     if (!user) {
-      document.title = 'Nomad Master — вход';
+      document.title = 'Ателье · Мастер — вход';
       return;
     }
     const tab = workspaceTabs.find((item) => item.id === activeTab) ?? workspaceTabs[0];
-    document.title = `${tab.label} — Nomad Master`;
+    document.title = `${tab.label} — Ателье · Мастер`;
   }, [user, activeTab]);
 
   useEffect(() => {
