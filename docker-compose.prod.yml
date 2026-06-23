@@ -13,7 +13,7 @@
 services:
   backend:
     build:
-      context: ./apps/nomad-backend
+      context: ./apps/backend
     environment:
       HOST: 0.0.0.0
       PORT: "3021"
@@ -36,7 +36,7 @@ services:
 
   aroma-web:
     build:
-      context: ./apps/nomad-aroma-web
+      context: ./apps/aroma-web
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
     environment:
@@ -49,7 +49,7 @@ services:
 
   master-web:
     build:
-      context: ./apps/nomad-master-web
+      context: ./apps/master-web
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
     environment:
@@ -61,7 +61,7 @@ services:
 
   telegram-bot:
     build:
-      context: ./services/nomad-telegram-bot
+      context: ./services/telegram-bot
     environment:
       NOMAD_BACKEND_URL: http://backend:3021
       # Один токен на обе стороны: рассинхрон → backend отдаёт 401 боту (red flag).
@@ -103,7 +103,7 @@ volumes:
 # IPv6 на сети контура: в РФ IPv4 до api.telegram.org заблокирован, доступен
 # только IPv6. Контейнер telegram-bot ходит в Telegram по IPv6 через NAT66
 # (маскарад ULA-подсети в глобальный IPv6 хоста). Требует включённого IPv6 в
-# демоне Docker (ipv6 + ip6tables, см. docs/nomad/prod-deploy-runbook.md).
+# демоне Docker (ipv6 + ip6tables, см. docs/atelier/prod-deploy-runbook.md).
 networks:
   default:
     enable_ipv6: true

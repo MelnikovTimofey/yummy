@@ -1,9 +1,9 @@
 # Nomad-specific ownership
-/apps/nomad-aroma-web/ @MelnikovTimofey
-/apps/nomad-master-web/ @MelnikovTimofey
-/apps/nomad-backend/ @MelnikovTimofey
-/services/nomad-telegram-bot/ @MelnikovTimofey
-/tests/nomad-smoke/ @MelnikovTimofey
+/apps/aroma-web/ @MelnikovTimofey
+/apps/master-web/ @MelnikovTimofey
+/apps/backend/ @MelnikovTimofey
+/services/telegram-bot/ @MelnikovTimofey
+/tests/smoke/ @MelnikovTimofey
 /CLAUDE.md @MelnikovTimofey
 /PRD.md @MelnikovTimofey
 /docs/ @MelnikovTimofey

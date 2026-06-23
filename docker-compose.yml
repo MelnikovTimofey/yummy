@@ -21,7 +21,7 @@ services:
 
   backend:
     build:
-      context: ./apps/nomad-backend
+      context: ./apps/backend
     environment:
       HOST: 0.0.0.0
       PORT: "3021"
@@ -47,7 +47,7 @@ services:
 
   aroma-web:
     build:
-      context: ./apps/nomad-aroma-web
+      context: ./apps/aroma-web
       args:
         VITE_API_BASE_URL: ${AROMA_VITE_API_BASE_URL:-http://localhost:3021}
     ports:
@@ -57,7 +57,7 @@ services:
 
   master-web:
     build:
-      context: ./apps/nomad-master-web
+      context: ./apps/master-web
       args:
         VITE_API_BASE_URL: ${MASTER_VITE_API_BASE_URL:-http://localhost:3021}
     ports:
@@ -70,7 +70,7 @@ services:
     # Запуск: `docker compose --profile seed run --rm seeder`.
     profiles: ["seed"]
     build:
-      context: ./apps/nomad-backend
+      context: ./apps/backend
     environment:
       DATABASE_URL: postgresql://nomad:nomad@db:5432/nomad?schema=public
       HTREVIEWS_DELAY_MS: ${HTREVIEWS_DELAY_MS:-250}
@@ -89,7 +89,7 @@ services:
     # Требует TELEGRAM_BOT_TOKEN. Запускается отдельно: `docker compose --profile bot up`.
     profiles: ["bot"]
     build:
-      context: ./services/nomad-telegram-bot
+      context: ./services/telegram-bot
     environment:
       NOMAD_BACKEND_URL: http://backend:3021
       NOMAD_BACKEND_AUTOMATION_TOKEN: ${NOMAD_AUTOMATION_KEY:-nomad-local-automation-key}

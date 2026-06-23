@@ -20,9 +20,9 @@ tests/*/node_modules
 design/
 
 # Nomad service local artifacts
-services/nomad-telegram-bot/node_modules
-services/nomad-telegram-bot/dist/
-services/nomad-telegram-bot/.env
+services/telegram-bot/node_modules
+services/telegram-bot/dist/
+services/telegram-bot/.env
 
 # Claude Code local settings (personal, not shared)
 .claude/settings.local.json

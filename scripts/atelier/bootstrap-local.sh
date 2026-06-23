@@ -8,10 +8,10 @@ SKIP_INSTALL=0
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/nomad/bootstrap-local.sh [--with-bot] [--skip-install]
+  ./scripts/atelier/bootstrap-local.sh [--with-bot] [--skip-install]
 
 Options:
-  --with-bot      Also install dependencies for services/nomad-telegram-bot
+  --with-bot      Also install dependencies for services/telegram-bot
   --skip-install  Skip npm ci and only run db/bootstrap steps
   --help          Show this help
 EOF
@@ -64,46 +64,46 @@ if ! command -v npm >/dev/null 2>&1; then
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "docker is required for apps/nomad-backend local Postgres bootstrap" >&2
+  echo "docker is required for apps/backend local Postgres bootstrap" >&2
   exit 1
 fi
 
 if [ "${SKIP_INSTALL}" -ne 1 ]; then
-  install_package "apps/nomad-backend"
-  install_package "apps/nomad-aroma-web"
-  install_package "apps/nomad-master-web"
+  install_package "apps/backend"
+  install_package "apps/aroma-web"
+  install_package "apps/master-web"
 
   if [ "${WITH_BOT}" -eq 1 ]; then
-    install_package "services/nomad-telegram-bot"
+    install_package "services/telegram-bot"
   fi
 fi
 
 echo "==> Starting local Nomad Postgres"
-run_in "apps/nomad-backend" npm run db:start
+run_in "apps/backend" npm run db:start
 
 echo "==> Generating Prisma client"
-run_in "apps/nomad-backend" npm run prisma:generate
+run_in "apps/backend" npm run prisma:generate
 
 echo "==> Resetting local Nomad schema"
-run_in "apps/nomad-backend" npm run prisma:dbpush -- --force-reset
+run_in "apps/backend" npm run prisma:dbpush -- --force-reset
 
 echo "==> Seeding local Nomad data"
-run_in "apps/nomad-backend" npm run prisma:seed
+run_in "apps/backend" npm run prisma:seed
 
 cat <<'EOF'
 
 Nomad local bootstrap complete.
 
 Next commands:
-  cd apps/nomad-backend && npm run dev
-  cd apps/nomad-aroma-web && npm run dev
-  cd apps/nomad-master-web && npm run dev
+  cd apps/backend && npm run dev
+  cd apps/aroma-web && npm run dev
+  cd apps/master-web && npm run dev
 
 Optional:
-  cd services/nomad-telegram-bot && npm run start
+  cd services/telegram-bot && npm run start
 
 Thin browser smoke:
-  cd tests/nomad-smoke && npm run smoke
+  cd tests/smoke && npm run smoke
 
 Canonical local URLs:
   backend: http://localhost:3021

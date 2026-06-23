@@ -5,11 +5,11 @@ on:
     branches:
       - main
     paths:
-      - apps/nomad-aroma-web/**
-      - apps/nomad-master-web/**
-      - apps/nomad-backend/**
-      - services/nomad-telegram-bot/**
-      - tests/nomad-smoke/**
+      - apps/aroma-web/**
+      - apps/master-web/**
+      - apps/backend/**
+      - services/telegram-bot/**
+      - tests/smoke/**
       - .github/**
       - .claude/**
       - CLAUDE.md
@@ -42,32 +42,32 @@ jobs:
         with:
           filters: |
             aroma:
-              - 'apps/nomad-aroma-web/**'
+              - 'apps/aroma-web/**'
             master:
-              - 'apps/nomad-master-web/**'
+              - 'apps/master-web/**'
             backend:
-              - 'apps/nomad-backend/**'
+              - 'apps/backend/**'
             backend_prisma:
-              - 'apps/nomad-backend/prisma/**'
+              - 'apps/backend/prisma/**'
             backend_auth:
-              - 'apps/nomad-backend/src/auth.ts'
-              - 'apps/nomad-backend/src/auth.test.ts'
-              - 'apps/nomad-backend/src/access.ts'
-              - 'apps/nomad-backend/src/access.test.ts'
-              - 'apps/nomad-backend/src/config.ts'
-              - 'apps/nomad-backend/scripts/bootstrap-admin.ts'
-              - 'apps/nomad-backend/.env.example'
+              - 'apps/backend/src/auth.ts'
+              - 'apps/backend/src/auth.test.ts'
+              - 'apps/backend/src/access.ts'
+              - 'apps/backend/src/access.test.ts'
+              - 'apps/backend/src/config.ts'
+              - 'apps/backend/scripts/bootstrap-admin.ts'
+              - 'apps/backend/.env.example'
             bot:
-              - 'services/nomad-telegram-bot/**'
+              - 'services/telegram-bot/**'
             runtime:
-              - 'services/nomad-telegram-bot/ops/**'
-              - 'services/nomad-telegram-bot/.env.example'
-              - 'docs/nomad/env-matrix.md'
-              - 'docs/nomad/deployment-smoke-checklist.md'
+              - 'services/telegram-bot/ops/**'
+              - 'services/telegram-bot/.env.example'
+              - 'docs/atelier/env-matrix.md'
+              - 'docs/atelier/deployment-smoke-checklist.md'
             process_core:
               - '.github/**'
               - '.claude/**'
-              - 'tests/nomad-smoke/**'
+              - 'tests/smoke/**'
               - 'CLAUDE.md'
               - 'docs/**'
 
@@ -164,12 +164,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: apps/nomad-aroma-web/package-lock.json
+          cache-dependency-path: apps/aroma-web/package-lock.json
       - name: Install dependencies
-        working-directory: apps/nomad-aroma-web
+        working-directory: apps/aroma-web
         run: npm ci
       - name: Build
-        working-directory: apps/nomad-aroma-web
+        working-directory: apps/aroma-web
         run: npm run build
 
   nomad-master-build:
@@ -183,15 +183,15 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: apps/nomad-master-web/package-lock.json
+          cache-dependency-path: apps/master-web/package-lock.json
       - name: Install dependencies
-        working-directory: apps/nomad-master-web
+        working-directory: apps/master-web
         run: npm ci
       - name: Test
-        working-directory: apps/nomad-master-web
+        working-directory: apps/master-web
         run: npm test
       - name: Build
-        working-directory: apps/nomad-master-web
+        working-directory: apps/master-web
         run: npm run build
 
   nomad-backend-build:
@@ -207,29 +207,29 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: apps/nomad-backend/package-lock.json
+          cache-dependency-path: apps/backend/package-lock.json
       - name: Install dependencies
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: npm ci
       - name: Start backend database
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         # --wait ждёт healthcheck `pg_isready`, чтобы `prisma db push` не падал
         # с P1001 на ещё не открытом порту.
         run: docker compose -f docker-compose.yml up -d --wait db
       - name: Prepare backend schema
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: |
           npm run prisma:generate
           npm run prisma:dbpush -- --force-reset
       - name: Test
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: npm test
       - name: Build
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: npm run build
       - name: Stop backend database
         if: always()
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: docker compose -f docker-compose.yml down -v
 
   nomad-bot-build:
@@ -243,13 +243,13 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: services/nomad-telegram-bot/package-lock.json
+          cache-dependency-path: services/telegram-bot/package-lock.json
       - name: Install dependencies
-        working-directory: services/nomad-telegram-bot
+        working-directory: services/telegram-bot
         run: npm ci
       - name: Test
-        working-directory: services/nomad-telegram-bot
+        working-directory: services/telegram-bot
         run: npm test
       - name: Build
-        working-directory: services/nomad-telegram-bot
+        working-directory: services/telegram-bot
         run: npm run build

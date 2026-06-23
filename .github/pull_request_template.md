@@ -10,10 +10,10 @@
 
 Перечислите изменённые Nomad-пути:
 
-- `apps/nomad-aroma-web/...`
-- `apps/nomad-master-web/...`
-- `apps/nomad-backend/...`
-- `services/nomad-telegram-bot/...`
+- `apps/aroma-web/...`
+- `apps/master-web/...`
+- `apps/backend/...`
+- `services/telegram-bot/...`
 - `docs/process paths`, если были затронуты
 
 ## Write Scope
@@ -26,8 +26,8 @@
 
 ```bash
 # example
-cd apps/nomad-backend && npm test
-cd apps/nomad-backend && npm run build
+cd apps/backend && npm test
+cd apps/backend && npm run build
 ```
 
 ## Docs Updated
