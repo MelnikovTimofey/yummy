@@ -23,5 +23,14 @@ export const getNomadDailyCodeWindow = (referenceDate = new Date()): NomadDailyC
   };
 };
 
-export const createNomadDailyCodeValue = (_referenceDate: Date = new Date()) =>
-  crypto.randomInt(0, 10000).toString().padStart(4, '0');
+export const createNomadDailyCodeValue = (
+  _referenceDate: Date = new Date(),
+  exclude: Iterable<string> = [],
+) => {
+  const taken = new Set(exclude);
+  let value = crypto.randomInt(0, 10000).toString().padStart(4, '0');
+  while (taken.has(value)) {
+    value = crypto.randomInt(0, 10000).toString().padStart(4, '0');
+  }
+  return value;
+};
