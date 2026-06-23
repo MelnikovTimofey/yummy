@@ -16,10 +16,10 @@
 
 | Label | Color | Description |
 |---|---|---|
-| `scope:aroma-web` | `B60205` | `apps/nomad-aroma-web` |
-| `scope:master-web` | `FBCA04` | `apps/nomad-master-web` |
-| `scope:backend` | `0E8A16` | `apps/nomad-backend` |
-| `scope:telegram-bot` | `1D76DB` | `services/nomad-telegram-bot` |
+| `scope:aroma-web` | `B60205` | `apps/aroma-web` |
+| `scope:master-web` | `FBCA04` | `apps/master-web` |
+| `scope:backend` | `0E8A16` | `apps/backend` |
+| `scope:telegram-bot` | `1D76DB` | `services/telegram-bot` |
 | `scope:repo-ops` | `5319E7` | `.github`, process docs, workflow, skills |
 
 ## Risk labels

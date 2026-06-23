@@ -1,8 +1,8 @@
 # Данные каталога Арома Ателье
 
-Здесь лежат **источники** контентного наполнения dev-БД Nomad: подборка миксов
+Здесь лежат **источники** контентного наполнения dev-БД Арома Ателье: подборка миксов
 и предустановленные рейлы. Это не seed (демо-фикстуры для smoke живут в
-`apps/nomad-backend/prisma/seed.ts`) и не сами данные БД — это «человекочитаемый»
+`apps/backend/prisma/seed.ts`) и не сами данные БД — это «человекочитаемый»
 исходник, из которого скрипт собирает миксы и рейлы поверх каталога табаков.
 
 ## Файлы
@@ -14,12 +14,12 @@
 
 ## Как наполнить данные в dev-БД
 
-Скрипт `apps/nomad-backend/scripts/build-catalog-backup.ts` (npm-скрипт
+Скрипт `apps/backend/scripts/build-catalog-backup.ts` (npm-скрипт
 `build:catalog`) парсит файлы выше, матчит компоненты «бренд + вкус» на реальные
-`NomadTobacco` и грузит миксы + prepared-рейлы.
+`Tobacco` и грузит миксы + prepared-рейлы.
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 npm run db:start                 # 1) контейнер БД (если не поднят)
 npm run prisma:dbpush            # 2) схема (если БД новая/пустая)
 
@@ -33,7 +33,7 @@ npm run build:catalog -- --yes   #    запись
 ```
 
 Порядок важен: шаг 4 требует уже залитого каталога (FK
-`NomadMixComponent.tobaccoId`) и при каталоге <1000 строк остановится с ошибкой.
+`MixComponent.tobaccoId`) и при каталоге <1000 строк остановится с ошибкой.
 
 ### Что делает `build:catalog`
 
@@ -61,8 +61,8 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 ## Снэпшот для быстрого развёртывания
 
 В репозитории лежит [`../../snapshots/nomad-product-data.dump`](../../snapshots/nomad-product-data.dump)
-— custom-format `pg_restore` дамп **только продуктовых таблиц** (`NomadTobacco`,
-`NomadMix`, `NomadMixComponent`, `NomadRail`, `NomadRailMix`), ~1.3 МБ. Им
+— custom-format `pg_restore` дамп **только продуктовых таблиц** (`Tobacco`,
+`Mix`, `MixComponent`, `Rail`, `RailMix`), ~1.3 МБ. Им
 поднимают готовое наполнение за секунды без краулинга htreviews — см. раздел
 «Быстрое развёртывание (из снэпшота)» в корневом [`README.md`](../../README.md).
 
@@ -71,8 +71,8 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 
 ```bash
 docker exec yummy-db-1 pg_dump -U nomad -d nomad -Fc --no-owner --no-privileges \
-  -t 'public."NomadTobacco"' -t 'public."NomadMix"' -t 'public."NomadMixComponent"' \
-  -t 'public."NomadRail"' -t 'public."NomadRailMix"' -f /tmp/product.dump
+  -t 'public."Tobacco"' -t 'public."Mix"' -t 'public."MixComponent"' \
+  -t 'public."Rail"' -t 'public."RailMix"' -f /tmp/product.dump
 docker cp yummy-db-1:/tmp/product.dump snapshots/nomad-product-data.dump
 ```
 

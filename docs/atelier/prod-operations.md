@@ -1,6 +1,6 @@
-# Nomad Prod Operations (эксплуатация)
+# Арома Ателье — Prod Operations (эксплуатация)
 
-День-2 инструкция по работе с прод-контуром Nomad: запуск, остановка,
+День-2 инструкция по работе с прод-контуром Арома Ателье: запуск, остановка,
 обслуживание, обновление, откат, диагностика. Первичное развёртывание — в
 [`prod-deploy-runbook.md`](prod-deploy-runbook.md).
 
@@ -125,10 +125,10 @@ PGPASSWORD='<пароль>' pg_dump -h 192.168.0.4 -U gen_user -d default_db -Fc
 ```bash
 PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
   -h 192.168.0.4 -U gen_user -d default_db \
-  -t NomadTobacco -t NomadMix -t NomadRail snapshots/nomad-product-data.dump
+  -t Tobacco -t Mix -t Rail snapshots/nomad-product-data.dump
 PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
   -h 192.168.0.4 -U gen_user -d default_db \
-  -t NomadMixComponent -t NomadRailMix snapshots/nomad-product-data.dump
+  -t MixComponent -t RailMix snapshots/nomad-product-data.dump
 ```
 
 ### Daily-код доступа (гость) и Telegram-allowlist

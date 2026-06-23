@@ -1,16 +1,16 @@
 ---
-name: nomad-qa-and-smoke
-description: Верификация, smoke-планирование, regression- и accessibility-ревью изменений Nomad перед PR. Покрывает build-гейты, стратегию UI-smoke (Playwright/ручной), доступность и формат отчёта об остаточных рисках.
+name: atelier-qa-and-smoke
+description: Верификация, smoke-планирование, regression- и accessibility-ревью изменений Арома Ателье перед PR. Покрывает build-гейты, стратегию UI-smoke (Playwright/ручной), доступность и формат отчёта об остаточных рисках.
 ---
 
-# Nomad QA And Smoke
+# Арома Ателье QA And Smoke
 
 Скилл выбирает наименьший корректный путь проверки, собирает доказательства и
 разделяет подтверждённое поведение от неподтверждённого риска.
 
 ## Цикл
 
-1. Определить затронутый scope — сопоставить изменение с проектами Nomad.
+1. Определить затронутый scope — сопоставить изменение с проектами Арома Ателье.
 2. Прогнать baseline build-гейты по каждому изменённому проекту.
 3. Выбрать проверку потока: Playwright, когда окружение готово; иначе ручной smoke —
    и явно это указать.
@@ -20,11 +20,11 @@ description: Верификация, smoke-планирование, regression-
 
 ## Baseline build-гейты
 
-- `cd apps/nomad-aroma-web && npm run build`
-- `cd apps/nomad-master-web && npm test && npm run build`
-- `cd apps/nomad-backend && npm test && npm run build` (Postgres: `npm run db:start`)
-- `cd services/nomad-telegram-bot && npm test && npm run build`
-- UI/интеграция: `cd tests/nomad-smoke && npm run smoke`
+- `cd apps/aroma-web && npm run build`
+- `cd apps/master-web && npm test && npm run build`
+- `cd apps/backend && npm test && npm run build` (Postgres: `npm run db:start`)
+- `cd services/telegram-bot && npm test && npm run build`
+- UI/интеграция: `cd tests/smoke && npm run smoke`
 - `git diff --check`
 
 ## UI-проверка
@@ -43,7 +43,7 @@ Playwright не запускался.
 3. контраст и читаемость русской копии;
 4. labels форм, helper-текст, сообщения об ошибках;
 5. mobile-читаемость в `Aroma` (поток `18+` → код → CTA, не слишком плотные карточки);
-6. role-sensitive поверхности в `Master` (admin-only данные не протекают к `nomad`).
+6. role-sensitive поверхности в `Master` (admin-only данные не протекают к `master`).
 
 Каждую находку привязывать к конкретному отказу: недостижимый контрол, неясный label,
 нечитаемый контраст, путаница ролей.

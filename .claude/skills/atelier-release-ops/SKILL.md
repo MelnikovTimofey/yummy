@@ -1,18 +1,18 @@
 ---
-name: nomad-release-ops
-description: Планирование и ревью окружения, деплоя, runtime-операций, Telegram-бота, bootstrap-admin и release-readiness контура Nomad. Покрывает владение env, rollout-smoke, точки внимания при откате и операционные stop-conditions.
+name: atelier-release-ops
+description: Планирование и ревью окружения, деплоя, runtime-операций, Telegram-бота, bootstrap-admin и release-readiness контура Арома Ателье. Покрывает владение env, rollout-smoke, точки внимания при откате и операционные stop-conditions.
 ---
 
-# Nomad Release Ops
+# Арома Ателье Release Ops
 
-Скилл стандартизирует операционную работу по запуску Nomad вне локальной разработки.
-Контекст: `docs/nomad/env-matrix.md`, `docs/nomad/deployment-smoke-checklist.md`,
-`docs/nomad/acceptance-checklist.md`.
+Скилл стандартизирует операционную работу по запуску Арома Ателье вне локальной разработки.
+Контекст: `docs/atelier/env-matrix.md`, `docs/atelier/deployment-smoke-checklist.md`,
+`docs/atelier/acceptance-checklist.md`.
 
 ## Когда применять
 
 - изменение env-переменных, конфигурации runtime, deployment-нот или владения секретами;
-- операционное поведение `services/nomad-telegram-bot`;
+- операционное поведение `services/telegram-bot`;
 - bootstrap-admin или доступ backend-автоматизации;
 - подготовка или ревью release-readiness.
 
@@ -20,15 +20,15 @@ description: Планирование и ревью окружения, депл
 
 1. Загрузить ops-контекст — прочитать env-matrix и deployment smoke checklist.
 2. Классифицировать изменение: `backend`, `aroma web`, `master web`, `bot`, `bootstrap`.
-3. Проверить границы секретов и runtime: секреты Nomad изолированы от legacy, владение
+3. Проверить границы секретов и runtime: секреты Арома Ателье изолированы от legacy, владение
    явное.
 4. Определить rollout-чеки: минимальный smoke-путь для затронутой runtime-поверхности.
 5. Зафиксировать точки внимания при откате — условие, останавливающее rollout.
 
 ## Runtime-поверхности
 
-`apps/nomad-backend`, `apps/nomad-aroma-web`, `apps/nomad-master-web`,
-`services/nomad-telegram-bot`.
+`apps/backend`, `apps/aroma-web`, `apps/master-web`,
+`services/telegram-bot`.
 
 ## Базовые rollout-чеки
 

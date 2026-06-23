@@ -53,7 +53,7 @@ Slug — короткое имя в kebab-case (например `feature/master
 6. `Constraints`
 7. `Checks`
 
-Для UI/redesign задач в `apps/nomad-master-web` issue также должен содержать:
+Для UI/redesign задач в `apps/master-web` issue также должен содержать:
 
 1. `Design / UX baseline`
 2. visual references
@@ -78,24 +78,24 @@ Slug — короткое имя в kebab-case (например `feature/master
 
 PR должен считаться `needs-human-review`, если затронуто хотя бы одно из условий:
 
-1. `apps/nomad-backend/prisma/**`
+1. `apps/backend/prisma/**`
 2. Nomad auth-related backend files:
-   - `apps/nomad-backend/src/auth.ts`
-   - `apps/nomad-backend/src/auth.test.ts`
-   - `apps/nomad-backend/src/access.ts`
-   - `apps/nomad-backend/src/access.test.ts`
-   - `apps/nomad-backend/src/config.ts`
-   - `apps/nomad-backend/scripts/bootstrap-admin.ts`
-   - `apps/nomad-backend/.env.example`
+   - `apps/backend/src/auth.ts`
+   - `apps/backend/src/auth.test.ts`
+   - `apps/backend/src/access.ts`
+   - `apps/backend/src/access.test.ts`
+   - `apps/backend/src/config.ts`
+   - `apps/backend/scripts/bootstrap-admin.ts`
+   - `apps/backend/.env.example`
 3. runtime / env / bot operation paths:
-   - `services/nomad-telegram-bot/ops/**`
-   - `services/nomad-telegram-bot/.env.example`
-   - `docs/nomad/env-matrix.md`
-   - `docs/nomad/deployment-smoke-checklist.md`
+   - `services/telegram-bot/ops/**`
+   - `services/telegram-bot/.env.example`
+   - `docs/atelier/env-matrix.md`
+   - `docs/atelier/deployment-smoke-checklist.md`
 4. process-governance files:
    - `CLAUDE.md`
    - `docs/**`
-   - `tests/nomad-smoke/**`
+   - `tests/smoke/**`
    - `.github/**`
    - `.claude/**`
 

@@ -1,4 +1,4 @@
-# Nomad Deployment Smoke Checklist
+# Арома Ателье — Deployment Smoke Checklist
 
 ## 1. Когда запускать
 
@@ -71,7 +71,7 @@ curl -sS \
 1. Если production admin ещё не заведён, выполнить:
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
 NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin" \
 NOMAD_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
