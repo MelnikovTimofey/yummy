@@ -1,8 +1,8 @@
-# Nomad Master Production Redesign
+# Production Redesign — Мастер (Арома Ателье)
 
 ## Назначение
 
-Этот документ фиксирует contract-first пакет для преобразования `Nomad Master` из MVP в production-ready staff/admin контур.
+Этот документ фиксирует contract-first пакет для преобразования `Мастер` из MVP в production-ready staff/admin контур.
 
 Каждый slice ведётся как отдельный GitHub issue по шаблону `.github/ISSUE_TEMPLATE/nomad-feature.yml`.
 
@@ -14,7 +14,7 @@
 
 ## Контур и ограничения
 
-- Контур: `Nomad`
+- Продукт: `Арома Ателье`
 - Reuse decision: `keep separate`
 - Execution mode:
   - `single-agent` на discovery, contracts и doc sync
@@ -25,13 +25,13 @@
 1. `Арома Ателье` остаётся guest-продуктом без пользовательской авторизации.
 2. `Покурить` остаётся аналитическим событием выбора микса, а не smoking session.
 3. Рекомендации продолжают зависеть от онбординга и наличия табаков.
-4. Nomad развивается параллельно и не repurpose-ит legacy runtime paths.
+4. Арома Ателье развивается параллельно и не repurpose-ит legacy runtime paths.
 
 ## Текущий статус по аудиту
 
 ### Frontend
 
-`apps/nomad-master-web/src/App.tsx` уже превратился в монолитный staff shell:
+`apps/master-web/src/App.tsx` уже превратился в монолитный staff shell:
 
 1. один файл `App.tsx` на 2459 строк;
 2. все модули `dashboard / inventory / mixes / rails / access` живут в одном stateful контейнере;
@@ -68,7 +68,7 @@
 
 ## Visual baseline
 
-Для `Nomad Master` redesign использовать следующий baseline:
+Для redesign `Мастер` использовать следующий baseline:
 
 1. предпочитать `shadcn/ui` для базовых UI primitives там, где это ускоряет delivery и не тянет широкий UI rewrite;
 2. не оставлять generic auto-generated components как финальный visual слой;
@@ -183,7 +183,7 @@
 Результат:
 
 1. этот документ;
-2. синхронизация `docs/nomad/implementation-plan.md` и `docs/nomad/roadmap.md`;
+2. синхронизация `docs/atelier/implementation-plan.md` и `docs/atelier/roadmap.md`;
 3. фиксация verification gates и agent scopes.
 
 Stop condition:
@@ -194,8 +194,8 @@ Stop condition:
 
 Scope:
 
-- `apps/nomad-backend/`
-- `apps/nomad-master-web/`
+- `apps/backend/`
+- `apps/master-web/`
 
 Результат:
 
@@ -213,8 +213,8 @@ Human review trigger:
 
 Scope:
 
-- `apps/nomad-backend/`
-- `apps/nomad-master-web/`
+- `apps/backend/`
+- `apps/master-web/`
 
 Результат:
 
@@ -231,8 +231,8 @@ Human review trigger:
 
 Scope:
 
-- `apps/nomad-backend/`
-- `apps/nomad-master-web/`
+- `apps/backend/`
+- `apps/master-web/`
 
 Результат:
 
@@ -249,8 +249,8 @@ Human review trigger:
 
 Scope:
 
-- `apps/nomad-backend/`
-- `apps/nomad-master-web/`
+- `apps/backend/`
+- `apps/master-web/`
 
 Результат:
 
@@ -267,9 +267,9 @@ Human review trigger:
 
 Scope:
 
-- `apps/nomad-backend/`
-- `services/nomad-telegram-bot/`
-- `apps/nomad-master-web/`
+- `apps/backend/`
+- `services/telegram-bot/`
+- `apps/master-web/`
 
 Результат:
 
@@ -286,8 +286,8 @@ Human review trigger:
 
 Scope:
 
-- `tests/nomad-smoke/`
-- затронутые Nomad apps/services
+- `tests/smoke/`
+- затронутые apps/services Арома Ателье
 
 Результат:
 
@@ -320,10 +320,10 @@ Scope:
 
 ### Допустимые parallel write scopes
 
-1. `apps/nomad-master-web/**`
-2. `apps/nomad-backend/**`
-3. `services/nomad-telegram-bot/**`
-4. `tests/nomad-smoke/**`
+1. `apps/master-web/**`
+2. `apps/backend/**`
+3. `services/telegram-bot/**`
+4. `tests/smoke/**`
 
 Правила:
 
@@ -336,10 +336,10 @@ Scope:
 Базовый gate:
 
 ```bash
-cd apps/nomad-master-web && npm test && npm run build
-cd apps/nomad-backend && npm test && npm run build
-cd services/nomad-telegram-bot && npm test && npm run build
-cd tests/nomad-smoke && npm run smoke
+cd apps/master-web && npm test && npm run build
+cd apps/backend && npm test && npm run build
+cd services/telegram-bot && npm test && npm run build
+cd tests/smoke && npm run smoke
 ```
 
 Дополнительный expectation:

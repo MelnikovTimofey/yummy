@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-Инструкция для Claude Code и субагентов в репозитории **Nomad**.
+Инструкция для Claude Code и субагентов в репозитории **Арома Ателье** (Aroma Atelier).
 
 ## 1. Проект
 
-Репозиторий содержит контур Nomad. Каталоги: `apps/nomad-aroma-web`,
-`apps/nomad-master-web`, `apps/nomad-backend`, `services/nomad-telegram-bot`,
-smoke-тесты в `tests/nomad-smoke`.
+Репозиторий содержит контур Арома Ателье. Каталоги: `apps/aroma-web`,
+`apps/master-web`, `apps/backend`, `services/telegram-bot`,
+smoke-тесты в `tests/smoke`.
 
 Исходный продукт **legacy Yummy** вынесен в архивный репозиторий
 [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy) и здесь больше
@@ -14,12 +14,12 @@ smoke-тесты в `tests/nomad-smoke`.
 
 Production-ветка репозитория — `main`. Соглашение по именам рабочих веток см. §5.
 
-Продукт Nomad (детали — в `PRD.md`, `docs/nomad/`):
+Продукт Арома Ателье (детали — в `PRD.md`, `docs/atelier/`):
 
-- `Арома Ателье` (`nomad-aroma-web`) — гостевой продукт **без авторизации**: онбординг
+- `Арома Ателье` (`aroma-web`) — гостевой продукт **без авторизации**: онбординг
   → рекомендации миксов → кнопка `Покурить`.
-- `Мастер` (`nomad-master-web`) — backoffice для роли `nomad`: инвентарь, миксы, rails.
-- `nomad-backend` — Node/TypeScript + Prisma + Postgres, интеграция с `htreviews.org`.
+- `Мастер` (`master-web`) — backoffice для роли `master`: инвентарь, миксы, rails.
+- `backend` — Node/TypeScript + Prisma + Postgres, интеграция с `htreviews.org`.
 
 ## 2. Принципы (KISS)
 
@@ -36,23 +36,23 @@ Production-ветка репозитория — `main`. Соглашение п
 ## 3. Разработка через тесты (TDD)
 
 - Для нетривиальной логики: сначала падающий тест, затем код, затем рефакторинг.
-- Backend-тесты: `cd apps/nomad-backend && npm test` (нужен Postgres —
+- Backend-тесты: `cd apps/backend && npm test` (нужен Postgres —
   `npm run db:start`). Любая бизнес-логика должна быть тестируемой.
 - Перед PR обязателен зелёный gate по затронутым поверхностям:
-  - `apps/nomad-backend` → `npm test && npm run build`;
-  - `apps/nomad-master-web` → `npm test && npm run build`;
-  - `apps/nomad-aroma-web` → `npm run build`;
-  - `services/nomad-telegram-bot` → `npm test && npm run build`;
-  - UI/интеграция → `cd tests/nomad-smoke && npm run smoke`.
+  - `apps/backend` → `npm test && npm run build`;
+  - `apps/master-web` → `npm test && npm run build`;
+  - `apps/aroma-web` → `npm run build`;
+  - `services/telegram-bot` → `npm test && npm run build`;
+  - UI/интеграция → `cd tests/smoke && npm run smoke`.
 - Если проверку не удалось запустить (например, нет окружения) — явно сказать об этом,
   а не выдавать за успех.
 
 > 🚨 **ЖЁСТКОЕ ПРАВИЛО — smoke после правок фронта:** любое изменение в
-> `apps/nomad-master-web/src/**` или `apps/nomad-aroma-web/src/**`, которое
+> `apps/master-web/src/**` или `apps/aroma-web/src/**`, которое
 > затрагивает разметку, текст, ARIA-ролы, h1/h2/heading'и, label'ы, табы или
-> навигацию — **обязано** в том же PR пройти через `cd tests/nomad-smoke &&
+> навигацию — **обязано** в том же PR пройти через `cd tests/smoke &&
 > npm run smoke` (а при невозможности запустить — отдельно перечислить, какие
-> assertion'ы в `tests/nomad-smoke/tests/*.spec.ts` могут поплыть, и
+> assertion'ы в `tests/smoke/tests/*.spec.ts` могут поплыть, и
 > обновить их). Триггер этой записи: в апреле–мае 2026 master-web прошёл
 > два UX-рефактора (PR #12, #14) с переименованием h1, smoke на `main`
 > оставался красным на каждом последующем PR, что блокировало merge. Не
@@ -65,8 +65,8 @@ Production-ветка репозитория — `main`. Соглашение п
 Кастомные субагенты — в `.claude/agents/`:
 
 - **planner** — анализ задачи, декомпозиция, формирование GitHub issue, выбор режима.
-- **backend-dev** — `apps/nomad-backend` (+ Prisma, bot), TDD.
-- **frontend-dev** — `apps/nomad-aroma-web` и `apps/nomad-master-web`, TDD.
+- **backend-dev** — `apps/backend` (+ Prisma, bot), TDD.
+- **frontend-dev** — `apps/aroma-web` и `apps/master-web`, TDD.
 - **qa-tdd** — тесты-первыми, smoke, верификация перед PR.
 
 Плюс встроенные `Explore` (поиск по коду) и `Plan` (проектирование).
@@ -108,7 +108,7 @@ Production-ветка репозитория — `main`. Соглашение п
 > Контракт «одна сессия — одна ветка — одна рабочая копия»:
 >
 > 1. **Один срез = один worktree.** Параллельная задача создаётся через
->    `git worktree add ../nomad-<slug> -b feature/<slug>` (или `bug/` /
+>    `git worktree add ../atelier-<slug> -b feature/<slug>` (или `bug/` /
 >    `chore/`) от свежего `main`. Не переключать ветки в основной копии,
 >    пока в ней есть незакоммиченные правки от другой задачи — переезд
 >    утянет их в новую ветку и смешает scope.
@@ -128,7 +128,7 @@ Production-ветка репозитория — `main`. Соглашение п
 >    пределы своего worktree; внутри worktree — путь относительно его
 >    корня.
 > 5. **Закрывать worktree после merge.** `git worktree remove
->    ../nomad-<slug>` сразу после merge PR — иначе worktrees копятся и
+>    ../atelier-<slug>` сразу после merge PR — иначе worktrees копятся и
 >    теряется картина «кто чем занят». `git worktree list` — single
 >    source of truth о параллельных сессиях; перед стартом новой задачи
 >    свериться с ним и убедиться, что слот свободен.
@@ -167,7 +167,7 @@ Production-ветка репозитория — `main`. Соглашение п
    запускался) — Claude мерджит PR сам командой
    `gh pr merge <num> --squash --delete-branch`, не дожидаясь
    подтверждения. «Оранжевый» smoke не мерджить — см. §3.
-   Если хоть один триггер сработал (`apps/nomad-backend/prisma/**`,
+   Если хоть один триггер сработал (`apps/backend/prisma/**`,
    auth-paths, runtime/env/bot ops, process-governance) — ждать
    человеческого ревью.
 7. Коммит после каждого логического блока.
@@ -181,7 +181,7 @@ Production-ветка репозитория — `main`. Соглашение п
 - Переиспользование идей из legacy — осознанный выбор: чтение по ссылке,
   `copy with adaptation` или `extract shared module`. Не зеркалить файлы.
 
-## 7. Продуктовые инварианты Nomad
+## 7. Продуктовые инварианты Арома Ателье
 
 1. `Арома Ателье` — гостевой контур без пользовательской авторизации; не возвращать
    избранное, профиль и smoking sessions, пока это явно не изменено в `PRD.md`.

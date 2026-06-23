@@ -1,18 +1,18 @@
-# Roadmap Nomad
+# Roadmap Арома Ателье
 
 ## 1. Текущий статус
 
-Nomad уже находится не на стадии идеи, а на стадии рабочего MVP-контура.
+Арома Ателье уже находится не на стадии идеи, а на стадии рабочего MVP-контура.
 
 Что уже сделано:
 
 1. отдельный parallel track без вмешательства в legacy `Yummy`;
 2. отдельные приложения:
-   - `apps/nomad-aroma-web`
-   - `apps/nomad-master-web`
-   - `apps/nomad-backend`
-   - `services/nomad-telegram-bot`
-3. отдельный Postgres + Prisma storage для Nomad;
+   - `apps/aroma-web`
+   - `apps/master-web`
+   - `apps/backend`
+   - `services/telegram-bot`
+3. отдельный Postgres + Prisma storage для Арома Ателье;
 4. guest flow:
    - `18+`
    - daily code
@@ -65,17 +65,17 @@ Roadmap дальше лучше вести не только фазами, но 
 ### Направление A. Release Foundation
 
 Цель:
-подготовить Nomad к устойчивому запуску вне локальной машины.
+подготовить Арома Ателье к устойчивому запуску вне локальной машины.
 
 Текущий статус:
 `in progress`
 
 Следующие шаги:
 
-1. подготовить production env matrix для всех Nomad-сервисов;
-2. оформить managed runtime для `services/nomad-telegram-bot`;
+1. подготовить production env matrix для всех сервисов Арома Ателье;
+2. оформить managed runtime для `services/telegram-bot`;
 3. оформить bootstrap-path для первого admin без dev seed-паролей;
-4. зафиксировать backup/restore policy для Nomad Postgres;
+4. зафиксировать backup/restore policy для Postgres Арома Ателье;
 5. подготовить deployment notes и smoke checklist.
 
 Definition of done:
@@ -97,7 +97,7 @@ Definition of done:
 1. доработать copywriting и микро-сценарии;
 2. улучшить empty/loading/error states;
 3. сделать mobile QA по реальным viewport;
-4. провести отдельный visual pass под Nomad brand layer;
+4. провести отдельный visual pass под Арома Ателье brand layer;
 5. при необходимости уточнить порядок экранов `рекомендации -> главная -> каталог`.
 
 Definition of done:
@@ -152,7 +152,7 @@ Definition of done:
 
 См. детальный execution contract:
 
-1. `docs/nomad/master-production-redesign.md`
+1. `docs/atelier/master-production-redesign.md`
 
 ### Направление E. Telegram And Automation
 
@@ -196,7 +196,7 @@ Definition of done:
 
 1. ключевые сценарии прикрыты автоматическими или чётко описанными smoke-проверками;
 2. критические staff-изменения оставляют audit trace;
-3. новые Nomad slices можно безопасно развивать через AI.
+3. новые slices Арома Ателье можно безопасно развивать через AI.
 
 ## 4. Приоритеты
 
@@ -248,7 +248,7 @@ visual polish, copy polish, guest UX refinements.
 
 ## 6. Exit Criteria For Roadmap Stage
 
-Nomad можно считать готовым к следующей стадии, если:
+Арома Ателье можно считать готовым к следующей стадии, если:
 
 1. daily code delivery стабильно работает через backend + bot;
 2. `Мастер` покрывает ежедневные операции staff;

@@ -1,6 +1,6 @@
-# Nomad Prod Deploy Runbook
+# Арома Ателье — Prod Deploy Runbook
 
-Развёртывание всего контура Nomad на одном облачном VPS: `docker compose` +
+Развёртывание всего контура Арома Ателье на одном облачном VPS: `docker compose` +
 managed Postgres + Caddy (авто-TLS). Покрывает backend, Арома Ателье, Мастер и
 Telegram-бот.
 
@@ -37,7 +37,7 @@ chmod 600 .env
 
 ```bash
 # 1. Backend: сборка + старт. На старте контейнер выполнит `prisma migrate deploy`
-#    и создаст схему в managed Postgres (см. apps/nomad-backend/Dockerfile).
+#    и создаст схему в managed Postgres (см. apps/backend/Dockerfile).
 docker compose -f docker-compose.prod.yml up -d --build backend
 docker compose -f docker-compose.prod.yml logs -f backend   # дождаться health + "migrations applied"
 

@@ -1,11 +1,11 @@
-# План реализации Nomad с ИИ
+# План реализации Арома Ателье с ИИ
 
 ## 1. Problem Statement And Outcomes
 
 * `fact`: в текущем репозитории уже есть legacy mobile web + backend, но они спроектированы под magic-link, избранное, сессии курения и ML/fallback-персонализацию.
-* `fact`: новый сценарий Nomad требует другой продуктовый режим: guest web без авторизации, daily code, age gate, staff backoffice и Telegram-бот.
+* `fact`: новый сценарий Арома Ателье требует другой продуктовый режим: guest web без авторизации, daily code, age gate, staff backoffice и Telegram-бот.
 * `inference`: если дорабатывать legacy-контур точечно, продукт быстро накопит противоречия между старой и новой моделью доступа.
-* `decision`: базовый вектор реализации — развивать Nomad параллельно legacy-контуру в отдельных приложениях и сервисах внутри этого же репозитория.
+* `decision`: базовый вектор реализации — развивать Арома Ателье параллельно legacy-контуру в отдельных приложениях и сервисах внутри этого же репозитория.
 
 Желаемые outcomes:
 
@@ -17,7 +17,7 @@
 
 ## 2. User Segments And JTBD
 
-### Гость Nomad
+### Гость Арома Ателье
 
 * `fact`: приходит по QR-коду.
 * `job`: быстро понять, что выбрать, не регистрируясь.
@@ -45,7 +45,7 @@
 * `fact`: frontend `YummyWeb` уже mobile-first и подходит как база для `Арома Ателье`.
 * `fact`: текущая схема содержит `User`, `MagicLinkToken`, `PreferenceProfile`, `SmokingSession`, `FavoriteMix`, `Recommendation`.
 * `fact`: home rails и рейтинги уже частично реализованы.
-* `fact`: цветовая база должна опираться на Nomad, primary `#551817`.
+* `fact`: цветовая база должна опираться на Арома Ателье, primary `#551817`.
 
 ### Assumptions
 
@@ -53,7 +53,7 @@
 * `assumption`: Telegram-боту достаточно staff-чата или whitelist сотрудников без сложной ACL.
 * `assumption`: rule-based рекомендации дадут достаточное качество на старте и ML можно отложить.
 * `assumption`: в inventory достаточно бинарного статуса `в наличии / не в наличии`, без партий и остатков по граммам.
-* `assumption`: daily code меняется раз в сутки по timezone Nomad, то есть по локальному времени заведения.
+* `assumption`: daily code меняется раз в сутки по timezone Арома Ателье, то есть по локальному времени заведения.
 
 ### Critical Unknowns
 
@@ -65,8 +65,8 @@
 
 | Опция | Описание | Ценность | Риски | Effort | Dependencies |
 |---|---|---|---|---|---|
-| A | Parallel track в том же репозитории: отдельные `nomad-*` apps/services + отдельный bot worker | Высокая: legacy защищён, Nomad изолирован, ИИ видит чистый контур | Средние: нужен repo bootstrap и отдельная dev-инфраструктура | Средний | новые app skeletons, отдельные env/db/docker paths |
-| B | Переиспользовать текущие `backend` + `YummyWeb` как основу Nomad | Средняя на старте | Очень высокие: конфликт доменных моделей, риск сломать legacy | Средний | сложная миграция schema/auth/UI |
+| A | Parallel track в том же репозитории: отдельные apps/services + отдельный bot worker | Высокая: legacy защищён, Арома Ателье изолирован, ИИ видит чистый контур | Средние: нужен repo bootstrap и отдельная dev-инфраструктура | Средний | новые app skeletons, отдельные env/db/docker paths |
+| B | Переиспользовать текущие `backend` + `YummyWeb` как основу Арома Ателье | Средняя на старте | Очень высокие: конфликт доменных моделей, риск сломать legacy | Средний | сложная миграция schema/auth/UI |
 | C | Сразу разделить на guest API, staff API, analytics service, bot service | Средняя | Высокие: сложность деплоя, связность схем, большой cost на coordination | Высокий | infra, service contracts, observability |
 
 * `decision`: рекомендована опция `A`.
@@ -76,36 +76,36 @@
 
 ### Backend
 
-* `decision`: не repurpose-ить текущий `backend/` под Nomad.
-* `decision`: поднять отдельный `apps/nomad-backend` как модульный Nomad backend.
-* `decision`: внутри `apps/nomad-backend` держать bounded modules:
+* `decision`: не repurpose-ить текущий `backend/` под Арома Ателье.
+* `decision`: поднять отдельный `apps/backend` как модульный backend Арома Ателье.
+* `decision`: внутри `apps/backend` держать bounded modules:
   1. `guest-access`
   2. `guest-onboarding`
   3. `inventory`
   4. `rails`
   5. `analytics`
   6. `staff-auth`
-* `decision`: legacy-модули `magic-link`, `favorites`, `preferences`, `sessions`, `personal recommendations` оставить в legacy-контуре и не тянуть их в Nomad без явного решения.
+* `decision`: legacy-модули `magic-link`, `favorites`, `preferences`, `sessions`, `personal recommendations` оставить в legacy-контуре и не тянуть их в Арома Ателье без явного решения.
 
 ### Frontend
 
-* `decision`: не переориентировать текущий `YummyWeb` на Nomad.
+* `decision`: не переориентировать текущий `YummyWeb` на Арома Ателье.
 * `decision`: создать отдельные фронты:
-  - `apps/nomad-aroma-web`
-  - `apps/nomad-master-web`
+  - `apps/aroma-web`
+  - `apps/master-web`
 * `inference`: отдельные фронты проще для ИИ, потому что исключают смешение guest UX и legacy flow.
 
 ### Bot
 
-* `decision`: Telegram-бот реализовать как отдельный process/package, работающий с Nomad backend-domain и Nomad data model.
+* `decision`: Telegram-бот реализовать как отдельный process/package, работающий с backend-domain и data model Арома Ателье.
 * `decision`: не делать бот самостоятельным источником бизнес-логики; он только читает/создаёт daily code и рассылает его.
 
 ### Data Model Delta
 
-* `decision`: в Nomad data model добавить `StaffUser`, `DailyAccessCode`, `InventoryStatus`, `Rail`, `RailMix`, `GuestEvent`.
+* `decision`: в data model Арома Ателье добавить `StaffUser`, `DailyAccessCode`, `InventoryStatus`, `Rail`, `RailMix`, `GuestEvent`.
 * `decision`: `MixRating` сохранить, но отвязать от обязательного зарегистрированного user-flow.
 * `decision`: рекомендации считать на лету по rule-based scoring.
-* `decision`: Nomad schema и Nomad product DB должны быть отделены от legacy schema/DB.
+* `decision`: schema и product DB Арома Ателье должны быть отделены от legacy schema/DB.
 
 ## 6. Validation Plan
 
@@ -138,7 +138,7 @@
 
 ### Master production redesign note
 
-Для `Nomad Master` текущий roadmap-level redesign нужно вести не одним broad rewrite, а отдельной программой hardening:
+Для `Мастер` текущий roadmap-level redesign нужно вести не одним broad rewrite, а отдельной программой hardening:
 
 1. `dashboard analytics contract`
 2. `inventory table + bulk operations`
@@ -149,7 +149,7 @@
 
 Источник контракта для этой программы:
 
-1. `docs/nomad/master-production-redesign.md`
+1. `docs/atelier/master-production-redesign.md`
 
 Правило:
 
@@ -167,19 +167,19 @@
 
 ## 8. Recommendation
 
-* `decision`: двигаться по опции `A` — parallel track в том же репозитории с отдельными Nomad apps/services.
-* `decision`: сначала создать изолированный Nomad scaffold и только потом писать feature code.
+* `decision`: двигаться по опции `A` — parallel track в том же репозитории с отдельными apps/services Арома Ателье.
+* `decision`: сначала создать изолированный scaffold Арома Ателье и только потом писать feature code.
 * `decision`: персонализацию оставить rule-based, без ML, до накопления событий `smoke_cta_clicked` и `mix_rated`.
 
 Следующая точка принятия решения:
 
 * `decision`: после завершения `Slice 2`, когда будет видно качество рекомендаций и достаточность текущей схемы inventory.
-* `decision`: целевая дата пересмотра архитектуры — после первого рабочего pilot в Nomad, а не раньше.
+* `decision`: целевая дата пересмотра архитектуры — после первого рабочего pilot в Арома Ателье, а не раньше.
 
 ## 9. Open Questions And Blocking Risks
 
 1. `blocking risk`: не подтверждена точная модель daily code: один код в день или коды по сменам.
 2. `blocking risk`: не определён production-канал рассылки Telegram-кода и кто именно считается staff-получателем.
 3. `blocking risk`: не подтверждено, можно ли хранить оценки без guest-account и как защищаться от накрутки.
-4. `risk`: при слишком раннем выносе shared packages можно случайно связать Nomad и legacy сильнее, чем нужно.
-5. `risk`: если оставить Nomad без отдельного workflow и active scope, AI-агенты будут продолжать случайно опираться на legacy-модель.
+4. `risk`: при слишком раннем выносе shared packages можно случайно связать Арома Ателье и legacy сильнее, чем нужно.
+5. `risk`: если оставить Арома Ателье без отдельного workflow и active scope, AI-агенты будут продолжать случайно опираться на legacy-модель.

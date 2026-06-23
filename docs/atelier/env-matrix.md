@@ -1,8 +1,8 @@
-# Nomad Env Matrix
+# Арома Ателье — Env Matrix
 
 ## 1. Назначение
 
-Этот документ фиксирует production и development matrix для всех Nomad-сервисов.
+Этот документ фиксирует production и development matrix для всех сервисов Арома Ателье.
 
 Правило:
 
@@ -10,13 +10,13 @@
 2. этот документ описывает полный operating набор переменных;
 3. production secrets не должны коммититься в репозиторий.
 
-## 2. apps/nomad-backend
+## 2. apps/backend
 
 ### Required in all environments
 
 | Переменная | Назначение | Пример |
 |---|---|---|
-| `DATABASE_URL` | подключение к Nomad Postgres | `postgresql://...` |
+| `DATABASE_URL` | подключение к Postgres Арома Ателье | `postgresql://...` |
 | `PORT` | порт backend | `3021` |
 | `HOST` | bind host | `0.0.0.0` |
 | `APP_NAME` | service name | `nomad-backend` |
@@ -44,7 +44,7 @@
 2. использовать `npm run bootstrap:admin`;
 3. `NOMAD_AUTOMATION_KEY` и `NOMAD_TOKEN_SECRET` должны быть независимыми secret values.
 
-## 3. apps/nomad-aroma-web
+## 3. apps/aroma-web
 
 ### Required
 
@@ -54,10 +54,10 @@
 
 ### Production notes
 
-1. должен указывать на production Nomad backend;
+1. должен указывать на production backend Арома Ателье;
 2. не должен указывать на legacy `backend`.
 
-## 4. apps/nomad-master-web
+## 4. apps/master-web
 
 ### Required
 
@@ -67,10 +67,10 @@
 
 ### Production notes
 
-1. должен указывать на тот же Nomad backend, что и `Арома Ателье`;
+1. должен указывать на тот же backend, что и `Арома Ателье`;
 2. CORS и origin policy проверяются на стороне backend.
 
-## 5. services/nomad-telegram-bot
+## 5. services/telegram-bot
 
 ### Required in production
 
@@ -78,7 +78,7 @@
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | токен Telegram-бота |
 | `NOMAD_TELEGRAM_API_BASE_URL` | Telegram API base URL |
-| `NOMAD_BACKEND_URL` | base URL Nomad backend |
+| `NOMAD_BACKEND_URL` | base URL backend Арома Ателье |
 | `NOMAD_BACKEND_AUTOMATION_TOKEN` | должен совпадать с backend `NOMAD_AUTOMATION_KEY` |
 | `NOMAD_BOT_STATE_PATH` | локальный state-файл бота |
 | `NOMAD_DAILY_BROADCAST_HOUR` | час ежедневного `ensure` current code |

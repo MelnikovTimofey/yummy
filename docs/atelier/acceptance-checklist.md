@@ -1,15 +1,15 @@
-# Nomad Acceptance Checklist
+# Acceptance Checklist — Арома Ателье
 
 ## Назначение
 
-Этот чеклист фиксирует минимальный набор проверок перед pilot/release для Nomad parallel track.
+Этот чеклист фиксирует минимальный набор проверок перед pilot/release Арома Ателье.
 
 ## Backend
 
-- `apps/nomad-backend`: `npm run prisma:generate`
-- `apps/nomad-backend`: `npm run prisma:dbpush`
-- `apps/nomad-backend`: `npm test`
-- `apps/nomad-backend`: `npm run build`
+- `apps/backend`: `npm run prisma:generate`
+- `apps/backend`: `npm run prisma:dbpush`
+- `apps/backend`: `npm test`
+- `apps/backend`: `npm run build`
 - Проверить `GET /health`
 - Проверить `GET /meta`
 
@@ -35,8 +35,8 @@
 
 ## Telegram automation
 
-- `services/nomad-telegram-bot`: `npm test`
-- `services/nomad-telegram-bot`: `npm run build`
+- `services/telegram-bot`: `npm test`
+- `services/telegram-bot`: `npm run build`
 - `/whoami` отвечает из allowlisted chat
 - `/code` возвращает текущий active daily code
 - `/rotate` создаёт новый код и фиксирует его в backend
@@ -52,7 +52,7 @@
 
 ## Audit trail
 
-- Staff-sensitive операции пишутся в `NomadAuditEvent`
+- Staff-sensitive операции пишутся в `AuditEvent`
 - `admin` видит последние события в `Мастере`
 - Аудит покрывает:
   - daily codes
