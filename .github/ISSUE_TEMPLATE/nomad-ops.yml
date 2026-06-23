@@ -10,10 +10,10 @@ body:
     attributes:
       label: "Runtime surface"
       options:
-        - "apps/nomad-backend"
-        - "apps/nomad-aroma-web"
-        - "apps/nomad-master-web"
-        - "services/nomad-telegram-bot"
+        - "apps/backend"
+        - "apps/aroma-web"
+        - "apps/master-web"
+        - "services/telegram-bot"
         - "cross-surface Nomad ops"
     validations:
       required: true

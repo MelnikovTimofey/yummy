@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths:
-      - apps/nomad-aroma-web/**
-      - apps/nomad-master-web/**
-      - apps/nomad-backend/**
-      - tests/nomad-smoke/**
+      - apps/aroma-web/**
+      - apps/master-web/**
+      - apps/backend/**
+      - tests/smoke/**
       - .claude/**
       - CLAUDE.md
 
@@ -36,40 +36,40 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: |
-            apps/nomad-backend/package-lock.json
-            apps/nomad-aroma-web/package-lock.json
-            apps/nomad-master-web/package-lock.json
-            tests/nomad-smoke/package-lock.json
+            apps/backend/package-lock.json
+            apps/aroma-web/package-lock.json
+            apps/master-web/package-lock.json
+            tests/smoke/package-lock.json
 
       - name: Install backend dependencies
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: npm ci
 
       - name: Install aroma dependencies
-        working-directory: apps/nomad-aroma-web
+        working-directory: apps/aroma-web
         run: npm ci
 
       - name: Install master dependencies
-        working-directory: apps/nomad-master-web
+        working-directory: apps/master-web
         run: npm ci
 
       - name: Install smoke dependencies
-        working-directory: tests/nomad-smoke
+        working-directory: tests/smoke
         run: npm ci
 
       - name: Install Playwright browser
-        working-directory: tests/nomad-smoke
+        working-directory: tests/smoke
         run: npx playwright install --with-deps chromium
 
       - name: Start backend database
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         # --wait ждёт healthcheck `pg_isready`, чтобы `prisma db push` не падал
         # с P1001 на ещё не открытом порту (тот же фикс, что в b198f3d для
         # nomad-backend-build job'а).
         run: docker compose -f docker-compose.yml up -d --wait db
 
       - name: Prepare backend schema and seed
-        working-directory: apps/nomad-backend
+        working-directory: apps/backend
         run: |
           npm run prisma:generate
           npm run prisma:dbpush -- --force-reset
@@ -79,17 +79,17 @@ jobs:
         run: |
           mkdir -p output/playwright/nomad-quality/logs
           (
-            cd apps/nomad-backend
+            cd apps/backend
             npm run dev > ../../output/playwright/nomad-quality/logs/backend.log 2>&1 &
             echo $! > ../../output/playwright/nomad-quality/logs/backend.pid
           )
           (
-            cd apps/nomad-aroma-web
+            cd apps/aroma-web
             npm run dev > ../../output/playwright/nomad-quality/logs/aroma.log 2>&1 &
             echo $! > ../../output/playwright/nomad-quality/logs/aroma.pid
           )
           (
-            cd apps/nomad-master-web
+            cd apps/master-web
             npm run dev > ../../output/playwright/nomad-quality/logs/master.log 2>&1 &
             echo $! > ../../output/playwright/nomad-quality/logs/master.pid
           )
@@ -115,7 +115,7 @@ jobs:
           done
 
       - name: Run thin browser smoke
-        working-directory: tests/nomad-smoke
+        working-directory: tests/smoke
         run: npm run smoke
 
       - name: Upload Playwright artifacts
@@ -134,4 +134,4 @@ jobs:
             [ -f "${pid_file}" ] || continue
             kill "$(cat "${pid_file}")" >/dev/null 2>&1 || true
           done
-          docker compose -f apps/nomad-backend/docker-compose.yml down -v
+          docker compose -f apps/backend/docker-compose.yml down -v

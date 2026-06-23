@@ -10,10 +10,10 @@ body:
     attributes:
       label: "Affected scope"
       options:
-        - "apps/nomad-aroma-web"
-        - "apps/nomad-master-web"
-        - "apps/nomad-backend"
-        - "services/nomad-telegram-bot"
+        - "apps/aroma-web"
+        - "apps/master-web"
+        - "apps/backend"
+        - "services/telegram-bot"
         - "repo ops / docs"
     validations:
       required: true
