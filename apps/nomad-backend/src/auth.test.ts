@@ -58,7 +58,7 @@ test('staff login is resolved from persisted staff accounts', async () => {
     };
 
     assert.equal(loginBody.user.login, 'nomad');
-    assert.equal(loginBody.user.role, 'nomad');
+    assert.equal(loginBody.user.role, 'master');
     assert.equal(loginBody.user.name, 'Nomad Staff');
 
     const me = await app.inject({
@@ -72,7 +72,7 @@ test('staff login is resolved from persisted staff accounts', async () => {
     assert.equal(me.statusCode, 200);
     const meBody = me.json() as { user: { login: string; role: string } };
     assert.equal(meBody.user.login, 'nomad');
-    assert.equal(meBody.user.role, 'nomad');
+    assert.equal(meBody.user.role, 'master');
 
     const wrongPassword = await app.inject({
       method: 'POST',

@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 // Назначение: собрать КАНОНИЧЕСКОЕ состояние данных Nomad поверх уже залитого
 // каталога табаков (htreviews) — 20 миксов из docs/data/top-20-mixes.md и
 // 5 prepared-рейлов из docs/data/preset-rails.md (+ 2 системных statistical).
-// Компоненты миксов матчатся на реальные NomadTobacco по «бренд + вкус».
+// Компоненты миксов матчатся на реальные Tobacco по «бренд + вкус».
 // Если хоть один компонент не сопоставлен — микс пропускается (чистые данные
 // важнее полноты 20/20). Скрипт идемпотентный: владеет слоем mix/rail целиком
 // и пересобирает его при каждом запуске. Состав/тексты табаков не меняет, но
@@ -26,7 +26,7 @@ const maskDatabaseUrl = (url: string | undefined) =>
 
 const DOCS_DIR = path.join(__dirname, '../../../docs/data');
 
-// --- Нормализация брендов: написание в docs → manufacturer в NomadTobacco -----
+// --- Нормализация брендов: написание в docs → manufacturer в Tobacco -----
 const BRAND_MANUFACTURER: Record<string, string> = {
   darkside: 'DARKSIDE',
   'dark side': 'DARKSIDE',
@@ -211,7 +211,7 @@ const parseRails = (): ParsedRail[] => {
   return rails;
 };
 
-// --- Матчинг компонента на NomadTobacco --------------------------------------
+// --- Матчинг компонента на Tobacco --------------------------------------
 type Candidate = { id: string; name: string; inStock: boolean };
 
 const scoreCandidate = (flavorNorm: string, flavorDespaced: string, name: string) => {
@@ -271,7 +271,7 @@ const matchComponent = (
 const main = async () => {
   console.log(`[build-catalog-backup] target DB: ${maskDatabaseUrl(process.env.DATABASE_URL)}`);
 
-  const tobaccoCount = await prisma.nomadTobacco.count();
+  const tobaccoCount = await prisma.tobacco.count();
   console.log(`[build-catalog-backup] табаков в каталоге: ${tobaccoCount}`);
   if (tobaccoCount < 1000) {
     throw new Error(
@@ -282,7 +282,7 @@ const main = async () => {
 
   // Загружаем кандидатов только нужных брендов в память
   const manufacturers = [...new Set(Object.values(BRAND_MANUFACTURER))];
-  const tobaccos = await prisma.nomadTobacco.findMany({
+  const tobaccos = await prisma.tobacco.findMany({
     where: { manufacturer: { in: manufacturers } },
     select: { id: true, name: true, manufacturer: true, inStock: true },
   });
@@ -364,15 +364,15 @@ const main = async () => {
   const builtMixNums = new Set(builtMixes.map((m) => m.num));
   await prisma.$transaction(async (tx) => {
     // Слой mix/rail принадлежит этому скрипту целиком — сносим и пересобираем.
-    await tx.nomadRailMix.deleteMany();
-    await tx.nomadMixComponent.deleteMany();
-    await tx.nomadSmokeCtaEvent.deleteMany();
-    await tx.nomadMixRating.deleteMany();
-    await tx.nomadRail.deleteMany();
-    await tx.nomadMix.deleteMany();
+    await tx.railMix.deleteMany();
+    await tx.mixComponent.deleteMany();
+    await tx.smokeCtaEvent.deleteMany();
+    await tx.mixRating.deleteMany();
+    await tx.rail.deleteMany();
+    await tx.mix.deleteMany();
 
     for (const m of builtMixes) {
-      await tx.nomadMix.create({
+      await tx.mix.create({
         data: {
           id: m.id,
           name: m.mix.name,
@@ -394,7 +394,7 @@ const main = async () => {
     // prepared-рейлы из docs (включаем только успешно созданные миксы)
     for (const rail of parsedRails) {
       const mixNums = rail.mixNums.filter((n) => builtMixNums.has(n));
-      await tx.nomadRail.create({
+      await tx.rail.create({
         data: {
           id: `rail-prepared-${rail.slug}`,
           name: rail.title,
@@ -417,23 +417,23 @@ const main = async () => {
     }
 
     // 2 системных statistical-рейла («Топ по Покурить», «Топ по оценкам») НЕ
-    // храним строками NomadRail: backend синтезирует их на лету из событий
+    // храним строками Rail: backend синтезирует их на лету из событий
     // (buildStatisticalRails в src/state.ts) и не читает statistical-строки.
     // Хранить их = пустые дубли в «Мастер → Менеджер рейлов».
 
     // Весь каталог — «в наличии», чтобы собранные миксы были guest-visible и
     // prepared-рейлы показывались на Главной (инвариант №3: видимость зависит
     // от инвентаря). guestVisible = mix.available && все компоненты inStock.
-    const stocked = await tx.nomadTobacco.updateMany({ data: { inStock: true } });
+    const stocked = await tx.tobacco.updateMany({ data: { inStock: true } });
     console.log(`[build-catalog-backup] помечено «в наличии» табаков: ${stocked.count}`);
   });
 
   const after = {
-    'табаки в наличии': await prisma.nomadTobacco.count({ where: { inStock: true } }),
-    миксы: await prisma.nomadMix.count(),
-    'состав миксов': await prisma.nomadMixComponent.count(),
-    рейлы: await prisma.nomadRail.count(),
-    'связи рейл↔микс': await prisma.nomadRailMix.count(),
+    'табаки в наличии': await prisma.tobacco.count({ where: { inStock: true } }),
+    миксы: await prisma.mix.count(),
+    'состав миксов': await prisma.mixComponent.count(),
+    рейлы: await prisma.rail.count(),
+    'связи рейл↔микс': await prisma.railMix.count(),
   };
   console.log('\n[build-catalog-backup] состояние после записи:');
   console.table(after);

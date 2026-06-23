@@ -160,7 +160,7 @@ const normalizeDateRange = (startsAt?: Date, endsAt?: Date) => {
 };
 
 const normalizeRole = (value: string | undefined): StaffRole | null => {
-  if (value === 'admin' || value === 'nomad') {
+  if (value === 'admin' || value === 'master') {
     return value;
   }
 
@@ -259,7 +259,7 @@ const mapStaffAccount = (record: {
   id: record.id,
   login: record.login,
   name: record.name,
-  role: normalizeRole(record.role) ?? 'nomad',
+  role: normalizeRole(record.role) ?? 'master',
   active: record.active,
   createdAt: record.createdAt.toISOString(),
   updatedAt: record.updatedAt.toISOString(),
@@ -434,7 +434,7 @@ const mapTelegramAutomationState = (
 export const listDailyAccessCodes = async () => {
   await ensureNomadState();
 
-  const records = await prisma.nomadDailyAccessCode.findMany({
+  const records = await prisma.dailyAccessCode.findMany({
     orderBy: [
       { startsAt: 'desc' },
       { createdAt: 'desc' },
@@ -447,7 +447,7 @@ export const listDailyAccessCodes = async () => {
 export const getDailyAccessCodeById = async (id: string) => {
   await ensureNomadState();
 
-  const record = await prisma.nomadDailyAccessCode.findUnique({
+  const record = await prisma.dailyAccessCode.findUnique({
     where: { id },
   });
 
@@ -476,7 +476,7 @@ export const createDailyAccessCode = async (payload: Partial<DailyAccessCodeInpu
 
   const prefix = `daily-code-${slugify(codeLabel)}`;
   const id = await nextPrefixedId(prefix, () =>
-    prisma.nomadDailyAccessCode.count({
+    prisma.dailyAccessCode.count({
       where: {
         id: {
           startsWith: prefix,
@@ -486,7 +486,7 @@ export const createDailyAccessCode = async (payload: Partial<DailyAccessCodeInpu
   );
 
   try {
-    const created = await prisma.nomadDailyAccessCode.create({
+    const created = await prisma.dailyAccessCode.create({
       data: {
         id,
         codeValue,
@@ -512,7 +512,7 @@ export const createDailyAccessCode = async (payload: Partial<DailyAccessCodeInpu
 export const updateDailyAccessCode = async (id: string, payload: DailyAccessCodePatch) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadDailyAccessCode.findUnique({
+  const current = await prisma.dailyAccessCode.findUnique({
     where: { id },
   });
 
@@ -533,7 +533,7 @@ export const updateDailyAccessCode = async (id: string, payload: DailyAccessCode
   }
 
   try {
-    const updated = await prisma.nomadDailyAccessCode.update({
+    const updated = await prisma.dailyAccessCode.update({
       where: { id },
       data: {
         codeValue,
@@ -558,7 +558,7 @@ export const updateDailyAccessCode = async (id: string, payload: DailyAccessCode
 export const deleteDailyAccessCode = async (id: string) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadDailyAccessCode.findUnique({
+  const current = await prisma.dailyAccessCode.findUnique({
     where: { id },
     select: { id: true },
   });
@@ -567,7 +567,7 @@ export const deleteDailyAccessCode = async (id: string) => {
     return false;
   }
 
-  await prisma.nomadDailyAccessCode.delete({
+  await prisma.dailyAccessCode.delete({
     where: { id },
   });
 
@@ -578,7 +578,7 @@ export const getCurrentDailyAccessCode = async () => {
   await ensureNomadState();
 
   const window = getNomadDailyCodeWindow();
-  const records = await prisma.nomadDailyAccessCode.findMany({
+  const records = await prisma.dailyAccessCode.findMany({
     where: dailyCodeWindowFilter(window),
     orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
   });
@@ -590,14 +590,14 @@ export const ensureCurrentDailyAccessCode = async () => {
   await ensureNomadState();
 
   const window = getNomadDailyCodeWindow();
-  const records = await prisma.nomadDailyAccessCode.findMany({
+  const records = await prisma.dailyAccessCode.findMany({
     where: dailyCodeWindowFilter(window),
     orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
   });
 
   if (records[0]) {
     if (records.length > 1) {
-      await prisma.nomadDailyAccessCode.updateMany({
+      await prisma.dailyAccessCode.updateMany({
         where: {
           id: {
             in: records.slice(1).map((record) => record.id),
@@ -618,7 +618,7 @@ export const ensureCurrentDailyAccessCode = async () => {
 
   const codeValue = createNomadDailyCodeValue(window.startsAt);
   const secret = createAutomationSecret(codeValue);
-  const created = await prisma.nomadDailyAccessCode.create({
+  const created = await prisma.dailyAccessCode.create({
     data: {
       id: `daily-code-${codeValue.toLowerCase()}`,
       codeValue,
@@ -644,13 +644,13 @@ export const rotateCurrentDailyAccessCode = async () => {
   const window = getNomadDailyCodeWindow();
 
   return prisma.$transaction(async (tx) => {
-    const records = await tx.nomadDailyAccessCode.findMany({
+    const records = await tx.dailyAccessCode.findMany({
       where: dailyCodeWindowFilter(window),
       orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
     });
 
     if (records.length) {
-      await tx.nomadDailyAccessCode.updateMany({
+      await tx.dailyAccessCode.updateMany({
         where: {
           id: {
             in: records.map((record) => record.id),
@@ -664,7 +664,7 @@ export const rotateCurrentDailyAccessCode = async () => {
 
     const codeValue = createNomadDailyCodeValue(window.startsAt);
     const secret = createAutomationSecret(codeValue);
-    const created = await tx.nomadDailyAccessCode.create({
+    const created = await tx.dailyAccessCode.create({
       data: {
         id: `daily-code-${codeValue.toLowerCase()}`,
         codeValue,
@@ -688,7 +688,7 @@ export const rotateCurrentDailyAccessCode = async () => {
 export const listStaffAccounts = async () => {
   await ensureNomadState();
 
-  const records = await prisma.nomadStaffAccount.findMany({
+  const records = await prisma.staffAccount.findMany({
     orderBy: [
       { active: 'desc' },
       { role: 'asc' },
@@ -702,7 +702,7 @@ export const listStaffAccounts = async () => {
 export const getStaffAccountById = async (id: string) => {
   await ensureNomadState();
 
-  const record = await prisma.nomadStaffAccount.findUnique({
+  const record = await prisma.staffAccount.findUnique({
     where: { id },
   });
 
@@ -724,7 +724,7 @@ export const createStaffAccount = async (payload: Partial<StaffAccountInput>) =>
 
   const prefix = `staff-${slugify(login)}`;
   const id = await nextPrefixedId(prefix, () =>
-    prisma.nomadStaffAccount.count({
+    prisma.staffAccount.count({
       where: {
         id: {
           startsWith: prefix,
@@ -734,7 +734,7 @@ export const createStaffAccount = async (payload: Partial<StaffAccountInput>) =>
   );
 
   try {
-    const created = await prisma.nomadStaffAccount.create({
+    const created = await prisma.staffAccount.create({
       data: {
         id,
         login,
@@ -759,7 +759,7 @@ export const createStaffAccount = async (payload: Partial<StaffAccountInput>) =>
 export const updateStaffAccount = async (id: string, payload: StaffAccountPatch) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadStaffAccount.findUnique({
+  const current = await prisma.staffAccount.findUnique({
     where: { id },
   });
 
@@ -784,7 +784,7 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
   const passwordSalt = password ? `seed:${id}:password:${Date.now()}` : current.passwordSalt;
 
   try {
-    const updated = await prisma.nomadStaffAccount.update({
+    const updated = await prisma.staffAccount.update({
       where: { id },
       data: {
         login,
@@ -813,7 +813,7 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
 export const deleteStaffAccount = async (id: string) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadStaffAccount.findUnique({
+  const current = await prisma.staffAccount.findUnique({
     where: { id },
     select: { id: true },
   });
@@ -822,7 +822,7 @@ export const deleteStaffAccount = async (id: string) => {
     return false;
   }
 
-  await prisma.nomadStaffAccount.delete({
+  await prisma.staffAccount.delete({
     where: { id },
   });
 
@@ -832,7 +832,7 @@ export const deleteStaffAccount = async (id: string) => {
 export const listTelegramRecipients = async () => {
   await ensureNomadState();
 
-  const records = await prisma.nomadTelegramRecipient.findMany({
+  const records = await prisma.telegramRecipient.findMany({
     orderBy: [{ scope: 'asc' }, { active: 'desc' }, { chatId: 'asc' }],
   });
 
@@ -842,7 +842,7 @@ export const listTelegramRecipients = async () => {
 export const getTelegramRecipientById = async (id: string) => {
   await ensureNomadState();
 
-  const record = await prisma.nomadTelegramRecipient.findUnique({
+  const record = await prisma.telegramRecipient.findUnique({
     where: { id },
   });
 
@@ -852,7 +852,7 @@ export const getTelegramRecipientById = async (id: string) => {
 export const listActiveTelegramRecipients = async () => {
   await ensureNomadState();
 
-  const records = await prisma.nomadTelegramRecipient.findMany({
+  const records = await prisma.telegramRecipient.findMany({
     where: {
       active: true,
     },
@@ -876,7 +876,7 @@ export const createTelegramRecipient = async (payload: Partial<TelegramRecipient
 
   const prefix = `telegram-${scope}-${slugify(chatId)}`;
   const id = await nextPrefixedId(prefix, () =>
-    prisma.nomadTelegramRecipient.count({
+    prisma.telegramRecipient.count({
       where: {
         id: {
           startsWith: prefix,
@@ -886,7 +886,7 @@ export const createTelegramRecipient = async (payload: Partial<TelegramRecipient
   );
 
   try {
-    const created = await prisma.nomadTelegramRecipient.create({
+    const created = await prisma.telegramRecipient.create({
       data: {
         id,
         chatId,
@@ -909,7 +909,7 @@ export const createTelegramRecipient = async (payload: Partial<TelegramRecipient
 export const updateTelegramRecipient = async (id: string, payload: TelegramRecipientPatch) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadTelegramRecipient.findUnique({
+  const current = await prisma.telegramRecipient.findUnique({
     where: { id },
   });
 
@@ -929,7 +929,7 @@ export const updateTelegramRecipient = async (id: string, payload: TelegramRecip
   }
 
   try {
-    const updated = await prisma.nomadTelegramRecipient.update({
+    const updated = await prisma.telegramRecipient.update({
       where: { id },
       data: {
         chatId,
@@ -952,7 +952,7 @@ export const updateTelegramRecipient = async (id: string, payload: TelegramRecip
 export const deleteTelegramRecipient = async (id: string) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadTelegramRecipient.findUnique({
+  const current = await prisma.telegramRecipient.findUnique({
     where: { id },
     select: { id: true },
   });
@@ -961,7 +961,7 @@ export const deleteTelegramRecipient = async (id: string) => {
     return false;
   }
 
-  await prisma.nomadTelegramRecipient.delete({
+  await prisma.telegramRecipient.delete({
     where: { id },
   });
 
@@ -971,7 +971,7 @@ export const deleteTelegramRecipient = async (id: string) => {
 export const listTelegramOperators = async () => {
   await ensureNomadState();
 
-  const records = await prisma.nomadTelegramOperator.findMany({
+  const records = await prisma.telegramOperator.findMany({
     orderBy: [{ active: 'desc' }, { name: 'asc' }, { phone: 'asc' }],
   });
 
@@ -981,7 +981,7 @@ export const listTelegramOperators = async () => {
 export const getTelegramOperatorById = async (id: string) => {
   await ensureNomadState();
 
-  const record = await prisma.nomadTelegramOperator.findUnique({
+  const record = await prisma.telegramOperator.findUnique({
     where: { id },
   });
 
@@ -996,7 +996,7 @@ export const getLinkedTelegramOperatorByChatId = async (chatIdValue: string) => 
     return null;
   }
 
-  const record = await prisma.nomadTelegramOperator.findFirst({
+  const record = await prisma.telegramOperator.findFirst({
     where: {
       linkedChatId: chatId,
       active: true,
@@ -1019,7 +1019,7 @@ export const createTelegramOperator = async (payload: Partial<TelegramOperatorIn
 
   const prefix = `telegram-operator-${slugify(name)}`;
   const id = await nextPrefixedId(prefix, () =>
-    prisma.nomadTelegramOperator.count({
+    prisma.telegramOperator.count({
       where: {
         id: {
           startsWith: prefix,
@@ -1029,7 +1029,7 @@ export const createTelegramOperator = async (payload: Partial<TelegramOperatorIn
   );
 
   try {
-    const created = await prisma.nomadTelegramOperator.create({
+    const created = await prisma.telegramOperator.create({
       data: {
         id,
         name,
@@ -1051,7 +1051,7 @@ export const createTelegramOperator = async (payload: Partial<TelegramOperatorIn
 export const updateTelegramOperator = async (id: string, payload: TelegramOperatorPatch) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadTelegramOperator.findUnique({
+  const current = await prisma.telegramOperator.findUnique({
     where: { id },
   });
 
@@ -1069,7 +1069,7 @@ export const updateTelegramOperator = async (id: string, payload: TelegramOperat
   }
 
   try {
-    const updated = await prisma.nomadTelegramOperator.update({
+    const updated = await prisma.telegramOperator.update({
       where: { id },
       data: {
         name,
@@ -1100,7 +1100,7 @@ export const updateTelegramOperator = async (id: string, payload: TelegramOperat
 export const deleteTelegramOperator = async (id: string) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadTelegramOperator.findUnique({
+  const current = await prisma.telegramOperator.findUnique({
     where: { id },
     select: { id: true },
   });
@@ -1109,7 +1109,7 @@ export const deleteTelegramOperator = async (id: string) => {
     return false;
   }
 
-  await prisma.nomadTelegramOperator.delete({
+  await prisma.telegramOperator.delete({
     where: { id },
   });
 
@@ -1133,7 +1133,7 @@ export const linkTelegramOperator = async (payload: Partial<TelegramOperatorLink
     return { error: 'phone and chatId are required' };
   }
 
-  const operator = await prisma.nomadTelegramOperator.findUnique({
+  const operator = await prisma.telegramOperator.findUnique({
     where: {
       phone,
     },
@@ -1144,7 +1144,7 @@ export const linkTelegramOperator = async (payload: Partial<TelegramOperatorLink
   }
 
   const linked = await prisma.$transaction(async (tx) => {
-    await tx.nomadTelegramOperator.updateMany({
+    await tx.telegramOperator.updateMany({
       where: {
         linkedChatId: chatId,
         NOT: {
@@ -1160,7 +1160,7 @@ export const linkTelegramOperator = async (payload: Partial<TelegramOperatorLink
       },
     });
 
-    return tx.nomadTelegramOperator.update({
+    return tx.telegramOperator.update({
       where: {
         id: operator.id,
       },
@@ -1180,7 +1180,7 @@ export const linkTelegramOperator = async (payload: Partial<TelegramOperatorLink
 export const getTelegramAutomationState = async () => {
   await ensureNomadState();
 
-  const record = await prisma.nomadTelegramAutomationState.findUnique({
+  const record = await prisma.telegramAutomationState.findUnique({
     where: {
       id: TELEGRAM_AUTOMATION_STATE_ID,
     },
@@ -1230,7 +1230,7 @@ export const reportTelegramAutomationState = async (payload: Partial<TelegramAut
       return { error: 'chatId is required for request event' };
     }
 
-    const operator = await prisma.nomadTelegramOperator.findFirst({
+    const operator = await prisma.telegramOperator.findFirst({
       where: {
         linkedChatId: chatId,
         active: true,
@@ -1268,7 +1268,7 @@ export const reportTelegramAutomationState = async (payload: Partial<TelegramAut
 
   const updated = await prisma.$transaction(async (tx) => {
     if (event === 'request' && requestOperator) {
-      await tx.nomadTelegramOperator.update({
+      await tx.telegramOperator.update({
         where: {
           id: requestOperator.id,
         },
@@ -1278,7 +1278,7 @@ export const reportTelegramAutomationState = async (payload: Partial<TelegramAut
       });
     }
 
-    return tx.nomadTelegramAutomationState.upsert({
+    return tx.telegramAutomationState.upsert({
       where: {
         id: TELEGRAM_AUTOMATION_STATE_ID,
       },

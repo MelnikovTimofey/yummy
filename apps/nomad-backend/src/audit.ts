@@ -81,7 +81,7 @@ const mapAuditEvent = (record: {
   id: record.id,
   actorLogin: record.actorLogin,
   actorName: record.actorName,
-  actorRole: record.actorRole === 'admin' ? 'admin' : 'nomad',
+  actorRole: record.actorRole === 'admin' ? 'admin' : 'master',
   action: isAuditAction(record.action) ? record.action : 'update',
   entityType: isAuditEntityType(record.entityType) ? record.entityType : 'inventory',
   entityId: record.entityId,
@@ -93,7 +93,7 @@ const mapAuditEvent = (record: {
 export const recordAuditEvent = async (payload: AuditEventInput) => {
   await ensureNomadState();
 
-  const created = await prisma.nomadAuditEvent.create({
+  const created = await prisma.auditEvent.create({
     data: {
       actorLogin: payload.actor.login,
       actorName: payload.actor.name,
@@ -112,7 +112,7 @@ export const recordAuditEvent = async (payload: AuditEventInput) => {
 export const listAuditEvents = async (limit = 40) => {
   await ensureNomadState();
 
-  const records = await prisma.nomadAuditEvent.findMany({
+  const records = await prisma.auditEvent.findMany({
     orderBy: {
       createdAt: 'desc',
     },

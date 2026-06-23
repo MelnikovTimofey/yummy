@@ -53,7 +53,7 @@ const buildUpsertData = (item: HtReviewsImportedTobacco, inStock: boolean) => ({
 
 const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
   if (item.sourceExternalId) {
-    const bySourceId = await prisma.nomadTobacco.findUnique({
+    const bySourceId = await prisma.tobacco.findUnique({
       where: {
         sourceExternalId: item.sourceExternalId,
       },
@@ -63,7 +63,7 @@ const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
     }
   }
 
-  const byStableId = await prisma.nomadTobacco.findUnique({
+  const byStableId = await prisma.tobacco.findUnique({
     where: {
       id: toStableId(item),
     },
@@ -72,7 +72,7 @@ const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
     return byStableId;
   }
 
-  const bySourceUrl = await prisma.nomadTobacco.findFirst({
+  const bySourceUrl = await prisma.tobacco.findFirst({
     where: {
       sourceUrl: item.sourceUrl,
     },
@@ -88,7 +88,7 @@ const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
     return null;
   }
 
-  return prisma.nomadTobacco.findFirst({
+  return prisma.tobacco.findFirst({
     where: {
       manufacturer: item.manufacturer,
       lineName: item.lineName ?? '',
@@ -127,7 +127,7 @@ export const syncHtReviewsCatalogToNomad = async (
     const data = buildUpsertData(item, nextInStock);
 
     if (existing) {
-      await prisma.nomadTobacco.update({
+      await prisma.tobacco.update({
         where: {
           id: existing.id,
         },
@@ -135,7 +135,7 @@ export const syncHtReviewsCatalogToNomad = async (
       });
       updated += 1;
     } else {
-      await prisma.nomadTobacco.create({
+      await prisma.tobacco.create({
         data: {
           id: toStableId(item),
           ...data,

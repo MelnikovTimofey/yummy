@@ -126,7 +126,7 @@ const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   return resolvedNames.join(', ') || 'Миксы не заданы';
 };
 
-const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'nomad');
+const formatRoleLabel = (role: StaffUser['role']) => (role === 'admin' ? 'admin' : 'master');
 
 export const App = () => {
   const [login, setLogin] = useState('admin');

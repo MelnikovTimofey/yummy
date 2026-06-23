@@ -165,7 +165,7 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
 });
 
-test('Master nomad role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
+test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
   await signIn('nomad', 'nomad', page);
 
   await openWorkspace(page, 'Доступ');

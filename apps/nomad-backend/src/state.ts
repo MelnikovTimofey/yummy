@@ -380,7 +380,7 @@ type SeedStaffAccount = {
   password: string;
   passwordSalt: string;
   name: string;
-  role: 'admin' | 'nomad';
+  role: 'admin' | 'master';
   active: boolean;
 };
 
@@ -461,7 +461,7 @@ const seedStaffAccounts: SeedStaffAccount[] = [
     password: 'nomad',
     passwordSalt: 'seed:staff-nomad',
     name: 'Nomad Staff',
-    role: 'nomad',
+    role: 'master',
     active: true,
   },
 ];
@@ -717,14 +717,14 @@ const mixViewSort = (left: MixView, right: MixView) => {
 };
 
 const syncIntroCards = async () => {
-  const existingCards = await prisma.nomadIntroCard.findMany();
+  const existingCards = await prisma.introCard.findMany();
   const existingById = new Map(existingCards.map((card) => [card.id, card]));
   const expectedIds = new Set(introCards.map((card) => card.id));
 
   await prisma.$transaction(async (tx) => {
     for (const staleCard of existingCards) {
       if (!expectedIds.has(staleCard.id)) {
-        await tx.nomadIntroCard.delete({
+        await tx.introCard.delete({
           where: {
             id: staleCard.id,
           },
@@ -736,7 +736,7 @@ const syncIntroCards = async () => {
       const current = existingById.get(card.id);
 
       if (!current) {
-        await tx.nomadIntroCard.create({
+        await tx.introCard.create({
           data: {
             id: card.id,
             step: card.step,
@@ -756,7 +756,7 @@ const syncIntroCards = async () => {
         current.bullets !== nextBullets;
 
       if (needsUpdate) {
-        await tx.nomadIntroCard.update({
+        await tx.introCard.update({
           where: {
             id: card.id,
           },
@@ -895,7 +895,7 @@ const mapMixView = (record: {
 };
 
 const fetchMixViews = async () => {
-  const records = await prisma.nomadMix.findMany({
+  const records = await prisma.mix.findMany({
     include: {
       components: {
         orderBy: { sortOrder: 'asc' },
@@ -1195,7 +1195,7 @@ const validateMixComponents = async (componentIds: string[]) => {
     return { error: 'At least one component is required', componentIds: [] as string[] };
   }
 
-  const tobaccos = await prisma.nomadTobacco.findMany({
+  const tobaccos = await prisma.tobacco.findMany({
     where: {
       id: {
         in: normalized,
@@ -1360,7 +1360,7 @@ const normalizeRailMixIds = async (mixIds: string[]) => {
     return { error: 'At least one mix is required', mixIds: [] as string[] };
   }
 
-  const mixes = await prisma.nomadMix.findMany({
+  const mixes = await prisma.mix.findMany({
     where: {
       id: {
         in: normalized,
@@ -1403,7 +1403,7 @@ const validateRailInput = async (payload: Partial<RailInput>) => {
 
 const nextMixId = async (name: string) => {
   const prefix = `mix-${slugify(name)}`;
-  const total = await prisma.nomadMix.count({
+  const total = await prisma.mix.count({
     where: {
       id: {
         startsWith: prefix,
@@ -1416,7 +1416,7 @@ const nextMixId = async (name: string) => {
 
 const nextTobaccoId = async (manufacturer: string, lineName: string, name: string) => {
   const prefix = `tobacco-${slugify(`${manufacturer} ${lineName} ${name}`)}`;
-  const total = await prisma.nomadTobacco.count({
+  const total = await prisma.tobacco.count({
     where: {
       id: {
         startsWith: prefix,
@@ -1429,7 +1429,7 @@ const nextTobaccoId = async (manufacturer: string, lineName: string, name: strin
 
 const nextRailId = async (name: string) => {
   const prefix = `rail-${slugify(name)}`;
-  const total = await prisma.nomadRail.count({
+  const total = await prisma.rail.count({
     where: {
       id: {
         startsWith: prefix,
@@ -1443,27 +1443,27 @@ const nextRailId = async (name: string) => {
 type NomadStorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 const wipeNomadStorage = async (tx: NomadStorageTx) => {
-  await tx.nomadSmokeCtaEvent.deleteMany();
-  await tx.nomadMixRating.deleteMany();
-  await tx.nomadRailMix.deleteMany();
-  await tx.nomadMixComponent.deleteMany();
-  await tx.nomadRail.deleteMany();
-  await tx.nomadMix.deleteMany();
-  await tx.nomadTobacco.deleteMany();
-  await tx.nomadIntroCard.deleteMany();
-  await tx.nomadDailyAccessCode.deleteMany();
-  await tx.nomadTelegramRecipient.deleteMany();
-  await tx.nomadTelegramOperator.deleteMany();
-  await tx.nomadTelegramAutomationState.deleteMany();
-  await tx.nomadAuditEvent.deleteMany();
-  await tx.nomadStaffAccount.deleteMany();
+  await tx.smokeCtaEvent.deleteMany();
+  await tx.mixRating.deleteMany();
+  await tx.railMix.deleteMany();
+  await tx.mixComponent.deleteMany();
+  await tx.rail.deleteMany();
+  await tx.mix.deleteMany();
+  await tx.tobacco.deleteMany();
+  await tx.introCard.deleteMany();
+  await tx.dailyAccessCode.deleteMany();
+  await tx.telegramRecipient.deleteMany();
+  await tx.telegramOperator.deleteMany();
+  await tx.telegramAutomationState.deleteMany();
+  await tx.auditEvent.deleteMany();
+  await tx.staffAccount.deleteMany();
 };
 
 const insertNomadOperationalState = async (
   tx: NomadStorageTx,
   currentCodeWindow: ReturnType<typeof getNomadDailyCodeWindow>,
 ) => {
-  await tx.nomadStaffAccount.createMany({
+  await tx.staffAccount.createMany({
     data: seedStaffAccounts.map((account) => ({
       id: account.id,
       login: account.login,
@@ -1475,7 +1475,7 @@ const insertNomadOperationalState = async (
     })),
   });
 
-  await tx.nomadDailyAccessCode.createMany({
+  await tx.dailyAccessCode.createMany({
     data: seedDailyAccessCodes.map((code) => ({
       id: code.id,
       codeValue: code.code,
@@ -1488,7 +1488,7 @@ const insertNomadOperationalState = async (
     })),
   });
 
-  await tx.nomadTelegramRecipient.createMany({
+  await tx.telegramRecipient.createMany({
     data: seedTelegramRecipients.map((recipient) => ({
       id: recipient.id,
       chatId: recipient.chatId,
@@ -1498,7 +1498,7 @@ const insertNomadOperationalState = async (
     })),
   });
 
-  await tx.nomadTelegramOperator.createMany({
+  await tx.telegramOperator.createMany({
     data: seedTelegramOperators.map((operator) => ({
       id: operator.id,
       name: operator.name,
@@ -1513,7 +1513,7 @@ const insertNomadOperationalState = async (
     })),
   });
 
-  await tx.nomadIntroCard.createMany({
+  await tx.introCard.createMany({
     data: introCards.map((card) => ({
       id: card.id,
       step: card.step,
@@ -1525,7 +1525,7 @@ const insertNomadOperationalState = async (
 };
 
 const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
-  await tx.nomadTobacco.createMany({
+  await tx.tobacco.createMany({
     data: seedTobaccos.map((tobacco) => ({
       id: tobacco.id,
       manufacturer: tobacco.manufacturer,
@@ -1538,7 +1538,7 @@ const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
     })),
   });
 
-  await tx.nomadMix.createMany({
+  await tx.mix.createMany({
     data: seedMixes.map((mix) => {
       const components = mix.componentIds
         .map((componentId) => seedTobaccos.find((item) => item.id === componentId))
@@ -1558,7 +1558,7 @@ const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
     }),
   });
 
-  await tx.nomadMixComponent.createMany({
+  await tx.mixComponent.createMany({
     data: seedMixes.flatMap((mix) =>
       distributeMixComponentProportions(mix.componentIds).map((component) => ({
         mixId: mix.id,
@@ -1569,7 +1569,7 @@ const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
     ),
   });
 
-  await tx.nomadRail.createMany({
+  await tx.rail.createMany({
     data: defaultRails.map((rail) => ({
       id: rail.id,
       name: rail.name,
@@ -1580,7 +1580,7 @@ const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
     })),
   });
 
-  await tx.nomadRailMix.createMany({
+  await tx.railMix.createMany({
     data: defaultRails.flatMap((rail) =>
       rail.mixIds.map((mixId, index) => ({
         railId: rail.id,
@@ -1618,7 +1618,7 @@ export const ensureNomadState = async () => {
   }
 
   bootstrapPromise = (async () => {
-    const staffAccountCount = await prisma.nomadStaffAccount.count();
+    const staffAccountCount = await prisma.staffAccount.count();
     if (!staffAccountCount) {
       await bootstrapNomadOperationalState();
     }
@@ -1643,7 +1643,7 @@ export const getGuestIntroCards = async () => {
   await ensureNomadState();
   await syncIntroCards();
 
-  const records = await prisma.nomadIntroCard.findMany({
+  const records = await prisma.introCard.findMany({
     orderBy: {
       step: 'asc',
     },
@@ -1656,7 +1656,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   await ensureNomadState();
 
   const [records, mixes] = await Promise.all([
-    prisma.nomadTobacco.findMany(),
+    prisma.tobacco.findMany(),
     fetchMixViews(),
   ]);
 
@@ -1795,7 +1795,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 export const getTobaccoById = async (id: string) => {
   await ensureNomadState();
 
-  const tobacco = await prisma.nomadTobacco.findUnique({
+  const tobacco = await prisma.tobacco.findUnique({
     where: { id },
   });
 
@@ -1813,7 +1813,7 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
     return { error: 'Manufacturer and name are required' };
   }
 
-  const existing = await prisma.nomadTobacco.findFirst({
+  const existing = await prisma.tobacco.findFirst({
     where: {
       manufacturer,
       lineName,
@@ -1830,7 +1830,7 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
 
   const id = await nextTobaccoId(manufacturer, lineName, name);
 
-  await prisma.nomadTobacco.create({
+  await prisma.tobacco.create({
     data: {
       id,
       manufacturer,
@@ -1857,7 +1857,7 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
 export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadTobacco.findUnique({
+  const current = await prisma.tobacco.findUnique({
     where: { id },
   });
 
@@ -1881,7 +1881,7 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
       ? payload.inStock
       : current.inStock;
 
-  const duplicate = await prisma.nomadTobacco.findFirst({
+  const duplicate = await prisma.tobacco.findFirst({
     where: {
       manufacturer,
       lineName,
@@ -1899,7 +1899,7 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
     return { error: 'Такой табак уже существует в каталоге' };
   }
 
-  await prisma.nomadTobacco.update({
+  await prisma.tobacco.update({
     where: { id },
     data: {
       manufacturer,
@@ -1938,7 +1938,7 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
 export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadTobacco.findUnique({
+  const current = await prisma.tobacco.findUnique({
     where: { id },
   });
 
@@ -1946,7 +1946,7 @@ export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
     return null;
   }
 
-  await prisma.nomadTobacco.update({
+  await prisma.tobacco.update({
     where: { id },
     data: { inStock },
   });
@@ -1980,7 +1980,7 @@ export const batchUpdateTobacco = async (
         : action === 'archive'
           ? { archived: true, inStock: false }
           : { archived: false };
-  const currentItems = await prisma.nomadTobacco.findMany({
+  const currentItems = await prisma.tobacco.findMany({
     where: {
       id: {
         in: normalizedIds,
@@ -1990,7 +1990,7 @@ export const batchUpdateTobacco = async (
   const currentIds = currentItems.map((item) => item.id);
   const skippedIds = normalizedIds.filter((id) => !currentIds.includes(id));
 
-  await prisma.nomadTobacco.updateMany({
+  await prisma.tobacco.updateMany({
     where: {
       id: {
         in: currentIds,
@@ -2057,7 +2057,7 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
 const buildMostSelectedRail = async (): Promise<RailView> => {
   const [mixes, events] = await Promise.all([
     getAvailableMixCatalog(),
-    prisma.nomadSmokeCtaEvent.findMany({
+    prisma.smokeCtaEvent.findMany({
       select: {
         mixId: true,
       },
@@ -2154,7 +2154,7 @@ const buildRailViews = async (guestOnly: boolean) => {
 
   const [mixes, rails] = await Promise.all([
     getAvailableMixCatalog(),
-    prisma.nomadRail.findMany({
+    prisma.rail.findMany({
       where: guestOnly
         ? {
             active: true,
@@ -2307,7 +2307,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
   const id = await nextMixId(validated.name);
 
   await prisma.$transaction(async (tx) => {
-    await tx.nomadMix.create({
+    await tx.mix.create({
       data: {
         id,
         name: validated.name,
@@ -2321,7 +2321,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
       },
     });
 
-    await tx.nomadMixComponent.createMany({
+    await tx.mixComponent.createMany({
       data: validated.components.map((component) => ({
         mixId: id,
         tobaccoId: component.tobaccoId,
@@ -2337,7 +2337,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
 export const updateMix = async (id: string, payload: MixPatch) => {
   await ensureNomadState();
 
-  const current = await prisma.nomadMix.findUnique({
+  const current = await prisma.mix.findUnique({
     where: { id },
     include: {
       components: {
@@ -2373,7 +2373,7 @@ export const updateMix = async (id: string, payload: MixPatch) => {
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.nomadMix.update({
+    await tx.mix.update({
       where: { id },
       data: {
         name: nextName,
@@ -2388,11 +2388,11 @@ export const updateMix = async (id: string, payload: MixPatch) => {
     });
 
     if (Array.isArray(payload.components) || Array.isArray(payload.componentIds)) {
-      await tx.nomadMixComponent.deleteMany({
+      await tx.mixComponent.deleteMany({
         where: { mixId: id },
       });
 
-      await tx.nomadMixComponent.createMany({
+      await tx.mixComponent.createMany({
         data: componentValidation.components.map((component) => ({
           mixId: id,
           tobaccoId: component.tobaccoId,
@@ -2412,12 +2412,12 @@ export const updateMix = async (id: string, payload: MixPatch) => {
 export const deleteMix = async (id: string): Promise<{ id: string; name: string } | null> => {
   await ensureNomadState();
 
-  const current = await prisma.nomadMix.findUnique({ where: { id } });
+  const current = await prisma.mix.findUnique({ where: { id } });
   if (!current) {
     return null;
   }
 
-  await prisma.nomadMix.delete({ where: { id } });
+  await prisma.mix.delete({ where: { id } });
 
   return { id: current.id, name: current.name };
 };
@@ -2429,12 +2429,12 @@ export const deleteRail = async (id: string) => {
     return { error: statisticalRailReadOnlyReason };
   }
 
-  const current = await prisma.nomadRail.findUnique({ where: { id } });
+  const current = await prisma.rail.findUnique({ where: { id } });
   if (!current) {
     return null;
   }
 
-  await prisma.nomadRail.delete({ where: { id } });
+  await prisma.rail.delete({ where: { id } });
 
   return { id: current.id, name: current.name };
 };
@@ -2454,7 +2454,7 @@ export const createRail = async (payload: Partial<RailInput>) => {
   const id = await nextRailId(validated.name);
 
   await prisma.$transaction(async (tx) => {
-    await tx.nomadRail.create({
+    await tx.rail.create({
       data: {
         id,
         name: validated.name,
@@ -2465,7 +2465,7 @@ export const createRail = async (payload: Partial<RailInput>) => {
       },
     });
 
-    await tx.nomadRailMix.createMany({
+    await tx.railMix.createMany({
       data: validated.mixIds.map((mixId, index) => ({
         railId: id,
         mixId,
@@ -2484,7 +2484,7 @@ export const updateRail = async (id: string, payload: RailPatch) => {
     return { error: statisticalRailReadOnlyReason };
   }
 
-  const current = await prisma.nomadRail.findUnique({
+  const current = await prisma.rail.findUnique({
     where: { id },
     include: {
       mixes: {
@@ -2518,7 +2518,7 @@ export const updateRail = async (id: string, payload: RailPatch) => {
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.nomadRail.update({
+    await tx.rail.update({
       where: { id },
       data: {
         name: nextName,
@@ -2529,11 +2529,11 @@ export const updateRail = async (id: string, payload: RailPatch) => {
     });
 
     if (Array.isArray(payload.mixIds)) {
-      await tx.nomadRailMix.deleteMany({
+      await tx.railMix.deleteMany({
         where: { railId: id },
       });
 
-      await tx.nomadRailMix.createMany({
+      await tx.railMix.createMany({
         data: railMixIds.mixIds.map((mixId, index) => ({
           railId: id,
           mixId,
@@ -2549,7 +2549,7 @@ export const updateRail = async (id: string, payload: RailPatch) => {
 export const recordSmokeCtaEvent = async (mixId: string) => {
   await ensureNomadState();
 
-  const event = await prisma.nomadSmokeCtaEvent.create({
+  const event = await prisma.smokeCtaEvent.create({
     data: { mixId },
   });
 
@@ -2562,7 +2562,7 @@ export const recordSmokeCtaEvent = async (mixId: string) => {
 export const getSmokeCtaEvents = async () => {
   await ensureNomadState();
 
-  const events = await prisma.nomadSmokeCtaEvent.findMany({
+  const events = await prisma.smokeCtaEvent.findMany({
     orderBy: {
       createdAt: 'asc',
     },
@@ -2577,7 +2577,7 @@ export const getSmokeCtaEvents = async () => {
 export const rateMix = async (id: string, value: number) => {
   await ensureNomadState();
 
-  const mix = await prisma.nomadMix.findUnique({
+  const mix = await prisma.mix.findUnique({
     where: { id },
     select: { id: true },
   });
@@ -2590,7 +2590,7 @@ export const rateMix = async (id: string, value: number) => {
     return { error: 'Rating value must be between 1 and 5' };
   }
 
-  await prisma.nomadMixRating.create({
+  await prisma.mixRating.create({
     data: {
       mixId: id,
       value,
@@ -2605,8 +2605,8 @@ export const getInventorySummary = async () => {
   await ensureNomadState();
 
   const [total, inStockCount] = await Promise.all([
-    prisma.nomadTobacco.count(),
-    prisma.nomadTobacco.count({
+    prisma.tobacco.count(),
+    prisma.tobacco.count({
       where: {
         inStock: true,
       },
@@ -2625,7 +2625,7 @@ export const getSmokeCtaSummary = async () => {
 
   const [mixes, events] = await Promise.all([
     getAvailableMixCatalog(),
-    prisma.nomadSmokeCtaEvent.findMany({
+    prisma.smokeCtaEvent.findMany({
       select: {
         mixId: true,
       },
@@ -2668,7 +2668,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
 
   const window = buildDashboardWindow(windowKey);
   const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents, blockedMixRecords] = await Promise.all([
-    prisma.nomadTobacco.findMany({
+    prisma.tobacco.findMany({
       orderBy: [{ manufacturer: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
@@ -2681,7 +2681,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
     }),
     getAvailableMixCatalog(),
     getStaffRails(),
-    prisma.nomadSmokeCtaEvent.findMany({
+    prisma.smokeCtaEvent.findMany({
       where: {
         createdAt: {
           gte: window.startsAtDate,
@@ -2693,7 +2693,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
         createdAt: true,
       },
     }),
-    prisma.nomadMixRating.findMany({
+    prisma.mixRating.findMany({
       where: {
         createdAt: {
           gte: window.startsAtDate,
@@ -2706,7 +2706,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
         createdAt: true,
       },
     }),
-    prisma.nomadMix.findMany({
+    prisma.mix.findMany({
       where: {
         available: true,
       },

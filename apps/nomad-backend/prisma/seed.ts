@@ -57,7 +57,7 @@ const staffAccounts = [
     password: 'nomad',
     passwordSalt: 'seed:staff-nomad',
     name: 'Nomad Staff',
-    role: 'nomad',
+    role: 'master',
     active: true,
   },
 ] as const;
@@ -258,22 +258,22 @@ const railMixes = [
 async function main() {
   const currentCodeWindow = getNomadDailyCodeWindow();
 
-  await prisma.nomadSmokeCtaEvent.deleteMany();
-  await prisma.nomadMixRating.deleteMany();
-  await prisma.nomadRailMix.deleteMany();
-  await prisma.nomadMixComponent.deleteMany();
-  await prisma.nomadRail.deleteMany();
-  await prisma.nomadMix.deleteMany();
-  await prisma.nomadTobacco.deleteMany();
-  await prisma.nomadIntroCard.deleteMany();
-  await prisma.nomadDailyAccessCode.deleteMany();
-  await prisma.nomadTelegramRecipient.deleteMany();
-  await prisma.nomadTelegramOperator.deleteMany();
-  await prisma.nomadTelegramAutomationState.deleteMany();
-  await prisma.nomadAuditEvent.deleteMany();
-  await prisma.nomadStaffAccount.deleteMany();
+  await prisma.smokeCtaEvent.deleteMany();
+  await prisma.mixRating.deleteMany();
+  await prisma.railMix.deleteMany();
+  await prisma.mixComponent.deleteMany();
+  await prisma.rail.deleteMany();
+  await prisma.mix.deleteMany();
+  await prisma.tobacco.deleteMany();
+  await prisma.introCard.deleteMany();
+  await prisma.dailyAccessCode.deleteMany();
+  await prisma.telegramRecipient.deleteMany();
+  await prisma.telegramOperator.deleteMany();
+  await prisma.telegramAutomationState.deleteMany();
+  await prisma.auditEvent.deleteMany();
+  await prisma.staffAccount.deleteMany();
 
-  await prisma.nomadStaffAccount.createMany({
+  await prisma.staffAccount.createMany({
     data: staffAccounts.map((account) => ({
       id: account.id,
       login: account.login,
@@ -286,7 +286,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadDailyAccessCode.createMany({
+  await prisma.dailyAccessCode.createMany({
     data: dailyAccessCodes.map((code) => ({
       id: code.id,
       codeValue: code.code,
@@ -300,11 +300,11 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadTelegramRecipient.createMany({
+  await prisma.telegramRecipient.createMany({
     data: telegramRecipients,
   });
 
-  await prisma.nomadTelegramOperator.createMany({
+  await prisma.telegramOperator.createMany({
     data: [
       {
         id: 'telegram-operator-anna',
@@ -334,7 +334,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadIntroCard.createMany({
+  await prisma.introCard.createMany({
     data: introCards.map((card) => ({
       id: card.id,
       step: card.step,
@@ -345,7 +345,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadTobacco.createMany({
+  await prisma.tobacco.createMany({
     data: tobaccos.map((tobacco) => ({
       id: tobacco.id,
       manufacturer: tobacco.manufacturer,
@@ -359,7 +359,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadMix.createMany({
+  await prisma.mix.createMany({
     data: mixes.map((mix) => ({
       id: mix.id,
       name: mix.name,
@@ -374,7 +374,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadMixComponent.createMany({
+  await prisma.mixComponent.createMany({
     data: mixComponents.map((component) => ({
       mixId: component.mixId,
       tobaccoId: component.tobaccoId,
@@ -384,7 +384,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadRail.createMany({
+  await prisma.rail.createMany({
     data: rails.map((rail) => ({
       id: rail.id,
       name: rail.name,
@@ -396,7 +396,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.nomadRailMix.createMany({
+  await prisma.railMix.createMany({
     data: railMixes.map((railMix) => ({
       railId: railMix.railId,
       mixId: railMix.mixId,

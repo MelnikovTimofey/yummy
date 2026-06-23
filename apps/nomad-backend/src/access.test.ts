@@ -166,7 +166,7 @@ test('staff accounts CRUD is admin-only', async () => {
       payload: {
         login: 'bartender',
         name: 'Bartender',
-        role: 'nomad',
+        role: 'master',
         password: 'bartender',
         active: true,
       },
@@ -177,7 +177,7 @@ test('staff accounts CRUD is admin-only', async () => {
       item: { id: string; login: string; name: string; role: string; active: boolean };
     };
     assert.equal(createdBody.item.login, 'bartender');
-    assert.equal(createdBody.item.role, 'nomad');
+    assert.equal(createdBody.item.role, 'master');
     assert.equal(createdBody.item.active, true);
 
     const updated = await app.inject({

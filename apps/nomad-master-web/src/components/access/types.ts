@@ -24,7 +24,7 @@ export const emptyStaffAccountEditor = (): StaffAccountEditorState => ({
   id: '',
   login: '',
   name: '',
-  role: 'nomad',
+  role: 'master',
   password: '',
   active: true,
 });
