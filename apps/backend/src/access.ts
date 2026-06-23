@@ -644,16 +644,20 @@ export const rotateCurrentDailyAccessCode = async () => {
   const window = getNomadDailyCodeWindow();
 
   return prisma.$transaction(async (tx) => {
-    const records = await tx.dailyAccessCode.findMany({
-      where: dailyCodeWindowFilter(window),
-      orderBy: [{ createdAt: 'desc' }, { updatedAt: 'desc' }],
+    const windowRecords = await tx.dailyAccessCode.findMany({
+      where: {
+        startsAt: { lt: window.endsAt },
+        endsAt: { gt: window.startsAt },
+      },
+      select: { id: true, codeValue: true, active: true },
     });
 
-    if (records.length) {
+    const activeIds = windowRecords.filter((record) => record.active).map((record) => record.id);
+    if (activeIds.length) {
       await tx.dailyAccessCode.updateMany({
         where: {
           id: {
-            in: records.map((record) => record.id),
+            in: activeIds,
           },
         },
         data: {
@@ -662,7 +666,10 @@ export const rotateCurrentDailyAccessCode = async () => {
       });
     }
 
-    const codeValue = createNomadDailyCodeValue(window.startsAt);
+    const codeValue = createNomadDailyCodeValue(
+      window.startsAt,
+      windowRecords.map((record) => record.codeValue),
+    );
     const secret = createAutomationSecret(codeValue);
     const created = await tx.dailyAccessCode.create({
       data: {
