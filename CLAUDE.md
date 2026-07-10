@@ -134,8 +134,9 @@ Production-ветка репозитория — `main`. Соглашение п
 >    свериться с ним и убедиться, что слот свободен.
 
 1. Нетривиальная задача начинается с GitHub issue
-   (`.github/ISSUE_TEMPLATE/nomad-feature.yml` / `nomad-bug.yml` / `nomad-ops.yml`).
-   Issue фиксирует bounded context, scope, критерии и проверки.
+   (`.github/ISSUE_TEMPLATE/atelier-feature.yml` / `atelier-bug.yml` / `atelier-ops.yml`).
+   Issue фиксирует bounded context, scope, критерии и проверки. Blank issues
+   отключены — задача заводится только по шаблону.
 2. Ветка от **свежего** `main` (после `git pull origin main`) по соглашению:
    - `feature/<slug>` — новый функционал, рефакторинг с продуктовым
      эффектом, обновление процесса/документации, новая поверхность;

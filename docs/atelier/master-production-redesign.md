@@ -4,7 +4,7 @@
 
 Этот документ фиксирует contract-first пакет для преобразования `Мастер` из MVP в production-ready staff/admin контур.
 
-Каждый slice ведётся как отдельный GitHub issue по шаблону `.github/ISSUE_TEMPLATE/nomad-feature.yml`.
+Каждый slice ведётся как отдельный GitHub issue по шаблону `.github/ISSUE_TEMPLATE/atelier-feature.yml`.
 
 Документ нужен до начала широкого рефакторинга, чтобы:
 

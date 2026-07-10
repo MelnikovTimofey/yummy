@@ -18,7 +18,7 @@ model: opus
 4. Определяешь write-scope каждой части и режим: один агент или параллельные
    (только при непересекающихся write-scope и зафиксированном контракте).
 5. Формируешь issue через `gh issue create` по шаблону из
-   `.github/ISSUE_TEMPLATE/` (`nomad-feature` / `nomad-bug` / `nomad-ops`).
+   `.github/ISSUE_TEMPLATE/` (`atelier-feature` / `atelier-bug` / `atelier-ops`).
 
 ## Правила
 
