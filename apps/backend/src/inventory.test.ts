@@ -30,7 +30,7 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
 
   const before = await app.inject({
     method: 'GET',
-    url: '/staff/inventory/tobaccos?stock=out-of-stock&manufacturers=Nomad%20Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc',
+    url: '/staff/inventory/tobaccos?stock=out-of-stock&manufacturers=%D0%90%D1%82%D0%B5%D0%BB%D1%8C%D0%B5%20Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc',
     headers: {
       authorization: `Bearer ${token}`,
     },
@@ -75,7 +75,7 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
     };
   };
   assert.equal(beforeBody.filters.stock, 'out-of-stock');
-  assert.deepEqual(beforeBody.filters.manufacturers, ['Nomad Reserve']);
+  assert.deepEqual(beforeBody.filters.manufacturers, ['Ателье Reserve']);
   assert.deepEqual(beforeBody.filters.flavors, ['персик']);
   assert.equal(beforeBody.sort.field, 'dependentMixes');
   assert.equal(beforeBody.sort.direction, 'desc');
@@ -621,7 +621,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
     ratingsCount: 1,
     popularity: 92,
   });
-  assert.equal(dashboardBody.inventory.manufacturers[0]?.label, 'Nomad Reserve');
+  assert.equal(dashboardBody.inventory.manufacturers[0]?.label, 'Ателье Reserve');
   assert.equal(dashboardBody.inventory.flavorProfiles.some((item) => item.label === 'Свежие'), true);
   assert.equal(dashboardBody.product.ratingDistribution.find((item) => item.value === 5)?.count, 1);
   assert.equal(dashboardBody.ops.blockedByInventoryCount, 1);

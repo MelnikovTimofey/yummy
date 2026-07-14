@@ -1,4 +1,4 @@
-# Nomad Backend
+# Backend Арома Ателье
 
 Отдельный backend для продуктов `Арома Ателье`, `Мастер` и `Telegram-бот`.
 
@@ -15,8 +15,8 @@
 
 На текущем storage-backed этапе:
 
-1. daily code хранится в Postgres как `NomadDailyAccessCode`;
-2. staff accounts хранятся в Postgres как `NomadStaffAccount`;
+1. daily code хранится в Postgres как `DailyAccessCode`;
+2. staff accounts хранятся в Postgres как `StaffAccount`;
 3. `.env` больше не является источником истины для guest access code и staff credentials;
 4. seed создаёт стартовые записи:
    - login `admin` / password `admin`,
@@ -45,10 +45,10 @@
 
 На текущем этапе runtime больше не хранит состояние в памяти:
 
-1. `Prisma + PostgreSQL` используются как локальное persistence-хранилище для Nomad;
-2. схема живёт в `apps/nomad-backend/prisma/schema.prisma`;
-3. сиды живут в `apps/nomad-backend/prisma/seed.ts`;
-4. локальный Postgres поднимается отдельным `docker-compose.yml` внутри `apps/nomad-backend`.
+1. `Prisma + PostgreSQL` используются как локальное persistence-хранилище контура;
+2. схема живёт в `apps/backend/prisma/schema.prisma`;
+3. сиды живут в `apps/backend/prisma/seed.ts`;
+4. локальный Postgres поднимается отдельным `docker-compose.yml` внутри `apps/backend`.
 
 На access-management этапе дополнительно есть:
 
@@ -70,7 +70,7 @@
 На этапе Telegram provisioning дополнительно есть:
 
 1. CRUD для чатов Telegram через `/staff/access/telegram-recipients`;
-2. эти записи хранятся в Postgres как `NomadTelegramRecipient`;
+2. эти записи хранятся в Postgres как `TelegramRecipient`;
 3. управление чатами Telegram доступно только роли `admin`;
 4. automation endpoint `GET /automation/telegram/recipients` отдаёт активные chat lists для worker;
 5. bot может использовать backend как source of truth, а `.env` оставляет только fallback.
@@ -78,7 +78,7 @@
 На этапе Telegram allowlist дополнительно есть:
 
 1. allowlist операторов через `/staff/access/telegram-operators`;
-2. эти записи хранятся в Postgres как `NomadTelegramOperator`;
+2. эти записи хранятся в Postgres как `TelegramOperator`;
 3. allowlist ведётся по `имя + телефон`, а не по `chatId`;
 4. automation endpoints:
    - `GET /automation/telegram/operators/by-chat/:chatId`
@@ -91,7 +91,7 @@
 
 На этапе Telegram automation state дополнительно есть:
 
-1. persisted singleton `NomadTelegramAutomationState` в Postgres;
+1. persisted singleton `TelegramAutomationState` в Postgres;
 2. automation endpoints:
    - `GET /automation/telegram/state`
    - `POST /automation/telegram/state/report`
@@ -107,7 +107,7 @@
 
 На этапе Quality And Hardening дополнительно есть:
 
-1. persisted audit trail `NomadAuditEvent`;
+1. persisted audit trail `AuditEvent`;
 2. audit покрывает staff-sensitive изменения:
    - daily codes;
    - staff accounts;
@@ -123,18 +123,18 @@
 
 1. отдельный bootstrap path для первого production admin;
 2. managed runtime templates для Telegram-бота;
-3. env matrix и deployment smoke checklist на уровне Nomad-контура.
+3. env matrix и deployment smoke checklist на уровне контура.
 
 На этапе подготовки интеграции HTReviews дополнительно есть:
 
 1. изолированный HTML adapter для `https://htreviews.org` внутри `src/integrations/htreviews`;
-2. CLI dry-run import без записи в runtime-каталог Nomad;
+2. CLI dry-run import без записи в runtime-каталог;
 3. preview snapshot, который можно использовать как staging-вход для будущей актуализации табаков;
-4. rule-based candidate mapping в Nomad taxonomy:
+4. rule-based candidate mapping в taxonomy:
    - `flavorProfiles`
    - `flavors`
    - `flavorTags`
-5. отдельный sync path для наполнения текущей Nomad БД с безопасным default `inStock=false`.
+5. отдельный sync path для наполнения текущей БД с безопасным default `inStock=false`.
 
 Параметры локального Postgres-контура:
 
@@ -212,7 +212,7 @@
 ## Локальный запуск
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 npm install
 npm run db:start
 npm run prisma:generate
@@ -230,14 +230,14 @@ npm run dev
 Базовый запуск:
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 npm run import:htreviews:preview
 ```
 
 По умолчанию preview сохраняется в:
 
 ```text
-apps/nomad-backend/data/imports/htreviews/preview.json
+apps/backend/data/imports/htreviews/preview.json
 ```
 
 Поддерживаемые env-параметры:
@@ -259,7 +259,7 @@ apps/nomad-backend/data/imports/htreviews/preview.json
 Пример минимального smoke-run:
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 HTREVIEWS_BRAND_URLS='https://htreviews.org/tobaccos/musthave' \
 HTREVIEWS_TOBACCO_LIMIT=3 \
 HTREVIEWS_DELAY_MS=100 \
@@ -269,7 +269,7 @@ npm run import:htreviews:preview
 Ограничения текущего foundation-среза:
 
 1. используется только публичный HTML, без `/api/*`;
-2. import не апдейтит `NomadTobacco` автоматически;
+2. import не апдейтит `Tobacco` автоматически;
 3. результат нужно просматривать как staging snapshot перед будущим sync-контуром;
 4. taxonomy mapping пока кандидатный и должен проходить product/data review.
 
@@ -281,10 +281,10 @@ npm run import:htreviews:preview
 
 ## HTReviews DB sync
 
-Если нужно не только preview, а реальное наполнение текущей Nomad БД:
+Если нужно не только preview, а реальное наполнение текущей БД:
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
 HTREVIEWS_BRAND_URLS='https://htreviews.org/tobaccos/musthave' \
 HTREVIEWS_TOBACCO_LIMIT=20 \
@@ -295,7 +295,7 @@ npm run sync:htreviews
 
 1. импорт идемпотентный: повторный прогон делает upsert по source IDs и fallback `brand + line + name`;
 2. новые позиции по умолчанию попадают в каталог как `out-of-stock`, чтобы не ломать guest recommendations;
-3. если позиция уже есть в Nomad БД, её текущий `inStock` сохраняется;
+3. если позиция уже есть в БД, её текущий `inStock` сохраняется;
 4. global discovery брендов не ограничен первым HTML-срезом `/tobaccos/brands` и добирает paginated brand pages через публичный `getData`;
 5. для imported tobacco теперь хранятся:
    - `lineName`
@@ -312,10 +312,10 @@ npm run sync:htreviews
 
 ## HTReviews detail backfill
 
-Если каталог уже импортирован в `NomadTobacco`, но большая часть записей осталась summary-only без вкусов и крепости, используйте detail backfill:
+Если каталог уже импортирован в `Tobacco`, но большая часть записей осталась summary-only без вкусов и крепости, используйте detail backfill:
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
 HTREVIEWS_DELAY_MS=10 \
 HTREVIEWS_CONCURRENCY=8 \
@@ -338,7 +338,7 @@ npm run backfill:htreviews:details
    - `flavors`
    - `flavorTags`
 4. не меняет `inStock`;
-5. после обновления табаков пересчитывает taxonomy у существующих `NomadMix` по их компонентам.
+5. после обновления табаков пересчитывает taxonomy у существующих `Mix` по их компонентам.
 
 Дополнительный env:
 
@@ -350,8 +350,8 @@ npm run backfill:htreviews:details
 ## Live catalog seed (этап 1)
 
 Production-БД при первом запуске не содержит seed-каталога. `ensureNomadState`
-ставит только staff/коды/recipients/operators/intro; `NomadTobacco`,
-`NomadMix`, `NomadMixComponent`, `NomadRail`, `NomadRailMix` стартуют пустыми
+ставит только staff/коды/recipients/operators/intro; `Tobacco`,
+`Mix`, `MixComponent`, `Rail`, `RailMix` стартуют пустыми
 и наполняются отдельно из htreviews.org.
 
 Чтобы налить каталог табаков в локальный продуктивный контур:
@@ -374,9 +374,9 @@ htreviews.org с подгрузкой деталей; контролируйте
 | `HTREVIEWS_FETCH_DETAILS` | `0`/`1`, подгружать страницу табака |
 | `HTREVIEWS_BRAND_URLS` | список URL'ов брендов через запятую (точечный seed) |
 
-После прогона `prisma.nomadTobacco.count()` > 0; вторичные вызовы
-`sync:htreviews` идут upsert'ом, не теряя `inStock`. Миксы (`NomadMix`) и
-rails (`NomadRail`) на этом этапе остаются пустыми — они будут наполнены на
+После прогона `prisma.tobacco.count()` > 0; вторичные вызовы
+`sync:htreviews` идут upsert'ом, не теряя `inStock`. Миксы (`Mix`) и
+rails (`Rail`) на этом этапе остаются пустыми — они будут наполнены на
 этапах 2-3.
 
 ## Bootstrap admin
@@ -386,7 +386,7 @@ rails (`NomadRail`) на этом этапе остаются пустыми —
 Используйте отдельный bootstrap path:
 
 ```bash
-cd apps/nomad-backend
+cd apps/backend
 NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
 NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin" \
 NOMAD_BOOTSTRAP_ADMIN_PASSWORD="change-me-now" \

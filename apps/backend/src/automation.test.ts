@@ -239,9 +239,9 @@ test('automation can link operator chat by phone and resolve it later', async ()
         phone: '+7 (999) 123-45-67',
         chatId: '362223626',
         telegramUserId: '998877',
-        username: 'anna_nomad',
+        username: 'anna_test',
         firstName: 'Анна',
-        lastName: 'Nomad',
+        lastName: 'Тестовый',
       },
     });
 

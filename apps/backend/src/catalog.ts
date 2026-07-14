@@ -42,7 +42,7 @@ export const tobaccos: Tobacco[] = [
   {
     id: 'tobacco-citrus-breeze',
     name: 'Citrus Breeze',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     flavorProfiles: ['fresh', 'citrus', 'sour'],
     flavors: ['лимон', 'грейпфрут', 'лайм'],
     flavorTags: ['fresh'],
@@ -51,7 +51,7 @@ export const tobaccos: Tobacco[] = [
   {
     id: 'tobacco-berry-oasis',
     name: 'Berry Oasis',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     flavorProfiles: ['berry', 'sweet', 'fruity'],
     flavors: ['малина', 'черника'],
     flavorTags: ['berry'],
@@ -60,7 +60,7 @@ export const tobaccos: Tobacco[] = [
   {
     id: 'tobacco-desert-honey',
     name: 'Desert Honey',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     flavorProfiles: ['dessert', 'sweet'],
     flavors: ['мед', 'ваниль'],
     flavorTags: ['dessert'],
@@ -69,7 +69,7 @@ export const tobaccos: Tobacco[] = [
   {
     id: 'tobacco-spice-route',
     name: 'Spice Route',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     flavorProfiles: ['spicy', 'tobacco'],
     flavors: ['корица', 'кардамон'],
     flavorTags: ['spicy'],
@@ -78,7 +78,7 @@ export const tobaccos: Tobacco[] = [
   {
     id: 'tobacco-mint-veil',
     name: 'Mint Veil',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     flavorProfiles: ['fresh', 'minty'],
     flavors: ['мята'],
     flavorTags: ['minty'],
@@ -87,7 +87,7 @@ export const tobaccos: Tobacco[] = [
   {
     id: 'tobacco-peach-silk',
     name: 'Peach Silk',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     flavorProfiles: ['sweet', 'fruity'],
     flavors: ['персик'],
     flavorTags: ['fruity'],

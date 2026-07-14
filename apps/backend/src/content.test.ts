@@ -627,7 +627,7 @@ test('staff mixes list supports filters and validates component proportions', as
 
     const filtered = await app.inject({
       method: 'GET',
-      url: '/staff/mixes?status=guest-visible&railState=in-rails&manufacturers=Nomad%20Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc',
+      url: '/staff/mixes?status=guest-visible&railState=in-rails&manufacturers=%D0%90%D1%82%D0%B5%D0%BB%D1%8C%D0%B5%20Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc',
       headers: {
         authorization: `Bearer ${token}`,
       },
@@ -662,7 +662,7 @@ test('staff mixes list supports filters and validates component proportions', as
     );
     assert.equal(filteredBody.filters.status, 'guest-visible');
     assert.equal(filteredBody.filters.railState, 'in-rails');
-    assert.deepEqual(filteredBody.filters.manufacturers, ['Nomad Reserve']);
+    assert.deepEqual(filteredBody.filters.manufacturers, ['Ателье Reserve']);
     assert.deepEqual(filteredBody.filters.flavors, ['малина']);
     assert.equal(filteredBody.sort.field, 'rails');
     assert.equal(filteredBody.sort.direction, 'desc');

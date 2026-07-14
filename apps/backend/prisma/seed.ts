@@ -56,7 +56,7 @@ const staffAccounts = [
     login: 'nomad',
     password: 'nomad',
     passwordSalt: 'seed:staff-nomad',
-    name: 'Nomad Staff',
+    name: 'Ателье Staff',
     role: 'master',
     active: true,
   },
@@ -78,7 +78,7 @@ const telegramRecipients = [] as const;
 const tobaccos = [
   {
     id: 'tobacco-citrus-breeze',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     name: 'Citrus Breeze',
     description: 'Свежий цитрусовый профиль.',
     flavorProfiles: ['fresh', 'citrus'],
@@ -88,7 +88,7 @@ const tobaccos = [
   },
   {
     id: 'tobacco-berry-oasis',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     name: 'Berry Oasis',
     description: 'Мягкая ягодная сладость.',
     flavorProfiles: ['berry', 'sweet'],
@@ -98,7 +98,7 @@ const tobaccos = [
   },
   {
     id: 'tobacco-desert-honey',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     name: 'Desert Honey',
     description: 'Десертный акцент с мёдом и ванилью.',
     flavorProfiles: ['dessert', 'sweet'],
@@ -108,7 +108,7 @@ const tobaccos = [
   },
   {
     id: 'tobacco-spice-route',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     name: 'Spice Route',
     description: 'Пряный табачный профиль.',
     flavorProfiles: ['spicy', 'tobacco'],
@@ -118,7 +118,7 @@ const tobaccos = [
   },
   {
     id: 'tobacco-mint-veil',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     name: 'Mint Veil',
     description: 'Чистая мята и прохлада.',
     flavorProfiles: ['fresh'],
@@ -128,7 +128,7 @@ const tobaccos = [
   },
   {
     id: 'tobacco-peach-silk',
-    manufacturer: 'Nomad Reserve',
+    manufacturer: 'Ателье Reserve',
     name: 'Peach Silk',
     description: 'Сладкий персиковый профиль.',
     flavorProfiles: ['sweet'],
@@ -237,7 +237,7 @@ const rails = [
   {
     id: 'rail-curated-evening-choice',
     name: 'Вечерний выбор',
-    description: 'Ручная подборка для позднего визита в Nomad.',
+    description: 'Ручная подборка для позднего визита в Ателье.',
     type: 'curated',
     active: false,
     isSystem: false,
