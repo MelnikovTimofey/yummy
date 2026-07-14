@@ -1,8 +1,7 @@
-name: "Nomad Ops / Runtime"
-description: "Env, deploy, runtime, bot или release задача для Nomad"
-title: "[Nomad Ops] "
+name: "Арома Ателье · Ops / Runtime"
+description: "Env, deploy, runtime, bot или release задача для Арома Ателье"
+title: "[ops] "
 labels:
-  - "contour:nomad"
   - "type:ops"
 body:
   - type: dropdown
@@ -14,7 +13,7 @@ body:
         - "apps/aroma-web"
         - "apps/master-web"
         - "services/telegram-bot"
-        - "cross-surface Nomad ops"
+        - "cross-surface ops"
     validations:
       required: true
   - type: textarea

@@ -1,8 +1,7 @@
-name: "Nomad Bug"
-description: "Баг в Nomad UI, backend или bot"
-title: "[Nomad Bug] "
+name: "Арома Ателье · Bug"
+description: "Баг в UI, backend или боте Арома Ателье"
+title: "[bug] "
 labels:
-  - "contour:nomad"
   - "type:bug"
 body:
   - type: dropdown

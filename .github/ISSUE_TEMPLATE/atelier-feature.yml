@@ -1,14 +1,13 @@
-name: "Nomad Feature Slice"
-description: "Новый bounded feature slice для Nomad"
-title: "[Nomad] "
+name: "Арома Ателье · Feature Slice"
+description: "Новый bounded feature slice для Арома Ателье"
+title: "[feat] "
 labels:
-  - "contour:nomad"
   - "type:feature"
 body:
   - type: markdown
     attributes:
       value: |
-        Базовый intake flow для Nomad feature work:
+        Базовый intake flow для feature work Арома Ателье:
         - для bounded feature slice использовать этот шаблон как source of truth;
         - этот issue фиксирует bounded context, scope и проверки до написания кода;
         - для UI/redesign задач в `apps/master-web` обязательно заполнить `Design / UX baseline`.

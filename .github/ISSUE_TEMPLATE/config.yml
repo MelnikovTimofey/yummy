@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Правила процесса (CLAUDE.md)"
+    url: "https://github.com/MelnikovTimofey/yummy/blob/main/CLAUDE.md"
+    about: "Issue → ветка → PR, TDD, self-merge — прочитать перед заведением задачи."

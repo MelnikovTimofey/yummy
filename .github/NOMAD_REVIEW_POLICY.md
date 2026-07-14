@@ -1,19 +1,24 @@
-# Nomad Review Policy
+# Review Policy — Арома Ателье
+
+> Имя файла (`NOMAD_REVIEW_POLICY.md`) и CI-идентификаторы (`nomad-review-flags`,
+> `nomad-smoke`, `nomad-*-build`) сохранены как функциональные идентификаторы —
+> на них завязаны CLAUDE.md, required-checks и branch protection. Переименование
+> человекочитаемого слоя не трогает эти идентификаторы намеренно.
 
 ## Назначение
 
-Этот документ фиксирует GitHub-layer для репозитория Nomad.
+Этот документ фиксирует GitHub-layer репозитория Арома Ателье.
 
 Цель:
 
-1. структурировать входящие Nomad issues;
-2. стандартизировать Nomad PR review;
-3. запускать автоматические проверки только по Nomad active scope;
+1. структурировать входящие issues;
+2. стандартизировать PR review;
+3. запускать автоматические проверки только по active scope изменения;
 4. вводить enforcement поэтапно, не ломая текущий `Human Review` workflow.
 
 ## Base branch
 
-Для Nomad PR использовать base branch `main` — production-ветка репозитория.
+Использовать base branch `main` — production-ветка репозитория.
 
 ## Branch naming
 
@@ -26,7 +31,7 @@ Slug — короткое имя в kebab-case (например `feature/master
 
 ## PR shape
 
-Для Nomad действует правило:
+Действует правило:
 
 1. `1 PR = 1 bounded context = 1 проверяемый результат`
 
@@ -37,13 +42,14 @@ Slug — короткое имя в kebab-case (например `feature/master
 
 ## Issue shape
 
-Для Nomad feature work базовым intake path считается:
+Базовым intake path для feature work считается:
 
-1. `.github/ISSUE_TEMPLATE/nomad-feature.yml`
+1. `.github/ISSUE_TEMPLATE/atelier-feature.yml`
 
 Каждая нетривиальная задача начинается с issue до написания кода.
+Blank issues отключены (`config.yml`) — задача заводится только по шаблону.
 
-Каждый Nomad feature issue должен зафиксировать:
+Каждый feature issue должен зафиксировать:
 
 1. `Primary scope`
 2. `Problem`
@@ -62,9 +68,9 @@ Slug — короткое имя в kebab-case (например `feature/master
 
 ## Required PR fields
 
-Каждый Nomad PR обязан содержать:
+Каждый PR обязан содержать:
 
-1. `Contour: Nomad`
+1. `Closes #<issue>` — ссылка на закрываемый issue (1 PR = 1 issue)
 2. `Bounded context`
 3. `Touched paths`
 4. `Write scope`
@@ -79,7 +85,7 @@ Slug — короткое имя в kebab-case (например `feature/master
 PR должен считаться `needs-human-review`, если затронуто хотя бы одно из условий:
 
 1. `apps/backend/prisma/**`
-2. Nomad auth-related backend files:
+2. auth-related backend files:
    - `apps/backend/src/auth.ts`
    - `apps/backend/src/auth.test.ts`
    - `apps/backend/src/access.ts`
@@ -105,13 +111,14 @@ PR должен считаться `needs-human-review`, если затрону
 
 Source of truth по GitHub labels хранится в `.github/labels.md`.
 
-Минимальный Nomad set:
+Минимальный set:
 
-1. `contour:nomad`
-2. `type:*`
-3. `scope:*`
-4. `risk:*`
-5. `batch:*`
+1. `type:*`
+2. `scope:*`
+3. `risk:*`
+4. `batch:*` (дублируется milestone'ом)
+
+Метка `contour:nomad` — legacy (см. `labels.md`), на новые issue/PR не навешивается.
 
 ## Phase rollout
 
@@ -119,15 +126,15 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 
 Включить:
 
-1. issue templates для Nomad как базовый intake path;
-2. PR template для Nomad;
-3. `CODEOWNERS` для Nomad paths;
-4. Nomad-only GitHub Actions;
+1. issue templates как базовый intake path;
+2. PR template;
+3. `CODEOWNERS` для process paths;
+4. GitHub Actions по scope изменения;
 5. ручное создание labels в GitHub UI или через CLI.
 
 Не включать пока:
 
-1. auto-merge для Nomad;
+1. auto-merge;
 2. branch protection, если required checks ещё нестабильны.
 
 ### Phase 2
@@ -135,9 +142,14 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 После стабилизации CI вручную включить branch protection или ruleset для `main`:
 
 1. require 1 approving review;
-2. require `CODEOWNERS` review для Nomad process files;
-3. require relevant Nomad checks;
+2. require `CODEOWNERS` review для process files;
+3. require relevant checks;
 4. не включать auto-merge до отдельного решения.
+
+> ⚠️ **Ограничение плана.** На приватном репозитории free-плана branch protection
+> API и rulesets недоступны (`403 Upgrade to GitHub Pro`). До перехода на Pro/Team
+> или публикации репозитория Phase 2 неисполним на GitHub-стороне — enforcement
+> держится на CI-гейтах и self-merge дисциплине (CLAUDE.md §5).
 
 Рекомендуемые required checks:
 
@@ -147,11 +159,11 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 4. `nomad-bot-build`
 5. `nomad-smoke`
 
-Если используется GitHub ruleset с path targeting, применять эти checks только для Nomad paths.
+Если используется GitHub ruleset с path targeting, применять эти checks только для активных path.
 
 ## Docs sync
 
-Если GitHub governance для Nomad меняется, обновлять:
+Если GitHub governance меняется, обновлять:
 
 1. `CLAUDE.md`, если меняются правила агента, процесс или operating model
 2. `.claude/agents/` или `.claude/skills/`, если меняются роли или скиллы
@@ -163,5 +175,5 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 Этот policy не нормализует пока:
 
 1. legacy `Yummy` GitHub governance;
-2. repo-wide branch protection для всех контуров;
-3. auto-merge стратегию для Nomad.
+2. repo-wide branch protection;
+3. auto-merge стратегию.

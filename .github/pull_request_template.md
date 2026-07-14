@@ -1,6 +1,8 @@
-## Contour
+## Связанный issue
 
-- [ ] `Nomad`
+<!-- Обязательно. Каждый PR закрывает ровно один issue (1 PR = 1 bounded context). -->
+
+Closes #
 
 ## Bounded Context
 
@@ -8,13 +10,13 @@
 
 ## Touched Paths
 
-Перечислите изменённые Nomad-пути:
+Перечислите изменённые пути:
 
 - `apps/aroma-web/...`
 - `apps/master-web/...`
 - `apps/backend/...`
 - `services/telegram-bot/...`
-- `docs/process paths`, если были затронуты
+- `docs/` или process-пути, если были затронуты
 
 ## Write Scope
 
