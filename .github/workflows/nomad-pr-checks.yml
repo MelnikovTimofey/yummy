@@ -75,7 +75,7 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     steps:
-      - name: Apply available Nomad labels
+      - name: Apply available labels
         uses: actions/github-script@v7
         env:
           AROMA: ${{ needs.changes.outputs.aroma }}
@@ -98,7 +98,9 @@ jobs:
             });
             const existingNames = new Set(existing.map((label) => label.name));
 
-            const desired = new Set(["contour:nomad"]);
+            // contour:nomad — legacy (см. labels.md): parallel-track концепт умер
+            // после split legacy, на новые PR не навешиваем.
+            const desired = new Set();
             if (process.env.AROMA === "true") desired.add("scope:aroma-web");
             if (process.env.MASTER === "true") desired.add("scope:master-web");
             if (process.env.BACKEND === "true") desired.add("scope:backend");
@@ -144,7 +146,7 @@ jobs:
             }
 
             const summary = [
-              "## Nomad review flags",
+              "## Review flags",
               `Human review required: ${needsHumanReview ? "yes" : "no"}`,
               `Applied labels: ${addable.length > 0 ? addable.join(", ") : "none"}`,
               `Missing labels in repo settings: ${missing.length > 0 ? missing.join(", ") : "none"}`,

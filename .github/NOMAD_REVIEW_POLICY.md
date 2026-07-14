@@ -134,32 +134,36 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 
 Не включать пока:
 
-1. auto-merge;
-2. branch protection, если required checks ещё нестабильны.
+1. auto-merge (self-merge выполняется вручную командой, см. CLAUDE.md §5.6);
+2. required status checks — до появления always-running gate-job (см. Phase 2).
 
-### Phase 2
+### Phase 2 — включено
 
-После стабилизации CI вручную включить branch protection или ruleset для `main`:
+Репозиторий публичный, на `main` включена branch protection:
 
-1. require 1 approving review;
-2. require `CODEOWNERS` review для process files;
-3. require relevant checks;
-4. не включать auto-merge до отдельного решения.
+1. **PR обязателен** для изменения `main` — прямой push/force-push/удаление запрещены;
+2. **`enforce_admins: true`** — правило связывает всех, включая владельца и агентов
+   (CLAUDE.md §5 «не писать в `main` напрямую» стало hard-гарантией);
+3. **required approving reviews = 0** — self-merge сохранён (CLAUDE.md §5.6): safe-PR
+   Claude мерджит сам, human review для risk-PR остаётся процедурным (label
+   `risk:human-review` + ожидание), не hard-gate.
 
-> ⚠️ **Ограничение плана.** На приватном репозитории free-плана branch protection
-> API и rulesets недоступны (`403 Upgrade to GitHub Pro`). До перехода на Pro/Team
-> или публикации репозитория Phase 2 неисполним на GitHub-стороне — enforcement
-> держится на CI-гейтах и self-merge дисциплине (CLAUDE.md §5).
+### Required status checks — пока НЕ включены
 
-Рекомендуемые required checks:
+Все воркфлоу используют path-фильтры (`on.paths` + `if: needs.changes...`), поэтому
+если пометить чек required, PR, не трогающий его пути, **навсегда зависнет** в
+ожидании чека, который не запустится. Прежде чем делать чеки required, нужен
+always-running aggregating gate-job (один чек, который всегда репортит и агрегирует
+результат остальных).
+
+Кандидаты в required (после появления gate-job):
 
 1. `nomad-aroma-build`
 2. `nomad-master-build`
 3. `nomad-backend-build`
 4. `nomad-bot-build`
 5. `nomad-smoke`
-
-Если используется GitHub ruleset с path targeting, применять эти checks только для активных path.
+6. `nomad-docs-lint`
 
 ## Docs sync
 
