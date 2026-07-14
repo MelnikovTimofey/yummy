@@ -460,7 +460,7 @@ const seedStaffAccounts: SeedStaffAccount[] = [
     login: 'nomad',
     password: 'nomad',
     passwordSalt: 'seed:staff-nomad',
-    name: 'Nomad Staff',
+    name: 'Ателье Staff',
     role: 'master',
     active: true,
   },

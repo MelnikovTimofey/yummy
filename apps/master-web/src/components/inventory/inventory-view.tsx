@@ -1204,7 +1204,7 @@ export const InventoryView = ({
                   label="Производитель"
                   value={editorDraft.manufacturer}
                   suggestions={manufacturerOptions}
-                  placeholder="Nomad Reserve"
+                  placeholder="Ателье Reserve"
                   disabled={saveStatus === 'loading'}
                   onChange={(value) => updateEditorDraft('manufacturer', value)}
                 />
