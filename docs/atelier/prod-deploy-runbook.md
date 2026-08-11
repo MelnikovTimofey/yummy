@@ -1,5 +1,9 @@
 # Арома Ателье — Prod Deploy Runbook
 
+> ℹ️ **Действующего прод-контура нет** — прошлый хост выведен из эксплуатации
+> (2026-08-11). Этот runbook актуален как инструкция для нового развёртывания
+> с нуля. Пути в примерах — `/opt/atelier`.
+
 Развёртывание всего контура Арома Ателье на одном облачном VPS: `docker compose` +
 managed Postgres + Caddy (авто-TLS). Покрывает backend, Арома Ателье, Мастер и
 Telegram-бот.
@@ -16,7 +20,7 @@ Telegram-бот.
 2. **VPS**: 2 vCPU / 4 GB / Ubuntu 22.04+, установлены Docker и docker compose
    plugin. Firewall: наружу только `80`, `443`, SSH.
 3. **DNS**: три A-записи на IP VPS — гостевой, мастер и API домены
-   (например `nomad.<домен>`, `master.nomad.<домен>`, `api.nomad.<домен>`).
+   (например `atelier.<домен>`, `master.atelier.<домен>`, `api.atelier.<домен>`).
 
 ## 2. Конфигурация
 
@@ -45,7 +49,7 @@ docker compose -f docker-compose.prod.yml logs -f backend   # дождаться
 #    Снэпшот содержит ТОЛЬКО продуктовые таблицы (без staff/auth) — схему уже
 #    создал migrate deploy на шаге 1, поэтому restore идёт ПОСЛЕ старта backend.
 pg_restore --no-owner --data-only --disable-triggers \
-  -d "$DATABASE_URL" snapshots/nomad-product-data.dump
+  -d "$DATABASE_URL" snapshots/atelier-product-data.dump
 #    → ~11505 табаков (inStock=true) + 15 миксов + 5 prepared-рейлов.
 #    Предупреждение `unrecognized configuration parameter "transaction_timeout"`
 #    на PG16 безвредно (дамп снят на PG17) — данные восстанавливаются полностью.

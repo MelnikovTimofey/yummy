@@ -60,7 +60,7 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 
 ## Снэпшот для быстрого развёртывания
 
-В репозитории лежит [`../../snapshots/nomad-product-data.dump`](../../snapshots/nomad-product-data.dump)
+В репозитории лежит [`../../snapshots/atelier-product-data.dump`](../../snapshots/atelier-product-data.dump)
 — custom-format `pg_restore` дамп **только продуктовых таблиц** (`Tobacco`,
 `Mix`, `MixComponent`, `Rail`, `RailMix`), ~1.3 МБ. Им
 поднимают готовое наполнение за секунды без краулинга htreviews — см. раздел
@@ -73,7 +73,7 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 docker exec yummy-db-1 pg_dump -U atelier -d atelier -Fc --no-owner --no-privileges \
   -t 'public."Tobacco"' -t 'public."Mix"' -t 'public."MixComponent"' \
   -t 'public."Rail"' -t 'public."RailMix"' -f /tmp/product.dump
-docker cp yummy-db-1:/tmp/product.dump snapshots/nomad-product-data.dump
+docker cp yummy-db-1:/tmp/product.dump snapshots/atelier-product-data.dump
 ```
 
 ## Бэкапы и restore

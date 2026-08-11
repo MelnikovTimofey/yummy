@@ -4,14 +4,14 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/nomad/services/telegram-bot
+WorkingDirectory=/opt/atelier/services/telegram-bot
 Environment=NODE_ENV=production
-EnvironmentFile=/etc/nomad/telegram-bot.env
-ExecStart=/usr/bin/node /opt/nomad/services/telegram-bot/dist/index.js
+EnvironmentFile=/etc/atelier/telegram-bot.env
+ExecStart=/usr/bin/node /opt/atelier/services/telegram-bot/dist/index.js
 Restart=always
 RestartSec=5
-User=nomad
-Group=nomad
+User=atelier
+Group=atelier
 
 [Install]
 WantedBy=multi-user.target

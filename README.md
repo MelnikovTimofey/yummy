@@ -60,7 +60,7 @@ docker compose down -v                    # стоп + сброс данных (
 #### Быстрое развёртывание (из снэпшота)
 
 В репозитории лежит готовый снэпшот продуктовых данных
-[`snapshots/nomad-product-data.dump`](snapshots/nomad-product-data.dump)
+[`snapshots/atelier-product-data.dump`](snapshots/atelier-product-data.dump)
 (custom-format `pg_restore`, ~1.3 МБ): весь каталог табаков (~11505, все
 `inStock=true`) + 15 миксов + 5 prepared-рейлов. Разворачивается за секунды,
 сеть и краулинг htreviews не нужны:
@@ -73,7 +73,7 @@ cd apps/backend && npx prisma db push && npm run prisma:seed && cd -
 docker compose exec -T db psql -U atelier -d atelier \
   -c 'TRUNCATE "Tobacco","Mix","MixComponent","Rail","RailMix" CASCADE;'
 docker compose exec -T db pg_restore -U atelier -d atelier --no-owner --data-only --disable-triggers \
-  < snapshots/nomad-product-data.dump
+  < snapshots/atelier-product-data.dump
 docker compose up -d backend aroma-web master-web
 ```
 

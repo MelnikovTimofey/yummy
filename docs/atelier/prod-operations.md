@@ -1,15 +1,21 @@
 # Арома Ателье — Prod Operations (эксплуатация)
 
+> ⚠️ **Прод-хост выведен из эксплуатации (2026-08-11).** Действующего прод-контура
+> нет. Координаты ниже (IP, домены, managed PG) — **историческая справка от
+> прошлого деплоя, они больше не активны**. Документ сохранён как шаблон
+> процедур и накопленных граблей для будущего развёртывания: при новом деплое
+> заменить координаты на актуальные.
+
 День-2 инструкция по работе с прод-контуром Арома Ателье: запуск, остановка,
 обслуживание, обновление, откат, диагностика. Первичное развёртывание — в
 [`prod-deploy-runbook.md`](prod-deploy-runbook.md).
 
-## 0. Координаты и доступ
+## 0. Координаты и доступ (историческое — хост удалён)
 
 | Что | Значение |
 |---|---|
 | Сервер (VPS) | `147.45.146.23`, SSH **порт 49222**, только по ключу |
-| Каталог проекта | `/opt/nomad-yummy` |
+| Каталог проекта | `/opt/atelier` |
 | Compose-файл | `docker-compose.prod.yml` (всегда с `--env-file .env`) |
 | Сервисы | `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
 | База данных | managed Postgres (внешняя), приватно `192.168.0.4:5432`, БД `default_db` |
@@ -17,10 +23,10 @@
 
 ```bash
 ssh -p 49222 root@147.45.146.23
-cd /opt/nomad-yummy
+cd /opt/atelier
 ```
 
-> Все команды ниже выполняются из `/opt/nomad-yummy`. `dc` для краткости можно
+> Все команды ниже выполняются из `/opt/atelier`. `dc` для краткости можно
 > завести алиасом:
 > ```bash
 > alias dc='docker compose -f docker-compose.prod.yml --env-file .env'
@@ -83,7 +89,7 @@ curl -sS -o /dev/null -w 'master %{http_code}\n' https://master.yummy-aroma-atel
 ## 4. Обновление (выкатка новой версии)
 
 ```bash
-cd /opt/nomad-yummy
+cd /opt/atelier
 git pull origin main
 
 # пересобрать и перезапустить изменённые сервисы
@@ -115,20 +121,20 @@ docker compose -f docker-compose.prod.yml --env-file .env restart telegram-bot
 ```bash
 # пароль БД из .env (DATABASE_URL). Дамп всей базы:
 PGPASSWORD='<пароль>' pg_dump -h 192.168.0.4 -U gen_user -d default_db -Fc \
-  -f /root/nomad-$(date +%F).dump
+  -f /root/atelier-$(date +%F).dump
 ```
 
 ### Снэпшот только продуктовых данных / restore
-Снэпшот лежит в репо: `snapshots/nomad-product-data.dump` (data-only, 5 таблиц).
+Снэпшот лежит в репо: `snapshots/atelier-product-data.dump` (data-only, 5 таблиц).
 Восстановление в managed PG — **в порядке FK, без `--disable-triggers`**
 (у `gen_user` нет прав суперюзера):
 ```bash
 PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
   -h 192.168.0.4 -U gen_user -d default_db \
-  -t Tobacco -t Mix -t Rail snapshots/nomad-product-data.dump
+  -t Tobacco -t Mix -t Rail snapshots/atelier-product-data.dump
 PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
   -h 192.168.0.4 -U gen_user -d default_db \
-  -t MixComponent -t RailMix snapshots/nomad-product-data.dump
+  -t MixComponent -t RailMix snapshots/atelier-product-data.dump
 ```
 
 ### Daily-код доступа (гость) и Telegram-allowlist
@@ -158,7 +164,7 @@ docker system prune -f      # убрать висячие образы/кэш (v
 ## 7. Откат
 
 ```bash
-cd /opt/nomad-yummy
+cd /opt/atelier
 git log --oneline -5                 # найти предыдущий рабочий коммит/тег
 git checkout <commit-или-tag>
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
