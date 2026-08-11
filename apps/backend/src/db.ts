@@ -7,7 +7,7 @@ process.env.DATABASE_URL ??= process.env.NODE_ENV === 'test'
 
 declare global {
   // eslint-disable-next-line no-var
-  var __nomadPrismaClient: PrismaClient | undefined;
+  var __prismaClient: PrismaClient | undefined;
 }
 
 const createClient = () =>
@@ -18,10 +18,10 @@ const createClient = () =>
         : ['error'],
   });
 
-export const prisma = globalThis.__nomadPrismaClient ?? createClient();
+export const prisma = globalThis.__prismaClient ?? createClient();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalThis.__nomadPrismaClient = prisma;
+  globalThis.__prismaClient = prisma;
 }
 
 export default prisma;

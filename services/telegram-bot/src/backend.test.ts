@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { NomadBackendClient } from './backend';
+import { BackendClient } from './backend';
 
 type FetchCall = {
   url: string;
@@ -69,7 +69,7 @@ test('ensureDailyCode calls automation endpoint with automation header', async (
         },
       }),
     ],
-    async () => new NomadBackendClient(buildConfig()).ensureDailyCode(),
+    async () => new BackendClient(buildConfig()).ensureDailyCode(),
   );
 
   assert.equal(result.state, 'created');
@@ -101,7 +101,7 @@ test('rotateDailyCode calls automation rotate endpoint', async () => {
         },
       }),
     ],
-    async () => new NomadBackendClient(buildConfig()).rotateDailyCode(),
+    async () => new BackendClient(buildConfig()).rotateDailyCode(),
   );
 
   assert.equal(result.state, 'rotated');
@@ -132,7 +132,7 @@ test('getCurrentDailyCode returns current active item when it exists', async () 
         },
       }),
     ],
-    async () => new NomadBackendClient(buildConfig()).getCurrentDailyCode(),
+    async () => new BackendClient(buildConfig()).getCurrentDailyCode(),
   );
 
   assert.equal(result.item?.id, 'daily-code-current');
@@ -154,7 +154,7 @@ test('telegram operator automation endpoints read linked operator and link conta
           linkedChatId: '362223626',
           linkedTelegramUserId: '998877',
           linkedUsername: 'anna_nomad',
-          linkedDisplayName: 'Анна Nomad',
+          linkedDisplayName: 'Анна Тестовый',
           linkedAt: new Date().toISOString(),
           lastCodeRequestedAt: null,
           createdAt: new Date().toISOString(),
@@ -170,7 +170,7 @@ test('telegram operator automation endpoints read linked operator and link conta
           linkedChatId: '362223626',
           linkedTelegramUserId: '998877',
           linkedUsername: 'anna_nomad',
-          linkedDisplayName: 'Анна Nomad',
+          linkedDisplayName: 'Анна Тестовый',
           linkedAt: new Date().toISOString(),
           lastCodeRequestedAt: null,
           createdAt: new Date().toISOString(),
@@ -179,7 +179,7 @@ test('telegram operator automation endpoints read linked operator and link conta
       }),
     ],
     async () => {
-      const client = new NomadBackendClient(buildConfig());
+      const client = new BackendClient(buildConfig());
       const current = await client.getTelegramOperatorByChatId(362223626);
       const linked = await client.linkTelegramOperator({
         phone: '+79991234567',
@@ -259,7 +259,7 @@ test('telegram automation state endpoints use automation header and payload', as
       }),
     ],
     async () => {
-      const client = new NomadBackendClient(buildConfig());
+      const client = new BackendClient(buildConfig());
       const current = await client.getTelegramAutomationState();
       const reported = await client.reportTelegramAutomationState({
         event: 'heartbeat',

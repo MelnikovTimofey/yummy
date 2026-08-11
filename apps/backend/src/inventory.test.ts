@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { tobaccos as seedTobaccos } from './catalog';
-import { resetNomadState } from './state';
+import { resetAppState } from './state';
 
 const loginStaff = async (app: ReturnType<typeof buildApp>) => {
   const response = await app.inject({
@@ -21,7 +21,7 @@ const loginStaff = async (app: ReturnType<typeof buildApp>) => {
 };
 
 test.beforeEach(async () => {
-  await resetNomadState();
+  await resetAppState();
 });
 
 test('staff inventory endpoints expose filtered inventory with dependent mixes and mutate stock', async () => {

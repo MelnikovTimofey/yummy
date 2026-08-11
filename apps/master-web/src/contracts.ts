@@ -1419,7 +1419,7 @@ export const formatFlavorProfileLabel = (value: string) => {
 
 // Канонические ключи категорий вкуса для редактора инвентаря — английские
 // ключи, совпадающие с flavorProfileLabels и с тем, что бэкенд хранит в
-// NomadTobacco.flavorProfiles. Не русские лейблы: иначе выбранная категория не
+// Tobacco.flavorProfiles. Не русские лейблы: иначе выбранная категория не
 // подсветится, а клик запишет в draft русский лейбл и затрёт ключ (issue #117).
 export const INVENTORY_FLAVOR_PROFILE_KEYS = [
   'fruity',

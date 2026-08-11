@@ -4,7 +4,7 @@ import type { HtReviewsImportOptions } from './types';
 export const HTREVIEWS_BASE_URL = 'https://htreviews.org';
 const DEFAULT_TIMEOUT_MS = 20_000;
 const DEFAULT_DELAY_MS = 250;
-const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; NomadCatalogPreview/0.1; +https://htreviews.org)';
+const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; AtelierCatalogPreview/0.1; +https://htreviews.org)';
 
 export class HtReviewsClient {
   readonly baseUrl: string;

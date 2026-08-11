@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { config } from './config';
-import { resetNomadState } from './state';
+import { resetAppState } from './state';
 
 const login = async (app: ReturnType<typeof buildApp>, loginName: string, password: string) => {
   const response = await app.inject({
@@ -20,7 +20,7 @@ const login = async (app: ReturnType<typeof buildApp>, loginName: string, passwo
 };
 
 test.beforeEach(async () => {
-  await resetNomadState();
+  await resetAppState();
 });
 
 test('daily codes CRUD is available to admin and nomad', async () => {
@@ -382,7 +382,7 @@ test('telegram operators CRUD is admin-only', async () => {
         authorization: `Bearer ${adminToken}`,
       },
       payload: {
-        name: 'Марат Nomad',
+        name: 'Марат Тестовый',
         phone: '+7 999 111-22-33',
         active: false,
       },
@@ -393,7 +393,7 @@ test('telegram operators CRUD is admin-only', async () => {
       item: { id: string; name: string; phone: string; active: boolean };
     };
     assert.equal(updatedBody.item.id, createdBody.item.id);
-    assert.equal(updatedBody.item.name, 'Марат Nomad');
+    assert.equal(updatedBody.item.name, 'Марат Тестовый');
     assert.equal(updatedBody.item.phone, '+79991112233');
     assert.equal(updatedBody.item.active, false);
 

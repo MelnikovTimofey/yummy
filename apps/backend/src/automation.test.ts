@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { config } from './config';
-import { createNomadDailyCodeValue, getNomadDailyCodeWindow } from './daily-code';
-import { resetNomadState } from './state';
+import { createDailyCodeValue, getDailyCodeWindow } from './daily-code';
+import { resetAppState } from './state';
 
 const automationHeaders = {
   'x-nomad-automation-key': config.automationKey,
@@ -24,16 +24,16 @@ const login = async (app: ReturnType<typeof buildApp>, loginName: string, passwo
 };
 
 test.beforeEach(async () => {
-  await resetNomadState();
+  await resetAppState();
 });
 
 test('daily code windows are aligned to the Moscow day boundary', () => {
   const referenceDate = new Date('2026-03-23T21:30:00.000Z');
-  const window = getNomadDailyCodeWindow(referenceDate);
+  const window = getDailyCodeWindow(referenceDate);
 
   assert.equal(window.startsAt.toISOString(), '2026-03-23T21:00:00.000Z');
   assert.equal(window.endsAt.toISOString(), '2026-03-24T21:00:00.000Z');
-  const generated = createNomadDailyCodeValue(referenceDate);
+  const generated = createDailyCodeValue(referenceDate);
   assert.equal(generated.length, 4);
   assert.match(generated, /^[0-9]{4}$/);
 });

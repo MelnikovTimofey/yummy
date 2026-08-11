@@ -1,5 +1,5 @@
 import { prisma } from './db';
-import { ensureNomadState } from './state';
+import { ensureAppState } from './state';
 import type { StaffRole, StaffUser } from './auth';
 
 export type AuditEntityType =
@@ -91,7 +91,7 @@ const mapAuditEvent = (record: {
 });
 
 export const recordAuditEvent = async (payload: AuditEventInput) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const created = await prisma.auditEvent.create({
     data: {
@@ -110,7 +110,7 @@ export const recordAuditEvent = async (payload: AuditEventInput) => {
 };
 
 export const listAuditEvents = async (limit = 40) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const records = await prisma.auditEvent.findMany({
     orderBy: {

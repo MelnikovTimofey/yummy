@@ -44,7 +44,7 @@ export type HtReviewsTobaccoDetail = {
   reviewCount: number | null;
 };
 
-export type NomadTaxonomyCandidate = {
+export type TaxonomyCandidate = {
   flavorProfiles: string[];
   flavors: string[];
   flavorTags: string[];
@@ -71,7 +71,7 @@ export type HtReviewsImportedTobacco = {
   reviewsCount: number | null;
   viewsCount: number | null;
   rawTags: string[];
-  nomadCandidate: NomadTaxonomyCandidate;
+  nomadCandidate: TaxonomyCandidate;
 };
 
 export type HtReviewsCatalogSnapshot = {

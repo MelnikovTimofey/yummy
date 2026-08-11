@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 const env = (value: string | undefined, fallback = '') => value?.trim() || fallback;
 
 const login = env(process.env.NOMAD_BOOTSTRAP_ADMIN_LOGIN, 'admin');
-const name = env(process.env.NOMAD_BOOTSTRAP_ADMIN_NAME, 'Nomad Admin');
+const name = env(process.env.NOMAD_BOOTSTRAP_ADMIN_NAME, 'Ателье Admin');
 const password = env(process.env.NOMAD_BOOTSTRAP_ADMIN_PASSWORD);
 
 const createSecretHash = (secret: string, salt: string) => crypto.scryptSync(secret, salt, 64).toString('hex');

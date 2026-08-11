@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { buildNomadTaxonomyCandidate } from '../src/integrations/htreviews/taxonomy';
+import { buildTaxonomyCandidate } from '../src/integrations/htreviews/taxonomy';
 
 process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
 
@@ -29,7 +29,7 @@ const parseList = (value: string | null): string[] => {
 };
 
 // Сериализуем как htreviews-синк (src/integrations/htreviews/sync.ts): кандидат
-// уже trimmed/dedup/sorted внутри buildNomadTaxonomyCandidate.
+// уже trimmed/dedup/sorted внутри buildTaxonomyCandidate.
 const serializeList = (items: string[]) => JSON.stringify(items);
 
 const main = async () => {
@@ -50,7 +50,7 @@ const main = async () => {
       continue;
     }
     emptyFlavors++;
-    const candidate = buildNomadTaxonomyCandidate(parseList(row.rawSourceTags));
+    const candidate = buildTaxonomyCandidate(parseList(row.rawSourceTags));
     if (candidate.flavors.length) {
       updates.push({ id: row.id, name: row.name, manufacturer: row.manufacturer, flavors: candidate.flavors });
     }

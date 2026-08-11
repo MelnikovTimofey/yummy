@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
-import { resetNomadState } from './state';
+import { resetAppState } from './state';
 
 test.beforeEach(async () => {
-  await resetNomadState();
+  await resetAppState();
 });
 
 test('guest access code is verified from persisted daily code storage', async () => {

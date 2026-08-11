@@ -1,16 +1,16 @@
 import { loadConfig } from './config';
-import { NomadBackendClient } from './backend';
-import { NomadTelegramBot } from './bot';
+import { BackendClient } from './backend';
+import { TelegramBot } from './bot';
 import { JsonStateStore } from './storage';
 import { TelegramClient } from './telegram';
 
 export const createBot = () => {
   const config = loadConfig();
-  const backend = new NomadBackendClient(config);
+  const backend = new BackendClient(config);
   const telegram = new TelegramClient(config.telegramBotToken, config.telegramApiBaseUrl);
   const stateStore = new JsonStateStore(config.statePath);
 
-  return new NomadTelegramBot({
+  return new TelegramBot({
     config,
     backend,
     telegram,

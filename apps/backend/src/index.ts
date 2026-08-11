@@ -4,6 +4,6 @@ import { config } from './config';
 const app = buildApp();
 
 app.listen({ host: config.host, port: config.port }).catch((error) => {
-  app.log.error(error, 'Failed to start Nomad backend');
+  app.log.error(error, 'Failed to start backend');
   process.exit(1);
 });

@@ -1,4 +1,4 @@
-import type { NomadTaxonomyCandidate } from './types';
+import type { TaxonomyCandidate } from './types';
 
 const FRUITY_TAGS = new Set([
   'абрикос',
@@ -244,7 +244,7 @@ const normalizeTag = (value: string) => value.toLowerCase().replace(/ё/g, 'е')
 
 const includesTag = (tag: string, collection: Set<string>) => collection.has(tag);
 
-export const buildNomadTaxonomyCandidate = (rawTags: string[]): NomadTaxonomyCandidate => {
+export const buildTaxonomyCandidate = (rawTags: string[]): TaxonomyCandidate => {
   const normalizedTags = Array.from(new Set(rawTags.map(normalizeTag).filter(Boolean)));
   const flavorProfiles = new Set<string>();
   const flavorTags = new Set<string>();

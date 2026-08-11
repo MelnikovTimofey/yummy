@@ -8,7 +8,7 @@ import {
   parseObjectListResponse,
   parseTobaccoPage,
 } from './parser';
-import { buildNomadTaxonomyCandidate } from './taxonomy';
+import { buildTaxonomyCandidate } from './taxonomy';
 import type {
   HtReviewsBrandRef,
   HtReviewsCatalogSnapshot,
@@ -35,7 +35,7 @@ const mergeSummaryAndDetail = (
   detail: HtReviewsTobaccoDetail | null,
 ): HtReviewsImportedTobacco => {
   const rawTags = detail?.rawTags.length ? detail.rawTags : [];
-  const nomadCandidate = buildNomadTaxonomyCandidate(rawTags);
+  const nomadCandidate = buildTaxonomyCandidate(rawTags);
 
   return {
     manufacturer: detail?.brand.name ?? summary.brand.name,

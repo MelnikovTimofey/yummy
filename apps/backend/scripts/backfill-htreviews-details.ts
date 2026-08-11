@@ -3,7 +3,7 @@ import { prisma } from '../src/db';
 import { HtReviewsClient } from '../src/integrations/htreviews/client';
 import { buildHtReviewsDescription } from '../src/integrations/htreviews/description';
 import { parseTobaccoPage } from '../src/integrations/htreviews/parser';
-import { buildNomadTaxonomyCandidate } from '../src/integrations/htreviews/taxonomy';
+import { buildTaxonomyCandidate } from '../src/integrations/htreviews/taxonomy';
 
 const toInt = (value: string | undefined, fallback: number) => {
   if (!value) {
@@ -128,7 +128,7 @@ async function main() {
       try {
         const html = await client.fetchText(current.sourceUrl!);
         const detail = parseTobaccoPage(html, client.baseUrl, current.sourceUrl!);
-        const taxonomy = buildNomadTaxonomyCandidate(detail.rawTags);
+        const taxonomy = buildTaxonomyCandidate(detail.rawTags);
 
         await prisma.tobacco.update({
           where: {
