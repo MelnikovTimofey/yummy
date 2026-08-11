@@ -1,9 +1,5 @@
 # Review Policy — Арома Ателье
 
-> CI-идентификаторы (`nomad-review-flags`, `nomad-smoke`, `nomad-*-build`) пока
-> сохраняют префикс `nomad-` — они переименовываются отдельным слайсом (issue #13),
-> чтобы смена имён чеков не смешивалась с этой правкой.
-
 ## Назначение
 
 Этот документ фиксирует GitHub-layer репозитория Арома Ателье.
@@ -157,12 +153,12 @@ always-running aggregating gate-job (один чек, который всегд�
 
 Кандидаты в required (после появления gate-job):
 
-1. `nomad-aroma-build`
-2. `nomad-master-build`
-3. `nomad-backend-build`
-4. `nomad-bot-build`
-5. `nomad-smoke`
-6. `nomad-docs-lint`
+1. `atelier-aroma-build`
+2. `atelier-master-build`
+3. `atelier-backend-build`
+4. `atelier-bot-build`
+5. `atelier-smoke`
+6. `atelier-docs-lint`
 
 ## Docs sync
 

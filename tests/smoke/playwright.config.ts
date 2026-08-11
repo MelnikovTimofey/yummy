@@ -8,9 +8,9 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [
     ['line'],
-    ['html', { open: 'never', outputFolder: '../../output/playwright/nomad-quality/html-report' }],
+    ['html', { open: 'never', outputFolder: '../../output/playwright/atelier-quality/html-report' }],
   ],
-  outputDir: '../../output/playwright/nomad-quality/test-results',
+  outputDir: '../../output/playwright/atelier-quality/test-results',
   use: {
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

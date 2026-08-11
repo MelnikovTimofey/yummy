@@ -163,8 +163,8 @@ Production-ветка репозитория — `main`. Соглашение п
 5. Self-review до merge. Изменения схемы/auth/env/контракта/процесса требуют
    человеческого ревью — см. `.github/REVIEW_POLICY.md`.
 6. **Self-merge по правилу:** если PR не триггерит `risk:human-review` по
-   `.github/REVIEW_POLICY.md` (CI-чек `nomad-review-flags` = pass)
-   и все required CI checks зелёные (включая `nomad-smoke`, если он
+   `.github/REVIEW_POLICY.md` (CI-чек `atelier-review-flags` = pass)
+   и все required CI checks зелёные (включая `atelier-smoke`, если он
    запускался) — Claude мерджит PR сам командой
    `gh pr merge <num> --squash --delete-branch`, не дожидаясь
    подтверждения. «Оранжевый» smoke не мерджить — см. §3.
