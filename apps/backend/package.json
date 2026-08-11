@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=nomad_test' NOMAD_ALLOW_STATE_RESET=1 NODE_ENV=test prisma db push --skip-generate && DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=nomad_test' NOMAD_ALLOW_STATE_RESET=1 NODE_ENV=test tsx --test --test-concurrency=1 $(find src -type f \\( -name '*.test.ts' -o -name '*.test.tsx' \\) | sort)",
+    "test": "DATABASE_URL='postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=atelier_test' ATELIER_ALLOW_STATE_RESET=1 NODE_ENV=test prisma db push --skip-generate && DATABASE_URL='postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=atelier_test' ATELIER_ALLOW_STATE_RESET=1 NODE_ENV=test tsx --test --test-concurrency=1 $(find src -type f \\( -name '*.test.ts' -o -name '*.test.tsx' \\) | sort)",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",

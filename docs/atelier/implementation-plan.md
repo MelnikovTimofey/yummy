@@ -49,7 +49,7 @@
 
 ### Assumptions
 
-* `assumption`: staff готовы работать с одной общей учётной записью `nomad` на MVP.
+* `assumption`: staff готовы работать с одной общей учётной записью `atelier` на MVP.
 * `assumption`: Telegram-боту достаточно staff-чата или whitelist сотрудников без сложной ACL.
 * `assumption`: rule-based рекомендации дадут достаточное качество на старте и ML можно отложить.
 * `assumption`: в inventory достаточно бинарного статуса `в наличии / не в наличии`, без партий и остатков по граммам.

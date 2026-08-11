@@ -785,7 +785,7 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
   }
 
   if (!role) {
-    return { error: 'role must be admin or nomad' };
+    return { error: 'role must be admin or master' };
   }
 
   const passwordSalt = password ? `seed:${id}:password:${Date.now()}` : current.passwordSalt;

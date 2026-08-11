@@ -33,7 +33,7 @@ export const main = async () => {
 
 if (require.main === module) {
   void main().catch((error) => {
-    console.error('[nomad-telegram-bot] fatal error', error);
+    console.error('[telegram-bot] fatal error', error);
     process.exit(1);
   });
 }

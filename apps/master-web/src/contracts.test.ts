@@ -651,7 +651,7 @@ test('sortRails keeps active statistical rails first', () => {
 test('normalizeDailyAccessCodeRecord preserves display code and dates', () => {
   const record = normalizeDailyAccessCodeRecord({
     codeId: 'code-1',
-    codeValue: 'NOMAD-2026',
+    codeValue: 'ATL-2026',
     codeLabel: 'Сегодня',
     active: false,
     startsAt: '2026-03-23T08:00:00.000Z',
@@ -660,7 +660,7 @@ test('normalizeDailyAccessCodeRecord preserves display code and dates', () => {
 
   assert.deepEqual(record, {
     id: 'code-1',
-    codeValue: 'NOMAD-2026',
+    codeValue: 'ATL-2026',
     codeLabel: 'Сегодня',
     active: false,
     startsAt: '2026-03-23T08:00:00.000Z',
@@ -671,14 +671,14 @@ test('normalizeDailyAccessCodeRecord preserves display code and dates', () => {
 test('normalizeStaffAccountRecord defaults to master role', () => {
   const record = normalizeStaffAccountRecord({
     id: 'staff-1',
-    login: 'nomad',
+    login: 'atelier',
     name: 'Кальянный мастер',
     active: true,
   });
 
   assert.deepEqual(record, {
     id: 'staff-1',
-    login: 'nomad',
+    login: 'atelier',
     name: 'Кальянный мастер',
     role: 'master',
     active: true,
@@ -712,7 +712,7 @@ test('sortStaffAccounts keeps active admins first', () => {
   const sorted = sortStaffAccounts([
     {
       id: 'staff-2',
-      login: 'nomad',
+      login: 'atelier',
       name: 'Ателье',
       role: 'master',
       active: true,
@@ -746,7 +746,7 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastRotateCodeValue: null,
     lastBroadcastAt: '2026-03-23T09:00:00.000Z',
     lastBroadcastCodeId: 'daily-code-default',
-    lastBroadcastCodeValue: 'NOMAD-2026',
+    lastBroadcastCodeValue: 'ATL-2026',
     lastBroadcastDayKey: '2026-03-23',
     lastRequestAt: '2026-03-23T12:00:00.000Z',
     lastRequestChatId: '362223626',
@@ -754,7 +754,7 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastRequestOperatorName: 'Анна',
     lastRequestPhone: '+79991234567',
     lastRequestCodeId: 'daily-code-default',
-    lastRequestCodeValue: 'NOMAD-2026',
+    lastRequestCodeValue: 'ATL-2026',
     lastErrorAt: '2026-03-23T10:21:00.000Z',
     lastErrorMessage: 'Telegram request timeout',
     updatedAt: '2026-03-23T10:21:00.000Z',
@@ -769,7 +769,7 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastRotateCodeValue: '',
     lastBroadcastAt: '2026-03-23T09:00:00.000Z',
     lastBroadcastCodeId: 'daily-code-default',
-    lastBroadcastCodeValue: 'NOMAD-2026',
+    lastBroadcastCodeValue: 'ATL-2026',
     lastBroadcastDayKey: '2026-03-23',
     lastRequestAt: '2026-03-23T12:00:00.000Z',
     lastRequestChatId: '362223626',
@@ -777,7 +777,7 @@ test('normalizeTelegramAutomationStateRecord supports nulls and health', () => {
     lastRequestOperatorName: 'Анна',
     lastRequestPhone: '+79991234567',
     lastRequestCodeId: 'daily-code-default',
-    lastRequestCodeValue: 'NOMAD-2026',
+    lastRequestCodeValue: 'ATL-2026',
     lastErrorAt: '2026-03-23T10:21:00.000Z',
     lastErrorMessage: 'Telegram request timeout',
     updatedAt: '2026-03-23T10:21:00.000Z',

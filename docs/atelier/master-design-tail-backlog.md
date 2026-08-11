@@ -270,11 +270,11 @@ human review (см. `.github/REVIEW_POLICY.md`).
 
   ```bash
   cd apps/backend && npm run db:start
-  DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
+  DATABASE_URL='postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public' \
     npx prisma db push --force-reset && npx prisma db seed
   npm run dev   # порт 3021
 
   cd ../master-web && npm run dev   # порт 5176
   ```
 
-- Логин: `admin/admin` (admin) или `nomad/nomad` (master).
+- Логин: `admin/admin` (admin) или `atelier/atelier` (master).

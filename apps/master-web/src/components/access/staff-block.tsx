@@ -276,7 +276,7 @@ export const StaffBlock = ({
                         setStaffAccountEditor((current) => ({ ...current, login: event.target.value }))
                       }
                       autoComplete="username"
-                      placeholder="nomad"
+                      placeholder="atelier"
                     />
                   </div>
                 </div>

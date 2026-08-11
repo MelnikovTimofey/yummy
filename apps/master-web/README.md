@@ -30,7 +30,7 @@ Staff/admin frontend для продукта `Мастер`.
 
 В текущем спринте реализован минимальный staff login flow:
 
-1. вход по `admin` или `nomad`;
+1. вход по `admin` или `atelier`;
 2. запрос `POST /staff/auth/login`;
 3. подтверждение через `GET /staff/auth/me`;
 4. хранение токена в `sessionStorage`;

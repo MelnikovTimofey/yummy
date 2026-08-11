@@ -619,7 +619,7 @@ p {
 .status-dot--loading {
   background: var(--warning);
   box-shadow: 0 0 0 3px var(--warning-soft);
-  animation: nomad-pulse 1.4s ease-in-out infinite;
+  animation: atelier-pulse 1.4s ease-in-out infinite;
 }
 
 .status-dot--error {
@@ -627,7 +627,7 @@ p {
   box-shadow: 0 0 0 3px var(--danger-soft);
 }
 
-@keyframes nomad-pulse {
+@keyframes atelier-pulse {
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
 }
@@ -5645,7 +5645,7 @@ input[type="checkbox"] {
 /* === Inventory editor drawer — mockup parity === */
 
 .inventory-editor-drawer {
-  /* mock-drawer = 560px (см. /tmp/nomad_template.html .drawer); +padding и
+  /* mock-drawer = 560px (см. /tmp/atelier_template.html .drawer); +padding и
      min(96vw) для очень узких viewport'ов. Перебивает общий sheet width
      820px из правила .inventory-editor-sheet выше. */
   width: min(620px, 96vw) !important;

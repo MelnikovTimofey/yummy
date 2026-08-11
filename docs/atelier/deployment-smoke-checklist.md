@@ -26,7 +26,7 @@ curl -sS https://api.nomad.example/health
 
 ```bash
 curl -sS \
-  -H 'x-nomad-automation-key: <automation-key>' \
+  -H 'x-atelier-automation-key: <automation-key>' \
   https://api.nomad.example/automation/daily-code/current
 ```
 
@@ -58,7 +58,7 @@ curl -sS \
 ## 5. Telegram bot
 
 1. Проверить, что process жив:
-   - `systemctl status nomad-telegram-bot`
+   - `systemctl status telegram-bot`
    - или `pm2 status`
 2. Проверить, что bot может достучаться до Telegram API.
 3. Проверить `/whoami`.
@@ -72,9 +72,9 @@ curl -sS \
 
 ```bash
 cd apps/backend
-NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
-NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin" \
-NOMAD_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
+ATELIER_BOOTSTRAP_ADMIN_LOGIN=atelier-admin \
+ATELIER_BOOTSTRAP_ADMIN_NAME="Ателье Admin" \
+ATELIER_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
 DATABASE_URL='postgresql://...' \
 npm run bootstrap:admin
 ```

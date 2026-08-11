@@ -104,7 +104,7 @@ export class TelegramBot {
     }
 
     if (!this.deps.config.backendAutomationToken) {
-      throw new Error('NOMAD_BACKEND_AUTOMATION_TOKEN is required');
+      throw new Error('ATELIER_BACKEND_AUTOMATION_TOKEN is required');
     }
 
     await this.safeReportState({ event: 'heartbeat' });
@@ -136,7 +136,7 @@ export class TelegramBot {
           await this.handleUpdate(update);
         }
       } catch (error) {
-        console.error('[nomad-telegram-bot] poll error', error);
+        console.error('[telegram-bot] poll error', error);
         await this.safeReportError(error);
         await this.sleep(1_000);
       }
@@ -328,7 +328,7 @@ export class TelegramBot {
     this.scheduler = setTimeout(() => {
       void this.runScheduledEnsure('scheduled')
         .catch((error) => {
-          console.error('[nomad-telegram-bot] scheduled ensure error', error);
+          console.error('[telegram-bot] scheduled ensure error', error);
           return this.safeReportError(error);
         })
         .finally(() => {
@@ -352,7 +352,7 @@ export class TelegramBot {
       const response = await this.deps.backend.getTelegramOperatorByChatId(chatId);
       return response.item;
     } catch (error) {
-      console.error('[nomad-telegram-bot] linked operator lookup failed', error);
+      console.error('[telegram-bot] linked operator lookup failed', error);
       await this.safeReportError(error);
       return null;
     }
@@ -376,7 +376,7 @@ export class TelegramBot {
     try {
       await this.deps.backend.reportTelegramAutomationState(payload);
     } catch (error) {
-      console.error('[nomad-telegram-bot] automation state report failed', error);
+      console.error('[telegram-bot] automation state report failed', error);
     }
   }
 

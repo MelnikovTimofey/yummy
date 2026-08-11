@@ -1,4 +1,4 @@
-# Reverse-proxy для прод-контура Nomad (см. docker-compose.prod.yml).
+# Reverse-proxy для прод-контура Арома Ателье (см. docker-compose.prod.yml).
 # Caddy сам выпускает и продлевает Let's Encrypt сертификаты для трёх доменов.
 # Домены и email подставляются из окружения контейнера proxy (.env).
 

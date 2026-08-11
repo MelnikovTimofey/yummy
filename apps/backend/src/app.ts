@@ -1876,7 +1876,7 @@ const authenticateStaffRequest = async (request: FastifyRequest, reply: FastifyR
   return user;
 };
 
-const AUTOMATION_HEADER = 'x-nomad-automation-key';
+const AUTOMATION_HEADER = 'x-atelier-automation-key';
 
 const authenticateAutomationRequest = (request: FastifyRequest, reply: FastifyReply) => {
   const header = request.headers[AUTOMATION_HEADER];

@@ -11,7 +11,7 @@ Telegram-бот.
 
 ## 1. Предусловия (облако — на стороне оператора)
 
-1. **Managed Postgres 16**: БД `nomad`, отдельный юзер, автобэкапы включены,
+1. **Managed Postgres 16**: БД `atelier`, отдельный юзер, автобэкапы включены,
    доступ к инстансу ограничен IP VPS, подключение `sslmode=require`.
 2. **VPS**: 2 vCPU / 4 GB / Ubuntu 22.04+, установлены Docker и docker compose
    plugin. Firewall: наружу только `80`, `443`, SSH.
@@ -26,7 +26,7 @@ cp .env.prod.example .env
 chmod 600 .env
 # заполнить .env: домены, ACME_EMAIL, PUBLIC_API_URL=https://<API_DOMAIN>,
 # DATABASE_URL (managed PG, sslmode=require),
-# NOMAD_AUTOMATION_KEY и NOMAD_TOKEN_SECRET (openssl rand -hex 32, независимые),
+# ATELIER_AUTOMATION_KEY и ATELIER_TOKEN_SECRET (openssl rand -hex 32, независимые),
 # TELEGRAM_BOT_TOKEN.
 ```
 
@@ -52,9 +52,9 @@ pg_restore --no-owner --data-only --disable-triggers \
 
 # 3. Прод-admin — ТОЛЬКО через bootstrap (НЕ prisma:seed: seed заливает демо-логины).
 docker compose -f docker-compose.prod.yml run --rm \
-  -e NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
-  -e NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin" \
-  -e NOMAD_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
+  -e ATELIER_BOOTSTRAP_ADMIN_LOGIN=atelier-admin \
+  -e ATELIER_BOOTSTRAP_ADMIN_NAME="Ателье Admin" \
+  -e ATELIER_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
   backend npm run bootstrap:admin
 
 # 4. Фронты (с реальным API-доменом в бандле), бот и proxy.
@@ -95,7 +95,7 @@ DNS A-записи и открытый `80`/`443`).
 
 ```bash
 curl -sS https://<API_DOMAIN>/health                       # status=ok
-curl -sS -H 'x-nomad-automation-key: <key>' \
+curl -sS -H 'x-atelier-automation-key: <key>' \
   https://<API_DOMAIN>/automation/daily-code/current        # не 401
 ```
 

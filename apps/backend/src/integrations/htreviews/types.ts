@@ -71,7 +71,7 @@ export type HtReviewsImportedTobacco = {
   reviewsCount: number | null;
   viewsCount: number | null;
   rawTags: string[];
-  nomadCandidate: TaxonomyCandidate;
+  taxonomyCandidate: TaxonomyCandidate;
 };
 
 export type HtReviewsCatalogSnapshot = {

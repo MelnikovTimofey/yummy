@@ -25,9 +25,9 @@
 ## Мастер
 
 - Логин `admin` работает
-- Логин `nomad` работает
+- Логин `atelier` работает
 - `admin` видит раздел `Доступ`, Telegram automation state и журнал аудита
-- `nomad` не получает доступ к admin-only данным
+- `atelier` не получает доступ к admin-only данным
 - Toggle наличия в инвентаризации работает
 - CRUD миксов и рейлов не падает на базовых сценариях
 - CRUD daily codes работает
@@ -46,7 +46,7 @@
 
 - Guest smoke пройден через Playwright CLI
 - Staff smoke пройден через Playwright CLI
-- Артефакты лежат в `output/playwright/nomad-quality`
+- Артефакты лежат в `output/playwright/atelier-quality`
 - В консоли нет product-breaking ошибок
 - Допустимый остаточный шум: React DevTools hint в dev-режиме
 

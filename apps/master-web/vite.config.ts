@@ -15,12 +15,12 @@ export default defineConfig({
     port: 5176,
   },
   // vite preview блокирует чужой Host (allowedHosts). В проде фронт за Caddy,
-  // который шлёт Host прод-домена — разрешаем его через NOMAD_ALLOWED_HOSTS
+  // который шлёт Host прод-домена — разрешаем его через ATELIER_ALLOWED_HOSTS
   // (читается при старте preview). Fallback true — для локального запуска.
   preview: {
     host: '0.0.0.0',
-    allowedHosts: process.env.NOMAD_ALLOWED_HOSTS
-      ? process.env.NOMAD_ALLOWED_HOSTS.split(',')
+    allowedHosts: process.env.ATELIER_ALLOWED_HOSTS
+      ? process.env.ATELIER_ALLOWED_HOSTS.split(',')
       : true,
   },
 });

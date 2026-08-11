@@ -45,9 +45,9 @@ const buildUpsertData = (item: HtReviewsImportedTobacco, inStock: boolean) => ({
   productionStatus: item.status,
   imageUrl: item.imageUrl,
   rawSourceTags: serializeList(item.rawTags),
-  flavorProfiles: serializeList(item.nomadCandidate.flavorProfiles),
-  flavors: serializeList(item.nomadCandidate.flavors),
-  flavorTags: serializeList(item.nomadCandidate.flavorTags),
+  flavorProfiles: serializeList(item.taxonomyCandidate.flavorProfiles),
+  flavors: serializeList(item.taxonomyCandidate.flavors),
+  flavorTags: serializeList(item.taxonomyCandidate.flavorTags),
   inStock,
 });
 

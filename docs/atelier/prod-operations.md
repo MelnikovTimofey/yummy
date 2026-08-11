@@ -132,15 +132,15 @@ PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
 ```
 
 ### Daily-код доступа (гость) и Telegram-allowlist
-Управляются из «Мастера» (вход `nomad-admin`) или ботом (`/rotate`). Не редактировать
+Управляются из «Мастера» (вход `atelier-admin`) или ботом (`/rotate`). Не редактировать
 напрямую в БД без необходимости.
 
 ### Создание/сброс staff-аккаунта
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env run --rm \
-  -e NOMAD_BOOTSTRAP_ADMIN_LOGIN=<login> \
-  -e NOMAD_BOOTSTRAP_ADMIN_NAME="<name>" \
-  -e NOMAD_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
+  -e ATELIER_BOOTSTRAP_ADMIN_LOGIN=<login> \
+  -e ATELIER_BOOTSTRAP_ADMIN_NAME="<name>" \
+  -e ATELIER_BOOTSTRAP_ADMIN_PASSWORD='<secret>' \
   backend npx -y tsx scripts/bootstrap-admin.ts
 ```
 (в прод-образе нет `tsx` как dev-зависимости — запуск через `npx -y tsx`.)
@@ -172,7 +172,7 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 |---|---|
 | `backend` не стартует, `P1000 auth failed` | неверный `DATABASE_URL`/пароль в `.env`; проверить `psql -h 192.168.0.4 -U gen_user -d default_db` |
 | `telegram-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ — нужен IPv6: `daemon.json` (`ipv6`+`ip6tables`) + IPv6-сеть в compose (см. deploy-runbook §4) |
-| фронт отдаёт `403 Blocked request ... host not allowed` | домен не в `NOMAD_ALLOWED_HOSTS`; проверить `AROMA_DOMAIN`/`MASTER_DOMAIN` в `.env`, пересобрать фронт |
+| фронт отдаёт `403 Blocked request ... host not allowed` | домен не в `ATELIER_ALLOWED_HOSTS`; проверить `AROMA_DOMAIN`/`MASTER_DOMAIN` в `.env`, пересобрать фронт |
 | Caddy не выпускает TLS | DNS не указывает на `147.45.146.23`, либо `80`/`443` недоступны снаружи; логи `proxy` |
 | `pg_restore: permission denied ... system trigger` | на managed PG нельзя `--disable-triggers`; грузить data-only в FK-порядке (см. §6) |
 | внешний доступ «висит» (рукопожатие ок, данных нет) | провайдерская inbound-фильтрация на IP; крайняя мера — сменить публичный IP |

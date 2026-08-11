@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
-process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
+process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
 const prisma = new PrismaClient();
 
@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 // из DATABASE_URL. Без флага скрипт работает в режиме превью и ничего не удаляет.
 const confirmed =
   process.argv.slice(2).some((arg) => arg === '--yes' || arg === '-y') ||
-  process.env.NOMAD_CONFIRM_CLEAN === '1';
+  process.env.ATELIER_CONFIRM_CLEAN === '1';
 
 const maskDatabaseUrl = (url: string | undefined) =>
   url?.replace(/:[^:@/]*@/, ':***@') ?? '<no DATABASE_URL>';
@@ -69,7 +69,7 @@ const main = async () => {
       '\n[clean-db] РЕЖИМ ПРЕВЬЮ — ничего не удалено.\n' +
         'Для реальной очистки запусти с подтверждением:\n' +
         '  npm run db:clean -- --yes\n' +
-        '  (или NOMAD_CONFIRM_CLEAN=1 npm run db:clean)',
+        '  (или ATELIER_CONFIRM_CLEAN=1 npm run db:clean)',
     );
     return;
   }

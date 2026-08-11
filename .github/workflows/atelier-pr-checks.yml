@@ -202,7 +202,7 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public
+      DATABASE_URL: postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
