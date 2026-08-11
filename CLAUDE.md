@@ -147,7 +147,7 @@ Production-ветка репозитория — `main`. Соглашение п
      CI/lint/format-tweaks, переименование внутренних идентификаторов.
      Не подходит для chore: схема данных, публичный контракт, auth —
      эти изменения идут через `feature` и попадают под human review
-     (см. `.github/NOMAD_REVIEW_POLICY.md`).
+     (см. `.github/REVIEW_POLICY.md`).
 
    Если сомневаешься между `feature` и `chore` — спрашивай. Правило
    большого пальца: если PR-описание начинается со слов «удалить /
@@ -161,9 +161,9 @@ Production-ветка репозитория — `main`. Соглашение п
 4. PR в `main` по `.github/pull_request_template.md`:
    **1 PR = 1 bounded context**, без смешения схемы/auth/UI/инфры.
 5. Self-review до merge. Изменения схемы/auth/env/контракта/процесса требуют
-   человеческого ревью — см. `.github/NOMAD_REVIEW_POLICY.md`.
+   человеческого ревью — см. `.github/REVIEW_POLICY.md`.
 6. **Self-merge по правилу:** если PR не триггерит `risk:human-review` по
-   `.github/NOMAD_REVIEW_POLICY.md` (CI-чек `nomad-review-flags` = pass)
+   `.github/REVIEW_POLICY.md` (CI-чек `nomad-review-flags` = pass)
    и все required CI checks зелёные (включая `nomad-smoke`, если он
    запускался) — Claude мерджит PR сам командой
    `gh pr merge <num> --squash --delete-branch`, не дожидаясь
