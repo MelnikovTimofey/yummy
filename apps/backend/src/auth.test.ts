@@ -46,8 +46,8 @@ test('staff login is resolved from persisted staff accounts', async () => {
       method: 'POST',
       url: '/staff/auth/login',
       payload: {
-        login: 'nomad',
-        password: 'nomad',
+        login: 'atelier',
+        password: 'atelier',
       },
     });
 
@@ -57,7 +57,7 @@ test('staff login is resolved from persisted staff accounts', async () => {
       user: { login: string; role: string; name: string };
     };
 
-    assert.equal(loginBody.user.login, 'nomad');
+    assert.equal(loginBody.user.login, 'atelier');
     assert.equal(loginBody.user.role, 'master');
     assert.equal(loginBody.user.name, 'Ателье Staff');
 
@@ -71,14 +71,14 @@ test('staff login is resolved from persisted staff accounts', async () => {
 
     assert.equal(me.statusCode, 200);
     const meBody = me.json() as { user: { login: string; role: string } };
-    assert.equal(meBody.user.login, 'nomad');
+    assert.equal(meBody.user.login, 'atelier');
     assert.equal(meBody.user.role, 'master');
 
     const wrongPassword = await app.inject({
       method: 'POST',
       url: '/staff/auth/login',
       payload: {
-        login: 'nomad',
+        login: 'atelier',
         password: 'wrong',
       },
     });

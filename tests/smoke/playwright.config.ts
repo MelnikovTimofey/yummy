@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const aromaBaseUrl = process.env.NOMAD_AROMA_URL ?? 'http://127.0.0.1:5174';
-const masterBaseUrl = process.env.NOMAD_MASTER_URL ?? 'http://127.0.0.1:5176';
+const aromaBaseUrl = process.env.ATELIER_AROMA_URL ?? 'http://127.0.0.1:5174';
+const masterBaseUrl = process.env.ATELIER_MASTER_URL ?? 'http://127.0.0.1:5176';
 
 export default defineConfig({
   testDir: './tests',

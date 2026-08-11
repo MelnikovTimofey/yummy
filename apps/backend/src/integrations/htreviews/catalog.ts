@@ -35,7 +35,7 @@ const mergeSummaryAndDetail = (
   detail: HtReviewsTobaccoDetail | null,
 ): HtReviewsImportedTobacco => {
   const rawTags = detail?.rawTags.length ? detail.rawTags : [];
-  const nomadCandidate = buildTaxonomyCandidate(rawTags);
+  const taxonomyCandidate = buildTaxonomyCandidate(rawTags);
 
   return {
     manufacturer: detail?.brand.name ?? summary.brand.name,
@@ -57,7 +57,7 @@ const mergeSummaryAndDetail = (
     reviewsCount: summary.reviewsCount ?? detail?.reviewCount ?? null,
     viewsCount: summary.viewsCount,
     rawTags,
-    nomadCandidate,
+    taxonomyCandidate,
   };
 };
 

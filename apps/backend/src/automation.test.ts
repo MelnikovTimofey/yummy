@@ -6,7 +6,7 @@ import { createDailyCodeValue, getDailyCodeWindow } from './daily-code';
 import { resetAppState } from './state';
 
 const automationHeaders = {
-  'x-nomad-automation-key': config.automationKey,
+  'x-atelier-automation-key': config.automationKey,
 };
 
 const login = async (app: ReturnType<typeof buildApp>, loginName: string, password: string) => {
@@ -53,7 +53,7 @@ test('automation endpoints require the automation key', async () => {
       method: 'GET',
       url: '/automation/daily-code/current',
       headers: {
-        'x-nomad-automation-key': 'wrong-key',
+        'x-atelier-automation-key': 'wrong-key',
       },
     });
 
@@ -334,7 +334,7 @@ test('automation can report and read telegram bot state', async () => {
       payload: {
         event: 'broadcast',
         codeId: 'daily-code-default',
-        codeValue: 'NOMAD-2026',
+        codeValue: 'ATL-2026',
         dayKey: '2026-03-23',
       },
     });
@@ -353,7 +353,7 @@ test('automation can report and read telegram bot state', async () => {
     assert.equal(broadcastBody.item.health, 'healthy');
     assert.ok(broadcastBody.item.lastBroadcastAt);
     assert.equal(broadcastBody.item.lastBroadcastCodeId, 'daily-code-default');
-    assert.equal(broadcastBody.item.lastBroadcastCodeValue, 'NOMAD-2026');
+    assert.equal(broadcastBody.item.lastBroadcastCodeValue, 'ATL-2026');
     assert.equal(broadcastBody.item.lastBroadcastDayKey, '2026-03-23');
 
     const error = await app.inject({
@@ -386,7 +386,7 @@ test('automation can report and read telegram bot state', async () => {
       payload: {
         event: 'rotate',
         codeId: 'daily-code-rotated',
-        codeValue: 'NOMAD-20260323-FA2481',
+        codeValue: 'ATL-20260323-FA2481',
       },
     });
 
@@ -403,7 +403,7 @@ test('automation can report and read telegram bot state', async () => {
     assert.equal(rotateBody.item.health, 'healthy');
     assert.ok(rotateBody.item.lastRotateAt);
     assert.equal(rotateBody.item.lastRotateCodeId, 'daily-code-rotated');
-    assert.equal(rotateBody.item.lastRotateCodeValue, 'NOMAD-20260323-FA2481');
+    assert.equal(rotateBody.item.lastRotateCodeValue, 'ATL-20260323-FA2481');
 
     await app.inject({
       method: 'POST',
@@ -423,7 +423,7 @@ test('automation can report and read telegram bot state', async () => {
         event: 'request',
         chatId: '362223626',
         codeId: 'daily-code-default',
-        codeValue: 'NOMAD-2026',
+        codeValue: 'ATL-2026',
       },
     });
 
@@ -446,7 +446,7 @@ test('automation can report and read telegram bot state', async () => {
     assert.equal(requestBody.item.lastRequestOperatorName, 'Анна');
     assert.equal(requestBody.item.lastRequestPhone, '+79991234567');
     assert.equal(requestBody.item.lastRequestCodeId, 'daily-code-default');
-    assert.equal(requestBody.item.lastRequestCodeValue, 'NOMAD-2026');
+    assert.equal(requestBody.item.lastRequestCodeValue, 'ATL-2026');
   } finally {
     await app.close();
   }

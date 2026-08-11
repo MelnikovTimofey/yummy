@@ -2,21 +2,21 @@ import 'dotenv/config';
 import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 
-process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
+process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
 const prisma = new PrismaClient();
 
 const env = (value: string | undefined, fallback = '') => value?.trim() || fallback;
 
-const login = env(process.env.NOMAD_BOOTSTRAP_ADMIN_LOGIN, 'admin');
-const name = env(process.env.NOMAD_BOOTSTRAP_ADMIN_NAME, 'Ателье Admin');
-const password = env(process.env.NOMAD_BOOTSTRAP_ADMIN_PASSWORD);
+const login = env(process.env.ATELIER_BOOTSTRAP_ADMIN_LOGIN, 'admin');
+const name = env(process.env.ATELIER_BOOTSTRAP_ADMIN_NAME, 'Ателье Admin');
+const password = env(process.env.ATELIER_BOOTSTRAP_ADMIN_PASSWORD);
 
 const createSecretHash = (secret: string, salt: string) => crypto.scryptSync(secret, salt, 64).toString('hex');
 
 const main = async () => {
   if (!password) {
-    throw new Error('NOMAD_BOOTSTRAP_ADMIN_PASSWORD is required');
+    throw new Error('ATELIER_BOOTSTRAP_ADMIN_PASSWORD is required');
   }
 
   const current = await prisma.staffAccount.findUnique({
@@ -83,7 +83,7 @@ const main = async () => {
 
 void main()
   .catch((error) => {
-    console.error('[nomad-backend] bootstrap-admin failed');
+    console.error('[atelier-backend] bootstrap-admin failed');
     console.error(error);
     process.exitCode = 1;
   })

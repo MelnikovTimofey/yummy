@@ -68,7 +68,7 @@ import {
   defaultInventoryListResponse,
 } from './contracts';
 
-const STORAGE_KEY = 'nomad-master-auth-v1';
+const STORAGE_KEY = 'atelier-master-auth-v1';
 
 const readStoredToken = () => {
   if (typeof window === 'undefined') {

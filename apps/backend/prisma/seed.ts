@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { getDailyCodeWindow } from '../src/daily-code';
 
-process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
+process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
 const prisma = new PrismaClient();
 
@@ -52,10 +52,10 @@ const staffAccounts = [
     active: true,
   },
   {
-    id: 'staff-nomad',
-    login: 'nomad',
-    password: 'nomad',
-    passwordSalt: 'seed:staff-nomad',
+    id: 'staff-atelier',
+    login: 'atelier',
+    password: 'atelier',
+    passwordSalt: 'seed:staff-atelier',
     name: 'Ателье Staff',
     role: 'master',
     active: true,

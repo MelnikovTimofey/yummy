@@ -33,7 +33,7 @@ docker compose up --build
 - `Арома Ателье` — http://localhost:4174
 - `Мастер` — http://localhost:4175
 - Backend API — http://localhost:3021
-- Postgres — `localhost:5433` (логин/пароль `nomad/nomad`, db `nomad`)
+- Postgres — `localhost:5433` (логин/пароль `atelier/atelier`, db `atelier`)
 
 Telegram-бот вынесен в profile `bot`, т.к. требует `TELEGRAM_BOT_TOKEN`:
 
@@ -47,7 +47,7 @@ docker compose --profile bot up --build telegram-bot
 docker compose up backend aroma-web       # частичный стек
 docker compose logs -f backend            # логи сервиса
 docker compose down                       # стоп
-docker compose down -v                    # стоп + сброс данных (volume nomad_db)
+docker compose down -v                    # стоп + сброс данных (volume atelier_db)
 ```
 
 ### Наполнение продуктовыми данными
@@ -70,9 +70,9 @@ docker compose up -d db
 # 1) схема + операционные данные (staff/intro/daily-код, демо-логин admin/admin)
 cd apps/backend && npx prisma db push && npm run prisma:seed && cd -
 # 2) заменить демо-контент продуктовыми данными из снэпшота
-docker compose exec -T db psql -U nomad -d nomad \
+docker compose exec -T db psql -U atelier -d atelier \
   -c 'TRUNCATE "Tobacco","Mix","MixComponent","Rail","RailMix" CASCADE;'
-docker compose exec -T db pg_restore -U nomad -d nomad --no-owner --data-only --disable-triggers \
+docker compose exec -T db pg_restore -U atelier -d atelier --no-owner --data-only --disable-triggers \
   < snapshots/nomad-product-data.dump
 docker compose up -d backend aroma-web master-web
 ```
@@ -126,7 +126,7 @@ HTREVIEWS_BRAND_LIMIT=1 HTREVIEWS_TOBACCO_LIMIT=10 \
 Проверить наполнение:
 
 ```bash
-docker compose exec db psql -U nomad -d nomad \
+docker compose exec db psql -U atelier -d atelier \
   -c "SELECT COUNT(*) FROM \"Tobacco\" WHERE \"sourceKind\" = 'htreviews';"
 ```
 
@@ -166,7 +166,7 @@ npm run db:start             # docker compose up -d db (порт 5433)
 # 2. Backend (отдельный терминал)
 cd apps/backend
 npm install
-export DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public'
+export DATABASE_URL='postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public'
 npx prisma db push
 npm run dev                  # http://localhost:3021
 
@@ -184,8 +184,8 @@ npm run dev                  # http://localhost:5176
 cd services/telegram-bot
 npm install
 export TELEGRAM_BOT_TOKEN=...
-export NOMAD_BACKEND_URL=http://localhost:3021
-export NOMAD_BACKEND_AUTOMATION_TOKEN=nomad-local-automation-key
+export ATELIER_BACKEND_URL=http://localhost:3021
+export ATELIER_BACKEND_AUTOMATION_TOKEN=atelier-local-automation-key
 npm run dev
 ```
 

@@ -25,17 +25,17 @@ test('broadcast delay targets configured Moscow time', () => {
 test('daily code helpers build stable values and sequences', () => {
   const dayKey = buildDayKey(new Date('2026-03-23T06:00:00.000Z'));
 
-  assert.equal(buildDailyCodeValue('NOMAD', dayKey), 'NOMAD-20260323');
-  assert.equal(buildDailyCodeValue('NOMAD', dayKey, 2), 'NOMAD-20260323-2');
+  assert.equal(buildDailyCodeValue('ATL', dayKey), 'ATL-20260323');
+  assert.equal(buildDailyCodeValue('ATL', dayKey, 2), 'ATL-20260323-2');
   assert.equal(buildDailyCodeLabel(dayKey, 2), 'Код на 23.03.2026 #2');
 
   const nextSequence = nextDailyCodeSequence(
     [
-      { codeValue: 'NOMAD-20260323' },
-      { codeValue: 'NOMAD-20260323-2' },
+      { codeValue: 'ATL-20260323' },
+      { codeValue: 'ATL-20260323-2' },
       { codeValue: 'OTHER-20260323-9' },
     ],
-    'NOMAD',
+    'ATL',
     dayKey,
   );
 

@@ -1,4 +1,4 @@
-# Запуск всего контура Nomad: db + backend + master-web + aroma-web + telegram-bot.
+# Запуск всего контура Арома Ателье: db + backend + master-web + aroma-web + telegram-bot.
 # Веб-приложения публикуются на localhost; VITE_API_BASE_URL зашивается на build,
 # поэтому браузер ходит в backend через проброшенный порт хоста (3021).
 
@@ -6,15 +6,15 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: nomad
-      POSTGRES_PASSWORD: nomad
-      POSTGRES_DB: nomad
+      POSTGRES_USER: atelier
+      POSTGRES_PASSWORD: atelier
+      POSTGRES_DB: atelier
     ports:
       - "5433:5432"
     volumes:
-      - nomad_db:/var/lib/postgresql/data
+      - atelier_db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nomad -d nomad"]
+      test: ["CMD-SHELL", "pg_isready -U atelier -d atelier"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -25,10 +25,10 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: "3021"
-      DATABASE_URL: postgresql://nomad:nomad@db:5432/nomad?schema=public
-      NOMAD_AUTOMATION_KEY: ${NOMAD_AUTOMATION_KEY:-nomad-local-automation-key}
-      NOMAD_TOKEN_SECRET: ${NOMAD_TOKEN_SECRET:-nomad-local-secret}
-      NOMAD_TOKEN_TTL_HOURS: ${NOMAD_TOKEN_TTL_HOURS:-24}
+      DATABASE_URL: postgresql://atelier:atelier@db:5432/atelier?schema=public
+      ATELIER_AUTOMATION_KEY: ${ATELIER_AUTOMATION_KEY:-atelier-local-automation-key}
+      ATELIER_TOKEN_SECRET: ${ATELIER_TOKEN_SECRET:-atelier-local-secret}
+      ATELIER_TOKEN_TTL_HOURS: ${ATELIER_TOKEN_TTL_HOURS:-24}
     ports:
       - "3021:3021"
     depends_on:
@@ -72,7 +72,7 @@ services:
     build:
       context: ./apps/backend
     environment:
-      DATABASE_URL: postgresql://nomad:nomad@db:5432/nomad?schema=public
+      DATABASE_URL: postgresql://atelier:atelier@db:5432/atelier?schema=public
       HTREVIEWS_DELAY_MS: ${HTREVIEWS_DELAY_MS:-250}
       HTREVIEWS_REQUEST_TIMEOUT_MS: ${HTREVIEWS_REQUEST_TIMEOUT_MS:-20000}
       HTREVIEWS_FETCH_DETAILS: ${HTREVIEWS_FETCH_DETAILS:-1}
@@ -91,16 +91,16 @@ services:
     build:
       context: ./services/telegram-bot
     environment:
-      NOMAD_BACKEND_URL: http://backend:3021
-      NOMAD_BACKEND_AUTOMATION_TOKEN: ${NOMAD_AUTOMATION_KEY:-nomad-local-automation-key}
+      ATELIER_BACKEND_URL: http://backend:3021
+      ATELIER_BACKEND_AUTOMATION_TOKEN: ${ATELIER_AUTOMATION_KEY:-atelier-local-automation-key}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      NOMAD_BOT_STATE_PATH: /data/nomad-telegram-bot-state.json
+      ATELIER_BOT_STATE_PATH: /data/atelier-telegram-bot-state.json
     volumes:
-      - nomad_bot_state:/data
+      - atelier_bot_state:/data
     depends_on:
       backend:
         condition: service_healthy
 
 volumes:
-  nomad_db:
-  nomad_bot_state:
+  atelier_db:
+  atelier_bot_state:

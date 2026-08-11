@@ -23,14 +23,14 @@ test.beforeEach(async () => {
   await resetAppState();
 });
 
-test('daily codes CRUD is available to admin and nomad', async () => {
+test('daily codes CRUD is available to admin and master', async () => {
   const app = buildApp();
 
   try {
     const adminToken = await login(app, 'admin', 'admin');
-    const nomadToken = await login(app, 'nomad', 'nomad');
+    const atelierToken = await login(app, 'atelier', 'atelier');
 
-    for (const token of [adminToken, nomadToken]) {
+    for (const token of [adminToken, atelierToken]) {
       const list = await app.inject({
         method: 'GET',
         url: '/staff/access/daily-codes',
@@ -49,10 +49,10 @@ test('daily codes CRUD is available to admin and nomad', async () => {
       method: 'POST',
       url: '/staff/access/daily-codes',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
       payload: {
-        codeValue: 'NOMAD-2027',
+        codeValue: 'ATL-2027',
         codeLabel: 'Вечерний код',
         active: false,
       },
@@ -62,7 +62,7 @@ test('daily codes CRUD is available to admin and nomad', async () => {
     const createdBody = created.json() as {
       item: { id: string; codeValue: string; codeLabel: string; active: boolean };
     };
-    assert.equal(createdBody.item.codeValue, 'NOMAD-2027');
+    assert.equal(createdBody.item.codeValue, 'ATL-2027');
     assert.equal(createdBody.item.codeLabel, 'Вечерний код');
     assert.equal(createdBody.item.active, false);
 
@@ -73,7 +73,7 @@ test('daily codes CRUD is available to admin and nomad', async () => {
         authorization: `Bearer ${adminToken}`,
       },
       payload: {
-        codeValue: 'NOMAD-2028',
+        codeValue: 'ATL-2028',
         codeLabel: 'Обновлённый код',
         active: true,
       },
@@ -84,7 +84,7 @@ test('daily codes CRUD is available to admin and nomad', async () => {
       item: { id: string; codeValue: string; codeLabel: string; active: boolean };
     };
     assert.equal(updatedBody.item.id, createdBody.item.id);
-    assert.equal(updatedBody.item.codeValue, 'NOMAD-2028');
+    assert.equal(updatedBody.item.codeValue, 'ATL-2028');
     assert.equal(updatedBody.item.codeLabel, 'Обновлённый код');
     assert.equal(updatedBody.item.active, true);
 
@@ -92,7 +92,7 @@ test('daily codes CRUD is available to admin and nomad', async () => {
       method: 'POST',
       url: '/guest/access-code/verify',
       payload: {
-        code: 'NOMAD-2028',
+        code: 'ATL-2028',
       },
     });
 
@@ -129,13 +129,13 @@ test('staff accounts CRUD is admin-only', async () => {
 
   try {
     const adminToken = await login(app, 'admin', 'admin');
-    const nomadToken = await login(app, 'nomad', 'nomad');
+    const atelierToken = await login(app, 'atelier', 'atelier');
 
     const forbidden = await app.inject({
       method: 'GET',
       url: '/staff/access/accounts',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
     });
 
@@ -245,13 +245,13 @@ test('telegram recipients CRUD is admin-only', async () => {
 
   try {
     const adminToken = await login(app, 'admin', 'admin');
-    const nomadToken = await login(app, 'nomad', 'nomad');
+    const atelierToken = await login(app, 'atelier', 'atelier');
 
     const forbidden = await app.inject({
       method: 'GET',
       url: '/staff/access/telegram-recipients',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
     });
 
@@ -342,13 +342,13 @@ test('telegram operators CRUD is admin-only', async () => {
 
   try {
     const adminToken = await login(app, 'admin', 'admin');
-    const nomadToken = await login(app, 'nomad', 'nomad');
+    const atelierToken = await login(app, 'atelier', 'atelier');
 
     const forbidden = await app.inject({
       method: 'GET',
       url: '/staff/access/telegram-operators',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
     });
 
@@ -416,13 +416,13 @@ test('telegram automation state is admin-only on staff side', async () => {
 
   try {
     const adminToken = await login(app, 'admin', 'admin');
-    const nomadToken = await login(app, 'nomad', 'nomad');
+    const atelierToken = await login(app, 'atelier', 'atelier');
 
     await app.inject({
       method: 'POST',
       url: '/automation/telegram/state/report',
       headers: {
-        'x-nomad-automation-key': config.automationKey,
+        'x-atelier-automation-key': config.automationKey,
       },
       payload: {
         event: 'heartbeat',
@@ -433,7 +433,7 @@ test('telegram automation state is admin-only on staff side', async () => {
       method: 'GET',
       url: '/staff/access/telegram-automation-state',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
     });
 
@@ -467,13 +467,13 @@ test('audit trail stores staff-sensitive mutations and is admin-only', async () 
 
   try {
     const adminToken = await login(app, 'admin', 'admin');
-    const nomadToken = await login(app, 'nomad', 'nomad');
+    const atelierToken = await login(app, 'atelier', 'atelier');
 
     const inventoryUpdate = await app.inject({
       method: 'PATCH',
       url: '/staff/inventory/tobaccos/tobacco-peach-silk',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
       payload: {
         inStock: true,
@@ -486,10 +486,10 @@ test('audit trail stores staff-sensitive mutations and is admin-only', async () 
       method: 'POST',
       url: '/staff/access/daily-codes',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
       payload: {
-        codeValue: 'NOMAD-AUDIT',
+        codeValue: 'ATL-AUDIT',
         codeLabel: 'Audit code',
         active: true,
       },
@@ -501,7 +501,7 @@ test('audit trail stores staff-sensitive mutations and is admin-only', async () 
       method: 'GET',
       url: '/staff/audit/events',
       headers: {
-        authorization: `Bearer ${nomadToken}`,
+        authorization: `Bearer ${atelierToken}`,
       },
     });
 
@@ -528,8 +528,8 @@ test('audit trail stores staff-sensitive mutations and is admin-only', async () 
     };
 
     assert.equal(body.items.length >= 2, true);
-    assert.equal(body.items.some((item) => item.actorLogin === 'nomad' && item.entityType === 'inventory' && item.action === 'toggle'), true);
-    assert.equal(body.items.some((item) => item.actorLogin === 'nomad' && item.entityType === 'daily-code' && item.action === 'create'), true);
+    assert.equal(body.items.some((item) => item.actorLogin === 'atelier' && item.entityType === 'inventory' && item.action === 'toggle'), true);
+    assert.equal(body.items.some((item) => item.actorLogin === 'atelier' && item.entityType === 'daily-code' && item.action === 'create'), true);
 
     const inventoryEvent = body.items.find((item) => item.entityType === 'inventory');
     assert.equal(inventoryEvent?.entityId, 'tobacco-peach-silk');

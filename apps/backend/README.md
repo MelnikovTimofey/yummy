@@ -9,7 +9,7 @@
 На Phase 1 в нем есть:
 
 1. guest access code verification;
-2. staff auth для `admin` и `nomad`;
+2. staff auth для `admin` и `atelier`;
 3. stateless bearer token для `GET /staff/auth/me`;
 4. health/meta endpoints для фронтенда.
 
@@ -20,7 +20,7 @@
 3. `.env` больше не является источником истины для guest access code и staff credentials;
 4. seed создаёт стартовые записи:
    - login `admin` / password `admin`,
-   - login `nomad` / password `nomad`,
+   - login `atelier` / password `atelier`,
    - daily code `1234`.
 
 На Phase 2 дополнительно есть:
@@ -54,13 +54,13 @@
 
 1. CRUD для daily codes через `/staff/access/daily-codes`;
 2. CRUD для staff accounts через `/staff/access/accounts`;
-3. role-guard: daily codes доступны `admin` и `nomad`, staff accounts только `admin`;
+3. role-guard: daily codes доступны `admin` и `atelier`, staff accounts только `admin`;
 4. `GET /staff/auth/me` проверяет не только bearer token, но и актуальное состояние account в БД.
 
 На automation этапе дополнительно есть:
 
 1. отдельный machine-to-machine контур для Telegram-бота;
-2. automation auth через header `x-nomad-automation-key`;
+2. automation auth через header `x-atelier-automation-key`;
 3. endpoints:
    - `GET /automation/daily-code/current`
    - `POST /automation/daily-code/ensure`
@@ -139,9 +139,9 @@
 Параметры локального Postgres-контура:
 
 1. порт `5433`;
-2. database `nomad`;
-3. user `nomad`;
-4. password `nomad`.
+2. database `atelier`;
+3. user `atelier`;
+4. password `atelier`.
 
 ## Эндпоинты
 
@@ -285,7 +285,7 @@ npm run import:htreviews:preview
 
 ```bash
 cd apps/backend
-DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
+DATABASE_URL='postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public' \
 HTREVIEWS_BRAND_URLS='https://htreviews.org/tobaccos/musthave' \
 HTREVIEWS_TOBACCO_LIMIT=20 \
 npm run sync:htreviews
@@ -316,7 +316,7 @@ npm run sync:htreviews
 
 ```bash
 cd apps/backend
-DATABASE_URL='postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public' \
+DATABASE_URL='postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public' \
 HTREVIEWS_DELAY_MS=10 \
 HTREVIEWS_CONCURRENCY=8 \
 HTREVIEWS_REQUEST_TIMEOUT_MS=20000 \
@@ -387,9 +387,9 @@ rails (`Rail`) на этом этапе остаются пустыми — он
 
 ```bash
 cd apps/backend
-NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
-NOMAD_BOOTSTRAP_ADMIN_NAME="Ателье Admin" \
-NOMAD_BOOTSTRAP_ADMIN_PASSWORD="change-me-now" \
+ATELIER_BOOTSTRAP_ADMIN_LOGIN=atelier-admin \
+ATELIER_BOOTSTRAP_ADMIN_NAME="Ателье Admin" \
+ATELIER_BOOTSTRAP_ADMIN_PASSWORD="change-me-now" \
 DATABASE_URL="postgresql://..." \
 npm run bootstrap:admin
 ```
@@ -405,27 +405,27 @@ npm run bootstrap:admin
 ```bash
 PORT=3021
 HOST=0.0.0.0
-APP_NAME=nomad-backend
-DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public"
-NOMAD_AUTOMATION_KEY=nomad-local-automation-key
-NOMAD_TOKEN_SECRET=change-me
-NOMAD_TOKEN_TTL_HOURS=24
+APP_NAME=atelier-backend
+DATABASE_URL="postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public"
+ATELIER_AUTOMATION_KEY=atelier-local-automation-key
+ATELIER_TOKEN_SECRET=change-me
+ATELIER_TOKEN_TTL_HOURS=24
 ```
 
 Для backend tests по умолчанию используется отдельная Prisma schema:
 
 ```bash
-DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=nomad_test"
+DATABASE_URL="postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=atelier_test"
 ```
 
-`npm test` сам подготавливает `nomad_test` через `prisma db push` и не должен затрагивать рабочую `public` schema.
+`npm test` сам подготавливает `atelier_test` через `prisma db push` и не должен затрагивать рабочую `public` schema.
 
 Отдельные bootstrap-only переменные для `npm run bootstrap:admin`:
 
 ```bash
-NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin
-NOMAD_BOOTSTRAP_ADMIN_NAME="Ателье Admin"
-NOMAD_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
+ATELIER_BOOTSTRAP_ADMIN_LOGIN=atelier-admin
+ATELIER_BOOTSTRAP_ADMIN_NAME="Ателье Admin"
+ATELIER_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
 ```
 
 ## Стадия

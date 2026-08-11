@@ -5,7 +5,7 @@ export type MasterStatTone = 'default' | 'success' | 'warning' | 'danger' | 'mon
 export type MasterStatTile = {
   /** eyebrow uppercase mono: «В КАТАЛОГЕ» / «ВИДНО ГОСТЮ» */
   label: string;
-  /** Большое значение — число или короткая строка (для mono-кодов типа NOMAD-2026) */
+  /** Большое значение — число или короткая строка (для mono-кодов типа ATL-2026) */
   value: ReactNode;
   /** Подпись под значением (caption) — необязательная */
   hint?: ReactNode;

@@ -54,7 +54,7 @@ test('ensureDailyCode calls automation endpoint with automation header', async (
       makeResponse({
         item: {
           id: 'daily-code-1',
-          codeValue: 'NOMAD-2026',
+          codeValue: 'ATL-2026',
           codeLabel: 'Код на 23.03.2026',
           active: true,
           startsAt: '2026-03-22T21:00:00.000Z',
@@ -77,7 +77,7 @@ test('ensureDailyCode calls automation endpoint with automation header', async (
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/ensure');
   assert.equal(calls[0].init?.method, 'POST');
-  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-atelier-automation-key'], 'automation-token');
 });
 
 test('rotateDailyCode calls automation rotate endpoint', async () => {
@@ -86,7 +86,7 @@ test('rotateDailyCode calls automation rotate endpoint', async () => {
       makeResponse({
         item: {
           id: 'daily-code-new',
-          codeValue: 'NOMAD-2026-2',
+          codeValue: 'ATL-2026-2',
           codeLabel: 'Код на 23.03.2026 #2',
           active: true,
           startsAt: '2026-03-22T21:00:00.000Z',
@@ -109,7 +109,7 @@ test('rotateDailyCode calls automation rotate endpoint', async () => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/rotate');
   assert.equal(calls[0].init?.method, 'POST');
-  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-atelier-automation-key'], 'automation-token');
 });
 
 test('getCurrentDailyCode returns current active item when it exists', async () => {
@@ -118,7 +118,7 @@ test('getCurrentDailyCode returns current active item when it exists', async () 
       makeResponse({
         item: {
           id: 'daily-code-current',
-          codeValue: 'NOMAD-2026',
+          codeValue: 'ATL-2026',
           codeLabel: 'Код на 23.03.2026',
           active: true,
           startsAt: '2026-03-22T21:00:00.000Z',
@@ -139,7 +139,7 @@ test('getCurrentDailyCode returns current active item when it exists', async () 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, 'https://backend.example/automation/daily-code/current');
   assert.equal(calls[0].init?.method, undefined);
-  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-atelier-automation-key'], 'automation-token');
 });
 
 test('telegram operator automation endpoints read linked operator and link contact', async () => {
@@ -153,7 +153,7 @@ test('telegram operator automation endpoints read linked operator and link conta
           active: true,
           linkedChatId: '362223626',
           linkedTelegramUserId: '998877',
-          linkedUsername: 'anna_nomad',
+          linkedUsername: 'anna_test',
           linkedDisplayName: 'Анна Тестовый',
           linkedAt: new Date().toISOString(),
           lastCodeRequestedAt: null,
@@ -169,7 +169,7 @@ test('telegram operator automation endpoints read linked operator and link conta
           active: true,
           linkedChatId: '362223626',
           linkedTelegramUserId: '998877',
-          linkedUsername: 'anna_nomad',
+          linkedUsername: 'anna_test',
           linkedDisplayName: 'Анна Тестовый',
           linkedAt: new Date().toISOString(),
           lastCodeRequestedAt: null,
@@ -185,7 +185,7 @@ test('telegram operator automation endpoints read linked operator and link conta
         phone: '+79991234567',
         chatId: '362223626',
         telegramUserId: '998877',
-        username: 'anna_nomad',
+        username: 'anna_test',
       });
       return { current, linked };
     },
@@ -195,14 +195,14 @@ test('telegram operator automation endpoints read linked operator and link conta
   assert.equal(result.linked.item.phone, '+79991234567');
   assert.equal(calls.length, 2);
   assert.equal(calls[0].url, 'https://backend.example/automation/telegram/operators/by-chat/362223626');
-  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-atelier-automation-key'], 'automation-token');
   assert.equal(calls[1].url, 'https://backend.example/automation/telegram/operators/link');
   assert.equal(calls[1].init?.method, 'POST');
   assert.deepEqual(JSON.parse(String(calls[1].init?.body)), {
     phone: '+79991234567',
     chatId: '362223626',
     telegramUserId: '998877',
-    username: 'anna_nomad',
+    username: 'anna_test',
   });
 });
 
@@ -272,10 +272,10 @@ test('telegram automation state endpoints use automation header and payload', as
   assert.equal(result.reported.item.lastHeartbeatAt, '2026-03-23T10:22:00.000Z');
   assert.equal(calls.length, 2);
   assert.equal(calls[0].url, 'https://backend.example/automation/telegram/state');
-  assert.equal((calls[0].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal((calls[0].init?.headers as Record<string, string>)['x-atelier-automation-key'], 'automation-token');
   assert.equal(calls[1].url, 'https://backend.example/automation/telegram/state/report');
   assert.equal(calls[1].init?.method, 'POST');
-  assert.equal((calls[1].init?.headers as Record<string, string>)['x-nomad-automation-key'], 'automation-token');
+  assert.equal((calls[1].init?.headers as Record<string, string>)['x-atelier-automation-key'], 'automation-token');
   assert.deepEqual(JSON.parse(String(calls[1].init?.body)), {
     event: 'heartbeat',
   });

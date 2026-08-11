@@ -70,7 +70,7 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 поднята на порту 5433):
 
 ```bash
-docker exec yummy-db-1 pg_dump -U nomad -d nomad -Fc --no-owner --no-privileges \
+docker exec yummy-db-1 pg_dump -U atelier -d atelier -Fc --no-owner --no-privileges \
   -t 'public."Tobacco"' -t 'public."Mix"' -t 'public."MixComponent"' \
   -t 'public."Rail"' -t 'public."RailMix"' -f /tmp/product.dump
 docker cp yummy-db-1:/tmp/product.dump snapshots/nomad-product-data.dump
@@ -78,7 +78,7 @@ docker cp yummy-db-1:/tmp/product.dump snapshots/nomad-product-data.dump
 
 ## Бэкапы и restore
 
-Полные дампы состояния (включая staff/auth и `nomad_test`) лежат вне репозитория
+Полные дампы состояния (включая staff/auth и `atelier_test`) лежат вне репозитория
 в `~/nomad-backups/` (большие бинарные `pg_dump`). Команды restore «из коробки» и
 снятия новых бэкапов — в `~/nomad-backups/README.md`.
 

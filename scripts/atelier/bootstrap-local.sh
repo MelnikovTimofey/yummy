@@ -41,7 +41,7 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-export DATABASE_URL="${DATABASE_URL:-postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public}"
 
 run_in() {
   local dir="$1"
@@ -59,7 +59,7 @@ install_package() {
 }
 
 if ! command -v npm >/dev/null 2>&1; then
-  echo "npm is required for Nomad bootstrap" >&2
+  echo "npm is required for bootstrap" >&2
   exit 1
 fi
 
@@ -78,21 +78,21 @@ if [ "${SKIP_INSTALL}" -ne 1 ]; then
   fi
 fi
 
-echo "==> Starting local Nomad Postgres"
+echo "==> Starting local Postgres"
 run_in "apps/backend" npm run db:start
 
 echo "==> Generating Prisma client"
 run_in "apps/backend" npm run prisma:generate
 
-echo "==> Resetting local Nomad schema"
+echo "==> Resetting local schema"
 run_in "apps/backend" npm run prisma:dbpush -- --force-reset
 
-echo "==> Seeding local Nomad data"
+echo "==> Seeding local data"
 run_in "apps/backend" npm run prisma:seed
 
 cat <<'EOF'
 
-Nomad local bootstrap complete.
+Local bootstrap complete.
 
 Next commands:
   cd apps/backend && npm run dev

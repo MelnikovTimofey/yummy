@@ -9,14 +9,14 @@ import type {
   TelegramAutomationReportPayload,
 } from './types';
 
-const AUTOMATION_HEADER = 'x-nomad-automation-key';
+const AUTOMATION_HEADER = 'x-atelier-automation-key';
 
 export class BackendClient {
   constructor(private readonly config: BotConfig) {}
 
   private headers() {
     if (!this.config.backendAutomationToken) {
-      throw new Error('NOMAD_BACKEND_AUTOMATION_TOKEN is required');
+      throw new Error('ATELIER_BACKEND_AUTOMATION_TOKEN is required');
     }
 
     return {

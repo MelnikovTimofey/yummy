@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { buildTaxonomyCandidate } from '../src/integrations/htreviews/taxonomy';
 
-process.env.DATABASE_URL ??= 'postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public';
+process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
 const prisma = new PrismaClient();
 
@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 // scripts/clean-db.ts.
 const confirmed =
   process.argv.slice(2).some((arg) => arg === '--yes' || arg === '-y' || arg === '--apply') ||
-  process.env.NOMAD_CONFIRM_BACKFILL === '1';
+  process.env.ATELIER_CONFIRM_BACKFILL === '1';
 
 const maskDatabaseUrl = (url: string | undefined) =>
   url?.replace(/:[^:@/]*@/, ':***@') ?? '<no DATABASE_URL>';
@@ -78,7 +78,7 @@ const main = async () => {
       '\n[backfill-flavors] РЕЖИМ ПРЕВЬЮ — ничего не записано.\n' +
         'Для применения запусти с подтверждением:\n' +
         '  npm run backfill:flavors -- --apply\n' +
-        '  (или NOMAD_CONFIRM_BACKFILL=1 npm run backfill:flavors)',
+        '  (или ATELIER_CONFIRM_BACKFILL=1 npm run backfill:flavors)',
     );
     return;
   }

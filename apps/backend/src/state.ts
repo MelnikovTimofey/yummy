@@ -456,10 +456,10 @@ const seedStaffAccounts: SeedStaffAccount[] = [
     active: true,
   },
   {
-    id: 'staff-nomad',
-    login: 'nomad',
-    password: 'nomad',
-    passwordSalt: 'seed:staff-nomad',
+    id: 'staff-atelier',
+    login: 'atelier',
+    password: 'atelier',
+    passwordSalt: 'seed:staff-atelier',
     name: 'Ателье Staff',
     role: 'master',
     active: true,
@@ -528,7 +528,7 @@ let bootstrapPromise: Promise<void> | null = null;
 
 const canResetAppState = () =>
   process.env.NODE_ENV === 'test'
-  || process.env.NOMAD_ALLOW_STATE_RESET === '1';
+  || process.env.ATELIER_ALLOW_STATE_RESET === '1';
 
 const unique = (items: string[]) => Array.from(new Set(items));
 
@@ -1633,7 +1633,7 @@ export const ensureAppState = async () => {
 
 export const resetAppState = async () => {
   if (!canResetAppState()) {
-    throw new Error('resetAppState is disabled outside test mode. Set NOMAD_ALLOW_STATE_RESET=1 for explicit maintenance runs.');
+    throw new Error('resetAppState is disabled outside test mode. Set ATELIER_ALLOW_STATE_RESET=1 for explicit maintenance runs.');
   }
 
   await resetStorageWithSeedCatalog();

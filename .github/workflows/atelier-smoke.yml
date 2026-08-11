@@ -25,9 +25,9 @@ jobs:
     timeout-minutes: 25
     env:
       CI: true
-      DATABASE_URL: postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=public
-      NOMAD_AROMA_URL: http://127.0.0.1:5174
-      NOMAD_MASTER_URL: http://127.0.0.1:5176
+      DATABASE_URL: postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public
+      ATELIER_AROMA_URL: http://127.0.0.1:5174
+      ATELIER_MASTER_URL: http://127.0.0.1:5176
     steps:
       - uses: actions/checkout@v4
 
