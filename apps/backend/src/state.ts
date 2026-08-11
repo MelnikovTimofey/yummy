@@ -1,6 +1,6 @@
 import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import type { Tobacco } from './catalog';
-import { getNomadDailyCodeWindow } from './daily-code';
+import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
 import { createSecretHash } from './auth';
 
@@ -526,7 +526,7 @@ const defaultRails: SeedRail[] = [
 
 let bootstrapPromise: Promise<void> | null = null;
 
-const canResetNomadState = () =>
+const canResetAppState = () =>
   process.env.NODE_ENV === 'test'
   || process.env.NOMAD_ALLOW_STATE_RESET === '1';
 
@@ -1440,9 +1440,9 @@ const nextRailId = async (name: string) => {
   return `${prefix}-${total + 1}`;
 };
 
-type NomadStorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+type StorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-const wipeNomadStorage = async (tx: NomadStorageTx) => {
+const wipeStorage = async (tx: StorageTx) => {
   await tx.smokeCtaEvent.deleteMany();
   await tx.mixRating.deleteMany();
   await tx.railMix.deleteMany();
@@ -1459,9 +1459,9 @@ const wipeNomadStorage = async (tx: NomadStorageTx) => {
   await tx.staffAccount.deleteMany();
 };
 
-const insertNomadOperationalState = async (
-  tx: NomadStorageTx,
-  currentCodeWindow: ReturnType<typeof getNomadDailyCodeWindow>,
+const insertOperationalState = async (
+  tx: StorageTx,
+  currentCodeWindow: ReturnType<typeof getDailyCodeWindow>,
 ) => {
   await tx.staffAccount.createMany({
     data: seedStaffAccounts.map((account) => ({
@@ -1524,7 +1524,7 @@ const insertNomadOperationalState = async (
   });
 };
 
-const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
+const insertSeedCatalog = async (tx: StorageTx) => {
   await tx.tobacco.createMany({
     data: seedTobaccos.map((tobacco) => ({
       id: tobacco.id,
@@ -1594,24 +1594,24 @@ const insertNomadSeedCatalog = async (tx: NomadStorageTx) => {
 // Production-bootstrap: только staff/коды/recipients/operators/intro. Каталог
 // табаков и миксы наполняются отдельно через `npm run sync:htreviews`. Этап 1
 // разводит production-данные и тестовую фикстуру seed-каталога.
-const bootstrapNomadOperationalState = async () => {
-  const currentCodeWindow = getNomadDailyCodeWindow();
+const bootstrapOperationalState = async () => {
+  const currentCodeWindow = getDailyCodeWindow();
   await prisma.$transaction(async (tx) => {
-    await insertNomadOperationalState(tx, currentCodeWindow);
+    await insertOperationalState(tx, currentCodeWindow);
   });
 };
 
 // Полный test-reset: чистит всё и переустанавливает seed-каталог как фикстуру.
-const resetNomadStorageWithSeedCatalog = async () => {
-  const currentCodeWindow = getNomadDailyCodeWindow();
+const resetStorageWithSeedCatalog = async () => {
+  const currentCodeWindow = getDailyCodeWindow();
   await prisma.$transaction(async (tx) => {
-    await wipeNomadStorage(tx);
-    await insertNomadOperationalState(tx, currentCodeWindow);
-    await insertNomadSeedCatalog(tx);
+    await wipeStorage(tx);
+    await insertOperationalState(tx, currentCodeWindow);
+    await insertSeedCatalog(tx);
   });
 };
 
-export const ensureNomadState = async () => {
+export const ensureAppState = async () => {
   if (bootstrapPromise) {
     await bootstrapPromise;
     return;
@@ -1620,7 +1620,7 @@ export const ensureNomadState = async () => {
   bootstrapPromise = (async () => {
     const staffAccountCount = await prisma.staffAccount.count();
     if (!staffAccountCount) {
-      await bootstrapNomadOperationalState();
+      await bootstrapOperationalState();
     }
   })();
 
@@ -1631,16 +1631,16 @@ export const ensureNomadState = async () => {
   }
 };
 
-export const resetNomadState = async () => {
-  if (!canResetNomadState()) {
-    throw new Error('resetNomadState is disabled outside test mode. Set NOMAD_ALLOW_STATE_RESET=1 for explicit maintenance runs.');
+export const resetAppState = async () => {
+  if (!canResetAppState()) {
+    throw new Error('resetAppState is disabled outside test mode. Set NOMAD_ALLOW_STATE_RESET=1 for explicit maintenance runs.');
   }
 
-  await resetNomadStorageWithSeedCatalog();
+  await resetStorageWithSeedCatalog();
 };
 
 export const getGuestIntroCards = async () => {
-  await ensureNomadState();
+  await ensureAppState();
   await syncIntroCards();
 
   const records = await prisma.introCard.findMany({
@@ -1653,7 +1653,7 @@ export const getGuestIntroCards = async () => {
 };
 
 export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Promise<InventoryListResult> => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const [records, mixes] = await Promise.all([
     prisma.tobacco.findMany(),
@@ -1793,7 +1793,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 };
 
 export const getTobaccoById = async (id: string) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const tobacco = await prisma.tobacco.findUnique({
     where: { id },
@@ -1803,7 +1803,7 @@ export const getTobaccoById = async (id: string) => {
 };
 
 export const createTobacco = async (payload: Partial<TobaccoInput>) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const manufacturer = payload.manufacturer?.trim();
   const name = payload.name?.trim();
@@ -1855,7 +1855,7 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
 };
 
 export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const current = await prisma.tobacco.findUnique({
     where: { id },
@@ -1936,7 +1936,7 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
 };
 
 export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const current = await prisma.tobacco.findUnique({
     where: { id },
@@ -1958,7 +1958,7 @@ export const batchUpdateTobacco = async (
   ids: string[],
   action: InventoryBatchAction,
 ): Promise<InventoryBatchResult> => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const normalizedIds = unique(ids.map((id) => id.trim()).filter(Boolean));
   if (!normalizedIds.length) {
@@ -2016,7 +2016,7 @@ export const batchUpdateTobacco = async (
 };
 
 export const getAvailableMixCatalog = async () => {
-  await ensureNomadState();
+  await ensureAppState();
   return (await fetchMixViews()).sort(mixViewSort);
 };
 
@@ -2150,7 +2150,7 @@ const toStaffRailView = (rail: RailView): StaffRailView => ({
 });
 
 const buildRailViews = async (guestOnly: boolean) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const [mixes, rails] = await Promise.all([
     getAvailableMixCatalog(),
@@ -2206,7 +2206,7 @@ export const getGuestHomeRails = async () => {
 };
 
 export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const search = typeof query.search === 'string' ? query.search.trim() : '';
   const normalizedSearch = normalizeToken(search);
@@ -2297,7 +2297,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
 };
 
 export const createMix = async (payload: Partial<MixInput>) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const validated = await validateMixInput(payload);
   if ('error' in validated) {
@@ -2335,7 +2335,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
 };
 
 export const updateMix = async (id: string, payload: MixPatch) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const current = await prisma.mix.findUnique({
     where: { id },
@@ -2410,7 +2410,7 @@ export const updateMix = async (id: string, payload: MixPatch) => {
 // снимаются каскадом из schema.prisma — поэтому микс автоматически уходит из
 // всех рейлов, в которые входил. Статистические рейлы пересчитываются на лету.
 export const deleteMix = async (id: string): Promise<{ id: string; name: string } | null> => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const current = await prisma.mix.findUnique({ where: { id } });
   if (!current) {
@@ -2423,7 +2423,7 @@ export const deleteMix = async (id: string): Promise<{ id: string; name: string 
 };
 
 export const deleteRail = async (id: string) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   if (id.startsWith('rail-statistical-')) {
     return { error: statisticalRailReadOnlyReason };
@@ -2444,7 +2444,7 @@ export const getStaffRails = async (): Promise<StaffRailView[]> => {
 };
 
 export const createRail = async (payload: Partial<RailInput>) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const validated = await validateRailInput(payload);
   if ('error' in validated) {
@@ -2478,7 +2478,7 @@ export const createRail = async (payload: Partial<RailInput>) => {
 };
 
 export const updateRail = async (id: string, payload: RailPatch) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   if (id.startsWith('rail-statistical-')) {
     return { error: statisticalRailReadOnlyReason };
@@ -2547,7 +2547,7 @@ export const updateRail = async (id: string, payload: RailPatch) => {
 };
 
 export const recordSmokeCtaEvent = async (mixId: string) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const event = await prisma.smokeCtaEvent.create({
     data: { mixId },
@@ -2560,7 +2560,7 @@ export const recordSmokeCtaEvent = async (mixId: string) => {
 };
 
 export const getSmokeCtaEvents = async () => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const events = await prisma.smokeCtaEvent.findMany({
     orderBy: {
@@ -2575,7 +2575,7 @@ export const getSmokeCtaEvents = async () => {
 };
 
 export const rateMix = async (id: string, value: number) => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const mix = await prisma.mix.findUnique({
     where: { id },
@@ -2602,7 +2602,7 @@ export const rateMix = async (id: string, value: number) => {
 };
 
 export const getInventorySummary = async () => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const [total, inStockCount] = await Promise.all([
     prisma.tobacco.count(),
@@ -2621,7 +2621,7 @@ export const getInventorySummary = async () => {
 };
 
 export const getSmokeCtaSummary = async () => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const [mixes, events] = await Promise.all([
     getAvailableMixCatalog(),
@@ -2664,7 +2664,7 @@ export const getSmokeCtaSummary = async () => {
 };
 
 export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d'): Promise<DashboardSummary> => {
-  await ensureNomadState();
+  await ensureAppState();
 
   const window = buildDashboardWindow(windowKey);
   const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents, blockedMixRecords] = await Promise.all([

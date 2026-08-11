@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export type NomadDailyCodeWindow = {
+export type DailyCodeWindow = {
   startsAt: Date;
   endsAt: Date;
 };
@@ -11,7 +11,7 @@ const toMoscowDate = (date: Date) => new Date(date.getTime() + MOSCOW_OFFSET_MIN
 
 const fromMoscowDate = (date: Date) => new Date(date.getTime() - MOSCOW_OFFSET_MINUTES * 60_000);
 
-export const getNomadDailyCodeWindow = (referenceDate = new Date()): NomadDailyCodeWindow => {
+export const getDailyCodeWindow = (referenceDate = new Date()): DailyCodeWindow => {
   const moscowDate = toMoscowDate(referenceDate);
   const startMoscow = new Date(Date.UTC(moscowDate.getUTCFullYear(), moscowDate.getUTCMonth(), moscowDate.getUTCDate()));
   const endMoscow = new Date(startMoscow);
@@ -23,7 +23,7 @@ export const getNomadDailyCodeWindow = (referenceDate = new Date()): NomadDailyC
   };
 };
 
-export const createNomadDailyCodeValue = (
+export const createDailyCodeValue = (
   _referenceDate: Date = new Date(),
   exclude: Iterable<string> = [],
 ) => {

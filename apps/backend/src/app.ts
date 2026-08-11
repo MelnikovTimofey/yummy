@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from './config';
-import { getNomadDailyCodeWindow } from './daily-code';
+import { getDailyCodeWindow } from './daily-code';
 import {
   createStaffToken,
   resolveStaffSession,
@@ -48,7 +48,7 @@ import {
   deleteMix,
   createRail,
   deleteRail,
-  ensureNomadState,
+  ensureAppState,
   getDashboardSummary,
   getInventorySummary,
   getInventoryTobaccos,
@@ -121,7 +121,7 @@ export const buildApp = () => {
   });
 
   app.addHook('onReady', async () => {
-    await ensureNomadState();
+    await ensureAppState();
   });
 
   app.get('/meta', async () => ({
@@ -317,7 +317,7 @@ export const buildApp = () => {
       return;
     }
 
-    const window = getNomadDailyCodeWindow();
+    const window = getDailyCodeWindow();
     const response: AutomationDailyCodeCurrentResponse = {
       item: await getCurrentDailyAccessCode(),
       window: {

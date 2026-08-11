@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { syncHtReviewsCatalogToNomad } from '../src/integrations/htreviews/sync';
+import { syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
 
 const toInt = (value: string | undefined) => {
   if (!value) {
@@ -36,7 +36,7 @@ async function main() {
   const startedAt = Date.now();
   console.log(`[htreviews:sync] ${new Date().toISOString()} starting against ${process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':***@') ?? '<no DATABASE_URL>'}`);
 
-  const stats = await syncHtReviewsCatalogToNomad({
+  const stats = await syncHtReviewsCatalog({
     brandLimit: toInt(process.env.HTREVIEWS_BRAND_LIMIT),
     tobaccoLimit: toInt(process.env.HTREVIEWS_TOBACCO_LIMIT),
     fetchDetails: toBoolean(process.env.HTREVIEWS_FETCH_DETAILS, true),

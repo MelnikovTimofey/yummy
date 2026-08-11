@@ -349,7 +349,7 @@ npm run backfill:htreviews:details
 
 ## Live catalog seed (этап 1)
 
-Production-БД при первом запуске не содержит seed-каталога. `ensureNomadState`
+Production-БД при первом запуске не содержит seed-каталога. `ensureAppState`
 ставит только staff/коды/recipients/operators/intro; `Tobacco`,
 `Mix`, `MixComponent`, `Rail`, `RailMix` стартуют пустыми
 и наполняются отдельно из htreviews.org.
@@ -388,7 +388,7 @@ rails (`Rail`) на этом этапе остаются пустыми — он
 ```bash
 cd apps/backend
 NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin \
-NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin" \
+NOMAD_BOOTSTRAP_ADMIN_NAME="Ателье Admin" \
 NOMAD_BOOTSTRAP_ADMIN_PASSWORD="change-me-now" \
 DATABASE_URL="postgresql://..." \
 npm run bootstrap:admin
@@ -424,7 +424,7 @@ DATABASE_URL="postgresql://nomad:nomad@127.0.0.1:5433/nomad?schema=nomad_test"
 
 ```bash
 NOMAD_BOOTSTRAP_ADMIN_LOGIN=nomad-admin
-NOMAD_BOOTSTRAP_ADMIN_NAME="Nomad Admin"
+NOMAD_BOOTSTRAP_ADMIN_NAME="Ателье Admin"
 NOMAD_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
 ```
 

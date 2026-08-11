@@ -11,7 +11,7 @@ import type {
 
 const AUTOMATION_HEADER = 'x-nomad-automation-key';
 
-export class NomadBackendClient {
+export class BackendClient {
   constructor(private readonly config: BotConfig) {}
 
   private headers() {

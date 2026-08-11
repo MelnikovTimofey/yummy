@@ -101,7 +101,7 @@ const logUpsertProgress = (message: string) => {
   console.log(`[htreviews:sync] ${new Date().toISOString()} ${message}`);
 };
 
-export const syncHtReviewsCatalogToNomad = async (
+export const syncHtReviewsCatalog = async (
   options: HtReviewsSyncOptions = {},
 ): Promise<HtReviewsSyncStats> => {
   const snapshot = await fetchHtReviewsCatalogSnapshot(options);

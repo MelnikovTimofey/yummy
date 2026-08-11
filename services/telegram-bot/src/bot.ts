@@ -1,5 +1,5 @@
 import type { BotConfig } from './config';
-import { NomadBackendClient } from './backend';
+import { BackendClient } from './backend';
 import { JsonStateStore } from './storage';
 import { TelegramClient, type TelegramSendMessageOptions } from './telegram';
 import type {
@@ -13,7 +13,7 @@ import { buildNextBroadcastDelay, formatMoscowDateTime } from './time';
 
 type Dependencies = {
   config: BotConfig;
-  backend: NomadBackendClient;
+  backend: BackendClient;
   telegram: TelegramClient;
   stateStore: JsonStateStore;
 };
@@ -24,7 +24,7 @@ type CommandContext = {
 };
 
 const HELP_TEXT = [
-  'Nomad Telegram Bot',
+  'Telegram-бот Арома Ателье',
   'Команды:',
   '/start - инструкция и привязка доступа',
   '/help - список команд',
@@ -34,11 +34,11 @@ const HELP_TEXT = [
 
 const CONTACT_REQUEST_TEXT = [
   'Чтобы получить доступ к daily code, поделитесь своим контактом.',
-  'Бот сверит номер телефона с allowlist Nomad и привяжет этот чат.',
+  'Бот сверит номер телефона с allowlist Ателье и привяжет этот чат.',
 ].join('\n');
 
 const CONTACT_MISMATCH_TEXT = 'Нужно отправить свой собственный контакт из Telegram.';
-const ACCESS_DENIED_TEXT = 'Номер телефона не найден в allowlist Nomad. Обратитесь к администратору.';
+const ACCESS_DENIED_TEXT = 'Номер телефона не найден в allowlist Ателье. Обратитесь к администратору.';
 
 const buildContactRequestMarkup = () => ({
   keyboard: [[{ text: 'Поделиться контактом', request_contact: true }]],
@@ -85,7 +85,7 @@ const buildLinkedStatus = (operator: TelegramOperatorRecord | null) => {
   ].join('\n');
 };
 
-export class NomadTelegramBot {
+export class TelegramBot {
   private stopped = false;
   private updateOffset = 0;
   private scheduler: NodeJS.Timeout | null = null;

@@ -198,5 +198,3 @@ export type StaffRailMutationResponse = {
 };
 
 export type GuestRatingMutationResponse = GuestMixRatingResponse;
-
-export type NomadRailType = RailType;

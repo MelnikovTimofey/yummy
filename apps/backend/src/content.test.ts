@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
-import { resetNomadState } from './state';
+import { resetAppState } from './state';
 
 const loginStaff = async (app: ReturnType<typeof buildApp>) => {
   const response = await app.inject({
@@ -20,7 +20,7 @@ const loginStaff = async (app: ReturnType<typeof buildApp>) => {
 };
 
 test.beforeEach(async () => {
-  await resetNomadState();
+  await resetAppState();
 });
 
 test('guest intro cards describe the onboarding flow', async () => {

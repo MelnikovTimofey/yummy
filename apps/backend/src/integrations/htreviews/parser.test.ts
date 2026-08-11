@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { extractCatalogEntryUrls, parseBrandIndexPage, parseBrandPage, parseTobaccoPage } from './parser';
-import { buildNomadTaxonomyCandidate } from './taxonomy';
+import { buildTaxonomyCandidate } from './taxonomy';
 
 test('parseBrandIndexPage returns deduplicated brand refs', () => {
   const html = `
@@ -170,15 +170,15 @@ test('parseTobaccoPage derives community strength from description scale when fi
   assert.equal(item.communityStrength, 'Крепкая');
 });
 
-test('buildNomadTaxonomyCandidate separates profiles, flavors and meta tags', () => {
-  const candidate = buildNomadTaxonomyCandidate(['Лимон', 'Мята', 'Чай', 'Виски', 'Сыр']);
+test('buildTaxonomyCandidate separates profiles, flavors and meta tags', () => {
+  const candidate = buildTaxonomyCandidate(['Лимон', 'Мята', 'Чай', 'Виски', 'Сыр']);
   assert.deepEqual(candidate.flavorProfiles, ['citrus', 'floral_herbal', 'fresh', 'fruity', 'minty', 'sour']);
   assert.deepEqual(candidate.flavorTags, ['напитки', 'охлаждающий', 'редкие']);
   assert.deepEqual(candidate.flavors, ['виски', 'лимон', 'мята', 'сыр', 'чай']);
 });
 
-test('buildNomadTaxonomyCandidate keeps creamy notes in flavors while deriving dessert profile', () => {
-  const candidate = buildNomadTaxonomyCandidate(['Сливочный']);
+test('buildTaxonomyCandidate keeps creamy notes in flavors while deriving dessert profile', () => {
+  const candidate = buildTaxonomyCandidate(['Сливочный']);
   assert.deepEqual(candidate.flavorProfiles, ['dessert', 'sweet']);
   assert.deepEqual(candidate.flavors, ['сливочный']);
   assert.deepEqual(candidate.flavorTags, []);
