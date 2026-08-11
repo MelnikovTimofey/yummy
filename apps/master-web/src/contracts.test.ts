@@ -58,9 +58,9 @@ test('пресеты крепости редактора совпадают со
 
 test('buildInventorySummary counts stock states', () => {
   const summary = buildInventorySummary([
-    { id: '1', name: 'A', manufacturer: 'Nomad', inStock: true, archived: false },
-    { id: '2', name: 'B', manufacturer: 'Nomad', inStock: false, archived: false },
-    { id: '3', name: 'C', manufacturer: 'Nomad', inStock: true, archived: false },
+    { id: '1', name: 'A', manufacturer: 'Ателье', inStock: true, archived: false },
+    { id: '2', name: 'B', manufacturer: 'Ателье', inStock: false, archived: false },
+    { id: '3', name: 'C', manufacturer: 'Ателье', inStock: true, archived: false },
   ]);
 
   assert.deepEqual(summary, {
@@ -72,9 +72,9 @@ test('buildInventorySummary counts stock states', () => {
 
 test('sortInventoryItems places in-stock tobaccos first', () => {
   const sorted = sortInventoryItems([
-    { id: '2', name: 'Zulu', manufacturer: 'Nomad', inStock: false, archived: false },
-    { id: '1', name: 'Alpha', manufacturer: 'Nomad', inStock: true, archived: false },
-    { id: '3', name: 'Beta', manufacturer: 'Nomad', inStock: false, archived: false },
+    { id: '2', name: 'Zulu', manufacturer: 'Ателье', inStock: false, archived: false },
+    { id: '1', name: 'Alpha', manufacturer: 'Ателье', inStock: true, archived: false },
+    { id: '3', name: 'Beta', manufacturer: 'Ателье', inStock: false, archived: false },
   ]);
 
   assert.deepEqual(sorted.map((item) => item.id), ['1', '3', '2']);
@@ -86,7 +86,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
       {
         id: 'tobacco-peach-silk',
         name: 'Peach Silk',
-        manufacturer: 'Nomad Reserve',
+        manufacturer: 'Ателье Reserve',
         lineName: 'Основная',
         country: 'Россия',
         officialStrength: 'Лёгкая',
@@ -117,10 +117,10 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
       search: 'персик',
       stock: 'out-of-stock',
       archived: 'archived',
-      manufacturers: ['Nomad Reserve'],
+      manufacturers: ['Ателье Reserve'],
       flavors: ['персик'],
       options: {
-        manufacturers: ['Nomad Reserve', 'Darkside'],
+        manufacturers: ['Ателье Reserve', 'Darkside'],
         flavorTags: ['fruity'],
       },
     },
@@ -180,7 +180,7 @@ test('normalizeInventoryBatchResponse parses batch mutation payload', () => {
       {
         id: 'tobacco-1',
         name: 'Mint Veil',
-        manufacturer: 'Nomad Reserve',
+        manufacturer: 'Ателье Reserve',
         inStock: false,
       },
     ],
@@ -214,7 +214,7 @@ test('buildInventoryRequestQuery serializes selected filters and sort', () => {
       search: 'персик',
       stock: 'out-of-stock',
       archived: 'archived',
-      manufacturers: ['Nomad Reserve'],
+      manufacturers: ['Ателье Reserve'],
       flavors: ['персик'],
     },
     {
@@ -227,13 +227,13 @@ test('buildInventoryRequestQuery serializes selected filters and sort', () => {
 
   assert.equal(
     query,
-    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&archived=archived&manufacturers=Nomad+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=100',
+    'search=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&stock=out-of-stock&archived=archived&manufacturers=%D0%90%D1%82%D0%B5%D0%BB%D1%8C%D0%B5+Reserve&flavors=%D0%BF%D0%B5%D1%80%D1%81%D0%B8%D0%BA&sort=dependentMixes&direction=desc&page=3&pageSize=100',
   );
 });
 
 test('toggleInventoryFilterValue adds and removes option without duplicates', () => {
-  assert.deepEqual(toggleInventoryFilterValue(['Nomad Reserve'], 'Darkside'), ['Nomad Reserve', 'Darkside']);
-  assert.deepEqual(toggleInventoryFilterValue(['Nomad Reserve'], 'Nomad Reserve'), []);
+  assert.deepEqual(toggleInventoryFilterValue(['Ателье Reserve'], 'Darkside'), ['Ателье Reserve', 'Darkside']);
+  assert.deepEqual(toggleInventoryFilterValue(['Ателье Reserve'], 'Ателье Reserve'), []);
 });
 
 test('parseDelimitedList trims empty chunks and duplicates', () => {
@@ -250,7 +250,7 @@ test('normalizeMixRecord accepts inStock alias and component objects', () => {
       {
         id: 'c-2',
         name: 'Компонент',
-        manufacturer: 'Nomad',
+        manufacturer: 'Ателье',
         flavors: ['мята'],
       },
     ],
@@ -268,7 +268,7 @@ test('normalizeMixRecord accepts inStock alias and component objects', () => {
     id: 'c-2',
     tobaccoId: 'c-2',
     name: 'Компонент',
-    manufacturer: 'Nomad',
+    manufacturer: 'Ателье',
     flavors: ['мята'],
     proportion: 0,
     sortOrder: 0,
@@ -286,7 +286,7 @@ test('normalizeMixListResponse supports filters, meta and rail memberships', () 
           {
             tobaccoId: 't-1',
             name: 'Berry Oasis',
-            manufacturer: 'Nomad Reserve',
+            manufacturer: 'Ателье Reserve',
             flavors: ['малина'],
             proportion: 60,
             sortOrder: 0,
@@ -311,9 +311,9 @@ test('normalizeMixListResponse supports filters, meta and rail memberships', () 
       search: 'ягода',
       status: 'guest-visible',
       railState: 'in-rails',
-      manufacturers: ['Nomad Reserve'],
+      manufacturers: ['Ателье Reserve'],
       options: {
-        manufacturers: ['Nomad Reserve'],
+        manufacturers: ['Ателье Reserve'],
         flavorProfiles: ['berry'],
         flavors: ['малина'],
         flavorTags: ['berry'],
@@ -354,7 +354,7 @@ test('buildMixRequestQuery serializes mix filters and sort', () => {
       search: 'ягода',
       status: 'guest-visible',
       railState: 'in-rails',
-      manufacturers: ['Nomad Reserve'],
+      manufacturers: ['Ателье Reserve'],
       flavors: ['малина'],
     },
     {
@@ -367,7 +367,7 @@ test('buildMixRequestQuery serializes mix filters and sort', () => {
 
   assert.equal(
     query,
-    'search=%D1%8F%D0%B3%D0%BE%D0%B4%D0%B0&status=guest-visible&railState=in-rails&manufacturers=Nomad+Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc&page=2&pageSize=50',
+    'search=%D1%8F%D0%B3%D0%BE%D0%B4%D0%B0&status=guest-visible&railState=in-rails&manufacturers=%D0%90%D1%82%D0%B5%D0%BB%D1%8C%D0%B5+Reserve&flavors=%D0%BC%D0%B0%D0%BB%D0%B8%D0%BD%D0%B0&sort=rails&direction=desc&page=2&pageSize=50',
   );
 });
 
@@ -432,8 +432,8 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
       outOfStockCount: 1,
       manufacturers: [
         {
-          key: 'Nomad Reserve',
-          label: 'Nomad Reserve',
+          key: 'Ателье Reserve',
+          label: 'Ателье Reserve',
           total: 4,
           inStockCount: 3,
           outOfStockCount: 1,
@@ -548,8 +548,8 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
       outOfStockCount: 1,
       manufacturers: [
         {
-          key: 'Nomad Reserve',
-          label: 'Nomad Reserve',
+          key: 'Ателье Reserve',
+          label: 'Ателье Reserve',
           total: 4,
           inStockCount: 3,
           outOfStockCount: 1,
@@ -713,7 +713,7 @@ test('sortStaffAccounts keeps active admins first', () => {
     {
       id: 'staff-2',
       login: 'nomad',
-      name: 'Nomad',
+      name: 'Ателье',
       role: 'master',
       active: true,
     },
@@ -792,8 +792,8 @@ test('normalizeTelegramOperatorRecord reads linked chat and request status', () 
     active: true,
     linkedChatId: '362223626',
     linkedTelegramUserId: '998877',
-    linkedUsername: 'anna_nomad',
-    linkedDisplayName: 'Анна Nomad',
+    linkedUsername: 'anna_test',
+    linkedDisplayName: 'Анна Тестовый',
     linkedAt: '2026-03-23T11:00:00.000Z',
     lastCodeRequestedAt: '2026-03-23T12:00:00.000Z',
   });
@@ -805,8 +805,8 @@ test('normalizeTelegramOperatorRecord reads linked chat and request status', () 
     active: true,
     linkedChatId: '362223626',
     linkedTelegramUserId: '998877',
-    linkedUsername: 'anna_nomad',
-    linkedDisplayName: 'Анна Nomad',
+    linkedUsername: 'anna_test',
+    linkedDisplayName: 'Анна Тестовый',
     linkedAt: '2026-03-23T11:00:00.000Z',
     lastCodeRequestedAt: '2026-03-23T12:00:00.000Z',
   });
@@ -821,7 +821,7 @@ test('normalizeAuditEventRecord preserves actor and details', () => {
     action: 'toggle',
     entityType: 'inventory',
     entityId: 'tobacco-1',
-    entityLabel: 'Nomad Reserve · Peach Silk',
+    entityLabel: 'Ателье Reserve · Peach Silk',
     details: {
       fromInStock: false,
       toInStock: true,
@@ -837,7 +837,7 @@ test('normalizeAuditEventRecord preserves actor and details', () => {
     action: 'toggle',
     entityType: 'inventory',
     entityId: 'tobacco-1',
-    entityLabel: 'Nomad Reserve · Peach Silk',
+    entityLabel: 'Ателье Reserve · Peach Silk',
     details: {
       fromInStock: false,
       toInStock: true,
@@ -913,8 +913,8 @@ test('sortTelegramOperators keeps linked active operators first', () => {
       active: true,
       linkedChatId: '362223626',
       linkedTelegramUserId: '998877',
-      linkedUsername: 'anna_nomad',
-      linkedDisplayName: 'Анна Nomad',
+      linkedUsername: 'anna_test',
+      linkedDisplayName: 'Анна Тестовый',
       linkedAt: '2026-03-23T11:00:00.000Z',
       lastCodeRequestedAt: '2026-03-23T12:00:00.000Z',
     },

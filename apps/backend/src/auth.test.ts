@@ -59,7 +59,7 @@ test('staff login is resolved from persisted staff accounts', async () => {
 
     assert.equal(loginBody.user.login, 'nomad');
     assert.equal(loginBody.user.role, 'master');
-    assert.equal(loginBody.user.name, 'Nomad Staff');
+    assert.equal(loginBody.user.name, 'Ателье Staff');
 
     const me = await app.inject({
       method: 'GET',

@@ -1,10 +1,10 @@
-# Nomad Telegram Bot
+# Telegram-бот Арома Ателье
 
-Сервис для автоматической выдачи daily code по request-модели в Nomad.
+Сервис для автоматической выдачи daily code по request-модели.
 
 ## Назначение
 
-Это отдельный worker для продукта `Nomad`. Он не содержит продуктовую бизнес-логику и работает поверх automation API backend:
+Это отдельный worker для контура `Арома Ателье`. Он не содержит продуктовую бизнес-логику и работает поверх automation API backend:
 
 - `GET /automation/daily-code/current`
 - `POST /automation/daily-code/ensure`
@@ -38,7 +38,7 @@
 ## Локальный запуск
 
 ```bash
-cd services/nomad-telegram-bot
+cd services/telegram-bot
 npm install
 npm test
 npm run build
@@ -49,8 +49,8 @@ npm run start
 
 Для production в репозитории подготовлены шаблоны:
 
-1. `services/nomad-telegram-bot/ops/ecosystem.config.cjs` для `pm2`;
-2. `services/nomad-telegram-bot/ops/nomad-telegram-bot.service` для `systemd`.
+1. `services/telegram-bot/ops/ecosystem.config.cjs` для `pm2`;
+2. `services/telegram-bot/ops/telegram-bot.service` для `systemd`.
 
 Они являются шаблонами и требуют адаптации путей:
 
@@ -72,8 +72,8 @@ NOMAD_DAILY_BROADCAST_MINUTE=0
 NOMAD_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
 ```
 
-Полная operating matrix по всем Nomad-сервисам зафиксирована в `docs/nomad/env-matrix.md`.
+Полная operating matrix по всем сервисам контура зафиксирована в `docs/atelier/env-matrix.md`.
 
 ## Стадия
 
-Текущая стадия: рабочий Nomad worker для `share contact -> /code` flow и backend-reported heartbeat/request status.
+Текущая стадия: рабочий worker для `share contact -> /code` flow и backend-reported heartbeat/request status.

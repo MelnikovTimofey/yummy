@@ -1,10 +1,10 @@
-# Nomad Master Web
+# Мастер · Арома Ателье
 
 Staff/admin frontend для продукта `Мастер`.
 
 ## Назначение
 
-Этот пакет отвечает за служебные сценарии Nomad:
+Этот пакет отвечает за служебные сценарии `Мастера`:
 
 1. авторизация сотрудников;
 2. инвентаризация;
@@ -58,7 +58,7 @@ Staff/admin frontend для продукта `Мастер`.
 
 1. текущий daily code показывается как read-only operational surface;
 2. `admin` управляет Telegram allowlist операторов по `имя + телефон`;
-3. `nomad` не отправляет код из `Мастера`, а получает его в Telegram-боте;
+3. `master` не отправляет код из `Мастера`, а получает его в Telegram-боте;
 4. staff accounts остаются отдельным admin-only блоком для входа в сам `Мастер`.
 
 ## Telegram allowlist и bot-request flow
@@ -91,7 +91,7 @@ Staff/admin frontend для продукта `Мастер`.
 ## Локальный запуск
 
 ```bash
-cd apps/nomad-master-web
+cd apps/master-web
 npm install
 npm run dev
 ```
@@ -104,7 +104,7 @@ npm run dev
 
 Для перехода из MVP в production-ready backoffice зафиксирован отдельный redesign contract:
 
-1. `docs/nomad/master-production-redesign.md`
+1. `docs/atelier/master-production-redesign.md`
 
 Текущий GitHub-backed redesign sequence:
 
@@ -128,7 +128,7 @@ npm run dev
 1. `Inventory` и `Mixes` уже использовали общий `ops-surface` язык для headers, stats, toolbars, table shells и editor surfaces;
 2. `Rails` подтянут к этому же visual contract: section header со stats, отдельный operational toolbar, единый surface для списка рейлов, editor и состава рейла;
 3. `Access` больше не выглядит как набор несвязанных admin-блоков: daily code, bot observability, allowlist, staff accounts и audit приведены к одному surface rhythm;
-4. admin-only и `nomad`-restricted панели сохранили текущие role boundaries, менялся только visual/system layer;
+4. admin-only и `master`-restricted панели сохранили текущие role boundaries, менялся только visual/system layer;
 5. targeted Playwright smoke для `Master` проходит и после harmonization `Rails`/`Access`.
 
 ## Issue #4. Master visual polish and desktop sign-off
@@ -137,7 +137,7 @@ npm run dev
 
 1. `Rails` и `Access` получили split-header layout, чтобы intro и operational stats не создавали пустые dead zones на desktop;
 2. destructive actions в `Access` теперь визуально отделены от обычных secondary actions;
-3. restricted panels для роли `nomad` стали считываться как intentional forbidden state, а не как случайный пустой блок;
+3. restricted panels для роли `master` стали считываться как intentional forbidden state, а не как случайный пустой блок;
 4. keyboard/focus path усилен для dense control surfaces: filters, toggles, tabs и destructive actions;
 5. финальный sign-off для этого slice выполнен как desktop-only по актуальному рабочему допущению интерфейса `Master`.
 
@@ -151,7 +151,7 @@ npm run dev
 4. топ по выборам, топ по guest-оценкам и распределение оценок;
 5. daily activity trend;
 6. операционные сигналы по blocked mixes и состоянию rails;
-7. `shadcn/ui` foundation для `nomad-master-web` как новый UI baseline;
+7. `shadcn/ui` foundation для `master-web` как новый UI baseline;
 8. visual redesign dashboard под premium HoReCa direction вместо прежней MVP-сводки.
 
 ## Slice 2. Inventory operations hardening
