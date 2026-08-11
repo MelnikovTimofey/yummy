@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'telegram-bot',
-      cwd: '/opt/nomad/services/telegram-bot',
+      cwd: '/opt/atelier/services/telegram-bot',
       script: 'dist/index.js',
       interpreter: 'node',
       instances: 1,

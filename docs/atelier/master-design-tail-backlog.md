@@ -6,7 +6,7 @@
 
 ## Контекст
 
-Репозиторий `nomad-yummy` (cwd `/Users/admin/PycharmProjects/yummy`).
+Репозиторий `yummy` (cwd `/Users/admin/PycharmProjects/yummy`).
 Продукт **Арома Ателье**, scope `apps/master-web`. Правила работы — `CLAUDE.md`
 в корне репо (особенно §3 TDD, §5 worktree-дисциплина, §7 продуктовые
 инварианты). Self-merge политика — см. `~/.claude/projects/<...>/memory/

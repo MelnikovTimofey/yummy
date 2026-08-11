@@ -50,7 +50,7 @@
 
 | Переменная | Назначение | Пример |
 |---|---|---|
-| `VITE_API_BASE_URL` | base URL backend | `https://api.nomad.example` |
+| `VITE_API_BASE_URL` | base URL backend | `https://api.atelier.example` |
 
 ### Production notes
 
@@ -63,7 +63,7 @@
 
 | Переменная | Назначение | Пример |
 |---|---|---|
-| `VITE_API_BASE_URL` | base URL backend | `https://api.nomad.example` |
+| `VITE_API_BASE_URL` | base URL backend | `https://api.atelier.example` |
 
 ### Production notes
 

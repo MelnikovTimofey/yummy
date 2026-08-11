@@ -14,7 +14,7 @@
 1. Проверить health:
 
 ```bash
-curl -sS https://api.nomad.example/health
+curl -sS https://api.atelier.example/health
 ```
 
 Ожидается:
@@ -27,7 +27,7 @@ curl -sS https://api.nomad.example/health
 ```bash
 curl -sS \
   -H 'x-atelier-automation-key: <automation-key>' \
-  https://api.nomad.example/automation/daily-code/current
+  https://api.atelier.example/automation/daily-code/current
 ```
 
 Ожидается:
