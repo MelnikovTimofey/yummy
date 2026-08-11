@@ -42,7 +42,7 @@ export type MixView = {
   components: MixComponentView[];
   avgRating: number;
   ratingsCount: number;
-  popularity: number;
+  smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
   createdAt: string;
@@ -97,7 +97,6 @@ export type DashboardMixMetric = {
   smokeCtaCount: number;
   avgRating: number;
   ratingsCount: number;
-  popularity: number;
 };
 
 export type DashboardRatingDistributionItem = {
@@ -143,7 +142,7 @@ export type InventoryDependentMixView = {
   available: boolean;
   guestVisible: boolean;
   avgRating: number;
-  popularity: number;
+  smokeCtaCount: number;
 };
 
 export type InventoryTobaccoView = {
@@ -204,7 +203,7 @@ export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
-export type MixSortField = 'popularity' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
+export type MixSortField = 'demand' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
 
 export type MixSortDirection = 'asc' | 'desc';
 
@@ -345,12 +344,11 @@ export type MixInput = {
     sortOrder?: number;
   }>;
   available?: boolean;
-  popularity?: number;
   baseAvgRating?: number;
 };
 
 export type MixPatch = Partial<
-  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'components' | 'available' | 'popularity' | 'baseAvgRating'>
+  Pick<MixInput, 'name' | 'description' | 'componentIds' | 'components' | 'available' | 'baseAvgRating'>
 >;
 
 export type RailInput = {
@@ -709,8 +707,8 @@ const mixViewSort = (left: MixView, right: MixView) => {
     return right.avgRating - left.avgRating;
   }
 
-  if (right.popularity !== left.popularity) {
-    return right.popularity - left.popularity;
+  if (right.smokeCtaCount !== left.smokeCtaCount) {
+    return right.smokeCtaCount - left.smokeCtaCount;
   }
 
   return left.name.localeCompare(right.name, 'ru');
@@ -817,7 +815,7 @@ const mapMixView = (record: {
   name: string;
   description: string;
   available: boolean;
-  popularity: number;
+  _count: { smokeEvents: number };
   baseAvgRating: number;
   createdAt: Date;
   updatedAt: Date;
@@ -883,7 +881,7 @@ const mapMixView = (record: {
     })),
     avgRating,
     ratingsCount,
-    popularity: record.popularity,
+    smokeCtaCount: record._count.smokeEvents,
     available: record.available,
     guestVisible,
     createdAt: record.createdAt.toISOString(),
@@ -920,6 +918,11 @@ const fetchMixViews = async () => {
           value: true,
         },
       },
+      _count: {
+        select: {
+          smokeEvents: true,
+        },
+      },
     },
   });
 
@@ -947,7 +950,7 @@ const normalizeMixSortField = (value: unknown): MixSortField => {
     return value;
   }
 
-  return 'popularity';
+  return 'demand';
 };
 
 const normalizeMixSortDirection = (value: unknown): MixSortDirection => {
@@ -1017,10 +1020,10 @@ const mixViewSortBy = (
       }
       break;
     }
-    case 'popularity':
+    case 'demand':
     default: {
-      if (left.popularity !== right.popularity) {
-        return by(left.popularity - right.popularity);
+      if (left.smokeCtaCount !== right.smokeCtaCount) {
+        return by(left.smokeCtaCount - right.smokeCtaCount);
       }
       break;
     }
@@ -1104,8 +1107,8 @@ const inventoryMixSort = (left: InventoryDependentMixView, right: InventoryDepen
     return left.available ? -1 : 1;
   }
 
-  if (right.popularity !== left.popularity) {
-    return right.popularity - left.popularity;
+  if (right.smokeCtaCount !== left.smokeCtaCount) {
+    return right.smokeCtaCount - left.smokeCtaCount;
   }
 
   if (right.avgRating !== left.avgRating) {
@@ -1127,7 +1130,7 @@ const buildInventoryTobaccoView = (
       available: mix.available,
       guestVisible: mix.guestVisible,
       avgRating: mix.avgRating,
-      popularity: mix.popularity,
+      smokeCtaCount: mix.smokeCtaCount,
     }))
     .sort(inventoryMixSort);
 
@@ -1349,7 +1352,6 @@ const validateMixInput = async (payload: Partial<MixInput>) => {
     flavors: componentValidation.flavors,
     flavorTags: componentValidation.flavorTags,
     available: payload.available ?? true,
-    popularity: typeof payload.popularity === 'number' ? payload.popularity : 0,
     baseAvgRating: typeof payload.baseAvgRating === 'number' ? payload.baseAvgRating : 4.5,
   };
 };
@@ -1552,7 +1554,6 @@ const insertSeedCatalog = async (tx: StorageTx) => {
         flavors: serializeList(unique(components.flatMap((item) => item.flavors))),
         flavorTags: serializeList(unique(components.flatMap((item) => item.flavorTags))),
         available: true,
-        popularity: mix.popularity,
         baseAvgRating: mix.avgRating,
       };
     }),
@@ -2055,43 +2056,22 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
 };
 
 const buildMostSelectedRail = async (): Promise<RailView> => {
-  const [mixes, events] = await Promise.all([
-    getAvailableMixCatalog(),
-    prisma.smokeCtaEvent.findMany({
-      select: {
-        mixId: true,
-      },
-    }),
-  ]);
-
-  const counts = events.reduce<Record<string, number>>((acc, event) => {
-    acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
-    return acc;
-  }, {});
+  const mixes = await getAvailableMixCatalog();
 
   const ranked = mixes
     .filter((mix) => mix.guestVisible)
-    .map((mix) => ({
-      mix,
-      smokeCtaCount: counts[mix.id] ?? 0,
-    }))
     .sort((left, right) => {
       if (right.smokeCtaCount !== left.smokeCtaCount) {
         return right.smokeCtaCount - left.smokeCtaCount;
       }
 
-      if (right.mix.avgRating !== left.mix.avgRating) {
-        return right.mix.avgRating - left.mix.avgRating;
+      if (right.avgRating !== left.avgRating) {
+        return right.avgRating - left.avgRating;
       }
 
-      if (right.mix.popularity !== left.mix.popularity) {
-        return right.mix.popularity - left.mix.popularity;
-      }
-
-      return left.mix.id.localeCompare(right.mix.id);
+      return left.id.localeCompare(right.id);
     })
-    .slice(0, 3)
-    .map(({ mix }) => mix);
+    .slice(0, 3);
 
   return {
     id: 'rail-statistical-top',
@@ -2119,8 +2099,8 @@ const buildTopRatedRail = async (): Promise<RailView> => {
         return right.ratingsCount - left.ratingsCount;
       }
 
-      if (right.popularity !== left.popularity) {
-        return right.popularity - left.popularity;
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
       }
 
       return left.name.localeCompare(right.name, 'ru');
@@ -2316,7 +2296,6 @@ export const createMix = async (payload: Partial<MixInput>) => {
         flavors: serializeList(validated.flavors),
         flavorTags: serializeList(validated.flavorTags),
         available: validated.available,
-        popularity: validated.popularity,
         baseAvgRating: validated.baseAvgRating,
       },
     });
@@ -2382,7 +2361,6 @@ export const updateMix = async (id: string, payload: MixPatch) => {
         flavors: serializeList(componentValidation.flavors),
         flavorTags: serializeList(componentValidation.flavorTags),
         available: typeof payload.available === 'boolean' ? payload.available : current.available,
-        popularity: typeof payload.popularity === 'number' ? payload.popularity : current.popularity,
         baseAvgRating: typeof payload.baseAvgRating === 'number' ? payload.baseAvgRating : current.baseAvgRating,
       },
     });
@@ -2814,7 +2792,6 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
       smokeCtaCount: smokeCounts[mix.id] ?? 0,
       avgRating: mix.avgRating,
       ratingsCount: mix.ratingsCount,
-      popularity: mix.popularity,
     }))
     .filter((item) => item.smokeCtaCount > 0)
     .sort((left, right) => {
@@ -2826,8 +2803,8 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
         return right.avgRating - left.avgRating;
       }
 
-      if (right.popularity !== left.popularity) {
-        return right.popularity - left.popularity;
+      if (right.smokeCtaCount !== left.smokeCtaCount) {
+        return right.smokeCtaCount - left.smokeCtaCount;
       }
 
       return left.mixName.localeCompare(right.mixName, 'ru');
@@ -2845,7 +2822,6 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
         smokeCtaCount: smokeCounts[mix.id] ?? 0,
         avgRating,
         ratingsCount: stats?.count ?? 0,
-        popularity: mix.popularity,
       };
     })
     .filter((item) => item.ratingsCount > 0)

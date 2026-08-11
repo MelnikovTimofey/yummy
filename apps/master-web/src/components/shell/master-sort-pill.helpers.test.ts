@@ -9,7 +9,7 @@ import {
 test('composeSortKey склеивает поле и направление через дефис', () => {
   assert.equal(composeSortKey('usage', 'desc'), 'usage-desc');
   assert.equal(composeSortKey('stock', 'asc'), 'stock-asc');
-  assert.equal(composeSortKey('popularity', 'desc'), 'popularity-desc');
+  assert.equal(composeSortKey('demand', 'desc'), 'demand-desc');
 });
 
 test('parseSortKey раскладывает compound-ключ обратно', () => {
@@ -46,7 +46,7 @@ test('parseSortKey обрабатывает имя поля с дефисами 
 
 test('buildSortPillOptions раскрывает каждое поле в desc/asc с человекочитаемой меткой', () => {
   const fields = [
-    { value: 'popularity' as const, label: 'По популярности' },
+    { value: 'demand' as const, label: 'По выбору гостей' },
     { value: 'name' as const, label: 'По названию' },
   ];
   const options = buildSortPillOptions(fields, [
@@ -56,12 +56,12 @@ test('buildSortPillOptions раскрывает каждое поле в desc/as
 
   assert.equal(options.length, 4);
   assert.deepEqual(options[0], {
-    key: 'popularity-desc',
-    label: 'По популярности · По убыванию',
+    key: 'demand-desc',
+    label: 'По выбору гостей · По убыванию',
   });
   assert.deepEqual(options[1], {
-    key: 'popularity-asc',
-    label: 'По популярности · По возрастанию',
+    key: 'demand-asc',
+    label: 'По выбору гостей · По возрастанию',
   });
   assert.deepEqual(options[2], {
     key: 'name-desc',

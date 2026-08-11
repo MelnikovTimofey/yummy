@@ -894,7 +894,7 @@ export const InventoryView = ({
                     <strong>{mix.name}</strong>
                     <span>{formatMixCardStatus(mix)}</span>
                     <span className="cell-meta">
-                      Рейтинг {mix.avgRating.toFixed(1)} · Популярность {formatMetricValue(mix.popularity)}
+                      Рейтинг {mix.avgRating.toFixed(1)} · выборов {formatMetricValue(mix.smokeCtaCount)}
                     </span>
                   </button>
                 ))
