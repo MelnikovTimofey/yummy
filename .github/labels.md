@@ -41,12 +41,6 @@ issue/PR, milestone даёт группировку и burndown.
 | `batch:quality-and-hardening` | Quality And Hardening | `D4C5F9` |
 | `batch:aroma-polish` | Aroma Polish | `F7C6C7` |
 
-## Legacy labels (не навешивать на новые issue/PR)
-
-| Label | Причина |
-|---|---|
-| `contour:nomad` | Концепт «parallel track» рядом с legacy Yummy устарел после split (CLAUDE.md §6): контур один — Арома Ателье. Метка сохранена только на исторических PR #2–#5. |
-
 ## Ручное создание
 
 Если `gh` настроен, labels создаются командами вида:

@@ -1,4 +1,4 @@
-name: Nomad Smoke
+name: Atelier Smoke
 
 on:
   pull_request:
@@ -16,11 +16,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: nomad-smoke-${{ github.event.pull_request.number }}
+  group: atelier-smoke-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  nomad-smoke:
+  atelier-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -65,7 +65,7 @@ jobs:
         working-directory: apps/backend
         # --wait ждёт healthcheck `pg_isready`, чтобы `prisma db push` не падал
         # с P1001 на ещё не открытом порту (тот же фикс, что в b198f3d для
-        # nomad-backend-build job'а).
+        # atelier-backend-build job'а).
         run: docker compose -f docker-compose.yml up -d --wait db
 
       - name: Prepare backend schema and seed
@@ -75,26 +75,26 @@ jobs:
           npm run prisma:dbpush -- --force-reset
           npm run prisma:seed
 
-      - name: Start Nomad local stack
+      - name: Start local stack
         run: |
-          mkdir -p output/playwright/nomad-quality/logs
+          mkdir -p output/playwright/atelier-quality/logs
           (
             cd apps/backend
-            npm run dev > ../../output/playwright/nomad-quality/logs/backend.log 2>&1 &
-            echo $! > ../../output/playwright/nomad-quality/logs/backend.pid
+            npm run dev > ../../output/playwright/atelier-quality/logs/backend.log 2>&1 &
+            echo $! > ../../output/playwright/atelier-quality/logs/backend.pid
           )
           (
             cd apps/aroma-web
-            npm run dev > ../../output/playwright/nomad-quality/logs/aroma.log 2>&1 &
-            echo $! > ../../output/playwright/nomad-quality/logs/aroma.pid
+            npm run dev > ../../output/playwright/atelier-quality/logs/aroma.log 2>&1 &
+            echo $! > ../../output/playwright/atelier-quality/logs/aroma.pid
           )
           (
             cd apps/master-web
-            npm run dev > ../../output/playwright/nomad-quality/logs/master.log 2>&1 &
-            echo $! > ../../output/playwright/nomad-quality/logs/master.pid
+            npm run dev > ../../output/playwright/atelier-quality/logs/master.log 2>&1 &
+            echo $! > ../../output/playwright/atelier-quality/logs/master.pid
           )
 
-      - name: Wait for Nomad services
+      - name: Wait for services
         run: |
           set -eu
           for url in http://127.0.0.1:3021/health http://127.0.0.1:5174 http://127.0.0.1:5176; do
@@ -122,15 +122,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nomad-smoke-artifacts
-          path: output/playwright/nomad-quality
+          name: atelier-smoke-artifacts
+          path: output/playwright/atelier-quality
           if-no-files-found: warn
 
       - name: Stop local stack
         if: always()
         run: |
           set +e
-          for pid_file in output/playwright/nomad-quality/logs/*.pid; do
+          for pid_file in output/playwright/atelier-quality/logs/*.pid; do
             [ -f "${pid_file}" ] || continue
             kill "$(cat "${pid_file}")" >/dev/null 2>&1 || true
           done

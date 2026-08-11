@@ -193,7 +193,7 @@ daily code'а.
   заменить `«—»` в колонке RATIO на реальный `confirmed/total`.
 
 **Triggers `risk:human-review`** — изменение Prisma-schema. Дождаться
-human review (см. `.github/NOMAD_REVIEW_POLICY.md`).
+human review (см. `.github/REVIEW_POLICY.md`).
 
 #### PR-12 · `feature/master-inventory-supply-flow`
 

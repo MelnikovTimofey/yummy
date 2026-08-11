@@ -1,4 +1,4 @@
-name: Nomad Docs Lint
+name: Atelier Docs Lint
 
 on:
   pull_request:
@@ -22,11 +22,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: nomad-docs-lint-${{ github.ref }}
+  group: atelier-docs-lint-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  nomad-docs-lint:
+  atelier-docs-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
       - name: Reject placeholder TODO markers
         run: |
           set -eu
-          if rg -n --glob '!.github/workflows/nomad-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .claude .github docs CLAUDE.md; then
+          if rg -n --glob '!.github/workflows/atelier-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .claude .github docs CLAUDE.md; then
             echo "Placeholder markers found in docs or skills"
             exit 1
           fi

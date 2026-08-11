@@ -1,4 +1,4 @@
-name: Nomad PR Checks
+name: Atelier PR Checks
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: nomad-pr-checks-${{ github.event.pull_request.number }}
+  group: atelier-pr-checks-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
       runtime: ${{ steps.filter.outputs.runtime }}
       process_core: ${{ steps.filter.outputs.process_core }}
     steps:
-      - name: Detect changed Nomad scopes
+      - name: Detect changed scopes
         id: filter
         uses: dorny/paths-filter@v3
         with:
@@ -71,7 +71,7 @@ jobs:
               - 'CLAUDE.md'
               - 'docs/**'
 
-  nomad-review-flags:
+  atelier-review-flags:
     needs: changes
     runs-on: ubuntu-latest
     steps:
@@ -155,8 +155,8 @@ jobs:
             core.summary.addRaw(summary, true);
             await core.summary.write();
 
-  nomad-aroma-build:
-    name: nomad-aroma-build
+  atelier-aroma-build:
+    name: atelier-aroma-build
     needs: changes
     if: needs.changes.outputs.aroma == 'true'
     runs-on: ubuntu-latest
@@ -174,8 +174,8 @@ jobs:
         working-directory: apps/aroma-web
         run: npm run build
 
-  nomad-master-build:
-    name: nomad-master-build
+  atelier-master-build:
+    name: atelier-master-build
     needs: changes
     if: needs.changes.outputs.master == 'true'
     runs-on: ubuntu-latest
@@ -196,8 +196,8 @@ jobs:
         working-directory: apps/master-web
         run: npm run build
 
-  nomad-backend-build:
-    name: nomad-backend-build
+  atelier-backend-build:
+    name: atelier-backend-build
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -234,8 +234,8 @@ jobs:
         working-directory: apps/backend
         run: docker compose -f docker-compose.yml down -v
 
-  nomad-bot-build:
-    name: nomad-bot-build
+  atelier-bot-build:
+    name: atelier-bot-build
     needs: changes
     if: needs.changes.outputs.bot == 'true'
     runs-on: ubuntu-latest
