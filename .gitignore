@@ -27,3 +27,6 @@ services/telegram-bot/.env
 # Claude Code local settings (personal, not shared)
 .claude/settings.local.json
 .claude/launch.json
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
