@@ -108,7 +108,7 @@ test('normalizeInventoryListResponse supports filter meta and dependent mixes', 
             available: true,
             guestVisible: false,
             avgRating: 4.7,
-            popularity: 12,
+            smokeCtaCount: 12,
           },
         ],
       },
@@ -257,7 +257,7 @@ test('normalizeMixRecord accepts inStock alias and component objects', () => {
     flavorProfiles: ['fresh'],
     flavors: ['мята'],
     avgRating: '4.7',
-    popularity: 11,
+    smokeCtaCount: 11,
     inStock: false,
   });
 
@@ -451,7 +451,7 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
           count: 3,
           avgRating: 4.8,
           ratingsCount: 2,
-          popularity: 12,
+          smokeCtaCount: 12,
         },
       ],
       topRatedMixes: [
@@ -461,7 +461,7 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
           avgRating: 5,
           ratingsCount: 1,
           smokeCtaCount: 1,
-          popularity: 10,
+          smokeCtaCount: 10,
         },
       ],
       ratingDistribution: [
@@ -522,7 +522,7 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
         smokeCtaCount: 3,
         avgRating: 4.8,
         ratingsCount: 2,
-        popularity: 12,
+        smokeCtaCount: 12,
       },
     ],
     topRatedMixes: [
@@ -532,7 +532,7 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
         smokeCtaCount: 1,
         avgRating: 5,
         ratingsCount: 1,
-        popularity: 10,
+        smokeCtaCount: 10,
       },
     ],
     ratingDistribution: [
@@ -592,7 +592,7 @@ test('dashboardWindowOptions keep supported dashboard windows in order', () => {
   assert.deepEqual(dashboardWindowOptions.map((item) => item.key), ['7d', '14d', '30d']);
 });
 
-test('sortMixes keeps available items and popularity first', () => {
+test('sortMixes keeps available items and demand first', () => {
   const sorted = sortMixes([
     {
       id: 'mix-2',
@@ -603,7 +603,7 @@ test('sortMixes keeps available items and popularity first', () => {
       flavorProfiles: [],
       flavors: [],
       avgRating: 4.5,
-      popularity: 20,
+      smokeCtaCount: 20,
       available: false,
     },
     {
@@ -615,7 +615,7 @@ test('sortMixes keeps available items and popularity first', () => {
       flavorProfiles: [],
       flavors: [],
       avgRating: 4.7,
-      popularity: 30,
+      smokeCtaCount: 30,
       available: true,
     },
   ]);

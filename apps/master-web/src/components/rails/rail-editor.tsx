@@ -179,7 +179,7 @@ export const RailEditor = ({
                       <div className="rail-drawer__picker-body">
                         <div className="rail-drawer__mix-name">{mix.name}</div>
                         <div className="rail-drawer__mix-meta">
-                          {mix.description || `Рейтинг ${mix.avgRating.toFixed(1)} · Популярность ${mix.popularity}`}
+                          {mix.description || `Рейтинг ${mix.avgRating.toFixed(1)} · выборов ${mix.smokeCtaCount}`}
                         </div>
                       </div>
                       <span className="rail-drawer__picker-action" aria-hidden>

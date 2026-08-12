@@ -34,7 +34,6 @@ export type Mix = {
   name: string;
   description: string;
   componentIds: string[];
-  popularity: number;
   avgRating: number;
 };
 
@@ -173,7 +172,6 @@ export const mixes: Mix[] = [
     name: 'Цитрусовый караван',
     description: 'Свежий микс с ярким лимонно-мятным акцентом.',
     componentIds: ['tobacco-citrus-breeze', 'tobacco-mint-veil'],
-    popularity: 92,
     avgRating: 4.8,
   },
   {
@@ -181,7 +179,6 @@ export const mixes: Mix[] = [
     name: 'Ягодный рассвет',
     description: 'Мягкая ягодная сладость с холодным хвостом.',
     componentIds: ['tobacco-berry-oasis', 'tobacco-mint-veil'],
-    popularity: 85,
     avgRating: 4.7,
   },
   {
@@ -189,7 +186,6 @@ export const mixes: Mix[] = [
     name: 'Шёлковый путь',
     description: 'Десертный микс с медом и ванилью.',
     componentIds: ['tobacco-desert-honey', 'tobacco-berry-oasis'],
-    popularity: 78,
     avgRating: 4.6,
   },
   {
@@ -197,7 +193,6 @@ export const mixes: Mix[] = [
     name: 'Янтарный базар',
     description: 'Пряно-табачный профиль с теплым послевкусием.',
     componentIds: ['tobacco-spice-route', 'tobacco-desert-honey'],
-    popularity: 74,
     avgRating: 4.5,
   },
   {
@@ -205,7 +200,6 @@ export const mixes: Mix[] = [
     name: 'Персиковый мираж',
     description: 'Сладкий фруктовый микс, который сейчас недоступен по наличию.',
     componentIds: ['tobacco-peach-silk', 'tobacco-mint-veil'],
-    popularity: 81,
     avgRating: 4.4,
   },
   {
@@ -213,7 +207,6 @@ export const mixes: Mix[] = [
     name: 'Травяной сад',
     description: 'Спокойный чайный микс с цитрусовой свежестью.',
     componentIds: ['tobacco-herbal-dawn', 'tobacco-mint-veil'],
-    popularity: 63,
     avgRating: 4.3,
   },
   {
@@ -221,7 +214,6 @@ export const mixes: Mix[] = [
     name: 'Розовый сумрак',
     description: 'Нежный цветочно-парфюмный микс для медленного вечера.',
     componentIds: ['tobacco-rose-nocturne', 'tobacco-coconut-cream'],
-    popularity: 58,
     avgRating: 4.2,
   },
   {
@@ -229,7 +221,6 @@ export const mixes: Mix[] = [
     name: 'Яблочная волна',
     description: 'Сочный кисло-свежий микс с холодным послевкусием.',
     componentIds: ['tobacco-apple-fizz', 'tobacco-mint-veil'],
-    popularity: 69,
     avgRating: 4.4,
   },
   {
@@ -237,7 +228,6 @@ export const mixes: Mix[] = [
     name: 'Виноградное ателье',
     description: 'Фруктовый микс с ягодной глубиной и мягкой основой.',
     componentIds: ['tobacco-grape-fog', 'tobacco-pear-bloom'],
-    popularity: 66,
     avgRating: 4.5,
   },
   {
@@ -245,7 +235,6 @@ export const mixes: Mix[] = [
     name: 'Тёмный рынок',
     description: 'Табачный микс с сухофруктами и тёплыми специями.',
     componentIds: ['tobacco-dark-leaf', 'tobacco-spice-route'],
-    popularity: 61,
     avgRating: 4.3,
   },
   {
@@ -253,7 +242,6 @@ export const mixes: Mix[] = [
     name: 'Сливовая ночь',
     description: 'Ледяная ягодная подача для тех, кто любит прохладный дым.',
     componentIds: ['tobacco-iced-plum', 'tobacco-berry-oasis'],
-    popularity: 64,
     avgRating: 4.4,
   },
 ];

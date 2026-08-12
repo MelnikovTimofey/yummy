@@ -147,7 +147,6 @@ const mixes = [
     flavors: ['лимон', 'мята'],
     flavorTags: ['fresh'],
     available: true,
-    popularity: 92,
     baseAvgRating: 4.8,
   },
   {
@@ -158,7 +157,6 @@ const mixes = [
     flavors: ['малина', 'черника'],
     flavorTags: ['berry'],
     available: true,
-    popularity: 85,
     baseAvgRating: 4.7,
   },
   {
@@ -169,7 +167,6 @@ const mixes = [
     flavors: ['мед', 'ваниль'],
     flavorTags: ['dessert'],
     available: true,
-    popularity: 78,
     baseAvgRating: 4.6,
   },
   {
@@ -180,7 +177,6 @@ const mixes = [
     flavors: ['корица', 'кардамон'],
     flavorTags: ['spicy'],
     available: true,
-    popularity: 74,
     baseAvgRating: 4.5,
   },
   {
@@ -191,7 +187,6 @@ const mixes = [
     flavors: ['персик'],
     flavorTags: ['fruity'],
     available: true,
-    popularity: 81,
     baseAvgRating: 4.4,
   },
 ] as const;
@@ -368,7 +363,6 @@ async function main() {
       flavors: JSON.stringify(mix.flavors),
       flavorTags: JSON.stringify(mix.flavorTags),
       available: mix.available,
-      popularity: mix.popularity,
       baseAvgRating: mix.baseAvgRating,
     })),
     skipDuplicates: true,

@@ -1257,7 +1257,6 @@ export const buildApp = () => {
             sortOrder?: number;
           }>;
           available?: boolean;
-          popularity?: number;
           baseAvgRating?: number;
         }
       | undefined;
@@ -1268,7 +1267,6 @@ export const buildApp = () => {
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : [],
       components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
-      popularity: payload?.popularity,
       baseAvgRating: payload?.baseAvgRating,
     });
 
@@ -1313,7 +1311,6 @@ export const buildApp = () => {
             sortOrder?: number;
           }>;
           available?: boolean;
-          popularity?: number;
           baseAvgRating?: number;
         }
       | undefined;
@@ -1328,7 +1325,6 @@ export const buildApp = () => {
       componentIds: Array.isArray(payload?.componentIds) ? payload!.componentIds : undefined,
       components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
-      popularity: payload?.popularity,
       baseAvgRating: payload?.baseAvgRating,
     });
 

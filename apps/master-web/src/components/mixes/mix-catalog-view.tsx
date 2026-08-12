@@ -507,7 +507,7 @@ export const MixCatalogView = ({
                       <td>
                         <div className="mixes-cell mixes-cell__metrics">
                           <span className="mixes-cell__metric" title="Популярность микса">
-                            <span aria-hidden="true">🔥</span> {formatMetricValue(mix.popularity)}
+                            <span aria-hidden="true">🔥</span> {formatMetricValue(mix.smokeCtaCount)}
                           </span>
                           <span className="mixes-cell__metric" title="Средний рейтинг гостей">
                             <span aria-hidden="true">★</span> {mix.avgRating.toFixed(1)}

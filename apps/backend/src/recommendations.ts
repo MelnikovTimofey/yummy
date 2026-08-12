@@ -16,7 +16,7 @@ export type RecommendationMix = {
   flavors: string[];
   score: number;
   avgRating: number;
-  popularity: number;
+  smokeCtaCount: number;
   components: Array<{
     id: string;
     name: string;
@@ -42,10 +42,17 @@ export const getOnboardingOptions = async () => {
 
 export const getInStockMixes = () => getGuestCatalogMixes();
 
+// Спрос — сырой счётчик событий «Покурить», он растёт неограниченно. Нормируем
+// его по самому выбираемому миксу, иначе со временем бонус за спрос перевесит
+// совпадение по онбордингу и рекомендации перестанут зависеть от ответов гостя
+// (PRD §7.3). Потолок в 30 баллов держит вклад спроса на уровне прежнего.
+const DEMAND_BONUS_CEILING = 30;
+
 const calculateScore = (
   mix: MixView,
   likedProfiles: string[],
   likedFlavors: string[],
+  maxSmokeCtaCount: number,
 ) => {
   const profiles = unique(mix.flavorProfiles.map((profile) => profile.toLowerCase()));
   const flavors = unique(mix.flavors.map((flavor) => flavor.toLowerCase()));
@@ -53,9 +60,11 @@ const calculateScore = (
   const profileHits = profiles.filter((profile) => likedProfiles.includes(profile)).length;
   const flavorHits = flavors.filter((flavor) => likedFlavors.includes(flavor)).length;
   const ratingBonus = mix.avgRating * 12;
-  const popularityBonus = mix.popularity * 0.35;
+  const demandBonus = maxSmokeCtaCount > 0
+    ? (mix.smokeCtaCount / maxSmokeCtaCount) * DEMAND_BONUS_CEILING
+    : 0;
 
-  return profileHits * 110 + flavorHits * 75 + ratingBonus + popularityBonus;
+  return profileHits * 110 + flavorHits * 75 + ratingBonus + demandBonus;
 };
 
 export const getRecommendations = async (input: OnboardingInput): Promise<RecommendationMix[]> => {
@@ -63,7 +72,10 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
   const likedFlavors = normalizeInput(input.likedFlavors);
   const limit = Math.max(1, Math.min(input.limit ?? 6, 12));
 
-  return (await getInStockMixes())
+  const mixes = await getInStockMixes();
+  const maxSmokeCtaCount = mixes.reduce((max, mix) => Math.max(max, mix.smokeCtaCount), 0);
+
+  return mixes
     .map((mix) => {
       return {
         id: mix.id,
@@ -71,9 +83,9 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
         description: mix.description,
         flavorProfiles: [...mix.flavorProfiles],
         flavors: [...mix.flavors],
-        score: Number(calculateScore(mix, likedProfiles, likedFlavors).toFixed(2)),
+        score: Number(calculateScore(mix, likedProfiles, likedFlavors, maxSmokeCtaCount).toFixed(2)),
         avgRating: mix.avgRating,
-        popularity: mix.popularity,
+        smokeCtaCount: mix.smokeCtaCount,
         components: mix.components.map((item) => ({
           id: item.id,
           name: item.name,
@@ -90,7 +102,7 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
       if (right.avgRating !== left.avgRating) {
         return right.avgRating - left.avgRating;
       }
-      return right.popularity - left.popularity;
+      return right.smokeCtaCount - left.smokeCtaCount;
     })
     .slice(0, limit);
 };

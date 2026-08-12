@@ -107,13 +107,13 @@ export function DashboardView({
                   <div className="dashboard-page__row-copy">
                     <div className="dashboard-page__row-name">{mix.name}</div>
                     <div className="dashboard-page__row-meta cell-truncate">
-                      Выборов {formatMetricValue(mix.smokeCtaCount)} · оценок {formatMetricValue(mix.ratingsCount)}
+                      Оценок {formatMetricValue(mix.ratingsCount)}
                     </div>
                   </div>
                   <div className="dashboard-page__row-metrics" aria-label="Спрос и рейтинг">
                     <span className="dashboard-page__metric">
                       <Flame size={11} aria-hidden="true" />
-                      {formatMetricValue(mix.popularity)}
+                      {formatMetricValue(mix.smokeCtaCount)}
                     </span>
                     <span className="dashboard-page__metric">
                       <Star size={11} aria-hidden="true" />

@@ -37,7 +37,7 @@ export type InventoryDependentMix = {
   available: boolean;
   guestVisible: boolean;
   avgRating: number;
-  popularity: number;
+  smokeCtaCount: number;
 };
 
 export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
@@ -142,7 +142,7 @@ export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
-export type MixSortField = 'popularity' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
+export type MixSortField = 'demand' | 'avgRating' | 'name' | 'updatedAt' | 'rails';
 
 export type MixSortDirection = 'asc' | 'desc';
 
@@ -214,7 +214,7 @@ export type MixRecord = {
   flavorTags: string[];
   avgRating: number;
   ratingsCount: number;
-  popularity: number;
+  smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
   createdAt: string;
@@ -249,7 +249,7 @@ export const defaultMixListResponse: MixListResponse = {
     },
   },
   sort: {
-    field: 'popularity',
+    field: 'demand',
     direction: 'desc',
   },
   meta: {
@@ -362,7 +362,7 @@ export type DashboardMixMetric = {
   smokeCtaCount: number;
   avgRating: number;
   ratingsCount: number;
-  popularity: number;
+  smokeCtaCount: number;
 };
 
 export type DashboardBlockedMix = {
@@ -602,9 +602,9 @@ const toMixRailFilter = (value: unknown): MixRailFilter => {
 };
 
 const toMixSortField = (value: unknown): MixSortField => {
-  return value === 'avgRating' || value === 'name' || value === 'updatedAt' || value === 'rails' || value === 'popularity'
+  return value === 'avgRating' || value === 'name' || value === 'updatedAt' || value === 'rails' || value === 'demand'
     ? value
-    : 'popularity';
+    : 'demand';
 };
 
 const toMixSortDirection = (value: unknown): MixSortDirection => {
@@ -832,7 +832,7 @@ export const normalizeInventoryDependentMix = (value: unknown): InventoryDepende
     available: toBoolean(raw.available, true),
     guestVisible: toBoolean(raw.guestVisible, true),
     avgRating: toNumber(raw.avgRating, 0),
-    popularity: toNumber(raw.popularity, 0),
+    smokeCtaCount: toNumber(raw.smokeCtaCount, 0),
   };
 };
 
@@ -889,7 +889,7 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     flavorTags: uniqueStrings(toStringList(raw.flavorTags)),
     avgRating: toNumber(raw.avgRating, 0),
     ratingsCount: toNumber(raw.ratingsCount, 0),
-    popularity: toNumber(raw.popularity, 0),
+    smokeCtaCount: toNumber(raw.smokeCtaCount, 0),
     available: toBoolean(raw.available ?? raw.inStock, true),
     guestVisible: toBoolean(raw.guestVisible, toBoolean(raw.available ?? raw.inStock, true)),
     createdAt: toIsoString(raw.createdAt, ''),
@@ -984,7 +984,7 @@ export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
         smokeCtaCount: 0,
         avgRating: 0,
         ratingsCount: 0,
-        popularity: 0,
+        smokeCtaCount: 0,
       };
     }
 
@@ -994,7 +994,7 @@ export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
       smokeCtaCount: toNumber(item.smokeCtaCount ?? item.count, 0),
       avgRating: toNumber(item.avgRating, 0),
       ratingsCount: toNumber(item.ratingsCount, 0),
-      popularity: toNumber(item.popularity, 0),
+      smokeCtaCount: toNumber(item.smokeCtaCount, 0),
     };
   };
 
@@ -1268,8 +1268,8 @@ export const sortMixes = (items: MixRecord[]) => {
       return right.railCount - left.railCount;
     }
 
-    if (right.popularity !== left.popularity) {
-      return right.popularity - left.popularity;
+    if (right.smokeCtaCount !== left.smokeCtaCount) {
+      return right.smokeCtaCount - left.smokeCtaCount;
     }
 
     if (right.avgRating !== left.avgRating) {
@@ -1552,7 +1552,7 @@ export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }
 ];
 
 export const mixSortFieldOptions: Array<{ value: MixSortField; label: string }> = [
-  { value: 'popularity', label: 'По популярности' },
+  { value: 'demand', label: 'По выбору гостей' },
   { value: 'rails', label: 'По участию в рейлах' },
   { value: 'avgRating', label: 'По рейтингу' },
   { value: 'updatedAt', label: 'По обновлению' },

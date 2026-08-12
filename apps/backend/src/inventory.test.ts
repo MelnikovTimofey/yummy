@@ -611,7 +611,6 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
     smokeCtaCount: 2,
     avgRating: 5,
     ratingsCount: 1,
-    popularity: 92,
   });
   assert.deepEqual(dashboardBody.product.topRatedMixes[0], {
     mixId: 'mix-citrus-scout',
@@ -619,7 +618,6 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
     smokeCtaCount: 2,
     avgRating: 5,
     ratingsCount: 1,
-    popularity: 92,
   });
   assert.equal(dashboardBody.inventory.manufacturers[0]?.label, 'Ателье Reserve');
   assert.equal(dashboardBody.inventory.flavorProfiles.some((item) => item.label === 'Свежие'), true);

@@ -601,7 +601,6 @@ test('staff mixes list supports filters and validates component proportions', as
           },
         ],
         available: true,
-        popularity: 22,
       },
     });
 
@@ -709,6 +708,52 @@ test('staff mixes list paginates catalog results', async () => {
     assert.equal(body.meta.totalPages >= 2, true);
     assert.equal(body.meta.hasNextPage, true);
     assert.equal(body.meta.hasPreviousPage, true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('staff mix catalog ranks by real smoke-CTA demand, not by seeded rating order', async () => {
+  const app = buildApp();
+
+  try {
+    const token = await loginStaff(app);
+
+    // rose-afterglow — аутсайдер в сидовом каталоге, citrus-scout — фаворит.
+    // Реальные выборы «Покурить» должны переставить их местами.
+    for (let index = 0; index < 5; index += 1) {
+      await app.inject({
+        method: 'POST',
+        url: '/guest/events/smoke-cta',
+        payload: { mixId: 'mix-rose-afterglow' },
+      });
+    }
+
+    await app.inject({
+      method: 'POST',
+      url: '/guest/events/smoke-cta',
+      payload: { mixId: 'mix-citrus-scout' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/staff/mixes?sort=demand&direction=desc',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as {
+      items: Array<{ id: string; smokeCtaCount: number }>;
+      sort: { field: string; direction: string };
+    };
+
+    assert.equal(body.sort.field, 'demand');
+    assert.equal(body.items[0]?.id, 'mix-rose-afterglow');
+    assert.equal(body.items[0]?.smokeCtaCount, 5);
+    assert.equal(body.items.find((item) => item.id === 'mix-citrus-scout')?.smokeCtaCount, 1);
+    assert.equal(body.items.find((item) => item.id === 'mix-silk-road')?.smokeCtaCount, 0);
   } finally {
     await app.close();
   }

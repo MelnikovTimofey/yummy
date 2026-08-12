@@ -69,7 +69,7 @@ export type OnboardingRecommendationsResponse = {
     flavors: string[];
     score: number;
     avgRating: number;
-    popularity: number;
+    smokeCtaCount: number;
     components: Array<{
       id: string;
       name: string;
