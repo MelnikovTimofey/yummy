@@ -98,8 +98,6 @@ jobs:
             });
             const existingNames = new Set(existing.map((label) => label.name));
 
-            // contour:nomad — legacy (см. labels.md): parallel-track концепт умер
-            // после split legacy, на новые PR не навешиваем.
             const desired = new Set();
             if (process.env.AROMA === "true") desired.add("scope:aroma-web");
             if (process.env.MASTER === "true") desired.add("scope:master-web");

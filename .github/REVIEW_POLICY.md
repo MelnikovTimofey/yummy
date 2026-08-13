@@ -113,8 +113,6 @@ Source of truth по GitHub labels хранится в `.github/labels.md`.
 3. `risk:*`
 4. `batch:*` (дублируется milestone'ом)
 
-Метка `contour:nomad` — legacy (см. `labels.md`), на новые issue/PR не навешивается.
-
 ## Phase rollout
 
 ### Phase 1
