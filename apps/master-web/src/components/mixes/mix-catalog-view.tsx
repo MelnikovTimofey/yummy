@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Copy, Eye, EyeOff, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  Copy,
+  Eye,
+  EyeOff,
+  Flame,
+  Pencil,
+  Plus,
+  Search,
+  Star,
+  Trash2,
+} from 'lucide-react';
 import {
   Dialog,
   DialogClose,
@@ -507,10 +518,12 @@ export const MixCatalogView = ({
                       <td>
                         <div className="mixes-cell mixes-cell__metrics">
                           <span className="mixes-cell__metric" title="Популярность микса">
-                            <span aria-hidden="true">🔥</span> {formatMetricValue(mix.smokeCtaCount)}
+                            <Flame size={11} aria-hidden="true" />
+                            {formatMetricValue(mix.smokeCtaCount)}
                           </span>
                           <span className="mixes-cell__metric" title="Средний рейтинг гостей">
-                            <span aria-hidden="true">★</span> {mix.avgRating.toFixed(1)}
+                            <Star size={11} aria-hidden="true" />
+                            {mix.avgRating.toFixed(1)}
                             {mix.ratingsCount > 0 ? (
                               <span className="mixes-cell__metric-meta">
                                 ({formatMetricValue(mix.ratingsCount)})
