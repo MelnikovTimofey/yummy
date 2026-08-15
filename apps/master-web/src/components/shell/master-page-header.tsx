@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react';
 
 type MasterPageHeaderProps = {
-  /** eyebrow uppercase mono mini (e.g. «ИНВЕНТАРИЗАЦИЯ», «МЕНЕДЖЕР МИКСОВ») */
+  /** eyebrow — служебный слой: uppercase 11px, --font-meta (e.g. «ИНВЕНТАРИЗАЦИЯ») */
   eyebrow?: string;
-  /** Main page title — рендерится как `<h1>` Fraunces огромный */
+  /** Main page title — рендерится как `<h1>` Source Serif 4, 36px/1.05 */
   title: string;
   /** 1-line lead под заголовком */
   subtitle?: string;
   /** Правый блок — primary action + ghost-actions (рендерится в сетке справа) */
   actions?: ReactNode;
-  /** Дополнительный slot правее actions — для mono-ссылок типа /staff/audit/events */
+  /** Дополнительный slot правее actions — для служебных ссылок типа /staff/audit/events */
   meta?: ReactNode;
 };
 
