@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { ChevronDown, ChevronUp, Plus, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, Plus, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
@@ -894,7 +894,16 @@ export const InventoryView = ({
                     <strong>{mix.name}</strong>
                     <span>{formatMixCardStatus(mix)}</span>
                     <span className="cell-meta">
-                      Рейтинг {mix.avgRating.toFixed(1)} · выборов {formatMetricValue(mix.smokeCtaCount)}
+                      <span className="metric-inline" title="Популярность микса">
+                        <Flame size={11} aria-hidden="true" />
+                        <span className="sr-only">Выборов</span>
+                        {formatMetricValue(mix.smokeCtaCount)}
+                      </span>
+                      <span className="metric-inline" title="Средний рейтинг гостей">
+                        <Star size={11} aria-hidden="true" />
+                        <span className="sr-only">Рейтинг</span>
+                        {mix.avgRating.toFixed(1)}
+                      </span>
                     </span>
                   </button>
                 ))
