@@ -1,52 +1,19 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-
-const signIn = async (login: string, password: string, page: Page) => {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Войти в смену' })).toBeVisible();
-  // exact-match: иначе getByLabel('Пароль') резолвится в 2 элемента —
-  // сам input и кнопку-«глаз» с aria-label «Показать пароль» (strict mode).
-  await page.getByLabel('Логин', { exact: true }).fill(login);
-  await page.getByLabel('Пароль', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Войти' }).click();
-  // h1 после логина = title из MasterPageHeader (default `dashboard` →
-  // «Дашборд смены»). Route-шапка `.master-stage__header` удалена в
-  // chore/master-stage-header-cleanup — единственный h1 живёт внутри
-  // MasterPageHeader каждого workspace-view (см. CLAUDE.md §3, smoke gate
-  // после правок фронта).
-  await expect(
-    page.getByRole('heading', { name: 'Дашборд смены', level: 1 }),
-  ).toBeVisible();
-  await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
-};
-
-const getWorkspaceTab = (page: Page, label: string) =>
-  page
-    .getByRole('tab')
-    .filter({
-      has: page.getByText(label, { exact: true }),
-    });
-
-const openWorkspace = async (page: Page, label: string) => {
-  const tab = getWorkspaceTab(page, label);
-  await tab.click();
-  await expect(tab).toHaveAttribute('aria-selected', 'true');
-};
-
-const getInventoryRow = (page: Page, name: string): Locator =>
-  page.locator('tbody tr').filter({
-    has: page.getByRole('cell', { name }),
-  });
-
-// Каталог миксов = таблица с богатой row-композицией (МИКС / СОСТАВ /
-// ПРОФИЛЬ / СТАТУС / МЕТРИКИ / ДЕЙСТВИЯ) — соответствует mockups.html.
-// PR #63 раньше попытался card-grid; PR-B вернул table back.
-const getMixRow = (page: Page, name: string): Locator =>
-  page.locator('table.mixes-table tbody tr').filter({
-    has: page.getByText(name, { exact: true }),
-  });
+import { expect, test } from '@playwright/test';
+import {
+  adminCredentials,
+  applyStockFilter,
+  getWorkspaceTab,
+  openWorkspace,
+  operatorCredentials,
+  pinFirstInventoryRow,
+  pinFirstMixRow,
+  readStockFilterCount,
+  readMixName,
+  signIn,
+} from './helpers';
 
 test('Master workspace tabs support keyboard navigation for critical admin sections', async ({ page }) => {
-  await signIn('admin', 'admin', page);
+  await signIn(adminCredentials.login, adminCredentials.password, page);
 
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
@@ -75,20 +42,37 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 });
 
 test('Master admin smoke covers inventory batch flow, mixes editor, rails read-only mode and access observability', async ({ page }) => {
-  await signIn('admin', 'admin', page);
+  await signIn(adminCredentials.login, adminCredentials.password, page);
 
   await openWorkspace(page, 'Табаки');
-  const mintVeilRow = getInventoryRow(page, 'Mint Veil');
-  await expect(mintVeilRow).toBeVisible();
+  const { row: tobaccoRow } = await pinFirstInventoryRow(page);
 
-  await mintVeilRow.getByRole('checkbox', { name: 'Выбрать Mint Veil' }).check();
+  const outOfStockBefore = await readStockFilterCount(page, 'Нет наличия');
+
+  await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
+  // Батч-флоу неразрушающий: наличие снимается и тут же возвращается, поэтому
+  // прогон не меняет состояние базы — важно и для демо-seed, и для снапшота.
   await page.getByRole('button', { name: 'Убрать из наличия' }).click();
-  await expect(mintVeilRow.getByText('Нет наличия')).toBeVisible();
+  // Результат читается по счётчику чипа, а не по статусу в исходной строке:
+  // при сортировке по умолчанию («сначала по наличию») строка уезжает в конец
+  // списка, а на каталоге из 11 505 позиций — вообще на другую страницу.
+  await expect
+    .poll(() => readStockFilterCount(page, 'Нет наличия'))
+    .toBe(outOfStockBefore + 1);
 
-  await mintVeilRow.getByRole('checkbox', { name: 'Выбрать Mint Veil' }).check();
+  // Возврат — из отфильтрованного списка снятых, где строка гарантированно
+  // видна независимо от размера каталога.
+  await applyStockFilter(page, 'Нет наличия');
+  await expect(tobaccoRow).toBeVisible();
+  await tobaccoRow.getByRole('checkbox').check();
+  await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
   await page.getByRole('button', { name: 'Вернуть в наличие' }).click();
-  await expect(mintVeilRow.getByText('В наличии')).toBeVisible();
+  await expect
+    .poll(() => readStockFilterCount(page, 'Нет наличия'))
+    .toBe(outOfStockBefore);
+
+  await applyStockFilter(page, 'Все');
 
   // Фильтр «Архив» (issue #129): по умолчанию архивные скрыты, чип не нажат.
   // Переключаем фильтр и убеждаемся, что он становится активным, затем
@@ -101,19 +85,21 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
 
   await openWorkspace(page, 'Миксы');
-  const citrusMixRow = getMixRow(page, 'Цитрусовый караван');
-  await expect(citrusMixRow).toBeVisible();
+  const mixRow = await pinFirstMixRow(page);
+  const mixName = await readMixName(mixRow);
   // Row-click открывает редактор (drawer-pattern из mockup'а Master).
   // Прежняя кнопка «Открыть» в actions-cell заменена на icon edit/copy/hide;
   // edit-icon скрыт до hover, поэтому кликаем по самой строке.
-  await citrusMixRow.click();
+  await mixRow.click();
   // MixBuilder открывается full-page (3-колоночный layout) — Sheet удалён
   // в шаге 5 рефактора по design/design_handoff_master_refactor §Микс —
   // конструктор. Имя микса — `<h2>` в sticky-breadcrumb сверху-слева.
-  await expect(page.getByRole('heading', { name: 'Цитрусовый караван' })).toBeVisible();
-  await expect(page.getByText('сумма = 100%')).toBeVisible();
-  await expect(page.locator('.mix-builder__component').nth(0)).toContainText('Citrus Breeze');
-  await expect(page.locator('.mix-builder__component').nth(1)).toContainText('Mint Veil');
+  await expect(page.getByRole('heading', { name: mixName })).toBeVisible();
+  // Тег «сумма = 100%» показывается только при totalPercent === 100, то есть
+  // зависит от долей конкретного микса. Проверяем сам breadcrumb и наличие
+  // состава — они есть у любого микса.
+  await expect(page.locator('.mix-builder__breadcrumb')).toBeVisible();
+  await expect(page.locator('.mix-builder__component').first()).toBeVisible();
 
   // Возвращаемся в каталог через кнопку «Отмена» в шапке MixBuilder —
   // полноэкранный layout не оверлей, но всё равно прячем его перед
@@ -121,22 +107,23 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await page.getByRole('button', { name: 'Отмена' }).click();
   await expect(page.locator('.mix-builder')).toBeHidden();
 
-  // Удаление микса = подтверждающий диалог, текст которого зависит от
-  // участия микса в рейлах. «Цитрусовый караван» входит в prepared-рейл
-  // «Свежая линия», поэтому предупреждение перечисляет рейлы. Не
-  // подтверждаем (Отмена) — smoke остаётся неразрушающим для остальных
-  // assertion'ов на seed-данных.
-  await citrusMixRow.getByRole('button', { name: 'Удалить Цитрусовый караван' }).click();
+  // Удаление микса = подтверждающий диалог. Не подтверждаем (Отмена) — smoke
+  // остаётся неразрушающим. Перечисление рейлов внутри диалога зависит от
+  // того, входит ли микс в рейл, поэтому живёт в master-seed.spec.ts.
+  await mixRow.getByRole('button', { name: `Удалить ${mixName}` }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Удалить микс «Цитрусовый караван»?' }),
+    page.getByRole('heading', { name: `Удалить микс «${mixName}»?` }),
   ).toBeVisible();
-  await expect(page.getByText('Свежая линия')).toBeVisible();
   await page.getByRole('button', { name: 'Отмена' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(citrusMixRow).toBeVisible();
+  await expect(mixRow).toBeVisible();
 
   await openWorkspace(page, 'Рейлы');
+  // «Больше всего выбирают» — системный statistical-рейл: backend синтезирует
+  // его на лету (`buildTopRail` в apps/backend/src/state.ts), строкой в базе
+  // он не лежит. Имя продуктовое, а не фикстурное, поэтому опора на него не
+  // возвращает зависимость от seed.
   const statisticalRail = page.locator('article').filter({
     has: page.getByRole('heading', { name: 'Больше всего выбирают' }),
   });
@@ -166,7 +153,7 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
 });
 
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
-  await signIn('atelier', 'atelier', page);
+  await signIn(operatorCredentials.login, operatorCredentials.password, page);
 
   await openWorkspace(page, 'Доступ');
   await expect(page.getByRole('heading', { name: 'Доступ и персонал', level: 1 })).toBeVisible();

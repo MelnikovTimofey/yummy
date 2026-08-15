@@ -1522,6 +1522,10 @@ export const InventoryView = ({
                   <tr
                     key={item.id}
                     data-active={isActive}
+                    // Якорь для smoke: имена табаков в реальном каталоге не
+                    // уникальны, а сортировка переставляет строки после
+                    // батч-операции (#27).
+                    data-tobacco-id={item.id}
                     className="inventory-table__row"
                     onClick={() => openEditEditor(item)}
                   >

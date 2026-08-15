@@ -76,6 +76,27 @@ docker exec yummy-db-1 pg_dump -U atelier -d atelier -Fc --no-owner --no-privile
 docker cp yummy-db-1:/tmp/product.dump snapshots/atelier-product-data.dump
 ```
 
+### Что снэпшот не содержит
+
+В нём нет ни `StaffAccount`, ни `DailyAccessCode`, поэтому на свежевосстановленной
+базе нельзя ни войти в консоль Мастера, ни пройти гостевой вход. После restore
+нужно завести учётки и код:
+
+```bash
+cd apps/backend
+ATELIER_BOOTSTRAP_ADMIN_LOGIN=… ATELIER_BOOTSTRAP_ADMIN_PASSWORD=… npm run bootstrap:admin
+```
+
+daily code создаётся в консоли Мастера, раздел «Доступ».
+
+## Smoke и состояние базы
+
+`tests/smoke` проходит **и на демо-seed, и на продуктовом снэпшоте** — тесты не
+ссылаются на имена сущностей каталога и адресуют строки по `data-tobacco-id` /
+`data-mix-id`. Требования к состоянию базы, переменные окружения для нестандартных
+учёток и разбор проекта `master-seed-chromium` — в
+[`../../tests/smoke/README.md`](../../tests/smoke/README.md).
+
 ## Бэкапы и restore
 
 Полные дампы состояния (включая staff/auth и `atelier_test`) лежат вне репозитория
