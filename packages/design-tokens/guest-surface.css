@@ -20,15 +20,19 @@
   --guest-chip-border-on: rgba(244, 239, 234, 0.34);
   --guest-dock-fade: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%); /* @kind color */
 
-  /* Guest primary CTA — solid oxblood */
-  --cta-solid: linear-gradient(180deg, #c25749 0%, #b04a3e 100%); /* @kind color */
+  /* Guest primary CTA — solid oxblood.
+     Градиент идёт от --accent к --accent-deep, а не от --accent-hover к --accent:
+     кремовая надпись 13px/600 на светлой кромке #C25749 давала 3.87:1, ниже
+     AA 4.5:1 для обычного текста. На этой паре — 4.72:1 сверху и 7.62:1 снизу. */
+  --cta-solid: linear-gradient(180deg, #b04a3e 0%, #7e342b 100%); /* @kind color */
   --cta-solid-border: rgba(244, 239, 234, 0.22);
   --cta-solid-ink: #f4efea;
   --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.18), 0 14px 26px rgba(126, 52, 43, 0.4);
   --cta-solid-disabled-bg: rgba(60, 28, 22, 0.6);
 
-  /* Segment nav (active) */
-  --segment-active-bg: linear-gradient(180deg, #c25749 0%, #b04a3e 100%);
+  /* Segment nav (active) — та же глубина, что у CTA: текст здесь 11px, то есть
+     требования к контрасту строже, а не мягче. */
+  --segment-active-bg: linear-gradient(180deg, #b04a3e 0%, #7e342b 100%);
   --segment-active-ink: #f4efea;
   --segment-active-border: rgba(244, 239, 234, 0.24);
   --segment-idle-bg: rgba(56, 24, 22, 0.54);
