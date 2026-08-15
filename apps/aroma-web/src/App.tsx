@@ -122,6 +122,7 @@ const readStoredStringArray = (key: string): string[] => {
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
+const requestTimeoutMs = 8000;
 
 const profileOptions: ProfileOption[] = [
   { value: 'sweet', label: 'Сладкий' },
@@ -398,10 +399,23 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: 
     headers.set('authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(requestTimeoutMs),
+    });
+  } catch (cause) {
+    // Без таймаута недоступный хост держит запрос до системного TCP-таймаута (~75 секунд).
+    const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
+    throw new Error(
+      timedOut
+        ? `Сервер не ответил за ${Math.round(requestTimeoutMs / 1000)} секунд. Проверьте, что API доступен.`
+        : 'Не удалось связаться с сервером. Проверьте, что API доступен.',
+    );
+  }
 
   const payload = (await response.json().catch(() => null)) as unknown;
 
