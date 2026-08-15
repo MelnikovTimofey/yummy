@@ -34,5 +34,16 @@ export default defineConfig({
         baseURL: masterBaseUrl,
       },
     },
+    // Сценарии, которым нужны именно демо-фикстуры seed. Вынесены в отдельный
+    // проект, чтобы общий прогон оставался зелёным и на продуктовом снапшоте:
+    // при отсутствии фикстур тесты помечают себя skipped (#27).
+    {
+      name: 'master-seed-chromium',
+      testMatch: /.*master-seed\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: masterBaseUrl,
+      },
+    },
   ],
 });

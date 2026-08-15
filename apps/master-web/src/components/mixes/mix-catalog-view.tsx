@@ -456,6 +456,8 @@ export const MixCatalogView = ({
                       key={mix.id}
                       data-blocked={!mix.available || undefined}
                       data-hidden={mix.available && !mix.guestVisible ? true : undefined}
+                      // Якорь для smoke — см. inventory-view (#27).
+                      data-mix-id={mix.id}
                       className="mixes-table__row"
                       onClick={() => onSelectMix(mix)}
                     >

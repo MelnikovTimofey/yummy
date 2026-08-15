@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { guestAccessCode } from './helpers';
 
 test('Aroma guest flow opens after daily code and exposes showcase/catalog without login', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByText('Код мастера')).toBeVisible();
-  await page.getByLabel('Код мастера').fill('1234');
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
   await page.getByRole('checkbox').click();
   await page.getByRole('button', { name: 'Войти в Ателье' }).click();
 
