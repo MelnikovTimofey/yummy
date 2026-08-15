@@ -6,6 +6,10 @@
 /* Канон Film Noir — packages/design-tokens (см. sync.mjs). */
 @import "./design-tokens.generated.css";
 
+/* Консоль тёмная всегда — через color-scheme и :root, без класса `dark`. Эта
+   директива держит tailwind-вариант `dark:` привязанным к классу вместо
+   дефолтного prefers-color-scheme: убрать её — и `dark:`-классы shadcn-кнопок
+   и бейджей оживут у пользователей с тёмной системной темой. */
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -3792,35 +3796,6 @@ input[type="checkbox"] {
   --radius-4xl: calc(var(--radius) * 2.6);
 
   --spacing-row: var(--row-h);
-}
-
-.dark {
-  --background: var(--bg-base);
-  --foreground: var(--text-primary);
-  --card: var(--bg-raised);
-  --card-foreground: var(--text-primary);
-  --popover: var(--bg-elevated);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--accent);
-  --primary-foreground: var(--accent-fg);
-  --secondary: var(--bg-raised);
-  --secondary-foreground: var(--text-primary);
-  --muted: var(--bg-raised);
-  --muted-foreground: var(--text-muted);
-  --accent: var(--bg-elevated);
-  --accent-foreground: var(--text-primary);
-  --destructive: var(--danger);
-  --border: var(--border-subtle);
-  --input: var(--input);
-  --ring: var(--accent-border);
-  --sidebar: var(--bg-raised);
-  --sidebar-foreground: var(--text-primary);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: var(--accent-fg);
-  --sidebar-accent: var(--bg-elevated);
-  --sidebar-accent-foreground: var(--text-primary);
-  --sidebar-border: var(--border-subtle);
-  --sidebar-ring: var(--accent-border);
 }
 
 .inventory-panel {
