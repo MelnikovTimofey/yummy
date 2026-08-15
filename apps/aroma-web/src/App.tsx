@@ -490,7 +490,14 @@ const sendMixRating = async (mixId: string, value: number) => {
   } satisfies MixRatingResult;
 };
 
-const COMPOSITION_PALETTE = ['#d8ab68', '#c08a4a', '#a23048', '#7a9560', '#7fb5a3'];
+// Ramp состава микса — слой данных, значения в packages/design-tokens/profile-colors.css
+const COMPOSITION_PALETTE = [
+  'var(--composition-1)',
+  'var(--composition-2)',
+  'var(--composition-3)',
+  'var(--composition-4)',
+  'var(--composition-5)',
+];
 
 const pluralizeMixes = (count: number) => {
   const mod10 = count % 10;
