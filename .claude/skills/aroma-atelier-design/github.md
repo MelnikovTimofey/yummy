@@ -13,7 +13,7 @@ date: 2026-08-14T14:20:27Z
 - 22 foundation specimen cards (Colors, Type, Spacing, Brand).
 - Two UI kits recreated: гостевое приложение и консоль Мастера.
 - Monospace removed entirely: the meta role (eyebrows, table heads, codes, kbd) is IBM Plex Sans via --font-meta (500 + tracking + tabular-nums).
-- Brand decisions applied locally: brass CTA/segment/rating repainted to oxblood (PRD §12); original «Дым» logo authored (no logo upstream); Gelasio + Mulish canonised as guest families.
+- Brand decisions applied locally: brass CTA/segment/rating repainted to oxblood (PRD §12); original «Дым» logo authored (no logo upstream); Literata + Mulish canonised as guest families (Gelasio dropped — no Cyrillic).
 
 ## Screen map
 
