@@ -74,6 +74,7 @@
   --warning-soft: rgba(194, 162, 78, 0.15);
   --danger: #cf4f44;
   --danger-soft: rgba(207, 79, 68, 0.15);
+  --danger-border: rgba(207, 79, 68, 0.4);
   --info: #5e7e96;
   --info-soft: rgba(94, 126, 150, 0.15);
 
