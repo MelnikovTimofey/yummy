@@ -35,51 +35,23 @@
 }
 
 :root {
+  /* ─── Палитра, шкалы и цвета профилей ───
+     Приходят из packages/design-tokens (design-tokens.generated.css выше):
+     поверхности, текст, акцент, бордеры, --profile-*, --composition-*.
+     Ниже — только то, что у гостя своё. */
+
   --radius: 0.95rem;
-  --background: #141417;
-  --foreground: #E8E6E0;
-  --card: #1C1C21;
-  --card-foreground: #E8E6E0;
-  --popover: #1C1C21;
-  --popover-foreground: #E8E6E0;
-  --primary: #B04A3E;
-  --primary-foreground: #F4EFEA;
+
+  /* Гостевые правки shadcn-контракта: у гостя контролы полупрозрачные,
+     а поповеры лежат на raised, а не на elevated, как в консоли. */
+  --popover: var(--bg-raised);
   --secondary: rgba(40, 40, 48, 0.62);
-  --secondary-foreground: #E8E6E0;
-  --muted: rgba(40, 40, 48, 0.66);
-  --muted-foreground: #B6B4AE;
-  --accent-ui: rgba(176, 74, 62, 0.14);
-  --accent-foreground: #F4EFEA;
-  --destructive: #CF4F44;
-  --border: rgba(150, 148, 142, 0.16);
+  --muted: var(--guest-control-bg);
+  --muted-foreground: var(--text-secondary);
+  --accent-ui: var(--accent-soft);
+  --accent-foreground: var(--accent-fg);
   --input: rgba(150, 148, 142, 0.22);
   --ring: rgba(176, 74, 62, 0.55);
-  --bg: #141417;
-  --surface: #1C1C21;
-  --surface-alt: #232329;
-  --surface-elevated: #2B2B32;
-  --accent: #B04A3E;
-  --accent-soft: #C25749;
-  --accent-deep: #7E342B;
-  --ember: #C25749;
-  --text-0: #E8E6E0;
-  --text-1: #B6B4AE;
-  --text-2: #8F8D87;
-  --line: rgba(150, 148, 142, 0.16);
-  --line-soft: rgba(150, 148, 142, 0.10);
-  --danger: #CF4F44;
-  --profile-citrus: #e8b948;
-  --profile-berry: #a23048;
-  --profile-floral-herbal: #7a9560;
-  --profile-fresh: #7fb5a3;
-  --profile-sweet: #d98c5a;
-  --profile-spicy: #c0492c;
-  --profile-dessert: #b07747;
-  --profile-tobacco: #7a5236;
-  --profile-minty: #6ba88a;
-  --profile-fruity: #dd8a4a;
-  --profile-perfume: #c787a8;
-  --profile-sour: #bcb04a;
   /* --font-display (Literata) и --font-body (Mulish) — из канона,
      packages/design-tokens/fonts.css. Файлы гарнитур подключены выше. */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -136,7 +108,7 @@ button,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--accent-soft);
+  outline: 2px solid var(--accent-hover);
   outline-offset: 2px;
 }
 
@@ -284,7 +256,7 @@ select:focus-visible {
 .header-auth-btn {
   border: 1px solid var(--line);
   background: var(--secondary);
-  color: var(--accent-soft);
+  color: var(--accent-hover);
   border-radius: 999px;
   min-height: 40px;
   padding: 0 14px;
@@ -386,7 +358,7 @@ select:focus-visible {
 }
 
 .status.ok {
-  color: var(--accent-soft);
+  color: var(--accent-hover);
 }
 
 .ghost-button:disabled {
@@ -423,7 +395,7 @@ select:focus-visible {
 }
 
 .tab.active {
-  background: linear-gradient(180deg, var(--accent-soft) 0%, var(--accent) 100%);
+  background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%);
   color: var(--primary-foreground);
   border-color: rgba(176, 74, 62, 0.4);
   font-weight: 600;
@@ -576,11 +548,11 @@ select:focus-visible {
   text-align: center;
   text-transform: uppercase;
   outline: none;
-  caret-color: var(--accent-soft);
+  caret-color: var(--accent-hover);
 }
 
 .aroma-access-code-input:focus-visible {
-  border-bottom-color: var(--accent-soft);
+  border-bottom-color: var(--accent-hover);
 }
 
 .aroma-access-code-hint {
@@ -844,7 +816,7 @@ select:focus-visible {
 .aroma-profile-card-on {
   border-color: var(--primary);
   background: linear-gradient(180deg, rgba(176, 74, 62, 0.24) 0%, rgba(176, 74, 62, 0.14) 100%);
-  color: var(--accent-soft);
+  color: var(--accent-hover);
 }
 
 .aroma-profile-card-dot {
@@ -1038,7 +1010,7 @@ select:focus-visible {
 
 .aroma-recs-comp-share {
   font-size: 13px;
-  color: var(--accent-soft);
+  color: var(--accent-hover);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
@@ -1142,7 +1114,7 @@ select:focus-visible {
 }
 
 .aroma-catalog-search:focus-visible {
-  border-color: var(--accent-soft);
+  border-color: var(--accent-hover);
 }
 
 .aroma-catalog-icon-btn {
@@ -1216,7 +1188,7 @@ select:focus-visible {
 
 .aroma-catalog-sort-btn-on {
   border-color: var(--primary);
-  color: var(--accent-soft);
+  color: var(--accent-hover);
   background: linear-gradient(180deg, rgba(176, 74, 62, 0.24) 0%, rgba(176, 74, 62, 0.14) 100%);
 }
 
@@ -1563,7 +1535,7 @@ select:focus-visible {
 
 .aroma-mix-sheet-comp-share {
   font-size: 13px;
-  color: var(--accent-soft);
+  color: var(--accent-hover);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
@@ -1593,7 +1565,7 @@ select:focus-visible {
 .aroma-mix-sheet-star-on {
   border-color: var(--primary);
   background: linear-gradient(180deg, rgba(176, 74, 62, 0.24) 0%, rgba(176, 74, 62, 0.14) 100%);
-  color: var(--accent-soft);
+  color: var(--accent-hover);
 }
 
 .aroma-mix-sheet-actions {
@@ -1733,7 +1705,7 @@ select:focus-visible {
 .aroma-smoke-confirmation-comp-share {
   font-family: var(--font-display);
   font-size: 22px;
-  color: var(--accent-soft);
+  color: var(--accent-hover);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1785,7 +1757,7 @@ select:focus-visible {
 .aroma-rail-code {
   border: 1px solid rgba(176, 74, 62, 0.20);
   background: var(--secondary);
-  color: var(--accent-soft);
+  color: var(--accent-hover);
   border-radius: 999px;
   height: 34px;
   padding: 0 14px;
