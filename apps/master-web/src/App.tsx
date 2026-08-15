@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
+import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
@@ -166,6 +167,22 @@ export const App = () => {
   const [inventoryFilters, setInventoryFilters] = useState<InventoryListFilters>(defaultInventoryListResponse.filters);
   const [inventorySort, setInventorySort] = useState<InventoryListSort>(defaultInventoryListResponse.sort);
   const [inventoryMeta, setInventoryMeta] = useState<InventoryListMeta>(defaultInventoryListResponse.meta);
+  // Обработчики инвентаря читают состояние поверхности отсюда, а не из
+  // замыкания рендера: дебаунс поиска срабатывает через 300 мс после ввода, и
+  // за это время фильтр наличия или сортировка успевают смениться (#60).
+  const inventoryFiltersRef = useRef(inventoryFilters);
+  const inventorySortRef = useRef(inventorySort);
+  const inventoryRequestGuard = useRef(createLatestRequestGuard()).current;
+
+  const commitInventoryFilters = (next: InventoryListFilters) => {
+    inventoryFiltersRef.current = next;
+    setInventoryFilters(next);
+  };
+
+  const commitInventorySort = (next: InventoryListSort) => {
+    inventorySortRef.current = next;
+    setInventorySort(next);
+  };
   const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
@@ -180,11 +197,12 @@ export const App = () => {
 
   const loadInventory = async (
     nextToken: string,
-    nextFilters: InventoryListFilters = inventoryFilters,
-    nextSort: InventoryListSort = inventorySort,
+    nextFilters: InventoryListFilters = inventoryFiltersRef.current,
+    nextSort: InventoryListSort = inventorySortRef.current,
     nextPage: number = inventoryMeta.page,
     nextPageSize: number = inventoryMeta.pageSize,
   ) => {
+    const ticket = inventoryRequestGuard.start();
     setInventoryStatus('loading');
     setInventoryError('');
 
@@ -192,13 +210,25 @@ export const App = () => {
       const query = buildInventoryRequestQuery(nextFilters, nextSort, nextPage, nextPageSize);
       const response = await requestJson<unknown>(`/staff/inventory/tobaccos${query ? `?${query}` : ''}`, {}, nextToken);
       const payload = normalizeInventoryListResponse(response);
+
+      // Ответ переустанавливает фильтры и сортировку из payload'а, поэтому
+      // запоздавший результат вернул бы поверхность к состоянию, из которого
+      // его отправили.
+      if (inventoryRequestGuard.isStale(ticket)) {
+        return;
+      }
+
       setInventory(payload.items);
-      setInventoryFilters(payload.filters);
-      setInventorySort(payload.sort);
+      commitInventoryFilters(payload.filters);
+      commitInventorySort(payload.sort);
       setInventoryMeta(payload.meta);
       setSelectedInventoryIds((current) => current.filter((id) => payload.items.some((item) => item.id === id)));
       setInventoryStatus('ready');
     } catch (cause) {
+      if (inventoryRequestGuard.isStale(ticket)) {
+        return;
+      }
+
       setInventory([]);
       setInventoryMeta(defaultInventoryListResponse.meta);
       setInventoryStatus('error');
@@ -436,8 +466,8 @@ export const App = () => {
   };
 
   const refreshInventorySurface = async (
-    nextFilters: InventoryListFilters = inventoryFilters,
-    nextSort: InventoryListSort = inventorySort,
+    nextFilters: InventoryListFilters = inventoryFiltersRef.current,
+    nextSort: InventoryListSort = inventorySortRef.current,
     nextPage: number = inventoryMeta.page,
   ) => {
     if (!token) {
@@ -449,86 +479,88 @@ export const App = () => {
 
   const onInventorySearchChange = async (value: string) => {
     const nextFilters = {
-      ...inventoryFilters,
+      ...inventoryFiltersRef.current,
       search: value,
     };
-    setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort, 1);
+    commitInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
   const onInventoryStockChange = async (value: InventoryListFilters['stock']) => {
     const nextFilters = {
-      ...inventoryFilters,
+      ...inventoryFiltersRef.current,
       stock: value,
     };
-    setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort, 1);
+    commitInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
   const onInventoryArchivedChange = async (value: InventoryListFilters['archived']) => {
     const nextFilters = {
-      ...inventoryFilters,
+      ...inventoryFiltersRef.current,
       archived: value,
     };
     setSelectedInventoryIds([]);
-    setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort, 1);
+    commitInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
   const onInventorySortFieldChange = async (field: InventoryListSort['field']) => {
     const nextSort = {
-      ...inventorySort,
+      ...inventorySortRef.current,
       field,
     };
-    setInventorySort(nextSort);
-    await refreshInventorySurface(inventoryFilters, nextSort, 1);
+    commitInventorySort(nextSort);
+    await refreshInventorySurface(inventoryFiltersRef.current, nextSort, 1);
   };
 
   const onInventorySortDirectionChange = async (direction: InventoryListSort['direction']) => {
     const nextSort = {
-      ...inventorySort,
+      ...inventorySortRef.current,
       direction,
     };
-    setInventorySort(nextSort);
-    await refreshInventorySurface(inventoryFilters, nextSort, 1);
+    commitInventorySort(nextSort);
+    await refreshInventorySurface(inventoryFiltersRef.current, nextSort, 1);
   };
 
   const onInventoryToggleFilterValue = async (key: InventoryFilterKey, value: string) => {
+    const current = inventoryFiltersRef.current;
     const nextFilters = {
-      ...inventoryFilters,
-      [key]: toggleInventoryFilterValue(inventoryFilters[key], value),
+      ...current,
+      [key]: toggleInventoryFilterValue(current[key], value),
     };
-    setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort, 1);
+    commitInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
   const onInventoryClearFilterGroup = async (key: InventoryFilterKey) => {
-    if (inventoryFilters[key].length === 0) {
+    const current = inventoryFiltersRef.current;
+    if (current[key].length === 0) {
       return;
     }
 
     const nextFilters = {
-      ...inventoryFilters,
+      ...current,
       [key]: [],
     };
-    setInventoryFilters(nextFilters);
-    await refreshInventorySurface(nextFilters, inventorySort, 1);
+    commitInventoryFilters(nextFilters);
+    await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
   const onInventoryResetFilters = async () => {
     const nextFilters = {
       ...defaultInventoryListResponse.filters,
-      options: inventoryFilters.options,
+      options: inventoryFiltersRef.current.options,
     };
     const nextSort = defaultInventoryListResponse.sort;
     setSelectedInventoryIds([]);
-    setInventoryFilters(nextFilters);
-    setInventorySort(nextSort);
+    commitInventoryFilters(nextFilters);
+    commitInventorySort(nextSort);
     await refreshInventorySurface(nextFilters, nextSort, 1);
   };
 
   const onInventoryPageChange = async (page: number) => {
-    await refreshInventorySurface(inventoryFilters, inventorySort, page);
+    await refreshInventorySurface(inventoryFiltersRef.current, inventorySortRef.current, page);
   };
 
   const onInventoryPageSizeChange = async (pageSize: number) => {
@@ -536,7 +568,7 @@ export const App = () => {
       return;
     }
 
-    await loadInventory(token, inventoryFilters, inventorySort, 1, pageSize);
+    await loadInventory(token, inventoryFiltersRef.current, inventorySortRef.current, 1, pageSize);
   };
 
   const onSignOut = () => {
@@ -549,8 +581,8 @@ export const App = () => {
     setToken('');
     setUser(null);
     setInventory([]);
-    setInventoryFilters(defaultInventoryListResponse.filters);
-    setInventorySort(defaultInventoryListResponse.sort);
+    commitInventoryFilters(defaultInventoryListResponse.filters);
+    commitInventorySort(defaultInventoryListResponse.sort);
     setInventoryMeta(defaultInventoryListResponse.meta);
     setSelectedInventoryIds([]);
     setSummary(null);
