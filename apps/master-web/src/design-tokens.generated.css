@@ -1,0 +1,351 @@
+/* СГЕНЕРИРОВАННЫЙ ФАЙЛ — не редактировать.
+   Источник: packages/design-tokens/. Перегенерация: node packages/design-tokens/sync.mjs
+   Правки здесь потеряются и уронят CI-проверку atelier-design-tokens. */
+/* Film Noir — канон дизайн-системы «Арома Ателье».
+   Единственное место, где заданы значения палитры, шрифтовых стеков, шкалы кеглей,
+   отступов, радиусов, теней, анимации и гостевой атмосферы. Обе поверхности
+   (apps/aroma-web, apps/master-web) получают их через packages/design-tokens/sync.mjs.
+
+   Здесь только определения переменных: ни reset'а, ни утилитарных классов,
+   ни загрузки шрифтовых файлов. */
+/* ── fonts.css ── */
+/* Fonts — Арома Ателье / Мастер.
+   Здесь объявлены только шрифтовые стеки. Загрузку начертаний делает потребитель:
+   приложения подключают self-hosted пакеты (`@fontsource*`), статические прототипы
+   дизайн-системы — Google Fonts с CDN. Пакет токенов внешних запросов не порождает.
+
+   Гостевые семейства канона — открытая пара Gelasio (display) и Mulish (body).
+   Upstream объявлял системные стеки без поставляемых бинарников:
+     --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif
+     --font-body:    "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif
+   Лицензий на эти гарнитуры у проекта нет, поэтому они остаются только в хвосте
+   fallback-цепочки — проектировать под Gelasio/Mulish. */
+
+:root {
+  /* Guest surface */
+  --font-display: Gelasio, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-body: Mulish, "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
+
+  /* Master surface */
+  --font-serif: "Source Serif 4", "Source Serif 4 Variable", "Source Serif Pro", Georgia, serif;
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Variable", -apple-system, "Segoe UI", system-ui, sans-serif;
+  /* Никаких monospace-начертаний в системе. Роль «служебного» текста —
+     eyebrow, шапки таблиц, коды смены, kbd, метрики — держит тот же
+     IBM Plex Sans: 500 + широкий трекинг + font-variant-numeric: tabular-nums.
+     Выравнивание цифр даёт табличная фигура, а не монширина. */
+  --font-meta: "IBM Plex Sans", "IBM Plex Sans Variable", -apple-system, "Segoe UI", system-ui, sans-serif;
+  /* Legacy alias — указывает на тот же sans, monospace не подключается. */
+  --font-mono: var(--font-meta);
+}
+/* ── colors.css ── */
+/* Film Noir palette — single source of truth for both surfaces (PRD §12).
+   Smoky charcoal surfaces, warm foggy-grey text, ONE muted oxblood accent. */
+:root {
+  /* Surfaces */
+  --bg-base: #141417;
+  --bg-raised: #1c1c21;
+  --bg-elevated: #232329;
+  --bg-overlay: #2b2b32;
+  --glass: rgba(28, 28, 33, 0.82);
+
+  /* Text */
+  --text-primary: #e8e6e0;
+  --text-secondary: #b6b4ae;
+  --text-muted: #8f8d87;
+  --text-faint: #6a6863;
+
+  /* Accent (oxblood) — the only brand colour */
+  --accent: #b04a3e;
+  --accent-hover: #c25749;
+  --accent-deep: #7e342b;
+  --accent-fg: #f4efea;
+  --accent-soft: rgba(176, 74, 62, 0.15);
+  --accent-border: rgba(176, 74, 62, 0.4);
+
+  /* Borders */
+  --border-subtle: rgba(150, 148, 142, 0.16);
+  --border-default: rgba(150, 148, 142, 0.26);
+  --border-strong: rgba(150, 148, 142, 0.4);
+
+  /* Semantic */
+  --success: #6e9a6a;
+  --success-soft: rgba(110, 154, 106, 0.15);
+  --warning: #c2a24e;
+  --warning-soft: rgba(194, 162, 78, 0.15);
+  --danger: #cf4f44;
+  --danger-soft: rgba(207, 79, 68, 0.15);
+  --info: #5e7e96;
+  --info-soft: rgba(94, 126, 150, 0.15);
+
+  /* Chart series (master dashboards) */
+  --chart-1: var(--accent);
+  --chart-2: var(--success);
+  --chart-3: var(--info);
+  --chart-4: var(--warning);
+  --chart-5: #8b8b90;
+
+  /* Semantic aliases — shadcn contract used by both apps */
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+  --card: var(--bg-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-elevated);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--bg-raised);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-raised);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--danger);
+  --border: var(--border-subtle);
+  --input: rgba(232, 230, 224, 0.07);
+  --ring: var(--accent-border);
+
+  /* Legacy guest aliases (upstream aroma-web names) */
+  --surface: var(--bg-raised);
+  --surface-alt: var(--bg-elevated);
+  --surface-elevated: var(--bg-overlay);
+  --text-0: var(--text-primary);
+  --text-1: var(--text-secondary);
+  --text-2: var(--text-muted);
+  --line: var(--border-subtle);
+  --line-soft: rgba(150, 148, 142, 0.1);
+  --ember: var(--accent-hover);
+}
+/* ── profile-colors.css ── */
+/* Flavour-profile colours — a DATA layer, not brand palette (PRD §12).
+   Used only to identify the 12 guest flavour profiles: dots, signature bars,
+   profile glyphs, mix-composition stacks. Never as UI accent. */
+:root {
+  --profile-citrus: #e8b948;
+  --profile-berry: #a23048;
+  --profile-floral-herbal: #7a9560;
+  --profile-fresh: #7fb5a3;
+  --profile-sweet: #d98c5a;
+  --profile-spicy: #c0492c;
+  --profile-dessert: #b07747;
+  --profile-tobacco: #7a5236;
+  --profile-minty: #6ba88a;
+  --profile-fruity: #dd8a4a;
+  --profile-perfume: #c787a8;
+  --profile-sour: #bcb04a;
+  --profile-fallback: var(--profile-tobacco);
+
+  /* Mix-composition stack palette (aroma-web COMPOSITION_PALETTE) */
+  --composition-1: #d8ab68;
+  --composition-2: #c08a4a;
+  --composition-3: #a23048;
+  --composition-4: #7a9560;
+  --composition-5: #7fb5a3;
+}
+/* ── typography.css ── */
+/* Type scale. Master runs a dense 11–36px console scale; guest runs a
+   mobile editorial scale with a serif display voice. */
+:root {
+  /* Master steps */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+
+  /* Guest display steps (serif) */
+  --fs-guest-hero: 46px;   /* access wordmark */
+  --fs-guest-title: 34px;  /* intro / confirmation title */
+  --fs-guest-h1: 28px;     /* onboarding title */
+  --fs-guest-h2: 22px;     /* rail + hero card title */
+  --fs-guest-h3: 16px;     /* row name */
+  --fs-guest-body: 15px;
+  --fs-guest-small: 13px;
+  --fs-guest-micro: 11px;  /* caps eyebrow */
+
+  /* Eyebrow / caps treatment — the brand's signature micro-label */
+  --caps-size: 11px;
+  --caps-tracking: 0.18em; /* @kind other */
+  --caps-tracking-wide: 0.22em; /* @kind other */
+  --caps-weight: 500; /* @kind font */
+
+  /* Line heights */
+  --lh-tight: 1.05; /* @kind other */
+  --lh-snug: 1.2; /* @kind other */
+  --lh-body: 1.5; /* @kind other */
+  --lh-relaxed: 1.55; /* @kind other */
+
+  /* Tabular numerals for shares, ratings, metrics */
+  --num-tabular: tabular-nums; /* @kind other */
+}
+/* ── spacing.css ── */
+/* 4px spacing scale (master --space-*), plus the layout constants both apps use. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Dense list row height (master tables) */
+  --row-h: 36px;
+  --list-row-min-h: 44px;
+
+  /* Guest phone frame */
+  --guest-shell-w: 430px;
+  --guest-gutter: 20px;
+  --guest-gutter-compact: 12px;
+  --tap-min: 44px;
+
+  /* Master workspace */
+  --master-max-w: 1680px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* ── radius.css ── */
+/* Two radius registers: tight for the console, generous for the guest app. */
+:root {
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  --radius: 0.625rem; /* master shadcn base */
+
+  /* Guest */
+  --r-guest-shell: 28px;
+  --r-guest-sheet: 26px;
+  --r-guest-card: 18px;
+  --r-guest-hero: 22px;
+  --r-guest-row: 14px;
+  --r-guest-cta: 14px;
+  --r-guest-glyph: 14px;
+}
+/* ── elevation.css ── */
+/* Shadows are deep and soft — cinema, not material. Cards also carry a 1px
+   inner top highlight so they read as lit from above. */
+:root {
+  --shadow-sm: 0 1px 0 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 24px -8px rgba(0, 0, 0, 0.55), 0 1px 0 0 rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 2px 0 0 rgba(0, 0, 0, 0.45);
+
+  --shadow-guest-shell: 0 30px 90px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(232, 230, 224, 0.03);
+  --shadow-guest-card: inset 0 1px 0 rgba(232, 230, 224, 0.04), 0 18px 36px rgba(0, 0, 0, 0.16);
+  --shadow-guest-scroll-card: inset 0 1px 0 rgba(232, 230, 224, 0.04), 0 14px 24px rgba(0, 0, 0, 0.22);
+  --shadow-guest-sheet: 0 -24px 60px rgba(0, 0, 0, 0.6);
+  --shadow-guest-popover: 0 24px 48px rgba(0, 0, 0, 0.4);
+
+  --highlight-inner: inset 0 1px 0 rgba(232, 230, 224, 0.04); /* @kind shadow */
+  --focus-ring: 0 0 0 3px var(--accent-soft); /* @kind shadow */
+}
+/* ── motion.css ── */
+/* Motion: short, linear-feeling state transitions; one signature ember pulse on
+   the guest CTA; sheets spring in from the bottom. Nothing bounces. */
+:root {
+  --dur-instant: 80ms; /* @kind other */
+  --dur-fast: 120ms; /* @kind other */
+  --dur-base: 160ms; /* @kind other */
+  --dur-slow: 220ms; /* @kind other */
+  --dur-sheet: 240ms; /* @kind other */
+
+  --ease-standard: ease; /* @kind other */
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
+
+  --transition-state: background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  --press-shift: translateY(1px); /* @kind other */
+}
+
+@keyframes aroma-ember {
+  0% {
+    box-shadow: 0 0 0 0 rgba(176, 74, 62, 0.45), 0 14px 26px rgba(176, 74, 62, 0.32);
+  }
+  60% {
+    box-shadow: 0 0 0 18px rgba(176, 74, 62, 0), 0 14px 26px rgba(176, 74, 62, 0.32);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(176, 74, 62, 0), 0 14px 26px rgba(176, 74, 62, 0.32);
+  }
+}
+
+@keyframes atelier-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes aroma-sheet-in {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.cta-pulse {
+  animation: aroma-ember 1.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-pulse {
+    animation: none;
+  }
+}
+/* ── guest-surface.css ── */
+/* Guest-surface atmosphere: the wine-warm room the mobile app sits in.
+   Accent rule (PRD §12): ONE brand colour — oxblood. The guest CTA, the active
+   navigation segment and the rating pill are all oxblood; the warm brass gradient
+   that upstream code used for them was retired on the brand owner's call. The only
+   remaining warm hues are the --composition-* data ramp (mix recipe shares). */
+:root {
+  --guest-room-bg: linear-gradient(180deg, #0f0f12 0%, #161619 40%, #141417 100%);
+  --guest-halo-strong: radial-gradient(circle at 50% 0%, rgba(176, 74, 62, 0.16), transparent 34%); /* @kind color */
+  --guest-halo-soft: radial-gradient(circle at 80% 18%, rgba(176, 74, 62, 0.1), transparent 24%); /* @kind color */
+  --guest-shell-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
+  --guest-topbar-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
+  --guest-card-bg: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(24, 24, 28, 0.94) 100%);
+  --guest-sheet-bg: linear-gradient(180deg, rgba(40, 15, 16, 0.98) 0%, rgba(20, 9, 10, 0.98) 100%);
+  --guest-row-bg: rgba(28, 28, 33, 0.84);
+  --guest-control-bg: rgba(40, 40, 48, 0.66);
+  --guest-control-bg-soft: rgba(40, 40, 48, 0.54);
+  --guest-chip-bg: rgba(40, 18, 18, 0.6);
+  --guest-chip-bg-on: linear-gradient(180deg, rgba(176, 74, 62, 0.62) 0%, rgba(140, 52, 43, 0.52) 100%);
+  --guest-chip-ink-on: #f7efec;
+  --guest-chip-border-on: rgba(244, 239, 234, 0.34);
+  --guest-dock-fade: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%); /* @kind color */
+
+  /* Guest primary CTA — solid oxblood */
+  --cta-solid: linear-gradient(180deg, #c25749 0%, #b04a3e 100%); /* @kind color */
+  --cta-solid-border: rgba(244, 239, 234, 0.22);
+  --cta-solid-ink: #f4efea;
+  --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.18), 0 14px 26px rgba(126, 52, 43, 0.4);
+  --cta-solid-disabled-bg: rgba(60, 28, 22, 0.6);
+
+  /* Segment nav (active) */
+  --segment-active-bg: linear-gradient(180deg, #c25749 0%, #b04a3e 100%);
+  --segment-active-ink: #f4efea;
+  --segment-active-border: rgba(244, 239, 234, 0.24);
+  --segment-idle-bg: rgba(56, 24, 22, 0.54);
+
+  /* Rating pill */
+  --rating-bg: rgba(176, 74, 62, 0.18);
+  --rating-border: var(--accent-border);
+  --rating-ink: #e6b3a9;
+
+  /* Master CTA gradient (backoffice primary) */
+  --cta-gradient: linear-gradient(135deg, var(--accent), #7e342b);
+}

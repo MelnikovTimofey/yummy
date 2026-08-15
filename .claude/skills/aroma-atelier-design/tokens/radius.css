@@ -1,0 +1,2 @@
+/* Реэкспорт канона. Значения живут в packages/design-tokens/radius.css — правьте их там. */
+@import url("../../../../packages/design-tokens/radius.css");

@@ -1,0 +1,38 @@
+/* Type scale. Master runs a dense 11–36px console scale; guest runs a
+   mobile editorial scale with a serif display voice. */
+:root {
+  /* Master steps */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+
+  /* Guest display steps (serif) */
+  --fs-guest-hero: 46px;   /* access wordmark */
+  --fs-guest-title: 34px;  /* intro / confirmation title */
+  --fs-guest-h1: 28px;     /* onboarding title */
+  --fs-guest-h2: 22px;     /* rail + hero card title */
+  --fs-guest-h3: 16px;     /* row name */
+  --fs-guest-body: 15px;
+  --fs-guest-small: 13px;
+  --fs-guest-micro: 11px;  /* caps eyebrow */
+
+  /* Eyebrow / caps treatment — the brand's signature micro-label */
+  --caps-size: 11px;
+  --caps-tracking: 0.18em; /* @kind other */
+  --caps-tracking-wide: 0.22em; /* @kind other */
+  --caps-weight: 500; /* @kind font */
+
+  /* Line heights */
+  --lh-tight: 1.05; /* @kind other */
+  --lh-snug: 1.2; /* @kind other */
+  --lh-body: 1.5; /* @kind other */
+  --lh-relaxed: 1.55; /* @kind other */
+
+  /* Tabular numerals for shares, ratings, metrics */
+  --num-tabular: tabular-nums; /* @kind other */
+}

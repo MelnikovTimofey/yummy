@@ -1,0 +1,20 @@
+/* Two radius registers: tight for the console, generous for the guest app. */
+:root {
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  --radius: 0.625rem; /* master shadcn base */
+
+  /* Guest */
+  --r-guest-shell: 28px;
+  --r-guest-sheet: 26px;
+  --r-guest-card: 18px;
+  --r-guest-hero: 22px;
+  --r-guest-row: 14px;
+  --r-guest-cta: 14px;
+  --r-guest-glyph: 14px;
+}

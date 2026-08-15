@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Арома Ателье">
+<rect width="120" height="120" rx="26" fill="#1C1C21"></rect>
+<g fill="none" stroke-linecap="round" stroke-width="5">
+<path d="M42 88C42 72 34 68 34 56C34 44 42 40 42 28" stroke="#B04A3E"></path>
+<path d="M60 92C60 74 50 70 50 56C50 42 60 38 60 24" stroke="#C25749" stroke-opacity=".82"></path>
+<path d="M78 88C78 72 70 68 70 56C70 44 78 40 78 28" stroke="#7E342B"></path>
+</g>
+</svg>
