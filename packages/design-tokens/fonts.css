@@ -3,17 +3,22 @@
    приложения подключают self-hosted пакеты (`@fontsource*`), статические прототипы
    дизайн-системы — Google Fonts с CDN. Пакет токенов внешних запросов не порождает.
 
-   Гостевые семейства канона — открытая пара Gelasio (display) и Mulish (body).
+   Гостевые семейства канона — открытая пара Literata (display) и Mulish (body).
    Upstream объявлял системные стеки без поставляемых бинарников:
      --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif
      --font-body:    "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif
    Лицензий на эти гарнитуры у проекта нет, поэтому они остаются только в хвосте
-   fallback-цепочки — проектировать под Gelasio/Mulish. */
+   fallback-цепочки — проектировать под Literata/Mulish.
+
+   Почему не Gelasio (была каноном до 2026-08-15): в гарнитуре нет кириллицы
+   (latin, latin-ext, vietnamese), а гостевой интерфейс целиком русский — все
+   заголовки падали бы в Georgia. Literata покрывает cyrillic и cyrillic-ext,
+   держит тот же тёплый книжный характер и есть в variable-начертании. */
 
 :root {
   /* Guest surface */
-  --font-display: Gelasio, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-body: Mulish, "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-display: "Literata Variable", Literata, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-body: "Mulish Variable", Mulish, "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
 
   /* Master surface */
   --font-serif: "Source Serif 4", "Source Serif 4 Variable", "Source Serif Pro", Georgia, serif;

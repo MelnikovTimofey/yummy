@@ -1,8 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/literata/wght.css";
+@import "@fontsource-variable/mulish/wght.css";
 /* Канон Film Noir — packages/design-tokens (см. sync.mjs). Локальный :root ниже
-   пока переопределяет часть значений; расхождения снимаются в #41 и #42. */
+   пока переопределяет часть значений; расхождения снимаются в #42. */
 @import "./design-tokens.generated.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -78,8 +80,8 @@
   --profile-fruity: #dd8a4a;
   --profile-perfume: #c787a8;
   --profile-sour: #bcb04a;
-  --font-body: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
-  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  /* --font-display (Literata) и --font-body (Mulish) — из канона,
+     packages/design-tokens/fonts.css. Файлы гарнитур подключены выше. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
