@@ -6105,6 +6105,13 @@ input[type="checkbox"] {
   font-size: var(--fs-sm);
 }
 
+.metric-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 .cell-truncate {
   overflow: hidden;
   text-overflow: ellipsis;

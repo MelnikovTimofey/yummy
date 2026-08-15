@@ -6,7 +6,7 @@ import {
   type FormEvent,
   type SetStateAction,
 } from 'react';
-import { Check, ChevronDown, ChevronUp, GripVertical, Plus, Search, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Flame, GripVertical, Plus, Search, Star, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatRailType } from '@/contracts';
@@ -179,7 +179,20 @@ export const RailEditor = ({
                       <div className="rail-drawer__picker-body">
                         <div className="rail-drawer__mix-name">{mix.name}</div>
                         <div className="rail-drawer__mix-meta">
-                          {mix.description || `Рейтинг ${mix.avgRating.toFixed(1)} · выборов ${mix.smokeCtaCount}`}
+                          {mix.description || (
+                            <span className="cell-meta">
+                              <span className="metric-inline" title="Популярность микса">
+                                <Flame size={11} aria-hidden="true" />
+                                <span className="sr-only">Выборов</span>
+                                {mix.smokeCtaCount}
+                              </span>
+                              <span className="metric-inline" title="Средний рейтинг гостей">
+                                <Star size={11} aria-hidden="true" />
+                                <span className="sr-only">Рейтинг</span>
+                                {mix.avgRating.toFixed(1)}
+                              </span>
+                            </span>
+                          )}
                         </div>
                       </div>
                       <span className="rail-drawer__picker-action" aria-hidden>
