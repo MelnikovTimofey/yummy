@@ -10,8 +10,6 @@
     "preview": "vite preview --host 0.0.0.0 --port 4175"
   },
   "dependencies": {
-    "@fontsource-variable/fraunces": "^5.2.9",
-    "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/ibm-plex-sans": "^5.2.8",
     "@fontsource-variable/source-serif-4": "^5.2.9",
     "@tailwindcss/vite": "^4.2.2",
