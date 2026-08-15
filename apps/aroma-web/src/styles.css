@@ -521,6 +521,13 @@ select:focus-visible {
   gap: 36px;
 }
 
+.aroma-access-mark {
+  display: block;
+  width: auto;
+  height: 64px;
+  margin-bottom: 18px;
+}
+
 .aroma-access-brand {
   display: block;
   font-family: var(--font-display);

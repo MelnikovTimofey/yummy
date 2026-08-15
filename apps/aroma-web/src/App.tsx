@@ -1369,6 +1369,7 @@ export const App = () => {
         <div className="aroma-access-halo" aria-hidden />
         <div className="aroma-access-body">
           <div>
+            <img className="aroma-access-mark" src="/logo-mark.svg" width="44" height="64" alt="" aria-hidden />
             <span className="aroma-access-brand">Арома<br />Ателье</span>
             <p className="aroma-access-tagline">подбор кальянных миксов</p>
           </div>
