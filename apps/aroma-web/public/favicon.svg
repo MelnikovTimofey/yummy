@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Арома Ателье">
-  <rect width="64" height="64" rx="16" fill="#B04A3E" />
-  <text x="32" y="32" fill="#F4EFEA" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="500" letter-spacing="-1" text-anchor="middle" dominant-baseline="central">АА</text>
-</svg>
+<rect width="64" height="64" rx="14" fill="#1C1C21"></rect>
+<g fill="none" stroke-linecap="round" stroke-width="4">
+<path d="M22 47C22 39 18 37 18 30C18 23 22 21 22 15" stroke="#B04A3E"></path>
+<path d="M32 49C32 39 27 37 27 30C27 22 32 20 32 13" stroke="#C25749" stroke-opacity=".82"></path>
+<path d="M42 47C42 39 38 37 38 30C38 23 42 21 42 15" stroke="#7E342B"></path>
+</g></svg>

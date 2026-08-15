@@ -71,7 +71,7 @@ export const MasterTopBar = ({
   return (
     <header className="topbar" aria-label="Рабочие разделы Мастера">
       <div className="brand">
-        <span className="brand__mark" aria-hidden="true">А</span>
+        <img className="brand__mark" src="/logo-mark.svg" width="18" height="26" alt="" aria-hidden="true" />
         <span className="brand__name">Ателье · Мастер</span>
       </div>
 

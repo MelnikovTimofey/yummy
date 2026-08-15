@@ -43,7 +43,7 @@ export const LoginScreen = ({
 
       <div className="auth-screen__container">
         <div className="auth-screen__brand" aria-label="Ателье · Мастер">
-          <div className="auth-screen__mark" aria-hidden="true">А</div>
+          <img className="auth-screen__mark" src="/logo-mark.svg" width="21" height="30" alt="" aria-hidden="true" />
           <div className="auth-screen__brand-name">
             Ателье <em>Мастер</em>
           </div>
