@@ -8,6 +8,7 @@ on:
       - apps/aroma-web/**
       - apps/master-web/**
       - apps/backend/**
+      - packages/**
       - services/telegram-bot/**
       - tests/smoke/**
       - .github/**
@@ -35,6 +36,7 @@ jobs:
       bot: ${{ steps.filter.outputs.bot }}
       runtime: ${{ steps.filter.outputs.runtime }}
       process_core: ${{ steps.filter.outputs.process_core }}
+      design_tokens: ${{ steps.filter.outputs.design_tokens }}
     steps:
       - name: Detect changed scopes
         id: filter
@@ -70,6 +72,10 @@ jobs:
               - 'tests/smoke/**'
               - 'CLAUDE.md'
               - 'docs/**'
+            design_tokens:
+              - 'packages/design-tokens/**'
+              - 'apps/aroma-web/src/design-tokens.generated.css'
+              - 'apps/master-web/src/design-tokens.generated.css'
 
   atelier-review-flags:
     needs: changes
@@ -152,6 +158,19 @@ jobs:
 
             core.summary.addRaw(summary, true);
             await core.summary.write();
+
+  atelier-design-tokens:
+    name: atelier-design-tokens
+    needs: changes
+    if: needs.changes.outputs.design_tokens == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Проверить, что токены приложений совпадают с каноном
+        run: node packages/design-tokens/sync.mjs --check
 
   atelier-aroma-build:
     name: atelier-aroma-build

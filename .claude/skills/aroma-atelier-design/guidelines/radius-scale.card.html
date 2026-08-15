@@ -1,0 +1,14 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Radius" subtitle="Tight console (4–16) vs generous guest (14–28)" -->
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{margin:0;padding:14px;background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary)}
+.row{display:flex;gap:8px;align-items:stretch}.sw{flex:1;border-radius:var(--r-md);border:1px solid var(--border-subtle);padding:8px;display:flex;flex-direction:column;justify-content:flex-end;min-height:74px}
+.n{font-family:var(--font-meta);font-size:10px;letter-spacing:.06em;color:var(--text-secondary)}.v{font-family:var(--font-meta);font-size:10px;color:var(--text-faint)}
+.lbl{font-family:var(--font-meta);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.r{height:52px;background:var(--bg-elevated);border:1px solid var(--border-default);display:grid;place-items:end center;padding-bottom:4px}</style></head><body>
+<div class="row">
+<div class="sw r" style="border-radius:var(--r-xs)"><span class="v">--r-xs 4</span></div><div class="sw r" style="border-radius:var(--r-sm)"><span class="v">--r-sm 6</span></div><div class="sw r" style="border-radius:var(--r-md)"><span class="v">--r-md 8</span></div><div class="sw r" style="border-radius:var(--r-lg)"><span class="v">--r-lg 12</span></div><div class="sw r" style="border-radius:var(--r-xl)"><span class="v">--r-xl 16</span></div>
+</div>
+<div class="row" style="margin-top:8px">
+<div class="sw r" style="border-radius:var(--r-guest-row)"><span class="v">--r-guest-row 14</span></div><div class="sw r" style="border-radius:var(--r-guest-card)"><span class="v">--r-guest-card 18</span></div><div class="sw r" style="border-radius:var(--r-guest-hero)"><span class="v">--r-guest-hero 22</span></div><div class="sw r" style="border-radius:var(--r-guest-sheet)"><span class="v">--r-guest-sheet 26</span></div><div class="sw r" style="border-radius:var(--r-pill)"><span class="v">--r-pill 999</span></div>
+</div></body></html>

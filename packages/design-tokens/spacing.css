@@ -1,0 +1,27 @@
+/* 4px spacing scale (master --space-*), plus the layout constants both apps use. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Dense list row height (master tables) */
+  --row-h: 36px;
+  --list-row-min-h: 44px;
+
+  /* Guest phone frame */
+  --guest-shell-w: 430px;
+  --guest-gutter: 20px;
+  --guest-gutter-compact: 12px;
+  --tap-min: 44px;
+
+  /* Master workspace */
+  --master-max-w: 1680px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}

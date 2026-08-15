@@ -1,0 +1,2 @@
+/* Реэкспорт канона. Значения живут в packages/design-tokens/profile-colors.css — правьте их там. */
+@import url("../../../../packages/design-tokens/profile-colors.css");

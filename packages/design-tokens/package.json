@@ -1,0 +1,16 @@
+{
+  "name": "@atelier/design-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Канонические токены дизайн-системы Film Noir «Арома Ателье»",
+  "type": "module",
+  "main": "index.css",
+  "files": [
+    "*.css",
+    "sync.mjs"
+  ],
+  "scripts": {
+    "sync": "node sync.mjs",
+    "check": "node sync.mjs --check"
+  }
+}

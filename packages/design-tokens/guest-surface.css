@@ -1,0 +1,43 @@
+/* Guest-surface atmosphere: the wine-warm room the mobile app sits in.
+   Accent rule (PRD §12): ONE brand colour — oxblood. The guest CTA, the active
+   navigation segment and the rating pill are all oxblood; the warm brass gradient
+   that upstream code used for them was retired on the brand owner's call. The only
+   remaining warm hues are the --composition-* data ramp (mix recipe shares). */
+:root {
+  --guest-room-bg: linear-gradient(180deg, #0f0f12 0%, #161619 40%, #141417 100%);
+  --guest-halo-strong: radial-gradient(circle at 50% 0%, rgba(176, 74, 62, 0.16), transparent 34%); /* @kind color */
+  --guest-halo-soft: radial-gradient(circle at 80% 18%, rgba(176, 74, 62, 0.1), transparent 24%); /* @kind color */
+  --guest-shell-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
+  --guest-topbar-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
+  --guest-card-bg: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(24, 24, 28, 0.94) 100%);
+  --guest-sheet-bg: linear-gradient(180deg, rgba(40, 15, 16, 0.98) 0%, rgba(20, 9, 10, 0.98) 100%);
+  --guest-row-bg: rgba(28, 28, 33, 0.84);
+  --guest-control-bg: rgba(40, 40, 48, 0.66);
+  --guest-control-bg-soft: rgba(40, 40, 48, 0.54);
+  --guest-chip-bg: rgba(40, 18, 18, 0.6);
+  --guest-chip-bg-on: linear-gradient(180deg, rgba(176, 74, 62, 0.62) 0%, rgba(140, 52, 43, 0.52) 100%);
+  --guest-chip-ink-on: #f7efec;
+  --guest-chip-border-on: rgba(244, 239, 234, 0.34);
+  --guest-dock-fade: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%); /* @kind color */
+
+  /* Guest primary CTA — solid oxblood */
+  --cta-solid: linear-gradient(180deg, #c25749 0%, #b04a3e 100%); /* @kind color */
+  --cta-solid-border: rgba(244, 239, 234, 0.22);
+  --cta-solid-ink: #f4efea;
+  --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.18), 0 14px 26px rgba(126, 52, 43, 0.4);
+  --cta-solid-disabled-bg: rgba(60, 28, 22, 0.6);
+
+  /* Segment nav (active) */
+  --segment-active-bg: linear-gradient(180deg, #c25749 0%, #b04a3e 100%);
+  --segment-active-ink: #f4efea;
+  --segment-active-border: rgba(244, 239, 234, 0.24);
+  --segment-idle-bg: rgba(56, 24, 22, 0.54);
+
+  /* Rating pill */
+  --rating-bg: rgba(176, 74, 62, 0.18);
+  --rating-border: var(--accent-border);
+  --rating-ink: #e6b3a9;
+
+  /* Master CTA gradient (backoffice primary) */
+  --cta-gradient: linear-gradient(135deg, var(--accent), #7e342b);
+}

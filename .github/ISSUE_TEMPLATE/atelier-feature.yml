@@ -74,7 +74,13 @@ body:
       label: "Design / UX baseline"
       description: "Обязательно для UI/redesign slices. Если задача не про UI, напишите `N/A`."
       placeholder: |
-        Для `apps/master-web`:
+        Канон обеих поверхностей — дизайн-система Film Noir:
+        - значения токенов — `packages/design-tokens/` (правятся только там,
+          в приложения раскладываются `node packages/design-tokens/sync.mjs`);
+        - описание системы, компоненты и UI-киты — `.claude/skills/aroma-atelier-design/`;
+        - один акцент-оксблад `#B04A3E`, monospace в системе нет, эмодзи не используются.
+
+        Для `apps/master-web` дополнительно:
         - использовать `shadcn/ui` там, где это уместно и не ломает bounded slice;
         - не оставлять generic auto-generated UI как финальный visual layer;
         - целиться в stylish premium HoReCa console, а не в generic SaaS;

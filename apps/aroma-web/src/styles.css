@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Канон Film Noir — packages/design-tokens (см. sync.mjs). Локальный :root ниже
+   пока переопределяет часть значений; расхождения снимаются в #41 и #42. */
+@import "./design-tokens.generated.css";
 
 @custom-variant dark (&:is(.dark *));
 

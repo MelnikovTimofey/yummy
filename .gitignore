@@ -19,6 +19,9 @@ tests/*/node_modules
 # local design handoff materials (Figma exports и т.п.)
 design/
 
+# черновые скриншоты, вставленные в скилл дизайн-системы
+.claude/skills/aroma-atelier-design/uploads/
+
 # Nomad service local artifacts
 services/telegram-bot/node_modules
 services/telegram-bot/dist/
