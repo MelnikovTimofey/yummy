@@ -25,12 +25,10 @@ export function CTA({
       className={pulse && !disabled ? "cta-pulse" : undefined}
       style={{
         width: "100%",
-        border: "1px solid rgba(242,213,165,0.28)",
-        background: disabled
-          ? "rgba(60,28,22,0.6)"
-          : "linear-gradient(180deg, #e0b878 0%, #c08a4a 100%)",
-        color: disabled ? "var(--text-2)" : "#23120d",
-        borderRadius: 14,
+        border: `1px solid ${disabled ? "var(--line)" : "var(--cta-solid-border)"}`,
+        background: disabled ? "var(--cta-solid-disabled-bg)" : "var(--cta-solid)",
+        color: disabled ? "var(--text-2)" : "var(--cta-solid-ink)",
+        borderRadius: "var(--r-guest-cta)",
         minHeight: 52,
         padding: "0 18px",
         fontSize: 13,
@@ -38,9 +36,7 @@ export function CTA({
         textTransform: "uppercase",
         fontWeight: 600,
         cursor: disabled ? "default" : "pointer",
-        boxShadow: disabled
-          ? "none"
-          : "inset 0 1px 0 rgba(255,243,220,0.28), 0 14px 26px rgba(140,45,36,0.32)",
+        boxShadow: disabled ? "none" : "var(--cta-solid-shadow)",
         ...style,
       }}
     >

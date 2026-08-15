@@ -34,15 +34,13 @@ export function Chip({
         display: "inline-flex",
         alignItems: "center",
         gap: 7,
-        border: `1px solid ${active ? "var(--primary)" : "var(--line)"}`,
-        background: active
-          ? "linear-gradient(180deg, rgba(216,171,104,0.20) 0%, rgba(140,45,36,0.18) 100%)"
-          : "rgba(40,18,18,0.6)",
-        color: active ? "var(--accent-soft)" : "var(--text-1)",
+        border: `1px solid ${active ? "var(--guest-chip-border-on)" : "var(--line)"}`,
+        background: active ? "var(--guest-chip-bg-on)" : "var(--guest-chip-bg)",
+        color: active ? "var(--guest-chip-ink-on)" : "var(--text-1)",
         borderRadius: 999,
         padding: isLg ? "10px 14px" : "7px 12px",
         fontSize: isLg ? 13 : 12,
-        fontWeight: 400,
+        fontWeight: active ? 600 : 400,
         letterSpacing: 0,
         textTransform: "none",
         lineHeight: 1.1,
@@ -62,7 +60,7 @@ export function Chip({
             borderRadius: 999,
             background: color,
             flex: "0 0 auto",
-            boxShadow: active ? "0 0 0 2px rgba(216,171,104,0.18)" : "none",
+            boxShadow: active ? "0 0 0 2px var(--guest-chip-border-on)" : "none",
           }}
         />
       )}
