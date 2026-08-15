@@ -6,11 +6,10 @@
 /* Канон Film Noir — packages/design-tokens (см. sync.mjs). */
 @import "./design-tokens.generated.css";
 
-/* Консоль тёмная всегда — через color-scheme и :root, без класса `dark`. Эта
-   директива держит tailwind-вариант `dark:` привязанным к классу вместо
-   дефолтного prefers-color-scheme: убрать её — и `dark:`-классы shadcn-кнопок
-   и бейджей оживут у пользователей с тёмной системной темой. */
-@custom-variant dark (&:is(.dark *));
+/* Консоль тёмная всегда — через color-scheme и :root, без класса `dark`.
+   `dark:`-классов в разметке нет (сняты вместе с директивой `@custom-variant`
+   в #49): вводя их снова, вернуть и директиву — иначе они оживут по
+   prefers-color-scheme у пользователей с тёмной системной темой. */
 
 :root {
   color-scheme: dark;
