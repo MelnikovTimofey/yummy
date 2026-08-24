@@ -64,3 +64,29 @@ test('Aroma guest returns to preferences from the recommendations screen and can
   await editEntry.click();
   await expect(page.locator('.aroma-onboarding-profile-grid button[aria-pressed="true"]')).toHaveCount(1);
 });
+
+// Связность онбординга с картотекой (#36). Не зависит от демо-фикстур:
+// проверяется наличие живого счётчика и его реакция на выбор, а не конкретные
+// числа — на продуктовом снапшоте они другие.
+test('Aroma onboarding shows how many mixes stand behind the current choice', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+
+  await page.getByRole('button', { name: 'Пропустить' }).click();
+  await expect(page.getByText('С чего начнём?')).toBeVisible();
+
+  const tally = page.locator('.aroma-onboarding-tally');
+  await expect(tally).toBeVisible();
+  await expect(tally).not.toBeEmpty();
+
+  const beforeChoice = (await tally.innerText()).trim();
+  await page.locator('.aroma-onboarding-profile-grid button').first().click();
+  await expect(tally).not.toHaveText(beforeChoice);
+
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await expect(page.getByText('Любимые ноты')).toBeVisible();
+  await expect(tally).toBeVisible();
+});

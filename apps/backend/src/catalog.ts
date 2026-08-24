@@ -156,6 +156,17 @@ export const tobaccos: Tobacco[] = [
     inStock: true,
   },
   {
+    // В наличии, но ни в один микс не входит: ровно та ситуация, из-за которой
+    // онбординг предлагал вкусы, не дающие ни одной рекомендации (#36).
+    id: 'tobacco-melon-solo',
+    name: 'Melon Solo',
+    manufacturer: 'Atlas Smoke',
+    flavorProfiles: ['fruity', 'sweet'],
+    flavors: ['дыня'],
+    flavorTags: ['fruity'],
+    inStock: true,
+  },
+  {
     id: 'tobacco-iced-plum',
     name: 'Iced Plum',
     manufacturer: 'Velvet Line',
