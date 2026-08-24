@@ -57,6 +57,13 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
+  /* Поле от края экрана до контента. Раньше его задавал padding у .content, а
+     секции добавляли поверх собственный — отступ жил в двух слоях сразу, и
+     sticky-элементам приходилось выгрызать чужой padding отрицательным
+     margin (#35). Теперь отступ задаёт только секция, а --gutter — общая
+     часть, которая меняется с шириной экрана. */
+  --gutter: 20px;
+
   /* Гость тёмный всегда. Без этого браузер считает страницу light-документом:
      светлый scrollbar, светлый overscroll и тёмный текст статус-бара поверх
      тёмной страницы. Консоль объявляет то же самое (master-web/src/styles.css). */
@@ -296,7 +303,6 @@ select:focus-visible {
 }
 
 .content {
-  padding: 12px 20px calc(12px + var(--safe-bottom));
   overflow-x: hidden;
   overflow-y: auto;
   display: grid;
@@ -307,7 +313,6 @@ select:focus-visible {
 }
 
 .content-intro {
-  padding: 0;
   gap: 0;
 }
 
@@ -774,7 +779,7 @@ select:focus-visible {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px 20px 0;
+  padding: 32px calc(var(--gutter) + 20px) calc(12px + var(--safe-bottom));
   gap: 12px;
 }
 
@@ -923,7 +928,7 @@ select:focus-visible {
 .aroma-recs-empty {
   display: grid;
   gap: 14px;
-  padding: 16px 20px calc(20px + var(--safe-bottom));
+  padding: 28px calc(var(--gutter) + 20px) calc(32px + var(--safe-bottom));
 }
 
 /* Не растягивать строки на всю высоту .content при малом числе элементов —
@@ -1121,25 +1126,24 @@ select:focus-visible {
   /* строки по контенту: при коротком списке свободная высота уходит вниз,
      а не растягивает чип-рейл в гигантские круги (grid align-content: stretch) */
   align-content: start;
-  padding: 0 20px calc(20px + var(--safe-bottom));
+  /* сверху 0: первым ребёнком идёт sticky-полоса фильтров, она встаёт вплотную
+     к шапке; остальным детям отступ даёт gap */
+  padding: 0 calc(var(--gutter) + 20px) calc(32px + var(--safe-bottom));
   position: relative;
 }
 
 /* control rail — сплошная полоса под табами (CatalogInline, вариант B):
-   уходит в край экрана отрицательными отступами (−12 main-padding, −20 секция)
-   и держит хайрлайн-разделитель снизу.
-
-   top повторяет margin-top, а не равен нулю: sticky-смещение считается от
-   margin box, поэтому при top: 0 прилипал верх margin box, а сама полоса
-   замирала на 12px ниже — в этот просвет было видно проезжающий контент (#35).
-   Оба числа компенсируют padding-top у .content и меняются только вместе. */
+   выходит в края экрана, отменяя горизонтальный отступ своей секции, и держит
+   хайрлайн-разделитель снизу. Вертикальной компенсации больше нет: секция
+   каталога не даёт padding сверху, поэтому sticky прилипает при top: 0 и щели
+   не остаётся (#35, #75). */
 .aroma-catalog-rail {
   display: grid;
   gap: 8px;
   position: sticky;
-  top: -12px;
+  top: 0;
   z-index: 2;
-  margin: -12px -32px 2px;
+  margin: 0 calc(-1 * (var(--gutter) + 20px)) 2px;
   padding: 12px 20px 10px;
   border-bottom: 1px solid var(--line-soft);
   background: rgba(20, 20, 23, 0.92);
@@ -1310,7 +1314,9 @@ select:focus-visible {
 .aroma-showcase {
   display: grid;
   gap: 22px;
-  padding: 16px 0 calc(20px + var(--safe-bottom));
+  /* по горизонтали — только поле экрана: рейлы витрины скроллятся до краёв,
+     свои отступы задают их дети */
+  padding: 28px var(--gutter) calc(32px + var(--safe-bottom));
 }
 
 .aroma-showcase-rail {
@@ -1771,7 +1777,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: calc(12px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
+  padding: calc(24px + var(--safe-top)) calc(var(--gutter) + 20px) calc(32px + var(--safe-bottom));
   overflow-y: auto;
 }
 
@@ -1941,12 +1947,8 @@ select:focus-visible {
     display: none;
   }
 
-  .content {
-    padding: 12px 12px calc(12px + var(--safe-bottom));
-  }
-
-  .content-intro {
-    padding: 0;
+  :root {
+    --gutter: 12px;
   }
 
   .selected-mix-shell {
