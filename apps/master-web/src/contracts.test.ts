@@ -460,7 +460,6 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
           mixName: 'Ягодный рассвет',
           avgRating: 5,
           ratingsCount: 1,
-          smokeCtaCount: 1,
           smokeCtaCount: 10,
         },
       ],
@@ -519,20 +518,18 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
       {
         mixId: 'mix-1',
         name: 'Цитрусовый караван',
-        smokeCtaCount: 3,
+        smokeCtaCount: 12,
         avgRating: 4.8,
         ratingsCount: 2,
-        smokeCtaCount: 12,
       },
     ],
     topRatedMixes: [
       {
         mixId: 'mix-2',
         name: 'Ягодный рассвет',
-        smokeCtaCount: 1,
+        smokeCtaCount: 10,
         avgRating: 5,
         ratingsCount: 1,
-        smokeCtaCount: 10,
       },
     ],
     ratingDistribution: [
@@ -942,4 +939,16 @@ test('date helpers roundtrip local input', () => {
   assert.equal(typeof iso, 'string');
   assert.ok(iso.endsWith('Z'));
   assert.equal(formatDateTimeLocalInput(iso), input);
+});
+
+// Дубликат ключа (#65) перебивал фолбэк, и метрика по payload'у с `count`
+// молча становилась нулём.
+test('normalizeDashboardSummary falls back to count when smokeCtaCount is absent', () => {
+  const summary = normalizeDashboardSummary({
+    product: {
+      topMixes: [{ mixId: 'mix-1', mixName: 'Цитрусовый караван', count: 7 }],
+    },
+  });
+
+  assert.equal(summary.topMixes[0]?.smokeCtaCount, 7);
 });
