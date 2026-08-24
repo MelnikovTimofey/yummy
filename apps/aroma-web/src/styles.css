@@ -186,8 +186,10 @@ select:focus-visible {
   padding: calc(12px + var(--safe-top)) 20px 8px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
-  position: sticky;
-  top: 0;
+  /* Не sticky: шапка лежит вне скролл-контейнера .content и остаётся обычным
+     flex-элементом .phone-shell — прилипать ей не к чему. position нужен
+     только ради z-index, которым тень ложится поверх контента. */
+  position: relative;
   z-index: 20;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(18px);
@@ -1092,12 +1094,17 @@ select:focus-visible {
 
 /* control rail — сплошная полоса под табами (CatalogInline, вариант B):
    уходит в край экрана отрицательными отступами (−12 main-padding, −20 секция)
-   и держит хайрлайн-разделитель снизу. */
+   и держит хайрлайн-разделитель снизу.
+
+   top повторяет margin-top, а не равен нулю: sticky-смещение считается от
+   margin box, поэтому при top: 0 прилипал верх margin box, а сама полоса
+   замирала на 12px ниже — в этот просвет было видно проезжающий контент (#35).
+   Оба числа компенсируют padding-top у .content и меняются только вместе. */
 .aroma-catalog-rail {
   display: grid;
   gap: 8px;
   position: sticky;
-  top: 0;
+  top: -12px;
   z-index: 2;
   margin: -12px -32px 2px;
   padding: 12px 20px 10px;
