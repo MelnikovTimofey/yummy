@@ -51,12 +51,36 @@ jobs:
             head -1 "${agent_file}" | grep -q '^---$' || { echo "Missing frontmatter in ${agent_file}"; exit 1; }
           done
       - name: Reject placeholder TODO markers
+        # grep, а не rg: ripgrep на ubuntu-latest не установлен, и `if rg …`
+        # молча считался пройденным (status 127 → условие ложно). Проверка была
+        # мёртвой с самого начала — см. #73. Статус grep разбирается явно, чтобы
+        # сломанный запуск больше не выглядел как «маркеров нет».
+        # docs/artifacts/archive/** исключён: это замороженный архив, TODO там —
+        # цитаты старых команд, а не placeholder'ы.
         run: |
           set -eu
-          if rg -n --glob '!.github/workflows/atelier-docs-lint.yml' "TODO|Structuring This Skill|Resources \(optional\)" .claude .github docs CLAUDE.md; then
+
+          set +e
+          matches=$(grep -rEn \
+            --exclude-dir=archive \
+            --exclude=atelier-docs-lint.yml \
+            "TODO|Structuring This Skill|Resources \(optional\)" \
+            .claude .github docs CLAUDE.md)
+          status=$?
+          set -e
+
+          if [ "${status}" -eq 0 ]; then
+            echo "${matches}"
             echo "Placeholder markers found in docs or skills"
             exit 1
           fi
+
+          if [ "${status}" -ne 1 ]; then
+            echo "grep exited with ${status} — проверка не выполнена"
+            exit "${status}"
+          fi
+
+          echo "No placeholder markers found"
       - name: Check whitespace errors in changed diff
         env:
           EVENT_NAME: ${{ github.event_name }}
