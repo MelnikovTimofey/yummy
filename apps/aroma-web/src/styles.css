@@ -928,6 +928,15 @@ select:focus-visible {
   align-content: start;
 }
 
+/* Заголовок подбора и вход в правку предпочтений в одной строке: ghost-кнопка,
+   а не второй CTA — главное действие на экране остаётся одно, «Покурить». */
+.aroma-recs-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .aroma-recs-empty {
   align-content: center;
   text-align: center;
