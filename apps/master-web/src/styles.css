@@ -73,6 +73,12 @@
   box-sizing: border-box;
 }
 
+/* Фон дублируется на корневом элементе: цвет overscroll (rubber-band в Safari)
+   берётся именно с html, а не с body. */
+html {
+  background: var(--bg-base);
+}
+
 body {
   margin: 0;
   min-width: 320px;
