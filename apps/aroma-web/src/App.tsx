@@ -1043,13 +1043,6 @@ export const App = () => {
     setAppliedSortBy('popularity');
   };
 
-  const primeCatalogFromOnboarding = (profiles: string[], flavors: string[]) => {
-    setAppliedCatalogProfiles(profiles);
-    setAppliedCatalogFlavors(flavors);
-    setQuery('');
-    setAppliedSortBy('popularity');
-  };
-
   const finishIntro = () => {
     setIntroSeen(true);
     setView('onboarding');
@@ -1114,7 +1107,6 @@ export const App = () => {
     if (ok) {
       setOnboardingDone(true);
       setView('recommendations');
-      primeCatalogFromOnboarding([...likedProfiles], [...likedFlavors]);
     }
   };
 
@@ -1132,7 +1124,6 @@ export const App = () => {
     }
 
     void loadRecommendations(likedProfiles, likedFlavors);
-    primeCatalogFromOnboarding([...likedProfiles], [...likedFlavors]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessGranted, onboardingDone]);
 
