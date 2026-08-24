@@ -819,6 +819,10 @@ export const App = () => {
   const [likedProfiles, setLikedProfiles] = useState<string[]>(() => readStoredStringArray(storageKeys.likedProfiles));
   const [likedFlavors, setLikedFlavors] = useState<string[]>(() => readStoredStringArray(storageKeys.likedFlavors));
   const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1);
+  // Повторный вход в предпочтения: тот же экран онбординга, но выход по «←»
+  // ведёт в подбор, а правки чипов остаются черновиком до «Показать подбор».
+  const [editingPreferences, setEditingPreferences] = useState(false);
+  const preferencesSnapshotRef = useRef<{ profiles: string[]; flavors: string[] } | null>(null);
 
   const [recommendations, setRecommendations] = useState<MixCard[]>([]);
   const [recommendationStatus, setRecommendationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -883,13 +887,22 @@ export const App = () => {
     }
   }, [onboardingDone]);
 
+  // Пока идёт правка, выбор чипов — черновик: сохранение откладывается до
+  // «Показать подбор», иначе сохранённые предпочтения разойдутся с показанным
+  // подбором, а после перезагрузки он пересоберётся по неподтверждённому.
   useEffect(() => {
+    if (editingPreferences) {
+      return;
+    }
     localStorage.setItem(storageKeys.likedProfiles, JSON.stringify(likedProfiles));
-  }, [likedProfiles]);
+  }, [likedProfiles, editingPreferences]);
 
   useEffect(() => {
+    if (editingPreferences) {
+      return;
+    }
     localStorage.setItem(storageKeys.likedFlavors, JSON.stringify(likedFlavors));
-  }, [likedFlavors]);
+  }, [likedFlavors, editingPreferences]);
 
   useEffect(() => {
     if (!accessGranted) {
@@ -1043,6 +1056,23 @@ export const App = () => {
     setAppliedSortBy('popularity');
   };
 
+  const openPreferencesEditing = () => {
+    preferencesSnapshotRef.current = { profiles: likedProfiles, flavors: likedFlavors };
+    setEditingPreferences(true);
+    setView('onboarding');
+  };
+
+  const cancelPreferencesEditing = () => {
+    const snapshot = preferencesSnapshotRef.current;
+    if (snapshot) {
+      setLikedProfiles(snapshot.profiles);
+      setLikedFlavors(snapshot.flavors);
+    }
+    preferencesSnapshotRef.current = null;
+    setEditingPreferences(false);
+    setView('recommendations');
+  };
+
   const finishIntro = () => {
     setIntroSeen(true);
     setView('onboarding');
@@ -1106,6 +1136,8 @@ export const App = () => {
     const ok = await loadRecommendations(likedProfiles, likedFlavors);
     if (ok) {
       setOnboardingDone(true);
+      preferencesSnapshotRef.current = null;
+      setEditingPreferences(false);
       setView('recommendations');
     }
   };
@@ -1288,6 +1320,8 @@ export const App = () => {
     const onBack = () => {
       if (onboardingStep === 2) {
         setOnboardingStep(1);
+      } else if (editingPreferences) {
+        cancelPreferencesEditing();
       } else {
         setView('intro');
       }
@@ -1541,7 +1575,9 @@ export const App = () => {
         <div className="aroma-onboarding-body">
           {onboardingStep === 1 ? (
             <>
-              <p className="aroma-caps">Шаг 1 · Профили</p>
+              <p className="aroma-caps">
+                {editingPreferences ? 'Правка вкусов · Шаг 1 · Профили' : 'Шаг 1 · Профили'}
+              </p>
               <h1 className="aroma-onboarding-title">С чего начнём?</h1>
               <p className="aroma-onboarding-hint">
                 Несколько касаний по профилям, и мы поймём, в какую сторону смотреть.
@@ -1577,7 +1613,9 @@ export const App = () => {
             </>
           ) : (
             <>
-              <p className="aroma-caps">Шаг 2 · Вкусы</p>
+              <p className="aroma-caps">
+                {editingPreferences ? 'Правка вкусов · Шаг 2 · Вкусы' : 'Шаг 2 · Вкусы'}
+              </p>
               <h1 className="aroma-onboarding-title">Любимые ноты</h1>
               <p className="aroma-onboarding-hint">
                 Опционально — но так подбор станет точнее.
@@ -1624,16 +1662,18 @@ export const App = () => {
           <CTA pulse={onboardingStep === 2 && !ctaDisabled} onClick={goNext} disabled={ctaDisabled}>
             {ctaLabel}
           </CTA>
-          <button
-            type="button"
-            className="aroma-onboarding-skip"
-            onClick={() => {
-              setOnboardingDone(true);
-              setView('catalog');
-            }}
-          >
-            Открыть каталог сразу
-          </button>
+          {editingPreferences ? null : (
+            <button
+              type="button"
+              className="aroma-onboarding-skip"
+              onClick={() => {
+                setOnboardingDone(true);
+                setView('catalog');
+              }}
+            >
+              Открыть каталог сразу
+            </button>
+          )}
         </div>
       </div>
     );
@@ -1685,7 +1725,7 @@ export const App = () => {
               : 'Откройте предпочтения, чтобы мы собрали подбор под текущее настроение, или сразу посмотрите весь каталог.'}
           </p>
           <div className="aroma-recs-empty-actions">
-            <CTA onClick={() => setView('onboarding')}>
+            <CTA onClick={openPreferencesEditing}>
               {recommendationStatus === 'ready' ? 'Изменить вкусы' : 'Открыть предпочтения'}
             </CTA>
             <button
@@ -1708,7 +1748,10 @@ export const App = () => {
 
     return (
       <section className="aroma-recs">
-        <p className="aroma-caps">Лучшее совпадение</p>
+        <div className="aroma-recs-head">
+          <p className="aroma-caps">Лучшее совпадение</p>
+          <Chip onClick={openPreferencesEditing}>Изменить вкусы</Chip>
+        </div>
         <article
           className="aroma-recs-hero"
           style={{
