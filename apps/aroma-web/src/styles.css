@@ -904,6 +904,10 @@ select:focus-visible {
   background: var(--primary);
 }
 
+.aroma-onboarding-tally {
+  text-align: center;
+}
+
 .aroma-onboarding-skip {
   background: transparent;
   border: 0;
@@ -964,6 +968,26 @@ select:focus-visible {
   display: grid;
   gap: 10px;
   margin-top: 8px;
+}
+
+/* Ряд «чем совпало»: активные Chip — то, что гость выбирал сам, остальные —
+   контекст микса. Отдельного типа плашки не заводим. */
+.aroma-recs-match-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aroma-recs-fallback-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.aroma-recs-row-flavor-on {
+  color: var(--text-0);
+  font-weight: 600;
 }
 
 .aroma-recs-hero {

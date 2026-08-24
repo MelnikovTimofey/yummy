@@ -10,6 +10,10 @@ type ChipProps = {
   onClick?: () => void;
   style?: CSSProperties;
   disabled?: boolean;
+  // Погашенный чип остаётся кликабельным: гость видит, что вкус существует, но
+  // сейчас ничего не даёт. Это не disabled — тупика быть не должно.
+  dimmed?: boolean;
+  ariaLabel?: string;
   type?: "button" | "submit";
 };
 
@@ -21,6 +25,8 @@ export function Chip({
   onClick,
   style,
   disabled,
+  dimmed = false,
+  ariaLabel,
   type = "button",
 }: ChipProps) {
   const isLg = tier === "lg";
@@ -30,6 +36,8 @@ export function Chip({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
+      aria-pressed={onClick ? active : undefined}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -45,7 +53,7 @@ export function Chip({
         textTransform: "none",
         lineHeight: 1.1,
         cursor: onClick && !disabled ? "pointer" : "default",
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled ? 0.5 : dimmed ? 0.42 : 1,
         boxShadow: active ? "inset 0 1px 0 rgba(255,244,236,0.10)" : "none",
         transition: "background 120ms, border-color 120ms, color 120ms",
         ...style,

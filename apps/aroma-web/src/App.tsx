@@ -24,6 +24,13 @@ type MixSource = 'recommendations' | 'showcase' | 'catalog' | 'rail';
 type OnboardingOptions = {
   profiles: string[];
   flavors: string[];
+  profileCounts: Record<string, number>;
+  flavorCounts: Record<string, number>;
+};
+
+type RecommendedMix = MixCard & {
+  matchedProfiles: string[];
+  matchedFlavors: string[];
 };
 
 type CatalogFilters = {
@@ -435,6 +442,16 @@ const fetchGuestAccess = async (code: string) => {
   return payload as GuestAccessSuccess;
 };
 
+const toCountMap = (value: unknown): Record<string, number> => {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, count]) => [key, toNumber(count, 0)]),
+  );
+};
+
 const fetchOnboardingOptions = async () => {
   const payload = await requestJson<unknown>('/guest/onboarding/options');
   const record = isRecord(payload) ? payload : {};
@@ -442,6 +459,8 @@ const fetchOnboardingOptions = async () => {
   return {
     profiles: toStringList(record.profiles ?? record.items ?? record.flavorProfiles),
     flavors: toStringList(record.flavors ?? record.items ?? record.flavorTags),
+    profileCounts: toCountMap(record.profileCounts),
+    flavorCounts: toCountMap(record.flavorCounts),
   } satisfies OnboardingOptions;
 };
 
@@ -467,7 +486,15 @@ const fetchRecommendations = async (payload: { likedProfiles: string[]; likedFla
   });
 
   const record = isRecord(response) ? response : {};
-  return extractCollection(record, ['items', 'mixes']).map((item, index) => normalizeMix(item, index));
+  return extractCollection(record, ['items', 'mixes']).map((item, index) => {
+    const itemRecord = isRecord(item) ? item : {};
+
+    return {
+      ...normalizeMix(item, index),
+      matchedProfiles: toStringList(itemRecord.matchedProfiles),
+      matchedFlavors: toStringList(itemRecord.matchedFlavors),
+    } satisfies RecommendedMix;
+  });
 };
 
 const sendSmokeCta = async (mixId: string) => {
@@ -813,7 +840,12 @@ export const App = () => {
   const [introError, setIntroError] = useState('');
   const [introIndex, setIntroIndex] = useState(0);
 
-  const [options, setOptions] = useState<OnboardingOptions>({ profiles: [], flavors: [] });
+  const [options, setOptions] = useState<OnboardingOptions>({
+    profiles: [],
+    flavors: [],
+    profileCounts: {},
+    flavorCounts: {},
+  });
   const [optionsStatus, setOptionsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [optionsError, setOptionsError] = useState('');
   const [likedProfiles, setLikedProfiles] = useState<string[]>(() => readStoredStringArray(storageKeys.likedProfiles));
@@ -824,7 +856,11 @@ export const App = () => {
   const [editingPreferences, setEditingPreferences] = useState(false);
   const preferencesSnapshotRef = useRef<{ profiles: string[]; flavors: string[] } | null>(null);
 
-  const [recommendations, setRecommendations] = useState<MixCard[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendedMix[]>([]);
+  // Полная картотека для онбординга: каталог в catalogSourceMixes живёт под
+  // фильтрами гостя, а счётчик подходящих миксов должен считаться по всей
+  // картотеке независимо от того, что гость нафильтровал в каталоге (#36).
+  const [onboardingMixes, setOnboardingMixes] = useState<MixCard[]>([]);
   const [recommendationStatus, setRecommendationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [recommendationError, setRecommendationError] = useState('');
 
@@ -934,8 +970,12 @@ export const App = () => {
     setOptionsError('');
 
     try {
-      const nextOptions = await fetchOnboardingOptions();
+      const [nextOptions, nextMixes] = await Promise.all([
+        fetchOnboardingOptions(),
+        fetchCatalogMixes(),
+      ]);
       setOptions(nextOptions);
+      setOnboardingMixes(nextMixes);
       setOptionsStatus('ready');
     } catch (cause) {
       setOptionsStatus('error');
@@ -1019,8 +1059,8 @@ export const App = () => {
     setRailProfileFilters([]);
   }, [selectedRail?.id]);
 
-  const updateMixInList = (items: MixCard[], mixId: string, updater: (mix: MixCard) => MixCard) =>
-    items.map((mix) => (mix.id === mixId ? updater(mix) : mix));
+  const updateMixInList = <T extends MixCard>(items: T[], mixId: string, updater: (mix: MixCard) => MixCard) =>
+    items.map((mix) => (mix.id === mixId ? ({ ...mix, ...updater(mix) } as T) : mix));
 
   const syncMixEverywhere = (mixId: string, updater: (mix: MixCard) => MixCard) => {
     setRecommendations((current) => updateMixInList(current, mixId, updater));
@@ -1284,10 +1324,11 @@ export const App = () => {
 
   const selectedMixCard =
     selectedMix?.id
-      ? recommendations
-          .concat(catalogSourceMixes)
-          .concat(showcaseRails.flatMap((rail) => rail.mixes))
-          .find((mix) => mix.id === selectedMix.id) ?? null
+      ? ([
+          ...recommendations,
+          ...catalogSourceMixes,
+          ...showcaseRails.flatMap((rail) => rail.mixes),
+        ] as MixCard[]).find((mix) => mix.id === selectedMix.id) ?? null
       : null;
 
   const renderBrand = () => (
@@ -1540,6 +1581,22 @@ export const App = () => {
   };
 
   const renderOnboardingView = () => {
+    // Миксы, попадающие под текущий выбор. Семантика та же, что у фильтров
+    // каталога: профиль ИЛИ-внутри-группы, между группами — И.
+    const mixesUnderProfiles = likedProfiles.length
+      ? onboardingMixes.filter((mix) =>
+          mix.flavorProfiles.some((profile) => likedProfiles.includes(profile)),
+        )
+      : onboardingMixes;
+    const matchingMixes = likedFlavors.length
+      ? mixesUnderProfiles.filter((mix) => mix.flavors.some((flavor) => likedFlavors.includes(flavor)))
+      : mixesUnderProfiles;
+    // Вкус, которого нет ни в одном миксе с выбранными профилями, гасим — но
+    // оставляем кликабельным, чтобы гость не упирался в тупик.
+    const flavorGivesNothing = (flavor: string) =>
+      likedProfiles.length > 0 && !mixesUnderProfiles.some((mix) => mix.flavors.includes(flavor));
+    const catalogueIsEmpty = !onboardingMixes.length && optionsStatus === 'ready';
+
     const toggleProfile = (value: string) =>
       setLikedProfiles((current) =>
         current.includes(value)
@@ -1580,7 +1637,9 @@ export const App = () => {
               </p>
               <h1 className="aroma-onboarding-title">С чего начнём?</h1>
               <p className="aroma-onboarding-hint">
-                Несколько касаний по профилям, и мы поймём, в какую сторону смотреть.
+                {catalogueIsEmpty
+                  ? 'Мастер ещё не собрал ни одного микса — подбор появится, когда картотека наполнится.'
+                  : 'Несколько касаний по профилям, и мы поймём, в какую сторону смотреть.'}
               </p>
               {optionsStatus === 'loading' ? (
                 <p className="screen-status">Подтягиваем доступные профили…</p>
@@ -1618,18 +1677,26 @@ export const App = () => {
               </p>
               <h1 className="aroma-onboarding-title">Любимые ноты</h1>
               <p className="aroma-onboarding-hint">
-                Опционально — но так подбор станет точнее.
+                {matchingMixes.length
+                  ? 'Опционально — но так подбор станет точнее. Приглушённые вкусы не встречаются в миксах с выбранными профилями.'
+                  : 'С этим набором миксов не осталось — снимите лишний вкус или вернитесь к профилям.'}
               </p>
               <div className="aroma-onboarding-flavor-wrap">
-                {options.flavors.map((flavor) => (
-                  <Chip
-                    key={flavor}
-                    active={likedFlavors.includes(flavor)}
-                    onClick={() => toggleFlavor(flavor)}
-                  >
-                    {flavor}
-                  </Chip>
-                ))}
+                {options.flavors.map((flavor) => {
+                  const givesNothing = flavorGivesNothing(flavor);
+
+                  return (
+                    <Chip
+                      key={flavor}
+                      active={likedFlavors.includes(flavor)}
+                      dimmed={givesNothing}
+                      ariaLabel={givesNothing ? `${flavor} — нет миксов с выбранными профилями` : undefined}
+                      onClick={() => toggleFlavor(flavor)}
+                    >
+                      {flavor}
+                    </Chip>
+                  );
+                })}
               </div>
               {likedProfiles.length ? (
                 <div className="aroma-onboarding-selected">
@@ -1655,6 +1722,13 @@ export const App = () => {
         </div>
 
         <div className="aroma-onboarding-dock">
+          <p className="aroma-caps aroma-onboarding-tally" aria-live="polite">
+            {catalogueIsEmpty
+              ? 'Картотека миксов пока пуста'
+              : matchingMixes.length
+                ? `Подходит миксов · ${matchingMixes.length}`
+                : 'Подходящих миксов нет'}
+          </p>
           <div className="aroma-onboarding-pips" aria-hidden>
             <span className={cn('aroma-onboarding-pip', onboardingStep >= 1 && 'aroma-onboarding-pip-on')} />
             <span className={cn('aroma-onboarding-pip', onboardingStep >= 2 && 'aroma-onboarding-pip-on')} />
@@ -1740,6 +1814,9 @@ export const App = () => {
       );
     }
 
+    const hasAnyMatch = recommendations.some(
+      (mix) => mix.matchedProfiles.length > 0 || mix.matchedFlavors.length > 0,
+    );
     const [hero, ...rest] = recommendations;
     const heroColor = getProfileColor(hero.flavorProfiles[0]);
     const heroComponents = [...hero.components]
@@ -1749,9 +1826,14 @@ export const App = () => {
     return (
       <section className="aroma-recs">
         <div className="aroma-recs-head">
-          <p className="aroma-caps">Лучшее совпадение</p>
+          <p className="aroma-caps">{hasAnyMatch ? 'Лучшее совпадение' : 'Точных совпадений нет'}</p>
           <Chip onClick={openPreferencesEditing}>Изменить вкусы</Chip>
         </div>
+        {hasAnyMatch ? null : (
+          <p className="aroma-recs-fallback-note">
+            Ни один микс не совпал с выбором целиком — показываем самое близкое из картотеки.
+          </p>
+        )}
         <article
           className="aroma-recs-hero"
           style={{
@@ -1766,6 +1848,23 @@ export const App = () => {
             </div>
           </div>
           <SignatureBar profiles={hero.flavorProfiles} height={6} />
+          <div className="aroma-recs-match-row">
+            {hero.flavorProfiles.map((profile) => (
+              <Chip
+                key={`hero-profile-${profile}`}
+                tier="sm"
+                active={hero.matchedProfiles.includes(profile)}
+                color={getProfileColor(profile)}
+              >
+                {formatProfileLabel(profile)}
+              </Chip>
+            ))}
+            {hero.flavors.slice(0, 4).map((flavor) => (
+              <Chip key={`hero-flavor-${flavor}`} tier="sm" active={hero.matchedFlavors.includes(flavor)}>
+                {flavor}
+              </Chip>
+            ))}
+          </div>
           {heroComponents.length ? (
             <div className="aroma-recs-composition">
               {heroComponents.map((component) => (
@@ -1805,7 +1904,15 @@ export const App = () => {
                     <h3 className="aroma-recs-row-name">{mix.name}</h3>
                     <SignatureBar profiles={mix.flavorProfiles} height={3} />
                     <p className="aroma-recs-row-flavors">
-                      {mix.flavors.slice(0, 3).join(' · ')}
+                      {mix.flavors.slice(0, 3).map((flavor, index) => (
+                        <span
+                          key={`${mix.id}-${flavor}`}
+                          className={cn(mix.matchedFlavors.includes(flavor) && 'aroma-recs-row-flavor-on')}
+                        >
+                          {index ? ' · ' : ''}
+                          {flavor}
+                        </span>
+                      ))}
                     </p>
                   </div>
                   <RatingPill rating={mix.avgRating} />

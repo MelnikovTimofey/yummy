@@ -1,4 +1,3 @@
-import { getInventoryTobaccos } from './state';
 import type { MixView } from './state';
 import { getGuestCatalogMixes } from './state';
 
@@ -8,12 +7,21 @@ export type OnboardingInput = {
   limit?: number;
 };
 
+export type OnboardingOptions = {
+  profiles: string[];
+  flavors: string[];
+  profileCounts: Record<string, number>;
+  flavorCounts: Record<string, number>;
+};
+
 export type RecommendationMix = {
   id: string;
   name: string;
   description: string;
   flavorProfiles: string[];
   flavors: string[];
+  matchedProfiles: string[];
+  matchedFlavors: string[];
   score: number;
   avgRating: number;
   smokeCtaCount: number;
@@ -31,12 +39,35 @@ const unique = (items: string[]) => Array.from(new Set(items));
 const normalizeInput = (items: string[]) =>
   unique(items.map((item) => item.trim().toLowerCase()).filter(Boolean));
 
-export const getOnboardingOptions = async () => {
-  const inStockTobaccos = (await getInventoryTobaccos()).items.filter((item) => item.inStock);
+const byRu = (left: string, right: string) => left.localeCompare(right, 'ru');
+
+const countMixesBy = (mixes: MixView[], pick: (mix: MixView) => string[]) => {
+  const counts = new Map<string, number>();
+
+  mixes.forEach((mix) => {
+    unique(pick(mix)).forEach((value) => {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    });
+  });
+
+  return counts;
+};
+
+// Опции строятся по миксам гостевого каталога, а не по инвентарю табаков:
+// выбор в онбординге должен вести хотя бы к одной рекомендации, иначе гость
+// набирает состав, которого в картотеке нет (#36). Счётчики отдаются сразу —
+// по ним онбординг показывает, сколько миксов стоит за каждой опцией.
+export const getOnboardingOptions = async (): Promise<OnboardingOptions> => {
+  const mixes = await getGuestCatalogMixes();
+
+  const profileCounts = countMixesBy(mixes, (mix) => mix.flavorProfiles);
+  const flavorCounts = countMixesBy(mixes, (mix) => mix.flavors);
 
   return {
-    profiles: unique(inStockTobaccos.flatMap((item) => item.flavorProfiles)).sort(),
-    flavors: unique(inStockTobaccos.flatMap((item) => item.flavors)).sort(),
+    profiles: Array.from(profileCounts.keys()).sort(byRu),
+    flavors: Array.from(flavorCounts.keys()).sort(byRu),
+    profileCounts: Object.fromEntries(profileCounts),
+    flavorCounts: Object.fromEntries(flavorCounts),
   };
 };
 
@@ -83,6 +114,13 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
         description: mix.description,
         flavorProfiles: [...mix.flavorProfiles],
         flavors: [...mix.flavors],
+        // Скоринг мягкий: микс попадает в выдачу и при нулевом совпадении, за
+        // счёт рейтинга и спроса. Различение «совпало / не совпало» нужно, чтобы
+        // экран результатов не выдавал популярное за подобранное (#36).
+        matchedProfiles: mix.flavorProfiles.filter((profile) =>
+          likedProfiles.includes(profile.toLowerCase()),
+        ),
+        matchedFlavors: mix.flavors.filter((flavor) => likedFlavors.includes(flavor.toLowerCase())),
         score: Number(calculateScore(mix, likedProfiles, likedFlavors, maxSmokeCtaCount).toFixed(2)),
         avgRating: mix.avgRating,
         smokeCtaCount: mix.smokeCtaCount,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
-import { tobaccos as seedTobaccos } from './catalog';
+import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import { resetAppState } from './state';
 
 const loginStaff = async (app: ReturnType<typeof buildApp>) => {
@@ -83,9 +83,12 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
   assert.equal(beforeBody.meta.filteredItems, 1);
   assert.equal(beforeBody.meta.inStockCount, 0);
   assert.equal(beforeBody.meta.outOfStockCount, 1);
-  // inMixesCount всегда глобальный — не зависит от текущих фильтров.
-  // В seed все 14 табаков входят хотя бы в один микс.
-  assert.equal(beforeBody.meta.inMixesCount, seedTobaccos.length);
+  // inMixesCount всегда глобальный — не зависит от текущих фильтров. Считаем
+  // по составам миксов: в seed есть табак, не входящий ни в один микс
+  // (Melon Solo — фикстура под #36).
+  const tobaccosUsedInMixes = new Set(seedMixes.flatMap((mix) => mix.componentIds)).size;
+  assert.ok(tobaccosUsedInMixes < seedTobaccos.length);
+  assert.equal(beforeBody.meta.inMixesCount, tobaccosUsedInMixes);
   assert.equal(beforeBody.meta.page, 1);
   assert.equal(beforeBody.meta.pageSize, 1);
   assert.equal(beforeBody.meta.totalPages, 1);
