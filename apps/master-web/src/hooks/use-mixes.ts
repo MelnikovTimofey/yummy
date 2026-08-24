@@ -1,5 +1,6 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
 import { requestJson } from '@/lib/api-client';
+import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { rebalanceTo100 } from '@/components/mixes/mix-builder/rebalance';
 import type {
   MixCatalogMode,
@@ -111,15 +112,32 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
   const [mixSaveStatus, setMixSaveStatus] = useState<MixesSaveStatus>('idle');
   const [mixSaveError, setMixSaveError] = useState('');
   const [mixRowPendingId, setMixRowPendingId] = useState('');
+  // Обработчики каталога читают состояние поверхности отсюда, а не из
+  // замыкания рендера: дебаунс поиска срабатывает через 250 мс после ввода, и
+  // за это время статус, рейл-фильтр или сортировка успевают смениться (#63).
+  const mixesFiltersRef = useRef(mixesFilters);
+  const mixesSortRef = useRef(mixesSort);
+  const mixesRequestGuard = useRef(createLatestRequestGuard()).current;
+
+  const commitMixesFilters = (next: MixListFilters) => {
+    mixesFiltersRef.current = next;
+    setMixesFilters(next);
+  };
+
+  const commitMixesSort = (next: MixListSort) => {
+    mixesSortRef.current = next;
+    setMixesSort(next);
+  };
 
   const loadMixes = useCallback(
     async (
       nextToken: string,
-      nextFilters: MixListFilters = mixesFilters,
-      nextSort: MixListSort = mixesSort,
+      nextFilters: MixListFilters = mixesFiltersRef.current,
+      nextSort: MixListSort = mixesSortRef.current,
       nextPage: number = mixesMeta.page,
       nextPageSize: number = mixesMeta.pageSize,
     ) => {
+      const ticket = mixesRequestGuard.start();
       setMixesStatus('loading');
       setMixesError('');
 
@@ -127,19 +145,31 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
         const query = buildMixRequestQuery(nextFilters, nextSort, nextPage, nextPageSize);
         const response = await requestJson<unknown>(`/staff/mixes${query ? `?${query}` : ''}`, {}, nextToken);
         const payload = normalizeMixListResponse(response);
+
+        // Ответ переустанавливает фильтры и сортировку из payload'а, поэтому
+        // запоздавший результат вернул бы поверхность к состоянию, из которого
+        // его отправили.
+        if (mixesRequestGuard.isStale(ticket)) {
+          return;
+        }
+
         setMixes(sortMixes(payload.items));
-        setMixesFilters(payload.filters);
-        setMixesSort(payload.sort);
+        commitMixesFilters(payload.filters);
+        commitMixesSort(payload.sort);
         setMixesMeta(payload.meta);
         setMixesStatus('ready');
       } catch (cause) {
+        if (mixesRequestGuard.isStale(ticket)) {
+          return;
+        }
+
         setMixes([]);
         setMixesMeta(defaultMixListResponse.meta);
         setMixesStatus('error');
         setMixesError(cause instanceof Error ? cause.message : 'Не удалось загрузить миксы');
       }
     },
-    [mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize],
+    [mixesMeta.page, mixesMeta.pageSize],
   );
 
   const loadMixTobaccos = useCallback(async (nextToken: string) => {
@@ -218,8 +248,8 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
   );
 
   const refreshSurface = async (
-    nextFilters: MixListFilters = mixesFilters,
-    nextSort: MixListSort = mixesSort,
+    nextFilters: MixListFilters = mixesFiltersRef.current,
+    nextSort: MixListSort = mixesSortRef.current,
     nextPage: number = mixesMeta.page,
   ) => {
     if (!token) {
@@ -229,66 +259,68 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
   };
 
   const onSearchChange = async (value: string) => {
-    const next = { ...mixesFilters, search: value };
-    setMixesFilters(next);
-    await refreshSurface(next, mixesSort, 1);
+    const next = { ...mixesFiltersRef.current, search: value };
+    commitMixesFilters(next);
+    await refreshSurface(next, mixesSortRef.current, 1);
   };
 
   const onStatusChange = async (value: MixStatusFilter) => {
-    const next = { ...mixesFilters, status: value };
-    setMixesFilters(next);
-    await refreshSurface(next, mixesSort, 1);
+    const next = { ...mixesFiltersRef.current, status: value };
+    commitMixesFilters(next);
+    await refreshSurface(next, mixesSortRef.current, 1);
   };
 
   const onRailStateChange = async (value: MixRailFilter) => {
-    const next = { ...mixesFilters, railState: value };
-    setMixesFilters(next);
-    await refreshSurface(next, mixesSort, 1);
+    const next = { ...mixesFiltersRef.current, railState: value };
+    commitMixesFilters(next);
+    await refreshSurface(next, mixesSortRef.current, 1);
   };
 
   const onSortFieldChange = async (field: MixSortField) => {
-    const next = { ...mixesSort, field };
-    setMixesSort(next);
-    await refreshSurface(mixesFilters, next, 1);
+    const next = { ...mixesSortRef.current, field };
+    commitMixesSort(next);
+    await refreshSurface(mixesFiltersRef.current, next, 1);
   };
 
   const onSortDirectionChange = async (direction: MixSortDirection) => {
-    const next = { ...mixesSort, direction };
-    setMixesSort(next);
-    await refreshSurface(mixesFilters, next, 1);
+    const next = { ...mixesSortRef.current, direction };
+    commitMixesSort(next);
+    await refreshSurface(mixesFiltersRef.current, next, 1);
   };
 
   const onToggleFilterValue = async (key: MixFilterKey, value: string) => {
+    const current = mixesFiltersRef.current;
     const next = {
-      ...mixesFilters,
-      [key]: toggleMixFilterValue(mixesFilters[key], value),
+      ...current,
+      [key]: toggleMixFilterValue(current[key], value),
     };
-    setMixesFilters(next);
-    await refreshSurface(next, mixesSort, 1);
+    commitMixesFilters(next);
+    await refreshSurface(next, mixesSortRef.current, 1);
   };
 
   const onClearFilterGroup = async (key: MixFilterKey) => {
-    if (mixesFilters[key].length === 0) {
+    const current = mixesFiltersRef.current;
+    if (current[key].length === 0) {
       return;
     }
-    const next = { ...mixesFilters, [key]: [] };
-    setMixesFilters(next);
-    await refreshSurface(next, mixesSort, 1);
+    const next = { ...current, [key]: [] };
+    commitMixesFilters(next);
+    await refreshSurface(next, mixesSortRef.current, 1);
   };
 
   const onResetFilters = async () => {
     const nextFilters = {
       ...defaultMixListResponse.filters,
-      options: mixesFilters.options,
+      options: mixesFiltersRef.current.options,
     };
     const nextSort = defaultMixListResponse.sort;
-    setMixesFilters(nextFilters);
-    setMixesSort(nextSort);
+    commitMixesFilters(nextFilters);
+    commitMixesSort(nextSort);
     await refreshSurface(nextFilters, nextSort, 1);
   };
 
   const onPageChange = async (page: number) => {
-    await refreshSurface(mixesFilters, mixesSort, page);
+    await refreshSurface(mixesFiltersRef.current, mixesSortRef.current, page);
   };
 
   const onSelectMix = useCallback(
@@ -365,7 +397,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
           },
           token,
         );
-        await loadMixes(token, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize);
+        await loadMixes(token, mixesFiltersRef.current, mixesSortRef.current, mixesMeta.page, mixesMeta.pageSize);
         if (onRefreshSiblings) {
           await onRefreshSiblings(token);
         }
@@ -375,7 +407,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
         setMixRowPendingId('');
       }
     },
-    [token, loadMixes, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
+    [token, loadMixes, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
   );
 
   // Жёсткое удаление микса из каталога. Backend каскадом снимает его со всех
@@ -387,7 +419,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       setMixRowPendingId(mix.id);
       try {
         await requestJson<unknown>(`/staff/mixes/${mix.id}`, { method: 'DELETE' }, token);
-        await loadMixes(token, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize);
+        await loadMixes(token, mixesFiltersRef.current, mixesSortRef.current, mixesMeta.page, mixesMeta.pageSize);
         if (onRefreshSiblings) {
           await onRefreshSiblings(token);
         }
@@ -397,7 +429,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
         setMixRowPendingId('');
       }
     },
-    [token, loadMixes, mixesFilters, mixesSort, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
+    [token, loadMixes, mixesMeta.page, mixesMeta.pageSize, onRefreshSiblings],
   );
 
   const onCancelCreate = useCallback(() => {
@@ -541,7 +573,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       setMixEditor(toMixEditorState(savedMix));
       setMixesScreen('catalog');
       await Promise.all([
-        loadMixes(token, mixesFilters, mixesSort),
+        loadMixes(token, mixesFiltersRef.current, mixesSortRef.current),
         onRefreshSiblings ? onRefreshSiblings(token) : Promise.resolve(),
       ]);
       setMixSaveStatus('ready');
@@ -556,8 +588,8 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     setMixes([]);
     setMixesStatus('idle');
     setMixesError('');
-    setMixesFilters(defaultMixListResponse.filters);
-    setMixesSort(defaultMixListResponse.sort);
+    commitMixesFilters(defaultMixListResponse.filters);
+    commitMixesSort(defaultMixListResponse.sort);
     setMixesMeta(defaultMixListResponse.meta);
     setMixTobaccos([]);
     setMixComponentTobaccos([]);

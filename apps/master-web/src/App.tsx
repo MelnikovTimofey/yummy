@@ -157,7 +157,7 @@ export const App = () => {
   const refreshRailSiblings = async (nextToken: string) => {
     await Promise.all([
       loadSummary(nextToken, dashboardWindow),
-      mixes.loadMixes(nextToken, mixes.mixesFilters, mixes.mixesSort),
+      mixes.loadMixes(nextToken),
     ]);
   };
   const rails = useRails({
@@ -254,7 +254,7 @@ export const App = () => {
   const refreshInventoryDependents = async (nextToken: string) => {
     await Promise.allSettled([
       loadSummary(nextToken, dashboardWindow),
-      mixes.loadMixes(nextToken, mixes.mixesFilters, mixes.mixesSort, mixes.mixesMeta.page, mixes.mixesMeta.pageSize),
+      mixes.loadMixes(nextToken),
       mixes.loadMixTobaccos(nextToken),
       rails.reloadCatalog(nextToken),
     ]);
