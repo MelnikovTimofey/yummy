@@ -362,7 +362,6 @@ export type DashboardMixMetric = {
   smokeCtaCount: number;
   avgRating: number;
   ratingsCount: number;
-  smokeCtaCount: number;
 };
 
 export type DashboardBlockedMix = {
@@ -984,7 +983,6 @@ export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
         smokeCtaCount: 0,
         avgRating: 0,
         ratingsCount: 0,
-        smokeCtaCount: 0,
       };
     }
 
@@ -994,7 +992,6 @@ export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
       smokeCtaCount: toNumber(item.smokeCtaCount ?? item.count, 0),
       avgRating: toNumber(item.avgRating, 0),
       ratingsCount: toNumber(item.ratingsCount, 0),
-      smokeCtaCount: toNumber(item.smokeCtaCount, 0),
     };
   };
 
