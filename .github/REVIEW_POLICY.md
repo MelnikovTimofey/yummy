@@ -96,9 +96,17 @@ PR должен считаться `needs-human-review`, если затрону
 4. process-governance files:
    - `CLAUDE.md`
    - `docs/**`
-   - `tests/smoke/**`
    - `.github/**`
    - `.claude/**`
+   - инфраструктура smoke-прогона: `tests/smoke/playwright.config.ts`,
+     `tests/smoke/tests/helpers.ts`, `tests/smoke/package.json`,
+     `tests/smoke/package-lock.json`, `tests/smoke/README.md`
+
+Сами сценарии `tests/smoke/tests/*.spec.ts` в этот список **не входят**. Они —
+тесты конкретных фич: `CLAUDE.md` §3 требует чинить и дополнять их в том же PR,
+который правит UI, поэтому флаг на них останавливал бы обычные срезы. Под ревью
+остаётся инфраструктура прогона — она задаёт креды, `baseURL` и состав проектов,
+то есть одной строкой может обезоружить весь gate.
 
 Если GitHub label `risk:human-review` существует, workflow пытается применить его автоматически.
 

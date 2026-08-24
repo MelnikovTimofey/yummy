@@ -66,10 +66,20 @@ jobs:
               - 'services/telegram-bot/.env.example'
               - 'docs/atelier/env-matrix.md'
               - 'docs/atelier/deployment-smoke-checklist.md'
+            # tests/smoke целиком здесь не стоит: сценарии в tests/*.spec.ts —
+            # обычные тесты фич, их правит тот же срез, что меняет UI, и держать
+            # из-за них весь PR в human-review нечем оправдать. Инфраструктура
+            # прогона остаётся под ревью: конфиг, хелперы и зависимости задают
+            # креды, baseURL и состав проектов, то есть могут тихо обезоружить
+            # gate целиком.
             process_core:
               - '.github/**'
               - '.claude/**'
-              - 'tests/smoke/**'
+              - 'tests/smoke/playwright.config.ts'
+              - 'tests/smoke/package.json'
+              - 'tests/smoke/package-lock.json'
+              - 'tests/smoke/tests/helpers.ts'
+              - 'tests/smoke/README.md'
               - 'CLAUDE.md'
               - 'docs/**'
             design_tokens:
