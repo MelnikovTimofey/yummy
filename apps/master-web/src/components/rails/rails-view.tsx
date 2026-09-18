@@ -13,7 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-const AROMA_WEB_URL = 'http://localhost:5174';
+const AROMA_WEB_URL =
+  import.meta.env.VITE_AROMA_WEB_URL ?? 'http://localhost:5174';
 
 const openGuestShowcase = () => {
   window.open(AROMA_WEB_URL, '_blank', 'noopener,noreferrer');
