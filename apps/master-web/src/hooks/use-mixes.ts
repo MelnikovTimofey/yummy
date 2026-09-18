@@ -308,17 +308,6 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     await refreshSurface(next, mixesSortRef.current, 1);
   };
 
-  const onResetFilters = async () => {
-    const nextFilters = {
-      ...defaultMixListResponse.filters,
-      options: mixesFiltersRef.current.options,
-    };
-    const nextSort = defaultMixListResponse.sort;
-    commitMixesFilters(nextFilters);
-    commitMixesSort(nextSort);
-    await refreshSurface(nextFilters, nextSort, 1);
-  };
-
   const onPageChange = async (page: number) => {
     await refreshSurface(mixesFiltersRef.current, mixesSortRef.current, page);
   };
@@ -625,7 +614,6 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     onSortDirectionChange,
     onToggleFilterValue,
     onClearFilterGroup,
-    onResetFilters,
     onPageChange,
     onSelectMix,
     onStartCreate,

@@ -547,18 +547,6 @@ export const App = () => {
     await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
-  const onInventoryResetFilters = async () => {
-    const nextFilters = {
-      ...defaultInventoryListResponse.filters,
-      options: inventoryFiltersRef.current.options,
-    };
-    const nextSort = defaultInventoryListResponse.sort;
-    setSelectedInventoryIds([]);
-    commitInventoryFilters(nextFilters);
-    commitInventorySort(nextSort);
-    await refreshInventorySurface(nextFilters, nextSort, 1);
-  };
-
   const onInventoryPageChange = async (page: number) => {
     await refreshInventorySurface(inventoryFiltersRef.current, inventorySortRef.current, page);
   };
@@ -835,7 +823,6 @@ export const App = () => {
       onSortDirectionChange={(value) => void onInventorySortDirectionChange(value)}
       onToggleFilterValue={(key, value) => void onInventoryToggleFilterValue(key, value)}
       onClearFilterGroup={(key) => void onInventoryClearFilterGroup(key)}
-      onResetFilters={() => void onInventoryResetFilters()}
       onPageChange={onInventoryPageChange}
       onPageSizeChange={(pageSize) => void onInventoryPageSizeChange(pageSize)}
       onToggleSelection={onToggleInventorySelection}
@@ -889,7 +876,6 @@ export const App = () => {
         onSortDirectionChange={(value) => void mixes.onSortDirectionChange(value)}
         onToggleFilterValue={(key, value) => void mixes.onToggleFilterValue(key, value)}
         onClearFilterGroup={(key) => void mixes.onClearFilterGroup(key)}
-        onResetFilters={() => void mixes.onResetFilters()}
         onPageChange={mixes.onPageChange}
         onSelectMix={onSelectMix}
         onStartCreate={onStartCreateMix}

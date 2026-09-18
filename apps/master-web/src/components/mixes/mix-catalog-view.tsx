@@ -83,7 +83,6 @@ type MixCatalogViewProps = {
   onSortDirectionChange: (value: MixSortDirection) => void;
   onToggleFilterValue: (key: MixFilterKey, value: string) => void;
   onClearFilterGroup: (key: MixFilterKey) => void;
-  onResetFilters: () => void;
   onPageChange: (page: number) => void;
   onSelectMix: (mix: MixRecord) => void;
   onStartCreate: () => void;
@@ -159,7 +158,6 @@ export const MixCatalogView = ({
   onSortDirectionChange,
   onToggleFilterValue,
   onClearFilterGroup,
-  onResetFilters: _onResetFilters,
   onPageChange,
   onSelectMix,
   onStartCreate,

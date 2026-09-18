@@ -52,7 +52,6 @@ type InventoryViewProps = {
   onSortDirectionChange: (value: InventorySortDirection) => void;
   onToggleFilterValue: (key: InventoryFilterKey, value: string) => void;
   onClearFilterGroup: (key: InventoryFilterKey) => void;
-  onResetFilters: () => void;
   onToggleSelection: (id: string) => void;
   onToggleSelectAll: () => void;
   onToggleStock: (item: InventoryTobacco) => void;
@@ -569,7 +568,6 @@ export const InventoryView = ({
   onSortDirectionChange,
   onToggleFilterValue,
   onClearFilterGroup,
-  onResetFilters,
   onToggleSelection,
   onToggleSelectAll,
   onToggleStock,
