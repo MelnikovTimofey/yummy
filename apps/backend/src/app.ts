@@ -40,6 +40,7 @@ import {
   updateTelegramRecipient,
 } from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
+import { evaluateBowl, getMixerPalette, parseBowlInput } from './mixer';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import {
   batchUpdateTobacco,
@@ -89,6 +90,8 @@ import type {
   GuestHomeRailsResponse,
   GuestIntroCardsResponse,
   GuestMixRatingResponse,
+  GuestMixerEvaluateResponse,
+  GuestMixerPaletteResponse,
   OnboardingRecommendationsResponse,
   StaffAccountMutationResponse,
   StaffAccountsResponse,
@@ -286,6 +289,25 @@ export const buildApp = () => {
         limit,
       }),
     };
+
+    return reply.send(response);
+  });
+
+  app.get('/guest/mixer/palette', async () => {
+    const response: GuestMixerPaletteResponse = await getMixerPalette();
+    return response;
+  });
+
+  app.post('/guest/mixer/evaluate', async (request, reply) => {
+    const input = parseBowlInput(request.body);
+    if ('error' in input) {
+      return reply.status(400).send(input satisfies ApiError);
+    }
+
+    const response: GuestMixerEvaluateResponse | null = await evaluateBowl(input);
+    if (!response) {
+      return reply.status(409).send({ error: 'Tobacco is not in stock' } satisfies ApiError);
+    }
 
     return reply.send(response);
   });

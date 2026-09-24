@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTobacco, resetAppState, updateTobacco } from './state';
+import { buildApp } from './app';
+import { createMix, createTobacco, resetAppState, updateMix, updateTobacco } from './state';
 import {
   affinityKey,
   buildAffinity,
@@ -13,6 +14,7 @@ import {
   type BowlComponent,
   type MixerTobacco,
 } from './mixer';
+import type { GuestMixerEvaluateResponse } from './types';
 
 const tobacco = (overrides: Partial<MixerTobacco> & { id: string }): MixerTobacco => ({
   manufacturer: 'Тест',
@@ -112,6 +114,28 @@ test.describe('palette', () => {
     }
     // Мята встречается с фрешем в каталоге чаще, чем с пряностью (ни разу).
     assert.ok(affinity['fresh|minty']! > affinity['minty|spicy']!);
+  });
+
+  test('palette endpoint returns the contract shape', async () => {
+    const app = buildApp();
+    const response = await app.inject({ method: 'GET', url: '/guest/mixer/palette' });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as { tobaccos: Array<Record<string, unknown>>; affinity: Record<string, number> };
+    assert.deepEqual(Object.keys(body.tobaccos[0]!).sort(), [
+      'cooling',
+      'flavorProfiles',
+      'flavorTags',
+      'flavors',
+      'id',
+      'manufacturer',
+      'mixCount',
+      'name',
+      'twist',
+    ]);
+    assert.equal(typeof body.affinity, 'object');
+
+    await app.close();
   });
 });
 
@@ -301,4 +325,139 @@ test('similar mix blends shared proportions and profile overlap with a threshold
   assert.equal(findSimilarMix(bowl([berry, 60], [tea, 40]), mixes)?.similarity, 100);
   // Общих табаков нет, профили не пересекаются.
   assert.equal(findSimilarMix(bowl([ice, 100]), mixes), null);
+});
+
+// --- оценка через API ------------------------------------------------------
+
+test.describe('evaluate endpoint', () => {
+  test.beforeEach(async () => {
+    await resetAppState();
+  });
+
+  const evaluate = async (payload: unknown) => {
+    const app = buildApp();
+    const response = await app.inject({ method: 'POST', url: '/guest/mixer/evaluate', payload: payload as object });
+    await app.close();
+    return response;
+  };
+
+  test('evaluates a bowl in the contract shape', async () => {
+    const response = await evaluate({
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 50 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 50 },
+      ],
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as GuestMixerEvaluateResponse;
+    assert.deepEqual(Object.keys(body).sort(), ['character', 'harmony', 'hints', 'name', 'similarMix', 'verdict']);
+    assert.ok(body.harmony >= 0 && body.harmony <= 100);
+    assert.equal(body.name, 'Лимон и мята');
+    assert.deepEqual(Object.keys(body.character).sort(), ['dense', 'fresh', 'sour', 'sweet']);
+    assert.deepEqual(body.similarMix, {
+      id: 'mix-citrus-scout',
+      name: 'Цитрусовый караван',
+      avgRating: 4.8,
+      similarity: 100,
+    });
+  });
+
+  test('similar mix skips hidden mixes', async () => {
+    await updateMix('mix-citrus-scout', { available: false });
+
+    const response = await evaluate({
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 50 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 50 },
+      ],
+    });
+    const body = response.json() as GuestMixerEvaluateResponse;
+
+    assert.ok(body.similarMix);
+    assert.notEqual(body.similarMix.id, 'mix-citrus-scout');
+  });
+
+  test('similar mix skips mixes blocked by stock', async () => {
+    // Почти чистая мята с персиком: был бы ближе всех, но персика нет в наличии.
+    const blocked = await createMix({
+      name: 'Мятный персик',
+      description: 'Не в наличии.',
+      components: [
+        { tobaccoId: 'tobacco-mint-veil', proportion: 90 },
+        { tobaccoId: 'tobacco-peach-silk', proportion: 10 },
+      ],
+    });
+    assert.ok(blocked && 'id' in blocked);
+
+    const response = await evaluate({ components: [{ tobaccoId: 'tobacco-mint-veil', proportion: 100 }] });
+    const body = response.json() as GuestMixerEvaluateResponse;
+
+    assert.ok(body.similarMix);
+    assert.notEqual(body.similarMix.id, blocked.id);
+  });
+
+  const invalidBodies: Array<[string, unknown]> = [
+    ['no body', undefined],
+    ['no components', { components: [] }],
+    ['four components', {
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 25 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 25 },
+        { tobaccoId: 'tobacco-berry-oasis', proportion: 25 },
+        { tobaccoId: 'tobacco-desert-honey', proportion: 25 },
+      ],
+    }],
+    ['repeated tobacco', {
+      components: [
+        { tobaccoId: 'tobacco-mint-veil', proportion: 50 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 50 },
+      ],
+    }],
+    ['proportion not a multiple of 5', {
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 52 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 48 },
+      ],
+    }],
+    ['fractional proportion', {
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 52.5 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 47.5 },
+      ],
+    }],
+    ['proportion below 5', {
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 100 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 0 },
+      ],
+    }],
+    ['sum is not 100', {
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 50 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 45 },
+      ],
+    }],
+    ['missing tobacco id', { components: [{ proportion: 100 }] }],
+  ];
+
+  for (const [label, payload] of invalidBodies) {
+    test(`rejects ${label} with 400`, async () => {
+      const response = await evaluate(payload);
+      assert.equal(response.statusCode, 400);
+    });
+  }
+
+  test('rejects unknown or out-of-stock tobacco with 409', async () => {
+    const unknown = await evaluate({ components: [{ tobaccoId: 'tobacco-nope', proportion: 100 }] });
+    const outOfStock = await evaluate({
+      components: [
+        { tobaccoId: 'tobacco-peach-silk', proportion: 50 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 50 },
+      ],
+    });
+
+    assert.equal(unknown.statusCode, 409);
+    assert.equal(outOfStock.statusCode, 409);
+  });
 });
