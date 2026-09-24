@@ -152,6 +152,30 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
 });
 
+// Каталог длиннее экрана: редактор микса из конца списка должен открываться
+// с начала страницы, а не на прокрутке, унаследованной от каталога.
+test('Master mix editor opened from the bottom of the catalog starts at the top', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Миксы');
+  const lastRow = page.locator('table.mixes-table tbody tr[data-mix-id]').last();
+  await lastRow.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+  await lastRow.click();
+  await expect(page.getByRole('button', { name: 'Назад к каталогу миксов' })).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Библиотека прокручивается внутри своей колонки и не выходит за экран.
+  await page.mouse.wheel(0, 2000);
+  const library = page.getByRole('complementary', { name: 'Библиотека табаков' });
+  await expect(library.getByRole('searchbox')).toBeInViewport({ ratio: 1 });
+  const topbarBottom = await page.locator('.topbar').evaluate((el) => el.getBoundingClientRect().bottom);
+  const libraryTop = await library.evaluate((el) => el.getBoundingClientRect().top);
+  expect(libraryTop).toBeGreaterThanOrEqual(topbarBottom);
+});
+
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
   await signIn(operatorCredentials.login, operatorCredentials.password, page);
 

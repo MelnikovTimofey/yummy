@@ -1,4 +1,4 @@
-import { useMemo, type FormEventHandler } from 'react';
+import { useLayoutEffect, useMemo, type FormEventHandler } from 'react';
 import { ArrowLeft, Scale } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
@@ -77,6 +77,12 @@ export const MixBuilder = ({
   onSubmit,
   onCancel,
 }: MixBuilderProps) => {
+  // Редактор открывается на месте каталога: без сброса окно остаётся на его
+  // прокрутке, и шапка с карточкой микса оказываются выше экрана.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, []);
+
   // Карточки состава резолвятся из набора данных компонентов (он полон даже
   // для табаков за пределами загруженной/найденной библиотеки), а не из
   // поисковой библиотеки слева.

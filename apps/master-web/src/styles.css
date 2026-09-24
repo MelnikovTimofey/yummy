@@ -7226,6 +7226,8 @@ input[type="checkbox"] {
    ===================================================================== */
 
 .mix-builder {
+  /* Нижний край sticky-топбара (.topbar: top 8px + высота) плюс зазор. */
+  --mix-builder-sticky-top: 80px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -7802,6 +7804,22 @@ input[type="checkbox"] {
 
 .mix-builder__body--two-col {
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+}
+
+/* Библиотека не растягивает страницу на всю выдачу: колонка держится под
+   топбаром, список прокручивается внутри неё. */
+@media (min-width: 1101px) {
+  .mix-builder__body--two-col {
+    align-items: start;
+  }
+
+  /* Высота считается от положения в покое (под топбаром и шапкой редактора,
+     ~160px), чтобы колонка целиком помещалась в экран сразу при открытии. */
+  .mix-builder__body--two-col .mix-builder__library {
+    position: sticky;
+    top: var(--mix-builder-sticky-top);
+    max-height: calc(100vh - 180px);
+  }
 }
 
 @media (max-width: 1100px) {
