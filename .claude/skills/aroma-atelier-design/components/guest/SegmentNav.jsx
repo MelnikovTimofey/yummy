@@ -17,7 +17,7 @@ export function SegmentNav({ items, value, onChange, style }) {
             onClick={() => onChange && onChange(it.id)}
             style={{
               border: '1px solid ' + (isActive ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
-              borderRadius: 'var(--r-pill)',
+              borderRadius: 'var(--r-guest-control)',
               padding: '10px 8px',
               minHeight: 40,
               background: isActive ? 'var(--segment-active-bg)' : 'var(--segment-idle-bg)',

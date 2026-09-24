@@ -18,7 +18,7 @@ export function RatingPill({ rating, count, style }: RatingPillProps) {
         background: "var(--rating-bg)",
         border: "1px solid var(--rating-border)",
         color: "var(--rating-ink)",
-        borderRadius: 999,
+        borderRadius: "var(--r-guest-badge)",
         padding: "3px 9px",
         fontSize: 11,
         lineHeight: 1.2,

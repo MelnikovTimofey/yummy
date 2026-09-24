@@ -7,7 +7,7 @@ export function GuestTab({ children, active = false, onClick, style }) {
       onClick={onClick}
       style={{
         border: '1px solid ' + (active ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-guest-control)',
         background: active ? 'var(--segment-active-bg)' : 'var(--guest-control-bg-soft)',
         color: active ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
         boxShadow: active ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',

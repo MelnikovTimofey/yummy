@@ -10,7 +10,7 @@ export function MasterSortPill({ value, options = [], onChange, label = 'Сор�
         aria-expanded={open}
         aria-label={label}
         onClick={() => setOpen(!open)}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 10px', borderRadius: 'var(--r-pill)', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 'var(--fs-sm)', cursor: 'pointer' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 10px', borderRadius: 'var(--r-md)', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: 'var(--fs-sm)', cursor: 'pointer' }}
       >
         <span>{current ? current.label : label}</span>
         <span aria-hidden style={{ fontSize: 9, color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-fast)' }}>▾</span>

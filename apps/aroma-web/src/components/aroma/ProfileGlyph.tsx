@@ -20,7 +20,7 @@ export function ProfileGlyph({ profiles, size = 56 }: ProfileGlyphProps) {
       style={{
         width: size,
         height: size,
-        borderRadius: 14,
+        borderRadius: "var(--r-guest-glyph)",
         background:
           "radial-gradient(circle at 30% 30%, var(--line-soft), transparent 70%), var(--bg-base)",
         border: "1px solid var(--line-soft)",
@@ -41,7 +41,7 @@ export function ProfileGlyph({ profiles, size = 56 }: ProfileGlyphProps) {
               top: pos.top * scale,
               width: pos.s * scale,
               height: pos.s * scale,
-              borderRadius: 999,
+              borderRadius: "var(--r-pill)",
               background: `radial-gradient(circle at 30% 30%, ${color} 0%, ${color}66 70%, transparent 100%)`,
               opacity: pos.o,
               mixBlendMode: "screen",

@@ -16,7 +16,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .brand{margin:0;font-family:var(--font-display);font-size:22px;line-height:1;letter-spacing:.01em;color:var(--text-0);white-space:nowrap}
 .tagline{margin:4px 0 0;font-size:11px;letter-spacing:var(--caps-tracking-wide);text-transform:uppercase;color:var(--text-1)}
 .topbar-right{margin-left:auto;display:inline-flex}
-.header-auth-btn{border:1px solid var(--line);background:var(--secondary);color:var(--accent-hover);border-radius:var(--r-pill);min-height:40px;padding:0 14px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.header-auth-btn{border:1px solid var(--line);background:var(--secondary);color:var(--accent-hover);border-radius:var(--r-guest-control);min-height:40px;padding:0 14px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .guest-stage-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .content{padding:12px 20px;overflow-y:auto;overflow-x:hidden;display:grid;gap:12px;min-height:0;flex:1 1 auto;align-content:start;scrollbar-width:thin;scrollbar-color:#3A3A40 #1A1A1D}
 .content-intro{padding:0;gap:0}
@@ -90,23 +90,23 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-showcase-rail{display:grid;gap:10px}
 .aroma-showcase-head{display:flex;align-items:center;gap:10px;padding:0 20px}
 .aroma-showcase-title{margin:0;font-family:var(--font-display);font-size:21px;line-height:1.1;color:var(--text-0)}
-.aroma-showcase-kind{padding:3px 8px;border-radius:999px;background:rgba(40,40,48,.5);border:1px solid var(--line-soft);color:var(--text-1);white-space:nowrap}
+.aroma-showcase-kind{padding:3px 8px;border-radius:var(--r-guest-badge);background:rgba(40,40,48,.5);border:1px solid var(--line-soft);color:var(--text-1);white-space:nowrap}
 .aroma-scroller{display:flex;gap:10px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none}
 .aroma-scroller::-webkit-scrollbar{display:none}
-.aroma-showcase-all{flex:0 0 auto;width:64px;border-radius:var(--r-xl);border:1px dashed var(--line);background:rgba(20,20,23,.5);color:var(--text-1);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.aroma-showcase-all{flex:0 0 auto;width:64px;border-radius:var(--r-guest-card);border:1px dashed var(--line);background:rgba(20,20,23,.5);color:var(--text-1);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer}
 
 /* Catalog */
 .aroma-catalog{display:grid;gap:12px;align-content:start;position:relative}
 .aroma-catalog-rail{display:grid;gap:8px;position:sticky;top:0;z-index:2;margin:-12px -20px 2px;padding:12px 20px 10px;border-bottom:1px solid var(--line-soft);background:rgba(20,20,23,.92);backdrop-filter:blur(12px)}
 .aroma-catalog-search-row{display:grid;grid-template-columns:1fr 38px;gap:8px;align-items:center}
-.aroma-catalog-search{width:100%;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 14px;font-size:13px;outline:none}
+.aroma-catalog-search{width:100%;height:38px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 14px;font-size:13px;outline:none}
 .aroma-catalog-search:focus-visible{border-color:var(--accent-hover)}
-.aroma-catalog-icon-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-1);position:relative;cursor:pointer}
+.aroma-catalog-icon-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-1);position:relative;cursor:pointer}
 .aroma-catalog-icon-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:999px;background:var(--primary)}
 .aroma-chip-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .aroma-chip-scroll::-webkit-scrollbar{display:none}
 .aroma-chip-scroll>button{flex:0 0 auto}
-.aroma-catalog-popover{border:1px solid var(--line);border-radius:var(--r-xl);padding:14px;background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-popover);display:grid;gap:10px}
+.aroma-catalog-popover{border:1px solid var(--line);border-radius:var(--r-guest-card);padding:14px;background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-popover);display:grid;gap:10px}
 .aroma-catalog-sort{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .aroma-sort-btn{min-height:36px;border-radius:12px;border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-1);font-size:12px;cursor:pointer;padding:0 6px}
 .aroma-sort-btn.on{border-color:var(--guest-chip-border-on);color:var(--guest-chip-ink-on);font-weight:600;background:var(--guest-chip-bg-on)}
@@ -116,10 +116,10 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 /* Rail */
 .aroma-rail{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding:12px 20px 20px;overflow-y:auto}
 .aroma-rail-topbar{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px}
-.aroma-rail-back{width:36px;height:36px;border-radius:999px;border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-0);font-size:18px;cursor:pointer}
+.aroma-rail-back{width:36px;height:36px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-0);font-size:18px;cursor:pointer}
 .aroma-rail-topbar-text{min-width:0;display:grid;gap:2px}
 .aroma-rail-meta{margin:0;font-size:11px;color:var(--text-2)}
-.aroma-rail-code{border:1px solid rgba(142, 47, 60,.2);background:var(--secondary);color:var(--accent-hover);border-radius:999px;height:34px;padding:0 14px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.aroma-rail-code{border:1px solid rgba(142, 47, 60,.2);background:var(--secondary);color:var(--accent-hover);border-radius:var(--r-guest-control);height:34px;padding:0 14px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
 .aroma-rail-intro{display:grid;gap:6px}
 .aroma-rail-title{margin:0;font-family:var(--font-display);font-size:26px;line-height:1.05;color:var(--text-0)}
 .aroma-rail-desc{margin:0;color:var(--text-1);font-size:13px;line-height:1.5;max-width:36ch}
@@ -143,7 +143,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 /* Smoke confirmation */
 .aroma-confirm{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;gap:22px;padding:20px 28px 28px;overflow-y:auto;background:radial-gradient(circle at 50% 10%,rgba(142, 47, 60,.18) 0%,transparent 40%),radial-gradient(circle at 50% 100%,rgba(142, 47, 60,.2) 0%,transparent 35%)}
 .aroma-confirm-topbar{display:flex;justify-content:flex-end}
-.aroma-confirm-done{background:transparent;border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--text-0);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.aroma-confirm-done{background:transparent;border:1px solid var(--line);border-radius:var(--r-guest-control);padding:8px 16px;color:var(--text-0);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
 .aroma-confirm-stack{display:grid;gap:10px;justify-items:center;text-align:center}
 .aroma-confirm-kicker{color:var(--primary)}
 .aroma-confirm-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-title);line-height:1.05;color:var(--text-0);max-width:14ch}

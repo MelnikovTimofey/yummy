@@ -1,4 +1,5 @@
-/* Two radius registers: tight for the console, generous for the guest app. */
+/* Two radius registers: tight for the console, a little softer for the guest app.
+   Пилюля (--r-pill) — не для кнопок, вкладок и чипов. */
 :root {
   --r-xs: 4px;
   --r-sm: 6px;
@@ -9,12 +10,17 @@
 
   --radius: 0.625rem; /* master shadcn base */
 
-  /* Guest */
-  --r-guest-shell: 28px;
-  --r-guest-sheet: 26px;
-  --r-guest-card: 18px;
-  --r-guest-hero: 22px;
-  --r-guest-row: 14px;
-  --r-guest-cta: 14px;
-  --r-guest-glyph: 14px;
+  /* Guest — строже, чем в upstream (2026-09-24): пилюли у кнопок и вкладок
+     выглядели нелепо. --r-pill — только для круглых по смыслу форм: точки,
+     свотчи, аватары, трек переключателя, полоса прогресса, ручка шторки. */
+  --r-guest-shell: 24px;
+  --r-guest-sheet: 20px;
+  --r-guest-hero: 16px;
+  --r-guest-card: 14px;
+  --r-guest-row: 12px;
+  --r-guest-glyph: 12px;
+  --r-guest-control: 10px;
+  --r-guest-cta: var(--r-guest-control);
+  --r-guest-chip: 8px;
+  --r-guest-badge: 6px;
 }
