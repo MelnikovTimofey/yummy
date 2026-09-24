@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   flavorProfileColor,
   formatFlavorProfileLabel,
+  formatCount,
   formatRating,
   INVENTORY_FLAVOR_PROFILE_KEYS,
   INVENTORY_STRENGTH_PRESETS,
@@ -1006,4 +1007,15 @@ test('flavorProfileColor ссылается на токен профиля с fa
   assert.equal(flavorProfileColor('fresh'), 'var(--profile-fresh, var(--profile-fallback))');
   assert.equal(flavorProfileColor('floral_herbal'), 'var(--profile-floral-herbal, var(--profile-fallback))');
   assert.equal(flavorProfileColor('Сладкие'), 'var(--profile-fallback)');
+});
+
+// Множественное число согласуется руками по канону: 1 микс / 2 микса / 5 миксов.
+test('formatCount согласует число и существительное', () => {
+  const forms = ['микс', 'микса', 'миксов'] as const;
+  assert.equal(formatCount(1, forms), '1 микс');
+  assert.equal(formatCount(2, forms), '2 микса');
+  assert.equal(formatCount(5, forms), '5 миксов');
+  assert.equal(formatCount(11, forms), '11 миксов');
+  assert.equal(formatCount(21, forms), '21 микс');
+  assert.equal(formatCount(11505, forms), '11\u00a0505 миксов');
 });

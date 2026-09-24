@@ -157,7 +157,6 @@ export const OperatorsBlock = ({
       <section className="card access-card" aria-label="Telegram-операторы">
         <header className="access-card__head">
           <div>
-            <p className="eyebrow access-card__eyebrow">Telegram-операторы</p>
             <p className="access-card__title-serif">Сотрудники с доступом к боту</p>
           </div>
           {telegramOperatorsStatus !== 'forbidden' ? (
@@ -205,7 +204,7 @@ export const OperatorsBlock = ({
                   onClick={() => setFilter(key)}
                 >
                   {label}
-                  <span className="chip__count">{count}</span>
+                  <span className="chip__count" hidden={key !== 'all' && count === 0}>{count}</span>
                 </button>
               ))}
             </div>
@@ -362,12 +361,12 @@ export const OperatorsBlock = ({
       >
         <DialogContent className="operator-dialog">
           <DialogHeader className="operator-dialog__head">
-            <p className="operator-dialog__eyebrow">
-              {telegramOperatorEditor.id ? 'Редактирование' : 'Новый оператор'}
-            </p>
+            {telegramOperatorEditor.id ? (
+              <p className="operator-dialog__eyebrow">Редактирование оператора</p>
+            ) : null}
             <DialogTitle className="operator-dialog__title">
               {telegramOperatorEditor.id
-                ? telegramOperatorEditor.name || 'Редактирование оператора'
+                ? telegramOperatorEditor.name || 'Без имени'
                 : 'Добавить оператора'}
             </DialogTitle>
             <DialogDescription className="operator-dialog__sub">

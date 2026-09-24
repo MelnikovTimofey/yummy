@@ -1639,6 +1639,18 @@ export const formatMetricValue = (value: number) => {
   return new Intl.NumberFormat('ru-RU').format(value);
 };
 
+export const formatCount = (value: number, forms: readonly [string, string, string]) => {
+  const mod10 = value % 10;
+  const mod100 = value % 100;
+  const form =
+    mod10 === 1 && mod100 !== 11
+      ? forms[0]
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? forms[1]
+        : forms[2];
+  return `${formatMetricValue(value)} ${form}`;
+};
+
 export const formatDateTimeLocalInput = (value: string) => {
   if (!value) {
     return '';

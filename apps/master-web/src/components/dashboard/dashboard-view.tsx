@@ -96,7 +96,6 @@ export function DashboardView({
 
       <div className="dashboard-page__columns">
         <article className="dashboard-page__card">
-          <p className="dashboard-page__eyebrow">Спрос гостей</p>
           <h3 className="dashboard-page__heading">Топ миксов недели</h3>
           {topMixes.length ? (
             <ol className="dashboard-page__rows">
@@ -128,7 +127,6 @@ export function DashboardView({
         </article>
 
         <aside className="dashboard-page__card">
-          <p className="dashboard-page__eyebrow">Внимание</p>
           <h3 className="dashboard-page__heading">Сигналы для команды</h3>
           {blockedMixes.length ? (
             <ul className="dashboard-page__signals">

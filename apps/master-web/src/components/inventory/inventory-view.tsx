@@ -6,7 +6,6 @@ import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import {
   buildSortPillOptions,
@@ -26,6 +25,7 @@ import type {
   InventoryTobacco,
 } from '@/contracts';
 import {
+  formatCount,
   formatFlavorProfileLabel,
   formatMixStatusLabel,
   formatRating,
@@ -126,19 +126,6 @@ const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
 const uniqueStrings = (items: string[]) =>
   Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 
-const buildBrandShort = (name: string) => {
-  const normalized = name.trim();
-  if (!normalized) {
-    return '··';
-  }
-
-  const tokens = normalized.split(/\s+/).filter(Boolean);
-  if (tokens.length >= 2) {
-    return (tokens[0][0] + tokens[1][0]).toLocaleUpperCase('ru-RU');
-  }
-
-  return normalized.slice(0, 2).toLocaleUpperCase('ru-RU');
-};
 
 type FilterChipEntry = {
   value: string;
@@ -927,6 +914,9 @@ export const InventoryView = ({
     </Sheet>
   ) : null;
 
+  const extraFilterGroupsAvailable = extraFilterGroups.some((group) => filters.options[group.key].length);
+  const extraFilterSelectionCount = extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0);
+
   const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
     // «Все» — сумма соседних чипов: backend считает их по выборке без фильтра наличия.
     { value: 'all', label: 'Все', count: meta.inStockCount + meta.outOfStockCount, ariaLabel: 'Фильтр: Все' },
@@ -939,9 +929,9 @@ export const InventoryView = ({
   return (
     <section className="tobaccos-page">
       <MasterPageHeader
-        eyebrow="Инвентаризация"
         title="Табаки"
         subtitle="Наличие, компоненты миксов и связанные позиции витрины."
+        meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])} · ${formatMetricValue(meta.inMixesCount)} в миксах`}
         actions={
           <button
             type="button"
@@ -953,32 +943,6 @@ export const InventoryView = ({
             Новый табак
           </button>
         }
-      />
-
-      <MasterStatsRow
-        tiles={[
-          {
-            label: 'В каталоге',
-            value: formatMetricValue(meta.totalItems),
-            hint: 'всего позиций',
-          },
-          {
-            label: 'В наличии',
-            value: formatMetricValue(meta.inStockCount),
-            hint: 'на полке',
-          },
-          {
-            label: 'Нет в наличии',
-            value: formatMetricValue(meta.outOfStockCount),
-            hint: 'требуют пополнения',
-            tone: meta.outOfStockCount > 0 ? 'warning' : 'default',
-          },
-          {
-            label: 'В составе миксов',
-            value: formatMetricValue(meta.inMixesCount),
-            hint: 'входят в миксы',
-          },
-        ]}
       />
 
       <div className="tobaccos-list">
@@ -1006,7 +970,9 @@ export const InventoryView = ({
                   onClick={() => onStockChange(tab.value)}
                 >
                   <span>{tab.label}</span>
-                  <span className="filter-chip__count">{formatMetricValue(tab.count)}</span>
+                  <span className="filter-chip__count" hidden={tab.value !== 'all' && tab.count === 0}>
+                    {formatMetricValue(tab.count)}
+                  </span>
                 </button>
               );
             })}
@@ -1021,7 +987,9 @@ export const InventoryView = ({
               onClick={() => onArchivedChange(archivedActive ? 'active' : 'archived')}
             >
               <span>Архив</span>
-              <span className="filter-chip__count">{formatMetricValue(meta.archivedCount)}</span>
+              <span className="filter-chip__count" hidden={meta.archivedCount === 0}>
+                {formatMetricValue(meta.archivedCount)}
+              </span>
             </button>
           </div>
 
@@ -1089,9 +1057,9 @@ export const InventoryView = ({
         >
           <SheetHeader className="drawer__head tobacco-drawer__head">
             <div className="tobacco-drawer__head-copy">
-              <p className="tobacco-drawer__eyebrow">
-                {editorMode === 'edit' ? 'Редактирование табака' : 'Новый табак'}
-              </p>
+              {editorMode === 'edit' ? (
+                <p className="tobacco-drawer__eyebrow">Редактирование табака</p>
+              ) : null}
               <SheetTitle className="tobacco-drawer__title">
                 {editorMode === 'edit'
                   ? editorDraft.name.trim() || 'Без названия'
@@ -1376,15 +1344,15 @@ export const InventoryView = ({
         </SheetContent>
       </Sheet>
 
-      {extraFilterGroups.some((group) => filters.options[group.key].length) ? (
+      {extraFilterGroupsAvailable ? (
         <details className="inventory-extra-filters">
           <summary className="inventory-extra-filters__trigger">
             Доп. фильтры
-            <span className="inventory-extra-filters__count" aria-hidden="true">
-              {formatMetricValue(
-                extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0),
-              )}
-            </span>
+            {extraFilterSelectionCount > 0 ? (
+              <span className="inventory-extra-filters__count" aria-hidden="true">
+                {formatMetricValue(extraFilterSelectionCount)}
+              </span>
+            ) : null}
           </summary>
           <div className="inventory-filter-groups ops-filter-groups">
             {extraFilterGroups.map((group) => {
@@ -1501,7 +1469,6 @@ export const InventoryView = ({
                 const stockLabel = item.inStock ? 'В наличии' : 'Нет наличия';
                 const dependentCount = item.dependentMixCount ?? 0;
                 const blockedCount = item.blockedDependentMixCount ?? 0;
-                const brandShort = buildBrandShort(item.manufacturer);
 
                 return (
                   <tr
@@ -1526,9 +1493,6 @@ export const InventoryView = ({
                           onChange={() => onToggleSelection(item.id)}
                           aria-label={`Выбрать ${item.name}`}
                         />
-                        <span className="inventory-brand-cell__pill" aria-hidden="true">
-                          {brandShort}
-                        </span>
                       </label>
                     </td>
                     <td>

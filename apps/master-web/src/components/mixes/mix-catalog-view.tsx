@@ -25,7 +25,6 @@ import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { FilterSingleSelect } from '@/components/ui/filter-single-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import {
   buildSortPillOptions,
   composeSortKey,
@@ -49,6 +48,7 @@ import {
   formatMetricValue,
   mixRailFilterOptions,
   mixSortDirectionOptions,
+  formatCount,
   formatRating,
   mixSortFieldOptions,
   resolveMixStatus,
@@ -108,15 +108,6 @@ type MixStatusChip = {
   ariaLabel: string;
   count: number;
 };
-
-const brandShort = (manufacturer: string) =>
-  manufacturer
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || '·';
 
 const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
   if (key === 'flavorProfiles') {
@@ -243,9 +234,9 @@ export const MixCatalogView = ({
   return (
     <section className="mixes-page">
       <MasterPageHeader
-        eyebrow="Менеджер миксов"
         title="Каталог миксов"
         subtitle="Состав, наличие и видимость на витрине."
+        meta={`${formatCount(meta.totalItems, ['микс', 'микса', 'миксов'])} · ${formatMetricValue(meta.inRailsCount)} в рейлах`}
         actions={
           <button
             type="button"
@@ -257,32 +248,6 @@ export const MixCatalogView = ({
             Новый микс
           </button>
         }
-      />
-
-      <MasterStatsRow
-        tiles={[
-          {
-            label: 'Всего',
-            value: formatMetricValue(meta.totalItems),
-            hint: 'в каталоге',
-          },
-          {
-            label: 'Видно гостю',
-            value: formatMetricValue(meta.guestVisibleCount),
-            hint: 'сейчас на витрине',
-          },
-          {
-            label: 'В рейлах',
-            value: formatMetricValue(meta.inRailsCount),
-            hint: 'опубликованы в подборках',
-          },
-          {
-            label: 'Заблокировано',
-            value: formatMetricValue(meta.blockedCount),
-            hint: 'из-за наличия',
-            tone: meta.blockedCount > 0 ? 'warning' : 'default',
-          },
-        ]}
       />
 
       <div className="mixes-list">
@@ -312,7 +277,9 @@ export const MixCatalogView = ({
                   onClick={() => onStatusChange(chip.value)}
                 >
                   <span>{chip.label}</span>
-                  <span className="filter-chip__count">{formatMetricValue(chip.count)}</span>
+                  <span className="filter-chip__count" hidden={chip.value !== 'all' && chip.count === 0}>
+                    {formatMetricValue(chip.count)}
+                  </span>
                 </button>
               );
             })}
@@ -374,9 +341,11 @@ export const MixCatalogView = ({
           <details className="inventory-extra-filters">
             <summary className="inventory-extra-filters__trigger">
               Доп. фильтры
-              <span className="inventory-extra-filters__count" aria-hidden="true">
-                {formatMetricValue(extraFilterSelectionCount)}
-              </span>
+              {extraFilterSelectionCount > 0 ? (
+                <span className="inventory-extra-filters__count" aria-hidden="true">
+                  {formatMetricValue(extraFilterSelectionCount)}
+                </span>
+              ) : null}
             </summary>
             <div className="inventory-filter-groups ops-filter-groups">
               <FilterSingleSelect
@@ -468,17 +437,6 @@ export const MixCatalogView = ({
                       </td>
                       <td>
                         <div className="mixes-cell mixes-cell__components">
-                          <div className="mixes-cell__pills" aria-hidden="true">
-                            {mix.components.map((component) => (
-                              <span
-                                key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}:pill`}
-                                className="mixes-cell__pill"
-                                title={`${component.manufacturer} · ${component.name}`}
-                              >
-                                {brandShort(component.manufacturer)}
-                              </span>
-                            ))}
-                          </div>
                           <span className="mixes-cell__component-line">
                             {mix.components.map((component) => component.name).join(' + ')}
                           </span>

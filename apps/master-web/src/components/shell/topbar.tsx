@@ -119,7 +119,9 @@ export const MasterTopBar = ({
 
         <div className="user-chip" aria-label="Текущий пользователь">
           <span className="user-chip__name">{userName}</span>
-          <span className="user-chip__tag">{userRoleLabel}</span>
+          {userRoleLabel.toLocaleLowerCase('ru-RU') !== userName.toLocaleLowerCase('ru-RU') ? (
+            <span className="user-chip__tag">{userRoleLabel}</span>
+          ) : null}
         </div>
 
         <button

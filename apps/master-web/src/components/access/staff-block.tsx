@@ -87,7 +87,6 @@ export const StaffBlock = ({
       <section className="card access-card" aria-label="Учётки Мастера">
         <header className="access-card__head">
           <div>
-            <p className="eyebrow access-card__eyebrow">Учётки Мастера</p>
             <p className="access-card__title-serif">Доступ к Мастеру</p>
           </div>
           {staffAccountsStatus !== 'forbidden' ? (
@@ -215,9 +214,9 @@ export const StaffBlock = ({
       >
         <DialogContent className="operator-dialog">
           <DialogHeader className="operator-dialog__head">
-            <p className="operator-dialog__eyebrow">
-              {staffAccountEditor.id ? 'Редактирование сотрудника' : 'Новый сотрудник'}
-            </p>
+            {staffAccountEditor.id ? (
+              <p className="operator-dialog__eyebrow">Редактирование сотрудника</p>
+            ) : null}
             <DialogTitle className="operator-dialog__title">
               {staffAccountEditor.id
                 ? staffAccountEditor.name || 'Без имени'
