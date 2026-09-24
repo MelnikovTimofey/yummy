@@ -155,15 +155,13 @@ export const MixBuilder = ({
           </span>
           <span className="mix-builder__breadcrumb-divider" aria-hidden="true">·</span>
           <span className="mix-builder__breadcrumb-meta">{componentsCountLabel}</span>
-          <span className="mix-builder__breadcrumb-divider" aria-hidden="true">·</span>
-          <span className="mix-builder__breadcrumb-meta">{totalPercent}%</span>
-          {totalPercent === 100 ? (
-            <span className="tag" data-tone="success">сумма = 100%</span>
-          ) : (
+          {totalPercent !== 100 ? (
             <span className="tag" data-tone="warning">
-              {totalPercent > 100 ? 'переполнено' : `осталось ${100 - totalPercent}%`}
+              {totalPercent > 100
+                ? `сумма ${totalPercent}% · лишние ${totalPercent - 100}%`
+                : `сумма ${totalPercent}% · осталось ${100 - totalPercent}%`}
             </span>
-          )}
+          ) : null}
           {blockedByStock ? (
             <span className="tag" data-tone="danger">блокируется наличием</span>
           ) : null}

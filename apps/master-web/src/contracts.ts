@@ -1319,6 +1319,45 @@ export const sortDailyAccessCodes = (items: DailyAccessCodeRecord[]) => {
   });
 };
 
+export type CurrentDailyCode =
+  | { state: 'active'; code: DailyAccessCodeRecord }
+  | { state: 'expired'; code: DailyAccessCodeRecord }
+  | { state: 'none'; code: null };
+
+// `active` у записи значит «не отозван», а не «действует сейчас»: окно
+// проверяется отдельно, иначе истёкший код выдаётся за текущий.
+export const resolveCurrentDailyCode = (
+  items: DailyAccessCodeRecord[],
+  now = new Date(),
+): CurrentDailyCode => {
+  const time = now.getTime();
+  const enabled = items
+    .filter((item) => item.active)
+    .sort((left, right) => right.endsAt.localeCompare(left.endsAt));
+  const current = enabled.find(
+    (item) => new Date(item.startsAt).getTime() <= time && time < new Date(item.endsAt).getTime(),
+  );
+
+  if (current) {
+    return { state: 'active', code: current };
+  }
+
+  const latest = enabled[0];
+  return latest ? { state: 'expired', code: latest } : { state: 'none', code: null };
+};
+
+export type MixStatus = 'visible' | 'hidden' | 'blocked';
+
+// `available` — ручной переключатель мастера; `guestVisible` backend считает
+// как `available` и наличие всех компонентов.
+export const resolveMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>): MixStatus => {
+  if (!mix.available) {
+    return 'hidden';
+  }
+
+  return mix.guestVisible ? 'visible' : 'blocked';
+};
+
 export const sortStaffAccounts = (items: StaffAccountRecord[]) => {
   const roleRank: Record<StaffUser['role'], number> = {
     admin: 0,

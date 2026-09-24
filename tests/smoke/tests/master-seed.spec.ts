@@ -51,7 +51,9 @@ test('Seeded mix editor shows the expected component composition', async ({ page
 
   await mixRow.click();
   await expect(page.getByRole('heading', { name: demoMixName })).toBeVisible();
-  await expect(page.getByText('сумма = 100%')).toBeVisible();
+  // Сумма долей в шапке появляется, только когда она не 100% (#96): у
+  // сбалансированного seed-микса предупреждения нет.
+  await expect(page.locator('.mix-builder__breadcrumb .tag[data-tone="warning"]')).toHaveCount(0);
   await expect(page.locator('.mix-builder__component').nth(0)).toContainText('Citrus Breeze');
   await expect(page.locator('.mix-builder__component').nth(1)).toContainText('Mint Veil');
 

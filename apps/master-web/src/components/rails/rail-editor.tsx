@@ -9,7 +9,7 @@ import {
 import { Check, ChevronDown, ChevronUp, Flame, GripVertical, Plus, Search, Star, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
-import { formatRailType } from '@/contracts';
+import { formatRailType, resolveMixStatus } from '@/contracts';
 
 export type RailEditorState = {
   id: string;
@@ -290,10 +290,10 @@ export const RailEditor = ({
                           </div>
                         </div>
                         <div className="rail-drawer__mix-actions">
-                          {mix && !mix.available ? (
+                          {mix && resolveMixStatus(mix) === 'blocked' ? (
                             <span className="tag" data-tone="warning">блокирован</span>
                           ) : null}
-                          {mix && !mix.guestVisible && mix.available ? (
+                          {mix && resolveMixStatus(mix) === 'hidden' ? (
                             <span className="tag tag--ghost">скрыт</span>
                           ) : null}
                           <button

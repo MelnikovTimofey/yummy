@@ -50,6 +50,7 @@ import {
   mixRailFilterOptions,
   mixSortDirectionOptions,
   mixSortFieldOptions,
+  resolveMixStatus,
 } from '@/contracts';
 
 export type MixEditorComponentInput = {
@@ -125,7 +126,9 @@ const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
 };
 
 const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => {
-  if (!mix.available) {
+  const status = resolveMixStatus(mix);
+
+  if (status === 'blocked') {
     return (
       <span className="tag" data-tone="danger">
         Блокирован
@@ -133,7 +136,7 @@ const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => 
     );
   }
 
-  if (!mix.guestVisible) {
+  if (status === 'hidden') {
     return <span className="tag">Скрыт</span>;
   }
 
@@ -452,8 +455,8 @@ export const MixCatalogView = ({
                   return (
                     <tr
                       key={mix.id}
-                      data-blocked={!mix.available || undefined}
-                      data-hidden={mix.available && !mix.guestVisible ? true : undefined}
+                      data-blocked={resolveMixStatus(mix) === 'blocked' || undefined}
+                      data-hidden={resolveMixStatus(mix) === 'hidden' || undefined}
                       // Якорь для smoke — см. inventory-view (#27).
                       data-mix-id={mix.id}
                       className="mixes-table__row"
