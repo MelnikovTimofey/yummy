@@ -1446,6 +1446,7 @@ type StorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 const wipeStorage = async (tx: StorageTx) => {
   await tx.smokeCtaEvent.deleteMany();
+  await tx.customMixSmokeEvent.deleteMany();
   await tx.mixRating.deleteMany();
   await tx.railMix.deleteMany();
   await tx.mixComponent.deleteMany();
@@ -2547,6 +2548,18 @@ export const recordSmokeCtaEvent = async (mixId: string) => {
     mixId: event.mixId,
     createdAt: event.createdAt.toISOString(),
   } satisfies SmokeCtaEvent;
+};
+
+export const createCustomMixSmokeEvent = async (data: {
+  components: Array<{ tobaccoId: string; manufacturer: string; name: string; proportion: number }>;
+  signature: string;
+  name: string;
+  harmony: number;
+  swipes: Array<{ turn: number; tobaccoId: string; direction: string }>;
+}) => {
+  await ensureAppState();
+
+  return prisma.customMixSmokeEvent.create({ data, select: { id: true } });
 };
 
 export const getSmokeCtaEvents = async () => {
