@@ -48,7 +48,7 @@
 .mixer-icon-btn {
   width: 36px;
   height: 36px;
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: var(--guest-control-bg-soft);
   color: var(--text-1);
@@ -86,7 +86,7 @@
 
 .mixer-progress-bar {
   height: 2px;
-  border-radius: 2px;
+  border-radius: var(--r-pill);
   background: var(--line);
   overflow: hidden;
 }
@@ -160,7 +160,7 @@
   font-family: var(--font-display);
   font-size: 16px;
   color: var(--accent-fg);
-  background: radial-gradient(circle at 50% 30%, rgba(176, 74, 62, 0.55), rgba(40, 18, 18, 0.95) 70%);
+  background: radial-gradient(circle at 50% 30%, rgba(142, 47, 60, 0.55), rgba(36, 12, 17, 0.95) 70%);
   border: 1px solid var(--accent-border);
 }
 
@@ -537,7 +537,7 @@
   font-size: 11px;
   color: var(--profile-fresh);
   border: 1px solid color-mix(in srgb, var(--profile-fresh) 45%, transparent);
-  border-radius: 999px;
+  border-radius: var(--r-guest-chip);
   padding: 1px 8px;
   white-space: nowrap;
 }
@@ -572,7 +572,7 @@
   top: 16px;
   z-index: 4;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-guest-chip);
   border: 1.5px solid;
   font-size: 13px;
   font-weight: 700;
@@ -586,7 +586,7 @@
   right: 16px;
   color: var(--guest-chip-ink-on);
   border-color: var(--accent-hover);
-  background: rgba(176, 74, 62, 0.42);
+  background: rgba(142, 47, 60, 0.42);
   transform: rotate(8deg);
 }
 
@@ -746,7 +746,7 @@
   color: var(--rating-ink);
   background: var(--rating-bg);
   border: 1px solid var(--rating-border);
-  border-radius: 999px;
+  border-radius: var(--r-guest-badge);
   padding: 4px 10px;
 }
 
@@ -791,7 +791,7 @@
   position: relative;
   display: flex;
   height: 34px;
-  border-radius: 10px;
+  border-radius: var(--r-guest-control);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -826,7 +826,7 @@
   content: "";
   width: 4px;
   height: 30px;
-  border-radius: 4px;
+  border-radius: var(--r-pill);
   background: var(--accent-fg);
   box-shadow: 0 0 0 2px rgba(20, 20, 23, 0.7);
 }
@@ -870,7 +870,7 @@
 
 .mixer-meter-track {
   height: 4px;
-  border-radius: 4px;
+  border-radius: var(--r-pill);
   background: var(--line);
   overflow: hidden;
 }
@@ -878,7 +878,7 @@
 .mixer-meter-track > span {
   display: block;
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--r-pill);
   background: var(--text-1);
   transition: width var(--dur-sheet) var(--ease-out);
 }

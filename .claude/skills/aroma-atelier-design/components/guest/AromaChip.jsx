@@ -21,7 +21,7 @@ export function AromaChip({ children, tier = 'sm', active = false, profile, colo
         border: '1px solid ' + (active ? 'var(--guest-chip-border-on)' : 'var(--border-subtle)'),
         background: active ? 'var(--guest-chip-bg-on)' : 'var(--guest-chip-bg)',
         color: active ? 'var(--guest-chip-ink-on)' : 'var(--text-secondary)',
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-guest-chip)',
         padding: isLg ? '10px 14px' : '7px 12px',
         fontFamily: 'var(--font-body)',
         fontSize: isLg ? 13 : 12,

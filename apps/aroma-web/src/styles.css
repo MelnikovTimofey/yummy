@@ -40,7 +40,7 @@
      поверхности, текст, акцент, бордеры, --profile-*, --composition-*.
      Ниже — только то, что у гостя своё. */
 
-  --radius: 0.95rem;
+  --radius: 0.625rem;
 
   /* Гостевые правки shadcn-контракта: у гостя контролы полупрозрачные,
      а поповеры лежат на raised, а не на elevated, как в консоли. */
@@ -153,7 +153,7 @@ select:focus-visible {
   max-width: 100%;
   height: calc(100dvh - 32px);
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: var(--r-guest-shell);
   background: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
   box-shadow:
     0 30px 90px rgba(0, 0, 0, 0.5),
@@ -171,7 +171,7 @@ select:focus-visible {
   right: -48px;
   width: 260px;
   height: 260px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: radial-gradient(circle, rgba(142, 47, 60, 0.55) 0%, rgba(142, 47, 60, 0) 70%);
   filter: blur(10px);
   opacity: 0.72;
@@ -183,7 +183,7 @@ select:focus-visible {
   left: -90px;
   width: 320px;
   height: 320px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: radial-gradient(circle, rgba(142, 47, 60, 0.16) 0%, rgba(142, 47, 60, 0) 72%);
   filter: blur(14px);
   opacity: 0.8;
@@ -241,7 +241,7 @@ select:focus-visible {
 .brand-logo {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: var(--r-guest-glyph);
   border: 1px solid var(--accent-border);
   background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
   color: var(--primary-foreground);
@@ -280,7 +280,7 @@ select:focus-visible {
   border: 1px solid var(--line);
   background: var(--secondary);
   color: var(--text-secondary);
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   min-height: 40px;
   padding: 0 14px;
   font-size: 12px;
@@ -330,19 +330,19 @@ select:focus-visible {
 
 .content::-webkit-scrollbar-track {
   background: #1A1A1D;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 
 .content::-webkit-scrollbar-thumb {
   background: #3A3A40;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid #232329;
 }
 
 .card {
   background: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(24, 24, 28, 0.94) 100%);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--r-guest-card);
   padding: 16px;
   box-shadow:
     inset 0 1px 0 rgba(232, 230, 224, 0.04),
@@ -393,7 +393,7 @@ select:focus-visible {
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.54);
   color: var(--text-0);
-  border-radius: 12px;
+  border-radius: var(--r-guest-control);
   min-height: 44px;
   font-size: 12px;
   letter-spacing: 1px;
@@ -404,7 +404,7 @@ select:focus-visible {
 
 .tab {
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   background: rgba(40, 40, 48, 0.54);
   color: var(--text-1);
   font-size: 11px;
@@ -597,7 +597,7 @@ select:focus-visible {
 .aroma-access-age-dot {
   width: 20px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: transparent;
   display: inline-flex;
@@ -741,7 +741,7 @@ select:focus-visible {
 .aroma-onboarding-back {
   width: 36px;
   height: 36px;
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.54);
   color: var(--text-0);
@@ -752,7 +752,7 @@ select:focus-visible {
 
 .aroma-onboarding-bar {
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(150, 148, 142, 0.16);
   overflow: hidden;
 }
@@ -813,7 +813,7 @@ select:focus-visible {
   gap: 10px;
   min-height: 52px;
   padding: 8px 12px;
-  border-radius: 14px;
+  border-radius: var(--r-guest-row);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.60);
   color: var(--text-1);
@@ -833,7 +833,7 @@ select:focus-visible {
 .aroma-profile-card-dot {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   flex: 0 0 auto;
 }
 
@@ -871,7 +871,7 @@ select:focus-visible {
 .aroma-onboarding-profile-tag-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 
 .aroma-onboarding-dock {
@@ -970,7 +970,7 @@ select:focus-visible {
 }
 
 .aroma-recs-hero {
-  border-radius: 22px;
+  border-radius: var(--r-guest-hero);
   padding: 18px;
   display: grid;
   gap: 14px;
@@ -1058,7 +1058,7 @@ select:focus-visible {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--r-guest-row);
   border: 1px solid var(--line);
   background: rgba(28, 28, 33, 0.84);
   color: var(--text-0);
@@ -1134,7 +1134,7 @@ select:focus-visible {
 .aroma-catalog-search {
   width: 100%;
   height: 38px;
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.66);
   color: var(--text-0);
@@ -1153,7 +1153,7 @@ select:focus-visible {
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.66);
   color: var(--text-1);
@@ -1167,7 +1167,7 @@ select:focus-visible {
   right: 6px;
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--primary);
 }
 
@@ -1190,7 +1190,7 @@ select:focus-visible {
 
 .aroma-catalog-popover {
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-guest-card);
   padding: 14px;
   background: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
@@ -1206,7 +1206,7 @@ select:focus-visible {
 
 .aroma-catalog-sort-btn {
   min-height: 36px;
-  border-radius: 12px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.54);
   color: var(--text-1);
@@ -1249,7 +1249,7 @@ select:focus-visible {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  border-radius: 14px;
+  border-radius: var(--r-guest-row);
   border: 1px solid var(--line);
   background: rgba(28, 28, 33, 0.84);
   color: var(--text-0);
@@ -1317,7 +1317,7 @@ select:focus-visible {
 .aroma-showcase-rail-kind {
   margin: 0;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--r-guest-badge);
   background: rgba(40, 40, 48, 0.50);
   border: 1px solid var(--line-soft);
   color: var(--text-1);
@@ -1344,7 +1344,7 @@ select:focus-visible {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border-radius: 16px;
+  border-radius: var(--r-guest-card);
   border: 1px solid var(--line);
   box-shadow: inset 0 1px 0 rgba(232, 230, 224, 0.04), 0 14px 24px rgba(0, 0, 0, 0.22);
   color: var(--text-0);
@@ -1381,7 +1381,7 @@ select:focus-visible {
 .aroma-showcase-all {
   flex: 0 0 auto;
   width: 64px;
-  border-radius: 16px;
+  border-radius: var(--r-guest-card);
   border: 1px dashed var(--line);
   background: rgba(20, 20, 23, 0.50);
   color: var(--text-1);
@@ -1469,7 +1469,7 @@ select:focus-visible {
 .aroma-mix-sheet-handle {
   width: 40px;
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(163, 59, 72, 0.32);
   margin: 0 auto 6px;
 }
@@ -1517,7 +1517,7 @@ select:focus-visible {
   display: flex;
   width: 100%;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   overflow: hidden;
   background: rgba(255, 255, 255, 0.06);
 }
@@ -1546,7 +1546,7 @@ select:focus-visible {
 .aroma-mix-sheet-comp-dot {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   align-self: center;
 }
 
@@ -1585,7 +1585,7 @@ select:focus-visible {
 .aroma-mix-sheet-star {
   width: 36px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.90);
   color: var(--text-2);
@@ -1611,7 +1611,7 @@ select:focus-visible {
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.50);
   color: var(--text-0);
-  border-radius: 14px;
+  border-radius: var(--r-guest-control);
   min-height: 48px;
   padding: 0 18px;
   font-size: 12px;
@@ -1656,7 +1656,7 @@ select:focus-visible {
 .aroma-smoke-confirmation-done {
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   padding: 8px 16px;
   color: var(--text-0);
   font-size: 11px;
@@ -1696,7 +1696,7 @@ select:focus-visible {
 }
 
 .aroma-smoke-confirmation-composition {
-  border-radius: 18px;
+  border-radius: var(--r-guest-card);
   padding: 18px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(22, 22, 26, 0.88) 100%);
@@ -1765,7 +1765,7 @@ select:focus-visible {
 .aroma-rail-back {
   width: 36px;
   height: 36px;
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.54);
   color: var(--text-0);
@@ -1790,7 +1790,7 @@ select:focus-visible {
   border: 1px solid rgba(142, 47, 60, 0.20);
   background: var(--secondary);
   color: var(--accent-ink);
-  border-radius: 999px;
+  border-radius: var(--r-guest-control);
   height: 34px;
   padding: 0 14px;
   font-size: 10.5px;
@@ -1848,7 +1848,7 @@ select:focus-visible {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--r-guest-row);
   border: 1px solid var(--line);
   background: rgba(28, 28, 33, 0.84);
   color: var(--text-0);

@@ -45,7 +45,7 @@ export function Chip({
         border: `1px solid ${active ? "var(--guest-chip-border-on)" : "var(--line)"}`,
         background: active ? "var(--guest-chip-bg-on)" : "var(--guest-chip-bg)",
         color: active ? "var(--guest-chip-ink-on)" : "var(--text-1)",
-        borderRadius: 999,
+        borderRadius: "var(--r-guest-chip)",
         padding: isLg ? "10px 14px" : "7px 12px",
         fontSize: isLg ? 13 : 12,
         fontWeight: active ? 600 : 400,
@@ -65,7 +65,7 @@ export function Chip({
           style={{
             width: dotSize,
             height: dotSize,
-            borderRadius: 999,
+            borderRadius: "var(--r-pill)",
             background: color,
             flex: "0 0 auto",
             boxShadow: active ? "0 0 0 2px var(--guest-chip-border-on)" : "none",

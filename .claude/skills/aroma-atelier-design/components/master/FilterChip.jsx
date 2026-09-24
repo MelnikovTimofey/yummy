@@ -11,7 +11,7 @@ export function FilterChip({ children, active = false, count, onClick, style }) 
         gap: 6,
         height: 26,
         padding: '0 10px',
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-sm)',
         fontFamily: 'var(--font-sans)',
         fontSize: 'var(--fs-sm)',
         background: active ? 'var(--accent-soft)' : 'var(--bg-raised)',
