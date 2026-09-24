@@ -2858,116 +2858,125 @@ input[type="checkbox"] {
   color: var(--accent);
 }
 
-.rails-page__list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Кнопки и теги — общие .btn / .tag (см. блок «Shared design-system primitives»). */
-
-/* --- Card ------------------------------------------------------------- */
-
-.rails-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--bg-raised);
+.rails-table-shell {
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-base));
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-lg);
+  overflow: hidden;
 }
 
-.rails-card__main {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+.rails-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.rails-card__tags {
+.rails-table thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rails-table td {
+  padding: 10px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rails-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.rails-table__row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.rails-table__row:hover {
+  background: var(--bg-elevated);
+}
+
+.rails-table__row[data-inactive] .rails-table__name strong {
+  color: var(--text-muted);
+}
+
+.rails-table__name {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
-.rails-card__name {
-  margin: 2px 0 4px;
-  font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.15;
+.rails-table__name strong {
+  font-size: var(--fs-md);
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.rails-card__description {
-  margin: 0 0 10px;
+.rails-table__description {
+  margin: 2px 0 0;
+  max-width: 48ch;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  font-size: var(--fs-md);
-  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rails-card__mixes {
+.rails-table__type {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.rails-card__mix {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--r-sm);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+.rails-table__faint {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.rails-table__mixes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rails-table__count {
+  font-variant-numeric: tabular-nums;
   font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
-.rails-card__mix-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.rails-card__mix-dot--active {
-  background: var(--success);
-}
-
-.rails-card__mix-dot--hidden {
-  background: var(--text-faint);
-}
-
-.rails-card__mix-name {
+.rails-table__mix-names {
+  max-width: 56ch;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
 }
 
-.rails-card__aside {
+.rails-table__mix-names [data-state='hidden'] {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.rails-table__actions-col {
+  width: 1%;
+}
+
+.rails-table__actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.rails-card__count {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 @media (max-width: 720px) {
@@ -2975,15 +2984,82 @@ input[type="checkbox"] {
     flex-direction: column;
     align-items: flex-start;
   }
+}
 
-  .rails-card {
+.rails-surface__editor {
+  gap: 10px;
+}
+
+/* =====================================================================
+   Rails list page — структура и токены под mockup Мастер · Refactor.
+   Scoped в .rails-page namespace, чтобы не цеплять глобальные .card / .btn.
+   Rail editor (sheet) использует отдельный .rails-surface__* набор ниже.
+   ===================================================================== */
+
+.rails-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 5px 12px 60px;
+}
+
+.rails-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.rails-page__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rails-page__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-3xl);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.rails-page__subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+
+.rails-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rails-page__notice {
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  margin: 0;
+}
+
+.rails-page__notice--error {
+  color: var(--accent);
+}
+
+/* Кнопки и теги — общие .btn / .tag (см. блок «Shared design-system primitives»). */
+
+/* --- Card ------------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  .rails-page__header {
     flex-direction: column;
-  }
-
-  .rails-card__aside {
     align-items: flex-start;
   }
-}
+
+  }
 
 .rails-surface__editor {
   gap: 12px;
@@ -7221,7 +7297,6 @@ button.chip .chip__count[hidden] {
   }
 }
 
-.mix-builder__composition,
 .mix-builder__preview,
 .mix-builder__library {
   display: flex;
@@ -7273,39 +7348,59 @@ button.chip .chip__count[hidden] {
 
 .proportion-bar__handle {
   position: absolute;
-  right: -4px;
-  top: -2px;
-  width: 8px;
-  height: 18px;
-  border-radius: 4px;
-  background: var(--foreground);
+  right: -3px;
+  top: -3px;
+  width: 6px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-raised);
   cursor: ew-resize;
-  opacity: 0;
-  transition: opacity 120ms ease-in-out;
+  opacity: 0.6;
+  transition: opacity 120ms ease;
 }
 
-.proportion-bar:hover .proportion-bar__handle,
+.proportion-bar__handle:hover,
 .proportion-bar__handle[data-dragging='true'] {
-  opacity: 0.9;
+  opacity: 1;
+}
+
+.mix-builder__composition {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
 }
 
 .mix-builder__components {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   overflow-y: auto;
   min-height: 0;
 }
 
+.mix-builder__components-head,
 .mix-builder__component {
   display: grid;
   grid-template-columns: 10px 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 10px 12px;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+}
+
+.mix-builder__components-head {
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mix-builder__component {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .mix-builder__component--missing {
@@ -7740,12 +7835,6 @@ button.chip .chip__count[hidden] {
   gap: 12px;
 }
 
-.mix-builder__proportions-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted-foreground);
-}
-
 .mix-builder__distribute {
   display: inline-flex;
   align-items: center;
@@ -7771,16 +7860,18 @@ button.chip .chip__count[hidden] {
 
 .mix-builder__presets {
   display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-self: flex-start;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  overflow: hidden;
 }
 
 .mix-builder__preset {
   padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--muted-foreground);
+  border: 0;
+  border-left: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: 12px;
@@ -7794,10 +7885,13 @@ button.chip .chip__count[hidden] {
   color: var(--foreground);
 }
 
+.mix-builder__preset:first-child {
+  border-left: 0;
+}
+
 .mix-builder__preset--active {
-  background: color-mix(in oklch, var(--primary) 14%, transparent);
-  border-color: color-mix(in oklch, var(--primary) 40%, transparent);
-  color: var(--primary);
+  background: var(--accent-soft);
+  color: var(--text-primary);
 }
 
 .mix-builder__composition-head {
@@ -7899,13 +7993,6 @@ button.chip .chip__count[hidden] {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  opacity: 0;
-  transition: opacity 120ms ease-in-out;
-}
-
-.mixes-table__row:hover .mixes-row-actions,
-.mixes-table__row:focus-within .mixes-row-actions {
-  opacity: 1;
 }
 
 .mixes-row-actions__btn {

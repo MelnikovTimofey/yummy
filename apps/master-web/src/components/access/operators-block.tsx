@@ -336,16 +336,19 @@ export const OperatorsBlock = ({
               );
             })}
 
-            <footer className="access-hint-row" aria-hidden="true">
-              <LinkIcon />
-              <span><strong>1.</strong> Администратор добавляет оператора</span>
-              <span className="access-hint-row__arrow">→</span>
-              <span><strong>2.</strong> Оператор пишет боту и шлёт контакт</span>
-              <span className="access-hint-row__arrow">→</span>
-              <span><strong>3.</strong> Бот привязывает чат по номеру</span>
-              <span className="access-hint-row__arrow">→</span>
-              <span><strong>4.</strong> Команда /code выдаёт актуальный код</span>
-            </footer>
+            {/* Инструкция нужна, пока ни один оператор не привязан к боту. */}
+            {counts.active === 0 ? (
+              <footer className="access-hint-row">
+                <LinkIcon />
+                <span><strong>1.</strong> Администратор добавляет оператора</span>
+                <span className="access-hint-row__arrow" aria-hidden="true">→</span>
+                <span><strong>2.</strong> Оператор пишет боту и шлёт контакт</span>
+                <span className="access-hint-row__arrow" aria-hidden="true">→</span>
+                <span><strong>3.</strong> Бот привязывает чат по номеру</span>
+                <span className="access-hint-row__arrow" aria-hidden="true">→</span>
+                <span><strong>4.</strong> Команда /code выдаёт актуальный код</span>
+              </footer>
+            ) : null}
           </>
         )}
       </section>

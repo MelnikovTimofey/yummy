@@ -123,8 +123,9 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   // его на лету (`buildTopRail` в apps/backend/src/state.ts), строкой в базе
   // он не лежит. Имя продуктовое, а не фикстурное, поэтому опора на него не
   // возвращает зависимость от seed.
-  const statisticalRail = page.locator('article').filter({
-    has: page.getByRole('heading', { name: 'Больше всего выбирают' }),
+  // Рейлы — строки таблицы (#101), а не карточки с заголовком.
+  const statisticalRail = page.locator('table.rails-table tbody tr').filter({
+    has: page.getByText('Больше всего выбирают', { exact: true }),
   });
   await statisticalRail.getByRole('button', { name: 'Просмотр' }).click();
   // Read-only drawer (статистический рейл): eyebrop «Редактирование рейла»,

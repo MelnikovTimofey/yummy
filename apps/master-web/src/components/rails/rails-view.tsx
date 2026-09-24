@@ -115,77 +115,89 @@ export const RailsView = ({
     ) : null}
     {railsError ? <p className="rails-page__notice rails-page__notice--error">{railsError}</p> : null}
 
-    <div className="rails-page__list">
-      {rails.map((rail) => {
-        const tokens = resolveRailMixTokens(rail, railMixCatalog);
-        return (
-          <article className="rails-card" key={rail.id}>
-            <div className="rails-card__main">
-              <div className="rails-card__tags">
-                <span className="tag">{formatRailType(rail.type)}</span>
-                {!rail.editable ? (
-                  <span className="tag tag--ghost">только просмотр</span>
-                ) : null}
-                {!rail.active ? <span className="tag tag--ghost">выключен</span> : null}
-              </div>
-              <h3 className="rails-card__name">{rail.name}</h3>
-              {rail.description ? (
-                <p className="rails-card__description">{rail.description}</p>
-              ) : null}
-              {tokens.length ? (
-                <ul className="rails-card__mixes">
-                  {tokens.map((token) => (
-                    <li className="rails-card__mix" key={token.id}>
-                      <span
-                        className={`rails-card__mix-dot rails-card__mix-dot--${token.state}`}
-                        aria-hidden="true"
-                      />
-                      <span className="rails-card__mix-name">{token.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="rails-page__notice">Миксы не заданы</p>
-              )}
-            </div>
-            <aside className="rails-card__aside">
-              <div className="rails-card__count">
-                {rail.mixIds.length} {pluralizeMixCount(rail.mixIds.length)}
-              </div>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => onOpenRail(rail)}
-              >
-                {rail.editable ? (
-                  <Pencil size={14} aria-hidden />
-                ) : (
-                  <Eye size={14} aria-hidden />
-                )}
-                {rail.editable ? 'Редактировать' : 'Просмотр'}
-              </button>
-              {rail.editable ? (
-                <button
-                  type="button"
-                  className="btn"
-                  data-variant="danger"
-                  title="Удалить"
-                  aria-label={`Удалить ${rail.name}`}
-                  onClick={() => setRailPendingDelete(rail)}
+    {rails.length ? (
+      <div className="rails-table-shell">
+        <table className="rails-table">
+          <thead>
+            <tr>
+              <th scope="col">Рейл</th>
+              <th scope="col">Тип</th>
+              <th scope="col">Миксы</th>
+              <th scope="col" className="rails-table__actions-col">
+                <span className="sr-only">Действия</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rails.map((rail) => {
+              const tokens = resolveRailMixTokens(rail, railMixCatalog);
+              return (
+                <tr
+                  key={rail.id}
+                  className="rails-table__row"
+                  data-inactive={!rail.active || undefined}
+                  onClick={() => onOpenRail(rail)}
                 >
-                  <Trash2 size={14} aria-hidden />
-                  Удалить
-                </button>
-              ) : null}
-            </aside>
-          </article>
-        );
-      })}
-
-      {!rails.length && railsStatus !== 'loading' ? (
-        <p className="rails-page__notice">Пока нет рейлов.</p>
-      ) : null}
-    </div>
+                  <td>
+                    <div className="rails-table__name">
+                      <strong>{rail.name}</strong>
+                      {!rail.active ? <span className="tag tag--ghost">выключен</span> : null}
+                    </div>
+                    {rail.description ? (
+                      <p className="rails-table__description">{rail.description}</p>
+                    ) : null}
+                  </td>
+                  <td>
+                    <div className="rails-table__type">
+                      <span>{formatRailType(rail.type)}</span>
+                      {!rail.editable ? <span className="rails-table__faint">только просмотр</span> : null}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="rails-table__mixes">
+                      <span className="rails-table__count">
+                        {rail.mixIds.length} {pluralizeMixCount(rail.mixIds.length)}
+                      </span>
+                      {tokens.length ? (
+                        <span className="rails-table__mix-names">
+                          {tokens.map((token, index) => (
+                            <span key={token.id} data-state={token.state}>
+                              {index > 0 ? ' · ' : ''}
+                              {token.name}
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="rails-table__actions" onClick={(event) => event.stopPropagation()}>
+                    <button type="button" className="btn" data-size="sm" onClick={() => onOpenRail(rail)}>
+                      {rail.editable ? <Pencil size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
+                      {rail.editable ? 'Редактировать' : 'Просмотр'}
+                    </button>
+                    {rail.editable ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        data-variant="ghost"
+                        data-size="sm"
+                        title="Удалить"
+                        aria-label={`Удалить ${rail.name}`}
+                        onClick={() => setRailPendingDelete(rail)}
+                      >
+                        <Trash2 size={14} aria-hidden />
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    ) : railsStatus !== 'loading' ? (
+      <p className="rails-page__notice">Пока нет рейлов.</p>
+    ) : null}
 
     <Dialog
       open={railPendingDelete !== null}
