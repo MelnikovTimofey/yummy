@@ -40,7 +40,7 @@ import {
   updateTelegramRecipient,
 } from './access';
 import { getOnboardingOptions, getRecommendations } from './recommendations';
-import { evaluateBowl, getMixerPalette, parseBowlInput } from './mixer';
+import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput, recordCustomMixSmoke } from './mixer';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import {
   batchUpdateTobacco,
@@ -90,6 +90,7 @@ import type {
   GuestHomeRailsResponse,
   GuestIntroCardsResponse,
   GuestMixRatingResponse,
+  GuestCustomMixSmokeResponse,
   GuestMixerEvaluateResponse,
   GuestMixerPaletteResponse,
   OnboardingRecommendationsResponse,
@@ -304,12 +305,29 @@ export const buildApp = () => {
       return reply.status(400).send(input satisfies ApiError);
     }
 
-    const response: GuestMixerEvaluateResponse | null = await evaluateBowl(input);
-    if (!response) {
+    const response = await evaluateBowl(input);
+    if ('unavailableTobaccoId' in response) {
       return reply.status(409).send({ error: 'Tobacco is not in stock' } satisfies ApiError);
     }
 
-    return reply.send(response);
+    return reply.send(response satisfies GuestMixerEvaluateResponse);
+  });
+
+  app.post('/guest/events/custom-mix-smoke', async (request, reply) => {
+    const input = parseCustomMixSmokeInput(request.body);
+    if ('error' in input) {
+      return reply.status(400).send(input satisfies ApiError);
+    }
+
+    const response = await recordCustomMixSmoke(input);
+    if ('unavailableTobaccoId' in response) {
+      return reply.status(409).send({
+        error: 'Tobacco is not in stock',
+        tobaccoId: response.unavailableTobaccoId,
+      } satisfies ApiError & { tobaccoId: string });
+    }
+
+    return reply.status(201).send(response satisfies GuestCustomMixSmokeResponse);
   });
 
   app.post('/guest/events/smoke-cta', async (request, reply) => {

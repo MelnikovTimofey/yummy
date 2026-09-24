@@ -109,6 +109,12 @@ export type GuestMixerEvaluateResponse = {
   similarMix: { id: string; name: string; avgRating: number; similarity: number } | null;
 };
 
+export type GuestCustomMixSmokeResponse = {
+  id: string;
+  signature: string;
+  harmony: number;
+};
+
 export type StaffAuthResponse = {
   accessToken: string;
   tokenType: 'Bearer';

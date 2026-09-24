@@ -1,5 +1,11 @@
-import { getAllTobaccos, getAvailableMixCatalog } from './state';
-import type { GuestMixerEvaluateResponse, GuestMixerHint, GuestMixerPaletteResponse } from './types';
+import { createHash } from 'node:crypto';
+import { createCustomMixSmokeEvent, getAllTobaccos, getAvailableMixCatalog } from './state';
+import type {
+  GuestCustomMixSmokeResponse,
+  GuestMixerEvaluateResponse,
+  GuestMixerHint,
+  GuestMixerPaletteResponse,
+} from './types';
 
 type PaletteTobacco = GuestMixerPaletteResponse['tobaccos'][number];
 
@@ -327,20 +333,34 @@ export const parseBowlInput = (body: unknown): BowlInput | { error: string } => 
   return parsed;
 };
 
-// null — в чаше табак, которого нет в палитре (не найден или не в наличии).
-export const evaluateBowl = async (input: BowlInput): Promise<GuestMixerEvaluateResponse | null> => {
-  const { palette, affinity, guestMixes } = await loadMixer();
-  const byId = new Map(palette.map((item) => [item.id, item]));
+export type UnavailableTobacco = { unavailableTobaccoId: string };
+
+// Недоступен табак, которого нет в палитре: не найден, не в наличии или в архиве.
+type ResolvedBowl = Awaited<ReturnType<typeof loadMixer>> & { components: BowlComponent[] };
+
+const resolveBowl = async (input: BowlInput): Promise<ResolvedBowl | UnavailableTobacco> => {
+  const mixer = await loadMixer();
+  const byId = new Map(mixer.palette.map((item) => [item.id, item]));
 
   const components: BowlComponent[] = [];
   for (const item of input) {
     const tobacco = byId.get(item.tobaccoId);
     if (!tobacco) {
-      return null;
+      return { unavailableTobaccoId: item.tobaccoId };
     }
     components.push({ tobacco, proportion: item.proportion });
   }
 
+  return { ...mixer, components };
+};
+
+export const evaluateBowl = async (input: BowlInput): Promise<GuestMixerEvaluateResponse | UnavailableTobacco> => {
+  const bowl = await resolveBowl(input);
+  if ('unavailableTobaccoId' in bowl) {
+    return bowl;
+  }
+
+  const { components, affinity, guestMixes } = bowl;
   const { harmony, hints } = harmonyOf(components, affinity);
   return {
     harmony,
@@ -350,4 +370,85 @@ export const evaluateBowl = async (input: BowlInput): Promise<GuestMixerEvaluate
     name: nameOf(components),
     similarMix: findSimilarMix(components, guestMixes),
   };
+};
+
+// --- «Покурить» на гостевом миксе -------------------------------------------
+
+export type MixerSwipe = { turn: 0 | 1 | 2; tobaccoId: string; direction: 'left' | 'right' };
+
+export type CustomMixSmokeInput = { components: BowlInput; name: string | null; swipes: MixerSwipe[] };
+
+const MAX_NAME_LENGTH = 60;
+const MAX_SWIPES = 500;
+
+const parseSwipes = (swipes: unknown): MixerSwipe[] | null => {
+  if (swipes === undefined || swipes === null) {
+    return [];
+  }
+  if (!Array.isArray(swipes) || swipes.length > MAX_SWIPES) {
+    return null;
+  }
+
+  const parsed: MixerSwipe[] = [];
+  for (const swipe of swipes as Array<Record<string, unknown> | null>) {
+    const { turn, tobaccoId, direction } = swipe ?? {};
+    if (
+      (turn !== 0 && turn !== 1 && turn !== 2)
+      || typeof tobaccoId !== 'string'
+      || !tobaccoId
+      || (direction !== 'left' && direction !== 'right')
+    ) {
+      return null;
+    }
+    parsed.push({ turn, tobaccoId, direction });
+  }
+  return parsed;
+};
+
+export const parseCustomMixSmokeInput = (body: unknown): CustomMixSmokeInput | { error: string } => {
+  const components = parseBowlInput(body);
+  if ('error' in components) {
+    return components;
+  }
+
+  const { name, swipes } = body as { name?: unknown; swipes?: unknown };
+  const parsedSwipes = parseSwipes(swipes);
+  if (!parsedSwipes) {
+    return { error: `Swipes must be a list of up to ${MAX_SWIPES} { turn: 0-2, tobaccoId, direction: left|right }` };
+  }
+
+  // Array.from режет по кодовым точкам, чтобы не разорвать эмодзи пополам.
+  const trimmed = typeof name === 'string' ? Array.from(name.trim()).slice(0, MAX_NAME_LENGTH).join('').trim() : '';
+  return { components, name: trimmed || null, swipes: parsedSwipes };
+};
+
+// Сигнатура — набор табаков без долей и порядка: по ней сводятся одинаковые чаши.
+export const signatureOf = (tobaccoIds: string[]) =>
+  createHash('sha1').update([...tobaccoIds].sort().join('|')).digest('hex');
+
+export const recordCustomMixSmoke = async (
+  input: CustomMixSmokeInput,
+): Promise<GuestCustomMixSmokeResponse | UnavailableTobacco> => {
+  const bowl = await resolveBowl(input.components);
+  if ('unavailableTobaccoId' in bowl) {
+    return bowl;
+  }
+
+  const { components, affinity } = bowl;
+  const { harmony } = harmonyOf(components, affinity);
+  const signature = signatureOf(components.map((item) => item.tobacco.id));
+  const { id } = await createCustomMixSmokeEvent({
+    components: components.map(({ tobacco, proportion }) => ({
+      tobaccoId: tobacco.id,
+      manufacturer: tobacco.manufacturer,
+      name: tobacco.name,
+      proportion,
+    })),
+    signature,
+    name: input.name ?? nameOf(components),
+    harmony,
+    swipes: input.swipes,
+  });
+
+  return { id, signature, harmony };
 };
