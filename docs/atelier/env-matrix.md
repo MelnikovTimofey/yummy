@@ -16,7 +16,7 @@
 
 | Переменная | Назначение | Пример |
 |---|---|---|
-| `DATABASE_URL` | подключение к Postgres Арома Ателье | `postgresql://...` |
+| `DATABASE_URL` | подключение к Postgres Арома Ателье | `postgresql://...` (в `docker-compose.prod.yml` собирается из `POSTGRES_PASSWORD`) |
 | `PORT` | порт backend | `3021` |
 | `HOST` | bind host | `0.0.0.0` |
 | `APP_NAME` | service name | `atelier-backend` |
@@ -40,9 +40,11 @@
 
 ### Production notes
 
-1. не использовать `prisma seed` как путь создания production admin;
-2. использовать `npm run bootstrap:admin`;
-3. `ATELIER_AUTOMATION_KEY` и `ATELIER_TOKEN_SECRET` должны быть независимыми secret values.
+1. в прод-контуре Postgres — сервис `db` того же compose; оператор задаёт только
+   `POSTGRES_PASSWORD` (URL-безопасные символы), `DATABASE_URL` compose собирает сам;
+2. не использовать `prisma seed` как путь создания production admin;
+3. использовать `npm run bootstrap:admin`;
+4. `ATELIER_AUTOMATION_KEY`, `ATELIER_TOKEN_SECRET` и `POSTGRES_PASSWORD` должны быть независимыми secret values.
 
 ## 3. apps/aroma-web
 
@@ -64,6 +66,7 @@
 | Переменная | Назначение | Пример |
 |---|---|---|
 | `VITE_API_BASE_URL` | base URL backend | `https://api.atelier.example` |
+| `VITE_AROMA_WEB_URL` | адрес гостевого контура для кнопки «Витрина гостя»; в проде `https://${AROMA_DOMAIN}` | `https://atelier.example` |
 
 ### Production notes
 
@@ -98,7 +101,7 @@
 
 1. `ATELIER_AUTOMATION_KEY`
 2. `ATELIER_TOKEN_SECRET`
-3. `DATABASE_URL`
+3. `POSTGRES_PASSWORD` (из него собирается `DATABASE_URL`)
 
 ### Telegram bot
 
@@ -114,7 +117,7 @@
 Для первого production/pilot запуска должны быть заданы:
 
 1. backend:
-   - `DATABASE_URL`
+   - `POSTGRES_PASSWORD`
    - `ATELIER_AUTOMATION_KEY`
    - `ATELIER_TOKEN_SECRET`
 2. web:
