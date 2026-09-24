@@ -1,7 +1,8 @@
 # Прод-контур Арома Ателье для одного облачного VPS.
 #
 # Отличия от локального docker-compose.yml:
-#   - НЕТ сервиса db: Postgres — managed (облачный), подключение через DATABASE_URL;
+#   - Postgres в том же контуре (сервис db), наружу не публикуется, данные — в
+#     volume atelier_pg; бэкапы — ночной pg_dump на хосте (см. prod-deploy-runbook.md);
 #   - секреты приходят из .env без локальных дефолтов (compose падает, если не заданы);
 #   - фронты собираются с реальным публичным API-доменом (PUBLIC_API_URL, build-arg);
 #   - наружу торчит только Caddy (80/443) с авто-TLS; backend и фронты — внутри сети;
@@ -11,6 +12,21 @@
 # Перед первым стартом заполнить .env по образцу .env.prod.example.
 
 services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: atelier
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: atelier
+    volumes:
+      - atelier_pg:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atelier -d atelier"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   backend:
     build:
       context: ./apps/backend
@@ -18,11 +34,16 @@ services:
       HOST: 0.0.0.0
       PORT: "3021"
       APP_NAME: atelier-backend
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      # Пароль подставляется в URL как есть — только URL-безопасные символы
+      # (openssl rand -hex 32).
+      DATABASE_URL: postgresql://atelier:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/atelier?schema=public
       ATELIER_AUTOMATION_KEY: ${ATELIER_AUTOMATION_KEY:?ATELIER_AUTOMATION_KEY is required}
       ATELIER_TOKEN_SECRET: ${ATELIER_TOKEN_SECRET:?ATELIER_TOKEN_SECRET is required}
       ATELIER_TOKEN_TTL_HOURS: ${ATELIER_TOKEN_TTL_HOURS:-24}
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test:
         - "CMD"
@@ -52,6 +73,8 @@ services:
       context: ./apps/master-web
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+        # Кнопка «Витрина гостя» на экране рейлов.
+        VITE_AROMA_WEB_URL: https://${AROMA_DOMAIN:?AROMA_DOMAIN is required}
     environment:
       ATELIER_ALLOWED_HOSTS: ${MASTER_DOMAIN:?MASTER_DOMAIN is required}
     restart: unless-stopped
@@ -96,6 +119,7 @@ services:
       - master-web
 
 volumes:
+  atelier_pg:
   atelier_bot_state:
   caddy_data:
   caddy_config:

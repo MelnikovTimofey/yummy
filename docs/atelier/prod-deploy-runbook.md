@@ -1,12 +1,11 @@
 # Арома Ателье — Prod Deploy Runbook
 
-> ℹ️ **Действующего прод-контура нет** — прошлый хост выведен из эксплуатации
-> (2026-08-11). Этот runbook актуален как инструкция для нового развёртывания
-> с нуля. Пути в примерах — `/opt/atelier`.
+> Действующий контур и его координаты — [`prod-operations.md`](prod-operations.md).
+> Пути в примерах — `/opt/atelier`.
 
 Развёртывание всего контура Арома Ателье на одном облачном VPS: `docker compose` +
-managed Postgres + Caddy (авто-TLS). Покрывает backend, Арома Ателье, Мастер и
-Telegram-бот.
+Postgres в том же контуре + Caddy (авто-TLS). Покрывает backend, Арома Ателье,
+Мастер и Telegram-бот.
 
 Связанные документы: [`env-matrix.md`](env-matrix.md),
 [`deployment-smoke-checklist.md`](deployment-smoke-checklist.md). Файлы контура:
@@ -15,11 +14,12 @@ Telegram-бот.
 
 ## 1. Предусловия (облако — на стороне оператора)
 
-1. **Managed Postgres 16**: БД `atelier`, отдельный юзер, автобэкапы включены,
-   доступ к инстансу ограничен IP VPS, подключение `sslmode=require`.
-2. **VPS**: 2 vCPU / 4 GB / Ubuntu 22.04+, установлены Docker и docker compose
-   plugin. Firewall: наружу только `80`, `443`, SSH.
-3. **DNS**: три A-записи на IP VPS — гостевой, мастер и API домены
+1. **VPS**: 2 vCPU / 4 GB / Ubuntu 24.04, установлены Docker и docker compose
+   plugin (`docker.io`, `docker-compose-v2`), swap 2 GB под сборку образов.
+   Firewall: наружу только `80`, `443`, SSH (не на 22, вход только по ключу).
+   Postgres наружу не публикуется — живёт в сети compose, данные в volume
+   `atelier_pg`.
+2. **DNS**: три A-записи на IP VPS — гостевой, мастер и API домены
    (например `atelier.<домен>`, `master.atelier.<домен>`, `api.atelier.<домен>`).
 
 ## 2. Конфигурация
@@ -29,9 +29,8 @@ git clone <repo> && cd <repo> && git checkout main
 cp .env.prod.example .env
 chmod 600 .env
 # заполнить .env: домены, ACME_EMAIL, PUBLIC_API_URL=https://<API_DOMAIN>,
-# DATABASE_URL (managed PG, sslmode=require),
-# ATELIER_AUTOMATION_KEY и ATELIER_TOKEN_SECRET (openssl rand -hex 32, независимые),
-# TELEGRAM_BOT_TOKEN.
+# POSTGRES_PASSWORD, ATELIER_AUTOMATION_KEY и ATELIER_TOKEN_SECRET
+# (openssl rand -hex 32, три независимых значения), TELEGRAM_BOT_TOKEN.
 ```
 
 > `PUBLIC_API_URL` зашивается в бандлы фронтов на этапе build. При его смене —
@@ -40,19 +39,19 @@ chmod 600 .env
 ## 3. Деплой
 
 ```bash
-# 1. Backend: сборка + старт. На старте контейнер выполнит `prisma migrate deploy`
-#    и создаст схему в managed Postgres (см. apps/backend/Dockerfile).
-docker compose -f docker-compose.prod.yml up -d --build backend
+# 1. Postgres + backend: сборка + старт. На старте backend выполнит
+#    `prisma migrate deploy` и создаст схему (см. apps/backend/Dockerfile).
+docker compose -f docker-compose.prod.yml up -d --build db backend
 docker compose -f docker-compose.prod.yml logs -f backend   # дождаться health + "migrations applied"
 
-# 2. Продуктовые данные ИЗ СНЭПШОТА напрямую в managed Postgres (data-only).
+# 2. Продуктовые данные ИЗ СНЭПШОТА (data-only) через контейнер db.
 #    Снэпшот содержит ТОЛЬКО продуктовые таблицы (без staff/auth) — схему уже
 #    создал migrate deploy на шаге 1, поэтому restore идёт ПОСЛЕ старта backend.
-pg_restore --no-owner --data-only --disable-triggers \
-  -d "$DATABASE_URL" snapshots/atelier-product-data.dump
+#    Юзер atelier — владелец БД в своём контейнере, --disable-triggers работает.
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_restore -U atelier -d atelier --no-owner --data-only --disable-triggers \
+  < snapshots/atelier-product-data.dump
 #    → ~11505 табаков (inStock=true) + 15 миксов + 5 prepared-рейлов.
-#    Предупреждение `unrecognized configuration parameter "transaction_timeout"`
-#    на PG16 безвредно (дамп снят на PG17) — данные восстанавливаются полностью.
 
 # 3. Прод-admin — ТОЛЬКО через bootstrap (НЕ prisma:seed: seed заливает демо-логины).
 docker compose -f docker-compose.prod.yml run --rm \
@@ -119,8 +118,8 @@ curl -sS -H 'x-atelier-automation-key: <key>' \
 
 **Откат:**
 
-- данные/схема — восстановить managed Postgres из снэпшота/PITR провайдера
-  (снять снэпшот БД ПЕРЕД деплоем — обязательный пред-шаг для рискованных релизов);
+- данные/схема — восстановить БД из ночного дампа (см. §8) или из бэкапа диска
+  VPS (снять `pg_dump` ПЕРЕД деплоем — обязательный пред-шаг для рискованных релизов);
 - код — `git checkout <предыдущий-tag>` + `docker compose -f docker-compose.prod.yml up -d --build`.
 
 ## 7. Обновление релиза
@@ -131,4 +130,29 @@ docker compose -f docker-compose.prod.yml up -d --build
 # backend на старте сам накатит новые миграции (migrate deploy).
 ```
 
-Перед рискованным обновлением (схемные миграции) — снэпшот managed Postgres.
+Перед рискованным обновлением (схемные миграции) — внеплановый дамп (§8).
+
+## 8. Бэкапы Postgres
+
+Ночной `pg_dump` в custom-формате на хост, хранение 14 дней. Установить один раз:
+
+```bash
+mkdir -p /opt/atelier/backups
+cat > /etc/cron.d/atelier-pg-backup <<'CRON'
+# ежедневно 03:30 по времени хоста
+30 3 * * * root cd /opt/atelier && docker compose -f docker-compose.prod.yml exec -T db pg_dump -U atelier -Fc atelier > /opt/atelier/backups/atelier-$(date +\%F).dump && find /opt/atelier/backups -name 'atelier-*.dump' -mtime +14 -delete
+CRON
+```
+
+Восстановление дампа целиком (схема + данные):
+
+```bash
+docker compose -f docker-compose.prod.yml stop backend telegram-bot
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_restore -U atelier -d atelier --clean --if-exists --no-owner < /opt/atelier/backups/atelier-<дата>.dump
+docker compose -f docker-compose.prod.yml start backend telegram-bot
+```
+
+Дампы лежат на том же VPS — от потери сервера целиком они не спасают. Для этого
+включить автобэкапы диска в панели провайдера или периодически забирать свежий
+дамп с хоста (`scp -P <ssh-port> root@<host>:/opt/atelier/backups/<файл> .`).
