@@ -36,7 +36,7 @@ const TURNS = [
   { key: 'base', label: 'Основа', range: '40–70%', line: 'turn.base' },
   { key: 'accent', label: 'Акцент', range: '20–40%', line: 'turn.accent' },
   { key: 'twist', label: 'Штрих', range: '5–15%', line: 'turn.twist' },
-] as const satisfies ReadonlyArray<{ key: SwipeRecord['turn']; label: string; range: string; line: MasterLineKey }>;
+] as const satisfies ReadonlyArray<{ key: 'base' | 'accent' | 'twist'; label: string; range: string; line: MasterLineKey }>;
 
 const PROFILE_ORDER = profileOptions.map((option) => option.value);
 const SOLD_OUT = 'Этот табак только что закончился.';
@@ -256,7 +256,7 @@ export function MixerScreen({
     if (busyRef.current || phase !== 'swipe' || !tobacco) return;
     setBusyState(true);
     setNotice(null);
-    swipes.current.push({ turn: TURNS[turn].key, tobaccoId: tobacco.id, direction: 'right' });
+    swipes.current.push({ turn, tobaccoId: tobacco.id, direction: 'right' });
 
     const nextChosen = [...chosen.slice(0, turn), tobacco.id];
     const nextTobaccos = tobaccosOf(nextChosen);
@@ -300,7 +300,7 @@ export function MixerScreen({
     setBusyState(true);
     setNotice(null);
     const done = () => {
-      swipes.current.push({ turn: TURNS[turn].key, tobaccoId: id, direction: 'left' });
+      swipes.current.push({ turn, tobaccoId: id, direction: 'left' });
       const result = skipCard(deck);
       showDeck(result.deck);
       skipStreak.current += 1;

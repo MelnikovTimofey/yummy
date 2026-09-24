@@ -40,7 +40,7 @@ export type BowlComponent = { tobaccoId: string; proportion: number };
 export type Turn = 0 | 1 | 2;
 
 export type SwipeRecord = {
-  turn: 'base' | 'accent' | 'twist';
+  turn: Turn;
   tobaccoId: string;
   direction: 'right' | 'left';
 };

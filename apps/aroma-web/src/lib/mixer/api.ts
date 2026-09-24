@@ -47,6 +47,8 @@ const request = async (path: string, body?: unknown): Promise<unknown> => {
   return payload;
 };
 
+const MAX_SWIPES = 500;
+
 export const fetchMixerPalette = async () => normalizePalette(await request('/guest/mixer/palette'));
 
 export const evaluateBowl = async (components: BowlComponent[]) =>
@@ -57,7 +59,8 @@ export const sendCustomMixSmoke = async (payload: {
   name: string;
   swipes: SwipeRecord[];
 }) => {
-  const response = await request('/guest/events/custom-mix-smoke', payload);
+  // Backend принимает не больше 500 свайпов, а колода бесконечная: шлём последние.
+  const response = await request('/guest/events/custom-mix-smoke', { ...payload, swipes: payload.swipes.slice(-MAX_SWIPES) });
   const record = typeof response === 'object' && response !== null ? (response as Record<string, unknown>) : {};
   return { harmony: typeof record.harmony === 'number' ? Math.round(record.harmony) : null };
 };
