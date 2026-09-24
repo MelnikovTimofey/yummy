@@ -2418,10 +2418,6 @@ input[type="checkbox"] {
   margin-top: 0;
 }
 
-.daily-code-hero__spacer {
-  flex: 1;
-}
-
 .daily-code-progress {
   display: flex;
   flex-direction: column;
@@ -2505,12 +2501,6 @@ input[type="checkbox"] {
   margin: 2px 0 0;
   font-size: var(--fs-sm);
   color: var(--text-muted);
-}
-
-.daily-code-rotation__chips {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
 }
 
 .daily-code-hero__error {
@@ -2682,11 +2672,6 @@ input[type="checkbox"] {
   margin: 0;
 }
 
-.bot-status__history__counter {
-  font-size: 11px;
-  color: var(--muted-foreground);
-}
-
 .bot-status__history__list {
   list-style: none;
   margin: 0;
@@ -2715,11 +2700,6 @@ input[type="checkbox"] {
 
 .bot-status__history__day {
   font-size: 12px;
-  color: var(--muted-foreground);
-}
-
-.bot-status__history__count {
-  font-size: 11px;
   color: var(--muted-foreground);
 }
 
@@ -2846,16 +2826,6 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
-.rails-page__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
 .rails-page__title {
   margin: 0;
   font-family: var(--font-serif);
@@ -2921,10 +2891,6 @@ input[type="checkbox"] {
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
-}
-
-.rails-card__kicker {
-  margin: 0;
 }
 
 .rails-card__name {
@@ -3931,6 +3897,11 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
+.filter-chip__count[hidden],
+button.chip .chip__count[hidden] {
+  display: none;
+}
+
 .filter-chip__count {
   display: inline-flex;
   align-items: center;
@@ -4413,10 +4384,6 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.access-card__eyebrow {
-  margin: 0;
 }
 
 .access-card__title-serif {
@@ -5331,41 +5298,17 @@ input[type="checkbox"] {
   z-index: 2;
 }
 
-.inventory-brand-cell__pill {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--accent-border);
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--text-secondary);
-  transition: opacity 0.12s ease, transform 0.12s ease;
-  pointer-events: none;
-}
-
-.inventory-brand-cell:hover .inventory-brand-cell__pill,
-.inventory-brand-cell:focus-within .inventory-brand-cell__pill,
-.inventory-brand-cell__check:checked + .inventory-brand-cell__pill {
-  opacity: 0;
-}
-
-/* Заменяющий чекбокс при hover/focus/checked. Использую псевдо-стили на
-   самом input, чтобы avoid extra DOM. */
+/* Рамка чекбокса рисуется псевдоэлементом ячейки: сам input прозрачен
+   поверх неё и ловит клики. */
 .inventory-brand-cell::after {
   content: '';
   position: absolute;
-  inset: 4px;
-  border: 1.5px solid var(--accent-border);
+  inset: 5px;
+  border: 1.5px solid var(--border-strong);
   border-radius: 4px;
   background: var(--bg-raised);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s ease;
+  transition: border-color 0.12s ease;
 }
 
 .inventory-brand-cell::before {
@@ -5386,15 +5329,10 @@ input[type="checkbox"] {
 
 .inventory-brand-cell:hover::after,
 .inventory-brand-cell:focus-within::after {
-  opacity: 1;
-}
-
-.inventory-brand-cell__check:checked ~ .inventory-brand-cell__pill {
-  opacity: 0;
+  border-color: var(--accent-border);
 }
 
 .inventory-brand-cell:has(.inventory-brand-cell__check:checked)::after {
-  opacity: 1;
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -7282,11 +7220,9 @@ input[type="checkbox"] {
   font-size: 13px;
 }
 
-.mix-builder__breadcrumb-eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 11px;
-  color: var(--muted-foreground);
+.mix-builder__breadcrumb-label {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .mix-builder__breadcrumb-divider {
@@ -7340,12 +7276,6 @@ input[type="checkbox"] {
   background: color-mix(in oklch, var(--destructive) 16%, transparent);
   border-color: color-mix(in oklch, var(--destructive) 40%, transparent);
   color: var(--destructive);
-}
-
-.mix-builder__chip--accent {
-  background: color-mix(in oklch, var(--primary) 14%, transparent);
-  border-color: color-mix(in oklch, var(--primary) 40%, transparent);
-  color: var(--primary);
 }
 
 .mix-builder__chip--ghost {
@@ -7876,12 +7806,10 @@ input[type="checkbox"] {
   line-height: 1.5;
 }
 
-.mix-builder__section-eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 11px;
-  color: var(--muted-foreground);
-  font-weight: 500;
+.mix-builder__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .mix-builder__section-count {
@@ -8123,29 +8051,6 @@ input[type="checkbox"] {
   gap: 8px;
 }
 
-.mixes-cell__pills {
-  display: inline-flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.mixes-cell__pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 26px;
-  height: 22px;
-  padding: 0 6px;
-  font-family: var(--font-meta);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  border-radius: 4px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
 .mixes-cell__component-line {
   font-size: 12px !important;
   color: var(--foreground) !important;
@@ -8189,26 +8094,11 @@ input[type="checkbox"] {
   color: var(--muted-foreground);
 }
 
-.mixes-empty__eyebrow {
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 11px;
-  color: var(--muted-foreground);
-}
-
 .mixes-empty__title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--foreground);
-}
-
-.mixes-empty__hint {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.4;
-  max-width: 520px;
 }
 
 /* =====================================================================
@@ -8349,16 +8239,6 @@ input[type="checkbox"] {
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-}
-
-.dashboard-page__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
 }
 
 .dashboard-page__heading {

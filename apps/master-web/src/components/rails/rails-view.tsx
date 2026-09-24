@@ -83,7 +83,6 @@ export const RailsView = ({
   <section className="rails-page">
     <header className="rails-page__header">
       <div className="rails-page__copy">
-        <p className="rails-page__eyebrow">Менеджер рейлов</p>
         <h1 className="rails-page__title">Рейлы</h1>
         <p className="rails-page__subtitle">
           Состав и порядок подборок для гостевой витрины.
@@ -123,14 +122,11 @@ export const RailsView = ({
           <article className="rails-card" key={rail.id}>
             <div className="rails-card__main">
               <div className="rails-card__tags">
-                <span className="rails-page__eyebrow rails-card__kicker">Рейл</span>
                 <span className="tag">{formatRailType(rail.type)}</span>
                 {!rail.editable ? (
                   <span className="tag tag--ghost">только просмотр</span>
                 ) : null}
-                {rail.active ? (
-                  <span className="tag">активен</span>
-                ) : null}
+                {!rail.active ? <span className="tag tag--ghost">выключен</span> : null}
               </div>
               <h3 className="rails-card__name">{rail.name}</h3>
               {rail.description ? (

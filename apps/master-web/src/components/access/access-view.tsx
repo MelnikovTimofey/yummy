@@ -10,7 +10,6 @@ import { DailyCodeBlock } from './daily-code-block';
 import { OperatorsBlock } from './operators-block';
 import { StaffBlock } from './staff-block';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
 import type {
   AccessLoadStatus,
@@ -82,66 +81,17 @@ export const AccessView = (props: AccessViewProps) => {
     telegramOperators,
     telegramOperatorsStatus,
     telegramOperatorsError,
-    staffAccounts,
   } = props;
 
   const currentDailyCode = resolveCurrentDailyCode(dailyCodes);
   const activeOperators = telegramOperators.filter((item) => item.active);
   const linkedOperatorsCount = activeOperators.filter((item) => item.linkedChatId).length;
-  const pendingOperatorsCount = activeOperators.length - linkedOperatorsCount;
-  const activeStaffAccounts = staffAccounts.filter((account) => account.active).length;
-  // adminAccountsCount раньше отдавался в caption «admin: N». В mockup-варианте
-  // под Master-учётками — «с доступом в систему», без отдельного admin-счётчика.
-
-  const dailyCodeHint = (() => {
-    if (!currentDailyCode.code) {
-      return 'не выпущен';
-    }
-    const end = new Date(currentDailyCode.code.endsAt);
-    if (Number.isNaN(end.getTime())) {
-      return 'окно не задано';
-    }
-    const formatted = new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(end);
-    return currentDailyCode.state === 'active' ? `до ${formatted}` : `истёк ${formatted}`;
-  })();
 
   return (
     <section className="access-page">
       <MasterPageHeader
-        eyebrow="Доступ"
         title="Доступ и персонал"
         subtitle="Гостевой код, операторы Telegram-бота и учётки Мастера."
-      />
-
-      <MasterStatsRow
-        tiles={[
-          {
-            label: 'Код смены',
-            value: currentDailyCode.state === 'active' ? currentDailyCode.code.codeValue : 'Нет кода',
-            hint: dailyCodeHint,
-            tone: currentDailyCode.state === 'active' ? 'mono' : 'warning',
-          },
-          {
-            label: 'Операторы',
-            value: activeOperators.length,
-            hint:
-              pendingOperatorsCount > 0
-                ? `+${pendingOperatorsCount} ждут привязки`
-                : activeOperators.length > 0
-                  ? 'все привязаны'
-                  : 'нет активных',
-          },
-          {
-            label: 'Учётки Мастера',
-            value: activeStaffAccounts,
-            hint: 'с доступом в систему',
-          },
-        ]}
       />
 
       <DailyCodeBlock

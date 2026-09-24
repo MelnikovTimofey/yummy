@@ -151,8 +151,8 @@ export const MixBuilder = ({
           <ArrowLeft size={16} aria-hidden="true" />
         </button>
         <div className="mix-builder__breadcrumb">
-          <span className="mix-builder__breadcrumb-eyebrow">
-            {mode === 'edit' ? 'РЕДАКТИРОВАНИЕ МИКСА' : 'НОВЫЙ МИКС'}
+          <span className="mix-builder__breadcrumb-label">
+            {mode === 'edit' ? 'Редактирование микса' : 'Новый микс'}
           </span>
           <span className="mix-builder__breadcrumb-divider" aria-hidden="true">·</span>
           <span className="mix-builder__breadcrumb-meta">{componentsCountLabel}</span>
@@ -241,7 +241,7 @@ export const MixBuilder = ({
 
           <section className="mix-builder__proportions" aria-label="Пропорции состава">
             <header className="mix-builder__proportions-head">
-              <span className="mix-builder__section-eyebrow">Пропорции</span>
+              <span className="mix-builder__section-title">Пропорции</span>
               <button
                 type="button"
                 className="mix-builder__distribute"
@@ -278,7 +278,7 @@ export const MixBuilder = ({
 
           <section className="mix-builder__composition" aria-label="Состав микса">
             <header className="mix-builder__composition-head">
-              <span className="mix-builder__section-eyebrow">
+              <span className="mix-builder__section-title">
                 Состав <span className="mix-builder__section-count">({editor.components.length})</span>
               </span>
             </header>
@@ -307,7 +307,7 @@ export const MixBuilder = ({
 
           {aggregatedProfiles.length ? (
             <section className="mix-builder__profile" aria-label="Вкусовой профиль">
-              <span className="mix-builder__section-eyebrow">Профиль</span>
+              <span className="mix-builder__section-title">Профиль</span>
               <div className="mix-builder__profile-chips">
                 {aggregatedProfiles.map((profile) => (
                   <ProfileTag key={profile} profile={profile} />
@@ -318,7 +318,7 @@ export const MixBuilder = ({
 
           {editor.railMemberships.length > 0 ? (
             <div className="mix-builder__memberships">
-              <span className="mix-builder__section-eyebrow">В рейлах</span>
+              <span className="mix-builder__section-title">В рейлах</span>
               <ul>
                 {editor.railMemberships.map((membership) => (
                   <li key={membership.id}>{membership.name}</li>

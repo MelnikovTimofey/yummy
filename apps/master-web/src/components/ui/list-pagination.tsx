@@ -23,7 +23,10 @@ export const ListPagination = ({
 }: ListPaginationProps) => {
   const showSizeSelector = Boolean(onPageSizeChange && pageSizeOptions?.length);
 
-  if (totalPages <= 1 && !showSizeSelector) {
+  // Пагинация нужна, только когда список не помещается в самую маленькую
+  // страницу: выбор «100 / 200 / 500» при шести позициях — шум.
+  const smallestPageSize = pageSizeOptions?.length ? Math.min(...pageSizeOptions) : pageSize;
+  if (totalPages <= 1 && filteredItems <= smallestPageSize) {
     return null;
   }
 

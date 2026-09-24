@@ -93,7 +93,6 @@ export const RailEditor = ({
   }, [railMixCatalog, editor.mixIds, pickerQuery]);
 
   const locked = Boolean(editor.id) && !editor.editable;
-  const headerEyebrow = editor.id ? 'Редактирование рейла' : 'Новый рейл';
   const headerTitle = editor.name || (editor.id ? 'Без названия' : 'Новый рейл');
   const submitLabel = saveStatus === 'loading'
     ? 'Сохраняем…'
@@ -125,7 +124,7 @@ export const RailEditor = ({
       >
         <header className="drawer__head rail-drawer__head">
           <div className="rail-drawer__head-copy">
-            <p className="rail-drawer__eyebrow">{headerEyebrow}</p>
+            {editor.id ? <p className="rail-drawer__eyebrow">Редактирование рейла</p> : null}
             <SheetTitle className="rail-drawer__title">{headerTitle}</SheetTitle>
             {locked && editor.readOnlyReason ? (
               <p className="rail-drawer__lock">{editor.readOnlyReason}</p>

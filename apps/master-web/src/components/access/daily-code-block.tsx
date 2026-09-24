@@ -146,8 +146,6 @@ export const DailyCodeBlock = ({
             <RefreshIcon />
             {isRotating ? 'Выпускаем…' : 'Выпустить новый код'}
           </button>
-          <span className="daily-code-hero__spacer" />
-          <kbd className="kbd" aria-hidden="true">⌘C</kbd>
         </div>
 
         {currentDailyCode.state === 'expired' ? (
