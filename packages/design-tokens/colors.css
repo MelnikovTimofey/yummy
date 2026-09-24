@@ -1,5 +1,5 @@
 /* Film Noir palette — single source of truth for both surfaces (PRD §12).
-   Smoky charcoal surfaces, warm foggy-grey text, ONE muted oxblood accent. */
+   Smoky charcoal surfaces, warm foggy-grey text, ONE deep bordeaux accent. */
 :root {
   /* Surfaces */
   --bg-base: #141417;
@@ -14,13 +14,16 @@
   --text-muted: #8f8d87;
   --text-faint: #6a6863;
 
-  /* Accent (oxblood) — the only brand colour */
-  --accent: #b04a3e;
-  --accent-hover: #c25749;
-  --accent-deep: #7e342b;
+  /* Accent (bordeaux) — the only brand colour. До 2026-09-24 — оксблад
+     #b04a3e: на экране читался оранжевым, в заливках — «мультяшно». */
+  --accent: #8e2f3c;
+  --accent-hover: #a33b48;
+  --accent-deep: #5c1c26;
   --accent-fg: #f4efea;
-  --accent-soft: rgba(176, 74, 62, 0.15);
-  --accent-border: rgba(176, 74, 62, 0.4);
+  --accent-soft: rgba(142, 47, 60, 0.22);
+  --accent-border: rgba(163, 59, 72, 0.5);
+  /* Бордо как цвет текста на угле даёт ~2.3:1 — для текста только ink (7.3:1). */
+  --accent-ink: #d98f97;
 
   /* Borders */
   --border-subtle: rgba(150, 148, 142, 0.16);
@@ -72,5 +75,5 @@
   --text-2: var(--text-muted);
   --line: var(--border-subtle);
   --line-soft: rgba(150, 148, 142, 0.1);
-  --ember: var(--accent-hover);
+  --ember: var(--accent-ink);
 }

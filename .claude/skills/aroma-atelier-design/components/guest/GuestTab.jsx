@@ -1,14 +1,16 @@
-// Pill tab used in the guest topbar nav rows (.tab / .tab.active upstream).
+// Tab used in the guest topbar nav rows (.tab / .tab.active upstream). Active is quiet:
+// graphite fill, cream ink and a 2px bordeaux mark — solid accent belongs to the CTA only.
 export function GuestTab({ children, active = false, onClick, style }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        border: '1px solid ' + (active ? 'rgba(176,74,62,0.4)' : 'var(--border-subtle)'),
+        border: '1px solid ' + (active ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
         borderRadius: 'var(--r-pill)',
-        background: active ? 'linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%)' : 'var(--guest-control-bg-soft)',
-        color: active ? 'var(--primary-foreground)' : 'var(--text-secondary)',
+        background: active ? 'var(--segment-active-bg)' : 'var(--guest-control-bg-soft)',
+        color: active ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
+        boxShadow: active ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
         fontFamily: 'var(--font-body)',
         fontSize: 11,
         lineHeight: 1.2,

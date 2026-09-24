@@ -1,4 +1,5 @@
-// Equal-width segmented control (guest journey / app tabs). Active segment is oxblood.
+// Equal-width segmented control (guest journey / app tabs). Active segment is quiet:
+// graphite, cream ink, 2px bordeaux mark.
 export function SegmentNav({ items, value, onChange, style }) {
   return (
     <div
@@ -21,6 +22,7 @@ export function SegmentNav({ items, value, onChange, style }) {
               minHeight: 40,
               background: isActive ? 'var(--segment-active-bg)' : 'var(--segment-idle-bg)',
               color: isActive ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
+              boxShadow: isActive ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
               fontFamily: 'var(--font-body)',
               fontSize: 11,
               letterSpacing: '0.10em',

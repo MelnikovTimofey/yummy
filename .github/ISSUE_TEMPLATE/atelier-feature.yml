@@ -78,7 +78,7 @@ body:
         - значения токенов — `packages/design-tokens/` (правятся только там,
           в приложения раскладываются `node packages/design-tokens/sync.mjs`);
         - описание системы, компоненты и UI-киты — `.claude/skills/aroma-atelier-design/`;
-        - один акцент-оксблад `#B04A3E`, monospace в системе нет, эмодзи не используются.
+        - один акцент-бордо `#8E2F3C`, monospace в системе нет, эмодзи не используются.
 
         Для `apps/master-web` дополнительно:
         - использовать `shadcn/ui` там, где это уместно и не ломает bounded slice;

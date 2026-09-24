@@ -1,4 +1,4 @@
-// Back arrow + oxblood progress bar + "1/2" counter, pinned in the guest topbar.
+// Back arrow + bordeaux progress bar + "1/2" counter, pinned in the guest topbar.
 export function OnboardingProgress({ step = 1, total = 2, onBack, style }) {
   const percent = Math.round((step / total) * 100);
   return (

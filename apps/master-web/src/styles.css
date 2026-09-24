@@ -587,7 +587,7 @@ p {
 
 .nav__item[data-active='true'] .nav__item-icon {
   opacity: 1;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .topbar__spacer {
@@ -739,7 +739,7 @@ p {
 
 .eyebrow {
   margin-bottom: 6px;
-  color: var(--accent-hover);
+  color: var(--accent-ink);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -953,7 +953,7 @@ p {
 .chip {
   padding: 6px 10px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 12px;
 }
 
@@ -1037,7 +1037,7 @@ button.chip[data-active="true"] .chip__count {
   font-size: var(--fs-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .tobacco-drawer__title {
@@ -1085,7 +1085,7 @@ button.chip[data-active="true"] .chip__count {
   margin: 0;
   padding: 10px 18px;
   font-size: var(--fs-sm);
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--bg-base);
   border-top: 1px solid var(--border-subtle);
 }
@@ -1217,7 +1217,7 @@ button.chip[data-active="true"] .chip__count {
 
 /* Удалить — danger ghost variant, парится с мокапом */
 .tobacco-drawer .tobacco-drawer__foot-left .btn[data-variant="danger"] {
-  color: var(--accent-hover);
+  color: var(--accent-ink);
   border-color: var(--danger-soft);
   background: transparent;
 }
@@ -1787,7 +1787,7 @@ input[type="checkbox"] {
 }
 
 .rails-page__notice--error {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .rails-table-shell {
@@ -1974,7 +1974,7 @@ input[type="checkbox"] {
 }
 
 .rails-page__notice--error {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* Кнопки и теги — общие .btn / .tag (см. блок «Shared design-system primitives»). */
@@ -2015,7 +2015,7 @@ input[type="checkbox"] {
   font-size: var(--fs-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .rail-drawer__title {
@@ -2245,7 +2245,7 @@ input[type="checkbox"] {
   height: 28px;
   border-radius: var(--r-xs);
   background: var(--bg-elevated);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* Guest preview (column 3) */
@@ -2345,7 +2345,7 @@ input[type="checkbox"] {
   margin: 0;
   padding: 10px 18px;
   font-size: var(--fs-sm);
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--bg-base);
   border-top: 1px solid var(--border-subtle);
 }
@@ -2948,7 +2948,7 @@ button.chip .chip__count[hidden] {
   font-size: var(--fs-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .operator-dialog__title {
@@ -3007,7 +3007,7 @@ button.chip .chip__count[hidden] {
 .operator-dialog__error {
   margin: 0;
   font-size: var(--fs-sm);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .operator-dialog__foot {
@@ -3111,7 +3111,7 @@ button.chip .chip__count[hidden] {
 
 .access-avatar--accent {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .access-avatar--square {
@@ -3328,7 +3328,7 @@ button.chip .chip__count[hidden] {
 }
 
 .multiselect__option--add {
-  color: var(--accent-hover);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -3840,7 +3840,7 @@ button.chip .chip__count[hidden] {
 .btn[data-variant="danger"] {
   background: transparent;
   border-color: var(--accent-border);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .btn[data-variant="danger"]:hover:not(:disabled) {
@@ -3922,7 +3922,7 @@ button.chip .chip__count[hidden] {
 .tag[data-tone="accent"] {
   background: var(--accent-soft);
   border-color: var(--accent-border);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .tag[data-tone="danger"] {
@@ -4248,7 +4248,7 @@ button.chip .chip__count[hidden] {
 
 .editor-chip--active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
   border-color: var(--accent-border);
 }
 
@@ -4666,7 +4666,7 @@ button.chip .chip__count[hidden] {
 
 .ops-filter-select__check {
   margin-top: 2px;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .ops-filter-select__empty {
@@ -5600,7 +5600,7 @@ button.chip .chip__count[hidden] {
   font-size: var(--fs-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .master-page-header__title {

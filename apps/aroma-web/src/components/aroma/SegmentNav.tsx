@@ -39,6 +39,7 @@ export function SegmentNav({ items, value, onChange, style }: SegmentNavProps) {
               minHeight: 40,
               background: isActive ? "var(--segment-active-bg)" : "var(--segment-idle-bg)",
               color: isActive ? "var(--segment-active-ink)" : "var(--text-1)",
+              boxShadow: isActive ? "inset 0 -2px 0 var(--segment-active-mark)" : "none",
               fontSize: 11,
               letterSpacing: "0.10em",
               textTransform: "uppercase",
