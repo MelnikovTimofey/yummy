@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatFlavorProfileLabel,
+  formatRating,
   INVENTORY_FLAVOR_PROFILE_KEYS,
   INVENTORY_STRENGTH_PRESETS,
   buildMixRequestQuery,
@@ -989,4 +990,11 @@ test('resolveMixStatus: скрыт мастером, блокирован нал
   assert.equal(resolveMixStatus({ available: false, guestVisible: false }), 'hidden');
   assert.equal(resolveMixStatus({ available: true, guestVisible: false }), 'blocked');
   assert.equal(resolveMixStatus({ available: true, guestVisible: true }), 'visible');
+});
+
+// Канон: дробь через запятую — `4,8`, а не `4.8` из `toFixed` (#97).
+test('formatRating форматирует рейтинг по-русски с одним знаком', () => {
+  assert.equal(formatRating(4.8), '4,8');
+  assert.equal(formatRating(5), '5,0');
+  assert.equal(formatRating(4.25), '4,3');
 });

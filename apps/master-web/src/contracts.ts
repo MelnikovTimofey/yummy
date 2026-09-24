@@ -1319,6 +1319,13 @@ export const sortDailyAccessCodes = (items: DailyAccessCodeRecord[]) => {
   });
 };
 
+const ratingFormatter = new Intl.NumberFormat('ru-RU', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+export const formatRating = (value: number) => ratingFormatter.format(value);
+
 export type CurrentDailyCode =
   | { state: 'active'; code: DailyAccessCodeRecord }
   | { state: 'expired'; code: DailyAccessCodeRecord }
@@ -1357,6 +1364,14 @@ export const resolveMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisibl
 
   return mix.guestVisible ? 'visible' : 'blocked';
 };
+
+const mixStatusLabels: Record<MixStatus, string> = {
+  visible: 'Виден гостю',
+  hidden: 'Скрыт мастером',
+  blocked: 'Блокирован наличием',
+};
+
+export const formatMixStatusLabel = (status: MixStatus) => mixStatusLabels[status];
 
 export const sortStaffAccounts = (items: StaffAccountRecord[]) => {
   const roleRank: Record<StaffUser['role'], number> = {
@@ -1426,7 +1441,7 @@ export const railTypeOptions: Array<{ value: RailType; label: string }> = [
 export const telegramRecipientScopeOptions: Array<{ value: TelegramRecipientScope; label: string }> = [
   { value: 'allowed', label: 'Разрешённые чаты' },
   { value: 'broadcast', label: 'Авторассылка' },
-  { value: 'rotate', label: 'Ручная ротация' },
+  { value: 'rotate', label: 'Смена кода' },
 ];
 
 export const formatRailType = (value: RailType) => {
@@ -1493,7 +1508,7 @@ export const formatTelegramAutomationHealth = (value: TelegramAutomationHealth) 
     case 'healthy':
       return 'Бот в норме';
     case 'stale':
-      return 'Heartbeat устарел';
+      return 'Бот давно не на связи';
     case 'error':
       return 'Есть ошибка';
     default:
@@ -1521,9 +1536,9 @@ export const formatAuditEntityType = (value: AuditEventRecord['entityType']) => 
     case 'staff-account':
       return 'Сотрудник';
     case 'telegram-operator':
-      return 'Telegram доступ';
+      return 'Оператор бота';
     case 'telegram-recipient':
-      return 'Telegram чат';
+      return 'Чат бота';
     case 'mix':
       return 'Микс';
     case 'rail':
@@ -1578,7 +1593,7 @@ export const mixStatusFilterOptions: Array<{ value: MixStatusFilter; label: stri
   { value: 'all', label: 'Все статусы' },
   { value: 'guest-visible', label: 'Виден гостю' },
   { value: 'blocked', label: 'Заблокирован наличием' },
-  { value: 'hidden', label: 'Скрыт оператором' },
+  { value: 'hidden', label: 'Скрыт мастером' },
 ];
 
 export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }> = [

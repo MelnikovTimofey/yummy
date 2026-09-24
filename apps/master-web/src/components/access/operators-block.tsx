@@ -175,7 +175,7 @@ export const OperatorsBlock = ({
 
         {telegramOperatorsStatus === 'forbidden' ? (
           <p className="access-card__forbidden meta-line">
-            {telegramOperatorsError || 'Allowlist Telegram доступен только для admin.'}
+            {telegramOperatorsError || 'Список операторов доступен только администратору.'}
           </p>
         ) : (
           <>
@@ -339,11 +339,11 @@ export const OperatorsBlock = ({
 
             <footer className="access-hint-row" aria-hidden="true">
               <LinkIcon />
-              <span><strong>1.</strong> Добавь оператора</span>
+              <span><strong>1.</strong> Администратор добавляет оператора</span>
               <span className="access-hint-row__arrow">→</span>
               <span><strong>2.</strong> Оператор пишет боту и шлёт контакт</span>
               <span className="access-hint-row__arrow">→</span>
-              <span><strong>3.</strong> Бот привязывает chat по номеру</span>
+              <span><strong>3.</strong> Бот привязывает чат по номеру</span>
               <span className="access-hint-row__arrow">→</span>
               <span><strong>4.</strong> Команда /code выдаёт актуальный код</span>
             </footer>
@@ -376,7 +376,7 @@ export const OperatorsBlock = ({
           </DialogHeader>
 
           {telegramOperatorsStatus === 'forbidden' ? (
-            <div className="empty">Telegram allowlist недоступен для вашей роли.</div>
+            <div className="empty">Список операторов доступен только администратору.</div>
           ) : (
             <form className="operator-dialog__form" onSubmit={onSubmitTelegramOperator}>
               <div className="operator-dialog__body">
@@ -452,7 +452,7 @@ export const OperatorsBlock = ({
                   disabled={telegramOperatorSaveStatus === 'loading'}
                 >
                   {telegramOperatorSaveStatus === 'loading'
-                    ? 'Сохраняем...'
+                    ? 'Сохраняем…'
                     : telegramOperatorEditor.id
                       ? 'Сохранить'
                       : 'Добавить'}

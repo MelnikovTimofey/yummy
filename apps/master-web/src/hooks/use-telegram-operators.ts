@@ -43,7 +43,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
     if (role !== 'admin') {
       setOperators([]);
       setStatus('forbidden');
-      setError('Allowlist Telegram доступен только для admin.');
+      setError('Список операторов доступен только администратору.');
       return;
     }
 
@@ -58,7 +58,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
     } catch (cause) {
       setOperators([]);
       setStatus('error');
-      setError(cause instanceof Error ? cause.message : 'Не удалось загрузить Telegram allowlist');
+      setError(cause instanceof Error ? cause.message : 'Не удалось загрузить операторов бота');
     }
   }, []);
 
@@ -66,7 +66,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
     if (role !== 'admin') {
       setAutomationState(null);
       setAutomationStatus('forbidden');
-      setAutomationError('Статус Telegram automation доступен только для admin.');
+      setAutomationError('Статус Telegram-бота доступен только администратору.');
       return;
     }
 
@@ -80,7 +80,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
     } catch (cause) {
       setAutomationState(null);
       setAutomationStatus('error');
-      setAutomationError(cause instanceof Error ? cause.message : 'Не удалось загрузить статус Telegram automation');
+      setAutomationError(cause instanceof Error ? cause.message : 'Не удалось загрузить статус Telegram-бота');
     }
   }, []);
 
@@ -112,12 +112,12 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
       const phone = editor.phone.trim();
 
       if (!name) {
-        setSaveError('Укажите имя оператора');
+        setSaveError('Нужно имя оператора');
         setSaveStatus('error');
         return;
       }
       if (!phone) {
-        setSaveError('Укажите номер телефона');
+        setSaveError('Нужен номер телефона');
         setSaveStatus('error');
         return;
       }
@@ -139,7 +139,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
 
         const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
         if (!savedOperator.id) {
-          throw new Error('Backend вернул пустую запись Telegram доступа');
+          throw new Error('Сервер вернул пустой ответ');
         }
 
         setOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
@@ -148,7 +148,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
         setDialogOpen(false);
         onAfterSubmit?.();
       } catch (cause) {
-        setSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить Telegram доступ');
+        setSaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить оператора');
         setSaveStatus('error');
       }
     },
@@ -178,14 +178,14 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
 
         const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
         if (!savedOperator.id) {
-          throw new Error('Backend вернул пустую запись Telegram доступа');
+          throw new Error('Сервер вернул пустой ответ');
         }
 
         setOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
         setEditor((current) => (current.id === operator.id ? toTelegramOperatorEditorState(savedOperator) : current));
         setStatus('ready');
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Не удалось обновить Telegram доступ');
+        setError(cause instanceof Error ? cause.message : 'Не удалось обновить оператора');
         setStatus('error');
       } finally {
         setToggleId('');
@@ -218,7 +218,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
 
         const savedOperator = normalizeTelegramOperatorRecord(readEntityPayload<unknown>(response));
         if (!savedOperator.id) {
-          throw new Error('Backend вернул пустую запись Telegram доступа');
+          throw new Error('Сервер вернул пустой ответ');
         }
 
         setOperators((current) => sortTelegramOperators(replaceOrInsert(current, savedOperator)));
@@ -252,7 +252,7 @@ export const useTelegramOperators = ({ onAfterSubmit }: UseTelegramOperatorsOpti
         setEditor((current) => (current.id === operator.id ? emptyTelegramOperatorEditor() : current));
         setStatus('ready');
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Не удалось удалить Telegram доступ');
+        setError(cause instanceof Error ? cause.message : 'Не удалось удалить оператора');
         setStatus('error');
       } finally {
         setToggleId('');

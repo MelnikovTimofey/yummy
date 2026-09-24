@@ -33,7 +33,7 @@ export const ListPagination = ({
   return (
     <div className="list-pagination">
       <p className="meta-line list-pagination__summary">
-        Показаны {formatNumber(start)}-{formatNumber(end)} из {formatNumber(filteredItems)}
+        Показаны {formatNumber(start)}–{formatNumber(end)} из {formatNumber(filteredItems)}
       </p>
 
       {showSizeSelector ? (

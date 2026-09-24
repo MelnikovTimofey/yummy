@@ -180,18 +180,18 @@ test('Master non-admin role keeps admin-only surfaces restricted while preservin
 
   await openWorkspace(page, 'Доступ');
   await expect(page.getByRole('heading', { name: 'Доступ и персонал', level: 1 })).toBeVisible();
-  await expect(page.getByText('Статус Telegram automation доступен только для admin.')).toBeVisible();
-  await expect(page.getByText('Allowlist Telegram доступен только для admin.').first()).toBeVisible();
-  // Текст «Telegram allowlist недоступен для вашей роли.» переехал внутрь Dialog
+  await expect(page.getByText('Статус Telegram-бота доступен только администратору.')).toBeVisible();
+  await expect(page.getByText('Список операторов доступен только администратору.').first()).toBeVisible();
+  // Текст о недоступном списке операторов переехал внутрь Dialog
   // «Новый оператор» после UX-рефактора PR #14 — на странице сразу не виден,
   // нужен клик. Не разворачиваем dialog в smoke, чтобы не множить шаги; inline
   // forbidden-сообщения по Telegram уже проверяет assertion выше.
-  await expect(page.getByText('Раздел сотрудников доступен только для admin.').first()).toBeVisible();
-  // «Staff accounts недоступны для вашей роли.» переехал внутрь Dialog'а
+  await expect(page.getByText('Раздел сотрудников доступен только администратору.').first()).toBeVisible();
+  // Сообщение о недоступных учётках переехало внутрь Dialog'а
   // «Создать сотрудника» после mockup-parity рефактора — на странице сразу
   // не виден, нужен клик. Основное forbidden-сообщение по staff выше уже
-  // проверено assertion'ом «Раздел сотрудников доступен только для admin.».
+  // проверено assertion'ом «Раздел сотрудников доступен только администратору.».
   // AuditBlock убран со страницы целиком — forbidden-сообщение по журналу
   // больше не рендерится на /access.
-  await expect(page.getByText('Журнал изменений доступен только для admin.')).toHaveCount(0);
+  await expect(page.getByText('Журнал изменений доступен только администратору.')).toHaveCount(0);
 });

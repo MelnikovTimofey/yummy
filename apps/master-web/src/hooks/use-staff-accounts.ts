@@ -33,7 +33,7 @@ export const useStaffAccounts = ({ onAfterSubmit }: UseStaffAccountsOptions = {}
     if (role !== 'admin') {
       setStaffAccounts([]);
       setStatus('forbidden');
-      setError('Раздел сотрудников доступен только для admin.');
+      setError('Раздел сотрудников доступен только администратору.');
       return;
     }
 
@@ -74,12 +74,12 @@ export const useStaffAccounts = ({ onAfterSubmit }: UseStaffAccountsOptions = {}
       const password = editor.password.trim();
 
       if (!loginValue) {
-        setSaveError('Введите логин');
+        setSaveError('Нужен логин');
         setSaveStatus('error');
         return;
       }
       if (!name) {
-        setSaveError('Введите имя');
+        setSaveError('Нужно имя');
         setSaveStatus('error');
         return;
       }
@@ -112,7 +112,7 @@ export const useStaffAccounts = ({ onAfterSubmit }: UseStaffAccountsOptions = {}
 
         const savedAccount = normalizeStaffAccountRecord(readEntityPayload<unknown>(response));
         if (!savedAccount.id) {
-          throw new Error('Backend вернул пустого сотрудника');
+          throw new Error('Сервер вернул пустой ответ');
         }
 
         setStaffAccounts((current) => sortStaffAccounts(replaceOrInsert(current, savedAccount)));
@@ -151,7 +151,7 @@ export const useStaffAccounts = ({ onAfterSubmit }: UseStaffAccountsOptions = {}
 
         const savedAccount = normalizeStaffAccountRecord(readEntityPayload<unknown>(response));
         if (!savedAccount.id) {
-          throw new Error('Backend вернул пустого сотрудника');
+          throw new Error('Сервер вернул пустой ответ');
         }
 
         setStaffAccounts((current) => sortStaffAccounts(replaceOrInsert(current, savedAccount)));

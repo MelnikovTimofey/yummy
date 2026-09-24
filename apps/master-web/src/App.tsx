@@ -98,9 +98,9 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
     return [
       { label: 'Всего табаков', value: 0 },
       { label: 'В наличии', value: 0 },
-      { label: 'Нажатия Выбрать', value: 0 },
+      { label: 'Нажатия «Покурить»', value: 0 },
       { label: 'Оценок гостей', value: 0 },
-      { label: 'Миксов блокирует наличие', value: 0 },
+      { label: 'Миксов без наличия', value: 0 },
       { label: 'Пустых активных рейлов', value: 0 },
     ];
   }
@@ -108,9 +108,9 @@ const readSummaryCards = (summary: DashboardSummary | null) => {
   return [
     { label: 'Всего табаков', value: summary.totalTobaccos },
     { label: 'В наличии', value: summary.inStockCount },
-    { label: 'Нажатия Выбрать', value: summary.smokeCtaTotal },
+    { label: 'Нажатия «Покурить»', value: summary.smokeCtaTotal },
     { label: 'Оценок гостей', value: summary.ratingsTotal },
-    { label: 'Миксов блокирует наличие', value: summary.ops.blockedByInventoryCount },
+    { label: 'Миксов без наличия', value: summary.ops.blockedByInventoryCount },
     { label: 'Пустых активных рейлов', value: summary.ops.emptyActiveRailsCount },
   ];
 };
@@ -417,7 +417,7 @@ export const App = () => {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!login.trim() || !password) {
-      setError('Введите логин и пароль');
+      setError('Нужны логин и пароль.');
       setStatus('error');
       return;
     }
@@ -677,7 +677,7 @@ export const App = () => {
       );
       const batch = normalizeInventoryBatchResponse(response);
       if (batch.skippedIds.length) {
-        setInventoryError(`Часть позиций пропущена backend: ${batch.skippedIds.join(', ')}`);
+        setInventoryError(`Часть позиций не обновилась: ${batch.skippedIds.join(', ')}`);
       }
       setSelectedInventoryIds([]);
       const dependentRefresh = refreshInventoryDependents(token);
@@ -685,7 +685,7 @@ export const App = () => {
       void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
-      setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить batch действие');
+      setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить массовое действие');
       setInventoryStatus('error');
     } finally {
       setInventoryBatchAction('');
@@ -706,13 +706,13 @@ export const App = () => {
     const name = payload.name.trim();
 
     if (!manufacturer) {
-      setInventorySaveError('Укажите производителя');
+      setInventorySaveError('Нужен производитель');
       setInventorySaveStatus('error');
       return;
     }
 
     if (!name) {
-      setInventorySaveError('Укажите название табака');
+      setInventorySaveError('Нужно название табака');
       setInventorySaveStatus('error');
       return;
     }

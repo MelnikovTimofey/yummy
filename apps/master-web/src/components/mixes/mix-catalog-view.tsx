@@ -49,6 +49,7 @@ import {
   formatMetricValue,
   mixRailFilterOptions,
   mixSortDirectionOptions,
+  formatRating,
   mixSortFieldOptions,
   resolveMixStatus,
 } from '@/contracts';
@@ -248,7 +249,7 @@ export const MixCatalogView = ({
       <MasterPageHeader
         eyebrow="Менеджер миксов"
         title="Каталог миксов"
-        subtitle="Подборки для гостевой витрины — поиск, фильтры, быстрые действия."
+        subtitle="Состав, наличие и видимость на витрине."
         actions={
           <button
             type="button"
@@ -283,7 +284,7 @@ export const MixCatalogView = ({
           {
             label: 'Заблокировано',
             value: formatMetricValue(meta.blockedCount),
-            hint: 'режет наличие табака',
+            hint: 'из-за наличия',
             tone: 'warning',
           },
         ]}
@@ -415,12 +416,7 @@ export const MixCatalogView = ({
 
         {!items.length && status !== 'loading' ? (
           <div className="mixes-empty">
-            <p className="mixes-empty__eyebrow">Пока пусто</p>
-            <p className="mixes-empty__title">По текущим фильтрам миксов нет</p>
-            <p className="mixes-empty__hint">
-              Очистите фильтры или создайте первый микс — это самый быстрый способ оживить
-              витрину гостя.
-            </p>
+            <p className="mixes-empty__title">По выбранным фильтрам ничего не найдено.</p>
             <button
               type="button"
               className="btn"
@@ -526,7 +522,7 @@ export const MixCatalogView = ({
                           </span>
                           <span className="mixes-cell__metric" title="Средний рейтинг гостей">
                             <Star size={11} aria-hidden="true" />
-                            {mix.avgRating.toFixed(1)}
+                            {formatRating(mix.avgRating)}
                             {mix.ratingsCount > 0 ? (
                               <span className="mixes-cell__metric-meta">
                                 ({formatMetricValue(mix.ratingsCount)})
@@ -599,7 +595,7 @@ export const MixCatalogView = ({
         )}
       </div>
 
-      {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов...</p> : null}
+      {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов…</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
       <ListPagination

@@ -98,10 +98,10 @@ export const DailyCodeBlock = ({
   };
 
   return (
-    <article className="card daily-code-card" aria-label="Daily code и статус Telegram-бота">
+    <article className="card daily-code-card" aria-label="Код смены и статус Telegram-бота">
       <div className="daily-code-card__left">
         <div className="daily-code-hero__head">
-          <p className="eyebrow">Текущий daily code</p>
+          <p className="eyebrow">Код смены</p>
           <span
             className={
               statusActive
@@ -121,7 +121,7 @@ export const DailyCodeBlock = ({
               : 'mono daily-code-hero__code daily-code-hero__code--empty'
           }
         >
-          {code || 'Нет активного кода'}
+          {code || 'Нет действующего кода'}
         </p>
 
         <div className="daily-code-hero__actions">
@@ -144,7 +144,7 @@ export const DailyCodeBlock = ({
             disabled={isRotating}
           >
             <RefreshIcon />
-            {isRotating ? 'Генерируем…' : 'Ротировать сейчас'}
+            {isRotating ? 'Выпускаем…' : 'Выпустить новый код'}
           </button>
           <span className="daily-code-hero__spacer" />
           <kbd className="kbd" aria-hidden="true">⌘C</kbd>
@@ -182,7 +182,7 @@ export const DailyCodeBlock = ({
           </div>
         </div>
 
-        {dailyCodesStatus === 'loading' ? <p className="meta-line daily-code-hero__error">Загружаем daily code…</p> : null}
+        {dailyCodesStatus === 'loading' ? <p className="meta-line daily-code-hero__error">Загружаем код смены…</p> : null}
         {dailyCodesError ? <p className="error-text daily-code-hero__error">{dailyCodesError}</p> : null}
         {rotateError ? <p className="error-text daily-code-hero__error">{rotateError}</p> : null}
       </div>

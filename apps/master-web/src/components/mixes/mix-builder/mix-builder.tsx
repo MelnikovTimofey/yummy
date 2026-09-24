@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, type FormEventHandler } from 'react';
 import { ArrowLeft, Scale } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
+import { formatFlavorProfileLabel } from '@/contracts';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
 import { ComponentCard } from './component-card';
 import { ProportionBar } from './proportion-bar';
@@ -201,7 +202,7 @@ export const MixBuilder = ({
             data-variant="primary"
             disabled={!isValid || saveStatus === 'loading'}
           >
-            {saveStatus === 'loading' ? 'Сохраняем...' : mode === 'edit' ? 'Сохранить' : 'Создать микс'}
+            {saveStatus === 'loading' ? 'Сохраняем…' : mode === 'edit' ? 'Сохранить' : 'Создать микс'}
           </button>
         </div>
       </header>
@@ -252,7 +253,7 @@ export const MixBuilder = ({
                 <span>Распределить поровну</span>
               </button>
             </header>
-            <p className="mix-builder__proportions-hint">потяни границы или используй пресеты</p>
+            <p className="mix-builder__proportions-hint">Границы долей перетаскиваются.</p>
             <ProportionBar components={editor.components} onResize={onReplaceComponents} />
             {presetsForCurrent.length ? (
               <div className="mix-builder__presets" role="group" aria-label="Быстрые пресеты пропорций">
@@ -285,7 +286,7 @@ export const MixBuilder = ({
               {editor.components.length === 0 ? (
                 <div className="mix-builder__empty">
                   <strong>Состав пуст</strong>
-                  <p>Добавьте табак из библиотеки слева →</p>
+                  <p>Табаки добавляются из библиотеки слева.</p>
                 </div>
               ) : (
                 editor.components.map((component) => (
@@ -309,7 +310,7 @@ export const MixBuilder = ({
               <div className="mix-builder__profile-chips">
                 {aggregatedProfiles.map((profile) => (
                   <span className="mix-builder__chip mix-builder__chip--accent" key={profile}>
-                    {profile}
+                    {formatFlavorProfileLabel(profile)}
                   </span>
                 ))}
               </div>
