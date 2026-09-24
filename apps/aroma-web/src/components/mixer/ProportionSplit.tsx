@@ -6,6 +6,8 @@ import type { PaletteTobacco } from '@/lib/mixer/types';
 
 export const ROLE_LABELS = ['Основа', 'Акцент', 'Штрих'] as const;
 
+const r = 'var(--r-guest-control)';
+
 // Полоса долей с бегунками на границах: шаг 5%, минимум 5% на компонент,
 // клавиши ← → двигают сфокусированную границу.
 export function ProportionSplit({
@@ -82,7 +84,7 @@ export function ProportionSplit({
             style={{
               flexBasis: `${shares[index]}%`,
               background: getProfileColor(tobacco.flavorProfiles[0]),
-              borderRadius: `${index === 0 ? 10 : 0}px ${index === tobaccos.length - 1 ? '10px 10px' : '0 0'} ${index === 0 ? 10 : 0}px`,
+              borderRadius: `${index === 0 ? r : '0'} ${index === tobaccos.length - 1 ? `${r} ${r}` : '0 0'} ${index === 0 ? r : '0'}`,
             }}
           >
             {shares[index] >= 10 ? `${shares[index]}%` : ''}
