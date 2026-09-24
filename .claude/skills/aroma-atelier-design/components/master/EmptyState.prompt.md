@@ -5,4 +5,4 @@ Zero-state copy inside a console surface.
 <EmptyState>Пока нет данных по спросу.</EmptyState>
 ```
 
-Full sentence with a period, calm and factual — the console never apologises or jokes. No icon, no illustration.
+Full sentence with a period, fact first — the console never apologises. A dry one-liner is welcome after the fact (see «Юмор» in the skill readme). No icon, no illustration.
