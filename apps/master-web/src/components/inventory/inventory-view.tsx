@@ -941,7 +941,8 @@ export const InventoryView = ({
   ) : null;
 
   const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
-    { value: 'all', label: 'Все', count: meta.totalItems, ariaLabel: 'Фильтр: Все' },
+    // «Все» — сумма соседних чипов: backend считает их по выборке без фильтра наличия.
+    { value: 'all', label: 'Все', count: meta.inStockCount + meta.outOfStockCount, ariaLabel: 'Фильтр: Все' },
     { value: 'in-stock', label: 'В наличии', count: meta.inStockCount, ariaLabel: 'Фильтр: В наличии' },
     { value: 'out-of-stock', label: 'Нет наличия', count: meta.outOfStockCount, ariaLabel: 'Фильтр: Нет наличия' },
   ];

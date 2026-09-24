@@ -1680,7 +1680,9 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     .map(normalizeToken)
     .filter(Boolean);
 
-  const filteredItems = items
+  // Выборка по всем фильтрам, кроме наличия: по ней считаются счётчики чипов
+  // наличия, иначе выбранный чип обнулял соседний (#103).
+  const stockScopeItems = items
     .filter((item) => {
       // Явный набор id игнорирует остальные фильтры: нужно вернуть именно эти
       // табаки (в т.ч. архивные/без наличия), чтобы резолвить компоненты микса.
@@ -1693,14 +1695,6 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
       }
 
       if (archived === 'archived' && !item.archived) {
-        return false;
-      }
-
-      if (stock === 'in-stock' && !item.inStock) {
-        return false;
-      }
-
-      if (stock === 'out-of-stock' && item.inStock) {
         return false;
       }
 
@@ -1739,6 +1733,19 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
         .join(' ');
 
       return searchTokens.every((token) => haystack.includes(token));
+    });
+
+  const filteredItems = stockScopeItems
+    .filter((item) => {
+      if (ids.size) {
+        return true;
+      }
+
+      if (stock === 'in-stock') {
+        return item.inStock;
+      }
+
+      return stock === 'out-of-stock' ? !item.inStock : true;
     })
     .sort((left, right) => inventoryTobaccoSort(left, right, sort, direction));
 
@@ -1780,8 +1787,8 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     meta: {
       totalItems: items.length,
       filteredItems: filteredItems.length,
-      inStockCount: filteredItems.filter((item) => item.inStock).length,
-      outOfStockCount: filteredItems.filter((item) => !item.inStock).length,
+      inStockCount: stockScopeItems.filter((item) => item.inStock).length,
+      outOfStockCount: stockScopeItems.filter((item) => !item.inStock).length,
       archivedCount: items.filter((item) => item.archived).length,
       inMixesCount: items.filter((item) => item.dependentMixCount > 0).length,
       page,
