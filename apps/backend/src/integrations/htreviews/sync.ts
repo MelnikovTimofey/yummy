@@ -11,8 +11,23 @@ export type HtReviewsSyncStats = {
   fetched: number;
   created: number;
   updated: number;
+  skippedInactive: number;
   preservedStockCount: number;
   defaultInStock: boolean;
+};
+
+const PRODUCED_STATUS = 'Выпускается';
+
+// Новые позиции заводим только выпускаемые, а заведённые обновляем всегда:
+// так снятие с производства доходит до productionStatus, а не застывает.
+export const decideTobaccoUpsert = (
+  status: string | null,
+  exists: boolean,
+): 'create' | 'update' | 'skip' => {
+  if (exists) {
+    return 'update';
+  }
+  return status?.trim() === PRODUCED_STATUS ? 'create' : 'skip';
 };
 
 const toStableId = (item: HtReviewsImportedTobacco) => {
@@ -109,6 +124,7 @@ export const syncHtReviewsCatalog = async (
 
   let created = 0;
   let updated = 0;
+  let skippedInactive = 0;
   let preservedStockCount = 0;
 
   logUpsertProgress(
@@ -119,26 +135,26 @@ export const syncHtReviewsCatalog = async (
   for (const item of snapshot.items) {
     processed += 1;
     const existing = await findExistingRecord(item);
-    const nextInStock = existing ? existing.inStock : defaultInStock;
-    if (existing && existing.inStock !== defaultInStock) {
-      preservedStockCount += 1;
-    }
+    const decision = decideTobaccoUpsert(item.status, Boolean(existing));
 
-    const data = buildUpsertData(item, nextInStock);
-
-    if (existing) {
+    if (decision === 'skip') {
+      skippedInactive += 1;
+    } else if (existing) {
+      if (existing.inStock !== defaultInStock) {
+        preservedStockCount += 1;
+      }
       await prisma.tobacco.update({
         where: {
           id: existing.id,
         },
-        data,
+        data: buildUpsertData(item, existing.inStock),
       });
       updated += 1;
     } else {
       await prisma.tobacco.create({
         data: {
           id: toStableId(item),
-          ...data,
+          ...buildUpsertData(item, defaultInStock),
         },
       });
       created += 1;
@@ -147,7 +163,7 @@ export const syncHtReviewsCatalog = async (
     if (processed % 50 === 0 || processed === snapshot.items.length) {
       logUpsertProgress(
         `upsert ${processed}/${snapshot.items.length} created=${created} updated=${updated}` +
-        ` preservedStock=${preservedStockCount}`,
+        ` skippedInactive=${skippedInactive} preservedStock=${preservedStockCount}`,
       );
     }
   }
@@ -156,6 +172,7 @@ export const syncHtReviewsCatalog = async (
     fetched: snapshot.tobaccoCount,
     created,
     updated,
+    skippedInactive,
     preservedStockCount,
     defaultInStock,
   };
