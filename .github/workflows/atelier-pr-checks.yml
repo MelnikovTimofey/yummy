@@ -216,6 +216,9 @@ jobs:
       - name: Install dependencies
         working-directory: apps/master-web
         run: npm ci
+      - name: Design lint
+        working-directory: apps/master-web
+        run: npm run lint:design
       - name: Test
         working-directory: apps/master-web
         run: npm test
