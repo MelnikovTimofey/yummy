@@ -260,7 +260,7 @@ function CompositionStack({
   }, c.name), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 13,
-      color: 'var(--accent-hover)',
+      color: 'var(--text-primary)',
       fontVariantNumeric: 'tabular-nums',
       fontWeight: 500
     }
@@ -570,7 +570,7 @@ function RatingPill({
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": true,
     style: {
-      color: 'var(--ember)',
+      color: 'var(--rating-ink)',
       fontSize: 10
     }
   }, "\u2605"), /*#__PURE__*/React.createElement("span", {
@@ -927,8 +927,8 @@ const VARIANTS = {
   },
   danger: {
     background: 'transparent',
-    borderColor: 'var(--accent-border)',
-    color: 'var(--accent)'
+    borderColor: 'var(--danger-border)',
+    color: 'var(--danger)'
   }
 };
 const SIZES = {
@@ -1035,7 +1035,7 @@ function MasterCard({
       fontWeight: 500,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
-      color: 'var(--accent-hover)'
+      color: 'var(--text-muted)'
     }
   }, eyebrow) : null, heading ? /*#__PURE__*/React.createElement("h3", {
     style: {
@@ -1273,7 +1273,7 @@ function MasterPageHeader({
       fontWeight: 500,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
-      color: 'var(--accent)'
+      color: 'var(--text-muted)'
     }
   }, eyebrow) : null, /*#__PURE__*/React.createElement("h1", {
     style: {
@@ -1496,12 +1496,12 @@ const TONES = {
   accent: {
     background: 'var(--accent-soft)',
     borderColor: 'var(--accent-border)',
-    color: 'var(--accent)'
+    color: 'var(--text-primary)'
   },
   danger: {
     background: 'var(--danger-soft)',
     borderColor: 'var(--danger-soft)',
-    color: 'var(--accent-hover)'
+    color: 'var(--danger)'
   },
   ghost: {
     background: 'transparent',
@@ -1677,6 +1677,7 @@ function MasterTopBar({
         borderRadius: 'var(--r-sm)',
         border: '1px solid ' + (isActive ? 'var(--border-default)' : 'transparent'),
         background: isActive ? 'var(--bg-elevated)' : 'transparent',
+        boxShadow: isActive ? 'inset 0 -2px 0 var(--accent-hover)' : 'none',
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         fontFamily: 'var(--font-sans)',
         fontSize: 'var(--fs-md)',
@@ -1687,8 +1688,7 @@ function MasterTopBar({
     }, item.icon ? /*#__PURE__*/React.createElement("span", {
       style: {
         display: 'inline-flex',
-        opacity: isActive ? 1 : 0.7,
-        color: isActive ? 'var(--accent)' : undefined
+        opacity: isActive ? 1 : 0.7
       }
     }, item.icon) : null, /*#__PURE__*/React.createElement("span", null, item.label));
   })), /*#__PURE__*/React.createElement("div", {

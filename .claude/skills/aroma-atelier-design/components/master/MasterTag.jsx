@@ -4,8 +4,8 @@ const TONES = {
   info: { background: 'var(--info-soft)', borderColor: 'var(--info-soft)', color: 'var(--info)' },
   success: { background: 'var(--success-soft)', borderColor: 'var(--success-soft)', color: 'var(--success)' },
   warning: { background: 'var(--warning-soft)', borderColor: 'var(--warning-soft)', color: 'var(--warning)' },
-  accent: { background: 'var(--accent-soft)', borderColor: 'var(--accent-border)', color: 'var(--accent)' },
-  danger: { background: 'var(--danger-soft)', borderColor: 'var(--danger-soft)', color: 'var(--accent-hover)' },
+  accent: { background: 'var(--accent-soft)', borderColor: 'var(--accent-border)', color: 'var(--text-primary)' },
+  danger: { background: 'var(--danger-soft)', borderColor: 'var(--danger-soft)', color: 'var(--danger)' },
   ghost: { background: 'transparent', borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' },
 };
 

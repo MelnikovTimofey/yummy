@@ -43,6 +43,7 @@ export function MasterTopBar({ items = [], active, onChange, userName = 'admin',
                 borderRadius: 'var(--r-sm)',
                 border: '1px solid ' + (isActive ? 'var(--border-default)' : 'transparent'),
                 background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                boxShadow: isActive ? 'inset 0 -2px 0 var(--accent-hover)' : 'none',
                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontFamily: 'var(--font-sans)',
                 fontSize: 'var(--fs-md)',
@@ -51,7 +52,7 @@ export function MasterTopBar({ items = [], active, onChange, userName = 'admin',
                 transition: 'var(--transition-state)',
               }}
             >
-              {item.icon ? <span style={{ display: 'inline-flex', opacity: isActive ? 1 : 0.7, color: isActive ? 'var(--accent)' : undefined }}>{item.icon}</span> : null}
+              {item.icon ? <span style={{ display: 'inline-flex', opacity: isActive ? 1 : 0.7 }}>{item.icon}</span> : null}
               <span>{item.label}</span>
             </button>
           );

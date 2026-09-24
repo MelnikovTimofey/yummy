@@ -3,7 +3,7 @@ const VARIANTS = {
   default: { background: 'var(--bg-raised)', borderColor: 'var(--border-default)', color: 'var(--text-primary)' },
   primary: { background: 'var(--accent)', borderColor: 'var(--accent)', color: 'var(--accent-fg)' },
   ghost: { background: 'transparent', borderColor: 'transparent', color: 'var(--text-secondary)' },
-  danger: { background: 'transparent', borderColor: 'var(--accent-border)', color: 'var(--accent)' },
+  danger: { background: 'transparent', borderColor: 'var(--danger-border)', color: 'var(--danger)' },
 };
 const SIZES = { sm: { height: 26, padding: '0 8px', fontSize: 'var(--fs-sm)', borderRadius: 'var(--r-xs)' }, md: { height: 32, padding: '0 12px', fontSize: 'var(--fs-md)', borderRadius: 'var(--r-sm)' }, lg: { height: 38, padding: '0 16px', fontSize: 'var(--fs-md)', borderRadius: 'var(--r-sm)' } };
 
