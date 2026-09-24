@@ -1810,6 +1810,11 @@ export const getTobaccoById = async (id: string) => {
   return tobacco ? mapTobacco(tobacco) : null;
 };
 
+export const getAllTobaccos = async () => {
+  await ensureAppState();
+  return (await prisma.tobacco.findMany()).map(mapTobacco);
+};
+
 export const createTobacco = async (payload: Partial<TobaccoInput>) => {
   await ensureAppState();
 

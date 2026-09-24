@@ -80,6 +80,35 @@ export type OnboardingRecommendationsResponse = {
   }>;
 };
 
+export type GuestMixerPaletteResponse = {
+  tobaccos: Array<{
+    id: string;
+    manufacturer: string;
+    name: string;
+    flavorProfiles: string[];
+    flavors: string[];
+    flavorTags: string[];
+    cooling: boolean;
+    twist: boolean;
+    mixCount: number;
+  }>;
+  affinity: Record<string, number>;
+};
+
+export type GuestMixerHint = {
+  kind: 'mono' | 'too-cold' | 'weak-base' | 'heavy-twist';
+  value?: number;
+};
+
+export type GuestMixerEvaluateResponse = {
+  harmony: number;
+  verdict: 'classic' | 'confident' | 'bold' | 'ask-master';
+  hints: GuestMixerHint[];
+  character: { sweet: number; sour: number; fresh: number; dense: number };
+  name: string;
+  similarMix: { id: string; name: string; avgRating: number; similarity: number } | null;
+};
+
 export type StaffAuthResponse = {
   accessToken: string;
   tokenType: 'Bearer';
