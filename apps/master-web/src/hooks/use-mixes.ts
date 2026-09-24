@@ -16,8 +16,6 @@ import type {
   MixListSort,
   MixRailFilter,
   MixRecord,
-  MixSortDirection,
-  MixSortField,
   MixStatusFilter,
 } from '@/contracts';
 import {
@@ -27,7 +25,6 @@ import {
   normalizeMixListResponse,
   normalizeMixRecord,
   readEntityPayload,
-  sortMixes,
   toggleMixFilterValue,
 } from '@/contracts';
 
@@ -153,7 +150,8 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
           return;
         }
 
-        setMixes(sortMixes(payload.items));
+        // Порядок задаёт сервер по выбранной сортировке — клиент его не трогает.
+        setMixes(payload.items);
         commitMixesFilters(payload.filters);
         commitMixesSort(payload.sort);
         setMixesMeta(payload.meta);
@@ -276,14 +274,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     await refreshSurface(next, mixesSortRef.current, 1);
   };
 
-  const onSortFieldChange = async (field: MixSortField) => {
-    const next = { ...mixesSortRef.current, field };
-    commitMixesSort(next);
-    await refreshSurface(mixesFiltersRef.current, next, 1);
-  };
-
-  const onSortDirectionChange = async (direction: MixSortDirection) => {
-    const next = { ...mixesSortRef.current, direction };
+  const onSortChange = async (next: MixListSort) => {
     commitMixesSort(next);
     await refreshSurface(mixesFiltersRef.current, next, 1);
   };
@@ -610,8 +601,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
     onSearchChange,
     onStatusChange,
     onRailStateChange,
-    onSortFieldChange,
-    onSortDirectionChange,
+    onSortChange,
     onToggleFilterValue,
     onClearFilterGroup,
     onPageChange,

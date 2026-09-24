@@ -505,20 +505,7 @@ export const App = () => {
     await refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
   };
 
-  const onInventorySortFieldChange = async (field: InventoryListSort['field']) => {
-    const nextSort = {
-      ...inventorySortRef.current,
-      field,
-    };
-    commitInventorySort(nextSort);
-    await refreshInventorySurface(inventoryFiltersRef.current, nextSort, 1);
-  };
-
-  const onInventorySortDirectionChange = async (direction: InventoryListSort['direction']) => {
-    const nextSort = {
-      ...inventorySortRef.current,
-      direction,
-    };
+  const onInventorySortChange = async (nextSort: InventoryListSort) => {
     commitInventorySort(nextSort);
     await refreshInventorySurface(inventoryFiltersRef.current, nextSort, 1);
   };
@@ -819,8 +806,7 @@ export const App = () => {
       onSearchChange={onInventorySearchChange}
       onStockChange={(value) => void onInventoryStockChange(value)}
       onArchivedChange={(value) => void onInventoryArchivedChange(value)}
-      onSortFieldChange={(value) => void onInventorySortFieldChange(value)}
-      onSortDirectionChange={(value) => void onInventorySortDirectionChange(value)}
+      onSortChange={(value) => void onInventorySortChange(value)}
       onToggleFilterValue={(key, value) => void onInventoryToggleFilterValue(key, value)}
       onClearFilterGroup={(key) => void onInventoryClearFilterGroup(key)}
       onPageChange={onInventoryPageChange}
@@ -872,8 +858,7 @@ export const App = () => {
         onSearchChange={mixes.onSearchChange}
         onStatusChange={(value) => void mixes.onStatusChange(value)}
         onRailStateChange={(value) => void mixes.onRailStateChange(value)}
-        onSortFieldChange={(value) => void mixes.onSortFieldChange(value)}
-        onSortDirectionChange={(value) => void mixes.onSortDirectionChange(value)}
+        onSortChange={(value) => void mixes.onSortChange(value)}
         onToggleFilterValue={(key, value) => void mixes.onToggleFilterValue(key, value)}
         onClearFilterGroup={(key) => void mixes.onClearFilterGroup(key)}
         onPageChange={mixes.onPageChange}

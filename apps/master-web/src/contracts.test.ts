@@ -33,7 +33,6 @@ import {
   parseDateTimeLocalInput,
   sortDailyAccessCodes,
   sortInventoryItems,
-  sortMixes,
   sortRails,
   sortStaffAccounts,
   sortTelegramOperators,
@@ -592,37 +591,6 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
 
 test('dashboardWindowOptions keep supported dashboard windows in order', () => {
   assert.deepEqual(dashboardWindowOptions.map((item) => item.key), ['7d', '14d', '30d']);
-});
-
-test('sortMixes keeps available items and demand first', () => {
-  const sorted = sortMixes([
-    {
-      id: 'mix-2',
-      name: 'B',
-      description: '',
-      componentIds: [],
-      components: [],
-      flavorProfiles: [],
-      flavors: [],
-      avgRating: 4.5,
-      smokeCtaCount: 20,
-      available: false,
-    },
-    {
-      id: 'mix-1',
-      name: 'A',
-      description: '',
-      componentIds: [],
-      components: [],
-      flavorProfiles: [],
-      flavors: [],
-      avgRating: 4.7,
-      smokeCtaCount: 30,
-      available: true,
-    },
-  ]);
-
-  assert.deepEqual(sorted.map((item) => item.id), ['mix-1', 'mix-2']);
 });
 
 test('sortRails keeps active statistical rails first', () => {

@@ -7,11 +7,7 @@ import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
-import {
-  buildSortPillOptions,
-  composeSortKey,
-  parseSortKey,
-} from '@/components/shell/master-sort-pill.helpers';
+import { SortableHeader } from '@/components/shell/sortable-header';
 import type {
   InventoryArchivedFilter,
   InventoryBatchAction,
@@ -20,8 +16,6 @@ import type {
   InventoryListMeta,
   InventoryListSort,
   InventoryStockFilter,
-  InventorySortDirection,
-  InventorySortField,
   InventoryTobacco,
 } from '@/contracts';
 import {
@@ -32,8 +26,7 @@ import {
   resolveMixStatus,
   formatInventoryBatchAction,
   formatMetricValue,
-  inventorySortDirectionOptions,
-  inventorySortFieldOptions,
+  defaultInventoryListResponse,
   INVENTORY_FLAVOR_PROFILE_KEYS,
   INVENTORY_STRENGTH_PRESETS,
 } from '@/contracts';
@@ -52,8 +45,7 @@ type InventoryViewProps = {
   onSearchChange: (value: string) => void;
   onStockChange: (value: InventoryStockFilter) => void;
   onArchivedChange: (value: InventoryArchivedFilter) => void;
-  onSortFieldChange: (value: InventorySortField) => void;
-  onSortDirectionChange: (value: InventorySortDirection) => void;
+  onSortChange: (value: InventoryListSort) => void;
   onToggleFilterValue: (key: InventoryFilterKey, value: string) => void;
   onClearFilterGroup: (key: InventoryFilterKey) => void;
   onToggleSelection: (id: string) => void;
@@ -83,6 +75,8 @@ const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
 const inventoryPageSizeOptions = [100, 200, 500, 1000];
 
 const STRENGTH_DASH = '—';
+
+const ALPHABET_DIRECTIONS = { asc: 'А → Я', desc: 'Я → А' } as const;
 
 const formatStrengthCompact = (item: InventoryTobacco) =>
   item.officialStrength?.trim() || item.communityStrength?.trim() || '';
@@ -544,8 +538,7 @@ export const InventoryView = ({
   onSearchChange,
   onStockChange,
   onArchivedChange,
-  onSortFieldChange,
-  onSortDirectionChange,
+  onSortChange,
   onToggleFilterValue,
   onClearFilterGroup,
   onToggleSelection,
@@ -914,6 +907,12 @@ export const InventoryView = ({
     </Sheet>
   ) : null;
 
+  const sortHeaderProps = {
+    sort,
+    fallback: defaultInventoryListResponse.sort,
+    onSortChange,
+  };
+
   const extraFilterGroupsAvailable = extraFilterGroups.some((group) => filters.options[group.key].length);
   const extraFilterSelectionCount = extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0);
 
@@ -992,29 +991,6 @@ export const InventoryView = ({
               </span>
             </button>
           </div>
-
-          <span className="tobaccos-list__sep" aria-hidden />
-
-          <label className="tobaccos-list__sort">
-            <ChevronDown size={12} aria-hidden />
-            <select
-              aria-label="Сортировка инвентаря"
-              value={composeSortKey(sort.field, sort.direction)}
-              onChange={(event) => {
-                const { field, direction } = parseSortKey<InventorySortField>(event.target.value);
-                onSortFieldChange(field);
-                onSortDirectionChange(direction as InventorySortDirection);
-              }}
-            >
-              {buildSortPillOptions(inventorySortFieldOptions, inventorySortDirectionOptions).map(
-                (opt) => (
-                  <option key={opt.key} value={opt.key}>
-                    {opt.label}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
         </div>
 
         {categoryChips.length ? (
@@ -1446,11 +1422,30 @@ export const InventoryView = ({
                   <span className="inventory-check__box" aria-hidden="true" />
                 </label>
               </th>
-              <th scope="col">Табак</th>
-              <th scope="col">Бренд</th>
+              <SortableHeader
+                label="Табак"
+                field="name"
+                initialDirection="asc"
+                directionLabels={ALPHABET_DIRECTIONS}
+                {...sortHeaderProps}
+              />
+              <SortableHeader
+                label="Бренд"
+                field="manufacturer"
+                initialDirection="asc"
+                directionLabels={ALPHABET_DIRECTIONS}
+                {...sortHeaderProps}
+              />
               <th scope="col">Вкус / профиль</th>
               <th className="inventory-table__stock" scope="col">В наличии</th>
-              <th className="inventory-table__mixes" scope="col">Миксов</th>
+              <SortableHeader
+                label="Миксов"
+                field="dependentMixes"
+                initialDirection="desc"
+                directionLabels={{ desc: 'больше миксов', asc: 'меньше миксов' }}
+                className="inventory-table__mixes"
+                {...sortHeaderProps}
+              />
               <th className="inventory-table__actions" scope="col" aria-label="Действия">
                 <span aria-hidden="true">⋯</span>
               </th>

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown,
   Copy,
   Eye,
   EyeOff,
@@ -25,11 +24,7 @@ import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
 import { FilterSingleSelect } from '@/components/ui/filter-single-select';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import {
-  buildSortPillOptions,
-  composeSortKey,
-  parseSortKey,
-} from '@/components/shell/master-sort-pill.helpers';
+import { SortableHeader } from '@/components/shell/sortable-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type {
   MixFilterKey,
@@ -39,18 +34,15 @@ import type {
   MixRailFilter,
   MixRailMembership,
   MixRecord,
-  MixSortDirection,
-  MixSortField,
   MixStatusFilter,
 } from '@/contracts';
 import {
   formatFlavorProfileLabel,
   formatMetricValue,
   mixRailFilterOptions,
-  mixSortDirectionOptions,
+  defaultMixListResponse,
   formatCount,
   formatRating,
-  mixSortFieldOptions,
   resolveMixStatus,
 } from '@/contracts';
 
@@ -81,8 +73,7 @@ type MixCatalogViewProps = {
   onSearchChange: (value: string) => void;
   onStatusChange: (value: MixStatusFilter) => void;
   onRailStateChange: (value: MixRailFilter) => void;
-  onSortFieldChange: (value: MixSortField) => void;
-  onSortDirectionChange: (value: MixSortDirection) => void;
+  onSortChange: (value: MixListSort) => void;
   onToggleFilterValue: (key: MixFilterKey, value: string) => void;
   onClearFilterGroup: (key: MixFilterKey) => void;
   onPageChange: (page: number) => void;
@@ -145,8 +136,7 @@ export const MixCatalogView = ({
   onSearchChange,
   onStatusChange,
   onRailStateChange,
-  onSortFieldChange,
-  onSortDirectionChange,
+  onSortChange,
   onToggleFilterValue,
   onClearFilterGroup,
   onPageChange,
@@ -231,6 +221,12 @@ export const MixCatalogView = ({
     0,
   );
 
+  const sortHeaderProps = {
+    sort,
+    fallback: defaultMixListResponse.sort,
+    onSortChange,
+  };
+
   return (
     <section className="mixes-page">
       <MasterPageHeader
@@ -284,27 +280,6 @@ export const MixCatalogView = ({
               );
             })}
           </div>
-
-          <span className="mixes-list__sep" aria-hidden />
-
-          <label className="mixes-list__sort">
-            <ChevronDown size={12} aria-hidden />
-            <select
-              aria-label="Сортировка миксов"
-              value={composeSortKey(sort.field, sort.direction)}
-              onChange={(event) => {
-                const { field, direction } = parseSortKey<MixSortField>(event.target.value);
-                onSortFieldChange(field);
-                onSortDirectionChange(direction as MixSortDirection);
-              }}
-            >
-              {buildSortPillOptions(mixSortFieldOptions, mixSortDirectionOptions).map((opt) => (
-                <option key={opt.key} value={opt.key}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         {profileChips.length ? (
@@ -396,11 +371,32 @@ export const MixCatalogView = ({
             <table className="mixes-table">
               <thead>
                 <tr>
-                  <th scope="col">Микс</th>
+                  <SortableHeader
+                    label="Микс"
+                    field="name"
+                    initialDirection="asc"
+                    directionLabels={{ asc: 'А → Я', desc: 'Я → А' }}
+                    {...sortHeaderProps}
+                  />
                   <th scope="col">Состав</th>
                   <th scope="col">Профиль</th>
                   <th scope="col">Статус</th>
-                  <th scope="col">Метрики</th>
+                  <SortableHeader
+                    label="Выборы"
+                    field="demand"
+                    initialDirection="desc"
+                    directionLabels={{ desc: 'чаще выбирают', asc: 'реже выбирают' }}
+                    className="mixes-table__metric-col"
+                    {...sortHeaderProps}
+                  />
+                  <SortableHeader
+                    label="Рейтинг"
+                    field="avgRating"
+                    initialDirection="desc"
+                    directionLabels={{ desc: 'выше рейтинг', asc: 'ниже рейтинг' }}
+                    className="mixes-table__metric-col"
+                    {...sortHeaderProps}
+                  />
                   <th scope="col" className="mixes-table__actions-col">Действия</th>
                 </tr>
               </thead>
@@ -453,22 +449,22 @@ export const MixCatalogView = ({
                         </div>
                       </td>
                       <td>{renderMixStatus(mix)}</td>
-                      <td>
-                        <div className="mixes-cell mixes-cell__metrics">
-                          <span className="mixes-cell__metric" title="Популярность микса">
-                            <Flame size={11} aria-hidden="true" />
-                            {formatMetricValue(mix.smokeCtaCount)}
-                          </span>
-                          <span className="mixes-cell__metric" title="Средний рейтинг гостей">
-                            <Star size={11} aria-hidden="true" />
-                            {formatRating(mix.avgRating)}
-                            {mix.ratingsCount > 0 ? (
-                              <span className="mixes-cell__metric-meta">
-                                ({formatMetricValue(mix.ratingsCount)})
-                              </span>
-                            ) : null}
-                          </span>
-                        </div>
+                      <td className="mixes-table__metric-col">
+                        <span className="mixes-cell__metric" title="Нажатия «Покурить»">
+                          <Flame size={11} aria-hidden="true" />
+                          {formatMetricValue(mix.smokeCtaCount)}
+                        </span>
+                      </td>
+                      <td className="mixes-table__metric-col">
+                        <span className="mixes-cell__metric" title="Средний рейтинг гостей">
+                          <Star size={11} aria-hidden="true" />
+                          {formatRating(mix.avgRating)}
+                          {mix.ratingsCount > 0 ? (
+                            <span className="mixes-cell__metric-meta">
+                              ({formatMetricValue(mix.ratingsCount)})
+                            </span>
+                          ) : null}
+                        </span>
                       </td>
                       <td
                         className="mixes-table__actions"
