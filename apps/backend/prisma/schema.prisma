@@ -272,3 +272,19 @@ model MixRating {
   @@index([mixId])
   @@index([createdAt])
 }
+
+// Гостевой микс из «Намиксуй»: снимок состава без FK на Tobacco, чтобы событие
+// пережило удаление табака, и без связи с гостем (PRD §4). В статистику
+// каталога (SmokeCtaEvent) не попадает.
+model CustomMixSmokeEvent {
+  id         String   @id @default(uuid())
+  components Json
+  signature  String
+  name       String
+  harmony    Int
+  swipes     Json     @default("[]")
+  createdAt  DateTime @default(now())
+
+  @@index([signature])
+  @@index([createdAt])
+}
