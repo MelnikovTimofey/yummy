@@ -17,7 +17,7 @@ export function SignatureBar({ profiles, height = 4, radius = 999 }: SignatureBa
         height,
         borderRadius: radius,
         overflow: "hidden",
-        boxShadow: "inset 0 0 0 1px rgba(255,244,236,0.04)",
+        boxShadow: "var(--highlight-inner)",
       }}
     >
       {profiles.map((profileId, i) => {

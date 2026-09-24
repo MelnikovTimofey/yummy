@@ -670,7 +670,7 @@ const MixDetailModal = ({
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
           overflowY: 'auto',
-          background: `radial-gradient(circle at 88% 0%, ${haloColor}50 0%, transparent 50%), linear-gradient(180deg, rgba(40,15,16,0.98) 0%, rgba(20,9,10,0.98) 100%)`,
+          background: `radial-gradient(circle at 88% 0%, ${haloColor}50 0%, transparent 50%), var(--guest-sheet-bg)`,
         }}
       >
         <span className="aroma-mix-sheet-handle" aria-hidden />
@@ -1837,7 +1837,7 @@ export const App = () => {
         <article
           className="aroma-recs-hero"
           style={{
-            background: `radial-gradient(circle at 80% 0%, ${heroColor}55 0%, transparent 55%), linear-gradient(180deg, rgba(34,15,16,0.96) 0%, rgba(22,11,12,0.88) 100%)`,
+            background: `radial-gradient(circle at 80% 0%, ${heroColor}55 0%, transparent 55%), var(--guest-card-bg)`,
           }}
         >
           <div className="aroma-recs-hero-head">
@@ -1964,7 +1964,7 @@ export const App = () => {
                       className="aroma-showcase-card"
                       onClick={() => openMix(mix, 'showcase')}
                       style={{
-                        background: `radial-gradient(circle at 86% 0%, ${profileColor}48 0%, transparent 60%), linear-gradient(180deg, rgba(40,17,17,0.96) 0%, rgba(22,11,12,0.96) 100%)`,
+                        background: `radial-gradient(circle at 86% 0%, ${profileColor}48 0%, transparent 60%), var(--guest-card-bg)`,
                       }}
                     >
                       <div className="aroma-showcase-card-head">
