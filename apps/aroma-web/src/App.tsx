@@ -1900,7 +1900,12 @@ export const App = () => {
       return <p className="screen-status error">{showcaseError}</p>;
     }
     if (!showcaseRails.length) {
-      return <p className="screen-status">Подборки пока не опубликованы.</p>;
+      return (
+        <section className="aroma-showcase">
+          <MixerInvite onOpen={() => openMixer('showcase')} />
+          <p className="screen-status">Подборки пока не опубликованы.</p>
+        </section>
+      );
     }
 
     return (

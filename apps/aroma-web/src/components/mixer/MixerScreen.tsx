@@ -452,6 +452,11 @@ export function MixerScreen({
   const fromOnboarding =
     turn === 0 && shelves.length > 0 && shelves.every((shelf) => onboardingShelves.includes(shelf));
   const cards = tobaccosOf(deck.queue);
+  // Полки из онбординга — первыми, иначе выбранная полка прячется за краем ленты.
+  const shelfOrder = shelvesOf(pool, PROFILE_ORDER).sort(
+    (left, right) =>
+      Number(turn === 0 && onboardingShelves.includes(right)) - Number(turn === 0 && onboardingShelves.includes(left)),
+  );
 
   const matchFor = (tobacco: PaletteTobacco) => {
     if (turn === 0) return mixCountCaption(tobacco.mixCount);
@@ -596,7 +601,7 @@ export function MixerScreen({
 
           {pool.length ? (
             <ShelfFilter
-              shelves={shelvesOf(pool, PROFILE_ORDER)}
+              shelves={shelfOrder}
               selected={shelves}
               count={underFilter.length}
               fromOnboarding={fromOnboarding}

@@ -343,7 +343,7 @@
 
 .mixer-deck-slot {
   min-height: 200px;
-  max-height: 480px;
+  max-height: 520px;
   display: flex;
   transition: opacity var(--dur-sheet) ease;
 }
@@ -369,10 +369,12 @@
 .mixer-card {
   --pc: var(--profile-fallback);
   border: 1px solid var(--border-default);
-  background: var(--guest-card-bg);
+  /* Непрозрачная подложка: сквозь верхнюю карту не должны читаться нижние. */
+  background-color: var(--bg-raised);
+  background-image: var(--guest-card-bg);
   padding: 16px 16px 14px;
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
   overflow: hidden;
   user-select: none;
@@ -472,8 +474,11 @@
   color: var(--text-1);
 }
 
-.mixer-card-brand {
-  margin-top: 4px;
+/* Текст карты прижат к низу: на высокой колоде верх занимает гало профиля.
+   Двойной класс — чтобы margin: 0 у .aroma-caps не перебил auto. */
+.mixer-card .mixer-card-brand {
+  margin-top: auto;
+  padding-top: 4px;
   letter-spacing: 0.14em;
   font-weight: 600;
 }
@@ -488,14 +493,20 @@
 }
 
 .mixer-card-flavors {
+  flex: none;
   margin-top: 2px;
   font-size: 14px;
   line-height: 1.4;
   color: var(--text-1);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
 .mixer-card-foot {
+  flex: none;
+  margin-top: 8px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -544,6 +555,7 @@
 
   .mixer-card-flavors {
     font-size: 13px;
+    -webkit-line-clamp: 1;
   }
 
   .mixer-card-foot {
@@ -728,7 +740,7 @@
   justify-self: start;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   line-height: 1.35;
   color: var(--rating-ink);

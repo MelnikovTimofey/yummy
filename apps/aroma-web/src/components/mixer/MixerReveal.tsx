@@ -101,7 +101,7 @@ export function MixerReveal({
           <div className="mixer-reveal-verdict">
             <span className="aroma-caps">Ваш микс · гармония</span>
             {evaluation ? (
-              <span className="mixer-verdict">{`${verdictLabel(evaluation.verdict)} · ${evaluation.harmony}`}</span>
+              <span className="mixer-verdict">{verdictLabel(evaluation.verdict)}</span>
             ) : (
               <span className="mixer-reveal-pending">
                 {evaluationFailed ? 'Оценка не загрузилась. Покурить можно и так.' : 'Считаем гармонию…'}
