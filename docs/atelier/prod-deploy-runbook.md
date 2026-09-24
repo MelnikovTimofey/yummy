@@ -87,6 +87,25 @@ DNS A-записи и открытый `80`/`443`).
 >
 > Хост должен иметь рабочий IPv6 (`curl -6 https://api.telegram.org` → `302`).
 
+> **Хост без IPv6** (например, TimeWeb nsk-1) — вместо NAT66 включить сервис
+> `telegram-tunnel`: SSH-туннель до `api.telegram.org:443` через хост вне РФ.
+>
+> ```bash
+> # на хосте вне РФ (один раз): пользователь без shell, ключ умеет только этот форвард
+> useradd -m -s /usr/sbin/nologin tgtunnel
+> install -d -m 700 -o tgtunnel -g tgtunnel /home/tgtunnel/.ssh
+> echo 'restrict,port-forwarding,permitopen="api.telegram.org:443",command="/bin/false" <pubkey>' \
+>   > /home/tgtunnel/.ssh/authorized_keys
+> chown tgtunnel:tgtunnel /home/tgtunnel/.ssh/authorized_keys && chmod 600 /home/tgtunnel/.ssh/authorized_keys
+>
+> # на прод-хосте
+> install -d -m 700 secrets/telegram-tunnel
+> ssh-keygen -q -t ed25519 -N '' -C telegram-tunnel -f secrets/telegram-tunnel/id_ed25519
+> ssh-keyscan -p <port> <хост> > secrets/telegram-tunnel/known_hosts   # сверить отпечаток!
+> # в .env: COMPOSE_PROFILES=tg-tunnel, TG_TUNNEL_TARGET=tgtunnel@<хост>, TG_TUNNEL_PORT=<port>
+> docker compose -f docker-compose.prod.yml up -d --build telegram-tunnel telegram-bot
+> ```
+
 1. Бот поднят (шаг 4) и не в crash-loop: `docker compose -f docker-compose.prod.yml ps`.
 2. Завести allowlist по номерам телефонов в backend (source of truth доступа — backend).
 3. First-link: пользователь шлёт `share contact` → backend привязывает `chatId`.

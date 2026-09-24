@@ -8,6 +8,9 @@ apps/*/.env
 .env
 # локальные токены облака/деплоя (TIMEWEB_TOKEN и т.п.)
 .env.project
+# прод-хост: дампы БД и ключи туннеля лежат внутри клона /opt/atelier
+backups/
+secrets/
 
 # local test artifacts
 .playwright-cli/
