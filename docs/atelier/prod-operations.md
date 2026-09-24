@@ -1,28 +1,30 @@
 # Арома Ателье — Prod Operations (эксплуатация)
 
-> ⚠️ **Прод-хост выведен из эксплуатации (2026-08-11).** Действующего прод-контура
-> нет. Координаты ниже (IP, домены, managed PG) — **историческая справка от
-> прошлого деплоя, они больше не активны**. Документ сохранён как шаблон
-> процедур и накопленных граблей для будущего развёртывания: при новом деплое
-> заменить координаты на актуальные.
+> Действующий контур развёрнут 2026-09-24 на TimeWeb Cloud (Новосибирск).
+> Прошлый хост (`147.45.146.23`, Москва) удалён 2026-08-11, его IP освобождён.
 
 День-2 инструкция по работе с прод-контуром Арома Ателье: запуск, остановка,
 обслуживание, обновление, откат, диагностика. Первичное развёртывание — в
 [`prod-deploy-runbook.md`](prod-deploy-runbook.md).
 
-## 0. Координаты и доступ (историческое — хост удалён)
+## 0. Координаты и доступ
 
 | Что | Значение |
 |---|---|
-| Сервер (VPS) | `147.45.146.23`, SSH **порт 49222**, только по ключу |
-| Каталог проекта | `/opt/atelier` |
+| Сервер (VPS) | TimeWeb `atelier-prod` (id 9187571), Cloud NSK 50: 2 vCPU / 4 GB / 50 GB, Ubuntu 24.04, nsk-1 |
+| IP | `201.24.60.80` (IPv4; IPv6 в nsk-1 провайдер не выдаёт) |
+| SSH | порт **49222**, только по ключу, `root` |
+| Каталог проекта | `/opt/atelier` (клон репо, `.env` с правами 600) |
 | Compose-файл | `docker-compose.prod.yml` (всегда с `--env-file .env`) |
-| Сервисы | `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
-| База данных | managed Postgres (внешняя), приватно `192.168.0.4:5432`, БД `default_db` |
-| Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend) |
+| Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
+| База данных | сервис `db` в том же compose, наружу не публикуется, volume `atelier_pg` |
+| Бэкапы | `/opt/atelier/backups`, cron `/etc/cron.d/atelier-pg-backup` (03:30 UTC, 14 дней) |
+| Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
+| TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |
+| Firewall | ufw: `49222`, `80`, `443` |
 
 ```bash
-ssh -p 49222 root@147.45.146.23
+ssh -p 49222 root@201.24.60.80
 cd /opt/atelier
 ```
 
@@ -58,13 +60,14 @@ docker compose -f docker-compose.prod.yml --env-file .env stop
 # остановить отдельный сервис
 docker compose -f docker-compose.prod.yml --env-file .env stop telegram-bot
 
-# полностью снести контейнеры и сеть (volume'ы и managed PG НЕ трогаются)
+# полностью снести контейнеры и сеть (volume'ы, в т.ч. atelier_pg, НЕ трогаются)
 docker compose -f docker-compose.prod.yml --env-file .env down
 ```
 
 `stop` против `down`: `stop` — пауза (контейнеры остаются), `down` — удаление
 контейнеров и docker-сети. Данные не теряются ни в том, ни в другом случае
-(БД внешняя, состояние бота и Caddy — в named volumes).
+(БД, состояние бота и Caddy — в named volumes). **Никогда** не запускать
+`down -v`: он удалит volume `atelier_pg` вместе с базой.
 
 ## 3. Статус, логи, здоровье
 
@@ -115,31 +118,36 @@ docker compose -f docker-compose.prod.yml --env-file .env restart telegram-bot
 
 ## 6. Обслуживание
 
-### Бэкап БД (managed PG)
-Автобэкапы — на стороне Timeweb (проверь, что включены + PITR). Ручной снэпшот
-перед рискованными изменениями — в панели managed PG или через `pg_dump`:
+### Бэкап БД
+Ночной `pg_dump` ставит cron (см. [`prod-deploy-runbook.md`](prod-deploy-runbook.md) §8).
+Внеплановый дамп перед рискованными изменениями:
 ```bash
-# пароль БД из .env (DATABASE_URL). Дамп всей базы:
-PGPASSWORD='<пароль>' pg_dump -h 192.168.0.4 -U gen_user -d default_db -Fc \
-  -f /root/atelier-$(date +%F).dump
+docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
+  pg_dump -U atelier -Fc atelier > backups/atelier-$(date +%F-%H%M).dump
+```
+Дампы лежат на том же VPS — периодически забирать свежий к себе:
+```bash
+scp -P 49222 root@201.24.60.80:/opt/atelier/backups/atelier-<дата>.dump .
 ```
 
 ### Снэпшот только продуктовых данных / restore
 Снэпшот лежит в репо: `snapshots/atelier-product-data.dump` (data-only, 5 таблиц).
-Восстановление в managed PG — **в порядке FK, без `--disable-triggers`**
-(у `gen_user` нет прав суперюзера):
+Грузится в БД, где схему уже создал `migrate deploy`:
 ```bash
-PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
-  -h 192.168.0.4 -U gen_user -d default_db \
-  -t Tobacco -t Mix -t Rail snapshots/atelier-product-data.dump
-PGPASSWORD='<пароль>' pg_restore --no-owner --data-only \
-  -h 192.168.0.4 -U gen_user -d default_db \
-  -t MixComponent -t RailMix snapshots/atelier-product-data.dump
+docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
+  pg_restore -U atelier -d atelier --no-owner --data-only --disable-triggers \
+  < snapshots/atelier-product-data.dump
 ```
 
 ### Daily-код доступа (гость) и Telegram-allowlist
-Управляются из «Мастера» (вход `atelier-admin`) или ботом (`/rotate`). Не редактировать
+Управляются из «Мастера» (вход `admin`) или ботом (`/rotate`). Не редактировать
 напрямую в БД без необходимости.
+
+> ⚠️ На пустой базе backend при первом обращении засевает демо-учётки
+> `admin/admin`, `atelier/atelier` и daily code `1234`. На этом хосте они
+> обезврежены: `admin` перезаписан через bootstrap, `atelier` и `1234`
+> деактивированы. При развёртывании на новую пустую БД — сделать bootstrap
+> `admin` **до** запуска `proxy`.
 
 ### Создание/сброс staff-аккаунта
 ```bash
@@ -169,18 +177,17 @@ git log --oneline -5                 # найти предыдущий рабо�
 git checkout <commit-или-tag>
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
-Если откат затрагивает схему — восстановить БД из снэпшота/PITR managed PG,
-снятого **до** проблемного деплоя. Вернуться на актуальный код: `git checkout main`.
+Если откат затрагивает схему — восстановить БД из дампа, снятого **до**
+проблемного деплоя (runbook §8). Вернуться на актуальный код: `git checkout main`.
 
 ## 8. Диагностика частых проблем
 
 | Симптом | Причина / решение |
 |---|---|
-| `backend` не стартует, `P1000 auth failed` | неверный `DATABASE_URL`/пароль в `.env`; проверить `psql -h 192.168.0.4 -U gen_user -d default_db` |
-| `telegram-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ — нужен IPv6: `daemon.json` (`ipv6`+`ip6tables`) + IPv6-сеть в compose (см. deploy-runbook §4) |
+| `backend` не стартует, `P1000 auth failed` | `POSTGRES_PASSWORD` в `.env` не совпадает с паролем, с которым volume `atelier_pg` инициализирован; проверить `docker compose ... exec db psql -U atelier -d atelier` |
+| `telegram-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ, а в nsk-1 нет IPv6. На этом хосте бот **не запущен** — нужен обходной путь (IPv6-хост или прокси для Telegram API через `ATELIER_TELEGRAM_API_BASE_URL`) |
 | фронт отдаёт `403 Blocked request ... host not allowed` | домен не в `ATELIER_ALLOWED_HOSTS`; проверить `AROMA_DOMAIN`/`MASTER_DOMAIN` в `.env`, пересобрать фронт |
-| Caddy не выпускает TLS | DNS не указывает на `147.45.146.23`, либо `80`/`443` недоступны снаружи; логи `proxy` |
-| `pg_restore: permission denied ... system trigger` | на managed PG нельзя `--disable-triggers`; грузить data-only в FK-порядке (см. §6) |
+| Caddy не выпускает TLS | DNS не указывает на `201.24.60.80`, либо `80`/`443` недоступны снаружи; логи `proxy` |
 | внешний доступ «висит» (рукопожатие ок, данных нет) | провайдерская inbound-фильтрация на IP; крайняя мера — сменить публичный IP |
 | нет SSH | порт **49222**, ключ-only; fallback — веб-консоль провайдера |
 
