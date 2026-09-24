@@ -220,12 +220,20 @@ test('base below 35% is a weak base', () => {
 });
 
 test('twist above 25% is heavy', () => {
-  const heavy = harmonyOf(bowl([berry, 60], [spice, 40]), neutral);
-  const light = harmonyOf(bowl([berry, 75], [spice, 25]), neutral);
+  const heavy = harmonyOf(bowl([berry, 45], [tea, 25], [spice, 30]), neutral);
+  const light = harmonyOf(bowl([berry, 50], [tea, 25], [spice, 25]), neutral);
 
   assert.deepEqual(heavy.hints, [{ kind: 'heavy-twist' }]);
   assert.deepEqual(light.hints, []);
   assert.ok(heavy.harmony < light.harmony);
+});
+
+// Штрих — роль третьего компонента, а не признак табака: пряный акцент
+// на 40% — обычная чаша, а не «перетягивающий штрих».
+test('a spicy accent is not a heavy twist', () => {
+  const { hints } = harmonyOf(bowl([berry, 60], [spice, 40]), neutral);
+
+  assert.deepEqual(hints, []);
 });
 
 test('verdict steps at 85, 70 and 55', () => {

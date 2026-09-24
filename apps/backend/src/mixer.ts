@@ -99,8 +99,8 @@ const componentAffinity = (left: MixerTobacco, right: MixerTobacco, affinity: Af
   return sum(values) / values.length;
 };
 
-// Основа — первый компонент чаши; штрих считается только по остальным, иначе
-// мятная или пряная основа штрафовалась бы дважды.
+// Роли задаёт порядок ходов: основа, акцент, штрих. Штрих — роль третьего
+// компонента, а не признак табака: пряный акцент не должен штрафоваться.
 export const harmonyOf = (components: BowlComponent[], affinity: Affinity) => {
   if (components.length === 1) {
     return { harmony: MONO_HARMONY, hints: [{ kind: 'mono' }] as GuestMixerHint[] };
@@ -132,7 +132,7 @@ export const harmonyOf = (components: BowlComponent[], affinity: Affinity) => {
     harmony -= (MIN_BASE - base) * 0.6;
   }
 
-  const twist = sum(components.slice(1).filter((item) => item.tobacco.twist).map((item) => item.proportion));
+  const twist = components[2]?.proportion ?? 0;
   if (twist > MAX_TWIST) {
     hints.push({ kind: 'heavy-twist' });
     harmony -= (twist - MAX_TWIST) * 0.5;
