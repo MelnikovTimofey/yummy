@@ -253,7 +253,6 @@ export const MixBuilder = ({
                 <span>Распределить поровну</span>
               </button>
             </header>
-            <p className="mix-builder__proportions-hint">Границы долей перетаскиваются.</p>
             <ProportionBar components={editor.components} onResize={onReplaceComponents} />
             {presetsForCurrent.length ? (
               <div className="mix-builder__presets" role="group" aria-label="Быстрые пресеты пропорций">
@@ -283,6 +282,13 @@ export const MixBuilder = ({
               </span>
             </header>
             <div className="mix-builder__components">
+              {editor.components.length ? (
+                <div className="mix-builder__components-head" aria-hidden="true">
+                  <span />
+                  <span>Табак</span>
+                  <span>Доля</span>
+                </div>
+              ) : null}
               {editor.components.length === 0 ? (
                 <div className="mix-builder__empty">
                   <strong>Состав пуст</strong>
