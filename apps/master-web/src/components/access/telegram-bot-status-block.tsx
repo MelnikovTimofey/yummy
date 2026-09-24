@@ -82,7 +82,9 @@ export const TelegramBotStatusBlock = ({
         <div className="bot-status__title">
           <p className="bot-status__name">Telegram-бот</p>
           <p className="bot-status__heartbeat">
-            Heartbeat {formatTimeOnly(heartbeatIso)} · {relativeFromNow(heartbeatIso)}
+            {heartbeatIso
+              ? `На связи в ${formatTimeOnly(heartbeatIso)} · ${relativeFromNow(heartbeatIso)}`
+              : 'Ещё не выходил на связь'}
           </p>
         </div>
         <span className={badge.className}>{badge.label}</span>
@@ -100,8 +102,7 @@ export const TelegramBotStatusBlock = ({
 
       <article className="bot-status__history">
         <div className="bot-status__history__head">
-          <p className="eyebrow">История окон</p>
-          <span className="mono bot-status__history__counter">{history.length} последних</span>
+          <p className="eyebrow">Последние коды</p>
         </div>
         {history.length === 0 ? (
           <p className="meta-line">История пуста</p>
@@ -111,9 +112,6 @@ export const TelegramBotStatusBlock = ({
               <li className="bot-status__history__row" key={item.id}>
                 <span className="mono bot-status__history__code">{item.codeValue}</span>
                 <span className="bot-status__history__day">{formatDayShort(item.startsAt)}</span>
-                <span className="mono bot-status__history__count">
-                  — <span className="bot-status__history__count-label">подтв.</span>
-                </span>
               </li>
             ))}
           </ul>

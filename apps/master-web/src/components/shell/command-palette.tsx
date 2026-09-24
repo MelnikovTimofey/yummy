@@ -27,8 +27,8 @@ export const CommandPalette = ({
   open,
   onOpenChange,
   items,
-  placeholder = 'Что нужно сделать? — миксы, табаки, рейлы, действия',
-  emptyLabel = 'Ничего не нашёл',
+  placeholder = 'Микс, табак, рейл или действие',
+  emptyLabel = 'Ничего не найдено',
 }: CommandPaletteProps) => {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -184,7 +184,6 @@ export const CommandPalette = ({
           {visibleItems.length === 0 ? (
             <div className="cmdk__empty px-6 py-8 text-center text-sm text-muted-foreground">
               <div className="font-medium text-foreground">{emptyLabel}</div>
-              <div className="mt-1">Попробуй другой запрос.</div>
             </div>
           ) : null}
         </div>

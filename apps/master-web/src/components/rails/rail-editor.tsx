@@ -9,7 +9,7 @@ import {
 import { Check, ChevronDown, ChevronUp, Flame, GripVertical, Plus, Search, Star, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
-import { formatRailType, resolveMixStatus } from '@/contracts';
+import { formatMixStatusLabel, formatRailType, formatRating, resolveMixStatus } from '@/contracts';
 
 export type RailEditorState = {
   id: string;
@@ -189,7 +189,7 @@ export const RailEditor = ({
                               <span className="metric-inline" title="Средний рейтинг гостей">
                                 <Star size={11} aria-hidden="true" />
                                 <span className="sr-only">Рейтинг</span>
-                                {mix.avgRating.toFixed(1)}
+                                {formatRating(mix.avgRating)}
                               </span>
                             </span>
                           )}
@@ -238,7 +238,7 @@ export const RailEditor = ({
                     Состав рейла · {editor.mixIds.length}
                   </h3>
                   {!locked && selectedRailMixEntries.length > 1 ? (
-                    <span className="rail-drawer__hint">тяни ↕ для порядка</span>
+                    <span className="rail-drawer__hint">порядок — перетаскиванием</span>
                   ) : null}
                 </div>
 
@@ -247,7 +247,7 @@ export const RailEditor = ({
                     <div className="empty">
                       {locked
                         ? 'В рейле нет миксов.'
-                        : '← Добавь миксы из списка слева'}
+                        : '← Миксы добавляются из списка слева'}
                     </div>
                   ) : (
                     selectedRailMixEntries.map(({ mixId, index, mix }) => (
@@ -285,7 +285,7 @@ export const RailEditor = ({
                           <div className="rail-drawer__mix-meta">
                             {mix
                               ? mix.description ||
-                                `${mix.guestVisible ? 'Виден гостю' : mix.available ? 'Скрыт оператором' : 'Заблокирован наличием'} · Рейтинг ${mix.avgRating.toFixed(1)}`
+                                `${formatMixStatusLabel(resolveMixStatus(mix))} · Рейтинг ${formatRating(mix.avgRating)}`
                               : 'Микс не найден в актуальном каталоге.'}
                           </div>
                         </div>
@@ -357,7 +357,7 @@ export const RailEditor = ({
                       ))
                     ) : (
                       <p className="rail-drawer__preview-empty">
-                        Пока пусто. Добавь миксы — гость увидит здесь.
+                        Пока пусто. Добавленные миксы гость увидит здесь.
                       </p>
                     )}
                   </div>

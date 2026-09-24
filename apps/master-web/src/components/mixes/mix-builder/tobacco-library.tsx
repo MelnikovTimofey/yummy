@@ -107,7 +107,7 @@ export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }:
         {filtered.length === 0 ? (
           <div className="mix-builder__library-empty">
             <strong>Ничего не найдено</strong>
-            <p>Сбросьте фильтры или измените поиск.</p>
+            <p>Сбросить фильтры или изменить поиск.</p>
           </div>
         ) : (
           filtered.map((tobacco) => {

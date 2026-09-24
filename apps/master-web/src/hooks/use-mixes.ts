@@ -510,19 +510,19 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       .filter((component) => component.tobaccoId);
 
     if (!name) {
-      setMixSaveError('Введите название микса');
+      setMixSaveError('Нужно название микса');
       setMixSaveStatus('error');
       return;
     }
 
     if (!description) {
-      setMixSaveError('Добавьте описание микса');
+      setMixSaveError('Нужно описание микса');
       setMixSaveStatus('error');
       return;
     }
 
     if (!components.length) {
-      setMixSaveError('Добавьте хотя бы один компонент');
+      setMixSaveError('Нужен хотя бы один компонент');
       setMixSaveStatus('error');
       return;
     }
@@ -556,7 +556,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
 
       const savedMix = normalizeMixRecord(readEntityPayload<unknown>(response));
       if (!savedMix.id) {
-        throw new Error('Backend вернул пустой микс');
+        throw new Error('Сервер вернул пустой ответ');
       }
 
       setMixEditor(toMixEditorState(savedMix));

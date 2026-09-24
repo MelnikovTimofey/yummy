@@ -120,7 +120,7 @@ export const RailsView = ({
     </header>
 
     {railsStatus === 'loading' ? (
-      <p className="rails-page__notice">Загружаем рейлы...</p>
+      <p className="rails-page__notice">Загружаем рейлы…</p>
     ) : null}
     {railsError ? <p className="rails-page__notice rails-page__notice--error">{railsError}</p> : null}
 

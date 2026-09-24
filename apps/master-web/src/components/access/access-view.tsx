@@ -115,7 +115,7 @@ export const AccessView = (props: AccessViewProps) => {
       <MasterPageHeader
         eyebrow="Доступ"
         title="Доступ и персонал"
-        subtitle="Управление гостевым кодом, операторами Telegram-бота и учётками Master."
+        subtitle="Гостевой код, операторы Telegram-бота и учётки Мастера."
       />
 
       <MasterStatsRow
@@ -138,7 +138,7 @@ export const AccessView = (props: AccessViewProps) => {
             tone: 'success',
           },
           {
-            label: 'Master-учётки',
+            label: 'Учётки Мастера',
             value: activeStaffAccounts,
             hint: 'с доступом в систему',
             tone: 'success',

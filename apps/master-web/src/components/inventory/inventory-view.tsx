@@ -26,6 +26,9 @@ import type {
 } from '@/contracts';
 import {
   formatFlavorProfileLabel,
+  formatMixStatusLabel,
+  formatRating,
+  resolveMixStatus,
   formatInventoryBatchAction,
   formatMetricValue,
   inventorySortDirectionOptions,
@@ -80,10 +83,8 @@ const inventoryPageSizeOptions = [100, 200, 500, 1000];
 
 const STRENGTH_DASH = '—';
 
-const formatStrengthCompact = (item: InventoryTobacco) => {
-  const value = item.officialStrength?.trim() || item.communityStrength?.trim();
-  return value || STRENGTH_DASH;
-};
+const formatStrengthCompact = (item: InventoryTobacco) =>
+  item.officialStrength?.trim() || item.communityStrength?.trim() || '';
 
 const formatProfileRest = (count: number) => `+${count}`;
 
@@ -110,17 +111,8 @@ const formatDetailValue = (value?: string | null, fallback = 'Не указан�
   return normalized ? normalized : fallback;
 };
 
-const formatMixCardStatus = (mix: NonNullable<InventoryTobacco['dependentMixes']>[number]) => {
-  if (!mix.available) {
-    return 'Скрыт оператором';
-  }
-
-  if (!mix.guestVisible) {
-    return 'Блокируется наличием';
-  }
-
-  return 'Виден гостю';
-};
+const formatMixCardStatus = (mix: NonNullable<InventoryTobacco['dependentMixes']>[number]) =>
+  formatMixStatusLabel(resolveMixStatus(mix));
 
 const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
   if (key === 'flavorProfiles') {
@@ -774,7 +766,7 @@ export const InventoryView = ({
                 disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
               >
                 {pendingRowId === activeItem.id
-                  ? 'Сохраняем...'
+                  ? 'Сохраняем…'
                   : activeItem.inStock
                     ? 'Убрать из наличия'
                     : 'Вернуть в наличие'}
@@ -812,7 +804,7 @@ export const InventoryView = ({
                 <dd>{formatDetailValue(activeItem.officialStrength)}</dd>
               </div>
               <div>
-                <dt>Комьюнити-крепость</dt>
+                <dt>Крепость по отзывам</dt>
                 <dd>{formatDetailValue(activeItem.communityStrength)}</dd>
               </div>
               <div>
@@ -900,7 +892,7 @@ export const InventoryView = ({
                       <span className="metric-inline" title="Средний рейтинг гостей">
                         <Star size={11} aria-hidden="true" />
                         <span className="sr-only">Рейтинг</span>
-                        {mix.avgRating.toFixed(1)}
+                        {formatRating(mix.avgRating)}
                       </span>
                     </span>
                   </button>
@@ -978,7 +970,7 @@ export const InventoryView = ({
           {
             label: 'В наличии',
             value: formatMetricValue(meta.inStockCount),
-            hint: 'сейчас на кухне',
+            hint: 'на полке',
             tone: 'success',
           },
           {
@@ -990,7 +982,7 @@ export const InventoryView = ({
           {
             label: 'В составе миксов',
             value: formatMetricValue(meta.inMixesCount),
-            hint: 'активно используется',
+            hint: 'входят в миксы',
           },
         ]}
       />
@@ -1143,7 +1135,7 @@ export const InventoryView = ({
                     className={`toggle ${editorDraft.inStock ? 'toggle--on' : 'toggle--off'}`}
                     onClick={() => updateEditorDraft('inStock', !editorDraft.inStock)}
                     disabled={saveStatus === 'loading'}
-                    title={editorDraft.inStock ? 'В наличии' : 'Нет на кухне'}
+                    title={editorDraft.inStock ? 'В наличии' : 'Нет в наличии'}
                   >
                     <span className="toggle__track" aria-hidden="true">
                       <span className="toggle__thumb" />
@@ -1153,7 +1145,7 @@ export const InventoryView = ({
                     className="inventory-editor-identity__status"
                     data-tone={editorDraft.inStock ? 'success' : 'muted'}
                   >
-                    {editorDraft.inStock ? 'В наличии' : 'Нет на кухне'}
+                    {editorDraft.inStock ? 'В наличии' : 'Нет в наличии'}
                   </span>
                 </div>
               </div>
@@ -1201,7 +1193,7 @@ export const InventoryView = ({
                   className="textarea-input"
                   value={editorDraft.description}
                   onChange={(event) => updateEditorDraft('description', event.target.value)}
-                  placeholder="Например: подходит к цитрусовым миксам, не миксуй с табачными"
+                  placeholder="Например: подходит к цитрусовым миксам, не сочетается с табачными"
                   rows={3}
                   disabled={saveStatus === 'loading'}
                 />
@@ -1259,7 +1251,7 @@ export const InventoryView = ({
                 label="Вкусы"
                 selected={editorDraft.flavors}
                 suggestions={flavorOptions}
-                placeholder="Выбери или добавь вкус"
+                placeholder="Выбрать или добавить вкус"
                 disabled={saveStatus === 'loading'}
                 onChange={(value) => updateEditorDraft('flavors', value)}
               />
@@ -1293,7 +1285,7 @@ export const InventoryView = ({
                   />
 
                   <label className="field">
-                    <span className="field-label">Комьюнити-крепость</span>
+                    <span className="field-label">Крепость по отзывам</span>
                     <input
                       className="text-input"
                       value={editorDraft.communityStrength}
@@ -1314,7 +1306,7 @@ export const InventoryView = ({
                     label="Мета-теги"
                     selected={editorDraft.flavorTags}
                     suggestions={flavorTagOptions}
-                    placeholder="Выбери или добавь мета-тег"
+                    placeholder="Выбрать или добавить мета-тег"
                     disabled={saveStatus === 'loading'}
                     onChange={(value) => updateEditorDraft('flavorTags', value)}
                   />
@@ -1382,7 +1374,7 @@ export const InventoryView = ({
                 data-variant="primary"
                 disabled={saveStatus === 'loading'}
               >
-                {saveStatus === 'loading' ? 'Сохраняем...' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
+                {saveStatus === 'loading' ? 'Сохраняем…' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
               </button>
             </div>
           </footer>
@@ -1437,7 +1429,7 @@ export const InventoryView = ({
               onClick={() => onRunBatchAction('set-in-stock')}
               disabled={pendingBatchAction !== ''}
             >
-              {pendingBatchAction === 'set-in-stock' ? 'Обновляем...' : formatInventoryBatchAction('set-in-stock')}
+              {pendingBatchAction === 'set-in-stock' ? 'Обновляем…' : formatInventoryBatchAction('set-in-stock')}
             </Button>
             <Button
               type="button"
@@ -1446,7 +1438,7 @@ export const InventoryView = ({
               onClick={() => onRunBatchAction('set-out-of-stock')}
               disabled={pendingBatchAction !== ''}
             >
-              {pendingBatchAction === 'set-out-of-stock' ? 'Обновляем...' : formatInventoryBatchAction('set-out-of-stock')}
+              {pendingBatchAction === 'set-out-of-stock' ? 'Обновляем…' : formatInventoryBatchAction('set-out-of-stock')}
             </Button>
             {archivedActive ? (
               <Button
@@ -1456,7 +1448,7 @@ export const InventoryView = ({
                 onClick={() => onRunBatchAction('unarchive')}
                 disabled={pendingBatchAction !== ''}
               >
-                {pendingBatchAction === 'unarchive' ? 'Обновляем...' : formatInventoryBatchAction('unarchive')}
+                {pendingBatchAction === 'unarchive' ? 'Обновляем…' : formatInventoryBatchAction('unarchive')}
               </Button>
             ) : (
               <Button
@@ -1466,14 +1458,14 @@ export const InventoryView = ({
                 onClick={() => onRunBatchAction('archive')}
                 disabled={pendingBatchAction !== ''}
               >
-                {pendingBatchAction === 'archive' ? 'Обновляем...' : formatInventoryBatchAction('archive')}
+                {pendingBatchAction === 'archive' ? 'Обновляем…' : formatInventoryBatchAction('archive')}
               </Button>
             )}
           </div>
         </div>
       ) : null}
 
-      {status === 'loading' ? <p className="meta-line">Загружаем таблицу остатков...</p> : null}
+      {status === 'loading' ? <p className="meta-line">Загружаем таблицу остатков…</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
       <div className="inventory-table-shell ops-table-shell">
@@ -1556,8 +1548,7 @@ export const InventoryView = ({
                           ) : null}
                         </strong>
                         <span className="inventory-cell__sub">
-                          {strengthLabel}
-                          {flavorsTop3 ? ` · ${flavorsTop3}` : ''}
+                          {[strengthLabel, flavorsTop3].filter(Boolean).join(' · ')}
                         </span>
                       </div>
                     </td>
@@ -1604,7 +1595,7 @@ export const InventoryView = ({
                           <span className="row-toggle__thumb" />
                         </span>
                         <span className="sr-only">
-                          {pendingRowId === item.id ? 'Сохраняем...' : stockLabel}
+                          {pendingRowId === item.id ? 'Сохраняем…' : stockLabel}
                         </span>
                       </button>
                     </td>
@@ -1676,7 +1667,7 @@ export const InventoryView = ({
             ) : (
               <tr>
                 <td className="inventory-table__empty" colSpan={7}>
-                  Нет позиций под текущие фильтры. Попробуй сбросить search или вкусовые фильтры.
+                  По выбранным фильтрам ничего не найдено.
                 </td>
               </tr>
             )}

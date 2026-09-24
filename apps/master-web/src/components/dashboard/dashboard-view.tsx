@@ -2,7 +2,7 @@ import { Flame, Star, TriangleAlert } from 'lucide-react';
 
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow, type MasterStatTile } from '@/components/shell/master-stats-row';
-import { DashboardSummary, formatMetricValue } from '@/contracts';
+import { DashboardSummary, formatMetricValue, formatRating } from '@/contracts';
 
 type DashboardViewProps = {
   summary: DashboardSummary | null;
@@ -50,7 +50,7 @@ const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => 
     {
       label: 'Заблокировано',
       value: formatMetricValue(blocked),
-      hint: 'режет наличие',
+      hint: 'из-за наличия',
       tone: 'warning',
     },
     {
@@ -117,7 +117,7 @@ export function DashboardView({
                     </span>
                     <span className="dashboard-page__metric">
                       <Star size={11} aria-hidden="true" />
-                      {mix.avgRating ? mix.avgRating.toFixed(1) : '—'}
+                      {mix.avgRating ? formatRating(mix.avgRating) : '—'}
                     </span>
                   </div>
                 </li>
@@ -145,7 +145,7 @@ export function DashboardView({
                     <div className="dashboard-page__row-meta cell-truncate">
                       {mix.missingComponents.length
                         ? `Нет наличия: ${mix.missingComponents.join(', ')}`
-                        : 'блокирован отсутствием табака в наличии'}
+                        : 'нет в наличии компонента'}
                     </div>
                   </div>
                   <button

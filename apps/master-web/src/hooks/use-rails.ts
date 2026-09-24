@@ -170,13 +170,13 @@ export const useRails = ({ onAfterSubmit, onRefreshSiblings }: UseRailsOptions =
       }
 
       if (!name) {
-        setRailSaveError('Введите название рейла');
+        setRailSaveError('Нужно название рейла');
         setRailSaveStatus('error');
         return;
       }
 
       if (!mixIds.length) {
-        setRailSaveError('Добавьте хотя бы один микс');
+        setRailSaveError('Нужен хотя бы один микс');
         setRailSaveStatus('error');
         return;
       }
@@ -203,7 +203,7 @@ export const useRails = ({ onAfterSubmit, onRefreshSiblings }: UseRailsOptions =
 
         const savedRail = normalizeRailRecord(readEntityPayload<unknown>(response));
         if (!savedRail.id) {
-          throw new Error('Backend вернул пустой рейл');
+          throw new Error('Сервер вернул пустой ответ');
         }
 
         setRails((current) => sortRails(replaceOrInsert(current, savedRail)));

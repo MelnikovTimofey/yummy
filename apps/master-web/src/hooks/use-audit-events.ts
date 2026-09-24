@@ -13,7 +13,7 @@ export const useAuditEvents = () => {
     if (role !== 'admin') {
       setAuditEvents([]);
       setStatus('forbidden');
-      setError('Журнал изменений доступен только для admin.');
+      setError('Журнал изменений доступен только администратору.');
       return;
     }
 

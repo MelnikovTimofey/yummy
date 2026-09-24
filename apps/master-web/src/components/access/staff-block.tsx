@@ -84,10 +84,10 @@ export const StaffBlock = ({
 
   return (
     <>
-      <section className="card access-card" aria-label="Master-учётки">
+      <section className="card access-card" aria-label="Учётки Мастера">
         <header className="access-card__head">
           <div>
-            <p className="eyebrow access-card__eyebrow">Master-учётки</p>
+            <p className="eyebrow access-card__eyebrow">Учётки Мастера</p>
             <p className="access-card__title-serif">Доступ к Мастеру</p>
           </div>
           {staffAccountsStatus !== 'forbidden' ? (
@@ -105,7 +105,7 @@ export const StaffBlock = ({
 
         {staffAccountsStatus === 'forbidden' ? (
           <p className="access-card__forbidden meta-line">
-            {staffAccountsError || 'Раздел сотрудников доступен только для admin.'}
+            {staffAccountsError || 'Раздел сотрудников доступен только администратору.'}
           </p>
         ) : (
           <>
@@ -224,12 +224,12 @@ export const StaffBlock = ({
                 : 'Создать сотрудника'}
             </DialogTitle>
             <DialogDescription className="operator-dialog__sub">
-              <strong>Admin</strong> может управлять всем — каталогом, staff-учётками, daily code и журналом.
+              <strong>Admin</strong> может управлять всем: каталогом, учётками, кодом смены и журналом.
             </DialogDescription>
           </DialogHeader>
 
           {staffAccountsStatus === 'forbidden' ? (
-            <div className="empty">Staff accounts недоступны для вашей роли.</div>
+            <div className="empty">Учётки доступны только администратору.</div>
           ) : (
             <form className="operator-dialog__form" onSubmit={onSubmitStaffAccount}>
               <div className="operator-dialog__body">
@@ -249,7 +249,7 @@ export const StaffBlock = ({
                     </span>
                   </button>
                   <span className="operator-dialog__active-hint">
-                    {staffAccountEditor.active ? 'Сможет войти в Master' : 'Доступ закрыт'}
+                    {staffAccountEditor.active ? 'Сможет войти в Мастер' : 'Доступ закрыт'}
                   </span>
                 </div>
 
@@ -320,7 +320,7 @@ export const StaffBlock = ({
                         setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))
                       }
                       autoComplete="new-password"
-                      placeholder="Оставьте пустым, если не менять"
+                      placeholder="Пусто — пароль не меняется"
                     />
                   </div>
                 </div>
@@ -368,7 +368,7 @@ export const StaffBlock = ({
                   disabled={staffAccountSaveStatus === 'loading'}
                 >
                   {staffAccountSaveStatus === 'loading'
-                    ? 'Сохраняем...'
+                    ? 'Сохраняем…'
                     : staffAccountEditor.id
                       ? 'Сохранить'
                       : 'Создать'}
