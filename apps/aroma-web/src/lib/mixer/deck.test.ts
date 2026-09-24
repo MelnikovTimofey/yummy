@@ -62,7 +62,7 @@ test('rewindCard возвращает последнюю пропущенную 
   const start = createDeck(['a', 'b', 'c', 'd', 'e'], rng);
   const skipped = start.queue[0];
   const afterSkip = skipCard(start, rng).deck;
-  assert.equal(afterSkip.history.at(-1), skipped);
+  assert.equal(afterSkip.history[afterSkip.history.length - 1], skipped);
 
   const back = rewindCard(afterSkip);
   assert.equal(back.queue[0], skipped);

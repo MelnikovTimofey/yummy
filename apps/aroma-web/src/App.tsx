@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
+import { MixerInvite } from '@/components/mixer/MixerInvite';
+import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
+import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { dedupeRails, railKindLabel } from '@/lib/showcase';
 
 type GuestView =
@@ -16,7 +19,8 @@ type GuestView =
   | 'showcase'
   | 'catalog'
   | 'rail'
-  | 'smoke-confirmation';
+  | 'smoke-confirmation'
+  | 'mixer';
 type AppTab = 'recommendations' | 'showcase' | 'catalog';
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
@@ -106,11 +110,6 @@ type MixModalState = {
   source: MixSource;
 };
 
-type ProfileOption = {
-  value: string;
-  label: string;
-};
-
 const storageKeys = {
   ageConfirmed: 'aroma-age-confirmed',
   accessGranted: 'aroma-access-granted',
@@ -131,26 +130,6 @@ const readStoredStringArray = (key: string): string[] => {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 const requestTimeoutMs = 8000;
-
-const profileOptions: ProfileOption[] = [
-  { value: 'sweet', label: 'Сладкий' },
-  { value: 'sour', label: 'Кислый' },
-  { value: 'spicy', label: 'Пряный' },
-  { value: 'fresh', label: 'Свежий' },
-  { value: 'dessert', label: 'Десертный' },
-  { value: 'tobacco', label: 'Табачный' },
-  { value: 'minty', label: 'Мятный' },
-  { value: 'fruity', label: 'Фруктовый' },
-  { value: 'floral_herbal', label: 'Цветочно-травяной' },
-  { value: 'citrus', label: 'Цитрусовый' },
-  { value: 'berry', label: 'Ягодный' },
-  { value: 'perfume', label: 'Парфюмный' },
-];
-
-const profileLabelMap = profileOptions.reduce<Record<string, string>>((acc, item) => {
-  acc[item.value] = item.label;
-  return acc;
-}, {});
 
 const mixSourceLabels: Record<MixSource, string> = {
   recommendations: 'Подбор для вас',
@@ -872,6 +851,7 @@ export const App = () => {
   const [ratingMessage, setRatingMessage] = useState('');
 
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
+  const [mixerReturnView, setMixerReturnView] = useState<'showcase' | 'recommendations'>('showcase');
 
   const [query, setQuery] = useState('');
   const [appliedCatalogProfiles, setAppliedCatalogProfiles] = useState<string[]>([]);
@@ -1198,6 +1178,15 @@ export const App = () => {
     setRatingValue(null);
   };
 
+  const openMixer = (from: 'showcase' | 'recommendations') => {
+    setMixerReturnView(from);
+    setView('mixer');
+  };
+
+  // Похожий микс с раскрытия «Намиксуй» — из полной картотеки онбординга.
+  const findCatalogMix = (mixId: string) =>
+    onboardingMixes.find((mix) => mix.id === mixId) ?? catalogSourceMixes.find((mix) => mix.id === mixId);
+
   const onChooseMix = async (mix: MixCard, source: MixSource) => {
     setChooseStatus('loading');
     setChooseError('');
@@ -1398,7 +1387,7 @@ export const App = () => {
       return null;
     }
 
-    if (view === 'smoke-confirmation') {
+    if (view === 'smoke-confirmation' || view === 'mixer') {
       return null;
     }
 
@@ -1779,6 +1768,9 @@ export const App = () => {
               Открыть каталог
             </button>
           </div>
+          {recommendationStatus === 'ready' ? (
+            <MixerInvite onOpen={() => openMixer('recommendations')} />
+          ) : null}
         </section>
       );
     }
@@ -1894,6 +1886,8 @@ export const App = () => {
             </div>
           </>
         ) : null}
+
+        <MixerInvite onOpen={() => openMixer('recommendations')} />
       </section>
     );
   };
@@ -1911,6 +1905,7 @@ export const App = () => {
 
     return (
       <section className="aroma-showcase">
+        <MixerInvite onOpen={() => openMixer('showcase')} />
         {dedupeRails(
           showcaseRails.map((rail) => ({ ...rail, mixes: rail.mixes.filter((mix) => mix.available) })),
         ).map((rail) => {
@@ -2320,6 +2315,16 @@ export const App = () => {
           renderAccessView()
         ) : view === 'smoke-confirmation' ? (
           renderSmokeConfirmationView()
+        ) : view === 'mixer' ? (
+          <MixerScreen
+            likedProfiles={likedProfiles}
+            onExit={() => setView(mixerReturnView)}
+            canOpenMix={(mixId) => Boolean(findCatalogMix(mixId))}
+            onOpenMix={(mixId) => {
+              const mix = findCatalogMix(mixId);
+              if (mix) openMix(mix, 'catalog');
+            }}
+          />
         ) : (
           <>
             {renderTopbar()}

@@ -1,3 +1,5 @@
+import type { PaletteTobacco, Turn, Verdict } from '@/lib/mixer/types';
+
 // Реплики мастера на экране «Намиксуй». Тексты пишет владелец продукта (#128):
 // по одной или несколько фраз на ключ, `{name}` подставляется там, где есть
 // имя. Пустой ключ — мастер молчит, на экране остаётся прошлая реплика.
@@ -118,4 +120,24 @@ const SKIP_LINE_CHANCE = 0.2;
 export const skipLineKey = (streak: number, rng: () => number = Math.random): MasterLineKey | null => {
   if (streak === 10) return 'skip.streak10';
   return rng() < SKIP_LINE_CHANCE ? 'skip' : null;
+};
+
+// Реплика на «беру»: основа — по первому профилю табака, акцент — по ступени
+// совпадения с чашей, штрих — холодок (или мятный) либо пряный.
+export const takeLineKey = (
+  turn: Turn,
+  tobacco: Pick<PaletteTobacco, 'flavorProfiles' | 'cooling'>,
+  verdict: Verdict,
+): MasterLineKey | null => {
+  const profiles = tobacco.flavorProfiles.map((profile) => profile.trim().toLowerCase());
+  if (turn === 0) {
+    const key = `take.base.${profiles[0]}`;
+    return key in masterLines ? (key as MasterLineKey) : null;
+  }
+  if (turn === 1) {
+    return `take.accent.${verdict}`;
+  }
+  if (tobacco.cooling || profiles.includes('minty')) return 'take.twist.cooling';
+  if (profiles.includes('spicy')) return 'take.twist.spicy';
+  return null;
 };

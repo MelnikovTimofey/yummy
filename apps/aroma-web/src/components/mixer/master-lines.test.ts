@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { masterLines, pickMasterLine, skipLineKey } from './master-lines';
+import { masterLines, pickMasterLine, skipLineKey, takeLineKey } from './master-lines';
 
 // Ключи — ровно из issue #128; тексты пишет владелец продукта.
 const expectedKeys = [
@@ -63,4 +63,17 @@ test('skipLineKey: десятый пропуск подряд и редкая р
   assert.equal(skipLineKey(3, () => 0.1), 'skip');
   assert.equal(skipLineKey(3, () => 0.5), null);
   assert.equal(skipLineKey(20, () => 0.5), null);
+});
+
+test('takeLineKey: основа по профилю, акцент по ступени, штрих по холодку', () => {
+  const tobacco = (flavorProfiles: string[], cooling = false) => ({ flavorProfiles, cooling });
+  assert.equal(takeLineKey(0, tobacco(['floral_herbal', 'fresh']), 'bold'), 'take.base.floral_herbal');
+  assert.equal(takeLineKey(0, tobacco(['Berry']), 'bold'), 'take.base.berry');
+  assert.equal(takeLineKey(0, tobacco(['unknown']), 'bold'), null);
+  assert.equal(takeLineKey(0, tobacco([]), 'bold'), null);
+  assert.equal(takeLineKey(1, tobacco(['citrus']), 'ask-master'), 'take.accent.ask-master');
+  assert.equal(takeLineKey(2, tobacco(['fruity'], true), 'classic'), 'take.twist.cooling');
+  assert.equal(takeLineKey(2, tobacco(['minty']), 'classic'), 'take.twist.cooling');
+  assert.equal(takeLineKey(2, tobacco(['spicy']), 'classic'), 'take.twist.spicy');
+  assert.equal(takeLineKey(2, tobacco(['fruity']), 'classic'), null);
 });
