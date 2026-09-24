@@ -369,6 +369,7 @@ select:focus-visible {
 
 .screen-status {
   margin: 0;
+  padding: 20px var(--gutter);
   color: var(--text-1);
   font-size: 15px;
 }
@@ -647,18 +648,6 @@ select:focus-visible {
   overflow: hidden;
 }
 
-.aroma-intro-watermark {
-  position: absolute;
-  top: 14px;
-  right: 22px;
-  font-family: var(--font-display);
-  font-size: 96px;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  color: rgba(176, 74, 62, 0.08);
-  pointer-events: none;
-}
-
 .aroma-intro-body {
   flex: 1 1 auto;
   display: flex;
@@ -666,10 +655,6 @@ select:focus-visible {
   gap: 18px;
   justify-content: center;
   z-index: 1;
-}
-
-.aroma-intro-caps {
-  margin: 0;
 }
 
 .aroma-intro-content {
@@ -696,6 +681,45 @@ select:focus-visible {
   max-width: 30ch;
 }
 
+.aroma-intro-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+
+.aroma-intro-step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.aroma-intro-step-num {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.aroma-intro-step-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.aroma-intro-step-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.aroma-intro-step-copy span {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
 .aroma-intro-dock {
   flex: 0 0 auto;
   display: grid;
@@ -705,39 +729,9 @@ select:focus-visible {
   background: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%);
 }
 
-.aroma-intro-pips {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-}
-
-.aroma-intro-pip {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(176, 74, 62, 0.30);
-  transition: width 220ms;
-}
-
-.aroma-intro-pip-active {
-  width: 22px;
-  background: var(--primary);
-}
-
-.aroma-intro-skip {
-  background: transparent;
-  border: 0;
-  color: var(--text-2);
-  font-size: 11px;
-  padding: 4px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
 .aroma-onboarding-progress {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 12px;
   padding-top: 4px;
@@ -768,12 +762,6 @@ select:focus-visible {
   border-radius: inherit;
   background: linear-gradient(90deg, var(--accent-deep) 0%, var(--primary) 100%);
   transition: width 240ms ease-out;
-}
-
-.aroma-onboarding-count {
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
-  color: var(--text-1);
 }
 
 .aroma-onboarding {
@@ -892,24 +880,6 @@ select:focus-visible {
   padding: 12px 0 calc(22px + var(--safe-bottom));
   border-top: 1px solid var(--line-soft);
   background: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%);
-}
-
-.aroma-onboarding-pips {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-}
-
-.aroma-onboarding-pip {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(176, 74, 62, 0.30);
-  transition: background 220ms;
-}
-
-.aroma-onboarding-pip-on {
-  background: var(--primary);
 }
 
 .aroma-onboarding-tally {
