@@ -1249,34 +1249,6 @@ export const toggleMixFilterValue = (values: string[], value: string) => {
   return uniqueStrings(next);
 };
 
-export const sortMixes = (items: MixRecord[]) => {
-  const copy = [...items];
-
-  return copy.sort((left, right) => {
-    if (left.guestVisible !== right.guestVisible) {
-      return left.guestVisible ? -1 : 1;
-    }
-
-    if (left.available !== right.available) {
-      return left.available ? -1 : 1;
-    }
-
-    if (left.railCount !== right.railCount) {
-      return right.railCount - left.railCount;
-    }
-
-    if (right.smokeCtaCount !== left.smokeCtaCount) {
-      return right.smokeCtaCount - left.smokeCtaCount;
-    }
-
-    if (right.avgRating !== left.avgRating) {
-      return right.avgRating - left.avgRating;
-    }
-
-    return left.name.localeCompare(right.name, 'ru');
-  });
-};
-
 export const sortRails = (items: RailRecord[]) => {
   const rank: Record<RailType, number> = {
     statistical: 0,
@@ -1583,19 +1555,6 @@ export const inventoryStockFilterOptions: Array<{ value: InventoryStockFilter; l
   { value: 'out-of-stock', label: 'Только нет наличия' },
 ];
 
-export const inventorySortFieldOptions: Array<{ value: InventorySortField; label: string }> = [
-  { value: 'stock', label: 'Сначала по наличию' },
-  { value: 'dependentMixes', label: 'По зависимым миксам' },
-  { value: 'updatedAt', label: 'По обновлению' },
-  { value: 'manufacturer', label: 'По производителю' },
-  { value: 'name', label: 'По названию' },
-];
-
-export const inventorySortDirectionOptions: Array<{ value: InventorySortDirection; label: string }> = [
-  { value: 'desc', label: 'По убыванию' },
-  { value: 'asc', label: 'По возрастанию' },
-];
-
 export const mixStatusFilterOptions: Array<{ value: MixStatusFilter; label: string }> = [
   { value: 'all', label: 'Все статусы' },
   { value: 'guest-visible', label: 'Виден гостю' },
@@ -1607,19 +1566,6 @@ export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }
   { value: 'all', label: 'Любое участие' },
   { value: 'in-rails', label: 'Только в рейлах' },
   { value: 'without-rails', label: 'Без рейлов' },
-];
-
-export const mixSortFieldOptions: Array<{ value: MixSortField; label: string }> = [
-  { value: 'demand', label: 'По выбору гостей' },
-  { value: 'rails', label: 'По участию в рейлах' },
-  { value: 'avgRating', label: 'По рейтингу' },
-  { value: 'updatedAt', label: 'По обновлению' },
-  { value: 'name', label: 'По названию' },
-];
-
-export const mixSortDirectionOptions: Array<{ value: MixSortDirection; label: string }> = [
-  { value: 'desc', label: 'По убыванию' },
-  { value: 'asc', label: 'По возрастанию' },
 ];
 
 export const formatInventoryBatchAction = (value: InventoryBatchAction) => {

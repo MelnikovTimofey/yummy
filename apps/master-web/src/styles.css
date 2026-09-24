@@ -3570,8 +3570,7 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .inventory-toolbar,
-  .mixes-toolbar:not(.mixes-toolbar--bar) {
+  .inventory-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3812,41 +3811,6 @@ input[type="checkbox"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.tobaccos-list__sep {
-  width: 1px;
-  height: 22px;
-  background: var(--border-subtle);
-  margin: 0 4px;
-}
-
-.tobaccos-list__sort {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-muted);
-}
-
-.tobaccos-list__sort > svg {
-  flex-shrink: 0;
-}
-
-.tobaccos-list__sort select {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  color: var(--text-secondary);
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  cursor: pointer;
-  padding-right: 4px;
-}
-
-.tobaccos-list__sort select:hover {
-  color: var(--text-primary);
 }
 
 .tobaccos-list__chip-filter {
@@ -4092,41 +4056,6 @@ button.chip .chip__count[hidden] {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-.mixes-list__sep {
-  width: 1px;
-  height: 22px;
-  background: var(--border-subtle);
-  margin: 0 4px;
-}
-
-.mixes-list__sort {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-muted);
-}
-
-.mixes-list__sort > svg {
-  flex-shrink: 0;
-}
-
-.mixes-list__sort select {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  color: var(--text-secondary);
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  cursor: pointer;
-  padding-right: 4px;
-}
-
-.mixes-list__sort select:hover {
-  color: var(--text-primary);
 }
 
 .mixes-list__profiles {
@@ -6652,13 +6581,6 @@ button.chip .chip__count[hidden] {
   color: var(--text-primary);
 }
 
-.mixes-toolbar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(280px, 1.6fr) repeat(3, minmax(140px, 1fr)) auto;
-  gap: 8px;
-  align-items: end;
-}
-
 .mixes-toolbar--bar {
   display: flex;
   flex-wrap: wrap;
@@ -6744,17 +6666,6 @@ button.chip .chip__count[hidden] {
   background: var(--accent-soft);
   border-color: var(--accent-border);
   color: var(--text-primary);
-}
-
-.mixes-toolbar--bar .master-sort-pill__trigger {
-  padding: 4px 10px;
-  font-size: 0.76rem;
-  gap: 6px;
-}
-
-.mixes-toolbar--bar .master-sort-pill__chevron {
-  width: 12px;
-  height: 12px;
 }
 
 .mixes-search,
@@ -7138,9 +7049,8 @@ button.chip .chip__count[hidden] {
   }
 
   .mixes-panel__stats,
-  .mixes-toolbar:not(.mixes-toolbar--bar),
-  .mixes-component-row,
-  .mixes-workspace {
+.mixes-component-row,
+.mixes-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -8063,10 +7973,6 @@ button.chip .chip__count[hidden] {
   gap: 4px;
 }
 
-.mixes-cell__metrics {
-  gap: 4px;
-}
-
 .mixes-cell__metric {
   display: inline-flex;
   align-items: center;
@@ -8353,94 +8259,6 @@ button.chip .chip__count[hidden] {
 }
 
 /* MasterSortPill — единый pill-popover на месте Сортировка+Порядок+Сбросить. */
-.master-sort-pill {
-  position: relative;
-  display: inline-block;
-}
-
-.master-sort-pill__trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border-default);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
-}
-
-.master-sort-pill__trigger:hover {
-  color: var(--text-primary);
-  border-color: var(--accent-hover);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.master-sort-pill__trigger:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 4px var(--accent-soft);
-  border-color: var(--accent-hover);
-  color: var(--text-primary);
-}
-
-.master-sort-pill__trigger[aria-expanded='true'] {
-  color: var(--text-primary);
-  border-color: var(--accent-hover);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.master-sort-pill__value {
-  letter-spacing: -0.005em;
-}
-
-.master-sort-pill__chevron {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.18s ease;
-}
-
-.master-sort-pill__chevron--open {
-  transform: rotate(180deg);
-}
-
-.master-sort-pill__popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 40;
-  list-style: none;
-  margin: 0;
-  padding: 6px;
-  min-width: 240px;
-  max-width: 320px;
-  border-radius: 12px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-elevated);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
-}
-
-.master-sort-pill__option {
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.84rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-
-.master-sort-pill__option:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-}
-
-.master-sort-pill__option--selected {
-  background: var(--accent-soft);
-  color: var(--text-primary);
-}
-
 /* Расширенный фильтр на странице миксов — общий стиль <details>-summary. */
 .master-filter-details {
   border: 1px dashed var(--accent-border);
@@ -8488,3 +8306,35 @@ button.chip .chip__count[hidden] {
   gap: 12px;
 }
 
+
+/* --- Сортируемый заголовок таблицы ------------------------------------ */
+
+.sortable-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--r-xs);
+  transition: color 120ms ease;
+}
+
+.sortable-header:hover,
+.sortable-header[data-active] {
+  color: var(--text-primary);
+}
+
+.sortable-header:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.mixes-table__metric-col {
+  white-space: nowrap;
+}
