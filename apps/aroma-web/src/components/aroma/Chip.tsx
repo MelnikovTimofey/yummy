@@ -54,7 +54,7 @@ export function Chip({
         lineHeight: 1.1,
         cursor: onClick && !disabled ? "pointer" : "default",
         opacity: disabled ? 0.5 : dimmed ? 0.42 : 1,
-        boxShadow: active ? "inset 0 1px 0 rgba(255,244,236,0.10)" : "none",
+        boxShadow: active ? "var(--highlight-inner)" : "none",
         transition: "background 120ms, border-color 120ms, color 120ms",
         ...style,
       }}
