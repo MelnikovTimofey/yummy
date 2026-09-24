@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
-import { colorForTobacco } from './color-for-tobacco';
+import { compositionColor } from './composition-color';
 import { componentPercent, resizeFromHandle } from './rebalance';
 import type { MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 
@@ -55,14 +55,13 @@ export const ProportionBar = ({ components, onResize }: ProportionBarProps) => {
   return (
     <div ref={barRef} className="proportion-bar" aria-label="Пропорции состава" role="presentation">
       {components.map((component, idx) => {
-        const color = colorForTobacco(component.tobaccoId);
         const isLast = idx === components.length - 1;
         const percent = componentPercent(component);
         return (
           <div
             key={component.key}
             className="proportion-bar__seg"
-            style={{ flex: `${percent} 0 0`, background: color.fill }}
+            style={{ flex: `${percent} 0 0`, background: compositionColor(idx) }}
             title={`${percent}%`}
           >
             {!isLast ? (

@@ -152,7 +152,7 @@ export const StaffBlock = ({
                   <div className="cell-meta mono access-cell-login">{account.login || '—'}</div>
                   <div>
                     {isAdmin ? (
-                      <span className="tag" data-tone="accent">admin</span>
+                      <span className="tag">admin</span>
                     ) : (
                       <span className="tag">staff</span>
                     )}

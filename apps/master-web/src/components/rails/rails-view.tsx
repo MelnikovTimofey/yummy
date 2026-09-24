@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { MixRecord, RailRecord, RailType } from '@/contracts';
+import type { MixRecord, RailRecord } from '@/contracts';
 import { formatRailType } from '@/contracts';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,14 +18,6 @@ const AROMA_WEB_URL =
 
 const openGuestShowcase = () => {
   window.open(AROMA_WEB_URL, '_blank', 'noopener,noreferrer');
-};
-
-type TagTone = 'info' | 'warning' | 'accent';
-
-const railTypeTone: Record<RailType, TagTone> = {
-  statistical: 'info',
-  prepared: 'warning',
-  curated: 'accent',
 };
 
 const pluralizeMixCount = (count: number) => {
@@ -132,14 +124,12 @@ export const RailsView = ({
             <div className="rails-card__main">
               <div className="rails-card__tags">
                 <span className="rails-page__eyebrow rails-card__kicker">Рейл</span>
-                <span className="tag" data-tone={railTypeTone[rail.type]}>
-                  {formatRailType(rail.type)}
-                </span>
+                <span className="tag">{formatRailType(rail.type)}</span>
                 {!rail.editable ? (
                   <span className="tag tag--ghost">только просмотр</span>
                 ) : null}
                 {rail.active ? (
-                  <span className="tag" data-tone="success">активен</span>
+                  <span className="tag">активен</span>
                 ) : null}
               </div>
               <h3 className="rails-card__name">{rail.name}</h3>

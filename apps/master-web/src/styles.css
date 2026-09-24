@@ -1673,7 +1673,7 @@ button.chip:hover {
 button.chip[data-active="true"] {
   background: var(--accent-soft);
   border-color: var(--accent-border, var(--border-subtle));
-  color: var(--accent);
+  color: var(--text-primary);
 }
 
 button.chip .chip__count {
@@ -3928,7 +3928,7 @@ input[type="checkbox"] {
 .filter-chip--active {
   background: var(--accent-soft);
   border-color: var(--accent-border);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 
 .filter-chip__count {
@@ -3948,7 +3948,7 @@ input[type="checkbox"] {
 
 .filter-chip--active .filter-chip__count {
   background: oklch(0 0 0 / 0.18);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 
 /* --- Table inside .tobaccos-list: нейтральная палитра ----------------- */
@@ -5869,7 +5869,14 @@ input[type="checkbox"] {
 .tag[data-tone="danger"] {
   background: var(--danger-soft);
   border-color: var(--danger-soft);
-  color: var(--accent-hover);
+  color: var(--danger);
+}
+
+.tag__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .tag--ghost {
@@ -7452,32 +7459,23 @@ input[type="checkbox"] {
 
 .mix-builder__component {
   display: grid;
-  grid-template-columns: 36px 1fr auto;
-  gap: 10px;
+  grid-template-columns: 10px 1fr auto;
+  gap: 12px;
   align-items: center;
   padding: 10px 12px;
   background: var(--background);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
   border-radius: 8px;
 }
 
 .mix-builder__component--missing {
   opacity: 0.6;
-  grid-template-columns: 1fr auto;
 }
 
-.mix-builder__component-brand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--muted);
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--foreground);
+.mix-builder__component-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
 }
 
 .mix-builder__component-main {
@@ -7498,17 +7496,14 @@ input[type="checkbox"] {
 .mix-builder__component-badge {
   display: inline-flex;
   padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border: 1px solid color-mix(in oklch, var(--destructive) 40%, transparent);
-  color: var(--destructive);
-  background: color-mix(in oklch, var(--destructive) 14%, transparent);
+  border-radius: var(--r-xs);
+  font-size: 11px;
+  font-weight: 500;
 }
 
-.mix-builder__component-badge--danger {
-  border-color: color-mix(in oklch, var(--destructive) 40%, transparent);
+.mix-builder__component-badge--warning {
+  color: var(--warning);
+  background: var(--warning-soft);
 }
 
 .mix-builder__component-sub {
@@ -8146,7 +8141,9 @@ input[type="checkbox"] {
   letter-spacing: 0.08em;
   font-weight: 600;
   border-radius: 4px;
-  border: 1px solid;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
 }
 
 .mixes-cell__component-line {

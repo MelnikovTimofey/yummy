@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  flavorProfileColor,
   formatFlavorProfileLabel,
   formatRating,
   INVENTORY_FLAVOR_PROFILE_KEYS,
@@ -997,4 +998,12 @@ test('formatRating форматирует рейтинг по-русски с о
   assert.equal(formatRating(4.8), '4,8');
   assert.equal(formatRating(5), '5,0');
   assert.equal(formatRating(4.25), '4,3');
+});
+
+// Цвет профиля — слой данных `--profile-*`; незнакомый ключ падает в fallback,
+// а не в случайный оттенок (#98).
+test('flavorProfileColor ссылается на токен профиля с fallback', () => {
+  assert.equal(flavorProfileColor('fresh'), 'var(--profile-fresh, var(--profile-fallback))');
+  assert.equal(flavorProfileColor('floral_herbal'), 'var(--profile-floral-herbal, var(--profile-fallback))');
+  assert.equal(flavorProfileColor('Сладкие'), 'var(--profile-fallback)');
 });

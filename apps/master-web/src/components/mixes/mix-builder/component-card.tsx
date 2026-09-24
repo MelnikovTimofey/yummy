@@ -1,34 +1,33 @@
 import { Minus, Plus, Trash2 } from 'lucide-react';
-import { colorForTobacco } from './color-for-tobacco';
+import { compositionColor } from './composition-color';
 import { componentPercent } from './rebalance';
 import type { MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import type { InventoryTobacco } from '@/contracts';
 
 type ComponentCardProps = {
   component: MixEditorComponentInput;
+  index: number;
   tobacco: InventoryTobacco | null;
   onPercentChange: (nextPercent: number) => void;
   onRemove: () => void;
 };
 
-const brandShort = (manufacturer: string) =>
-  manufacturer
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || '·';
-
-export const ComponentCard = ({ component, tobacco, onPercentChange, onRemove }: ComponentCardProps) => {
+export const ComponentCard = ({ component, index, tobacco, onPercentChange, onRemove }: ComponentCardProps) => {
   const percent = componentPercent(component);
-  const color = colorForTobacco(component.tobaccoId);
+  const swatch = (
+    <span
+      className="mix-builder__component-swatch"
+      style={{ background: compositionColor(index) }}
+      aria-hidden="true"
+    />
+  );
 
   const step = (delta: number) => onPercentChange(Math.max(1, Math.min(99, percent + delta)));
 
   if (!tobacco) {
     return (
-      <div className="mix-builder__component mix-builder__component--missing" style={{ borderLeftColor: color.fill }}>
+      <div className="mix-builder__component mix-builder__component--missing">
+        {swatch}
         <div className="mix-builder__component-main">
           <div className="mix-builder__component-name">Табак не найден ({component.tobaccoId})</div>
           <div className="mix-builder__component-sub">Возможно, удалён из каталога</div>
@@ -62,15 +61,13 @@ export const ComponentCard = ({ component, tobacco, onPercentChange, onRemove }:
   }
 
   return (
-    <div className="mix-builder__component" style={{ borderLeftColor: color.fill }}>
-      <div className="mix-builder__component-brand" aria-hidden="true">
-        {brandShort(tobacco.manufacturer)}
-      </div>
+    <div className="mix-builder__component">
+      {swatch}
       <div className="mix-builder__component-main">
         <div className="mix-builder__component-name">
           {tobacco.name}
           {!tobacco.inStock ? (
-            <span className="mix-builder__component-badge mix-builder__component-badge--danger">нет в наличии</span>
+            <span className="mix-builder__component-badge mix-builder__component-badge--warning">нет в наличии</span>
           ) : null}
         </div>
         <div className="mix-builder__component-sub">

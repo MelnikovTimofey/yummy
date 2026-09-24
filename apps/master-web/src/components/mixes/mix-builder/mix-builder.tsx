@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, type FormEventHandler } from 'react';
 import { ArrowLeft, Scale } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
-import { formatFlavorProfileLabel } from '@/contracts';
+import { ProfileTag } from '@/components/ui/profile-tag';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
 import { ComponentCard } from './component-card';
 import { ProportionBar } from './proportion-bar';
@@ -164,7 +164,7 @@ export const MixBuilder = ({
             </span>
           ) : null}
           {blockedByStock ? (
-            <span className="tag" data-tone="danger">блокируется наличием</span>
+            <span className="tag" data-tone="warning">блокируется наличием</span>
           ) : null}
         </div>
         <div className="mix-builder__actions">
@@ -289,10 +289,11 @@ export const MixBuilder = ({
                   <p>Табаки добавляются из библиотеки слева.</p>
                 </div>
               ) : (
-                editor.components.map((component) => (
+                editor.components.map((component, index) => (
                   <ComponentCard
                     key={component.key}
                     component={component}
+                    index={index}
                     tobacco={tobaccoMap.get(component.tobaccoId) ?? null}
                     onPercentChange={(nextPercent) =>
                       onUpdateComponent(component.key, { proportion: String(nextPercent) })
@@ -309,9 +310,7 @@ export const MixBuilder = ({
               <span className="mix-builder__section-eyebrow">Профиль</span>
               <div className="mix-builder__profile-chips">
                 {aggregatedProfiles.map((profile) => (
-                  <span className="mix-builder__chip mix-builder__chip--accent" key={profile}>
-                    {formatFlavorProfileLabel(profile)}
-                  </span>
+                  <ProfileTag key={profile} profile={profile} />
                 ))}
               </div>
             </section>

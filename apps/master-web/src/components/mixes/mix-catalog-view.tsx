@@ -31,7 +31,7 @@ import {
   composeSortKey,
   parseSortKey,
 } from '@/components/shell/master-sort-pill.helpers';
-import { colorForTobacco } from '@/components/mixes/mix-builder/color-for-tobacco';
+import { ProfileTag } from '@/components/ui/profile-tag';
 import type {
   MixFilterKey,
   MixListFilters,
@@ -131,21 +131,17 @@ const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => 
 
   if (status === 'blocked') {
     return (
-      <span className="tag" data-tone="danger">
+      <span className="tag" data-tone="warning">
         Блокирован
       </span>
     );
   }
 
   if (status === 'hidden') {
-    return <span className="tag">Скрыт</span>;
+    return <span className="tag tag--ghost">Скрыт</span>;
   }
 
-  return (
-    <span className="tag" data-tone="success">
-      Виден
-    </span>
-  );
+  return <span className="tag">Виден</span>;
 };
 
 export const MixCatalogView = ({
@@ -274,7 +270,6 @@ export const MixCatalogView = ({
             label: 'Видно гостю',
             value: formatMetricValue(meta.guestVisibleCount),
             hint: 'сейчас на витрине',
-            tone: 'success',
           },
           {
             label: 'В рейлах',
@@ -285,7 +280,7 @@ export const MixCatalogView = ({
             label: 'Заблокировано',
             value: formatMetricValue(meta.blockedCount),
             hint: 'из-за наличия',
-            tone: 'warning',
+            tone: meta.blockedCount > 0 ? 'warning' : 'default',
           },
         ]}
       />
@@ -474,23 +469,15 @@ export const MixCatalogView = ({
                       <td>
                         <div className="mixes-cell mixes-cell__components">
                           <div className="mixes-cell__pills" aria-hidden="true">
-                            {mix.components.map((component) => {
-                              const color = colorForTobacco(component.tobaccoId);
-                              return (
-                                <span
-                                  key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}:pill`}
-                                  className="mixes-cell__pill"
-                                  style={{
-                                    background: color.soft,
-                                    borderColor: color.border,
-                                    color: color.text,
-                                  }}
-                                  title={`${component.manufacturer} · ${component.name}`}
-                                >
-                                  {brandShort(component.manufacturer)}
-                                </span>
-                              );
-                            })}
+                            {mix.components.map((component) => (
+                              <span
+                                key={`${mix.id}:${component.tobaccoId}:${component.sortOrder}:pill`}
+                                className="mixes-cell__pill"
+                                title={`${component.manufacturer} · ${component.name}`}
+                              >
+                                {brandShort(component.manufacturer)}
+                              </span>
+                            ))}
                           </div>
                           <span className="mixes-cell__component-line">
                             {mix.components.map((component) => component.name).join(' + ')}
@@ -500,13 +487,7 @@ export const MixCatalogView = ({
                       <td>
                         <div className="mixes-cell mixes-cell__chips">
                           {visibleProfiles.map((profile) => (
-                            <span
-                              key={`${mix.id}:profile:${profile}`}
-                              className="tag"
-                              data-tone="accent"
-                            >
-                              {formatFlavorProfileLabel(profile)}
-                            </span>
+                            <ProfileTag key={`${mix.id}:profile:${profile}`} profile={profile} />
                           ))}
                           {profileOverflow > 0 ? (
                             <span className="tag tag--ghost">+{profileOverflow}</span>
