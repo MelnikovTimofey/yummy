@@ -12,39 +12,41 @@ export const defaultShares = (count: number) => [...(DEFAULT_SHARES[count] ?? []
 
 const NEUTRAL_AFFINITY = 0.5;
 
-const profileAffinity = (left: string, right: string, affinity: Record<string, number>) => {
-  const key = [left, right].sort().join('|');
-  return affinity[key] ?? NEUTRAL_AFFINITY;
-};
+const profilesOf = (tobacco: PaletteTobacco) =>
+  Array.from(new Set(tobacco.flavorProfiles.map((profile) => profile.trim().toLowerCase())));
 
-// У табака может быть несколько профилей — сродство пары табаков берём
-// средним по всем парам их профилей.
+// Формулы — зеркало harmonyOf из apps/backend/src/mixer.ts (#125): совпадение
+// на карте обязано сходиться с тем, что evaluate покажет на раскрытии.
+// Сродство пары табаков — среднее по всем парам их профилей.
 export const pairAffinity = (
   left: PaletteTobacco,
   right: PaletteTobacco,
   affinity: Record<string, number>,
 ) => {
-  if (!left.flavorProfiles.length || !right.flavorProfiles.length) {
+  const leftProfiles = profilesOf(left);
+  const rightProfiles = profilesOf(right);
+  if (!leftProfiles.length || !rightProfiles.length) {
     return NEUTRAL_AFFINITY;
   }
-  let sum = 0;
-  let count = 0;
-  for (const a of left.flavorProfiles) {
-    for (const b of right.flavorProfiles) {
-      sum += profileAffinity(a, b, affinity);
-      count += 1;
-    }
-  }
-  return sum / count;
+  const values = leftProfiles.flatMap((a) =>
+    rightProfiles.map((b) => affinity[[a, b].sort().join('|')] ?? NEUTRAL_AFFINITY),
+  );
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 };
 
-// Совпадение на карте — сродство профилей, взвешенное произведением долей по
-// умолчанию, без штрафов: итог со штрафами считает backend на раскрытии.
-export const matchScore = (tobaccos: PaletteTobacco[], affinity: Record<string, number>) => {
+const MONO_HARMONY = 70;
+const MAX_COOLING = 20;
+const MIN_BASE = 35;
+const MAX_TWIST = 25;
+
+export const harmonyOf = (
+  tobaccos: PaletteTobacco[],
+  shares: number[],
+  affinity: Record<string, number>,
+) => {
   if (tobaccos.length < 2) {
-    return null;
+    return MONO_HARMONY;
   }
-  const shares = defaultShares(tobaccos.length);
   let weighted = 0;
   let weights = 0;
   for (let i = 0; i < tobaccos.length; i += 1) {
@@ -54,8 +56,21 @@ export const matchScore = (tobaccos: PaletteTobacco[], affinity: Record<string, 
       weights += weight;
     }
   }
-  return Math.round((weighted / weights) * 100);
+  let harmony = 40 + 60 * (weighted / weights);
+
+  const cooling = coolingShare(tobaccos, shares);
+  if (cooling > MAX_COOLING) harmony -= (cooling - MAX_COOLING) * 0.5;
+  if (shares[0] < MIN_BASE) harmony -= (MIN_BASE - shares[0]) * 0.6;
+  // Штрих — по роли: третий компонент чаши, а не флаг twist у табака.
+  const twist = shares[2] ?? 0;
+  if (twist > MAX_TWIST) harmony -= (twist - MAX_TWIST) * 0.5;
+
+  return Math.max(0, Math.min(100, Math.round(harmony)));
 };
+
+// Совпадение на карте — гармония чаши с этой картой при долях по умолчанию.
+export const matchScore = (tobaccos: PaletteTobacco[], affinity: Record<string, number>) =>
+  harmonyOf(tobaccos, defaultShares(tobaccos.length), affinity);
 
 export const verdictForScore = (score: number): Verdict =>
   score >= 85 ? 'classic' : score >= 70 ? 'confident' : score >= 55 ? 'bold' : 'ask-master';
@@ -90,18 +105,19 @@ export const splitWarning = (tobaccos: PaletteTobacco[], shares: number[]) => {
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 // Черновик имени, пока идут свайпы; на раскрытии его заменяет имя из evaluate.
-// Правило то же, что у backend (#125): первые ноты через запятую и «и»,
-// охлаждающий штрих — суффикс «со льдом».
+// Правило — как nameOf в backend (#125): первые ноты через запятую и «и»,
+// холодок после основы — суффикс «со льдом».
 export const draftMixName = (tobaccos: PaletteTobacco[]) => {
   if (!tobaccos.length) {
     return '';
   }
-  const coldTwist = tobaccos.length === 3 && tobaccos[2].cooling;
-  const named = coldTwist ? tobaccos.slice(0, 2) : tobaccos;
-  const notes = named.map((tobacco) => tobacco.flavors[0] ?? tobacco.name);
+  const [base, ...rest] = tobaccos;
+  const named = [base, ...rest.filter((tobacco) => !tobacco.cooling)];
+  const iced = rest.some((tobacco) => tobacco.cooling);
+  const notes = Array.from(new Set(named.map((tobacco) => tobacco.flavors[0]?.trim() || tobacco.name)));
   const joined =
     notes.length === 1 ? notes[0] : `${notes.slice(0, -1).join(', ')} и ${notes[notes.length - 1]}`;
-  return capitalize(coldTwist ? `${joined} со льдом` : joined);
+  return `${capitalize(joined)}${iced ? ' со льдом' : ''}`;
 };
 
 export const poolForTurn = (palette: PaletteTobacco[], turn: Turn, chosen: string[]) =>
@@ -154,7 +170,7 @@ export const trustMaster = (
     }
     const current = ids.map((id) => byId.get(id)).filter((item): item is PaletteTobacco => Boolean(item));
     const best = pool
-      .map((tobacco) => ({ tobacco, score: matchScore([...current, tobacco], affinity) ?? 0 }))
+      .map((tobacco) => ({ tobacco, score: matchScore([...current, tobacco], affinity) }))
       .sort((left, right) => right.score - left.score)
       .slice(0, 4);
     ids.push(pickOne(best, rng).tobacco.id);

@@ -4,6 +4,7 @@ import {
   coolingShare,
   defaultShares,
   draftMixName,
+  harmonyOf,
   initialShelves,
   matchScore,
   moveBoundary,
@@ -54,17 +55,38 @@ test('pairAffinity усредняет пары профилей у многоп�
   assert.equal(pairAffinity(left, right, affinity), (0.8 + 0.4) / 2);
 });
 
-test('matchScore взвешивает сродство произведением долей по умолчанию', () => {
+test('matchScore считает как evaluate: 40 + 60 · сродство, взвешенное долями по умолчанию', () => {
   const base = tobacco('base', { flavorProfiles: ['berry'] });
   const accent = tobacco('accent', { flavorProfiles: ['dessert'] });
   const twist = tobacco('twist', { flavorProfiles: ['minty'] });
 
-  assert.equal(matchScore([base, accent], affinity), 90);
+  // 40 + 60 · 0,9
+  assert.equal(matchScore([base, accent], affinity), 94);
 
-  // 55·35·0,9 + 55·10·0,8 + 35·10·0,4 = 1732,5 + 440 + 140 = 2312,5
-  // 55·35 + 55·10 + 35·10 = 2825 → 81,86…
-  assert.equal(matchScore([base, accent, twist], affinity), 82);
-  assert.equal(matchScore([base], affinity), null);
+  // (55·35·0,9 + 55·10·0,8 + 35·10·0,4) / (55·35 + 55·10 + 35·10) = 0,8186…
+  // 40 + 60 · 0,8186 = 89,1
+  assert.equal(matchScore([base, accent, twist], affinity), 89);
+  assert.equal(matchScore([base], affinity), 70);
+});
+
+test('matchScore учитывает штрафы ремесла, как evaluate', () => {
+  const base = tobacco('base', { flavorProfiles: ['citrus'] });
+  // Холодок акцентом — 35% при пороге 20: −0,5 за процент сверх.
+  const coldAccent = tobacco('ice', { flavorProfiles: ['fruity'], cooling: true, twist: true });
+  // Нейтральное сродство 0,5 → 70; холодок 35% → −7,5; штраф штриха — только третьему.
+  assert.equal(matchScore([base, coldAccent], affinity), 63);
+
+  const citrus = tobacco('c', { flavorProfiles: ['citrus'] });
+  const fruit = tobacco('f', { flavorProfiles: ['fruity'] });
+  const pepper = tobacco('p', { flavorProfiles: ['spicy'] });
+  // Основа 30% → −3; штрих 30% → −2,5.
+  assert.equal(harmonyOf([citrus, fruit, pepper], [30, 40, 30], affinity), 65);
+});
+
+test('профили сравниваются без учёта регистра и повторов', () => {
+  const left = tobacco('a', { flavorProfiles: ['Berry', 'berry'] });
+  const right = tobacco('b', { flavorProfiles: ['dessert'] });
+  assert.equal(pairAffinity(left, right, affinity), 0.9);
 });
 
 test('verdictForScore — ступени 85 / 70 / 55', () => {
@@ -94,18 +116,21 @@ test('coolingShare и splitWarning', () => {
   assert.equal(splitWarning(tobaccos, [55, 35, 10]), null);
 });
 
-test('draftMixName: первые ноты через запятую и «и», холодный штрих — «со льдом»', () => {
+test('draftMixName: первые ноты через запятую и «и», холодок — «со льдом»', () => {
   const strawberry = tobacco('a', { flavors: ['земляника', 'лесные ягоды'] });
   const tea = tobacco('b', { flavors: ['чёрный чай'] });
   const ice = tobacco('c', { flavors: ['ледяная мята'], cooling: true, twist: true });
   const ginger = tobacco('d', { flavors: ['имбирь'], twist: true });
   const noFlavors = tobacco('e', { name: 'Supernova', flavors: [] });
+  const wildStrawberry = tobacco('f', { flavors: ['земляника'] });
 
   assert.equal(draftMixName([]), '');
   assert.equal(draftMixName([strawberry]), 'Земляника');
   assert.equal(draftMixName([strawberry, tea]), 'Земляника и чёрный чай');
   assert.equal(draftMixName([strawberry, tea, ice]), 'Земляника и чёрный чай со льдом');
+  assert.equal(draftMixName([strawberry, ice]), 'Земляника со льдом');
   assert.equal(draftMixName([strawberry, tea, ginger]), 'Земляника, чёрный чай и имбирь');
+  assert.equal(draftMixName([strawberry, wildStrawberry]), 'Земляника');
   assert.equal(draftMixName([noFlavors]), 'Supernova');
 });
 
