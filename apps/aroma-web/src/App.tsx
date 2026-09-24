@@ -419,15 +419,15 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: 
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
     throw new Error(
       timedOut
-        ? `Сервер не ответил за ${Math.round(requestTimeoutMs / 1000)} секунд. Проверьте, что API доступен.`
-        : 'Не удалось связаться с сервером. Проверьте, что API доступен.',
+        ? 'Ателье не ответило вовремя. Попробуйте ещё раз.'
+        : 'Нет связи с Ателье. Попробуйте ещё раз.',
     );
   }
 
   const payload = (await response.json().catch(() => null)) as unknown;
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(payload, 'Запрос не выполнен'));
+    throw new Error(extractErrorMessage(payload, 'Не получилось. Попробуйте ещё раз.'));
   }
 
   return payload as T;
@@ -540,13 +540,15 @@ const COMPOSITION_PALETTE = [
   'var(--composition-5)',
 ];
 
-const pluralizeMixes = (count: number) => {
+const pluralize = (count: number, [one, few, many]: readonly [string, string, string]) => {
   const mod10 = count % 10;
   const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'микс';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'микса';
-  return 'миксов';
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
 };
+
+const pluralizeMixes = (count: number) => pluralize(count, ['микс', 'микса', 'миксов']);
 
 // Порог в пикселях, после которого отпускание пальца закрывает лист.
 const SWIPE_DISMISS_THRESHOLD = 110;
@@ -1218,7 +1220,7 @@ export const App = () => {
     } catch (cause) {
       setSelectedMix(previousMix);
       setChooseStatus('error');
-      setChooseError(cause instanceof Error ? cause.message : 'Не удалось зафиксировать "Выбрать".');
+      setChooseError(cause instanceof Error ? cause.message : 'Не получилось отметить выбор. Попробуйте ещё раз.');
     }
   };
 
@@ -1420,7 +1422,7 @@ export const App = () => {
           {renderBrand()}
           <div className="topbar-right">
             <Button className="header-auth-btn" variant="outline" type="button" onClick={onResetAccess}>
-              Новый код
+              Сменить код
             </Button>
           </div>
         </div>
@@ -1702,7 +1704,7 @@ export const App = () => {
             {catalogueIsEmpty
               ? 'Картотека миксов пока пуста'
               : matchingMixes.length
-                ? `Подходит миксов · ${matchingMixes.length}`
+                ? `${pluralize(matchingMixes.length, ['Подходит', 'Подходят', 'Подходят'])} ${matchingMixes.length} ${pluralizeMixes(matchingMixes.length)}`
                 : 'Подходящих миксов нет'}
           </p>
           <CTA pulse={onboardingStep === 2 && !ctaDisabled} onClick={goNext} disabled={ctaDisabled}>
@@ -1850,7 +1852,11 @@ export const App = () => {
           ) : null}
           <div className="aroma-recs-hero-meta">
             <RatingPill rating={hero.avgRating} />
-            <span className="aroma-caps">{`${hero.popularity} выборов`}</span>
+            {hero.popularity > 0 ? (
+              <span className="aroma-caps">
+                {`${hero.popularity} ${pluralize(hero.popularity, ['выбор', 'выбора', 'выборов'])}`}
+              </span>
+            ) : null}
           </div>
           <CTA
             pulse
@@ -2096,7 +2102,7 @@ export const App = () => {
             className="aroma-rail-code"
             onClick={onResetAccess}
           >
-            Новый код
+            Сменить код
           </button>
         </header>
 
