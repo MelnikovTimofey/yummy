@@ -25,6 +25,8 @@ import {
   normalizeTelegramOperatorRecord,
   normalizeTelegramRecipientRecord,
   parseDelimitedList,
+  resolveCurrentDailyCode,
+  resolveMixStatus,
   parseDateTimeLocalInput,
   sortDailyAccessCodes,
   sortInventoryItems,
@@ -951,4 +953,40 @@ test('normalizeDashboardSummary falls back to count when smokeCtaCount is absent
   });
 
   assert.equal(summary.topMixes[0]?.smokeCtaCount, 7);
+});
+
+// Флаг `active` у кода — «не отозван», а не «действует сейчас»: без проверки
+// окна консоль называла активным код, истёкший месяц назад (#96).
+test('resolveCurrentDailyCode отличает действующий код от истёкшего', () => {
+  const now = new Date('2026-09-24T12:00:00.000Z');
+  const expired = {
+    id: 'code-aug',
+    codeValue: '1234',
+    codeLabel: '1234',
+    active: true,
+    startsAt: '2026-08-24T00:12:00.000Z',
+    endsAt: '2026-08-25T00:12:00.000Z',
+  };
+  const current = {
+    id: 'code-sep',
+    codeValue: '5678',
+    codeLabel: '5678',
+    active: true,
+    startsAt: '2026-09-23T21:00:00.000Z',
+    endsAt: '2026-09-24T21:00:00.000Z',
+  };
+  const revoked = { ...current, id: 'code-revoked', codeValue: '9999', active: false };
+
+  assert.deepEqual(resolveCurrentDailyCode([expired, current], now), { state: 'active', code: current });
+  assert.deepEqual(resolveCurrentDailyCode([expired], now), { state: 'expired', code: expired });
+  assert.deepEqual(resolveCurrentDailyCode([revoked], now), { state: 'none', code: null });
+  assert.deepEqual(resolveCurrentDailyCode([], now), { state: 'none', code: null });
+});
+
+// `available` — ручной переключатель мастера, `guestVisible` — итог с учётом
+// наличия (apps/backend/src/state.ts). Каталог путал их местами (#96).
+test('resolveMixStatus: скрыт мастером, блокирован наличием или виден', () => {
+  assert.equal(resolveMixStatus({ available: false, guestVisible: false }), 'hidden');
+  assert.equal(resolveMixStatus({ available: true, guestVisible: false }), 'blocked');
+  assert.equal(resolveMixStatus({ available: true, guestVisible: true }), 'visible');
 });

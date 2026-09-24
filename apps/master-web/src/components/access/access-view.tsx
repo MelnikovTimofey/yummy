@@ -5,6 +5,7 @@ import type {
   TelegramAutomationStateRecord,
   TelegramOperatorRecord,
 } from '@/contracts';
+import { resolveCurrentDailyCode } from '@/contracts';
 import { DailyCodeBlock } from './daily-code-block';
 import { OperatorsBlock } from './operators-block';
 import { StaffBlock } from './staff-block';
@@ -84,7 +85,7 @@ export const AccessView = (props: AccessViewProps) => {
     staffAccounts,
   } = props;
 
-  const currentDailyCode = dailyCodes.find((item) => item.active) ?? dailyCodes[0] ?? null;
+  const currentDailyCode = resolveCurrentDailyCode(dailyCodes);
   const activeOperators = telegramOperators.filter((item) => item.active);
   const linkedOperatorsCount = activeOperators.filter((item) => item.linkedChatId).length;
   const pendingOperatorsCount = activeOperators.length - linkedOperatorsCount;
@@ -93,19 +94,20 @@ export const AccessView = (props: AccessViewProps) => {
   // под Master-учётками — «с доступом в систему», без отдельного admin-счётчика.
 
   const dailyCodeHint = (() => {
-    if (!currentDailyCode?.endsAt) {
-      return 'окно не задано';
+    if (!currentDailyCode.code) {
+      return 'не выпущен';
     }
-    const end = new Date(currentDailyCode.endsAt);
+    const end = new Date(currentDailyCode.code.endsAt);
     if (Number.isNaN(end.getTime())) {
       return 'окно не задано';
     }
-    return `до ${new Intl.DateTimeFormat('ru-RU', {
+    const formatted = new Intl.DateTimeFormat('ru-RU', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(end)}`;
+    }).format(end);
+    return currentDailyCode.state === 'active' ? `до ${formatted}` : `истёк ${formatted}`;
   })();
 
   return (
@@ -119,10 +121,10 @@ export const AccessView = (props: AccessViewProps) => {
       <MasterStatsRow
         tiles={[
           {
-            label: 'Активный код',
-            value: currentDailyCode?.codeValue ?? 'Нет кода',
+            label: 'Код смены',
+            value: currentDailyCode.state === 'active' ? currentDailyCode.code.codeValue : 'Нет кода',
             hint: dailyCodeHint,
-            tone: 'mono',
+            tone: currentDailyCode.state === 'active' ? 'mono' : 'warning',
           },
           {
             label: 'Операторы',

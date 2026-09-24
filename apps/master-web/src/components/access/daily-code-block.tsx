@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type {
+  CurrentDailyCode,
   DailyAccessCodeRecord,
   TelegramAutomationStateRecord,
   TelegramOperatorRecord,
@@ -10,10 +11,8 @@ import { formatDateTimeDisplay } from './format-date-time';
 import { TelegramBotStatusBlock } from './telegram-bot-status-block';
 import type { AccessLoadStatus, AccessRoleStatus } from './types';
 
-type RotationMode = 'auto' | 'manual';
-
 type DailyCodeBlockProps = {
-  currentDailyCode: DailyAccessCodeRecord | null;
+  currentDailyCode: CurrentDailyCode;
   dailyCodes: DailyAccessCodeRecord[];
   dailyCodesStatus: AccessLoadStatus;
   dailyCodesError: string;
@@ -72,16 +71,19 @@ export const DailyCodeBlock = ({
   telegramAutomationStateStatus,
   telegramAutomationStateError,
 }: DailyCodeBlockProps) => {
-  const countdown = useCountdown(currentDailyCode?.endsAt ?? '');
-  const progress = useTimeProgress(
-    currentDailyCode?.startsAt ?? '',
-    currentDailyCode?.endsAt ?? '',
-  );
+  const activeCode = currentDailyCode.state === 'active' ? currentDailyCode.code : null;
+  const countdown = useCountdown(activeCode?.endsAt ?? '');
+  const progress = useTimeProgress(activeCode?.startsAt ?? '', activeCode?.endsAt ?? '');
   const [copied, setCopied] = useState(false);
-  const [rotationMode, setRotationMode] = useState<RotationMode>('auto');
 
-  const code = currentDailyCode?.codeValue ?? '';
-  const statusActive = currentDailyCode?.active ?? false;
+  const code = activeCode?.codeValue ?? '';
+  const statusActive = currentDailyCode.state === 'active';
+  const statusLabel =
+    currentDailyCode.state === 'active'
+      ? 'Действует'
+      : currentDailyCode.state === 'expired'
+        ? 'Истёк'
+        : 'Нет кода';
   const isRotating = rotateStatus === 'rotating';
 
   const handleCopy = async () => {
@@ -108,7 +110,7 @@ export const DailyCodeBlock = ({
             }
           >
             <span className="status-pill__dot daily-code-hero__status-dot" />
-            <span>{statusActive ? 'Активен' : 'Нет активного кода'}</span>
+            <span>{statusLabel}</span>
           </span>
         </div>
 
@@ -148,11 +150,17 @@ export const DailyCodeBlock = ({
           <kbd className="kbd" aria-hidden="true">⌘C</kbd>
         </div>
 
-        {currentDailyCode?.endsAt ? (
+        {currentDailyCode.state === 'expired' ? (
+          <p className="daily-code-progress__expires">
+            Код {currentDailyCode.code.codeValue} истёк {formatDateTimeDisplay(currentDailyCode.code.endsAt)}.
+          </p>
+        ) : null}
+
+        {activeCode ? (
           <div className="daily-code-progress" aria-live="polite">
             <div className="daily-code-progress__labels">
               <span className="daily-code-progress__expires">
-                Истекает {formatDateTimeDisplay(currentDailyCode.endsAt)}
+                Истекает {formatDateTimeDisplay(activeCode.endsAt)}
               </span>
               <span className="mono daily-code-progress__remaining">
                 {countdown.expired ? 'истёк' : `осталось ${countdown.remaining}`}
@@ -169,32 +177,8 @@ export const DailyCodeBlock = ({
             <ClockIcon />
           </span>
           <div className="daily-code-rotation__text">
-            <p className="daily-code-rotation__title">
-              {rotationMode === 'auto' ? 'Автоматическая ротация' : 'Ручная ротация'}
-            </p>
-            <p className="daily-code-rotation__sub">
-              {rotationMode === 'auto' ? 'Каждый день в 00:00' : 'Без расписания — только вручную'}
-            </p>
-          </div>
-          <div className="daily-code-rotation__chips" role="tablist" aria-label="Режим ротации">
-            <button
-              type="button"
-              className="chip"
-              data-active={rotationMode === 'auto'}
-              onClick={() => setRotationMode('auto')}
-              aria-pressed={rotationMode === 'auto'}
-            >
-              Авто
-            </button>
-            <button
-              type="button"
-              className="chip"
-              data-active={rotationMode === 'manual'}
-              onClick={() => setRotationMode('manual')}
-              aria-pressed={rotationMode === 'manual'}
-            >
-              Вручную
-            </button>
+            <p className="daily-code-rotation__title">Новый код каждые сутки</p>
+            <p className="daily-code-rotation__sub">Выпускает Telegram-бот в 00:00 МСК.</p>
           </div>
         </div>
 

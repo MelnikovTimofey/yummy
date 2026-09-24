@@ -95,9 +95,8 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   // в шаге 5 рефактора по design/design_handoff_master_refactor §Микс —
   // конструктор. Имя микса — `<h2>` в sticky-breadcrumb сверху-слева.
   await expect(page.getByRole('heading', { name: mixName })).toBeVisible();
-  // Тег «сумма = 100%» показывается только при totalPercent === 100, то есть
-  // зависит от долей конкретного микса. Проверяем сам breadcrumb и наличие
-  // состава — они есть у любого микса.
+  // Предупреждение о сумме долей зависит от конкретного микса. Проверяем сам
+  // breadcrumb и наличие состава — они есть у любого микса.
   await expect(page.locator('.mix-builder__breadcrumb')).toBeVisible();
   await expect(page.locator('.mix-builder__component').first()).toBeVisible();
 
