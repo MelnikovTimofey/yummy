@@ -1,47 +1,48 @@
 /* Guest-surface atmosphere: the wine-warm room the mobile app sits in.
-   Accent rule (PRD §12): ONE brand colour — oxblood. The guest CTA, the active
-   navigation segment and the rating pill are all oxblood; the warm brass gradient
-   that upstream code used for them was retired on the brand owner's call. The only
-   remaining warm hues are the --composition-* data ramp (mix recipe shares). */
+   Accent rule (PRD §12): ONE brand colour — bordeaux. Solid bordeaux is reserved
+   for the primary CTA; the active navigation segment is quiet (graphite fill,
+   cream ink, 2px bordeaux mark) and the rating pill is a bordeaux tint. The warm
+   brass gradient and the brighter oxblood were retired on the brand owner's call.
+   The only remaining warm hues are the --composition-* data ramp. */
 :root {
   --guest-room-bg: linear-gradient(180deg, #0f0f12 0%, #161619 40%, #141417 100%);
-  --guest-halo-strong: radial-gradient(circle at 50% 0%, rgba(176, 74, 62, 0.16), transparent 34%); /* @kind color */
-  --guest-halo-soft: radial-gradient(circle at 80% 18%, rgba(176, 74, 62, 0.1), transparent 24%); /* @kind color */
+  --guest-halo-strong: radial-gradient(circle at 50% 0%, rgba(142, 47, 60, 0.2), transparent 34%); /* @kind color */
+  --guest-halo-soft: radial-gradient(circle at 80% 18%, rgba(142, 47, 60, 0.13), transparent 24%); /* @kind color */
   --guest-shell-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
   --guest-topbar-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
   --guest-card-bg: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(24, 24, 28, 0.94) 100%);
-  --guest-sheet-bg: linear-gradient(180deg, rgba(40, 15, 16, 0.98) 0%, rgba(20, 9, 10, 0.98) 100%);
+  --guest-sheet-bg: linear-gradient(180deg, rgba(38, 14, 20, 0.98) 0%, rgba(18, 8, 11, 0.98) 100%);
   --guest-row-bg: rgba(28, 28, 33, 0.84);
   --guest-control-bg: rgba(40, 40, 48, 0.66);
   --guest-control-bg-soft: rgba(40, 40, 48, 0.54);
-  --guest-chip-bg: rgba(40, 18, 18, 0.6);
-  --guest-chip-bg-on: linear-gradient(180deg, rgba(176, 74, 62, 0.62) 0%, rgba(140, 52, 43, 0.52) 100%);
+  --guest-chip-bg: rgba(38, 20, 24, 0.6);
+  --guest-chip-bg-on: linear-gradient(180deg, rgba(142, 47, 60, 0.7) 0%, rgba(92, 28, 38, 0.62) 100%);
   --guest-chip-ink-on: #f7efec;
   --guest-chip-border-on: rgba(244, 239, 234, 0.34);
   --guest-dock-fade: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%); /* @kind color */
 
-  /* Guest primary CTA — solid oxblood.
-     Градиент идёт от --accent к --accent-deep, а не от --accent-hover к --accent:
-     кремовая надпись 13px/600 на светлой кромке #C25749 давала 3.87:1, ниже
-     AA 4.5:1 для обычного текста. На этой паре — 4.72:1 сверху и 7.62:1 снизу. */
-  --cta-solid: linear-gradient(180deg, #b04a3e 0%, #7e342b 100%); /* @kind color */
+  /* Guest primary CTA — solid bordeaux, единственная сплошная заливка акцента.
+     Градиент от --accent к --accent-deep: кремовая надпись 13px/600 — 7.0:1
+     сверху и 11.0:1 снизу (AA с запасом). */
+  --cta-solid: linear-gradient(180deg, #8e2f3c 0%, #5c1c26 100%); /* @kind color */
   --cta-solid-border: rgba(244, 239, 234, 0.22);
   --cta-solid-ink: #f4efea;
-  --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.18), 0 14px 26px rgba(126, 52, 43, 0.4);
-  --cta-solid-disabled-bg: rgba(60, 28, 22, 0.6);
+  --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.16), 0 14px 26px rgba(92, 28, 38, 0.45);
+  --cta-solid-disabled-bg: rgba(58, 24, 30, 0.6);
 
-  /* Segment nav (active) — та же глубина, что у CTA: текст здесь 11px, то есть
-     требования к контрасту строже, а не мягче. */
-  --segment-active-bg: linear-gradient(180deg, #b04a3e 0%, #7e342b 100%);
-  --segment-active-ink: #f4efea;
-  --segment-active-border: rgba(244, 239, 234, 0.24);
-  --segment-idle-bg: rgba(56, 24, 22, 0.54);
+  /* Segment nav (active) — «тихий»: графит, кремовый текст и черта акцента снизу.
+     Сплошной бордо — только у CTA, иначе навигация спорит с главным действием. */
+  --segment-active-bg: var(--bg-overlay);
+  --segment-active-ink: var(--text-primary);
+  --segment-active-border: var(--border-default);
+  --segment-active-mark: var(--accent-hover);
+  --segment-idle-bg: rgba(40, 40, 48, 0.54);
 
   /* Rating pill */
-  --rating-bg: rgba(176, 74, 62, 0.18);
+  --rating-bg: rgba(142, 47, 60, 0.24);
   --rating-border: var(--accent-border);
-  --rating-ink: #e6b3a9;
+  --rating-ink: #e3a9b1;
 
   /* Master CTA gradient (backoffice primary) */
-  --cta-gradient: linear-gradient(135deg, var(--accent), #7e342b);
+  --cta-gradient: linear-gradient(135deg, var(--accent), var(--accent-deep));
 }

@@ -1,4 +1,4 @@
-Oxblood-filled pill tab (`.tab` upstream) for the pre-onboarding journey nav.
+Quiet tab (`.tab` upstream) for the pre-onboarding journey nav: graphite when active, with a bordeaux mark.
 
 ```jsx
 <GuestTab active>Знакомство</GuestTab>

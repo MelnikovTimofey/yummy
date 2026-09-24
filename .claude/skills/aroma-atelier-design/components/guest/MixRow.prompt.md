@@ -5,4 +5,4 @@ Tappable mix row — opens the mix sheet. Used in Каталог (glyph 44), р�
 <MixRow name="Космокола" profiles={['sweet']} rating={4.3} showGlyph={false} showSignature />
 ```
 
-Rows are 8px apart in a grid; the whole row is the hit target. Hover only lifts the border to `rgba(176,74,62,0.40)` — no elevation change.
+Rows are 8px apart in a grid; the whole row is the hit target. Hover only lifts the border to `rgba(142, 47, 60,0.40)` — no elevation change.

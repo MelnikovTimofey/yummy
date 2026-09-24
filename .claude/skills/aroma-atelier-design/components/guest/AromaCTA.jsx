@@ -1,4 +1,4 @@
-// Guest primary action — solid oxblood CTA, full width, uppercase tracking, optional ember pulse.
+// Guest primary action — solid bordeaux CTA, full width, uppercase tracking, optional ember pulse.
 export function AromaCTA({ children, onClick, disabled = false, pulse = false, type = 'button', style }) {
   return (
     <button

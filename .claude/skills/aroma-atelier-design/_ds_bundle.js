@@ -315,7 +315,7 @@ function GuestTab({
     type: "button",
     onClick: onClick,
     style: {
-      border: '1px solid ' + (active ? 'rgba(176,74,62,0.4)' : 'var(--border-subtle)'),
+      border: '1px solid ' + (active ? 'rgba(142, 47, 60,0.4)' : 'var(--border-subtle)'),
       borderRadius: 'var(--r-pill)',
       background: active ? 'linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%)' : 'var(--guest-control-bg-soft)',
       color: active ? 'var(--primary-foreground)' : 'var(--text-secondary)',

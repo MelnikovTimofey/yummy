@@ -9,4 +9,4 @@ The guest app's only navigation — 2–3 equal-width uppercase segments under t
 ```
 
 - Max 3 segments; labels are one word where possible.
-- Active segment is oxblood with cream ink — the same fill as `AromaCTA`, so never show an active segment and a pulsing CTA in the same viewport band.
+- Active segment is quiet — graphite fill, cream ink and a 2px bordeaux mark at the bottom. Solid accent is reserved for `AromaCTA`, so navigation never competes with the primary action.

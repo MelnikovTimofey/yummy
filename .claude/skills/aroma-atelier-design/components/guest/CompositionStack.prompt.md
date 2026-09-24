@@ -8,6 +8,6 @@ The mix recipe, shown in the mix sheet and the smoke-confirmation card.
 ]} />
 ```
 
-- Manufacturer is uppercase micro-caps, tobacco name is normal weight, share is oxblood and tabular.
+- Manufacturer is uppercase micro-caps, tobacco name is normal weight, share is cream (`--text-primary`) and tabular.
 - Shares are Russian-formatted (`40%`, `12,5%`); components sort by share descending.
 - Colours come from `--composition-*` (a data ramp), not from the flavour-profile colours.
