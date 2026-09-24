@@ -7,6 +7,7 @@ import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
+import { ProfileTag } from '@/components/ui/profile-tag';
 import {
   buildSortPillOptions,
   composeSortKey,
@@ -731,7 +732,7 @@ export const InventoryView = ({
           <div className="tobacco-detail-drawer__head-meta">
             <span
               className="tag"
-              data-tone={activeItem.inStock ? 'success' : 'warning'}
+              data-tone={activeItem.inStock ? undefined : 'warning'}
             >
               {activeItem.inStock ? 'В наличии' : 'Нет наличия'}
             </span>
@@ -826,13 +827,7 @@ export const InventoryView = ({
             <p className="tobacco-detail-drawer__label">Категории · вкусы · теги</p>
             <div className="tobacco-detail-drawer__taxonomy">
               {(activeItem.flavorProfiles ?? []).map((profile) => (
-                <span
-                  key={`${activeItem.id}:detail:profile:${profile}`}
-                  className="tag"
-                  data-tone="accent"
-                >
-                  {formatFlavorProfileLabel(profile)}
-                </span>
+                <ProfileTag key={`${activeItem.id}:detail:profile:${profile}`} profile={profile} />
               ))}
               {(activeItem.flavors ?? []).map((flavor) => (
                 <span
@@ -971,13 +966,12 @@ export const InventoryView = ({
             label: 'В наличии',
             value: formatMetricValue(meta.inStockCount),
             hint: 'на полке',
-            tone: 'success',
           },
           {
             label: 'Нет в наличии',
             value: formatMetricValue(meta.outOfStockCount),
             hint: 'требуют пополнения',
-            tone: 'warning',
+            tone: meta.outOfStockCount > 0 ? 'warning' : 'default',
           },
           {
             label: 'В составе миксов',
@@ -1564,9 +1558,7 @@ export const InventoryView = ({
                       <div className="inventory-cell__chips">
                         {profileShown.length ? (
                           profileShown.map((profile) => (
-                            <Badge key={`${item.id}:profile:${profile}`} variant="outline">
-                              {formatFlavorProfileLabel(profile)}
-                            </Badge>
+                            <ProfileTag key={`${item.id}:profile:${profile}`} profile={profile} />
                           ))
                         ) : (
                           <span className="inventory-cell__faint">{STRENGTH_DASH}</span>

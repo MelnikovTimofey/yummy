@@ -262,7 +262,7 @@ export const OperatorsBlock = ({
                     <div className="access-tg-cell">
                       {isLinked ? (
                         <>
-                          <span className="tag" data-tone="success">привязан</span>
+                          <span className="tag">привязан</span>
                           {operator.linkedUsername ? (
                             <span className="mono access-tg-cell__handle">
                               @{operator.linkedUsername.replace(/^@/, '')}

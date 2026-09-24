@@ -1468,6 +1468,13 @@ export const formatFlavorProfileLabel = (value: string) => {
   return flavorProfileLabels[normalized] ?? value;
 };
 
+export const flavorProfileColor = (value: string) => {
+  const key = value.trim().toLowerCase();
+  return key in flavorProfileLabels
+    ? `var(--profile-${key.replace(/_/g, '-')}, var(--profile-fallback))`
+    : 'var(--profile-fallback)';
+};
+
 // Канонические ключи категорий вкуса для редактора инвентаря — английские
 // ключи, совпадающие с flavorProfileLabels и с тем, что бэкенд хранит в
 // Tobacco.flavorProfiles. Не русские лейблы: иначе выбранная категория не

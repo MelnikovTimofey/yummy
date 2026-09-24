@@ -135,13 +135,11 @@ export const AccessView = (props: AccessViewProps) => {
                 : activeOperators.length > 0
                   ? 'все привязаны'
                   : 'нет активных',
-            tone: 'success',
           },
           {
             label: 'Учётки Мастера',
             value: activeStaffAccounts,
             hint: 'с доступом в систему',
-            tone: 'success',
           },
         ]}
       />

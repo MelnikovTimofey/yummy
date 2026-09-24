@@ -45,13 +45,12 @@ const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => 
       label: 'Виден гостю',
       value: formatMetricValue(guestVisible),
       hint: 'миксов на витрине',
-      tone: 'success',
     },
     {
       label: 'Заблокировано',
       value: formatMetricValue(blocked),
       hint: 'из-за наличия',
-      tone: 'warning',
+      tone: blocked > 0 ? 'warning' : 'default',
     },
     {
       label: 'Активных рейлов',

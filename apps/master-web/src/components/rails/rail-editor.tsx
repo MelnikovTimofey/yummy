@@ -132,7 +132,7 @@ export const RailEditor = ({
             ) : null}
           </div>
           <div className="rail-drawer__head-meta">
-            <span className="tag" data-tone={editor.type === 'statistical' ? 'info' : editor.type === 'prepared' ? 'warning' : 'accent'}>
+            <span className="tag">
               {formatRailType(editor.type)}
             </span>
             {locked ? <span className="tag tag--ghost">только просмотр</span> : null}
