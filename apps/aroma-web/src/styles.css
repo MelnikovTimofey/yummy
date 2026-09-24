@@ -139,7 +139,9 @@ select:focus-visible {
   place-items: center;
   padding: 16px;
   position: relative;
-  overflow: hidden;
+  /* clip, а не hidden: гало выходят за край, и hidden-контейнер браузер
+     прокручивал бы при фокусе — весь экран съезжал (#112). */
+  overflow: clip;
   background:
     radial-gradient(circle at 50% 0%, rgba(176, 74, 62, 0.16), transparent 34%),
     radial-gradient(circle at 80% 18%, rgba(176, 74, 62, 0.10), transparent 24%),

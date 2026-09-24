@@ -176,7 +176,9 @@ export const DailyCodeBlock = ({
           </span>
           <div className="daily-code-rotation__text">
             <p className="daily-code-rotation__title">Новый код каждые сутки</p>
-            <p className="daily-code-rotation__sub">Выпускает Telegram-бот в 00:00 МСК.</p>
+            <p className="daily-code-rotation__sub">
+              Действует сутки по московскому времени, бот рассылает его операторам утром.
+            </p>
           </div>
         </div>
 
