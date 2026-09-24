@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '../../db';
 import { fetchHtReviewsCatalogSnapshot } from './catalog';
+import { lineUrlFromTobaccoUrl } from './parser';
 import type { HtReviewsImportOptions, HtReviewsImportedTobacco } from './types';
 
 export type HtReviewsSyncOptions = HtReviewsImportOptions & {
@@ -28,6 +29,25 @@ export const decideTobaccoUpsert = (
     return 'update';
   }
   return status?.trim() === PRODUCED_STATUS ? 'create' : 'skip';
+};
+
+export const collectKnownLineUrls = (sourceUrls: Array<string | null>) => {
+  const lineUrls = new Set<string>();
+  for (const sourceUrl of sourceUrls) {
+    const lineUrl = sourceUrl ? lineUrlFromTobaccoUrl(sourceUrl) : null;
+    if (lineUrl) {
+      lineUrls.add(lineUrl);
+    }
+  }
+  return Array.from(lineUrls);
+};
+
+const loadKnownLineUrls = async () => {
+  const records = await prisma.tobacco.findMany({
+    where: { sourceKind: 'htreviews' },
+    select: { sourceUrl: true },
+  });
+  return collectKnownLineUrls(records.map((record) => record.sourceUrl));
 };
 
 const toStableId = (item: HtReviewsImportedTobacco) => {
@@ -119,7 +139,9 @@ const logUpsertProgress = (message: string) => {
 export const syncHtReviewsCatalog = async (
   options: HtReviewsSyncOptions = {},
 ): Promise<HtReviewsSyncStats> => {
-  const snapshot = await fetchHtReviewsCatalogSnapshot(options);
+  const knownLineUrls = options.knownLineUrls ?? (options.brandUrls?.length ? [] : await loadKnownLineUrls());
+  logUpsertProgress(`phase=known-lines total=${knownLineUrls.length}`);
+  const snapshot = await fetchHtReviewsCatalogSnapshot({ ...options, knownLineUrls });
   const defaultInStock = options.defaultInStock ?? false;
 
   let created = 0;

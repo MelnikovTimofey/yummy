@@ -93,4 +93,6 @@ export type HtReviewsImportOptions = {
   tobaccoLimit?: number;
   fetchDetails?: boolean;
   brandUrls?: string[];
+  // Линейки, уже известные по каталогу: обходятся даже без ссылок на discovery-страницах.
+  knownLineUrls?: string[];
 };

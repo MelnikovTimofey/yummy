@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideTobaccoUpsert } from './sync';
+import { collectKnownLineUrls, decideTobaccoUpsert } from './sync';
 
 // Issue #88: в каталог попадают только выпускаемые табаки, но уже заведённые
 // обновляются всегда — иначе снятие с производства не дойдёт до productionStatus.
@@ -23,4 +23,20 @@ test('существующий табак обновляется при любо
 
 test('статус сравнивается без учёта пробелов по краям', () => {
   assert.equal(decideTobaccoUpsert(' Выпускается ', false), 'create');
+});
+
+test('известные линейки собираются из sourceUrl без дублей и мусора (issue #92)', () => {
+  assert.deepEqual(
+    collectKnownLineUrls([
+      'https://htreviews.org/tobaccos/duft/duft-lineika-strong/pomelo',
+      'https://htreviews.org/tobaccos/duft/duft-lineika-strong/cola',
+      'https://htreviews.org/tobaccos/spectrum/hard-line/kiwi',
+      'https://htreviews.org/tobaccos/duft',
+      null,
+    ]),
+    [
+      'https://htreviews.org/tobaccos/duft/duft-lineika-strong',
+      'https://htreviews.org/tobaccos/spectrum/hard-line',
+    ],
+  );
 });

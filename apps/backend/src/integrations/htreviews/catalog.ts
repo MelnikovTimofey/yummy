@@ -281,12 +281,14 @@ export const fetchHtReviewsCatalogSnapshot = async (
     }
   }
 
-  if (!explicitBrands && !options.brandLimit) {
-    const lineUrls = Array.from(discoveryLineUrls);
-    logProgress(`phase=lines total=${lineUrls.length}`);
+  const crawledLineUrls = new Set<string>();
+  const crawlLines = async (phase: string, candidates: Iterable<string>) => {
+    const lineUrls = Array.from(new Set(candidates)).filter((url) => !crawledLineUrls.has(url));
+    logProgress(`phase=${phase} total=${lineUrls.length}`);
     let lineIndex = 0;
     for (const lineUrl of lineUrls) {
       lineIndex += 1;
+      crawledLineUrls.add(lineUrl);
       const html = await safeFetchText(client, lineUrl);
       if (!html) {
         continue;
@@ -301,21 +303,29 @@ export const fetchHtReviewsCatalogSnapshot = async (
       }
       if (lineIndex % 10 === 0 || lineIndex === lineUrls.length) {
         logProgress(
-          `lines ${lineIndex}/${lineUrls.length}` +
+          `${phase} ${lineIndex}/${lineUrls.length}` +
           ` brands=${discoveryBrandUrls.size} summaries=${summaryMap.size}`,
         );
       }
       if (options.tobaccoLimit && summaryMap.size >= options.tobaccoLimit) {
-        logProgress(`lines stopped at tobaccoLimit=${options.tobaccoLimit}`);
-        break;
+        logProgress(`${phase} stopped at tobaccoLimit=${options.tobaccoLimit}`);
+        return;
       }
     }
+  };
+
+  if (!explicitBrands && !options.brandLimit) {
+    await crawlLines('lines', [...discoveryLineUrls, ...(options.knownLineUrls ?? [])]);
   }
 
   const brands = takeLimit(
     explicitBrands ?? Array.from(discoveryBrandUrls).map((url) => toBrandRef(url)),
     options.brandLimit,
   );
+
+  // Страница бренда показывает не все линейки табаками — ссылки на линейки
+  // обходим отдельно, иначе целые линейки выпадают из каталога (#92).
+  const brandLineUrls = new Set<string>();
 
   logProgress(`phase=brands total=${brands.length}`);
   let brandIndex = 0;
@@ -325,6 +335,9 @@ export const fetchHtReviewsCatalogSnapshot = async (
     const html = await safeFetchText(client, brand.url);
     if (!html) {
       continue;
+    }
+    for (const lineUrl of extractCatalogEntryUrls(html, client.baseUrl).lineUrls) {
+      brandLineUrls.add(lineUrl);
     }
     for (const summary of parseBrandPage(html, client.baseUrl)) {
       summaryMap.set(summary.url, summary);
@@ -343,6 +356,10 @@ export const fetchHtReviewsCatalogSnapshot = async (
       logProgress(`brands stopped at tobaccoLimit=${options.tobaccoLimit}`);
       break;
     }
+  }
+
+  if (!options.tobaccoLimit || summaryMap.size < options.tobaccoLimit) {
+    await crawlLines('brand-lines', brandLineUrls);
   }
 
   const limitedSummaries = takeLimit(
@@ -388,7 +405,7 @@ export const fetchHtReviewsCatalogSnapshot = async (
     baseUrl: client.baseUrl,
     robotsNotes: [
       'HTReviews robots.txt запрещает /api/* для User-agent *.',
-      'HTReviews robots.txt отдельно запрещает GPTBot.',
+      'HTReviews robots.txt отдельно запрещает GPTBot и Claude — прогон запускает оператор, не агент.',
       'Интеграция использует публичный HTML и рассчитана на ручной dry-run/import review.',
     ],
     brandCount: brands.length,

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { extractCatalogEntryUrls, parseBrandIndexPage, parseBrandPage, parseTobaccoPage } from './parser';
+import {
+  extractCatalogEntryUrls,
+  lineUrlFromTobaccoUrl,
+  parseBrandIndexPage,
+  parseBrandPage,
+  parseTobaccoPage,
+} from './parser';
 import { buildTaxonomyCandidate } from './taxonomy';
 
 test('parseBrandIndexPage returns deduplicated brand refs', () => {
@@ -182,4 +188,24 @@ test('buildTaxonomyCandidate keeps creamy notes in flavors while deriving desser
   assert.deepEqual(candidate.flavorProfiles, ['dessert', 'sweet']);
   assert.deepEqual(candidate.flavors, ['сливочный']);
   assert.deepEqual(candidate.flavorTags, []);
+});
+
+// Issue #92: линейки, известные по Tobacco.sourceUrl, должны попадать в обход,
+// даже если на discovery-страницах и странице бренда на них нет ссылок.
+test('lineUrlFromTobaccoUrl выводит URL линейки из URL табака', () => {
+  assert.equal(
+    lineUrlFromTobaccoUrl('https://htreviews.org/tobaccos/duft/duft-lineika-strong/pomelo'),
+    'https://htreviews.org/tobaccos/duft/duft-lineika-strong',
+  );
+  assert.equal(
+    lineUrlFromTobaccoUrl('https://htreviews.org/tobaccos/spectrum/hard-line/kiwi?ref=x#top'),
+    'https://htreviews.org/tobaccos/spectrum/hard-line',
+  );
+});
+
+test('lineUrlFromTobaccoUrl не выдумывает линейку для бренда, служебных и чужих путей', () => {
+  assert.equal(lineUrlFromTobaccoUrl('https://htreviews.org/tobaccos/duft'), null);
+  assert.equal(lineUrlFromTobaccoUrl('https://htreviews.org/tobaccos/new/some/thing'), null);
+  assert.equal(lineUrlFromTobaccoUrl('https://htreviews.org/reviews/duft/strong/pomelo'), null);
+  assert.equal(lineUrlFromTobaccoUrl('не url'), null);
 });
