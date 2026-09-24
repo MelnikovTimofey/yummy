@@ -9,8 +9,9 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   await page.getByRole('checkbox').click();
   await page.getByRole('button', { name: 'Войти в Ателье' }).click();
 
-  await expect(page.getByRole('button', { name: 'Пропустить' })).toBeVisible();
-  await page.getByRole('button', { name: 'Пропустить' }).click();
+  // Знакомство — один экран с кнопкой «Начать подбор» (#114).
+  await expect(page.getByRole('button', { name: 'Начать подбор' })).toBeVisible();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
 
   await expect(page.getByText('С чего начнём?')).toBeVisible();
   await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
@@ -37,7 +38,7 @@ test('Aroma guest returns to preferences from the recommendations screen and can
   await page.getByRole('checkbox').click();
   await page.getByRole('button', { name: 'Войти в Ателье' }).click();
 
-  await page.getByRole('button', { name: 'Пропустить' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
   await expect(page.getByText('С чего начнём?')).toBeVisible();
 
   const firstProfile = page.locator('.aroma-onboarding-profile-grid button').first();
@@ -51,7 +52,7 @@ test('Aroma guest returns to preferences from the recommendations screen and can
   await editEntry.click();
 
   // Повторный вход отличим от первого прохода и открывается с выбранным ранее.
-  await expect(page.getByText('Правка вкусов · Шаг 1 · Профили')).toBeVisible();
+  await expect(page.getByText('Правка вкусов · Шаг 01 · из 02 · Профили')).toBeVisible();
   await expect(page.locator('.aroma-onboarding-profile-grid button[aria-pressed="true"]')).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Открыть каталог сразу' })).toHaveCount(0);
 
@@ -75,7 +76,7 @@ test('Aroma onboarding shows how many mixes stand behind the current choice', as
   await page.getByRole('checkbox').click();
   await page.getByRole('button', { name: 'Войти в Ателье' }).click();
 
-  await page.getByRole('button', { name: 'Пропустить' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
   await expect(page.getByText('С чего начнём?')).toBeVisible();
 
   const tally = page.locator('.aroma-onboarding-tally');

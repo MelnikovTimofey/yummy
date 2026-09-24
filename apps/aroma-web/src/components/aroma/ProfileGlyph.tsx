@@ -22,7 +22,7 @@ export function ProfileGlyph({ profiles, size = 56 }: ProfileGlyphProps) {
         height: size,
         borderRadius: 14,
         background:
-          "radial-gradient(circle at 30% 30%, rgba(255,244,236,0.04), transparent 70%), rgba(20,10,10,0.5)",
+          "radial-gradient(circle at 30% 30%, var(--line-soft), transparent 70%), var(--bg-base)",
         border: "1px solid var(--line-soft)",
         position: "relative",
         flex: "0 0 auto",

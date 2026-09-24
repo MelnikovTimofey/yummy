@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
+import { dedupeRails, railKindLabel } from '@/lib/showcase';
 
 type GuestView =
   | 'access'
@@ -150,12 +151,6 @@ const profileLabelMap = profileOptions.reduce<Record<string, string>>((acc, item
   acc[item.value] = item.label;
   return acc;
 }, {});
-
-const railToneLabels: Record<RailType, string> = {
-  statistical: 'Выбор гостей',
-  prepared: 'Редакция',
-  curated: 'Мастера',
-};
 
 const mixSourceLabels: Record<MixSource, string> = {
   recommendations: 'Подбор для вас',
@@ -419,15 +414,15 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: 
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
     throw new Error(
       timedOut
-        ? `Сервер не ответил за ${Math.round(requestTimeoutMs / 1000)} секунд. Проверьте, что API доступен.`
-        : 'Не удалось связаться с сервером. Проверьте, что API доступен.',
+        ? 'Ателье не ответило вовремя. Попробуйте ещё раз.'
+        : 'Нет связи с Ателье. Попробуйте ещё раз.',
     );
   }
 
   const payload = (await response.json().catch(() => null)) as unknown;
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(payload, 'Запрос не выполнен'));
+    throw new Error(extractErrorMessage(payload, 'Не получилось. Попробуйте ещё раз.'));
   }
 
   return payload as T;
@@ -540,13 +535,15 @@ const COMPOSITION_PALETTE = [
   'var(--composition-5)',
 ];
 
-const pluralizeMixes = (count: number) => {
+const pluralize = (count: number, [one, few, many]: readonly [string, string, string]) => {
   const mod10 = count % 10;
   const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'микс';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'микса';
-  return 'миксов';
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
 };
+
+const pluralizeMixes = (count: number) => pluralize(count, ['микс', 'микса', 'миксов']);
 
 // Порог в пикселях, после которого отпускание пальца закрывает лист.
 const SWIPE_DISMISS_THRESHOLD = 110;
@@ -670,7 +667,7 @@ const MixDetailModal = ({
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
           overflowY: 'auto',
-          background: `radial-gradient(circle at 88% 0%, ${haloColor}50 0%, transparent 50%), linear-gradient(180deg, rgba(40,15,16,0.98) 0%, rgba(20,9,10,0.98) 100%)`,
+          background: `radial-gradient(circle at 88% 0%, ${haloColor}50 0%, transparent 50%), var(--guest-sheet-bg)`,
         }}
       >
         <span className="aroma-mix-sheet-handle" aria-hidden />
@@ -681,9 +678,7 @@ const MixDetailModal = ({
         <div className="aroma-mix-sheet-head">
           <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
           <div className="aroma-mix-sheet-head-text">
-            <p className="aroma-caps">{mixSourceLabels[source]}</p>
             <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
-            <SignatureBar profiles={mix.flavorProfiles} height={4} />
           </div>
         </div>
 
@@ -694,12 +689,7 @@ const MixDetailModal = ({
         {mix.flavorProfiles.length || mix.flavors.length ? (
           <div className="aroma-mix-sheet-tags">
             {mix.flavorProfiles.slice(0, 3).map((profile) => (
-              <Chip
-                key={`profile-${profile}`}
-                tier="lg"
-                active
-                color={getProfileColor(profile)}
-              >
+              <Chip key={`profile-${profile}`} tier="lg" color={getProfileColor(profile)}>
                 {formatProfileLabel(profile)}
               </Chip>
             ))}
@@ -838,7 +828,6 @@ export const App = () => {
   const [introCards, setIntroCards] = useState<IntroCard[]>([]);
   const [introStatus, setIntroStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [introError, setIntroError] = useState('');
-  const [introIndex, setIntroIndex] = useState(0);
 
   const [options, setOptions] = useState<OnboardingOptions>({
     profiles: [],
@@ -1226,7 +1215,7 @@ export const App = () => {
     } catch (cause) {
       setSelectedMix(previousMix);
       setChooseStatus('error');
-      setChooseError(cause instanceof Error ? cause.message : 'Не удалось зафиксировать "Выбрать".');
+      setChooseError(cause instanceof Error ? cause.message : 'Не получилось отметить выбор. Попробуйте ещё раз.');
     }
   };
 
@@ -1380,7 +1369,6 @@ export const App = () => {
         <div className="aroma-onboarding-bar" role="progressbar" aria-valuemin={0} aria-valuemax={2} aria-valuenow={onboardingStep}>
           <span className="aroma-onboarding-bar-fill" style={{ width: `${percent}%` }} />
         </div>
-        <span className="aroma-caps aroma-onboarding-count">{`${onboardingStep}/2`}</span>
       </div>
     );
   };
@@ -1429,7 +1417,7 @@ export const App = () => {
           {renderBrand()}
           <div className="topbar-right">
             <Button className="header-auth-btn" variant="outline" type="button" onClick={onResetAccess}>
-              Новый код
+              Сменить код
             </Button>
           </div>
         </div>
@@ -1475,7 +1463,7 @@ export const App = () => {
                 }
               />
               <p className="aroma-access-code-hint">
-                Спросите у мастера зала — действует до 06:00.
+                Спросите у мастера зала — код действует до конца суток.
               </p>
             </div>
 
@@ -1518,7 +1506,7 @@ export const App = () => {
 
   const renderIntroView = () => {
     if (introStatus === 'loading') {
-      return <p className="screen-status">Загружаем знакомство...</p>;
+      return <p className="screen-status">Загружаем знакомство…</p>;
     }
     if (introError) {
       return <p className="screen-status error">{introError}</p>;
@@ -1527,54 +1515,39 @@ export const App = () => {
       return null;
     }
 
-    const currentIndex = Math.min(introIndex, introCards.length - 1);
-    const card = introCards[currentIndex];
-    const isLast = currentIndex === introCards.length - 1;
-    const totalLabel = String(introCards.length).padStart(2, '0');
-    const stepLabel = String(currentIndex + 1).padStart(2, '0');
-
-    const goNext = () => {
-      if (isLast) {
-        finishIntro();
-        return;
-      }
-      setIntroIndex(currentIndex + 1);
-    };
+    // Одно окно вместо карусели: приветствие — последняя карточка знакомства,
+    // остальные — короткий список того, что будет дальше.
+    const welcome = introCards[introCards.length - 1];
+    const steps = introCards.slice(0, -1);
 
     return (
       <div className="aroma-intro">
-        <span className="aroma-intro-watermark" aria-hidden>{stepLabel}</span>
-
         <div className="aroma-intro-body">
-          <p className="aroma-caps aroma-intro-caps">{`Шаг ${stepLabel} · из ${totalLabel}`}</p>
           <div className="aroma-intro-content">
-            <h1 className="aroma-intro-title">{card.title}</h1>
-            <p className="aroma-intro-text">{card.description}</p>
+            <h1 className="aroma-intro-title">{welcome.title}</h1>
+            <p className="aroma-intro-text">{welcome.description}</p>
           </div>
+          {steps.length ? (
+            <ol className="aroma-intro-steps">
+              {steps.map((step, index) => (
+                <li key={step.id} className="aroma-intro-step">
+                  <span className="aroma-intro-step-num" aria-hidden>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="aroma-intro-step-copy">
+                    <strong>{step.title}</strong>
+                    <span>{step.description}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
         </div>
 
         <div className="aroma-intro-dock">
-          <div className="aroma-intro-pips" role="tablist" aria-label="Прогресс знакомства">
-            {introCards.map((_, i) => (
-              <span
-                key={i}
-                className={cn('aroma-intro-pip', i === currentIndex && 'aroma-intro-pip-active')}
-                aria-hidden
-              />
-            ))}
-          </div>
-          <CTA pulse={isLast} onClick={goNext}>
-            {isLast ? 'Перейти к подбору' : 'Дальше'}
+          <CTA pulse onClick={finishIntro}>
+            Начать подбор
           </CTA>
-          {!isLast && (
-            <button
-              type="button"
-              className="aroma-intro-skip"
-              onClick={finishIntro}
-            >
-              Пропустить знакомство
-            </button>
-          )}
         </div>
       </div>
     );
@@ -1633,7 +1606,7 @@ export const App = () => {
           {onboardingStep === 1 ? (
             <>
               <p className="aroma-caps">
-                {editingPreferences ? 'Правка вкусов · Шаг 1 · Профили' : 'Шаг 1 · Профили'}
+                {editingPreferences ? 'Правка вкусов · Шаг 01 · из 02 · Профили' : 'Шаг 01 · из 02 · Профили'}
               </p>
               <h1 className="aroma-onboarding-title">С чего начнём?</h1>
               <p className="aroma-onboarding-hint">
@@ -1673,7 +1646,7 @@ export const App = () => {
           ) : (
             <>
               <p className="aroma-caps">
-                {editingPreferences ? 'Правка вкусов · Шаг 2 · Вкусы' : 'Шаг 2 · Вкусы'}
+                {editingPreferences ? 'Правка вкусов · Шаг 02 · из 02 · Вкусы' : 'Шаг 02 · из 02 · Вкусы'}
               </p>
               <h1 className="aroma-onboarding-title">Любимые ноты</h1>
               <p className="aroma-onboarding-hint">
@@ -1726,13 +1699,9 @@ export const App = () => {
             {catalogueIsEmpty
               ? 'Картотека миксов пока пуста'
               : matchingMixes.length
-                ? `Подходит миксов · ${matchingMixes.length}`
+                ? `${pluralize(matchingMixes.length, ['Подходит', 'Подходят', 'Подходят'])} ${matchingMixes.length} ${pluralizeMixes(matchingMixes.length)}`
                 : 'Подходящих миксов нет'}
           </p>
-          <div className="aroma-onboarding-pips" aria-hidden>
-            <span className={cn('aroma-onboarding-pip', onboardingStep >= 1 && 'aroma-onboarding-pip-on')} />
-            <span className={cn('aroma-onboarding-pip', onboardingStep >= 2 && 'aroma-onboarding-pip-on')} />
-          </div>
           <CTA pulse={onboardingStep === 2 && !ctaDisabled} onClick={goNext} disabled={ctaDisabled}>
             {ctaLabel}
           </CTA>
@@ -1837,7 +1806,7 @@ export const App = () => {
         <article
           className="aroma-recs-hero"
           style={{
-            background: `radial-gradient(circle at 80% 0%, ${heroColor}55 0%, transparent 55%), linear-gradient(180deg, rgba(34,15,16,0.96) 0%, rgba(22,11,12,0.88) 100%)`,
+            background: `radial-gradient(circle at 80% 0%, ${heroColor}55 0%, transparent 55%), var(--guest-card-bg)`,
           }}
         >
           <div className="aroma-recs-hero-head">
@@ -1878,7 +1847,11 @@ export const App = () => {
           ) : null}
           <div className="aroma-recs-hero-meta">
             <RatingPill rating={hero.avgRating} />
-            <span className="aroma-caps">{`${hero.popularity} выборов`}</span>
+            {hero.popularity > 0 ? (
+              <span className="aroma-caps">
+                {`${hero.popularity} ${pluralize(hero.popularity, ['выбор', 'выбора', 'выборов'])}`}
+              </span>
+            ) : null}
           </div>
           <CTA
             pulse
@@ -1938,8 +1911,10 @@ export const App = () => {
 
     return (
       <section className="aroma-showcase">
-        {showcaseRails.map((rail) => {
-          const mixes = rail.mixes.filter((mix) => mix.available);
+        {dedupeRails(
+          showcaseRails.map((rail) => ({ ...rail, mixes: rail.mixes.filter((mix) => mix.available) })),
+        ).map((rail) => {
+          const { mixes } = rail;
           const openRail = () => {
             setSelectedRail(rail);
             setView('rail');
@@ -1950,7 +1925,7 @@ export const App = () => {
               <div className="aroma-showcase-rail-head">
                 <h2 className="aroma-showcase-rail-title">{rail.name}</h2>
                 <span className="aroma-caps aroma-showcase-rail-kind">
-                  {railToneLabels[rail.type]}
+                  {railKindLabel(rail)}
                 </span>
               </div>
 
@@ -1964,7 +1939,7 @@ export const App = () => {
                       className="aroma-showcase-card"
                       onClick={() => openMix(mix, 'showcase')}
                       style={{
-                        background: `radial-gradient(circle at 86% 0%, ${profileColor}48 0%, transparent 60%), linear-gradient(180deg, rgba(40,17,17,0.96) 0%, rgba(22,11,12,0.96) 100%)`,
+                        background: `radial-gradient(circle at 86% 0%, ${profileColor}48 0%, transparent 60%), var(--guest-card-bg)`,
                       }}
                     >
                       <div className="aroma-showcase-card-head">
@@ -2113,7 +2088,7 @@ export const App = () => {
           </button>
           <div className="aroma-rail-topbar-text">
             <p className="aroma-caps">
-              {`Витрина · ${railToneLabels[rail.type]}`}
+              {`Витрина · ${railKindLabel(rail)}`}
             </p>
             <p className="aroma-rail-meta">
               {`${rail.mixes.length} ${pluralizeMixes(rail.mixes.length)}`}
@@ -2124,7 +2099,7 @@ export const App = () => {
             className="aroma-rail-code"
             onClick={onResetAccess}
           >
-            Новый код
+            Сменить код
           </button>
         </header>
 
