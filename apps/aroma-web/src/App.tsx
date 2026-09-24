@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
+import { dedupeRails, railKindLabel } from '@/lib/showcase';
 
 type GuestView =
   | 'access'
@@ -150,12 +151,6 @@ const profileLabelMap = profileOptions.reduce<Record<string, string>>((acc, item
   acc[item.value] = item.label;
   return acc;
 }, {});
-
-const railToneLabels: Record<RailType, string> = {
-  statistical: 'Выбор гостей',
-  prepared: 'Редакция',
-  curated: 'Мастера',
-};
 
 const mixSourceLabels: Record<MixSource, string> = {
   recommendations: 'Подбор для вас',
@@ -1916,8 +1911,10 @@ export const App = () => {
 
     return (
       <section className="aroma-showcase">
-        {showcaseRails.map((rail) => {
-          const mixes = rail.mixes.filter((mix) => mix.available);
+        {dedupeRails(
+          showcaseRails.map((rail) => ({ ...rail, mixes: rail.mixes.filter((mix) => mix.available) })),
+        ).map((rail) => {
+          const { mixes } = rail;
           const openRail = () => {
             setSelectedRail(rail);
             setView('rail');
@@ -1928,7 +1925,7 @@ export const App = () => {
               <div className="aroma-showcase-rail-head">
                 <h2 className="aroma-showcase-rail-title">{rail.name}</h2>
                 <span className="aroma-caps aroma-showcase-rail-kind">
-                  {railToneLabels[rail.type]}
+                  {railKindLabel(rail)}
                 </span>
               </div>
 
@@ -2091,7 +2088,7 @@ export const App = () => {
           </button>
           <div className="aroma-rail-topbar-text">
             <p className="aroma-caps">
-              {`Витрина · ${railToneLabels[rail.type]}`}
+              {`Витрина · ${railKindLabel(rail)}`}
             </p>
             <p className="aroma-rail-meta">
               {`${rail.mixes.length} ${pluralizeMixes(rail.mixes.length)}`}
