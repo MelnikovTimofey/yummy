@@ -98,6 +98,43 @@ services:
       backend:
         condition: service_healthy
 
+  telegram-tunnel:
+    # Для хостов без IPv6 (в РФ IPv4 до api.telegram.org заблокирован): SSH-туннель
+    # через хост вне РФ. Сервис отвечает в сети контура под именем api.telegram.org,
+    # поэтому бот ходит «напрямую» и видит настоящий сертификат Telegram — TLS
+    # идёт насквозь, промежуточный хост токен не видит. Цель форварда резолвится
+    # на удалённой стороне. Включается COMPOSE_PROFILES=tg-tunnel в .env.
+    profiles: ["tg-tunnel"]
+    build:
+      context: ./services/telegram-tunnel
+    command:
+      - ssh
+      - -N
+      - -o
+      - ExitOnForwardFailure=yes
+      - -o
+      - ServerAliveInterval=30
+      - -o
+      - ServerAliveCountMax=3
+      - -o
+      - StrictHostKeyChecking=yes
+      - -o
+      - UserKnownHostsFile=/keys/known_hosts
+      - -i
+      - /keys/id_ed25519
+      - -p
+      - ${TG_TUNNEL_PORT:-22}
+      - -L
+      - 0.0.0.0:443:api.telegram.org:443
+      - ${TG_TUNNEL_TARGET:-}
+    volumes:
+      - ./secrets/telegram-tunnel:/keys:ro
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - api.telegram.org
+
   proxy:
     image: caddy:2
     ports:

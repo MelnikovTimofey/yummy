@@ -88,6 +88,16 @@
 | `ATELIER_DAILY_BROADCAST_MINUTE` | минута ежедневного `ensure` current code |
 | `ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS` | long-poll timeout |
 
+### Туннель до Telegram (хосты без IPv6)
+
+| Переменная | Назначение |
+|---|---|
+| `COMPOSE_PROFILES` | `tg-tunnel` — включает сервис `telegram-tunnel` |
+| `TG_TUNNEL_TARGET` | `user@host` SSH-хоста вне РФ |
+| `TG_TUNNEL_PORT` | SSH-порт этого хоста (по умолчанию `22`) |
+
+Ключ и `known_hosts` — файлы в `secrets/telegram-tunnel/` на прод-хосте, не env.
+
 ### Production notes
 
 1. source of truth по Telegram access должен жить в backend allowlist по телефонам;
