@@ -147,6 +147,28 @@ test('staff inventory endpoints expose filtered inventory with dependent mixes a
   await app.close();
 });
 
+// Счётчики чипов наличия описывают, что получишь по клику: они считаются по
+// выборке со всеми фильтрами, кроме самого наличия (#103).
+test('staff inventory stock counters ignore the stock filter itself', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const expectedInStock = seedTobaccos.filter((item) => item.inStock).length;
+  const expectedOutOfStock = seedTobaccos.length - expectedInStock;
+  assert.ok(expectedInStock > 0 && expectedOutOfStock > 0);
+
+  for (const stock of ['all', 'in-stock', 'out-of-stock']) {
+    const response = await app.inject({
+      method: 'GET',
+      url: `/staff/inventory/tobaccos?stock=${stock}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(response.statusCode, 200);
+    const { meta } = response.json() as { meta: { inStockCount: number; outOfStockCount: number } };
+    assert.equal(meta.inStockCount, expectedInStock, `inStockCount при stock=${stock}`);
+    assert.equal(meta.outOfStockCount, expectedOutOfStock, `outOfStockCount при stock=${stock}`);
+  }
+});
+
 test('staff inventory list paginates filtered results', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
