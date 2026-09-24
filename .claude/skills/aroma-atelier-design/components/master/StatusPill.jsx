@@ -12,7 +12,7 @@ export function StatusPill({ children, dot = false, tone = 'success', kbd, onCli
         alignItems: 'center',
         gap: 6,
         padding: '4px 10px 4px 8px',
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-sm)',
         fontFamily: 'var(--font-sans)',
         fontSize: 'var(--fs-sm)',
         color: 'var(--text-secondary)',

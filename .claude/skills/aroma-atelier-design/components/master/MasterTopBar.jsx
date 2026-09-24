@@ -65,14 +65,14 @@ export function MasterTopBar({ items = [], active, onChange, userName = 'admin',
           <button
             type="button"
             onClick={onOpenCommandPalette}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px 4px 8px', borderRadius: 'var(--r-pill)', fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px 4px 8px', borderRadius: 'var(--r-md)', fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', cursor: 'pointer' }}
           >
             <span>Найти или сделать</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 'var(--r-xs)', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderBottomWidth: 2, fontFamily: 'var(--font-meta)', fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)' }}>⌘K</span>
           </button>
         ) : null}
 
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border-subtle)', background: 'var(--bg-raised)', lineHeight: 1.15 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-subtle)', background: 'var(--bg-raised)', lineHeight: 1.15 }}>
           <span style={{ fontSize: 'var(--fs-sm)', letterSpacing: '-0.01em', color: 'var(--text-secondary)' }}>{userName}</span>
           <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-faint)' }}>{userRole}</span>
         </span>

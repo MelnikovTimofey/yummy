@@ -11,7 +11,7 @@ export function RatingPill({ rating, count, style }) {
         background: 'var(--rating-bg)',
         border: '1px solid var(--rating-border)',
         color: 'var(--rating-ink)',
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-guest-badge)',
         padding: '3px 9px',
         fontFamily: 'var(--font-body)',
         fontSize: 11,
