@@ -22,6 +22,7 @@
 | Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
 | TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |
 | Firewall | ufw: `49222`, `80`, `443` |
+| Telegram | бот ходит в `api.telegram.org` через сервис `telegram-tunnel` → `lampa@186.246.25.8:37023` (Франкфурт); ключ `secrets/telegram-tunnel/`, на удалённой стороне ограничен `permitopen="api.telegram.org:443"` |
 
 ```bash
 ssh -p 49222 root@201.24.60.80
@@ -185,7 +186,7 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 | Симптом | Причина / решение |
 |---|---|
 | `backend` не стартует, `P1000 auth failed` | `POSTGRES_PASSWORD` в `.env` не совпадает с паролем, с которым volume `atelier_pg` инициализирован; проверить `docker compose ... exec db psql -U atelier -d atelier` |
-| `telegram-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ, а в nsk-1 нет IPv6. На этом хосте бот **не запущен** — нужен обходной путь (IPv6-хост или прокси для Telegram API через `ATELIER_TELEGRAM_API_BASE_URL`) |
+| `telegram-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ, в nsk-1 нет IPv6 — бот работает через `telegram-tunnel`. Проверить `ps` и `logs telegram-tunnel` (упал SSH до Франкфурта / сменился его host key → обновить `secrets/telegram-tunnel/known_hosts`) |
 | фронт отдаёт `403 Blocked request ... host not allowed` | домен не в `ATELIER_ALLOWED_HOSTS`; проверить `AROMA_DOMAIN`/`MASTER_DOMAIN` в `.env`, пересобрать фронт |
 | Caddy не выпускает TLS | DNS не указывает на `201.24.60.80`, либо `80`/`443` недоступны снаружи; логи `proxy` |
 | внешний доступ «висит» (рукопожатие ок, данных нет) | провайдерская inbound-фильтрация на IP; крайняя мера — сменить публичный IP |
