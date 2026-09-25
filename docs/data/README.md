@@ -58,6 +58,22 @@ npm run build:catalog -- --yes   #    запись
 Пул сверен с прод-каталогом. На старом снэпшоте или бэкапе часть табаков может
 отсутствовать или числиться снятой — превью это покажет пропусками.
 
+### На проде
+
+В прод-образе backend нет `docs/data` и `tsx`. Скрипт запускается разовым
+контейнером из свежего образа: источники монтируются из `/opt/atelier` в
+`/docs/data`, где их ищет скрипт (`/app/scripts/../../../docs/data`). Перед
+записью — `pg_dump` (см. `docs/atelier/prod-operations.md`).
+
+```bash
+cd /opt/atelier && git pull origin main
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build backend
+docker compose -f docker-compose.prod.yml --env-file .env run --rm --no-deps \
+  -v /opt/atelier/docs/data:/docs/data:ro backend \
+  npx -y tsx scripts/build-catalog-backup.ts          # превью
+# то же с `--yes` в конце — запись
+```
+
 ### Проверить результат
 
 ```bash
