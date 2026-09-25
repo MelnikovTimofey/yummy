@@ -25,7 +25,7 @@ export function RatingPill({ rating, count, style }: RatingPillProps) {
         ...style,
       }}
     >
-      <span style={{ color: "var(--ember)", fontSize: 10 }} aria-hidden>
+      <span style={{ color: "var(--rating-ink)", fontSize: 10 }} aria-hidden>
         ★
       </span>
       <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatRating(rating)}</span>

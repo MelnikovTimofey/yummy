@@ -67,8 +67,8 @@
   --accent-fg: #f4efea;
   --accent-soft: rgba(142, 47, 60, 0.22);
   --accent-border: rgba(163, 59, 72, 0.5);
-  /* Бордо как цвет текста на угле даёт ~2.3:1 — для текста только ink (7.3:1). */
-  --accent-ink: #d98f97;
+  /* Текст и иконки акцентом не набираются: бордо на угле даёт ~2.3:1, а светлый
+     бордо читается розовым (#139). Акцент — только метки, рамки и заливка CTA. */
 
   /* Borders */
   --border-subtle: rgba(150, 148, 142, 0.16);
@@ -120,7 +120,6 @@
   --text-2: var(--text-muted);
   --line: var(--border-subtle);
   --line-soft: rgba(150, 148, 142, 0.1);
-  --ember: var(--accent-ink);
 }
 /* ── profile-colors.css ── */
 /* Flavour-profile colours — a DATA layer, not brand palette (PRD §12).
@@ -324,7 +323,8 @@
 /* Guest-surface atmosphere: the wine-warm room the mobile app sits in.
    Accent rule (PRD §12): ONE brand colour — bordeaux. Solid bordeaux is reserved
    for the primary CTA; the active navigation segment is quiet (graphite fill,
-   cream ink, 2px bordeaux mark) and the rating pill is a bordeaux tint. The warm
+   cream ink, 2px bordeaux mark); text and icons are never bordeaux — the rating
+   pill is cream on graphite with a bordeaux hairline. The warm
    brass gradient and the brighter oxblood were retired on the brand owner's call.
    The only remaining warm hues are the --composition-* data ramp. */
 :root {
@@ -362,9 +362,9 @@
   --segment-idle-bg: rgba(40, 40, 48, 0.54);
 
   /* Rating pill */
-  --rating-bg: rgba(142, 47, 60, 0.24);
+  --rating-bg: rgba(43, 43, 50, 0.6);
   --rating-border: var(--accent-border);
-  --rating-ink: #e3a9b1;
+  --rating-ink: var(--text-primary);
 
   /* Master CTA gradient (backoffice primary) */
   --cta-gradient: linear-gradient(135deg, var(--accent), var(--accent-deep));

@@ -20,7 +20,7 @@ export function CompositionStack({ components = [], showBar = true, style }) {
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: 'var(--r-pill)', alignSelf: 'center', background: PALETTE[i % PALETTE.length] }} />
             <span className="aroma-caps" style={{ fontSize: 10, letterSpacing: '0.18em', whiteSpace: 'nowrap' }}>{c.manufacturer}</span>
             <span style={{ fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-            <span style={{ fontSize: 13, color: 'var(--accent-hover)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{formatPercent(c.proportion)}</span>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{formatPercent(c.proportion)}</span>
           </li>
         ))}
       </ul>
