@@ -5,7 +5,8 @@
 
 export type PoolSet = 'хиты' | 'ниша';
 
-export type RuleTobacco = { flavorProfiles: string[]; flavors: string[]; flavorTags: string[] };
+// Крепость (`officialStrength` каталога) участвует в правилах строчными: «крепкая».
+export type RuleTobacco = { flavorProfiles: string[]; flavors: string[]; flavorTags: string[]; strength?: string | null };
 
 export type PoolMix = {
   slug: string;
@@ -57,8 +58,11 @@ export const parseRailRule = (text: string): RailRule => {
   return rule;
 };
 
-const termsOf = (tobacco: RuleTobacco) =>
-  new Set([...tobacco.flavorProfiles, ...tobacco.flavors, ...tobacco.flavorTags]);
+const termsOf = (tobacco: RuleTobacco) => {
+  const terms = new Set([...tobacco.flavorProfiles, ...tobacco.flavors, ...tobacco.flavorTags]);
+  if (tobacco.strength) terms.add(tobacco.strength.toLowerCase());
+  return terms;
+};
 
 export const termShares = (components: PoolMix['components']) => {
   const shares = new Map<string, number>();
@@ -121,10 +125,11 @@ export type PoolEntry = {
 const tableCells = (line: string) => {
   const row = line.trim();
   if (!row.startsWith('|')) return null;
+  // `\|` — экранированная черта внутри ячейки (альтернативы в правиле рейла).
   return row
-    .split('|')
+    .split(/(?<!\\)\|/)
     .slice(1, -1)
-    .map((cell) => cell.trim());
+    .map((cell) => cell.replace(/\\\|/g, '|').trim());
 };
 
 const SET_SLUG: Record<PoolSet, string> = { хиты: 'hit', ниша: 'niche' };

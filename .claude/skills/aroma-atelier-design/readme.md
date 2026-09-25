@@ -24,7 +24,7 @@
   - `README.md`, `PRD.md` — продуктовое видение, инварианты, таблица токенов Film Noir (§12)
   - `apps/aroma-web/src/styles.css`, `apps/aroma-web/src/App.tsx`, `apps/aroma-web/src/components/aroma/*`, `apps/aroma-web/src/components/ui/*`, `apps/aroma-web/src/lib/profile-color.ts` — гостевая поверхность
   - `apps/master-web/src/styles.css`, `apps/master-web/src/components/**` — консоль Мастера (`.btn`, `.tag`, `.stats`, `.list`, `.input`, `.toggle`, `.topbar`, `.master-page-header`, …)
-  - `docs/data/top-20-mixes.md` — реальные миксы и составы, использованы как контент в UI-кит
+  - `docs/data/mixes.md` — реальные миксы и составы, использованы как контент в UI-кит
   - `apps/*/components.json` — `iconLibrary: lucide`, shadcn-стили `new-york` (гость) и `radix-nova` (Мастер)
 - Полезно изучить репозиторий дальше (там же CI, issue-шаблоны, runbook'и и `docs/atelier/master-production-redesign.md`) — это даст более точные решения при проектировании новых экранов.
 
@@ -131,7 +131,7 @@
 
 ## UI kits
 
-- `ui_kits/aroma-guest/` — гостевое приложение целиком, кликабельно: гейт 18+ и код → знакомство (4 карточки) → онбординг (профили → вкусы) → Подбор / Витрина / Каталог → рейл → bottom-sheet микса с оценкой → карточка для мастера. Контент — реальные миксы из `docs/data/top-20-mixes.md`.
+- `ui_kits/aroma-guest/` — гостевое приложение целиком, кликабельно: гейт 18+ и код → знакомство (4 карточки) → онбординг (профили → вкусы) → Подбор / Витрина / Каталог → рейл → bottom-sheet микса с оценкой → карточка для мастера. Контент — реальные миксы из `docs/data/mixes.md`.
 - `ui_kits/master/` — консоль: вход в смену → Дашборд (окно 7/14/30, топ миксов, сигналы) → Табаки (фильтры, batch-действия, тумблеры наличия) → Миксы (каталог + редактор состава) → Рейлы (авто vs редактируемые, состав) → Доступ (код смены, Telegram-allowlist, staff, журнал). Работает ⌘K.
 
 ## Индекс файлов

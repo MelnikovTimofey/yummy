@@ -25,7 +25,7 @@ date: 2026-08-14T14:20:27Z
 | `packages/design-tokens/fonts.css` | `apps/aroma-web/src/styles.css` (`--font-display`, `--font-body`), `apps/master-web/src/styles.css` (fontsource imports) |
 | `components/guest/*` | `apps/aroma-web/src/components/aroma/*`, `apps/aroma-web/src/components/ui/*`, `apps/aroma-web/src/styles.css` |
 | `components/master/*` | `apps/master-web/src/components/shell/*`, `apps/master-web/src/components/ui/*`, `apps/master-web/src/styles.css` |
-| `ui_kits/aroma-guest/*` | `apps/aroma-web/src/App.tsx`, `apps/aroma-web/src/styles.css`, `docs/data/top-20-mixes.md` |
+| `ui_kits/aroma-guest/*` | `apps/aroma-web/src/App.tsx`, `apps/aroma-web/src/styles.css`, `docs/data/mixes.md` |
 | `ui_kits/master/*` | `apps/master-web/src/App.tsx`, `apps/master-web/src/components/{auth,dashboard,inventory,mixes,rails,access,shell}/*`, `apps/master-web/src/styles.css` |
 | `assets/logo-master-mark.svg` | `apps/master-web/public/favicon.svg` |
 | `assets/logo-mark*.svg`, `assets/logo-lockup.svg`, `assets/favicon.svg` | authored here — no logo exists upstream |

@@ -18,7 +18,7 @@
 - `index.html` — оболочка, экранные layout-классы (перенесены из `apps/aroma-web/src/styles.css`), загрузка бандла дизайн-системы
 - `GuestScreens.jsx` — экраны (Access, Intro, Onboarding, Recommendations, Showcase, Catalog, Rail, MixSheet, Confirmation)
 - `GuestApp.jsx` — переходы, фильтры, правило рекомендаций (совпадение профилей ×3 + вкусов ×2 + популярность)
-- `mock-data.js` — 12 реальных миксов и 3 рейла из `docs/data/top-20-mixes.md`
+- `mock-data.js` — 12 реальных миксов и 3 рейла из `docs/data/mixes.md`
 
 Примитивы берутся из бандла дизайн-системы (`window.<Namespace>`): `AromaCTA`, `AromaChip`, `SegmentNav`, `GuestTab`, `ProfileGlyph`, `SignatureBar`, `RatingPill`, `ProfileCard`, `MixRow`, `ShowcaseCard`, `GuestCard`, `CompositionStack`, `AccessCodeInput`, `OnboardingProgress`.
 

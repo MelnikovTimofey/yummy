@@ -79,6 +79,13 @@ test('matchesRule: набор и число табаков', () => {
   assert.equal(matchesRule(niche, parseRailRule('основа tobacco · до 1 табака')), false);
 });
 
+test('matchesRule: крепость табака — тоже термин правила', () => {
+  const strong = tobacco({ flavorProfiles: ['fruity'], flavors: ['вишня'], strength: 'Крепкая' });
+  const dark = mix('dark', 'ниша', [[strong, 60], [ice, 40]]);
+  assert.equal(matchesRule(dark, parseRailRule('основа крепкая')), true);
+  assert.equal(matchesRule(mix('soft', 'ниша', [[strong, 30], [ice, 70]]), parseRailRule('основа крепкая')), false);
+});
+
 test('assignRails: порядок пула, лимит размера и не больше двух рейлов на микс', () => {
   const pool = [
     mix('a', 'хиты', [[berry, 100]]),
@@ -160,4 +167,9 @@ test('parseRails: таблица рейлов с правилами', () => {
       rule: { set: 'хиты', lead: [['berry']], has: [['охлаждающий']], none: [], maxComponents: null },
     },
   ]);
+});
+
+test('parseRails: экранированный «\\|» в ячейке — альтернатива, а не граница колонки', () => {
+  const md = '| `tropics` | Тропики | Манго и ананас. | `основа манго\\|ананас` |';
+  assert.deepEqual(parseRails(md)[0].rule.lead, [['манго', 'ананас']]);
 });
