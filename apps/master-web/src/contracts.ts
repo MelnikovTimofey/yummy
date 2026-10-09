@@ -479,6 +479,8 @@ type DashboardSummaryPayload = {
 export type RailMixReference = {
   id: string;
   name: string;
+  guestVisible: boolean;
+  available: boolean;
 };
 
 export type RailRecord = {
@@ -700,6 +702,8 @@ const normalizeRailMixReference = (value: unknown): RailMixReference => {
     return {
       id: stringValue,
       name: stringValue,
+      guestVisible: true,
+      available: true,
     };
   }
 
@@ -707,6 +711,8 @@ const normalizeRailMixReference = (value: unknown): RailMixReference => {
   return {
     id,
     name: String(value.name ?? value.mixName ?? id),
+    guestVisible: toBoolean(value.guestVisible, true),
+    available: toBoolean(value.available, true),
   };
 };
 
