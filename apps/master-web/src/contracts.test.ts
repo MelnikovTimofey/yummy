@@ -405,7 +405,31 @@ test('normalizeRailRecord accepts mix refs and active alias', () => {
   assert.deepEqual(rail.mixes[0], {
     id: 'mix-1',
     name: 'Цитрусовый караван',
+    guestVisible: true,
+    available: true,
   });
+});
+
+test('normalizeRailRecord keeps guest visibility of rail mixes', () => {
+  const rail = normalizeRailRecord({
+    id: 'rail-1',
+    name: 'Тестовый рейл',
+    type: 'prepared',
+    mixes: [
+      { id: 'mix-visible', name: 'Видимый', guestVisible: true, available: true },
+      { id: 'mix-blocked', name: 'Без табака', guestVisible: false, available: true },
+      { id: 'mix-hidden', name: 'Скрытый', guestVisible: false, available: false },
+    ],
+  });
+
+  assert.deepEqual(
+    rail.mixes.map((mix) => [mix.id, mix.guestVisible, mix.available]),
+    [
+      ['mix-visible', true, true],
+      ['mix-blocked', false, true],
+      ['mix-hidden', false, false],
+    ],
+  );
 });
 
 test('normalizeRailRecord falls back to read-only semantics for statistical rails', () => {
