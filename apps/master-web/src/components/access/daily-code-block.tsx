@@ -175,9 +175,9 @@ export const DailyCodeBlock = ({
             <ClockIcon />
           </span>
           <div className="daily-code-rotation__text">
-            <p className="daily-code-rotation__title">Новый код каждые сутки</p>
+            <p className="daily-code-rotation__title">Новый код каждую неделю</p>
             <p className="daily-code-rotation__sub">
-              Действует сутки по московскому времени, бот рассылает его операторам утром.
+              Действует с понедельника по воскресенье по московскому времени, операторы получают его в боте командой /code.
             </p>
           </div>
         </div>

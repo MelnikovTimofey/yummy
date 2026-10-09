@@ -13,9 +13,12 @@ const fromMoscowDate = (date: Date) => new Date(date.getTime() - MOSCOW_OFFSET_M
 
 export const getDailyCodeWindow = (referenceDate = new Date()): DailyCodeWindow => {
   const moscowDate = toMoscowDate(referenceDate);
-  const startMoscow = new Date(Date.UTC(moscowDate.getUTCFullYear(), moscowDate.getUTCMonth(), moscowDate.getUTCDate()));
+  const daysSinceMonday = (moscowDate.getUTCDay() + 6) % 7;
+  const startMoscow = new Date(
+    Date.UTC(moscowDate.getUTCFullYear(), moscowDate.getUTCMonth(), moscowDate.getUTCDate() - daysSinceMonday),
+  );
   const endMoscow = new Date(startMoscow);
-  endMoscow.setUTCDate(endMoscow.getUTCDate() + 1);
+  endMoscow.setUTCDate(endMoscow.getUTCDate() + 7);
 
   return {
     startsAt: fromMoscowDate(startMoscow),
