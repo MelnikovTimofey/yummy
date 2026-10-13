@@ -1,7 +1,7 @@
 import type { BotConfig } from './config';
 import { BackendClient } from './backend';
 import { JsonStateStore } from './storage';
-import { TelegramClient, type TelegramSendMessageOptions } from './telegram';
+import { TelegramClient, type TelegramBotCommand, type TelegramSendMessageOptions } from './telegram';
 import type {
   DailyAccessCodeRecord,
   TelegramAutomationReportPayload,
@@ -23,13 +23,17 @@ type CommandContext = {
   args: string[];
 };
 
+export const BOT_COMMANDS: TelegramBotCommand[] = [
+  { command: 'start', description: 'инструкция и привязка доступа' },
+  { command: 'help', description: 'список команд' },
+  { command: 'code', description: 'показать текущий daily code' },
+  { command: 'whoami', description: 'показать статус привязки чата' },
+];
+
 const HELP_TEXT = [
   'Telegram-бот Арома Ателье',
   'Команды:',
-  '/start - инструкция и привязка доступа',
-  '/help - список команд',
-  '/code - показать текущий daily code',
-  '/whoami - показать статус привязки чата',
+  ...BOT_COMMANDS.map(({ command, description }) => `/${command} - ${description}`),
 ].join('\n');
 
 const CONTACT_REQUEST_TEXT = [
@@ -107,6 +111,7 @@ export class TelegramBot {
       throw new Error('ATELIER_BACKEND_AUTOMATION_TOKEN is required');
     }
 
+    await this.registerCommandMenu();
     await this.safeReportState({ event: 'heartbeat' });
     await this.runScheduledEnsure('startup');
     this.scheduleNextEnsure();
@@ -124,6 +129,16 @@ export class TelegramBot {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
+    }
+  }
+
+  // Меню команд — удобство, а не условие работы: сбой не должен ронять бота.
+  private async registerCommandMenu() {
+    try {
+      await this.deps.telegram.setMyCommands(BOT_COMMANDS);
+    } catch (error) {
+      console.error('[telegram-bot] command menu registration failed', error);
+      await this.safeReportError(error);
     }
   }
 
