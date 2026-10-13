@@ -5,6 +5,11 @@ export type TelegramSendMessageOptions = {
   reply_markup?: Record<string, unknown>;
 };
 
+export type TelegramBotCommand = {
+  command: string;
+  description: string;
+};
+
 export class TelegramClient {
   constructor(
     private readonly token: string,
@@ -38,6 +43,18 @@ export class TelegramClient {
 
     const response = await fetch(url);
     return this.readJson<TelegramUpdate[]>(response);
+  }
+
+  async setMyCommands(commands: TelegramBotCommand[]) {
+    const response = await fetch(`${this.apiBaseUrl}/bot${this.token}/setMyCommands`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ commands }),
+    });
+
+    return this.readJson<boolean>(response);
   }
 
   async sendMessage(chatId: number, text: string, options: TelegramSendMessageOptions = {}) {
