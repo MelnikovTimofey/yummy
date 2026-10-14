@@ -153,25 +153,36 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ## 8. Бэкапы Postgres
 
-Ночной `pg_dump` в custom-формате на хост, хранение 14 дней. Установить один раз:
+Ночной `pg_dump` (03:30 UTC) пишется на хост в `/opt/atelier/backups` (14 дней) и
+копируется в S3 TimeWeb в **другом регионе** (`ru-1`, Санкт-Петербург) — там
+хранятся 30 последних дампов. По понедельникам в 04:00 UTC
+`pg-restore-check.sh` поднимает последний дамп из S3 во временном `postgres:16`
+и проверяет, что `Tobacco`, `Mix`, `StaffAccount`, `_prisma_migrations` не
+пустые. Лог обоих скриптов — `/var/log/atelier-backup.log`.
+
+Установка один раз:
+
+1. В панели TimeWeb создать приватный бакет S3 в `ru-1` и ключи доступа к нему.
+2. На хосте положить `/opt/atelier/.env.backup` с правами 600 — переменные
+   `BACKUP_S3_*` из [`env-matrix.md`](env-matrix.md) §5a.
+3. Поставить cron и проверить вручную:
 
 ```bash
-mkdir -p /opt/atelier/backups
-cat > /etc/cron.d/atelier-pg-backup <<'CRON'
-# ежедневно 03:30 по времени хоста
-30 3 * * * root cd /opt/atelier && docker compose -f docker-compose.prod.yml exec -T db pg_dump -U atelier -Fc atelier > /opt/atelier/backups/atelier-$(date +\%F).dump && find /opt/atelier/backups -name 'atelier-*.dump' -mtime +14 -delete
-CRON
+cd /opt/atelier
+chmod 600 .env.backup backups/*.dump
+cp scripts/atelier/pg-backup.cron /etc/cron.d/atelier-pg-backup
+scripts/atelier/pg-backup.sh
+scripts/atelier/pg-restore-check.sh
 ```
 
-Восстановление дампа целиком (схема + данные):
+Восстановление целиком (схема + данные), из `/opt/atelier`:
 
 ```bash
-docker compose -f docker-compose.prod.yml stop backend telegram-bot
-docker compose -f docker-compose.prod.yml exec -T db \
-  pg_restore -U atelier -d atelier --clean --if-exists --no-owner < /opt/atelier/backups/atelier-<дата>.dump
-docker compose -f docker-compose.prod.yml start backend telegram-bot
-```
+# если дампа на хосте нет — скачать из S3 (список дампов: s3 ls s3://$BACKUP_S3_BUCKET/)
+. scripts/atelier/backup-lib.sh && s3 cp s3://$BACKUP_S3_BUCKET/atelier-<дата>.dump /backups/
 
-Дампы лежат на том же VPS — от потери сервера целиком они не спасают. Для этого
-включить автобэкапы диска в панели провайдера или периодически забирать свежий
-дамп с хоста (`scp -P <ssh-port> root@<host>:/opt/atelier/backups/<файл> .`).
+docker compose -f docker-compose.prod.yml --env-file .env stop backend telegram-bot
+docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
+  pg_restore -U atelier -d atelier --clean --if-exists --no-owner < backups/atelier-<дата>.dump
+docker compose -f docker-compose.prod.yml --env-file .env start backend telegram-bot
+```

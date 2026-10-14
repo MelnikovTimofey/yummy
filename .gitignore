@@ -8,6 +8,8 @@ apps/*/.env
 .env
 # локальные токены облака/деплоя (TIMEWEB_TOKEN и т.п.)
 .env.project
+# прод-хост: ключи S3 для бэкапов БД
+.env.backup
 # прод-хост: дампы БД и ключи туннеля лежат внутри клона /opt/atelier
 backups/
 secrets/
