@@ -193,7 +193,47 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 | внешний доступ «висит» (рукопожатие ок, данных нет) | провайдерская inbound-фильтрация на IP; крайняя мера — сменить публичный IP |
 | нет SSH | порт **49222**, ключ-only; fallback — веб-консоль провайдера |
 
-## 9. Связанные документы
+## 9. Мониторинг и алерты
+
+Алерты приходят в Telegram от отдельного бота (не гостевого `@aroma_atelier_bot`)
+в чат владельца. Два наблюдателя:
+
+| Что | Где | Как часто | Что проверяет |
+|---|---|---|---|
+| Внешний | GitHub Actions `.github/workflows/atelier-uptime.yml` → `scripts/atelier/uptime-check.sh` | каждые 5 мин (GitHub может задерживать на 5–15 мин) | `yummy-aroma-atelier.ru`, `master.`, `api.…/health` отвечают 200 |
+| Хост | cron `/etc/cron.d/atelier-host-check` → `scripts/atelier/host-check.sh`, лог `/var/log/atelier-monitor.log` | каждые 5 мин | все сервисы compose запущены; диск `/` ≤ 80 %; свободной памяти ≥ 10 %; дамп БД моложе 26 ч; последний бэкап и проверка восстановления без `FAILED`; heartbeat бота свежее 10 мин |
+
+Оба шлют сообщение только при **смене** состояния: что сломалось и что починилось.
+Пока проблема не ушла — повторов нет. Хост шлёт алерты через `telegram-tunnel`:
+если лёг сам туннель, алерт с хоста не уйдёт, но внешний наблюдатель продолжит
+работать.
+
+Установка один раз:
+
+1. Создать бота через @BotFather и написать ему `/start` из чата, куда слать
+   алерты.
+2. На хосте — `/opt/atelier/.env.monitor` с правами 600
+   (`ATELIER_ALERT_BOT_TOKEN`, `ATELIER_ALERT_CHAT_ID`, см.
+   [`env-matrix.md`](env-matrix.md) §5b).
+3. В GitHub — секреты репозитория с теми же значениями:
+   `ATELIER_ALERT_BOT_TOKEN`, `ATELIER_ALERT_CHAT_ID`.
+4. Поставить cron и проверить:
+
+```bash
+cd /opt/atelier
+cp scripts/atelier/host-check.cron /etc/cron.d/atelier-host-check
+scripts/atelier/host-check.sh && tail -5 /var/log/atelier-monitor.log
+```
+
+Тест алерта без поломки прода — занизить порог диска на один прогон
+(`DISK_MAX_PCT=1 scripts/atelier/host-check.sh`), следующий обычный прогон
+пришлёт «Устранено». Внешний наблюдатель запускается вручную:
+`gh workflow run atelier-uptime.yml`.
+
+> GitHub отключает расписания в публичном репо после 60 дней без коммитов.
+> Если репо надолго затихнет — включить workflow заново во вкладке Actions.
+
+## 10. Связанные документы
 - [`prod-deploy-runbook.md`](prod-deploy-runbook.md) — первичное развёртывание с нуля.
 - [`env-matrix.md`](env-matrix.md) — полный набор переменных окружения.
 - [`deployment-smoke-checklist.md`](deployment-smoke-checklist.md) — smoke после деплоя.

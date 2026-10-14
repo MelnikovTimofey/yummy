@@ -1,0 +1,3 @@
+# Арома Ателье: мониторинг прод-хоста (docs/atelier/prod-operations.md §9)
+# Установка: cp /opt/atelier/scripts/atelier/host-check.cron /etc/cron.d/atelier-host-check
+*/5 * * * * root /opt/atelier/scripts/atelier/host-check.sh >> /var/log/atelier-monitor.log 2>&1

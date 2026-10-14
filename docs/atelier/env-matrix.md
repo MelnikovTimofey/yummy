@@ -120,6 +120,17 @@
 | `BACKUP_S3_KEEP` | сколько последних дампов хранить в S3 (по умолчанию `30`) | `30` |
 | `BACKUP_LOCAL_DAYS` | сколько дней хранить дампы на хосте (по умолчанию `14`) | `14` |
 
+## 5b. Мониторинг (прод-хост и GitHub)
+
+Файл `/opt/atelier/.env.monitor` (права 600, в git не коммитится) — читает
+`scripts/atelier/host-check.sh`. Те же значения — в секретах GitHub-репозитория
+для `.github/workflows/atelier-uptime.yml`.
+
+| Переменная | Назначение | Пример |
+|---|---|---|
+| `ATELIER_ALERT_BOT_TOKEN` | токен отдельного бота для алертов | secret |
+| `ATELIER_ALERT_CHAT_ID` | чат, куда слать алерты | `123456789` |
+
 ## 6. Secret ownership
 
 ### Backend
@@ -136,6 +147,10 @@
 ### Бэкап БД
 
 1. `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`
+
+### Мониторинг
+
+1. `ATELIER_ALERT_BOT_TOKEN` (хост + секрет GitHub)
 
 ### Bootstrap operation
 

@@ -1,0 +1,59 @@
+name: Atelier Uptime
+
+# Внешний наблюдатель за продом: проверка с хоста не заметит, что лёг весь сервер.
+# Алерт в Telegram — только при смене состояния (упал / поднялся), сравнивая с
+# результатом прошлого прогона. Проверки самого хоста — scripts/atelier/host-check.sh.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: atelier-uptime
+  cancel-in-progress: false
+
+jobs:
+  atelier-uptime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/atelier/uptime-check.sh
+          sparse-checkout-cone-mode: false
+      - name: Проверить домены и оповестить при смене состояния
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALERT_BOT_TOKEN: ${{ secrets.ATELIER_ALERT_BOT_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ATELIER_ALERT_CHAT_ID }}
+        run: |
+          set +e -u
+          failed="$(scripts/atelier/uptime-check.sh)"
+          status=$?
+          echo "${failed:-все домены отвечают 200}"
+
+          previous="$(gh run list -R "$GITHUB_REPOSITORY" --workflow atelier-uptime.yml --status completed --limit 1 \
+            --json conclusion -q '.[0].conclusion // "success"')"
+
+          text=""
+          if [ "$status" -ne 0 ] && [ "$previous" != failure ]; then
+            text="Арома Ателье недоступно снаружи:"$'\n'"$failed"
+          elif [ "$status" -eq 0 ] && [ "$previous" = failure ]; then
+            text="Арома Ателье снова доступно снаружи."
+          fi
+
+          if [ -n "$text" ]; then
+            if [ -z "$ALERT_BOT_TOKEN" ] || [ -z "$ALERT_CHAT_ID" ]; then
+              echo "::warning::нет секретов ATELIER_ALERT_BOT_TOKEN / ATELIER_ALERT_CHAT_ID — алерт не отправлен"
+            else
+              curl -sS -f -m 20 -o /dev/null "https://api.telegram.org/bot$ALERT_BOT_TOKEN/sendMessage" \
+                --data-urlencode "chat_id=$ALERT_CHAT_ID" --data-urlencode "text=$text"
+            fi
+          fi
+
+          exit "$status"
