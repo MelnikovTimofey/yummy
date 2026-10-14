@@ -1,0 +1,4 @@
+# Арома Ателье: бэкап Postgres в S3 и проверка восстановления (docs/atelier/prod-deploy-runbook.md §8)
+# Установка: cp /opt/atelier/scripts/atelier/pg-backup.cron /etc/cron.d/atelier-pg-backup
+30 3 * * * root /opt/atelier/scripts/atelier/pg-backup.sh >> /var/log/atelier-backup.log 2>&1
+0 4 * * 1 root /opt/atelier/scripts/atelier/pg-restore-check.sh >> /var/log/atelier-backup.log 2>&1

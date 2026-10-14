@@ -18,7 +18,7 @@
 | Compose-файл | `docker-compose.prod.yml` (всегда с `--env-file .env`) |
 | Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
 | База данных | сервис `db` в том же compose, наружу не публикуется, volume `atelier_pg` |
-| Бэкапы | `/opt/atelier/backups`, cron `/etc/cron.d/atelier-pg-backup` (03:30 UTC, 14 дней) |
+| Бэкапы | `/opt/atelier/backups` (14 дней) + S3 TimeWeb `ru-1` (30 дампов), cron `/etc/cron.d/atelier-pg-backup`: дамп 03:30 UTC, проверка восстановления пн 04:00 UTC; лог `/var/log/atelier-backup.log` |
 | Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
 | TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |
 | Firewall | ufw: `49222`, `80`, `443` |
@@ -126,9 +126,10 @@ docker compose -f docker-compose.prod.yml --env-file .env restart telegram-bot
 docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
   pg_dump -U atelier -Fc atelier > backups/atelier-$(date +%F-%H%M).dump
 ```
-Дампы лежат на том же VPS — периодически забирать свежий к себе:
+Ночной дамп сам уходит в S3 в другом регионе, раз в неделю проверяется его
+восстановление (runbook §8). Последние записи:
 ```bash
-scp -P 49222 root@201.24.60.80:/opt/atelier/backups/atelier-<дата>.dump .
+tail -20 /var/log/atelier-backup.log
 ```
 
 ### Снэпшот только продуктовых данных / restore

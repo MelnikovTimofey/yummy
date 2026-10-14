@@ -105,6 +105,21 @@
 3. `ATELIER_DAILY_BROADCAST_*` сохраняют старое имя только ради совместимости env, но управляют уже не рассылкой, а ежедневным `ensure` current code;
 4. `ATELIER_BACKEND_AUTOMATION_TOKEN` должен ротироваться отдельно от staff credentials.
 
+## 5a. Бэкап БД в S3 (прод-хост)
+
+Файл `/opt/atelier/.env.backup` (права 600, в git не коммитится) — читают
+`scripts/atelier/pg-backup.sh` и `pg-restore-check.sh`.
+
+| Переменная | Назначение | Пример |
+|---|---|---|
+| `BACKUP_S3_ENDPOINT` | S3-совместимый endpoint | `https://s3.twcstorage.ru` |
+| `BACKUP_S3_REGION` | регион бакета | `ru-1` |
+| `BACKUP_S3_BUCKET` | бакет под дампы | `atelier-backups` |
+| `BACKUP_S3_ACCESS_KEY` | ключ доступа к бакету | secret |
+| `BACKUP_S3_SECRET_KEY` | секретный ключ | secret |
+| `BACKUP_S3_KEEP` | сколько последних дампов хранить в S3 (по умолчанию `30`) | `30` |
+| `BACKUP_LOCAL_DAYS` | сколько дней хранить дампы на хосте (по умолчанию `14`) | `14` |
+
 ## 6. Secret ownership
 
 ### Backend
@@ -117,6 +132,10 @@
 
 1. `TELEGRAM_BOT_TOKEN`
 2. `ATELIER_BACKEND_AUTOMATION_TOKEN`
+
+### Бэкап БД
+
+1. `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`
 
 ### Bootstrap operation
 
