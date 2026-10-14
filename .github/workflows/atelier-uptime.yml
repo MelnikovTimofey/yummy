@@ -6,7 +6,8 @@ name: Atelier Uptime
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # Не на ровных минутах: в :00/:05 у GitHub пик очереди, и запуски по `*/5` пропадали.
+    - cron: '3-59/5 * * * *'
   workflow_dispatch:
 
 permissions:
