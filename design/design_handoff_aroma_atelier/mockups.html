@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aroma Atelier — Selected mockups</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    #root { height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="aroma/design-canvas.jsx"></script>
+  <script type="text/babel" src="aroma/aroma-shared.jsx"></script>
+  <script type="text/babel" src="aroma/auth.jsx"></script>
+  <script type="text/babel" src="aroma/intro.jsx"></script>
+  <script type="text/babel" src="aroma/onboarding.jsx"></script>
+  <script type="text/babel" src="aroma/recommendations.jsx"></script>
+  <script type="text/babel" src="aroma/catalog.jsx"></script>
+  <script type="text/babel" src="aroma/showcase.jsx"></script>
+  <script type="text/babel" src="aroma/mix-card.jsx"></script>
+  <script type="text/babel" src="aroma/extras.jsx"></script>
+
+  <script type="text/babel">
+    // Selected variants only — full guest flow in order.
+    const W = 414, H = 880;
+    function App() {
+      const {
+        DesignCanvas, DCSection, DCArtboard,
+        AuthMinimal, IntroSwipe, OnboardingSteps,
+        RecommendationsHero, CatalogInline, ShowcaseRails,
+        MixCardHero, SmokeCardPremium, RailView,
+      } = window;
+      return (
+        <DesignCanvas>
+          <DCSection id="flow" title="Гостевой путь" subtitle="Выбранные варианты в порядке прохождения">
+            <DCArtboard id="01-auth"      label="01 · Авторизация (C)"    width={W} height={H}><AuthMinimal /></DCArtboard>
+            <DCArtboard id="02-intro"     label="02 · Знакомство (A)"     width={W} height={H}><IntroSwipe /></DCArtboard>
+            <DCArtboard id="03-onboard"   label="03 · Онбординг (B)"      width={W} height={H}><OnboardingSteps /></DCArtboard>
+            <DCArtboard id="04-recs"      label="04 · Подбор (B)"         width={W} height={H}><RecommendationsHero /></DCArtboard>
+            <DCArtboard id="05-showcase"  label="05 · Витрина (C · тихие рейлы)" width={W} height={H}><ShowcaseRails /></DCArtboard>
+            <DCArtboard id="06-rail"      label="06 · Раскрытый рельс"    width={W} height={H}><RailView /></DCArtboard>
+            <DCArtboard id="07-catalog"   label="07 · Каталог (B)"        width={W} height={H}><CatalogInline /></DCArtboard>
+            <DCArtboard id="08-mix-card"  label="08 · Карточка микса (A)" width={W} height={H}><MixCardHero /></DCArtboard>
+            <DCArtboard id="09-master"    label="09 · Карточка мастеру (A)" width={W} height={H}><SmokeCardPremium /></DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
