@@ -3,7 +3,9 @@ import { type PointerEvent as ReactPointerEvent, FormEvent, useEffect, useRef, u
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
+import { KeyRound } from 'lucide-react';
+
+import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { getProfileColor } from '@/lib/profile-color';
@@ -22,6 +24,7 @@ type GuestView =
   | 'smoke-confirmation'
   | 'mixer';
 type AppTab = 'recommendations' | 'showcase' | 'catalog';
+type MixerReturnView = AppTab | 'rail';
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
 type MixSource = 'recommendations' | 'showcase' | 'catalog' | 'rail';
@@ -851,7 +854,7 @@ export const App = () => {
   const [ratingMessage, setRatingMessage] = useState('');
 
   const [selectedRail, setSelectedRail] = useState<HomeRail | null>(null);
-  const [mixerReturnView, setMixerReturnView] = useState<'showcase' | 'recommendations'>('showcase');
+  const [mixerReturnView, setMixerReturnView] = useState<MixerReturnView>('showcase');
 
   const [query, setQuery] = useState('');
   const [appliedCatalogProfiles, setAppliedCatalogProfiles] = useState<string[]>([]);
@@ -1178,7 +1181,7 @@ export const App = () => {
     setRatingValue(null);
   };
 
-  const openMixer = (from: 'showcase' | 'recommendations') => {
+  const openMixer = (from: MixerReturnView) => {
     setMixerReturnView(from);
     setView('mixer');
   };
@@ -1311,10 +1314,8 @@ export const App = () => {
 
   const renderBrand = () => (
     <Button variant="ghost" type="button" className="brand-wrap brand-home-btn" onClick={() => setView(accessGranted ? 'recommendations' : 'access')}>
-      <div>
-        <p className="brand">Арома Ателье</p>
-        <p className="tagline">подбор миксов</p>
-      </div>
+      <img className="brand-mark" src="/logo-mark-oxblood.svg" width="15" height="22" alt="" aria-hidden />
+      <span className="brand">Арома Ателье</span>
     </Button>
   );
 
@@ -1362,26 +1363,6 @@ export const App = () => {
     );
   };
 
-  const renderAppNav = (activeTab: AppTab) => (
-    <nav className="topbar-nav-list guest-app-nav" aria-label="Гостевая навигация">
-      {([
-        { key: 'recommendations', label: 'Подбор' },
-        { key: 'showcase', label: 'Витрина' },
-        { key: 'catalog', label: 'Каталог' },
-      ] as Array<{ key: AppTab; label: string }>).map((item) => (
-        <Button
-          key={item.key}
-          className={cn('tab', activeTab === item.key && 'active')}
-          variant="ghost"
-          type="button"
-          onClick={() => setView(item.key)}
-        >
-          {item.label}
-        </Button>
-      ))}
-    </nav>
-  );
-
   const renderTopbar = () => {
     if (!accessGranted) {
       return null;
@@ -1395,24 +1376,22 @@ export const App = () => {
       return null;
     }
 
-    const activeTab: AppTab | null =
-      view === 'recommendations' || view === 'showcase' || view === 'catalog'
-        ? view
-        : null;
-
     return (
       <header className="topbar">
-        <div className="topbar-main-row topbar-main-row-compact">
+        <div className="topbar-main-row">
           {renderBrand()}
-          <div className="topbar-right">
-            <Button className="header-auth-btn" variant="outline" type="button" onClick={onResetAccess}>
-              Сменить код
-            </Button>
-          </div>
+          <button
+            type="button"
+            className="topbar-icon-btn"
+            onClick={onResetAccess}
+            aria-label="Сменить код"
+            title="Сменить код"
+          >
+            <KeyRound size={20} strokeWidth={1.8} aria-hidden />
+          </button>
         </div>
         {view === 'intro' ? renderJourneyNav('intro') : null}
         {view === 'onboarding' ? renderOnboardingProgress() : null}
-        {activeTab ? renderAppNav(activeTab) : null}
       </header>
     );
   };
@@ -2094,13 +2073,6 @@ export const App = () => {
               {`${rail.mixes.length} ${pluralizeMixes(rail.mixes.length)}`}
             </p>
           </div>
-          <button
-            type="button"
-            className="aroma-rail-code"
-            onClick={onResetAccess}
-          >
-            Сменить код
-          </button>
         </header>
 
         <div className="aroma-rail-intro">
@@ -2311,6 +2283,10 @@ export const App = () => {
   };
 
 
+  // Нижняя панель (#168) — на табах и в подборке; из неё же Миксер, который вернёт сюда.
+  const navReturnView: MixerReturnView | null =
+    view === 'recommendations' || view === 'showcase' || view === 'catalog' || view === 'rail' ? view : null;
+
   return (
     <div className="app-bg">
       <div className="halo-top" />
@@ -2342,6 +2318,12 @@ export const App = () => {
               {view === 'catalog' ? renderCatalogView() : null}
               {view === 'rail' ? renderRailView() : null}
             </main>
+            {navReturnView ? (
+              <BottomNav
+                value={navReturnView === 'rail' ? 'showcase' : navReturnView}
+                onChange={(tab) => (tab === 'mixer' ? openMixer(navReturnView) : setView(tab))}
+              />
+            ) : null}
           </>
         )}
       </div>

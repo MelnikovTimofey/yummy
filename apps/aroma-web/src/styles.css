@@ -192,7 +192,7 @@ select:focus-visible {
 .topbar {
   display: grid;
   gap: 8px;
-  padding: calc(12px + var(--safe-top)) 20px 8px;
+  padding: calc(6px + var(--safe-top)) 10px 6px 20px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
   /* Не sticky: шапка лежит вне скролл-контейнера .content и остаётся обычным
@@ -212,20 +212,37 @@ select:focus-visible {
   width: 100%;
 }
 
-.topbar-main-row-compact .topbar-right {
-  margin-left: auto;
-}
-
-.topbar-right {
-  display: inline-flex;
-  position: relative;
-  flex: 0 0 auto;
-}
-
 .brand-wrap {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
+}
+
+.brand-mark {
+  width: auto;
+  height: 22px;
+  flex: 0 0 auto;
+}
+
+.topbar-icon-btn {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: var(--r-guest-control);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.topbar-icon-btn:hover,
+.topbar-icon-btn:focus-visible {
+  color: var(--text-0);
+  background: var(--guest-control-bg-soft);
 }
 
 .brand-home-btn {
@@ -261,37 +278,15 @@ select:focus-visible {
 .brand {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1;
   letter-spacing: 0.01em;
   color: var(--text-0);
   white-space: nowrap;
 }
 
-.tagline {
-  margin: 4px 0 0;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--text-1);
-}
-
-.header-auth-btn {
-  border: 1px solid var(--line);
-  background: var(--secondary);
-  color: var(--text-secondary);
-  border-radius: var(--r-guest-control);
-  min-height: 40px;
-  padding: 0 14px;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
 .topbar-nav-list,
-.guest-stage-nav,
-.guest-app-nav {
+.guest-stage-nav {
   display: grid;
   gap: 8px;
 }
@@ -300,8 +295,53 @@ select:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.guest-app-nav {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* Нижняя панель гостя (#168): последний flex-элемент .phone-shell, поэтому
+   прокрутка .content заканчивается над ней, а не под ней. */
+.bottom-nav {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0 8px var(--safe-bottom);
+  border-top: 1px solid var(--line);
+  background: var(--guest-topbar-bg);
+  backdrop-filter: blur(18px);
+  position: relative;
+  z-index: 20;
+}
+
+.bottom-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-item[aria-current="page"] {
+  color: var(--text-0);
+}
+
+.bottom-nav-item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 22px;
+  height: 2px;
+  margin-left: -11px;
+  border-radius: 0 0 2px 2px;
+  background: var(--accent);
+}
+
+.bottom-nav-item:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: -4px;
+  border-radius: var(--r-guest-control);
 }
 
 .content {
@@ -1757,7 +1797,7 @@ select:focus-visible {
 
 .aroma-rail-topbar {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 36px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
 }
@@ -1786,18 +1826,6 @@ select:focus-visible {
   color: var(--text-2);
 }
 
-.aroma-rail-code {
-  border: 1px solid rgba(142, 47, 60, 0.20);
-  background: var(--secondary);
-  color: var(--text-secondary);
-  border-radius: var(--r-guest-control);
-  height: 34px;
-  padding: 0 14px;
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
 
 .aroma-rail-intro {
   display: grid;
@@ -1898,7 +1926,7 @@ select:focus-visible {
   }
 
   .topbar {
-    padding: calc(8px + var(--safe-top)) 12px 8px;
+    padding: calc(6px + var(--safe-top)) 6px 6px 12px;
   }
 
   .brand-wrap {
@@ -1917,10 +1945,6 @@ select:focus-visible {
     letter-spacing: 0.01em;
   }
 
-  .tagline {
-    display: none;
-  }
-
   :root {
     --gutter: 12px;
   }
@@ -1933,10 +1957,6 @@ select:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .guest-app-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .tab {
     min-height: 40px;
     padding: 8px 10px;
@@ -1945,8 +1965,7 @@ select:focus-visible {
     font-weight: 500;
   }
 
-  .cinema-actions .ghost-button,
-  .header-auth-btn {
+  .cinema-actions .ghost-button {
     width: 100%;
   }
 }

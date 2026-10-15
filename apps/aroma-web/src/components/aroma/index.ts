@@ -5,3 +5,5 @@ export type { SegmentItem } from "./SegmentNav";
 export { ProfileGlyph } from "./ProfileGlyph";
 export { SignatureBar } from "./SignatureBar";
 export { RatingPill } from "./RatingPill";
+export { BottomNav } from "./BottomNav";
+export type { BottomNavTab } from "./BottomNav";
