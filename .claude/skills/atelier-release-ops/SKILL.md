@@ -6,7 +6,8 @@ description: Планирование и ревью окружения, депл
 # Арома Ателье Release Ops
 
 Скилл стандартизирует операционную работу по запуску Арома Ателье вне локальной разработки.
-Контекст: `docs/atelier/env-matrix.md`, `docs/atelier/deployment-smoke-checklist.md`,
+Контекст: `docs/atelier/prod-operations.md` (выкатка, откат, мониторинг, бэкапы),
+`docs/atelier/env-matrix.md`, `docs/atelier/deployment-smoke-checklist.md`,
 `docs/atelier/acceptance-checklist.md`.
 
 ## Когда применять
@@ -24,6 +25,13 @@ description: Планирование и ревью окружения, депл
    явное.
 4. Определить rollout-чеки: минимальный smoke-путь для затронутой runtime-поверхности.
 5. Зафиксировать точки внимания при откате — условие, останавливающее rollout.
+6. Выкатить: дождаться зелёного `Atelier Images` для коммита, затем на хосте
+   `scripts/atelier/deploy.sh [сервис …]` (готовые образы из GHCR, `--no-deps` для
+   точечной выкатки). Перед схемной миграцией — `scripts/atelier/pg-backup.sh`.
+   Откат — `DEPLOY_TAG=<sha> scripts/atelier/deploy.sh`. `up -d --build` на хосте —
+   только аварийно.
+7. После выкатки: домены отвечают 200, `host-check.sh` чистый, алертов в Telegram нет.
+   Для фичи с клиентом — шаг «приёмка клиентом» из `atelier-feature-design`.
 
 ## Runtime-поверхности
 
@@ -45,7 +53,8 @@ description: Планирование и ревью окружения, депл
 - crash-loop бота или сломанная связь с Telegram API;
 - гостевой поток не доходит до рекомендаций или карточки микса;
 - вход в `Мастер` падает после деплоя;
-- ломается flow `rotate` / daily code для активного доступа.
+- ломается flow `rotate` / daily code для активного доступа;
+- алерт от `host-check` или внешнего наблюдателя (Франкфурт) после выкатки.
 
 ## Stop-conditions
 
