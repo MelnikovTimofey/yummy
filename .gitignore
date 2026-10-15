@@ -24,9 +24,6 @@ tobaccos.xml
 test-results
 tests/*/node_modules
 
-# local design handoff materials (Figma exports и т.п.)
-design/
-
 # черновые скриншоты, вставленные в скилл дизайн-системы
 .claude/skills/aroma-atelier-design/uploads/
 
