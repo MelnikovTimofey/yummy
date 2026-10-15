@@ -20,9 +20,22 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   await expect(page.getByRole('button', { name: 'Каталог' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Витрина' }).click();
-  await expect(page.getByText('Выбор гостей').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Каталог' }).click();
+  // Компактная Витрина (#175): тип полки — значком и в aria-label заголовка,
+  // заголовок открывает подборку, карточка-постер — микс. Таб ищем через
+  // навигацию: подстрочный поиск по «Витрина» зацепит полку «Мягкая витрина».
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  const guestsShelf = page.getByRole('button', { name: /^Открыть подборку «.+», выбор гостей$/ }).first();
+  await expect(guestsShelf).toBeVisible();
+  await guestsShelf.click();
+  await expect(page.getByText('Витрина · Выбор гостей')).toBeVisible();
+  await page.getByRole('button', { name: 'Назад к витрине' }).click();
+
+  await page.locator('.aroma-showcase-card').first().click();
+  await expect(page.getByRole('button', { name: 'Покурить' })).toBeVisible();
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+
+  await nav.getByRole('button', { name: 'Каталог', exact: true }).click();
   await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();
   await expect(page.getByText(/Найдено/)).toBeVisible();
   await expect(page.getByText('Вход для персонала')).toHaveCount(0);

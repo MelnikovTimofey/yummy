@@ -3,7 +3,7 @@ import { type PointerEvent as ReactPointerEvent, FormEvent, useEffect, useRef, u
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { KeyRound } from 'lucide-react';
+import { ChevronRight, KeyRound } from 'lucide-react';
 
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
@@ -11,7 +11,7 @@ import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
-import { dedupeRails, railKindLabel } from '@/lib/showcase';
+import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
   | 'access'
@@ -1881,19 +1881,22 @@ export const App = () => {
     if (!showcaseRails.length) {
       return (
         <section className="aroma-showcase">
-          <MixerInvite onOpen={() => openMixer('showcase')} />
+          <MixerInvite strip onOpen={() => openMixer('showcase')} />
           <p className="screen-status">Подборки пока не опубликованы.</p>
         </section>
       );
     }
 
+    // Полки по образцу Okko (#175): заголовок с шевроном открывает подборку,
+    // под ним лента постеров, около двух на ширину экрана.
     return (
       <section className="aroma-showcase">
-        <MixerInvite onOpen={() => openMixer('showcase')} />
+        <MixerInvite strip onOpen={() => openMixer('showcase')} />
         {dedupeRails(
           showcaseRails.map((rail) => ({ ...rail, mixes: rail.mixes.filter((mix) => mix.available) })),
         ).map((rail) => {
           const { mixes } = rail;
+          const KindIcon = railKindIcon(rail);
           const openRail = () => {
             setSelectedRail(rail);
             setView('rail');
@@ -1901,16 +1904,22 @@ export const App = () => {
 
           return (
             <section key={rail.id} className="aroma-showcase-rail">
-              <div className="aroma-showcase-rail-head">
-                <h2 className="aroma-showcase-rail-title">{rail.name}</h2>
-                <span className="aroma-caps aroma-showcase-rail-kind">
-                  {railKindLabel(rail)}
-                </span>
-              </div>
+              <h2 className="aroma-showcase-rail-head">
+                <button
+                  type="button"
+                  className="aroma-showcase-rail-open"
+                  onClick={openRail}
+                  aria-label={railOpenLabel(rail)}
+                >
+                  <KindIcon className="aroma-showcase-rail-icon" size={16} strokeWidth={1.8} aria-hidden />
+                  <span className="aroma-showcase-rail-title">{rail.name}</span>
+                  <ChevronRight className="aroma-showcase-rail-chevron" size={22} strokeWidth={1.8} aria-hidden />
+                </button>
+              </h2>
 
               <div className="aroma-showcase-scroller">
                 {mixes.map((mix) => {
-                  const profileColor = getProfileColor(mix.flavorProfiles[0]);
+                  const [firstProfile, secondProfile = firstProfile] = mix.flavorProfiles;
                   return (
                     <button
                       key={`${rail.id}:${mix.id}`}
@@ -1918,32 +1927,20 @@ export const App = () => {
                       className="aroma-showcase-card"
                       onClick={() => openMix(mix, 'showcase')}
                       style={{
-                        background: `radial-gradient(circle at 86% 0%, ${profileColor}48 0%, transparent 60%), var(--guest-card-bg)`,
+                        background: `radial-gradient(circle at 88% 0%, ${getProfileColor(firstProfile)}8c 0%, transparent 62%), radial-gradient(circle at 0% 100%, ${getProfileColor(secondProfile)}4d 0%, transparent 58%), var(--guest-card-bg)`,
                       }}
                     >
-                      <div className="aroma-showcase-card-head">
-                        <ProfileGlyph profiles={mix.flavorProfiles} size={44} />
-                        <RatingPill rating={mix.avgRating} style={{ marginLeft: 'auto' }} />
-                      </div>
-                      <h3 className="aroma-showcase-card-name">{mix.name}</h3>
-                      <SignatureBar profiles={mix.flavorProfiles} height={3} />
-                      {mix.flavors.length ? (
-                        <p className="aroma-showcase-card-flavors">
-                          {mix.flavors.join(' · ')}
-                        </p>
-                      ) : null}
+                      <span className="aroma-showcase-card-top">
+                        <ProfileGlyph profiles={mix.flavorProfiles} size={28} />
+                        <RatingPill rating={mix.avgRating} style={{ padding: '2px 7px', fontSize: 10.5 }} />
+                      </span>
+                      <span className="aroma-showcase-card-name">{mix.name}</span>
+                      <span className="aroma-showcase-card-signature">
+                        <SignatureBar profiles={mix.flavorProfiles} height={2} />
+                      </span>
                     </button>
                   );
                 })}
-
-                <button
-                  type="button"
-                  className="aroma-showcase-all"
-                  onClick={openRail}
-                  aria-label={`Открыть весь рейл «${rail.name}»`}
-                >
-                  Все
-                </button>
               </div>
             </section>
           );
