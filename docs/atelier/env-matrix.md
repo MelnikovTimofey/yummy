@@ -105,6 +105,15 @@
 3. `ATELIER_DAILY_BROADCAST_*` сохраняют старое имя только ради совместимости env, но управляют уже не рассылкой, а ежедневным `ensure` current code;
 4. `ATELIER_BACKEND_AUTOMATION_TOKEN` должен ротироваться отдельно от staff credentials.
 
+## 4a. Версии образов (прод-хост)
+
+Пишет `scripts/atelier/deploy.sh` после успешной выкатки, руками не править.
+Не заданы — compose берёт плавающий тег `main`.
+
+| Переменная | Назначение | Пример |
+|---|---|---|
+| `ATELIER_TAG_BACKEND`, `ATELIER_TAG_AROMA_WEB`, `ATELIER_TAG_MASTER_WEB`, `ATELIER_TAG_TELEGRAM_BOT`, `ATELIER_TAG_TELEGRAM_TUNNEL` | выкаченный тег образа сервиса в `ghcr.io/melnikovtimofey/atelier-<сервис>` (SHA коммита) | `4037385b…` |
+
 ## 5a. Бэкап БД в S3 (прод-хост)
 
 Файл `/opt/atelier/.env.backup` (права 600, в git не коммитится) — читают

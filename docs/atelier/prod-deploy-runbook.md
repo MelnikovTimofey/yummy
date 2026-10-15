@@ -33,8 +33,11 @@ chmod 600 .env
 # (openssl rand -hex 32, три независимых значения), TELEGRAM_BOT_TOKEN.
 ```
 
-> `PUBLIC_API_URL` зашивается в бандлы фронтов на этапе build. При его смене —
-> обязателен пересбор: `docker compose -f docker-compose.prod.yml up -d --build aroma-web master-web`.
+> `PUBLIC_API_URL` зашивается в бандлы фронтов на этапе build. Прод-образы
+> собирает CI (`.github/workflows/atelier-images.yml`) с адресами из `env` workflow —
+> при смене домена поправить их там. Ниже первичный деплой собирает образы на
+> хосте (`--build`); дальнейшие выкатки — `scripts/atelier/deploy.sh`
+> (`prod-operations.md` §4).
 
 ## 3. Деплой
 
@@ -139,13 +142,13 @@ curl -sS -H 'x-atelier-automation-key: <key>' \
 
 - данные/схема — восстановить БД из ночного дампа (см. §8) или из бэкапа диска
   VPS (снять `pg_dump` ПЕРЕД деплоем — обязательный пред-шаг для рискованных релизов);
-- код — `git checkout <предыдущий-tag>` + `docker compose -f docker-compose.prod.yml up -d --build`.
+- код — `DEPLOY_TAG=<sha> scripts/atelier/deploy.sh` (образы предыдущего коммита из GHCR, `prod-operations.md` §7).
 
 ## 7. Обновление релиза
 
 ```bash
-git pull origin main
-docker compose -f docker-compose.prod.yml up -d --build
+cd /opt/atelier
+scripts/atelier/deploy.sh   # git pull + готовые образы из GHCR, см. prod-operations.md §4
 # backend на старте сам накатит новые миграции (migrate deploy).
 ```
 
