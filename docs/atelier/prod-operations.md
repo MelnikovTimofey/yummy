@@ -92,21 +92,36 @@ curl -sS -o /dev/null -w 'master %{http_code}\n' https://master.yummy-aroma-atel
 
 ## 4. Обновление (выкатка новой версии)
 
+Образы на хосте **не собираются**: их собирает CI
+(`.github/workflows/atelier-images.yml`) на каждый push в `main` и кладёт в GHCR
+(`ghcr.io/melnikovtimofey/atelier-<сервис>`) с тегом = SHA коммита. Перед выкаткой
+дождаться зелёного прогона `Atelier Images` для нужного коммита
+(`gh run list --workflow atelier-images.yml --limit 1`).
+
 ```bash
 cd /opt/atelier
-git pull origin main
 
-# пересобрать и перезапустить изменённые сервисы
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# весь контур на текущий main: git pull, pull образов, up --wait
+scripts/atelier/deploy.sh
 
-# точечно — только нужный сервис:
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build backend
+# точечно — только нужные сервисы; зависимости из depends_on не пересоздаются
+scripts/atelier/deploy.sh telegram-bot
 ```
 
+- Выкаченный тег каждого сервиса скрипт пишет в `.env` (`ATELIER_TAG_<СЕРВИС>`),
+  поэтому обычный `docker compose … up -d` после выкатки ничего не меняет.
+- **Точечная выкатка идёт с `--no-deps`** (#150): compose не ждёт `healthy` у
+  зависимостей. Если вместе с сервисом изменилась и его зависимость (например,
+  бот и backend) — перечислить обе: `deploy.sh backend telegram-bot`, или
+  выкатить весь контур.
 - **Миграции схемы** накатываются автоматически при рестарте backend
   (`prisma migrate deploy`). Перед рискованной миграцией — снять снэпшот БД (см. §6).
-- **Смена `PUBLIC_API_URL`/домена** требует пересборки фронтов (`--build`), т.к.
-  URL зашивается в бандл.
+- **Смена `PUBLIC_API_URL`/домена**: URL зашивается в бандлы фронтов при сборке в
+  CI — поменять `PUBLIC_API_URL`/`AROMA_URL` в `env` workflow `atelier-images.yml`,
+  смержить, затем `deploy.sh aroma-web master-web`.
+- **Аварийно, если CI недоступен**, можно собрать на хосте по-старому:
+  `docker compose … up -d --build <сервис>`. Это пересобирает образ из текущего
+  кода и снова грузит хост — только как исключение.
 - **Смена `.env`** (секреты, домены) — затем `up -d` (compose пересоздаст
   контейнеры с новым окружением).
 
@@ -116,6 +131,9 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build backend
 docker compose -f docker-compose.prod.yml --env-file .env restart backend
 docker compose -f docker-compose.prod.yml --env-file .env restart telegram-bot
 ```
+
+`restart` перезапускает контейнер на той же версии и зависимости не трогает.
+Пересоздать сервис (например, после смены `.env`) — `up -d --no-deps <сервис>`.
 
 ## 6. Обслуживание
 
@@ -173,14 +191,18 @@ docker system prune -f      # убрать висячие образы/кэш (v
 
 ## 7. Откат
 
+Откат — выкатка образов предыдущего коммита; его SHA печатает `deploy.sh` в строке
+`было:` и видно в `git log --oneline -5`.
+
 ```bash
 cd /opt/atelier
-git log --oneline -5                 # найти предыдущий рабочий коммит/тег
-git checkout <commit-или-tag>
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+DEPLOY_TAG=<sha> scripts/atelier/deploy.sh               # весь контур
+DEPLOY_TAG=<sha> scripts/atelier/deploy.sh telegram-bot  # один сервис
 ```
+
 Если откат затрагивает схему — восстановить БД из дампа, снятого **до**
-проблемного деплоя (runbook §8). Вернуться на актуальный код: `git checkout main`.
+проблемного деплоя (runbook §8): старый backend не откатывает уже применённые
+миграции. Образы старше 7 дней удаляются с хоста, но лежат в GHCR и скачаются заново.
 
 ## 8. Диагностика частых проблем
 
