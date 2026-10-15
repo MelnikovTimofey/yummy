@@ -1,7 +1,51 @@
-// Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл) → карточка → подтверждение.
-const { SegmentNav, GuestTab, OnboardingProgress } = window.DesignSystem_1aef33;
+// Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл / миксер) → карточка → подтверждение.
+const { GuestTab, OnboardingProgress } = window.DesignSystem_1aef33;
 const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar } = window;
 const MOCK = window.AROMA_MOCK;
+
+// Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
+function Icon({ name, size = 24, stroke = 1.8 }) {
+  const node = window.lucide.icons[name];
+  const children = node[0] === 'svg' ? node[2] : node;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children.map(([tag, attrs], i) => React.createElement(tag, { key: i, ...attrs }))}
+    </svg>
+  );
+}
+
+// Нижняя панель (#168): только значки, название — в aria-label, активный пункт кремовый с чертой акцента.
+const NAV_ITEMS = [
+  { id: 'recommendations', label: 'Подбор', icon: 'Sparkles' },
+  { id: 'showcase', label: 'Витрина', icon: 'GalleryHorizontalEnd' },
+  { id: 'catalog', label: 'Каталог', icon: 'Search' },
+  { id: 'mixer', label: 'Миксер', icon: 'Blend' },
+];
+
+function BottomNav({ value, onChange }) {
+  return (
+    <nav className="bottom-nav" aria-label="Гостевая навигация">
+      {NAV_ITEMS.map((item) => (
+        <button key={item.id} type="button" className="bottom-nav-item" aria-label={item.label} aria-current={value === item.id ? 'page' : undefined} onClick={() => onChange(item.id)}>
+          <Icon name={item.icon} stroke={value === item.id ? 2.1 : 1.8} />
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+// Экрана «Намиксуй» в ките нет — заглушка показывает только полноэкранный режим без панели и возврат.
+function MixerStub({ onBack }) {
+  return (
+    <section className="kit-mixer">
+      <header className="kit-mixer-top">
+        <button type="button" className="aroma-rail-back" onClick={onBack} aria-label="Назад">←</button>
+        <h1 className="kit-mixer-title">Намиксуй</h1>
+      </header>
+      <p className="guest-status">Сборку микса за три хода смотрите в приложении: экран MixerScreen в apps/aroma-web.</p>
+    </section>
+  );
+}
 
 function GuestApp() {
   const [view, setView] = React.useState('access');
@@ -22,6 +66,7 @@ function GuestApp() {
   const [sheet, setSheet] = React.useState(null);
   const [rating, setRating] = React.useState(0);
   const [selected, setSelected] = React.useState(null);
+  const [mixerReturn, setMixerReturn] = React.useState('recommendations');
 
   const toggle = (setter) => (value) => setter((cur) => (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]));
 
@@ -54,7 +99,11 @@ function GuestApp() {
     setAccessError(''); setView('intro');
   };
 
-  const appTab = ['recommendations', 'showcase', 'catalog'].includes(view) ? view : null;
+  const navView = ['recommendations', 'showcase', 'catalog', 'rail'].includes(view) ? view : null;
+  const goNav = (tab) => {
+    if (tab === 'mixer') setMixerReturn(view);
+    setView(tab);
+  };
 
   return (
     <div className="app-bg">
@@ -65,6 +114,8 @@ function GuestApp() {
           <AccessScreen code={code} setCode={setCode} ageOk={ageOk} setAgeOk={setAgeOk} error={accessError} onSubmit={submitAccess} />
         ) : view === 'confirmation' ? (
           <ConfirmationScreen mix={selected.mix} onDone={() => setView('recommendations')} />
+        ) : view === 'mixer' ? (
+          <MixerStub onBack={() => setView(mixerReturn)} />
         ) : (
           <>
             {view !== 'rail' ? (
@@ -72,14 +123,11 @@ function GuestApp() {
                 <div className="topbar-main-row">
                   <button type="button" className="brand-home-btn" onClick={() => setView('recommendations')}>
                     <img className="brand-mark" src="../../assets/logo-mark-oxblood.svg" alt="" aria-hidden />
-                    <span>
-                      <p className="brand">Арома Ателье</p>
-                      <p className="tagline">подбор миксов</p>
-                    </span>
+                    <span className="brand">Арома Ателье</span>
                   </button>
-                  <div className="topbar-right">
-                    <button type="button" className="header-auth-btn" onClick={() => { setView('access'); setCode(''); setAgeOk(false); setSelected(null); }}>Новый код</button>
-                  </div>
+                  <button type="button" className="topbar-icon-btn" aria-label="Сменить код" title="Сменить код" onClick={() => { setView('access'); setCode(''); setAgeOk(false); setSelected(null); }}>
+                    <Icon name="KeyRound" size={20} />
+                  </button>
                 </div>
                 {view === 'intro' ? (
                   <nav className="guest-stage-nav" aria-label="Маршрут знакомства">
@@ -89,9 +137,6 @@ function GuestApp() {
                 ) : null}
                 {view === 'onboarding' ? (
                   <OnboardingProgress step={step} total={2} onBack={() => (step === 2 ? setStep(1) : setView('intro'))} />
-                ) : null}
-                {appTab ? (
-                  <SegmentNav value={appTab} onChange={setView} items={[{ id: 'recommendations', label: 'Подбор' }, { id: 'showcase', label: 'Витрина' }, { id: 'catalog', label: 'Каталог' }]} />
                 ) : null}
               </header>
             ) : null}
@@ -140,6 +185,7 @@ function GuestApp() {
                 <RailScreen rail={rail} filters={railFilters} toggleFilter={(p) => (p === null ? setRailFilters([]) : toggle(setRailFilters)(p))} onBack={() => setView('showcase')} onOpen={openMix} />
               ) : null}
             </main>
+            {navView ? <BottomNav value={navView === 'rail' ? 'showcase' : navView} onChange={goNav} /> : null}
           </>
         )}
       </div>

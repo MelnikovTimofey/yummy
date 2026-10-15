@@ -1,4 +1,6 @@
-The guest app's only navigation — 2–3 equal-width uppercase segments under the wordmark.
+2–3 equal-width uppercase segments — a switch between equal views inside one screen.
+
+Not the guest app's main navigation: since #168 that is the bottom icon bar (Подбор · Витрина · Каталог · Миксер, see `ui_kits/aroma-guest`).
 
 ```jsx
 <SegmentNav
