@@ -22,7 +22,7 @@ BACKUP_DIR="${BACKUP_DIR:-$PWD/backups}"
 BACKUP_LOG="${BACKUP_LOG:-/var/log/atelier-backup.log}"
 DISK_MAX_PCT="${DISK_MAX_PCT:-80}"
 MEM_MIN_PCT="${MEM_MIN_PCT:-10}"
-BACKUP_MAX_AGE_MIN="${BACKUP_MAX_AGE_MIN:-1560}"
+BACKUP_MAX_AGE_MIN="${BACKUP_MAX_AGE_MIN:-150}"
 BOT_STALE_SEC="${BOT_STALE_SEC:-600}"
 # Из РФ до Telegram только через telegram-tunnel: в сети контура он отвечает
 # как api.telegram.org, поэтому curl запускается контейнером в этой сети.
@@ -58,7 +58,7 @@ if [[ -r /proc/meminfo ]]; then
 fi
 
 if [[ -z "$(find "$BACKUP_DIR" -name 'atelier-*.dump' -mmin -"$BACKUP_MAX_AGE_MIN" 2>/dev/null)" ]]; then
-  problems+=("нет свежего дампа БД за последние $((BACKUP_MAX_AGE_MIN / 60)) ч")
+  problems+=("нет свежего дампа БД за последние $BACKUP_MAX_AGE_MIN мин")
 fi
 
 last_backup="$(grep -E 'backup ok:|pg-backup\.sh FAILED' "$BACKUP_LOG" 2>/dev/null | tail -1)"
