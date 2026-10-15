@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dedupeRails, railKindLabel } from './showcase';
+import { Feather, Flame, Star, Users } from 'lucide-react';
+import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from './showcase';
 
-const rail = (id: string, type: 'statistical' | 'prepared' | 'curated', mixIds: string[]) => ({
+const rail = (id: string, type: 'statistical' | 'prepared' | 'curated', mixIds: string[], name = id) => ({
   id,
+  name,
   type,
   mixes: mixIds.map((mixId) => ({ id: mixId })),
 });
@@ -38,4 +40,23 @@ test('railKindLabel различает статистические рейлы',
   assert.equal(railKindLabel(rail('rail-statistical-rated', 'statistical', [])), 'Оценки гостей');
   assert.equal(railKindLabel(rail('rail-prepared-fresh-line', 'prepared', [])), 'Редакция');
   assert.equal(railKindLabel(rail('rail-curated-evening-choice', 'curated', [])), 'Мастера');
+});
+
+// Полка Витрины (#175): тип показан значком, словами — только в aria-label заголовка.
+test('railKindIcon даёт значок типа полки', () => {
+  assert.equal(railKindIcon(rail('rail-statistical-top', 'statistical', [])), Users);
+  assert.equal(railKindIcon(rail('rail-statistical-rated', 'statistical', [])), Star);
+  assert.equal(railKindIcon(rail('rail-prepared-on-ice', 'prepared', [])), Feather);
+  assert.equal(railKindIcon(rail('rail-curated-evening-choice', 'curated', [])), Flame);
+});
+
+test('railOpenLabel называет полку и её тип', () => {
+  assert.equal(
+    railOpenLabel(rail('rail-prepared-on-ice', 'prepared', [], 'Со льдом')),
+    'Открыть подборку «Со льдом», редакция',
+  );
+  assert.equal(
+    railOpenLabel(rail('rail-statistical-rated', 'statistical', [], 'Лучшие оценки')),
+    'Открыть подборку «Лучшие оценки», оценки гостей',
+  );
 });

@@ -1327,49 +1327,85 @@ select:focus-visible {
 
 .aroma-showcase {
   display: grid;
-  gap: 22px;
-  /* по горизонтали — только поле экрана: рейлы витрины скроллятся до краёв,
-     свои отступы задают их дети */
-  padding: 28px var(--gutter) calc(32px + var(--safe-bottom));
+  gap: 12px;
+  /* строки по контенту: на короткой витрине свободная высота уходит вниз,
+     а не растягивает полки и приглашение (grid align-content: stretch) */
+  align-content: start;
+  /* по горизонтали — только поле экрана, свои отступы задают дети */
+  padding: 12px var(--gutter) calc(32px + var(--safe-bottom));
 }
 
+/* Полка (#175): заголовок с шевроном, под ним лента постеров, как у Okko. */
 .aroma-showcase-rail {
   display: grid;
-  gap: 10px;
+  gap: 2px;
 }
 
 .aroma-showcase-rail-head {
+  margin: 0;
+  padding: 0 6px 0 20px;
+  font: inherit;
+}
+
+.aroma-showcase-rail-open {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-0);
+  text-align: left;
+  cursor: pointer;
+}
+
+.aroma-showcase-rail-open:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+  border-radius: var(--r-guest-control);
+}
+
+.aroma-showcase-rail-icon {
+  flex: 0 0 auto;
+  margin-right: -2px;
+  color: var(--text-2);
 }
 
 .aroma-showcase-rail-title {
-  margin: 0;
+  min-width: 0;
   font-family: var(--font-display);
-  font-size: 21px;
-  line-height: 1.1;
+  font-size: 19px;
+  line-height: 1.15;
   letter-spacing: 0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aroma-showcase-rail-chevron {
+  flex: 0 0 auto;
+  margin: 0 5px 0 auto;
+  color: var(--text-1);
+}
+
+.aroma-showcase-rail-open:hover .aroma-showcase-rail-chevron,
+.aroma-showcase-rail-open:focus-visible .aroma-showcase-rail-chevron {
   color: var(--text-0);
 }
 
-.aroma-showcase-rail-kind {
-  margin: 0;
-  padding: 3px 8px;
-  border-radius: var(--r-guest-badge);
-  background: rgba(40, 40, 48, 0.50);
-  border: 1px solid var(--line-soft);
-  color: var(--text-1);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
+/* Лента выходит за поле экрана до самого края, как у Okko: из-под края видна
+   следующая карточка. Вертикальный паддинг — запас под focus-обводку:
+   overflow-x обрезает и по вертикали. */
 .aroma-showcase-scroller {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 0 20px 4px;
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 4px calc(var(--gutter) + 20px);
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: calc(var(--gutter) + 20px);
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1379,62 +1415,71 @@ select:focus-visible {
 }
 
 .aroma-showcase-card {
+  position: relative;
   flex: 0 0 auto;
-  width: 196px;
-  display: grid;
-  gap: 10px;
-  padding: 12px;
+  width: 156px;
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 9px 10px 10px;
   border-radius: var(--r-guest-card);
   border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 rgba(232, 230, 224, 0.04), 0 14px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-guest-scroll-card);
   color: var(--text-0);
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
+  scroll-snap-align: start;
+  transition: border-color 120ms;
 }
 
-.aroma-showcase-card-head {
+/* затемнение к низу — название читается поверх цветных пятен профиля */
+.aroma-showcase-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(15, 15, 18, 0.55) 100%);
+  pointer-events: none;
+}
+
+.aroma-showcase-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.aroma-showcase-card:hover {
+  border-color: var(--accent-border);
+}
+
+.aroma-showcase-card:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+.aroma-showcase-card-top {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .aroma-showcase-card-name {
-  margin: 0;
   font-family: var(--font-display);
-  font-size: 15.5px;
-  line-height: 1.1;
-  min-height: 2.2em;
-  color: var(--text-0);
-}
-
-.aroma-showcase-card-flavors {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.25;
-  color: var(--text-1);
+  font-size: 14.5px;
+  line-height: 1.15;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.aroma-showcase-all {
-  flex: 0 0 auto;
-  width: 64px;
-  border-radius: var(--r-guest-card);
-  border: 1px dashed var(--line);
-  background: rgba(20, 20, 23, 0.50);
-  color: var(--text-1);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  line-height: 1.2;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  cursor: pointer;
+.aroma-showcase-card .aroma-showcase-card-signature {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
 }
 
 .aroma-mix-sheet {

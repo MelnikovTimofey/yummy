@@ -1043,6 +1043,35 @@ button.mixer-similar:hover {
   color: var(--text-2);
 }
 
+/* Полоса на Витрине (#175): 52 px вместо карточки, чтобы в кадр вошло больше полок. */
+.mixer-invite-strip {
+  grid-template-columns: 32px minmax(0, 1fr) 20px;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 12px 8px 10px;
+  box-shadow: none;
+}
+
+.mixer-invite-strip .mixer-invite-text {
+  gap: 1px;
+}
+
+.mixer-invite-strip .mixer-invite-kicker {
+  font-size: 10px;
+}
+
+.mixer-invite-strip .mixer-invite-title {
+  font-size: 14.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mixer-invite-chevron {
+  color: var(--text-1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mixer *,
   .mixer *::before,
