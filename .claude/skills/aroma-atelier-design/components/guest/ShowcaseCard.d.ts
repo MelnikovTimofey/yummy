@@ -1,9 +1,8 @@
 import type { CSSProperties } from 'react';
 
-/** 196px card in a Витрина rail. Halo tint comes from the mix's first flavour profile. */
+/** 156×92 poster in a Витрина shelf. Background tints come from the mix's first two flavour profiles over `--guest-card-bg`. */
 export interface ShowcaseCardProps {
   name: string;
-  flavors?: string[];
   profiles?: string[];
   rating?: number;
   onClick?: () => void;

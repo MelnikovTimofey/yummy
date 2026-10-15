@@ -1,18 +1,7 @@
 // Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл / миксер) → карточка → подтверждение.
 const { GuestTab, OnboardingProgress } = window.DesignSystem_1aef33;
-const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar } = window;
+const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar, Icon } = window;
 const MOCK = window.AROMA_MOCK;
-
-// Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
-function Icon({ name, size = 24, stroke = 1.8 }) {
-  const node = window.lucide.icons[name];
-  const children = node[0] === 'svg' ? node[2] : node;
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {children.map(([tag, attrs], i) => React.createElement(tag, { key: i, ...attrs }))}
-    </svg>
-  );
-}
 
 // Нижняя панель (#168): только значки, название — в aria-label, активный пункт кремовый с чертой акцента.
 const NAV_ITEMS = [

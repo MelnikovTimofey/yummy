@@ -93,15 +93,20 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-recs-hero-meta{display:flex;align-items:center;gap:10px}
 .aroma-list{display:grid;gap:8px}
 
-/* Showcase */
-.aroma-showcase{display:grid;gap:22px;padding:4px 0 8px;margin:0 -20px}
-.aroma-showcase-rail{display:grid;gap:10px}
-.aroma-showcase-head{display:flex;align-items:center;gap:10px;padding:0 20px}
-.aroma-showcase-title{margin:0;font-family:var(--font-display);font-size:21px;line-height:1.1;color:var(--text-0)}
-.aroma-showcase-kind{padding:3px 8px;border-radius:var(--r-guest-badge);background:rgba(40,40,48,.5);border:1px solid var(--line-soft);color:var(--text-1);white-space:nowrap}
-.aroma-scroller{display:flex;gap:10px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none}
-.aroma-scroller::-webkit-scrollbar{display:none}
-.aroma-showcase-all{flex:0 0 auto;width:64px;border-radius:var(--r-guest-card);border:1px dashed var(--line);background:rgba(20,20,23,.5);color:var(--text-1);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:8px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+/* Showcase (#175): полка — заголовок с шевроном, под ним лента постеров, как у Okko */
+.aroma-showcase{display:grid;gap:12px;align-content:start;padding:0 0 8px;margin:0 -20px}
+.aroma-showcase-rail{display:grid;gap:2px}
+.aroma-showcase-rail-head{margin:0;padding:0 6px 0 20px;font:inherit}
+.aroma-showcase-rail-open{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:0;border:0;background:transparent;color:var(--text-0);text-align:left;cursor:pointer}
+.aroma-showcase-rail-open:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.aroma-showcase-rail-icon{flex:0 0 auto;display:inline-flex;margin-right:-2px;color:var(--text-2)}
+.aroma-showcase-rail-title{min-width:0;font-family:var(--font-display);font-size:19px;line-height:1.15;letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aroma-showcase-rail-chevron{flex:0 0 auto;display:inline-flex;margin:0 5px 0 auto;color:var(--text-1)}
+.aroma-showcase-rail-open:hover .aroma-showcase-rail-chevron,.aroma-showcase-rail-open:focus-visible .aroma-showcase-rail-chevron{color:var(--text-0)}
+/* вертикальный паддинг — запас под focus-обводку постера: overflow-x обрезает и по вертикали */
+.aroma-showcase-scroller{display:flex;gap:8px;overflow-x:auto;padding:4px 20px;scroll-snap-type:x proximity;scroll-padding-inline:20px;scrollbar-width:none}
+.aroma-showcase-scroller::-webkit-scrollbar{display:none}
+.aroma-showcase-scroller>button:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
 
 /* Catalog */
 .aroma-catalog{display:grid;gap:12px;align-content:start;position:relative}

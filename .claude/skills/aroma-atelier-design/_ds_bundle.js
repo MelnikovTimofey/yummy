@@ -749,7 +749,7 @@ Object.assign(__ds_scope, { MixRow });
 
 // components/guest/ShowcaseCard.jsx
 try { (() => {
-// Horizontal-rail card (Витрина): glyph + rating head, serif name, signature, flavours.
+// Poster in a Витрина shelf (#175): glyph + rating on top, serif name below, signature along the bottom edge.
 
 const PROFILE_COLORS = {
   citrus: 'var(--profile-citrus)',
@@ -765,69 +765,77 @@ const PROFILE_COLORS = {
   perfume: 'var(--profile-perfume)',
   sour: 'var(--profile-sour)'
 };
+const tint = (profile, share) => 'color-mix(in srgb, ' + (PROFILE_COLORS[profile] || 'var(--profile-fallback)') + ' ' + share + '%, transparent)';
 function ShowcaseCard({
   name,
-  flavors = [],
   profiles = [],
   rating,
   onClick,
   style
 }) {
-  const halo = PROFILE_COLORS[profiles[0]] || 'var(--profile-fallback)';
+  const [first, second = first] = profiles;
   return /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onClick,
     style: {
+      position: 'relative',
       flex: '0 0 auto',
-      width: 196,
-      display: 'grid',
-      gap: 10,
-      padding: 12,
-      borderRadius: 'var(--r-xl)',
+      width: 156,
+      height: 92,
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      padding: '9px 10px 10px',
+      borderRadius: 'var(--r-guest-card)',
       border: '1px solid var(--border-subtle)',
       boxShadow: 'var(--shadow-guest-scroll-card)',
       color: 'var(--text-primary)',
       textAlign: 'left',
       cursor: 'pointer',
-      background: 'radial-gradient(circle at 86% 0%, color-mix(in srgb, ' + halo + ' 28%, transparent) 0%, transparent 60%), linear-gradient(180deg, rgba(40,17,17,0.96) 0%, rgba(22,11,12,0.96) 100%)',
+      overflow: 'hidden',
+      scrollSnapAlign: 'start',
+      // Darkening to the bottom keeps the name readable over the profile tints.
+      background: 'linear-gradient(180deg, transparent 35%, rgba(15,15,18,0.55) 100%), radial-gradient(circle at 88% 0%, ' + tint(first, 55) + ' 0%, transparent 62%), radial-gradient(circle at 0% 100%, ' + tint(second, 30) + ' 0%, transparent 58%), var(--guest-card-bg)',
       ...style
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       display: 'flex',
-      alignItems: 'center',
-      gap: 10
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 6
     }
   }, /*#__PURE__*/React.createElement(__ds_scope.ProfileGlyph, {
     profiles: profiles,
-    size: 44
+    size: 28
   }), rating != null ? /*#__PURE__*/React.createElement(__ds_scope.RatingPill, {
     rating: rating,
     style: {
-      marginLeft: 'auto'
+      padding: '2px 7px',
+      fontSize: 10.5
     }
   }) : null), /*#__PURE__*/React.createElement("span", {
     style: {
       fontFamily: 'var(--font-display)',
-      fontSize: 15.5,
-      lineHeight: 1.1,
-      minHeight: '2.2em',
-      display: 'block'
-    }
-  }, name), /*#__PURE__*/React.createElement(__ds_scope.SignatureBar, {
-    profiles: profiles,
-    height: 3
-  }), flavors.length ? /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      lineHeight: 1.25,
-      color: 'var(--text-secondary)',
+      fontSize: 14.5,
+      lineHeight: 1.15,
       display: '-webkit-box',
       WebkitLineClamp: 2,
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden'
     }
-  }, flavors.join(' · ')) : null);
+  }, name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0
+    }
+  }, /*#__PURE__*/React.createElement(__ds_scope.SignatureBar, {
+    profiles: profiles,
+    height: 2
+  })));
 }
 Object.assign(__ds_scope, { ShowcaseCard });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/guest/ShowcaseCard.jsx", error: String((e && e.message) || e) }); }
