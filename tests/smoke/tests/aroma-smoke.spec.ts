@@ -148,3 +148,41 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await page.getByRole('button', { name: 'Готово' }).click();
   await expect(page.getByRole('button', { name: /Намиксуйте сами/ })).toBeVisible();
 });
+
+// Нижняя панель (#168): только значки, имена — в aria-label. Панели нет на
+// знакомстве и в онбординге; Миксер из панели открывается на весь экран и
+// «Назад» возвращает на экран, откуда гость пришёл.
+test('Aroma guest navigates with the bottom bar and opens the mixer from it', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  await expect(page.getByRole('button', { name: 'Начать подбор' })).toBeVisible();
+  await expect(nav).toHaveCount(0);
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await expect(page.getByText('С чего начнём?')).toBeVisible();
+  await expect(nav).toHaveCount(0);
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  await expect(nav).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сменить код', exact: true })).toBeVisible();
+  const catalogTab = nav.getByRole('button', { name: 'Каталог', exact: true });
+  await expect(catalogTab).toHaveAttribute('aria-current', 'page');
+
+  const showcaseTab = nav.getByRole('button', { name: 'Витрина', exact: true });
+  await showcaseTab.click();
+  await expect(showcaseTab).toHaveAttribute('aria-current', 'page');
+  await expect(catalogTab).not.toHaveAttribute('aria-current', 'page');
+
+  await catalogTab.click();
+  await nav.getByRole('button', { name: 'Миксер', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
+  await expect(nav).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();
+  await expect(catalogTab).toHaveAttribute('aria-current', 'page');
+});
