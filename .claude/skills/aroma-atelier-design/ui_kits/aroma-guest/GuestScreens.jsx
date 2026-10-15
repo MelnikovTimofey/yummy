@@ -244,7 +244,6 @@ function RailScreen({ rail, filters, toggleFilter, onBack, onOpen }) {
           <p className="aroma-caps">{'Витрина · ' + railKind[rail.type]}</p>
           <p className="aroma-rail-meta">{mixes.length + ' ' + plural(mixes.length)}</p>
         </div>
-        <button type="button" className="aroma-rail-code">Новый код</button>
       </header>
       <div className="aroma-rail-intro">
         <h1 className="aroma-rail-title">{rail.name}</h1>

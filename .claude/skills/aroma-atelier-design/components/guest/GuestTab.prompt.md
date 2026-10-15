@@ -5,4 +5,4 @@ Quiet tab (`.tab` upstream) for the pre-onboarding journey nav: graphite when ac
 <GuestTab onClick={go}>Предпочтения</GuestTab>
 ```
 
-Use `SegmentNav` for the main app tabs (equal-width grid); use `GuestTab` on the intro/onboarding route, where tabs sit in a two-up row.
+Use `GuestTab` on the intro/onboarding route, where tabs sit in a two-up row. The main app sections live in the bottom icon bar (#168), not in tabs.
