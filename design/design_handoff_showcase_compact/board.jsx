@@ -11,11 +11,14 @@ const tint = (id, share) => 'color-mix(in srgb, ' + profileColor(id) + ' ' + sha
 
 const RAIL_KIND = { statistical: 'Выбор гостей', prepared: 'Редакция', curated: 'Мастера' };
 const shelfKind = (rail) => (rail.id === 'rail-statistical-rated' ? 'Оценки гостей' : RAIL_KIND[rail.type]);
+// Раунд 2: тип полки значком Lucide слева от названия, сам тип — в aria-label.
+const KIND_ICON = { statistical: 'Users', prepared: 'Feather', curated: 'Flame' };
+const shelfIcon = (rail) => (rail.id === 'rail-statistical-rated' ? 'Star' : KIND_ICON[rail.type]);
 const mixById = (id) => M.mixes.find((mix) => mix.id === id);
 
 // Короткая полка для края «1–3 микса»: на проде таких нет, миксы реальные.
 const SHORT_RAIL = { id: 'rail-curated-short', name: 'Мастер смены советует', type: 'curated', description: 'Два микса, которые мастер смены собрал бы себе.', mixIds: [M.rails[2].mixIds[0], M.rails[3].mixIds[1]] };
-const EDGE_RAIL_IDS = ['rail-statistical-top', 'rail-prepared-on-ice', 'rail-prepared-bodrum-sunset'];
+const EDGE_RAIL_IDS = ['rail-statistical-top', 'rail-statistical-rated', 'rail-prepared-on-ice'];
 
 const NAV_ITEMS = [
   { id: 'recommendations', label: 'Подбор', icon: 'Sparkles' },
@@ -166,9 +169,15 @@ function CompactShowcase({ rails, card, kind, invite, onOpen, onOpenRail, onOpen
       {rails.map((rail) => (
         <section key={rail.id} className="sc-rail">
           <h2 className="sc-head">
-            <button type="button" className="sc-head-btn" onClick={() => onOpenRail(rail)} aria-label={'Открыть подборку «' + rail.name + '»'}>
+            <button
+              type="button"
+              className="sc-head-btn"
+              onClick={() => onOpenRail(rail)}
+              aria-label={'Открыть подборку «' + rail.name + '»' + (kind === 'icon' ? ', ' + shelfKind(rail).toLowerCase() : '')}
+            >
+              {kind === 'icon' ? <span className="sc-kind-icon"><Icon name={shelfIcon(rail)} size={16} /></span> : null}
               <span className="sc-title">{rail.name}</span>
-              {kind ? <span className="aroma-caps sc-kind">{shelfKind(rail)}</span> : null}
+              {kind === 'label' ? <span className="aroma-caps sc-kind">{shelfKind(rail)}</span> : null}
               <span className="sc-chev"><Icon name="ChevronRight" size={22} /></span>
             </button>
           </h2>
@@ -197,7 +206,7 @@ function MixerStub({ onBack }) {
   );
 }
 
-function GuestPhone({ layout = 'poster', kind = false, invite = 'card', edge = false, selectedMixId = null, initialRail = null }) {
+function GuestPhone({ layout = 'poster', kind = 'none', invite = 'card', edge = false, selectedMixId = null, initialRail = null }) {
   const rails = edge ? [...EDGE_RAIL_IDS.map((id) => M.rails.find((r) => r.id === id)), SHORT_RAIL] : M.rails;
   const [view, setView] = React.useState(initialRail ? 'rail' : 'showcase');
   const [rail, setRail] = React.useState(initialRail ? M.rails.find((r) => r.id === initialRail) : null);
@@ -271,14 +280,17 @@ function Toggle({ title, value, options, onChange }) {
 }
 
 const SHOTS = [
+  { id: 'final', group: 'final', name: 'Итог · A, значок типа, полоса', note: 'Выбор владельца, раунд 2. В первом кадре три полки целиком и начало четвёртой.', props: { layout: 'poster', kind: 'icon', invite: 'strip' } },
+  { id: 'final-edge', group: 'final', name: 'Итог · края', note: 'Все четыре значка типа, длинные названия, короткая полка.', props: { layout: 'poster', kind: 'icon', invite: 'strip', edge: true } },
   { id: 'now', group: 'compare', name: 'Сейчас', note: 'Карточка 196 px, в кадре полторы карточки и две полки. Бейдж типа справа, «Все» в конце ленты.', props: { layout: 'now' } },
   { id: 'a', group: 'compare', name: 'A · постер', note: 'Горизонтальная карточка 156×92, около двух на экран, как у Okko. Название поверх градиента профиля, без вкусов.', props: { layout: 'poster' } },
   { id: 'b', group: 'compare', name: 'B · плотная', note: 'Вертикальная карточка 132 px, около 2,5 на экран. Остаются вкусы в одну строку.', props: { layout: 'tile' } },
-  { id: 'a-kind', group: 'detail', name: 'Тип полки подписью', note: '«Выбор гостей», «Редакция», «Мастера» мелкими капсами перед шевроном. Без подписи — как у Okko.', props: { layout: 'poster', kind: true } },
-  { id: 'a-strip', group: 'detail', name: 'Приглашение полосой', note: 'Низкая полоса 52 px вместо карточки 88 px: на экране помещается ещё треть полки.', props: { layout: 'poster', invite: 'strip' } },
-  { id: 'a-edge', group: 'edge', name: 'A · края', note: 'Длинные названия миксов и полки, тип подписью, короткая полка из двух миксов.', props: { layout: 'poster', kind: true, edge: true } },
-  { id: 'b-edge', group: 'edge', name: 'B · края', note: 'То же для плотной карточки.', props: { layout: 'tile', kind: true, edge: true } },
-  { id: 'selected', group: 'edge', name: '«Карточка для мастера»', note: 'Выбранный микс закреплён под шапкой, полки прокручиваются под ним.', props: { layout: 'poster', selectedMixId: M.rails[0].mixIds[0] } },
+  { id: 'a-kind', group: 'detail', name: 'Тип полки подписью — отвергнут', note: 'Мелкие капсы перед шевроном обрезают длинное название полки.', props: { layout: 'poster', kind: 'label' } },
+  { id: 'a-icon', group: 'detail', name: 'Тип полки значком — выбран', note: 'Users — выбор гостей, Star — оценки гостей, Feather — редакция, Flame — мастера. 16 px, --text-2.', props: { layout: 'poster', kind: 'icon' } },
+  { id: 'a-strip', group: 'detail', name: 'Приглашение полосой — выбрано', note: 'Низкая полоса 52 px вместо карточки 88 px: на экране помещается ещё треть полки.', props: { layout: 'poster', invite: 'strip' } },
+  { id: 'a-edge', group: 'edge', name: 'A · края, тип подписью', note: 'Длинные названия миксов и полки, короткая полка из двух миксов.', props: { layout: 'poster', kind: 'label', edge: true } },
+  { id: 'b-edge', group: 'edge', name: 'B · края — отвергнут', note: 'Плотная карточка обрезает названия чаще.', props: { layout: 'tile', kind: 'label', edge: true } },
+  { id: 'selected', group: 'edge', name: '«Карточка для мастера»', note: 'Выбранный микс закреплён под шапкой, полки прокручиваются под ним.', props: { layout: 'poster', kind: 'icon', invite: 'strip', selectedMixId: M.rails[0].mixIds[0] } },
   { id: 'rail', group: 'edge', name: 'Подборка по шеврону', note: 'Экран подборки не меняется: «←» возвращает на Витрину.', props: { layout: 'poster', initialRail: 'rail-prepared-on-ice' } },
 ];
 
@@ -302,8 +314,8 @@ function Shot({ id }) {
 
 function Board() {
   const [layout, setLayout] = React.useState('poster');
-  const [kind, setKind] = React.useState(false);
-  const [invite, setInvite] = React.useState('card');
+  const [kind, setKind] = React.useState('icon');
+  const [invite, setInvite] = React.useState('strip');
   const section = (group) => SHOTS.filter((shot) => shot.group === group).map((shot) => <ShotFrame key={shot.id} shot={shot} />);
   return (
     <div className="board">
@@ -320,7 +332,7 @@ function Board() {
         <h2 className="board-h2">Кликабельный прототип</h2>
         <div className="tweaks">
           <Toggle title="Карточка" value={layout} options={[['poster', 'A · постер'], ['tile', 'B · плотная'], ['now', 'Сейчас']]} onChange={setLayout} />
-          <Toggle title="Тип полки" value={kind} options={[[false, 'Нет'], [true, 'Подпись']]} onChange={setKind} />
+          <Toggle title="Тип полки" value={kind} options={[['none', 'Нет'], ['label', 'Подпись'], ['icon', 'Значок']]} onChange={setKind} />
           <Toggle title="Намиксуй" value={invite} options={[['card', 'Карточка'], ['strip', 'Полоса']]} onChange={setInvite} />
         </div>
         <div className="board-row">
@@ -331,12 +343,17 @@ function Board() {
       </section>
 
       <section className="board-section">
-        <h2 className="board-h2">Сейчас и два варианта карточки — выбрать один</h2>
+        <h2 className="board-h2">Итог: A · значок типа · полоса</h2>
+        <div className="board-row">{section('final')}</div>
+      </section>
+
+      <section className="board-section">
+        <h2 className="board-h2">Сейчас и два варианта карточки — выбрана A</h2>
         <div className="board-row">{section('compare')}</div>
       </section>
 
       <section className="board-section">
-        <h2 className="board-h2">Детали — решить отдельно</h2>
+        <h2 className="board-h2">Детали: тип полки и приглашение</h2>
         <div className="board-row">{section('detail')}</div>
       </section>
 
