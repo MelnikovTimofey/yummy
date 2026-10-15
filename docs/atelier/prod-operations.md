@@ -196,17 +196,24 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ## 9. Мониторинг и алерты
 
 Алерты приходят в Telegram от отдельного бота (не гостевого `@aroma_atelier_bot`)
-в чат владельца. Два наблюдателя:
+в чат владельца. Три наблюдателя:
 
 | Что | Где | Как часто | Что проверяет |
 |---|---|---|---|
-| Внешний | GitHub Actions `.github/workflows/atelier-uptime.yml` → `scripts/atelier/uptime-check.sh` | каждые 5 мин (GitHub может задерживать на 5–15 мин) | `yummy-aroma-atelier.ru`, `master.`, `api.…/health` отвечают 200 |
+| Внешний (основной) | Франкфурт `186.246.25.8` (хост `telegram-tunnel`), пользователь `lampa`: user-crontab → `~/atelier-uptime/uptime-watch.sh` (копия `scripts/atelier/uptime-watch.sh`) | каждые 5 мин | `yummy-aroma-atelier.ru`, `master.`, `api.…/health` отвечают 200 |
+| Внешний (запасной) | GitHub Actions `.github/workflows/atelier-uptime.yml` → `scripts/atelier/uptime-check.sh` | по расписанию раз в 5 мин, на деле раз в 2–5 ч | то же |
 | Хост | cron `/etc/cron.d/atelier-host-check` → `scripts/atelier/host-check.sh`, лог `/var/log/atelier-monitor.log` | каждые 5 мин | все сервисы compose запущены; диск `/` ≤ 80 %; свободной памяти ≥ 10 %; дамп БД моложе 26 ч; последний бэкап и проверка восстановления без `FAILED`; heartbeat бота свежее 10 мин |
 
-Оба шлют сообщение только при **смене** состояния: что сломалось и что починилось.
-Пока проблема не ушла — повторов нет. Хост шлёт алерты через `telegram-tunnel`:
-если лёг сам туннель, алерт с хоста не уйдёт, но внешний наблюдатель продолжит
-работать.
+Все шлют сообщение только при **смене** состояния: что сломалось и что починилось.
+Пока проблема не ушла — повторов нет. Хост шлёт алерты через `telegram-tunnel`,
+Франкфурт и GitHub — в Telegram напрямую. Если лёг Франкфурт, вместе с ним
+перестают работать и основной внешний наблюдатель, и туннель для алертов с хоста —
+остаётся только GitHub, который запускается редко.
+
+> Почему не только GitHub: в этом репо расписание срабатывает раз в 2–5 часов
+> вместо 5 минут (сдвиг cron не помог, #159). UptimeRobot Free не подходит:
+> Telegram и webhook там только на платных тарифах, а сам Free — для
+> некоммерческих проектов.
 
 Установка один раз:
 
@@ -217,7 +224,7 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
    [`env-matrix.md`](env-matrix.md) §5b).
 3. В GitHub — секреты репозитория с теми же значениями:
    `ATELIER_ALERT_BOT_TOKEN`, `ATELIER_ALERT_CHAT_ID`.
-4. Поставить cron и проверить:
+4. Поставить cron на прод-хосте и проверить:
 
 ```bash
 cd /opt/atelier
@@ -225,10 +232,24 @@ cp scripts/atelier/host-check.cron /etc/cron.d/atelier-host-check
 scripts/atelier/host-check.sh && tail -5 /var/log/atelier-monitor.log
 ```
 
+5. Франкфурт (`ssh atelier-frankfurt`; ключ `id_xray` должен быть в ssh-agent).
+   Скрипт и `.env` копируются с рабочей машины, на хосте нет клона репо:
+
+```bash
+ssh atelier-frankfurt 'umask 077 && mkdir -p ~/atelier-uptime && cat > ~/atelier-uptime/uptime-watch.sh && chmod 700 ~/atelier-uptime/uptime-watch.sh' < scripts/atelier/uptime-watch.sh
+ssh atelier-prod 'cat /opt/atelier/.env.monitor' | ssh atelier-frankfurt 'umask 077 && cat > ~/atelier-uptime/.env'
+ssh atelier-frankfurt '(crontab -l 2>/dev/null; echo "*/5 * * * * \$HOME/atelier-uptime/uptime-watch.sh >> \$HOME/atelier-uptime/log 2>&1") | crontab -'
+```
+
+   Без изменений скрипт молчит, поэтому сам прогон видно по
+   `~/atelier-uptime/last-run`, а отправленные алерты — по `~/atelier-uptime/log`.
+
 Тест алерта без поломки прода — занизить порог диска на один прогон
 (`DISK_MAX_PCT=1 scripts/atelier/host-check.sh`), следующий обычный прогон
-пришлёт «Устранено». Внешний наблюдатель запускается вручную:
-`gh workflow run atelier-uptime.yml`.
+пришлёт «Устранено». Внешний — подставить несуществующий адрес на один прогон:
+`UPTIME_URLS="https://api.yummy-aroma-atelier.ru/nope" ~/atelier-uptime/uptime-watch.sh`
+во Франкфурте, следующий обычный прогон пришлёт «снова доступно». GitHub-вариант
+запускается вручную: `gh workflow run atelier-uptime.yml`.
 
 > GitHub отключает расписания в публичном репо после 60 дней без коммитов.
 > Если репо надолго затихнет — включить workflow заново во вкладке Actions.
