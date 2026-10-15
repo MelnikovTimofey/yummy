@@ -6,17 +6,31 @@
 	email {$ACME_EMAIL}
 }
 
+# Пока deploy.sh пересоздаёт контейнер, upstream пару секунд (backend — дольше)
+# не слушает порт. Вместо мгновенного 502 Caddy держит запрос и повторяет
+# подключение (#164).
+(retry_while_restarting) {
+	lb_try_duration 30s
+	lb_try_interval 250ms
+}
+
 # Гостевой Арома Ателье
 {$AROMA_DOMAIN} {
-	reverse_proxy aroma-web:4174
+	reverse_proxy aroma-web:4174 {
+		import retry_while_restarting
+	}
 }
 
 # Backoffice Мастер
 {$MASTER_DOMAIN} {
-	reverse_proxy master-web:4175
+	reverse_proxy master-web:4175 {
+		import retry_while_restarting
+	}
 }
 
 # Backend API
 {$API_DOMAIN} {
-	reverse_proxy backend:3021
+	reverse_proxy backend:3021 {
+		import retry_while_restarting
+	}
 }
