@@ -181,8 +181,8 @@
         "message": "<SegmentItem> doesn't accept that prop. Declared props: id, label."
       },
       {
-        "selector": "JSXOpeningElement[name.name='ShowcaseCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|flavors|profiles|rating|onClick|style|key|ref|className|style|children)$/]",
-        "message": "<ShowcaseCard> doesn't accept that prop. Declared props: name, flavors, profiles, rating, onClick, style."
+        "selector": "JSXOpeningElement[name.name='ShowcaseCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|profiles|rating|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<ShowcaseCard> doesn't accept that prop. Declared props: name, profiles, rating, onClick, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='SignatureBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:profiles|height|radius|key|ref|className|style|children)$/]",

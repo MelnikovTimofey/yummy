@@ -3,8 +3,22 @@ const { AromaCTA, AromaChip, SegmentNav, ProfileGlyph, SignatureBar, RatingPill,
 const M = window.AROMA_MOCK;
 const label = (p) => M.profileLabels[p] || p;
 const railKind = { statistical: 'Выбор гостей', prepared: 'Редакция', curated: 'Мастера' };
+// На Витрине тип полки виден значком, словами — в aria-label заголовка (railKindIcon в apps/aroma-web).
+// Полка «Оценки гостей» в приложении получает Star; в мок-данных кита её нет.
+const railKindIcon = { statistical: 'Users', prepared: 'Feather', curated: 'Flame' };
 const sourceLabel = { recommendations: 'Подбор для вас', showcase: 'Из витрины', catalog: 'Из каталога', rail: 'Из подборки' };
 const plural = (n) => { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'микс'; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'микса'; return 'миксов'; };
+
+// Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
+function Icon({ name, size = 24, stroke = 1.8 }) {
+  const node = window.lucide.icons[name];
+  const children = node[0] === 'svg' ? node[2] : node;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children.map(([tag, attrs], i) => React.createElement(tag, { key: i, ...attrs }))}
+    </svg>
+  );
+}
 
 function AccessScreen({ code, setCode, ageOk, setAgeOk, error, onSubmit }) {
   const ready = code.length >= 4 && ageOk;
@@ -160,21 +174,24 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
   );
 }
 
+// Полки по образцу Okko (#175): заголовок с шевроном открывает подборку, под ним лента постеров.
 function ShowcaseScreen({ onOpen, onOpenRail }) {
   return (
     <section className="aroma-showcase">
       {M.rails.map((rail) => (
         <section key={rail.id} className="aroma-showcase-rail">
-          <div className="aroma-showcase-head">
-            <h2 className="aroma-showcase-title">{rail.name}</h2>
-            <span className="aroma-caps aroma-showcase-kind">{railKind[rail.type]}</span>
-          </div>
-          <div className="aroma-scroller">
+          <h2 className="aroma-showcase-rail-head">
+            <button type="button" className="aroma-showcase-rail-open" onClick={() => onOpenRail(rail)} aria-label={'Открыть подборку «' + rail.name + '», ' + railKind[rail.type].toLowerCase()}>
+              <span className="aroma-showcase-rail-icon"><Icon name={railKindIcon[rail.type]} size={16} /></span>
+              <span className="aroma-showcase-rail-title">{rail.name}</span>
+              <span className="aroma-showcase-rail-chevron"><Icon name="ChevronRight" size={22} /></span>
+            </button>
+          </h2>
+          <div className="aroma-showcase-scroller">
             {rail.mixIds.map((id) => {
               const mix = M.mixes.find((m) => m.id === id);
-              return <ShowcaseCard key={id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={mix.avgRating} onClick={() => onOpen(mix, 'showcase')} />;
+              return <ShowcaseCard key={id} name={mix.name} profiles={mix.flavorProfiles} rating={mix.avgRating} onClick={() => onOpen(mix, 'showcase')} />;
             })}
-            <button type="button" className="aroma-showcase-all" onClick={() => onOpenRail(rail)} aria-label={'Открыть весь рейл «' + rail.name + '»'}>Все</button>
           </div>
         </section>
       ))}
@@ -328,7 +345,7 @@ function ConfirmationScreen({ mix, onDone }) {
   );
 }
 
-Object.assign(window, { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
+Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
   return (
     <div className="aroma-selected-shell">
       <GuestCard compact title="Карточка для мастера" style={{ display: 'grid', gap: 10 }}>
