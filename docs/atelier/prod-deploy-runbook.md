@@ -140,7 +140,7 @@ curl -sS -H 'x-atelier-automation-key: <key>' \
 
 **Откат:**
 
-- данные/схема — восстановить БД из ночного дампа (см. §8) или из бэкапа диска
+- данные/схема — восстановить БД из последнего часового дампа (см. §8) или из бэкапа диска
   VPS (снять `pg_dump` ПЕРЕД деплоем — обязательный пред-шаг для рискованных релизов);
 - код — `DEPLOY_TAG=<sha> scripts/atelier/deploy.sh` (образы предыдущего коммита из GHCR, `prod-operations.md` §7).
 
@@ -156,10 +156,19 @@ scripts/atelier/deploy.sh   # git pull + готовые образы из GHCR, 
 
 ## 8. Бэкапы Postgres
 
-Ночной `pg_dump` (03:30 UTC) пишется на хост в `/opt/atelier/backups` (14 дней) и
-копируется в S3 TimeWeb в **другом регионе** (`ru-1`, Санкт-Петербург) — там
-хранятся 30 последних дампов. По понедельникам в 04:00 UTC
-`pg-restore-check.sh` поднимает последний дамп из S3 во временном `postgres:16`
+`pg_dump` каждый час в :30 UTC пишется на хост в `/opt/atelier/backups` и
+копируется в S3 TimeWeb в **другом регионе** (`ru-1`, Санкт-Петербург):
+
+| Где | Что | Сколько хранится |
+|---|---|---|
+| S3 `hourly/atelier-<дата>T<час>.dump` | каждый часовой дамп | 48 последних (двое суток) |
+| S3 `daily/atelier-<дата>.dump` | дамп 03:30 UTC | 30 последних (месяц) |
+| хост `backups/atelier-<дата>T<час>.dump` | часовые | 24 часа |
+| хост `backups/atelier-<дата>.dump` | дневные | 14 дней |
+
+Сроки задаются переменными `BACKUP_*` в `.env.backup` (`env-matrix.md` §5a). Потеря
+сервера стоит не больше часа данных. По понедельникам в 04:00 UTC
+`pg-restore-check.sh` поднимает последний часовой дамп из S3 во временном `postgres:16`
 и проверяет, что `Tobacco`, `Mix`, `StaffAccount`, `_prisma_migrations` не
 пустые. Лог обоих скриптов — `/var/log/atelier-backup.log`.
 
@@ -181,11 +190,11 @@ scripts/atelier/pg-restore-check.sh
 Восстановление целиком (схема + данные), из `/opt/atelier`:
 
 ```bash
-# если дампа на хосте нет — скачать из S3 (список дампов: s3 ls s3://$BACKUP_S3_BUCKET/)
-. scripts/atelier/backup-lib.sh && s3 cp s3://$BACKUP_S3_BUCKET/atelier-<дата>.dump /backups/
+# если дампа на хосте нет — скачать из S3 (список: s3_list hourly / s3_list daily)
+. scripts/atelier/backup-lib.sh && s3 cp s3://$BACKUP_S3_BUCKET/hourly/atelier-<дата>T<час>.dump /backups/
 
 docker compose -f docker-compose.prod.yml --env-file .env stop backend telegram-bot
 docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
-  pg_restore -U atelier -d atelier --clean --if-exists --no-owner < backups/atelier-<дата>.dump
+  pg_restore -U atelier -d atelier --clean --if-exists --no-owner < backups/atelier-<дата>T<час>.dump
 docker compose -f docker-compose.prod.yml --env-file .env start backend telegram-bot
 ```

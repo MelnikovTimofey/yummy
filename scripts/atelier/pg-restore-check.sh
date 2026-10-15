@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Еженедельная проверка, что бэкап восстанавливается: последний дамп из S3
+# Еженедельная проверка, что бэкап восстанавливается: последний часовой дамп из S3
 # поднимается во временном postgres:16, ключевые таблицы не пустые.
 # Ненулевой код выхода = бэкап непригоден, разбираться до любых работ с базой.
 
@@ -14,13 +14,13 @@ container="atelier-restore-check"
 workdir="$(mktemp -d)"
 trap 'docker rm -f "$container" >/dev/null 2>&1 || true; rm -rf "$workdir"' EXIT
 
-latest="$(s3 ls "s3://$BACKUP_S3_BUCKET/" | awk '{print $4}' | grep -E '^atelier-[0-9-]{10}\.dump$' | sort | tail -1 || true)"
+latest="$(s3_list hourly | awk 'NR == 1')"
 if [[ -z "$latest" ]]; then
-  echo "restore check FAILED: в s3://$BACKUP_S3_BUCKET нет дампов" >&2
+  echo "restore check FAILED: в s3://$BACKUP_S3_BUCKET/hourly нет дампов" >&2
   exit 1
 fi
 
-BACKUP_DIR="$workdir" s3 cp "s3://$BACKUP_S3_BUCKET/$latest" "/backups/$latest" --only-show-errors
+BACKUP_DIR="$workdir" s3 cp "s3://$BACKUP_S3_BUCKET/hourly/$latest" "/backups/$latest" --only-show-errors
 
 docker run -d --name "$container" -e POSTGRES_USER=atelier -e POSTGRES_PASSWORD=restore-check \
   -e POSTGRES_DB=atelier postgres:16 >/dev/null

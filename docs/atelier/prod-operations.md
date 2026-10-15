@@ -18,7 +18,7 @@
 | Compose-файл | `docker-compose.prod.yml` (всегда с `--env-file .env`) |
 | Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
 | База данных | сервис `db` в том же compose, наружу не публикуется, volume `atelier_pg` |
-| Бэкапы | `/opt/atelier/backups` (14 дней) + S3 TimeWeb `ru-1` (30 дампов), cron `/etc/cron.d/atelier-pg-backup`: дамп 03:30 UTC, проверка восстановления пн 04:00 UTC; лог `/var/log/atelier-backup.log` |
+| Бэкапы | ежечасный `pg_dump` (:30 UTC) → `/opt/atelier/backups` (часовые 24 ч, дневные 14 дней) + S3 TimeWeb `ru-1`: `hourly/` (48 шт.), `daily/` (дамп 03:30 UTC, 30 шт.); проверка восстановления пн 04:00 UTC; cron `/etc/cron.d/atelier-pg-backup`, лог `/var/log/atelier-backup.log` |
 | Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
 | TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |
 | Firewall | ufw: `49222`, `80`, `443` |
@@ -138,14 +138,15 @@ docker compose -f docker-compose.prod.yml --env-file .env restart telegram-bot
 ## 6. Обслуживание
 
 ### Бэкап БД
-Ночной `pg_dump` ставит cron (см. [`prod-deploy-runbook.md`](prod-deploy-runbook.md) §8).
+Ежечасный `pg_dump` ставит cron (см. [`prod-deploy-runbook.md`](prod-deploy-runbook.md) §8).
 Внеплановый дамп перед рискованными изменениями:
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
   pg_dump -U atelier -Fc atelier > backups/atelier-$(date +%F-%H%M).dump
 ```
-Ночной дамп сам уходит в S3 в другом регионе, раз в неделю проверяется его
-восстановление (runbook §8). Последние записи:
+Каждый дамп сам уходит в S3 в другом регионе, раз в неделю проверяется его
+восстановление (runbook §8). При потере сервера теряется не больше часа данных.
+Внеплановый дамп с копией в S3 — `scripts/atelier/pg-backup.sh`. Последние записи:
 ```bash
 tail -20 /var/log/atelier-backup.log
 ```
@@ -235,7 +236,7 @@ DEPLOY_TAG=<sha> scripts/atelier/deploy.sh telegram-bot  # один сервис
 |---|---|---|---|
 | Внешний (основной) | Франкфурт `186.246.25.8` (хост `telegram-tunnel`), пользователь `lampa`: user-crontab → `~/atelier-uptime/uptime-watch.sh` (копия `scripts/atelier/uptime-watch.sh`) | каждые 5 мин | `yummy-aroma-atelier.ru`, `master.`, `api.…/health` отвечают 200 |
 | Внешний (запасной) | GitHub Actions `.github/workflows/atelier-uptime.yml` → `scripts/atelier/uptime-check.sh` | по расписанию раз в 5 мин, на деле раз в 2–5 ч | то же |
-| Хост | cron `/etc/cron.d/atelier-host-check` → `scripts/atelier/host-check.sh`, лог `/var/log/atelier-monitor.log` | каждые 5 мин | все сервисы compose запущены; диск `/` ≤ 80 %; свободной памяти ≥ 10 %; дамп БД моложе 26 ч; последний бэкап и проверка восстановления без `FAILED`; heartbeat бота свежее 10 мин |
+| Хост | cron `/etc/cron.d/atelier-host-check` → `scripts/atelier/host-check.sh`, лог `/var/log/atelier-monitor.log` | каждые 5 мин | все сервисы compose запущены; диск `/` ≤ 80 %; свободной памяти ≥ 10 %; дамп БД моложе 150 мин; последний бэкап и проверка восстановления без `FAILED`; heartbeat бота свежее 10 мин |
 
 Все шлют сообщение только при **смене** состояния: что сломалось и что починилось.
 Пока проблема не ушла — повторов нет. Хост шлёт алерты через `telegram-tunnel`,
