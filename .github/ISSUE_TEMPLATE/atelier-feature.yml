@@ -119,4 +119,4 @@ body:
         - label: "Задача затрагивает public contract"
         - label: "Задача меняет process/workflow/docs rules"
         - label: "Можно делать как локальный bounded slice без cross-app rewrite"
-        - label: "Это UI/redesign slice для `apps/master-web` и нужен visual benchmark / design sign-off"
+        - label: "Это UI-срез: нужен мокап, согласованный владельцем (`design/design_handoff_<slug>/`, скилл `atelier-feature-design`)"
