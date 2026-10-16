@@ -8,9 +8,17 @@
 `apps/master-web`, `apps/backend`, `services/telegram-bot`,
 smoke-тесты в `tests/smoke`.
 
-Исходный продукт **legacy Yummy** вынесен в архивный репозиторий
-[MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy) и здесь больше
-не присутствует. Состояние монорепо до split — tag `pre-legacy-split`.
+Рабочий репозиторий — [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy)
+(public): issues и PR Арома Ателье заводятся здесь. Legacy вынесен в два
+приватных архива и здесь больше не присутствует:
+
+- [MelnikovTimofey/yummy-old](https://github.com/MelnikovTimofey/yummy-old) —
+  исходный продукт **legacy Yummy** (`Yummy/`, `YummyExpo/`, `YummyWeb/`,
+  `backend/`, `ml/`), последний коммит 2026-05-23.
+- [MelnikovTimofey/nomad-yummy](https://github.com/MelnikovTimofey/nomad-yummy) —
+  снимок монорепо эпохи Nomad до 2026-06-04 с собственной нумерацией PR и
+  issues: `#N` в коммитах `main` до этой даты — номера оттуда, а не отсюда.
+  Там же tag `pre-legacy-split` — состояние монорепо до split.
 
 Production-ветка репозитория — `main`. Соглашение по именам рабочих веток см. §5.
 
@@ -194,10 +202,13 @@ Production-ветка репозитория — `main`. Соглашение п
 
 ## 6. Отношения с legacy Yummy
 
-- Legacy-код живёт отдельно: [MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy).
-  В этом репозитории его нет и сюда он не возвращается.
-- Не копировать legacy-каталоги (`Yummy/`, `YummyWeb/`, `backend/`, `ml/`,
-  `services/catalog-updater/`) обратно в `apps/`/`services/`.
+- Legacy-код живёт отдельно: [MelnikovTimofey/yummy-old](https://github.com/MelnikovTimofey/yummy-old)
+  (legacy Yummy) и [MelnikovTimofey/nomad-yummy](https://github.com/MelnikovTimofey/nomad-yummy)
+  (снимок эпохи Nomad), см. §1. В этом репозитории его нет и сюда он не
+  возвращается.
+- Не копировать legacy-каталоги (`Yummy/`, `YummyExpo/`, `YummyWeb/`,
+  `backend/`, `ml/`, `services/catalog-updater/`) обратно в
+  `apps/`/`services/`.
 - Переиспользование идей из legacy — осознанный выбор: чтение по ссылке,
   `copy with adaptation` или `extract shared module`. Не зеркалить файлы.
 

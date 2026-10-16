@@ -12,10 +12,16 @@
 
 ## Legacy Yummy
 
-Исходный продукт Yummy вынесен в отдельный архивный репозиторий
-[MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy) с сохранением
-истории. В этом репозитории legacy-код больше не поддерживается. Состояние
-монорепо до split зафиксировано tag-ом `pre-legacy-split`.
+Этот репозиторий,
+[MelnikovTimofey/yummy](https://github.com/MelnikovTimofey/yummy), — рабочий:
+issues и PR Арома Ателье ведутся здесь. Legacy вынесен в приватные архивные
+репозитории с сохранением истории и здесь больше не поддерживается:
+
+- [MelnikovTimofey/yummy-old](https://github.com/MelnikovTimofey/yummy-old) —
+  исходный продукт Yummy;
+- [MelnikovTimofey/nomad-yummy](https://github.com/MelnikovTimofey/nomad-yummy) —
+  снимок монорепо эпохи Nomad до 2026-06-04 с собственной нумерацией PR и
+  issues. Там же tag `pre-legacy-split` — состояние монорепо до split.
 
 ## Запуск
 
