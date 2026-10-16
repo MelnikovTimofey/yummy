@@ -254,7 +254,7 @@ function CtCatalogB({ query, setQuery, tokens, setTokens, onOpenSheet, onOpen })
     <section className="aroma-catalog">
       <div className="aroma-catalog-rail ct-rail">
         <div className="ct-search-row with-btn">
-          <input type="search" className="ct-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Название, вкус или табак" aria-label="Поиск по каталогу" autoComplete="off" />
+          <input type="search" className="ct-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Микс, вкус, табак" aria-label="Поиск по каталогу" autoComplete="off" />
           <button type="button" className={'ct-filter-btn' + (tokens.length ? ' on' : '')} onClick={onOpenSheet} aria-label={tokens.length ? 'Фильтры, выбрано ' + tokens.length : 'Фильтры'}>
             <CtFiltersIcon />
             <span>Фильтры</span>
@@ -387,10 +387,10 @@ const CT_SHOTS = [
   { id: 'b', group: 'b', name: 'B · покой', note: 'Поле и кнопка «Фильтры». Ленты профилей нет, рейтинг только у миксов с оценками.', variant: 'b', init: {} },
   { id: 'b-sheet', group: 'b', name: 'B · шторка фильтров', note: 'Характер и вкусы со счётчиками, частые вкусы первыми, поиск по вкусам. Кнопка показывает, сколько миксов найдётся.', variant: 'b', init: { sheet: true, tokens: [ctFl('холодок')] } },
   { id: 'b-tokens', group: 'b', name: 'B · выбраны «холодок» и «Ягодный»', note: 'Выбранное видно метками под полем, на кнопке — счётчик.', variant: 'b', init: { tokens: [ctFl('холодок'), ctPr('berry')] } },
-  { id: 'edge-empty', group: 'edge', name: 'Пусто', note: 'Adalya и «холодок» вместе не встречаются. Одно касание убирает последнюю метку.', variant: 'a', init: { tokens: [ctBr('Adalya'), ctFl('холодок')] } },
-  { id: 'edge-many', group: 'edge', name: 'Много меток', note: 'Шесть меток в одну строку с прокруткой, шапка не растёт.', variant: 'a', init: { tokens: [ctFl('холодок'), ctFl('малина'), ctFl('лимон'), ctPr('berry'), ctPr('fresh'), ctBr('DARKSIDE')] } },
-  { id: 'edge-keyboard', group: 'edge', name: 'Открыта клавиатура', note: 'Ввод «хол»: подсказки укладываются над клавиатурой, кнопка «Показать …» прячет её и открывает выдачу.', variant: 'a', init: { focused: true, query: 'хол', keyboard: true } },
-  { id: 'edge-long', group: 'edge', name: 'Длинные названия', note: 'Без «★» название получает всю ширину. Если не помещается — вторая строка.', variant: 'a', init: { tokens: [ctFl('жвачка'), ctFl('огурец'), ctFl('мохито'), ctFl('тархун')] } },
+  { id: 'edge-empty', group: 'edge', name: 'Пусто', note: 'Adalya (текстом) и «холодок» вместе не встречаются. Одно касание убирает последнюю метку.', variant: 'b', init: { query: 'Adalya', tokens: [ctFl('холодок')] } },
+  { id: 'edge-many', group: 'edge', name: 'Много меток', note: 'Пять меток в одну строку с прокруткой, шапка не растёт. На кнопке — 5.', variant: 'b', init: { tokens: [ctFl('холодок'), ctFl('малина'), ctFl('лимон'), ctPr('berry'), ctPr('fresh')] } },
+  { id: 'edge-keyboard', group: 'edge', name: 'Открыта клавиатура', note: 'Табак ищется текстом: «darkside» — 12 миксов, список виден над клавиатурой.', variant: 'b', init: { query: 'darkside', keyboard: true } },
+  { id: 'edge-long', group: 'edge', name: 'Длинные названия', note: 'Без «★» название получает всю ширину. Если не помещается — вторая строка.', variant: 'b', init: { tokens: [ctFl('жвачка'), ctFl('огурец'), ctFl('мохито'), ctFl('тархун')] } },
 ];
 
 function CtShotFrame({ shot }) {
@@ -412,7 +412,7 @@ function CtShot({ id }) {
 }
 
 function CtBoard() {
-  const [variant, setVariant] = React.useState('a');
+  const [variant, setVariant] = React.useState('b');
   const section = (group) => CT_SHOTS.filter((shot) => shot.group === group).map((shot) => <CtShotFrame key={shot.id} shot={shot} />);
   return (
     <div className="board">
@@ -421,21 +421,26 @@ function CtBoard() {
         <h1 className="board-title">Каталог: поиск и фильтры в одном месте</h1>
         <p className="board-text">
           Сейчас выдачу настраивают в трёх местах: поле, лента профилей и поповер со вкусами и сортировкой.
-          Два варианта собирают всё у поля поиска. Сортировки нет, «★» только у миксов с оценками (#185),
-          порядок по алфавиту. Данные — 53 микса прода на 16 октября.
+          Два варианта собирают всё у поля поиска, владелец выбрал B: поле и одна шторка «Фильтры».
+          Сортировки нет, «★» только у миксов с оценками (#185), порядок по алфавиту. Данные — 53 микса прода на 16 октября.
         </p>
       </header>
 
       <section className="board-section">
         <h2 className="board-h2">Кликабельный прототип</h2>
         <div className="tweaks">
-          <CtToggle title="Вариант" value={variant} options={[['a', 'A · всё в поле'], ['b', 'B · поле и шторка'], ['now', 'Сейчас']]} onChange={setVariant} />
+          <CtToggle title="Вариант" value={variant} options={[['b', 'B · поле и шторка'], ['a', 'A · всё в поле'], ['now', 'Сейчас']]} onChange={setVariant} />
         </div>
         <div className="board-row">
-          <CtFrame name="Попробуйте: поле → подсказка или «Фильтры» → метка → микс → «Покурить»">
+          <CtFrame name="Попробуйте: «Фильтры» → характер или вкус → метка → микс → «Покурить»">
             <CtPhone key={variant} variant={variant} />
           </CtFrame>
         </div>
+      </section>
+
+      <section className="board-section">
+        <h2 className="board-h2">Итог: B · поле и одна шторка — выбран</h2>
+        <div className="board-row">{section('b')}</div>
       </section>
 
       <section className="board-section">
@@ -444,17 +449,12 @@ function CtBoard() {
       </section>
 
       <section className="board-section">
-        <h2 className="board-h2">A · всё в поле</h2>
+        <h2 className="board-h2">A · всё в поле — отвергнут</h2>
         <div className="board-row">{section('a')}</div>
       </section>
 
       <section className="board-section">
-        <h2 className="board-h2">B · поле и одна шторка</h2>
-        <div className="board-row">{section('b')}</div>
-      </section>
-
-      <section className="board-section">
-        <h2 className="board-h2">Края (на варианте A, в B так же)</h2>
+        <h2 className="board-h2">Края на варианте B</h2>
         <div className="board-row">{section('edge')}</div>
       </section>
     </div>
