@@ -2196,41 +2196,42 @@ export const App = () => {
               </Chip>
             ))}
           </div>
+          {/* Поповер — внутри sticky-рейла: в потоке после него он открывался
+              в начале списка, и после прокрутки оказывался за экраном. */}
+          {catalogPopoverOpen ? (
+            <div className="aroma-catalog-popover" role="dialog" aria-label="Фильтры каталога">
+              <p className="aroma-caps">Сортировка</p>
+              <div className="aroma-catalog-sort">
+                {sortOptions.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={cn(
+                      'aroma-catalog-sort-btn',
+                      appliedSortBy === item.value && 'aroma-catalog-sort-btn-on',
+                    )}
+                    onClick={() => setAppliedSortBy(item.value)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <p className="aroma-caps">Вкусы</p>
+              <div className="aroma-catalog-flavor-wrap">
+                {options.flavors.map((flavor) => (
+                  <Chip
+                    key={flavor}
+                    active={appliedCatalogFlavors.includes(flavor)}
+                    onClick={() => toggleCatalogFlavor(flavor)}
+                  >
+                    {flavor}
+                  </Chip>
+                ))}
+              </div>
+              <CTA onClick={() => setCatalogPopoverOpen(false)}>Готово</CTA>
+            </div>
+          ) : null}
         </div>
-
-        {catalogPopoverOpen ? (
-          <div className="aroma-catalog-popover" role="dialog" aria-label="Фильтры каталога">
-            <p className="aroma-caps">Сортировка</p>
-            <div className="aroma-catalog-sort">
-              {sortOptions.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={cn(
-                    'aroma-catalog-sort-btn',
-                    appliedSortBy === item.value && 'aroma-catalog-sort-btn-on',
-                  )}
-                  onClick={() => setAppliedSortBy(item.value)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <p className="aroma-caps">Вкусы</p>
-            <div className="aroma-catalog-flavor-wrap">
-              {options.flavors.map((flavor) => (
-                <Chip
-                  key={flavor}
-                  active={appliedCatalogFlavors.includes(flavor)}
-                  onClick={() => toggleCatalogFlavor(flavor)}
-                >
-                  {flavor}
-                </Chip>
-              ))}
-            </div>
-            <CTA onClick={() => setCatalogPopoverOpen(false)}>Готово</CTA>
-          </div>
-        ) : null}
 
         <div className="aroma-catalog-meta">
           <p className="aroma-caps">
