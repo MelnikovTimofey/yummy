@@ -1,6 +1,6 @@
 // Данные мокапа. Табаки и миксы — полка и каталог миксов прода на 19.10.2026
 // (GET /guest/mixer/palette, GET /guest/catalog/mixes). Мокап показывает полку через месяц
-// после запуска: «сегодня» — четверг, 19 ноября 2026. Контейнеры, расход, цены и поставки
+// после запуска: «сегодня» — четверг, 19 ноября 2026. Банки, расход, цены и поставки
 // смоделированы по двум реальным счетам; поставщики и номера счетов вымышлены,
 // цифры htreviews условные.
 window.INV = {
@@ -9,7 +9,7 @@ window.INV = {
   stats: { shelf: 269, packs: 412, kg: 78, ending: 14, out: 6, todayG: 540, todayBowls: 30 },
   statusCounts: { all: 269, ok: 211, last: 38, ending: 14, out: 6, stop: 3, plan: 4 },
 
-  // packs: open — доля остатка открытого контейнера, sealed — контейнеров в запасе.
+  // packs: open — доля остатка открытой банки, sealed — банок в запасе.
   // rate — г/день; rateKind: ok | brand (оценка по бренду) | none.
   shelf: [
     { id: 'bb-cane', brand: 'Black Burn', name: 'Cane Mint', grams: 200, profiles: ['minty'], open: 0.2, sealed: 0, remain: 40, rate: 21, rateKind: 'ok', until: '21 ноя', days: 2, status: 'ending', last: true, arrived: '5 ноя', supplier: 'Каспий Опт', mixes: 3 },
@@ -34,16 +34,16 @@ window.INV = {
     'sb-lemon': ['Барбариска с лимонадом', 'Лавандовый лимонад'],
   },
 
-  // История контейнеров Black Burn Raspberries для карточки.
+  // История банок Black Burn Raspberries для карточки.
   rasp: {
     packs: [
-      { n: 5, state: 'sealed', title: 'В запасе', line: 'пришёл 12 ноя · счёт № 03944 · 1 550 ₽' },
-      { n: 4, state: 'open', fill: 0.45, title: 'В работе', line: 'пришёл 12 ноя · вскрыт 14 ноя · отметка ½ 17 ноя' },
-      { n: 3, state: 'empty', title: 'Пустой', line: '29 окт → 14 ноя · 16 дн · 12,5 г/день' },
-      { n: 2, state: 'empty', title: 'Пустой', line: '15 окт → 29 окт · 14 дн · 14,3 г/день' },
+      { n: 5, state: 'sealed', title: 'В запасе', line: 'пришла 12 ноя · счёт № 03944 · 1 550 ₽' },
+      { n: 4, state: 'open', fill: 0.45, title: 'В работе', line: 'пришла 12 ноя · вскрыта 14 ноя · отметка ½ 17 ноя' },
+      { n: 3, state: 'empty', title: 'Пустая', line: '29 окт → 14 ноя · 16 дн · 12,5 г/день' },
+      { n: 2, state: 'empty', title: 'Пустая', line: '15 окт → 29 окт · 14 дн · 14,3 г/день' },
     ],
     bars: [14.3, 12.5, 13.1],
-    barLabels: ['контейнер 2', 'контейнер 3', 'контейнер 4 (идёт)'],
+    barLabels: ['банка 2', 'банка 3', 'банка 4 (идёт)'],
   },
 
   deliveries: [

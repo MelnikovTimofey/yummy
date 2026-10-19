@@ -65,7 +65,7 @@ function Pips({ row, lg }) {
   for (let i = 0; i < row.sealed; i += 1) slots.push(<span key={'s' + i} className="pip sealed" />);
   if (!slots.length) slots.push(<span key="n" className="pip none" />);
   return (
-    <span className={'pips' + (lg ? ' lg' : '')} title="Контейнеры: в работе и в запасе">
+    <span className={'pips' + (lg ? ' lg' : '')} title="Банки: в работе и в запасе">
       {slots}
       {!lg ? <span className="pips-meta">{row.open == null && !row.sealed ? 'нет' : (row.open != null ? '1' : '0') + ' + ' + row.sealed}</span> : null}
     </span>
@@ -81,14 +81,14 @@ function InvRate({ row }) {
 const INV_STATUS_TEXT = { out: ['inv-danger', 'закончился'], ending: ['inv-warn', 'заканчивается'], check: ['inv-warn', 'проверьте остаток'], plan: ['inv-faint', 'в плане'] };
 const invStatusLine = (row) => {
   if (row.status === 'stop') return <span className="inv-faint">стоп для гостей · {row.note}</span>;
-  if (INV_STATUS_TEXT[row.status]) { const [cls, text] = INV_STATUS_TEXT[row.status]; return <span className={cls}>{text}{row.last && row.status === 'ending' ? ' · последний контейнер' : ''}</span>; }
-  if (row.last) return <span className="inv-muted">последний контейнер</span>;
+  if (INV_STATUS_TEXT[row.status]) { const [cls, text] = INV_STATUS_TEXT[row.status]; return <span className={cls}>{text}{row.last && row.status === 'ending' ? ' · последняя банка' : ''}</span>; }
+  if (row.last) return <span className="inv-muted">последняя банка</span>;
   return null;
 };
 
 function InvUntilDate({ row }) {
   if (row.status === 'out') return <span className="inv-danger">{row.until}</span>;
-  if (row.status === 'check') return <span className="inv-warn">должен был закончиться</span>;
+  if (row.status === 'check') return <span className="inv-warn">должна была закончиться</span>;
   if (row.days == null) return <span className="inv-faint">—</span>;
   const cls = row.days <= 3 ? 'inv-danger' : row.days <= 7 ? 'inv-warn' : '';
   return <span className={'inv-num ' + cls}>{row.until} <span className="inv-faint">· {row.days} дн</span></span>;
@@ -103,15 +103,15 @@ function InvUntil({ row, stacked }) {
 function InvRowMenu({ row, pos, onMark, onClose }) {
   return (
     <div className="inv-pop" style={pos} onClick={(e) => e.stopPropagation()}>
-      <span className="inv-pop-label">Сколько осталось в открытом</span>
+      <span className="inv-pop-label">Сколько осталось в открытой</span>
       <div className="inv-fracs">
         {['¾', '½', '⅓', '¼'].map((f, i) => <button key={f} className="inv-frac" onClick={() => onMark(row, f)} title={'Клавиша ' + (i + 1)}>{f}</button>)}
       </div>
       <div className="inv-sep" />
-      <button className="inv-pop-item" onClick={onClose}>Вскрыть ещё один контейнер</button>
-      <button className="inv-pop-item" onClick={onClose}>Добавить контейнер вручную</button>
+      <button className="inv-pop-item" onClick={onClose}>Вскрыть ещё одну банку</button>
+      <button className="inv-pop-item" onClick={onClose}>Добавить банку вручную</button>
       <button className="inv-pop-item" onClick={onClose}>{row.status === 'stop' ? 'Снять стоп для гостей' : 'Стоп для гостей'}</button>
-      <button className="inv-pop-item" onClick={onClose}>Списать контейнер…</button>
+      <button className="inv-pop-item" onClick={onClose}>Списать банку…</button>
       <div className="inv-sep" />
       <button className="inv-pop-item" onClick={onClose}>Убрать с полки <span className="inv-faint">история останется</span></button>
     </div>
@@ -128,7 +128,7 @@ function InvActions({ row, menuOpen, onEmpty, onMenu, onMark, onCloseMenu }) {
     const d = desk.getBoundingClientRect();
     setPos({ top: a.bottom - d.top + 4, right: d.right - a.right });
   }, [menuOpen]);
-  let primary = <MasterButton size="sm" onClick={() => onEmpty(row)}>Закончился</MasterButton>;
+  let primary = <MasterButton size="sm" onClick={() => onEmpty(row)}>Закончилась</MasterButton>;
   if (row.status === 'out' || row.status === 'plan') primary = <span className="inv-faint" style={{ fontSize: 12 }}>в «К заказу»</span>;
   if (row.status === 'stop') primary = <MasterButton size="sm" variant="ghost">Снять стоп</MasterButton>;
   if (row.status === 'check') primary = <MasterButton size="sm" onClick={() => onMenu(row.id)}>Отметить остаток</MasterButton>;
@@ -149,7 +149,7 @@ function InvShelfTable({ rows, menuFor, setMenuFor, onEmpty, onMark, onOpen }) {
         { key: 'name', label: 'ТАБАК', width: 'minmax(0,1.5fr)', render: (r) => (
           <span className="inv-name"><b>{r.name}</b><span>{r.brand} · {r.grams} г</span></span>
         ) },
-        { key: 'packs', label: 'КОНТЕЙНЕРЫ', width: '110px', render: (r) => <Pips row={r} /> },
+        { key: 'packs', label: 'БАНКИ', width: '110px', render: (r) => <Pips row={r} /> },
         { key: 'remain', label: 'ОСТАТОК', width: '84px', align: 'right', render: (r) => <span className="inv-num">{r.remain ? '≈ ' + r.remain + ' г' : '—'}</span> },
         { key: 'rate', label: 'РАСХОД', width: '130px', render: (r) => <InvRate row={r} /> },
         { key: 'until', label: 'ХВАТИТ ДО', width: '200px', render: (r) => <InvUntil row={r} stacked /> },
@@ -165,7 +165,7 @@ function InvShelfTable({ rows, menuFor, setMenuFor, onEmpty, onMark, onOpen }) {
 }
 
 const INV_STATUS_CHIPS = [
-  ['all', 'Все'], ['ok', 'Есть'], ['last', 'Последний контейнер'], ['ending', 'Заканчивается'], ['out', 'Закончились'], ['stop', 'Стоп'], ['plan', 'В плане'],
+  ['all', 'Все'], ['ok', 'Есть'], ['last', 'Последняя банка'], ['ending', 'Заканчивается'], ['out', 'Закончились'], ['stop', 'Стоп'], ['plan', 'В плане'],
 ];
 const invMatchStatus = (row, key) => {
   if (key === 'all') return true;
@@ -229,36 +229,36 @@ function InvDrawer({ row, onClose, few }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <MasterButton variant="primary">Закончился</MasterButton>
+          <MasterButton variant="primary">Закончилась</MasterButton>
           <MasterButton>Осталось ¾ ½ ⅓ ¼</MasterButton>
         </div>
 
         <div className="inv-kv">
           {few ? (
             <>
-              <div><span>Расход</span><b className="inv-faint">мало данных</b><small>появится, когда закончится первый контейнер или после двух отметок</small></div>
+              <div><span>Расход</span><b className="inv-faint">мало данных</b><small>появится, когда закончится первая банка или после двух отметок</small></div>
               <div><span>Хватит до</span><b>~ 15 дек</b><small>по бренду Сарма: ≈ 8 г/день</small></div>
-              <div><span>Остаток</span><b>≈ 380 г</b><small>открытый ≈ 180 г + 1 в запасе</small></div>
+              <div><span>Остаток</span><b>≈ 380 г</b><small>открытая ≈ 180 г + 1 в запасе</small></div>
               <div><span>Цена грамма</span><b>7,65 ₽</b><small>≈ 138 ₽ на чашу 18 г</small></div>
             </>
           ) : (
             <>
               <div><span>Хватит до</span><b>11 дек</b><small>22 дня · с запасом</small></div>
-              <div><span>Остаток</span><b>≈ 290 г</b><small>открытый ≈ 90 г + 1 в запасе</small></div>
-              <div><span>Расход</span><b>13 г/день</b><small>по 3 контейнерам за 60 дней</small></div>
+              <div><span>Остаток</span><b>≈ 290 г</b><small>открытая ≈ 90 г + 1 в запасе</small></div>
+              <div><span>Расход</span><b>13 г/день</b><small>по 3 банкам за 60 дней</small></div>
               <div><span>Цена грамма</span><b>7,75 ₽</b><small>≈ 140 ₽ на чашу 18 г</small></div>
             </>
           )}
         </div>
 
         <div style={{ display: 'grid', gap: 8 }}>
-          <h3 className="inv-h3">Контейнеры</h3>
+          <h3 className="inv-h3">Банки</h3>
           <div className="inv-packs">
             {(few ? hist.packs.slice(0, 2) : hist.packs).map((p) => (
               <div className="inv-pack" key={p.n}>
                 <span className={'pip ' + (p.state === 'sealed' ? 'sealed' : p.state === 'empty' ? 'none' : '')}>{p.state === 'open' ? <i style={{ height: p.fill * 100 + '%' }} /> : null}</span>
-                <span className="inv-pack-copy"><b>{p.title} · контейнер {p.n}</b><span>{p.line}</span></span>
-                <MasterIconButton label="Действия с контейнером" small><Ic name="Ellipsis" size={14} /></MasterIconButton>
+                <span className="inv-pack-copy"><b>{p.title} · банка {p.n}</b><span>{p.line}</span></span>
+                <MasterIconButton label="Действия с банкой" small><Ic name="Ellipsis" size={14} /></MasterIconButton>
               </div>
             ))}
           </div>
@@ -266,7 +266,7 @@ function InvDrawer({ row, onClose, few }) {
 
         {!few ? (
           <div style={{ display: 'grid', gap: 6 }}>
-            <h3 className="inv-h3">Расход по контейнерам, г/день</h3>
+            <h3 className="inv-h3">Расход по банкам, г/день</h3>
             <div className="inv-bars">
               {hist.bars.map((v, i) => (
                 <div className={'inv-bar' + (i === hist.bars.length - 1 ? ' partial' : '')} key={i}>
@@ -283,7 +283,7 @@ function InvDrawer({ row, onClose, few }) {
           <h3 className="inv-h3">Настройки</h3>
           <div className="inv-setting"><span>Фасовка по умолчанию<small>если в счёте вес не указан</small></span><span className="inv-select" style={{ width: 90 }}>{row.grams} г <Ic name="ChevronDown" size={13} /></span></div>
           <div className="inv-setting"><span>Держим постоянно<small>закончится — попадёт в «К заказу»</small></span><MasterToggle checked label="Держим постоянно" /></div>
-          <div className="inv-setting"><span>Стоп для гостей<small>контейнеры есть, но гостю не предлагать</small></span><MasterToggle checked={false} label="Стоп для гостей" /></div>
+          <div className="inv-setting"><span>Стоп для гостей<small>банки есть, но гостю не предлагать</small></span><MasterToggle checked={false} label="Стоп для гостей" /></div>
         </div>
 
         <div style={{ display: 'grid', gap: 6 }}>
@@ -323,7 +323,7 @@ function InvReorder({ copied }) {
           <pre className="inv-copy">{'Добрый день! Заказ:\nBlack Burn Cane Mint 200 г — 3 шт\nSebero Лимонная шипучка 200 г — 2 шт\nBlack Burn Pear lemonade 200 г — 2 шт\nСпасибо!'}</pre>
         </MasterCard>
       ) : null}
-      <p className="hint">Количество — расход на 21 день, округлено до контейнера. Срок поставки — 7 дней (настройка точки).</p>
+      <p className="hint">Количество — расход на 21 день, округлено до банки. Срок поставки — 7 дней (настройка точки).</p>
     </div>
   );
 }
@@ -345,7 +345,7 @@ function InvShelfScreen({ init = {}, onTab }) {
     setMenuFor(null);
     if (row.sealed > 0) {
       setRows((cur) => cur.map((r) => (r.id === row.id ? { ...r, open: 1, sealed: r.sealed - 1, last: r.sealed - 1 === 0 } : r)));
-      setToast({ title: row.brand + ' ' + row.name, text: 'контейнер пустой, следующий вскрыт. В запасе: ' + (row.sealed - 1) + '.' });
+      setToast({ title: row.brand + ' ' + row.name, text: 'банка пустая, следующая вскрыта. В запасе: ' + (row.sealed - 1) + '.' });
     } else {
       setRows((cur) => cur.map((r) => (r.id === row.id ? { ...r, open: null, remain: 0, status: 'out', until: 'закончился сегодня', last: false } : r)));
       setToast({ title: row.brand + ' ' + row.name, text: 'табак закончился, гости его больше не видят' + (row.mixes ? '. Миксов скрыто: ' + row.mixes : '') + '. Добавлен в «К заказу».' });
@@ -368,8 +368,8 @@ function InvShelfScreen({ init = {}, onTab }) {
       <MasterPageHeader
         eyebrow={'ИНВЕНТАРИЗАЦИЯ · ' + INV_D.today}
         title="Полка"
-        subtitle="Контейнеры на полке, расход и прогноз. Закончился контейнер — одна кнопка."
-        meta={s.shelf + ' позиций · ' + s.packs + ' контейнеров'}
+        subtitle="Банки на полке, расход и прогноз. Закончилась банка — одна кнопка."
+        meta={s.shelf + ' позиций · ' + s.packs + ' банок'}
         actions={<>
           <span className="inv-seg">
             <button aria-pressed={view === 'shelf'} onClick={() => setView('shelf')}>Полка</button>
@@ -380,7 +380,7 @@ function InvShelfScreen({ init = {}, onTab }) {
         </>}
       />
       <MasterStatsRow tiles={[
-        { label: 'НА ПОЛКЕ', value: s.shelf, hint: s.packs + ' контейнеров · ≈ ' + s.kg + ' кг' },
+        { label: 'НА ПОЛКЕ', value: s.shelf, hint: s.packs + ' банок · ≈ ' + s.kg + ' кг' },
         { label: 'ЗАКАНЧИВАЕТСЯ', value: s.ending, hint: 'хватит на 7 дней и меньше', tone: 'warning' },
         { label: 'ЗАКОНЧИЛИСЬ', value: s.out, hint: 'держим постоянно — в «К заказу»', tone: 'danger' },
         { label: 'СЕГОДНЯ УЙДЁТ', value: '≈ ' + s.todayG + ' г', hint: '≈ ' + s.todayBowls + ' чаш по 18 г · четверг +8 %' },
@@ -403,7 +403,7 @@ function InvShelfScreen({ init = {}, onTab }) {
           <div className="inv-keys">
             <span><b className="inv-kbd">/</b> поиск</span>
             <span><b className="inv-kbd">↑</b><b className="inv-kbd">↓</b> строка</span>
-            <span><b className="inv-kbd">E</b> закончился</span>
+            <span><b className="inv-kbd">E</b> закончилась</span>
             <span><b className="inv-kbd">1</b>–<b className="inv-kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
             <span><b className="inv-kbd">Enter</b> карточка</span>
             <span><b className="inv-kbd">Z</b> отменить</span>
@@ -427,7 +427,7 @@ function InvDeliveries({ onTab, edge }) {
         actions={<MasterButton variant="primary" icon={<Ic name="FileUp" size={14} />} onClick={() => onTab && onTab('parse')}>Загрузить счёт</MasterButton>}
       />
       <MasterStatsRow tiles={[
-        { label: 'ЗА НОЯБРЬ', value: '66 076 ₽', hint: '45 контейнеров' },
+        { label: 'ЗА НОЯБРЬ', value: '66 076 ₽', hint: '45 банок' },
         { label: 'ЖДУТ ПРИХОДА', value: 1, hint: 'черновик от 18 ноя', tone: 'warning' },
         { label: 'ПОСТАВЩИКОВ', value: 2, hint: 'сопоставлений в памяти: 61' },
         { label: 'ЦЕНА ГРАММА', value: '7,6 ₽', hint: 'в среднем по полке' },
@@ -443,7 +443,7 @@ function InvDeliveries({ onTab, edge }) {
       {edge === 'dup' ? (
         <div className="inv-alert">
           <Ic name="Copy" />
-          <p className="grow"><b>Счёт № 03944 от «Каспий Опт» уже загружен</b> 11 ноября и принят 12 ноября. Второй раз те же контейнеры не создаём.</p>
+          <p className="grow"><b>Счёт № 03944 от «Каспий Опт» уже загружен</b> 11 ноября и принят 12 ноября. Второй раз те же банки не создаём.</p>
           <MasterButton size="sm">Открыть принятый</MasterButton>
           <MasterButton size="sm" variant="ghost">Это другой счёт</MasterButton>
         </div>
@@ -459,7 +459,7 @@ function InvDeliveries({ onTab, edge }) {
           { key: 'supplier', label: 'ПОСТАВЩИК', width: 'minmax(0,1fr)' },
           { key: 'number', label: 'СЧЁТ', width: '130px' },
           { key: 'lines', label: 'СТРОК', width: '70px', align: 'right' },
-          { key: 'packs', label: 'КОНТЕЙНЕРОВ', width: '110px', align: 'right' },
+          { key: 'packs', label: 'БАНОК', width: '70px', align: 'right' },
           { key: 'sum', label: 'СУММА', width: '110px', align: 'right', render: (r) => <span className="inv-num">{r.sum}</span> },
           { key: 'arrived', label: 'ПРИШЛО', width: '100px' },
           { key: 'status', label: 'СТАТУС', width: '170px', render: (r) => r.status === 'draft'
@@ -530,7 +530,7 @@ function InvParse({ edge }) {
           } },
           { key: 'tag', label: '', width: '110px', render: (r) => (r.created ? <MasterTag tone="info">создана</MasterTag> : INV_MATCH_TAG[r.match]) },
           { key: 'grams', label: 'ФАСОВКА', width: '76px', render: (r) => (r.grams ? <span className="inv-num">{r.grams} г</span> : <span className="inv-faint">—</span>) },
-          { key: 'qty', label: 'КОЛ-ВО', width: '86px', render: (r) => (r.match === 'skip' ? <span className="inv-faint">—</span> : <span className="inv-stepper"><button>−</button><span>{r.qty}</span><button>+</button></span>) },
+          { key: 'qty', label: 'БАНОК', width: '86px', render: (r) => (r.match === 'skip' ? <span className="inv-faint">—</span> : <span className="inv-stepper"><button>−</button><span>{r.qty}</span><button>+</button></span>) },
           { key: 'price', label: 'ЦЕНА', width: '84px', align: 'right', render: (r) => <span className="inv-num">{r.price}</span> },
           { key: 'came', label: 'ПРИШЛО', width: '70px', align: 'center', render: (r) => (r.match === 'skip' ? null : <MasterToggle checked={r.came} onChange={(v) => resolve(r.i, { came: v })} label="Пришло" />) },
         ]}
@@ -541,7 +541,7 @@ function InvParse({ edge }) {
         <p className="grow">{edge === 'sum'
           ? <span className="inv-warn">Сумма строк 21 770 ₽ ≠ итог 22 270 ₽</span>
           : <span className="inv-ok">Сумма строк 22 270 ₽ = итог счёта</span>}
-          {' · будет ' + packs + ' контейнеров'}{pending ? <span className="inv-warn">{' · без табака: ' + pending + ' строки'}</span> : null}</p>
+          {' · будет ' + packs + ' банок'}{pending ? <span className="inv-warn">{' · без табака: ' + pending + ' строки'}</span> : null}</p>
         <MasterButton variant="ghost">Сохранить черновик</MasterButton>
         <MasterButton variant="primary" disabled={pending > 0}>{pending ? 'Выберите табак в ' + pending + ' строках' : 'Принять поставку'}</MasterButton>
       </div>
@@ -671,10 +671,10 @@ function InvDashboard() {
 function InvEmptyShelf({ onTab }) {
   return (
     <div className="page">
-      <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle="Контейнеры на полке, расход и прогноз." />
+      <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle="Банки на полке, расход и прогноз." />
       <div className="inv-empty-hero">
         <h2>Полка пуста</h2>
-        <p>Контейнеры появляются из поставок. Загрузите первый счёт поставщика — строки сопоставим с каталогом, вы проверите и примете. Табаки, которые уже стоят на полке, можно добавить из каталога без счёта.</p>
+        <p>Банки появляются из поставок. Загрузите первый счёт поставщика — строки сопоставим с каталогом, вы проверите и примете. Табаки, которые уже стоят на полке, можно добавить из каталога без счёта.</p>
         <div style={{ display: 'flex', gap: 8 }}>
           <MasterButton variant="primary" icon={<Ic name="FileUp" size={14} />} onClick={() => onTab && onTab('parse')}>Загрузить счёт</MasterButton>
           <MasterButton variant="ghost">Добавить из каталога</MasterButton>
@@ -684,7 +684,7 @@ function InvEmptyShelf({ onTab }) {
   );
 }
 
-// Интерактивный «Мастер»: вкладки, «Закончился», меню, карточка, поставки.
+// Интерактивный «Мастер»: вкладки, «Закончилась», меню, карточка, поставки.
 function InvApp({ start = 'shelf', init = {} }) {
   const [tab, setTab] = React.useState(start);
   const top = tab === 'parse' ? 'deliveries' : tab;
@@ -724,7 +724,7 @@ function MShelf({ sheet }) {
             <span className="inv-name"><b>{r.name}</b><span>{r.brand} · {r.grams} г</span></span>
             {r.status === 'check'
               ? <button className="m-empty-btn" onClick={() => setOpen(r.id)}>Проверить</button>
-              : <button className="m-empty-btn">Закончился</button>}
+              : <button className="m-empty-btn">Закончилась</button>}
             <div className="m-card-meta">
               <button className="m-pips" onClick={() => setOpen(r.id)} aria-label={'Сколько осталось: ' + r.name}><Pips row={r} /></button>
               <span style={{ fontSize: 13, textAlign: 'right' }}><InvUntil row={r} stacked /></span>
@@ -741,10 +741,10 @@ function MShelf({ sheet }) {
             <div>
               <p className="inv-eyebrow">{row.brand} · {row.grams} г</p>
               <h2>{row.name}</h2>
-              <span className="inv-muted">Открытый контейнер · вскрыт 7 ноя · {row.mark ? 'отметка ' + row.mark : 'отметок нет'}</span>
+              <span className="inv-muted">Открытая банка · вскрыта 7 ноя · {row.mark ? 'отметка ' + row.mark : 'отметок нет'}</span>
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
-              <h3 className="inv-h3">Сколько осталось в открытом?</h3>
+              <h3 className="inv-h3">Сколько осталось в открытой?</h3>
               <div className="m-fracs">
                 {[['1', 'полная'], ['¾', ''], ['½', ''], ['⅓', ''], ['¼', '']].map(([f, sub]) => (
                   <button key={f} className={'m-frac' + (frac === f ? ' on' : '')} onClick={() => setFrac(f)}>{f}{sub ? <small>{sub}</small> : null}</button>
@@ -752,7 +752,7 @@ function MShelf({ sheet }) {
               </div>
               <span className="inv-faint" style={{ fontSize: 12 }}>Можно не отмечать — отметка только уточняет прогноз.</span>
             </div>
-            <button className="m-big">Закончился · запаса нет</button>
+            <button className="m-big">Закончилась · запаса нет</button>
           </section>
         </>
       ) : null}
@@ -762,11 +762,11 @@ function MShelf({ sheet }) {
 
 // ── Кадры доски и режим #shot= ──
 const INV_SHOTS = [
-  { id: 'shelf', group: 'shelf', name: 'Полка', note: 'Статусы-чипы со счётчиками, контейнеры-пипсы, «хватит до», «Закончился» в строке.', start: 'shelf' },
+  { id: 'shelf', group: 'shelf', name: 'Полка', note: 'Статусы-чипы со счётчиками, банки-пипсы, «хватит до», «Закончилась» в строке.', start: 'shelf' },
   { id: 'shelf-filters', group: 'shelf', name: 'Полка · фильтры', note: 'Все фильтры в браузере: 269 строк, без запросов к серверу.', start: 'shelf', init: { filters: true } },
   { id: 'shelf-menu', group: 'shelf', name: 'Полка · меню строки', note: 'Отметка ¾ ½ ⅓ ¼ — по желанию. Остальное — редкие действия.', start: 'shelf', init: { menu: 'ds-blackcurrant' } },
-  { id: 'shelf-undo', group: 'shelf', name: 'Полка · «Закончился» и отмена', note: 'Одно нажатие, 10 секунд на отмену, гость сразу перестаёт видеть табак.', start: 'shelf', init: { rows: INV_D.shelf.map((r) => (r.id === 'bb-cane' ? { ...r, open: null, remain: 0, status: 'out', until: 'закончился сегодня', last: false } : r)), toast: { title: 'Black Burn Cane Mint', text: 'табак закончился, гости его больше не видят. Миксов скрыто: 3. Добавлен в «К заказу».' } } },
-  { id: 'shelf-drawer', group: 'shelf', name: 'Карточка на полке', note: 'История контейнеров, расход по контейнерам, прогноз, настройки.', start: 'shelf', init: { drawer: 'bb-rasp' } },
+  { id: 'shelf-undo', group: 'shelf', name: 'Полка · «Закончилась» и отмена', note: 'Одно нажатие, 10 секунд на отмену, гость сразу перестаёт видеть табак.', start: 'shelf', init: { rows: INV_D.shelf.map((r) => (r.id === 'bb-cane' ? { ...r, open: null, remain: 0, status: 'out', until: 'закончился сегодня', last: false } : r)), toast: { title: 'Black Burn Cane Mint', text: 'табак закончился, гости его больше не видят. Миксов скрыто: 3. Добавлен в «К заказу».' } } },
+  { id: 'shelf-drawer', group: 'shelf', name: 'Карточка на полке', note: 'История банок, расход по банкам, прогноз, настройки.', start: 'shelf', init: { drawer: 'bb-rasp' } },
   { id: 'reorder', group: 'shelf', name: 'К заказу', note: 'Группы по последнему поставщику, количество — расход на 21 день.', start: 'shelf', init: { view: 'reorder', copied: true }, tall: true },
   { id: 'deliveries', group: 'deliveries', name: 'Поставки', note: 'Счета, черновик ждёт прихода.', start: 'deliveries' },
   { id: 'delivery-parse', group: 'deliveries', name: 'Разбор счёта', note: 'Реальный счёт поставщика: память, предложения, нет в каталоге, не табак, фасовка 25 г, ×2.', start: 'parse', tall: true },
@@ -774,7 +774,7 @@ const INV_SHOTS = [
   { id: 'catalog-all', group: 'catalog', name: 'Каталог → Все табаки', note: 'Каталог отделён от полки, колонки htreviews.', start: 'catalog', init: { view: 'all' } },
   { id: 'dashboard', group: 'dashboard', name: 'Дашборд: блок полки', note: 'Прогноз на сегодня, что заканчивается, траты, расход по неделям.', start: 'dashboard', tall: true },
   { id: 'edge-empty', group: 'edge', name: 'Пустая полка', start: 'shelf', init: { empty: true } },
-  { id: 'edge-few', group: 'edge', name: 'Мало данных о расходе', note: 'Прогноз по бренду, пока нет своего пустого контейнера.', start: 'shelf', init: { drawer: 'sr-passion', few: true } },
+  { id: 'edge-few', group: 'edge', name: 'Мало данных о расходе', note: 'Прогноз по бренду, пока нет своей пустой банки.', start: 'shelf', init: { drawer: 'sr-passion', few: true } },
   { id: 'edge-pdf', group: 'edge', name: 'PDF без текста', start: 'deliveries', init: { edge: 'pdf' } },
   { id: 'edge-dup', group: 'edge', name: 'Счёт уже загружен', start: 'deliveries', init: { edge: 'dup' } },
   { id: 'edge-sum', group: 'edge', name: 'Сумма не сходится', start: 'parse', init: { edge: 'sum' }, tall: true },
@@ -803,10 +803,10 @@ function InvBoard() {
     <div className="board">
       <header className="board-head">
         <p className="board-caps">#152 · Мастер · десктоп 1280 и телефон 375</p>
-        <h1 className="board-title">Инвентарь: поставки, контейнеры, расход</h1>
+        <h1 className="board-title">Инвентарь: поставки, банки, расход</h1>
         <p className="board-text">
-          Каталог (что бывает) отделён от полки (что держим). Контейнер приходит по счёту поставщика, вскрывается сам,
-          мастер отмечает только «Закончился» и, если хочет, остаток ¾ ½ ⅓ ¼. Из дат прихода, вскрытия и окончания
+          Каталог (что бывает) отделён от полки (что держим). Банка приходит по счёту поставщика, вскрывается сама,
+          мастер отмечает только «Закончилась» и, если хочет, остаток ¾ ½ ⅓ ¼. Из дат прихода, вскрытия и окончания
           считаются расход, прогноз «хватит до» и список «К заказу». htreviews — для идей закупки.
           Табаки и миксы — прод на 19 октября; мокап показывает полку через месяц после запуска, поставщики вымышлены, цифры htreviews условные.
         </p>
@@ -814,7 +814,7 @@ function InvBoard() {
 
       <section className="board-section">
         <h2 className="board-h2">Кликабельный прототип</h2>
-        <p className="frame-note">Вкладки «Полка», «Поставки», «Каталог», «Дашборд»; «Закончился» и отмена; меню «⋯»; клик по строке — карточка; «Загрузить счёт» — разбор.</p>
+        <p className="frame-note">Вкладки «Полка», «Поставки», «Каталог», «Дашборд»; «Закончилась» и отмена; меню «⋯»; клик по строке — карточка; «Загрузить счёт» — разбор.</p>
         <InvDesk><InvApp start="shelf" /></InvDesk>
       </section>
       <section className="board-section"><h2 className="board-h2">Полка</h2><div className="board-row">{section('shelf')}</div></section>
