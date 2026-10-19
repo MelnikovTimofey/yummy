@@ -1,6 +1,6 @@
 // Данные мокапа. Табаки и миксы — полка и каталог миксов прода на 19.10.2026
 // (GET /guest/mixer/palette, GET /guest/catalog/mixes). Мокап показывает полку через месяц
-// после запуска: «сегодня» — четверг, 19 ноября 2026. Банки, расход, цены и поставки
+// после запуска: «сегодня» — четверг, 19 ноября 2026. Контейнеры, расход, цены и поставки
 // смоделированы по двум реальным счетам; поставщики и номера счетов вымышлены,
 // цифры htreviews условные.
 window.INV = {
@@ -9,13 +9,13 @@ window.INV = {
   stats: { shelf: 269, packs: 412, kg: 78, ending: 14, out: 6, todayG: 540, todayBowls: 30 },
   statusCounts: { all: 269, ok: 211, last: 38, ending: 14, out: 6, stop: 3, plan: 4 },
 
-  // packs: open — доля остатка открытой банки, sealed — банок в запасе.
+  // packs: open — доля остатка открытого контейнера, sealed — контейнеров в запасе.
   // rate — г/день; rateKind: ok | brand (оценка по бренду) | none.
   shelf: [
     { id: 'bb-cane', brand: 'Black Burn', name: 'Cane Mint', grams: 200, profiles: ['minty'], open: 0.2, sealed: 0, remain: 40, rate: 21, rateKind: 'ok', until: '21 ноя', days: 2, status: 'ending', last: true, arrived: '5 ноя', supplier: 'Каспий Опт', mixes: 3 },
     { id: 'ds-blackcurrant', brand: 'DARKSIDE', name: 'Blackcurrant', grams: 250, profiles: ['berry'], open: 0.25, sealed: 0, remain: 55, rate: 9, rateKind: 'ok', until: '25 ноя', days: 6, status: 'ending', last: true, mark: '¼ вчера', arrived: '15 окт', supplier: 'Южный табак', mixes: 0 },
     { id: 'bb-pear', brand: 'Black Burn', name: 'Pear lemonade', grams: 200, profiles: ['fruity'], open: 0.7, sealed: 0, remain: 140, rate: 12, rateKind: 'ok', until: '30 ноя', days: 11, status: 'last', last: true, arrived: '12 ноя', supplier: 'Каспий Опт', mixes: 0 },
-    { id: 'hl-panama', brand: 'Хулиган', name: 'Panama', grams: 200, profiles: ['fruity'], open: 0.05, sealed: 1, remain: 210, rate: 8, rateKind: 'ok', until: '15 дек', days: 26, status: 'check', initial: true, arrived: 'начальный остаток', supplier: '—', mixes: 0 },
+    { id: 'hl-panama', brand: 'Хулиган', name: 'Panama', grams: 200, profiles: ['fruity'], open: 0.05, sealed: 1, remain: 210, rate: 8, rateKind: 'ok', until: '15 дек', days: 26, status: 'check', initial: true, arrived: '19 окт', supplier: 'Стартовый приход', mixes: 0 },
     { id: 'ds-bittersweet', brand: 'DARKSIDE', name: 'Bittersweet', grams: 250, profiles: ['citrus'], open: 0.4, sealed: 2, remain: 600, rate: 17, rateKind: 'ok', until: '24 дек', days: 35, status: 'ok', arrived: '12 ноя', supplier: 'Южный табак', mixes: 3 },
     { id: 'bb-rasp', brand: 'Black Burn', name: 'Raspberries', grams: 200, profiles: ['berry'], open: 0.45, sealed: 1, remain: 290, rate: 13, rateKind: 'ok', until: '11 дек', days: 22, status: 'ok', mark: '½ 17 ноя', arrived: '12 ноя', supplier: 'Каспий Опт', mixes: 0 },
     { id: 'ds-mango', brand: 'DARKSIDE', name: 'Mango Lassi 2.0', grams: 250, profiles: ['fruity'], open: 0.5, sealed: 1, remain: 375, rate: 11, rateKind: 'ok', until: '23 дек', days: 34, status: 'ok', arrived: '15 окт', supplier: 'Южный табак', mixes: 1 },
@@ -34,16 +34,16 @@ window.INV = {
     'sb-lemon': ['Барбариска с лимонадом', 'Лавандовый лимонад'],
   },
 
-  // История банок Black Burn Raspberries для карточки.
+  // История контейнеров Black Burn Raspberries для карточки.
   rasp: {
     packs: [
-      { n: 5, state: 'sealed', title: 'В запасе', line: 'пришла 12 ноя · счёт № 03944 · 1 550 ₽' },
-      { n: 4, state: 'open', fill: 0.45, title: 'В работе', line: 'пришла 12 ноя · вскрыта 14 ноя · отметка ½ 17 ноя' },
-      { n: 3, state: 'empty', title: 'Пустая', line: '29 окт → 14 ноя · 16 дн · 12,5 г/день' },
-      { n: 2, state: 'empty', title: 'Пустая', line: '15 окт → 29 окт · 14 дн · 14,3 г/день' },
+      { n: 5, state: 'sealed', title: 'В запасе', line: 'пришёл 12 ноя · счёт № 03944 · 1 550 ₽' },
+      { n: 4, state: 'open', fill: 0.45, title: 'В работе', line: 'пришёл 12 ноя · вскрыт 14 ноя · отметка ½ 17 ноя' },
+      { n: 3, state: 'empty', title: 'Пустой', line: '29 окт → 14 ноя · 16 дн · 12,5 г/день' },
+      { n: 2, state: 'empty', title: 'Пустой', line: '15 окт → 29 окт · 14 дн · 14,3 г/день' },
     ],
     bars: [14.3, 12.5, 13.1],
-    barLabels: ['банка 2', 'банка 3', 'банка 4 (идёт)'],
+    barLabels: ['контейнер 2', 'контейнер 3', 'контейнер 4 (идёт)'],
   },
 
   deliveries: [
