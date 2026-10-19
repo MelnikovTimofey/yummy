@@ -139,8 +139,9 @@ test.describe('к заказу', () => {
     assert.deepEqual(reorder.settings, { bowlGrams: 18, leadDays: 7 });
     const bySupplier = new Map(reorder.groups.map((group) => [group.supplier?.id ?? null, group]));
     assert.equal(reorder.groups.length, 3);
-    // Южный табак — только «заканчивается» позже Berry: группа последняя.
-    assert.equal(reorder.groups[2].supplier?.id, yug.id);
+    // С поставщиком — по срочности первой строки; «Поставщик не выбран» — всегда последней,
+    // хотя закончившийся Herbal и Peach в плане срочнее Apple.
+    assert.deepEqual(reorder.groups.map((group) => group.supplier?.id ?? null), [kaspiy.id, yug.id, null]);
 
     const k = bySupplier.get(kaspiy.id)!;
     assert.deepEqual(k.supplier, { id: kaspiy.id, name: 'Каспий Опт' });
@@ -246,6 +247,9 @@ test.describe('дашборд полки', () => {
     await addPack(actor, BERRY, { priceKop: 160_000 }, at(1));
     await markEmpty(actor, BERRY, at(6));
     await markEmpty(actor, MINT, at(5));
+    // Закончившийся, который не держим постоянно, — не в списке.
+    await markEmpty(actor, HERBAL, at(5));
+    await prisma.shelfItem.update({ where: { tobaccoId: HERBAL }, data: { keepStocked: false } });
     const dashboard = await getShelfDashboard(at(8));
     assert.deepEqual(dashboard.ending.map((item) => [item.tobacco.id, item.status]), [
       [MINT, 'out'],

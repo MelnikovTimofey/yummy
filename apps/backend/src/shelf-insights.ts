@@ -118,7 +118,8 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
   const { records, items, forecasts, settings } = await loadShelf(now);
   const byId = new Map(records.map((record, index) => [record.tobaccoId, { record, forecast: forecasts[index] }]));
 
-  // reorderList уже отсортирован по срочности: группы идут в порядке первой строки.
+  // reorderList уже отсортирован по срочности: группы идут в порядке первой строки,
+  // «Поставщик не выбран» — последней.
   const groups = new Map<string | null, ReorderGroup>();
   for (const line of reorderList(items, forecasts, settings)) {
     const { record, forecast } = byId.get(line.tobaccoId)!;
@@ -139,7 +140,8 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
   }
 
   const invoices = await loadLastInvoices([...groups.keys()].filter((key): key is string => key !== null));
-  const result = [...groups.values()].map((group) => {
+  const ordered = [...groups.values()].sort((a, b) => Number(a.supplier === null) - Number(b.supplier === null));
+  const result = ordered.map((group) => {
     const invoice = group.supplier ? invoices.get(group.supplier.id) : undefined;
     const priced = group.items.every((item) => item.lastPriceKop !== null);
     return {
@@ -215,7 +217,7 @@ const loadMonthSpend = async (now: Date) => {
 const endingOf = (records: ShelfRecord[], forecasts: ShelfForecast[]) => {
   const rows = forecasts
     .map((forecast, index) => ({ forecast, record: records[index] }))
-    .filter(({ forecast }) => forecast.status === 'out' || forecast.status === 'ending');
+    .filter(({ forecast, record }) => forecast.status === 'ending' || (forecast.status === 'out' && record.keepStocked));
   const rank = ({ forecast }: (typeof rows)[number]) =>
     forecast.status === 'out' ? -Infinity : forecast.endsAt?.getTime() ?? Infinity;
   return rows
