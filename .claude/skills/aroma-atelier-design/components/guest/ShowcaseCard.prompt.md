@@ -6,4 +6,4 @@ Poster inside a horizontally scrolling Витрина shelf. The shelf header (L
 </div>
 ```
 
-Fixed 156×92 — about two posters per phone width, the third peeks from the edge. Glyph 28 and a compact rating on top, the name clamps to two lines, a 2px signature runs along the bottom edge. No flavours on the poster: they live in the mix sheet.
+Fixed 156×92 — about two posters per phone width, the third peeks from the edge. Glyph 28 and a compact rating on top (no rating when the mix has no guest ratings — the glyph stays top-left, the name does not move), the name clamps to two lines, a 2px signature runs along the bottom edge. No flavours on the poster: they live in the mix sheet.
