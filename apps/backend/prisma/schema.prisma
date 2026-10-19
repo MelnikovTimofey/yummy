@@ -147,6 +147,9 @@ model Tobacco {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   mixComponents   MixComponent[]
+  shelfItem       ShelfItem?
+  supplierItems   SupplierItem[]
+  deliveryLines   DeliveryLine[]
 
   @@unique([sourceKind, sourceNumericId])
   @@index([manufacturer, lineName, name])
@@ -292,4 +295,140 @@ model CustomMixSmokeEvent {
 
   @@index([signature])
   @@index([createdAt])
+}
+
+// Полка точки (#152): что точка держит. Каталог (Tobacco) о наличии не знает —
+// Tobacco.inStock только кэш, который пишет сервис полки (src/shelf.ts).
+model ShelfItem {
+  id          String   @id @default(uuid())
+  tobaccoId   String   @unique
+  status      String   @default("active")
+  keepStocked Boolean  @default(true)
+  stopped     Boolean  @default(false)
+  stopNote    String?
+  packWeight  Int
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tobacco     Tobacco  @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
+  packs       Pack[]
+
+  @@index([status])
+}
+
+// Банка (пачка 25 г — тоже банка). openedAt — только явное «вскрыть ещё одну»;
+// обычное вскрытие выводит resolvePacks (src/stock.ts).
+model Pack {
+  id             String        @id @default(uuid())
+  shelfItemId    String
+  weight         Int
+  priceKop       Int?
+  receivedAt     DateTime
+  openedAt       DateTime?
+  emptiedAt      DateTime?
+  writtenOffAt   DateTime?
+  writeOffReason String?
+  deliveryId     String?
+  deliveryLineId String?
+  createdAt      DateTime      @default(now())
+  shelfItem      ShelfItem     @relation(fields: [shelfItemId], references: [id], onDelete: Restrict)
+  delivery       Delivery?     @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+  deliveryLine   DeliveryLine? @relation(fields: [deliveryLineId], references: [id], onDelete: SetNull)
+  marks          PackMark[]
+
+  @@index([shelfItemId])
+  @@index([deliveryId])
+  @@index([deliveryLineId])
+}
+
+model PackMark {
+  id         String   @id @default(uuid())
+  packId     String
+  fraction   Float
+  at         DateTime
+  actorLogin String?
+  createdAt  DateTime @default(now())
+  pack       Pack     @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@index([packId])
+}
+
+model ShelfSettings {
+  id        Int      @id @default(1)
+  bowlGrams Int      @default(18)
+  leadDays  Int      @default(7)
+  updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id         String         @id @default(uuid())
+  name       String
+  inn        String?        @unique
+  format     String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  items      SupplierItem[]
+  deliveries Delivery[]
+}
+
+// Память сопоставлений «строка счёта поставщика → табак каталога».
+model SupplierItem {
+  id             String   @id @default(uuid())
+  supplierId     String
+  article        String?
+  normalizedName String
+  tobaccoId      String
+  packWeight     Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  tobacco        Tobacco  @relation(fields: [tobaccoId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, normalizedName])
+  @@index([supplierId, article])
+  @@index([tobaccoId])
+}
+
+model Delivery {
+  id          String         @id @default(uuid())
+  supplierId  String?
+  kind        String
+  number      String?
+  invoiceDate DateTime?
+  receivedAt  DateTime?
+  status      String         @default("draft")
+  totalKop    Int?
+  fileName    String?
+  file        Bytes?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  supplier    Supplier?      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  lines       DeliveryLine[]
+  packs       Pack[]
+
+  @@index([supplierId])
+  @@index([status])
+}
+
+model DeliveryLine {
+  id          String   @id @default(uuid())
+  deliveryId  String
+  n           Int
+  rawName     String
+  article     String?
+  qty         Int
+  unit        String?
+  priceKop    Int?
+  sumKop      Int?
+  grams       Int?
+  tobaccoId   String?
+  kind        String   @default("tobacco")
+  arrived     Boolean  @default(true)
+  matchReason String?
+  delivery    Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  tobacco     Tobacco? @relation(fields: [tobaccoId], references: [id], onDelete: SetNull)
+  packs       Pack[]
+
+  @@index([deliveryId])
+  @@index([tobaccoId])
 }
