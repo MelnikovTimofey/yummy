@@ -199,53 +199,120 @@ function ShowcaseScreen({ onOpen, onOpenRail }) {
   );
 }
 
-function CatalogScreen({ query, setQuery, profiles, toggleProfile, flavors, toggleFlavor, sort, setSort, popoverOpen, setPopoverOpen, results, onOpen, onReset }) {
-  const dirty = Boolean(query) || profiles.length || flavors.length || sort !== 'popularity';
+// Каталог по варианту B (#181): фильтр — метка { kind: 'profile' | 'flavor', value }, как CatalogFilterTag в приложении.
+const filterLabel = (tag) => (tag.kind === 'profile' ? label(tag.value) : tag.value);
+const sameFilter = (a, b) => a.kind === b.kind && a.value === b.value;
+// В приложении счётчики приходят из /guest/onboarding/options, в ките считаются по мок-миксам.
+const countBy = (pick) => M.mixes.reduce((acc, mix) => { pick(mix).forEach((v) => { acc[v] = (acc[v] || 0) + 1; }); return acc; }, {});
+const profileCounts = countBy((mix) => mix.flavorProfiles);
+const flavorCounts = countBy((mix) => mix.flavors);
+const byCountDesc = (values, counts, toLabel = (v) => v) => [...values].sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || toLabel(a).localeCompare(toLabel(b), 'ru'));
+// Сразу видны самые частые вкусы, остальные — по «Все N вкусов» или поиску.
+const SHEET_FLAVOR_LIMIT = 18;
+
+function FiltersIcon() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M2 4h12M5 8h6M7 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+}
+
+// Совпавшие с меткой или текстом вкусы — первыми, чтобы было видно, почему микс в выдаче.
+function flavorsMatchedFirst(flavors, query, filters) {
+  const q = query.trim().toLowerCase();
+  const hit = (f) => filters.some((t) => t.kind === 'flavor' && t.value === f) || (q !== '' && f.includes(q));
+  return [...flavors.filter(hit), ...flavors.filter((f) => !hit(f))];
+}
+
+function CatalogScreen({ query, setQuery, filters, onRemoveFilter, onOpenFilters, results, onOpen, onReset }) {
+  const last = filters[filters.length - 1];
+  const lastLabel = last ? filterLabel(last) : query.trim();
+  const dirty = Boolean(query.trim()) || filters.length > 0;
   return (
     <section className="aroma-catalog">
       <div className="aroma-catalog-rail">
         <div className="aroma-catalog-search-row">
-          <input type="search" className="aroma-catalog-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Поиск по названию и описанию" autoComplete="off" />
-          <button type="button" className="aroma-catalog-icon-btn" onClick={() => setPopoverOpen(!popoverOpen)} aria-label="Фильтры и сортировка" aria-expanded={popoverOpen}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M2 4h12M5 8h6M7 12h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            {flavors.length || sort !== 'popularity' ? <span className="aroma-catalog-icon-dot" aria-hidden /> : null}
+          <input type="search" className="aroma-catalog-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Микс, вкус, табак" aria-label="Поиск по каталогу" enterKeyHint="search" autoComplete="off" />
+          <button type="button" className={'aroma-catalog-filter-btn' + (filters.length ? ' aroma-catalog-filter-btn-on' : '')} onClick={onOpenFilters} aria-label={filters.length ? 'Фильтры, выбрано ' + filters.length : 'Фильтры'}>
+            <FiltersIcon />
+            <span>Фильтры</span>
+            {filters.length ? <span className="aroma-catalog-filter-count">{filters.length}</span> : null}
           </button>
         </div>
-        <div className="aroma-chip-scroll">
-          {Object.keys(M.profileLabels).map((id) => (
-            <AromaChip key={id} profile={id} active={profiles.includes(id)} onClick={() => toggleProfile(id)}>{label(id)}</AromaChip>
-          ))}
-        </div>
-      </div>
-
-      {popoverOpen ? (
-        <div className="aroma-catalog-popover" role="dialog" aria-label="Фильтры каталога">
-          <p className="aroma-caps">Сортировка</p>
-          <div className="aroma-catalog-sort">
-            {[['popularity', 'По популярности'], ['rating', 'По рейтингу'], ['newest', 'Сначала новое']].map(([v, l]) => (
-              <button key={v} type="button" className={'aroma-sort-btn' + (sort === v ? ' on' : '')} onClick={() => setSort(v)}>{l}</button>
+        {filters.length ? (
+          <div className="aroma-catalog-tags" role="group" aria-label="Выбранные фильтры">
+            {filters.map((tag) => (
+              <AromaChip key={tag.kind + '-' + tag.value} active profile={tag.kind === 'profile' ? tag.value : undefined} onClick={() => onRemoveFilter(tag)}>
+                {filterLabel(tag)}<span className="aroma-catalog-tag-x" aria-hidden>×</span>
+              </AromaChip>
             ))}
           </div>
-          <p className="aroma-caps">Вкусы</p>
-          <div className="aroma-flavor-scroll">
-            {M.flavors.map((f) => <AromaChip key={f} active={flavors.includes(f)} onClick={() => toggleFlavor(f)}>{f}</AromaChip>)}
-          </div>
-          <AromaCTA onClick={() => setPopoverOpen(false)}>Готово</AromaCTA>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <div className="aroma-catalog-meta">
         <p className="aroma-caps">{'Найдено · ' + results.length}</p>
-        {dirty ? <button type="button" className="aroma-skip" onClick={onReset}>Сбросить</button> : null}
+        {dirty && results.length ? <button type="button" className="aroma-skip" onClick={onReset}>Сбросить</button> : null}
       </div>
 
-      {!results.length ? <p className="guest-status">По выбранным фильтрам ничего не найдено.</p> : null}
-      <div className="aroma-list">
+      {!results.length ? (
+        <div className="aroma-catalog-empty">
+          <p className="guest-status">По выбранным фильтрам ничего не найдено. Даже мастер развёл руками.</p>
+          <div className="aroma-catalog-empty-actions">
+            {lastLabel ? <button type="button" className="aroma-ghost-sm" onClick={() => (last ? onRemoveFilter(last) : setQuery(''))}>{'Убрать «' + lastLabel + '»'}</button> : null}
+            <button type="button" className="aroma-skip" onClick={onReset}>Сбросить всё</button>
+          </div>
+        </div>
+      ) : null}
+      <div className="aroma-catalog-list">
         {results.map((mix) => (
-          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={mix.avgRating} onClick={() => onOpen(mix, 'catalog')} />
+          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={flavorsMatchedFirst(mix.flavors, query, filters)} rating={mix.avgRating} glyphSize={36} style={{ padding: '7px 12px' }} onClick={() => onOpen(mix, 'catalog')} />
         ))}
       </div>
     </section>
+  );
+}
+
+// Шторка «Фильтры» — разметка карточки микса; выбор применяется сразу, CTA только закрывает.
+function CatalogFiltersSheet({ filters, onToggle, onReset, resultCount, onClose }) {
+  const [find, setFind] = React.useState('');
+  const [showAll, setShowAll] = React.useState(false);
+  // Как availableProfileOptions в приложении: только характеры, которые есть в каталоге.
+  const profiles = byCountDesc(Object.keys(M.profileLabels).filter((p) => profileCounts[p]), profileCounts, label);
+  const flavors = byCountDesc(M.flavors, flavorCounts);
+  const f = find.trim().toLowerCase();
+  const visibleFlavors = f ? flavors.filter((x) => x.includes(f)) : showAll ? flavors : flavors.slice(0, SHEET_FLAVOR_LIMIT);
+  const isOn = (tag) => filters.some((t) => sameFilter(t, tag));
+  const chip = (tag, count) => (
+    <AromaChip key={tag.value} active={isOn(tag)} profile={tag.kind === 'profile' ? tag.value : undefined} onClick={() => onToggle(tag)}>
+      {filterLabel(tag)}<span className="aroma-catalog-chip-count">{count}</span>
+    </AromaChip>
+  );
+  return (
+    <div className="aroma-sheet-overlay" onClick={onClose}>
+      <section className="aroma-sheet" role="dialog" aria-label="Фильтры" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--guest-sheet-bg)' }}>
+        <span className="aroma-sheet-handle" aria-hidden />
+        <div className="aroma-catalog-sheet-head">
+          <h2 className="aroma-sheet-title">Фильтры</h2>
+          {filters.length ? <button type="button" className="aroma-skip" onClick={onReset}>Сбросить</button> : null}
+        </div>
+        <section className="aroma-sheet-block">
+          <p className="aroma-caps">Характер</p>
+          <div className="aroma-catalog-sheet-chips" role="group" aria-label="Характер">
+            {profiles.map((p) => chip({ kind: 'profile', value: p }, profileCounts[p] || 0))}
+          </div>
+        </section>
+        <section className="aroma-sheet-block">
+          <p className="aroma-caps">Вкусы</p>
+          <input type="search" className="aroma-catalog-sheet-search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Найти вкус" aria-label="Найти вкус" enterKeyHint="search" autoComplete="off" />
+          <div className="aroma-catalog-sheet-chips" role="group" aria-label="Вкусы">
+            {visibleFlavors.map((v) => chip({ kind: 'flavor', value: v }, flavorCounts[v] || 0))}
+          </div>
+          {f && !visibleFlavors.length ? <p className="aroma-catalog-sheet-hint">Такого вкуса в каталоге нет.</p> : null}
+          {!f && !showAll && flavors.length > SHEET_FLAVOR_LIMIT ? (
+            <button type="button" className="aroma-skip aroma-catalog-sheet-more" onClick={() => setShowAll(true)}>{'Все ' + flavors.length + ' вкусов'}</button>
+          ) : null}
+        </section>
+        <AromaCTA disabled={!resultCount} onClick={onClose}>{resultCount ? 'Показать ' + resultCount + ' ' + plural(resultCount) : 'Ничего не найдено'}</AromaCTA>
+      </section>
+    </div>
   );
 }
 
@@ -345,7 +412,7 @@ function ConfirmationScreen({ mix, onDone }) {
   );
 }
 
-Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
+Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
   return (
     <div className="aroma-selected-shell">
       <GuestCard compact title="Карточка для мастера" style={{ display: 'grid', gap: 10 }}>

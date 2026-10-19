@@ -108,23 +108,38 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-showcase-scroller::-webkit-scrollbar{display:none}
 .aroma-showcase-scroller>button:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
 
-/* Catalog */
+/* Catalog (#181, вариант B): поле и кнопка «Фильтры», метки выбранного, шторка — по .aroma-catalog-* в apps/aroma-web */
 .aroma-catalog{display:grid;gap:12px;align-content:start;position:relative}
 .aroma-catalog-rail{display:grid;gap:8px;position:sticky;top:0;z-index:2;margin:-12px -20px 2px;padding:12px 20px 10px;border-bottom:1px solid var(--line-soft);background:rgba(20,20,23,.92);backdrop-filter:blur(12px)}
-.aroma-catalog-search-row{display:grid;grid-template-columns:1fr 38px;gap:8px;align-items:center}
-.aroma-catalog-search{width:100%;height:38px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 14px;font-size:13px;outline:none}
+.aroma-catalog-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+/* 16px — меньший кегль iOS Safari увеличивает при фокусе */
+.aroma-catalog-search{width:100%;box-sizing:border-box;height:44px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 14px;font-family:var(--font-body);font-size:16px;outline:none}
+.aroma-catalog-search::placeholder{color:var(--text-2)}
 .aroma-catalog-search:focus-visible{border-color:var(--accent-hover)}
-.aroma-catalog-icon-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-1);position:relative;cursor:pointer}
-.aroma-catalog-icon-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:999px;background:var(--primary)}
+.aroma-catalog-filter-btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-1);font-family:var(--font-body);font-size:13px;white-space:nowrap;cursor:pointer}
+.aroma-catalog-filter-btn-on{border-color:var(--guest-chip-border-on);color:var(--text-0)}
+.aroma-catalog-filter-btn:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.aroma-catalog-filter-count{color:var(--guest-chip-ink-on);font-weight:600;font-variant-numeric:tabular-nums}
+/* метки — одной строкой с прокруткой: шапка не растёт, сколько ни выбери */
+.aroma-catalog-tags{display:flex;gap:6px;overflow-x:auto;margin:0 -20px;padding:0 20px 2px;scrollbar-width:none}
+.aroma-catalog-tags::-webkit-scrollbar{display:none}
+.aroma-catalog-tags>button{flex:0 0 auto}
+.aroma-catalog-tag-x{margin-left:2px;opacity:.8}
+.aroma-catalog-meta{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aroma-catalog-empty{display:grid;gap:10px;justify-items:start}
+.aroma-catalog-empty-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.aroma-catalog-list{display:grid;gap:6px}
+.aroma-catalog-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aroma-catalog-sheet-chips{display:flex;flex-wrap:wrap;gap:6px}
+.aroma-catalog-chip-count{margin-left:3px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.aroma-catalog-sheet-search{width:100%;box-sizing:border-box;height:40px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 12px;font-family:var(--font-body);font-size:16px;outline:none}
+.aroma-catalog-sheet-search::placeholder{color:var(--text-2)}
+.aroma-catalog-sheet-search:focus-visible{border-color:var(--accent-hover)}
+.aroma-catalog-sheet-hint{margin:0;font-size:12px;color:var(--text-2)}
+.aroma-catalog-sheet-more{justify-self:start;padding:0}
 .aroma-chip-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .aroma-chip-scroll::-webkit-scrollbar{display:none}
 .aroma-chip-scroll>button{flex:0 0 auto}
-.aroma-catalog-popover{border:1px solid var(--line);border-radius:var(--r-guest-card);padding:14px;background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-popover);display:grid;gap:10px}
-.aroma-catalog-sort{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.aroma-sort-btn{min-height:36px;border-radius:12px;border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-1);font-size:12px;cursor:pointer;padding:0 6px}
-.aroma-sort-btn.on{border-color:var(--guest-chip-border-on);color:var(--guest-chip-ink-on);font-weight:600;background:var(--guest-chip-bg-on)}
-.aroma-flavor-scroll{display:flex;flex-wrap:wrap;gap:6px;max-height:132px;overflow-y:auto;padding-right:4px}
-.aroma-catalog-meta{display:flex;align-items:center;justify-content:space-between;gap:12px}
 
 /* Rail */
 .aroma-rail{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding:12px 20px 20px;overflow-y:auto}
