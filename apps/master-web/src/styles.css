@@ -1905,7 +1905,7 @@ input[type="checkbox"] {
   width: 1%;
 }
 
-.rails-table__actions {
+.rails-table__action-group {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
