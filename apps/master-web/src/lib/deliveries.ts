@@ -4,15 +4,21 @@ import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListIte
 // деньги и даты. Решения о сопоставлении принимает backend, здесь — только
 // как их показать.
 
-// memory — по памяти поставщика; suggest — уверенное предложение каталога;
-// weak — табак не выбран, но в каталоге есть похожий; manual — выбрал мастер;
-// none — в каталоге ничего похожего; skip — не табак.
-export type LineMatch = 'memory' | 'suggest' | 'weak' | 'manual' | 'none' | 'skip';
+// Зеркало порога apps/backend/src/invoices/match.ts: с этой уверенности
+// backend сам выбирает табак, и проверять такую строку не обязательно.
+export const CONFIDENT_MATCH = 80;
+
+// memory — по памяти поставщика; catalog — уверенное совпадение с каталогом;
+// suggest — табак выбран по каталогу, но совпадение слабое; weak — табак не
+// выбран, но в каталоге есть похожий; manual — выбрал мастер; none — в каталоге
+// ничего похожего; skip — не табак.
+export type LineMatch = 'memory' | 'catalog' | 'suggest' | 'weak' | 'manual' | 'none' | 'skip';
 
 export type TagTone = 'success' | 'warning' | 'danger' | 'info' | 'ghost';
 
 export const LINE_MATCH_TAG: Record<LineMatch, { tone: TagTone; label: string }> = {
   memory: { tone: 'success', label: 'по памяти' },
+  catalog: { tone: 'success', label: 'по каталогу' },
   suggest: { tone: 'warning', label: 'проверьте' },
   weak: { tone: 'warning', label: 'проверьте' },
   manual: { tone: 'info', label: 'выбрано' },
@@ -29,7 +35,7 @@ export const lineMatch = (line: DeliveryLine): LineMatch => {
     return top && top.reason !== 'no-brand' ? 'weak' : 'none';
   }
   if (line.matchReason === 'memory') return 'memory';
-  if (line.matchReason === 'catalog') return 'suggest';
+  if (line.matchReason === 'catalog') return (line.confidence ?? 0) >= CONFIDENT_MATCH ? 'catalog' : 'suggest';
   return 'manual';
 };
 
@@ -41,6 +47,7 @@ export const lineMatchHint = (line: DeliveryLine) => {
       return 'нет бренда и веса';
     case 'memory':
       return `по памяти: строка этого поставщика${suffix}`;
+    case 'catalog':
     case 'suggest':
       return line.confidence === null
         ? `предложено по каталогу${suffix}`
@@ -57,7 +64,7 @@ export const lineMatchHint = (line: DeliveryLine) => {
 };
 
 export const summarizeLines = (lines: DeliveryLine[]) => {
-  const summary = { memory: 0, suggest: 0, none: 0, skip: 0, manual: 0 };
+  const summary = { memory: 0, catalog: 0, suggest: 0, none: 0, skip: 0, manual: 0 };
   for (const item of lines) {
     const match = lineMatch(item);
     summary[match === 'weak' ? 'suggest' : match] += 1;
@@ -207,4 +214,34 @@ export const readUploadError = (cause: unknown): UploadError => {
     };
   }
   return { kind: 'other', message: failure.message };
+};
+
+// --- новая карточка каталога из строки счёта ----------------------------------
+
+const WEIGHT = /,?\s*\d+\s*(?:гр|г|g)\.?(?=[\s,)]|$)/i;
+const clean = (value: string) => value.replace(/\s+/g, ' ').replace(/^[\s,.-]+|[\s,.-]+$/g, '');
+// «BLANSH» в счёте — «Blansh» в каталоге; кириллицу не трогаем.
+const brandCase = (value: string) => (/^[A-Z]{4,}$/.test(value) ? value[0] + value.slice(1).toLowerCase() : value);
+
+// Черновик бренда и названия для «Создать карточку»: мастер поправит руками.
+export const guessTobaccoFromLine = (rawName: string) => {
+  const text = clean(rawName.replace(/^табак\s+для\s+кальяна\s+/i, ''));
+  const quoted = /^["«“]([^"»”]+)["»”]\s*(.*)$/.exec(text);
+  let manufacturer: string;
+  let name: string;
+  if (quoted) {
+    manufacturer = quoted[1];
+    name = quoted[2].replace(WEIGHT, '');
+  } else {
+    const weight = WEIGHT.exec(text);
+    if (weight && weight.index > 0) {
+      manufacturer = text.slice(0, weight.index);
+      name = text.slice(weight.index + weight[0].length);
+    } else {
+      const [first = '', ...rest] = text.split(' ');
+      manufacturer = first;
+      name = rest.join(' ');
+    }
+  }
+  return { manufacturer: brandCase(clean(manufacturer)), name: clean(name) };
 };

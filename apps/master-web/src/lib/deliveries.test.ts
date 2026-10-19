@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeDeliveryCard, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
 import {
+  CONFIDENT_MATCH,
   acceptLabel,
   acceptedToastTitle,
   deliveryHeadline,
@@ -11,6 +12,7 @@ import {
   formatFullDate,
   formatMoney,
   formatPrice,
+  guessTobaccoFromLine,
   lineMatch,
   lineMatchHint,
   localDateInput,
@@ -53,7 +55,10 @@ const card = (patch: Partial<DeliveryCard> = {}): DeliveryCard => ({
 
 test('lineMatch различает память, предложение, ручной выбор, «не найдено» и «не табак»', () => {
   assert.equal(lineMatch(line()), 'memory');
-  assert.equal(lineMatch(line({ matchReason: 'catalog', confidence: 86 })), 'suggest');
+  // Уверенное совпадение с каталогом (от CONFIDENT_MATCH) не требует проверки, слабее — «проверьте».
+  assert.equal(lineMatch(line({ matchReason: 'catalog', confidence: CONFIDENT_MATCH })), 'catalog');
+  assert.equal(lineMatch(line({ matchReason: 'catalog', confidence: 64 })), 'suggest');
+  assert.equal(lineMatch(line({ matchReason: 'catalog', confidence: null })), 'suggest');
   assert.equal(lineMatch(line({ matchReason: 'manual' })), 'manual');
   assert.equal(lineMatch(line({ kind: 'skip', tobacco: null, matchReason: null })), 'skip');
   assert.equal(lineMatch(line({ tobacco: null, matchReason: null })), 'none');
@@ -77,6 +82,8 @@ test('lineMatch различает память, предложение, руч�
 test('lineMatchHint подписывает выбор под селектом', () => {
   assert.equal(lineMatchHint(line()), 'по памяти: строка этого поставщика');
   assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 86 })), 'похоже на 86 % · Black Burn');
+  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 64 })), 'похоже на 64 % · Black Burn');
+  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: null })), 'предложено по каталогу');
   assert.equal(lineMatchHint(line({ matchReason: 'manual' })), 'выбрано вручную');
   assert.equal(lineMatchHint(line({ matchReason: 'manual', newOnShelf: true })), 'выбрано вручную · новый на полке');
   assert.equal(lineMatchHint(line({ tobacco: null, matchReason: null })), 'нет в каталоге');
@@ -98,12 +105,13 @@ test('summarizeLines считает сводные метки разбора', (
     line(),
     line({ id: 'l2' }),
     line({ id: 'l3', matchReason: 'catalog', confidence: 90 }),
+    line({ id: 'l3b', matchReason: 'catalog', confidence: 70 }),
     line({ id: 'l4', tobacco: null, matchReason: null, candidates: [{ id: 'x', manufacturer: 'A', lineName: '', name: 'B', confidence: 40, reason: 'catalog' }] }),
     line({ id: 'l5', tobacco: null, matchReason: null }),
     line({ id: 'l6', kind: 'skip', tobacco: null, matchReason: null }),
     line({ id: 'l7', matchReason: 'manual' }),
   ]);
-  assert.deepEqual(summary, { memory: 2, suggest: 2, none: 1, skip: 1, manual: 1 });
+  assert.deepEqual(summary, { memory: 2, catalog: 1, suggest: 2, none: 1, skip: 1, manual: 1 });
 });
 
 test('деньги из копеек: итог в рублях и цена с копейками', () => {
@@ -238,4 +246,18 @@ test('дата прихода: сегодня — текущее время, д�
   assert.equal(receivedAtFromInput('2026-11-19', now), now.toISOString());
   assert.equal(receivedAtFromInput('2026-11-17', now), new Date(2026, 10, 17, 12).toISOString());
   assert.equal(receivedAtFromInput('', now), now.toISOString());
+});
+
+test('guessTobaccoFromLine предзаполняет карточку каталога из строки счёта', () => {
+  assert.deepEqual(guessTobaccoFromLine('Табак для кальяна BLANSH 200 гр Грейпфрутовый Сок'), {
+    manufacturer: 'Blansh',
+    name: 'Грейпфрутовый Сок',
+  });
+  assert.deepEqual(guessTobaccoFromLine('Табак для кальяна Black Burn 200г Raspberries (Спелая лесная малина)'), {
+    manufacturer: 'Black Burn',
+    name: 'Raspberries (Спелая лесная малина)',
+  });
+  assert.deepEqual(guessTobaccoFromLine('"Дарк Сайд" Кор (Блэккерент), 250 г'), { manufacturer: 'Дарк Сайд', name: 'Кор (Блэккерент)' });
+  assert.deepEqual(guessTobaccoFromLine('Sebero Клубника'), { manufacturer: 'Sebero', name: 'Клубника' });
+  assert.deepEqual(guessTobaccoFromLine('ОБЛАКО'), { manufacturer: 'ОБЛАКО', name: '' });
 });
