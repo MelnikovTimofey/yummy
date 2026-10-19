@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from './config';
 import { getDailyCodeWindow } from './daily-code';
@@ -62,6 +62,24 @@ import {
   updateShelfItem,
   writeOff,
 } from './shelf';
+import {
+  acceptDelivery,
+  addLine,
+  createDraftFromPdf,
+  createManualDraft,
+  deleteDelivery,
+  deleteLine,
+  DeliveryConflictError,
+  DeliveryNotFoundError,
+  DeliveryValidationError,
+  getDelivery,
+  getDeliveryFile,
+  InvoiceUnreadableError,
+  listDeliveries,
+  updateDelivery,
+  updateLine,
+  type LineKind,
+} from './deliveries';
 import {
   batchUpdateTobacco,
   createTobacco,
@@ -204,6 +222,17 @@ export const buildApp = () => {
       shelfWriteOff: 'POST /staff/shelf/packs/:packId/write-off',
       shelfSettings: 'GET /staff/shelf/settings',
       shelfSettingsUpdate: 'PATCH /staff/shelf/settings',
+      deliveriesList: 'GET /staff/deliveries',
+      deliveriesUpload: 'POST /staff/deliveries',
+      deliveriesManual: 'POST /staff/deliveries/manual',
+      deliveriesRead: 'GET /staff/deliveries/:id',
+      deliveriesFile: 'GET /staff/deliveries/:id/file',
+      deliveriesUpdate: 'PATCH /staff/deliveries/:id',
+      deliveriesDelete: 'DELETE /staff/deliveries/:id',
+      deliveriesAccept: 'POST /staff/deliveries/:id/accept',
+      deliveryLinesCreate: 'POST /staff/deliveries/:id/lines',
+      deliveryLinesUpdate: 'PATCH /staff/deliveries/:id/lines/:lineId',
+      deliveryLinesDelete: 'DELETE /staff/deliveries/:id/lines/:lineId',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
       dailyCodesCreate: 'POST /staff/access/daily-codes',
@@ -2043,7 +2072,208 @@ export const buildApp = () => {
     return reply.send({ user });
   });
 
+  registerDeliveryRoutes(app);
+
   return app;
+};
+
+// --- поставки (#152, срез 3) -------------------------------------------------
+
+const MAX_INVOICE_BYTES = 5 * 1024 * 1024;
+// base64 раздувает файл на треть, плюс JSON вокруг.
+const UPLOAD_BODY_LIMIT = 8 * 1024 * 1024;
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
+const sendDeliveryError = (reply: FastifyReply, error: unknown) => {
+  if (error instanceof DeliveryNotFoundError) return reply.status(404).send({ error: error.message });
+  if (error instanceof DeliveryValidationError) return reply.status(400).send({ error: error.message });
+  if (error instanceof DeliveryConflictError) {
+    return reply.status(409).send({ error: error.message, code: error.code, ...error.extra });
+  }
+  if (error instanceof InvoiceUnreadableError) return reply.status(422).send({ error: error.message, code: error.code });
+  throw error;
+};
+
+const invalid = (message: string): never => {
+  throw new DeliveryValidationError(message);
+};
+
+const readNumber = (value: unknown, field: string, nullable = false): number | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null && nullable) return null;
+  return typeof value === 'number' ? value : invalid(`${field}: нужно число`);
+};
+
+const readText = (value: unknown, field: string): string | null | undefined => {
+  if (value === undefined || value === null) return value;
+  return typeof value === 'string' ? value : invalid(`${field}: нужна строка`);
+};
+
+const readDate = (value: unknown, field: string): Date | null | undefined => {
+  if (value === undefined || value === null) return value;
+  const date = typeof value === 'string' ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : invalid(`${field}: нужна дата в формате ISO`);
+};
+
+const readBoolean = (value: unknown, field: string) =>
+  value === undefined || typeof value === 'boolean' ? value : invalid(`${field}: нужно да или нет`);
+
+const readKind = (value: unknown): LineKind | undefined =>
+  value === undefined || value === 'tobacco' || value === 'skip' ? value : invalid('Тип строки: tobacco или skip');
+
+const readPdf = (value: unknown) => {
+  const content = (typeof value === 'string' ? value : '').replace(/^data:[^,]*;base64,/, '').replace(/\s+/g, '');
+  if (!content || content.length % 4 !== 0 || !BASE64.test(content)) {
+    return invalid('Файл не передан или повреждён при загрузке');
+  }
+  const file = Buffer.from(content, 'base64');
+  return file.length > MAX_INVOICE_BYTES ? invalid('Файл больше 5 МБ') : file;
+};
+
+const registerDeliveryRoutes = (app: FastifyInstance) => {
+  type Params = { id: string; lineId: string };
+  type Body = Record<string, unknown> | undefined;
+
+  app.get('/staff/deliveries', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    return reply.send(await listDeliveries());
+  });
+
+  app.post('/staff/deliveries', { bodyLimit: UPLOAD_BODY_LIMIT }, async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    try {
+      const body = request.body as Body;
+      const fileName = readText(body?.fileName, 'Имя файла')?.trim().slice(0, 200) || 'invoice.pdf';
+      const file = readPdf(body?.contentBase64);
+      const allowDuplicate = readBoolean(body?.allowDuplicate, 'Загрузить повторно') ?? false;
+      return reply.status(201).send(await createDraftFromPdf(user, fileName, file, { allowDuplicate }));
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.post('/staff/deliveries/manual', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    try {
+      const body = request.body as Body;
+      const card = await createManualDraft(user, {
+        supplierName: readText(body?.supplierName, 'Поставщик'),
+        number: readText(body?.number, 'Номер счёта'),
+        invoiceDate: readDate(body?.invoiceDate, 'Дата счёта'),
+      });
+      return reply.status(201).send(card);
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.get('/staff/deliveries/:id', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    try {
+      return reply.send(await getDelivery((request.params as Params).id));
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.get('/staff/deliveries/:id/file', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    try {
+      const { fileName, file } = await getDeliveryFile((request.params as Params).id);
+      return reply
+        .header('content-type', 'application/pdf')
+        .header('content-disposition', `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`)
+        .send(file);
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.patch('/staff/deliveries/:id', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    try {
+      const body = request.body as Body;
+      const card = await updateDelivery((request.params as Params).id, {
+        receivedAt: readDate(body?.receivedAt, 'Дата прихода'),
+        number: readText(body?.number, 'Номер счёта'),
+        invoiceDate: readDate(body?.invoiceDate, 'Дата счёта'),
+      });
+      return reply.send(card);
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.delete('/staff/deliveries/:id', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    try {
+      await deleteDelivery(user, (request.params as Params).id);
+      return reply.status(204).send();
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.post('/staff/deliveries/:id/accept', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    try {
+      const receivedAt = readDate((request.body as Body)?.receivedAt, 'Дата прихода') ?? undefined;
+      return reply.send(await acceptDelivery(user, (request.params as Params).id, { receivedAt }));
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.post('/staff/deliveries/:id/lines', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    try {
+      const body = request.body as Body;
+      const card = await addLine((request.params as Params).id, {
+        rawName: readText(body?.rawName, 'Название') ?? '',
+        qty: readNumber(body?.qty, 'Количество') ?? invalid('Укажите количество банок'),
+        priceKop: readNumber(body?.priceKop, 'Цена', true),
+        grams: readNumber(body?.grams, 'Фасовка', true),
+        tobaccoId: readText(body?.tobaccoId, 'Табак'),
+        kind: readKind(body?.kind),
+      });
+      return reply.status(201).send(card);
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.patch('/staff/deliveries/:id/lines/:lineId', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    try {
+      const body = request.body as Body;
+      const { id, lineId } = request.params as Params;
+      const card = await updateLine(id, lineId, {
+        tobaccoId: readText(body?.tobaccoId, 'Табак'),
+        qty: readNumber(body?.qty, 'Количество') ?? undefined,
+        grams: readNumber(body?.grams, 'Фасовка', true),
+        priceKop: readNumber(body?.priceKop, 'Цена', true),
+        arrived: readBoolean(body?.arrived, 'Пришло'),
+        kind: readKind(body?.kind),
+      });
+      return reply.send(card);
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
+
+  app.delete('/staff/deliveries/:id/lines/:lineId', async (request, reply) => {
+    if (!(await authenticateStaffRequest(request, reply))) return;
+    try {
+      const { id, lineId } = request.params as Params;
+      return reply.send(await deleteLine(id, lineId));
+    } catch (error) {
+      return sendDeliveryError(reply, error);
+    }
+  });
 };
 
 const isApiError = (value: unknown): value is ApiError =>
