@@ -627,6 +627,8 @@ test('sortRails keeps active statistical rails first', () => {
       mixIds: [],
       mixes: [],
       active: false,
+      editable: true,
+      readOnlyReason: '',
     },
     {
       id: 'rail-1',
@@ -636,6 +638,8 @@ test('sortRails keeps active statistical rails first', () => {
       mixIds: [],
       mixes: [],
       active: true,
+      editable: false,
+      readOnlyReason: 'Статистический рейл формируется автоматически и доступен только для просмотра.',
     },
   ]);
 

@@ -622,7 +622,7 @@ export const InventoryView = ({
       return;
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape') {
         setActiveItemId('');
       }
