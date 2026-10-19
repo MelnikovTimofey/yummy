@@ -2,6 +2,7 @@ import 'dotenv/config';
 import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { getDailyCodeWindow } from '../src/daily-code';
+import { startShelfFromStock } from '../src/shelf';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
@@ -353,6 +354,8 @@ async function main() {
     })),
     skipDuplicates: true,
   });
+
+  await prisma.$transaction((tx) => startShelfFromStock(tx, new Date()));
 
   await prisma.mix.createMany({
     data: mixes.map((mix) => ({

@@ -3,6 +3,7 @@ import type { Tobacco } from './catalog';
 import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
 import { createSecretHash } from './auth';
+import { startShelfFromStock } from './shelf';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -1461,6 +1462,14 @@ const wipeStorage = async (tx: StorageTx) => {
   await tx.mixComponent.deleteMany();
   await tx.rail.deleteMany();
   await tx.mix.deleteMany();
+  await tx.packMark.deleteMany();
+  await tx.pack.deleteMany();
+  await tx.shelfItem.deleteMany();
+  await tx.shelfSettings.deleteMany();
+  await tx.deliveryLine.deleteMany();
+  await tx.delivery.deleteMany();
+  await tx.supplierItem.deleteMany();
+  await tx.supplier.deleteMany();
   await tx.tobacco.deleteMany();
   await tx.introCard.deleteMany();
   await tx.dailyAccessCode.deleteMany();
@@ -1619,6 +1628,7 @@ const resetStorageWithSeedCatalog = async () => {
     await wipeStorage(tx);
     await insertOperationalState(tx, currentCodeWindow);
     await insertSeedCatalog(tx);
+    await startShelfFromStock(tx, new Date());
   });
 };
 
