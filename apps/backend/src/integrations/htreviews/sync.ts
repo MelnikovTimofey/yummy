@@ -86,6 +86,23 @@ const buildUpsertData = (item: HtReviewsImportedTobacco, inStock: boolean) => ({
   inStock,
 });
 
+type HtReviewsStats = Pick<HtReviewsImportedTobacco, 'rating' | 'ratingsCount' | 'reviewsCount' | 'viewsCount'>;
+
+// Парсер отдаёт null, когда карточка или выдача не показала счётчик: это
+// пропуск данных, а не обнуление, поэтому такие поля в update не попадают.
+export const buildStatsData = (stats: HtReviewsStats, syncedAt: Date) => {
+  const data = Object.fromEntries(
+    Object.entries({
+      rating: stats.rating,
+      ratingsCount: stats.ratingsCount,
+      reviewsCount: stats.reviewsCount,
+      viewsCount: stats.viewsCount,
+    }).filter(([, value]) => value !== null),
+  ) as Partial<Record<keyof HtReviewsStats, number>>;
+
+  return Object.keys(data).length ? { ...data, statsSyncedAt: syncedAt } : {};
+};
+
 const findExistingRecord = async (item: HtReviewsImportedTobacco) => {
   if (item.sourceExternalId) {
     const bySourceId = await prisma.tobacco.findUnique({
@@ -169,7 +186,10 @@ export const syncHtReviewsCatalog = async (
         where: {
           id: existing.id,
         },
-        data: buildUpsertData(item, existing.inStock),
+        data: {
+          ...buildUpsertData(item, existing.inStock),
+          ...buildStatsData(item, new Date()),
+        },
       });
       updated += 1;
     } else {
@@ -177,6 +197,7 @@ export const syncHtReviewsCatalog = async (
         data: {
           id: toStableId(item),
           ...buildUpsertData(item, defaultInStock),
+          ...buildStatsData(item, new Date()),
         },
       });
       created += 1;

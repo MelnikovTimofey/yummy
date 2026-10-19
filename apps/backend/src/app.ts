@@ -42,6 +42,7 @@ import {
 import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput, recordCustomMixSmoke } from './mixer';
 import { listAuditEvents, recordAuditEvent } from './audit';
+import { getCatalogIdeas } from './catalog-ideas';
 import {
   batchUpdateTobacco,
   createTobacco,
@@ -97,6 +98,7 @@ import type {
   StaffAccountMutationResponse,
   StaffAccountsResponse,
   StaffAuthResponse,
+  StaffCatalogIdeasResponse,
   StaffInventoryBatchMutationResponse,
   StaffInventoryMutationResponse,
   StaffInventoryResponse,
@@ -169,6 +171,7 @@ export const buildApp = () => {
       inventoryCreate: 'POST /staff/inventory/tobaccos',
       inventoryBatch: 'POST /staff/inventory/tobaccos/batch',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
+      catalogIdeas: 'GET /staff/catalog/ideas',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
       dailyCodesCreate: 'POST /staff/access/daily-codes',
@@ -1460,6 +1463,16 @@ export const buildApp = () => {
       pageSize: query?.pageSize === undefined ? undefined : Number(query.pageSize),
     });
 
+    return reply.send(response);
+  });
+
+  app.get('/staff/catalog/ideas', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const response: StaffCatalogIdeasResponse = await getCatalogIdeas();
     return reply.send(response);
   });
 
