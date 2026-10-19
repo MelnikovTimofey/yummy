@@ -42,7 +42,6 @@ const FRUITY_TAGS = new Set([
   'фрукты',
   'хурма',
   'яблоко',
-  'юдзу',
 ]);
 
 const BERRY_TAGS = new Set([
@@ -250,8 +249,10 @@ export const buildTaxonomyCandidate = (rawTags: string[]): TaxonomyCandidate => 
   const flavorTags = new Set<string>();
   const matchedSourceTags = new Set<string>();
 
+  // Один тег — один профиль (#182): у sour/fresh/sweet нет своих тегов в
+  // htreviews, а fruity по цитрусам и ягодам стоял почти у каждого микса.
   for (const tag of normalizedTags) {
-    if (includesTag(tag, FRUITY_TAGS) || includesTag(tag, CITRUS_TAGS) || includesTag(tag, BERRY_TAGS)) {
+    if (includesTag(tag, FRUITY_TAGS)) {
       flavorProfiles.add('fruity');
       matchedSourceTags.add(tag);
     }
@@ -263,20 +264,17 @@ export const buildTaxonomyCandidate = (rawTags: string[]): TaxonomyCandidate => 
 
     if (includesTag(tag, CITRUS_TAGS)) {
       flavorProfiles.add('citrus');
-      flavorProfiles.add('sour');
       matchedSourceTags.add(tag);
     }
 
     if (includesTag(tag, MINTY_TAGS)) {
       flavorProfiles.add('minty');
-      flavorProfiles.add('fresh');
       flavorTags.add('охлаждающий');
       matchedSourceTags.add(tag);
     }
 
     if (includesTag(tag, DESSERT_TAGS)) {
       flavorProfiles.add('dessert');
-      flavorProfiles.add('sweet');
       matchedSourceTags.add(tag);
     }
 
