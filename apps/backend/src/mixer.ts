@@ -26,6 +26,7 @@ type SimilarCandidate = {
   id: string;
   name: string;
   avgRating: number;
+  ratingsCount: number;
   flavorProfiles: string[];
   components: Array<{ tobaccoId: string; proportion: number }>;
 };
@@ -251,7 +252,7 @@ export const findSimilarMix = (
       similarity >= SIMILARITY_THRESHOLD
       && (!best || similarity > best.similarity || (similarity === best.similarity && mix.avgRating > best.avgRating))
     ) {
-      best = { id: mix.id, name: mix.name, avgRating: mix.avgRating, similarity };
+      best = { id: mix.id, name: mix.name, avgRating: mix.avgRating, ratingsCount: mix.ratingsCount, similarity };
     }
   }
 

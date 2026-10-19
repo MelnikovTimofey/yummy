@@ -145,14 +145,14 @@ export function MixerReveal({
             <button type="button" className="mixer-similar" onClick={() => onOpenMix(similar.id)}>
               <span className="aroma-caps">В ателье похоже</span>
               <strong>{similar.name}</strong>
-              <RatingPill rating={similar.avgRating} />
+              {similar.ratingsCount > 0 ? <RatingPill rating={similar.avgRating} /> : null}
               <span className="mixer-similar-note">{`Совпадение ${similar.similarity}% · открыть микс мастера`}</span>
             </button>
           ) : (
             <div className="mixer-similar">
               <span className="aroma-caps">В ателье похоже</span>
               <strong>{similar.name}</strong>
-              <RatingPill rating={similar.avgRating} />
+              {similar.ratingsCount > 0 ? <RatingPill rating={similar.avgRating} /> : null}
               <span className="mixer-similar-note">{`Совпадение ${similar.similarity}%`}</span>
             </div>
           )

@@ -49,6 +49,12 @@ test('normalizeEvaluation держит границы шкал', () => {
   assert.deepEqual(evaluation.hints, [{ kind: 'too-cold', value: 25 }]);
   assert.deepEqual(evaluation.character, { sweet: 0.4, sour: 1, fresh: 0, dense: 0 });
   assert.equal(evaluation.similarMix?.name, 'Морозная ягода');
+  assert.equal(evaluation.similarMix?.ratingsCount, 0);
+  assert.equal(
+    normalizeEvaluation({ similarMix: { id: 'm2', name: 'Тропики', avgRating: 4.9, ratingsCount: 7, similarity: 40 } })
+      .similarMix?.ratingsCount,
+    7,
+  );
   assert.equal(normalizeEvaluation({ verdict: 'strange' }).verdict, 'ask-master');
   assert.equal(normalizeEvaluation({}).similarMix, null);
 });

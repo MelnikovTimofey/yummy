@@ -24,6 +24,7 @@ export type RecommendationMix = {
   matchedFlavors: string[];
   score: number;
   avgRating: number;
+  ratingsCount: number;
   smokeCtaCount: number;
   components: Array<{
     id: string;
@@ -123,6 +124,7 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
         matchedFlavors: mix.flavors.filter((flavor) => likedFlavors.includes(flavor.toLowerCase())),
         score: Number(calculateScore(mix, likedProfiles, likedFlavors, maxSmokeCtaCount).toFixed(2)),
         avgRating: mix.avgRating,
+        ratingsCount: mix.ratingsCount,
         smokeCtaCount: mix.smokeCtaCount,
         components: mix.components.map((item) => ({
           id: item.id,

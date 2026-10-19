@@ -2,6 +2,8 @@
 const { AromaCTA, AromaChip, SegmentNav, ProfileGlyph, SignatureBar, RatingPill, ProfileCard, MixRow, ShowcaseCard, GuestCard, CompositionStack, AccessCodeInput, OnboardingProgress, GuestTab } = window.DesignSystem_1aef33;
 const M = window.AROMA_MOCK;
 const label = (p) => M.profileLabels[p] || p;
+// Без оценок гостей «★» нет: avgRating такого микса — базовый из Мастера, не мнение гостей (#185).
+const guestRating = (mix) => (mix.ratingsCount ? mix.avgRating : null);
 const railKind = { statistical: 'Выбор гостей', prepared: 'Редакция', curated: 'Мастера' };
 // На Витрине тип полки виден значком, словами — в aria-label заголовка (railKindIcon в apps/aroma-web).
 // Полка «Оценки гостей» в приложении получает Star; в мок-данных кита её нет.
@@ -155,7 +157,7 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
         <SignatureBar profiles={hero.flavorProfiles} height={6} />
         <CompositionStack components={hero.components} showBar={false} />
         <div className="aroma-recs-hero-meta">
-          <RatingPill rating={hero.avgRating} />
+          {hero.ratingsCount ? <RatingPill rating={hero.avgRating} /> : null}
           <span className="aroma-caps">{hero.popularity + ' выборов'}</span>
         </div>
         <AromaCTA pulse onClick={() => onChoose(hero, 'recommendations')}>Покурить</AromaCTA>
@@ -165,7 +167,7 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
           <p className="aroma-caps">Тоже подходят</p>
           <div className="aroma-list">
             {rest.slice(0, 4).map((mix) => (
-              <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={mix.avgRating} showGlyph={false} showSignature onClick={() => onOpen(mix, 'recommendations')} />
+              <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} showGlyph={false} showSignature onClick={() => onOpen(mix, 'recommendations')} />
             ))}
           </div>
         </>
@@ -190,7 +192,7 @@ function ShowcaseScreen({ onOpen, onOpenRail }) {
           <div className="aroma-showcase-scroller">
             {rail.mixIds.map((id) => {
               const mix = M.mixes.find((m) => m.id === id);
-              return <ShowcaseCard key={id} name={mix.name} profiles={mix.flavorProfiles} rating={mix.avgRating} onClick={() => onOpen(mix, 'showcase')} />;
+              return <ShowcaseCard key={id} name={mix.name} profiles={mix.flavorProfiles} rating={guestRating(mix)} onClick={() => onOpen(mix, 'showcase')} />;
             })}
           </div>
         </section>
@@ -263,7 +265,7 @@ function CatalogScreen({ query, setQuery, filters, onRemoveFilter, onOpenFilters
       ) : null}
       <div className="aroma-catalog-list">
         {results.map((mix) => (
-          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={flavorsMatchedFirst(mix.flavors, query, filters)} rating={mix.avgRating} glyphSize={36} style={{ padding: '7px 12px' }} onClick={() => onOpen(mix, 'catalog')} />
+          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={flavorsMatchedFirst(mix.flavors, query, filters)} rating={guestRating(mix)} glyphSize={36} style={{ padding: '7px 12px' }} onClick={() => onOpen(mix, 'catalog')} />
         ))}
       </div>
     </section>
@@ -340,7 +342,7 @@ function RailScreen({ rail, filters, toggleFilter, onBack, onOpen }) {
       {!visible.length ? <p className="guest-status">По выбранным профилям ничего не найдено.</p> : null}
       <div className="aroma-list">
         {visible.map((mix) => (
-          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={mix.avgRating} glyphSize={60} onClick={() => onOpen(mix, 'rail')} />
+          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} glyphSize={60} onClick={() => onOpen(mix, 'rail')} />
         ))}
       </div>
     </section>
