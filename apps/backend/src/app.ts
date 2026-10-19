@@ -44,6 +44,25 @@ import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput
 import { listAuditEvents, recordAuditEvent } from './audit';
 import { getCatalogIdeas } from './catalog-ideas';
 import {
+  addMark,
+  addPack,
+  addToShelf,
+  getSettings,
+  getShelf,
+  getShelfItem,
+  markEmpty,
+  openAnother,
+  removeFromShelf,
+  setStop,
+  ShelfConflictError,
+  ShelfNotFoundError,
+  ShelfValidationError,
+  undoEmpty,
+  updateSettings,
+  updateShelfItem,
+  writeOff,
+} from './shelf';
+import {
   batchUpdateTobacco,
   createTobacco,
   createMix,
@@ -172,6 +191,19 @@ export const buildApp = () => {
       inventoryBatch: 'POST /staff/inventory/tobaccos/batch',
       inventoryUpdate: 'PATCH /staff/inventory/tobaccos/:id',
       catalogIdeas: 'GET /staff/catalog/ideas',
+      shelf: 'GET /staff/shelf',
+      shelfItem: 'GET /staff/shelf/:tobaccoId',
+      shelfAdd: 'POST /staff/shelf',
+      shelfUpdate: 'PATCH /staff/shelf/:tobaccoId',
+      shelfRemove: 'DELETE /staff/shelf/:tobaccoId',
+      shelfEmpty: 'POST /staff/shelf/:tobaccoId/empty',
+      shelfMark: 'POST /staff/shelf/:tobaccoId/marks',
+      shelfOpen: 'POST /staff/shelf/:tobaccoId/open',
+      shelfAddPack: 'POST /staff/shelf/:tobaccoId/packs',
+      shelfUndoEmpty: 'POST /staff/shelf/packs/:packId/undo-empty',
+      shelfWriteOff: 'POST /staff/shelf/packs/:packId/write-off',
+      shelfSettings: 'GET /staff/shelf/settings',
+      shelfSettingsUpdate: 'PATCH /staff/shelf/settings',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
       dailyCodesCreate: 'POST /staff/access/daily-codes',
@@ -1836,6 +1868,152 @@ export const buildApp = () => {
     };
 
     return reply.send(response);
+  });
+
+  // Ошибки домена полки → HTTP: не найдено 404, конфликт состояния банок 409, неверный ввод 400.
+  const sendShelf = async <T>(reply: FastifyReply, run: () => Promise<T>) => {
+    try {
+      return reply.send(await run());
+    } catch (error) {
+      if (error instanceof ShelfNotFoundError) {
+        return reply.status(404).send({ error: error.message } satisfies ApiError);
+      }
+      if (error instanceof ShelfConflictError) {
+        return reply.status(409).send({ error: error.message, code: error.code });
+      }
+      if (error instanceof ShelfValidationError) {
+        return reply.status(400).send({ error: error.message } satisfies ApiError);
+      }
+      throw error;
+    }
+  };
+  const tobaccoParam = (request: FastifyRequest) => (request.params as { tobaccoId?: string }).tobaccoId?.trim() ?? '';
+  const packParam = (request: FastifyRequest) => (request.params as { packId?: string }).packId?.trim() ?? '';
+
+  app.get('/staff/shelf', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => getShelf());
+  });
+
+  app.get('/staff/shelf/settings', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => getSettings());
+  });
+
+  app.patch('/staff/shelf/settings', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { bowlGrams?: unknown; leadDays?: unknown };
+    return sendShelf(reply, () => updateSettings(user, {
+      bowlGrams: typeof body.bowlGrams === 'number' ? body.bowlGrams : undefined,
+      leadDays: typeof body.leadDays === 'number' ? body.leadDays : undefined,
+    }));
+  });
+
+  app.post('/staff/shelf', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { tobaccoId?: unknown; status?: unknown };
+    if (typeof body.tobaccoId !== 'string' || !body.tobaccoId.trim()) {
+      return reply.status(400).send({ error: 'tobaccoId is required' } satisfies ApiError);
+    }
+    const status = body.status === 'plan' ? 'plan' : 'active';
+    return sendShelf(reply, async () => ({ item: await addToShelf(user, body.tobaccoId as string, status) }));
+  });
+
+  app.get('/staff/shelf/:tobaccoId', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, async () => ({ item: await getShelfItem(tobaccoParam(request)) }));
+  });
+
+  app.patch('/staff/shelf/:tobaccoId', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as {
+      stopped?: unknown;
+      stopNote?: unknown;
+      keepStocked?: unknown;
+      packWeight?: unknown;
+      note?: unknown;
+    };
+    const tobaccoId = tobaccoParam(request);
+    return sendShelf(reply, async () => {
+      let item = null;
+      if (typeof body.stopped === 'boolean') {
+        item = await setStop(user, tobaccoId, body.stopped, typeof body.stopNote === 'string' ? body.stopNote : undefined);
+      }
+      const patch = {
+        keepStocked: typeof body.keepStocked === 'boolean' ? body.keepStocked : undefined,
+        packWeight: typeof body.packWeight === 'number' ? body.packWeight : undefined,
+        note: typeof body.note === 'string' ? body.note : undefined,
+      };
+      if (Object.values(patch).some((value) => value !== undefined)) {
+        item = await updateShelfItem(user, tobaccoId, patch);
+      }
+      if (!item) {
+        throw new ShelfValidationError('Nothing to update');
+      }
+      return { item };
+    });
+  });
+
+  app.delete('/staff/shelf/:tobaccoId', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, async () => ({ item: await removeFromShelf(user, tobaccoParam(request)) }));
+  });
+
+  app.post('/staff/shelf/:tobaccoId/empty', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => markEmpty(user, tobaccoParam(request)));
+  });
+
+  app.post('/staff/shelf/:tobaccoId/marks', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { fraction?: unknown };
+    if (typeof body.fraction !== 'number') {
+      return reply.status(400).send({ error: 'fraction is required' } satisfies ApiError);
+    }
+    return sendShelf(reply, async () => ({ item: await addMark(user, tobaccoParam(request), body.fraction as number) }));
+  });
+
+  app.post('/staff/shelf/:tobaccoId/open', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, async () => ({ item: await openAnother(user, tobaccoParam(request)) }));
+  });
+
+  app.post('/staff/shelf/:tobaccoId/packs', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { weight?: unknown; priceKop?: unknown };
+    return sendShelf(reply, async () => ({
+      item: await addPack(user, tobaccoParam(request), {
+        weight: typeof body.weight === 'number' ? body.weight : undefined,
+        priceKop: typeof body.priceKop === 'number' ? body.priceKop : undefined,
+      }),
+    }));
+  });
+
+  app.post('/staff/shelf/packs/:packId/undo-empty', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, async () => ({ item: await undoEmpty(user, packParam(request)) }));
+  });
+
+  app.post('/staff/shelf/packs/:packId/write-off', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { reason?: unknown };
+    if (typeof body.reason !== 'string' || !body.reason.trim()) {
+      return reply.status(400).send({ error: 'reason is required' } satisfies ApiError);
+    }
+    return sendShelf(reply, async () => ({ item: await writeOff(user, packParam(request), (body.reason as string).trim()) }));
   });
 
   app.get('/staff/dashboard/summary', async (request, reply) => {
