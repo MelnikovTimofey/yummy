@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildApp } from './app';
-import { deleteMix, resetAppState } from './state';
+import { deleteMix, rateMix, resetAppState } from './state';
 import { mixes as mixFixtures } from './catalog';
 import { getInStockMixes, getOnboardingOptions, getRecommendations } from './recommendations';
 
@@ -121,4 +121,16 @@ test('guest onboarding endpoint returns ranked recommendation list', async () =>
   assert.equal(body.items[0]?.id, 'mix-silk-road');
 
   await app.close();
+});
+
+test('recommendations carry the guest ratings count', async () => {
+  await rateMix('mix-silk-road', 4);
+
+  const recommendations = await getRecommendations({ likedProfiles: ['sweet'], likedFlavors: ['мед'], limit: 12 });
+  const rated = recommendations.find((mix) => mix.id === 'mix-silk-road');
+  const unrated = recommendations.find((mix) => mix.id !== 'mix-silk-road');
+
+  assert.equal(rated?.ratingsCount, 1);
+  assert.equal(rated?.avgRating, 4);
+  assert.equal(unrated?.ratingsCount, 0);
 });

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildApp } from './app';
-import { createMix, createTobacco, resetAppState, updateMix, updateTobacco } from './state';
+import { createMix, createTobacco, rateMix, resetAppState, updateMix, updateTobacco } from './state';
 import {
   affinityKey,
   buildAffinity,
@@ -308,6 +308,7 @@ test('similar mix blends shared proportions and profile overlap with a threshold
       id: 'same',
       name: 'Тот же',
       avgRating: 4.5,
+      ratingsCount: 0,
       flavorProfiles: ['berry', 'sweet', 'floral_herbal'],
       components: [
         { tobaccoId: 'berry', proportion: 60 },
@@ -318,6 +319,7 @@ test('similar mix blends shared proportions and profile overlap with a threshold
       id: 'far',
       name: 'Далёкий',
       avgRating: 4.9,
+      ratingsCount: 3,
       flavorProfiles: ['spicy'],
       components: [{ tobaccoId: 'spice', proportion: 100 }],
     },
@@ -328,6 +330,7 @@ test('similar mix blends shared proportions and profile overlap with a threshold
     id: 'same',
     name: 'Тот же',
     avgRating: 4.5,
+    ratingsCount: 0,
     similarity: 47,
   });
   assert.equal(findSimilarMix(bowl([berry, 60], [tea, 40]), mixes)?.similarity, 100);
@@ -367,8 +370,25 @@ test.describe('evaluate endpoint', () => {
       id: 'mix-citrus-scout',
       name: 'Цитрусовый караван',
       avgRating: 4.8,
+      ratingsCount: 0,
       similarity: 100,
     });
+  });
+
+  test('similar mix counts guest ratings', async () => {
+    await rateMix('mix-citrus-scout', 5);
+
+    const response = await evaluate({
+      components: [
+        { tobaccoId: 'tobacco-citrus-breeze', proportion: 50 },
+        { tobaccoId: 'tobacco-mint-veil', proportion: 50 },
+      ],
+    });
+    const body = response.json() as GuestMixerEvaluateResponse;
+
+    assert.equal(body.similarMix?.id, 'mix-citrus-scout');
+    assert.equal(body.similarMix?.avgRating, 5);
+    assert.equal(body.similarMix?.ratingsCount, 1);
   });
 
   test('similar mix skips hidden mixes', async () => {

@@ -106,7 +106,7 @@ export type GuestMixerEvaluateResponse = {
   hints: GuestMixerHint[];
   character: { sweet: number; sour: number; fresh: number; dense: number };
   name: string;
-  similarMix: { id: string; name: string; avgRating: number; similarity: number } | null;
+  similarMix: { id: string; name: string; avgRating: number; ratingsCount: number; similarity: number } | null;
 };
 
 export type GuestCustomMixSmokeResponse = {
