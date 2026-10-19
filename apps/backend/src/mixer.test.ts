@@ -102,6 +102,15 @@ test.describe('palette', () => {
     assert.equal(byId.get('tobacco-melon-solo')?.mixCount, 0);
   });
 
+  test('palette affinity learns from published mixes with out-of-stock components', async () => {
+    // Персика нет в наличии, но «Персиковый мираж» опубликован: его сочетание с мятой — знание мастера.
+    const published = (await getMixerPalette()).affinity;
+    await updateMix('mix-peach-mirage', { available: false });
+    const hidden = (await getMixerPalette()).affinity;
+
+    assert.ok(published['fruity|minty']! > hidden['fruity|minty']!);
+  });
+
   test('palette affinity uses sorted profile keys within 0..1', async () => {
     const { affinity } = await getMixerPalette();
     const keys = Object.keys(affinity);

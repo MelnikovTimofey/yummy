@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createCustomMixSmokeEvent, getAllTobaccos, getAvailableMixCatalog } from './state';
+import { createCustomMixSmokeEvent, getAvailableMixCatalog, getMixerTobaccos } from './state';
 import type {
   GuestCustomMixSmokeResponse,
   GuestMixerEvaluateResponse,
@@ -267,11 +267,11 @@ export const findSimilarMix = (
 };
 
 const loadMixer = async () => {
-  const tobaccos = await getAllTobaccos();
   const mixes = await getAvailableMixCatalog();
   // Сродство и счётчики строим по всем опубликованным миксам, а не только по
   // тем, что сейчас в наличии: знание мастера о сочетаниях от склада не зависит.
   const published = mixes.filter((mix) => mix.available);
+  const tobaccos = await getMixerTobaccos(unique(published.flatMap((mix) => mix.componentIds)));
   const profilesById = new Map(tobaccos.map((item) => [item.id, item.flavorProfiles.map(normalize)]));
 
   const palette: MixerTobacco[] = tobaccos

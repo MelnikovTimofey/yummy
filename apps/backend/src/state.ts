@@ -1811,9 +1811,13 @@ export const getTobaccoById = async (id: string) => {
   return tobacco ? mapTobacco(tobacco) : null;
 };
 
-export const getAllTobaccos = async () => {
+// Каталог htreviews — больше десяти тысяч табаков, а миксеру нужны только
+// полка и компоненты миксов, по которым он учит сродство.
+export const getMixerTobaccos = async (componentIds: string[]) => {
   await ensureAppState();
-  return (await prisma.tobacco.findMany()).map(mapTobacco);
+  return (await prisma.tobacco.findMany({
+    where: { OR: [{ inStock: true, archived: false }, { id: { in: componentIds } }] },
+  })).map(mapTobacco);
 };
 
 export const createTobacco = async (payload: Partial<TobaccoInput>) => {
