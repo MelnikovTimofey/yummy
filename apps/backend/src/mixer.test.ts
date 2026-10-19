@@ -147,32 +147,59 @@ test('affinity key is symmetric and alphabetical', () => {
   assert.equal(affinityKey('berry', 'berry'), 'berry|berry');
 });
 
-test('affinity ranks frequent pairs above rare ones and unmet known pairs below met', () => {
+// Полка: восемь фруктовых табаков, по одному мятному и пряному.
+const shelf = [...Array.from({ length: 8 }, () => ['fruity']), ['minty'], ['spicy']];
+
+test('affinity rates a pair against how often the shelf would give it by chance', () => {
   const affinity = buildAffinity(
     [
-      [['sweet'], ['fresh']],
-      [['sweet'], ['fresh']],
-      [['sweet'], ['sour']],
+      [['fruity'], ['fruity']],
+      [['fruity'], ['fruity']],
+      [['fruity'], ['fruity']],
+      [['minty'], ['spicy']],
     ],
-    ['fresh', 'sour', 'sweet'],
+    shelf,
   );
 
-  assert.ok(affinity['fresh|sweet']! > affinity['sour|sweet']!);
-  assert.ok(affinity['fresh|sour']! < affinity['sour|sweet']!);
+  // Фрукт с фруктом сводят втрое чаще, но это почти случайная частота для
+  // такой полки; мяту с пряностью — один раз, но наугад их почти не собрать.
+  assert.equal(affinity['fruity|fruity'], 0.55);
+  assert.equal(affinity['minty|spicy'], 0.68);
 });
 
-test('affinity is neutral without catalogue data', () => {
-  const empty = buildAffinity([], ['fresh', 'sweet']);
+test('affinity drops below neutral for a pair the master never combines', () => {
+  const affinity = buildAffinity(
+    [
+      [['fruity'], ['fruity']],
+      [['fruity'], ['fruity']],
+      [['fruity'], ['fruity']],
+      [['minty'], ['spicy']],
+    ],
+    shelf,
+  );
+
+  assert.equal(affinity['fruity|minty'], 0.36);
+});
+
+test('affinity smooths rare pairs: more meetings give more affinity', () => {
+  const once = buildAffinity([[['minty'], ['spicy']], [['fruity'], ['fruity']]], shelf);
+  const twice = buildAffinity([[['minty'], ['spicy']], [['minty'], ['spicy']], [['fruity'], ['fruity']]], shelf);
+
+  assert.ok(once['minty|spicy']! < twice['minty|spicy']!);
+  assert.ok(twice['minty|spicy']! < 1);
+});
+
+test('affinity is neutral without catalogue data and ignores tobaccos without profiles', () => {
+  const empty = buildAffinity([], [['fresh'], ['sweet'], []]);
   assert.deepEqual(empty, { 'fresh|fresh': 0.5, 'fresh|sweet': 0.5, 'sweet|sweet': 0.5 });
 
-  // Пряность в миксах не встречалась вовсе — о ней данных нет.
-  const partial = buildAffinity([[['sweet'], ['fresh']]], ['fresh', 'spicy', 'sweet']);
-  assert.equal(partial['spicy|sweet'], 0.5);
+  // Компонент без профилей ничего не говорит о сочетаниях.
+  assert.deepEqual(buildAffinity([[['fresh'], []]], [['fresh'], ['sweet']]), empty);
 });
 
 // --- гармония --------------------------------------------------------------
 
-const neutral = buildAffinity([], ['berry', 'sweet', 'floral_herbal', 'minty', 'fresh', 'spicy']);
+const neutral = buildAffinity([], [['berry', 'sweet'], ['floral_herbal'], ['minty', 'fresh'], ['spicy']]);
 
 test('single component is a mono bowl with harmony 70', () => {
   assert.deepEqual(harmonyOf(bowl([berry, 100]), neutral), { harmony: 70, hints: [{ kind: 'mono' }] });
@@ -192,7 +219,7 @@ test('pairs with higher affinity give higher harmony', () => {
       [['berry', 'sweet'], ['floral_herbal']],
       [['berry'], ['spicy']],
     ],
-    ['berry', 'sweet', 'floral_herbal', 'spicy'],
+    [['berry', 'sweet'], ['floral_herbal'], ['spicy'], ['spicy']],
   );
   const loved = harmonyOf(bowl([berry, 60], [tea, 40]), affinity).harmony;
   const unmet = harmonyOf(bowl([tea, 75], [spice, 25]), affinity).harmony;
@@ -236,14 +263,16 @@ test('a spicy accent is not a heavy twist', () => {
   assert.deepEqual(hints, []);
 });
 
-test('verdict steps at 85, 70 and 55', () => {
+// Нейтральная чаша (70) — «уверенно»: «классика» требует сродства выше случайного.
+test('verdict steps at 75, 62 and 50', () => {
   assert.equal(verdictOf(100), 'classic');
-  assert.equal(verdictOf(85), 'classic');
-  assert.equal(verdictOf(84), 'confident');
+  assert.equal(verdictOf(75), 'classic');
+  assert.equal(verdictOf(74), 'confident');
   assert.equal(verdictOf(70), 'confident');
-  assert.equal(verdictOf(69), 'bold');
-  assert.equal(verdictOf(55), 'bold');
-  assert.equal(verdictOf(54), 'ask-master');
+  assert.equal(verdictOf(62), 'confident');
+  assert.equal(verdictOf(61), 'bold');
+  assert.equal(verdictOf(50), 'bold');
+  assert.equal(verdictOf(49), 'ask-master');
   assert.equal(verdictOf(0), 'ask-master');
 });
 

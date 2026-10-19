@@ -73,7 +73,7 @@ export const matchScore = (tobaccos: PaletteTobacco[], affinity: Record<string, 
   harmonyOf(tobaccos, defaultShares(tobaccos.length), affinity);
 
 export const verdictForScore = (score: number): Verdict =>
-  score >= 85 ? 'classic' : score >= 70 ? 'confident' : score >= 55 ? 'bold' : 'ask-master';
+  score >= 75 ? 'classic' : score >= 62 ? 'confident' : score >= 50 ? 'bold' : 'ask-master';
 
 const STEP = 5;
 const MIN_SHARE = 5;
