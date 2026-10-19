@@ -110,6 +110,11 @@ node scripts/atelier/load/cleanup.mjs created.log | ssh atelier-prod 'cd /opt/at
 node scripts/atelier/load/cleanup.mjs created.log --commit | ssh atelier-prod 'cd /opt/atelier && docker compose -f docker-compose.prod.yml --env-file .env exec -T db psql -U atelier -d atelier -v ON_ERROR_STOP=1'
 ```
 
+Прогон 2026-10-19 шёл с рабочего Mac, а не из Франкфурта: k6 в docker (`grafana/k6:2.3.0`), код дня
+передан через `-e ATELIER_CODE` из файла с правами 600. Серверное время и CPU/RAM от места генератора не
+зависят, а задержки k6 включают сеть и прокси (≈ 50 мс). Результаты — в
+[комментарии к #154](https://github.com/MelnikovTimofey/yummy/issues/154#issuecomment-6276644730).
+
 `cleanup.mjs` удаляет события по точному совпадению: `SmokeCtaEvent` по паре `mixId` и `createdAt` с
 точностью до миллисекунды, `CustomMixSmokeEvent` по id. Сверка перед удалением:
 
