@@ -1166,109 +1166,173 @@ select:focus-visible {
 
 .aroma-catalog-search-row {
   display: grid;
-  grid-template-columns: 1fr 38px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }
 
+/* 16px — меньший кегль iOS Safari увеличивает при фокусе, и экран «прыгает» (#181) */
 .aroma-catalog-search {
   width: 100%;
-  height: 38px;
+  height: 44px;
   border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.66);
   color: var(--text-0);
   padding: 0 14px;
-  font-size: 13px;
+  font-size: 16px;
   outline: none;
+}
+
+.aroma-catalog-search::placeholder {
+  color: var(--text-2);
 }
 
 .aroma-catalog-search:focus-visible {
   border-color: var(--accent-hover);
 }
 
-.aroma-catalog-icon-btn {
-  display: flex;
+.aroma-catalog-filter-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px;
   border-radius: var(--r-guest-control);
   border: 1px solid var(--line);
   background: rgba(40, 40, 48, 0.66);
   color: var(--text-1);
-  position: relative;
+  font-size: 13px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.aroma-catalog-icon-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
-  border-radius: var(--r-pill);
-  background: var(--primary);
+.aroma-catalog-filter-btn-on {
+  border-color: var(--guest-chip-border-on);
+  color: var(--text-0);
 }
 
-.aroma-catalog-chip-scroll {
+.aroma-catalog-filter-btn:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+.aroma-catalog-filter-count {
+  color: var(--guest-chip-ink-on);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Метки выбранного — одной строкой с прокруткой: шапка не растёт, сколько ни выбери */
+.aroma-catalog-tags {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  margin: 0 -20px;
+  padding: 0 20px 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.aroma-catalog-chip-scroll::-webkit-scrollbar {
+.aroma-catalog-tags::-webkit-scrollbar {
   display: none;
 }
 
-.aroma-catalog-chip-scroll > button {
+.aroma-catalog-tags > button {
   flex: 0 0 auto;
 }
 
-.aroma-catalog-popover {
+.aroma-catalog-tag-x {
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+.aroma-catalog-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.aroma-catalog-empty-text {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.aroma-catalog-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.aroma-catalog-empty-btn {
   border: 1px solid var(--line);
-  border-radius: var(--r-guest-card);
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  background: rgba(40, 40, 48, 0.54);
+  color: var(--text-0);
+  border-radius: var(--r-guest-control);
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.aroma-catalog-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aroma-catalog-sheet-block {
   display: grid;
   gap: 10px;
 }
 
-.aroma-catalog-sort {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.aroma-catalog-sort-btn {
-  min-height: 36px;
-  border-radius: var(--r-guest-control);
-  border: 1px solid var(--line);
-  background: rgba(40, 40, 48, 0.54);
-  color: var(--text-1);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  padding: 0 6px;
-}
-
-.aroma-catalog-sort-btn-on {
-  border-color: var(--guest-chip-border-on);
-  color: var(--guest-chip-ink-on);
-  background: var(--guest-chip-bg-on);
-}
-
-.aroma-catalog-flavor-wrap {
+.aroma-catalog-sheet-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-height: 132px;
-  overflow-y: auto;
-  padding-right: 4px;
+}
+
+.aroma-catalog-chip-count {
+  margin-left: 3px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.aroma-catalog-sheet-search {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--r-guest-control);
+  border: 1px solid var(--line);
+  background: rgba(40, 40, 48, 0.66);
+  color: var(--text-0);
+  padding: 0 12px;
+  font-size: 16px;
+  outline: none;
+}
+
+.aroma-catalog-sheet-search::placeholder {
+  color: var(--text-2);
+}
+
+.aroma-catalog-sheet-search:focus-visible {
+  border-color: var(--accent-hover);
+}
+
+.aroma-catalog-sheet-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.aroma-catalog-sheet-more {
+  justify-self: start;
+  padding: 0;
 }
 
 .aroma-catalog-meta {
@@ -1280,15 +1344,15 @@ select:focus-visible {
 
 .aroma-catalog-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .aroma-catalog-row {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-radius: var(--r-guest-row);
   border: 1px solid var(--line);
   background: rgba(28, 28, 33, 0.84);

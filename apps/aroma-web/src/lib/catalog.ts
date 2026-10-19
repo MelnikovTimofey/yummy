@@ -1,0 +1,52 @@
+type CatalogMix = {
+  name: string;
+  description: string;
+  flavorProfiles: string[];
+  flavors: string[];
+  available: boolean;
+  components: Array<{ name: string; manufacturer: string }>;
+};
+
+export type CatalogFilter = {
+  query: string;
+  profiles: string[];
+  flavors: string[];
+};
+
+const byRu = (left: string, right: string) => left.localeCompare(right, 'ru');
+
+const matchesQuery = (mix: CatalogMix, query: string) =>
+  [
+    mix.name,
+    mix.description,
+    ...mix.flavors,
+    ...mix.components.flatMap((component) => [component.name, component.manufacturer]),
+  ]
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
+
+// Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и».
+// Сортировки нет (#181): у «Покурить» и оценок пока нет данных, поэтому порядок — по алфавиту.
+export const filterCatalogMixes = <T extends CatalogMix>(mixes: T[], { query, profiles, flavors }: CatalogFilter): T[] => {
+  const normalizedQuery = query.trim().toLowerCase();
+  return mixes
+    .filter((mix) => mix.available)
+    .filter((mix) => !normalizedQuery || matchesQuery(mix, normalizedQuery))
+    .filter((mix) => !profiles.length || mix.flavorProfiles.some((profile) => profiles.includes(profile)))
+    .filter((mix) => !flavors.length || mix.flavors.some((flavor) => flavors.includes(flavor)))
+    .sort((left, right) => byRu(left.name, right.name));
+};
+
+export const flavorsMatchedFirst = (flavors: string[], query: string, selectedFlavors: string[]) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  const isMatch = (flavor: string) =>
+    selectedFlavors.includes(flavor) || (normalizedQuery !== '' && flavor.includes(normalizedQuery));
+  return [...flavors.filter(isMatch), ...flavors.filter((flavor) => !isMatch(flavor))];
+};
+
+export const byCountDesc = (
+  values: string[],
+  counts: Record<string, number>,
+  label: (value: string) => string = (value) => value,
+) => [...values].sort((left, right) => (counts[right] ?? 0) - (counts[left] ?? 0) || byRu(label(left), label(right)));

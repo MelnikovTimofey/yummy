@@ -8,6 +8,7 @@ import { ChevronRight, KeyRound } from 'lucide-react';
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
+import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst } from '@/lib/catalog';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
@@ -41,9 +42,9 @@ type RecommendedMix = MixCard & {
   matchedFlavors: string[];
 };
 
-type CatalogFilters = {
-  profiles?: string[];
-  flavors?: string[];
+type CatalogFilterTag = {
+  kind: 'profile' | 'flavor';
+  value: string;
 };
 
 type GuestAccessSuccess = {
@@ -106,8 +107,6 @@ type MixRatingResult = {
   message?: string;
 };
 
-type CatalogSort = 'popularity' | 'rating' | 'newest';
-
 type MixModalState = {
   mix: MixCard;
   source: MixSource;
@@ -141,12 +140,6 @@ const mixSourceLabels: Record<MixSource, string> = {
   rail: 'Из подборки',
 };
 
-const sortOptions: Array<{ value: CatalogSort; label: string }> = [
-  { value: 'popularity', label: 'По популярности' },
-  { value: 'rating', label: 'По рейтингу' },
-  { value: 'newest', label: 'Сначала новое' },
-];
-
 const railDescriptions: Record<RailType, string> = {
   statistical: 'Миксы, к которым гости возвращаются чаще всего.',
   prepared: 'Подборка для быстрого старта в фирменной стилистике ателье.',
@@ -155,8 +148,6 @@ const railDescriptions: Record<RailType, string> = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const unique = (items: string[]): string[] => Array.from(new Set(items));
 
 
 const formatPlainLabel = (value: string) =>
@@ -240,20 +231,6 @@ const extractErrorMessage = (payload: unknown, fallback: string) => {
   }
 
   return fallback;
-};
-
-const buildCatalogQuery = (filters: CatalogFilters) => {
-  const params = new URLSearchParams();
-
-  unique((filters.profiles ?? []).map((item) => item.trim()).filter(Boolean)).forEach((profile) => {
-    params.append('profiles', profile);
-  });
-  unique((filters.flavors ?? []).map((item) => item.trim()).filter(Boolean)).forEach((flavor) => {
-    params.append('flavors', flavor);
-  });
-
-  const query = params.toString();
-  return query ? `?${query}` : '';
 };
 
 const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().replace('.', ',')}%`;
@@ -451,8 +428,8 @@ const fetchHomeRails = async () => {
   return extractCollection(payload, ['items', 'rails']).map((item, index) => normalizeRail(item, index));
 };
 
-const fetchCatalogMixes = async (filters: CatalogFilters = {}) => {
-  const payload = await requestJson<unknown>(`/guest/catalog/mixes${buildCatalogQuery(filters)}`);
+const fetchCatalogMixes = async () => {
+  const payload = await requestJson<unknown>('/guest/catalog/mixes');
   return extractCollection(payload, ['items', 'mixes', 'catalog']).map((item, index) => normalizeMix(item, index));
 };
 
@@ -780,6 +757,151 @@ const MixDetailModal = ({
   );
 };
 
+// Сразу видны самые частые вкусы, остальные — по «Все N вкусов» или поиску.
+const CATALOG_SHEET_FLAVOR_LIMIT = 18;
+
+const CatalogFiltersSheet = ({
+  profiles,
+  flavors,
+  profileCounts,
+  flavorCounts,
+  selected,
+  resultCount,
+  onToggle,
+  onReset,
+  onClose,
+}: {
+  profiles: string[];
+  flavors: string[];
+  profileCounts: Record<string, number>;
+  flavorCounts: Record<string, number>;
+  selected: CatalogFilterTag[];
+  resultCount: number;
+  onToggle: (tag: CatalogFilterTag) => void;
+  onReset: () => void;
+  onClose: () => void;
+}) => {
+  const swipe = useSwipeDownToClose(onClose);
+  const [flavorQuery, setFlavorQuery] = useState('');
+  const [showAllFlavors, setShowAllFlavors] = useState(false);
+
+  const isSelected = (kind: CatalogFilterTag['kind'], value: string) =>
+    selected.some((tag) => tag.kind === kind && tag.value === value);
+  const normalizedFlavorQuery = flavorQuery.trim().toLowerCase();
+  const visibleFlavors = normalizedFlavorQuery
+    ? flavors.filter((flavor) => flavor.includes(normalizedFlavorQuery))
+    : showAllFlavors
+      ? flavors
+      : flavors.slice(0, CATALOG_SHEET_FLAVOR_LIMIT);
+  const chipCountLabel = (label: string, count = 0) => `${label}, ${count} ${pluralizeMixes(count)}`;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="aroma-mix-sheet aroma-catalog-sheet"
+        data-dragging={swipe.dragging ? 'true' : 'false'}
+        onPointerDown={swipe.onPointerDown}
+        onPointerMove={swipe.onPointerMove}
+        onPointerUp={swipe.onPointerEnd}
+        onPointerCancel={swipe.onPointerCancel}
+        style={{
+          top: 'auto',
+          bottom: 0,
+          left: '50%',
+          transform: `translateX(-50%) translateY(${swipe.offset}px)`,
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain',
+          width: 'min(calc(100vw - 16px), 540px)',
+          maxHeight: '92dvh',
+          padding: '12px 20px calc(20px + env(safe-area-inset-bottom))',
+          borderTopLeftRadius: 'var(--r-guest-sheet)',
+          borderTopRightRadius: 'var(--r-guest-sheet)',
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
+          overflowY: 'auto',
+          background: 'var(--guest-sheet-bg)',
+        }}
+      >
+        <span className="aroma-mix-sheet-handle" aria-hidden />
+        <DialogDescription className="sr-only">
+          Характер и вкусы, по которым Каталог сужает выдачу.
+        </DialogDescription>
+
+        <div className="aroma-catalog-sheet-head">
+          <DialogTitle className="aroma-mix-sheet-title">Фильтры</DialogTitle>
+          {selected.length ? (
+            <button type="button" className="aroma-onboarding-skip" onClick={onReset}>
+              Сбросить
+            </button>
+          ) : null}
+        </div>
+
+        <section className="aroma-catalog-sheet-block">
+          <p className="aroma-caps">Характер</p>
+          <div className="aroma-catalog-sheet-chips" role="group" aria-label="Характер">
+            {profiles.map((profile) => (
+              <Chip
+                key={profile}
+                color={getProfileColor(profile)}
+                active={isSelected('profile', profile)}
+                ariaLabel={chipCountLabel(formatProfileLabel(profile), profileCounts[profile])}
+                onClick={() => onToggle({ kind: 'profile', value: profile })}
+              >
+                {formatProfileLabel(profile)}
+                <span className="aroma-catalog-chip-count">{profileCounts[profile] ?? 0}</span>
+              </Chip>
+            ))}
+          </div>
+        </section>
+
+        <section className="aroma-catalog-sheet-block">
+          <p className="aroma-caps">Вкусы</p>
+          <input
+            type="search"
+            className="aroma-catalog-sheet-search"
+            value={flavorQuery}
+            onChange={(event) => setFlavorQuery(event.target.value)}
+            placeholder="Найти вкус"
+            aria-label="Найти вкус"
+            enterKeyHint="search"
+            autoComplete="off"
+          />
+          <div className="aroma-catalog-sheet-chips" role="group" aria-label="Вкусы">
+            {visibleFlavors.map((flavor) => (
+              <Chip
+                key={flavor}
+                active={isSelected('flavor', flavor)}
+                ariaLabel={chipCountLabel(flavor, flavorCounts[flavor])}
+                onClick={() => onToggle({ kind: 'flavor', value: flavor })}
+              >
+                {flavor}
+                <span className="aroma-catalog-chip-count">{flavorCounts[flavor] ?? 0}</span>
+              </Chip>
+            ))}
+          </div>
+          {normalizedFlavorQuery && !visibleFlavors.length ? (
+            <p className="aroma-catalog-sheet-hint">Такого вкуса в каталоге нет.</p>
+          ) : null}
+          {!normalizedFlavorQuery && !showAllFlavors && flavors.length > CATALOG_SHEET_FLAVOR_LIMIT ? (
+            <button
+              type="button"
+              className="aroma-onboarding-skip aroma-catalog-sheet-more"
+              onClick={() => setShowAllFlavors(true)}
+            >
+              {`Все ${flavors.length} ${pluralize(flavors.length, ['вкус', 'вкуса', 'вкусов'])}`}
+            </button>
+          ) : null}
+        </section>
+
+        <CTA disabled={!resultCount} onClick={onClose}>
+          {resultCount ? `Показать ${resultCount} ${pluralizeMixes(resultCount)}` : 'Ничего не найдено'}
+        </CTA>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const App = () => {
   const [ageConfirmed, setAgeConfirmed] = useState(() => localStorage.getItem(storageKeys.ageConfirmed) === 'true');
   const [accessGranted, setAccessGranted] = useState(() => localStorage.getItem(storageKeys.accessGranted) === 'true');
@@ -857,10 +979,9 @@ export const App = () => {
   const [mixerReturnView, setMixerReturnView] = useState<MixerReturnView>('showcase');
 
   const [query, setQuery] = useState('');
-  const [appliedCatalogProfiles, setAppliedCatalogProfiles] = useState<string[]>([]);
-  const [appliedCatalogFlavors, setAppliedCatalogFlavors] = useState<string[]>([]);
-  const [appliedSortBy, setAppliedSortBy] = useState<CatalogSort>('popularity');
-  const [catalogPopoverOpen, setCatalogPopoverOpen] = useState(false);
+  // Метки в порядке выбора: «Убрать последний фильтр» в пустой выдаче снимает именно последний.
+  const [catalogFilters, setCatalogFilters] = useState<CatalogFilterTag[]>([]);
+  const [catalogFiltersOpen, setCatalogFiltersOpen] = useState(false);
   const [railProfileFilters, setRailProfileFilters] = useState<string[]>([]);
 
   useEffect(() => {
@@ -969,14 +1090,14 @@ export const App = () => {
     }
   };
 
-  const loadCatalog = async (filters: CatalogFilters = {}) => {
+  const loadCatalog = async () => {
     const requestId = catalogRequestRef.current + 1;
     catalogRequestRef.current = requestId;
     setCatalogStatus('loading');
     setCatalogError('');
 
     try {
-      const mixes = await fetchCatalogMixes(filters);
+      const mixes = await fetchCatalogMixes();
       if (catalogRequestRef.current !== requestId) {
         return;
       }
@@ -1015,11 +1136,8 @@ export const App = () => {
       return;
     }
 
-    void loadCatalog({
-      profiles: appliedCatalogProfiles,
-      flavors: appliedCatalogFlavors,
-    });
-  }, [accessGranted, appliedCatalogProfiles, appliedCatalogFlavors]);
+    void loadCatalog();
+  }, [accessGranted]);
 
   useEffect(() => {
     if (view === 'onboarding') {
@@ -1063,9 +1181,7 @@ export const App = () => {
 
   const resetCatalogFilters = () => {
     setQuery('');
-    setAppliedCatalogProfiles([]);
-    setAppliedCatalogFlavors([]);
-    setAppliedSortBy('popularity');
+    setCatalogFilters([]);
   };
 
   const openPreferencesEditing = () => {
@@ -1260,48 +1376,13 @@ export const App = () => {
     !options.profiles.length || options.profiles.includes(option.value),
   );
 
-  const filteredCatalogMixes = catalogSourceMixes
-    .filter((mix) => mix.available)
-    .filter((mix) => {
-      if (!query) {
-        return true;
-      }
-
-      const haystack = [
-        mix.name,
-        mix.description,
-        ...mix.flavors,
-        ...mix.components.map((component) => component.name),
-        ...mix.components.map((component) => component.manufacturer),
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(query.toLowerCase());
-    })
-    .filter((mix) =>
-      !appliedCatalogProfiles.length ? true : mix.flavorProfiles.some((profile) => appliedCatalogProfiles.includes(profile)),
-    )
-    .filter((mix) => (!appliedCatalogFlavors.length ? true : mix.flavors.some((flavor) => appliedCatalogFlavors.includes(flavor))))
-    .sort((left, right) => {
-      if (appliedSortBy === 'rating' && right.avgRating !== left.avgRating) {
-        return right.avgRating - left.avgRating;
-      }
-
-      if (appliedSortBy === 'newest') {
-        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-      }
-
-      if (right.popularity !== left.popularity) {
-        return right.popularity - left.popularity;
-      }
-
-      if (right.avgRating !== left.avgRating) {
-        return right.avgRating - left.avgRating;
-      }
-
-      return left.name.localeCompare(right.name, 'ru');
-    });
+  const catalogProfiles = catalogFilters.filter((tag) => tag.kind === 'profile').map((tag) => tag.value);
+  const catalogFlavors = catalogFilters.filter((tag) => tag.kind === 'flavor').map((tag) => tag.value);
+  const filteredCatalogMixes = filterCatalogMixes(catalogSourceMixes, {
+    query,
+    profiles: catalogProfiles,
+    flavors: catalogFlavors,
+  });
 
   const selectedMixCard =
     selectedMix?.id
@@ -2132,25 +2213,18 @@ export const App = () => {
   };
 
   const renderCatalogView = () => {
-    const toggleCatalogProfile = (value: string) =>
-      setAppliedCatalogProfiles((current) =>
-        current.includes(value)
-          ? current.filter((item) => item !== value)
-          : [...current, value],
+    const removeCatalogFilter = (tag: CatalogFilterTag) =>
+      setCatalogFilters((current) =>
+        current.filter((item) => item.kind !== tag.kind || item.value !== tag.value),
       );
-    const toggleCatalogFlavor = (value: string) =>
-      setAppliedCatalogFlavors((current) =>
-        current.includes(value)
-          ? current.filter((item) => item !== value)
-          : [...current, value],
-      );
-    const hasPopoverIndicator =
-      appliedCatalogFlavors.length > 0 || appliedSortBy !== 'popularity';
-    const hasAnyFilter =
-      Boolean(query) ||
-      appliedCatalogProfiles.length > 0 ||
-      appliedCatalogFlavors.length > 0 ||
-      appliedSortBy !== 'popularity';
+    const catalogFilterLabel = (tag: CatalogFilterTag) =>
+      tag.kind === 'profile' ? formatProfileLabel(tag.value) : tag.value;
+    const lastCatalogFilter = catalogFilters[catalogFilters.length - 1];
+    const lastFilterLabel = lastCatalogFilter
+      ? catalogFilterLabel(lastCatalogFilter)
+      : query.trim();
+    const hasAnyFilter = Boolean(query.trim()) || catalogFilters.length > 0;
+    const isEmpty = !filteredCatalogMixes.length && catalogStatus === 'ready';
 
     return (
       <section className="aroma-catalog">
@@ -2161,15 +2235,22 @@ export const App = () => {
               className="aroma-catalog-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Поиск по названию и описанию"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+              }}
+              placeholder="Микс, вкус, табак"
+              aria-label="Поиск по каталогу"
+              enterKeyHint="search"
               autoComplete="off"
             />
             <button
               type="button"
-              className="aroma-catalog-icon-btn"
-              onClick={() => setCatalogPopoverOpen((current) => !current)}
-              aria-label="Фильтры и сортировка"
-              aria-expanded={catalogPopoverOpen}
+              className={cn(
+                'aroma-catalog-filter-btn',
+                catalogFilters.length > 0 && 'aroma-catalog-filter-btn-on',
+              )}
+              onClick={() => setCatalogFiltersOpen(true)}
+              aria-label={catalogFilters.length ? `Фильтры, выбрано ${catalogFilters.length}` : 'Фильтры'}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path
@@ -2179,56 +2260,26 @@ export const App = () => {
                   strokeLinecap="round"
                 />
               </svg>
-              {hasPopoverIndicator ? (
-                <span className="aroma-catalog-icon-dot" aria-hidden />
+              <span>Фильтры</span>
+              {catalogFilters.length ? (
+                <span className="aroma-catalog-filter-count">{catalogFilters.length}</span>
               ) : null}
             </button>
           </div>
-          <div className="aroma-catalog-chip-scroll">
-            {availableProfileOptions.map((option) => (
-              <Chip
-                key={option.value}
-                color={getProfileColor(option.value)}
-                active={appliedCatalogProfiles.includes(option.value)}
-                onClick={() => toggleCatalogProfile(option.value)}
-              >
-                {option.label}
-              </Chip>
-            ))}
-          </div>
-          {/* Поповер — внутри sticky-рейла: в потоке после него он открывался
-              в начале списка, и после прокрутки оказывался за экраном. */}
-          {catalogPopoverOpen ? (
-            <div className="aroma-catalog-popover" role="dialog" aria-label="Фильтры каталога">
-              <p className="aroma-caps">Сортировка</p>
-              <div className="aroma-catalog-sort">
-                {sortOptions.map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={cn(
-                      'aroma-catalog-sort-btn',
-                      appliedSortBy === item.value && 'aroma-catalog-sort-btn-on',
-                    )}
-                    onClick={() => setAppliedSortBy(item.value)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <p className="aroma-caps">Вкусы</p>
-              <div className="aroma-catalog-flavor-wrap">
-                {options.flavors.map((flavor) => (
-                  <Chip
-                    key={flavor}
-                    active={appliedCatalogFlavors.includes(flavor)}
-                    onClick={() => toggleCatalogFlavor(flavor)}
-                  >
-                    {flavor}
-                  </Chip>
-                ))}
-              </div>
-              <CTA onClick={() => setCatalogPopoverOpen(false)}>Готово</CTA>
+          {catalogFilters.length ? (
+            <div className="aroma-catalog-tags" role="group" aria-label="Выбранные фильтры">
+              {catalogFilters.map((tag) => (
+                <Chip
+                  key={`${tag.kind}-${tag.value}`}
+                  active
+                  color={tag.kind === 'profile' ? getProfileColor(tag.value) : undefined}
+                  ariaLabel={`Убрать фильтр «${catalogFilterLabel(tag)}»`}
+                  onClick={() => removeCatalogFilter(tag)}
+                >
+                  {catalogFilterLabel(tag)}
+                  <span className="aroma-catalog-tag-x" aria-hidden>×</span>
+                </Chip>
+              ))}
             </div>
           ) : null}
         </div>
@@ -2236,10 +2287,10 @@ export const App = () => {
         <div className="aroma-catalog-meta">
           <p className="aroma-caps">
             {catalogStatus === 'loading'
-              ? 'Обновляем…'
+              ? 'Загружаем…'
               : `Найдено · ${filteredCatalogMixes.length}`}
           </p>
-          {hasAnyFilter ? (
+          {hasAnyFilter && !isEmpty ? (
             <button
               type="button"
               className="aroma-onboarding-skip"
@@ -2251,8 +2302,32 @@ export const App = () => {
         </div>
 
         {catalogError ? <p className="screen-status error">{catalogError}</p> : null}
-        {!filteredCatalogMixes.length && catalogStatus === 'ready' ? (
-          <p className="screen-status">По выбранным фильтрам ничего не найдено.</p>
+        {isEmpty ? (
+          <div className="aroma-catalog-empty">
+            <p className="aroma-catalog-empty-text">
+              По выбранным фильтрам ничего не найдено. Даже мастер развёл руками.
+            </p>
+            <div className="aroma-catalog-empty-actions">
+              {lastFilterLabel ? (
+                <button
+                  type="button"
+                  className="aroma-catalog-empty-btn"
+                  onClick={() =>
+                    lastCatalogFilter ? removeCatalogFilter(lastCatalogFilter) : setQuery('')
+                  }
+                >
+                  {`Убрать «${lastFilterLabel}»`}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="aroma-onboarding-skip"
+                onClick={resetCatalogFilters}
+              >
+                Сбросить всё
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <div className="aroma-catalog-list">
@@ -2263,12 +2338,12 @@ export const App = () => {
               className="aroma-catalog-row"
               onClick={() => openMix(mix, 'catalog')}
             >
-              <ProfileGlyph profiles={mix.flavorProfiles} size={44} />
+              <ProfileGlyph profiles={mix.flavorProfiles} size={36} />
               <div className="aroma-catalog-row-main">
                 <h3 className="aroma-catalog-row-name">{mix.name}</h3>
                 {mix.flavors.length ? (
                   <p className="aroma-catalog-row-flavors">
-                    {mix.flavors.slice(0, 3).join(' · ')}
+                    {flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(' · ')}
                   </p>
                 ) : null}
               </div>
@@ -2325,6 +2400,30 @@ export const App = () => {
           </>
         )}
       </div>
+
+      {catalogFiltersOpen ? (
+        <CatalogFiltersSheet
+          profiles={byCountDesc(
+            availableProfileOptions.map((option) => option.value),
+            options.profileCounts,
+            formatProfileLabel,
+          )}
+          flavors={byCountDesc(options.flavors, options.flavorCounts)}
+          profileCounts={options.profileCounts}
+          flavorCounts={options.flavorCounts}
+          selected={catalogFilters}
+          resultCount={filteredCatalogMixes.length}
+          onToggle={(tag) =>
+            setCatalogFilters((current) =>
+              current.some((item) => item.kind === tag.kind && item.value === tag.value)
+                ? current.filter((item) => item.kind !== tag.kind || item.value !== tag.value)
+                : [...current, tag],
+            )
+          }
+          onReset={() => setCatalogFilters([])}
+          onClose={() => setCatalogFiltersOpen(false)}
+        />
+      ) : null}
 
       <MixDetailModal
         state={mixModalState}
