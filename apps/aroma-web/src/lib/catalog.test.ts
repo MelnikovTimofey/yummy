@@ -47,6 +47,54 @@ test('filterCatalogMixes ищет текст в названии, описани
   assert.deepEqual(names(filterCatalogMixes(mixes, { ...noFilter, query: '  papa ' })), ['Банановая сторона']);
 });
 
+// Разбор поиска на данных прода (#187): гость пишет «е» вместо «ё», бренды — по-русски, характер — словом.
+test('filterCatalogMixes не различает «е» и «ё» ни в запросе, ни в тексте микса', () => {
+  const mixes = [
+    mix('Вишнёвый чизкейк'),
+    mix('Дымный вечер', { description: 'Копчёная груша' }),
+    mix('Новый год', { flavors: ['ёлка'] }),
+    mix('Еловый лес'),
+  ];
+  const search = (query: string) => names(filterCatalogMixes(mixes, { ...noFilter, query }));
+
+  assert.deepEqual(search('вишневый'), ['Вишнёвый чизкейк']);
+  assert.deepEqual(search('копченая'), ['Дымный вечер']);
+  assert.deepEqual(search('елка'), search('ёлка'));
+  assert.deepEqual(search('елка'), ['Новый год']);
+  assert.deepEqual(search('ёлов'), ['Еловый лес']);
+});
+
+test('filterCatalogMixes находит бренд по русскому названию', () => {
+  const mixes = [
+    mix('Банановая сторона', { components: [{ name: 'Bananapapa', manufacturer: 'DARKSIDE' }] }),
+    mix('Пинаколада', { components: [{ name: 'Pinacolada', manufacturer: 'MUSTHAVE' }] }),
+    mix('Сигарный банан', { components: [{ name: 'Banana', manufacturer: 'Satyr' }] }),
+    mix('Лимонад', { components: [{ name: 'Lemonade', manufacturer: 'Black Burn' }] }),
+  ];
+  const search = (query: string) => names(filterCatalogMixes(mixes, { ...noFilter, query }));
+
+  assert.deepEqual(search('дарксайд'), search('darkside'));
+  assert.deepEqual(search('дарксайд'), ['Банановая сторона']);
+  assert.deepEqual(search('масхэв'), search('musthave'));
+  assert.deepEqual(search('Мастхэв'), ['Пинаколада']);
+  assert.deepEqual(search('сатир'), ['Сигарный банан']);
+  assert.deepEqual(search('блэк бёрн'), ['Лимонад']);
+});
+
+test('filterCatalogMixes находит микс по подписи характера, не путая её со вкусами', () => {
+  const mixes = [
+    mix('Космокола', { flavorProfiles: ['berry', 'fresh'], flavors: ['черника'] }),
+    mix('Лимон с хвоей', { flavorProfiles: ['citrus'], flavors: ['лимон'] }),
+    mix('Ягодный пунш', { flavors: ['малина'] }),
+    mix('Молоко и банан', { flavorProfiles: ['dessert'], flavors: ['ягоды годжи'] }),
+  ];
+  const search = (query: string) => names(filterCatalogMixes(mixes, { ...noFilter, query }));
+
+  assert.deepEqual(search('ягод'), ['Космокола', 'Молоко и банан', 'Ягодный пунш']);
+  assert.deepEqual(search('цитрус'), ['Лимон с хвоей']);
+  assert.deepEqual(search('berry'), []);
+});
+
 // Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и».
 test('filterCatalogMixes: «или» внутри типа метки, «и» между типами и с текстом', () => {
   const mixes = [
@@ -78,6 +126,7 @@ test('flavorsMatchedFirst поднимает выбранные и найден�
   assert.deepEqual(flavorsMatchedFirst(flavors, '', ['холодок']), ['холодок', 'арбуз', 'барбарис', 'дыня', 'лайм', 'лимон']);
   assert.deepEqual(flavorsMatchedFirst(flavors, 'ЛИМ', ['дыня']), ['дыня', 'лимон', 'арбуз', 'барбарис', 'лайм', 'холодок']);
   assert.deepEqual(flavorsMatchedFirst(flavors, '', []), flavors);
+  assert.deepEqual(flavorsMatchedFirst(['дыня', 'ёлка'], 'елк', []), ['ёлка', 'дыня']);
 });
 
 // Частые вкусы и характеры первыми — в шторке «Фильтры» и в счётчиках (#181).
