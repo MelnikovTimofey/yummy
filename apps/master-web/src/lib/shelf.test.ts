@@ -141,6 +141,8 @@ test('shelfUntil: дата и дни с тоном по сроку постав�
   assert.deepEqual(shelfUntil(row({ status: 'check', overdue: true }), 7), { text: 'должна была закончиться', days: null, tone: 'warning' });
   assert.deepEqual(shelfUntil(row({ status: 'out', daysLeft: 0 }), 7), { text: 'нет банок', days: null, tone: 'danger' });
   assert.deepEqual(shelfUntil(row({ daysLeft: null, endsAt: null, rateKind: 'none' }), 7), { text: '—', days: null, tone: 'faint' });
+  // В плане банок ещё не было: оценка по бренду даёт «0 дней», но прогноза нет.
+  assert.deepEqual(shelfUntil(row({ status: 'plan', rateKind: 'brand', daysLeft: 0, endsAt: '2026-10-20T10:00:00.000Z' }), 7), { text: '—', days: null, tone: 'faint' });
 });
 
 test('shelfPips: открытые с заливкой, запасные сплошные, подпись «1 + 2»', () => {

@@ -5856,3 +5856,542 @@ button.chip .chip__count[hidden] {
 .mixes-table__metric-col {
   white-space: nowrap;
 }
+
+/* =====================================================================
+   Полка (#211) — по design/design_handoff_inventory (#shot=shelf,
+   shelf-menu, shelf-undo, shelf-drawer, edge-empty, edge-few).
+   ===================================================================== */
+
+.shelf-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 5px 12px 60px;
+  max-width: 1480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.shelf-faint { color: var(--text-faint); }
+.shelf-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+[data-tone="warning"].shelf-num,
+.shelf-until small[data-tone="warning"] { color: var(--warning); }
+[data-tone="danger"].shelf-num,
+.shelf-until small[data-tone="danger"] { color: var(--danger); }
+[data-tone="faint"].shelf-num,
+.shelf-until small[data-tone="faint"] { color: var(--text-faint); }
+.shelf-until small[data-tone="muted"] { color: var(--text-muted); }
+
+.shelf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.shelf-toolbar__search { flex: 0 1 220px; min-width: 180px; }
+
+.shelf-toolbar__chips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.shelf-sort .select-input {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  border-color: var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+/* --- Панель фильтров ------------------------------------------------- */
+
+.shelf-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.shelf-filters__group { display: grid; gap: 6px; align-content: start; }
+
+.shelf-filters__group h4 {
+  margin: 0 0 2px;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.shelf-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.shelf-check input { accent-color: var(--accent); margin: 0; }
+.shelf-check__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.shelf-check em {
+  margin-left: auto;
+  font-style: normal;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-filters__more,
+.shelf-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.shelf-filters__more:hover,
+.shelf-link:hover { color: var(--text-primary); }
+
+.shelf-filters__reset { align-self: flex-start; }
+
+/* --- Таблица полки --------------------------------------------------- */
+
+.shelf-table-shell {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow-x: auto;
+}
+
+.shelf-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.shelf-table th {
+  height: 34px;
+  padding: 0 12px;
+  text-align: left;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.shelf-table td {
+  height: 52px;
+  padding: 6px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-md);
+}
+
+.shelf-table tbody tr { cursor: pointer; transition: background 80ms ease; }
+.shelf-table tbody tr:last-child td { border-bottom: 0; }
+.shelf-table tbody tr:hover { background: var(--bg-elevated); }
+.shelf-table tbody tr[data-active="true"] { background: var(--accent-soft); }
+.shelf-table .shelf-table__num { text-align: right; }
+.shelf-table__note { font-size: var(--fs-xs); }
+.shelf-table__rate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shelf-table__empty { margin: 12px; }
+
+.shelf-table__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+
+.shelf-name { display: grid; gap: 1px; min-width: 0; }
+
+.shelf-name b {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shelf-name span {
+  font-family: var(--font-meta);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shelf-name--receipt b { font-weight: 400; font-size: var(--fs-sm); }
+
+.shelf-until { display: grid; gap: 1px; }
+.shelf-until small { font-size: var(--fs-xs); }
+
+/* --- Банки-пипсы ----------------------------------------------------- */
+
+.shelf-pips { display: inline-flex; align-items: flex-end; gap: 3px; height: 18px; }
+
+.shelf-pip {
+  position: relative;
+  display: inline-block;
+  width: 9px;
+  height: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.shelf-pip i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--text-secondary); }
+.shelf-pip[data-tone="low"] i { background: var(--warning); }
+.shelf-pip[data-tone="crit"] i { background: var(--danger); }
+.shelf-pip--sealed { background: var(--text-secondary); border-color: var(--text-secondary); }
+.shelf-pip--none { border-style: dashed; border-color: var(--border-default); }
+
+.shelf-pips__meta {
+  margin-left: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.shelf-keys {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.shelf-keys span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* --- Меню строки ----------------------------------------------------- */
+
+.shelf-menu {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  width: 260px;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.shelf-menu__label {
+  padding: 6px 8px 4px;
+  font-family: var(--font-meta);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.shelf-menu__fracs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 2px 4px 2px; }
+
+.shelf-menu__frac {
+  height: 32px;
+  min-width: 34px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.shelf-menu__frac:hover:not(:disabled) { border-color: var(--accent-border); background: var(--accent-soft); }
+.shelf-menu__frac:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.shelf-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.shelf-menu__item:hover:not(:disabled),
+.shelf-menu__item:focus-visible { background: var(--accent-soft); color: var(--text-primary); outline: none; }
+.shelf-menu__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.shelf-menu__item .shelf-faint { font-size: var(--fs-xs); }
+
+.shelf-menu__sep { height: 1px; margin: 4px 0; background: var(--border-subtle); }
+
+.shelf-menu__form { display: grid; gap: 8px; padding: 0 4px 4px; }
+.shelf-menu__hint { margin: 0 4px; font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-menu__field { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-menu__field .text-input,
+.shelf-card__stop-note .text-input {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+}
+
+.shelf-menu__form-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* --- Тост «Закончилась» и отмена -------------------------------------- */
+
+.shelf-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(640px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+  color: var(--success);
+  pointer-events: auto;
+}
+
+.shelf-toast[data-tone="danger"] { border-color: var(--danger-border); color: var(--danger); }
+.shelf-toast > svg { flex-shrink: 0; }
+
+.shelf-toast p {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.shelf-toast b { font-weight: 500; color: var(--text-primary); }
+
+.shelf-toast__timer {
+  font-family: var(--font-meta);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-toast .btn .kbd { margin-left: 2px; }
+
+/* --- Пустая полка ---------------------------------------------------- */
+
+.shelf-empty {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 40px 32px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-lg);
+}
+
+.shelf-empty h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 22px; }
+.shelf-empty p { margin: 0; max-width: 64ch; line-height: 1.5; color: var(--text-muted); }
+
+/* --- Карточка на полке (шторка) --------------------------------------- */
+
+.shelf-card {
+  width: min(480px, 100%);
+  max-width: 96vw !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-raised) !important;
+  border-left: 1px solid var(--border-default);
+}
+
+.shelf-card__head { display: grid; gap: 6px; padding: 20px 22px 0; }
+.shelf-card__eyebrow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.shelf-card__eyebrow {
+  margin: 0;
+  font-family: var(--font-meta);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.shelf-card__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.shelf-card__links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.shelf-card__body { display: grid; gap: 18px; align-content: start; padding: 16px 22px 28px; }
+
+.shelf-card__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.shelf-card__marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+}
+
+.shelf-card__marks .shelf-faint { margin-right: 4px; }
+.shelf-card__marks .shelf-menu__frac { height: 32px; }
+
+.shelf-card__tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+.shelf-card__tile {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+}
+
+.shelf-card__tile span {
+  font-family: var(--font-meta);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.shelf-card__tile b {
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-card__tile b.shelf-faint { color: var(--text-faint); }
+.shelf-card__tile small { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-card__section { display: grid; gap: 8px; }
+
+.shelf-card__h3 {
+  margin: 0;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.shelf-card__note { margin: 0; font-size: var(--fs-sm); }
+
+.shelf-card__packs { border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
+
+.shelf-card__pack {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.shelf-card__pack:last-child { border-bottom: 0; }
+.shelf-card__pack-copy { display: grid; gap: 1px; min-width: 0; }
+.shelf-card__pack-copy b { font-weight: 500; font-size: var(--fs-sm); }
+.shelf-card__pack-copy span { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-card__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 116px;
+  padding: 8px 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.shelf-card__bar {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  align-content: end;
+  height: 100%;
+}
+
+.shelf-card__bar i {
+  display: block;
+  width: 100%;
+  max-width: 56px;
+  border-radius: 3px 3px 0 0;
+  background: var(--chart-1);
+}
+
+.shelf-card__bar span { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.shelf-card__bar small { font-size: 10.5px; color: var(--text-faint); }
+
+.shelf-card__setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-sm);
+}
+
+.shelf-card__setting small { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
+
+.shelf-card__select.select-input {
+  width: 100px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+}
+
+.shelf-card__stop-note { display: flex; gap: 8px; }
+.shelf-card__mix { font-size: var(--fs-sm); }
+
+/* Каталог: колонка «Полка» вместо тумблера наличия (#211). */
+.inventory-shelf-cell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }

@@ -173,7 +173,7 @@ export const formatShelfDate = (iso: string | null | undefined) => {
 export const shelfUntil = (row: ShelfRow, leadDays: number): { text: string; days: string | null; tone: ShelfTone } => {
   if (row.status === 'out') return { text: 'нет банок', days: null, tone: 'danger' };
   if (row.status === 'check') return { text: 'должна была закончиться', days: null, tone: 'warning' };
-  if (row.daysLeft === null || !row.endsAt) return { text: '—', days: null, tone: 'faint' };
+  if (row.status === 'plan' || row.daysLeft === null || !row.endsAt) return { text: '—', days: null, tone: 'faint' };
   const days = Math.round(row.daysLeft);
   return {
     text: `${row.rateKind === 'brand' ? '~' : ''}${formatShelfDate(row.endsAt)}`,
@@ -200,6 +200,8 @@ const integer = numberFormat(0);
 const decimal = numberFormat(1);
 
 export const formatNumber = (value: number) => integer.format(Math.round(value));
+
+export const formatOneDecimal = (value: number) => decimal.format(value);
 
 export const formatDecimal = (value: number) => (value < 10 ? decimal : integer).format(value);
 
