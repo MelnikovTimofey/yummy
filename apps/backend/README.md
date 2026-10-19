@@ -223,6 +223,22 @@ npm run dev
 
 По умолчанию backend слушает `3021`.
 
+## Полка и наличие
+
+Полка точки (#152): `ShelfItem` — табак, который точка держит; `Pack` — банка
+(пачка 25 г — тоже банка); `PackMark` — отметка остатка; `ShelfSettings` —
+граммовка чаши и срок поставки; `Supplier`, `SupplierItem`, `Delivery`,
+`DeliveryLine` — поставки по счетам.
+
+- `src/stock.ts` — чистая математика: вскрытие, расход, прогноз, «К заказу».
+- `src/shelf.ts` — сервис полки: экран и карточка, «Закончилась» и отмена,
+  отметки, ручные банки, списание, стоп, настройки. Все мутации — в одной
+  транзакции с пересчётом `Tobacco.inStock` и записью аудита.
+- `Tobacco.inStock` — кэш правила «на полке (active) и не стоп и есть банка в
+  запасе или в работе и не архив». Пишет его только `syncAvailability` из
+  `src/shelf.ts`. Старый тумблер «Табаков» до экрана «Полка» переводится в банки:
+  «есть» — на полку и банка, если её нет; «нет» — банки закончились сейчас.
+
 ## HTReviews preview import
 
 Подготовительный import работает отдельно от runtime backend и не меняет текущий seed автоматически.
@@ -295,7 +311,7 @@ npm run sync:htreviews
 
 1. импорт идемпотентный: повторный прогон делает upsert по source IDs и fallback `brand + line + name`;
 2. новые позиции по умолчанию попадают в каталог как `out-of-stock`, чтобы не ломать guest recommendations;
-3. если позиция уже есть в БД, её текущий `inStock` сохраняется;
+3. наличие (`inStock`) sync не пишет: это кэш полки, его меняет только `src/shelf.ts`;
 4. global discovery брендов не ограничен первым HTML-срезом `/tobaccos/brands` и добирает paginated brand pages через публичный `getData`;
 5. для imported tobacco теперь хранятся:
    - `lineName`
@@ -308,7 +324,7 @@ npm run sync:htreviews
 
 Дополнительный env:
 
-1. `HTREVIEWS_DEFAULT_IN_STOCK=true|false` - default stock flag для новых импортированных записей.
+1. `HTREVIEWS_DEFAULT_IN_STOCK=true|false` — `true` ставит новые импортированные карточки на полку с одной банкой фасовки по умолчанию (по умолчанию `false`).
 
 ## HTReviews detail backfill
 
