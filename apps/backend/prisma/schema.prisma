@@ -139,6 +139,11 @@ model Tobacco {
   flavorTags      String
   inStock         Boolean           @default(true)
   archived        Boolean           @default(false)
+  rating          Float?
+  ratingsCount    Int?
+  reviewsCount    Int?
+  viewsCount      Int?
+  statsSyncedAt   DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   mixComponents   MixComponent[]
