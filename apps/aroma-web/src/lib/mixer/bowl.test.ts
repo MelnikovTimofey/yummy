@@ -89,12 +89,13 @@ test('профили сравниваются без учёта регистра
   assert.equal(pairAffinity(left, right, affinity), 0.9);
 });
 
-test('verdictForScore — ступени 85 / 70 / 55', () => {
-  assert.equal(verdictForScore(85), 'classic');
-  assert.equal(verdictForScore(84), 'confident');
-  assert.equal(verdictForScore(70), 'confident');
-  assert.equal(verdictForScore(55), 'bold');
-  assert.equal(verdictForScore(54), 'ask-master');
+test('verdictForScore — ступени 75 / 62 / 50, как verdictOf в backend', () => {
+  assert.equal(verdictForScore(75), 'classic');
+  assert.equal(verdictForScore(74), 'confident');
+  assert.equal(verdictForScore(62), 'confident');
+  assert.equal(verdictForScore(61), 'bold');
+  assert.equal(verdictForScore(50), 'bold');
+  assert.equal(verdictForScore(49), 'ask-master');
 });
 
 test('moveBoundary двигает границу с шагом 5 и оставляет минимум 5', () => {

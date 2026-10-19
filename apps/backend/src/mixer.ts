@@ -36,8 +36,9 @@ const COOLING_TAG = 'охлаждающий';
 const TWIST_PROFILES = ['minty', 'spicy'];
 
 const NEUTRAL_AFFINITY = 0.5;
-const UNMET_AFFINITY = 0.3;
-const MET_AFFINITY_FLOOR = 0.6;
+// Сглаживание: столько «случайных» встреч добавляется к наблюдаемым и
+// ожидаемым, чтобы пара из одного-двух миксов не уходила в крайности.
+const AFFINITY_PRIOR = 2;
 
 const MONO_HARMONY = 70;
 const MAX_COOLING = 20;
@@ -52,41 +53,47 @@ const sum = (values: number[]) => values.reduce((total, value) => total + value,
 
 export const affinityKey = (left: string, right: string) => [left, right].sort().join('|');
 
-// Сродство — насколько часто профили разных компонентов одной чаши встречаются
-// вместе в миксах мастера. Нормируем по самой частой паре. Пара известных
-// профилей, которую мастер ни разу не сводил, опускается ниже нейтрали: это
-// слабый сигнал «не сочетают», а не отсутствие данных.
-export const buildAffinity = (mixes: string[][][], profiles: string[]): Affinity => {
-  const known = new Set<string>();
-  const pairCounts = new Map<string, number>();
-
-  for (const components of mixes) {
-    const pairs = new Set<string>();
-    components.forEach((left, index) => {
-      left.forEach((profile) => known.add(profile));
-      for (const right of components.slice(index + 1)) {
-        left.forEach((a) => right.forEach((b) => pairs.add(affinityKey(a, b))));
-      }
-    });
-    pairs.forEach((key) => pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1));
+// Сродство — во сколько раз мастер сводит профили разных компонентов чаще,
+// чем они сошлись бы у табаков, взятых с полки наугад (lift). Частый на полке
+// профиль сам по себе сродства не получает: ожидаемое считается по долям
+// профилей на полке. Вес пары компонентов делится между парами их профилей
+// поровну — так же, как гармония усредняет сродство. Шкала 0..1 —
+// lift² / (1 + lift²): случайная частота даёт нейтральные 0,5, квадрат
+// растягивает шкалу, чтобы вердикты различали миксы мастера и случайные чаши.
+export const buildAffinity = (mixes: string[][][], shelf: string[][]): Affinity => {
+  const shares = new Map<string, number>();
+  let shelfSize = 0;
+  for (const profiles of shelf.map(unique)) {
+    if (!profiles.length) continue;
+    shelfSize += 1;
+    profiles.forEach((profile) => shares.set(profile, (shares.get(profile) ?? 0) + 1 / profiles.length));
   }
 
-  const maxCount = Math.max(0, ...pairCounts.values());
-  const sorted = unique(profiles).sort();
+  const observed = new Map<string, number>();
+  let pairs = 0;
+  for (const components of mixes.map((items) => items.map(unique))) {
+    components.forEach((left, index) => {
+      for (const right of components.slice(index + 1)) {
+        if (!left.length || !right.length) continue;
+        pairs += 1;
+        const weight = 1 / (left.length * right.length);
+        left.forEach((a) => right.forEach((b) => {
+          const key = affinityKey(a, b);
+          observed.set(key, (observed.get(key) ?? 0) + weight);
+        }));
+      }
+    });
+  }
+
+  const sorted = [...shares.keys()].sort();
   const affinity: Affinity = {};
 
   sorted.forEach((left, index) => {
     for (const right of sorted.slice(index)) {
       const key = affinityKey(left, right);
-      const count = pairCounts.get(key) ?? 0;
-
-      if (!known.has(left) || !known.has(right)) {
-        affinity[key] = NEUTRAL_AFFINITY;
-      } else if (!count) {
-        affinity[key] = UNMET_AFFINITY;
-      } else {
-        affinity[key] = round2(MET_AFFINITY_FLOOR + (1 - MET_AFFINITY_FLOOR) * (count / maxCount));
-      }
+      const chance = (shares.get(left)! / shelfSize) * (shares.get(right)! / shelfSize) * (left === right ? 1 : 2);
+      const lift = ((observed.get(key) ?? 0) + AFFINITY_PRIOR) / (pairs * chance + AFFINITY_PRIOR);
+      affinity[key] = round2(lift ** 2 / (1 + lift ** 2));
     }
   });
 
@@ -149,9 +156,9 @@ export const harmonyOf = (components: BowlComponent[], affinity: Affinity) => {
 };
 
 export const verdictOf = (harmony: number): GuestMixerEvaluateResponse['verdict'] => {
-  if (harmony >= 85) return 'classic';
-  if (harmony >= 70) return 'confident';
-  if (harmony >= 55) return 'bold';
+  if (harmony >= 75) return 'classic';
+  if (harmony >= 62) return 'confident';
+  if (harmony >= 50) return 'bold';
   return 'ask-master';
 };
 
@@ -291,7 +298,7 @@ const loadMixer = async () => {
 
   const affinity = buildAffinity(
     published.map((mix) => mix.componentIds.map((id) => profilesById.get(id) ?? [])),
-    palette.flatMap((item) => item.flavorProfiles.map(normalize)),
+    palette.map((item) => item.flavorProfiles.map(normalize)),
   );
 
   return { palette, affinity, guestMixes: mixes.filter((mix) => mix.guestVisible) };
