@@ -1,6 +1,6 @@
 // Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл / миксер) → карточка → подтверждение.
 const { GuestTab, OnboardingProgress } = window.DesignSystem_1aef33;
-const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar, Icon } = window;
+const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar, Icon } = window;
 const MOCK = window.AROMA_MOCK;
 
 // Нижняя панель (#168): только значки, название — в aria-label, активный пункт кремовый с чертой акцента.
@@ -46,10 +46,8 @@ function GuestApp() {
   const [likedProfiles, setLikedProfiles] = React.useState([]);
   const [likedFlavors, setLikedFlavors] = React.useState([]);
   const [query, setQuery] = React.useState('');
-  const [catalogProfiles, setCatalogProfiles] = React.useState([]);
-  const [catalogFlavors, setCatalogFlavors] = React.useState([]);
-  const [sort, setSort] = React.useState('popularity');
-  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const [catalogFilters, setCatalogFilters] = React.useState([]);
+  const [catalogFiltersOpen, setCatalogFiltersOpen] = React.useState(false);
   const [rail, setRail] = React.useState(null);
   const [railFilters, setRailFilters] = React.useState([]);
   const [sheet, setSheet] = React.useState(null);
@@ -71,14 +69,22 @@ function GuestApp() {
     return scored.slice(0, 5).map((x) => x.mix);
   }, [likedProfiles, likedFlavors]);
 
+  // Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и». Сортировки нет (#181): по алфавиту.
   const catalogResults = React.useMemo(() => {
     const q = query.trim().toLowerCase();
+    const of = (kind) => catalogFilters.filter((t) => t.kind === kind).map((t) => t.value);
+    const profiles = of('profile');
+    const flavors = of('flavor');
     return MOCK.mixes
-      .filter((m) => !q || (m.name + ' ' + m.description + ' ' + m.flavors.join(' ') + ' ' + m.components.map((c) => c.name + ' ' + c.manufacturer).join(' ')).toLowerCase().includes(q))
-      .filter((m) => !catalogProfiles.length || m.flavorProfiles.some((p) => catalogProfiles.includes(p)))
-      .filter((m) => !catalogFlavors.length || m.flavors.some((f) => catalogFlavors.includes(f)))
-      .sort((a, b) => (sort === 'rating' ? b.avgRating - a.avgRating : sort === 'newest' ? b.id.localeCompare(a.id) : b.popularity - a.popularity));
-  }, [query, catalogProfiles, catalogFlavors, sort]);
+      .filter((m) => !q || [m.name, m.description, ...m.flavors, ...m.components.flatMap((c) => [c.name, c.manufacturer])].join(' ').toLowerCase().includes(q))
+      .filter((m) => !profiles.length || m.flavorProfiles.some((p) => profiles.includes(p)))
+      .filter((m) => !flavors.length || m.flavors.some((f) => flavors.includes(f)))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  }, [query, catalogFilters]);
+
+  const sameFilter = (a, b) => a.kind === b.kind && a.value === b.value;
+  const removeCatalogFilter = (tag) => setCatalogFilters((cur) => cur.filter((t) => !sameFilter(t, tag)));
+  const toggleCatalogFilter = (tag) => setCatalogFilters((cur) => (cur.some((t) => sameFilter(t, tag)) ? cur.filter((t) => !sameFilter(t, tag)) : [...cur, tag]));
 
   const openMix = (mix, source) => { setSheet({ mix, source }); setRating(0); };
   const chooseMix = (mix, source) => { setSelected({ mix, source }); setSheet(null); setView('confirmation'); };
@@ -149,7 +155,7 @@ function GuestApp() {
                   flavors={likedFlavors}
                   toggleProfile={toggle(setLikedProfiles)}
                   toggleFlavor={toggle(setLikedFlavors)}
-                  onNext={() => { if (step === 1) { setStep(2); return; } setCatalogProfiles(likedProfiles); setCatalogFlavors(likedFlavors); setView('recommendations'); }}
+                  onNext={() => { if (step === 1) { setStep(2); return; } setView('recommendations'); }}
                   onSkip={() => setView('catalog')}
                 />
               ) : null}
@@ -162,12 +168,10 @@ function GuestApp() {
               {view === 'catalog' ? (
                 <CatalogScreen
                   query={query} setQuery={setQuery}
-                  profiles={catalogProfiles} toggleProfile={toggle(setCatalogProfiles)}
-                  flavors={catalogFlavors} toggleFlavor={toggle(setCatalogFlavors)}
-                  sort={sort} setSort={setSort}
-                  popoverOpen={popoverOpen} setPopoverOpen={setPopoverOpen}
+                  filters={catalogFilters} onRemoveFilter={removeCatalogFilter}
+                  onOpenFilters={() => setCatalogFiltersOpen(true)}
                   results={catalogResults} onOpen={openMix}
-                  onReset={() => { setQuery(''); setCatalogProfiles([]); setCatalogFlavors([]); setSort('popularity'); }}
+                  onReset={() => { setQuery(''); setCatalogFilters([]); }}
                 />
               ) : null}
               {view === 'rail' && rail ? (
@@ -178,6 +182,9 @@ function GuestApp() {
           </>
         )}
       </div>
+      {catalogFiltersOpen ? (
+        <CatalogFiltersSheet filters={catalogFilters} onToggle={toggleCatalogFilter} onReset={() => setCatalogFilters([])} resultCount={catalogResults.length} onClose={() => setCatalogFiltersOpen(false)} />
+      ) : null}
       <MixSheet state={sheet} rating={rating} onRate={setRating} onClose={() => setSheet(null)} onChoose={chooseMix} />
     </div>
   );
