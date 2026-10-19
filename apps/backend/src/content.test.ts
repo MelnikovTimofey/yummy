@@ -167,6 +167,84 @@ test('guest home rails include statistical rails for CTA and ratings', async () 
   }
 });
 
+test('statistical rails stay off the guest home until guests choose or rate a mix', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const guestRails = await app.inject({
+      method: 'GET',
+      url: '/guest/home/rails',
+    });
+
+    assert.equal(guestRails.statusCode, 200);
+    const guestRailsBody = guestRails.json() as { items: Array<{ id: string; type: string }> };
+    assert.deepEqual(
+      guestRailsBody.items.filter((item) => item.type === 'statistical').map((item) => item.id),
+      [],
+    );
+
+    const staffRails = await app.inject({
+      method: 'GET',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(staffRails.statusCode, 200);
+    const staffRailsBody = staffRails.json() as {
+      items: Array<{ id: string; type: string; mixIds: string[]; mixes: Array<{ id: string }> }>;
+    };
+    const statisticalRails = staffRailsBody.items.filter((item) => item.type === 'statistical');
+    assert.deepEqual(
+      statisticalRails.map((item) => [item.id, item.mixIds, item.mixes]),
+      [
+        ['rail-statistical-top', [], []],
+        ['rail-statistical-rated', [], []],
+      ],
+    );
+  } finally {
+    await app.close();
+  }
+});
+
+test('most selected rail needs a smoke CTA and top rated rail needs a guest rating', async () => {
+  const app = buildApp();
+
+  try {
+    await app.inject({
+      method: 'POST',
+      url: '/guest/events/smoke-cta',
+      payload: {
+        mixId: 'mix-citrus-scout',
+      },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/guest/mixes/mix-berry-dawn/rating',
+      payload: {
+        value: 5,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/guest/home/rails',
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as { items: Array<{ id: string; mixes: Array<{ id: string }> }> };
+    const ctaRail = body.items.find((item) => item.id === 'rail-statistical-top');
+    const ratedRail = body.items.find((item) => item.id === 'rail-statistical-rated');
+    assert.deepEqual(ctaRail?.mixes.map((mix) => mix.id), ['mix-citrus-scout']);
+    assert.deepEqual(ratedRail?.mixes.map((mix) => mix.id), ['mix-berry-dawn']);
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff can manage mixes and rails', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
