@@ -8,7 +8,7 @@ import { ChevronRight, KeyRound } from 'lucide-react';
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
-import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst } from '@/lib/catalog';
+import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst, normalizeSearchText } from '@/lib/catalog';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
@@ -787,9 +787,9 @@ const CatalogFiltersSheet = ({
 
   const isSelected = (kind: CatalogFilterTag['kind'], value: string) =>
     selected.some((tag) => tag.kind === kind && tag.value === value);
-  const normalizedFlavorQuery = flavorQuery.trim().toLowerCase();
+  const normalizedFlavorQuery = normalizeSearchText(flavorQuery);
   const visibleFlavors = normalizedFlavorQuery
-    ? flavors.filter((flavor) => flavor.includes(normalizedFlavorQuery))
+    ? flavors.filter((flavor) => normalizeSearchText(flavor).includes(normalizedFlavorQuery))
     : showAllFlavors
       ? flavors
       : flavors.slice(0, CATALOG_SHEET_FLAVOR_LIMIT);

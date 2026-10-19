@@ -1,3 +1,5 @@
+import { profileLabelMap } from './profile-labels';
+
 type CatalogMix = {
   name: string;
   description: string;
@@ -15,21 +17,52 @@ export type CatalogFilter = {
 
 const byRu = (left: string, right: string) => left.localeCompare(right, 'ru');
 
+export const normalizeSearchText = (text: string) => text.trim().toLowerCase().replace(/ё/g, 'е');
+
+// Как гости пишут латинские бренды прода по-русски (#187). Бренды из Каталога прода на 2026-10-19;
+// кириллические (Сарма, База, Северный, Кобра, Хулиган) находятся и так.
+const brandAliases: Record<string, string[]> = {
+  musthave: ['масхэв', 'мастхэв', 'масхев', 'мастхев', 'маст хэв'],
+  darkside: ['дарксайд', 'дарк сайд'],
+  tangiers: ['танжирс', 'танжерс'],
+  satyr: ['сатир', 'сатыр'],
+  'black burn': ['блэк берн', 'блек берн', 'блэкберн'],
+  spectrum: ['спектрум'],
+  sebero: ['себеро'],
+  adalya: ['адалия', 'адалья'],
+  serbetli: ['щербетли', 'шербетли', 'сербетли'],
+  nirvana: ['нирвана'],
+  'sapphire crown': ['сапфир краун'],
+  mattpear: ['матпир', 'маттпир', 'мэтпир'],
+  'al fakher': ['аль фахер', 'альфахер', 'аль факер'],
+  'trofimoff’s': ['трофимов'],
+  oven: ['овен'],
+  // В данных прода «Nаш» набран с латинской N.
+  'nаш': ['наш'],
+  chabacco: ['чабакко', 'чабако'],
+  banger: ['бангер', 'бэнгер'],
+  afzal: ['афзал'],
+};
+
 const matchesQuery = (mix: CatalogMix, query: string) =>
-  [
-    mix.name,
-    mix.description,
-    ...mix.flavors,
-    ...mix.components.flatMap((component) => [component.name, component.manufacturer]),
-  ]
-    .join(' ')
-    .toLowerCase()
-    .includes(query);
+  normalizeSearchText(
+    [
+      mix.name,
+      mix.description,
+      ...mix.flavors,
+      ...mix.flavorProfiles.map((profile) => profileLabelMap[profile] ?? ''),
+      ...mix.components.flatMap((component) => [
+        component.name,
+        component.manufacturer,
+        ...(brandAliases[component.manufacturer.toLowerCase()] ?? []),
+      ]),
+    ].join(' '),
+  ).includes(query);
 
 // Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и».
 // Сортировки нет (#181): у «Покурить» и оценок пока нет данных, поэтому порядок — по алфавиту.
 export const filterCatalogMixes = <T extends CatalogMix>(mixes: T[], { query, profiles, flavors }: CatalogFilter): T[] => {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(query);
   return mixes
     .filter((mix) => mix.available)
     .filter((mix) => !normalizedQuery || matchesQuery(mix, normalizedQuery))
@@ -39,9 +72,9 @@ export const filterCatalogMixes = <T extends CatalogMix>(mixes: T[], { query, pr
 };
 
 export const flavorsMatchedFirst = (flavors: string[], query: string, selectedFlavors: string[]) => {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(query);
   const isMatch = (flavor: string) =>
-    selectedFlavors.includes(flavor) || (normalizedQuery !== '' && flavor.includes(normalizedQuery));
+    selectedFlavors.includes(flavor) || (normalizedQuery !== '' && normalizeSearchText(flavor).includes(normalizedQuery));
   return [...flavors.filter(isMatch), ...flavors.filter((flavor) => !isMatch(flavor))];
 };
 
