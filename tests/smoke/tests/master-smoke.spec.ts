@@ -194,7 +194,9 @@ test('Master shelf marks a pack empty and undoes it from the toast', async ({ pa
 // Табак берётся с полки, поэтому приёмка лишь добавляет ему банку в запас:
 // гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
 // остаётся поставка с уникальным номером «SMOKE-…» и одна банка.
-test('Master deliveries accept a manual draft with a catalog tobacco', async ({ page }) => {
+// Неразрушающий, как весь прогон (README smoke): черновик доводится до готовности
+// к приёмке и удаляется — принятая поставка оставила бы банки и поставку в базе.
+test('Master deliveries prepare a manual draft with a catalog tobacco and discard it', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
   await openWorkspace(page, 'Полка');
@@ -212,7 +214,6 @@ test('Master deliveries accept a manual draft with a catalog tobacco', async ({ 
   const number = `SMOKE-${Date.now()}`;
   await page.getByRole('button', { name: 'Заполнить вручную' }).click();
   const manual = page.getByRole('dialog');
-  await manual.getByLabel('Поставщик').fill('Smoke-поставщик');
   await manual.getByLabel('Номер счёта').fill(number);
   await manual.getByRole('button', { name: 'Создать черновик' }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`^Счёт № ${number}`), level: 1 })).toBeVisible();
@@ -237,11 +238,12 @@ test('Master deliveries accept a manual draft with a catalog tobacco', async ({ 
   await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
   await expect(page.locator('.deliv-footbar')).toContainText('будет 1 банка');
 
-  await page.getByRole('button', { name: 'Принять поставку' }).click();
-  const toast = page.locator('.shelf-toast');
-  await expect(toast).toContainText('Принято: 1 банка на полке');
-  await expect(toast.getByRole('button', { name: 'Открыть полку' })).toBeVisible();
-  await expect(page.locator('tr[data-delivery-id]').filter({ hasText: `№ ${number}` })).toContainText('принята');
+  await expect(page.getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Удалить черновик' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Удалить черновик' }).click();
+  await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeVisible();
+  await expect(page.locator('tr[data-delivery-id]').filter({ hasText: `№ ${number}` })).toHaveCount(0);
 });
 
 // Каталог длиннее экрана: редактор микса из конца списка должен открываться
