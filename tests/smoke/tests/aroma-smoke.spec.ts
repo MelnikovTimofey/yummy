@@ -24,11 +24,13 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   // Компактная Витрина (#175): тип полки — значком и в aria-label заголовка,
   // заголовок открывает подборку, карточка-постер — микс. Таб ищем через
   // навигацию: подстрочный поиск по «Витрина» зацепит полку «Мягкая витрина».
+  // Полки «выбор гостей» и «оценки гостей» появляются только после «Покурить»
+  // и оценок (#197), а в seed событий нет, поэтому открываем полку редакции.
   const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
-  const guestsShelf = page.getByRole('button', { name: /^Открыть подборку «.+», выбор гостей$/ }).first();
-  await expect(guestsShelf).toBeVisible();
-  await guestsShelf.click();
-  await expect(page.getByText('Витрина · Выбор гостей')).toBeVisible();
+  const editorialShelf = page.getByRole('button', { name: /^Открыть подборку «.+», редакция$/ }).first();
+  await expect(editorialShelf).toBeVisible();
+  await editorialShelf.click();
+  await expect(page.getByText('Витрина · Редакция')).toBeVisible();
   await page.getByRole('button', { name: 'Назад к витрине' }).click();
 
   await page.locator('.aroma-showcase-card').first().click();
