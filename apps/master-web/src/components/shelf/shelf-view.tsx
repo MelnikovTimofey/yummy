@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleCheck, Ellipsis, Search, TriangleAlert } from 'lucide-react';
+import { Ellipsis, FileUp, Search } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import { formatCount, formatMetricValue, type ShelfRow } from '@/contracts';
@@ -30,24 +30,17 @@ import { ShelfCard } from './shelf-card';
 import { ShelfFilterPanel } from './shelf-filter-panel';
 import { ShelfPips } from './shelf-pips';
 import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
+import { ShelfToast, type ShelfToastData } from './shelf-toast';
 
 type ShelfViewProps = {
   shelf: ShelfApi;
   onGoCatalog: () => void;
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
+  onUploadInvoice: (file: File) => void;
 };
 
-type Toast = {
-  id: number;
-  title: string;
-  text: string;
-  error?: boolean;
-  undo?: () => Promise<unknown>;
-};
-
-const UNDO_SECONDS = 10;
-const NOTE_SECONDS = 5;
+type Toast = ShelfToastData;
 
 const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
 const today = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
@@ -58,44 +51,7 @@ const markLabel = (fraction: number) => MARK_OPTIONS.find((option) => option.val
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 
-const ShelfToast = ({ toast, onUndo, onClose }: { toast: Toast; onUndo: () => void; onClose: () => void }) => {
-  const total = toast.undo ? UNDO_SECONDS : NOTE_SECONDS;
-  const [left, setLeft] = useState(total);
-
-  useEffect(() => {
-    setLeft(total);
-    const timer = window.setInterval(() => setLeft((current) => current - 1), 1000);
-    return () => window.clearInterval(timer);
-  }, [toast.id, total]);
-
-  useEffect(() => {
-    if (left <= 0) onClose();
-  }, [left, onClose]);
-
-  return (
-    <div className="shelf-toast" role="status" data-tone={toast.error ? 'danger' : undefined}>
-      {toast.error ? <TriangleAlert size={16} aria-hidden /> : <CircleCheck size={16} aria-hidden />}
-      <p>
-        <b>{toast.title}</b>
-        {toast.text ? ` — ${toast.text}` : null}
-      </p>
-      {toast.undo ? (
-        <>
-          <span className="shelf-toast__timer">{left} с</span>
-          <button type="button" className="btn" data-size="sm" onClick={onUndo}>
-            Отменить <span className="kbd">Z</span>
-          </button>
-        </>
-      ) : (
-        <button type="button" className="icon-btn" aria-label="Закрыть уведомление" onClick={onClose}>
-          ×
-        </button>
-      )}
-    </div>
-  );
-};
-
-export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix }: ShelfViewProps) => {
+export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUploadInvoice }: ShelfViewProps) => {
   const { view } = shelf;
   const rows = view?.rows ?? [];
   const settings = view?.settings ?? { bowlGrams: 18, leadDays: 7 };
@@ -113,6 +69,28 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix }: Sh
   const toastSeq = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableSectionElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // Счёт выбирается прямо на полке: файл уходит на «Поставки», там его разберут.
+  const invoiceInput = (
+    <input
+      ref={fileRef}
+      type="file"
+      accept="application/pdf,.pdf"
+      hidden
+      onChange={(event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (file) onUploadInvoice(file);
+      }}
+    />
+  );
+  const uploadButton = (
+    <button type="button" className="btn" data-variant="primary" onClick={() => fileRef.current?.click()}>
+      <FileUp size={14} aria-hidden />
+      Загрузить счёт
+    </button>
+  );
 
   const shown = useMemo(
     () => sortShelfRows(filterShelfRows(rows, { query, status, filters }), sort),
@@ -317,12 +295,16 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix }: Sh
         <div className="shelf-empty">
           <h2>Полка пуста</h2>
           <p>
-            Банки появляются из поставок. Табаки, которые уже стоят на полке, можно добавить из каталога: «На полку» в
-            строке табака — и банка на месте.
+            Банки появляются из поставок. Загрузите первый счёт поставщика — строки сопоставим с каталогом, вы проверите и
+            примете. Табаки, которые уже стоят на полке, можно добавить из каталога без счёта.
           </p>
-          <button type="button" className="btn" data-variant="primary" onClick={onGoCatalog}>
-            Добавить из каталога
-          </button>
+          <div className="shelf-empty__actions">
+            {uploadButton}
+            <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
+              Добавить из каталога
+            </button>
+          </div>
+          {invoiceInput}
         </div>
         {toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null}
       </section>
@@ -340,9 +322,13 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix }: Sh
         subtitle="Банки на полке, расход и прогноз. Закончилась банка — одна кнопка."
         meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])} · ${formatCount(totals.packs, ['банка', 'банки', 'банок'])}` : undefined}
         actions={
-          <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
-            Добавить из каталога
-          </button>
+          <>
+            <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
+              Добавить из каталога
+            </button>
+            {uploadButton}
+            {invoiceInput}
+          </>
         }
       />
 

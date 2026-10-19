@@ -6395,3 +6395,261 @@ button.chip .chip__count[hidden] {
 
 /* Каталог: колонка «Полка» вместо тумблера наличия (#211). */
 .inventory-shelf-cell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+
+/* =====================================================================
+   Поставки (#212) — по design/design_handoff_inventory (#shot=deliveries,
+   delivery-parse, edge-pdf, edge-dup, edge-sum).
+   ===================================================================== */
+
+.shelf-empty__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.deliv-back { align-self: flex-start; margin-bottom: -4px; }
+.deliv-muted { color: var(--text-muted); font-size: var(--fs-sm); }
+.deliv-ok { color: var(--success); }
+.deliv-warn { color: var(--warning); }
+.deliv-center { text-align: center; }
+.deliv-dot { background: currentColor; }
+
+.deliv-parse-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.deliv-parse-head__hint { margin-left: auto; }
+
+/* --- Плашки: PDF без текста, дубликат, сумма не сходится -------------- */
+
+.deliv-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--warning);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+}
+
+.deliv-alert[data-tone="danger"] { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger); }
+.deliv-alert > svg { flex-shrink: 0; margin-top: 2px; }
+.deliv-alert__text { flex: 1; margin: 0; line-height: 1.45; color: var(--text-primary); }
+.deliv-alert__text b { font-weight: 500; }
+
+/* --- Зона перетаскивания PDF ------------------------------------------ */
+
+.deliv-drop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.deliv-drop b { color: var(--text-primary); font-weight: 500; }
+.deliv-drop:focus-visible { outline: none; border-color: var(--accent); }
+.deliv-drop[data-state="hover"] { border-color: var(--accent); background: var(--accent-soft); color: var(--text-primary); }
+.deliv-drop[data-state="busy"] { cursor: progress; border-color: var(--accent-border); }
+
+.deliv-spin { animation: deliv-spin 900ms linear infinite; }
+
+@keyframes deliv-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Список поставок -------------------------------------------------- */
+
+.deliv-table { min-width: 980px; }
+.deliv-table tbody tr:focus-visible { outline: none; background: var(--bg-elevated); }
+.deliv-date-cell { font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+
+/* --- Разбор счёта ----------------------------------------------------- */
+
+.deliv-lines tbody tr { cursor: default; }
+.deliv-lines tbody tr:hover { background: transparent; }
+.deliv-lines td { height: 60px; }
+
+.deliv-raw { display: block; font-size: var(--fs-sm); line-height: 1.35; color: var(--text-muted); }
+.deliv-raw--skip { opacity: 0.5; }
+
+.deliv-match { display: grid; gap: 3px; min-width: 0; }
+.deliv-match small { font-size: var(--fs-xs); color: var(--text-faint); }
+.deliv-match b { font-weight: 500; }
+
+.deliv-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.deliv-select:hover:not(:disabled) { border-color: var(--border-strong); }
+.deliv-select:disabled { opacity: 0.6; cursor: progress; }
+.deliv-select[data-tone="warn"] { border-color: var(--warning); }
+.deliv-select[data-tone="danger"] { border-color: var(--danger-border); }
+.deliv-select > svg { flex-shrink: 0; color: var(--text-muted); }
+.deliv-select__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+
+.deliv-link { font-size: inherit; color: var(--text-secondary); }
+.deliv-link:disabled { opacity: 0.5; cursor: progress; }
+
+.deliv-grams { display: inline-flex; align-items: center; gap: 4px; }
+
+.deliv-grams__input {
+  width: 52px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.deliv-grams__input:hover { border-color: var(--border-default); }
+.deliv-grams__input:focus { outline: none; border-color: var(--accent); }
+
+.deliv-stepper {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+}
+
+.deliv-stepper button {
+  width: 24px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.deliv-stepper button:hover:not(:disabled) { color: var(--text-primary); }
+.deliv-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+.deliv-stepper span { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* --- Нижняя панель приёмки -------------------------------------------- */
+
+.deliv-footbar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+}
+
+.deliv-footbar__summary { flex: 1; min-width: 240px; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+
+.deliv-date { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-muted); }
+
+.deliv-date__input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color-scheme: dark;
+}
+
+/* --- Выбор табака ----------------------------------------------------- */
+
+.deliv-picker {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.deliv-picker__search { margin: 2px 2px 4px; }
+.deliv-picker__list { display: grid; gap: 1px; max-height: 300px; overflow-y: auto; }
+.deliv-picker__note { margin: 4px 8px 6px; font-size: var(--fs-xs); color: var(--text-muted); }
+
+.deliv-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.deliv-option:hover,
+.deliv-option:focus-visible { background: var(--accent-soft); color: var(--text-primary); outline: none; }
+.deliv-option[aria-pressed="true"] { background: var(--bg-raised); color: var(--text-primary); }
+.deliv-option__name { display: flex; gap: 6px; align-items: baseline; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.deliv-option__name b { font-weight: 500; color: var(--text-primary); }
+.deliv-option__meta { flex-shrink: 0; font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+/* --- Короткие формы ----------------------------------------------------- */
+
+.deliv-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.deliv-form-row--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.deliv-form-narrow { max-width: 140px; }
+.deliv-form-results { display: grid; gap: 1px; margin-top: -8px; padding: 4px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); background: var(--bg-raised); }
+
+.deliv-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 32px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-base);
+  font-size: var(--fs-sm);
+}
+
+/* Седьмая вкладка («Поставки») не помещается в шапку на 1280 px вместе с
+   подписью палитры: бренд и подпись больше не переносятся, а на узких
+   десктопах от палитры остаются иконка и ⌘K (aria-label у кнопки остаётся). */
+.brand__name,
+.status-pill__label { white-space: nowrap; }
+
+@media (max-width: 1360px) {
+  .topbar .status-pill__label { display: none; }
+}

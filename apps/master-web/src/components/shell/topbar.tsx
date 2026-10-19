@@ -27,6 +27,7 @@ export const MasterTopBar = ({
   const tabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     dashboard: null,
     shelf: null,
+    deliveries: null,
     catalog: null,
     mixes: null,
     rails: null,

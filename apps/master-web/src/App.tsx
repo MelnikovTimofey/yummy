@@ -8,6 +8,8 @@ import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
 import { ShelfView } from '@/components/shelf/shelf-view';
+import { useDeliveries } from '@/hooks/use-deliveries';
+import { DeliveriesView } from '@/components/deliveries/deliveries-view';
 import { useStaffAccounts } from '@/hooks/use-staff-accounts';
 import { useTelegramOperators } from '@/hooks/use-telegram-operators';
 import { Card, CardContent } from '@/components/ui/card';
@@ -146,6 +148,9 @@ export const App = () => {
   const telegramOps = useTelegramOperators({ onAfterSubmit: onAfterAccessSubmit });
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
   const shelf = useShelf(token);
+  const deliveries = useDeliveries(token);
+  // Счёт, выбранный на «Полке»: его разбирает вкладка «Поставки».
+  const [pendingInvoice, setPendingInvoice] = useState<File | null>(null);
   const shelfStatuses = useMemo(
     () => new Map((shelf.view?.rows ?? []).map((row) => [row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active'] as const)),
     [shelf.view],
@@ -290,7 +295,8 @@ export const App = () => {
     if (!user || !token || previous === activeTab) return;
     if (activeTab === 'catalog') void loadInventory(token);
     if (activeTab === 'shelf') void shelf.reload(token);
-    if (previous === 'shelf') void refreshInventoryDependents(token);
+    // Приёмка поставки тоже меняет наличие для гостя.
+    if (previous === 'shelf' || previous === 'deliveries') void refreshInventoryDependents(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -575,6 +581,8 @@ export const App = () => {
     staff.reset();
     telegramOps.reset();
     shelf.reset();
+    deliveries.reset();
+    setPendingInvoice(null);
     storeToken('');
     setToken('');
     setUser(null);
@@ -888,6 +896,22 @@ export const App = () => {
         void onInventorySearchChange(row.tobacco.name);
       }}
       onOpenMix={onOpenInventoryMix}
+      onUploadInvoice={(file) => {
+        setPendingInvoice(file);
+        setActiveTab('deliveries');
+      }}
+    />
+  );
+
+  const renderDeliveries = () => (
+    <DeliveriesView
+      api={deliveries}
+      pendingFile={pendingInvoice}
+      onPendingFileTaken={() => setPendingInvoice(null)}
+      onOpenShelf={() => setActiveTab('shelf')}
+      onAccepted={() => {
+        if (token) void refreshInventoryDependents(token);
+      }}
     />
   );
 
@@ -1033,6 +1057,8 @@ export const App = () => {
         return renderDashboard();
       case 'shelf':
         return renderShelf();
+      case 'deliveries':
+        return renderDeliveries();
       case 'catalog':
         return renderInventory();
       case 'mixes':
