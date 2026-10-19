@@ -13,6 +13,7 @@
     "sync:htreviews": "tsx scripts/sync-htreviews.ts",
     "backfill:htreviews:details": "tsx scripts/backfill-htreviews-details.ts",
     "backfill:flavors": "tsx scripts/backfill-flavors.ts",
+    "backfill:profiles": "tsx scripts/backfill-flavor-profiles.ts",
     "db:start": "docker compose -f docker-compose.yml up -d db",
     "db:stop": "docker compose -f docker-compose.yml down",
     "db:clean": "tsx scripts/clean-db.ts",
