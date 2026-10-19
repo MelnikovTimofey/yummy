@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import {
   adminCredentials,
   applyStockFilter,
@@ -20,15 +20,16 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
   await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
 
   await getWorkspaceTab(page, 'Дашборд').press('ArrowRight');
-  await expect(getWorkspaceTab(page, 'Табаки')).toHaveAttribute('aria-selected', 'true');
-  // PR-C `feature/master-apply-shared-primitives` уже смержён: InventoryView
-  // рендерит MasterPageHeader с h1 «Табаки», прежний h2 «Таблица остатков
-  // и зависимых миксов» удалён.
-  await expect(
-    page.getByRole('heading', { name: 'Табаки', level: 1 }),
-  ).toBeVisible();
+  // #211: вкладка «Табаки» разделилась на «Полку» (что держим) и «Каталог»
+  // (что бывает); следом за дашбордом идёт «Полка».
+  await expect(getWorkspaceTab(page, 'Полка')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
 
-  await getWorkspaceTab(page, 'Табаки').press('End');
+  await getWorkspaceTab(page, 'Полка').press('ArrowRight');
+  await expect(getWorkspaceTab(page, 'Каталог')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Каталог', level: 1 })).toBeVisible();
+
+  await getWorkspaceTab(page, 'Каталог').press('End');
   await expect(getWorkspaceTab(page, 'Доступ')).toHaveAttribute('aria-selected', 'true');
   // AccessView рендерит свой MasterPageHeader с h1 «Доступ и персонал»
   // (под mockups.html). Бывший section-head h2 «Daily code и Telegram
@@ -41,19 +42,23 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
 });
 
-test('Master admin smoke covers inventory batch flow, mixes editor, rails read-only mode and access observability', async ({ page }) => {
+test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails read-only mode and access observability', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
-  await openWorkspace(page, 'Табаки');
+  await openWorkspace(page, 'Каталог');
   const { row: tobaccoRow } = await pinFirstInventoryRow(page);
 
   const outOfStockBefore = await readStockFilterCount(page, 'Нет наличия');
 
   await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
-  // Батч-флоу неразрушающий: наличие снимается и тут же возвращается, поэтому
-  // прогон не меняет состояние базы — важно и для демо-seed, и для снапшота.
-  await page.getByRole('button', { name: 'Убрать из наличия' }).click();
+  // Батч-флоу неразрушающий: табак убирается с полки и тут же возвращается.
+  // Банки при этом не трогаются, поэтому вернувшийся табак снова виден гостю,
+  // а прогон не меняет состояние базы — важно и для демо-seed, и для снапшота.
+  // Первая строка при сортировке по умолчанию («сначала по наличию») — табак
+  // в наличии, то есть на полке (#211).
+  // exact: у кнопки «На полку» в строке каталога aria-label «На полку: <табак>».
+  await page.getByRole('button', { name: 'Убрать с полки', exact: true }).click();
   // Результат читается по счётчику чипа, а не по статусу в исходной строке:
   // при сортировке по умолчанию («сначала по наличию») строка уезжает в конец
   // списка, а на каталоге из 11 505 позиций — вообще на другую страницу.
@@ -67,7 +72,7 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   await expect(tobaccoRow).toBeVisible();
   await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
-  await page.getByRole('button', { name: 'Вернуть в наличие' }).click();
+  await page.getByRole('button', { name: 'На полку', exact: true }).click();
   await expect
     .poll(() => readStockFilterCount(page, 'Нет наличия'))
     .toBe(outOfStockBefore);
@@ -150,6 +155,34 @@ test('Master admin smoke covers inventory batch flow, mixes editor, rails read-o
   // AuditBlock убран со страницы целиком (mockup-trim) — журнал теперь
   // только за пределами Master, через /staff/audit/events API.
   await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
+});
+
+// «Закончилась» — главное действие полки (#211): одно нажатие, тост
+// с отменой. Сценарий неразрушающий: отмена возвращает банку в работу.
+test('Master shelf marks a pack empty and undoes it from the toast', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const emptyButton = (row: Locator) => row.getByRole('button', { name: 'Закончилась', exact: true });
+  const first = page
+    .locator('table.shelf-table tbody tr[data-tobacco-id]')
+    .filter({ has: page.getByRole('button', { name: 'Закончилась', exact: true }) })
+    .first();
+  await expect(first).toBeVisible();
+  // Строка адресуется по id: после «Закончилась» сортировка «Хватит до»
+  // переставляет закончившийся табак наверх.
+  const id = await first.getAttribute('data-tobacco-id');
+  const row = page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
+
+  await emptyButton(row).click();
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText(/банка пустая|табак закончился/);
+  await toast.getByRole('button', { name: /Отменить/ }).click();
+  await expect(toast).toBeHidden();
+  await expect(emptyButton(row)).toBeVisible();
 });
 
 // Каталог длиннее экрана: редактор микса из конца списка должен открываться
