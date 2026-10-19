@@ -6653,3 +6653,277 @@ button.chip .chip__count[hidden] {
 @media (max-width: 1360px) {
   .topbar .status-pill__label { display: none; }
 }
+
+/* =====================================================================
+   «К заказу», настройки полки (#213) — по design/design_handoff_inventory
+   (#shot=reorder; настройки — README §7).
+   ===================================================================== */
+
+.shelf-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.shelf-seg button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-seg button + button { border-left: 1px solid var(--border-default); }
+.shelf-seg button:hover { color: var(--text-primary); }
+.shelf-seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--text-primary); }
+.shelf-seg button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+.shelf-head-menu { position: relative; display: inline-flex; }
+
+.shelf-menu.shelf-menu--head {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 280px;
+}
+
+.reorder { display: grid; gap: 12px; }
+.reorder__empty { margin: 0; }
+.reorder__hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+
+.reorder-group {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow-x: auto;
+}
+
+.reorder-group__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.reorder-group__head h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--text-primary);
+}
+
+.reorder-group__caption { flex: 1; font-size: var(--fs-sm); color: var(--text-muted); }
+.reorder-group__sum { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.reorder-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--fs-sm);
+}
+
+.reorder-table th {
+  height: 34px;
+  padding: 0 16px;
+  text-align: left;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.reorder-table td {
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.reorder-table tbody tr:last-child td { border-bottom: 0; }
+
+.reorder-stepper {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+}
+
+.reorder-stepper button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.reorder-stepper button:hover:not(:disabled) { color: var(--text-primary); }
+.reorder-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+.reorder-stepper output { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.reorder-copied {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.reorder-copied__eyebrow {
+  margin: 0;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.reorder-copied h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; }
+
+.reorder-copied pre {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-base);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  user-select: all;
+}
+
+/* =====================================================================
+   Дашборд: блок «Полка» (#213) — по #shot=dashboard.
+   ===================================================================== */
+
+.shelf-dash__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .shelf-dash__columns { grid-template-columns: 1fr; }
+}
+
+.shelf-dash__eyebrow {
+  margin: 0;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.shelf-dash__forecast { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); }
+
+.shelf-dash__forecast b {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-dash__forecast span { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.shelf-dash__subhead {
+  margin: 8px 0 0;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.shelf-dash__ending { list-style: none; margin: 0; padding: 0; display: grid; }
+.shelf-dash__ending li + li { border-top: 1px solid var(--border-subtle); }
+
+.shelf-dash__ending-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.shelf-dash__ending-row:hover > span:first-child { text-decoration: underline; text-underline-offset: 3px; }
+.shelf-dash__ending-row:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--r-sm); }
+
+.shelf-dash__spend { display: grid; gap: 10px; }
+
+.shelf-dash__spend-row {
+  display: grid;
+  grid-template-columns: minmax(0, 140px) 1fr 100px;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--fs-sm);
+}
+
+.shelf-dash__spend-row > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.shelf-dash__spend-row i { display: block; height: 8px; border-radius: 4px; background: var(--chart-2); }
+.shelf-dash__spend-row > span:last-child { text-align: right; }
+
+.shelf-dash__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.shelf-dash__kv div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
+.shelf-dash__kv span { font-family: var(--font-meta); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+.shelf-dash__kv b { font-weight: 500; font-size: 17px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.shelf-dash__kv small { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-dash__weeks { display: flex; align-items: flex-end; gap: 12px; height: 150px; padding-top: 8px; }
+
+.shelf-dash__bar {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  align-content: end;
+  height: 100%;
+}
+
+.shelf-dash__bar i {
+  display: block;
+  width: 100%;
+  max-width: 90px;
+  border-radius: 3px 3px 0 0;
+  background: var(--chart-1);
+}
+
+.shelf-dash__bar--partial i {
+  background: repeating-linear-gradient(135deg, var(--chart-1) 0 4px, transparent 4px 8px);
+  border: 1px solid var(--chart-1);
+  border-bottom: 0;
+}
+
+.shelf-dash__bar span { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.shelf-dash__bar-labels { display: flex; gap: 12px; }
+.shelf-dash__bar-labels span { flex: 1; text-align: center; font-size: 10.5px; color: var(--text-faint); }

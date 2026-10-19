@@ -7,6 +7,7 @@ import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
+import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
 import { ShelfView } from '@/components/shelf/shelf-view';
 import { useDeliveries } from '@/hooks/use-deliveries';
 import { DeliveriesView } from '@/components/deliveries/deliveries-view';
@@ -15,6 +16,7 @@ import { useTelegramOperators } from '@/hooks/use-telegram-operators';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
+import { ShelfDashboardBlock } from '@/components/dashboard/shelf-dashboard-block';
 import { InventoryView, type CatalogBatchAction, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView } from '@/components/mixes/mix-catalog-view';
 import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
@@ -56,6 +58,7 @@ import {
   formatTelegramAutomationHealth,
   normalizeAuditEventRecord,
   normalizeDashboardSummary,
+  DEFAULT_SHELF_SETTINGS,
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
@@ -149,6 +152,9 @@ export const App = () => {
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
   const shelf = useShelf(token);
   const deliveries = useDeliveries(token);
+  const shelfDashboard = useShelfDashboard(token);
+  // Табак из «Заканчивается» на дашборде: «Полка» откроет его карточку.
+  const [pendingShelfCard, setPendingShelfCard] = useState('');
   // Счёт, выбранный на «Полке»: его разбирает вкладка «Поставки».
   const [pendingInvoice, setPendingInvoice] = useState<File | null>(null);
   const shelfStatuses = useMemo(
@@ -295,6 +301,7 @@ export const App = () => {
     if (!user || !token || previous === activeTab) return;
     if (activeTab === 'catalog') void loadInventory(token);
     if (activeTab === 'shelf') void shelf.reload(token);
+    if (activeTab === 'dashboard') void shelfDashboard.reload(token);
     // Приёмка поставки тоже меняет наличие для гостя.
     if (previous === 'shelf' || previous === 'deliveries') void refreshInventoryDependents(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -421,6 +428,7 @@ export const App = () => {
         await Promise.all([
           loadInventory(token),
           shelf.reload(token),
+          shelfDashboard.reload(token),
           loadSummary(token, dashboardWindow),
           mixes.reload(token),
           rails.reload(token),
@@ -469,6 +477,7 @@ export const App = () => {
       await Promise.all([
         loadInventory(auth.accessToken),
         shelf.reload(auth.accessToken),
+        shelfDashboard.reload(auth.accessToken),
         loadSummary(auth.accessToken, dashboardWindow),
         mixes.reload(auth.accessToken),
         rails.reload(auth.accessToken),
@@ -581,6 +590,8 @@ export const App = () => {
     staff.reset();
     telegramOps.reset();
     shelf.reset();
+    shelfDashboard.reset();
+    setPendingShelfCard('');
     deliveries.reset();
     setPendingInvoice(null);
     storeToken('');
@@ -849,6 +860,19 @@ export const App = () => {
       summaryStatus={summaryStatus}
       summaryError={summaryError}
       onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
+      shelfBlock={
+        <ShelfDashboardBlock
+          data={shelfDashboard.data}
+          status={shelfDashboard.status}
+          error={shelfDashboard.error}
+          bowlGrams={shelf.view?.settings.bowlGrams ?? DEFAULT_SHELF_SETTINGS.bowlGrams}
+          leadDays={shelf.view?.settings.leadDays ?? DEFAULT_SHELF_SETTINGS.leadDays}
+          onOpenTobacco={(tobaccoId) => {
+            setPendingShelfCard(tobaccoId);
+            setActiveTab('shelf');
+          }}
+        />
+      }
     />
   );
 
@@ -900,6 +924,8 @@ export const App = () => {
         setPendingInvoice(file);
         setActiveTab('deliveries');
       }}
+      openCardId={pendingShelfCard}
+      onCardOpened={() => setPendingShelfCard('')}
     />
   );
 

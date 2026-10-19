@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Flame, Star, TriangleAlert } from 'lucide-react';
 
 import { MasterPageHeader } from '@/components/shell/master-page-header';
@@ -9,6 +10,8 @@ type DashboardViewProps = {
   summaryStatus: 'idle' | 'loading' | 'ready' | 'error';
   summaryError: string;
   onNavigate: (tab: 'inventory' | 'mixes' | 'rails' | 'access') => void;
+  // Блок «Полка» (#213) — сверху, как в мокапе; остальные блоки без изменений.
+  shelfBlock?: ReactNode;
 };
 
 const formatDayMonth = (value: string) => {
@@ -65,6 +68,7 @@ export function DashboardView({
   summaryStatus,
   summaryError,
   onNavigate,
+  shelfBlock,
 }: DashboardViewProps) {
   const topMixes = (summary?.topMixes ?? []).slice(0, 6);
   const blockedMixes = summary?.ops.blockedMixes ?? [];
@@ -91,6 +95,8 @@ export function DashboardView({
           {summaryError}
         </div>
       ) : null}
+
+      {shelfBlock}
 
       <MasterStatsRow tiles={buildStatsTiles(summary)} />
 

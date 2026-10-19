@@ -1,13 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
+import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { summarizeShelf } from '@/lib/shelf';
 import {
+  normalizeReorderView,
   normalizeShelfCard,
   normalizeShelfEmptyResponse,
   normalizeShelfRow,
+  normalizeShelfSettings,
   normalizeShelfView,
   readEntityPayload,
+  type ReorderView,
   type ShelfRow,
+  type ShelfSettings,
   type ShelfView,
 } from '@/contracts';
 
@@ -31,14 +36,33 @@ const packPath = (packId: string) => `/staff/shelf/packs/${encodeURIComponent(pa
 
 // Полка грузится одним запросом; после действия строка приходит с сервера,
 // а счётчики пересчитываются на месте, без перезагрузки всей полки.
+// «К заказу» (#213) считает сервер по всей полке, поэтому его перечитываем
+// вместе с полкой и после каждого действия.
 export const useShelf = (token: string) => {
   const [view, setView] = useState<ShelfView | null>(null);
   const [status, setStatus] = useState<ShelfLoadStatus>('idle');
   const [error, setError] = useState('');
+  const [reorder, setReorder] = useState<ReorderView | null>(null);
+  const [reorderError, setReorderError] = useState('');
+  const reorderGuard = useRef(createLatestRequestGuard()).current;
+
+  const loadReorder = useCallback(async (nextToken: string = token) => {
+    const ticket = reorderGuard.start();
+    try {
+      const next = normalizeReorderView(await requestJson<unknown>('/staff/shelf/reorder', {}, nextToken));
+      if (reorderGuard.isStale(ticket)) return;
+      setReorder(next);
+      setReorderError('');
+    } catch (cause) {
+      if (reorderGuard.isStale(ticket)) return;
+      setReorderError(cause instanceof Error ? cause.message : 'Не удалось загрузить «К заказу»');
+    }
+  }, [reorderGuard, token]);
 
   const reload = useCallback(async (nextToken: string = token) => {
     setStatus('loading');
     setError('');
+    void loadReorder(nextToken);
     try {
       setView(normalizeShelfView(await requestJson<unknown>('/staff/shelf', {}, nextToken)));
       setStatus('ready');
@@ -46,7 +70,7 @@ export const useShelf = (token: string) => {
       setStatus('error');
       setError(cause instanceof Error ? cause.message : 'Не удалось загрузить полку');
     }
-  }, [token]);
+  }, [loadReorder, token]);
 
   const applyRow = useCallback((item: ShelfRow) => {
     setView((current) => {
@@ -59,8 +83,9 @@ export const useShelf = (token: string) => {
           : [...current.rows, item];
       return { ...current, rows, ...summarizeShelf(rows) };
     });
+    void loadReorder();
     return item;
-  }, []);
+  }, [loadReorder]);
 
   const send = useCallback(
     async (path: string, init: RequestInit) => applyRow(normalizeShelfRow(readEntityPayload(await requestJson<unknown>(path, init, token)))),
@@ -100,13 +125,43 @@ export const useShelf = (token: string) => {
     [token],
   );
 
+  // Граммовка чаши и срок поставки меняют прогноз всей полки и «К заказу».
+  const saveSettings = useCallback(async (settings: ShelfSettings) => {
+    const saved = normalizeShelfSettings(await requestJson<unknown>('/staff/shelf/settings', json('PATCH', settings), token));
+    await reload();
+    return saved;
+  }, [reload, token]);
+
   const reset = useCallback(() => {
+    reorderGuard.start();
     setView(null);
     setStatus('idle');
     setError('');
-  }, []);
+    setReorder(null);
+    setReorderError('');
+  }, [reorderGuard]);
 
-  return { view, status, error, reload, reset, markEmpty, undoEmpty, mark, openAnother, addPack, writeOff, update, remove, add, loadCard };
+  return {
+    view,
+    status,
+    error,
+    reorder,
+    reorderError,
+    reload,
+    loadReorder,
+    reset,
+    markEmpty,
+    undoEmpty,
+    mark,
+    openAnother,
+    addPack,
+    writeOff,
+    update,
+    remove,
+    add,
+    loadCard,
+    saveSettings,
+  };
 };
 
 export type ShelfApi = ReturnType<typeof useShelf>;
