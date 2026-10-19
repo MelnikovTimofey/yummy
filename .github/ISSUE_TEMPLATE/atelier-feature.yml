@@ -100,6 +100,17 @@ body:
     validations:
       required: false
   - type: textarea
+    id: load
+    attributes:
+      label: "Нагрузка"
+      description: "Влияет ли срез на нагрузку прода: уровень и обоснование. Критерии — `.claude/skills/atelier-feature-design` («Оценка нагрузки»)."
+      placeholder: |
+        нет — правка текста карточки, новых запросов нет
+        малое — новая выгрузка в консоли Мастера читает весь каталог; замер до/после на снапшоте
+        заметное — новый запрос на каждом экране гостя; прогон k6 по профилю #154
+    validations:
+      required: true
+  - type: textarea
     id: checks
     attributes:
       label: "Checks"
