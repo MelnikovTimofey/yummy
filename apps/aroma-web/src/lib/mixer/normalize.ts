@@ -79,6 +79,7 @@ export const normalizeEvaluation = (payload: unknown): Evaluation => {
           id: text(similar.id),
           name: text(similar.name),
           avgRating: num(similar.avgRating),
+          ratingsCount: num(similar.ratingsCount),
           similarity: Math.round(num(similar.similarity)),
         }
       : null,

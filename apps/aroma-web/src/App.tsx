@@ -12,6 +12,7 @@ import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst, normalizeSearchTe
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
+import { applyGuestRating } from '@/lib/rating';
 import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
@@ -71,6 +72,7 @@ type MixCard = {
   flavors: string[];
   flavorTags: string[];
   avgRating: number;
+  ratingsCount: number;
   popularity: number;
   available: boolean;
   createdAt: string;
@@ -102,8 +104,8 @@ type MixRatingResult = {
   ok: true;
   mixId: string;
   value: number;
-  averageRating?: number;
-  ratingCount?: number;
+  averageRating: number;
+  ratingCount: number;
   message?: string;
 };
 
@@ -305,6 +307,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
     flavors: toStringList(record.flavors ?? record.tastes),
     flavorTags: toStringList(record.flavorTags ?? record.tags ?? record.metaTags),
     avgRating: toNumber(record.avgRating ?? record.averageRating ?? record.rating, 0),
+    ratingsCount: toNumber(record.ratingsCount, 0),
     popularity: toNumber(record.popularity ?? record.smokeCtaCount ?? record.count, 0),
     available: toBoolean(record.available ?? record.inStock ?? record.isAvailable, true),
     createdAt:
@@ -1339,10 +1342,7 @@ export const App = () => {
 
     try {
       const result = await sendMixRating(mixModalState.mix.id, value);
-      syncMixEverywhere(mixModalState.mix.id, (mix) => ({
-        ...mix,
-        avgRating: Number.isFinite(result.averageRating ?? Number.NaN) ? (result.averageRating as number) : mix.avgRating,
-      }));
+      syncMixEverywhere(mixModalState.mix.id, (mix) => applyGuestRating(mix, result));
       setRatingStatus('ready');
       setRatingMessage(result.message ?? `Оценка ${result.value} сохранена.`);
     } catch (cause) {
@@ -1898,7 +1898,7 @@ export const App = () => {
             </div>
           ) : null}
           <div className="aroma-recs-hero-meta">
-            <RatingPill rating={hero.avgRating} />
+            {hero.ratingsCount > 0 ? <RatingPill rating={hero.avgRating} /> : null}
             {hero.popularity > 0 ? (
               <span className="aroma-caps">
                 {`${hero.popularity} ${pluralize(hero.popularity, ['выбор', 'выбора', 'выборов'])}`}
@@ -1940,7 +1940,7 @@ export const App = () => {
                       ))}
                     </p>
                   </div>
-                  <RatingPill rating={mix.avgRating} />
+                  {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
                 </button>
               ))}
             </div>
@@ -2013,7 +2013,9 @@ export const App = () => {
                     >
                       <span className="aroma-showcase-card-top">
                         <ProfileGlyph profiles={mix.flavorProfiles} size={28} />
-                        <RatingPill rating={mix.avgRating} style={{ padding: '2px 7px', fontSize: 10.5 }} />
+                        {mix.ratingsCount > 0 ? (
+                          <RatingPill rating={mix.avgRating} style={{ padding: '2px 7px', fontSize: 10.5 }} />
+                        ) : null}
                       </span>
                       <span className="aroma-showcase-card-name">{mix.name}</span>
                       <span className="aroma-showcase-card-signature">
@@ -2204,7 +2206,7 @@ export const App = () => {
                   </p>
                 ) : null}
               </div>
-              <RatingPill rating={mix.avgRating} />
+              {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
             </button>
           ))}
         </div>
@@ -2347,7 +2349,7 @@ export const App = () => {
                   </p>
                 ) : null}
               </div>
-              <RatingPill rating={mix.avgRating} />
+              {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
             </button>
           ))}
         </div>
