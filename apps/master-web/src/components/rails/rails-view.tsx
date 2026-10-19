@@ -171,23 +171,25 @@ export const RailsView = ({
                     </div>
                   </td>
                   <td className="rails-table__actions" onClick={(event) => event.stopPropagation()}>
-                    <button type="button" className="btn" data-size="sm" onClick={() => onOpenRail(rail)}>
-                      {rail.editable ? <Pencil size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
-                      {rail.editable ? 'Редактировать' : 'Просмотр'}
-                    </button>
-                    {rail.editable ? (
-                      <button
-                        type="button"
-                        className="btn"
-                        data-variant="ghost"
-                        data-size="sm"
-                        title="Удалить"
-                        aria-label={`Удалить ${rail.name}`}
-                        onClick={() => setRailPendingDelete(rail)}
-                      >
-                        <Trash2 size={14} aria-hidden />
+                    <div className="rails-table__action-group">
+                      <button type="button" className="btn" data-size="sm" onClick={() => onOpenRail(rail)}>
+                        {rail.editable ? <Pencil size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
+                        {rail.editable ? 'Редактировать' : 'Просмотр'}
                       </button>
-                    ) : null}
+                      {rail.editable ? (
+                        <button
+                          type="button"
+                          className="btn"
+                          data-variant="ghost"
+                          data-size="sm"
+                          title="Удалить"
+                          aria-label={`Удалить ${rail.name}`}
+                          onClick={() => setRailPendingDelete(rail)}
+                        >
+                          <Trash2 size={14} aria-hidden />
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );
