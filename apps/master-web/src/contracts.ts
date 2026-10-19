@@ -1856,3 +1856,178 @@ export const normalizeShelfEmptyResponse = (value: unknown) => {
   const raw = isRecord(value) ? value : {};
   return { packId: String(raw.packId ?? ''), item: normalizeShelfRow(raw.item) };
 };
+
+// --- Поставки (#212): ответы /staff/deliveries* ------------------------------
+
+export type DeliveryKind = 'invoice' | 'manual' | 'start';
+export type DeliveryStatus = 'draft' | 'received';
+export type DeliveryLineKind = 'tobacco' | 'skip';
+export type DeliveryMatchReason = 'memory' | 'catalog' | 'manual';
+
+export type DeliveryListItem = {
+  id: string;
+  kind: DeliveryKind;
+  status: DeliveryStatus;
+  supplier: string | null;
+  number: string | null;
+  invoiceDate: string | null;
+  receivedAt: string | null;
+  lines: number;
+  packs: number;
+  totalKop: number | null;
+  createdAt: string;
+};
+
+export type DeliveryTotals = { monthKop: number; monthPacks: number; drafts: number; suppliers: number; memoryItems: number };
+
+export type DeliveryList = { items: DeliveryListItem[]; totals: DeliveryTotals };
+
+export type DeliveryCandidate = {
+  id: string;
+  manufacturer: string;
+  lineName: string;
+  name: string;
+  confidence: number;
+  reason: string;
+};
+
+export type DeliveryLine = {
+  id: string;
+  n: number;
+  rawName: string;
+  article: string | null;
+  qty: number;
+  unit: string | null;
+  priceKop: number | null;
+  sumKop: number | null;
+  grams: number | null;
+  kind: DeliveryLineKind;
+  arrived: boolean;
+  tobacco: { id: string; manufacturer: string; lineName: string; name: string; shelfStatus: ShelfItemStatus | null } | null;
+  matchReason: DeliveryMatchReason | null;
+  confidence: number | null;
+  candidates: DeliveryCandidate[];
+  newOnShelf: boolean;
+};
+
+export type DeliveryCard = {
+  id: string;
+  kind: DeliveryKind;
+  status: DeliveryStatus;
+  supplier: { id: string; name: string; inn: string | null } | null;
+  number: string | null;
+  invoiceDate: string | null;
+  receivedAt: string | null;
+  totalKop: number | null;
+  fileName: string | null;
+  hasFile: boolean;
+  createdAt: string;
+  lines: DeliveryLine[];
+  linesSumKop: number;
+  sumMatches: boolean | null;
+  pendingLines: number;
+  packsToCreate: number;
+  packs: number;
+};
+
+const DELIVERY_KINDS = ['invoice', 'manual', 'start'] as const;
+const DELIVERY_STATUSES = ['draft', 'received'] as const;
+
+// Дата счёта приходит как «2026-11-18» и остаётся строкой: в Date она уехала бы
+// на день назад в часовых поясах западнее UTC.
+const toDateOnly = (value: unknown) =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null;
+
+const normalizeDeliveryLine = (value: unknown): DeliveryLine => {
+  const raw = isRecord(value) ? value : {};
+  const tobacco = isRecord(raw.tobacco) ? raw.tobacco : null;
+
+  return {
+    id: String(raw.id ?? ''),
+    n: toNumber(raw.n, 0),
+    rawName: String(raw.rawName ?? ''),
+    article: toNullableString(raw.article),
+    qty: toNumber(raw.qty, 1),
+    unit: toNullableString(raw.unit),
+    priceKop: toNullableNumber(raw.priceKop),
+    sumKop: toNullableNumber(raw.sumKop),
+    grams: toNullableNumber(raw.grams),
+    kind: pickOne(raw.kind, ['tobacco', 'skip'] as const, 'tobacco'),
+    arrived: toBoolean(raw.arrived, true),
+    tobacco: tobacco
+      ? {
+          id: String(tobacco.id ?? ''),
+          manufacturer: String(tobacco.manufacturer ?? ''),
+          lineName: String(tobacco.lineName ?? ''),
+          name: String(tobacco.name ?? ''),
+          shelfStatus: tobacco.shelfStatus == null ? null : pickOne(tobacco.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
+        }
+      : null,
+    matchReason: raw.matchReason === 'memory' || raw.matchReason === 'catalog' || raw.matchReason === 'manual' ? raw.matchReason : null,
+    confidence: toNullableNumber(raw.confidence),
+    candidates: (Array.isArray(raw.candidates) ? raw.candidates : []).filter(isRecord).map((candidate) => ({
+      id: String(candidate.id ?? ''),
+      manufacturer: String(candidate.manufacturer ?? ''),
+      lineName: String(candidate.lineName ?? ''),
+      name: String(candidate.name ?? ''),
+      confidence: toNumber(candidate.confidence, 0),
+      reason: String(candidate.reason ?? ''),
+    })),
+    newOnShelf: toBoolean(raw.newOnShelf, false),
+  };
+};
+
+export const normalizeDeliveryCard = (value: unknown): DeliveryCard => {
+  const raw = isRecord(value) ? value : {};
+  const supplier = isRecord(raw.supplier) ? raw.supplier : null;
+
+  return {
+    id: String(raw.id ?? ''),
+    kind: pickOne(raw.kind, DELIVERY_KINDS, 'manual'),
+    status: pickOne(raw.status, DELIVERY_STATUSES, 'draft'),
+    supplier: supplier
+      ? { id: String(supplier.id ?? ''), name: String(supplier.name ?? ''), inn: toNullableString(supplier.inn) }
+      : null,
+    number: toNullableString(raw.number),
+    invoiceDate: toDateOnly(raw.invoiceDate),
+    receivedAt: toIsoString(raw.receivedAt, '') || null,
+    totalKop: toNullableNumber(raw.totalKop),
+    fileName: toNullableString(raw.fileName),
+    hasFile: toBoolean(raw.hasFile, false),
+    createdAt: toIsoString(raw.createdAt, ''),
+    lines: (Array.isArray(raw.lines) ? raw.lines : []).map(normalizeDeliveryLine),
+    linesSumKop: toNumber(raw.linesSumKop, 0),
+    sumMatches: typeof raw.sumMatches === 'boolean' ? raw.sumMatches : null,
+    pendingLines: toNumber(raw.pendingLines, 0),
+    packsToCreate: toNumber(raw.packsToCreate, 0),
+    packs: toNumber(raw.packs, 0),
+  };
+};
+
+export const normalizeDeliveryList = (value: unknown): DeliveryList => {
+  const raw = isRecord(value) ? value : {};
+  const totals = isRecord(raw.totals) ? raw.totals : {};
+
+  return {
+    items: (Array.isArray(raw.items) ? raw.items : []).filter(isRecord).map((item) => ({
+      id: String(item.id ?? ''),
+      kind: pickOne(item.kind, DELIVERY_KINDS, 'manual'),
+      status: pickOne(item.status, DELIVERY_STATUSES, 'draft'),
+      supplier: toNullableString(item.supplier),
+      number: toNullableString(item.number),
+      invoiceDate: toDateOnly(item.invoiceDate),
+      receivedAt: toIsoString(item.receivedAt, '') || null,
+      lines: toNumber(item.lines, 0),
+      packs: toNumber(item.packs, 0),
+      totalKop: toNullableNumber(item.totalKop),
+      createdAt: toIsoString(item.createdAt, ''),
+    })),
+    totals: {
+      monthKop: toNumber(totals.monthKop, 0),
+      monthPacks: toNumber(totals.monthPacks, 0),
+      drafts: toNumber(totals.drafts, 0),
+      suppliers: toNumber(totals.suppliers, 0),
+      memoryItems: toNumber(totals.memoryItems, 0),
+    },
+  };
+};
