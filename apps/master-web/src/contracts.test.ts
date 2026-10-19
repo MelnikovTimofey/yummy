@@ -18,6 +18,10 @@ import {
   normalizeDashboardSummary,
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
+  normalizeShelfCard,
+  normalizeShelfEmptyResponse,
+  normalizeShelfRow,
+  normalizeShelfView,
   normalizeMixListResponse,
   normalizeDailyAccessCodeRecord,
   normalizeMixRecord,
@@ -1014,4 +1018,138 @@ test('formatCount согласует число и существительно�
   assert.equal(formatCount(11, forms), '11 миксов');
   assert.equal(formatCount(21, forms), '21 микс');
   assert.equal(formatCount(11505, forms), '11\u00a0505 миксов');
+});
+
+// --- Полка (#211) ---------------------------------------------------------
+
+const rawRow = {
+  tobacco: {
+    id: 't1',
+    manufacturer: 'Black Burn',
+    lineName: '',
+    name: 'Raspberries',
+    flavorProfiles: ['berry'],
+    flavors: ['малина'],
+    officialStrength: 'Средняя',
+    communityStrength: null,
+    archived: false,
+  },
+  shelfStatus: 'active',
+  status: 'ok',
+  last: false,
+  overdue: false,
+  guestAvailable: true,
+  openPacks: [{ id: 'p4', weight: 200, openedAt: '2026-11-14T10:00:00.000Z', fraction: 0.45 }],
+  sealedCount: 1,
+  remainingGrams: 290,
+  rate: 13,
+  rateKind: 'own',
+  daysLeft: 22.3,
+  endsAt: '2026-12-11T10:00:00.000Z',
+  lastReceipt: { receivedAt: '2026-11-12T10:00:00.000Z', kind: 'invoice', number: '03944', label: 'Каспий Опт' },
+  mixCount: 2,
+  keepStocked: true,
+  stopped: false,
+  stopNote: null,
+  packWeight: 200,
+  note: null,
+};
+
+test('normalizeShelfRow читает строку полки из ответа backend', () => {
+  const row = normalizeShelfRow(rawRow);
+  assert.equal(row.tobacco.id, 't1');
+  assert.equal(row.tobacco.manufacturer, 'Black Burn');
+  assert.deepEqual(row.tobacco.flavorProfiles, ['berry']);
+  assert.equal(row.tobacco.officialStrength, 'Средняя');
+  assert.equal(row.tobacco.communityStrength, null);
+  assert.equal(row.shelfStatus, 'active');
+  assert.equal(row.status, 'ok');
+  assert.deepEqual(row.openPacks, [{ id: 'p4', weight: 200, openedAt: '2026-11-14T10:00:00.000Z', fraction: 0.45 }]);
+  assert.equal(row.sealedCount, 1);
+  assert.equal(row.rate, 13);
+  assert.equal(row.rateKind, 'own');
+  assert.equal(row.daysLeft, 22.3);
+  assert.equal(row.lastReceipt?.label, 'Каспий Опт');
+  assert.equal(row.lastReceipt?.kind, 'invoice');
+  assert.equal(row.mixCount, 2);
+  assert.equal(row.packWeight, 200);
+});
+
+test('normalizeShelfRow не доверяет неизвестным значениям', () => {
+  const row = normalizeShelfRow({ tobacco: { id: 't2' }, status: 'weird', rateKind: 'x', rate: null, daysLeft: null });
+  assert.equal(row.status, 'ok');
+  assert.equal(row.shelfStatus, 'active');
+  assert.equal(row.rateKind, 'none');
+  assert.equal(row.rate, null);
+  assert.equal(row.daysLeft, null);
+  assert.equal(row.endsAt, null);
+  assert.equal(row.lastReceipt, null);
+  assert.deepEqual(row.openPacks, []);
+  assert.equal(row.tobacco.name, '');
+});
+
+test('normalizeShelfView собирает строки, счётчики, итоги и настройки', () => {
+  const view = normalizeShelfView({
+    rows: [rawRow],
+    counters: { all: 1, ok: 1, last: 0, ending: 0, out: 0, stop: 0, plan: 0 },
+    totals: { packs: 2, kg: 0.29 },
+    today: { grams: 13, bowls: 0.7 },
+    settings: { bowlGrams: 18, leadDays: 7 },
+  });
+  assert.equal(view.rows.length, 1);
+  assert.equal(view.counters.all, 1);
+  assert.equal(view.totals.kg, 0.29);
+  assert.equal(view.today.grams, 13);
+  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7 });
+});
+
+test('normalizeShelfView без данных — пустая полка с настройками по умолчанию', () => {
+  const view = normalizeShelfView(null);
+  assert.deepEqual(view.rows, []);
+  assert.equal(view.counters.all, 0);
+  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7 });
+});
+
+test('normalizeShelfCard читает историю банок, цену и миксы', () => {
+  const card = normalizeShelfCard({
+    item: {
+      ...rawRow,
+      packs: [
+        {
+          id: 'p2',
+          state: 'empty',
+          weight: 200,
+          priceKop: 155000,
+          receivedAt: '2026-10-15T10:00:00.000Z',
+          openedAt: '2026-10-15T10:00:00.000Z',
+          emptiedAt: '2026-10-29T10:00:00.000Z',
+          writtenOffAt: null,
+          writeOffReason: null,
+          delivery: { id: 'd1', kind: 'start', number: null, supplier: null },
+          marks: [{ at: '2026-10-20T10:00:00.000Z', fraction: 0.5 }],
+          usage: { days: 14, gramsPerDay: 14.28 },
+        },
+      ],
+      gramPriceKop: 775,
+      bowlCostKop: 13950,
+      mixes: [{ id: 'm1', name: 'Малиновый тоник' }],
+      settings: { bowlGrams: 18, leadDays: 7 },
+    },
+  });
+  assert.equal(card.tobacco.name, 'Raspberries');
+  assert.equal(card.packs.length, 1);
+  assert.equal(card.packs[0].state, 'empty');
+  assert.equal(card.packs[0].priceKop, 155000);
+  assert.equal(card.packs[0].delivery?.kind, 'start');
+  assert.deepEqual(card.packs[0].marks, [{ at: '2026-10-20T10:00:00.000Z', fraction: 0.5 }]);
+  assert.deepEqual(card.packs[0].usage, { days: 14, gramsPerDay: 14.28 });
+  assert.equal(card.gramPriceKop, 775);
+  assert.equal(card.bowlCostKop, 13950);
+  assert.deepEqual(card.mixes, [{ id: 'm1', name: 'Малиновый тоник' }]);
+});
+
+test('normalizeShelfEmptyResponse отдаёт id пустой банки для отмены', () => {
+  const response = normalizeShelfEmptyResponse({ packId: 'p4', item: rawRow });
+  assert.equal(response.packId, 'p4');
+  assert.equal(response.item.tobacco.id, 't1');
 });
