@@ -83,13 +83,13 @@ const shelfInclude = {
   packs: {
     include: {
       marks: { orderBy: { at: 'asc' } },
-      delivery: { select: { id: true, kind: true, number: true, supplier: { select: { name: true } } } },
+      delivery: { select: { id: true, kind: true, number: true, supplier: { select: { id: true, name: true } } } },
     },
     orderBy: [{ receivedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
   },
 } satisfies Prisma.ShelfItemInclude;
 
-type ShelfRecord = Prisma.ShelfItemGetPayload<{ include: typeof shelfInclude }>;
+export type ShelfRecord = Prisma.ShelfItemGetPayload<{ include: typeof shelfInclude }>;
 type PackRecord = ShelfRecord['packs'][number];
 
 const toStockPack = (pack: PackRecord): Pack => ({
@@ -306,10 +306,21 @@ const buildRow = async (client: Tx, record: ShelfRecord, now: Date) => {
 
 const rowOf = async (tobaccoId: string, now: Date) => (await buildRow(prisma, await loadItem(prisma, tobaccoId), now)).row;
 
-export const getShelf = async (now = new Date()): Promise<ShelfView> => {
+// Полка (в работе и в плане) с прогнозом: records[i], items[i] и forecasts[i] —
+// один табак.
+export const loadShelf = async (now: Date) => {
   const records = (await prisma.shelfItem.findMany({ where: { status: ON_SHELF }, include: shelfInclude })).sort(byName);
   const settings = await loadSettings(prisma);
-  const forecasts = forecastShelf(records.map(toStockItem), now, settings);
+  const items = records.map(toStockItem);
+  return { records, items, forecasts: forecastShelf(items, now, settings), settings };
+};
+
+// Банки всех табаков, когда-либо стоявших на полке, — для истории расхода.
+export const loadShelfHistory = async () =>
+  (await prisma.shelfItem.findMany({ include: shelfInclude })).map(toStockItem);
+
+export const getShelf = async (now = new Date()): Promise<ShelfView> => {
+  const { records, forecasts, settings } = await loadShelf(now);
   const mixCounts = countBy(await loadMixes(prisma, records.map((record) => record.tobaccoId)));
   const rows = records.map((record, index) => toRow(record, forecasts[index], now, mixCounts.get(record.tobaccoId) ?? 0));
 

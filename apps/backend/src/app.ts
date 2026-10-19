@@ -43,6 +43,7 @@ import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput, recordCustomMixSmoke } from './mixer';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import { getCatalogIdeas } from './catalog-ideas';
+import { registerShelfInsightsRoutes } from './shelf-insights';
 import {
   addMark,
   addPack,
@@ -233,6 +234,8 @@ export const buildApp = () => {
       deliveryLinesCreate: 'POST /staff/deliveries/:id/lines',
       deliveryLinesUpdate: 'PATCH /staff/deliveries/:id/lines/:lineId',
       deliveryLinesDelete: 'DELETE /staff/deliveries/:id/lines/:lineId',
+      shelfReorder: 'GET /staff/shelf/reorder',
+      shelfDashboard: 'GET /staff/shelf/dashboard',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
       dailyCodesCreate: 'POST /staff/access/daily-codes',
@@ -2073,6 +2076,7 @@ export const buildApp = () => {
   });
 
   registerDeliveryRoutes(app);
+  registerShelfInsightsRoutes(app, authenticateStaffRequest);
 
   return app;
 };
