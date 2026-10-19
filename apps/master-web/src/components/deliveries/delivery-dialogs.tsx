@@ -223,7 +223,7 @@ export const AddLineDialog = ({
           <TobaccoSearchResults
             query={query}
             state={found.state}
-            items={found.items.slice(0, 6)}
+            items={found.items}
             onPick={(option) => {
               setTobacco(option);
               setQuery('');

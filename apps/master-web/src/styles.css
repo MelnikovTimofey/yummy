@@ -6629,7 +6629,7 @@ button.chip .chip__count[hidden] {
 .deliv-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .deliv-form-row--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .deliv-form-narrow { max-width: 140px; }
-.deliv-form-results { display: grid; gap: 1px; margin-top: -8px; padding: 4px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); background: var(--bg-raised); }
+.deliv-form-results { display: grid; gap: 1px; max-height: 220px; overflow-y: auto; margin-top: -8px; padding: 4px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); background: var(--bg-raised); }
 
 .deliv-chosen {
   display: flex;
