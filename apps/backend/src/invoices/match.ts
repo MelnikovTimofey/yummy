@@ -10,8 +10,13 @@ export type MatchCandidate = {
   reason: 'memory' | 'catalog' | 'no-brand';
 };
 
+// С этой уверенности предложение можно показывать как сопоставленное, ниже — как вариант для выбора.
+export const CONFIDENT_MATCH = 80;
+
 const MAX_CANDIDATES = 5;
 const PHONETIC_MATCH = 0.9;
+const STEM_MATCH = 0.8;
+const MIN_STEM = 5;
 const MIN_PHONETIC_KEY = 2;
 // Без бренда из каталога тот же вкус бывает у любого производителя — уверенность не выше половины.
 const NO_BRAND_FACTOR = 0.5;
@@ -84,6 +89,17 @@ const phoneticKey = (token: string) =>
     .replace(/[aeiouy]/g, '')
     .replace(/(.)\1+/g, '$1');
 
+// Словоформы: «Барбарисовая» ~ «Барбарис», «Raspberry» ~ «Raspberries». Общая основа должна покрывать
+// и бо́льшую часть длинного слова, иначе «Grape» совпало бы с «Grapefruit», а «Black» — с «Blackberry».
+const sameStem = (a: string, b: string) => {
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  let prefix = 0;
+  while (prefix < shorter.length && shorter[prefix] === longer[prefix]) {
+    prefix += 1;
+  }
+  return prefix >= MIN_STEM && prefix >= 0.7 * shorter.length && prefix >= 0.6 * longer.length;
+};
+
 const tokenSimilarity = (a: string, b: string) => {
   if (a === b) {
     return 1;
@@ -93,7 +109,10 @@ const tokenSimilarity = (a: string, b: string) => {
   }
   // Скелет из одной согласной («то», «Tea», «Ми») совпадает слишком часто.
   const key = phoneticKey(a);
-  return key.length >= MIN_PHONETIC_KEY && key === phoneticKey(b) ? PHONETIC_MATCH : 0;
+  if (key.length >= MIN_PHONETIC_KEY && key === phoneticKey(b)) {
+    return PHONETIC_MATCH;
+  }
+  return sameStem(a, b) ? STEM_MATCH : 0;
 };
 
 // Коэффициент Дайса по токенам: лишние слова с любой стороны снижают оценку.

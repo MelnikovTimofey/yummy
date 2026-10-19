@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { matchLine, normalizeName, type CatalogTobacco } from './match';
-
-const HIGH = 80;
+import { CONFIDENT_MATCH, matchLine, normalizeName, type CatalogTobacco } from './match';
 
 // Названия — с полки прода; id условные.
 const catalog: CatalogTobacco[] = [
@@ -32,6 +30,8 @@ const catalog: CatalogTobacco[] = [
   ['sarma-maracuja', 'Сарма', 'Маракуйя'],
   ['sarma-grapefruit', 'Сарма', 'Грейпфрутовый сок'],
   ['sebero-maracuja', 'Sebero', 'Маракуйя'],
+  ['sebero-barberry', 'Sebero', 'Барбарис'],
+  ['sebero-lemon-fizz', 'Sebero', 'Лимонная шипучка'],
 ].map(([id, manufacturer, name]) => ({ id, manufacturer, lineName: null, name }));
 
 const top = (name: string) => matchLine({ name }, catalog)[0];
@@ -66,7 +66,7 @@ test('matchLine transliterates a Cyrillic flavor to the Latin catalog name', () 
   for (const [name, id] of cases) {
     const best = top(name);
     assert.equal(best?.tobaccoId, id, name);
-    assert.ok(best.confidence >= HIGH, `${name}: ${best.confidence}`);
+    assert.ok(best.confidence >= CONFIDENT_MATCH, `${name}: ${best.confidence}`);
   }
 });
 
@@ -81,6 +81,26 @@ test('matchLine keeps a leading vowel and ignores one-consonant words in transli
   assert.equal(matchLine({ name: 'Black Burn 200г Айс Эппл' }, tricky)[0]?.tobaccoId, 'ice-apple');
 });
 
+test('matchLine matches word forms by a common stem', () => {
+  assert.equal(top('Табак для кальяна SEBERO Блэк БЧК 200гр Барбарисовая Шипучка')?.tobaccoId, 'sebero-barberry');
+  assert.equal(top('Табак для кальяна Black Burn 200г Raspberry')?.tobaccoId, 'bb-raspberries');
+});
+
+test('matchLine does not stem short words or compound words', () => {
+  const tricky: CatalogTobacco[] = [
+    { id: 'pearl', manufacturer: 'Black Burn', lineName: null, name: 'Pearl' },
+    { id: 'mint-pastille', manufacturer: 'Black Burn', lineName: null, name: 'Мятная пастилка' },
+    { id: 'grape-core', manufacturer: 'Black Burn', lineName: null, name: 'Grape Core' },
+    { id: 'kalee-grapefruit', manufacturer: 'Black Burn', lineName: null, name: 'Kalee Grapefruit 2.0' },
+  ];
+  assert.deepEqual(matchLine({ name: 'Black Burn 200г Pear' }, tricky), []);
+  assert.deepEqual(matchLine({ name: 'Black Burn 200г Мята' }, tricky), []);
+  assert.deepEqual(
+    matchLine({ name: 'Black Burn 200г Grapefruit' }, tricky).map((candidate) => candidate.tobaccoId),
+    ['kalee-grapefruit'],
+  );
+});
+
 test('matchLine does not offer tobaccos of another brand when the brand is in the catalog', () => {
   const candidates = matchLine({ name: '"Дарк Сайд" Кор (Блэккерент), 250 г' }, catalog);
   assert.ok(candidates.every((candidate) => candidate.tobaccoId.startsWith('ds-')));
@@ -92,7 +112,7 @@ test('matchLine ranks candidates by confidence and keeps partial matches below e
     assert.ok(candidates[index - 1].confidence >= candidates[index].confidence);
   }
   const kalee = candidates.find((candidate) => candidate.tobaccoId === 'ds-kalee');
-  assert.ok(kalee && kalee.confidence < HIGH);
+  assert.ok(kalee && kalee.confidence < CONFIDENT_MATCH);
 });
 
 test('matchLine prefers the catalog line named in the invoice between equal flavors', () => {
@@ -112,16 +132,16 @@ test('matchLine gives no high confidence for a flavor the brand does not have', 
     { name: 'Табак для кальяна Black Burn 200г Pineapple (Сочный ананас)' },
     catalog,
   );
-  assert.ok(candidates.every((candidate) => candidate.confidence < HIGH));
+  assert.ok(candidates.every((candidate) => candidate.confidence < CONFIDENT_MATCH));
 });
 
 test('matchLine gives no high confidence without a brand from the catalog', () => {
   const blansh = matchLine({ name: 'Табак для кальяна BLANSH 200 гр Грейпфрутовый Сок' }, catalog);
   assert.ok(blansh.length > 0);
-  assert.ok(blansh.every((candidate) => candidate.confidence < HIGH && candidate.reason === 'no-brand'));
+  assert.ok(blansh.every((candidate) => candidate.confidence < CONFIDENT_MATCH && candidate.reason === 'no-brand'));
 
   const noBrand = matchLine({ name: 'Маракуйя 200г' }, catalog);
-  assert.ok(noBrand.every((candidate) => candidate.confidence < HIGH));
+  assert.ok(noBrand.every((candidate) => candidate.confidence < CONFIDENT_MATCH));
 });
 
 test('matchLine returns nothing for a line that shares no tokens with the catalog', () => {
