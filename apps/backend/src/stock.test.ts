@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   bowlCost,
+  consumptionByPeriod,
   consumptionRate,
   forecastShelf,
   gramPrice,
@@ -10,6 +11,7 @@ import {
   resolvePacks,
   shelfForecast,
   todayForecast,
+  weekdayFactor,
   withBrandFallback,
   DEFAULT_SETTINGS,
   type Pack,
@@ -503,5 +505,81 @@ test.describe('money', () => {
 
   test('no priced open pack, no bowl cost', () => {
     assert.equal(bowlCost(resolvePacks([pack({ id: 'a' })]), 18), null);
+  });
+});
+
+// --- расход по периодам ------------------------------------------------------
+
+test.describe('consumptionByPeriod', () => {
+  const period = (from: number, to: number) => ({ from: day(from), to: day(to) });
+
+  test('a finished pack spreads evenly over its time', () => {
+    const packs = [pack({ id: 'a', emptiedAt: day(10) })];
+    assert.deepEqual(consumptionByPeriod(packs, [period(-3, 0), period(0, 5), period(5, 12)]), [0, 125, 125]);
+  });
+
+  test('marks split the scale into segments with their own pace', () => {
+    const packs = [pack({ id: 'a', marks: [{ at: day(4), fraction: 0.5 }], emptiedAt: day(10) })];
+    const [first, second] = consumptionByPeriod(packs, [period(0, 2), period(2, 8)]);
+    approx(first, 62.5);
+    approx(second, 62.5 + (125 * 4) / 6);
+  });
+
+  test('the running segment does not count yet', () => {
+    const packs = [pack({ id: 'a', marks: [{ at: day(4), fraction: 0.5 }] })];
+    assert.deepEqual(consumptionByPeriod(packs, [period(0, 4), period(4, 30)]), [125, 0]);
+  });
+
+  test('written-off packs and correcting marks give no grams', () => {
+    const packs = [
+      pack({ id: 'a', writtenOffAt: day(3), openedAt: day(0) }),
+      pack({ id: 'b', marks: [{ at: day(4), fraction: 0.5 }, { at: day(6), fraction: 0.75 }], emptiedAt: day(9) }),
+    ];
+    // a списана, b вскрыта на её месте с day(3): ½ за 1 день, исправление, ¾ за 3 дня
+    assert.deepEqual(consumptionByPeriod(packs, [period(0, 30)]), [125 + 187.5]);
+  });
+
+  test('grams of several packs add up', () => {
+    const packs = [pack({ id: 'a', emptiedAt: day(5) }), pack({ id: 'b', emptiedAt: day(10) })];
+    assert.deepEqual(consumptionByPeriod(packs, [period(0, 5), period(5, 10)]), [250, 250]);
+  });
+});
+
+// --- день недели -------------------------------------------------------------
+
+test.describe('weekdayFactor', () => {
+  // Четверг 12 февраля 2026; окно — 28 полных дней с 15 января (тоже четверг).
+  const NOW = new Date(2026, 1, 12, 15);
+  const WINDOW_START = new Date(2026, 0, 15);
+  const local = (dayOfJanuary: number, hour: number) => new Date(2026, 0, dayOfJanuary, hour);
+
+  // По два события в каждый день окна и ещё по два — по четвергам.
+  const events = () => {
+    const result: Date[] = [];
+    for (let offset = 0; offset < 28; offset += 1) {
+      result.push(local(15 + offset, 12), local(15 + offset, 20));
+      if (offset % 7 === 0) result.push(local(15 + offset, 21), local(15 + offset, 22));
+    }
+    return result;
+  };
+
+  test('share of this weekday against the average day', () => {
+    // четверг: 4 события в день, средний день — 64 / 28
+    approx(weekdayFactor(events(), WINDOW_START, NOW), 4 / (64 / 28));
+  });
+
+  test('today and events before the window are not counted', () => {
+    const extra = [new Date(2026, 1, 12, 10), local(10, 12), local(14, 23)];
+    approx(weekdayFactor([...events(), ...extra], local(1, 0), NOW), 4 / (64 / 28));
+  });
+
+  test('less than four full weeks of data gives no factor', () => {
+    assert.equal(weekdayFactor(events(), new Date(2026, 0, 15, 0, 1), NOW), null);
+    assert.equal(weekdayFactor([], null, NOW), null);
+  });
+
+  test('fewer than 50 events give no factor', () => {
+    const sparse = events().slice(0, 49);
+    assert.equal(weekdayFactor(sparse, WINDOW_START, NOW), null);
   });
 });
