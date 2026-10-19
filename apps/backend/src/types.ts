@@ -11,6 +11,7 @@ import type {
   StaffRailView,
 } from './state';
 import type { AuditEventView } from './audit';
+import type { CatalogIdeas } from './catalog-ideas';
 import type {
   DailyAccessCodeView,
   StaffAccountView,
@@ -138,6 +139,8 @@ export type StaffInventoryMutationResponse = {
 };
 
 export type StaffInventoryBatchMutationResponse = InventoryBatchResult;
+
+export type StaffCatalogIdeasResponse = CatalogIdeas;
 
 export type StaffRailsResponse = {
   items: StaffRailView[];

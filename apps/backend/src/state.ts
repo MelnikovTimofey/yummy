@@ -160,6 +160,9 @@ export type InventoryTobaccoView = {
   flavorTags: string[];
   inStock: boolean;
   archived: boolean;
+  rating: number | null;
+  ratingsCount: number | null;
+  viewsCount: number | null;
   updatedAt: string;
   dependentMixCount: number;
   blockedDependentMixCount: number;
@@ -785,6 +788,9 @@ const mapTobacco = (record: {
   flavorTags: string;
   inStock: boolean;
   archived: boolean;
+  rating: number | null;
+  ratingsCount: number | null;
+  viewsCount: number | null;
   updatedAt: Date;
 }) => ({
   id: record.id,
@@ -801,6 +807,9 @@ const mapTobacco = (record: {
   flavorTags: parseList(record.flavorTags),
   inStock: record.inStock,
   archived: record.archived,
+  rating: record.rating,
+  ratingsCount: record.ratingsCount,
+  viewsCount: record.viewsCount,
   updatedAt: record.updatedAt.toISOString(),
 });
 
