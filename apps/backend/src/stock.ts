@@ -64,7 +64,6 @@ const REORDER_DAYS = 21;
 const OVERDUE_SHARE = 0.1;
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
-const daysBetween = (from: Date, to: Date) => (to.getTime() - from.getTime()) / DAY_MS;
 const endOf = (pack: Pack) => pack.emptiedAt ?? pack.writtenOffAt;
 
 // Самая ранняя точка не раньше `from`, когда у табака нет ни одной открытой
@@ -125,6 +124,8 @@ const lastMark = (pack: ResolvedPack): PackMark => {
 
 // Завершённые отрезки шкалы банки: от вскрытия через отметки к «Закончилась».
 // Текущий отрезок (от последней точки до сейчас) не завершён и сюда не входит.
+// Отметка выше предыдущей — исправление: её отрезок не расход, но точкой
+// отсчёта дальше служит она.
 const segments = (pack: ResolvedPack) => {
   if (!pack.openedAt || pack.state === 'written_off') return [];
   const points: PackMark[] = [
@@ -132,24 +133,39 @@ const segments = (pack: ResolvedPack) => {
     ...[...pack.marks].sort((a, b) => a.at.getTime() - b.at.getTime()),
   ];
   if (pack.emptiedAt) points.push({ at: pack.emptiedAt, fraction: 0 });
-  return points.slice(1).map((point, index) => ({
-    from: points[index].at.getTime(),
-    to: point.at.getTime(),
-    grams: pack.weight * (points[index].fraction - point.fraction),
-  }));
+  return points.slice(1).flatMap((point, index) => {
+    const previous = points[index];
+    if (point.fraction > previous.fraction) return [];
+    return [{ from: previous.at.getTime(), to: point.at.getTime(), grams: pack.weight * (previous.fraction - point.fraction) }];
+  });
 };
 
+const unionLength = (intervals: Array<[number, number]>) => {
+  let total = 0;
+  let end = -Infinity;
+  for (const [from, to] of [...intervals].sort((a, b) => a[0] - b[0])) {
+    if (to <= end) continue;
+    total += to - Math.max(from, end);
+    end = to;
+  }
+  return total;
+};
+
+// Расход — табака, а не банки: граммы всех банок делятся на время, когда
+// хоть одна была в работе, чтобы параллельные банки не делили расход пополам.
 export const consumptionRate = (packs: Pack[], now: Date): Rate => {
   const windowStart = now.getTime() - RATE_WINDOW_DAYS * DAY_MS;
   let grams = 0;
-  let days = 0;
+  const covered: Array<[number, number]> = [];
   for (const segment of resolvePacks(packs).flatMap(segments)) {
     if (segment.to <= segment.from) continue;
-    const overlap = Math.min(segment.to, now.getTime()) - Math.max(segment.from, windowStart);
-    if (overlap <= 0) continue;
-    grams += (segment.grams * overlap) / (segment.to - segment.from);
-    days += overlap / DAY_MS;
+    const from = Math.max(segment.from, windowStart);
+    const to = Math.min(segment.to, now.getTime());
+    if (to <= from) continue;
+    grams += (segment.grams * (to - from)) / (segment.to - segment.from);
+    covered.push([from, to]);
   }
+  const days = unionLength(covered) / DAY_MS;
   return days > 0 ? { gramsPerDay: grams / days, kind: 'own' } : { gramsPerDay: null, kind: 'none' };
 };
 
@@ -165,9 +181,31 @@ export const withBrandFallback = (rate: Rate, brandRates: number[]): Rate => {
   return { gramsPerDay: median(brandRates), kind: 'brand' };
 };
 
-export const openRemaining = (pack: ResolvedPack, gramsPerDay: number | null, now: Date) => {
+const openInterval = (pack: ResolvedPack): [number, number] | null =>
+  pack.openedAt ? [pack.openedAt.getTime(), endOf(pack)?.getTime() ?? Infinity] : null;
+
+// Дни, взвешенные долей банки: пока в работе k банок, каждая уходит в k раз медленнее.
+const sharedDays = (from: number, to: number, intervals: Array<[number, number]>) => {
+  const cuts = [from, to, ...intervals.flat().filter((time) => time > from && time < to)].sort((a, b) => a - b);
+  let days = 0;
+  for (let index = 1; index < cuts.length; index += 1) {
+    const middle = (cuts[index - 1] + cuts[index]) / 2;
+    const open = intervals.filter(([start, end]) => start <= middle && middle < end).length;
+    days += (cuts[index] - cuts[index - 1]) / DAY_MS / Math.max(1, open);
+  }
+  return days;
+};
+
+// packs — все банки табака: по ним видно, сколько банок было в работе одновременно.
+export const openRemaining = (
+  pack: ResolvedPack,
+  gramsPerDay: number | null,
+  now: Date,
+  packs: ResolvedPack[] = [pack],
+) => {
   const mark = lastMark(pack);
-  const spent = gramsPerDay === null ? 0 : gramsPerDay * daysBetween(mark.at, now);
+  const intervals = packs.map(openInterval).filter((interval): interval is [number, number] => interval !== null);
+  const spent = gramsPerDay === null ? 0 : gramsPerDay * sharedDays(mark.at.getTime(), now.getTime(), intervals);
   const grams = Math.max(0, pack.weight * mark.fraction - spent);
   return { grams, overdue: grams < pack.weight * OVERDUE_SHARE };
 };
@@ -176,7 +214,7 @@ export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: 
   const packs = resolvePacks(item.packs);
   const open = packs.filter((pack) => pack.state === 'open');
   const sealed = packs.filter((pack) => pack.state === 'sealed');
-  const remaining = open.map((pack) => openRemaining(pack, rate.gramsPerDay, now));
+  const remaining = open.map((pack) => openRemaining(pack, rate.gramsPerDay, now, packs));
   const remainingGrams = sum(remaining.map((entry) => entry.grams)) + sum(sealed.map((pack) => pack.weight));
   const daysLeft = rate.gramsPerDay ? remainingGrams / rate.gramsPerDay : null;
   const overdue = remaining.some((entry) => entry.overdue);

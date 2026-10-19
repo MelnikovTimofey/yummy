@@ -205,6 +205,42 @@ test.describe('consumptionRate', () => {
     approx(consumptionRate(packs, day(25)).gramsPerDay, 25);
   });
 
+  test('packs opened together and emptied together: rate of the tobacco, not of a pack', () => {
+    const packs = [
+      pack({ id: 'a', openedAt: day(0), emptiedAt: day(10) }),
+      pack({ id: 'b', openedAt: day(0), emptiedAt: day(10) }),
+    ];
+    approx(consumptionRate(packs, day(12)).gramsPerDay, 50);
+  });
+
+  test('a pack opened while another is open: days are the union of intervals', () => {
+    const packs = [
+      pack({ id: 'a', openedAt: day(0), emptiedAt: day(10) }),
+      pack({ id: 'b', openedAt: day(5), emptiedAt: day(15) }),
+    ];
+    approx(consumptionRate(packs, day(20)).gramsPerDay, 500 / 15);
+  });
+
+  test('a correcting mark gives no grams and no days, and becomes the new start', () => {
+    const packs = [
+      pack({
+        id: 'a',
+        emptiedAt: day(10),
+        marks: [
+          { at: day(4), fraction: 0.5 },
+          { at: day(6), fraction: 0.75 },
+        ],
+      }),
+    ];
+    // 0–4: 125 г; 4–6: исправление, не считается; 6–10: 187,5 г
+    approx(consumptionRate(packs, day(10)).gramsPerDay, 312.5 / 8);
+  });
+
+  test('a correction right after a mark keeps the earlier segment only', () => {
+    const packs = [pack({ id: 'a', marks: [{ at: day(1), fraction: 0.5 }, { at: day(2), fraction: 0.75 }] })];
+    approx(consumptionRate(packs, day(5)).gramsPerDay, 125);
+  });
+
   test('no finished segment means no data', () => {
     assert.deepEqual(consumptionRate([pack({ id: 'a' }), pack({ id: 'b' })], day(30)), none);
     assert.deepEqual(consumptionRate([], day(30)), none);
@@ -260,6 +296,24 @@ test.describe('openRemaining', () => {
     assert.deepEqual(openRemaining(opened(), 24, day(10)), { grams: 10, overdue: true });
   });
 
+  test('packs open in parallel share the rate', () => {
+    const packs = resolvePacks([pack({ id: 'a', openedAt: day(0) }), pack({ id: 'b', openedAt: day(0) })]);
+    assert.deepEqual(openRemaining(packs[0], 50, day(4), packs), { grams: 150, overdue: false });
+  });
+
+  test('the share changes when a second pack is opened', () => {
+    const packs = resolvePacks([pack({ id: 'a' }), pack({ id: 'b', openedAt: day(4) })]);
+    // a: 4 дня один (80 г) + 2 дня вдвоём (20 г); b: 2 дня вдвоём (20 г)
+    assert.deepEqual(openRemaining(packs[0], 20, day(6), packs), { grams: 150, overdue: false });
+    assert.deepEqual(openRemaining(packs[1], 20, day(6), packs), { grams: 230, overdue: false });
+  });
+
+  test('a pack emptied earlier shared the rate only while it was open', () => {
+    const packs = resolvePacks([pack({ id: 'a', emptiedAt: day(4) }), pack({ id: 'b', openedAt: day(2) })]);
+    // b: 2 дня вдвоём (20 г) + 4 дня один (80 г)
+    assert.deepEqual(openRemaining(packs[1], 20, day(8), packs), { grams: 150, overdue: false });
+  });
+
   test('never goes below zero', () => {
     assert.deepEqual(openRemaining(opened(), 30, day(20)), { grams: 0, overdue: true });
   });
@@ -285,6 +339,13 @@ test.describe('shelfForecast', () => {
     approx(forecast.remainingGrams, 450);
     approx(forecast.daysLeft, 18);
     assert.equal(forecast.endsAt?.getTime(), day(30).getTime());
+  });
+
+  test('parallel open packs do not double the spend', () => {
+    const shelf = item({ tobaccoId: 't', packs: [pack({ id: 'a', openedAt: day(0) }), pack({ id: 'b', openedAt: day(0) })] });
+    const forecast = shelfForecast(shelf, own(50), day(4), DEFAULT_SETTINGS);
+    approx(forecast.remainingGrams, 300);
+    approx(forecast.daysLeft, 6);
   });
 
   test('last pack is a flag, not a status', () => {
