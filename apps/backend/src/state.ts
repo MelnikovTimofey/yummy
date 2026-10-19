@@ -2076,7 +2076,7 @@ const buildMostSelectedRail = async (): Promise<RailView> => {
   const mixes = await getAvailableMixCatalog();
 
   const ranked = mixes
-    .filter((mix) => mix.guestVisible)
+    .filter((mix) => mix.guestVisible && mix.smokeCtaCount > 0)
     .sort((left, right) => {
       if (right.smokeCtaCount !== left.smokeCtaCount) {
         return right.smokeCtaCount - left.smokeCtaCount;
@@ -2106,7 +2106,7 @@ const buildTopRatedRail = async (): Promise<RailView> => {
   const mixes = await getAvailableMixCatalog();
 
   const ranked = mixes
-    .filter((mix) => mix.guestVisible)
+    .filter((mix) => mix.guestVisible && mix.ratingsCount > 0)
     .sort((left, right) => {
       if (right.avgRating !== left.avgRating) {
         return right.avgRating - left.avgRating;
@@ -2199,7 +2199,7 @@ const buildRailViews = async (guestOnly: boolean) => {
 
 export const getGuestHomeRails = async () => {
   const rails = [...(await buildStatisticalRails()), ...(await buildRailViews(true))];
-  return rails.filter((rail) => rail.type === 'statistical' || rail.mixes.length > 0);
+  return rails.filter((rail) => rail.mixes.length > 0);
 };
 
 export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
@@ -2966,7 +2966,10 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
       hiddenMixesCount: mixes.filter((mix) => !mix.available).length,
       blockedByInventoryCount: mixes.filter((mix) => mix.available && !mix.guestVisible).length,
       activeRailsCount: railHealth.filter((rail) => rail.active).length,
-      emptyActiveRailsCount: railHealth.filter((rail) => rail.active && rail.visibleMixCount === 0).length,
+      // Статистический рейл пуст, пока гости не выбирают и не оценивают: мастеру тут нечего чинить.
+      emptyActiveRailsCount: railHealth.filter(
+        (rail) => rail.active && rail.type !== 'statistical' && rail.visibleMixCount === 0,
+      ).length,
       blockedMixes,
       railHealth: railHealth.slice(0, 6),
     },

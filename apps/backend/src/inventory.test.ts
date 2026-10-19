@@ -538,6 +538,35 @@ test('batch archive and unarchive toggle archived state', async () => {
   await app.close();
 });
 
+test('empty statistical rails do not count as empty active rails on the dashboard', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  const dashboard = await app.inject({
+    method: 'GET',
+    url: '/staff/dashboard/summary?window=7d',
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
+
+  assert.equal(dashboard.statusCode, 200);
+  const dashboardBody = dashboard.json() as {
+    ops: {
+      emptyActiveRailsCount: number;
+      railHealth: Array<{ railId: string; visibleMixCount: number }>;
+    };
+  };
+
+  assert.equal(
+    dashboardBody.ops.railHealth.find((rail) => rail.railId === 'rail-statistical-top')?.visibleMixCount,
+    0,
+  );
+  assert.equal(dashboardBody.ops.emptyActiveRailsCount, 0);
+
+  await app.close();
+});
+
 test('smoke CTA events are recorded in dashboard summary', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
