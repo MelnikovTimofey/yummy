@@ -36,7 +36,7 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
 
   await nav.getByRole('button', { name: 'Каталог', exact: true }).click();
-  await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();
+  await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
   await expect(page.getByText(/Найдено/)).toBeVisible();
   await expect(page.getByText('Вход для персонала')).toHaveCount(0);
 });
@@ -196,6 +196,39 @@ test('Aroma guest navigates with the bottom bar and opens the mixer from it', as
   await expect(nav).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Назад', exact: true }).click();
-  await expect(page.getByPlaceholder('Поиск по названию и описанию')).toBeVisible();
+  await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
   await expect(catalogTab).toHaveAttribute('aria-current', 'page');
+});
+
+// Каталог (#181): поиск и фильтры в одном месте. «Фильтры» открывает шторку
+// с характером и вкусами, выбор виден метками под полем и снимается касанием.
+// Вкус берётся первым из шторки, поэтому сценарий не зависит от демо-фикстур.
+test('Aroma catalog keeps filters in one sheet and shows them as removable tags', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
+  const filtersButton = page.getByRole('button', { name: 'Фильтры', exact: true });
+  await filtersButton.click();
+
+  const sheet = page.getByRole('dialog', { name: 'Фильтры' });
+  await expect(sheet).toBeVisible();
+  const flavor = sheet.getByRole('group', { name: 'Вкусы' }).getByRole('button').first();
+  const flavorName = (await flavor.getAttribute('aria-label'))?.split(',')[0] ?? '';
+  await flavor.click();
+  await expect(flavor).toHaveAttribute('aria-pressed', 'true');
+  await sheet.getByRole('button', { name: /^Показать \d+ микс/ }).click();
+  await expect(sheet).toHaveCount(0);
+
+  const tag = page.getByRole('button', { name: `Убрать фильтр «${flavorName}»` });
+  await expect(tag).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Фильтры, выбрано 1' })).toBeVisible();
+  await tag.click();
+  await expect(tag).toHaveCount(0);
+  await expect(filtersButton).toBeVisible();
 });
