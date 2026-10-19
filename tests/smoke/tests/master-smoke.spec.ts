@@ -25,7 +25,12 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
   await expect(getWorkspaceTab(page, 'Полка')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
 
+  // #212: между «Полкой» и «Каталогом» — «Поставки» (счета поставщиков и приход).
   await getWorkspaceTab(page, 'Полка').press('ArrowRight');
+  await expect(getWorkspaceTab(page, 'Поставки')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeVisible();
+
+  await getWorkspaceTab(page, 'Поставки').press('ArrowRight');
   await expect(getWorkspaceTab(page, 'Каталог')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'Каталог', level: 1 })).toBeVisible();
 
@@ -183,6 +188,60 @@ test('Master shelf marks a pack empty and undoes it from the toast', async ({ pa
   await toast.getByRole('button', { name: /Отменить/ }).click();
   await expect(toast).toBeHidden();
   await expect(emptyButton(row)).toBeVisible();
+});
+
+// Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
+// Табак берётся с полки, поэтому приёмка лишь добавляет ему банку в запас:
+// гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
+// остаётся поставка с уникальным номером «SMOKE-…» и одна банка.
+test('Master deliveries accept a manual draft with a catalog tobacco', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  const shelfRow = page.locator('table.shelf-table tbody tr[data-tobacco-id]').first();
+  await expect(shelfRow).toBeVisible();
+  // Первая ячейка — табак (в колонке «Приход» тоже есть .shelf-name).
+  // textContent, а не innerText: подпись бренда в CSS набрана капслоком.
+  const nameCell = shelfRow.locator('td').first();
+  const tobaccoName = ((await nameCell.locator('.shelf-name b').textContent()) ?? '').trim();
+  const manufacturer = ((await nameCell.locator('.shelf-name span').textContent()) ?? '').split(' · ')[0].trim();
+
+  await openWorkspace(page, 'Поставки');
+  await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeVisible();
+
+  const number = `SMOKE-${Date.now()}`;
+  await page.getByRole('button', { name: 'Заполнить вручную' }).click();
+  const manual = page.getByRole('dialog');
+  await manual.getByLabel('Поставщик').fill('Smoke-поставщик');
+  await manual.getByLabel('Номер счёта').fill(number);
+  await manual.getByRole('button', { name: 'Создать черновик' }).click();
+  await expect(page.getByRole('heading', { name: new RegExp(`^Счёт № ${number}`), level: 1 })).toBeVisible();
+  await expect(page.getByText('ПОСТАВКА · ЧЕРНОВИК')).toBeVisible();
+
+  await page.getByRole('button', { name: '+ Добавить строку' }).click();
+  const addLine = page.getByRole('dialog');
+  await addLine.getByLabel('Табак из каталога').fill(tobaccoName);
+  await addLine
+    .getByRole('group', { name: 'Табаки каталога' })
+    .getByRole('button')
+    .filter({ hasText: tobaccoName })
+    .filter({ hasText: manufacturer })
+    .first()
+    .click();
+  await addLine.getByLabel('Цена за банку, ₽').fill('1 550');
+  await addLine.getByRole('button', { name: 'Добавить строку' }).click();
+  await expect(addLine).toBeHidden();
+
+  const line = page.locator('tr[data-line-id]');
+  await expect(line).toHaveCount(1);
+  await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
+  await expect(page.locator('.deliv-footbar')).toContainText('будет 1 банка');
+
+  await page.getByRole('button', { name: 'Принять поставку' }).click();
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toContainText('Принято: 1 банка на полке');
+  await expect(toast.getByRole('button', { name: 'Открыть полку' })).toBeVisible();
+  await expect(page.locator('tr[data-delivery-id]').filter({ hasText: `№ ${number}` })).toContainText('принята');
 });
 
 // Каталог длиннее экрана: редактор микса из конца списка должен открываться
