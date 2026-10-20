@@ -320,3 +320,28 @@ test('Aroma anonymous heart offers the cabinet and «Не сейчас» closes 
   await expect(prompt).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Покурить' })).toBeVisible();
 });
+
+// «Для вас» (#245) — только у вошедшего гостя. Аноним после онбординга видит
+// Подбор как раньше: без «Для вас», подсказки и «Подобрать под настроение»,
+// и Подбор не ходит в /guest/me/for-you.
+test('Aroma anonymous recommendations stay without «Для вас»', async ({ page }) => {
+  const forYouRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/guest/me/for-you')) forYouRequests.push(request.url());
+  });
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.locator('.aroma-onboarding-profile-grid button').first().click();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('button', { name: 'Показать подбор' }).click();
+
+  await expect(page.getByRole('button', { name: /Изменить вкусы|Открыть предпочтения/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Для вас', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Подобрать под настроение' })).toHaveCount(0);
+  await expect(page.getByText('Давно на одном вкусе')).toHaveCount(0);
+  expect(forYouRequests).toEqual([]);
+});
