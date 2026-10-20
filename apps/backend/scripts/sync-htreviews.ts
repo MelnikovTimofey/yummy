@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
+import { loadShelfBrandUrls, syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
 
 const toInt = (value: string | undefined) => {
   if (!value) {
@@ -28,10 +28,18 @@ const toBoolean = (value: string | undefined, fallback: boolean) => {
 };
 
 async function main() {
-  const brandUrls = process.env.HTREVIEWS_BRAND_URLS
-    ?.split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const shelfBrands = toBoolean(process.env.HTREVIEWS_SHELF_BRANDS, false);
+  const brandUrls = shelfBrands
+    ? await loadShelfBrandUrls()
+    : process.env.HTREVIEWS_BRAND_URLS
+      ?.split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  // Пустой список брендов syncHtReviewsCatalog читает как «весь каталог»:
+  // ночной прогон не должен молча превратиться в многочасовой полный.
+  if (shelfBrands && !brandUrls?.length) {
+    throw new Error('HTREVIEWS_SHELF_BRANDS=1, но в наличии нет ни одного табака htreviews');
+  }
 
   const startedAt = Date.now();
   console.log(`[htreviews:sync] ${new Date().toISOString()} starting against ${process.env.DATABASE_URL?.replace(/:[^:@]*@/, ':***@') ?? '<no DATABASE_URL>'}`);
@@ -47,7 +55,12 @@ async function main() {
 
   const elapsedMs = Date.now() - startedAt;
   console.log(`[htreviews:sync] ${new Date().toISOString()} completed in ${Math.round(elapsedMs / 1000)}s`);
-  console.log(JSON.stringify(stats, null, 2));
+  console.log(`[htreviews:sync] stats ${JSON.stringify({ shelfBrands: shelfBrands ? brandUrls?.length : null, ...stats })}`);
+  // Сетевые ошибки обход проглатывает по одному URL; если не пришло ничего —
+  // htreviews недоступен или закрыл доступ, и это сбой, а не пустая синхронизация.
+  if (stats.fetched === 0) {
+    throw new Error('с htreviews не получено ни одного табака');
+  }
 }
 
 main().catch((error: unknown) => {
