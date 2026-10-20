@@ -2,7 +2,7 @@ import { prisma } from './db';
 import { buildForYou, MIN_FOR_YOU_PICKS, type ForYouHistoryEntry } from './for-you';
 import { loadMixer } from './mixer';
 import { getRecommendations } from './recommendations';
-import type { GuestCabinetItem, GuestFavoriteItem, GuestForYouResponse, GuestHistoryItem, GuestHistoryResponse, GuestMixStatus } from './types';
+import type { GuestCabinetCard, GuestCabinetItem, GuestFavoriteItem, GuestForYouResponse, GuestHistoryItem, GuestHistoryResponse, GuestMixStatus } from './types';
 
 // История и избранное гостя (#240, PRD §8.9). Строка показывает снимок названия
 // и статус: в наличии, нет табака (первый отсутствующий) или «Больше не готовим».
@@ -41,9 +41,11 @@ const loadMixes = async (ids: string[]) => {
     select: {
       id: true,
       name: true,
+      description: true,
       available: true,
       flavorProfiles: true,
-      components: { orderBy: { sortOrder: 'asc' }, select: { tobaccoId: true } },
+      flavors: true,
+      components: { orderBy: { sortOrder: 'asc' }, select: { tobaccoId: true, proportion: true } },
     },
   });
   return new Map(mixes.map((mix) => [mix.id, mix]));
@@ -87,7 +89,7 @@ const customProfiles = (components: SnapshotComponent[], tobaccos: Map<string, T
   })));
 
 type CatalogRow = { mixId: string | null; mixName: string; mixProfiles: unknown };
-type CustomRow = { id: string; name: string; components: unknown };
+type CustomRow = { id: string; name: string; components: unknown; harmony: number; createdAt: Date };
 
 // Общая сборка строк истории и избранного: одним запросом миксы, табаки и оценки.
 const buildItems = async (guestId: string, catalog: CatalogRow[], custom: CustomRow[]) => {
@@ -101,6 +103,16 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
   const ratings = await prisma.mixRating.findMany({ where: { guestId, mixId: { in: mixIds } }, select: { mixId: true, value: true } });
   const ownRating = new Map(ratings.map((rating) => [rating.mixId, rating.value]));
 
+  const catalogCard = (mix: NonNullable<ReturnType<Mixes['get']>>): GuestCabinetCard => ({
+    description: mix.description,
+    flavors: parseList(mix.flavors),
+    components: mix.components.map((item) => {
+      const tobacco = tobaccos.get(item.tobaccoId);
+      return { tobaccoId: item.tobaccoId, manufacturer: tobacco?.manufacturer ?? '', name: tobacco?.name ?? item.tobaccoId, proportion: item.proportion };
+    }),
+    harmony: null,
+    madeAt: null,
+  });
   const catalogItem = (row: CatalogRow): GuestCabinetItem => {
     const live = row.mixId ? mixes.get(row.mixId) : undefined;
     return {
@@ -109,6 +121,7 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
       flavorProfiles: asStringList(row.mixProfiles).length ? asStringList(row.mixProfiles) : parseList(live?.flavorProfiles ?? '[]'),
       status: catalogStatus(row.mixId, mixes, tobaccos),
       ownRating: row.mixId ? ownRating.get(row.mixId) ?? null : null,
+      card: live?.available ? catalogCard(live) : null,
     };
   };
   const customItem = (row: CustomRow): GuestCabinetItem => {
@@ -119,6 +132,13 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
       flavorProfiles: customProfiles(components, tobaccos),
       status: customStatus(components, tobaccos),
       ownRating: null,
+      card: {
+        description: '',
+        flavors: [],
+        components: components.map(({ tobaccoId, manufacturer, name, proportion }) => ({ tobaccoId, manufacturer, name, proportion })),
+        harmony: row.harmony,
+        madeAt: row.createdAt.toISOString(),
+      },
     };
   };
   return { catalogItem, customItem };
@@ -142,7 +162,7 @@ export const getGuestHistory = async (guestId: string, before: Date | null, limi
   const orderBy = [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
   const [smokes, customs] = await Promise.all([
     prisma.smokeCtaEvent.findMany({ where, orderBy, take: limit + 1 }),
-    prisma.customMixSmokeEvent.findMany({ where, orderBy, take: limit + 1, select: { id: true, name: true, components: true, createdAt: true } }),
+    prisma.customMixSmokeEvent.findMany({ where, orderBy, take: limit + 1, select: { id: true, name: true, components: true, harmony: true, createdAt: true } }),
   ]);
 
   const merged = [
@@ -168,7 +188,7 @@ export const getGuestFavorites = async (guestId: string): Promise<{ items: Guest
   const favorites = await prisma.guestFavorite.findMany({
     where: { guestId },
     orderBy: { createdAt: 'desc' },
-    include: { customMixEvent: { select: { id: true, name: true, components: true } } },
+    include: { customMixEvent: { select: { id: true, name: true, components: true, harmony: true, createdAt: true } } },
   });
   const { catalogItem, customItem } = await buildItems(
     guestId,
