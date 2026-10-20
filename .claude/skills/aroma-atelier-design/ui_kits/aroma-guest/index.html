@@ -27,6 +27,9 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 /* Тонкая шапка и нижняя панель (#168); шесть пунктов с «Рилсами» (#153): поля 4px, колонка ≈ 61px */
 .topbar-icon-btn{margin-left:auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
 .topbar-icon-btn:hover,.topbar-icon-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
+.topbar-icon-btn+.topbar-icon-btn{margin-left:0}
+.topbar-master-card{position:relative}
+.topbar-master-card-dot{position:absolute;top:9px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:0 4px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
 .bottom-nav-item{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;border:0;background:transparent;color:var(--text-muted);cursor:pointer}
 .bottom-nav-item[aria-current="page"]{color:var(--text-0)}
@@ -54,9 +57,6 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .reels::-webkit-scrollbar{display:none}
 .reel-slot{height:100%;scroll-snap-align:start;scroll-snap-stop:always}
 .reel{position:relative;height:100%;overflow:hidden}
-.reel-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 20px 18px;pointer-events:none;background:linear-gradient(180deg,rgba(14,14,17,.55) 0%,transparent 100%)}
-.reel-title{margin:0;font-family:var(--font-display);font-size:22px;line-height:1;color:var(--text-0)}
-.reel-count{margin:0;font-size:11px;letter-spacing:.16em;color:var(--text-1);font-variant-numeric:tabular-nums}
 .reel-tap{position:absolute;inset:0;z-index:1;border:0;background:transparent;padding:0;cursor:pointer}
 .reel-tap:focus-visible{outline:2px solid var(--accent-hover);outline-offset:-4px}
 .reel-paused{position:absolute;left:50%;top:40%;z-index:2;width:56px;height:56px;margin:-28px 0 0 -28px;display:grid;place-items:center;border-radius:var(--r-pill);background:rgba(14,14,17,.55);border:1px solid var(--line);color:var(--text-0);pointer-events:none;backdrop-filter:blur(4px)}
@@ -74,7 +74,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 @keyframes reel-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .reel-name-row{display:flex;align-items:flex-start;gap:8px}
 .reel-name-row .heart-btn{margin:-2px -8px 0 auto}
-.reel-name{margin:0;flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:28px;line-height:1.06;color:var(--text-0);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.reel-name{margin:0;flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:28px;line-height:1.2;color:var(--text-0);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .reel-flavors{margin:0;font-size:14px;line-height:1.4;color:var(--text-1)}
 .reel-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:2px}
 
@@ -150,8 +150,6 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-selected-dot{width:8px;height:8px;border-radius:999px}
 
 /* Selected-mix bar */
-.aroma-selected-shell{padding:8px 20px 0;border-bottom:1px solid var(--line-soft);background:var(--guest-topbar-bg)}
-.aroma-selected-text{margin:0;font-size:14px;line-height:1.55}
 
 /* Recommendations */
 .aroma-recs{display:grid;gap:14px;align-content:start}
