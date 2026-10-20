@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useIsPhone } from '@/hooks/use-is-phone';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ShelfSettings } from '@/contracts';
 import { validateShelfSettings } from '@/lib/reorder';
@@ -17,6 +18,8 @@ export const ShelfSettingsDialog = ({ settings, onSave, onClose }: ShelfSettings
   const [leadDays, setLeadDays] = useState(String(settings.leadDays));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // На телефоне (#228) — нижней шторкой на всю ширину и без автофокуса: иначе сразу выскакивает клавиатура.
+  const isPhone = useIsPhone();
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -39,7 +42,16 @@ export const ShelfSettingsDialog = ({ settings, onSave, onClose }: ShelfSettings
 
   return (
     <Dialog open onOpenChange={(next) => (next || busy ? null : onClose())}>
-      <DialogContent className="operator-dialog" showCloseButton={false}>
+      <DialogContent className={`operator-dialog${isPhone ? ' operator-dialog--phone' : ''}`} showCloseButton={false}
+        onOpenAutoFocus={
+          isPhone
+            ? (event) => {
+                event.preventDefault();
+                (event.currentTarget as HTMLElement | null)?.focus();
+              }
+            : undefined
+        }
+      >
         <DialogHeader className="operator-dialog__head">
           <p className="operator-dialog__eyebrow">Полка · настройки</p>
           <DialogTitle className="operator-dialog__title">Настройки полки</DialogTitle>
@@ -53,7 +65,7 @@ export const ShelfSettingsDialog = ({ settings, onSave, onClose }: ShelfSettings
               <label className="operator-dialog__field">
                 <span className="operator-dialog__label">Граммовка чаши, г</span>
                 <span className="input">
-                  <input type="number" inputMode="numeric" min={1} max={100} step={1} value={bowlGrams} onChange={(event) => setBowlGrams(event.target.value)} autoFocus />
+                  <input type="number" inputMode="numeric" min={1} max={100} step={1} value={bowlGrams} onChange={(event) => setBowlGrams(event.target.value)} autoFocus={!isPhone} />
                 </span>
               </label>
               <label className="operator-dialog__field">

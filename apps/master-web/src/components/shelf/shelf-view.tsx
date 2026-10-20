@@ -51,6 +51,9 @@ type ShelfViewProps = {
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
   onUploadInvoice: (file: File) => void;
+  // Настройки полки живут в App: на телефоне их открывают из верхней панели.
+  settingsOpen: boolean;
+  onSettingsOpenChange: (open: boolean) => void;
   // Карточка, которую открыли извне (дашборд → «Заканчивается»).
   openCardId?: string;
   onCardOpened?: () => void;
@@ -67,7 +70,19 @@ const markLabel = (fraction: number) => MARK_OPTIONS.find((option) => option.val
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 
-export const ShelfView = ({ shelf, mode, onModeChange, onGoCatalog, onOpenInCatalog, onOpenMix, onUploadInvoice, openCardId, onCardOpened }: ShelfViewProps) => {
+export const ShelfView = ({
+  shelf,
+  mode,
+  onModeChange,
+  onGoCatalog,
+  onOpenInCatalog,
+  onOpenMix,
+  onUploadInvoice,
+  settingsOpen,
+  onSettingsOpenChange,
+  openCardId,
+  onCardOpened,
+}: ShelfViewProps) => {
   const { view } = shelf;
   const rows = view?.rows ?? [];
   const settings = view?.settings ?? { bowlGrams: 18, leadDays: 7 };
@@ -90,7 +105,6 @@ export const ShelfView = ({ shelf, mode, onModeChange, onGoCatalog, onOpenInCata
   const [pendingId, setPendingId] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const [sheetId, setSheetId] = useState('');
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const toastSeq = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableSectionElement | null>(null);
@@ -132,9 +146,9 @@ export const ShelfView = ({ shelf, mode, onModeChange, onGoCatalog, onOpenInCata
   }, [openCardId, rows, onCardOpened, onModeChange]);
 
   const reorderCount = countReorder(shelf.reorder);
-  const headMenu = <ShelfHeadMenu onSettings={() => setSettingsOpen(true)} />;
+  const headMenu = <ShelfHeadMenu onSettings={() => onSettingsOpenChange(true)} />;
   const settingsDialog = settingsOpen ? (
-    <ShelfSettingsDialog settings={settings} onSave={shelf.saveSettings} onClose={() => setSettingsOpen(false)} />
+    <ShelfSettingsDialog settings={settings} onSave={shelf.saveSettings} onClose={() => onSettingsOpenChange(false)} />
   ) : null;
 
   const shown = useMemo(
@@ -376,6 +390,7 @@ export const ShelfView = ({ shelf, mode, onModeChange, onGoCatalog, onOpenInCata
         onOpenMix(mixId);
       }}
       onClose={() => setCardId('')}
+      actions={isPhone ? rowActions : undefined}
     />
   ) : null;
   const toastNode = toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Ellipsis, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HtreviewsLink } from '@/components/ui/htreviews-link';
 import { ProfileTag } from '@/components/ui/profile-tag';
@@ -19,6 +19,8 @@ import {
   packTitle,
   shelfUntil,
 } from '@/lib/shelf';
+import { ShelfActionsSheet } from './shelf-mobile';
+import type { ShelfRowActions } from './shelf-row-menu';
 
 type ShelfCardProps = {
   row: ShelfRow;
@@ -31,6 +33,8 @@ type ShelfCardProps = {
   onOpenCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
   onClose: () => void;
+  // Только на телефоне (#228): меню «⋯» строки здесь недоступно — его пункты в шапке карточки.
+  actions?: ShelfRowActions;
 };
 
 const PACK_WEIGHTS = [25, 50, 100, 125, 200, 250, 500, 1000];
@@ -71,12 +75,14 @@ export const ShelfCard = ({
   onOpenCatalog,
   onOpenMix,
   onClose,
+  actions,
 }: ShelfCardProps) => {
   const [card, setCard] = useState<ShelfCardData | null>(null);
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   const [stopNote, setStopNote] = useState(row.stopNote ?? '');
+  const [actionsOpen, setActionsOpen] = useState(false);
   const tobaccoId = row.tobacco.id;
 
   // Строка обновляется после каждого действия — карточку перечитываем вместе с ней.
@@ -174,9 +180,26 @@ export const ShelfCard = ({
             <p className="shelf-card__eyebrow">
               {row.tobacco.manufacturer} · {row.packWeight} г · {row.shelfStatus === 'plan' ? 'в плане' : 'на полке'}
             </p>
-            <button type="button" className="icon-btn" aria-label="Закрыть" onClick={onClose}>
-              <X size={16} aria-hidden />
-            </button>
+            {actions ? (
+              <span className="shelf-card__head-actions">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`Действия: ${row.tobacco.manufacturer} ${row.tobacco.name}`}
+                  aria-expanded={actionsOpen}
+                  onClick={() => setActionsOpen(true)}
+                >
+                  <Ellipsis size={18} aria-hidden />
+                </button>
+                <button type="button" className="icon-btn" aria-label="Закрыть" onClick={onClose}>
+                  <X size={18} aria-hidden />
+                </button>
+              </span>
+            ) : (
+              <button type="button" className="icon-btn" aria-label="Закрыть" onClick={onClose}>
+                <X size={16} aria-hidden />
+              </button>
+            )}
           </div>
           <SheetTitle className="shelf-card__title">{row.tobacco.name}</SheetTitle>
           <SheetDescription className="sr-only">Карточка табака на полке: банки, расход и настройки.</SheetDescription>
@@ -343,6 +366,7 @@ export const ShelfCard = ({
           </section>
         </div>
       </SheetContent>
+      {actions && actionsOpen ? <ShelfActionsSheet row={row} actions={actions} onClose={() => setActionsOpen(false)} /> : null}
     </Sheet>
   );
 };
