@@ -10,6 +10,7 @@ import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
 import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
+import { ShelfMobileHeadMenu } from '@/components/shelf/shelf-mobile';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
@@ -154,10 +155,13 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
+  const [shelfSettingsOpen, setShelfSettingsOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   // Вернулись на полку — снова полка, а не «К заказу» (как до выноса режима в App).
   useEffect(() => {
-    if (activeTab !== 'shelf') setShelfMode('shelf');
+    if (activeTab === 'shelf') return;
+    setShelfMode('shelf');
+    setShelfSettingsOpen(false);
   }, [activeTab]);
 
   const onAfterAccessSubmit = () => setActiveTab('access');
@@ -954,6 +958,8 @@ export const App = () => {
         setPendingInvoice(file);
         setActiveTab('deliveries');
       }}
+      settingsOpen={shelfSettingsOpen}
+      onSettingsOpenChange={setShelfSettingsOpen}
       openCardId={pendingShelfCard}
       onCardOpened={() => setPendingShelfCard('')}
     />
@@ -1215,15 +1221,18 @@ export const App = () => {
             title={mobileTitleFor(activeTab, shelfMode)}
             action={
               activeTab === 'shelf' ? (
-                <button
-                  type="button"
-                  className="icon-btn m-topbar__action"
-                  aria-label="К заказу"
-                  aria-pressed={shelfMode === 'reorder'}
-                  onClick={() => setShelfMode(shelfMode === 'reorder' ? 'shelf' : 'reorder')}
-                >
-                  <ShoppingCart size={18} strokeWidth={1.8} aria-hidden />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="icon-btn m-topbar__action"
+                    aria-label="К заказу"
+                    aria-pressed={shelfMode === 'reorder'}
+                    onClick={() => setShelfMode(shelfMode === 'reorder' ? 'shelf' : 'reorder')}
+                  >
+                    <ShoppingCart size={18} strokeWidth={1.8} aria-hidden />
+                  </button>
+                  <ShelfMobileHeadMenu onSettings={() => setShelfSettingsOpen(true)} />
+                </>
               ) : null
             }
           />

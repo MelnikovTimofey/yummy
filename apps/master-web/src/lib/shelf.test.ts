@@ -16,9 +16,11 @@ import {
   matchShelfStatus,
   packLine,
   packTitle,
+  parseManualPack,
   pickWriteOffPack,
   resolveShelfShortcut,
   shelfPips,
+  shelfRowMenu,
   shelfStatusLine,
   shelfUntil,
   sortShelfRows,
@@ -246,4 +248,45 @@ test('packTitle и packLine описывают историю банки', () =>
   assert.equal(packLine(card.packs[0]), 'Стартовый приход · 15 окт → 29 окт · 14 дн · 14,3 г/день');
   assert.equal(packTitle(card.packs[1], 2), 'Списана · банка 2');
   assert.equal(packLine(card.packs[1]), 'пришла 29 окт · списана 1 ноя · брак');
+});
+
+test('shelfRowMenu: отметки — только с открытой банкой, «вскрыть» — только с запасом, списать — если банки есть', () => {
+  const both = shelfRowMenu(row());
+  assert.deepEqual(both, {
+    canMark: true,
+    canOpenAnother: true,
+    canWriteOff: true,
+    stopLabel: 'Стоп для гостей',
+    writeOffHint: 'Спишется открытая банка. В расход не пойдёт.',
+  });
+
+  const openOnly = shelfRowMenu(row({ sealedCount: 0 }));
+  assert.equal(openOnly.canMark, true);
+  assert.equal(openOnly.canOpenAnother, false);
+  assert.equal(openOnly.canWriteOff, true);
+
+  const sealedOnly = shelfRowMenu(row({ openPacks: [] }));
+  assert.equal(sealedOnly.canMark, false);
+  assert.equal(sealedOnly.canOpenAnother, true);
+  assert.equal(sealedOnly.canWriteOff, true);
+  assert.equal(sealedOnly.writeOffHint, 'Спишется самая старая банка из запаса. В расход не пойдёт.');
+});
+
+test('shelfRowMenu: закончился или в плане — ни отметок, ни «вскрыть», ни списания; стоп — «Снять стоп»', () => {
+  for (const status of ['out', 'plan'] as const) {
+    const menu = shelfRowMenu(row({ status, openPacks: [], sealedCount: 0 }));
+    assert.deepEqual([menu.canMark, menu.canOpenAnother, menu.canWriteOff], [false, false, false]);
+  }
+  assert.equal(shelfRowMenu(row({ status: 'stop', stopped: true })).stopLabel, 'Снять стоп для гостей');
+});
+
+test('parseManualPack: вес — целые граммы, цена — по желанию, в копейках', () => {
+  assert.deepEqual(parseManualPack('200', ''), { weight: 200 });
+  assert.deepEqual(parseManualPack('250', '1 290,5'.replace(' ', '')), { weight: 250, priceKop: 129050 });
+  assert.deepEqual(parseManualPack('25', '  '), { weight: 25 });
+  assert.equal(parseManualPack('0', ''), null);
+  assert.equal(parseManualPack('12.5', ''), null);
+  assert.equal(parseManualPack('', ''), null);
+  // Непонятная цена не мешает добавить банку — как и было в меню строки.
+  assert.deepEqual(parseManualPack('200', 'дорого'), { weight: 200 });
 });

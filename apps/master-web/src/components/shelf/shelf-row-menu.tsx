@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { ShelfRow } from '@/contracts';
-import { MARK_OPTIONS } from '@/lib/shelf';
+import { MARK_OPTIONS, parseManualPack, shelfRowMenu } from '@/lib/shelf';
 
 export type ShelfRowActions = {
   onMark: (row: ShelfRow, fraction: number) => void;
@@ -34,8 +34,7 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
   const [price, setPrice] = useState('');
   const [reason, setReason] = useState('');
 
-  const hasOpen = row.openPacks.length > 0;
-  const hasPacks = hasOpen || row.sealedCount > 0;
+  const items = shelfRowMenu(row);
   const name = `${row.tobacco.manufacturer} ${row.tobacco.name}`;
 
   useLayoutEffect(() => {
@@ -83,10 +82,8 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
 
   const submitPack = (event: FormEvent) => {
     event.preventDefault();
-    const grams = Number(weight);
-    const rubles = Number(price.replace(',', '.'));
-    if (!Number.isInteger(grams) || grams < 1) return;
-    actions.onAddPack(row, { weight: grams, ...(price.trim() && rubles >= 0 ? { priceKop: Math.round(rubles * 100) } : {}) });
+    const pack = parseManualPack(weight, price);
+    if (pack) actions.onAddPack(row, pack);
   };
 
   const submitWriteOff = (event: FormEvent) => {
@@ -112,7 +109,7 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
                 key={option.label}
                 type="button"
                 className="shelf-menu__frac"
-                disabled={!hasOpen}
+                disabled={!items.canMark}
                 title={`Осталось ${option.label} · клавиша ${index + 1}`}
                 aria-label={`Осталось ${option.label}`}
                 onClick={() => actions.onMark(row, option.value)}
@@ -121,20 +118,20 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
               </button>
             ))}
           </div>
-          <button type="button" className="shelf-menu__item" disabled={!hasOpen} onClick={() => actions.onMark(row, 1)}>
+          <button type="button" className="shelf-menu__item" disabled={!items.canMark} onClick={() => actions.onMark(row, 1)}>
             Банка полная
           </button>
           <div className="shelf-menu__sep" />
-          <button type="button" className="shelf-menu__item" disabled={row.sealedCount === 0} onClick={() => actions.onOpenAnother(row)}>
+          <button type="button" className="shelf-menu__item" disabled={!items.canOpenAnother} onClick={() => actions.onOpenAnother(row)}>
             Вскрыть ещё одну банку
           </button>
           <button type="button" className="shelf-menu__item" onClick={() => setMode('add-pack')}>
             Добавить банку вручную
           </button>
           <button type="button" className="shelf-menu__item" onClick={() => actions.onToggleStop(row)}>
-            {row.stopped ? 'Снять стоп для гостей' : 'Стоп для гостей'}
+            {items.stopLabel}
           </button>
-          <button type="button" className="shelf-menu__item" disabled={!hasPacks} onClick={() => setMode('write-off')}>
+          <button type="button" className="shelf-menu__item" disabled={!items.canWriteOff} onClick={() => setMode('write-off')}>
             Списать банку…
           </button>
           <div className="shelf-menu__sep" />
@@ -169,7 +166,7 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
       {mode === 'write-off' ? (
         <form className="shelf-menu__form" onSubmit={submitWriteOff}>
           <span className="shelf-menu__label">Списать банку</span>
-          <p className="shelf-menu__hint">{hasOpen ? 'Спишется открытая банка.' : 'Спишется самая старая банка из запаса.'} В расход не пойдёт.</p>
+          <p className="shelf-menu__hint">{items.writeOffHint}</p>
           <label className="shelf-menu__field">
             <span>Причина</span>
             <input
