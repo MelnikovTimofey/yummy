@@ -89,8 +89,9 @@ export const reasonText = (reason: GuestForYouReason): string => {
     case 'sidestep':
       return `Мастера часто сводят ${profileNeuter(reason.fromProfile)} ${withPreposition(profileInstrumental(reason.toProfile))}`;
     case 'sidestep-neutral':
-      // Сродства с любимыми профилями нет — не выдумываем его (решение владельца, #241).
-      return reason.toProfile ? `Попробуйте что-то другое — ${profileNeuter(reason.toProfile)}` : 'Попробуйте что-то другое';
+      // Сродства с любимыми профилями нет — не выдумываем его и не называем
+      // профиль (решения владельца, #241 и 2026-10-20).
+      return 'Попробуйте что-то другое';
   }
 };
 
