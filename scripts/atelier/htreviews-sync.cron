@@ -1,0 +1,6 @@
+# Арома Ателье: синхронизация каталога с htreviews.org (docs/atelier/prod-operations.md §6)
+# Установка: cp /opt/atelier/scripts/atelier/htreviews-sync.cron /etc/cron.d/atelier-htreviews-sync
+# Старт в :35 — сразу после ежечасного pg-backup (:30). Полный прогон в ночь на воскресенье:
+# он идёт часами и должен закончиться до проверки восстановления (пн 04:00 UTC).
+35 23 * * 0-5 root /opt/atelier/scripts/atelier/htreviews-sync.sh shelf >> /var/log/atelier-htreviews-sync.log 2>&1
+35 23 * * 6 root /opt/atelier/scripts/atelier/htreviews-sync.sh full >> /var/log/atelier-htreviews-sync.log 2>&1

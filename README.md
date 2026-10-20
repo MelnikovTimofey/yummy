@@ -4,7 +4,7 @@
 
 ## Поверхности
 
-- `apps/aroma-web` — гостевой `Арома Ателье` (без авторизации);
+- `apps/aroma-web` — гостевой `Арома Ателье` (без обязательного входа; кабинет — через Telegram);
 - `apps/master-web` — backoffice `Мастер`;
 - `apps/backend` — Node/TypeScript + Prisma + Postgres;
 - `services/telegram-bot` — Telegram-бот;
@@ -121,6 +121,7 @@ docker compose --profile seed run --rm seeder
 | `HTREVIEWS_TOBACCO_LIMIT` | top-N табаков на бренд |
 | `HTREVIEWS_FETCH_DETAILS` | `0`/`1`, подгружать страницу табака |
 | `HTREVIEWS_BRAND_URLS` | список URL'ов брендов через запятую (точечный seed) |
+| `HTREVIEWS_SHELF_BRANDS` | `1` — только бренды табаков в наличии (ночной прогон на проде, см. `docs/atelier/prod-operations.md` §6) |
 
 Быстрый smoke (1 бренд × 10 SKU, ~минута):
 

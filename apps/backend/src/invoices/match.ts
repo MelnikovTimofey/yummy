@@ -1,4 +1,4 @@
-import { describeLine } from './brands';
+import { BRAND_OWNERS, describeLine } from './brands';
 
 export type CatalogTobacco = { id: string; manufacturer: string; lineName: string | null; name: string };
 
@@ -18,6 +18,7 @@ const PHONETIC_MATCH = 0.9;
 const STEM_MATCH = 0.8;
 const MIN_STEM = 5;
 const MIN_PHONETIC_KEY = 2;
+const MIN_COMPOUND_KEY = 4;
 // Без бренда из каталога тот же вкус бывает у любого производителя — уверенность не выше половины.
 const NO_BRAND_FACTOR = 0.5;
 
@@ -31,7 +32,7 @@ const CYRILLIC_TO_LATIN: Record<string, string> = {
   ж: 'zh',
   з: 'z',
   и: 'i',
-  й: 'i',
+  й: 'y',
   к: 'k',
   л: 'l',
   м: 'm',
@@ -70,7 +71,7 @@ const tokens = (value: string | null | undefined) => (value ? normalizeName(valu
 // Русская транскрипция и английское написание расходятся в гласных и удвоениях, но совпадают
 // в скелете согласных: «Блэккерент» и «Blackcurrant» — оба blkrnt, «Вирджин» и «Virgin» — vrjn.
 // Начальная гласная остаётся меткой V: без неё «Облако» и «Black» дают один скелет blk.
-const phoneticKey = (token: string) =>
+const consonants = (token: string) =>
   [...token]
     .map((char) => CYRILLIC_TO_LATIN[char] ?? char)
     .join('')
@@ -84,9 +85,22 @@ const phoneticKey = (token: string) =>
     .replace(/[cq]/g, 'k')
     .replace(/x/g, 'ks')
     .replace(/w/g, 'v')
-    .replace(/g(?=[eiy])/g, 'j')
+    .replace(/g(?=[eiy])/g, 'j');
+
+const phoneticKey = (token: string) =>
+  consonants(token)
     .replace(/^[aeiouy]+/, 'V')
     .replace(/[aeiouy]/g, '')
+    .replace(/(.)\1+/g, '$1');
+
+// Слова со скелетом из одной согласной различают гласные: «Ба» и «Boo» — разные вкусы.
+// Гласные сводятся к классам по звучанию в транскрипции: «Ми» ~ «Me», «Ти» ~ «Tea», «Бу» ~ «Boo».
+const shortKey = (token: string) =>
+  consonants(token)
+    .replace(/y(?=[aeiou])/g, 'j')
+    .replace(/[eiy]/g, 'i')
+    .replace(/[ou]/g, 'u')
+    .replace(/([aiu])[aiu]+/g, '$1')
     .replace(/(.)\1+/g, '$1');
 
 // Словоформы: «Барбарисовая» ~ «Барбарис», «Raspberry» ~ «Raspberries». Общая основа должна покрывать
@@ -107,37 +121,72 @@ const tokenSimilarity = (a: string, b: string) => {
   if (!/\p{L}/u.test(a) || !/\p{L}/u.test(b)) {
     return 0;
   }
-  // Скелет из одной согласной («то», «Tea», «Ми») совпадает слишком часто.
+  // Скелет из одной согласной («то», «Tea», «Ми») совпадает слишком часто. У длинного слова
+  // («Папайя», «Какао») его уточняют гласные, короткое сверяет shortTokenSimilarity.
   const key = phoneticKey(a);
-  if (key.length >= MIN_PHONETIC_KEY && key === phoneticKey(b)) {
+  const same =
+    key.length >= MIN_PHONETIC_KEY ? key === phoneticKey(b) : a.length >= MIN_STEM && shortKey(a) === shortKey(b);
+  if (same) {
     return PHONETIC_MATCH;
   }
   return sameStem(a, b) ? STEM_MATCH : 0;
 };
 
-// Коэффициент Дайса по токенам: лишние слова с любой стороны снижают оценку.
-const similarity = (left: string[], right: string[]) => {
-  if (!left.length || !right.length) {
-    return 0;
-  }
-  const used = new Set<number>();
+const shortTokenSimilarity = (a: string, b: string) =>
+  /\p{L}/u.test(a) && shortKey(a) === shortKey(b) ? PHONETIC_MATCH : 0;
+
+// Жадно сопоставляет слова left со свободными словами right, занимая их в used.
+const matchTokens = (
+  left: string[],
+  right: string[],
+  used: Set<number>,
+  score: (a: string, b: string) => number,
+) => {
   let matched = 0;
+  const unmatched: string[] = [];
   for (const token of left) {
     let best = 0;
     let bestIndex = -1;
     right.forEach((candidate, index) => {
-      const score = used.has(index) ? 0 : tokenSimilarity(token, candidate);
-      if (score > best) {
-        best = score;
+      const value = used.has(index) ? 0 : score(token, candidate);
+      if (value > best) {
+        best = value;
         bestIndex = index;
       }
     });
     if (bestIndex >= 0) {
       used.add(bestIndex);
       matched += best;
+    } else {
+      unmatched.push(token);
     }
   }
-  return (2 * matched) / (left.length + right.length);
+  return { matched, unmatched };
+};
+
+// Коэффициент Дайса по токенам: лишние слова с любой стороны снижают оценку. Короткие слова
+// («Ми» ~ «Me») засчитываются только остатком к уже совпавшему длинному: «Пинк Ми» ~ «Pink Me».
+const similarity = (left: string[], right: string[]) => {
+  if (!left.length || !right.length) {
+    return 0;
+  }
+  const used = new Set<number>();
+  const strict = matchTokens(left, right, used, tokenSimilarity);
+  const rest = strict.matched ? matchTokens(strict.unmatched, right, used, shortTokenSimilarity).matched : 0;
+  return Math.max((2 * (strict.matched + rest)) / (left.length + right.length), compoundSimilarity(left, right));
+};
+
+// Слитное и раздельное написание: «Бабл Гам» ~ «Баблгам», «Black Berry» ~ «Blackberry».
+const compoundSimilarity = (left: string[], right: string[]) => {
+  if (left.length === right.length) {
+    return 0;
+  }
+  const [a, b] = [left.join(''), right.join('')];
+  if (a === b) {
+    return 1;
+  }
+  const key = phoneticKey(a);
+  return key.length >= MIN_COMPOUND_KEY && key === phoneticKey(b) ? PHONETIC_MATCH : 0;
 };
 
 const findInMemory = (line: { article?: string; name: string }, memory: SupplierMemoryItem[]) => {
@@ -156,7 +205,13 @@ export const matchLine = (
   const described = describeLine(line.name);
 
   const brand = described.brand?.toLowerCase();
-  const ofBrand = brand ? catalog.filter((tobacco) => tobacco.manufacturer.toLowerCase() === brand) : [];
+  const owner = described.brand ? BRAND_OWNERS[described.brand]?.toLowerCase() : undefined;
+  const ofBrand = brand
+    ? catalog.filter((tobacco) => {
+        const manufacturer = tobacco.manufacturer.toLowerCase();
+        return manufacturer === brand || manufacturer === owner || tobacco.lineName?.toLowerCase() === brand;
+      })
+    : [];
   const pool = ofBrand.length ? ofBrand : catalog;
   const factor = ofBrand.length ? 1 : NO_BRAND_FACTOR;
   const reason = ofBrand.length ? 'catalog' : 'no-brand';
