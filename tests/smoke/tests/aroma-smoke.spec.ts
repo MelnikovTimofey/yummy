@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { guestAccessCode } from './helpers';
 
 test('Aroma guest flow opens after daily code and exposes showcase/catalog without login', async ({ page }) => {
@@ -170,7 +170,7 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await expect(page.getByRole('button', { name: /Намиксуйте сами/ })).toBeVisible();
 });
 
-// Нижняя панель (#168): только значки, имена — в aria-label. Панели нет на
+// Нижняя панель (#168, #243): пять значков, имена — в aria-label. Панели нет на
 // знакомстве и в онбординге; Миксер из панели открывается на весь экран и
 // «Назад» возвращает на экран, откуда гость пришёл.
 test('Aroma guest navigates with the bottom bar and opens the mixer from it', async ({ page }) => {
@@ -189,6 +189,7 @@ test('Aroma guest navigates with the bottom bar and opens the mixer from it', as
   await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
 
   await expect(nav).toBeVisible();
+  await expect(nav.getByRole('button')).toHaveCount(5);
   await expect(page.getByRole('button', { name: 'Сменить код', exact: true })).toBeVisible();
   const catalogTab = nav.getByRole('button', { name: 'Каталог', exact: true });
   await expect(catalogTab).toHaveAttribute('aria-current', 'page');
@@ -239,4 +240,59 @@ test('Aroma catalog keeps filters in one sheet and shows them as removable tags'
   await tag.click();
   await expect(tag).toHaveCount(0);
   await expect(filtersButton).toBeVisible();
+});
+
+// Кабинет гостя (#243): пятый пункт панели. Анонимный путь — согласие и CTA
+// «Войти через Telegram»; сам вход через Telegram smoke не проверяет. Бот
+// входа задаётся env backend, поэтому конфиг подменяется в браузере.
+const openCabinet = async (page: Page, botUsername: string | null) => {
+  await page.route('**/guest/auth/telegram/config', (route) => route.fulfill({ json: { botUsername } }));
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  const cabinetTab = nav.getByRole('button', { name: 'Кабинет', exact: true });
+  await cabinetTab.click();
+  await expect(cabinetTab).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('heading', { name: 'Запомним, что вам понравилось', level: 1 })).toBeVisible();
+};
+
+test('Aroma cabinet asks for consent before «Войти через Telegram»', async ({ page }) => {
+  await openCabinet(page, 'aroma_atelier_client_bot');
+
+  const login = page.getByRole('button', { name: 'Войти через Telegram' });
+  await expect(login).toBeDisabled();
+  await expect(page.getByRole('link', { name: 'Политика' })).toHaveAttribute('href', 'https://nomadlounge.ru/agreement/');
+
+  const consent = page.getByRole('checkbox', { name: /Согласен на обработку Telegram id/ });
+  await consent.click();
+  await expect(consent).toHaveAttribute('aria-checked', 'true');
+  await expect(login).toBeEnabled();
+});
+
+test('Aroma cabinet without a login bot only explains itself', async ({ page }) => {
+  await openCabinet(page, null);
+
+  await expect(page.getByText('Без входа всё работает как прежде. Кабинет действует в этом заведении.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Войти через Telegram' })).toHaveCount(0);
+  await expect(page.getByRole('checkbox')).toHaveCount(0);
+});
+
+test('Aroma intro offers the returning guest to log in', async ({ page }) => {
+  await page.route('**/guest/auth/telegram/config', (route) =>
+    route.fulfill({ json: { botUsername: 'aroma_atelier_client_bot' } }),
+  );
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+
+  await expect(page.getByRole('button', { name: 'Начать подбор' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Уже были у нас\? Войти через Telegram/ })).toBeVisible();
 });
