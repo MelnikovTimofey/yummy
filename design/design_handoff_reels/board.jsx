@@ -1,4 +1,4 @@
-// Доска мокапа #153: «рилсы» миксов — полноэкранная лента со сценой, сгенерированной по вкусам микса.
+// Доска мокапа #153: «рилсы» миксов — раздел нижней панели с лентой миксов; фон рилса — сцена по вкусам микса.
 // Миксы — витрина прода на 2026-10-15 (../design_handoff_showcase_compact/showcase-data.js).
 // Сцены здесь — CSS-приближение; в приложении это композиции Remotion в @remotion/player.
 const DS = window.DesignSystem_1aef33;
@@ -142,9 +142,11 @@ function Icon({ name, size = 24, stroke = 1.8, fill = 'none' }) {
   );
 }
 
+// Рилсы — отдельный раздел панели, как Reels в Instagram: третьим, ближе к центру.
 const NAV_ITEMS = [
   { id: 'recs', label: 'Подбор', icon: 'Sparkles' },
   { id: 'showcase', label: 'Витрина', icon: 'GalleryHorizontalEnd' },
+  { id: 'reels', label: 'Рилсы', icon: 'Clapperboard' },
   { id: 'catalog', label: 'Каталог', icon: 'Search' },
   { id: 'mixer', label: 'Миксер', icon: 'Blend' },
   { id: 'cabinet', label: 'Кабинет', icon: 'CircleUserRound' },
@@ -166,19 +168,36 @@ function Topbar() {
   );
 }
 
-function BottomNav() {
+function BottomNav({ value, onChange }) {
   return (
-    <nav className="bottom-nav nav-5" aria-label="Гостевая навигация">
+    <nav className="bottom-nav nav-6" aria-label="Гостевая навигация">
       {NAV_ITEMS.map((item) => (
-        <button key={item.id} type="button" className="bottom-nav-item" aria-label={item.label} aria-current={item.id === 'recs' ? 'page' : undefined}>
-          <Icon name={item.icon} stroke={item.id === 'recs' ? 2.1 : 1.8} />
+        <button key={item.id} type="button" className="bottom-nav-item" aria-label={item.label} aria-current={value === item.id ? 'page' : undefined} onClick={() => onChange(item.id)}>
+          <Icon name={item.icon} stroke={value === item.id ? 2.1 : 1.8} />
         </button>
       ))}
     </nav>
   );
 }
 
-// ── Лента ──
+function StubScreen({ title, text }) {
+  return (
+    <section className="reel-stub">
+      <p className="aroma-caps">{title}</p>
+      <p className="guest-status">{text}</p>
+    </section>
+  );
+}
+
+function HeartButton({ on, onClick }) {
+  return (
+    <button type="button" className="heart-btn" aria-pressed={on} aria-label={on ? 'Убрать из избранного' : 'В избранное'} onClick={onClick}>
+      <Icon name="Heart" size={22} fill={on ? 'currentColor' : 'none'} />
+    </button>
+  );
+}
+
+// ── Лента гостя без входа ──
 
 // Гость выбрал в онбординге «Мятный» и «Ягодный»: сначала его подбор, затем остальные доступные миксы.
 const LIKED = ['minty', 'berry'];
@@ -189,26 +208,70 @@ const FEED = [
 // Порядок кадров доски: первым — микс с холодом, как в примере клиента.
 const START = ['mix-catalog-hit-03', 'mix-catalog-niche-09', 'mix-catalog-hit-11', 'mix-catalog-hit-13', 'mix-catalog-niche-14', 'mix-catalog-niche-06'];
 const FEED_ORDERED = [...START.map((id) => FEED.find((m) => m.id === id)), ...FEED.filter((m) => !START.includes(m.id))];
+const ANON_ITEMS = FEED_ORDERED.map((mix) => ({ mix }));
+
+// ── Лента вошедшего гостя ──
+// Тот же набор «Для вас» и те же причины, что в согласованном мокапе кабинета (#151, вариант A · по слотам).
+
+const FOR_YOU = {
+  again: { mix: mixById('mix-catalog-hit-01'), slot: 'Снова', reason: 'Ваша оценка ★ 5 · выбирали 5 раз' },
+  hero: { mix: mixById('mix-catalog-hit-08'), slot: 'Новое в вашем вкусе', reason: 'Ягодное, как вы любите, — на персиковом чае.' },
+  taste: [
+    { mix: mixById('mix-catalog-hit-10'), slot: 'Новое в вашем вкусе', reason: 'Черника и холодок — рядом с вашими любимыми' },
+    { mix: mixById('mix-catalog-hit-03'), slot: 'Новое в вашем вкусе', reason: 'Свежее и ягодное, но с яблоком' },
+    { mix: mixById('mix-catalog-hit-26'), slot: 'Новое в вашем вкусе', reason: 'Похоже на «Морозную ягоду», только виноград и манго' },
+  ],
+  aside: { mix: mixById('mix-catalog-hit-02'), slot: 'Шаг в сторону', reason: 'Мастера часто сводят ягодное с цитрусовым' },
+};
+// История для строки «Выбирали N раз» на рилсах вне «Для вас».
+const HISTORY = { 'mix-catalog-hit-01': { count: 5, rating: 5 }, 'mix-catalog-hit-05': { count: 1, rating: 4 } };
+const FAVORITES = ['mix-catalog-hit-01', 'mix-catalog-niche-12', 'mix-catalog-hit-10'];
+
+function loggedItems(persona) {
+  if (persona === 'cold') return ANON_ITEMS;
+  // Пузырь: «Шаг в сторону» первым, с подсказкой; иначе — как на Подборе: новое, шаг в сторону, повтор в конце.
+  const head = persona === 'steady'
+    ? [{ ...FOR_YOU.aside, bubble: true }, FOR_YOU.hero, ...FOR_YOU.taste, FOR_YOU.again]
+    : [FOR_YOU.hero, ...FOR_YOU.taste, FOR_YOU.aside, FOR_YOU.again];
+  const ids = head.map((item) => item.mix.id);
+  const tail = FEED_ORDERED.filter((mix) => !ids.includes(mix.id)).map((mix) => ({ mix, history: HISTORY[mix.id] }));
+  return [...head.map((item) => ({ ...item, mix: withRating(item.mix) })), ...tail];
+}
 
 const pad = (n) => String(n).padStart(2, '0');
+const times = (n) => { const a = n % 10, b = n % 100; return n + (a >= 2 && a <= 4 && (b < 12 || b > 14) ? ' раза' : ' раз'); };
 
-function Reel({ mix, index, total, styleB, active, paused, onTogglePause, onClose, onOpen, onChoose, gone, hint }) {
-  const profiles = mix.flavorProfiles.slice(0, 3);
+function Reel({ item, index, total, styleB, active, paused, onTogglePause, onOpen, onChoose, gone, hint, fav, onFav }) {
+  const { mix, slot, reason, bubble, history } = item;
   return (
     <section className="reel" aria-label={mix.name}>
       <Scene mix={mix} styleB={styleB} playing={active && !paused} />
       <button type="button" className="reel-tap" aria-label={paused ? 'Продолжить' : 'Пауза'} onClick={onTogglePause} />
       {paused ? <span className="reel-paused"><Icon name="Play" size={22} /></span> : null}
       <div className="reel-top">
-        <button type="button" className="reel-close" aria-label="Закрыть ленту" onClick={onClose}><Icon name="X" size={22} /></button>
+        <p className="reel-title">Рилсы</p>
         <p className="reel-count">{pad(index + 1) + ' · из ' + pad(total)}</p>
-        <span />
       </div>
       <div className={'reel-dock' + (active ? ' reel-reveal' : '')} key={active ? 'on' : 'off'}>
         {hint ? <span className="reel-hint"><Icon name="ChevronUp" size={18} />Листайте вверх</span> : null}
-        <p className="aroma-caps">{profiles.map(label).join(' · ')}</p>
-        <h2 className="reel-name">{mix.name}</h2>
-        {mix.ratingsCount ? <div className="reel-meta"><RatingPill rating={mix.avgRating} count={mix.ratingsCount} /></div> : null}
+        {bubble ? (
+          <section className="reel-bubble" aria-label="Подсказка">
+            <p className="aroma-caps">Давно на одном вкусе</p>
+            <p className="reel-bubble-text">Четыре из пяти последних — «Морозная ягода». Мастер уважает постоянство, но рядом есть кое-что.</p>
+          </section>
+        ) : null}
+        <p className="aroma-caps">{slot || mix.flavorProfiles.slice(0, 3).map(label).join(' · ')}</p>
+        <div className="reel-name-row">
+          <h2 className="reel-name">{mix.name}</h2>
+          <HeartButton on={fav} onClick={() => onFav(mix)} />
+        </div>
+        {reason ? <p className="reel-reason">{reason}</p> : null}
+        {mix.ratingsCount || history ? (
+          <div className="reel-meta">
+            {mix.ratingsCount ? <RatingPill rating={mix.avgRating} count={mix.ratingsCount} /> : null}
+            {history ? <span className="reel-own">{'Выбирали ' + times(history.count) + (history.rating ? ' · ваша ★ ' + history.rating : '')}</span> : null}
+          </div>
+        ) : null}
         <p className="reel-flavors">{mix.flavors.join(' · ')}</p>
         <CompositionStack components={mix.components} showBar={false} />
         {gone ? <p className="reel-toast" role="status">Этот микс сейчас недоступен по наличию. Листайте дальше — остальные на месте.</p> : null}
@@ -221,11 +284,11 @@ function Reel({ mix, index, total, styleB, active, paused, onTogglePause, onClos
   );
 }
 
-function Feed({ items, start = 0, styleB, paused: initialPaused = false, gone: goneId = null, hint = false, onClose, onOpen, onChoose }) {
+function Feed({ items, start = 0, styleB, paused: initialPaused = false, gone: goneId = null, hint = false, favs, onFav, onOpen, onChoose }) {
   const ref = React.useRef(null);
   const [active, setActive] = React.useState(start);
   const [paused, setPaused] = React.useState(initialPaused);
-  const [gone, setGone] = React.useState(goneId ? [] : null);
+  const [gone, setGone] = React.useState([]);
   const [swiped, setSwiped] = React.useState(false);
 
   React.useEffect(() => {
@@ -249,20 +312,21 @@ function Feed({ items, start = 0, styleB, paused: initialPaused = false, gone: g
   // Рендерятся только соседи активного: остальные — пустые слоты той же высоты.
   return (
     <div className="reels" ref={ref}>
-      {items.map((mix, i) => (
-        <div key={mix.id} data-i={i} style={{ height: '100%', scrollSnapAlign: 'start' }}>
+      {items.map((item, i) => (
+        <div key={item.mix.id} data-i={i} className="reel-slot">
           {Math.abs(i - active) <= 1 ? (
             <Reel
-              mix={mix}
+              item={item}
               index={i}
               total={items.length}
               styleB={styleB}
               active={i === active}
               paused={i === active && paused}
               hint={hint && i === start && !swiped}
-              gone={gone && gone.includes(mix.id)}
+              gone={gone.includes(item.mix.id)}
+              fav={favs.includes(item.mix.id)}
+              onFav={onFav}
               onTogglePause={() => setPaused(!paused)}
-              onClose={onClose}
               onOpen={onOpen}
               onChoose={(m) => (goneId === m.id && !gone.includes(m.id) ? setGone([...gone, m.id]) : onChoose(m))}
             />
@@ -273,25 +337,21 @@ function Feed({ items, start = 0, styleB, paused: initialPaused = false, gone: g
   );
 }
 
-function FeedEmpty({ onClose }) {
+function FeedEmpty({ onRecs }) {
   return (
-    <>
-      <div className="reel-top" style={{ position: 'static' }}>
-        <button type="button" className="reel-close" aria-label="Закрыть ленту" onClick={onClose}><Icon name="X" size={22} /></button>
-      </div>
-      <section className="reel-empty">
-        <img src="../../.claude/skills/aroma-atelier-design/assets/logo-mark.svg" alt="" aria-hidden style={{ width: 56 }} />
-        <p className="aroma-caps">Лента миксов</p>
-        <h1 className="aroma-empty-title">Сейчас показать нечего</h1>
-        <p className="aroma-empty-text">Ни одного микса в наличии. Мастер уже в курсе — спросите его, что будет сегодня.</p>
-        <button type="button" className="aroma-ghost" onClick={onClose}>Вернуться</button>
-      </section>
-    </>
+    <section className="reel-empty">
+      <img src="../../.claude/skills/aroma-atelier-design/assets/logo-mark.svg" alt="" aria-hidden style={{ width: 56 }} />
+      <p className="aroma-caps">Рилсы</p>
+      <h1 className="aroma-empty-title">Сейчас показать нечего</h1>
+      <p className="aroma-empty-text">Ни одного микса в наличии. Мастер уже в курсе — спросите его, что будет сегодня.</p>
+      <button type="button" className="aroma-ghost" onClick={onRecs}>К подбору</button>
+    </section>
   );
 }
 
-// ── Вход в ленту ──
+// ── Вход с Подбора ──
 
+// Отвергнут владельцем 2026-10-20 — остаётся на доске для истории решения.
 function EntryLink({ onOpen }) {
   return (
     <button type="button" className="reel-entry-link" onClick={() => onOpen(0)}>
@@ -302,10 +362,10 @@ function EntryLink({ onOpen }) {
   );
 }
 
-function EntryStrip({ styleB, onOpen }) {
+function EntryStrip({ items, styleB, onOpen }) {
   return (
-    <div className="reel-strip" role="list" aria-label="Лента миксов">
-      {FEED_ORDERED.slice(0, 8).map((mix, i) => (
+    <div className="reel-strip" role="list" aria-label="Рилсы">
+      {items.slice(0, 8).map(({ mix }, i) => (
         <button key={mix.id} type="button" role="listitem" className="reel-strip-item" onClick={() => onOpen(i)}>
           <span className="reel-strip-thumb"><Scene mix={mix} styleB={styleB} playing={false} /></span>
           <span className="reel-strip-name">{mix.name}</span>
@@ -315,9 +375,9 @@ function EntryStrip({ styleB, onOpen }) {
   );
 }
 
-// ── Карточка микса из ленты: как MixSheet кита, надзаголовок «Из ленты» ──
+// ── Карточка микса из ленты: как MixSheet кита, надзаголовок «Из рилсов» ──
 
-function ReelSheet({ mix, onClose, onChoose }) {
+function ReelSheet({ mix, fav, onFav, onClose, onChoose }) {
   if (!mix) return null;
   const halo = CSS_VAR(pickScene(mix).c1);
   return (
@@ -327,10 +387,11 @@ function ReelSheet({ mix, onClose, onChoose }) {
         <div className="aroma-sheet-head">
           <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
           <div className="aroma-sheet-head-text">
-            <p className="aroma-caps">Из ленты</p>
+            <p className="aroma-caps">Из рилсов</p>
             <h2 className="aroma-sheet-title">{mix.name}</h2>
             <SignatureBar profiles={mix.flavorProfiles} height={4} />
           </div>
+          <HeartButton on={fav} onClick={() => onFav(mix)} />
         </div>
         <p className="aroma-sheet-desc">{mix.description}</p>
         <div className="aroma-sheet-tags">
@@ -348,8 +409,26 @@ function ReelSheet({ mix, onClose, onChoose }) {
           </div>
         </section>
         <div className="aroma-sheet-actions">
-          <button type="button" className="aroma-ghost" onClick={onClose}>К ленте</button>
+          <button type="button" className="aroma-ghost" onClick={onClose}>К рилсам</button>
           <AromaCTA pulse onClick={() => onChoose(mix)}>Покурить</AromaCTA>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Тот же текст, что у сердечка без входа в карточке микса (#151).
+function AnonHeartSheet({ onLogin, onClose }) {
+  return (
+    <div className="aroma-sheet-overlay" onClick={onClose}>
+      <section className="aroma-sheet" role="dialog" aria-label="Избранное" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--guest-sheet-bg)' }}>
+        <span className="aroma-sheet-handle" aria-hidden />
+        <p className="aroma-caps">Избранное</p>
+        <h2 className="aroma-sheet-title">Избранное живёт в кабинете</h2>
+        <p className="aroma-sheet-desc">Войдите через Telegram — и микс будет ждать вас в следующий раз. Без входа подбор работает как прежде.</p>
+        <div className="reel-sheet-actions">
+          <button type="button" className="aroma-ghost" onClick={onClose}>Не сейчас</button>
+          <AromaCTA onClick={onLogin}>Войти</AromaCTA>
         </div>
       </section>
     </div>
@@ -358,38 +437,68 @@ function ReelSheet({ mix, onClose, onChoose }) {
 
 // ── Телефон ──
 
-function GuestPhone({ view: initialView = 'recs', entry = 'A', styleB = false, start = 0, paused = false, gone = null, hint = false, sheet: initialSheet = null, empty = false }) {
+function GuestPhone({ view: initialView = 'recs', entry = 'B', styleB = true, logged: initialLogged = false, persona = 'steady', start = 0, paused = false, gone = null, hint = false, sheet: initialSheet = null, anonHeart = false, empty = false }) {
   const [view, setView] = React.useState(initialView);
+  const [logged, setLogged] = React.useState(initialLogged);
   const [from, setFrom] = React.useState(start);
   const [sheet, setSheet] = React.useState(initialSheet);
-  const [chosen, setChosen] = React.useState(initialView === 'confirm' ? FEED_ORDERED[start] : null);
-  const openFeed = (i) => { setFrom(i); setView('feed'); };
+  const [favs, setFavs] = React.useState(initialLogged ? FAVORITES : []);
+  const [heartPrompt, setHeartPrompt] = React.useState(anonHeart);
+  const items = logged ? loggedItems(persona) : ANON_ITEMS;
+  const [chosen, setChosen] = React.useState(initialView === 'confirm' ? items[start].mix : null);
+  const openReels = (i) => { setFrom(i); setView('reels'); };
   const choose = (mix) => { setSheet(null); setChosen(mix); setView('confirm'); };
+  const toggleFav = (mix) => {
+    if (!logged) return setHeartPrompt(true);
+    setFavs(favs.includes(mix.id) ? favs.filter((id) => id !== mix.id) : [...favs, mix.id]);
+  };
+  const login = () => { setHeartPrompt(false); setLogged(true); setFavs(FAVORITES); };
+  const go = (id) => (id === 'reels' ? openReels(0) : setView(id));
 
   let body;
-  if (view === 'feed') {
-    body = empty
-      ? <FeedEmpty onClose={() => setView('recs')} />
-      : <Feed items={FEED_ORDERED} start={from} styleB={styleB} paused={paused} gone={gone} hint={hint} onClose={() => setView('recs')} onOpen={setSheet} onChoose={choose} />;
-  } else if (view === 'confirm') {
-    body = <window.ConfirmationScreen mix={chosen} onDone={() => setView('feed')} />;
+  if (view === 'confirm') {
+    body = <window.ConfirmationScreen mix={chosen} onDone={() => setView('reels')} />;
+  } else if (view === 'reels') {
+    body = (
+      <>
+        {empty
+          ? <FeedEmpty onRecs={() => setView('recs')} />
+          : <Feed key={String(logged) + from} items={items} start={from} styleB={styleB} paused={paused} gone={gone} hint={hint} favs={favs} onFav={toggleFav} onOpen={setSheet} onChoose={choose} />}
+        <BottomNav value="reels" onChange={go} />
+      </>
+    );
   } else {
-    const recs = FEED.slice(0, 5).map((m) => ({ ...m, popularity: m.popularity || 0 }));
+    let main;
+    if (view !== 'recs') {
+      main = <StubScreen title={NAV_ITEMS.find((item) => item.id === view).label} text="Экран не меняется." />;
+    } else if (logged && persona !== 'cold') {
+      main = (
+        <>
+          <EntryStrip items={items} styleB={styleB} onOpen={openReels} />
+          <StubScreen title="Для вас" text="Подбор «Для вас» — как в мокапе кабинета (#151). Полоса рилсов над ним идёт в том же порядке, что и «Для вас»." />
+        </>
+      );
+    } else {
+      main = (
+        <>
+          {entry === 'A' ? <EntryLink onOpen={openReels} /> : <EntryStrip items={items} styleB={styleB} onOpen={openReels} />}
+          <window.RecommendationsScreen mixes={FEED.slice(0, 5)} onOpen={setSheet} onChoose={choose} onOpenOnboarding={() => {}} onOpenCatalog={() => {}} />
+        </>
+      );
+    }
     body = (
       <>
         <Topbar />
-        <main className="content">
-          {entry === 'A' ? <EntryLink onOpen={openFeed} /> : <EntryStrip styleB={styleB} onOpen={openFeed} />}
-          <window.RecommendationsScreen mixes={recs} onOpen={setSheet} onChoose={choose} onOpenOnboarding={() => {}} onOpenCatalog={() => {}} />
-        </main>
-        <BottomNav />
+        <main className="content">{main}</main>
+        <BottomNav value={view} onChange={go} />
       </>
     );
   }
   return (
     <div className="phone-shell">
       {body}
-      <ReelSheet mix={sheet} onClose={() => setSheet(null)} onChoose={choose} />
+      <ReelSheet mix={sheet} fav={sheet ? favs.includes(sheet.id) : false} onFav={toggleFav} onClose={() => setSheet(null)} onChoose={choose} />
+      {heartPrompt ? <AnonHeartSheet onLogin={login} onClose={() => setHeartPrompt(false)} /> : null}
     </div>
   );
 }
@@ -405,14 +514,15 @@ const SCENE_EXAMPLES = [
   { motif: 'smoke', id: 'mix-catalog-niche-06' },
 ];
 const SCENE_NOTES = {
-  frost: 'Иней дышит по краям, сверху медленно оседает снежная пыль. Цвет — «Мятный».',
-  bloom: 'Пять лепестков раскрываются и медленно вращаются, мелкие лепестки плывут вверх. Цвет — «Цветочно-травяной».',
-  juicy: 'Тёплое «солнце» дышит, пузырьки поднимаются. Цвет — «Цитрусовый», без цитруса — «Фруктовый».',
-  berry: 'Капли падают и расходятся, как чернила в воде. Цвет — «Ягодный».',
-  warm: 'Угли и искры поднимаются от тёплого свечения снизу. Цвет — «Десертный», у пряных — «Пряный».',
-  smoke: 'Клубы дыма поднимаются и тают; это же сцена по умолчанию. Цвет — «Табачный».',
+  frost: 'Иней дышит по краям, сверху медленно оседают снежинки. Цвет — «Мятный».',
+  bloom: 'Цветок из пяти лепестков раскрывается и медленно вращается, мелкие лепестки плывут вверх. Цвет — «Цветочно-травяной».',
+  juicy: 'Кольцо медленно вращается, дольки поднимаются. Цвет — «Цитрусовый», без цитруса — «Фруктовый».',
+  berry: 'Грозди ягод медленно падают. Цвет — «Ягодный».',
+  warm: 'Искры поднимаются от тёплого свечения снизу. Цвет — «Десертный», у пряных — «Пряный».',
+  smoke: 'Струи дыма прорисовываются снизу вверх и тают; это же сцена по умолчанию. Цвет — «Табачный».',
 };
 const RULE_EXAMPLES = ['mix-catalog-hit-01', 'mix-catalog-hit-03', 'mix-catalog-niche-10', 'mix-catalog-niche-05', 'mix-catalog-hit-07', 'mix-catalog-niche-01', 'mix-catalog-niche-08', 'mix-catalog-niche-04'];
+const COSMOCOLA = loggedItems('varied').findIndex((item) => item.mix.id === 'mix-catalog-hit-05');
 
 function Frame({ name, note, children }) {
   return (
@@ -427,23 +537,29 @@ function Frame({ name, note, children }) {
 }
 
 const SHOTS = [
-  { id: 'entry-a', group: 'entry', name: 'Вход A · ссылка над подбором', note: 'Тихая ссылка «Смотреть лентой» над «Лучшим совпадением», как «Подобрать под настроение». Подбор не меняется.', props: { entry: 'A' } },
-  { id: 'entry-b', group: 'entry', name: 'Вход B · полоса превью', note: 'Кружки со статичным кадром сцены над подбором, как Stories. Нажатие открывает ленту с этого микса.', props: { entry: 'B' } },
-  { id: 'reel-first', group: 'feed', name: 'Первый рилс', note: 'Сцена «Холод». Подсказка «Листайте вверх» исчезает после первого свайпа. Листайте колесом или тачпадом внутри телефона.', props: { view: 'feed', hint: true } },
-  { id: 'reel-bloom', group: 'feed', name: 'Цветы', note: '«Цветочный коктейль»: маргарита и цветочный. Рядом с текстом сцена приглушена доком.', props: { view: 'feed', start: 1 } },
-  { id: 'reel-long', group: 'feed', name: 'Длинный состав', note: '«Френч-коктейль»: шесть вкусов и четыре табака. Название — до двух строк, док растёт вверх, сцена остаётся сверху.', props: { view: 'feed', start: FEED_ORDERED.findIndex((m) => m.id === 'mix-catalog-niche-10') } },
-  { id: 'reel-norating', group: 'feed', name: 'Без оценок гостей', note: '«Томат с перцем» гости ещё не оценивали — «★» нет, как в карточке (#185). Сцена «Дым».', props: { view: 'feed', start: 5 } },
-  { id: 'reel-paused', group: 'feed', name: 'Пауза', note: 'Тап по сцене — пауза, ещё тап — продолжение. Текст и кнопки нажимаются как обычно.', props: { view: 'feed', start: 2, paused: true } },
-  { id: 'reel-sheet', group: 'edge', name: 'Подробнее', note: 'Карточка микса поверх ленты: надзаголовок «Из ленты», оценка, «К ленте».', props: { view: 'feed', start: 3, sheet: withRating(mixById('mix-catalog-hit-13')) } },
-  { id: 'reel-confirm', group: 'edge', name: '«Покурить» → «Покажите мастеру»', note: 'Тот же экран и то же событие smoke-cta. «Готово» возвращает в ленту на тот же рилс.', props: { view: 'confirm', start: 0 } },
-  { id: 'reel-gone', group: 'edge', name: 'Микс закончился', note: 'Пока гость листал, табак кончился: smoke-cta отвечает 404. Нажмите «Покурить» — строка-статус и неактивная CTA, листать дальше можно.', props: { view: 'feed', start: 4, gone: 'mix-catalog-niche-14' } },
-  { id: 'reel-empty', group: 'edge', name: 'Пустая лента', note: 'Ни одного доступного микса. Факт первым, затем выход.', props: { view: 'feed', empty: true } },
+  { id: 'entry-b', group: 'entry', name: 'Подбор · полоса рилсов — выбрано', note: 'Кружки со статичным кадром сцены над подбором, как Stories. Нажатие открывает раздел «Рилсы» с этого микса.', props: {} },
+  { id: 'entry-a', group: 'entry', name: 'Ссылка «Смотреть лентой» — отвергнут', note: 'Тихая ссылка над подбором. Владелец выбрал полосу и отдельный раздел панели.', props: { entry: 'A' } },
+  { id: 'reels-first', group: 'feed', name: 'Раздел «Рилсы»', note: 'Третий пункт панели, Lucide Clapperboard. Панель остаётся, как в Instagram. Подсказка «Листайте вверх» — до первого свайпа.', props: { view: 'reels', hint: true } },
+  { id: 'reel-bloom', group: 'feed', name: 'Цветы', note: '«Цветочный коктейль»: маргарита и цветочный.', props: { view: 'reels', start: 1 } },
+  { id: 'reel-long', group: 'feed', name: 'Длинный состав', note: '«Френч-коктейль»: шесть вкусов и четыре табака. Название — до трёх строк целиком, док растёт вверх.', props: { view: 'reels', start: FEED_ORDERED.findIndex((m) => m.id === 'mix-catalog-niche-10') } },
+  { id: 'reel-norating', group: 'feed', name: 'Без оценок гостей', note: '«Томат с перцем» гости ещё не оценивали — «★» нет, как в карточке (#185). Сцена «Дым».', props: { view: 'reels', start: 5 } },
+  { id: 'reel-paused', group: 'feed', name: 'Пауза', note: 'Тап по сцене — пауза, ещё тап — продолжение. Текст и кнопки нажимаются как обычно.', props: { view: 'reels', start: 2, paused: true } },
+  { id: 'reel-sheet', group: 'edge', name: 'Подробнее', note: 'Карточка микса поверх рилса: «Из рилсов», сердечко, оценка, «К рилсам».', props: { view: 'reels', start: 3, sheet: withRating(mixById('mix-catalog-hit-13')) } },
+  { id: 'reel-confirm', group: 'edge', name: '«Покурить» → «Покажите мастеру»', note: 'Тот же экран и то же событие smoke-cta. «Готово» возвращает на тот же рилс.', props: { view: 'confirm' } },
+  { id: 'reel-gone', group: 'edge', name: 'Микс закончился', note: 'Пока гость листал, табак кончился: smoke-cta отвечает 404. Нажмите «Покурить» — строка-статус и неактивная CTA.', props: { view: 'reels', start: 4, gone: 'mix-catalog-niche-14' } },
+  { id: 'reel-empty', group: 'edge', name: 'Пусто', note: 'Ни одного доступного микса. Факт первым, затем выход на Подбор.', props: { view: 'reels', empty: true } },
+  { id: 'reel-anon-heart', group: 'edge', name: 'Сердечко без входа', note: 'Как в карточке микса (#151): предложение войти. «Войти» в мокапе сразу логинит.', props: { view: 'reels', anonHeart: true } },
+  { id: 'li-strip', group: 'logged', name: 'Подбор вошедшего гостя', note: 'Полоса рилсов в порядке «Для вас»: первым — «Шаг в сторону», потому что гость сидит на одном вкусе.', props: { logged: true } },
+  { id: 'li-bubble', group: 'logged', name: 'Первый рилс · пузырь', note: '4 из 5 последних выборов — «Морозная ягода». Первым идёт «Шаг в сторону» с той же подсказкой, что на «Для вас». Ничего не запрещаем.', props: { view: 'reels', logged: true } },
+  { id: 'li-taste', group: 'logged', name: '«Новое в вашем вкусе»', note: 'Надпись слота вместо профилей и причина одной фразой — как у карточек «Для вас». Сердечко залито: микс в избранном.', props: { view: 'reels', logged: true, persona: 'varied', start: 1 } },
+  { id: 'li-again', group: 'logged', name: '«Снова»', note: 'Один повтор в конце блока «Для вас»: ваша оценка и сколько раз выбирали.', props: { view: 'reels', logged: true, persona: 'varied', start: 5 } },
+  { id: 'li-history', group: 'logged', name: 'После «Для вас»', note: 'Дальше — остальные миксы каталога без слотов и причин. Если гость уже выбирал микс — «Выбирали 1 раз · ваша ★ 4».', props: { view: 'reels', logged: true, persona: 'varied', start: COSMOCOLA } },
 ];
 
 function ShotFrame({ shot, styleB }) {
   return (
     <Frame name={shot.name} note={shot.note}>
-      <GuestPhone {...shot.props} styleB={shot.props.styleB ?? styleB} />
+      <GuestPhone {...shot.props} styleB={styleB} />
     </Frame>
   );
 }
@@ -462,8 +578,8 @@ function SceneTile({ motif, id }) {
   return (
     <figure className="scene-tile">
       <div className="scene-pair">
-        <div className="scene-box"><Scene mix={mix} /><span className="scene-box-label">A · Атмосфера</span></div>
-        <div className="scene-box"><Scene mix={mix} styleB /><span className="scene-box-label">B · Образ</span></div>
+        <div className="scene-box"><Scene mix={mix} styleB /><span className="scene-box-label">B · Образ — выбран</span></div>
+        <div className="scene-box scene-box-off"><Scene mix={mix} /><span className="scene-box-label">A · отвергнут</span></div>
       </div>
       <p className="scene-tile-name">{MOTIFS[motif].label + ' — ' + mix.name}</p>
       <p className="scene-tile-note">{SCENE_NOTES[motif]}</p>
@@ -497,43 +613,49 @@ function RuleTable() {
 }
 
 function Board() {
-  const [styleB, setStyleB] = React.useState(new URLSearchParams(location.hash.slice(1)).get('style') === 'B');
+  const [styleB, setStyleB] = React.useState(new URLSearchParams(location.hash.slice(1)).get('style') !== 'A');
   const section = (group) => SHOTS.filter((shot) => shot.group === group).map((shot) => <ShotFrame key={shot.id + styleB} shot={shot} styleB={styleB} />);
   return (
     <div className="board">
       <header className="board-head">
-        <p className="aroma-caps">#153 · мокап на согласование</p>
+        <p className="aroma-caps">#153 · мокап на согласование · раунд 2</p>
         <h1 className="board-title">«Рилсы» миксов</h1>
-        <p className="board-text">Полноэкранная лента миксов: свайп вверх — следующий микс. Фон рилса — сцена, сгенерированная по вкусам микса: мятный дышит холодом, цветочный раскрывается лепестками. Сцены здесь — CSS-приближение. В приложении это композиции Remotion, их играет @remotion/player на телефоне гостя, без видеофайлов и без нагрузки на сервер. Миксы — витрина прода на 15 октября.</p>
+        <p className="board-text">«Рилсы» — отдельный раздел нижней панели, как Reels в Instagram, плюс полоса превью над Подбором. Свайп вверх — следующий микс. Фон рилса — сцена, сгенерированная по вкусам микса: мятный дышит холодом, цветочный раскрывается лепестками. Сцены здесь — CSS-приближение. В приложении это композиции Remotion в @remotion/player на телефоне гостя: без видеофайлов и нагрузки на сервер. Миксы — витрина прода на 15 октября.</p>
+        <p className="board-text">Решения владельца 2026-10-20: стиль сцен B · Образ; вход — полоса превью и отдельный раздел панели; лента проработана для вошедшего гостя.</p>
         <div className="tweaks">
           <div className="tweak">
             <span className="aroma-caps">Стиль сцен</span>
-            <button type="button" className={styleB ? '' : 'on'} onClick={() => setStyleB(false)}>A · Атмосфера</button>
-            <button type="button" className={styleB ? 'on' : ''} onClick={() => setStyleB(true)}>B · Образ</button>
+            <button type="button" className={styleB ? 'on' : ''} onClick={() => setStyleB(true)}>B · Образ — выбран</button>
+            <button type="button" className={styleB ? '' : 'on'} onClick={() => setStyleB(false)}>A · Атмосфера — отвергнут</button>
           </div>
         </div>
       </header>
       <section className="board-section" id="scenes">
-        <h2 className="board-h2">Сцены: A или B</h2>
-        <p className="board-text">A продолжает язык ProfileGlyph: размытые орбы, туман и свет в цветах профиля, без предметов. B — тонкие линейные мотивы штрихом знака «Дым»: снежинки, лепестки, дольки, ягоды. Оба стиля — исключение из правила «без иллюстраций» (VISUAL FOUNDATIONS), только для ленты.</p>
+        <h2 className="board-h2">Сцены — выбран B</h2>
+        <p className="board-text">B — тонкие линейные мотивы штрихом знака «Дым»: снежинки, лепестки, дольки, ягоды, искры, струи. Мотив считывается сразу. Это исключение из правила «без иллюстраций» (VISUAL FOUNDATIONS), только для рилсов. A — орбы и туман в духе ProfileGlyph — отвергнут: местами читался как цветное пятно.</p>
         <div className="scene-grid">{SCENE_EXAMPLES.map((s) => <SceneTile key={s.motif} {...s} />)}</div>
       </section>
       <section className="board-section" id="rule">
         <h2 className="board-h2">Как выбирается сцена</h2>
-        <p className="board-text">У миксов прода по 4–8 профилей, и порядок профилей не говорит, какой главный: у «Морозной ягоды» первым идёт «Цветочно-травяной». Поэтому сцена берётся из flavors: каждый вкус относится к одному из шести мотивов, побеждает мотив с бо́льшим числом вкусов, при равенстве — тот, чей вкус идёт раньше. Холод перебивает всё. Второй мотив добавляет треть частиц своего цвета. Вкусы не узнали — сцена по первому профилю, профилей нет — «Дым».</p>
+        <p className="board-text">У миксов прода по 4–8 профилей, и порядок профилей не говорит, какой главный: у «Морозной ягоды» первым идёт «Цветочно-травяной». Поэтому сцена берётся из flavors: каждый вкус относится к одному из шести мотивов, побеждает мотив с бо́льшим числом вкусов, при равенстве — тот, чей вкус идёт раньше. Холод перебивает всё. Второй мотив добавляет треть фигур своего цвета. Вкусы не узнали — сцена по первому профилю, профилей нет — «Дым».</p>
         <RuleTable />
       </section>
       <section className="board-section" id="entry">
-        <h2 className="board-h2">Вход в ленту</h2>
+        <h2 className="board-h2">Вход: полоса над Подбором и раздел панели</h2>
         <div className="board-row">{section('entry')}</div>
       </section>
       <section className="board-section" id="feed">
-        <h2 className="board-h2">Лента</h2>
+        <h2 className="board-h2">Раздел «Рилсы»</h2>
         <div className="board-row">{section('feed')}</div>
       </section>
       <section className="board-section" id="edge">
         <h2 className="board-h2">Подробнее, выбор и края</h2>
         <div className="board-row">{section('edge')}</div>
+      </section>
+      <section className="board-section" id="logged">
+        <h2 className="board-h2">Вошедший гость</h2>
+        <p className="board-text">Лента начинается с «Для вас» (PRD §6.5) — тот же набор и те же правила, что на Подборе: новое во вкусе, шаг в сторону, не больше одного повтора, подсказка против пузыря. Дальше — остальные доступные миксы. Сердечко добавляет в избранное кабинета; «Покурить» пишется в историю. Меньше трёх выборов — лента как у гостя без входа.</p>
+        <div className="board-row">{section('logged')}</div>
       </section>
     </div>
   );
@@ -541,4 +663,4 @@ function Board() {
 
 const params = new URLSearchParams(location.hash.slice(1));
 const shotId = params.get('shot');
-ReactDOM.createRoot(document.getElementById('root')).render(shotId ? <Shot id={shotId} styleB={params.get('style') === 'B'} /> : <Board />);
+ReactDOM.createRoot(document.getElementById('root')).render(shotId ? <Shot id={shotId} styleB={params.get('style') !== 'A'} /> : <Board />);
