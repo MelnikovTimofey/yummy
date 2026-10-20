@@ -190,6 +190,61 @@ test('Master shelf marks a pack empty and undoes it from the toast', async ({ pa
   await expect(emptyButton(row)).toBeVisible();
 });
 
+// «Полка» на телефоне (#215): у стойки мастер открывает полку из нижней
+// навигации, жмёт «Закончилась» в карточке и отменяет из тоста, а шторку
+// «Сколько осталось?» закрывает без отметки. Неразрушающий.
+test.describe('Master on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master shelf on a phone: bottom navigation, «Закончилась» with undo, remaining sheet closes without a mark', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+
+    // На телефоне вместо вкладок — нижняя навигация.
+    await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toHaveCount(0);
+    const shelfTab = page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true });
+    await expect(shelfTab).toBeVisible();
+    await shelfTab.click();
+    await expect(shelfTab).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
+
+    // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
+    await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
+    const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончилась', exact: true });
+    const first = page
+      .locator('.m-shelf-card')
+      .filter({ has: page.getByRole('button', { name: 'Закончилась', exact: true }) })
+      .first();
+    await expect(first).toBeVisible();
+    const id = await first.getAttribute('data-tobacco-id');
+    const card = page.locator(`.m-shelf-card[data-tobacco-id="${id}"]`);
+    // Страница не уезжает вбок: карточки вместо широкой таблицы.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await emptyButton(card).click();
+    const toast = page.locator('.shelf-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText(/банка пустая|табак закончился/);
+    await toast.getByRole('button', { name: /Отменить/ }).click();
+    await expect(toast).toBeHidden();
+    await expect(emptyButton(card)).toBeVisible();
+
+    await card.getByRole('button', { name: /^Сколько осталось/ }).click();
+    const sheet = page.getByRole('dialog', { name: /^Сколько осталось/ });
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole('group', { name: 'Сколько осталось в открытой' }).getByRole('button')).toHaveCount(5);
+    await expect(sheet).toContainText('Можно не отмечать — отметка только уточняет прогноз.');
+    await expect(sheet.getByRole('button', { name: /^Закончилась/ })).toBeVisible();
+    // Тап по затемнению над шторкой закрывает её без отметки.
+    await page.mouse.click(187, 40);
+    await expect(sheet).toBeHidden();
+    await expect(toast).toBeHidden();
+  });
+});
+
 // Прогноз и «К заказу» (#213): блок «Полка» на дашборде, переключатель
 // «К заказу» и настройки полки. Неразрушающий: количество в «К заказу» не
 // сохраняется, настройки закрываются «Отменой».
