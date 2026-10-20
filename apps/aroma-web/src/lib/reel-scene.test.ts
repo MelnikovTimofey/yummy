@@ -76,17 +76,17 @@ test('pickScene: «Тепло» — «Пряный», если пряносте�
   assert.equal(pickScene({ flavors: ['корица', 'ваниль', 'шоколад'], flavorProfiles: [] }).c1, 'dessert');
 });
 
-test('pickScene: неузнанный вкус не ломает правило — сцена по первому профилю и его цвет', () => {
+// Ни один вкус не узнан — отдельная общая сцена (решение владельца 2026-10-20):
+// мотив вкуса по одному профилю не угадываем, цвет — первого профиля.
+test('pickScene: неузнанные вкусы — общая сцена в цвете первого профиля', () => {
   assert.deepEqual(pickScene({ flavors: ['маргарита'], flavorProfiles: ['berry', 'minty'] }), {
-    primary: 'berry',
+    primary: 'general',
     secondary: null,
     c1: 'berry',
-    c2: 'fruity',
+    c2: 'berry',
   });
-  // Без узнанных вкусов цвет берётся из самого профиля, а не из правила цитруса/пряностей.
-  assert.equal(pickScene({ flavors: ['маргарита'], flavorProfiles: ['citrus'] }).c1, 'citrus');
-  assert.equal(pickScene({ flavors: ['маргарита'], flavorProfiles: ['dessert'] }).c1, 'dessert');
-  assert.equal(pickScene({ flavors: [], flavorProfiles: ['fresh'] }).primary, 'frost');
+  assert.equal(pickScene({ flavors: [], flavorProfiles: ['fresh'] }).primary, 'general');
+  assert.equal(pickScene({ flavors: ['маргарита'], flavorProfiles: ['tobacco'] }).primary, 'general');
 });
 
 test('pickScene: неузнанный вкус рядом с узнанным не мешает', () => {
@@ -98,21 +98,12 @@ test('pickScene: неузнанный вкус рядом с узнанным н
   });
 });
 
-test('pickScene: нет ни вкусов, ни профилей — «Дым»', () => {
+test('pickScene: нет ни вкусов, ни профилей — общая сцена в запасном цвете', () => {
   assert.deepEqual(pickScene({ flavors: [], flavorProfiles: [] }), {
-    primary: 'smoke',
+    primary: 'general',
     secondary: null,
-    c1: 'tobacco',
-    c2: 'spicy',
-  });
-});
-
-test('pickScene: неизвестный профиль без узнанных вкусов — «Дым»', () => {
-  assert.deepEqual(pickScene({ flavors: ['маргарита'], flavorProfiles: ['umami'] }), {
-    primary: 'smoke',
-    secondary: null,
-    c1: 'tobacco',
-    c2: 'spicy',
+    c1: '',
+    c2: '',
   });
 });
 
