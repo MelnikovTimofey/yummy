@@ -320,8 +320,10 @@ select:focus-visible {
   flex: 0 0 auto;
   display: grid;
   /* Число колонок задаёт BottomNav по числу пунктов (#263). Поля 4px: при
-     шести пунктах на 375px колонка ≈ 61px — тап-зона больше 44px. */
-  padding: 0 4px var(--safe-bottom);
+     шести пунктах на 375px колонка ≈ 61px — тап-зона больше 44px. Снизу не
+     меньше 12px: без viewport-fit=cover safe-area на iPhone равна 0, и крайние
+     иконки уходили под скруглённые углы экрана (#300). */
+  padding: 0 4px max(12px, var(--safe-bottom));
   border-top: 1px solid var(--line);
   background: var(--guest-topbar-bg);
   backdrop-filter: blur(18px);
