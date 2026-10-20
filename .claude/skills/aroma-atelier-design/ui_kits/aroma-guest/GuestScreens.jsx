@@ -8,7 +8,7 @@ const railKind = { statistical: 'Выбор гостей', prepared: 'Редак
 // На Витрине тип полки виден значком, словами — в aria-label заголовка (railKindIcon в apps/aroma-web).
 // Полка «Оценки гостей» в приложении получает Star; в мок-данных кита её нет.
 const railKindIcon = { statistical: 'Users', prepared: 'Feather', curated: 'Flame' };
-const sourceLabel = { recommendations: 'Подбор для вас', showcase: 'Из витрины', catalog: 'Из каталога', rail: 'Из подборки' };
+const sourceLabel = { recommendations: 'Подбор для вас', showcase: 'Из витрины', catalog: 'Из каталога', rail: 'Из подборки', reels: 'Из рилсов' };
 const plural = (n) => { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'микс'; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'микса'; return 'миксов'; };
 
 // Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
@@ -394,10 +394,214 @@ function MixSheet({ state, rating, onRate, onClose, onChoose, favorite = false, 
           {rating ? <p className="guest-ok">{'Оценка ' + rating + ' сохранена.'}</p> : null}
         </section>
         <div className="aroma-sheet-actions">
-          <button type="button" className="aroma-ghost" onClick={onClose}>Закрыть</button>
+          <button type="button" className="aroma-ghost" onClick={onClose}>{source === 'reels' ? 'К рилсам' : 'Закрыть'}</button>
           <AromaCTA pulse onClick={() => onChoose(mix, source)}>Покурить</AromaCTA>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ── Рилсы (#153) ──
+// Сознательное исключение из VISUAL FOUNDATIONS: линейные мотивы и анимированный фон — только в разделе «Рилсы»
+// и в кружках полосы над Подбором. Сцены здесь — CSS-приближение мокапа design/design_handoff_reels/,
+// в приложении это композиции Remotion в @remotion/player.
+
+// Правило выбора сцены: профили у миксов раздуты и не упорядочены по силе, поэтому сцена берётся из flavors.
+const MOTIFS = {
+  frost: { profile: 'minty', alt: 'fresh', words: ['холодок', 'мята', 'ментол', 'лёд', 'лед', 'ледян'] },
+  bloom: { profile: 'floral_herbal', alt: 'perfume', words: ['цветочн', 'лаванда', 'ромашка', 'роза', 'бузина', 'жасмин', 'хвойн', 'базилик', 'тархун', 'травян', 'можжевельник', 'чай'] },
+  juicy: { profile: 'citrus', alt: 'fruity', words: ['лимон', 'лайм', 'грейпфрут', 'апельсин', 'мандарин', 'бергамот', 'ананас', 'манго', 'банан', 'киви', 'персик', 'яблоко', 'груша', 'арбуз', 'дыня', 'кокос', 'марула', 'кола', 'энергетик', 'огурец'] },
+  berry: { profile: 'berry', alt: 'fruity', words: ['малина', 'клубника', 'черника', 'вишня', 'ежевика', 'голубика', 'клюква', 'смородина', 'барбарис', 'виноград', 'ягод', 'ревень'] },
+  warm: { profile: 'dessert', alt: 'spicy', words: ['ваниль', 'шоколад', 'какао', 'печенье', 'пирог', 'чизкейк', 'тирамису', 'молоко', 'булочка', 'корица', 'кардамон', 'перец', 'кашмир', 'мед', 'мёд', 'орех', 'орчата', 'ром', 'жвачка'] },
+  smoke: { profile: 'tobacco', alt: 'spicy', words: ['табачн', 'сигар', 'бекон', 'томат', 'копчен'] },
+};
+const CITRUS = ['лимон', 'лайм', 'грейпфрут', 'апельсин', 'мандарин', 'бергамот'];
+const SPICE = ['корица', 'кардамон', 'перец', 'кашмир'];
+const PROFILE_TO_MOTIF = { minty: 'frost', fresh: 'frost', floral_herbal: 'bloom', perfume: 'bloom', citrus: 'juicy', fruity: 'juicy', sour: 'juicy', berry: 'berry', dessert: 'warm', sweet: 'warm', spicy: 'warm', tobacco: 'smoke' };
+const profileVar = (profile) => 'var(--profile-' + profile.replace('_', '-') + ')';
+const hits = (flavors, words) => flavors.filter((f) => words.some((w) => f.toLowerCase().includes(w)));
+
+function pickScene(mix) {
+  const scored = Object.entries(MOTIFS)
+    .map(([id, motif]) => {
+      const found = hits(mix.flavors, motif.words);
+      return { id, count: found.length, first: found.length ? mix.flavors.indexOf(found[0]) : 99 };
+    })
+    .filter((m) => m.count)
+    // Холод перебивает всё: самое яркое ощущение.
+    .sort((a, b) => (b.id === 'frost') - (a.id === 'frost') || b.count - a.count || a.first - b.first);
+  const primary = scored[0] ? scored[0].id : PROFILE_TO_MOTIF[mix.flavorProfiles[0]] || 'smoke';
+  const secondary = scored[1] ? scored[1].id : null;
+  const colorOf = (id) => {
+    if (id === 'juicy') return hits(mix.flavors, CITRUS).length ? 'citrus' : 'fruity';
+    if (id === 'warm') return hits(mix.flavors, SPICE).length >= hits(mix.flavors, MOTIFS.warm.words).length / 2 ? 'spicy' : 'dessert';
+    return MOTIFS[id].profile;
+  };
+  return { primary, secondary, c1: colorOf(primary), c2: secondary ? colorOf(secondary) : MOTIFS[primary].alt };
+}
+
+// Детерминированный шум: один и тот же микс всегда выглядит одинаково (в Remotion — random(seed) с seed = mix.id).
+function seeded(text) {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
+
+// Мотивы стиля B: штрих 1,2–1,4 в цвете профиля, без заливки, как у знака «Дым».
+const SHAPES = {
+  frost: <svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">{[0, 60, 120].map((r) => <g key={r} transform={'rotate(' + r + ')'}><path d="M0 -11V11" /><path d="M-3 -8L0 -5L3 -8M-3 8L0 5L3 8" /></g>)}</svg>,
+  bloom: <svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M0 -11C6 -5 6 5 0 11C-6 5 -6 -5 0 -11Z" /><path d="M0 -8V8" strokeLinecap="round" /></svg>,
+  juicy: <svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><circle r="10" /><circle r="7.5" />{[0, 60, 120].map((r) => <path key={r} d="M0 -7.5V7.5" transform={'rotate(' + r + ')'} />)}</svg>,
+  berry: <svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="-4" cy="2" r="5" /><circle cx="4" cy="3" r="5" /><circle cx="0" cy="-4" r="5" /></svg>,
+  warm: <svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M0 8V-8" /></svg>,
+  smoke: <svg viewBox="0 0 40 120" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M20 118C4 96 36 78 20 58C6 40 32 22 22 2" /></svg>,
+};
+const PARTICLES = {
+  frost: { n: 26, size: [10, 18], y: [-8, 10] },
+  bloom: { n: 12, size: [14, 22], y: [70, 100] },
+  juicy: { n: 16, size: [16, 26], y: [80, 105] },
+  berry: { n: 16, size: [16, 24], y: [10, 60] },
+  warm: { n: 26, size: [12, 18], y: [85, 105] },
+  smoke: { n: 7, size: [30, 44], y: [70, 100] },
+};
+// Бесшовный цикл ≈ 6 с; струи дыма прорисовываются вдвое медленнее.
+const CYCLE = 6;
+
+function particles(motif, rand, color, count) {
+  const cfg = PARTICLES[motif];
+  const [lo, hi] = cfg.size;
+  return Array.from({ length: count || cfg.n }, (_, i) => {
+    const s = lo + rand() * (hi - lo);
+    const style = {
+      '--x': (rand() * 100).toFixed(1) + '%',
+      '--y': (cfg.y[0] + rand() * (cfg.y[1] - cfg.y[0])).toFixed(1) + '%',
+      '--s': Math.round(motif === 'smoke' ? s * 3 : s) + 'px',
+      '--dl': (-rand() * CYCLE).toFixed(2) + 's',
+      '--d': CYCLE * (motif === 'smoke' ? 2 : 1) + 's',
+      '--dx': Math.round((rand() - 0.5) * 80) + 'px',
+      '--pc': profileVar(color),
+    };
+    if (motif === 'smoke') style.width = Math.round(s) + 'px';
+    return <span key={motif + i} className={'p m-' + motif} style={style}>{SHAPES[motif]}</span>;
+  });
+}
+
+function Scene({ mix, playing = true }) {
+  const { primary, secondary, c1, c2 } = pickScene(mix);
+  const rand = seeded(mix.id);
+  return (
+    <div className={'scene' + (playing ? '' : ' scene-paused')} style={{ '--c1': profileVar(c1), '--c2': profileVar(c2) }} aria-hidden>
+      {primary === 'frost' ? <span className="frost-rim" /> : null}
+      {primary === 'bloom' ? (
+        <span className="bloom-core">
+          {[0, 72, 144, 216, 288].map((r, i) => <span key={r} className="bloom-petal" style={{ rotate: r + 'deg', animationDelay: -i * 0.4 + 's' }} />)}
+        </span>
+      ) : null}
+      {primary === 'juicy' ? <span className="juicy-ring" /> : null}
+      {primary === 'warm' ? <span className="warm-glow" /> : null}
+      {particles(primary, rand, c1)}
+      {secondary ? particles(secondary, rand, c2, Math.ceil(PARTICLES[secondary].n / 3)) : null}
+    </div>
+  );
+}
+
+// Полоса превью над Подбором: первые восемь миксов ленты, статичный кадр сцены в кружке 60px.
+function ReelStrip({ mixes, onOpen }) {
+  return (
+    <div className="reel-strip" role="list" aria-label="Рилсы">
+      {mixes.slice(0, 8).map((mix, i) => (
+        <button key={mix.id} type="button" role="listitem" className="reel-strip-item" onClick={() => onOpen(i)}>
+          <span className="reel-strip-thumb"><Scene mix={mix} playing={false} /></span>
+          <span className="reel-strip-name">{mix.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+function Reel({ mix, index, total, active, paused, hint, favorite, onFavorite, onTogglePause, onOpen, onChoose }) {
+  return (
+    <section className="reel" aria-label={mix.name}>
+      <Scene mix={mix} playing={active && !paused} />
+      <button type="button" className="reel-tap" aria-label={paused ? 'Продолжить' : 'Пауза'} onClick={onTogglePause} />
+      {paused ? <span className="reel-paused"><Icon name="Play" size={22} /></span> : null}
+      <div className="reel-top">
+        <p className="reel-title">Рилсы</p>
+        <p className="reel-count">{pad2(index + 1) + ' · из ' + pad2(total)}</p>
+      </div>
+      <div className={'reel-dock' + (active ? ' reel-reveal' : '')} key={active ? 'on' : 'off'}>
+        {hint ? <span className="reel-hint"><Icon name="ChevronUp" size={18} />Листайте вверх</span> : null}
+        <p className="aroma-caps">{mix.flavorProfiles.slice(0, 3).map(label).join(' · ')}</p>
+        <div className="reel-name-row">
+          <h2 className="reel-name">{mix.name}</h2>
+          <HeartButton on={favorite} onClick={() => onFavorite(mix)} />
+        </div>
+        {mix.ratingsCount ? <div><RatingPill rating={mix.avgRating} count={mix.ratingsCount} /></div> : null}
+        <p className="reel-flavors">{mix.flavors.join(' · ')}</p>
+        <CompositionStack components={mix.components} showBar={false} />
+        <div className="reel-actions">
+          <button type="button" className="aroma-ghost" onClick={() => onOpen(mix, 'reels')}>Подробнее</button>
+          <AromaCTA pulse onClick={() => onChoose(mix, 'reels')}>Покурить</AromaCTA>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Лента: вертикальный свайп со снапом, один жест — один рилс. Играет только активный рилс,
+// соседи — статичный кадр, дальше — пустые слоты той же высоты.
+function ReelsScreen({ mixes, start = 0, favoriteIds, onFavorite, onOpen, onChoose }) {
+  const ref = React.useRef(null);
+  const [active, setActive] = React.useState(start);
+  const [paused, setPaused] = React.useState(false);
+  const [swiped, setSwiped] = React.useState(false);
+
+  React.useEffect(() => {
+    const root = ref.current;
+    root.scrollTop = start * root.clientHeight;
+    // Первый вызов observer — стартовый рилс, это ещё не свайп.
+    let initial = true;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting || initial) return;
+        setActive(Number(e.target.dataset.i));
+        setPaused(false);
+        setSwiped(true);
+      });
+      initial = false;
+    }, { root, threshold: 0.6 });
+    root.querySelectorAll('[data-i]').forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="reels" ref={ref}>
+      {mixes.map((mix, i) => (
+        <div key={mix.id} data-i={i} className="reel-slot">
+          {Math.abs(i - active) <= 1 ? (
+            <Reel
+              mix={mix}
+              index={i}
+              total={mixes.length}
+              active={i === active}
+              paused={i === active && paused}
+              hint={i === start && !swiped}
+              favorite={favoriteIds.includes(mix.id)}
+              onFavorite={onFavorite}
+              onTogglePause={() => setPaused(!paused)}
+              onOpen={onOpen}
+              onChoose={onChoose}
+            />
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -424,7 +628,7 @@ function ConfirmationScreen({ mix, onDone }) {
   );
 }
 
-Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
+Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
   return (
     <div className="aroma-selected-shell">
       <GuestCard compact title="Карточка для мастера" style={{ display: 'grid', gap: 10 }}>

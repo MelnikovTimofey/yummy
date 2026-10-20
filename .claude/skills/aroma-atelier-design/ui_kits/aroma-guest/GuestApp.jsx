@@ -1,12 +1,14 @@
-// Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл / миксер / кабинет) → карточка → подтверждение.
+// Guest flow: access → intro → onboarding → (подбор / витрина / рилсы / каталог / рейл / миксер / кабинет) → карточка → подтверждение.
 const { GuestTab, OnboardingProgress, MixRow } = window.DesignSystem_1aef33;
-const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar, Icon } = window;
+const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen, GuestSelectedBar, Icon } = window;
 const MOCK = window.AROMA_MOCK;
 
 // Нижняя панель (#168): только значки, название — в aria-label, активный пункт кремовый с чертой акцента.
+// «Рилсы» (#153) — третьим, ближе к центру, как Reels в Instagram.
 const NAV_ITEMS = [
   { id: 'recommendations', label: 'Подбор', icon: 'Sparkles' },
   { id: 'showcase', label: 'Витрина', icon: 'GalleryHorizontalEnd' },
+  { id: 'reels', label: 'Рилсы', icon: 'Clapperboard' },
   { id: 'catalog', label: 'Каталог', icon: 'Search' },
   { id: 'mixer', label: 'Миксер', icon: 'Blend' },
   { id: 'cabinet', label: 'Кабинет', icon: 'CircleUserRound' },
@@ -72,6 +74,7 @@ function GuestApp() {
   const [selected, setSelected] = React.useState(null);
   const [mixerReturn, setMixerReturn] = React.useState('recommendations');
   const [favoriteIds, setFavoriteIds] = React.useState([]);
+  const [reelsStart, setReelsStart] = React.useState(0);
 
   const toggle = (setter) => (value) => setter((cur) => (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]));
 
@@ -86,6 +89,9 @@ function GuestApp() {
       .sort((a, b) => b.score - a.score);
     return scored.slice(0, 5).map((x) => x.mix);
   }, [likedProfiles, likedFlavors]);
+
+  // Лента рилсов: подбор по онбордингу, затем остальные миксы каталога без повторов.
+  const reelsFeed = React.useMemo(() => [...recommendations, ...MOCK.mixes.filter((mix) => !recommendations.includes(mix))], [recommendations]);
 
   // Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и». Сортировки нет (#181): по алфавиту.
   const catalogResults = React.useMemo(() => {
@@ -105,7 +111,11 @@ function GuestApp() {
   const toggleCatalogFilter = (tag) => setCatalogFilters((cur) => (cur.some((t) => sameFilter(t, tag)) ? cur.filter((t) => !sameFilter(t, tag)) : [...cur, tag]));
 
   const openMix = (mix, source) => { setSheet({ mix, source }); setRating(0); };
-  const chooseMix = (mix, source) => { setSelected({ mix, source }); setSheet(null); setView('confirmation'); };
+  const chooseMix = (mix, source) => {
+    if (source === 'reels') setReelsStart(reelsFeed.indexOf(mix));
+    setSelected({ mix, source }); setSheet(null); setView('confirmation');
+  };
+  const openReels = (index) => { setReelsStart(index); setView('reels'); };
 
   const submitAccess = () => {
     if (code.length < 4 || !ageOk) { setAccessError('Введите код доступа и подтвердите 18+.'); return; }
@@ -116,6 +126,8 @@ function GuestApp() {
   const navView = ['recommendations', 'showcase', 'catalog', 'rail', 'cabinet'].includes(view) ? view : null;
   const goNav = (tab) => {
     if (tab === 'mixer') setMixerReturn(view);
+    // Рилсы в панели всегда открывают ленту с начала.
+    if (tab === 'reels') { openReels(0); return; }
     setView(tab);
   };
 
@@ -127,9 +139,15 @@ function GuestApp() {
         {view === 'access' ? (
           <AccessScreen code={code} setCode={setCode} ageOk={ageOk} setAgeOk={setAgeOk} error={accessError} onSubmit={submitAccess} />
         ) : view === 'confirmation' ? (
-          <ConfirmationScreen mix={selected.mix} onDone={() => setView('recommendations')} />
+          <ConfirmationScreen mix={selected.mix} onDone={() => setView(selected.source === 'reels' ? 'reels' : 'recommendations')} />
         ) : view === 'mixer' ? (
           <MixerStub onBack={() => setView(mixerReturn)} />
+        ) : view === 'reels' ? (
+          // Шапки нет, лента на всю высоту над панелью; «Готово» после «Покурить» возвращает на тот же рилс.
+          <>
+            <ReelsScreen key={reelsStart} mixes={reelsFeed} start={reelsStart} favoriteIds={favoriteIds} onFavorite={toggleFavorite} onOpen={openMix} onChoose={chooseMix} />
+            <BottomNav value="reels" onChange={goNav} />
+          </>
         ) : (
           <>
             {view !== 'rail' ? (
@@ -178,6 +196,7 @@ function GuestApp() {
                   onSkip={() => setView('catalog')}
                 />
               ) : null}
+              {view === 'recommendations' ? <ReelStrip mixes={reelsFeed} onOpen={openReels} /> : null}
               {view === 'recommendations' ? (
                 <RecommendationsScreen mixes={recommendations} onOpen={openMix} onChoose={chooseMix} onOpenOnboarding={() => { setStep(1); setView('onboarding'); }} onOpenCatalog={() => setView('catalog')} />
               ) : null}

@@ -1,4 +1,4 @@
-<!-- @dsCard group="Арома Ателье · Guest" viewport="430x780" name="Гостевое приложение" subtitle="18+ gate → знакомство → онбординг → нижняя панель: подбор / витрина / каталог / миксер → карточка" -->
+<!-- @dsCard group="Арома Ателье · Guest" viewport="430x780" name="Гостевое приложение" subtitle="18+ gate → знакомство → онбординг → нижняя панель: подбор / витрина / рилсы / каталог / миксер / кабинет → карточка" -->
 <!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8"><title>Арома Ателье · Гость</title>
 <link rel="stylesheet" href="../../styles.css">
@@ -15,7 +15,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .brand-mark{width:auto;height:22px;flex:0 0 auto}
 .brand{margin:0;font-family:var(--font-display);font-size:19px;line-height:1;letter-spacing:.01em;color:var(--text-0);white-space:nowrap}
 .guest-stage-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.content{padding:12px 20px;overflow-y:auto;overflow-x:hidden;display:grid;gap:12px;min-height:0;flex:1 1 auto;align-content:start;scrollbar-width:thin;scrollbar-color:#3A3A40 #1A1A1D}
+.content{padding:12px 20px;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-height:0;flex:1 1 auto;align-content:start;scrollbar-width:thin;scrollbar-color:#3A3A40 #1A1A1D}
 .content-intro{padding:0;gap:0}
 .guest-status{margin:0;color:var(--text-1);font-size:15px}
 .guest-error{margin:0;color:var(--danger);font-size:12px;text-align:center}
@@ -24,10 +24,10 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-ghost{border:1px solid var(--line);background:rgba(40,40,48,.5);color:var(--text-0);border-radius:14px;min-height:48px;padding:0 18px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;cursor:pointer}
 .aroma-ghost-sm{border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);border-radius:12px;min-height:44px;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:0 14px}
 
-/* Тонкая шапка и нижняя панель (#168) */
+/* Тонкая шапка и нижняя панель (#168); шесть пунктов с «Рилсами» (#153): поля 4px, колонка ≈ 61px */
 .topbar-icon-btn{margin-left:auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
 .topbar-icon-btn:hover,.topbar-icon-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
-.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:0 8px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
+.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:0 4px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
 .bottom-nav-item{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;border:0;background:transparent;color:var(--text-muted);cursor:pointer}
 .bottom-nav-item[aria-current="page"]{color:var(--text-0)}
 .bottom-nav-item[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 2px 2px;background:var(--accent)}
@@ -41,6 +41,73 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .heart-btn[aria-pressed="true"]{color:var(--text-0)}
 .heart-btn:hover,.heart-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
 .heart-btn:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+
+/* Рилсы (#153): полоса превью над Подбором и лента со сценами. Исключение из VISUAL FOUNDATIONS — только здесь */
+/* у прокручиваемого элемента в grid минимальная высота 0 — без min-height строка схлопывается */
+.reel-strip{display:flex;align-items:flex-start;gap:10px;min-height:96px;overflow-x:auto;margin:0 -20px;padding:2px 20px 4px;scrollbar-width:none}
+.reel-strip::-webkit-scrollbar{display:none}
+.reel-strip-item{flex:0 0 auto;width:68px;display:grid;gap:6px;justify-items:center;padding:0;border:0;background:transparent;color:var(--text-1);cursor:pointer}
+.reel-strip-item:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.reel-strip-thumb{position:relative;width:60px;height:60px;border-radius:var(--r-pill);overflow:hidden;box-shadow:0 0 0 1px var(--line),0 0 0 3px var(--bg-base),0 0 0 4px var(--accent-border)}
+.reel-strip-name{font-size:10.5px;line-height:1.25;text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reels{position:relative;flex:1 1 auto;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.reels::-webkit-scrollbar{display:none}
+.reel-slot{height:100%;scroll-snap-align:start;scroll-snap-stop:always}
+.reel{position:relative;height:100%;overflow:hidden}
+.reel-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 20px 18px;pointer-events:none;background:linear-gradient(180deg,rgba(14,14,17,.55) 0%,transparent 100%)}
+.reel-title{margin:0;font-family:var(--font-display);font-size:22px;line-height:1;color:var(--text-0)}
+.reel-count{margin:0;font-size:11px;letter-spacing:.16em;color:var(--text-1);font-variant-numeric:tabular-nums}
+.reel-tap{position:absolute;inset:0;z-index:1;border:0;background:transparent;padding:0;cursor:pointer}
+.reel-tap:focus-visible{outline:2px solid var(--accent-hover);outline-offset:-4px}
+.reel-paused{position:absolute;left:50%;top:40%;z-index:2;width:56px;height:56px;margin:-28px 0 0 -28px;display:grid;place-items:center;border-radius:var(--r-pill);background:rgba(14,14,17,.55);border:1px solid var(--line);color:var(--text-0);pointer-events:none;backdrop-filter:blur(4px)}
+.reel-hint{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;flex-direction:column;align-items:center;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;pointer-events:none}
+.reel-hint svg{animation:reel-hint 2s var(--ease-out) infinite}
+@keyframes reel-hint{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-4px);opacity:1}}
+/* текст — HTML-слой поверх сцены: читается скринридером и не дёргается при паузе */
+.reel-dock{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:10px;padding:56px 20px 20px;background:linear-gradient(180deg,transparent 0%,rgba(14,14,17,.72) 26%,rgba(14,14,17,.94) 100%)}
+.reel-dock>*{min-width:0}
+.reel-reveal>*{animation:reel-in var(--dur-sheet) var(--ease-out) both}
+.reel-reveal>*:nth-child(2){animation-delay:60ms}
+.reel-reveal>*:nth-child(3){animation-delay:120ms}
+.reel-reveal>*:nth-child(4){animation-delay:180ms}
+.reel-reveal>*:nth-child(n+5){animation-delay:240ms}
+@keyframes reel-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.reel-name-row{display:flex;align-items:flex-start;gap:8px}
+.reel-name-row .heart-btn{margin:-2px -8px 0 auto}
+.reel-name{margin:0;flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:28px;line-height:1.06;color:var(--text-0);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.reel-flavors{margin:0;font-size:14px;line-height:1.4;color:var(--text-1)}
+.reel-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:2px}
+
+/* Сцены стиля B — CSS-приближение мокапа; в приложении композиции Remotion. Штрих 1,2–1,4 в цвете профиля, без заливки */
+.scene{position:absolute;inset:0;overflow:hidden;background:radial-gradient(120% 80% at 50% 30%,color-mix(in srgb,var(--c1) 22%,#141417) 0%,#121215 62%,#0e0e11 100%)}
+.scene::after{content:"";position:absolute;inset:0;background:radial-gradient(70% 50% at 50% 38%,color-mix(in srgb,var(--c1) 20%,transparent) 0%,transparent 70%);animation:scene-breathe 6s ease-in-out infinite}
+@keyframes scene-breathe{0%,100%{opacity:.7}50%{opacity:1}}
+.scene-paused *,.scene-paused::after{animation-play-state:paused!important}
+.p{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);color:color-mix(in srgb,var(--pc) 80%,#fff 20%);animation-duration:var(--d,6s);animation-delay:var(--dl);animation-iteration-count:infinite;animation-timing-function:linear;will-change:transform,opacity}
+.p svg{display:block;width:100%;height:100%;overflow:visible}
+.frost-rim{position:absolute;inset:0;box-shadow:inset 0 0 36px 4px color-mix(in srgb,var(--c1) 55%,transparent),inset 0 0 90px 8px color-mix(in srgb,var(--c2) 18%,transparent);animation:frost-rim 6s ease-in-out infinite}
+@keyframes frost-rim{0%,100%{opacity:.55}50%{opacity:1}}
+.m-frost,.m-berry{animation-name:m-fall}
+.m-berry{animation-timing-function:ease-out}
+@keyframes m-fall{0%{transform:translate(0,-40px) rotate(0);opacity:0}12%{opacity:.95}50%{transform:translate(var(--dx),330px) rotate(90deg)}88%{opacity:.85}100%{transform:translate(0,700px) rotate(180deg);opacity:0}}
+.bloom-core{position:absolute;left:50%;top:34%;width:0;height:0;animation:bloom-spin 12s linear infinite}
+.bloom-petal{position:absolute;left:-38px;top:-110px;width:76px;height:110px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;transform-origin:50% 100%;border:1.4px solid color-mix(in srgb,var(--c1) 80%,#fff 20%);opacity:.85;animation:bloom-open 6s ease-in-out infinite}
+@keyframes bloom-spin{to{transform:rotate(360deg)}}
+@keyframes bloom-open{0%,100%{scale:.72}50%{scale:1}}
+.m-bloom{animation-name:m-drift}
+@keyframes m-drift{0%{transform:translate(0,0) rotate(0);opacity:0}15%{opacity:.9}100%{transform:translate(var(--dx),-520px) rotate(220deg);opacity:0}}
+.juicy-ring{position:absolute;left:50%;top:30%;width:200px;height:200px;margin:-100px 0 0 -100px;border-radius:var(--r-pill);border:1.4px solid color-mix(in srgb,var(--c1) 75%,#fff 25%);animation:bloom-spin 24s linear infinite}
+.m-juicy{animation-name:m-rise}
+@keyframes m-rise{0%{transform:translate(0,40px);opacity:0}15%{opacity:.9}100%{transform:translate(var(--dx),-620px);opacity:0}}
+.warm-glow{position:absolute;left:-10%;right:-10%;bottom:-10%;height:60%;background:radial-gradient(60% 70% at 50% 100%,color-mix(in srgb,var(--c1) 85%,#fff 5%) 0%,color-mix(in srgb,var(--c1) 35%,transparent) 45%,transparent 75%);animation:scene-breathe 3s ease-in-out infinite}
+.m-warm{animation-name:m-ember;animation-timing-function:ease-out}
+@keyframes m-ember{0%{transform:translate(0,0);opacity:0}10%{opacity:1}50%{opacity:.5}60%{opacity:.95}100%{transform:translate(var(--dx),-560px);opacity:0}}
+.m-smoke{animation-name:m-wisp;animation-timing-function:ease-in-out}
+@keyframes m-wisp{0%{transform:translate(0,40px) scale(.6);opacity:0}25%{opacity:.75}100%{transform:translate(var(--dx),-460px) scale(1.8);opacity:0}}
+.m-smoke svg path{stroke-dasharray:240;animation:m-draw var(--d,6s) linear infinite;animation-delay:var(--dl)}
+@keyframes m-draw{from{stroke-dashoffset:240}to{stroke-dashoffset:-240}}
+/* prefers-reduced-motion: сцена — статичный кадр, док появляется без анимации */
+@media (prefers-reduced-motion: reduce){.scene *,.scene::after,.reel-hint svg{animation-play-state:paused!important}.reel-reveal>*{animation:none}}
 
 /* Access */
 .aroma-access{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
