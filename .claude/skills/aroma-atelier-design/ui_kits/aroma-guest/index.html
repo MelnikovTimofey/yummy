@@ -27,13 +27,20 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 /* Тонкая шапка и нижняя панель (#168) */
 .topbar-icon-btn{margin-left:auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
 .topbar-icon-btn:hover,.topbar-icon-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
-.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0 8px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
+.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:0 8px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
 .bottom-nav-item{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;border:0;background:transparent;color:var(--text-muted);cursor:pointer}
 .bottom-nav-item[aria-current="page"]{color:var(--text-0)}
 .bottom-nav-item[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 2px 2px;background:var(--accent)}
 .kit-mixer{flex:1 1 auto;display:grid;gap:16px;align-content:start;padding:12px 20px}
 .kit-mixer-top{display:grid;grid-template-columns:36px 1fr 36px;align-items:center}
 .kit-mixer-title{margin:0;text-align:center;font-family:var(--font-display);font-size:22px;color:var(--text-0)}
+/* Кабинет (#151): в ките заглушка со списком избранного; сердечко — в шапке карточки микса */
+.kit-cabinet{display:grid;gap:12px;align-content:start;grid-template-columns:minmax(0,1fr)}
+.kit-cabinet-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h1);line-height:1.05;color:var(--text-0)}
+.heart-btn{flex:0 0 auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;margin:-4px -6px 0 0;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
+.heart-btn[aria-pressed="true"]{color:var(--text-0)}
+.heart-btn:hover,.heart-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
+.heart-btn:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
 
 /* Access */
 .aroma-access{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}

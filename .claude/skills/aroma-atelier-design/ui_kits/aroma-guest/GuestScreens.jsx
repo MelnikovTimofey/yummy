@@ -12,11 +12,11 @@ const sourceLabel = { recommendations: 'Подбор для вас', showcase: '
 const plural = (n) => { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'микс'; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'микса'; return 'миксов'; };
 
 // Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
-function Icon({ name, size = 24, stroke = 1.8 }) {
+function Icon({ name, size = 24, stroke = 1.8, fill = 'none' }) {
   const node = window.lucide.icons[name];
   const children = node[0] === 'svg' ? node[2] : node;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {children.map(([tag, attrs], i) => React.createElement(tag, { key: i, ...attrs }))}
     </svg>
   );
@@ -349,7 +349,16 @@ function RailScreen({ rail, filters, toggleFilter, onBack, onOpen }) {
   );
 }
 
-function MixSheet({ state, rating, onRate, onClose, onChoose }) {
+// Сердечко (#151): не акцентное — выключено --text-muted, включено кремовое с заливкой.
+function HeartButton({ on, onClick }) {
+  return (
+    <button type="button" className="heart-btn" aria-pressed={on} aria-label={on ? 'Убрать из избранного' : 'В избранное'} onClick={onClick}>
+      <Icon name="Heart" size={22} fill={on ? 'currentColor' : 'none'} />
+    </button>
+  );
+}
+
+function MixSheet({ state, rating, onRate, onClose, onChoose, favorite = false, onFavorite }) {
   if (!state) return null;
   const { mix, source } = state;
   const halo = 'var(--profile-' + (mix.flavorProfiles[0] || 'tobacco').replace('_', '-') + ')';
@@ -364,6 +373,7 @@ function MixSheet({ state, rating, onRate, onClose, onChoose }) {
             <h2 className="aroma-sheet-title">{mix.name}</h2>
             <SignatureBar profiles={mix.flavorProfiles} height={4} />
           </div>
+          {onFavorite ? <HeartButton on={favorite} onClick={() => onFavorite(mix)} /> : null}
         </div>
         <p className="aroma-sheet-desc">{mix.description}</p>
         <div className="aroma-sheet-tags">
