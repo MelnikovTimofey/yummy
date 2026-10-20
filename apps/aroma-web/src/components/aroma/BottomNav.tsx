@@ -1,10 +1,11 @@
-import { Blend, CircleUserRound, GalleryHorizontalEnd, Search, Sparkles, type LucideIcon } from "lucide-react";
+import { Blend, CircleUserRound, Clapperboard, GalleryHorizontalEnd, Search, Sparkles, type LucideIcon } from "lucide-react";
 
-export type BottomNavTab = "recommendations" | "showcase" | "catalog" | "mixer" | "cabinet";
+export type BottomNavTab = "recommendations" | "showcase" | "reels" | "catalog" | "mixer" | "cabinet";
 
 const items: Array<{ id: BottomNavTab; label: string; icon: LucideIcon }> = [
   { id: "recommendations", label: "Подбор", icon: Sparkles },
   { id: "showcase", label: "Витрина", icon: GalleryHorizontalEnd },
+  { id: "reels", label: "Рилсы", icon: Clapperboard },
   { id: "catalog", label: "Каталог", icon: Search },
   { id: "mixer", label: "Миксер", icon: Blend },
   { id: "cabinet", label: "Кабинет", icon: CircleUserRound },
@@ -15,10 +16,11 @@ type BottomNavProps = {
   onChange: (id: BottomNavTab) => void;
 };
 
-// Нижняя панель гостя (#168, #243): только значки, название — в aria-label.
+// Нижняя панель гостя (#168, #243, #263): только значки, название — в aria-label.
+// Колонок столько же, сколько пунктов.
 export function BottomNav({ value, onChange }: BottomNavProps) {
   return (
-    <nav className="bottom-nav" aria-label="Гостевая навигация">
+    <nav className="bottom-nav" aria-label="Гостевая навигация" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
       {items.map(({ id, label, icon: Icon }) => {
         const isActive = value === id;
         return (
