@@ -188,7 +188,7 @@
 
 1. `TELEGRAM_BOT_TOKEN`
 2. `ATELIER_GUEST_LOGIN_BOT_TOKEN` — бот входа гостей (#266), отдельный от staff-бота
-2. `ATELIER_BACKEND_AUTOMATION_TOKEN`
+3. `ATELIER_BACKEND_AUTOMATION_TOKEN`
 
 ### Бэкап БД
 
