@@ -187,13 +187,24 @@ function ForYouHero({ item, onOpen, onChoose }) {
   );
 }
 
+// «Подобрать под настроение»: обычный онбординг на один визит, вкусы в кабинете не меняются.
+function MoodLink({ onMood }) {
+  return (
+    <button type="button" className="fy-mood-link" onClick={onMood}>
+      <span>Подобрать под настроение</span>
+      <Icon name="ChevronRight" size={18} />
+    </button>
+  );
+}
+
 // A · по слотам: повтор, во вкусе, шаг в сторону — каждый под своей подписью.
-function ForYouSlots({ bubble, onOpen, onChoose }) {
+function ForYouSlots({ bubble, onOpen, onChoose, onMood }) {
   return (
     <section className="aroma-recs">
       <header className="fy-head">
         <h1 className="fy-title">Для вас</h1>
         <p className="fy-sub">По вашим выборам, оценкам и избранному.</p>
+        <MoodLink onMood={onMood} />
       </header>
       {bubble ? <BubbleHint onOpen={onOpen} /> : null}
       <p className="aroma-caps">Новое в вашем вкусе</p>
@@ -234,12 +245,57 @@ function ForYouList({ bubble, onOpen, onChoose }) {
   );
 }
 
-function ColdStart({ onOpen, onChoose }) {
+function ColdStart({ onOpen, onChoose, onMood }) {
   const mixes = ['mix-catalog-hit-08', 'mix-catalog-hit-01', 'mix-catalog-hit-26', 'mix-catalog-hit-03', 'mix-catalog-hit-10'].map(mixById);
   return (
     <>
       <p className="fy-cold">«Для вас» соберётся, когда у нас будет больше ваших выборов. Пока — по вкусам из онбординга.</p>
+      {onMood ? <MoodLink onMood={onMood} /> : null}
       <window.RecommendationsScreen mixes={mixes} onOpen={(mix) => onOpen(mix)} onChoose={(mix) => onChoose(mix)} onOpenOnboarding={() => {}} onOpenCatalog={() => {}} />
+    </>
+  );
+}
+
+// Онбординг под настроение — экран онбординга из кита, сверху строка о том, что это на один визит.
+function MoodOnboarding({ profiles, setProfiles, onBack, onDone, onCatalog }) {
+  const [step, setStep] = React.useState(1);
+  const [flavors, setFlavors] = React.useState([]);
+  const toggle = (setter) => (value) => setter((cur) => (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]));
+  return (
+    <>
+      <div className="fy-mood-note">
+        <button type="button" className="aroma-rail-back" onClick={onBack} aria-label="Назад к «Для вас»">←</button>
+        <p className="fy-mood-note-text"><span className="aroma-caps">Под настроение</span>Только на этот визит. Вкусы в кабинете не изменятся.</p>
+      </div>
+      <window.OnboardingScreen
+        step={step}
+        profiles={profiles}
+        flavors={flavors}
+        toggleProfile={toggle(setProfiles)}
+        toggleFlavor={toggle(setFlavors)}
+        onNext={() => (step === 1 ? setStep(2) : onDone())}
+        onSkip={onCatalog}
+      />
+    </>
+  );
+}
+
+function MoodResult({ profiles, onBack, onOpen, onChoose }) {
+  const score = (mix) => mix.flavorProfiles.filter((p) => profiles.includes(p)).length;
+  const mixes = M.mixes.filter((mix) => !profiles.length || score(mix) > 0).sort((a, b) => score(b) - score(a)).slice(0, 5);
+  return (
+    <>
+      <div className="fy-mood-note">
+        <p className="fy-mood-note-text">
+          <span className="aroma-caps">{'Под настроение' + (profiles.length ? ' · ' + profiles.map(label).join(' · ') : '')}</span>
+          Подбор на этот визит. «Для вас» и вкусы в кабинете не изменились.
+        </p>
+      </div>
+      <button type="button" className="fy-mood-link" onClick={onBack}>
+        <Icon name="ChevronLeft" size={18} />
+        <span>Вернуться к «Для вас»</span>
+      </button>
+      <window.RecommendationsScreen mixes={mixes} onOpen={(mix) => onOpen(mix, { source: 'Под настроение' })} onChoose={onChoose} onOpenOnboarding={onBack} onOpenCatalog={onBack} />
     </>
   );
 }
@@ -494,7 +550,7 @@ function IntroReturning({ onLogin, onNext }) {
 
 // ── Телефон ──
 
-function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, persona = 'steady', variant = 'A', cabTab = 'history', sheet: initialSheet = null, anonHeart = false, deleteOpen = false, tgError = false, toast = null, fav = true }) {
+function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, persona = 'steady', variant = 'A', cabTab = 'history', sheet: initialSheet = null, anonHeart = false, deleteOpen = false, tgError = false, toast = null, fav = true, mood = [] }) {
   const [view, setView] = React.useState(initialView);
   const [logged, setLogged] = React.useState(initialLogged);
   const [tab, setTab] = React.useState(cabTab);
@@ -504,6 +560,7 @@ function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, 
   const [delOpen, setDelOpen] = React.useState(deleteOpen);
   const [note, setNote] = React.useState(toast);
   const [chosen, setChosen] = React.useState(null);
+  const [moodProfiles, setMoodProfiles] = React.useState(mood);
 
   const history = logged ? PERSONAS[persona] : [];
   const favorites = persona === 'empty' ? [] : FAVORITES;
@@ -511,7 +568,8 @@ function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, 
   const choose = (mix) => { setSheet(null); setChosen(mix); setView('confirm'); };
   const login = () => { setHeartPrompt(false); setSheet(null); setView('tg'); };
   const afterLogin = () => { setLogged(true); setNote('Вы вошли. Вкусы из онбординга сохранены в кабинете.'); setView('cabinet'); };
-  const withNav = ['recs', 'showcase', 'catalog', 'cabinet'].includes(view);
+  const withNav = ['recs', 'mood-result', 'showcase', 'catalog', 'cabinet'].includes(view);
+  const startMood = () => { setMoodProfiles([]); setView('mood'); };
 
   let body;
   if (view === 'intro') body = <IntroReturning onLogin={login} onNext={() => setView('recs')} />;
@@ -521,9 +579,13 @@ function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, 
   else {
     let main;
     if (view === 'recs') {
-      if (!logged || PERSONAS[persona].length < 3) main = <ColdStart onOpen={(mix) => openMix(mix, { source: 'Подбор для вас' })} onChoose={choose} />;
-      else if (variant === 'A') main = <ForYouSlots bubble={BUBBLE[persona]} onOpen={openMix} onChoose={choose} />;
+      if (!logged || PERSONAS[persona].length < 3) main = <ColdStart onOpen={(mix) => openMix(mix, { source: 'Подбор для вас' })} onChoose={choose} onMood={logged ? startMood : null} />;
+      else if (variant === 'A') main = <ForYouSlots bubble={BUBBLE[persona]} onOpen={openMix} onChoose={choose} onMood={startMood} />;
       else main = <ForYouList bubble={BUBBLE[persona]} onOpen={openMix} onChoose={choose} />;
+    } else if (view === 'mood') {
+      main = <MoodOnboarding profiles={moodProfiles} setProfiles={setMoodProfiles} onBack={() => setView('recs')} onDone={() => setView('mood-result')} onCatalog={() => setView('catalog')} />;
+    } else if (view === 'mood-result') {
+      main = <MoodResult profiles={moodProfiles} onBack={() => setView('recs')} onOpen={openMix} onChoose={choose} />;
     } else if (view === 'cabinet') {
       main = logged
         ? <Cabinet tab={tab} setTab={setTab} history={history} favorites={favorites} toast={note} onOpen={openMix} onGoRecs={() => setView('recs')} onLogout={() => { setLogged(false); setNote(null); }} onDelete={() => setDelOpen(true)} />
@@ -542,7 +604,7 @@ function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, 
   return (
     <div className="phone-shell">
       {body}
-      {withNav ? <BottomNav value={view} onChange={(id) => { setNote(null); setView(id); }} /> : null}
+      {withNav ? <BottomNav value={view === 'mood-result' ? 'recs' : view} onChange={(id) => { setNote(null); setView(id); }} /> : null}
       <CabMixSheet
         state={sheet}
         logged={logged}
@@ -576,6 +638,8 @@ const SHOTS = [
   { id: 'fy-b', group: 'foryou', name: '«Для вас» B · одним списком — отвергнут', note: 'Тот же набор: герой и строки с причиной. Повтор и шаг в сторону помечены капсами внутри строки.', props: { variant: 'B' } },
   { id: 'fy-a-varied', group: 'foryou', name: 'A · разные выборы', note: 'Пузыря нет — подсказки нет. Состав выдачи по тем же правилам.', props: { variant: 'A', persona: 'varied' } },
   { id: 'fy-cold', group: 'foryou', name: 'Меньше трёх выборов', note: 'Подбор по сохранённому онбордингу, как сейчас. Сверху одна строка, без призыва выбирать чаще.', props: { persona: 'cold' } },
+  { id: 'fy-mood', group: 'foryou', name: 'Под настроение · онбординг', note: '«Подобрать под настроение» под заголовком «Для вас». Обычный онбординг, сверху — что это только на этот визит.', props: { view: 'mood' } },
+  { id: 'fy-mood-result', group: 'foryou', name: 'Под настроение · подбор', note: 'Подбор по онбордингу этого визита. «Для вас» и вкусы в кабинете не изменились, назад — одной ссылкой.', props: { view: 'mood-result', mood: ['citrus'] } },
   { id: 'cab-anon', group: 'cabinet', name: 'Кабинет без входа', note: 'Зачем входить, согласие и «Войти через Telegram». CTA неактивна, пока нет согласия.', props: { view: 'cabinet', logged: false } },
   { id: 'cab-tg', group: 'cabinet', name: 'Вход: экран Telegram', note: 'Окно Telegram — не наше. После подтверждения гость возвращается туда, откуда пришёл.', props: { view: 'tg', logged: false } },
   { id: 'cab-tg-error', group: 'cabinet', name: 'Telegram не ответил', note: 'Ошибка одной фразой: что случилось и что работает без входа.', props: { view: 'cabinet', logged: false, tgError: true } },
