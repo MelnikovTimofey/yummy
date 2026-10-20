@@ -5,10 +5,11 @@ import {
   Library,
   Package,
   ShieldCheck,
+  Truck,
   type LucideIcon,
 } from 'lucide-react';
 
-export type WorkspaceTab = 'dashboard' | 'shelf' | 'catalog' | 'mixes' | 'rails' | 'access';
+export type WorkspaceTab = 'dashboard' | 'shelf' | 'deliveries' | 'catalog' | 'mixes' | 'rails' | 'access';
 
 export type WorkspaceTabDescriptor = {
   id: WorkspaceTab;
@@ -20,6 +21,7 @@ export type WorkspaceTabDescriptor = {
 export const workspaceTabs: WorkspaceTabDescriptor[] = [
   { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', icon: LayoutDashboard },
   { id: 'shelf', label: 'Полка', kicker: 'Банки, расход и прогноз', icon: Package },
+  { id: 'deliveries', label: 'Поставки', kicker: 'Счета поставщиков и приход', icon: Truck },
   { id: 'catalog', label: 'Каталог', kicker: 'Карточки htreviews и свои', icon: Library },
   { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', icon: Blend },
   { id: 'rails', label: 'Рейлы', kicker: 'Витрина', icon: GalleryVerticalEnd },

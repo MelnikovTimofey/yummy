@@ -11,7 +11,8 @@ export type AuditEntityType =
   | 'rail'
   | 'inventory'
   | 'shelf'
-  | 'pack';
+  | 'pack'
+  | 'delivery';
 
 const AUDIT_ACTIONS = [
   'create',
@@ -30,6 +31,8 @@ const AUDIT_ACTIONS = [
   'add',
   'remove',
   'settings',
+  // Поставки (src/deliveries.ts).
+  'accept',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -65,7 +68,8 @@ const isAuditEntityType = (value: string): value is AuditEntityType =>
   || value === 'rail'
   || value === 'inventory'
   || value === 'shelf'
-  || value === 'pack';
+  || value === 'pack'
+  || value === 'delivery';
 
 const isAuditAction = (value: string): value is AuditAction => (AUDIT_ACTIONS as readonly string[]).includes(value);
 

@@ -37,8 +37,11 @@ export const requestJson = async <T,>(
       payload && typeof payload === 'object' && 'error' in payload
         ? String(payload.error)
         : 'Запрос не выполнен';
-    const wrapped = new Error(error) as Error & { status?: number };
+    // payload нужен вызывающему, когда ответ несёт больше текста ошибки
+    // (409 поставок: code, deliveryId).
+    const wrapped = new Error(error) as Error & { status?: number; payload?: unknown };
     wrapped.status = response.status;
+    wrapped.payload = payload;
     throw wrapped;
   }
 
