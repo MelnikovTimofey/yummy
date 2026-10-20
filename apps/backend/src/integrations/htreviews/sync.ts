@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../../db';
 import { setStockedLegacy } from '../../shelf';
 import { fetchHtReviewsCatalogSnapshot } from './catalog';
-import { lineUrlFromTobaccoUrl } from './parser';
+import { brandUrlFromTobaccoUrl, lineUrlFromTobaccoUrl } from './parser';
 import type { HtReviewsImportOptions, HtReviewsImportedTobacco } from './types';
 
 export type HtReviewsSyncOptions = HtReviewsImportOptions & {
@@ -43,12 +43,38 @@ export const collectKnownLineUrls = (sourceUrls: Array<string | null>) => {
   return Array.from(lineUrls);
 };
 
-const loadKnownLineUrls = async () => {
+export const filterLineUrlsByBrands = (lineUrls: string[], brandUrls: string[]) => {
+  const brands = new Set(brandUrls.map((url) => url.replace(/\/+$/, '')));
+  return lineUrls.filter((lineUrl) => brands.has(lineUrl.slice(0, lineUrl.lastIndexOf('/'))));
+};
+
+const loadKnownLineUrls = async (brandUrls?: string[]) => {
   const records = await prisma.tobacco.findMany({
     where: { sourceKind: 'htreviews' },
     select: { sourceUrl: true },
   });
-  return collectKnownLineUrls(records.map((record) => record.sourceUrl));
+  const lineUrls = collectKnownLineUrls(records.map((record) => record.sourceUrl));
+  return brandUrls?.length ? filterLineUrlsByBrands(lineUrls, brandUrls) : lineUrls;
+};
+
+export const collectBrandUrls = (sourceUrls: Array<string | null>) => {
+  const brandUrls = new Set<string>();
+  for (const sourceUrl of sourceUrls) {
+    const brandUrl = sourceUrl ? brandUrlFromTobaccoUrl(sourceUrl) : null;
+    if (brandUrl) {
+      brandUrls.add(brandUrl);
+    }
+  }
+  return Array.from(brandUrls);
+};
+
+// Бренды того, что есть в точке: inStock — кэш наличия, который ведёт полка.
+export const loadShelfBrandUrls = async () => {
+  const records = await prisma.tobacco.findMany({
+    where: { sourceKind: 'htreviews', inStock: true, archived: false },
+    select: { sourceUrl: true },
+  });
+  return collectBrandUrls(records.map((record) => record.sourceUrl));
 };
 
 const toStableId = (item: HtReviewsImportedTobacco) => {
@@ -157,7 +183,7 @@ const logUpsertProgress = (message: string) => {
 export const syncHtReviewsCatalog = async (
   options: HtReviewsSyncOptions = {},
 ): Promise<HtReviewsSyncStats> => {
-  const knownLineUrls = options.knownLineUrls ?? (options.brandUrls?.length ? [] : await loadKnownLineUrls());
+  const knownLineUrls = options.knownLineUrls ?? await loadKnownLineUrls(options.brandUrls);
   logUpsertProgress(`phase=known-lines total=${knownLineUrls.length}`);
   const snapshot = await fetchHtReviewsCatalogSnapshot({ ...options, knownLineUrls });
   const defaultInStock = options.defaultInStock ?? false;
