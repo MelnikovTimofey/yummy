@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Flame, Plus, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
+import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
 import type {
   InventoryArchivedFilter,
   InventoryFilterKey,
@@ -71,7 +72,12 @@ type InventoryViewProps = {
   saveError: string;
   onSaveTobacco: (payload: InventoryEditorInput) => Promise<void>;
   onResetSaveFeedback: () => void;
+  view: CatalogView;
+  onViewChange: (view: CatalogView) => void;
+  ideas: ReactNode;
 };
+
+export type CatalogView = 'all' | 'ideas';
 
 // Фильтры в свёрнутом `<details>` блоке «Доп. фильтры». Бренд живёт здесь
 // мультиселектом на весь список брендов (issue #119): чипов-топ-8 не хватало
@@ -566,6 +572,9 @@ export const InventoryView = ({
   saveError,
   onSaveTobacco,
   onResetSaveFeedback,
+  view,
+  onViewChange,
+  ideas,
 }: InventoryViewProps) => {
   const [activeItemId, setActiveItemId] = useState('');
   const [searchValue, setSearchValue] = useState(filters.search);
@@ -922,6 +931,313 @@ export const InventoryView = ({
     </Sheet>
   ) : null;
 
+  const editorSheet = (
+    <Sheet
+      open={editorOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          closeEditor();
+        }
+      }}
+    >
+      <SheetContent
+        side="right"
+        className="inventory-editor-sheet tobacco-drawer"
+        showCloseButton={false}
+      >
+        <SheetHeader className="drawer__head tobacco-drawer__head">
+          <div className="tobacco-drawer__head-copy">
+            {editorMode === 'edit' ? (
+              <p className="tobacco-drawer__eyebrow">Редактирование табака</p>
+            ) : null}
+            <SheetTitle className="tobacco-drawer__title">
+              {editorMode === 'edit'
+                ? editorDraft.name.trim() || 'Без названия'
+                : 'Добавить табак'}
+            </SheetTitle>
+            <SheetDescription className="sr-only">
+              {editorMode === 'edit'
+                ? 'Обновите позицию каталога.'
+                : 'Добавьте позицию в каталог.'}
+            </SheetDescription>
+          </div>
+          <button
+            type="button"
+            className="tobacco-drawer__close"
+            onClick={closeEditor}
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+        </SheetHeader>
+
+        <form
+          className="tobacco-drawer__form admin-form inventory-editor-form"
+          onSubmit={(event) => void handleEditorSubmit(event)}
+        >
+        <div className="drawer__body tobacco-drawer__body">
+          <div className="inventory-editor-identity">
+            {editorMode === 'create' ? (
+            <div className="inventory-editor-identity__col">
+              <div className="section-h">Полка</div>
+              <div className="inventory-editor-identity__toggle">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editorDraft.inStock}
+                  className={`toggle ${editorDraft.inStock ? 'toggle--on' : 'toggle--off'}`}
+                  onClick={() => updateEditorDraft('inStock', !editorDraft.inStock)}
+                  disabled={saveStatus === 'loading'}
+                  aria-label="Сразу на полку"
+                  title={editorDraft.inStock ? 'Сразу на полку с одной банкой' : 'Только в каталог'}
+                >
+                  <span className="toggle__track" aria-hidden="true">
+                    <span className="toggle__thumb" />
+                  </span>
+                </button>
+                <span
+                  className="inventory-editor-identity__status"
+                  data-tone={editorDraft.inStock ? 'success' : 'muted'}
+                >
+                  {editorDraft.inStock ? 'Сразу на полку' : 'Только в каталог'}
+                </span>
+              </div>
+            </div>
+            ) : null}
+            <div className="inventory-editor-identity__col">
+              <div className="section-h">Крепость</div>
+              <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
+                {INVENTORY_STRENGTH_PRESETS.map((preset) => {
+                  const active =
+                    editorDraft.officialStrength.trim().toLocaleLowerCase('ru-RU') ===
+                    preset.toLocaleLowerCase('ru-RU');
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={active ? 'editor-chip editor-chip--active' : 'editor-chip'}
+                      aria-pressed={active}
+                      onClick={() =>
+                        updateEditorDraft('officialStrength', active ? '' : preset)
+                      }
+                      disabled={saveStatus === 'loading'}
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="inventory-editor-fields">
+            <label className="field field--wide">
+              <span className="field-label">Название</span>
+              <input
+                className="text-input text-input--name"
+                value={editorDraft.name}
+                onChange={(event) => updateEditorDraft('name', event.target.value)}
+                placeholder="Например, Citrus Breeze"
+                disabled={saveStatus === 'loading'}
+              />
+            </label>
+
+            <label className="field field--wide">
+              <span className="field-label">Описание для команды</span>
+              <textarea
+                className="textarea-input"
+                value={editorDraft.description}
+                onChange={(event) => updateEditorDraft('description', event.target.value)}
+                placeholder="Например: подходит к цитрусовым миксам, не сочетается с табачными"
+                rows={3}
+                disabled={saveStatus === 'loading'}
+              />
+            </label>
+
+            <div className="form-grid form-grid--two">
+              <InventorySuggestionInput
+                label="Производитель"
+                value={editorDraft.manufacturer}
+                suggestions={manufacturerOptions}
+                placeholder="Ателье Reserve"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('manufacturer', value)}
+              />
+
+              <InventorySuggestionInput
+                label="Линейка"
+                value={editorDraft.lineName}
+                suggestions={lineNameOptions}
+                placeholder="Signature"
+                disabled={saveStatus === 'loading'}
+                onChange={(value) => updateEditorDraft('lineName', value)}
+              />
+            </div>
+
+            <div className="field field--wide">
+              <span className="field-label">Категория вкуса · можно несколько</span>
+              <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
+                {flavorProfileOptions.map((profile) => {
+                  const active = editorDraft.flavorProfiles.includes(profile);
+                  return (
+                    <button
+                      key={profile}
+                      type="button"
+                      className={active ? 'editor-chip editor-chip--active' : 'editor-chip'}
+                      aria-pressed={active}
+                      onClick={() =>
+                        updateEditorDraft(
+                          'flavorProfiles',
+                          active
+                            ? editorDraft.flavorProfiles.filter((item) => item !== profile)
+                            : [...editorDraft.flavorProfiles, profile],
+                        )
+                      }
+                      disabled={saveStatus === 'loading'}
+                    >
+                      {formatFlavorProfileLabel(profile)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <InventoryTokenEditor
+              label="Вкусы"
+              selected={editorDraft.flavors}
+              suggestions={flavorOptions}
+              placeholder="Выбрать или добавить вкус"
+              disabled={saveStatus === 'loading'}
+              onChange={(value) => updateEditorDraft('flavors', value)}
+            />
+
+            <details
+              className="inventory-extra-filters inventory-editor-extra"
+              open={extraEditorOpen}
+              onToggle={(event) => setExtraEditorOpen(event.currentTarget.open)}
+            >
+              <summary className="inventory-extra-filters__trigger">
+                {extraEditorOpen ? (
+                  <ChevronUp size={14} aria-hidden className="inventory-editor-extra__chevron" />
+                ) : (
+                  <ChevronDown size={14} aria-hidden className="inventory-editor-extra__chevron" />
+                )}
+                <span>Дополнительно</span>
+                {extraFieldsFilledCount > 0 ? (
+                  <span className="inventory-extra-filters__count" aria-hidden="true">
+                    {extraFieldsFilledCount}
+                  </span>
+                ) : null}
+              </summary>
+              <div className="form-grid form-grid--two inventory-editor-extra__grid">
+                <InventorySuggestionInput
+                  label="Страна"
+                  value={editorDraft.country}
+                  suggestions={countryOptions}
+                  placeholder="Например, Россия"
+                  disabled={saveStatus === 'loading'}
+                  onChange={(value) => updateEditorDraft('country', value)}
+                />
+
+                <label className="field">
+                  <span className="field-label">Крепость по отзывам</span>
+                  <input
+                    className="text-input"
+                    value={editorDraft.communityStrength}
+                    onChange={(event) => updateEditorDraft('communityStrength', event.target.value)}
+                    placeholder="Например, выше средней"
+                    disabled={saveStatus === 'loading'}
+                  />
+                </label>
+
+                <InventoryProductionStatusSelect
+                  value={editorDraft.productionStatus}
+                  options={productionStatusOptions}
+                  disabled={saveStatus === 'loading'}
+                  onChange={(value) => updateEditorDraft('productionStatus', value)}
+                />
+
+                <InventoryTokenEditor
+                  label="Мета-теги"
+                  selected={editorDraft.flavorTags}
+                  suggestions={flavorTagOptions}
+                  placeholder="Выбрать или добавить мета-тег"
+                  disabled={saveStatus === 'loading'}
+                  onChange={(value) => updateEditorDraft('flavorTags', value)}
+                />
+              </div>
+            </details>
+          </div>
+
+        </div>
+
+        {saveError ? <p className="tobacco-drawer__error">{saveError}</p> : null}
+
+        <footer className="drawer__foot tobacco-drawer__foot">
+          <div className="tobacco-drawer__foot-left">
+            {editingItem ? (
+              editingItem.archived ? (
+                <button
+                  type="button"
+                  className="btn"
+                  data-variant="ghost"
+                  disabled={pendingRowId === editingItem.id || saveStatus === 'loading'}
+                  onClick={() => {
+                    onArchiveTobacco(editingItem, false);
+                    closeEditor();
+                  }}
+                >
+                  Вернуть из архива
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn"
+                  data-variant="danger"
+                  disabled={pendingRowId === editingItem.id || saveStatus === 'loading'}
+                  title="Архивный табак скрывается из каталога и снимается с наличия"
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `Архивировать «${editingItem.name}»? Табак скроется из каталога и снимется с наличия.`,
+                      )
+                    ) {
+                      return;
+                    }
+                    onArchiveTobacco(editingItem, true);
+                    closeEditor();
+                  }}
+                >
+                  Архивировать
+                </button>
+              )
+            ) : null}
+          </div>
+          <div className="tobacco-drawer__foot-actions">
+            <button
+              type="button"
+              className="btn"
+              data-variant="ghost"
+              onClick={closeEditor}
+              disabled={saveStatus === 'loading'}
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="btn"
+              data-variant="primary"
+              disabled={saveStatus === 'loading'}
+            >
+              {saveStatus === 'loading' ? 'Сохраняем…' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
+            </button>
+          </div>
+        </footer>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+
   const sortHeaderProps = {
     sort,
     fallback: defaultInventoryListResponse.sort,
@@ -948,18 +1264,32 @@ export const InventoryView = ({
         subtitle="Все табаки: карточки htreviews и свои. Банки и расход — на «Полке»."
         meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])} · ${formatMetricValue(meta.inMixesCount)} в миксах`}
         actions={
-          <button
-            type="button"
-            className="btn"
-            data-variant="primary"
-            onClick={openCreateEditor}
-          >
-            <Plus size={14} aria-hidden />
-            Новый табак
-          </button>
+          <>
+            <span className="shelf-seg" role="group" aria-label="Вид каталога">
+              <button type="button" aria-pressed={view === 'all'} onClick={() => onViewChange('all')}>
+                Все табаки
+              </button>
+              <button type="button" aria-pressed={view === 'ideas'} onClick={() => onViewChange('ideas')}>
+                Идеи для закупки
+              </button>
+            </span>
+            <button
+              type="button"
+              className="btn"
+              data-variant="primary"
+              onClick={openCreateEditor}
+            >
+              <Plus size={14} aria-hidden />
+              Новый табак
+            </button>
+          </>
         }
       />
 
+      {editorSheet}
+
+      {view === 'ideas' ? ideas : (
+      <>
       <div className="tobaccos-list">
         <div className="tobaccos-list__toolbar">
           <div className="input tobaccos-list__search">
@@ -1031,313 +1361,6 @@ export const InventoryView = ({
           </div>
         ) : null}
 
-        {/* ↓ table + auxiliary blocks live inside .tobaccos-list; portal'ные
-             Sheet'ы (editor, detail) — после закрытия `.tobaccos-list`. */}
-
-      <Sheet
-        open={editorOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeEditor();
-          }
-        }}
-      >
-        <SheetContent
-          side="right"
-          className="inventory-editor-sheet tobacco-drawer"
-          showCloseButton={false}
-        >
-          <SheetHeader className="drawer__head tobacco-drawer__head">
-            <div className="tobacco-drawer__head-copy">
-              {editorMode === 'edit' ? (
-                <p className="tobacco-drawer__eyebrow">Редактирование табака</p>
-              ) : null}
-              <SheetTitle className="tobacco-drawer__title">
-                {editorMode === 'edit'
-                  ? editorDraft.name.trim() || 'Без названия'
-                  : 'Добавить табак'}
-              </SheetTitle>
-              <SheetDescription className="sr-only">
-                {editorMode === 'edit'
-                  ? 'Обновите позицию каталога.'
-                  : 'Добавьте позицию в каталог.'}
-              </SheetDescription>
-            </div>
-            <button
-              type="button"
-              className="tobacco-drawer__close"
-              onClick={closeEditor}
-              aria-label="Закрыть"
-            >
-              ✕
-            </button>
-          </SheetHeader>
-
-          <form
-            className="tobacco-drawer__form admin-form inventory-editor-form"
-            onSubmit={(event) => void handleEditorSubmit(event)}
-          >
-          <div className="drawer__body tobacco-drawer__body">
-            <div className="inventory-editor-identity">
-              {editorMode === 'create' ? (
-              <div className="inventory-editor-identity__col">
-                <div className="section-h">Полка</div>
-                <div className="inventory-editor-identity__toggle">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={editorDraft.inStock}
-                    className={`toggle ${editorDraft.inStock ? 'toggle--on' : 'toggle--off'}`}
-                    onClick={() => updateEditorDraft('inStock', !editorDraft.inStock)}
-                    disabled={saveStatus === 'loading'}
-                    aria-label="Сразу на полку"
-                    title={editorDraft.inStock ? 'Сразу на полку с одной банкой' : 'Только в каталог'}
-                  >
-                    <span className="toggle__track" aria-hidden="true">
-                      <span className="toggle__thumb" />
-                    </span>
-                  </button>
-                  <span
-                    className="inventory-editor-identity__status"
-                    data-tone={editorDraft.inStock ? 'success' : 'muted'}
-                  >
-                    {editorDraft.inStock ? 'Сразу на полку' : 'Только в каталог'}
-                  </span>
-                </div>
-              </div>
-              ) : null}
-              <div className="inventory-editor-identity__col">
-                <div className="section-h">Крепость</div>
-                <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
-                  {INVENTORY_STRENGTH_PRESETS.map((preset) => {
-                    const active =
-                      editorDraft.officialStrength.trim().toLocaleLowerCase('ru-RU') ===
-                      preset.toLocaleLowerCase('ru-RU');
-                    return (
-                      <button
-                        key={preset}
-                        type="button"
-                        className={active ? 'editor-chip editor-chip--active' : 'editor-chip'}
-                        aria-pressed={active}
-                        onClick={() =>
-                          updateEditorDraft('officialStrength', active ? '' : preset)
-                        }
-                        disabled={saveStatus === 'loading'}
-                      >
-                        {preset}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="inventory-editor-fields">
-              <label className="field field--wide">
-                <span className="field-label">Название</span>
-                <input
-                  className="text-input text-input--name"
-                  value={editorDraft.name}
-                  onChange={(event) => updateEditorDraft('name', event.target.value)}
-                  placeholder="Например, Citrus Breeze"
-                  disabled={saveStatus === 'loading'}
-                />
-              </label>
-
-              <label className="field field--wide">
-                <span className="field-label">Описание для команды</span>
-                <textarea
-                  className="textarea-input"
-                  value={editorDraft.description}
-                  onChange={(event) => updateEditorDraft('description', event.target.value)}
-                  placeholder="Например: подходит к цитрусовым миксам, не сочетается с табачными"
-                  rows={3}
-                  disabled={saveStatus === 'loading'}
-                />
-              </label>
-
-              <div className="form-grid form-grid--two">
-                <InventorySuggestionInput
-                  label="Производитель"
-                  value={editorDraft.manufacturer}
-                  suggestions={manufacturerOptions}
-                  placeholder="Ателье Reserve"
-                  disabled={saveStatus === 'loading'}
-                  onChange={(value) => updateEditorDraft('manufacturer', value)}
-                />
-
-                <InventorySuggestionInput
-                  label="Линейка"
-                  value={editorDraft.lineName}
-                  suggestions={lineNameOptions}
-                  placeholder="Signature"
-                  disabled={saveStatus === 'loading'}
-                  onChange={(value) => updateEditorDraft('lineName', value)}
-                />
-              </div>
-
-              <div className="field field--wide">
-                <span className="field-label">Категория вкуса · можно несколько</span>
-                <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
-                  {flavorProfileOptions.map((profile) => {
-                    const active = editorDraft.flavorProfiles.includes(profile);
-                    return (
-                      <button
-                        key={profile}
-                        type="button"
-                        className={active ? 'editor-chip editor-chip--active' : 'editor-chip'}
-                        aria-pressed={active}
-                        onClick={() =>
-                          updateEditorDraft(
-                            'flavorProfiles',
-                            active
-                              ? editorDraft.flavorProfiles.filter((item) => item !== profile)
-                              : [...editorDraft.flavorProfiles, profile],
-                          )
-                        }
-                        disabled={saveStatus === 'loading'}
-                      >
-                        {formatFlavorProfileLabel(profile)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <InventoryTokenEditor
-                label="Вкусы"
-                selected={editorDraft.flavors}
-                suggestions={flavorOptions}
-                placeholder="Выбрать или добавить вкус"
-                disabled={saveStatus === 'loading'}
-                onChange={(value) => updateEditorDraft('flavors', value)}
-              />
-
-              <details
-                className="inventory-extra-filters inventory-editor-extra"
-                open={extraEditorOpen}
-                onToggle={(event) => setExtraEditorOpen(event.currentTarget.open)}
-              >
-                <summary className="inventory-extra-filters__trigger">
-                  {extraEditorOpen ? (
-                    <ChevronUp size={14} aria-hidden className="inventory-editor-extra__chevron" />
-                  ) : (
-                    <ChevronDown size={14} aria-hidden className="inventory-editor-extra__chevron" />
-                  )}
-                  <span>Дополнительно</span>
-                  {extraFieldsFilledCount > 0 ? (
-                    <span className="inventory-extra-filters__count" aria-hidden="true">
-                      {extraFieldsFilledCount}
-                    </span>
-                  ) : null}
-                </summary>
-                <div className="form-grid form-grid--two inventory-editor-extra__grid">
-                  <InventorySuggestionInput
-                    label="Страна"
-                    value={editorDraft.country}
-                    suggestions={countryOptions}
-                    placeholder="Например, Россия"
-                    disabled={saveStatus === 'loading'}
-                    onChange={(value) => updateEditorDraft('country', value)}
-                  />
-
-                  <label className="field">
-                    <span className="field-label">Крепость по отзывам</span>
-                    <input
-                      className="text-input"
-                      value={editorDraft.communityStrength}
-                      onChange={(event) => updateEditorDraft('communityStrength', event.target.value)}
-                      placeholder="Например, выше средней"
-                      disabled={saveStatus === 'loading'}
-                    />
-                  </label>
-
-                  <InventoryProductionStatusSelect
-                    value={editorDraft.productionStatus}
-                    options={productionStatusOptions}
-                    disabled={saveStatus === 'loading'}
-                    onChange={(value) => updateEditorDraft('productionStatus', value)}
-                  />
-
-                  <InventoryTokenEditor
-                    label="Мета-теги"
-                    selected={editorDraft.flavorTags}
-                    suggestions={flavorTagOptions}
-                    placeholder="Выбрать или добавить мета-тег"
-                    disabled={saveStatus === 'loading'}
-                    onChange={(value) => updateEditorDraft('flavorTags', value)}
-                  />
-                </div>
-              </details>
-            </div>
-
-          </div>
-
-          {saveError ? <p className="tobacco-drawer__error">{saveError}</p> : null}
-
-          <footer className="drawer__foot tobacco-drawer__foot">
-            <div className="tobacco-drawer__foot-left">
-              {editingItem ? (
-                editingItem.archived ? (
-                  <button
-                    type="button"
-                    className="btn"
-                    data-variant="ghost"
-                    disabled={pendingRowId === editingItem.id || saveStatus === 'loading'}
-                    onClick={() => {
-                      onArchiveTobacco(editingItem, false);
-                      closeEditor();
-                    }}
-                  >
-                    Вернуть из архива
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn"
-                    data-variant="danger"
-                    disabled={pendingRowId === editingItem.id || saveStatus === 'loading'}
-                    title="Архивный табак скрывается из каталога и снимается с наличия"
-                    onClick={() => {
-                      if (
-                        !window.confirm(
-                          `Архивировать «${editingItem.name}»? Табак скроется из каталога и снимется с наличия.`,
-                        )
-                      ) {
-                        return;
-                      }
-                      onArchiveTobacco(editingItem, true);
-                      closeEditor();
-                    }}
-                  >
-                    Архивировать
-                  </button>
-                )
-              ) : null}
-            </div>
-            <div className="tobacco-drawer__foot-actions">
-              <button
-                type="button"
-                className="btn"
-                data-variant="ghost"
-                onClick={closeEditor}
-                disabled={saveStatus === 'loading'}
-              >
-                Отмена
-              </button>
-              <button
-                type="submit"
-                className="btn"
-                data-variant="primary"
-                disabled={saveStatus === 'loading'}
-              >
-                {saveStatus === 'loading' ? 'Сохраняем…' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
-              </button>
-            </div>
-          </footer>
-          </form>
-        </SheetContent>
-      </Sheet>
 
       {extraFilterGroupsAvailable ? (
         <details className="inventory-extra-filters">
@@ -1456,6 +1479,9 @@ export const InventoryView = ({
                 {...sortHeaderProps}
               />
               <th scope="col">Вкус / профиль</th>
+              <th className="inventory-table__stat" scope="col">★ htreviews</th>
+              <th className="inventory-table__stat" scope="col">Оценок</th>
+              <th className="inventory-table__stat" scope="col">Просмотров</th>
               <th className="inventory-table__stock" scope="col">Полка</th>
               <SortableHeader
                 label="Миксов"
@@ -1551,6 +1577,11 @@ export const InventoryView = ({
                         ) : null}
                       </div>
                     </td>
+                    <td className="inventory-table__stat">{formatHtRating(item.rating ?? null)}</td>
+                    <td className="inventory-table__stat">
+                      {item.ratingsCount == null ? STRENGTH_DASH : formatMetricValue(item.ratingsCount)}
+                    </td>
+                    <td className="inventory-table__stat">{formatViews(item.viewsCount ?? null)}</td>
                     <td className="inventory-table__stock" onClick={(event) => event.stopPropagation()}>
                       {shelfStatus === 'active' ? (
                         <span className="inventory-shelf-cell">
@@ -1639,7 +1670,7 @@ export const InventoryView = ({
               })
             ) : (
               <tr>
-                <td className="inventory-table__empty" colSpan={7}>
+                <td className="inventory-table__empty" colSpan={10}>
                   По выбранным фильтрам ничего не найдено.
                 </td>
               </tr>
@@ -1658,6 +1689,8 @@ export const InventoryView = ({
         pageSizeOptions={inventoryPageSizeOptions}
         onPageSizeChange={onPageSizeChange}
       />
+      </>
+      )}
 
       {detailModal}
     </section>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { HtreviewsLink } from '@/components/ui/htreviews-link';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { formatCount, type ShelfCard as ShelfCardData, type ShelfRow, type ShelfSettings } from '@/contracts';
 import type { ShelfPatch } from '@/hooks/use-shelf';
@@ -186,6 +187,7 @@ export const ShelfCard = ({
             <button type="button" className="shelf-link" onClick={() => onOpenCatalog(row)}>
               Карточка в каталоге
             </button>
+            {row.tobacco.sourceUrl ? <HtreviewsLink href={row.tobacco.sourceUrl} /> : null}
           </div>
         </SheetHeader>
 
