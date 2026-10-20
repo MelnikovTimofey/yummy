@@ -4,7 +4,7 @@
 
 ## Поверхности
 
-- `apps/aroma-web` — гостевой `Арома Ателье` (без авторизации);
+- `apps/aroma-web` — гостевой `Арома Ателье` (без обязательного входа; кабинет — через Telegram);
 - `apps/master-web` — backoffice `Мастер`;
 - `apps/backend` — Node/TypeScript + Prisma + Postgres;
 - `services/telegram-bot` — Telegram-бот;
