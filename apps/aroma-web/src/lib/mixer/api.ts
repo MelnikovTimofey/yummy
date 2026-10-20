@@ -1,3 +1,4 @@
+import { fetchAsGuest } from '../guest-client';
 import { normalizeEvaluation, normalizePalette } from './normalize';
 import type { BowlComponent, SwipeRecord } from './types';
 
@@ -17,15 +18,18 @@ export class MixerApiError extends Error {
   }
 }
 
-const request = async (path: string, body?: unknown): Promise<unknown> => {
+// `asGuest` — запрос с токеном кабинета: собранный микс попадает в историю гостя.
+const request = async (path: string, body?: unknown, { asGuest = false } = {}): Promise<unknown> => {
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    const init: RequestInit = {
       method: body === undefined ? 'GET' : 'POST',
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(requestTimeoutMs),
-    });
+    };
+    const url = `${apiBaseUrl}${path}`;
+    response = asGuest ? await fetchAsGuest(url, init, { anonymousRetry: true }) : await fetch(url, init);
   } catch (cause) {
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
     throw new MixerApiError(
@@ -60,7 +64,11 @@ export const sendCustomMixSmoke = async (payload: {
   swipes: SwipeRecord[];
 }) => {
   // Backend принимает не больше 500 свайпов, а колода бесконечная: шлём последние.
-  const response = await request('/guest/events/custom-mix-smoke', { ...payload, swipes: payload.swipes.slice(-MAX_SWIPES) });
+  const response = await request(
+    '/guest/events/custom-mix-smoke',
+    { ...payload, swipes: payload.swipes.slice(-MAX_SWIPES) },
+    { asGuest: true },
+  );
   const record = typeof response === 'object' && response !== null ? (response as Record<string, unknown>) : {};
   return { harmony: typeof record.harmony === 'number' ? Math.round(record.harmony) : null };
 };
