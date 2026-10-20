@@ -1,31 +1,73 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadReelFeed, orderReelFeed, reelCounter, reelStrip } from './reel-feed';
+import type { GuestForYouPersonal } from './for-you-copy';
+import { loadReelFeed, reelCounter, reelEntries, reelStrip } from './reel-feed';
 
 const mixes = (...ids: string[]) => ids.map((id) => ({ id }));
-const ids = (items: Array<{ id: string }>) => items.map((item) => item.id);
-const TASTE = { likedProfiles: ['minty'], likedFlavors: ['черника'] };
+const ids = (items: Array<{ mix: { id: string } }>) => items.map((item) => item.mix.id);
 
-test('orderReelFeed: сначала подбор по онбордингу, затем остальной каталог без повторов', () => {
-  const feed = orderReelFeed(mixes('c', 'a'), mixes('a', 'b', 'c', 'd'));
+test('reelEntries: сначала подбор по онбордингу, затем остальной каталог без повторов', () => {
+  const feed = reelEntries(mixes('c', 'a'), mixes('a', 'b', 'c', 'd'));
   assert.deepEqual(ids(feed), ['c', 'a', 'b', 'd']);
+  assert.ok(feed.every((entry) => entry.slot === null && entry.reason === null && entry.hint === null));
 });
 
-test('orderReelFeed: без подбора лента — каталог в его порядке', () => {
-  assert.deepEqual(ids(orderReelFeed([], mixes('a', 'b'))), ['a', 'b']);
+test('reelEntries: без подбора лента — каталог в его порядке', () => {
+  assert.deepEqual(ids(reelEntries([], mixes('a', 'b'))), ['a', 'b']);
 });
 
-test('orderReelFeed: повтор внутри подбора не дублирует рилс', () => {
-  assert.deepEqual(ids(orderReelFeed(mixes('a', 'a'), mixes('a', 'b'))), ['a', 'b']);
+test('reelEntries: повтор внутри подбора не дублирует рилс', () => {
+  assert.deepEqual(ids(reelEntries(mixes('a', 'a'), mixes('a', 'b'))), ['a', 'b']);
 });
 
-const fakeApi = (recommended: string[], catalog: string[]) => {
-  const calls = { recommendations: [] as unknown[], catalog: 0 };
+// «Для вас» вошедшего гостя (#265): те же слоты и фразы, что на Подборе (#245).
+const forYou = (hint: GuestForYouPersonal<{ id: string }>['hint']): GuestForYouPersonal<{ id: string }> => ({
+  mode: 'personal',
+  fresh: ['f1', 'f2', 'f3', 'f4', 'f5'].map((id) => ({
+    mix: { id },
+    reason: { kind: 'taste', profiles: [], flavors: ['черника'], likeMixName: null },
+  })),
+  sidestep: [{ mix: { id: 's1' }, reason: { kind: 'sidestep-neutral', toProfile: 'citrus' } }],
+  again: [{ mix: { id: 'a1' }, reason: { kind: 'again', rating: 5, timesChosen: 5 } }],
+  hint,
+});
+
+test('reelEntries: «Для вас» — новое во вкусе (герой и ещё три), шаг в сторону, снова, затем каталог', () => {
+  const feed = reelEntries(forYou(null), mixes('a1', 'x', 'f1', 'f5', 'y'));
+  assert.deepEqual(ids(feed), ['f1', 'f2', 'f3', 'f4', 's1', 'a1', 'x', 'f5', 'y']);
+  assert.deepEqual(
+    feed.slice(0, 6).map((entry) => entry.slot),
+    ['Новое в вашем вкусе', 'Новое в вашем вкусе', 'Новое в вашем вкусе', 'Новое в вашем вкусе', 'Шаг в сторону', 'Снова'],
+  );
+  assert.equal(feed[0].reason, 'Черника — рядом с вашими любимыми');
+  assert.equal(feed[4].reason, 'Попробуйте что-то другое');
+  assert.equal(feed[5].reason, 'Ваша оценка ★ 5 · выбирали 5 раз');
+  // После «Для вас» — без слота и причины, строки истории нет.
+  assert.deepEqual(feed.slice(6).map((entry) => [entry.slot, entry.reason]), [[null, null], [null, null], [null, null]]);
+  assert.ok(feed.every((entry) => entry.hint === null));
+});
+
+test('reelEntries: подсказка «Давно на одном вкусе» — первым «Шаг в сторону» с её текстом', () => {
+  const feed = reelEntries(forYou({ kind: 'same-mix', mixName: 'Морозная ягода', count: 4, outOf: 5 }), []);
+  assert.deepEqual(ids(feed), ['s1', 'f1', 'f2', 'f3', 'f4', 'a1']);
+  assert.equal(feed[0].slot, 'Шаг в сторону');
+  assert.equal(feed[0].hint, 'Четыре из пяти последних — «Морозная ягода». Мастер уважает постоянство, но рядом есть кое-что.');
+  assert.ok(feed.slice(1).every((entry) => entry.hint === null));
+});
+
+test('reelStrip: первые восемь рилсов в порядке ленты', () => {
+  const catalog = mixes('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j');
+  assert.deepEqual(ids(reelStrip(mixes('j', 'c'), catalog)), ['j', 'c', 'a', 'b', 'd', 'e', 'f', 'g']);
+  assert.deepEqual(ids(reelStrip(forYou(null), catalog)), ['f1', 'f2', 'f3', 'f4', 's1', 'a1', 'a', 'b']);
+});
+
+const fakeApi = (head: ReturnType<typeof forYou> | Array<{ id: string }>, catalog: string[]) => {
+  const calls = { head: 0, catalog: 0 };
   return {
     calls,
-    fetchRecommendations: async (taste: unknown) => {
-      calls.recommendations.push(taste);
-      return mixes(...recommended);
+    fetchHead: async () => {
+      calls.head += 1;
+      return head;
     },
     fetchCatalog: async () => {
       calls.catalog += 1;
@@ -34,55 +76,29 @@ const fakeApi = (recommended: string[], catalog: string[]) => {
   };
 };
 
-test('loadReelFeed: гость прошёл онбординг — подбор по его вкусам, затем каталог', async () => {
-  const api = fakeApi(['b'], ['a', 'b', 'c']);
-  const feed = await loadReelFeed({ taste: TASTE, recommendations: null, catalog: null, ...api });
+test('loadReelFeed: голова ленты и каталог не загружены — по одному запросу', async () => {
+  const api = fakeApi(mixes('b'), ['a', 'b', 'c']);
+  const feed = await loadReelFeed({ head: null, catalog: null, ...api });
   assert.deepEqual(ids(feed), ['b', 'a', 'c']);
-  assert.deepEqual(api.calls.recommendations, [TASTE]);
-  assert.equal(api.calls.catalog, 1);
+  assert.deepEqual(api.calls, { head: 1, catalog: 1 });
 });
 
-test('loadReelFeed: гость не прошёл онбординг — лента начинается с каталога, без запроса подбора', async () => {
-  const api = fakeApi(['b'], ['a', 'b']);
-  const feed = await loadReelFeed({ taste: null, recommendations: null, catalog: null, ...api });
+test('loadReelFeed: уже загруженные «Для вас» и каталог переиспользуются без запросов', async () => {
+  const api = fakeApi(mixes('x'), ['y']);
+  const feed = await loadReelFeed({ head: forYou(null), catalog: mixes('z'), ...api });
+  assert.deepEqual(ids(feed), ['f1', 'f2', 'f3', 'f4', 's1', 'a1', 'z']);
+  assert.deepEqual(api.calls, { head: 0, catalog: 0 });
+});
+
+test('loadReelFeed: пустая голова (онбординг не пройден) — лента с каталога, без запроса подбора', async () => {
+  const api = fakeApi(mixes('b'), ['a', 'b']);
+  const feed = await loadReelFeed({ head: [], catalog: null, ...api });
   assert.deepEqual(ids(feed), ['a', 'b']);
-  assert.deepEqual(api.calls.recommendations, []);
-});
-
-test('loadReelFeed: пустые вкусы — как без онбординга', async () => {
-  const api = fakeApi(['b'], ['a', 'b']);
-  await loadReelFeed({ taste: { likedProfiles: [], likedFlavors: [] }, recommendations: null, catalog: null, ...api });
-  assert.deepEqual(api.calls.recommendations, []);
-});
-
-test('loadReelFeed: уже загруженные каталог и подбор переиспользуются без запросов', async () => {
-  const api = fakeApi(['x'], ['y']);
-  const feed = await loadReelFeed({
-    taste: TASTE,
-    recommendations: mixes('c'),
-    catalog: mixes('a', 'c'),
-    ...api,
-  });
-  assert.deepEqual(ids(feed), ['c', 'a']);
-  assert.deepEqual(api.calls.recommendations, []);
-  assert.equal(api.calls.catalog, 0);
-});
-
-test('loadReelFeed: загруженный каталог переиспользуется и при свежем подборе', async () => {
-  const api = fakeApi(['c'], ['y']);
-  const feed = await loadReelFeed({ taste: TASTE, recommendations: null, catalog: mixes('a', 'c'), ...api });
-  assert.deepEqual(ids(feed), ['c', 'a']);
-  assert.equal(api.calls.catalog, 0);
+  assert.deepEqual(api.calls, { head: 0, catalog: 1 });
 });
 
 test('reelCounter: номер и всего — двумя цифрами', () => {
   assert.equal(reelCounter(4, 33), '05 · из 33');
   assert.equal(reelCounter(0, 7), '01 · из 07');
   assert.equal(reelCounter(119, 120), '120 · из 120');
-});
-
-test('reelStrip: первые восемь миксов в порядке ленты', () => {
-  const catalog = mixes('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j');
-  assert.deepEqual(ids(reelStrip(mixes('j', 'c'), catalog)), ['j', 'c', 'a', 'b', 'd', 'e', 'f', 'g']);
-  assert.deepEqual(ids(reelStrip([], mixes('a', 'b'))), ['a', 'b']);
 });

@@ -420,3 +420,29 @@ test('Aroma reel strip above recommendations opens the feed on the tapped mix', 
   await expect(page.locator('.reel-count')).toHaveText(new RegExp(`^0${index + 1} · из `));
   await expect(page.locator('.reel-reveal .reel-name')).toHaveText(name);
 });
+
+// Сердечко на рилсе (#265): у гостя без входа — та же шторка «Избранное живёт
+// в кабинете», что в карточке микса (#244); «Не сейчас» возвращает в ленту.
+test('Aroma anonymous heart on a reel offers the cabinet and «Не сейчас» closes the prompt', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Рилсы', exact: true }).click();
+  const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
+  const heart = reel.getByRole('button', { name: 'В избранное' });
+  await expect(heart).toHaveAttribute('aria-pressed', 'false');
+  await heart.click();
+
+  const prompt = page.getByRole('dialog', { name: 'Избранное живёт в кабинете' });
+  await expect(prompt).toBeVisible();
+  await expect(prompt.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
+  await prompt.getByRole('button', { name: 'Не сейчас' }).click();
+  await expect(prompt).toHaveCount(0);
+  await expect(page.locator('.reel-count')).toHaveText(/^01 · из /);
+  await expect(reel.getByRole('button', { name: 'Покурить' })).toBeVisible();
+});

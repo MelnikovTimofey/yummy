@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { ChevronUp, Play } from 'lucide-react';
 import { CTA, RatingPill } from '@/components/aroma';
+import { HeartButton } from '@/components/cabinet/HeartButton';
+import { HINT_TITLE } from '@/lib/for-you-copy';
 import { profileLabelMap } from '@/lib/profile-labels';
 import { ReelStill } from './ReelStill';
 
@@ -23,6 +25,13 @@ const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().
 
 export type ReelProps = {
   mix: ReelFeedMix;
+  /** «Для вас» вошедшего гостя (#265): надпись слота вместо профилей, причина
+   *  под названием и подсказка «Давно на одном вкусе». */
+  slot: string | null;
+  reason: string | null;
+  bubble: string | null;
+  favorite: boolean;
+  onFavorite: () => void;
   /** Активный рилс играет сцену; соседи — статичный кадр. */
   active: boolean;
   animated: boolean;
@@ -36,7 +45,24 @@ export type ReelProps = {
   onChoose: () => void;
 };
 
-export function Reel({ mix, active, animated, paused, hint, gone, choosing, error, onTogglePause, onOpen, onChoose }: ReelProps) {
+export function Reel({
+  mix,
+  slot,
+  reason,
+  bubble,
+  favorite,
+  onFavorite,
+  active,
+  animated,
+  paused,
+  hint,
+  gone,
+  choosing,
+  error,
+  onTogglePause,
+  onOpen,
+  onChoose,
+}: ReelProps) {
   const components = [...mix.components].sort((left, right) => right.proportion - left.proportion);
   const profiles = mix.flavorProfiles.slice(0, 3).map((profile) => profileLabelMap[profile] ?? profile);
   const playing = active && animated;
@@ -66,8 +92,18 @@ export function Reel({ mix, active, animated, paused, hint, gone, choosing, erro
             Листайте вверх
           </span>
         ) : null}
-        {profiles.length ? <p className="aroma-caps reel-profiles">{profiles.join(' · ')}</p> : null}
-        <h2 className="reel-name">{mix.name}</h2>
+        {bubble ? (
+          <section className="reel-bubble" aria-label={HINT_TITLE}>
+            <p className="aroma-caps">{HINT_TITLE}</p>
+            <p className="reel-bubble-text">{bubble}</p>
+          </section>
+        ) : null}
+        {slot || profiles.length ? <p className="aroma-caps reel-profiles">{slot ?? profiles.join(' · ')}</p> : null}
+        <div className="reel-name-row">
+          <h2 className="reel-name">{mix.name}</h2>
+          <HeartButton on={favorite} onClick={onFavorite} />
+        </div>
+        {reason ? <p className="reel-reason">{reason}</p> : null}
         {mix.ratingsCount > 0 ? (
           <div className="reel-meta">
             <RatingPill rating={mix.avgRating} count={mix.ratingsCount} />
