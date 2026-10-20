@@ -13,6 +13,10 @@ export function orderReelFeed<T extends { id: string }>(recommended: T[], catalo
   });
 }
 
+// Полоса над Подбором (#264): первые восемь рилсов ленты в её порядке.
+export const reelStrip = <T extends { id: string }>(recommended: T[], catalog: T[]): T[] =>
+  orderReelFeed(recommended, catalog).slice(0, 8);
+
 /** `taste: null` — гость не прошёл онбординг. `recommendations` и `catalog` —
  *  уже загруженные выдачи: их не запрашиваем повторно. */
 export async function loadReelFeed<T extends { id: string }>({

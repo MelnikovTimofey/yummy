@@ -18,6 +18,7 @@ import { MixerMasterCard, type MasterCardComponent } from '@/components/mixer/Mi
 import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { Feed } from '@/components/reels/Feed';
 import { FeedEmpty } from '@/components/reels/FeedEmpty';
+import { ReelStrip } from '@/components/reels/ReelStrip';
 import {
   customDescription,
   isFavorite,
@@ -63,7 +64,7 @@ import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
-import { loadReelFeed } from '@/lib/reel-feed';
+import { loadReelFeed, reelStrip } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
@@ -1271,6 +1272,9 @@ export const App = () => {
   // Миксы, на которые smoke-cta ответил 404: табак кончился, пока гость листал.
   const [goneReels, setGoneReels] = useState<string[]>([]);
   const [reelChoice, setReelChoice] = useState<{ mixId: string; status: 'loading' | 'error'; error: string } | null>(null);
+  // Подбор по вкусам для ленты и полосы у вошедшего гостя: его Подбор — «Для вас»,
+  // поэтому подбор по вкусам запрашивается отдельно и живёт до смены вкусов.
+  const [tasteRecs, setTasteRecs] = useState<{ key: string; items: MixCard[] } | null>(null);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -2081,12 +2085,48 @@ export const App = () => {
     }
   };
 
-  // «Рилсы» из панели — лента с начала. Подбор и каталог, если уже загружены,
-  // не запрашиваются заново; у вошедшего Подбор — «Для вас», поэтому подбор по
-  // вкусам для ленты запрашивается отдельно (#265 заменит его на «Для вас»).
-  const openReels = async () => {
+  const hasTaste = onboardingDone && (likedProfiles.length > 0 || likedFlavors.length > 0);
+  const tasteKey = JSON.stringify([likedProfiles, likedFlavors]);
+  // null — подбор по вкусам ещё не загружен.
+  const feedRecommendations: MixCard[] | null = !hasTaste
+    ? []
+    : signedIn
+      ? tasteRecs?.key === tasteKey
+        ? tasteRecs.items
+        : null
+      : recommendationStatus === 'ready'
+        ? recommendations
+        : null;
+  const stripItems =
+    feedRecommendations && catalogStatus === 'ready' ? reelStrip(feedRecommendations, catalogSourceMixes) : [];
+
+  // Полоса у вошедшего: подбор по вкусам — в фоне, Подбор его не ждёт.
+  useEffect(() => {
+    if (!accessGranted || !signedIn || view !== 'recommendations' || !hasTaste || tasteRecs?.key === tasteKey) {
+      return;
+    }
+    let cancelled = false;
+    fetchRecommendations({ likedProfiles, likedFlavors })
+      .then((items) => {
+        if (!cancelled) setTasteRecs({ key: tasteKey, items });
+      })
+      .catch(() => {
+        // Без полосы Подбор работает как прежде.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessGranted, signedIn, view, hasTaste, tasteKey, tasteRecs?.key]);
+
+  // «Рилсы» из панели — лента с начала, кружок полосы (#264) — с его номера:
+  // полоса и лента собираются из одних источников, порядок совпадает. Подбор и
+  // каталог, если уже загружены, не запрашиваются заново (#265 заменит подбор
+  // вошедшего на «Для вас»).
+  const openReels = async (start = 0) => {
     const loadId = reels.loadId + 1;
-    setReelIndex(0);
+    const key = tasteKey;
+    setReelIndex(start);
     setReelSwiped(false);
     setReelChoice(null);
     setView('reels');
@@ -2094,9 +2134,13 @@ export const App = () => {
     try {
       const items = await loadReelFeed<MixCard>({
         taste: onboardingDone ? { likedProfiles, likedFlavors } : null,
-        recommendations: !signedIn && recommendationStatus === 'ready' ? recommendations : null,
+        recommendations: feedRecommendations,
         catalog: catalogStatus === 'ready' ? catalogSourceMixes : null,
-        fetchRecommendations: fetchRecommendations,
+        fetchRecommendations: async (taste) => {
+          const recommended = await fetchRecommendations(taste);
+          if (signedIn) setTasteRecs({ key, items: recommended });
+          return recommended;
+        },
         fetchCatalog: fetchCatalogMixes,
       });
       setReels((current) => (current.loadId === loadId ? { status: 'ready', items, error: '', loadId } : current));
@@ -3403,6 +3447,9 @@ export const App = () => {
             <main className={view === 'intro' ? 'content content-intro' : 'content'}>
               {view === 'intro' ? renderIntroView() : null}
               {view === 'onboarding' ? renderOnboardingView() : null}
+              {view === 'recommendations' && stripItems.length ? (
+                <ReelStrip items={stripItems} onOpen={(index) => void openReels(index)} />
+              ) : null}
               {view === 'recommendations' ? renderRecommendationsView() : null}
               {view === 'showcase' ? renderShowcaseView() : null}
               {view === 'catalog' ? renderCatalogView() : null}

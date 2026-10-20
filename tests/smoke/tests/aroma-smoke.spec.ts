@@ -390,3 +390,33 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(counter).toHaveText(/^02 · из /);
   await expect(reelsTab).toHaveAttribute('aria-current', 'page');
 });
+
+// Полоса рилсов над Подбором (#264): кружки в порядке ленты, кружок открывает
+// раздел «Рилсы» на своём миксе. Remotion на Подборе не рендерится.
+test('Aroma reel strip above recommendations opens the feed on the tapped mix', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.locator('.aroma-onboarding-profile-grid button').first().click();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('button', { name: 'Показать подбор' }).click();
+
+  const strip = page.getByRole('list', { name: 'Рилсы' });
+  await expect(strip).toBeVisible();
+  const circles = strip.getByRole('button');
+  const count = await circles.count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThanOrEqual(8);
+
+  const index = count > 1 ? 1 : 0;
+  const name = (await circles.nth(index).innerText()).trim();
+  await circles.nth(index).click();
+
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  await expect(nav.getByRole('button', { name: 'Рилсы', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.reel-count')).toHaveText(new RegExp(`^0${index + 1} · из `));
+  await expect(page.locator('.reel-reveal .reel-name')).toHaveText(name);
+});

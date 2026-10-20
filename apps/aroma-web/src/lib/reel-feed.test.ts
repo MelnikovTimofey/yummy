@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadReelFeed, orderReelFeed, reelCounter } from './reel-feed';
+import { loadReelFeed, orderReelFeed, reelCounter, reelStrip } from './reel-feed';
 
 const mixes = (...ids: string[]) => ids.map((id) => ({ id }));
 const ids = (items: Array<{ id: string }>) => items.map((item) => item.id);
@@ -79,4 +79,10 @@ test('reelCounter: номер и всего — двумя цифрами', () =
   assert.equal(reelCounter(4, 33), '05 · из 33');
   assert.equal(reelCounter(0, 7), '01 · из 07');
   assert.equal(reelCounter(119, 120), '120 · из 120');
+});
+
+test('reelStrip: первые восемь миксов в порядке ленты', () => {
+  const catalog = mixes('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j');
+  assert.deepEqual(ids(reelStrip(mixes('j', 'c'), catalog)), ['j', 'c', 'a', 'b', 'd', 'e', 'f', 'g']);
+  assert.deepEqual(ids(reelStrip([], mixes('a', 'b'))), ['a', 'b']);
 });
