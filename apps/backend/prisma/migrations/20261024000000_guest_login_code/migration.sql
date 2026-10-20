@@ -18,4 +18,3 @@ CREATE TABLE "GuestLoginCode" (
 
 -- CreateIndex
 CREATE INDEX "GuestLoginCode_expiresAt_idx" ON "GuestLoginCode"("expiresAt");
-
