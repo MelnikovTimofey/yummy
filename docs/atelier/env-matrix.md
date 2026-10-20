@@ -20,6 +20,7 @@
 | `PORT` | порт backend | `3021` |
 | `HOST` | bind host | `0.0.0.0` |
 | `APP_NAME` | service name | `atelier-backend` |
+| `TZ` | часовой пояс точки: границы дня дашборда, недели расхода, месяц трат | `Europe/Volgograd` (задан в `docker-compose.prod.yml`) |
 | `ATELIER_AUTOMATION_KEY` | M2M auth для бота | secret |
 | `ATELIER_TOKEN_SECRET` | подпись staff token | secret |
 | `ATELIER_TOKEN_TTL_HOURS` | TTL staff token | `24` |
