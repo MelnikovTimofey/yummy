@@ -216,3 +216,39 @@ test('fetchHtReviewsCatalogSnapshot extends brand pages via paginated postData r
     },
   ]);
 });
+
+// Issue #249: страница бренда Blansh не показывает ни табаков, ни ссылок на
+// линейки — при обходе по списку брендов известные линейки обходятся отдельно.
+test('fetchHtReviewsCatalogSnapshot обходит известные линейки явно заданных брендов', async (t) => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: string[] = [];
+
+  globalThis.fetch = (async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetchCalls.push(url);
+
+    if (url === 'https://htreviews.org/tobaccos/blansh') {
+      return htmlResponse('<div class="tobacco_list_items" data-count="0"></div>');
+    }
+    if (url === 'https://htreviews.org/tobaccos/blansh/main') {
+      return htmlResponse(buildBrandPage('blansh', 'Blansh', 'Kiwi Crush', 'kivi-krash'));
+    }
+
+    throw new Error(`Unexpected fetch url in test: ${url}`);
+  }) as typeof globalThis.fetch;
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const snapshot = await fetchHtReviewsCatalogSnapshot({
+    brandUrls: ['https://htreviews.org/tobaccos/blansh'],
+    knownLineUrls: ['https://htreviews.org/tobaccos/blansh/main'],
+    fetchDetails: false,
+    delayMs: 0,
+    requestTimeoutMs: 100,
+  });
+
+  assert.deepEqual(snapshot.items.map((item) => item.name), ['Kiwi Crush']);
+  assert.equal(fetchCalls.filter((url) => url === 'https://htreviews.org/tobaccos/blansh/main').length, 1);
+});
