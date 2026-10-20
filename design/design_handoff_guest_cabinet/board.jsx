@@ -572,8 +572,8 @@ function Frame({ name, note, children }) {
 }
 
 const SHOTS = [
-  { id: 'fy-a', group: 'foryou', name: '«Для вас» A · по слотам', note: 'Гость четыре раза из пяти выбрал «Морозную ягоду». Сверху подсказка, дальше «Новое в вашем вкусе», «Шаг в сторону» и один повтор в конце.', props: { variant: 'A' } },
-  { id: 'fy-b', group: 'foryou', name: '«Для вас» B · одним списком', note: 'Тот же набор: герой и строки с причиной. Повтор и шаг в сторону помечены капсами внутри строки.', props: { variant: 'B' } },
+  { id: 'fy-a', group: 'foryou', name: '«Для вас» A · по слотам — выбран', note: 'Гость четыре раза из пяти выбрал «Морозную ягоду». Сверху подсказка, дальше «Новое в вашем вкусе», «Шаг в сторону» и один повтор в конце.', props: { variant: 'A' } },
+  { id: 'fy-b', group: 'foryou', name: '«Для вас» B · одним списком — отвергнут', note: 'Тот же набор: герой и строки с причиной. Повтор и шаг в сторону помечены капсами внутри строки.', props: { variant: 'B' } },
   { id: 'fy-a-varied', group: 'foryou', name: 'A · разные выборы', note: 'Пузыря нет — подсказки нет. Состав выдачи по тем же правилам.', props: { variant: 'A', persona: 'varied' } },
   { id: 'fy-cold', group: 'foryou', name: 'Меньше трёх выборов', note: 'Подбор по сохранённому онбордингу, как сейчас. Сверху одна строка, без призыва выбирать чаще.', props: { persona: 'cold' } },
   { id: 'cab-anon', group: 'cabinet', name: 'Кабинет без входа', note: 'Зачем входить, согласие и «Войти через Telegram». CTA неактивна, пока нет согласия.', props: { view: 'cabinet', logged: false } },
@@ -618,7 +618,7 @@ function Board() {
         <p className="board-text">Вход через Telegram, история выборов, избранное и «Для вас» с защитой от пузыря одного вкуса. Правила — PRD §4, §6.5, §8.9. Все экраны кликабельны: вкладки, карточки, сердечко, вход и удаление. Миксы — витрина прода на 15 октября.</p>
       </header>
       <section className="board-section" id="foryou">
-        <h2 className="board-h2">«Для вас» — выбрать A или B</h2>
+        <h2 className="board-h2">«Для вас» — выбран A</h2>
         <div className="board-row">{section('foryou')}</div>
       </section>
       <section className="board-section" id="cabinet">
