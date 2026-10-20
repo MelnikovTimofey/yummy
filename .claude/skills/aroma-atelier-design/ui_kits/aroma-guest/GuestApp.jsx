@@ -1,5 +1,5 @@
-// Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл / миксер) → карточка → подтверждение.
-const { GuestTab, OnboardingProgress } = window.DesignSystem_1aef33;
+// Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл / миксер / кабинет) → карточка → подтверждение.
+const { GuestTab, OnboardingProgress, MixRow } = window.DesignSystem_1aef33;
 const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ConfirmationScreen, GuestSelectedBar, Icon } = window;
 const MOCK = window.AROMA_MOCK;
 
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: 'showcase', label: 'Витрина', icon: 'GalleryHorizontalEnd' },
   { id: 'catalog', label: 'Каталог', icon: 'Search' },
   { id: 'mixer', label: 'Миксер', icon: 'Blend' },
+  { id: 'cabinet', label: 'Кабинет', icon: 'CircleUserRound' },
 ];
 
 function BottomNav({ value, onChange }) {
@@ -36,6 +37,22 @@ function MixerStub({ onBack }) {
   );
 }
 
+// Кабинета в ките нет: вход через Telegram, история и «Для вас» — в design/design_handoff_guest_cabinet/.
+// Заглушка показывает только избранное, которое гость отметил сердечком в карточке микса.
+function CabinetStub({ favorites, onOpen }) {
+  return (
+    <section className="kit-cabinet">
+      <h1 className="kit-cabinet-title">Кабинет</h1>
+      <p className="aroma-caps">{'Избранное · ' + favorites.length}</p>
+      {favorites.length ? (
+        favorites.map((mix) => <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} onClick={() => onOpen(mix, 'catalog')} />)
+      ) : (
+        <p className="guest-status">Пока пусто. Сердечко на карточке микса — и он здесь.</p>
+      )}
+    </section>
+  );
+}
+
 function GuestApp() {
   const [view, setView] = React.useState('access');
   const [code, setCode] = React.useState('');
@@ -54,6 +71,7 @@ function GuestApp() {
   const [rating, setRating] = React.useState(0);
   const [selected, setSelected] = React.useState(null);
   const [mixerReturn, setMixerReturn] = React.useState('recommendations');
+  const [favoriteIds, setFavoriteIds] = React.useState([]);
 
   const toggle = (setter) => (value) => setter((cur) => (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]));
 
@@ -94,7 +112,8 @@ function GuestApp() {
     setAccessError(''); setView('intro');
   };
 
-  const navView = ['recommendations', 'showcase', 'catalog', 'rail'].includes(view) ? view : null;
+  const toggleFavorite = (mix) => setFavoriteIds((cur) => (cur.includes(mix.id) ? cur.filter((id) => id !== mix.id) : [...cur, mix.id]));
+  const navView = ['recommendations', 'showcase', 'catalog', 'rail', 'cabinet'].includes(view) ? view : null;
   const goNav = (tab) => {
     if (tab === 'mixer') setMixerReturn(view);
     setView(tab);
@@ -174,6 +193,9 @@ function GuestApp() {
                   onReset={() => { setQuery(''); setCatalogFilters([]); }}
                 />
               ) : null}
+              {view === 'cabinet' ? (
+                <CabinetStub favorites={MOCK.mixes.filter((mix) => favoriteIds.includes(mix.id))} onOpen={openMix} />
+              ) : null}
               {view === 'rail' && rail ? (
                 <RailScreen rail={rail} filters={railFilters} toggleFilter={(p) => (p === null ? setRailFilters([]) : toggle(setRailFilters)(p))} onBack={() => setView('showcase')} onOpen={openMix} />
               ) : null}
@@ -185,7 +207,7 @@ function GuestApp() {
       {catalogFiltersOpen ? (
         <CatalogFiltersSheet filters={catalogFilters} onToggle={toggleCatalogFilter} onReset={() => setCatalogFilters([])} resultCount={catalogResults.length} onClose={() => setCatalogFiltersOpen(false)} />
       ) : null}
-      <MixSheet state={sheet} rating={rating} onRate={setRating} onClose={() => setSheet(null)} onChoose={chooseMix} />
+      <MixSheet state={sheet} rating={rating} onRate={setRating} onClose={() => setSheet(null)} onChoose={chooseMix} favorite={Boolean(sheet && favoriteIds.includes(sheet.mix.id))} onFavorite={toggleFavorite} />
     </div>
   );
 }
