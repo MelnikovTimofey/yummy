@@ -78,6 +78,7 @@ const shelfInclude = {
       officialStrength: true,
       communityStrength: true,
       archived: true,
+      sourceUrl: true,
     },
   },
   packs: {
@@ -153,6 +154,7 @@ export type ShelfTobaccoView = {
   officialStrength: string | null;
   communityStrength: string | null;
   archived: boolean;
+  sourceUrl: string | null;
 };
 
 export type OpenPackView = {
@@ -252,6 +254,7 @@ const toRow = (record: ShelfRecord, forecast: ShelfForecast, now: Date, mixCount
       officialStrength: record.tobacco.officialStrength,
       communityStrength: record.tobacco.communityStrength,
       archived: record.tobacco.archived,
+      sourceUrl: record.tobacco.sourceUrl,
     },
     shelfStatus: record.status as ShelfItemStatus,
     status: forecast.status,
