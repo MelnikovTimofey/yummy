@@ -436,6 +436,7 @@ export const signatureOf = (tobaccoIds: string[]) =>
 
 export const recordCustomMixSmoke = async (
   input: CustomMixSmokeInput,
+  guestId: string | null = null,
 ): Promise<GuestCustomMixSmokeResponse | UnavailableTobacco> => {
   const bowl = await resolveBowl(input.components);
   if ('unavailableTobaccoId' in bowl) {
@@ -456,6 +457,7 @@ export const recordCustomMixSmoke = async (
     name: input.name ?? nameOf(components),
     harmony,
     swipes: input.swipes,
+    guestId,
   });
 
   return { id, signature, harmony };

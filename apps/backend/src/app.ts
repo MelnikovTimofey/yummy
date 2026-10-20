@@ -14,6 +14,15 @@ import {
   updateGuestTaste,
 } from './guest-account';
 import {
+  addFavoriteCustom,
+  addFavoriteMix,
+  getGuestFavorites,
+  getGuestHistory,
+  parseHistoryQuery,
+  removeFavoriteCustom,
+  removeFavoriteMix,
+} from './guest-cabinet';
+import {
   createStaffToken,
   resolveStaffSession,
   resolveStaffUser,
@@ -214,6 +223,10 @@ export const buildApp = () => {
       guestLoginStatus: 'GET /guest/auth/telegram/status',
       guestMe: 'GET|DELETE /guest/me',
       guestMeOnboarding: 'PUT /guest/me/onboarding',
+      guestMeHistory: 'GET /guest/me/history',
+      guestMeFavorites: 'GET /guest/me/favorites',
+      guestMeFavoriteMix: 'PUT|DELETE /guest/me/favorites/mixes/:mixId',
+      guestMeFavoriteCustom: 'PUT|DELETE /guest/me/favorites/custom/:eventId',
       automationGuestLoginConfirm: 'POST /automation/guest-login/confirm',
       automationCurrentDailyCode: 'GET /automation/daily-code/current',
       automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
@@ -404,7 +417,12 @@ export const buildApp = () => {
       return reply.status(400).send(input satisfies ApiError);
     }
 
-    const response = await recordCustomMixSmoke(input);
+    const guest = await optionalGuest(request, reply);
+    if (guest === undefined) {
+      return;
+    }
+
+    const response = await recordCustomMixSmoke(input, guest?.id ?? null);
     if ('unavailableTobaccoId' in response) {
       return reply.status(409).send({
         error: 'Tobacco is not in stock',
@@ -428,7 +446,12 @@ export const buildApp = () => {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
 
-    const event = await recordSmokeCtaEvent(mix);
+    const guest = await optionalGuest(request, reply);
+    if (guest === undefined) {
+      return;
+    }
+
+    const event = await recordSmokeCtaEvent(mix, guest?.id ?? null);
     return reply.status(201).send({
       ok: true,
       recordedAt: event.createdAt,
@@ -686,6 +709,56 @@ export const buildApp = () => {
     return reply.send(await updateGuestTaste(guest.id, taste));
   });
 
+  app.get('/guest/me/history', async (request, reply) => {
+    const guest = await authenticateGuestRequest(request, reply);
+    if (!guest) {
+      return;
+    }
+
+    const query = parseHistoryQuery(request.query);
+    if ('error' in query) {
+      return reply.status(400).send(query satisfies ApiError);
+    }
+
+    return reply.send(await getGuestHistory(guest.id, query.before, query.limit));
+  });
+
+  app.get('/guest/me/favorites', async (request, reply) => {
+    const guest = await authenticateGuestRequest(request, reply);
+    if (!guest) {
+      return;
+    }
+
+    return reply.send(await getGuestFavorites(guest.id));
+  });
+
+  const favoriteRoute = (
+    method: 'PUT' | 'DELETE',
+    kind: 'mixes' | 'custom',
+    act: (guestId: string, id: string) => Promise<unknown>,
+  ) =>
+    app.route({
+      method,
+      url: `/guest/me/favorites/${kind}/:id`,
+      handler: async (request, reply) => {
+        const guest = await authenticateGuestRequest(request, reply);
+        if (!guest) {
+          return;
+        }
+
+        const found = await act(guest.id, (request.params as { id: string }).id);
+        if (found === false) {
+          return reply.status(404).send({ error: kind === 'mixes' ? 'Mix not found' : 'Custom mix not found' } satisfies ApiError);
+        }
+
+        return reply.status(204).send();
+      },
+    });
+  favoriteRoute('PUT', 'mixes', addFavoriteMix);
+  favoriteRoute('DELETE', 'mixes', removeFavoriteMix);
+  favoriteRoute('PUT', 'custom', addFavoriteCustom);
+  favoriteRoute('DELETE', 'custom', removeFavoriteCustom);
+
   app.delete('/guest/me', async (request, reply) => {
     const guest = await authenticateGuestRequest(request, reply);
     if (!guest) {
@@ -709,7 +782,12 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Rating value must be between 1 and 5' } satisfies ApiError);
     }
 
-    const rated = await rateMix(mixId, value);
+    const guest = await optionalGuest(request, reply);
+    if (guest === undefined) {
+      return;
+    }
+
+    const rated = await rateMix(mixId, value, guest?.id ?? null);
     if (!rated) {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
@@ -2448,6 +2526,16 @@ const authenticateGuestRequest = async (request: FastifyRequest, reply: FastifyR
   }
 
   return guest;
+};
+
+// Токен на гостевых событиях и оценке необязателен (#240): без заголовка — аноним,
+// как раньше (null). Невалидный — 401 и undefined: молча писать анонимно нельзя,
+// гость потеряет запись в истории; клиент стирает токен и повторяет запрос.
+const optionalGuest = async (request: FastifyRequest, reply: FastifyReply) => {
+  if (!request.headers.authorization) {
+    return null;
+  }
+  return (await authenticateGuestRequest(request, reply)) ?? undefined;
 };
 
 const AUTOMATION_HEADER = 'x-atelier-automation-key';

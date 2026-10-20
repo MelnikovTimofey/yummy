@@ -2567,11 +2567,11 @@ export const updateRail = async (id: string, payload: RailPatch) => {
   return (await getStaffRails()).find((rail) => rail.id === id) ?? null;
 };
 
-export const recordSmokeCtaEvent = async (mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles'>) => {
+export const recordSmokeCtaEvent = async (mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles'>, guestId: string | null = null) => {
   await ensureAppState();
 
   const event = await prisma.smokeCtaEvent.create({
-    data: { mixId: mix.id, mixName: mix.name, mixProfiles: mix.flavorProfiles },
+    data: { mixId: mix.id, guestId, mixName: mix.name, mixProfiles: mix.flavorProfiles },
   });
 
   return {
@@ -2586,6 +2586,7 @@ export const createCustomMixSmokeEvent = async (data: {
   name: string;
   harmony: number;
   swipes: Array<{ turn: number; tobaccoId: string; direction: string }>;
+  guestId: string | null;
 }) => {
   await ensureAppState();
 
@@ -2607,7 +2608,7 @@ export const getSmokeCtaEvents = async () => {
   }));
 };
 
-export const rateMix = async (id: string, value: number) => {
+export const rateMix = async (id: string, value: number, guestId: string | null = null) => {
   await ensureAppState();
 
   const mix = await prisma.mix.findUnique({
@@ -2623,13 +2624,22 @@ export const rateMix = async (id: string, value: number) => {
     return { error: 'Rating value must be between 1 and 5' };
   }
 
-  await prisma.mixRating.create({
-    data: {
-      mixId: id,
-      value,
-      source: 'guest',
-    },
-  });
+  // Вошедший гость оценивает микс один раз: повторная оценка заменяет прежнюю.
+  if (guestId) {
+    await prisma.mixRating.upsert({
+      where: { guestId_mixId: { guestId, mixId: id } },
+      create: { mixId: id, guestId, value, source: 'guest' },
+      update: { value },
+    });
+  } else {
+    await prisma.mixRating.create({
+      data: {
+        mixId: id,
+        value,
+        source: 'guest',
+      },
+    });
+  }
 
   return getMixById(id);
 };
