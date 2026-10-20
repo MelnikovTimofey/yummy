@@ -4,6 +4,16 @@ import cors from '@fastify/cors';
 import { config } from './config';
 import { getDailyCodeWindow } from './daily-code';
 import {
+  confirmGuestLogin,
+  deleteGuestAccount,
+  getGuestLoginStatus,
+  getGuestMe,
+  parseTaste,
+  resolveGuestSession,
+  startGuestLogin,
+  updateGuestTaste,
+} from './guest-account';
+import {
   createStaffToken,
   resolveStaffSession,
   resolveStaffUser,
@@ -130,6 +140,8 @@ import type {
   GuestIntroCardsResponse,
   GuestMixRatingResponse,
   GuestCustomMixSmokeResponse,
+  GuestTelegramConfigResponse,
+  AutomationGuestLoginConfirmRequest,
   GuestMixerEvaluateResponse,
   GuestMixerPaletteResponse,
   OnboardingRecommendationsResponse,
@@ -197,6 +209,12 @@ export const buildApp = () => {
       guestHomeRails: 'GET /guest/home/rails',
       guestMixRating: 'POST /guest/mixes/:id/rating',
       smokeCtaEvent: 'POST /guest/events/smoke-cta',
+      guestLoginConfig: 'GET /guest/auth/telegram/config',
+      guestLoginStart: 'POST /guest/auth/telegram/start',
+      guestLoginStatus: 'GET /guest/auth/telegram/status',
+      guestMe: 'GET|DELETE /guest/me',
+      guestMeOnboarding: 'PUT /guest/me/onboarding',
+      automationGuestLoginConfirm: 'POST /automation/guest-login/confirm',
       automationCurrentDailyCode: 'GET /automation/daily-code/current',
       automationEnsureDailyCode: 'POST /automation/daily-code/ensure',
       automationRotateDailyCode: 'POST /automation/daily-code/rotate',
@@ -593,6 +611,89 @@ export const buildApp = () => {
     };
 
     return reply.send(response);
+  });
+
+  app.get('/guest/auth/telegram/config', async () => ({ botUsername: config.guestLoginBotUsername }) satisfies GuestTelegramConfigResponse);
+
+  app.post('/guest/auth/telegram/start', async (request, reply) => {
+    const taste = parseTaste(request.body, { required: false });
+    if ('error' in taste) {
+      return reply.status(400).send(taste satisfies ApiError);
+    }
+
+    const consent = (request.body as { consent?: unknown } | undefined)?.consent === true;
+    const started = await startGuestLogin({ consent, ...taste });
+    if (!started) {
+      return reply.status(503).send({ error: 'Guest login bot is not configured' } satisfies ApiError);
+    }
+
+    return reply.status(201).send(started);
+  });
+
+  app.get('/guest/auth/telegram/status', async (request, reply) => {
+    const code = (request.query as { code?: unknown }).code;
+    const result = typeof code === 'string' && code ? await getGuestLoginStatus(code) : null;
+    if (!result) {
+      return reply.status(404).send({ error: 'Login code not found' } satisfies ApiError);
+    }
+
+    return reply.send(result);
+  });
+
+  app.post('/automation/guest-login/confirm', async (request, reply) => {
+    if (!authenticateAutomationRequest(request, reply)) {
+      return;
+    }
+
+    const body = request.body as Partial<AutomationGuestLoginConfirmRequest> | undefined;
+    const code = typeof body?.code === 'string' ? body.code : '';
+    const telegramId = typeof body?.telegramId === 'string' || typeof body?.telegramId === 'number' ? String(body.telegramId) : '';
+    if (!code || !/^\d{1,20}$/.test(telegramId)) {
+      return reply.status(400).send({ error: 'code and numeric telegramId are required' } satisfies ApiError);
+    }
+
+    const result = await confirmGuestLogin(code, telegramId);
+    if (result === 'not-found') {
+      return reply.status(404).send({ error: 'Login code not found' } satisfies ApiError);
+    }
+    if (result === 'gone') {
+      return reply.status(410).send({ error: 'Login code expired or already used' } satisfies ApiError);
+    }
+
+    return reply.send({ ok: true });
+  });
+
+  app.get('/guest/me', async (request, reply) => {
+    const guest = await authenticateGuestRequest(request, reply);
+    if (!guest) {
+      return;
+    }
+
+    return reply.send(await getGuestMe(guest));
+  });
+
+  app.put('/guest/me/onboarding', async (request, reply) => {
+    const guest = await authenticateGuestRequest(request, reply);
+    if (!guest) {
+      return;
+    }
+
+    const taste = parseTaste(request.body, { required: true });
+    if ('error' in taste) {
+      return reply.status(400).send(taste satisfies ApiError);
+    }
+
+    return reply.send(await updateGuestTaste(guest.id, taste));
+  });
+
+  app.delete('/guest/me', async (request, reply) => {
+    const guest = await authenticateGuestRequest(request, reply);
+    if (!guest) {
+      return;
+    }
+
+    await deleteGuestAccount(guest.id);
+    return reply.status(204).send();
   });
 
   app.post('/guest/mixes/:id/rating', async (request, reply) => {
@@ -2335,6 +2436,18 @@ const authenticateStaffRequest = async (request: FastifyRequest, reply: FastifyR
   }
 
   return user;
+};
+
+// Токен гостя кабинета (#239). Удалённая учётка — тоже 401: клиент стирает токен.
+const authenticateGuestRequest = async (request: FastifyRequest, reply: FastifyReply) => {
+  const header = request.headers.authorization;
+  const guest = header?.startsWith('Bearer ') ? await resolveGuestSession(header.slice('Bearer '.length).trim()) : null;
+  if (!guest) {
+    reply.status(401).send({ error: 'Invalid or expired guest token' } satisfies ApiError);
+    return null;
+  }
+
+  return guest;
 };
 
 const AUTOMATION_HEADER = 'x-atelier-automation-key';

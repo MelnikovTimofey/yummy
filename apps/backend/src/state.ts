@@ -1455,6 +1455,7 @@ const nextRailId = async (name: string) => {
 type StorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 const wipeStorage = async (tx: StorageTx) => {
+  await tx.guestLoginCode.deleteMany();
   await tx.guestFavorite.deleteMany();
   await tx.smokeCtaEvent.deleteMany();
   await tx.customMixSmokeEvent.deleteMany();

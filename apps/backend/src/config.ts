@@ -14,4 +14,7 @@ export const config = {
   automationKey: env(process.env.ATELIER_AUTOMATION_KEY, 'atelier-local-automation-key'),
   tokenSecret: env(process.env.ATELIER_TOKEN_SECRET, 'atelier-local-secret'),
   tokenTtlHours: parsePort(process.env.ATELIER_TOKEN_TTL_HOURS, 24),
+  // Бот входа гостей (#239). Без него кнопка входа в кабинет не показывается.
+  guestLoginBotUsername: process.env.ATELIER_GUEST_LOGIN_BOT_USERNAME?.trim().replace(/^@/, '') || null,
+  guestTokenTtlDays: parsePort(process.env.ATELIER_GUEST_TOKEN_TTL_DAYS, 90),
 };
