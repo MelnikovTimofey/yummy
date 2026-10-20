@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  brandUrlFromTobaccoUrl,
   extractCatalogEntryUrls,
   lineUrlFromTobaccoUrl,
   parseBrandIndexPage,
@@ -208,4 +209,20 @@ test('lineUrlFromTobaccoUrl не выдумывает линейку для бр
   assert.equal(lineUrlFromTobaccoUrl('https://htreviews.org/tobaccos/new/some/thing'), null);
   assert.equal(lineUrlFromTobaccoUrl('https://htreviews.org/reviews/duft/strong/pomelo'), null);
   assert.equal(lineUrlFromTobaccoUrl('не url'), null);
+});
+
+// Issue #246: ночная синхронизация обходит только бренды того, что есть в точке.
+test('brandUrlFromTobaccoUrl выводит URL бренда из URL табака', () => {
+  assert.equal(
+    brandUrlFromTobaccoUrl('https://htreviews.org/tobaccos/darkside/core/pink-mi?ref=x#top'),
+    'https://htreviews.org/tobaccos/darkside',
+  );
+  assert.equal(brandUrlFromTobaccoUrl('https://htreviews.org/tobaccos/duft'), 'https://htreviews.org/tobaccos/duft');
+});
+
+test('brandUrlFromTobaccoUrl не выдумывает бренд для служебных и чужих путей', () => {
+  assert.equal(brandUrlFromTobaccoUrl('https://htreviews.org/tobaccos'), null);
+  assert.equal(brandUrlFromTobaccoUrl('https://htreviews.org/tobaccos/new/some/thing'), null);
+  assert.equal(brandUrlFromTobaccoUrl('https://htreviews.org/reviews/duft/strong/pomelo'), null);
+  assert.equal(brandUrlFromTobaccoUrl('не url'), null);
 });
