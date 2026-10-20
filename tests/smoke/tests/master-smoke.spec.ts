@@ -190,6 +190,36 @@ test('Master shelf marks a pack empty and undoes it from the toast', async ({ pa
   await expect(emptyButton(row)).toBeVisible();
 });
 
+// Прогноз и «К заказу» (#213): блок «Полка» на дашборде, переключатель
+// «К заказу» и настройки полки. Неразрушающий: количество в «К заказу» не
+// сохраняется, настройки закрываются «Отменой».
+test('Master dashboard shows the shelf forecast, shelf opens reorder and settings without saving', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  const forecast = page.getByRole('article', { name: 'Прогноз расхода' });
+  await expect(forecast.getByRole('heading', { name: 'Прогноз расхода' })).toBeVisible();
+  await expect(forecast).toContainText(/≈ [\d\s ]+ г/);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const reorderToggle = page.getByRole('group', { name: 'Вид полки' }).getByRole('button', { name: /^К заказу/ });
+  await reorderToggle.click();
+  await expect(reorderToggle).toHaveAttribute('aria-pressed', 'true');
+  // Группы поставщиков или пустое состояние — зависит от полки в базе.
+  await expect(page.locator('.reorder-group, .reorder__empty').first()).toBeVisible();
+  await expect(page.locator('.reorder__hint')).toContainText('Количество — расход на 21 день');
+
+  await page.getByRole('button', { name: 'Меню полки' }).click();
+  await page.getByRole('menuitem', { name: /Настройки полки/ }).click();
+  const settings = page.getByRole('dialog');
+  await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
+  await expect(settings.getByLabel('Граммовка чаши, г')).toHaveValue(/^\d+$/);
+  await expect(settings.getByLabel('Срок поставки, дней')).toHaveValue(/^\d+$/);
+  await settings.getByRole('button', { name: 'Отмена' }).click();
+  await expect(settings).toBeHidden();
+});
+
 // Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
 // Табак берётся с полки, поэтому приёмка лишь добавляет ему банку в запас:
 // гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
