@@ -193,6 +193,40 @@ test('Master shelf marks a pack empty and undoes it from the toast', async ({ pa
 // «Полка» на телефоне (#215): у стойки мастер открывает полку из нижней
 // навигации, жмёт «Закончилась» в карточке и отменяет из тоста, а шторку
 // «Сколько осталось?» закрывает без отметки. Неразрушающий.
+// «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
+// окна отмечает его просмотренным для логина. Неразрушающий: отметка живёт в
+// localStorage, а он у Playwright свежий на каждый тест.
+test('Master «What\'s new»: the dot stays until the release is read, then is gone after reload', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  const unread = page.getByRole('button', { name: 'Что нового, есть непрочитанное' });
+  await expect(unread).toBeVisible();
+  await unread.click();
+
+  const dialog = page.getByRole('dialog', { name: /^Что нового/ });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Назад' })).toBeDisabled();
+  const pips = dialog.getByRole('button', { name: /^Слайд \d+ из \d+$/ });
+  const total = await pips.count();
+  expect(total).toBeGreaterThan(0);
+  await expect(dialog.getByRole('button', { name: `Слайд 1 из ${total}` })).toHaveAttribute('aria-current', 'step');
+
+  for (let step = 1; step < total; step += 1) {
+    await dialog.getByRole('button', { name: 'Далее' }).click();
+    await expect(dialog.getByRole('button', { name: `Слайд ${step + 1} из ${total}` })).toHaveAttribute('aria-current', 'step');
+  }
+  await dialog.getByRole('button', { name: 'Готово' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(page.getByRole('button', { name: 'Что нового', exact: true })).toBeVisible();
+  await expect(unread).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Что нового', exact: true })).toBeVisible();
+  await expect(unread).toHaveCount(0);
+});
+
 test.describe('Master on a phone', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
@@ -242,6 +276,27 @@ test.describe('Master on a phone', () => {
     await page.mouse.click(187, 40);
     await expect(sheet).toBeHidden();
     await expect(toast).toBeHidden();
+  });
+
+  test('Master «What\'s new» on a phone opens full screen from «Ещё»', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
+    const more = page.getByRole('dialog', { name: 'Ещё разделы' });
+    await expect(more).toBeVisible();
+    await more.getByRole('button', { name: 'Что нового, есть непрочитанное' }).click();
+    await expect(more).toBeHidden();
+
+    const dialog = page.getByRole('dialog', { name: /^Что нового/ });
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box).toMatchObject({ x: 0, y: 0, width: 375, height: 812 });
+    await dialog.getByRole('button', { name: 'Закрыть' }).click();
+    await expect(dialog).toBeHidden();
   });
 });
 

@@ -1,5 +1,5 @@
 import { KeyboardEvent, useRef } from 'react';
-import { LogOut, Search } from 'lucide-react';
+import { LogOut, Search, Sparkles } from 'lucide-react';
 import {
   getWorkspacePanelId,
   getWorkspaceTabId,
@@ -116,10 +116,12 @@ export const MasterTopBar = ({
             type="button"
             className="wn-trigger"
             aria-label={whatsNew.unseen ? 'Что нового, есть непрочитанное' : 'Что нового'}
+            title="Что нового"
             onClick={whatsNew.onOpen}
           >
             {whatsNew.unseen ? <span className="wn-dot" aria-hidden="true" /> : null}
-            Что нового
+            <Sparkles className="wn-trigger__icon" size={14} strokeWidth={1.9} aria-hidden />
+            <span className="wn-trigger__label">Что нового</span>
           </button>
         ) : null}
 

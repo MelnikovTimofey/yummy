@@ -7485,6 +7485,30 @@ button.chip .chip__count[hidden] {
 }
 
 .wn-trigger:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.wn-trigger__icon { display: none; flex: 0 0 auto; }
+
+/* Мокап снят с шестью вкладками: семь вкладок, кнопка с подписью и учётка
+   с ролью («Ателье Staff · master») не помещаются в шапку уже на 1440 px.
+   Как у палитры (#212), от кнопки остаются точка и иконка, вкладки чуть
+   плотнее. Если и так тесно, сжимается имя в учётке, а не вкладки: иначе
+   правая группа наезжает на «Доступ» (до #226 так было на 1101–1120). */
+@media (max-width: 1480px) {
+  .wn-trigger__label { display: none; }
+  .wn-trigger__icon { display: block; }
+  .topbar .nav__item { padding-left: 9px; padding-right: 9px; }
+}
+
+@media (min-width: 1101px) {
+  .topbar .nav { flex-shrink: 0; }
+  .topbar__right { min-width: 0; }
+  .user-chip { min-width: 0; }
+  .user-chip__name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+}
+
+/* Уже 1280, но ещё не перенос шапки (≤ 1100): вкладкам — только подписи. */
+@media (min-width: 1101px) and (max-width: 1260px) {
+  .topbar .nav__item-icon { display: none; }
+}
 
 .wn-trigger:focus-visible {
   outline: none;

@@ -47,8 +47,11 @@ export const WhatsNewDialog = ({ release, isPhone, onClose, onAction }: WhatsNew
           }}
         >
           <header className="wn-head">
-            <Dialog.Title className="wn-head__title">
-              Что нового · <b>{release.label}</b>
+            {/* Заголовок окна — подпись, а не heading: заголовок слайда — h2 ниже. */}
+            <Dialog.Title asChild>
+              <p className="wn-head__title">
+                Что нового · <b>{release.label}</b>
+              </p>
             </Dialog.Title>
             <Dialog.Close className="wn-x" aria-label="Закрыть">
               <X size={16} strokeWidth={1.8} aria-hidden />

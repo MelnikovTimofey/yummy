@@ -118,9 +118,8 @@ export const swipeStep = (dx: number, dy: number) => {
   return dx < 0 ? 1 : -1;
 };
 
-// Снимок телефона узкий и высокий — показываем целиком, как в мокапе (#shot=phone-1).
+// Снимок по умолчанию — cover от левого верхнего угла; contain — только где указано.
 export const slideImage = (slide: WhatsNewSlide, isPhone: boolean) => {
   if (!('image' in slide)) return null;
-  const phone = isPhone && slide.imagePhone;
-  return { src: phone || slide.image, contain: Boolean(slide.contain || phone) };
+  return { src: (isPhone && slide.imagePhone) || slide.image, contain: Boolean(slide.contain) };
 };

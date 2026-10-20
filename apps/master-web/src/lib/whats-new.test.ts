@@ -82,10 +82,10 @@ test('свайп: влево — следующий, вправо — преды
   assert.equal(swipeStep(-60, 120), 0);
 });
 
-test('картинка слайда: на телефоне — imagePhone, если есть; contain — где указано и для снимка телефона', () => {
+test('картинка слайда: на телефоне — imagePhone, если есть; contain — только где указано', () => {
   const desk = { title: 't', text: 'x', image: '/a.jpg', imagePhone: '/a-phone.jpg' };
   assert.deepEqual(slideImage(desk, false), { src: '/a.jpg', contain: false });
-  assert.deepEqual(slideImage(desk, true), { src: '/a-phone.jpg', contain: true });
+  assert.deepEqual(slideImage(desk, true), { src: '/a-phone.jpg', contain: false });
   assert.deepEqual(slideImage({ title: 't', text: 'x', image: '/b.jpg' }, true), { src: '/b.jpg', contain: false });
   assert.deepEqual(slideImage({ title: 't', text: 'x', image: '/c.jpg', contain: true }, false), { src: '/c.jpg', contain: true });
   assert.equal(slideImage({ title: 't', text: 'x', list: ['a'] }, false), null);
