@@ -12,14 +12,11 @@ export type MasterLineKey =
   | 'take.base.berry'
   | 'take.base.citrus'
   | 'take.base.dessert'
-  | 'take.base.fresh'
   | 'take.base.minty'
   | 'take.base.fruity'
   | 'take.base.spicy'
   | 'take.base.tobacco'
   | 'take.base.floral_herbal'
-  | 'take.base.sweet'
-  | 'take.base.sour'
   | 'take.base.perfume'
   | 'take.accent.classic'
   | 'take.accent.confident'
@@ -54,14 +51,11 @@ export const masterLines: MasterLines = {
   'take.base.berry': [],
   'take.base.citrus': [],
   'take.base.dessert': [],
-  'take.base.fresh': [],
   'take.base.minty': [],
   'take.base.fruity': [],
   'take.base.spicy': [],
   'take.base.tobacco': [],
   'take.base.floral_herbal': [],
-  'take.base.sweet': [],
-  'take.base.sour': [],
   'take.base.perfume': [],
 
   // Взяли акцент — по ступени совпадения с чашей: 85+ / 70+ / 55+ / ниже.

@@ -54,6 +54,13 @@ test('каждый ключ категории вкуса редактора и�
   }
 });
 
+// Без источника в htreviews (#182): мастер не должен вернуть их табаку руками.
+test('редактор инвентаря не предлагает профили «Сладкие», «Кислые», «Свежие»', () => {
+  for (const key of ['sweet', 'sour', 'fresh']) {
+    assert.equal((INVENTORY_FLAVOR_PROFILE_KEYS as readonly string[]).includes(key), false, key);
+  }
+});
+
 test('пресеты крепости редактора совпадают со шкалой htreviews (issue #117)', () => {
   assert.deepEqual(
     [...INVENTORY_STRENGTH_PRESETS],
