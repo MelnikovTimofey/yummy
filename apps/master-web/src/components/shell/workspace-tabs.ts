@@ -2,12 +2,13 @@ import {
   Blend,
   GalleryVerticalEnd,
   LayoutDashboard,
+  Library,
+  Package,
   ShieldCheck,
-  Warehouse,
   type LucideIcon,
 } from 'lucide-react';
 
-export type WorkspaceTab = 'dashboard' | 'inventory' | 'mixes' | 'rails' | 'access';
+export type WorkspaceTab = 'dashboard' | 'shelf' | 'catalog' | 'mixes' | 'rails' | 'access';
 
 export type WorkspaceTabDescriptor = {
   id: WorkspaceTab;
@@ -18,7 +19,8 @@ export type WorkspaceTabDescriptor = {
 
 export const workspaceTabs: WorkspaceTabDescriptor[] = [
   { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', icon: LayoutDashboard },
-  { id: 'inventory', label: 'Табаки', kicker: 'Наличие и стоп-лист', icon: Warehouse },
+  { id: 'shelf', label: 'Полка', kicker: 'Банки, расход и прогноз', icon: Package },
+  { id: 'catalog', label: 'Каталог', kicker: 'Карточки htreviews и свои', icon: Library },
   { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', icon: Blend },
   { id: 'rails', label: 'Рейлы', kicker: 'Витрина', icon: GalleryVerticalEnd },
   { id: 'access', label: 'Доступ', kicker: 'Telegram и роли', icon: ShieldCheck },

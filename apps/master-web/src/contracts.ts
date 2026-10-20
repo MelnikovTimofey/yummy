@@ -1626,3 +1626,233 @@ export const parseDateTimeLocalInput = (value: string) => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
 };
+
+// --- Полка (#211): ответы /staff/shelf* ------------------------------------
+
+export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
+export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
+export type ShelfRateKind = 'own' | 'brand' | 'none';
+export type ShelfPackState = 'sealed' | 'open' | 'empty' | 'written_off';
+export type ShelfReceiptKind = 'invoice' | 'start' | 'manual';
+
+export type ShelfTobacco = {
+  id: string;
+  manufacturer: string;
+  lineName: string;
+  name: string;
+  flavorProfiles: string[];
+  flavors: string[];
+  officialStrength: string | null;
+  communityStrength: string | null;
+  archived: boolean;
+};
+
+export type ShelfOpenPack = { id: string; weight: number; openedAt: string; fraction: number };
+
+export type ShelfReceipt = { receivedAt: string; kind: ShelfReceiptKind; number: string | null; label: string };
+
+export type ShelfRow = {
+  tobacco: ShelfTobacco;
+  shelfStatus: ShelfItemStatus;
+  status: ShelfStatus;
+  last: boolean;
+  overdue: boolean;
+  guestAvailable: boolean;
+  openPacks: ShelfOpenPack[];
+  sealedCount: number;
+  remainingGrams: number;
+  rate: number | null;
+  rateKind: ShelfRateKind;
+  daysLeft: number | null;
+  endsAt: string | null;
+  lastReceipt: ShelfReceipt | null;
+  mixCount: number;
+  keepStocked: boolean;
+  stopped: boolean;
+  stopNote: string | null;
+  packWeight: number;
+  note: string | null;
+};
+
+export type ShelfCounterKey = 'all' | 'ok' | 'last' | 'ending' | 'out' | 'stop' | 'plan';
+export type ShelfCounters = Record<ShelfCounterKey, number>;
+export type ShelfSettings = { bowlGrams: number; leadDays: number };
+
+export type ShelfView = {
+  rows: ShelfRow[];
+  counters: ShelfCounters;
+  totals: { packs: number; kg: number };
+  today: { grams: number; bowls: number };
+  settings: ShelfSettings;
+};
+
+export type ShelfPack = {
+  id: string;
+  state: ShelfPackState;
+  weight: number;
+  priceKop: number | null;
+  receivedAt: string;
+  openedAt: string | null;
+  emptiedAt: string | null;
+  writtenOffAt: string | null;
+  writeOffReason: string | null;
+  delivery: { id: string; kind: string; number: string | null; supplier: string | null } | null;
+  marks: Array<{ at: string; fraction: number }>;
+  usage: { days: number; gramsPerDay: number } | null;
+};
+
+export type ShelfCard = ShelfRow & {
+  packs: ShelfPack[];
+  gramPriceKop: number | null;
+  bowlCostKop: number | null;
+  mixes: Array<{ id: string; name: string }>;
+  settings: ShelfSettings;
+};
+
+export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7 };
+
+const SHELF_STATUSES: ShelfStatus[] = ['ok', 'ending', 'check', 'stop', 'out', 'plan'];
+const SHELF_PACK_STATES: ShelfPackState[] = ['sealed', 'open', 'empty', 'written_off'];
+
+const toNullableNumber = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+const toNullableString = (value: unknown) => (value == null ? null : String(value));
+
+const pickOne = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+  allowed.includes(value as T) ? (value as T) : fallback;
+
+const normalizeShelfSettings = (value: unknown): ShelfSettings => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    bowlGrams: toNumber(raw.bowlGrams, DEFAULT_SHELF_SETTINGS.bowlGrams),
+    leadDays: toNumber(raw.leadDays, DEFAULT_SHELF_SETTINGS.leadDays),
+  };
+};
+
+export const normalizeShelfRow = (value: unknown): ShelfRow => {
+  const raw = isRecord(value) ? value : {};
+  const tobacco = isRecord(raw.tobacco) ? raw.tobacco : {};
+  const receipt = isRecord(raw.lastReceipt) ? raw.lastReceipt : null;
+
+  return {
+    tobacco: {
+      id: String(tobacco.id ?? ''),
+      manufacturer: String(tobacco.manufacturer ?? ''),
+      lineName: String(tobacco.lineName ?? ''),
+      name: String(tobacco.name ?? ''),
+      flavorProfiles: uniqueStrings(toStringList(tobacco.flavorProfiles)),
+      flavors: uniqueStrings(toStringList(tobacco.flavors)),
+      officialStrength: toNullableString(tobacco.officialStrength),
+      communityStrength: toNullableString(tobacco.communityStrength),
+      archived: toBoolean(tobacco.archived, false),
+    },
+    shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
+    status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
+    last: toBoolean(raw.last, false),
+    overdue: toBoolean(raw.overdue, false),
+    guestAvailable: toBoolean(raw.guestAvailable, false),
+    openPacks: (Array.isArray(raw.openPacks) ? raw.openPacks : []).filter(isRecord).map((pack) => ({
+      id: String(pack.id ?? ''),
+      weight: toNumber(pack.weight, 0),
+      openedAt: toIsoString(pack.openedAt, ''),
+      fraction: toNumber(pack.fraction, 0),
+    })),
+    sealedCount: toNumber(raw.sealedCount, 0),
+    remainingGrams: toNumber(raw.remainingGrams, 0),
+    rate: toNullableNumber(raw.rate),
+    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
+    daysLeft: toNullableNumber(raw.daysLeft),
+    endsAt: toIsoString(raw.endsAt, '') || null,
+    lastReceipt: receipt
+      ? {
+          receivedAt: toIsoString(receipt.receivedAt, ''),
+          kind: pickOne(receipt.kind, ['invoice', 'start', 'manual'] as const, 'manual'),
+          number: toNullableString(receipt.number),
+          label: String(receipt.label ?? ''),
+        }
+      : null,
+    mixCount: toNumber(raw.mixCount, 0),
+    keepStocked: toBoolean(raw.keepStocked, true),
+    stopped: toBoolean(raw.stopped, false),
+    stopNote: toNullableString(raw.stopNote),
+    packWeight: toNumber(raw.packWeight, 200),
+    note: toNullableString(raw.note),
+  };
+};
+
+export const normalizeShelfView = (value: unknown): ShelfView => {
+  const raw = isRecord(value) ? value : {};
+  const counters = isRecord(raw.counters) ? raw.counters : {};
+  const totals = isRecord(raw.totals) ? raw.totals : {};
+  const today = isRecord(raw.today) ? raw.today : {};
+
+  return {
+    rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow),
+    counters: {
+      all: toNumber(counters.all, 0),
+      ok: toNumber(counters.ok, 0),
+      last: toNumber(counters.last, 0),
+      ending: toNumber(counters.ending, 0),
+      out: toNumber(counters.out, 0),
+      stop: toNumber(counters.stop, 0),
+      plan: toNumber(counters.plan, 0),
+    },
+    totals: { packs: toNumber(totals.packs, 0), kg: toNumber(totals.kg, 0) },
+    today: { grams: toNumber(today.grams, 0), bowls: toNumber(today.bowls, 0) },
+    settings: normalizeShelfSettings(raw.settings),
+  };
+};
+
+const normalizeShelfPack = (value: unknown): ShelfPack => {
+  const raw = isRecord(value) ? value : {};
+  const delivery = isRecord(raw.delivery) ? raw.delivery : null;
+  const usage = isRecord(raw.usage) ? raw.usage : null;
+
+  return {
+    id: String(raw.id ?? ''),
+    state: pickOne(raw.state, SHELF_PACK_STATES, 'sealed'),
+    weight: toNumber(raw.weight, 0),
+    priceKop: toNullableNumber(raw.priceKop),
+    receivedAt: toIsoString(raw.receivedAt, ''),
+    openedAt: toIsoString(raw.openedAt, '') || null,
+    emptiedAt: toIsoString(raw.emptiedAt, '') || null,
+    writtenOffAt: toIsoString(raw.writtenOffAt, '') || null,
+    writeOffReason: toNullableString(raw.writeOffReason),
+    delivery: delivery
+      ? {
+          id: String(delivery.id ?? ''),
+          kind: String(delivery.kind ?? 'manual'),
+          number: toNullableString(delivery.number),
+          supplier: toNullableString(delivery.supplier),
+        }
+      : null,
+    marks: (Array.isArray(raw.marks) ? raw.marks : []).filter(isRecord).map((mark) => ({
+      at: toIsoString(mark.at, ''),
+      fraction: toNumber(mark.fraction, 0),
+    })),
+    usage: usage ? { days: toNumber(usage.days, 0), gramsPerDay: toNumber(usage.gramsPerDay, 0) } : null,
+  };
+};
+
+export const normalizeShelfCard = (value: unknown): ShelfCard => {
+  const raw = readEntityPayload<unknown>(value);
+  const record = isRecord(raw) ? raw : {};
+
+  return {
+    ...normalizeShelfRow(record),
+    packs: (Array.isArray(record.packs) ? record.packs : []).map(normalizeShelfPack),
+    gramPriceKop: toNullableNumber(record.gramPriceKop),
+    bowlCostKop: toNullableNumber(record.bowlCostKop),
+    mixes: (Array.isArray(record.mixes) ? record.mixes : []).filter(isRecord).map((mix) => ({
+      id: String(mix.id ?? ''),
+      name: String(mix.name ?? ''),
+    })),
+    settings: normalizeShelfSettings(record.settings),
+  };
+};
+
+export const normalizeShelfEmptyResponse = (value: unknown) => {
+  const raw = isRecord(value) ? value : {};
+  return { packId: String(raw.packId ?? ''), item: normalizeShelfRow(raw.item) };
+};

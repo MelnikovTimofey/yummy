@@ -10,7 +10,6 @@ import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import type {
   InventoryArchivedFilter,
-  InventoryBatchAction,
   InventoryFilterKey,
   InventoryListFilters,
   InventoryListMeta,
@@ -24,12 +23,22 @@ import {
   formatMixStatusLabel,
   formatRating,
   resolveMixStatus,
-  formatInventoryBatchAction,
   formatMetricValue,
   defaultInventoryListResponse,
   INVENTORY_FLAVOR_PROFILE_KEYS,
   INVENTORY_STRENGTH_PRESETS,
 } from '@/contracts';
+
+// Наличие для гостя считает полка (#211): каталог только ставит табак на полку
+// и убирает с неё, архив — по-прежнему здесь.
+export type CatalogBatchAction = 'shelf-add' | 'shelf-remove' | 'archive' | 'unarchive';
+
+const catalogBatchLabels: Record<CatalogBatchAction, string> = {
+  'shelf-add': 'На полку',
+  'shelf-remove': 'Убрать с полки',
+  archive: 'Архивировать',
+  unarchive: 'Вернуть из архива',
+};
 
 type InventoryViewProps = {
   items: InventoryTobacco[];
@@ -41,7 +50,8 @@ type InventoryViewProps = {
   sort: InventoryListSort;
   selectedIds: string[];
   pendingRowId: string;
-  pendingBatchAction: '' | InventoryBatchAction;
+  pendingBatchAction: '' | CatalogBatchAction;
+  shelfStatuses: Map<string, 'active' | 'plan'>;
   onSearchChange: (value: string) => void;
   onStockChange: (value: InventoryStockFilter) => void;
   onArchivedChange: (value: InventoryArchivedFilter) => void;
@@ -50,9 +60,10 @@ type InventoryViewProps = {
   onClearFilterGroup: (key: InventoryFilterKey) => void;
   onToggleSelection: (id: string) => void;
   onToggleSelectAll: () => void;
-  onToggleStock: (item: InventoryTobacco) => void;
+  onAddToShelf: (item: InventoryTobacco) => void;
+  onRemoveFromShelf: (item: InventoryTobacco) => void;
   onArchiveTobacco: (item: InventoryTobacco, archived: boolean) => void;
-  onRunBatchAction: (action: InventoryBatchAction) => void;
+  onRunBatchAction: (action: CatalogBatchAction) => void;
   onOpenMix: (mixId: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -535,6 +546,7 @@ export const InventoryView = ({
   selectedIds,
   pendingRowId,
   pendingBatchAction,
+  shelfStatuses,
   onSearchChange,
   onStockChange,
   onArchivedChange,
@@ -543,7 +555,8 @@ export const InventoryView = ({
   onClearFilterGroup,
   onToggleSelection,
   onToggleSelectAll,
-  onToggleStock,
+  onAddToShelf,
+  onRemoveFromShelf,
   onArchiveTobacco,
   onRunBatchAction,
   onOpenMix,
@@ -714,7 +727,7 @@ export const InventoryView = ({
               className="tag"
               data-tone={activeItem.inStock ? undefined : 'warning'}
             >
-              {activeItem.inStock ? 'В наличии' : 'Нет наличия'}
+              {activeItem.inStock ? 'Гость видит' : 'Гость не видит'}
             </span>
           </div>
           <button
@@ -742,15 +755,17 @@ export const InventoryView = ({
                 type="button"
                 className="btn"
                 data-size="sm"
-                data-variant={activeItem.inStock ? 'ghost' : 'primary'}
-                onClick={() => onToggleStock(activeItem)}
+                data-variant={shelfStatuses.has(activeItem.id) ? 'ghost' : 'primary'}
+                onClick={() =>
+                  shelfStatuses.has(activeItem.id) ? onRemoveFromShelf(activeItem) : onAddToShelf(activeItem)
+                }
                 disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
               >
                 {pendingRowId === activeItem.id
                   ? 'Сохраняем…'
-                  : activeItem.inStock
-                    ? 'Убрать из наличия'
-                    : 'Вернуть в наличие'}
+                  : shelfStatuses.has(activeItem.id)
+                    ? 'Убрать с полки'
+                    : 'На полку'}
               </button>
               <button
                 type="button"
@@ -928,8 +943,9 @@ export const InventoryView = ({
   return (
     <section className="tobaccos-page">
       <MasterPageHeader
-        title="Табаки"
-        subtitle="Наличие, компоненты миксов и связанные позиции витрины."
+        eyebrow="КАТАЛОГ · HTREVIEWS"
+        title="Каталог"
+        subtitle="Все табаки: карточки htreviews и свои. Банки и расход — на «Полке»."
         meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])} · ${formatMetricValue(meta.inMixesCount)} в миксах`}
         actions={
           <button
@@ -1063,8 +1079,9 @@ export const InventoryView = ({
           >
           <div className="drawer__body tobacco-drawer__body">
             <div className="inventory-editor-identity">
+              {editorMode === 'create' ? (
               <div className="inventory-editor-identity__col">
-                <div className="section-h">Наличие</div>
+                <div className="section-h">Полка</div>
                 <div className="inventory-editor-identity__toggle">
                   <button
                     type="button"
@@ -1073,7 +1090,8 @@ export const InventoryView = ({
                     className={`toggle ${editorDraft.inStock ? 'toggle--on' : 'toggle--off'}`}
                     onClick={() => updateEditorDraft('inStock', !editorDraft.inStock)}
                     disabled={saveStatus === 'loading'}
-                    title={editorDraft.inStock ? 'В наличии' : 'Нет в наличии'}
+                    aria-label="Сразу на полку"
+                    title={editorDraft.inStock ? 'Сразу на полку с одной банкой' : 'Только в каталог'}
                   >
                     <span className="toggle__track" aria-hidden="true">
                       <span className="toggle__thumb" />
@@ -1083,10 +1101,11 @@ export const InventoryView = ({
                     className="inventory-editor-identity__status"
                     data-tone={editorDraft.inStock ? 'success' : 'muted'}
                   >
-                    {editorDraft.inStock ? 'В наличии' : 'Нет в наличии'}
+                    {editorDraft.inStock ? 'Сразу на полку' : 'Только в каталог'}
                   </span>
                 </div>
               </div>
+              ) : null}
               <div className="inventory-editor-identity__col">
                 <div className="section-h">Крепость</div>
                 <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
@@ -1358,25 +1377,25 @@ export const InventoryView = ({
         <div className="inventory-batch-bar">
           <div>
             <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
-            <p className="meta-line">Массовые действия меняют наличие и архив.</p>
+            <p className="meta-line">Массовые действия ставят на полку, убирают с неё и архивируют.</p>
           </div>
           <div className="inventory-batch-bar__actions">
             <Button
               type="button"
               size="sm"
-              onClick={() => onRunBatchAction('set-in-stock')}
+              onClick={() => onRunBatchAction('shelf-add')}
               disabled={pendingBatchAction !== ''}
             >
-              {pendingBatchAction === 'set-in-stock' ? 'Обновляем…' : formatInventoryBatchAction('set-in-stock')}
+              {pendingBatchAction === 'shelf-add' ? 'Обновляем…' : catalogBatchLabels['shelf-add']}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="secondary"
-              onClick={() => onRunBatchAction('set-out-of-stock')}
+              onClick={() => onRunBatchAction('shelf-remove')}
               disabled={pendingBatchAction !== ''}
             >
-              {pendingBatchAction === 'set-out-of-stock' ? 'Обновляем…' : formatInventoryBatchAction('set-out-of-stock')}
+              {pendingBatchAction === 'shelf-remove' ? 'Обновляем…' : catalogBatchLabels['shelf-remove']}
             </Button>
             {archivedActive ? (
               <Button
@@ -1386,7 +1405,7 @@ export const InventoryView = ({
                 onClick={() => onRunBatchAction('unarchive')}
                 disabled={pendingBatchAction !== ''}
               >
-                {pendingBatchAction === 'unarchive' ? 'Обновляем…' : formatInventoryBatchAction('unarchive')}
+                {pendingBatchAction === 'unarchive' ? 'Обновляем…' : catalogBatchLabels.unarchive}
               </Button>
             ) : (
               <Button
@@ -1396,7 +1415,7 @@ export const InventoryView = ({
                 onClick={() => onRunBatchAction('archive')}
                 disabled={pendingBatchAction !== ''}
               >
-                {pendingBatchAction === 'archive' ? 'Обновляем…' : formatInventoryBatchAction('archive')}
+                {pendingBatchAction === 'archive' ? 'Обновляем…' : catalogBatchLabels.archive}
               </Button>
             )}
           </div>
@@ -1437,7 +1456,7 @@ export const InventoryView = ({
                 {...sortHeaderProps}
               />
               <th scope="col">Вкус / профиль</th>
-              <th className="inventory-table__stock" scope="col">В наличии</th>
+              <th className="inventory-table__stock" scope="col">Полка</th>
               <SortableHeader
                 label="Миксов"
                 field="dependentMixes"
@@ -1461,7 +1480,7 @@ export const InventoryView = ({
                 const strengthLabel = formatStrengthCompact(item);
                 const flavorsTop3 = (item.flavors ?? []).slice(0, 3).join(', ');
                 const stockBusy = pendingRowId === item.id || pendingBatchAction !== '';
-                const stockLabel = item.inStock ? 'В наличии' : 'Нет наличия';
+                const shelfStatus = shelfStatuses.get(item.id);
                 const dependentCount = item.dependentMixCount ?? 0;
                 const blockedCount = item.blockedDependentMixCount ?? 0;
 
@@ -1533,22 +1552,25 @@ export const InventoryView = ({
                       </div>
                     </td>
                     <td className="inventory-table__stock" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={item.inStock}
-                        aria-label={`${stockLabel}: переключить наличие для ${item.name}`}
-                        onClick={() => onToggleStock(item)}
-                        disabled={stockBusy}
-                        className={`row-toggle row-toggle--icon ${item.inStock ? 'row-toggle--on' : 'row-toggle--off'}${stockBusy ? ' row-toggle--busy' : ''}`}
-                      >
-                        <span className="row-toggle__track" aria-hidden="true">
-                          <span className="row-toggle__thumb" />
+                      {shelfStatus === 'active' ? (
+                        <span className="inventory-shelf-cell">
+                          <span className="tag" data-tone="success">на полке</span>
+                          {item.inStock ? null : <span className="inventory-cell__faint">гость не видит</span>}
                         </span>
-                        <span className="sr-only">
-                          {pendingRowId === item.id ? 'Сохраняем…' : stockLabel}
-                        </span>
-                      </button>
+                      ) : shelfStatus === 'plan' ? (
+                        <span className="tag" data-tone="info">в плане</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn"
+                          data-size="sm"
+                          aria-label={`На полку: ${item.name}`}
+                          onClick={() => onAddToShelf(item)}
+                          disabled={stockBusy || item.archived}
+                        >
+                          {pendingRowId === item.id ? 'Ставим…' : 'На полку'}
+                        </button>
+                      )}
                     </td>
                     <td className="inventory-table__mixes">
                       {dependentCount > 0 ? (

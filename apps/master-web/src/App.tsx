@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
@@ -6,12 +6,14 @@ import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
+import { useShelf } from '@/hooks/use-shelf';
+import { ShelfView } from '@/components/shelf/shelf-view';
 import { useStaffAccounts } from '@/hooks/use-staff-accounts';
 import { useTelegramOperators } from '@/hooks/use-telegram-operators';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { InventoryView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
+import { InventoryView, type CatalogBatchAction, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { MixCatalogView } from '@/components/mixes/mix-catalog-view';
 import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
@@ -31,7 +33,6 @@ import {
   DailyAccessCodeRecord,
   DashboardSummary,
   DashboardWindowKey,
-  InventoryBatchAction,
   InventoryFilterKey,
   InventoryListFilters,
   InventoryListMeta,
@@ -144,6 +145,11 @@ export const App = () => {
   const staff = useStaffAccounts({ onAfterSubmit: onAfterAccessSubmit });
   const telegramOps = useTelegramOperators({ onAfterSubmit: onAfterAccessSubmit });
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
+  const shelf = useShelf(token);
+  const shelfStatuses = useMemo(
+    () => new Map((shelf.view?.rows ?? []).map((row) => [row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active'] as const)),
+    [shelf.view],
+  );
   const mixes = useMixes({
     token,
     onAfterSubmit: () => setActiveTab('mixes'),
@@ -191,7 +197,7 @@ export const App = () => {
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [toggleId, setToggleId] = useState('');
-  const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | InventoryBatchAction>('');
+  const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | CatalogBatchAction>('');
   const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [inventorySaveError, setInventorySaveError] = useState('');
 
@@ -254,6 +260,7 @@ export const App = () => {
   const refreshInventoryDependents = async (nextToken: string) => {
     await Promise.allSettled([
       loadSummary(nextToken, dashboardWindow),
+      shelf.reload(nextToken),
       mixes.loadMixes(nextToken),
       mixes.loadMixTobaccos(nextToken),
       rails.reloadCatalog(nextToken),
@@ -272,6 +279,19 @@ export const App = () => {
   }, [mixes]);
   useEffect(() => {
     activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  // Полка и каталог показывают одно наличие с разных сторон: при переходе
+  // между ними перечитываем ту поверхность, на которую пришли.
+  const previousTabRef = useRef(activeTab);
+  useEffect(() => {
+    const previous = previousTabRef.current;
+    previousTabRef.current = activeTab;
+    if (!user || !token || previous === activeTab) return;
+    if (activeTab === 'catalog') void loadInventory(token);
+    if (activeTab === 'shelf') void shelf.reload(token);
+    if (previous === 'shelf') void refreshInventoryDependents(token);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {
@@ -394,6 +414,7 @@ export const App = () => {
         setUser(profile.user);
         await Promise.all([
           loadInventory(token),
+          shelf.reload(token),
           loadSummary(token, dashboardWindow),
           mixes.reload(token),
           rails.reload(token),
@@ -441,6 +462,7 @@ export const App = () => {
       setUser(profile.user);
       await Promise.all([
         loadInventory(auth.accessToken),
+        shelf.reload(auth.accessToken),
         loadSummary(auth.accessToken, dashboardWindow),
         mixes.reload(auth.accessToken),
         rails.reload(auth.accessToken),
@@ -552,6 +574,7 @@ export const App = () => {
     dailyCode.reset();
     staff.reset();
     telegramOps.reset();
+    shelf.reset();
     storeToken('');
     setToken('');
     setUser(null);
@@ -574,7 +597,10 @@ export const App = () => {
     setInventoryBatchAction('');
   };
 
-  const onToggleStock = async (item: InventoryTobacco) => {
+  // Каталог ставит табак на полку и убирает с неё через сервис полки; наличие
+  // для гостя пересчитывает backend, поэтому после действия каталог и зависимые
+  // поверхности перечитываются.
+  const runCatalogShelfAction = async (item: InventoryTobacco, action: () => Promise<unknown>, fallback: string) => {
     if (!token) {
       return;
     }
@@ -583,25 +609,24 @@ export const App = () => {
     setInventoryError('');
 
     try {
-      await requestJson<unknown>(
-        `/staff/inventory/tobaccos/${item.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ inStock: !item.inStock }),
-        },
-        token,
-      );
+      await action();
       const dependentRefresh = refreshInventoryDependents(token);
       await loadInventory(token, inventoryFilters, inventorySort);
       void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
-      setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить наличие');
+      setInventoryError(cause instanceof Error ? cause.message : fallback);
       setInventoryStatus('error');
     } finally {
       setToggleId('');
     }
   };
+
+  const onAddToShelf = (item: InventoryTobacco) =>
+    runCatalogShelfAction(item, () => shelf.add(item.id), 'Не удалось поставить табак на полку');
+
+  const onRemoveFromShelf = (item: InventoryTobacco) =>
+    runCatalogShelfAction(item, () => shelf.remove(item.id), 'Не удалось убрать табак с полки');
 
   const onToggleInventorySelection = (id: string) => {
     setSelectedInventoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -642,13 +667,39 @@ export const App = () => {
     }
   };
 
-  const onRunInventoryBatch = async (action: InventoryBatchAction) => {
+  const onRunInventoryBatch = async (action: CatalogBatchAction) => {
     if (!token || !selectedInventoryIds.length) {
       return;
     }
 
     setInventoryBatchAction(action);
     setInventoryError('');
+
+    if (action === 'shelf-add' || action === 'shelf-remove') {
+      const failed: string[] = [];
+      for (const id of selectedInventoryIds) {
+        const onShelf = shelfStatuses.get(id);
+        try {
+          if (action === 'shelf-add' && onShelf !== 'active') {
+            await shelf.add(id);
+          }
+          if (action === 'shelf-remove' && onShelf) {
+            await shelf.remove(id);
+          }
+        } catch {
+          failed.push(inventory.find((item) => item.id === id)?.name ?? id);
+        }
+      }
+      if (failed.length) {
+        setInventoryError(`Часть позиций не обновилась: ${failed.join(', ')}`);
+      }
+      setSelectedInventoryIds([]);
+      const dependentRefresh = refreshInventoryDependents(token);
+      await loadInventory(token, inventoryFilters, inventorySort);
+      void dependentRefresh;
+      setInventoryBatchAction('');
+      return;
+    }
 
     try {
       const response = await requestJson<unknown>(
@@ -724,7 +775,9 @@ export const App = () => {
             flavorProfiles: payload.flavorProfiles,
             flavors: payload.flavors,
             flavorTags: payload.flavorTags,
-            inStock: payload.inStock,
+            // Наличие правится на «Полке»; при создании карточки можно сразу
+            // поставить табак на полку (backend добавит одну банку).
+            ...(payload.id ? {} : { inStock: payload.inStock }),
           }),
         },
         token,
@@ -787,7 +840,7 @@ export const App = () => {
       summary={summary}
       summaryStatus={summaryStatus}
       summaryError={summaryError}
-      onNavigate={(tab) => setActiveTab(tab)}
+      onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
     />
   );
 
@@ -803,6 +856,7 @@ export const App = () => {
       selectedIds={selectedInventoryIds}
       pendingRowId={toggleId}
       pendingBatchAction={inventoryBatchAction}
+      shelfStatuses={shelfStatuses}
       onSearchChange={onInventorySearchChange}
       onStockChange={(value) => void onInventoryStockChange(value)}
       onArchivedChange={(value) => void onInventoryArchivedChange(value)}
@@ -813,7 +867,8 @@ export const App = () => {
       onPageSizeChange={(pageSize) => void onInventoryPageSizeChange(pageSize)}
       onToggleSelection={onToggleInventorySelection}
       onToggleSelectAll={onToggleSelectAllInventory}
-      onToggleStock={(item) => void onToggleStock(item)}
+      onAddToShelf={(item) => void onAddToShelf(item)}
+      onRemoveFromShelf={(item) => void onRemoveFromShelf(item)}
       onArchiveTobacco={(item, archived) => void onArchiveTobacco(item, archived)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
       onOpenMix={onOpenInventoryMix}
@@ -821,6 +876,18 @@ export const App = () => {
       saveError={inventorySaveError}
       onSaveTobacco={onSaveTobacco}
       onResetSaveFeedback={onResetInventorySaveFeedback}
+    />
+  );
+
+  const renderShelf = () => (
+    <ShelfView
+      shelf={shelf}
+      onGoCatalog={() => setActiveTab('catalog')}
+      onOpenInCatalog={(row) => {
+        setActiveTab('catalog');
+        void onInventorySearchChange(row.tobacco.name);
+      }}
+      onOpenMix={onOpenInventoryMix}
     />
   );
 
@@ -964,7 +1031,9 @@ export const App = () => {
     switch (activeTab) {
       case 'dashboard':
         return renderDashboard();
-      case 'inventory':
+      case 'shelf':
+        return renderShelf();
+      case 'catalog':
         return renderInventory();
       case 'mixes':
         return renderMixes();
@@ -1030,7 +1099,7 @@ export const App = () => {
         hint: tobacco.manufacturer || 'табак',
         keywords: `${tobacco.name} ${tobacco.manufacturer}`,
         searchOnly: true,
-        onSelect: () => setActiveTab('inventory'),
+        onSelect: () => setActiveTab('catalog'),
       })),
     ];
 
