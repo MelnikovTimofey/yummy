@@ -192,12 +192,30 @@ export type GuestMixRef =
   | { kind: 'catalog'; mixId: string | null }
   | { kind: 'custom'; eventId: string };
 
+export type GuestCabinetComponent = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+  proportion: number;
+};
+
+// Карточка из строки кабинета: у каталожного — текущий микс (null у удалённого
+// или скрытого), у собранного — снимок события с гармонией и датой.
+export type GuestCabinetCard = {
+  description: string;
+  flavors: string[];
+  components: GuestCabinetComponent[];
+  harmony: number | null;
+  madeAt: string | null;
+};
+
 export type GuestCabinetItem = {
   ref: GuestMixRef;
   name: string;
   flavorProfiles: string[];
   status: GuestMixStatus;
   ownRating: number | null;
+  card: GuestCabinetCard | null;
 };
 
 // GET /guest/me/history?before=<ISO>&limit=50 — по убыванию даты.

@@ -73,6 +73,48 @@ test.describe('guest cabinet: history and favorites', () => {
     assert.equal(await prisma.smokeCtaEvent.count({ where: { guestId: null } }), 1);
   });
 
+  // Карточка из строки кабинета (#244): sheet-stock и sheet-custom без запроса
+  // каталога — у собранного микса состав и гармония из снимка события.
+  test('rows carry the card: description, flavors and components; custom — harmony and the date it was made', async () => {
+    const guest = await createGuest();
+    await smoke(app, MIX, guest.headers);
+    await smokeCustom(app, guest.headers);
+    const custom = await prisma.customMixSmokeEvent.findFirstOrThrow({ where: { guestId: guest.id } });
+    assert.equal((await app.inject({ method: 'PUT', url: `/guest/me/favorites/custom/${custom.id}`, headers: guest.headers })).statusCode, 204);
+
+    const mix = await prisma.mix.findUniqueOrThrow({
+      where: { id: MIX },
+      include: { components: { orderBy: { sortOrder: 'asc' }, include: { tobacco: true } } },
+    });
+    const { items } = await history(app, guest.headers);
+    const catalogRow = items.find((item) => item.ref.kind === 'catalog')!;
+    assert.deepEqual(catalogRow.card, {
+      description: mix.description,
+      flavors: JSON.parse(mix.flavors),
+      components: mix.components.map((item) => ({
+        tobaccoId: item.tobaccoId,
+        manufacturer: item.tobacco.manufacturer,
+        name: item.tobacco.name,
+        proportion: item.proportion,
+      })),
+      harmony: null,
+      madeAt: null,
+    });
+
+    const customRow = items.find((item) => item.ref.kind === 'custom')!;
+    assert.equal(customRow.card?.harmony, custom.harmony);
+    assert.equal(customRow.card?.madeAt, custom.createdAt.toISOString());
+    assert.deepEqual(customRow.card?.components.map((item) => [item.tobaccoId, item.proportion]), BOWL.map((item) => [item.tobaccoId, item.proportion]));
+    assert.ok(customRow.card?.components.every((item) => item.manufacturer && item.name));
+
+    const [favorite] = (await favorites(app, guest.headers)).items;
+    assert.equal(favorite.card?.madeAt, custom.createdAt.toISOString());
+
+    await deleteMix(MIX);
+    const after = await history(app, guest.headers);
+    assert.equal(after.items.find((item) => item.ref.kind === 'catalog')!.card, null);
+  });
+
   test('an invalid guest token is 401 on guest events and rating — the client drops it and retries anonymously', async () => {
     const bad = { authorization: 'Bearer broken.token' };
     assert.equal((await smoke(app, MIX, bad)).statusCode, 401);
