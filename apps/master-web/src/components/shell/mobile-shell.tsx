@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Sparkles } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { MOBILE_MORE_TABS, MOBILE_NAV, mobileNavItemFor } from './mobile-nav';
 import type { WorkspaceTab } from './workspace-tabs';
@@ -21,9 +21,11 @@ type MobileNavProps = {
   userName: string;
   userRoleLabel: string;
   onSignOut: () => void;
+  // Пункт «Что нового» в «Ещё» (#226); нет выпусков — нет пункта.
+  whatsNew: { unseen: boolean; onOpen: () => void } | null;
 };
 
-export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onSignOut }: MobileNavProps) => {
+export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onSignOut, whatsNew }: MobileNavProps) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const active = mobileNavItemFor(activeTab);
 
@@ -41,6 +43,7 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
             onClick={() => (item.id === 'more' ? setMoreOpen(true) : onTabChange(item.id))}
           >
             {item.label}
+            {item.id === 'more' && whatsNew?.unseen ? <span className="wn-dot m-nav__dot" aria-hidden="true" /> : null}
           </button>
         ))}
       </nav>
@@ -75,6 +78,23 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
               );
             })}
           </ul>
+          {whatsNew ? (
+            <button
+              type="button"
+              className="m-more__item"
+              aria-label={whatsNew.unseen ? 'Что нового, есть непрочитанное' : 'Что нового'}
+              onClick={() => {
+                setMoreOpen(false);
+                whatsNew.onOpen();
+              }}
+            >
+              <Sparkles size={18} strokeWidth={1.8} aria-hidden />
+              <span>
+                <b>Что нового</b>
+              </span>
+              {whatsNew.unseen ? <span className="wn-dot m-more__dot" aria-hidden="true" /> : null}
+            </button>
+          ) : null}
           <button
             type="button"
             className="m-more__item m-more__item--exit"
