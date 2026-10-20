@@ -81,6 +81,46 @@ test('matchLine keeps a leading vowel and ignores one-consonant words in transli
   assert.equal(matchLine({ name: 'Black Burn 200г Айс Эппл' }, tricky)[0]?.tobaccoId, 'ice-apple');
 });
 
+test('matchLine counts a one-consonant word only next to a matched longer word', () => {
+  const short: CatalogTobacco[] = [
+    { id: 'pink-me', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Pink Me' },
+    { id: 'forever-young', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Forever young' },
+    { id: 'green-tea', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Green Tea' },
+  ];
+  const pinkMe = matchLine({ name: '"Дарк Сайд" Кор (Пинк Ми), 250 г' }, short)[0];
+  assert.equal(pinkMe?.tobaccoId, 'pink-me');
+  assert.ok(pinkMe.confidence >= CONFIDENT_MATCH, `Пинк Ми: ${pinkMe.confidence}`);
+
+  const foreverYoung = matchLine({ name: '"Дарк Сайд" Кор (Форевер Янг), 250 г' }, short)[0];
+  assert.equal(foreverYoung?.tobaccoId, 'forever-young');
+  assert.equal(foreverYoung.confidence, 90);
+
+  assert.deepEqual(matchLine({ name: '"Дарк Сайд" Кор (Ми), 250 г' }, short), []);
+  assert.deepEqual(matchLine({ name: '"Дарк Сайд" Кор (Что-то), 250 г' }, short), []);
+  assert.deepEqual(matchLine({ name: '"Дарк Сайд" Кор (Ми то), 250 г' }, short), []);
+});
+
+test('matchLine tells one-consonant words apart by vowels', () => {
+  // Пары с одной полки htreviews: скелет согласных у коротких слов совпадает.
+  const pairs: CatalogTobacco[] = [
+    { id: 'hard-ba', manufacturer: 'Хулиган', lineName: null, name: 'HARD BA' },
+    { id: 'hard-boo', manufacturer: 'Хулиган', lineName: null, name: 'Hard Boo' },
+    { id: 'kakao-maya', manufacturer: 'Хулиган', lineName: null, name: 'Kakao Maya' },
+    { id: 'kakao-mayo', manufacturer: 'Хулиган', lineName: null, name: 'Kakao Mayo' },
+    { id: 'ice-tea', manufacturer: 'Хулиган', lineName: null, name: 'Ice Tea' },
+    { id: 'papaya', manufacturer: 'Хулиган', lineName: null, name: 'Papaya' },
+  ];
+  const confident = (name: string) =>
+    matchLine({ name }, pairs)
+      .filter((candidate) => candidate.confidence >= CONFIDENT_MATCH)
+      .map((candidate) => candidate.tobaccoId);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Хард Бу'), ['hard-boo']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Хард Ба'), ['hard-ba']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Какао Майо'), ['kakao-mayo']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Айс Ти'), ['ice-tea']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Папайя'), ['papaya']);
+});
+
 test('matchLine matches word forms by a common stem', () => {
   assert.equal(top('Табак для кальяна SEBERO Блэк БЧК 200гр Барбарисовая Шипучка')?.tobaccoId, 'sebero-barberry');
   assert.equal(top('Табак для кальяна Black Burn 200г Raspberry')?.tobaccoId, 'bb-raspberries');
