@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Что нового · мокап</title>
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<style>
+body{margin:0;background:#0c0c0e;font-family:var(--font-sans);color:var(--text-primary)}
+.board{padding:28px 32px 80px;display:grid;gap:36px}
+.board-caps{margin:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-hover)}
+.board-title{margin:6px 0 8px;font-family:var(--font-serif);font-weight:500;font-size:30px}
+.board-text{margin:0;color:var(--text-secondary);line-height:1.55;max-width:96ch}
+.board-h2{margin:0 0 12px;font-family:var(--font-serif);font-weight:500;font-size:20px}
+.row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.frame{display:grid;gap:8px}
+.frame-name{margin:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.frame-name b{color:var(--text-primary);font-weight:500}
+.desk{width:1280px;height:800px;position:relative;overflow:hidden;border:1px solid var(--border-default);border-radius:10px;background:var(--bg-base)}
+.phone{width:375px;height:780px;position:relative;overflow:hidden;border:1px solid var(--border-default);border-radius:28px;background:var(--bg-base)}
+.shot{min-height:100vh;display:grid;place-items:start center;background:var(--bg-base)}
+.shot .desk,.shot .phone{border:0;border-radius:0}
+
+/* Фон: снимок «Полки» под затемнением */
+.desk-bg{position:absolute;inset:0;background:url(../design_handoff_inventory/screens/impl-shelf.png) top left/1280px auto no-repeat}
+.phone-bg{position:absolute;inset:0;background:url(../design_handoff_inventory/screens/impl-shelf-mobile.png) top left/375px auto no-repeat}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(2px)}
+
+/* Кнопка в шапке */
+.wn-trigger{position:absolute;top:24px;right:372px;display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--bg-raised);color:var(--text-secondary);font:inherit;font-size:13px;cursor:pointer}
+.wn-trigger:hover{color:var(--text-primary);border-color:var(--border-strong)}
+.wn-dot{width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.wn-trigger svg{width:14px;height:14px}
+.callout{position:absolute;top:66px;right:330px;padding:8px 12px;border-radius:var(--r-md);background:var(--bg-elevated);border:1px solid var(--border-default);font-size:12px;color:var(--text-muted);max-width:240px}
+
+/* Окно */
+.wn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:760px;display:grid;grid-template-rows:auto auto auto auto;border:1px solid var(--border-default);border-radius:var(--r-xl);background:var(--bg-raised);box-shadow:var(--shadow-lg);overflow:hidden}
+.wn-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px}
+.wn-head p{margin:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.wn-head p b{color:var(--text-primary);font-weight:500}
+.wn-x{width:30px;height:30px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--text-muted);font-size:18px;cursor:pointer}
+.wn-x:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.wn-visual{margin:0 12px;height:360px;border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-base);overflow:hidden;position:relative}
+.wn-visual img{display:block;width:100%;height:100%;object-fit:cover;object-position:top left}
+.wn-visual.contain img{object-fit:contain;object-position:center;padding:16px;box-sizing:border-box}
+.wn-copy{padding:18px 22px 6px;display:grid;gap:6px;min-height:96px;align-content:start}
+.wn-copy h2{margin:0;font-family:var(--font-serif);font-weight:500;font-size:26px;line-height:1.15}
+.wn-copy p{margin:0;color:var(--text-secondary);font-size:15px;line-height:1.5;max-width:62ch}
+.wn-foot{display:flex;align-items:center;gap:10px;padding:14px 18px;border-top:1px solid var(--border-subtle);margin-top:12px}
+.wn-pips{display:flex;gap:6px;margin-right:auto}
+.wn-pip{width:20px;height:3px;border-radius:2px;border:0;padding:0;background:var(--border-default);cursor:pointer}
+.wn-pip.on{width:28px;background:var(--accent)}
+.wn-btn{height:32px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border-default);background:transparent;color:var(--text-primary);font:inherit;font-size:13px;cursor:pointer}
+.wn-btn:disabled{opacity:.4;cursor:default}
+.wn-btn.ghost{border-color:transparent;color:var(--text-secondary)}
+.wn-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.wn-btn.link{border-color:transparent;color:var(--text-secondary);text-decoration:underline;text-underline-offset:3px}
+
+/* Слайд-список, как в референсе */
+.wn-list{position:absolute;inset:0;display:grid;align-content:center;padding:0 56px}
+.wn-item{display:grid;grid-template-columns:22px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border-subtle);font-size:15px}
+.wn-item:last-child{border-bottom:0}
+.wn-check{width:20px;height:20px;border-radius:999px;background:var(--success);display:grid;place-items:center;color:var(--bg-base);font-size:12px;font-weight:700}
+.wn-item small{color:var(--text-faint);font-size:12px}
+
+/* Телефон: окно на весь экран */
+.wn.phone-wn{left:0;top:0;transform:none;width:100%;height:100%;border:0;border-radius:0;grid-template-rows:auto 1fr auto auto}
+.phone-wn .wn-visual{height:auto;min-height:0;display:grid;place-items:center}
+.phone-wn .wn-visual img{width:100%;height:100%;object-fit:cover;object-position:top left}
+.phone-wn .wn-visual.contain img{object-fit:contain;object-position:center top;padding:0}
+.phone-wn .wn-copy{padding:16px 18px 4px;min-height:120px}
+.phone-wn .wn-copy h2{font-size:22px}
+.phone-wn .wn-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.phone-wn .wn-arrows{display:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// Выпуск — одна запись в данных master-web; крупная фича при релизе добавляет свои слайды.
+const RELEASE = {
+  id: '2026-10-inventory',
+  label: '21 октября',
+  slides: [
+    { title: 'Полка вместо «Табаков»', text: 'Банки на полке, расход и «хватит до» по каждому табаку. Закончилась банка — одна кнопка и 10 секунд на отмену.', image: '../design_handoff_inventory/screens/impl-shelf.png', imagePhone: '../design_handoff_inventory/screens/impl-shelf-mobile.png', action: 'Открыть полку' },
+    { title: 'Поставки из счёта', text: 'PDF счёта поставщика превращается в банки на полке. Строки сопоставляются с каталогом, следующий счёт того же поставщика разбирается сам.', image: '../design_handoff_inventory/screens/impl-deliveries.png', action: 'Открыть поставки' },
+    { title: 'К заказу и прогноз', text: 'Что закончится до следующей поставки, сколько заказать и готовый текст для поставщика. На дашборде — прогноз расхода на сегодня и траты.', image: '../design_handoff_inventory/screens/impl-reorder.png', action: 'Открыть «К заказу»' },
+    { title: 'Идеи для закупки', text: 'В «Каталоге» — табаки не с полки по рейтингу и просмотрам htreviews. Понравилось — «В план», и табак появится в «К заказу».', image: '../design_handoff_inventory/screens/impl-ideas.png', action: 'Открыть идеи' },
+    { title: 'Полка на телефоне', text: '«Закончилась» и остаток банки — прямо у стойки, с телефона.', image: '../design_handoff_inventory/screens/impl-shelf-mobile.png', contain: true },
+    { title: 'И по мелочи', text: 'То, что не тянет на отдельный слайд, но пригодится в смене.', list: [
+      'Каталог отделён от полки — наличие больше не тумблер',
+      'Стоп для гостей: табак есть, но гостю не предлагается',
+      'Настройки полки: граммовка чаши и срок поставки',
+      'Ссылка на htreviews в карточке табака',
+    ] },
+  ],
+};
+
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function visual(slide, phone) {
+  if (slide.list) return `<div class="wn-visual"><div class="wn-list">${slide.list.map((t) => `<div class="wn-item"><span class="wn-check">✓</span><span>${esc(t)}</span><small></small></div>`).join('')}</div></div>`;
+  const src = phone && slide.imagePhone ? slide.imagePhone : slide.image;
+  const contain = slide.contain || (phone && slide.imagePhone);
+  return `<div class="wn-visual${contain ? ' contain' : ''}"><img src="${src}" alt="" /></div>`;
+}
+function dialog(index, phone) {
+  const slide = RELEASE.slides[index];
+  const last = index === RELEASE.slides.length - 1;
+  return `
+  <section class="wn${phone ? ' phone-wn' : ''}" role="dialog" aria-label="Что нового" data-index="${index}">
+    <header class="wn-head"><p>Что нового · <b>${RELEASE.label}</b></p><button class="wn-x" aria-label="Закрыть">×</button></header>
+    ${visual(slide, phone)}
+    <div class="wn-copy"><h2>${esc(slide.title)}</h2><p>${esc(slide.text)}</p></div>
+    <footer class="wn-foot">
+      <div class="wn-pips">${RELEASE.slides.map((_, i) => `<button class="wn-pip${i === index ? ' on' : ''}" data-go="${i}" aria-label="Слайд ${i + 1}"></button>`).join('')}</div>
+      ${slide.action && !phone ? `<button class="wn-btn link">${esc(slide.action)}</button>` : ''}
+      <button class="wn-btn ghost" data-go="${index - 1}" ${index === 0 ? 'disabled' : ''}>Назад</button>
+      <button class="wn-btn primary" data-go="${last ? 'done' : index + 1}">${last ? 'Готово' : 'Далее'}</button>
+    </footer>
+  </section>`;
+}
+function desk(index, opts = {}) {
+  return `<div class="desk"><div class="desk-bg"></div>
+    <button class="wn-trigger">${opts.read ? '' : '<span class="wn-dot"></span>'}Что нового</button>
+    ${opts.callout ? '<div class="callout">Точка — пока выпуск не просмотрен этим логином на этом устройстве. Окно само не открывается.</div>' : ''}
+    ${index == null ? '' : `<div class="scrim"></div>${dialog(index, false)}`}</div>`;
+}
+function phone(index) {
+  return `<div class="phone"><div class="phone-bg"></div>${index == null ? '' : `${dialog(index, true)}`}</div>`;
+}
+function wire(root) {
+  root.querySelectorAll('.wn').forEach((wn) => {
+    wn.addEventListener('click', (e) => {
+      const go = e.target.closest('[data-go]')?.dataset.go;
+      if (go == null) return;
+      const host = wn.parentElement;
+      const isPhone = wn.classList.contains('phone-wn');
+      const next = go === 'done' ? 0 : Number(go);
+      wn.outerHTML = dialog(next, isPhone);
+      wire(host);
+    });
+  });
+}
+
+const SHOTS = [
+  ['trigger', 'Шапка: «Что нового» с точкой', () => desk(null, { callout: true })],
+  ['slide-1', 'Окно · первый слайд', () => desk(0)],
+  ['slide-2', 'Окно · «Поставки из счёта»', () => desk(1)],
+  ['slide-list', 'Окно · последний слайд — список, «Готово»', () => desk(5)],
+  ['read', 'Шапка после просмотра — точки нет', () => desk(null, { read: true })],
+  ['phone-1', 'Телефон · на весь экран', () => phone(0)],
+  ['phone-list', 'Телефон · последний слайд', () => phone(5)],
+];
+
+const shotId = new URLSearchParams(location.hash.slice(1)).get('shot');
+const root = document.getElementById('root');
+if (shotId) {
+  const shot = SHOTS.find(([id]) => id === shotId) || SHOTS[1];
+  root.innerHTML = `<div class="shot">${shot[2]()}</div>`;
+} else {
+  root.innerHTML = `<div class="board">
+    <header><p class="board-caps">#226 · Мастер · десктоп 1280 и телефон 375</p>
+      <h1 class="board-title">«Что нового» в «Мастере»</h1>
+      <p class="board-text">Окно со слайдами по референсу владельца: иллюстрация, заголовок, короткий текст; точки-страницы, «Назад» / «Далее», на последнем — «Готово». Открывается кнопкой в шапке, точка-акцент — пока выпуск не просмотрен. Первый выпуск — про инвентарь (#152), снимки реальных экранов. Слайды кликабельны.</p></header>
+    <section><h2 class="board-h2">Десктоп</h2><div class="row">${SHOTS.filter(([id]) => !id.startsWith('phone')).map(([id, name, f]) => `<div class="frame"><p class="frame-name"><b>${name}</b> · #shot=${id}</p>${f()}</div>`).join('')}</div></section>
+    <section><h2 class="board-h2">Телефон</h2><div class="row">${SHOTS.filter(([id]) => id.startsWith('phone')).map(([id, name, f]) => `<div class="frame"><p class="frame-name"><b>${name}</b> · #shot=${id}</p>${f()}</div>`).join('')}</div></section>
+  </div>`;
+}
+wire(root);
+</script>
+</body>
+</html>
