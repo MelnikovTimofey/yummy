@@ -14,6 +14,8 @@ type MasterTopBarProps = {
   userRoleLabel: string;
   onSignOut: () => void;
   onOpenCommandPalette: () => void;
+  // Нет выпусков — нет и кнопки «Что нового».
+  whatsNew: { unseen: boolean; onOpen: () => void } | null;
 };
 
 export const MasterTopBar = ({
@@ -23,6 +25,7 @@ export const MasterTopBar = ({
   userRoleLabel,
   onSignOut,
   onOpenCommandPalette,
+  whatsNew,
 }: MasterTopBarProps) => {
   const tabRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     dashboard: null,
@@ -108,6 +111,18 @@ export const MasterTopBar = ({
       <div className="topbar__spacer" />
 
       <div className="topbar__right">
+        {whatsNew ? (
+          <button
+            type="button"
+            className="wn-trigger"
+            aria-label={whatsNew.unseen ? 'Что нового, есть непрочитанное' : 'Что нового'}
+            onClick={whatsNew.onOpen}
+          >
+            {whatsNew.unseen ? <span className="wn-dot" aria-hidden="true" /> : null}
+            Что нового
+          </button>
+        ) : null}
+
         <button
           type="button"
           className="status-pill status-pill--button"

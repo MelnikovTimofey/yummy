@@ -7460,3 +7460,275 @@ button.chip .chip__count[hidden] {
   /* Панель приёмки поставки прилипает над нижней навигацией, а не под ней. */
   .deliv-footbar { bottom: calc(56px + var(--safe-bottom) + 8px); }
 }
+
+/* =====================================================================
+   «Что нового» (#226) — по design/design_handoff_whats_new
+   (#shot=trigger, slide-1, slide-list, phone-1). Кнопка в шапке, пункт
+   в «Ещё» и окно со слайдами; на телефоне окно на весь экран.
+   ===================================================================== */
+
+.wn-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-base);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.wn-trigger:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+.wn-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.wn-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.m-nav__item { position: relative; }
+.wn-dot.m-nav__dot { position: absolute; top: 14px; left: calc(50% + 16px); }
+.wn-dot.m-more__dot { display: block; margin-left: auto; margin-right: 4px; }
+
+/* --- Окно ------------------------------------------------------------- */
+
+@keyframes wn-in { from { opacity: 0; transform: translate(-50%, -48%); } }
+
+.wn-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: oklch(0 0 0 / 0.62);
+  backdrop-filter: blur(2px);
+  animation: bottom-sheet-fade var(--dur-base) var(--ease-out);
+}
+
+.wn {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 71;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-xl);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  animation: wn-in var(--dur-base) var(--ease-out);
+}
+
+.wn:focus { outline: none; }
+
+.wn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+}
+
+.wn-head__title {
+  margin: 0;
+  font-family: var(--font-meta);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.wn-head__title b { color: var(--text-primary); font-weight: 500; }
+
+.wn-x {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.wn-x:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.wn-x:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); color: var(--text-primary); }
+
+.wn-visual {
+  position: relative;
+  height: 360px;
+  margin: 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-base);
+}
+
+.wn-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.wn-visual--contain img {
+  box-sizing: border-box;
+  padding: 16px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.wn-list {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  margin: 0;
+  padding: 0 56px;
+  list-style: none;
+}
+
+.wn-list__item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-guest-body);
+  color: var(--text-primary);
+}
+
+.wn-list__item:last-child { border-bottom: 0; }
+
+.wn-list__check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  background: var(--success);
+  color: var(--bg-base);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.wn-copy {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 96px;
+  padding: 18px 22px 6px;
+}
+
+.wn-copy h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.wn-copy p {
+  max-width: 62ch;
+  margin: 0;
+  font-size: var(--fs-guest-body);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.wn-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.wn-pips { display: flex; gap: 6px; margin-right: auto; }
+
+/* Полоска 3 px, а нажимается вся высота кнопки. */
+.wn-pip {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: linear-gradient(var(--border-default), var(--border-default)) center / 100% 3px no-repeat;
+  cursor: pointer;
+}
+
+.wn-pip[aria-current="step"] {
+  width: 28px;
+  background-image: linear-gradient(var(--accent), var(--accent));
+}
+
+.wn-pip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 2px; }
+
+.wn-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-base);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.wn-btn:disabled { opacity: 0.4; cursor: default; }
+.wn-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.wn-btn--ghost { border-color: transparent; color: var(--text-secondary); }
+.wn-btn--ghost:hover:not(:disabled) { color: var(--text-primary); }
+.wn-btn--primary { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+.wn-btn--primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+.wn-btn--link { border-color: transparent; color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; }
+.wn-btn--link:hover { color: var(--text-primary); }
+
+/* --- Телефон: на весь экран ------------------------------------------- */
+
+.wn.wn--phone {
+  left: 0;
+  top: 0;
+  transform: none;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  overflow: hidden;
+  padding-top: var(--safe-top);
+  border: 0;
+  border-radius: 0;
+  animation: bottom-sheet-fade var(--dur-base) var(--ease-out);
+}
+
+.wn--phone .wn-visual { height: auto; min-height: 0; }
+.wn--phone .wn-visual--contain img { padding: 0; object-position: center top; }
+.wn--phone .wn-list { padding: 0 20px; }
+.wn--phone .wn-copy { min-height: 120px; padding: 16px 18px 4px; }
+.wn--phone .wn-copy h2 { font-size: 22px; }
+.wn--phone .wn-foot { padding: 12px 16px calc(12px + var(--safe-bottom)); }
+.wn--phone .wn-btn { height: 40px; }

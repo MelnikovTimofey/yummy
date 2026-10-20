@@ -29,6 +29,8 @@ import { RailEditor } from '@/components/rails/rail-editor';
 import { RailsView } from '@/components/rails/rails-view';
 import { MasterTopBar } from '@/components/shell/topbar';
 import { MobileNav, MobileTopBar } from '@/components/shell/mobile-shell';
+import { WhatsNewDialog } from '@/components/shell/whats-new-dialog';
+import { hasUnseen, latestRelease, markSeen, readSeen, type WhatsNewAction } from '@/lib/whats-new';
 import { mobileTitleFor } from '@/components/shell/mobile-nav';
 import {
   getWorkspacePanelId,
@@ -152,6 +154,7 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   // Вернулись на полку — снова полка, а не «К заказу» (как до выноса режима в App).
   useEffect(() => {
     if (activeTab !== 'shelf') setShelfMode('shelf');
@@ -625,6 +628,7 @@ export const App = () => {
     setError('');
     setPassword('');
     setActiveTab('dashboard');
+    setWhatsNewOpen(false);
     setInventoryStatus('idle');
     setSummaryStatus('idle');
     setInventoryError('');
@@ -1125,6 +1129,27 @@ export const App = () => {
   };
 
   if (user) {
+    const whatsNewRelease = latestRelease();
+    // Читаем при каждом рендере: закрытие окна и так перерисовывает App, а при
+    // недоступном хранилище точка честно остаётся гореть.
+    const whatsNew = whatsNewRelease
+      ? { unseen: hasUnseen(readSeen(user.login)), onOpen: () => setWhatsNewOpen(true) }
+      : null;
+    const closeWhatsNew = () => {
+      if (whatsNewRelease) markSeen(user.login, whatsNewRelease.id);
+      setWhatsNewOpen(false);
+    };
+    const openWhatsNewAction = (action: WhatsNewAction) => {
+      closeWhatsNew();
+      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : 'shelf');
+      if (action.tab === 'catalog') {
+        setCatalogView(action.view === 'ideas' ? 'ideas' : 'all');
+        // Смена вкладки сама перечитает идеи; уже в каталоге — перечитываем здесь.
+        if (action.view === 'ideas' && activeTab === 'catalog' && token) void catalogIdeas.reload(token);
+      }
+      setActiveTab(action.tab);
+    };
+
     const commandPaletteItems: CommandPaletteItem[] = [
       ...workspaceTabs.map((tab) => ({
         id: `nav:${tab.id}`,
@@ -1210,6 +1235,7 @@ export const App = () => {
             userRoleLabel={formatRoleLabel(user.role)}
             onSignOut={onSignOut}
             onOpenCommandPalette={() => cmdK.setOpen(true)}
+            whatsNew={whatsNew}
           />
         )}
 
@@ -1234,6 +1260,16 @@ export const App = () => {
             userName={user.name}
             userRoleLabel={formatRoleLabel(user.role)}
             onSignOut={onSignOut}
+            whatsNew={whatsNew}
+          />
+        ) : null}
+
+        {whatsNewOpen && whatsNewRelease ? (
+          <WhatsNewDialog
+            release={whatsNewRelease}
+            isPhone={isPhone}
+            onClose={closeWhatsNew}
+            onAction={openWhatsNewAction}
           />
         ) : null}
 
