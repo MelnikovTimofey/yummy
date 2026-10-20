@@ -1722,7 +1722,7 @@ const toNullableString = (value: unknown) => (value == null ? null : String(valu
 const pickOne = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback;
 
-const normalizeShelfSettings = (value: unknown): ShelfSettings => {
+export const normalizeShelfSettings = (value: unknown): ShelfSettings => {
   const raw = isRecord(value) ? value : {};
   return {
     bowlGrams: toNumber(raw.bowlGrams, DEFAULT_SHELF_SETTINGS.bowlGrams),
@@ -1855,6 +1855,148 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
 export const normalizeShelfEmptyResponse = (value: unknown) => {
   const raw = isRecord(value) ? value : {};
   return { packId: String(raw.packId ?? ''), item: normalizeShelfRow(raw.item) };
+};
+
+// --- «К заказу» и блок «Полка» дашборда (#213) -------------------------------
+
+export type ShelfTobaccoRef = { id: string; manufacturer: string; lineName: string; name: string };
+export type ShelfSupplierRef = { id: string; name: string };
+
+export type ReorderItem = {
+  tobacco: ShelfTobaccoRef;
+  status: ShelfStatus;
+  daysLeft: number | null;
+  endsAt: string | null;
+  rate: number | null;
+  rateKind: ShelfRateKind;
+  quantity: number;
+  packWeight: number;
+  lastPriceKop: number | null;
+};
+
+export type ReorderGroup = {
+  supplier: ShelfSupplierRef | null;
+  lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
+  items: ReorderItem[];
+  // null — хоть у одной строки нет последней цены.
+  sumKop: number | null;
+};
+
+export type ReorderView = {
+  groups: ReorderGroup[];
+  settings: ShelfSettings;
+  text: Array<{ supplierId: string | null; text: string }>;
+};
+
+export type ShelfDashboardWeek = { from: string; to: string; grams: number; partial: boolean };
+
+export type ShelfDashboard = {
+  // weekday: 1 — понедельник … 7 — воскресенье.
+  today: { grams: number; bowls: number; weekdayFactor: number | null; weekday: number };
+  ending: Array<{ tobacco: ShelfTobaccoRef; status: ShelfStatus; daysLeft: number | null; endsAt: string | null }>;
+  spend: { month: string; bySupplier: Array<{ supplier: ShelfSupplierRef | null; sumKop: number }>; totalKop: number };
+  bowlCostKop: number | null;
+  stockValueKop: number;
+  weekly: ShelfDashboardWeek[];
+};
+
+const normalizeTobaccoRef = (value: unknown): ShelfTobaccoRef => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    id: String(raw.id ?? ''),
+    manufacturer: String(raw.manufacturer ?? ''),
+    lineName: String(raw.lineName ?? ''),
+    name: String(raw.name ?? ''),
+  };
+};
+
+const normalizeSupplierRef = (value: unknown): ShelfSupplierRef | null =>
+  isRecord(value) ? { id: String(value.id ?? ''), name: String(value.name ?? '') } : null;
+
+const listOf = (value: unknown) => (Array.isArray(value) ? value : []);
+
+// Даты «2026-11-18» — календарные дни (см. toDateOnly ниже).
+const toDay = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
+
+const normalizeReorderItem = (value: unknown): ReorderItem => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    tobacco: normalizeTobaccoRef(raw.tobacco),
+    status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
+    daysLeft: toNullableNumber(raw.daysLeft),
+    endsAt: toIsoString(raw.endsAt, '') || null,
+    rate: toNullableNumber(raw.rate),
+    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
+    quantity: toNumber(raw.quantity, 1),
+    packWeight: toNumber(raw.packWeight, 200),
+    lastPriceKop: toNullableNumber(raw.lastPriceKop),
+  };
+};
+
+const normalizeReorderGroup = (value: unknown): ReorderGroup => {
+  const raw = isRecord(value) ? value : {};
+  const invoice = isRecord(raw.lastInvoice) ? raw.lastInvoice : null;
+  const invoiceDate = invoice ? toDay(invoice.date) : '';
+  return {
+    supplier: normalizeSupplierRef(raw.supplier),
+    lastInvoice: invoice && invoiceDate
+      ? {
+          number: toNullableString(invoice.number),
+          date: invoiceDate,
+          status: pickOne(invoice.status, ['draft', 'received'] as const, 'received'),
+        }
+      : null,
+    items: listOf(raw.items).map(normalizeReorderItem),
+    sumKop: toNullableNumber(raw.sumKop),
+  };
+};
+
+export const normalizeReorderView = (value: unknown): ReorderView => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    groups: listOf(raw.groups).map(normalizeReorderGroup),
+    settings: normalizeShelfSettings(raw.settings),
+    text: listOf(raw.text).filter(isRecord).map((entry) => ({
+      supplierId: toNullableString(entry.supplierId),
+      text: String(entry.text ?? ''),
+    })),
+  };
+};
+
+export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
+  const raw = isRecord(value) ? value : {};
+  const today = isRecord(raw.today) ? raw.today : {};
+  const spend = isRecord(raw.spend) ? raw.spend : {};
+  return {
+    today: {
+      grams: toNumber(today.grams, 0),
+      bowls: toNumber(today.bowls, 0),
+      weekdayFactor: toNullableNumber(today.weekdayFactor),
+      weekday: toNumber(today.weekday, 1),
+    },
+    ending: listOf(raw.ending).filter(isRecord).map((entry) => ({
+      tobacco: normalizeTobaccoRef(entry.tobacco),
+      status: pickOne(entry.status, SHELF_STATUSES, 'ending'),
+      daysLeft: toNullableNumber(entry.daysLeft),
+      endsAt: toIsoString(entry.endsAt, '') || null,
+    })),
+    spend: {
+      month: typeof spend.month === 'string' && /^\d{4}-\d{2}$/.test(spend.month) ? spend.month : '',
+      bySupplier: listOf(spend.bySupplier).filter(isRecord).map((entry) => ({
+        supplier: normalizeSupplierRef(entry.supplier),
+        sumKop: toNumber(entry.sumKop, 0),
+      })),
+      totalKop: toNumber(spend.totalKop, 0),
+    },
+    bowlCostKop: toNullableNumber(raw.bowlCostKop),
+    stockValueKop: toNumber(raw.stockValueKop, 0),
+    weekly: listOf(raw.weekly).filter(isRecord).map((week) => ({
+      from: toDay(week.from),
+      to: toDay(week.to),
+      grams: toNumber(week.grams, 0),
+      partial: toBoolean(week.partial, false),
+    })),
+  };
 };
 
 // --- Поставки (#212): ответы /staff/deliveries* ------------------------------

@@ -28,8 +28,12 @@ import {
 } from '@/lib/shelf';
 import { ShelfCard } from './shelf-card';
 import { ShelfFilterPanel } from './shelf-filter-panel';
+import { countReorder } from '@/lib/reorder';
+import { ShelfHeadMenu } from './shelf-head-menu';
 import { ShelfPips } from './shelf-pips';
+import { ShelfReorder } from './shelf-reorder';
 import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
+import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 
 type ShelfViewProps = {
@@ -38,6 +42,9 @@ type ShelfViewProps = {
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
   onUploadInvoice: (file: File) => void;
+  // Карточка, которую открыли извне (дашборд → «Заканчивается»).
+  openCardId?: string;
+  onCardOpened?: () => void;
 };
 
 type Toast = ShelfToastData;
@@ -51,7 +58,7 @@ const markLabel = (fraction: number) => MARK_OPTIONS.find((option) => option.val
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 
-export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUploadInvoice }: ShelfViewProps) => {
+export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUploadInvoice, openCardId, onCardOpened }: ShelfViewProps) => {
   const { view } = shelf;
   const rows = view?.rows ?? [];
   const settings = view?.settings ?? { bowlGrams: 18, leadDays: 7 };
@@ -66,6 +73,8 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
   const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement } | null>(null);
   const [pendingId, setPendingId] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
+  const [mode, setMode] = useState<'shelf' | 'reorder'>('shelf');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const toastSeq = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableSectionElement | null>(null);
@@ -91,6 +100,20 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
       Загрузить счёт
     </button>
   );
+
+  useEffect(() => {
+    if (!openCardId || !rows.some((row) => row.tobacco.id === openCardId)) return;
+    setMode('shelf');
+    setActiveId(openCardId);
+    setCardId(openCardId);
+    onCardOpened?.();
+  }, [openCardId, rows, onCardOpened]);
+
+  const reorderCount = countReorder(shelf.reorder);
+  const headMenu = <ShelfHeadMenu onSettings={() => setSettingsOpen(true)} />;
+  const settingsDialog = settingsOpen ? (
+    <ShelfSettingsDialog settings={settings} onSave={shelf.saveSettings} onClose={() => setSettingsOpen(false)} />
+  ) : null;
 
   const shown = useMemo(
     () => sortShelfRows(filterShelfRows(rows, { query, status, filters }), sort),
@@ -211,13 +234,13 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
     [run, shelf],
   );
 
-  const keyboard = useRef({ shown, activeId, cardId, menu, onEmpty, onMark, onUndo });
-  keyboard.current = { shown, activeId, cardId, menu, onEmpty, onMark, onUndo };
+  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onMark, onUndo });
+  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onMark, onUndo };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const state = keyboard.current;
-      if (event.defaultPrevented || state.cardId || state.menu) return;
+      if (event.defaultPrevented || state.cardId || state.menu || state.mode !== 'shelf') return;
       const target = event.target as HTMLElement | null;
       const shortcut = resolveShelfShortcut({
         key: event.key,
@@ -266,7 +289,7 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
     // поиск по полке: перехватываем раньше, в фазе захвата.
     const onSearchKey = (event: KeyboardEvent) => {
       const state = keyboard.current;
-      if (state.cardId || state.menu) return;
+      if (state.cardId || state.menu || state.mode !== 'shelf') return;
       const shortcut = resolveShelfShortcut({
         key: event.key,
         code: event.code,
@@ -291,7 +314,7 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
   if (shelf.status !== 'error' && view && !rows.length) {
     return (
       <section className="shelf-page">
-        <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle="Банки на полке, расход и прогноз." />
+        <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle="Банки на полке, расход и прогноз." actions={headMenu} />
         <div className="shelf-empty">
           <h2>Полка пуста</h2>
           <p>
@@ -306,6 +329,7 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
           </div>
           {invoiceInput}
         </div>
+        {settingsDialog}
         {toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null}
       </section>
     );
@@ -323,11 +347,20 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
         meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])} · ${formatCount(totals.packs, ['банка', 'банки', 'банок'])}` : undefined}
         actions={
           <>
+            <span className="shelf-seg" role="group" aria-label="Вид полки">
+              <button type="button" aria-pressed={mode === 'shelf'} onClick={() => setMode('shelf')}>
+                Полка
+              </button>
+              <button type="button" aria-pressed={mode === 'reorder'} onClick={() => setMode('reorder')}>
+                {reorderCount === null ? 'К заказу' : `К заказу · ${formatMetricValue(reorderCount)}`}
+              </button>
+            </span>
             <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
               Добавить из каталога
             </button>
             {uploadButton}
             {invoiceInput}
+            {headMenu}
           </>
         }
       />
@@ -355,214 +388,222 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
             ]}
           />
 
-          <div className="shelf-toolbar">
-            <div className="input shelf-toolbar__search">
-              <Search size={14} aria-hidden />
-              <input
-                ref={searchRef}
-                type="search"
-                aria-label="Поиск по полке"
-                placeholder="Табак или бренд"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') event.currentTarget.blur();
-                }}
-              />
-              <span className="kbd" aria-hidden="true">/</span>
-            </div>
-            <div className="shelf-toolbar__chips" role="group" aria-label="Статус на полке">
-              {SHELF_STATUS_CHIPS.map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`filter-chip${status === key ? ' filter-chip--active' : ''}`}
-                  aria-pressed={status === key}
-                  onClick={() => setStatus(key)}
-                >
-                  <span>{label}</span>
-                  <span className="filter-chip__count">{formatMetricValue(counters?.[key] ?? 0)}</span>
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className={`filter-chip${filtersOpen || activeFilters ? ' filter-chip--active' : ''}`}
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen((current) => !current)}
-            >
-              <span>Фильтры</span>
-              <span className="filter-chip__count" hidden={!activeFilters}>
-                {activeFilters}
-              </span>
-            </button>
-            <label className="shelf-sort">
-              <span className="sr-only">Сортировка</span>
-              <select className="select-input" value={sort} onChange={(event) => setSort(event.target.value as ShelfSortKey)}>
-                {SHELF_SORT_OPTIONS.map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          {mode === 'reorder' ? <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} /> : null}
 
-          {filtersOpen ? (
+          {mode === 'shelf' ? (
             <>
-              <ShelfFilterPanel rows={rows} filters={filters} onChange={setFilters} />
-              {activeFilters ? (
-                <button type="button" className="btn shelf-filters__reset" data-size="sm" data-variant="ghost" onClick={() => setFilters(EMPTY_SHELF_FILTERS)}>
-                  Сбросить фильтры
-                </button>
-              ) : null}
-            </>
-          ) : null}
-
-          <div className="shelf-table-shell">
-            <table className="shelf-table">
-              <colgroup>
-                <col />
-                <col style={{ width: 110 }} />
-                <col style={{ width: 88 }} />
-                <col style={{ width: 168 }} />
-                <col style={{ width: 200 }} />
-                <col style={{ width: 150 }} />
-                <col style={{ width: 64 }} />
-                <col style={{ width: 186 }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th scope="col">Табак</th>
-                  <th scope="col">Банки</th>
-                  <th scope="col" className="shelf-table__num">Остаток</th>
-                  <th scope="col">Расход</th>
-                  <th scope="col">Хватит до</th>
-                  <th scope="col">Приход</th>
-                  <th scope="col" className="shelf-table__num">Миксы</th>
-                  <th scope="col" aria-label="Действия" />
-                </tr>
-              </thead>
-              <tbody ref={tableRef}>
-                {shown.map((row) => {
-                  const until = shelfUntil(row, settings.leadDays);
-                  const line = shelfStatusLine(row);
-                  const busy = pendingId === row.tobacco.id;
-                  const menuOpen = menu?.id === row.tobacco.id;
-                  let primary;
-                  if (row.status === 'out' || row.status === 'plan') {
-                    primary = <span className="shelf-faint shelf-table__note">в «К заказу»</span>;
-                  } else if (row.status === 'stop') {
-                    primary = (
-                      <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
-                        Снять стоп
-                      </button>
-                    );
-                  } else if (row.status === 'check') {
-                    primary = (
-                      <button
-                        type="button"
-                        className="btn"
-                        data-size="sm"
-                        disabled={busy}
-                        onClick={(event) => setMenu({ id: row.tobacco.id, anchor: event.currentTarget })}
-                      >
-                        Отметить остаток
-                      </button>
-                    );
-                  } else {
-                    primary = (
-                      <button type="button" className="btn" data-size="sm" disabled={busy || !row.openPacks.length} onClick={() => void onEmpty(row)}>
-                        Закончилась
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <tr
-                      key={row.tobacco.id}
-                      data-tobacco-id={row.tobacco.id}
-                      data-active={row.tobacco.id === activeId}
-                      onClick={() => {
-                        setActiveId(row.tobacco.id);
-                        setCardId(row.tobacco.id);
-                      }}
+              <div className="shelf-toolbar">
+                <div className="input shelf-toolbar__search">
+                  <Search size={14} aria-hidden />
+                  <input
+                    ref={searchRef}
+                    type="search"
+                    aria-label="Поиск по полке"
+                    placeholder="Табак или бренд"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') event.currentTarget.blur();
+                    }}
+                  />
+                  <span className="kbd" aria-hidden="true">/</span>
+                </div>
+                <div className="shelf-toolbar__chips" role="group" aria-label="Статус на полке">
+                  {SHELF_STATUS_CHIPS.map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`filter-chip${status === key ? ' filter-chip--active' : ''}`}
+                      aria-pressed={status === key}
+                      onClick={() => setStatus(key)}
                     >
-                      <td>
-                        <span className="shelf-name">
-                          <b>{row.tobacco.name}</b>
-                          <span>
-                            {row.tobacco.manufacturer} · {row.packWeight} г
-                          </span>
-                        </span>
-                      </td>
-                      <td>
-                        <ShelfPips row={row} />
-                      </td>
-                      <td className="shelf-table__num shelf-num">{formatGrams(row.remainingGrams)}</td>
-                      <td>
-                        <span
-                          className={`shelf-table__rate ${row.rateKind === 'own' ? 'shelf-num' : 'shelf-faint'}`}
-                          title={row.rateKind === 'brand' ? `${formatRate(row)}: своих данных ещё нет — медиана бренда` : undefined}
-                        >
-                          {formatRate(row)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="shelf-until">
-                          <span className="shelf-num" data-tone={until.tone}>
-                            {until.text}
-                            {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
-                          </span>
-                          {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
-                        </span>
-                      </td>
-                      <td>
-                        {row.lastReceipt ? (
-                          <span className="shelf-name shelf-name--receipt">
-                            <b>{formatShelfDate(row.lastReceipt.receivedAt)}</b>
-                            <span>{row.lastReceipt.label}</span>
-                          </span>
-                        ) : (
-                          <span className="shelf-faint">—</span>
-                        )}
-                      </td>
-                      <td className="shelf-table__num shelf-num">
-                        {row.mixCount ? formatMetricValue(row.mixCount) : <span className="shelf-faint">—</span>}
-                      </td>
-                      <td onClick={(event) => event.stopPropagation()}>
-                        <span className="shelf-table__actions">
-                          {primary}
+                      <span>{label}</span>
+                      <span className="filter-chip__count">{formatMetricValue(counters?.[key] ?? 0)}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={`filter-chip${filtersOpen || activeFilters ? ' filter-chip--active' : ''}`}
+                  aria-expanded={filtersOpen}
+                  onClick={() => setFiltersOpen((current) => !current)}
+                >
+                  <span>Фильтры</span>
+                  <span className="filter-chip__count" hidden={!activeFilters}>
+                    {activeFilters}
+                  </span>
+                </button>
+                <label className="shelf-sort">
+                  <span className="sr-only">Сортировка</span>
+                  <select className="select-input" value={sort} onChange={(event) => setSort(event.target.value as ShelfSortKey)}>
+                    {SHELF_SORT_OPTIONS.map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {filtersOpen ? (
+                <>
+                  <ShelfFilterPanel rows={rows} filters={filters} onChange={setFilters} />
+                  {activeFilters ? (
+                    <button type="button" className="btn shelf-filters__reset" data-size="sm" data-variant="ghost" onClick={() => setFilters(EMPTY_SHELF_FILTERS)}>
+                      Сбросить фильтры
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+
+              <div className="shelf-table-shell">
+                <table className="shelf-table">
+                  <colgroup>
+                    <col />
+                    <col style={{ width: 110 }} />
+                    <col style={{ width: 88 }} />
+                    <col style={{ width: 168 }} />
+                    <col style={{ width: 200 }} />
+                    <col style={{ width: 150 }} />
+                    <col style={{ width: 64 }} />
+                    <col style={{ width: 186 }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th scope="col">Табак</th>
+                      <th scope="col">Банки</th>
+                      <th scope="col" className="shelf-table__num">Остаток</th>
+                      <th scope="col">Расход</th>
+                      <th scope="col">Хватит до</th>
+                      <th scope="col">Приход</th>
+                      <th scope="col" className="shelf-table__num">Миксы</th>
+                      <th scope="col" aria-label="Действия" />
+                    </tr>
+                  </thead>
+                  <tbody ref={tableRef}>
+                    {shown.map((row) => {
+                      const until = shelfUntil(row, settings.leadDays);
+                      const line = shelfStatusLine(row);
+                      const busy = pendingId === row.tobacco.id;
+                      const menuOpen = menu?.id === row.tobacco.id;
+                      let primary;
+                      if (row.status === 'out' || row.status === 'plan') {
+                        primary = <span className="shelf-faint shelf-table__note">в «К заказу»</span>;
+                      } else if (row.status === 'stop') {
+                        primary = (
+                          <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
+                            Снять стоп
+                          </button>
+                        );
+                      } else if (row.status === 'check') {
+                        primary = (
                           <button
                             type="button"
-                            className="icon-btn"
-                            aria-label={`Ещё действия: ${fullName(row)}`}
-                            aria-expanded={menuOpen}
+                            className="btn"
+                            data-size="sm"
                             disabled={busy}
-                            onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget })}
+                            onClick={(event) => setMenu({ id: row.tobacco.id, anchor: event.currentTarget })}
                           >
-                            <Ellipsis size={15} aria-hidden />
+                            Отметить остаток
                           </button>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!shown.length ? <p className="empty shelf-table__empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
-          </div>
+                        );
+                      } else {
+                        primary = (
+                          <button type="button" className="btn" data-size="sm" disabled={busy || !row.openPacks.length} onClick={() => void onEmpty(row)}>
+                            Закончилась
+                          </button>
+                        );
+                      }
 
-          <div className="shelf-keys" aria-hidden="true">
-            <span><b className="kbd">/</b> поиск</span>
-            <span><b className="kbd">↑</b><b className="kbd">↓</b> строка</span>
-            <span><b className="kbd">E</b> закончилась</span>
-            <span><b className="kbd">1</b>–<b className="kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
-            <span><b className="kbd">Enter</b> карточка</span>
-            <span><b className="kbd">Z</b> отменить</span>
-          </div>
+                      return (
+                        <tr
+                          key={row.tobacco.id}
+                          data-tobacco-id={row.tobacco.id}
+                          data-active={row.tobacco.id === activeId}
+                          onClick={() => {
+                            setActiveId(row.tobacco.id);
+                            setCardId(row.tobacco.id);
+                          }}
+                        >
+                          <td>
+                            <span className="shelf-name">
+                              <b>{row.tobacco.name}</b>
+                              <span>
+                                {row.tobacco.manufacturer} · {row.packWeight} г
+                              </span>
+                            </span>
+                          </td>
+                          <td>
+                            <ShelfPips row={row} />
+                          </td>
+                          <td className="shelf-table__num shelf-num">{formatGrams(row.remainingGrams)}</td>
+                          <td>
+                            <span
+                              className={`shelf-table__rate ${row.rateKind === 'own' ? 'shelf-num' : 'shelf-faint'}`}
+                              title={row.rateKind === 'brand' ? `${formatRate(row)}: своих данных ещё нет — медиана бренда` : undefined}
+                            >
+                              {formatRate(row)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="shelf-until">
+                              <span className="shelf-num" data-tone={until.tone}>
+                                {until.text}
+                                {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
+                              </span>
+                              {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
+                            </span>
+                          </td>
+                          <td>
+                            {row.lastReceipt ? (
+                              <span className="shelf-name shelf-name--receipt">
+                                <b>{formatShelfDate(row.lastReceipt.receivedAt)}</b>
+                                <span>{row.lastReceipt.label}</span>
+                              </span>
+                            ) : (
+                              <span className="shelf-faint">—</span>
+                            )}
+                          </td>
+                          <td className="shelf-table__num shelf-num">
+                            {row.mixCount ? formatMetricValue(row.mixCount) : <span className="shelf-faint">—</span>}
+                          </td>
+                          <td onClick={(event) => event.stopPropagation()}>
+                            <span className="shelf-table__actions">
+                              {primary}
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                aria-label={`Ещё действия: ${fullName(row)}`}
+                                aria-expanded={menuOpen}
+                                disabled={busy}
+                                onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget })}
+                              >
+                                <Ellipsis size={15} aria-hidden />
+                              </button>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {!shown.length ? <p className="empty shelf-table__empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
+              </div>
+
+              <div className="shelf-keys" aria-hidden="true">
+                <span><b className="kbd">/</b> поиск</span>
+                <span><b className="kbd">↑</b><b className="kbd">↓</b> строка</span>
+                <span><b className="kbd">E</b> закончилась</span>
+                <span><b className="kbd">1</b>–<b className="kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
+                <span><b className="kbd">Enter</b> карточка</span>
+                <span><b className="kbd">Z</b> отменить</span>
+              </div>
+            </>
+          ) : null}
         </>
       ) : null}
+
+      {settingsDialog}
 
       {menu && menuRow ? (
         <ShelfRowMenu row={menuRow} anchor={menu.anchor} actions={rowActions} onClose={() => setMenu(null)} />

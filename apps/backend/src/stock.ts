@@ -62,6 +62,8 @@ const DAY_MS = 86_400_000;
 const RATE_WINDOW_DAYS = 60;
 const REORDER_DAYS = 21;
 const OVERDUE_SHARE = 0.1;
+const WEEKDAY_WINDOW_DAYS = 28;
+const WEEKDAY_MIN_EVENTS = 50;
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 const endOf = (pack: Pack) => pack.emptiedAt ?? pack.writtenOffAt;
@@ -167,6 +169,34 @@ export const consumptionRate = (packs: Pack[], now: Date): Rate => {
   }
   const days = unionLength(covered) / DAY_MS;
   return days > 0 ? { gramsPerDay: grams / days, kind: 'own' } : { gramsPerDay: null, kind: 'none' };
+};
+
+export type Period = { from: Date; to: Date };
+
+// Граммы завершённых отрезков шкалы, разнесённые по времени отрезка равномерно.
+export const consumptionByPeriod = (packs: Pack[], periods: Period[]): number[] => {
+  const all = resolvePacks(packs).flatMap(segments).filter((segment) => segment.to > segment.from);
+  return periods.map(({ from, to }) =>
+    sum(
+      all.map((segment) => {
+        const overlap = Math.min(segment.to, to.getTime()) - Math.max(segment.from, from.getTime());
+        return overlap > 0 ? (segment.grams * overlap) / (segment.to - segment.from) : 0;
+      }),
+    ),
+  );
+};
+
+// Поправка прогноза на день недели по «Покурить» за 28 полных дней до сегодня
+// (по 4 каждого дня недели). Дни — в часовом поясе процесса. first — самое
+// раннее событие вообще: пока оно позже начала окна, четырёх недель ещё нет.
+export const weekdayFactor = (events: Date[], first: Date | null, now: Date): number | null => {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - WEEKDAY_WINDOW_DAYS);
+  if (!first || first > windowStart) return null;
+  const inWindow = events.filter((event) => event >= windowStart && event < today);
+  if (inWindow.length < WEEKDAY_MIN_EVENTS) return null;
+  const sameDay = inWindow.filter((event) => event.getDay() === now.getDay()).length;
+  return sameDay / (WEEKDAY_WINDOW_DAYS / 7) / (inWindow.length / WEEKDAY_WINDOW_DAYS);
 };
 
 const median = (values: number[]) => {
