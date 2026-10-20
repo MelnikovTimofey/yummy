@@ -3,6 +3,7 @@ import { ROLE_LABELS } from './ProportionSplit';
 import './mixer.css';
 
 export type MasterCardComponent = { id: string; manufacturer: string; name: string; proportion: number };
+export type MixerSmoke = { name: string; profiles: string[]; components: MasterCardComponent[]; harmony: number | null };
 
 // Карточка для мастера после «Покурить» — в той же подаче, что у миксов
 // каталога, плюс пометка «Собран гостем». Её же открывает собранный микс из

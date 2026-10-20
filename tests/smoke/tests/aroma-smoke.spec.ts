@@ -159,6 +159,7 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   // Раскрытие: имя, доли, «Покурить».
   await expect(page.getByText('Раскрытие')).toBeVisible();
   await expect(page.getByLabel('Название микса')).not.toHaveValue('');
+  const mixName = (await page.getByLabel('Название микса').inputValue()).trim();
   await expect(page.getByText('Доли · тяните бегунки')).toBeVisible();
   await expect(page.getByRole('slider').first()).toBeVisible();
   await page.getByRole('button', { name: 'Покурить' }).click();
@@ -168,11 +169,19 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await expect(page.getByText(/Собран гостем/)).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
   await expect(page.getByRole('button', { name: /Намиксуйте сами/ })).toBeVisible();
+
+  // Собранный микс — карточка для мастера в шапке (#289, #291); «Готово»
+  // возвращает туда, откуда её открыли.
+  await page.getByRole('button', { name: `Карточка для мастера: ${mixName}` }).click();
+  await expect(page.getByText('Покажите мастеру')).toBeVisible();
+  await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Готово' }).click();
+  await expect(page.getByRole('button', { name: /Намиксуйте сами/ })).toBeVisible();
 });
 
 // Нижняя панель (#168, #243, #263): шесть значков, имена — в aria-label. Панели нет на
 // знакомстве и в онбординге; Миксер из панели открывается на весь экран и
-// «Назад» возвращает на экран, откуда гость пришёл.
+// «Назад» возвращает на экран, откуда гость пришёл, — и посреди сборки (#293).
 test('Aroma guest navigates with the bottom bar and opens the mixer from it', async ({ page }) => {
   await page.goto('/');
 
@@ -203,6 +212,10 @@ test('Aroma guest navigates with the bottom bar and opens the mixer from it', as
   await nav.getByRole('button', { name: 'Миксер', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
   await expect(nav).toHaveCount(0);
+  const take = page.getByRole('button', { name: 'Беру', exact: true });
+  await expect(take).toBeEnabled();
+  await take.click();
+  await expect(page.getByText('Ход 02 · из 03')).toBeVisible();
 
   await page.getByRole('button', { name: 'Назад', exact: true }).click();
   await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
@@ -393,19 +406,21 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(reelsTab).toBeVisible();
   await reelsTab.click();
   await expect(reelsTab).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('heading', { name: 'Рилсы', level: 1 })).toBeVisible();
+  // Без видимой шапки и счётчика (#290): «Рилсы» — заголовок для скринридера.
+  await expect(page.getByRole('heading', { name: 'Рилсы', level: 1 })).toBeAttached();
+  await expect(page.getByText(/· из \d+/)).toHaveCount(0);
   await expect(page.getByText('Листайте вверх')).toBeVisible();
 
-  const counter = page.locator('.reel-count');
-  await expect(counter).toHaveText(/^01 · из \d+$/);
-  test.skip((await counter.innerText()).endsWith('из 01'), 'в наличии один микс — листать некуда');
+  const activeName = page.locator('.reel-reveal .reel-name');
+  const firstName = (await activeName.innerText()).trim();
+  test.skip((await page.locator('.reel-slot').count()) < 2, 'в наличии один микс — листать некуда');
 
   const feed = page.locator('.reels');
   const box = await feed.boundingBox();
   if (!box) throw new Error('Нет ленты рилсов');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3);
   await page.mouse.wheel(0, box.height);
-  await expect(counter).toHaveText(/^02 · из /);
+  await expect(activeName).not.toHaveText(firstName);
   await expect(page.getByText('Листайте вверх')).toHaveCount(0);
 
   const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
@@ -416,8 +431,7 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Рилсы', level: 1 })).toBeVisible();
-  await expect(counter).toHaveText(/^02 · из /);
+  await expect(activeName).toHaveText(mixName);
   await expect(reelsTab).toHaveAttribute('aria-current', 'page');
 });
 
@@ -447,7 +461,6 @@ test('Aroma reel strip above recommendations opens the feed on the tapped mix', 
 
   const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
   await expect(nav.getByRole('button', { name: 'Рилсы', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.reel-count')).toHaveText(new RegExp(`^0${index + 1} · из `));
   await expect(page.locator('.reel-reveal .reel-name')).toHaveText(name);
 });
 
@@ -473,6 +486,5 @@ test('Aroma anonymous heart on a reel offers the cabinet and «Не сейчас
   await expect(prompt.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
   await prompt.getByRole('button', { name: 'Не сейчас' }).click();
   await expect(prompt).toHaveCount(0);
-  await expect(page.locator('.reel-count')).toHaveText(/^01 · из /);
   await expect(reel.getByRole('button', { name: 'Покурить' })).toBeVisible();
 });

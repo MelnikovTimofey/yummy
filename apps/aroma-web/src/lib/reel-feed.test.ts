@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { GuestForYouPersonal } from './for-you-copy';
-import { loadReelFeed, reelCounter, reelEntries, reelStrip } from './reel-feed';
+import { loadReelFeed, reelEntries, reelStrip } from './reel-feed';
 
 const mixes = (...ids: string[]) => ids.map((id) => ({ id }));
 const ids = (items: Array<{ mix: { id: string } }>) => items.map((item) => item.mix.id);
@@ -95,10 +95,4 @@ test('loadReelFeed: пустая голова (онбординг не прой�
   const feed = await loadReelFeed({ head: [], catalog: null, ...api });
   assert.deepEqual(ids(feed), ['a', 'b']);
   assert.deepEqual(api.calls, { head: 0, catalog: 1 });
-});
-
-test('reelCounter: номер и всего — двумя цифрами', () => {
-  assert.equal(reelCounter(4, 33), '05 · из 33');
-  assert.equal(reelCounter(0, 7), '01 · из 07');
-  assert.equal(reelCounter(119, 120), '120 · из 120');
 });

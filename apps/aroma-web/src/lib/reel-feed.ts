@@ -57,7 +57,3 @@ export async function loadReelFeed<T extends { id: string }>({
   const [first, all] = await Promise.all([head ?? fetchHead(), catalog ?? fetchCatalog()]);
   return reelEntries(first, all);
 }
-
-const pad = (n: number) => String(n).padStart(2, '0');
-
-export const reelCounter = (index: number, total: number) => `${pad(index + 1)} · из ${pad(total)}`;
