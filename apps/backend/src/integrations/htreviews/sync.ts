@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '../../db';
 import { fetchHtReviewsCatalogSnapshot } from './catalog';
-import { lineUrlFromTobaccoUrl } from './parser';
+import { brandUrlFromTobaccoUrl, lineUrlFromTobaccoUrl } from './parser';
 import type { HtReviewsImportOptions, HtReviewsImportedTobacco } from './types';
 
 export type HtReviewsSyncOptions = HtReviewsImportOptions & {
@@ -48,6 +48,26 @@ const loadKnownLineUrls = async () => {
     select: { sourceUrl: true },
   });
   return collectKnownLineUrls(records.map((record) => record.sourceUrl));
+};
+
+export const collectBrandUrls = (sourceUrls: Array<string | null>) => {
+  const brandUrls = new Set<string>();
+  for (const sourceUrl of sourceUrls) {
+    const brandUrl = sourceUrl ? brandUrlFromTobaccoUrl(sourceUrl) : null;
+    if (brandUrl) {
+      brandUrls.add(brandUrl);
+    }
+  }
+  return Array.from(brandUrls);
+};
+
+// Бренды того, что есть в точке: inStock — кэш наличия, который ведёт полка.
+export const loadShelfBrandUrls = async () => {
+  const records = await prisma.tobacco.findMany({
+    where: { sourceKind: 'htreviews', inStock: true, archived: false },
+    select: { sourceUrl: true },
+  });
+  return collectBrandUrls(records.map((record) => record.sourceUrl));
 };
 
 const toStableId = (item: HtReviewsImportedTobacco) => {
