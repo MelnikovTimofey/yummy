@@ -115,7 +115,15 @@ const toRow = <M>(card: GuestForYouCard<M> | undefined): ForYouRow<M> | null =>
 
 // Раскладка A · по слотам: «Новое в вашем вкусе» (герой + три строки),
 // «Шаг в сторону», «Снова». Подсказка ведёт на микс «Шаг в сторону».
-export const forYouSlots = <M>(response: GuestForYouPersonal<M>) => {
+export type ForYouSlots<M> = {
+  hint: { text: string; mix: M } | null;
+  hero: ForYouRow<M> | null;
+  taste: ForYouRow<M>[];
+  sidestep: ForYouRow<M> | null;
+  again: ForYouRow<M> | null;
+};
+
+export const forYouSlots = <M>(response: GuestForYouPersonal<M>): ForYouSlots<M> => {
   const [hero, ...taste] = response.fresh;
   const sidestep = toRow(response.sidestep[0]);
   return {
