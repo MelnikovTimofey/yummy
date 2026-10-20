@@ -1,9 +1,8 @@
 import { type PointerEvent as ReactPointerEvent, type ReactNode, FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { ChevronRight, KeyRound } from 'lucide-react';
+import { ChevronRight, ClipboardList, KeyRound } from 'lucide-react';
 
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
@@ -14,7 +13,7 @@ import { BackToForYou, ForYou, MoodLink, MoodNote } from '@/components/for-you/F
 import { HeartButton } from '@/components/cabinet/HeartButton';
 import { LoginWait } from '@/components/cabinet/LoginWait';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
-import { MixerMasterCard, type MasterCardComponent } from '@/components/mixer/MixerMasterCard';
+import { MixerMasterCard, type MixerSmoke } from '@/components/mixer/MixerMasterCard';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { Feed } from '@/components/reels/Feed';
 import { FeedEmpty } from '@/components/reels/FeedEmpty';
@@ -184,13 +183,6 @@ type MixModalState = {
   source: MixSource;
   item?: GuestCabinetItem;
   blockReason?: string | null;
-};
-
-type CustomSmoke = {
-  name: string;
-  profiles: string[];
-  components: MasterCardComponent[];
-  harmony: number | null;
 };
 
 const storageKeys = {
@@ -1244,7 +1236,10 @@ export const App = () => {
   const [favorites, setFavorites] = useState<GuestFavoriteItem[] | null>(null);
   const favoritesRequestedRef = useRef(false);
   const [anonHeartOpen, setAnonHeartOpen] = useState(false);
-  const [customSmoke, setCustomSmoke] = useState<CustomSmoke | null>(null);
+  // Карточка для мастера — последний выбор гостя: микс каталога (selectedMix)
+  // или собранный (customSmoke). Новый выбор сбрасывает другой.
+  const [customSmoke, setCustomSmoke] = useState<MixerSmoke | null>(null);
+  const [customReturnView, setCustomReturnView] = useState<GuestView>('cabinet');
   // «Для вас» и «Под настроение» (#245).
   const [forYou, setForYou] = useState<ForYouState>(EMPTY_FOR_YOU);
   const forYouRequestRef = useRef(0);
@@ -2032,6 +2027,8 @@ export const App = () => {
       })),
       harmony,
     });
+    setSelectedMix(null);
+    setCustomReturnView('cabinet');
     setView('custom-confirmation');
   };
 
@@ -2057,6 +2054,7 @@ export const App = () => {
         source,
         mix,
       });
+      setCustomSmoke(null);
       setChooseStatus('ready');
       setMixModalState(null);
       setView('smoke-confirmation');
@@ -2126,6 +2124,7 @@ export const App = () => {
     setReelChoice(null);
     countPick();
     setSelectedMix({ id: mix.id, source: 'reels', mix });
+    setCustomSmoke(null);
     setChooseStatus('ready');
     setView('smoke-confirmation');
   };
@@ -2247,6 +2246,35 @@ export const App = () => {
     );
   };
 
+  // Карточка для мастера (#289) — иконкой в шапке, а не панелью под ней: место на
+  // экране нужнее самим миксам. Точка — метка, что карточка есть.
+  const renderMasterCardButton = () => {
+    const openCard = customSmoke
+      ? () => {
+          setCustomReturnView(view);
+          setView('custom-confirmation');
+        }
+      : selectedMixCard && selectedMix
+        ? () => openMix(selectedMixCard, selectedMix.source)
+        : null;
+    if (!openCard) {
+      return null;
+    }
+    const name = customSmoke?.name ?? selectedMixCard?.name;
+    return (
+      <button
+        type="button"
+        className="topbar-icon-btn topbar-master-card"
+        onClick={openCard}
+        aria-label={`Карточка для мастера: ${name}`}
+        title="Карточка для мастера"
+      >
+        <ClipboardList size={20} strokeWidth={1.8} aria-hidden />
+        <span className="topbar-master-card-dot" aria-hidden />
+      </button>
+    );
+  };
+
   const renderTopbar = () => {
     if (!accessGranted) {
       return null;
@@ -2264,6 +2292,7 @@ export const App = () => {
       <header className="topbar">
         <div className="topbar-main-row">
           {renderBrand()}
+          {renderMasterCardButton()}
           <button
             type="button"
             className="topbar-icon-btn"
@@ -2605,30 +2634,6 @@ export const App = () => {
       </div>
     );
   };
-
-  const renderSelectedMixBar = () =>
-    selectedMixCard && selectedMix ? (
-      <div className="selected-mix-shell">
-        <Card className="card compact-card selected-mix-bar">
-          <div>
-            <p className="card-title">Карточка для мастера</p>
-            <p className="card-text">
-              {selectedMixCard.name} · {mixSourceLabels[selectedMix.source]}
-            </p>
-          </div>
-          <div className="cinema-actions">
-            <Button
-              className="ghost-button"
-              variant="outline"
-              type="button"
-              onClick={() => openMix(selectedMixCard, selectedMix.source)}
-            >
-              Открыть карточку
-            </Button>
-          </div>
-        </Card>
-      </div>
-    ) : null;
 
   // Подбор: «Под настроение» этого визита, у вошедшего — «Для вас» (#245), у
   // анонима — подбор по вкусам устройства, как раньше.
@@ -3379,7 +3384,7 @@ export const App = () => {
               components={customSmoke.components}
               harmony={customSmoke.harmony}
               footnote={null}
-              onDone={() => setView('cabinet')}
+              onDone={() => setView(customReturnView)}
             />
           </section>
         ) : view === 'reels' ? (
@@ -3390,6 +3395,10 @@ export const App = () => {
         ) : view === 'mixer' ? (
           <MixerScreen
             likedProfiles={likedProfiles}
+            onSmoked={(card) => {
+              setCustomSmoke(card);
+              setSelectedMix(null);
+            }}
             onExit={() => {
               // В «Намиксуй» гость мог нажать «Покурить» — это тоже выбор для «Для вас».
               invalidateForYou();
@@ -3404,7 +3413,6 @@ export const App = () => {
         ) : (
           <>
             {renderTopbar()}
-            {view !== 'intro' && view !== 'login' ? renderSelectedMixBar() : null}
             <main className={view === 'intro' ? 'content content-intro' : 'content'}>
               {view === 'intro' ? renderIntroView() : null}
               {view === 'onboarding' ? renderOnboardingView() : null}

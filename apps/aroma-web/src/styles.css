@@ -245,6 +245,25 @@ select:focus-visible {
   background: var(--guest-control-bg-soft);
 }
 
+.topbar-icon-btn + .topbar-icon-btn {
+  margin-left: 0;
+}
+
+/* Карточка для мастера: бордо — только метка-точка, иконка остаётся приглушённой. */
+.topbar-master-card {
+  position: relative;
+}
+
+.topbar-master-card-dot {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 .brand-home-btn {
   border: 0;
   background: transparent;
@@ -469,23 +488,6 @@ select:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.selected-mix-bar {
-  display: grid;
-  gap: 10px;
-}
-
-.selected-mix-shell {
-  padding: 8px 20px 0;
-  border-bottom: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, rgba(28, 28, 33, 0.95) 0%, rgba(20, 20, 23, 0.92) 100%);
-}
-
-.selected-mix-shell .selected-mix-bar {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  margin: 0;
 }
 
 @keyframes aroma-ember {
@@ -2059,10 +2061,6 @@ select:focus-visible {
     --gutter: 12px;
   }
 
-  .selected-mix-shell {
-    padding: 8px 12px 0;
-  }
-
   .guest-stage-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2664,36 +2662,13 @@ select:focus-visible {
   overflow: hidden;
 }
 
-.reel-top {
+.reels-heading {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: calc(14px + var(--safe-top)) 20px 18px;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(14, 14, 17, 0.55) 0%, transparent 100%);
-}
-
-.reel-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1;
-  color: var(--text-0);
-}
-
-.reel-count {
-  margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .reel-tap {
@@ -2818,7 +2793,8 @@ select:focus-visible {
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 400;
-  line-height: 1.06;
+  /* Не теснее 1.2: line-clamp режет по строке, и хвосты «р», «у», «д» срезались. */
+  line-height: 1.2;
   color: var(--text-0);
   text-wrap: balance;
   display: -webkit-box;

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { reelCounter, type ReelEntry } from '@/lib/reel-feed';
+import type { ReelEntry } from '@/lib/reel-feed';
 import { Reel, type ReelFeedMix } from './Reel';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -61,10 +61,8 @@ export function Feed<T extends ReelFeedMix>({
 
   return (
     <div className="reels-feed">
-      <header className="reel-top">
-        <h1 className="reel-title">Рилсы</h1>
-        <p className="reel-count">{reelCounter(index, items.length)}</p>
-      </header>
+      {/* Без видимой шапки: экран целиком отдан сцене (#290). Заголовок — для скринридера. */}
+      <h1 className="reels-heading">Рилсы</h1>
       <div className="reels" ref={scrollerRef} onScroll={onScroll}>
         {items.map(({ mix, slot, reason, hint: bubble }, i) => (
           <div key={mix.id} className="reel-slot">

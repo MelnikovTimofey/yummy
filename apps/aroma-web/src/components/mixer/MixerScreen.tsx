@@ -22,7 +22,7 @@ import { profileOptions } from '@/lib/profile-labels';
 import { BowlRing, ringArcs } from './BowlRing';
 import { MasterLine } from './MasterLine';
 import { pickMasterLine, skipLineKey, takeLineKey, type MasterLineKey } from './master-lines';
-import { MixerMasterCard } from './MixerMasterCard';
+import { MixerMasterCard, type MasterCardComponent, type MixerSmoke } from './MixerMasterCard';
 import { MixerReveal, MixerRevealDock } from './MixerReveal';
 import { PourLayer, type PourLayerHandle } from './PourLayer';
 import { ShelfFilter } from './ShelfFilter';
@@ -54,11 +54,14 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 export function MixerScreen({
   likedProfiles,
   onExit,
+  onSmoked,
   canOpenMix,
   onOpenMix,
 }: {
   likedProfiles: string[];
   onExit: () => void;
+  /** Собранный микс становится карточкой для мастера в шапке приложения. */
+  onSmoked: (card: MixerSmoke) => void;
   canOpenMix: (mixId: string) => boolean;
   onOpenMix: (mixId: string) => void;
 }) {
@@ -371,23 +374,19 @@ export function MixerScreen({
     later(done, 900 + added * LUCK_STAGGER_MS);
   };
 
+  // «Назад» — на экран, откуда гость пришёл, а не отмена прошлого выбора (#293).
   const back = () => {
     if (busyRef.current) return;
-    setNotice(null);
-    if (phase === 'reveal') {
-      const target = (chosen.length === 3 ? 2 : chosen.length) as Turn;
-      startTurn(target, chosen.slice(0, target));
-      say(TURNS[target].line);
-      return;
-    }
-    if (phase === 'swipe' && turn > 0) {
-      const target = (turn - 1) as Turn;
-      startTurn(target, chosen.slice(0, target));
-      say(TURNS[target].line);
-      return;
-    }
     onExit();
   };
+
+  const bowlProfiles = Array.from(new Set(chosenTobaccos.flatMap((tobacco) => tobacco.flavorProfiles))).slice(0, 3);
+  const bowlComponents: MasterCardComponent[] = chosenTobaccos.map((tobacco, index) => ({
+    id: tobacco.id,
+    manufacturer: tobacco.manufacturer,
+    name: tobacco.name,
+    proportion: shares[index],
+  }));
 
   const mixName = customName ?? (evaluation?.name || draftMixName(chosenTobaccos));
 
@@ -414,6 +413,7 @@ export function MixerScreen({
       }
     }
     setSmoking(false);
+    onSmoked({ name, profiles: bowlProfiles, components: bowlComponents, harmony });
     setMaster({ name, harmony, footnote: pickMasterLine('master-card') });
     setPhase('master');
   };
@@ -516,13 +516,8 @@ export function MixerScreen({
       <section className="mixer">
         <MixerMasterCard
           name={master.name}
-          profiles={Array.from(new Set(chosenTobaccos.flatMap((tobacco) => tobacco.flavorProfiles))).slice(0, 3)}
-          components={chosenTobaccos.map((tobacco, index) => ({
-            id: tobacco.id,
-            manufacturer: tobacco.manufacturer,
-            name: tobacco.name,
-            proportion: shares[index],
-          }))}
+          profiles={bowlProfiles}
+          components={bowlComponents}
           harmony={master.harmony}
           footnote={master.footnote}
           onDone={onExit}
