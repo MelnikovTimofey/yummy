@@ -14,7 +14,7 @@ const tobacco = (overrides: Partial<IdeaSourceTobacco> & { id: string }): IdeaSo
   name: overrides.id,
   flavorProfiles: [],
   flavors: [],
-  inStock: false,
+  onShelf: false,
   archived: false,
   sourceUrl: `https://htreviews.org/tobaccos/darkside/core/${overrides.id}`,
   rating: null,
@@ -35,7 +35,7 @@ test('байесовская оценка не даёт 5,0 с тремя оце
 test('идеи берут только табаки не с полки, не из архива и со ссылкой на htreviews', () => {
   const ideas = buildCatalogIdeas(
     [
-      tobacco({ id: 'shelf', inStock: true, viewsCount: 10, rating: 4.5, ratingsCount: 100 }),
+      tobacco({ id: 'shelf', onShelf: true, viewsCount: 10, rating: 4.5, ratingsCount: 100 }),
       tobacco({ id: 'idea', viewsCount: 900, rating: 4.5, ratingsCount: 100 }),
       tobacco({ id: 'archived', archived: true, viewsCount: 900, rating: 4.5, ratingsCount: 100 }),
       tobacco({ id: 'manual', sourceUrl: null, viewsCount: 900, rating: 4.5, ratingsCount: 100 }),
@@ -50,7 +50,7 @@ test('идеи берут только табаки не с полки, не и�
 test('популярное у брендов полки сортируется по просмотрам', () => {
   const ideas = buildCatalogIdeas(
     [
-      tobacco({ id: 'shelf', inStock: true }),
+      tobacco({ id: 'shelf', onShelf: true }),
       tobacco({ id: 'quiet', viewsCount: 1200 }),
       tobacco({ id: 'loud', viewsCount: 96000 }),
       tobacco({ id: 'unknown-views' }),
@@ -82,7 +82,7 @@ test('каждая подборка ограничена двенадцатью 
   const many = Array.from({ length: 20 }, (_, index) =>
     tobacco({ id: `t${index}`, viewsCount: index, rating: 4.5, ratingsCount: index + 1 }),
   );
-  const ideas = buildCatalogIdeas([tobacco({ id: 'shelf', inStock: true }), ...many], []);
+  const ideas = buildCatalogIdeas([tobacco({ id: 'shelf', onShelf: true }), ...many], []);
 
   assert.equal(ideas.popularOnShelfBrands.length, 12);
   assert.equal(ideas.topRated.length, 12);
@@ -91,10 +91,10 @@ test('каждая подборка ограничена двенадцатью 
 test('похоже на то, что быстро уходит: вкусы ходовых табаков полки из доступных миксов', () => {
   const ideas = buildCatalogIdeas(
     [
-      tobacco({ id: 'cane-mint', name: 'Cane Mint', inStock: true, flavorProfiles: ['minty'], flavors: ['мята', 'тростник'] }),
-      tobacco({ id: 'bittersweet', name: 'Bittersweet', inStock: true, flavorProfiles: ['citrus'], flavors: ['грейпфрут'] }),
-      tobacco({ id: 'idle', name: 'Idle', inStock: true, flavorProfiles: ['berry'], flavors: ['малина'] }),
-      tobacco({ id: 'hidden', name: 'Hidden', inStock: true, flavorProfiles: ['dessert'], flavors: ['ваниль'] }),
+      tobacco({ id: 'cane-mint', name: 'Cane Mint', onShelf: true, flavorProfiles: ['minty'], flavors: ['мята', 'тростник'] }),
+      tobacco({ id: 'bittersweet', name: 'Bittersweet', onShelf: true, flavorProfiles: ['citrus'], flavors: ['грейпфрут'] }),
+      tobacco({ id: 'idle', name: 'Idle', onShelf: true, flavorProfiles: ['berry'], flavors: ['малина'] }),
+      tobacco({ id: 'hidden', name: 'Hidden', onShelf: true, flavorProfiles: ['dessert'], flavors: ['ваниль'] }),
       tobacco({ id: 'ice-mint', name: 'Ice Mint', flavorProfiles: ['Minty'], flavors: ['мята', 'тростник'], rating: 4.4, ratingsCount: 820 }),
       tobacco({ id: 'mint-only', name: 'Mint Only', flavorProfiles: ['minty'], flavors: [], rating: 4.9, ratingsCount: 900 }),
       tobacco({ id: 'mint-weak', name: 'Mint Weak', flavorProfiles: ['minty'], flavors: [], rating: 3.5, ratingsCount: 900 }),
@@ -122,7 +122,7 @@ test('похоже на то, что быстро уходит: вкусы хо�
 test('элемент идеи несёт статистику и ссылку, но не флаги полки', () => {
   const ideas = buildCatalogIdeas(
     [
-      tobacco({ id: 'shelf', inStock: true }),
+      tobacco({ id: 'shelf', onShelf: true }),
       tobacco({
         id: 'supernova',
         name: 'Supernova',
@@ -209,6 +209,55 @@ test('GET /staff/catalog/ideas закрыт для гостей и отдаёт 
   assert.equal(item?.rating, 4.6);
   assert.equal(item?.ratingsCount, 300);
   assert.equal(item?.viewsCount, 5000);
+
+  await app.close();
+});
+
+test('табак, который держат на полке, не становится идеей, даже без банок или на стопе', async () => {
+  await resetAppState();
+  const stats = {
+    sourceKind: 'htreviews',
+    flavorProfiles: JSON.stringify(['minty']),
+    flavors: JSON.stringify(['мята']),
+    flavorTags: JSON.stringify([]),
+    inStock: false,
+    rating: 4.6,
+    ratingsCount: 300,
+    viewsCount: 5000,
+  };
+  await prisma.tobacco.create({
+    data: {
+      ...stats,
+      id: 'htreviews-kept-stopped',
+      manufacturer: 'Ателье Reserve',
+      name: 'Держим на стопе',
+      sourceUrl: 'https://htreviews.org/tobaccos/atelier/reserve/kept',
+      shelfItem: { create: { status: 'active', stopped: true, packWeight: 200 } },
+    },
+  });
+  await prisma.tobacco.create({
+    data: {
+      ...stats,
+      id: 'htreviews-planned',
+      manufacturer: 'Ателье Reserve',
+      name: 'В плане',
+      sourceUrl: 'https://htreviews.org/tobaccos/atelier/reserve/planned',
+      shelfItem: { create: { status: 'plan', packWeight: 200 } },
+    },
+  });
+
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const response = await app.inject({
+    method: 'GET',
+    url: '/staff/catalog/ideas',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const body = response.json() as Record<'popularOnShelfBrands' | 'topRated' | 'likeFastMoving', Array<{ id: string }>>;
+  const all = [...body.popularOnShelfBrands, ...body.topRated, ...body.likeFastMoving].map((item) => item.id);
+  assert.ok(!all.includes('htreviews-kept-stopped'));
+  // «В плане» — ещё идея: UI показывает её с меткой «в плане».
+  assert.ok(all.includes('htreviews-planned'));
 
   await app.close();
 });
