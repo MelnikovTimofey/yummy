@@ -336,3 +336,32 @@ export const packLine = (pack: ShelfPack) => {
   parts.push(packSource(pack), pack.priceKop !== null ? formatPackPrice(pack.priceKop) : null);
   return parts.filter(Boolean).join(' · ');
 };
+
+// Пункты меню «⋯» строки — одни и те же на десктопе и в карточке на телефоне (#228).
+// Недоступное не прячем, а гасим: так видно, чего табаку не хватает.
+export type ShelfRowMenu = {
+  canMark: boolean;
+  canOpenAnother: boolean;
+  canWriteOff: boolean;
+  stopLabel: string;
+  writeOffHint: string;
+};
+
+export const shelfRowMenu = (row: Pick<ShelfRow, 'openPacks' | 'sealedCount' | 'stopped'>): ShelfRowMenu => {
+  const hasOpen = row.openPacks.length > 0;
+  return {
+    canMark: hasOpen,
+    canOpenAnother: row.sealedCount > 0,
+    canWriteOff: hasOpen || row.sealedCount > 0,
+    stopLabel: row.stopped ? 'Снять стоп для гостей' : 'Стоп для гостей',
+    writeOffHint: `${hasOpen ? 'Спишется открытая банка.' : 'Спишется самая старая банка из запаса.'} В расход не пойдёт.`,
+  };
+};
+
+// «Добавить банку вручную»: вес — целые граммы, цена в рублях — по желанию.
+export const parseManualPack = (weight: string, price: string): { weight: number; priceKop?: number } | null => {
+  const grams = Number(weight);
+  if (!weight.trim() || !Number.isInteger(grams) || grams < 1) return null;
+  const rubles = Number(price.replace(',', '.'));
+  return { weight: grams, ...(price.trim() && rubles >= 0 ? { priceKop: Math.round(rubles * 100) } : {}) };
+};
