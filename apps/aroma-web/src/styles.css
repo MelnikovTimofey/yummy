@@ -1444,7 +1444,9 @@ select:focus-visible {
   min-width: 0;
   font-family: var(--font-display);
   font-size: 19px;
-  line-height: 1.15;
+  /* Литерата уводит «у», «ф», «р» на 0.23em под базовую линию: при обрезке
+     строке нужно не меньше ~1.33, иначе хвосты срезаются (#296). */
+  line-height: 1.35;
   letter-spacing: 0.005em;
   white-space: nowrap;
   overflow: hidden;
@@ -1534,7 +1536,7 @@ select:focus-visible {
 .aroma-showcase-card-name {
   font-family: var(--font-display);
   font-size: 14.5px;
-  line-height: 1.15;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1960,7 +1962,10 @@ select:focus-visible {
   max-width: 36ch;
 }
 
+/* Своя горизонтальная прокрутка даёт min-height: 0 — в длинной подборке flex
+   колонки сжимал строку чипов до кромки (#297). */
 .aroma-rail-chip-scroll {
+  flex: 0 0 auto;
   display: flex;
   gap: 6px;
   overflow-x: auto;
@@ -2352,7 +2357,7 @@ select:focus-visible {
 .cab-row-name {
   font-family: var(--font-display);
   font-size: 14.5px;
-  line-height: 1.2;
+  line-height: 1.35;
   color: var(--text-primary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2553,7 +2558,7 @@ select:focus-visible {
   min-width: 0;
   font-family: var(--font-display);
   font-size: 14.5px;
-  line-height: 1.2;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2793,8 +2798,8 @@ select:focus-visible {
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 400;
-  /* Не теснее 1.2: line-clamp режет по строке, и хвосты «р», «у», «д» срезались. */
-  line-height: 1.2;
+  /* Не теснее ~1.33: line-clamp режет по строке, и хвосты «р», «у», «ф» срезаются (#292, #296). */
+  line-height: 1.35;
   color: var(--text-0);
   text-wrap: balance;
   display: -webkit-box;
