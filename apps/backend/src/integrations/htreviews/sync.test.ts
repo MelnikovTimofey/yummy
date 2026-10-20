@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildStatsData, collectKnownLineUrls, decideTobaccoUpsert } from './sync';
+import { prisma } from '../../db';
+import { resetAppState } from '../../state';
+import {
+  buildStatsData,
+  collectBrandUrls,
+  collectKnownLineUrls,
+  decideTobaccoUpsert,
+  filterLineUrlsByBrands,
+  loadShelfBrandUrls,
+} from './sync';
 
 // Issue #88: в каталог попадают только выпускаемые табаки, но уже заведённые
 // обновляются всегда — иначе снятие с производства не дойдёт до productionStatus.
@@ -71,5 +80,70 @@ test('нулевые счётчики — это значение, а не пр�
   assert.deepEqual(
     buildStatsData({ rating: null, ratingsCount: 0, reviewsCount: 0, viewsCount: 0 }, SYNCED_AT),
     { ratingsCount: 0, reviewsCount: 0, viewsCount: 0, statsSyncedAt: SYNCED_AT },
+  );
+});
+
+// Issue #246: ночью синхронизируются только бренды того, что есть в точке, —
+// иначе новые вкусы из счетов поставщика ждут ручного полного прогона.
+test('бренды собираются из sourceUrl без дублей и мусора', () => {
+  assert.deepEqual(
+    collectBrandUrls([
+      'https://htreviews.org/tobaccos/darkside/core/pink-mi',
+      'https://htreviews.org/tobaccos/darkside/base/cola',
+      'https://htreviews.org/tobaccos/musthave/main/pinkman',
+      'https://htreviews.org/tobaccos/new/x/y',
+      null,
+    ]),
+    [
+      'https://htreviews.org/tobaccos/darkside',
+      'https://htreviews.org/tobaccos/musthave',
+    ],
+  );
+});
+
+test('бренды точки — только у табаков htreviews в наличии и не в архиве', async () => {
+  await resetAppState();
+  const tobacco = (id: string, sourceUrl: string, extra: { inStock: boolean; archived?: boolean; sourceKind?: string }) =>
+    prisma.tobacco.create({
+      data: {
+        id,
+        manufacturer: id,
+        name: id,
+        sourceKind: extra.sourceKind ?? 'htreviews',
+        sourceUrl,
+        flavorProfiles: '[]',
+        flavors: '[]',
+        flavorTags: '[]',
+        inStock: extra.inStock,
+        archived: extra.archived ?? false,
+      },
+    });
+  await tobacco('shelf-ds-core', 'https://htreviews.org/tobaccos/darkside/core/pink-mi', { inStock: true });
+  await tobacco('shelf-ds-base', 'https://htreviews.org/tobaccos/darkside/base/cola', { inStock: true });
+  await tobacco('shelf-mh-off', 'https://htreviews.org/tobaccos/musthave/main/pinkman', { inStock: false });
+  await tobacco('shelf-sp-arch', 'https://htreviews.org/tobaccos/spectrum/hard/kiwi', { inStock: true, archived: true });
+  await tobacco('shelf-manual', 'https://htreviews.org/tobaccos/duft/strong/pomelo', { inStock: true, sourceKind: 'manual' });
+
+  const brandUrls = await loadShelfBrandUrls();
+
+  assert.ok(brandUrls.includes('https://htreviews.org/tobaccos/darkside'));
+  for (const brand of ['musthave', 'spectrum', 'duft']) {
+    assert.ok(!brandUrls.includes(`https://htreviews.org/tobaccos/${brand}`), brand);
+  }
+});
+
+// Issue #249: при обходе по брендам известные линейки берутся только этих брендов.
+test('известные линейки фильтруются по списку брендов', () => {
+  assert.deepEqual(
+    filterLineUrlsByBrands(
+      [
+        'https://htreviews.org/tobaccos/blansh/main',
+        'https://htreviews.org/tobaccos/blanshx/main',
+        'https://htreviews.org/tobaccos/darkside/core',
+        'https://htreviews.org/tobaccos/musthave/main',
+      ],
+      ['https://htreviews.org/tobaccos/blansh', 'https://htreviews.org/tobaccos/darkside'],
+    ),
+    ['https://htreviews.org/tobaccos/blansh/main', 'https://htreviews.org/tobaccos/darkside/core'],
   );
 });

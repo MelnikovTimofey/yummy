@@ -25,6 +25,11 @@ const BRANDS: Array<[canonical: string, aliases: string[]]> = [
   ['Trofimoff’s', ['trofimoff’s', "trofimoff's", 'trofimoff', 'трофимофф']],
 ];
 
+// Марки, которые htreviews ведёт линейкой другого производителя: Blansh — линейка AHF Tobacco.
+export const BRAND_OWNERS: Record<string, string> = {
+  Blansh: 'AHF Tobacco',
+};
+
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const BRAND_PATTERNS = BRANDS.flatMap(([canonical, aliases]) => aliases.map((alias) => ({ canonical, alias })))

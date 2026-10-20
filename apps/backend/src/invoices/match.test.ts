@@ -81,6 +81,65 @@ test('matchLine keeps a leading vowel and ignores one-consonant words in transli
   assert.equal(matchLine({ name: 'Black Burn 200г Айс Эппл' }, tricky)[0]?.tobaccoId, 'ice-apple');
 });
 
+test('matchLine matches a flavor written in one word on one side and in two on the other', () => {
+  const compound: CatalogTobacco[] = [
+    { id: 'sarma-bubblegum', manufacturer: 'Сарма', lineName: 'Классическая', name: 'Баблгам' },
+    { id: 'sarma-raspberry', manufacturer: 'Сарма', lineName: 'Классическая', name: 'Лесная малина' },
+    { id: 'bb-bubble-gum', manufacturer: 'Black Burn', lineName: null, name: 'Bubble Gum' },
+    { id: 'bb-blackberry', manufacturer: 'Black Burn', lineName: null, name: 'Blackberry' },
+  ];
+  const sarma = matchLine({ name: 'Табак для кальяна Сарма 25г Бабл Гам' }, compound)[0];
+  assert.equal(sarma?.tobaccoId, 'sarma-bubblegum');
+  assert.ok(sarma.confidence >= CONFIDENT_MATCH, `Бабл Гам: ${sarma.confidence}`);
+
+  const blackBurn = matchLine({ name: 'Табак для кальяна Black Burn 200г Баблгам' }, compound)[0];
+  assert.equal(blackBurn?.tobaccoId, 'bb-bubble-gum');
+  assert.ok(blackBurn.confidence >= CONFIDENT_MATCH, `Баблгам: ${blackBurn.confidence}`);
+
+  const blackBerry = matchLine({ name: 'Табак для кальяна Black Burn 200г Black Berry' }, compound)[0];
+  assert.equal(blackBerry?.tobaccoId, 'bb-blackberry');
+});
+
+test('matchLine counts a one-consonant word only next to a matched longer word', () => {
+  const short: CatalogTobacco[] = [
+    { id: 'pink-me', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Pink Me' },
+    { id: 'forever-young', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Forever young' },
+    { id: 'green-tea', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Green Tea' },
+  ];
+  const pinkMe = matchLine({ name: '"Дарк Сайд" Кор (Пинк Ми), 250 г' }, short)[0];
+  assert.equal(pinkMe?.tobaccoId, 'pink-me');
+  assert.ok(pinkMe.confidence >= CONFIDENT_MATCH, `Пинк Ми: ${pinkMe.confidence}`);
+
+  const foreverYoung = matchLine({ name: '"Дарк Сайд" Кор (Форевер Янг), 250 г' }, short)[0];
+  assert.equal(foreverYoung?.tobaccoId, 'forever-young');
+  assert.equal(foreverYoung.confidence, 90);
+
+  assert.deepEqual(matchLine({ name: '"Дарк Сайд" Кор (Ми), 250 г' }, short), []);
+  assert.deepEqual(matchLine({ name: '"Дарк Сайд" Кор (Что-то), 250 г' }, short), []);
+  assert.deepEqual(matchLine({ name: '"Дарк Сайд" Кор (Ми то), 250 г' }, short), []);
+});
+
+test('matchLine tells one-consonant words apart by vowels', () => {
+  // Пары с одной полки htreviews: скелет согласных у коротких слов совпадает.
+  const pairs: CatalogTobacco[] = [
+    { id: 'hard-ba', manufacturer: 'Хулиган', lineName: null, name: 'HARD BA' },
+    { id: 'hard-boo', manufacturer: 'Хулиган', lineName: null, name: 'Hard Boo' },
+    { id: 'kakao-maya', manufacturer: 'Хулиган', lineName: null, name: 'Kakao Maya' },
+    { id: 'kakao-mayo', manufacturer: 'Хулиган', lineName: null, name: 'Kakao Mayo' },
+    { id: 'ice-tea', manufacturer: 'Хулиган', lineName: null, name: 'Ice Tea' },
+    { id: 'papaya', manufacturer: 'Хулиган', lineName: null, name: 'Papaya' },
+  ];
+  const confident = (name: string) =>
+    matchLine({ name }, pairs)
+      .filter((candidate) => candidate.confidence >= CONFIDENT_MATCH)
+      .map((candidate) => candidate.tobaccoId);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Хард Бу'), ['hard-boo']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Хард Ба'), ['hard-ba']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Какао Майо'), ['kakao-mayo']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Айс Ти'), ['ice-tea']);
+  assert.deepEqual(confident('Табак для кальяна Хулиган 200г Папайя'), ['papaya']);
+});
+
 test('matchLine matches word forms by a common stem', () => {
   assert.equal(top('Табак для кальяна SEBERO Блэк БЧК 200гр Барбарисовая Шипучка')?.tobaccoId, 'sebero-barberry');
   assert.equal(top('Табак для кальяна Black Burn 200г Raspberry')?.tobaccoId, 'bb-raspberries');
@@ -136,12 +195,31 @@ test('matchLine gives no high confidence for a flavor the brand does not have', 
 });
 
 test('matchLine gives no high confidence without a brand from the catalog', () => {
-  const blansh = matchLine({ name: 'Табак для кальяна BLANSH 200 гр Грейпфрутовый Сок' }, catalog);
-  assert.ok(blansh.length > 0);
-  assert.ok(blansh.every((candidate) => candidate.confidence < CONFIDENT_MATCH && candidate.reason === 'no-brand'));
+  const bliss = matchLine({ name: 'Табак для кальяна BLISS 200 гр Грейпфрутовый Сок' }, catalog);
+  assert.ok(bliss.length > 0);
+  assert.ok(bliss.every((candidate) => candidate.confidence < CONFIDENT_MATCH && candidate.reason === 'no-brand'));
 
   const noBrand = matchLine({ name: 'Маракуйя 200г' }, catalog);
   assert.ok(noBrand.every((candidate) => candidate.confidence < CONFIDENT_MATCH));
+});
+
+// На htreviews Blansh — линейка производителя AHF Tobacco, а поставщик пишет её как бренд.
+test('matchLine finds a brand that the catalog keeps as a line of another manufacturer', () => {
+  const ahf: CatalogTobacco[] = [
+    { id: 'ahf-blansh-raspberry', manufacturer: 'AHF Tobacco', lineName: 'Blansh', name: 'Ягода Малинка' },
+    { id: 'ahf-raspberry-no-line', manufacturer: 'AHF Tobacco', lineName: null, name: 'Ягода Малинка' },
+    { id: 'blansh-cherry', manufacturer: 'Blansh', lineName: 'Основная', name: 'Вишневый сад' },
+    { id: 'sarma-raspberry', manufacturer: 'Сарма', lineName: 'Классическая', name: 'Ягода Малинка' },
+  ];
+  const candidates = matchLine({ name: 'Табак для кальяна BLANSH 200 гр ЯГОДА МАЛИНКА' }, ahf);
+  assert.deepEqual(
+    candidates.map((candidate) => [candidate.tobaccoId, candidate.confidence, candidate.reason]),
+    [
+      ['ahf-blansh-raspberry', 100, 'catalog'],
+      ['ahf-raspberry-no-line', 100, 'catalog'],
+    ],
+  );
+  assert.equal(matchLine({ name: 'Табак для кальяна BLANSH 200 гр Вишневый сад' }, ahf)[0]?.tobaccoId, 'blansh-cherry');
 });
 
 test('matchLine returns nothing for a line that shares no tokens with the catalog', () => {
