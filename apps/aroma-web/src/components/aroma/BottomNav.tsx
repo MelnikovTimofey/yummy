@@ -1,12 +1,13 @@
-import { Blend, GalleryHorizontalEnd, Search, Sparkles, type LucideIcon } from "lucide-react";
+import { Blend, CircleUserRound, GalleryHorizontalEnd, Search, Sparkles, type LucideIcon } from "lucide-react";
 
-export type BottomNavTab = "recommendations" | "showcase" | "catalog" | "mixer";
+export type BottomNavTab = "recommendations" | "showcase" | "catalog" | "mixer" | "cabinet";
 
 const items: Array<{ id: BottomNavTab; label: string; icon: LucideIcon }> = [
   { id: "recommendations", label: "Подбор", icon: Sparkles },
   { id: "showcase", label: "Витрина", icon: GalleryHorizontalEnd },
   { id: "catalog", label: "Каталог", icon: Search },
   { id: "mixer", label: "Миксер", icon: Blend },
+  { id: "cabinet", label: "Кабинет", icon: CircleUserRound },
 ];
 
 type BottomNavProps = {
@@ -14,7 +15,7 @@ type BottomNavProps = {
   onChange: (id: BottomNavTab) => void;
 };
 
-// Нижняя панель гостя (#168): только значки, название — в aria-label.
+// Нижняя панель гостя (#168, #243): только значки, название — в aria-label.
 export function BottomNav({ value, onChange }: BottomNavProps) {
   return (
     <nav className="bottom-nav" aria-label="Гостевая навигация">
