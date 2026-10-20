@@ -5,10 +5,7 @@ export type ProfileOption = {
 
 // Порядок — тот же, в котором профили показываются гостю в онбординге.
 export const profileOptions: ProfileOption[] = [
-  { value: 'sweet', label: 'Сладкий' },
-  { value: 'sour', label: 'Кислый' },
   { value: 'spicy', label: 'Пряный' },
-  { value: 'fresh', label: 'Свежий' },
   { value: 'dessert', label: 'Десертный' },
   { value: 'tobacco', label: 'Табачный' },
   { value: 'minty', label: 'Мятный' },
@@ -19,7 +16,11 @@ export const profileOptions: ProfileOption[] = [
   { value: 'perfume', label: 'Парфюмный' },
 ];
 
-export const profileLabelMap = profileOptions.reduce<Record<string, string>>((acc, item) => {
-  acc[item.value] = item.label;
-  return acc;
-}, {});
+// «Сладкий», «Кислый» и «Свежий» сняты с выбора (#182): своего источника в
+// htreviews у них нет. Подписи остаются для вкусов, сохранённых гостями раньше.
+export const profileLabelMap: Record<string, string> = {
+  ...Object.fromEntries(profileOptions.map((item) => [item.value, item.label])),
+  sweet: 'Сладкий',
+  sour: 'Кислый',
+  fresh: 'Свежий',
+};

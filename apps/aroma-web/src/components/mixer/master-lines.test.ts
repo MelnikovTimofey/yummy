@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { masterLines, pickMasterLine, skipLineKey, takeLineKey } from './master-lines';
 
-// Ключи — ровно из issue #128; тексты пишет владелец продукта.
+// Ключи — из issue #128 без профилей, снятых в #182; тексты пишет владелец продукта.
 const expectedKeys = [
   'turn.base',
   'turn.accent',
@@ -11,14 +11,11 @@ const expectedKeys = [
     'berry',
     'citrus',
     'dessert',
-    'fresh',
     'minty',
     'fruity',
     'spicy',
     'tobacco',
     'floral_herbal',
-    'sweet',
-    'sour',
     'perfume',
   ].map((profile) => `take.base.${profile}`),
   'take.accent.classic',

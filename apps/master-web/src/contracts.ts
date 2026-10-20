@@ -1467,18 +1467,16 @@ export const flavorProfileColor = (value: string) => {
 // ключи, совпадающие с flavorProfileLabels и с тем, что бэкенд хранит в
 // Tobacco.flavorProfiles. Не русские лейблы: иначе выбранная категория не
 // подсветится, а клик запишет в draft русский лейбл и затрёт ключ (issue #117).
+// sweet/sour/fresh не предлагаются: источника в htreviews у них нет (#182).
 export const INVENTORY_FLAVOR_PROFILE_KEYS = [
   'fruity',
   'berry',
   'citrus',
   'dessert',
-  'sweet',
   'minty',
-  'fresh',
   'spicy',
   'tobacco',
   'floral_herbal',
-  'sour',
   'perfume',
 ] as const;
 
