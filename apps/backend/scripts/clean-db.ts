@@ -19,6 +19,7 @@ const maskDatabaseUrl = (url: string | undefined) =>
 // дети, потом родители. Операционные данные (staff, daily-коды, intro-карточки,
 // telegram-операторы, аудит) НЕ трогаем — иначе будет нечем логиниться и тестировать.
 const targets = [
+  { label: 'избранное гостей', run: () => prisma.guestFavorite.deleteMany() },
   { label: 'smoke-события', run: () => prisma.smokeCtaEvent.deleteMany() },
   { label: 'рейтинги миксов', run: () => prisma.mixRating.deleteMany() },
   { label: 'связи рейл↔микс', run: () => prisma.railMix.deleteMany() },
@@ -40,6 +41,7 @@ const targets = [
 ] as const;
 
 const counts = async () => ({
+  'избранное гостей': await prisma.guestFavorite.count(),
   'smoke-события': await prisma.smokeCtaEvent.count(),
   'рейтинги миксов': await prisma.mixRating.count(),
   'связи рейл↔микс': await prisma.railMix.count(),

@@ -229,7 +229,7 @@ test.describe('дашборд полки', () => {
       custom.push(local(back, 20));
       if (back % 7 === 0) smoke.push(local(back, 21), local(back, 22));
     }
-    await prisma.smokeCtaEvent.createMany({ data: smoke.map((createdAt) => ({ mixId: 'mix-citrus-scout', createdAt })) });
+    await prisma.smokeCtaEvent.createMany({ data: smoke.map((createdAt) => ({ mixId: 'mix-citrus-scout', mixName: 'Citrus Scout', createdAt })) });
     await prisma.customMixSmokeEvent.createMany({
       data: custom.map((createdAt) => ({ components: [], signature: 's', name: 'Свой', harmony: 50, createdAt })),
     });

@@ -254,6 +254,7 @@ const railMixes = [
 async function main() {
   const currentCodeWindow = getDailyCodeWindow();
 
+  await prisma.guestFavorite.deleteMany();
   await prisma.smokeCtaEvent.deleteMany();
   await prisma.mixRating.deleteMany();
   await prisma.railMix.deleteMany();

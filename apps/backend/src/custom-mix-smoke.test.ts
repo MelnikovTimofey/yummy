@@ -7,6 +7,7 @@ import {
   createTobacco,
   getDashboardSummary,
   getGuestHomeRails,
+  getMixById,
   getSmokeCtaEvents,
   getSmokeCtaSummary,
   recordSmokeCtaEvent,
@@ -196,7 +197,9 @@ test.describe('custom mix smoke event', () => {
     };
 
     // Живое событие каталога — чтобы статистика была непустой и сдвиг был виден.
-    await recordSmokeCtaEvent('mix-citrus-scout');
+    const scout = await getMixById('mix-citrus-scout');
+    assert.ok(scout);
+    await recordSmokeCtaEvent(scout);
     const before = await snapshot();
     for (let index = 0; index < 3; index += 1) {
       assert.equal((await smoke({ components: lemonMint })).statusCode, 201);
