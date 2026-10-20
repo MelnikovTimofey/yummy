@@ -220,6 +220,30 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   await expect(settings).toBeHidden();
 });
 
+// «Идеи для закупки» (#214): подборки htreviews или пустое состояние — на seed
+// статистики нет, на снапшоте прода она есть. Неразрушающий: «В план» не жмём.
+test('Master catalog shows purchase ideas from htreviews without planning anything', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Каталог');
+  await expect(page.getByRole('columnheader', { name: 'Просмотров' })).toBeVisible();
+
+  const catalogView = page.getByRole('group', { name: 'Вид каталога' });
+  const ideasToggle = catalogView.getByRole('button', { name: 'Идеи для закупки' });
+  await ideasToggle.click();
+  await expect(ideasToggle).toHaveAttribute('aria-pressed', 'true');
+
+  const section = page.getByRole('heading', {
+    level: 2,
+    name: /^(Популярное у ваших брендов|Высокий рейтинг|Похоже на то, что быстро уходит)$/,
+  });
+  const empty = page.getByText('Идей пока нет: статистика htreviews появится после следующей синхронизации каталога.');
+  await expect(section.or(empty).first()).toBeVisible();
+
+  await catalogView.getByRole('button', { name: 'Все табаки' }).click();
+  await expect(page.locator('tbody tr[data-tobacco-id]').first()).toBeVisible();
+});
+
 // Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
 // Табак берётся с полки, поэтому приёмка лишь добавляет ему банку в запас:
 // гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе

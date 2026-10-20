@@ -7,7 +7,9 @@ export type IdeaSourceTobacco = {
   name: string;
   flavorProfiles: string[];
   flavors: string[];
-  inStock: boolean;
+  // Держит ли точка табак (ShelfItem active), а не наличие для гостя: табак
+  // без банок или на стопе — всё равно «наш», в идеи закупки он не идёт.
+  onShelf: boolean;
   archived: boolean;
   sourceUrl: string | null;
   rating: number | null;
@@ -119,8 +121,8 @@ const buildLikeFastMoving = (candidates: IdeaSourceTobacco[], fastMoving: IdeaSo
 };
 
 export const buildCatalogIdeas = (tobaccos: IdeaSourceTobacco[], mixes: IdeaSourceMix[]): CatalogIdeas => {
-  const shelf = tobaccos.filter((tobacco) => tobacco.inStock && !tobacco.archived);
-  const candidates = tobaccos.filter((tobacco) => !tobacco.inStock && !tobacco.archived && tobacco.sourceUrl);
+  const shelf = tobaccos.filter((tobacco) => tobacco.onShelf && !tobacco.archived);
+  const candidates = tobaccos.filter((tobacco) => !tobacco.onShelf && !tobacco.archived && tobacco.sourceUrl);
   const shelfBrands = new Set(shelf.map((tobacco) => normalize(tobacco.manufacturer)));
 
   const popularOnShelfBrands = candidates
@@ -162,9 +164,9 @@ export const getCatalogIdeas = async (): Promise<CatalogIdeas> => {
         name: true,
         flavorProfiles: true,
         flavors: true,
-        inStock: true,
         archived: true,
         sourceUrl: true,
+        shelfItem: { select: { status: true } },
         rating: true,
         ratingsCount: true,
         reviewsCount: true,
@@ -178,8 +180,9 @@ export const getCatalogIdeas = async (): Promise<CatalogIdeas> => {
   ]);
 
   return buildCatalogIdeas(
-    tobaccos.map((tobacco) => ({
+    tobaccos.map(({ shelfItem, ...tobacco }) => ({
       ...tobacco,
+      onShelf: shelfItem?.status === 'active',
       flavorProfiles: parseList(tobacco.flavorProfiles),
       flavors: parseList(tobacco.flavors),
     })),

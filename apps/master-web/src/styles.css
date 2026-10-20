@@ -6927,3 +6927,122 @@ button.chip .chip__count[hidden] {
 .shelf-dash__bar span { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .shelf-dash__bar-labels { display: flex; gap: 12px; }
 .shelf-dash__bar-labels span { flex: 1; text-align: center; font-size: 10.5px; color: var(--text-faint); }
+
+/* =====================================================================
+   Каталог → «Идеи для закупки» и колонки htreviews (#214) — по
+   design/design_handoff_inventory (#shot=ideas, #shot=catalog-all).
+   ===================================================================== */
+
+.htreviews-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.htreviews-link:hover { color: var(--text-primary); }
+.htreviews-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.catalog-ideas { display: grid; gap: 20px; }
+
+.catalog-ideas__section { display: grid; gap: 10px; }
+
+.catalog-ideas__head { display: grid; gap: 2px; }
+
+.catalog-ideas__head h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-xl);
+  color: var(--text-primary);
+}
+
+.catalog-ideas__head p,
+.catalog-ideas__hint,
+.catalog-ideas__empty {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.catalog-ideas__empty {
+  padding: 32px 16px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+
+.catalog-ideas__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.catalog-idea {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.catalog-idea__brand {
+  font-family: var(--font-meta);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.catalog-idea__name {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-xl);
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.catalog-idea__tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.catalog-idea__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-idea__stats > span { display: inline-flex; align-items: center; gap: 4px; }
+
+.catalog-idea__why { margin: 0; font-size: var(--fs-xs); color: var(--text-faint); }
+
+.catalog-idea__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.inventory-table--redesign .inventory-table__stat {
+  width: 96px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+  .catalog-ideas__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .catalog-ideas__grid { grid-template-columns: minmax(0, 1fr); }
+}

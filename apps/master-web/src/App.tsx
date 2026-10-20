@@ -8,6 +8,7 @@ import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
 import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
+import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
 import { ShelfView } from '@/components/shelf/shelf-view';
 import { useDeliveries } from '@/hooks/use-deliveries';
 import { DeliveriesView } from '@/components/deliveries/deliveries-view';
@@ -17,7 +18,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { ShelfDashboardBlock } from '@/components/dashboard/shelf-dashboard-block';
-import { InventoryView, type CatalogBatchAction, type InventoryEditorInput } from '@/components/inventory/inventory-view';
+import { InventoryView, type CatalogBatchAction, type CatalogView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
+import { CatalogIdeasView } from '@/components/inventory/catalog-ideas-view';
 import { MixCatalogView } from '@/components/mixes/mix-catalog-view';
 import { MixBuilder } from '@/components/mixes/mix-builder/mix-builder';
 import { CommandPalette, type CommandPaletteItem } from '@/components/shell/command-palette';
@@ -153,6 +155,8 @@ export const App = () => {
   const shelf = useShelf(token);
   const deliveries = useDeliveries(token);
   const shelfDashboard = useShelfDashboard(token);
+  const [catalogView, setCatalogView] = useState<CatalogView>('all');
+  const catalogIdeas = useCatalogIdeas(token, (tobaccoId) => shelf.add(tobaccoId, 'plan'));
   // Табак из «Заканчивается» на дашборде: «Полка» откроет его карточку.
   const [pendingShelfCard, setPendingShelfCard] = useState('');
   // Счёт, выбранный на «Полке»: его разбирает вкладка «Поставки».
@@ -300,6 +304,7 @@ export const App = () => {
     previousTabRef.current = activeTab;
     if (!user || !token || previous === activeTab) return;
     if (activeTab === 'catalog') void loadInventory(token);
+    if (activeTab === 'catalog' && catalogView === 'ideas') void catalogIdeas.reload(token);
     if (activeTab === 'shelf') void shelf.reload(token);
     if (activeTab === 'dashboard') void shelfDashboard.reload(token);
     // Приёмка поставки тоже меняет наличие для гостя.
@@ -591,6 +596,8 @@ export const App = () => {
     telegramOps.reset();
     shelf.reset();
     shelfDashboard.reset();
+    catalogIdeas.reset();
+    setCatalogView('all');
     setPendingShelfCard('');
     deliveries.reset();
     setPendingInvoice(null);
@@ -908,6 +915,12 @@ export const App = () => {
       saveError={inventorySaveError}
       onSaveTobacco={onSaveTobacco}
       onResetSaveFeedback={onResetInventorySaveFeedback}
+      view={catalogView}
+      onViewChange={(view) => {
+        setCatalogView(view);
+        if (view === 'ideas' && token) void catalogIdeas.reload(token);
+      }}
+      ideas={<CatalogIdeasView ideas={catalogIdeas} shelfStatuses={shelfStatuses} />}
     />
   );
 
@@ -916,6 +929,7 @@ export const App = () => {
       shelf={shelf}
       onGoCatalog={() => setActiveTab('catalog')}
       onOpenInCatalog={(row) => {
+        setCatalogView('all');
         setActiveTab('catalog');
         void onInventorySearchChange(row.tobacco.name);
       }}

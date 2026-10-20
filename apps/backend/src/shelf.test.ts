@@ -240,6 +240,8 @@ test.describe('настройки полки', () => {
 
 test.describe('экран «Полка»', () => {
   test('строки, счётчики, итоги и прогноз на сегодня', async () => {
+    const mintUrl = 'https://htreviews.org/tobaccos/atelier/mint-veil';
+    await prisma.tobacco.update({ where: { id: MINT }, data: { sourceUrl: mintUrl } });
     await addToShelf(actor, PEACH, 'plan', at(1));
     await setStop(actor, 'tobacco-berry-oasis', true, undefined, at(1));
     await markEmpty(actor, 'tobacco-citrus-breeze', at(10));
@@ -266,6 +268,7 @@ test.describe('экран «Полка»', () => {
     assert.equal(mint.mixCount, 5);
     assert.deepEqual(mint.lastReceipt && [mint.lastReceipt.label, mint.lastReceipt.kind], ['Стартовый приход', 'start']);
     assert.deepEqual(mint.tobacco.flavors, seedTobaccos.find((item) => item.id === MINT)!.flavors);
+    assert.equal(mint.tobacco.sourceUrl, mintUrl);
     assert.equal(mint.openPacks.length, 1);
     assert.equal(mint.sealedCount, 0);
     // У Ателье Reserve есть свой расход (Citrus Breeze), остальные бренда получают медиану.
@@ -275,6 +278,7 @@ test.describe('экран «Полка»', () => {
 
     const honey = shelf.rows.find((row) => row.tobacco.id === 'tobacco-desert-honey')!;
     assert.equal(honey.lastReceipt?.label, 'Вручную');
+    assert.equal(honey.tobacco.sourceUrl, null);
 
     const openWithRate = shelf.rows.filter((row) => row.openPacks.length && row.rate);
     const grams = openWithRate.reduce((total, row) => total + row.rate!, 0);
