@@ -36,7 +36,7 @@ const release = (id: string): WhatsNewRelease => ({ id, label: id, slides: [{ ti
 test('последний выпуск — первый в списке; выпусков нет — null', () => {
   assert.equal(latestRelease([release('new'), release('old')])?.id, 'new');
   assert.equal(latestRelease([]), null);
-  assert.equal(latestRelease()?.id, '2026-10-inventory');
+  assert.equal(latestRelease()?.id, '2026-10-guest');
 });
 
 test('непросмотрено, пока сохранённый id не совпал с последним выпуском', () => {
@@ -110,9 +110,21 @@ test('данные выпусков целостны: id уникальны, у 
   }
 });
 
-test('первый выпуск — инвентарь, 21 октября, 6 слайдов как в мокапе', () => {
-  const first = WHATS_NEW[0];
-  assert.equal(first.id, '2026-10-inventory');
+test('последний выпуск — гостевой: кабинет, «Для вас», рилсы и мелочи, без «Открыть раздел»', () => {
+  const latest = WHATS_NEW[0];
+  assert.equal(latest.id, '2026-10-guest');
+  assert.deepEqual(
+    latest.slides.map((slide) => slide.title),
+    ['Кабинет гостя', '«Для вас» на «Подборе»', 'Рилсы', 'И по мелочи'],
+  );
+  // Гостевые экраны в «Мастере» не открыть — кнопки раздела нет.
+  assert.ok(latest.slides.every((slide) => !slide.action));
+  // Снимки телефона гостя — целиком, без обрезки.
+  assert.ok(latest.slides.every((slide) => !('image' in slide) || slide.contain));
+});
+
+test('выпуск инвентаря — 21 октября, 6 слайдов как в мокапе', () => {
+  const first = WHATS_NEW.find((item) => item.id === '2026-10-inventory')!;
   assert.equal(first.label, '21 октября');
   assert.deepEqual(
     first.slides.map((slide) => slide.title),
