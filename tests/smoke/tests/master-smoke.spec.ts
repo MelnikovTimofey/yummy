@@ -278,6 +278,62 @@ test.describe('Master on a phone', () => {
     await expect(toast).toBeHidden();
   });
 
+  // Редкие действия и настройки полки на телефоне (#228). Неразрушающий:
+  // списание и настройки открываются и закрываются без подтверждения.
+  test('Master shelf card on a phone: actions sheet, write-off form and shelf settings close without changes', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
+    await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
+
+    // Берём табак с открытой банкой — у него доступно и списание.
+    const first = page
+      .locator('.m-shelf-card')
+      .filter({ has: page.getByRole('button', { name: 'Закончилась', exact: true }) })
+      .first();
+    await expect(first).toBeVisible();
+    await first.locator('.m-shelf-card__name').click();
+    const card = page.locator('.shelf-card');
+    await expect(card).toBeVisible();
+
+    await card.getByRole('button', { name: /^Действия:/ }).click();
+    const actions = page.getByRole('dialog', { name: /^Действия:/ });
+    await expect(actions).toBeVisible();
+    await expect(actions.getByRole('group', { name: 'Сколько осталось в открытой' }).getByRole('button')).toHaveCount(5);
+    for (const name of ['Вскрыть ещё одну банку', 'Добавить банку вручную', 'Списать банку…']) {
+      await expect(actions.getByRole('button', { name, exact: true })).toBeVisible();
+    }
+    await expect(actions.getByRole('button', { name: /стоп для гостей$/i })).toBeVisible();
+    await expect(actions.getByRole('button', { name: /^Убрать с полки/ })).toBeVisible();
+
+    await actions.getByRole('button', { name: 'Списать банку…', exact: true }).click();
+    const writeOff = page.getByRole('dialog', { name: 'Списать банку' });
+    await expect(writeOff.getByLabel('Причина')).toBeVisible();
+    await expect(writeOff.getByRole('button', { name: 'Списать', exact: true })).toBeDisabled();
+    // Тап по затемнению закрывает шторку, карточка остаётся.
+    await page.mouse.click(187, 40);
+    await expect(writeOff).toBeHidden();
+    await expect(card).toBeVisible();
+    await expect(page.locator('.shelf-toast')).toBeHidden();
+    await card.getByRole('button', { name: 'Закрыть' }).click();
+    await expect(card).toBeHidden();
+
+    await page.getByRole('button', { name: 'Меню полки' }).click();
+    const menu = page.getByRole('dialog', { name: 'Меню полки' });
+    await menu.getByRole('button', { name: /^Настройки полки/ }).click();
+    await expect(menu).toBeHidden();
+    const settings = page.getByRole('dialog', { name: 'Настройки полки' });
+    await expect(settings.getByLabel('Граммовка чаши, г')).toHaveValue(/^\d+$/);
+    await expect(settings.getByLabel('Срок поставки, дней')).toHaveValue(/^\d+$/);
+    // На телефоне — нижней шторкой на всю ширину.
+    await expect.poll(async () => (await settings.boundingBox())?.width).toBe(375);
+    await settings.getByRole('button', { name: 'Отмена' }).click();
+    await expect(settings).toBeHidden();
+  });
+
   test('Master «What\'s new» on a phone opens full screen from «Ещё»', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
