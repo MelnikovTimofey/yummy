@@ -233,6 +233,11 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .fy-bubble-link{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 4px 6px 8px;border-radius:var(--r-guest-control);border:1px solid var(--line-soft);background:var(--guest-control-bg-soft);color:var(--text-0);text-align:left;cursor:pointer}
 .fy-bubble-link:hover{border-color:var(--accent-border)}
 .fy-bubble-name{flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:14.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* «Подобрать под настроение» (#151): тихая ссылка и строка «только на этот визит» */
+.fy-mood-link{justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:36px;margin-top:2px;padding:0;border:0;background:transparent;color:var(--text-0);font-family:var(--font-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.fy-mood-link:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.fy-mood-note{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-guest-row);border:1px solid var(--line-soft)}
+.fy-mood-note-text{margin:0;display:grid;gap:2px;font-size:12.5px;line-height:1.45;color:var(--text-1)}
 .fy-cold{margin:0;padding:10px 12px;border-radius:var(--r-guest-row);border:1px solid var(--line-soft);font-size:12.5px;line-height:1.45;color:var(--text-1)}
 
 /* Кабинет */
