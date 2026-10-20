@@ -41,7 +41,7 @@ export type ForYouPersonal<M extends ForYouMix = ForYouMix> = {
 export type ForYouResult<M extends ForYouMix = ForYouMix> = { mode: 'cold'; picks: number } | ForYouPersonal<M>;
 
 // Числа — стартовые из PRD §6.5, уточняются по итогам пилота.
-const MIN_PICKS = 3;
+export const MIN_FOR_YOU_PICKS = 3;
 const SATURATION = 3;
 const DECAY_AFTER_DAYS = 60;
 const DECAY_FACTOR = 0.5;
@@ -156,7 +156,7 @@ const buildHint = (history: ForYouHistoryEntry[], leadingOfEntry: (entry: ForYou
 };
 
 export const buildForYou = <M extends ForYouMix>(input: ForYouInput<M>): ForYouResult<M> => {
-  if (input.history.length < MIN_PICKS) {
+  if (input.history.length < MIN_FOR_YOU_PICKS) {
     return { mode: 'cold', picks: input.history.length };
   }
 

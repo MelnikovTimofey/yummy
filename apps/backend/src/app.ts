@@ -17,6 +17,7 @@ import {
   addFavoriteCustom,
   addFavoriteMix,
   getGuestFavorites,
+  getGuestForYou,
   getGuestHistory,
   parseHistoryQuery,
   removeFavoriteCustom,
@@ -224,6 +225,7 @@ export const buildApp = () => {
       guestMe: 'GET|DELETE /guest/me',
       guestMeOnboarding: 'PUT /guest/me/onboarding',
       guestMeHistory: 'GET /guest/me/history',
+      guestMeForYou: 'GET /guest/me/for-you',
       guestMeFavorites: 'GET /guest/me/favorites',
       guestMeFavoriteMix: 'PUT|DELETE /guest/me/favorites/mixes/:mixId',
       guestMeFavoriteCustom: 'PUT|DELETE /guest/me/favorites/custom/:eventId',
@@ -721,6 +723,15 @@ export const buildApp = () => {
     }
 
     return reply.send(await getGuestHistory(guest.id, query.before, query.limit));
+  });
+
+  app.get('/guest/me/for-you', async (request, reply) => {
+    const guest = await authenticateGuestRequest(request, reply);
+    if (!guest) {
+      return;
+    }
+
+    return reply.send(await getGuestForYou(guest));
   });
 
   app.get('/guest/me/favorites', async (request, reply) => {

@@ -1,5 +1,8 @@
 import { prisma } from './db';
-import type { GuestCabinetItem, GuestFavoriteItem, GuestHistoryItem, GuestHistoryResponse, GuestMixStatus } from './types';
+import { buildForYou, MIN_FOR_YOU_PICKS, type ForYouHistoryEntry } from './for-you';
+import { loadMixer } from './mixer';
+import { getRecommendations } from './recommendations';
+import type { GuestCabinetItem, GuestFavoriteItem, GuestForYouResponse, GuestHistoryItem, GuestHistoryResponse, GuestMixStatus } from './types';
 
 // История и избранное гостя (#240, PRD §8.9). Строка показывает снимок названия
 // и статус: в наличии, нет табака (первый отсутствующий) или «Больше не готовим».
@@ -213,3 +216,51 @@ export const removeFavoriteMix = (guestId: string, mixId: string) =>
 
 export const removeFavoriteCustom = (guestId: string, eventId: string) =>
   prisma.guestFavorite.deleteMany({ where: { guestId, customMixEventId: eventId } });
+
+// «Для вас» (#241): данные гостя и наличие для чистой функции buildForYou.
+// Последние 200 выборов — затухание после 60 дней делает хвост неважным.
+const FOR_YOU_HISTORY = 200;
+
+export const getGuestForYou = async (guest: { id: string; likedProfiles: unknown; likedFlavors: unknown }): Promise<GuestForYouResponse> => {
+  const onboarding = { likedProfiles: asStringList(guest.likedProfiles), likedFlavors: asStringList(guest.likedFlavors) };
+  const orderBy = { createdAt: 'desc' as const };
+  const [smokes, customs, ratings, favorites, mixer] = await Promise.all([
+    prisma.smokeCtaEvent.findMany({ where: { guestId: guest.id }, orderBy, take: FOR_YOU_HISTORY }),
+    prisma.customMixSmokeEvent.findMany({ where: { guestId: guest.id }, orderBy, take: FOR_YOU_HISTORY, select: { signature: true, name: true, components: true, createdAt: true } }),
+    prisma.mixRating.findMany({ where: { guestId: guest.id }, select: { mixId: true, value: true } }),
+    prisma.guestFavorite.findMany({ where: { guestId: guest.id, mixId: { not: null } }, select: { mixId: true } }),
+    loadMixer(),
+  ]);
+
+  const history: ForYouHistoryEntry[] = [
+    ...smokes.map((row): ForYouHistoryEntry => ({ kind: 'catalog', at: row.createdAt, mixId: row.mixId, name: row.mixName, profiles: asStringList(row.mixProfiles) })),
+    ...customs.map((row): ForYouHistoryEntry => ({ kind: 'custom', at: row.createdAt, key: row.signature, name: row.name, components: asComponents(row.components) })),
+  ];
+
+  if (history.length < MIN_FOR_YOU_PICKS) {
+    const items = onboarding.likedProfiles.length || onboarding.likedFlavors.length ? await getRecommendations(onboarding) : [];
+    return { mode: 'cold', picks: history.length, onboarding, items };
+  }
+
+  const customTobaccoIds = history.flatMap((entry) => (entry.kind === 'custom' ? entry.components.map((item) => item.tobaccoId) : []));
+  const outOfPalette = await loadTobaccos(customTobaccoIds.filter((id) => !mixer.palette.some((tobacco) => tobacco.id === id)));
+  const mixTobaccos = await prisma.tobacco.findMany({
+    where: { id: { in: Array.from(new Set(mixer.guestMixes.flatMap((mix) => mix.componentIds))) } },
+    select: { id: true, flavorProfiles: true },
+  });
+  const tobaccoProfiles: Record<string, string[]> = {};
+  for (const tobacco of mixer.palette) tobaccoProfiles[tobacco.id] = tobacco.flavorProfiles;
+  for (const tobacco of [...mixTobaccos, ...outOfPalette.values()]) tobaccoProfiles[tobacco.id] = parseList(tobacco.flavorProfiles);
+
+  const result = buildForYou({
+    now: new Date(),
+    history,
+    ratings: Object.fromEntries(ratings.map((rating) => [rating.mixId, rating.value])),
+    favoriteMixIds: favorites.flatMap((row) => (row.mixId ? [row.mixId] : [])),
+    onboarding,
+    mixes: mixer.guestMixes,
+    tobaccoProfiles,
+    affinity: mixer.affinity,
+  });
+  return result.mode === 'cold' ? { mode: 'cold', picks: result.picks, onboarding, items: [] } : result;
+};
