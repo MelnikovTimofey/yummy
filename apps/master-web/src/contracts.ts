@@ -29,6 +29,10 @@ export type InventoryTobacco = {
   dependentMixCount?: number;
   blockedDependentMixCount?: number;
   dependentMixes?: InventoryDependentMix[];
+  // Статистика htreviews (#209): у своих карточек и до синхронизации — null.
+  rating?: number | null;
+  ratingsCount?: number | null;
+  viewsCount?: number | null;
 };
 
 export type InventoryDependentMix = {
@@ -525,6 +529,9 @@ const toStringList = (value: unknown): string[] => {
     .filter(Boolean);
 };
 
+const toNullableNumber = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
 const toNumber = (value: unknown, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -863,6 +870,9 @@ export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
     dependentMixCount: toNumber(raw.dependentMixCount, 0),
     blockedDependentMixCount: toNumber(raw.blockedDependentMixCount, 0),
     dependentMixes: readListPayload<unknown>(raw.dependentMixes).map(normalizeInventoryDependentMix),
+    rating: toNullableNumber(raw.rating),
+    ratingsCount: toNullableNumber(raw.ratingsCount),
+    viewsCount: toNullableNumber(raw.viewsCount),
   };
 };
 
@@ -1645,6 +1655,7 @@ export type ShelfTobacco = {
   officialStrength: string | null;
   communityStrength: string | null;
   archived: boolean;
+  sourceUrl: string | null;
 };
 
 export type ShelfOpenPack = { id: string; weight: number; openedAt: string; fraction: number };
@@ -1714,9 +1725,6 @@ export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 
 const SHELF_STATUSES: ShelfStatus[] = ['ok', 'ending', 'check', 'stop', 'out', 'plan'];
 const SHELF_PACK_STATES: ShelfPackState[] = ['sealed', 'open', 'empty', 'written_off'];
 
-const toNullableNumber = (value: unknown) =>
-  typeof value === 'number' && Number.isFinite(value) ? value : null;
-
 const toNullableString = (value: unknown) => (value == null ? null : String(value));
 
 const pickOne = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
@@ -1746,6 +1754,7 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
       officialStrength: toNullableString(tobacco.officialStrength),
       communityStrength: toNullableString(tobacco.communityStrength),
       archived: toBoolean(tobacco.archived, false),
+      sourceUrl: typeof tobacco.sourceUrl === 'string' && tobacco.sourceUrl.trim() ? tobacco.sourceUrl : null,
     },
     shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
     status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
@@ -2171,5 +2180,53 @@ export const normalizeDeliveryList = (value: unknown): DeliveryList => {
       suppliers: toNumber(totals.suppliers, 0),
       memoryItems: toNumber(totals.memoryItems, 0),
     },
+  };
+};
+
+// --- Каталог → «Идеи для закупки» (#214): ответ /staff/catalog/ideas -------
+
+export type CatalogIdea = {
+  id: string;
+  manufacturer: string;
+  lineName: string;
+  name: string;
+  flavorProfiles: string[];
+  rating: number | null;
+  ratingsCount: number | null;
+  reviewsCount: number | null;
+  viewsCount: number | null;
+  sourceUrl: string;
+  why: string | null;
+};
+
+export type CatalogIdeas = {
+  popularOnShelfBrands: CatalogIdea[];
+  topRated: CatalogIdea[];
+  likeFastMoving: CatalogIdea[];
+};
+
+const normalizeCatalogIdea = (raw: UnknownRecord): CatalogIdea => ({
+  id: String(raw.id ?? ''),
+  manufacturer: String(raw.manufacturer ?? ''),
+  lineName: String(raw.lineName ?? ''),
+  name: String(raw.name ?? ''),
+  flavorProfiles: uniqueStrings(toStringList(raw.flavorProfiles)),
+  rating: toNullableNumber(raw.rating),
+  ratingsCount: toNullableNumber(raw.ratingsCount),
+  reviewsCount: toNullableNumber(raw.reviewsCount),
+  viewsCount: toNullableNumber(raw.viewsCount),
+  sourceUrl: String(raw.sourceUrl ?? ''),
+  why: typeof raw.why === 'string' && raw.why.trim() ? raw.why.trim() : null,
+});
+
+const normalizeCatalogIdeaList = (value: unknown) =>
+  (Array.isArray(value) ? value : []).filter(isRecord).map(normalizeCatalogIdea);
+
+export const normalizeCatalogIdeas = (value: unknown): CatalogIdeas => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    popularOnShelfBrands: normalizeCatalogIdeaList(raw.popularOnShelfBrands),
+    topRated: normalizeCatalogIdeaList(raw.topRated),
+    likeFastMoving: normalizeCatalogIdeaList(raw.likeFastMoving),
   };
 };
