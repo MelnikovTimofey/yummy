@@ -195,12 +195,31 @@ test('matchLine gives no high confidence for a flavor the brand does not have', 
 });
 
 test('matchLine gives no high confidence without a brand from the catalog', () => {
-  const blansh = matchLine({ name: 'Табак для кальяна BLANSH 200 гр Грейпфрутовый Сок' }, catalog);
-  assert.ok(blansh.length > 0);
-  assert.ok(blansh.every((candidate) => candidate.confidence < CONFIDENT_MATCH && candidate.reason === 'no-brand'));
+  const bliss = matchLine({ name: 'Табак для кальяна BLISS 200 гр Грейпфрутовый Сок' }, catalog);
+  assert.ok(bliss.length > 0);
+  assert.ok(bliss.every((candidate) => candidate.confidence < CONFIDENT_MATCH && candidate.reason === 'no-brand'));
 
   const noBrand = matchLine({ name: 'Маракуйя 200г' }, catalog);
   assert.ok(noBrand.every((candidate) => candidate.confidence < CONFIDENT_MATCH));
+});
+
+// На htreviews Blansh — линейка производителя AHF Tobacco, а поставщик пишет её как бренд.
+test('matchLine finds a brand that the catalog keeps as a line of another manufacturer', () => {
+  const ahf: CatalogTobacco[] = [
+    { id: 'ahf-blansh-raspberry', manufacturer: 'AHF Tobacco', lineName: 'Blansh', name: 'Ягода Малинка' },
+    { id: 'ahf-raspberry-no-line', manufacturer: 'AHF Tobacco', lineName: null, name: 'Ягода Малинка' },
+    { id: 'blansh-cherry', manufacturer: 'Blansh', lineName: 'Основная', name: 'Вишневый сад' },
+    { id: 'sarma-raspberry', manufacturer: 'Сарма', lineName: 'Классическая', name: 'Ягода Малинка' },
+  ];
+  const candidates = matchLine({ name: 'Табак для кальяна BLANSH 200 гр ЯГОДА МАЛИНКА' }, ahf);
+  assert.deepEqual(
+    candidates.map((candidate) => [candidate.tobaccoId, candidate.confidence, candidate.reason]),
+    [
+      ['ahf-blansh-raspberry', 100, 'catalog'],
+      ['ahf-raspberry-no-line', 100, 'catalog'],
+    ],
+  );
+  assert.equal(matchLine({ name: 'Табак для кальяна BLANSH 200 гр Вишневый сад' }, ahf)[0]?.tobaccoId, 'blansh-cherry');
 });
 
 test('matchLine returns nothing for a line that shares no tokens with the catalog', () => {

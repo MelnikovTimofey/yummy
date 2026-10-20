@@ -1,4 +1,4 @@
-import { describeLine } from './brands';
+import { BRAND_OWNERS, describeLine } from './brands';
 
 export type CatalogTobacco = { id: string; manufacturer: string; lineName: string | null; name: string };
 
@@ -205,7 +205,13 @@ export const matchLine = (
   const described = describeLine(line.name);
 
   const brand = described.brand?.toLowerCase();
-  const ofBrand = brand ? catalog.filter((tobacco) => tobacco.manufacturer.toLowerCase() === brand) : [];
+  const owner = described.brand ? BRAND_OWNERS[described.brand]?.toLowerCase() : undefined;
+  const ofBrand = brand
+    ? catalog.filter((tobacco) => {
+        const manufacturer = tobacco.manufacturer.toLowerCase();
+        return manufacturer === brand || manufacturer === owner || tobacco.lineName?.toLowerCase() === brand;
+      })
+    : [];
   const pool = ofBrand.length ? ofBrand : catalog;
   const factor = ofBrand.length ? 1 : NO_BRAND_FACTOR;
   const reason = ofBrand.length ? 'catalog' : 'no-brand';
