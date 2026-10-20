@@ -7,6 +7,7 @@ import {
   collectBrandUrls,
   collectKnownLineUrls,
   decideTobaccoUpsert,
+  filterLineUrlsByBrands,
   loadShelfBrandUrls,
 } from './sync';
 
@@ -129,4 +130,20 @@ test('бренды точки — только у табаков htreviews в н
   for (const brand of ['musthave', 'spectrum', 'duft']) {
     assert.ok(!brandUrls.includes(`https://htreviews.org/tobaccos/${brand}`), brand);
   }
+});
+
+// Issue #249: при обходе по брендам известные линейки берутся только этих брендов.
+test('известные линейки фильтруются по списку брендов', () => {
+  assert.deepEqual(
+    filterLineUrlsByBrands(
+      [
+        'https://htreviews.org/tobaccos/blansh/main',
+        'https://htreviews.org/tobaccos/blanshx/main',
+        'https://htreviews.org/tobaccos/darkside/core',
+        'https://htreviews.org/tobaccos/musthave/main',
+      ],
+      ['https://htreviews.org/tobaccos/blansh', 'https://htreviews.org/tobaccos/darkside'],
+    ),
+    ['https://htreviews.org/tobaccos/blansh/main', 'https://htreviews.org/tobaccos/darkside/core'],
+  );
 });
