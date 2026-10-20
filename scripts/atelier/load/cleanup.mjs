@@ -40,4 +40,8 @@ SELECT
   (SELECT count(*) FROM "CustomMixSmokeEvent" WHERE name = 'k6 #154') AS custom_with_marker;
 DELETE FROM "SmokeCtaEvent" e USING load_smoke l WHERE e."mixId" = l.mix_id AND e."createdAt" = l.created_at;
 DELETE FROM "CustomMixSmokeEvent" WHERE id IN (SELECT id FROM load_custom);
+-- Учётки входа из прогона (LOGIN_SHARE, #239): Telegram id с префиксом прогона.
+SELECT count(*) AS load_guests FROM "GuestAccount" WHERE "telegramId" LIKE '999000%';
+DELETE FROM "GuestAccount" WHERE "telegramId" LIKE '999000%';
+DELETE FROM "GuestLoginCode" WHERE "telegramId" LIKE '999000%' OR "telegramId" IS NULL AND "expiresAt" < now();
 ${flag === '--commit' ? 'COMMIT' : 'ROLLBACK'};`);

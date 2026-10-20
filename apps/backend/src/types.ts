@@ -136,12 +136,20 @@ export type GuestMe = GuestTaste & {
   favoritesCount: number;
 };
 
-// POST /guest/auth/telegram. `telegram` — поля Telegram Login Widget как есть
-// (id, auth_date, hash, …); из них сохраняется только id. `consent` обязателен
-// при первом входе (400 без него); вкусы текущего прохождения переносятся в учётку.
-export type GuestTelegramAuthRequest = Partial<GuestTaste> & {
-  telegram: Record<string, string | number>;
+// Вход через бота по ссылке (#239). POST /guest/auth/telegram/start → код и
+// ссылка t.me/<бот>?start=<код>; сайт открывает приложение Telegram, гость жмёт
+// «Запустить», бот подтверждает код (POST /automation/guest-login/confirm), а
+// сайт опрашивает GET /guest/auth/telegram/status?code= и получает токен один
+// раз. `consent` обязателен для нового гостя — иначе статус `consent-required`;
+// непустые вкусы текущего прохождения переносятся в учётку. Без бота — 503.
+export type GuestLoginStartRequest = Partial<GuestTaste> & {
   consent?: boolean;
+};
+
+export type GuestLoginStartResponse = {
+  code: string;
+  botUrl: string;
+  expiresAt: string;
 };
 
 export type GuestAuthResponse = {
@@ -149,6 +157,20 @@ export type GuestAuthResponse = {
   expiresAt: string;
   created: boolean;
   me: GuestMe;
+};
+
+export type GuestLoginStatusResponse =
+  | { status: 'pending' }
+  | { status: 'expired' }
+  | { status: 'consent-required' }
+  | ({ status: 'ok' } & GuestAuthResponse);
+
+// POST /automation/guest-login/confirm (ключ автоматизации, вызывает бот):
+// 200 — подтверждено, 404 — кода нет, 410 — просрочен, использован или
+// подтверждён другим Telegram-аккаунтом.
+export type AutomationGuestLoginConfirmRequest = {
+  code: string;
+  telegramId: string;
 };
 
 // GET /guest/auth/telegram/config — бот входа для виджета; null, если вход не настроен.

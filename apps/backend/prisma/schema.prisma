@@ -331,6 +331,23 @@ model GuestAccount {
   ratings              MixRating[]
 }
 
+// Одноразовый код входа через бота (#239): сайт создаёт его вместе с согласием
+// и вкусами текущего прохождения, бот по /start подтверждает Telegram id, сайт
+// забирает токен гостя по статусу. Живёт 10 минут, просроченные чистит старт.
+model GuestLoginCode {
+  code          String    @id
+  consent       Boolean   @default(false)
+  likedProfiles Json      @default("[]")
+  likedFlavors  Json      @default("[]")
+  telegramId    String?
+  confirmedAt   DateTime?
+  consumedAt    DateTime?
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
 // Избранное: каталожный микс (mixId) или собранный в «Намиксуй»
 // (customMixEventId), одно из двух — следит код. Снимок названия и профилей
 // нужен, когда мастер удалил микс: строка остаётся с «Больше не готовим».

@@ -24,6 +24,8 @@
 | `ATELIER_AUTOMATION_KEY` | M2M auth для бота | secret |
 | `ATELIER_TOKEN_SECRET` | подпись staff token | secret |
 | `ATELIER_TOKEN_TTL_HOURS` | TTL staff token | `24` |
+| `ATELIER_GUEST_LOGIN_BOT_USERNAME` | username бота входа гостей в кабинет, без `@` (#239); пусто — вход выключен, `GET /guest/auth/telegram/config` отдаёт `null` | `aroma_atelier_client_bot` |
+| `ATELIER_GUEST_TOKEN_TTL_DAYS` | TTL токена гостя кабинета, подписывается `ATELIER_TOKEN_SECRET` с `kind: 'guest'` | `90` |
 
 ### Bootstrap-only
 
@@ -166,6 +168,7 @@
 ### Telegram bot
 
 1. `TELEGRAM_BOT_TOKEN`
+2. `ATELIER_GUEST_LOGIN_BOT_TOKEN` — бот входа гостей (#266), отдельный от staff-бота
 2. `ATELIER_BACKEND_AUTOMATION_TOKEN`
 
 ### Бэкап БД

@@ -85,6 +85,47 @@ export const verifyStaffToken = (token: string): StaffUser | null => {
   }
 };
 
+// Токен гостя кабинета (#239): та же подпись, что у staff, но свой kind —
+// staff-токен без kind гостевым не считается, гостевой без login/role — staff.
+type GuestTokenPayload = {
+  kind: 'guest';
+  guestId: string;
+  expiresAt: number;
+};
+
+export const createGuestToken = (guestId: string, ttlDays = config.guestTokenTtlDays) => {
+  const payload: GuestTokenPayload = {
+    kind: 'guest',
+    guestId,
+    expiresAt: Math.floor(Date.now() / 1000) + ttlDays * 24 * 60 * 60,
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  return { token: `${encodedPayload}.${sign(encodedPayload)}`, expiresAt: new Date(payload.expiresAt * 1000) };
+};
+
+export const verifyGuestToken = (token: string): string | null => {
+  const [encodedPayload, signature] = token.split('.');
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expected = Buffer.from(sign(encodedPayload));
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encodedPayload)) as Partial<GuestTokenPayload>;
+    if (payload.kind !== 'guest' || !payload.guestId || !payload.expiresAt || payload.expiresAt <= Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    return payload.guestId;
+  } catch {
+    return null;
+  }
+};
+
 export const resolveStaffUser = async (login: string, password: string): Promise<StaffUser | null> => {
   const account = await prisma.staffAccount.findUnique({
     where: { login },

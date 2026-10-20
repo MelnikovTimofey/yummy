@@ -11,6 +11,9 @@ const DURATION_MIN = Number(__ENV.DURATION_MIN || 15);
 const BURST_SESSIONS = Number(__ENV.BURST_SESSIONS || 40);
 const BURST_AT_MIN = Number(__ENV.BURST_AT_MIN || 7);
 const MIXER_SHARE = Number(__ENV.MIXER_SHARE || 0.5);
+// Доля сессий со входом в кабинет (#239): бота подменяет вызов confirm с ключом автоматизации.
+const LOGIN_SHARE = Number(__ENV.LOGIN_SHARE || 0);
+const AUTOMATION_KEY = __ENV.ATELIER_AUTOMATION_KEY;
 const THINK_MAX_S = Number(__ENV.THINK_MAX_S || 5);
 const OUT_DIR = (__ENV.OUT_DIR || '.').replace(/\/$/, '');
 
@@ -22,6 +25,12 @@ const GUEST_TIMEOUT_MS = 8000;
 if (!CODE) {
   throw new Error('Нужен код дня: ATELIER_CODE=<код> k6 run ...');
 }
+if (LOGIN_SHARE > 0 && !AUTOMATION_KEY) {
+  throw new Error('Для LOGIN_SHARE нужен ATELIER_AUTOMATION_KEY');
+}
+
+// Учётки прогона узнаются по префиксу Telegram id — их удаляет cleanup.mjs.
+const LOAD_TELEGRAM_PREFIX = '999000';
 
 const ENDPOINTS = [
   'POST /guest/access-code/verify',
@@ -34,6 +43,9 @@ const ENDPOINTS = [
   'GET /guest/mixer/palette',
   'POST /guest/mixer/evaluate',
   'POST /guest/events/custom-mix-smoke',
+  'POST /guest/auth/telegram/start',
+  'GET /guest/auth/telegram/status',
+  'GET /guest/me',
 ];
 
 const serverErrors = new Rate('server_errors');
@@ -147,6 +159,30 @@ export function setup() {
   }
 }
 
+// Вход через бота: старт, подтверждение «ботом», 1–3 опроса статуса, /guest/me.
+const login = () => {
+  think();
+  const started = readJson(send('POST', '/guest/auth/telegram/start', { consent: true }));
+  if (!started) {
+    return;
+  }
+  const telegramId = `${LOAD_TELEGRAM_PREFIX}${randInt(100000, 999999)}`;
+  for (let poll = randInt(0, 2); poll > 0; poll -= 1) {
+    send('GET', `/guest/auth/telegram/status?code=${started.code}`);
+    sleep(2);
+  }
+  http.post(`${BASE_URL}/automation/guest-login/confirm`, JSON.stringify({ code: started.code, telegramId }), {
+    headers: { ...JSON_HEADERS, 'x-atelier-automation-key': AUTOMATION_KEY },
+    tags: { name: 'bot confirm' },
+  });
+  const token = readJson(send('GET', `/guest/auth/telegram/status?code=${started.code}`), 'token');
+  if (token) {
+    const req = request('GET', '/guest/me');
+    req.params.headers = { authorization: `Bearer ${token}` };
+    track(req.name, http.request(req.method, req.url, req.body, req.params));
+  }
+};
+
 export default function () {
   const access = send('POST', '/guest/access-code/verify', { code: CODE });
   if (access.status !== 200) {
@@ -172,6 +208,10 @@ export default function () {
       const recs = send('POST', '/guest/onboarding/recommendations', { likedProfiles, likedFlavors });
       recommended = readJson(recs, 'items') || [];
     }
+  }
+
+  if (Math.random() < LOGIN_SHARE) {
+    login();
   }
 
   const mixes = recommended.length ? recommended.slice(0, 3) : readJson(catalog, 'items') || [];
