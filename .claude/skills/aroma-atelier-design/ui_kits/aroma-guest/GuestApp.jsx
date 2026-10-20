@@ -1,6 +1,6 @@
 // Guest flow: access → intro → onboarding → (подбор / витрина / рилсы / каталог / рейл / миксер / кабинет) → карточка → подтверждение.
 const { GuestTab, OnboardingProgress, MixRow } = window.DesignSystem_1aef33;
-const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen, GuestSelectedBar, Icon } = window;
+const { AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen, Icon } = window;
 const MOCK = window.AROMA_MOCK;
 
 // Нижняя панель (#168): только значки, название — в aria-label, активный пункт кремовый с чертой акцента.
@@ -157,6 +157,12 @@ function GuestApp() {
                     <img className="brand-mark" src="../../assets/logo-mark-oxblood.svg" alt="" aria-hidden />
                     <span className="brand">Арома Ателье</span>
                   </button>
+                  {selected ? (
+                    <button type="button" className="topbar-icon-btn topbar-master-card" aria-label={'Карточка для мастера: ' + selected.mix.name} title="Карточка для мастера" onClick={() => openMix(selected.mix, selected.source)}>
+                      <Icon name="ClipboardList" size={20} />
+                      <span className="topbar-master-card-dot" aria-hidden />
+                    </button>
+                  ) : null}
                   <button type="button" className="topbar-icon-btn" aria-label="Сменить код" title="Сменить код" onClick={() => { setView('access'); setCode(''); setAgeOk(false); setSelected(null); }}>
                     <Icon name="KeyRound" size={20} />
                   </button>
@@ -171,10 +177,6 @@ function GuestApp() {
                   <OnboardingProgress step={step} total={2} onBack={() => (step === 2 ? setStep(1) : setView('intro'))} />
                 ) : null}
               </header>
-            ) : null}
-
-            {selected && view !== 'intro' && view !== 'rail' ? (
-              <GuestSelectedBar mix={selected.mix} source={selected.source} onOpen={() => openMix(selected.mix, selected.source)} />
             ) : null}
 
             <main className={view === 'intro' ? 'content content-intro' : 'content'}>

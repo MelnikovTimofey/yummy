@@ -524,7 +524,6 @@ function ReelStrip({ mixes, onOpen }) {
   );
 }
 
-const pad2 = (n) => String(n).padStart(2, '0');
 
 function Reel({ mix, index, total, active, paused, hint, favorite, onFavorite, onTogglePause, onOpen, onChoose }) {
   return (
@@ -532,10 +531,6 @@ function Reel({ mix, index, total, active, paused, hint, favorite, onFavorite, o
       <Scene mix={mix} playing={active && !paused} />
       <button type="button" className="reel-tap" aria-label={paused ? 'Продолжить' : 'Пауза'} onClick={onTogglePause} />
       {paused ? <span className="reel-paused"><Icon name="Play" size={22} /></span> : null}
-      <div className="reel-top">
-        <p className="reel-title">Рилсы</p>
-        <p className="reel-count">{pad2(index + 1) + ' · из ' + pad2(total)}</p>
-      </div>
       <div className={'reel-dock' + (active ? ' reel-reveal' : '')} key={active ? 'on' : 'off'}>
         {hint ? <span className="reel-hint"><Icon name="ChevronUp" size={18} />Листайте вверх</span> : null}
         <p className="aroma-caps">{mix.flavorProfiles.slice(0, 3).map(label).join(' · ')}</p>
@@ -628,13 +623,4 @@ function ConfirmationScreen({ mix, onDone }) {
   );
 }
 
-Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen, GuestSelectedBar: function ({ mix, source, onOpen }) {
-  return (
-    <div className="aroma-selected-shell">
-      <GuestCard compact title="Карточка для мастера" style={{ display: 'grid', gap: 10 }}>
-        <p className="aroma-selected-text">{mix.name + ' · ' + sourceLabel[source]}</p>
-        <button type="button" className="aroma-ghost-sm" onClick={onOpen}>Открыть карточку</button>
-      </GuestCard>
-    </div>
-  );
-} });
+Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen });
