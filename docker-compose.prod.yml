@@ -40,6 +40,10 @@ services:
       HOST: 0.0.0.0
       PORT: "3021"
       APP_NAME: atelier-backend
+      # Местное время точки (Волгоград, UTC+3): границы дня дашборда, недели
+      # расхода и месяц трат считаются в поясе процесса. Дневной код от него не
+      # зависит — он считает московское время явно (daily-code.ts).
+      TZ: Europe/Volgograd
       # Пароль подставляется в URL как есть — только URL-безопасные символы
       # (openssl rand -hex 32).
       DATABASE_URL: postgresql://atelier:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/atelier?schema=public

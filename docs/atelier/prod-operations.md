@@ -19,6 +19,7 @@
 | Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
 | База данных | сервис `db` в том же compose, наружу не публикуется, volume `atelier_pg` |
 | Бэкапы | ежечасный `pg_dump` (:30 UTC) → `/opt/atelier/backups` (часовые 24 ч, дневные 14 дней) + S3 TimeWeb `ru-1`: `hourly/` (48 шт.), `daily/` (дамп 03:30 UTC, 30 шт.); проверка восстановления пн 04:00 UTC; cron `/etc/cron.d/atelier-pg-backup`, лог `/var/log/atelier-backup.log` |
+| Каталог табаков | синхронизация с htreviews.org: ночью 23:35 UTC вс–пт — бренды того, что есть в точке, сб 23:35 UTC — полный прогон; cron `/etc/cron.d/atelier-htreviews-sync`, лог `/var/log/atelier-htreviews-sync.log` (§6) |
 | Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
 | TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |
 | Firewall | ufw: `49222`, `80`, `443` |
@@ -149,6 +150,54 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
 Внеплановый дамп с копией в S3 — `scripts/atelier/pg-backup.sh`. Последние записи:
 ```bash
 tail -20 /var/log/atelier-backup.log
+```
+
+### Синхронизация каталога с htreviews.org
+Новые вкусы попадают в каталог только синхронизацией — иначе строки PDF-счёта
+остаются «не найдено». Её запускает cron `scripts/atelier/htreviews-sync.cron`:
+
+| Когда (UTC) | Режим | Что обходит | Длительность |
+|---|---|---|---|
+| вс–пт 23:35 | `shelf` | бренды табаков в наличии (`HTREVIEWS_SHELF_BRANDS=1`) | минуты |
+| сб 23:35 | `full` | весь каталог | часы |
+
+Прогон — одноразовый контейнер из выкаченного образа backend
+(`compose run --rm --no-deps backend npx tsx scripts/sync-htreviews.ts`).
+Он идемпотентен: upsert по id htreviews, новые позиции заводит только со
+статусом «Выпускается», `inStock` и полку не трогает. Второй прогон, пока идёт
+первый, пропускается (`flock` на `/var/lock/atelier-htreviews-sync.lock`).
+Старт в :35 — сразу после ежечасного `pg-backup` (:30). Полный прогон всё
+равно захватывает несколько бэкапов: это безопасно, потому что `pg_dump`
+снимает согласованный снимок. Закончиться он должен до проверки
+восстановления (пн 04:00 UTC). Пауза между запросами — 500 мс
+(`HTREVIEWS_DELAY_MS`), User-Agent `AromaAtelierCatalogSync/1.0` со ссылкой
+на репозиторий.
+
+При сбое (код выхода ≠ 0, в том числе когда с htreviews не пришло ни одного
+табака) уходит алерт ботом мониторинга (`.env.monitor`, §9).
+
+> Перед включением владелец подтверждает, что robots.txt и правила htreviews.org
+> разрешают регулярный обход для обычного user-agent и для используемых путей
+> (страницы `/tobaccos/…`, `getData?action=brands`, `POST /postData`). Claude на
+> htreviews.org не ходит: robots.txt закрыт для его user-agent.
+
+Включить (после выкатки backend с этим скриптом):
+```bash
+cp scripts/atelier/htreviews-sync.cron /etc/cron.d/atelier-htreviews-sync
+scripts/atelier/htreviews-sync.sh shelf && tail -3 /var/log/atelier-htreviews-sync.log
+```
+
+Ручной прогон: `scripts/atelier/htreviews-sync.sh shelf` или
+`scripts/atelier/htreviews-sync.sh full` (полный — в `tmux`/`nohup`, идёт часами).
+Посмотреть итог последних прогонов — строки `ok` содержат created/updated/skippedInactive:
+```bash
+grep -E 'htreviews sync (ok|skipped)|FAILED' /var/log/atelier-htreviews-sync.log | tail -10
+```
+
+Выключить (идущий прогон доработает сам; остановить его —
+`docker ps --filter name=backend-run -q | xargs -r docker stop`):
+```bash
+rm /etc/cron.d/atelier-htreviews-sync
 ```
 
 ### Снэпшот только продуктовых данных / restore
