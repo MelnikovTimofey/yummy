@@ -1537,6 +1537,10 @@ const insertOperationalState = async (
     })),
   });
 
+  await insertIntroCards(tx);
+};
+
+const insertIntroCards = async (tx: StorageTx) => {
   await tx.introCard.createMany({
     data: introCards.map((card) => ({
       id: card.id,
@@ -1614,9 +1618,8 @@ const insertSeedCatalog = async (tx: StorageTx) => {
   });
 };
 
-// Production-bootstrap: только staff/коды/recipients/operators/intro. Каталог
-// табаков и миксы наполняются отдельно через `npm run sync:htreviews`. Этап 1
-// разводит production-данные и тестовую фикстуру seed-каталога.
+// Dev-bootstrap: демо staff/коды/operators/intro. Каталог табаков и миксы
+// наполняются отдельно через `npm run sync:htreviews`.
 const bootstrapOperationalState = async () => {
   const currentCodeWindow = getDailyCodeWindow();
   await prisma.$transaction(async (tx) => {
@@ -1642,6 +1645,15 @@ export const ensureAppState = async () => {
   }
 
   bootstrapPromise = (async () => {
+    // На проде известные логины, код и телефоны операторов — открытая дверь:
+    // первый admin создаётся только `npm run bootstrap:admin`.
+    if (process.env.NODE_ENV === 'production') {
+      if (!(await prisma.introCard.count())) {
+        await prisma.$transaction(insertIntroCards);
+      }
+      return;
+    }
+
     const staffAccountCount = await prisma.staffAccount.count();
     if (!staffAccountCount) {
       await bootstrapOperationalState();
