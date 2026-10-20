@@ -46,6 +46,8 @@ const ENDPOINTS = [
   'POST /guest/auth/telegram/start',
   'GET /guest/auth/telegram/status',
   'GET /guest/me',
+  'GET /guest/me/history',
+  'PUT /guest/me/favorites/mixes',
 ];
 
 const serverErrors = new Rate('server_errors');
@@ -160,7 +162,7 @@ export function setup() {
 }
 
 // Вход через бота: старт, подтверждение «ботом», 1–3 опроса статуса, /guest/me.
-const login = () => {
+const login = (mixes) => {
   think();
   const started = readJson(send('POST', '/guest/auth/telegram/start', { consent: true }));
   if (!started) {
@@ -176,10 +178,27 @@ const login = () => {
     tags: { name: 'bot confirm' },
   });
   const token = readJson(send('GET', `/guest/auth/telegram/status?code=${started.code}`), 'token');
-  if (token) {
-    const req = request('GET', '/guest/me');
-    req.params.headers = { authorization: `Bearer ${token}` };
-    track(req.name, http.request(req.method, req.url, req.body, req.params));
+  if (!token) {
+    return;
+  }
+  // Вошедший гость: кабинет, «Покурить» в историю, история и сердечко (#240).
+  const authed = (method, path, body, name) => {
+    const req = request(method, path, body);
+    req.name = name || req.name;
+    req.params.tags = { name: req.name };
+    req.params.headers = { ...req.params.headers, authorization: `Bearer ${token}` };
+    return track(req.name, http.request(req.method, req.url, req.body, req.params));
+  };
+  authed('GET', '/guest/me');
+  if (mixes.length) {
+    const mix = pick(mixes);
+    const smoke = readJson(authed('POST', '/guest/events/smoke-cta', { mixId: mix.id }));
+    if (smoke) {
+      console.log(`created SmokeCtaEvent ${smoke.mixId} ${smoke.recordedAt}`);
+    }
+    think();
+    authed('GET', '/guest/me/history');
+    authed('PUT', `/guest/me/favorites/mixes/${mix.id}`, undefined, 'PUT /guest/me/favorites/mixes');
   }
 };
 
@@ -210,11 +229,10 @@ export default function () {
     }
   }
 
-  if (Math.random() < LOGIN_SHARE) {
-    login();
-  }
-
   const mixes = recommended.length ? recommended.slice(0, 3) : readJson(catalog, 'items') || [];
+  if (Math.random() < LOGIN_SHARE) {
+    login(mixes);
+  }
   if (mixes.length) {
     think();
     const smoke = send('POST', '/guest/events/smoke-cta', { mixId: pick(mixes).id });
