@@ -137,7 +137,7 @@ model Tobacco {
   flavorProfiles  String
   flavors         String
   flavorTags      String
-  inStock         Boolean           @default(true)
+  inStock         Boolean           @default(false)
   archived        Boolean           @default(false)
   rating          Float?
   ratingsCount    Int?
