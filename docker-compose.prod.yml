@@ -130,6 +130,25 @@ services:
       backend:
         condition: service_healthy
 
+  # Бот входа гостей в кабинет (@aroma_atelier_client_bot, #266): тот же образ,
+  # что у staff-бота, в режиме guest-login — только подтверждение кода по /start.
+  # Свой тег (deploy.sh пишет ATELIER_TAG_TELEGRAM_GUEST_BOT), до Telegram — тем же
+  # путём, что staff-бот. Offset опроса в памяти, state-файла и volume нет.
+  telegram-guest-bot:
+    image: ghcr.io/melnikovtimofey/atelier-telegram-bot:${ATELIER_TAG_TELEGRAM_GUEST_BOT:-main}
+    build:
+      context: ./services/telegram-bot
+    environment:
+      ATELIER_BOT_MODE: guest-login
+      ATELIER_BACKEND_URL: http://backend:3021
+      ATELIER_BACKEND_AUTOMATION_TOKEN: ${ATELIER_AUTOMATION_KEY:?ATELIER_AUTOMATION_KEY is required}
+      TELEGRAM_BOT_TOKEN: ${ATELIER_GUEST_LOGIN_BOT_TOKEN:?ATELIER_GUEST_LOGIN_BOT_TOKEN is required}
+      ATELIER_GUEST_LOGIN_RETURN_URL: https://${AROMA_DOMAIN:?AROMA_DOMAIN is required}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
   telegram-tunnel:
     image: ghcr.io/melnikovtimofey/atelier-telegram-tunnel:${ATELIER_TAG_TELEGRAM_TUNNEL:-main}
     # Для хостов без IPv6 (в РФ IPv4 до api.telegram.org заблокирован): SSH-туннель

@@ -1,6 +1,7 @@
 import { loadConfig } from './config';
 import { BackendClient } from './backend';
 import { TelegramBot } from './bot';
+import { GuestLoginBot } from './guest-login-bot';
 import { JsonStateStore } from './storage';
 import { TelegramClient } from './telegram';
 
@@ -8,6 +9,11 @@ export const createBot = () => {
   const config = loadConfig();
   const backend = new BackendClient(config);
   const telegram = new TelegramClient(config.telegramBotToken, config.telegramApiBaseUrl);
+
+  if (config.mode === 'guest-login') {
+    return new GuestLoginBot({ config, backend, telegram });
+  }
+
   const stateStore = new JsonStateStore(config.statePath);
 
   return new TelegramBot({

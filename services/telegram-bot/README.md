@@ -35,6 +35,23 @@
 4. По расписанию бот делает `ensure` current code, чтобы код существовал для нового дня ещё до первого запроса.
 5. Бот отправляет heartbeat, request events и ошибки в backend, чтобы `Мастер` видел текущее состояние automation без чтения логов.
 
+## Режим входа гостей (`ATELIER_BOT_MODE=guest-login`)
+
+Тот же образ запускается вторым ботом — `@aroma_atelier_client_bot`, провайдером
+входа гостя в кабинет (PRD §3.3, #239, #266). В этом режиме работает только
+обработчик входа: staff-команды, allowlist, код смены, рассылки и отчёты
+состояния в backend выключены.
+
+1. `/start <код>` → `POST /automation/guest-login/confirm { code, telegramId }`:
+   - `200` — «Готово — вернитесь в Ателье.» с кнопкой «Вернуться в Ателье»
+     (`ATELIER_GUEST_LOGIN_RETURN_URL`);
+   - `404` / `410` — «Ссылка устарела. Нажмите «Войти через Telegram» на сайте ещё раз.»;
+   - сеть или другой код — «Не получилось подтвердить вход. Попробуйте ещё раз через минуту.»
+2. `/start` без кода и любое другое сообщение — одна справка о том, что войти
+   можно кнопкой «Войти через Telegram» на сайте заведения.
+3. В логах — только факт подтверждения и HTTP-код backend: без имени, username,
+   текста сообщений и кода входа.
+
 ## Локальный запуск
 
 ```bash
@@ -70,6 +87,10 @@ ATELIER_BOT_STATE_PATH=.atelier-telegram-bot-state.json
 ATELIER_DAILY_BROADCAST_HOUR=9
 ATELIER_DAILY_BROADCAST_MINUTE=0
 ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
+# staff (по умолчанию) или guest-login
+ATELIER_BOT_MODE=staff
+# только для guest-login: адрес кнопки «Вернуться в Ателье»
+ATELIER_GUEST_LOGIN_RETURN_URL=
 ```
 
 Полная operating matrix по всем сервисам контура зафиксирована в `docs/atelier/env-matrix.md`.

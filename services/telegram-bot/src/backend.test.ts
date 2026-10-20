@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { BotConfig } from './config';
 import { BackendClient } from './backend';
 
 type FetchCall = {
@@ -37,7 +38,8 @@ const withMockFetch = async <T>(responses: Array<Response | ((call: FetchCall) =
   }
 };
 
-const buildConfig = () => ({
+const buildConfig = (): BotConfig => ({
+  mode: 'staff',
   telegramBotToken: 'bot-token',
   telegramApiBaseUrl: 'https://api.telegram.org',
   backendUrl: 'https://backend.example',
@@ -46,6 +48,7 @@ const buildConfig = () => ({
   updateTimeoutSeconds: 25,
   broadcastHour: 9,
   broadcastMinute: 0,
+  guestLoginReturnUrl: '',
 });
 
 test('ensureDailyCode calls automation endpoint with automation header', async () => {
@@ -279,4 +282,35 @@ test('telegram automation state endpoints use automation header and payload', as
   assert.deepEqual(JSON.parse(String(calls[1].init?.body)), {
     event: 'heartbeat',
   });
+});
+
+test('confirmGuestLogin posts code and telegram id with automation header and returns backend status', async () => {
+  for (const status of [200, 404, 410, 500]) {
+    const body = status === 200 ? { ok: true } : { error: 'nope' };
+    const { result, calls } = await withMockFetch(
+      [makeResponse(body, status)],
+      async () => new BackendClient(buildConfig()).confirmGuestLogin({ code: 'login-code', telegramId: '4242' }),
+    );
+
+    assert.equal(result, status);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://backend.example/automation/guest-login/confirm');
+    assert.equal(calls[0].init?.method, 'POST');
+    const headers = calls[0].init?.headers as Record<string, string>;
+    assert.equal(headers['x-atelier-automation-key'], 'automation-token');
+    assert.equal(headers['content-type'], 'application/json');
+    assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { code: 'login-code', telegramId: '4242' });
+  }
+});
+
+test('confirmGuestLogin propagates network errors', async () => {
+  await assert.rejects(
+    withMockFetch(
+      [() => {
+        throw new TypeError('fetch failed');
+      }],
+      async () => new BackendClient(buildConfig()).confirmGuestLogin({ code: 'login-code', telegramId: '4242' }),
+    ),
+    /fetch failed/,
+  );
 });
