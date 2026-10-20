@@ -216,11 +216,11 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
 Управляются из «Мастера» (вход `admin`) или ботом (`/rotate`). Не редактировать
 напрямую в БД без необходимости.
 
-> ⚠️ На пустой базе backend при первом обращении засевает демо-учётки
-> `admin/admin`, `atelier/atelier` и daily code `1234`. На этом хосте они
-> обезврежены: `admin` перезаписан через bootstrap, `atelier` и `1234`
-> деактивированы. При развёртывании на новую пустую БД — сделать bootstrap
-> `admin` **до** запуска `proxy`.
+> На пустой базе прод-backend (`NODE_ENV=production`) не создаёт ни staff-учёток,
+> ни daily code, ни Telegram-операторов — только вводные карточки. Первый `admin`
+> — через bootstrap (раздел «Создание/сброс staff-аккаунта»), daily code и
+> операторы — из «Мастера». Демо-учётки `admin/admin`, `atelier/atelier` и код
+> `1234` засеваются только в dev/test (#86).
 
 ### Бот входа гостей (`telegram-guest-bot`)
 Отдельный бот `@aroma_atelier_client_bot` (токен `ATELIER_GUEST_LOGIN_BOT_TOKEN`
