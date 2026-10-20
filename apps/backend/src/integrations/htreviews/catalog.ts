@@ -358,8 +358,10 @@ export const fetchHtReviewsCatalogSnapshot = async (
     }
   }
 
+  // С явным списком брендов фаза lines пропущена, а известные линейки нужны и
+  // здесь: страница бренда может не показывать ни табаков, ни линеек (#249).
   if (!options.tobaccoLimit || summaryMap.size < options.tobaccoLimit) {
-    await crawlLines('brand-lines', brandLineUrls);
+    await crawlLines('brand-lines', [...brandLineUrls, ...(explicitBrands ? options.knownLineUrls ?? [] : [])]);
   }
 
   const limitedSummaries = takeLimit(
