@@ -56,6 +56,12 @@ test('Aroma guest returns to preferences from the recommendations screen and can
   await page.getByRole('button', { name: 'Начать подбор' }).click();
   await expect(page.getByText('С чего начнём?')).toBeVisible();
 
+  // Правке нужен второй профиль. На продуктовом снапшоте наличие — только полка
+  // Nomad, и гостю доступны миксы одного профиля: сценарий там не применим.
+  const profiles = page.locator('.aroma-onboarding-profile-grid button');
+  await expect(profiles.first()).toBeVisible();
+  test.skip((await profiles.count()) < 2, 'в онбординге меньше двух профилей — нечего добавить при правке');
+
   const firstProfile = page.locator('.aroma-onboarding-profile-grid button').first();
   await firstProfile.click();
   await expect(firstProfile).toHaveAttribute('aria-pressed', 'true');
