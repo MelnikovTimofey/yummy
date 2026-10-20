@@ -16,6 +16,8 @@ import { LoginWait } from '@/components/cabinet/LoginWait';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
 import { MixerMasterCard, type MasterCardComponent } from '@/components/mixer/MixerMasterCard';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
+import { Feed } from '@/components/reels/Feed';
+import { FeedEmpty } from '@/components/reels/FeedEmpty';
 import {
   customDescription,
   isFavorite,
@@ -61,6 +63,7 @@ import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
+import { loadReelFeed } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
@@ -69,6 +72,7 @@ type GuestView =
   | 'onboarding'
   | 'recommendations'
   | 'showcase'
+  | 'reels'
   | 'catalog'
   | 'rail'
   | 'smoke-confirmation'
@@ -76,11 +80,11 @@ type GuestView =
   | 'mixer'
   | 'cabinet'
   | 'login';
-type AppTab = 'recommendations' | 'showcase' | 'catalog' | 'cabinet';
+type AppTab = 'recommendations' | 'showcase' | 'reels' | 'catalog' | 'cabinet';
 type MixerReturnView = AppTab | 'rail';
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
-type MixSource = 'recommendations' | 'mood' | 'showcase' | 'catalog' | 'rail' | CabinetListSource;
+type MixSource = 'recommendations' | 'mood' | 'showcase' | 'reels' | 'catalog' | 'rail' | CabinetListSource;
 
 type OnboardingOptions = {
   profiles: string[];
@@ -212,6 +216,7 @@ const mixSourceLabels: Record<MixSource, string> = {
   recommendations: 'Подбор для вас',
   mood: 'Под настроение',
   showcase: 'Из витрины',
+  reels: 'Из рилсов',
   catalog: 'Из каталога',
   rail: 'Из подборки',
   history: 'Из истории',
@@ -820,7 +825,11 @@ const MixDetailModal = ({
   }
 
   const custom = state.item?.ref.kind === 'custom';
-  const eyebrow = custom ? 'Собран вами' : source === 'history' || source === 'favorites' ? mixSourceLabels[source] : null;
+  const eyebrow = custom
+    ? 'Собран вами'
+    : source === 'history' || source === 'favorites' || source === 'reels'
+      ? mixSourceLabels[source]
+      : null;
   const blockReason = state.blockReason ?? (!mix.available ? 'Этот микс сейчас недоступен по наличию.' : null);
   const canSmoke = !blockReason;
   const isSelected = !custom && selectedMixId === mix.id;
@@ -971,7 +980,7 @@ const MixDetailModal = ({
             className="aroma-mix-sheet-ghost"
             onClick={onClose}
           >
-            Закрыть
+            {source === 'reels' ? 'К рилсам' : 'Закрыть'}
           </button>
           <CTA
             pulse={canSmoke && !isSelected && chooseStatus !== 'loading'}
@@ -1252,6 +1261,16 @@ export const App = () => {
   const moodDraft = mood && !mood.items ? mood : null;
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  // Лента «Рилсы» (#263). Индекс — здесь, а не в ленте: «Готово» после
+  // «Покурить» возвращает на тот же рилс. `loadId` пересоздаёт ленту с начала.
+  const [reels, setReels] = useState<{ status: 'idle' | 'loading' | 'ready' | 'error'; items: MixCard[]; error: string; loadId: number }>(
+    { status: 'idle', items: [], error: '', loadId: 0 },
+  );
+  const [reelIndex, setReelIndex] = useState(0);
+  const [reelSwiped, setReelSwiped] = useState(false);
+  // Миксы, на которые smoke-cta ответил 404: табак кончился, пока гость листал.
+  const [goneReels, setGoneReels] = useState<string[]>([]);
+  const [reelChoice, setReelChoice] = useState<{ mixId: string; status: 'loading' | 'error'; error: string } | null>(null);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -2051,9 +2070,61 @@ export const App = () => {
       setView('smoke-confirmation');
     } catch (cause) {
       setSelectedMix(previousMix);
+      if (source === 'reels' && cause instanceof RequestError && cause.status === 404) {
+        setGoneReels((current) => [...current, mix.id]);
+        setChooseStatus('idle');
+        setMixModalState(null);
+        return;
+      }
       setChooseStatus('error');
       setChooseError(cause instanceof Error ? cause.message : 'Не получилось отметить выбор. Попробуйте ещё раз.');
     }
+  };
+
+  // «Рилсы» из панели — лента с начала. Подбор и каталог, если уже загружены,
+  // не запрашиваются заново; у вошедшего Подбор — «Для вас», поэтому подбор по
+  // вкусам для ленты запрашивается отдельно (#265 заменит его на «Для вас»).
+  const openReels = async () => {
+    const loadId = reels.loadId + 1;
+    setReelIndex(0);
+    setReelSwiped(false);
+    setReelChoice(null);
+    setView('reels');
+    setReels((current) => ({ ...current, status: 'loading', error: '', loadId }));
+    try {
+      const items = await loadReelFeed<MixCard>({
+        taste: onboardingDone ? { likedProfiles, likedFlavors } : null,
+        recommendations: !signedIn && recommendationStatus === 'ready' ? recommendations : null,
+        catalog: catalogStatus === 'ready' ? catalogSourceMixes : null,
+        fetchRecommendations: fetchRecommendations,
+        fetchCatalog: fetchCatalogMixes,
+      });
+      setReels((current) => (current.loadId === loadId ? { status: 'ready', items, error: '', loadId } : current));
+    } catch (cause) {
+      setReels((current) => (current.loadId === loadId ? { ...current, status: 'error', error: friendlyError(cause) } : current));
+    }
+  };
+
+  // «Покурить» прямо из рилса: то же событие smoke-cta и тот же экран «Покажите
+  // мастеру». 404 — микс кончился: CTA гаснет, лента остаётся на месте.
+  const onChooseReel = async (mix: MixCard) => {
+    setReelChoice({ mixId: mix.id, status: 'loading', error: '' });
+    try {
+      await sendSmokeCta(mix.id);
+    } catch (cause) {
+      if (cause instanceof RequestError && cause.status === 404) {
+        setGoneReels((current) => [...current, mix.id]);
+        setReelChoice(null);
+      } else {
+        setReelChoice({ mixId: mix.id, status: 'error', error: friendlyError(cause) });
+      }
+      return;
+    }
+    setReelChoice(null);
+    countPick();
+    setSelectedMix({ id: mix.id, source: 'reels', mix });
+    setChooseStatus('ready');
+    setView('smoke-confirmation');
   };
 
   const onSaveRating = async (value: number) => {
@@ -2864,7 +2935,11 @@ export const App = () => {
 
     const mix = selectedMixCard;
     const doneView: GuestView =
-      selectedMix?.source === 'history' || selectedMix?.source === 'favorites' ? 'cabinet' : 'recommendations';
+      selectedMix?.source === 'history' || selectedMix?.source === 'favorites'
+        ? 'cabinet'
+        : selectedMix?.source === 'reels'
+          ? 'reels'
+          : 'recommendations';
     const components = [...mix.components].sort(
       (left, right) => right.proportion - left.proportion,
     );
@@ -3225,9 +3300,62 @@ export const App = () => {
 
   // Нижняя панель (#168) — на табах и в подборке; из неё же Миксер, который вернёт сюда.
   const navReturnView: MixerReturnView | null =
-    view === 'recommendations' || view === 'showcase' || view === 'catalog' || view === 'rail' || view === 'cabinet'
+    view === 'recommendations' ||
+    view === 'showcase' ||
+    view === 'reels' ||
+    view === 'catalog' ||
+    view === 'rail' ||
+    view === 'cabinet'
       ? view
       : null;
+
+  const renderBottomNav = () =>
+    navReturnView ? (
+      <BottomNav
+        value={navReturnView === 'rail' ? 'showcase' : navReturnView}
+        onChange={(tab) => {
+          setCabinetNotice('');
+          setLoginError('');
+          if (tab === 'mixer') {
+            openMixer(navReturnView);
+          } else if (tab === 'reels') {
+            void openReels();
+          } else {
+            setView(tab);
+          }
+        }}
+      />
+    ) : null;
+
+  // Лента «Рилсы» (#263): на всю высоту над панелью, без шапки «Арома Ателье».
+  const renderReelsView = () => {
+    if (reels.status === 'error' && !reels.items.length) {
+      return <p className="screen-status error reels-status">{reels.error}</p>;
+    }
+    if (reels.status !== 'ready') {
+      return <p className="screen-status reels-status">Собираем ленту…</p>;
+    }
+    if (!reels.items.length) {
+      return <FeedEmpty onRecs={() => setView('recommendations')} />;
+    }
+    return (
+      <Feed
+        key={reels.loadId}
+        items={reels.items}
+        index={Math.min(reelIndex, reels.items.length - 1)}
+        onIndexChange={(next) => {
+          setReelIndex(next);
+          setReelSwiped(true);
+          setReelChoice(null);
+        }}
+        hint={!reelSwiped}
+        goneIds={goneReels}
+        choice={reelChoice}
+        onOpen={(mix) => openMix(mix, 'reels')}
+        onChoose={(mix) => void onChooseReel(mix)}
+      />
+    );
+  };
 
   return (
     <div className="app-bg">
@@ -3249,6 +3377,11 @@ export const App = () => {
               onDone={() => setView('cabinet')}
             />
           </section>
+        ) : view === 'reels' ? (
+          <>
+            {renderReelsView()}
+            {renderBottomNav()}
+          </>
         ) : view === 'mixer' ? (
           <MixerScreen
             likedProfiles={likedProfiles}
@@ -3277,20 +3410,7 @@ export const App = () => {
               {view === 'cabinet' ? renderCabinetView() : null}
               {view === 'login' ? renderLoginView() : null}
             </main>
-            {navReturnView ? (
-              <BottomNav
-                value={navReturnView === 'rail' ? 'showcase' : navReturnView}
-                onChange={(tab) => {
-                  setCabinetNotice('');
-                  setLoginError('');
-                  if (tab === 'mixer') {
-                    openMixer(navReturnView);
-                  } else {
-                    setView(tab);
-                  }
-                }}
-              />
-            ) : null}
+            {renderBottomNav()}
           </>
         )}
       </div>
