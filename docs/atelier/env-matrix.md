@@ -135,13 +135,24 @@
 ## 5b. Мониторинг (прод-хост и GitHub)
 
 Файл `/opt/atelier/.env.monitor` (права 600, в git не коммитится) — читает
-`scripts/atelier/host-check.sh`. Те же значения — в секретах GitHub-репозитория
+`scripts/atelier/host-check.sh` и `scripts/atelier/htreviews-sync.sh`. Те же значения — в секретах GitHub-репозитория
 для `.github/workflows/atelier-uptime.yml`.
 
 | Переменная | Назначение | Пример |
 |---|---|---|
 | `ATELIER_ALERT_BOT_TOKEN` | токен отдельного бота для алертов | secret |
 | `ATELIER_ALERT_CHAT_ID` | чат, куда слать алерты | `123456789` |
+
+## 5c. Синхронизация каталога с htreviews.org (прод-хост)
+
+Задаёт `scripts/atelier/htreviews-sync.sh` для одноразового контейнера backend
+(`scripts/sync-htreviews.ts`), в `.env` не пишутся. Остальные `HTREVIEWS_*` —
+в [`apps/backend/README.md`](../../apps/backend/README.md).
+
+| Переменная | Назначение | Пример |
+|---|---|---|
+| `HTREVIEWS_SHELF_BRANDS` | `1` — обойти только бренды табаков htreviews в наличии (`inStock`, не в архиве); `HTREVIEWS_BRAND_URLS` при этом игнорируется. Режим `shelf` обёртки | `1` |
+| `HTREVIEWS_DELAY_MS` | пауза между запросами к htreviews; обёртка ставит `500`, если не задано в окружении | `500` |
 
 ## 6. Secret ownership
 
