@@ -64,7 +64,7 @@ import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
-import { loadReelFeed, reelStrip } from '@/lib/reel-feed';
+import { loadReelFeed, reelStrip, type ReelEntry, type ReelHead } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
@@ -1264,7 +1264,7 @@ export const App = () => {
   const [submitError, setSubmitError] = useState('');
   // Лента «Рилсы» (#263). Индекс — здесь, а не в ленте: «Готово» после
   // «Покурить» возвращает на тот же рилс. `loadId` пересоздаёт ленту с начала.
-  const [reels, setReels] = useState<{ status: 'idle' | 'loading' | 'ready' | 'error'; items: MixCard[]; error: string; loadId: number }>(
+  const [reels, setReels] = useState<{ status: 'idle' | 'loading' | 'ready' | 'error'; items: ReelEntry<MixCard>[]; error: string; loadId: number }>(
     { status: 'idle', items: [], error: '', loadId: 0 },
   );
   const [reelIndex, setReelIndex] = useState(0);
@@ -1272,9 +1272,6 @@ export const App = () => {
   // Миксы, на которые smoke-cta ответил 404: табак кончился, пока гость листал.
   const [goneReels, setGoneReels] = useState<string[]>([]);
   const [reelChoice, setReelChoice] = useState<{ mixId: string; status: 'loading' | 'error'; error: string } | null>(null);
-  // Подбор по вкусам для ленты и полосы у вошедшего гостя: его Подбор — «Для вас»,
-  // поэтому подбор по вкусам запрашивается отдельно и живёт до смены вкусов.
-  const [tasteRecs, setTasteRecs] = useState<{ key: string; items: MixCard[] } | null>(null);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -1598,6 +1595,7 @@ export const App = () => {
   const invalidateForYou = () => setForYou((current) => ({ ...current, stale: true }));
 
   // Пока идёт пересборка, на экране остаётся прежняя выдача.
+  // Возвращает выдачу и ленте рилсов (#265): та же выдача, второго запроса нет.
   const loadForYou = async () => {
     const requestId = forYouRequestRef.current + 1;
     forYouRequestRef.current = requestId;
@@ -1605,10 +1603,12 @@ export const App = () => {
     try {
       const data = await fetchForYou();
       if (forYouRequestRef.current === requestId) setForYou({ status: 'ready', data, error: '', stale: false });
+      return data;
     } catch (cause) {
       if (forYouRequestRef.current === requestId) {
         setForYou((current) => ({ ...current, status: 'error', error: friendlyError(cause) }));
       }
+      throw cause;
     }
   };
 
@@ -1711,7 +1711,9 @@ export const App = () => {
     if (!accessGranted || !signedIn || view !== 'recommendations' || !forYouNeedsLoad || forYou.status === 'loading') {
       return;
     }
-    void loadForYou();
+    loadForYou().catch(() => {
+      // Ошибку Подбор показывает из состояния.
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessGranted, signedIn, view, forYou.status === 'idle']);
 
@@ -1972,26 +1974,25 @@ export const App = () => {
     : null;
   const modalFavorite = Boolean(modalRef && signedIn && isFavorite(favorites, modalRef));
 
-  // Сердечко: локально сразу, на сбой — откат.
-  const toggleFavorite = async () => {
-    if (!mixModalState || !modalRef) {
-      return;
-    }
+  // Сердечко карточки и рилса (#265): локально сразу, на сбой — откат. У гостя
+  // без входа — шторка «Избранное живёт в кабинете».
+  const toggleFavorite = async (item: GuestCabinetItem) => {
     if (!signedIn) {
       setAnonHeartOpen(true);
       return;
     }
-    const item = mixModalState.item ?? mixToCabinetItem(mixModalState.mix);
-    const on = !modalFavorite;
+    const on = !isFavorite(favorites, item.ref);
     const previous = favorites ?? [];
-    setFavorites(on ? withFavorite(previous, item, new Date()) : withoutFavorite(previous, modalRef));
+    setFavorites(on ? withFavorite(previous, item, new Date()) : withoutFavorite(previous, item.ref));
     try {
-      await sendGuestFavorite(modalRef, on);
+      await sendGuestFavorite(item.ref, on);
       invalidateForYou();
     } catch {
       if (guestSession.token()) setFavorites(previous);
     }
   };
+
+  const isFavoriteMix = (mix: MixCard) => signedIn && isFavorite(favorites, { kind: 'catalog', mixId: mix.id });
 
   // «Войти» из шторки сердечка — в кабинет, к согласию и входу через Telegram.
   const loginFromHeart = () => {
@@ -2085,62 +2086,33 @@ export const App = () => {
     }
   };
 
+  // Голова ленты и полосы (#265): у вошедшего — уже загруженный Подбором «Для
+  // вас» (personal) или его подбор по вкусам кабинета (cold), у гостя без входа —
+  // подбор по онбордингу. null — ещё не загружена.
+  const forYouHead = (data: ForYouData): ReelHead<MixCard> => (data.mode === 'personal' ? data : data.items);
   const hasTaste = onboardingDone && (likedProfiles.length > 0 || likedFlavors.length > 0);
-  const tasteKey = JSON.stringify([likedProfiles, likedFlavors]);
-  // null — подбор по вкусам ещё не загружен.
-  const feedRecommendations: MixCard[] | null = !hasTaste
-    ? []
-    : signedIn
-      ? tasteRecs?.key === tasteKey
-        ? tasteRecs.items
-        : null
-      : recommendationStatus === 'ready'
-        ? recommendations
-        : null;
-  const stripItems =
-    feedRecommendations && catalogStatus === 'ready' ? reelStrip(feedRecommendations, catalogSourceMixes) : [];
+  const anonHead: ReelHead<MixCard> | null = !hasTaste ? [] : recommendationStatus === 'ready' ? recommendations : null;
+  const shownHead = signedIn ? (forYou.data ? forYouHead(forYou.data) : null) : anonHead;
+  const stripItems = shownHead && catalogStatus === 'ready' ? reelStrip(shownHead, catalogSourceMixes) : [];
 
-  // Полоса у вошедшего: подбор по вкусам — в фоне, Подбор его не ждёт.
-  useEffect(() => {
-    if (!accessGranted || !signedIn || view !== 'recommendations' || !hasTaste || tasteRecs?.key === tasteKey) {
-      return;
-    }
-    let cancelled = false;
-    fetchRecommendations({ likedProfiles, likedFlavors })
-      .then((items) => {
-        if (!cancelled) setTasteRecs({ key: tasteKey, items });
-      })
-      .catch(() => {
-        // Без полосы Подбор работает как прежде.
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessGranted, signedIn, view, hasTaste, tasteKey, tasteRecs?.key]);
-
-  // «Рилсы» из панели — лента с начала, кружок полосы (#264) — с его номера:
-  // полоса и лента собираются из одних источников, порядок совпадает. Подбор и
-  // каталог, если уже загружены, не запрашиваются заново (#265 заменит подбор
-  // вошедшего на «Для вас»).
-  const openReels = async (start = 0) => {
+  // «Рилсы» из панели — лента с начала, кружок полосы (#264) — с его номера.
+  // Кружок берёт ту же голову, что видна на Подборе, поэтому номер совпадает;
+  // из панели устаревший «Для вас» пересобирается — тем же запросом, что сделал
+  // бы Подбор. Каталог, если уже загружен, не запрашивается заново.
+  const openReels = async (start?: number) => {
     const loadId = reels.loadId + 1;
-    const key = tasteKey;
-    setReelIndex(start);
+    const head = signedIn ? (forYou.data && (start !== undefined || !forYou.stale) ? forYouHead(forYou.data) : null) : anonHead;
+    setReelIndex(start ?? 0);
     setReelSwiped(false);
     setReelChoice(null);
     setView('reels');
     setReels((current) => ({ ...current, status: 'loading', error: '', loadId }));
     try {
       const items = await loadReelFeed<MixCard>({
-        taste: onboardingDone ? { likedProfiles, likedFlavors } : null,
-        recommendations: feedRecommendations,
+        head,
         catalog: catalogStatus === 'ready' ? catalogSourceMixes : null,
-        fetchRecommendations: async (taste) => {
-          const recommended = await fetchRecommendations(taste);
-          if (signedIn) setTasteRecs({ key, items: recommended });
-          return recommended;
-        },
+        fetchHead: async () =>
+          signedIn ? forYouHead(await loadForYou()) : fetchRecommendations({ likedProfiles, likedFlavors }),
         fetchCatalog: fetchCatalogMixes,
       });
       setReels((current) => (current.loadId === loadId ? { status: 'ready', items, error: '', loadId } : current));
@@ -3397,6 +3369,8 @@ export const App = () => {
         choice={reelChoice}
         onOpen={(mix) => openMix(mix, 'reels')}
         onChoose={(mix) => void onChooseReel(mix)}
+        isFavorite={isFavoriteMix}
+        onFavorite={(mix) => void toggleFavorite(mixToCabinetItem(mix))}
       />
     );
   };
@@ -3448,7 +3422,7 @@ export const App = () => {
               {view === 'intro' ? renderIntroView() : null}
               {view === 'onboarding' ? renderOnboardingView() : null}
               {view === 'recommendations' && stripItems.length ? (
-                <ReelStrip items={stripItems} onOpen={(index) => void openReels(index)} />
+                <ReelStrip items={stripItems.map((entry) => entry.mix)} onOpen={(index) => void openReels(index)} />
               ) : null}
               {view === 'recommendations' ? renderRecommendationsView() : null}
               {view === 'showcase' ? renderShowcaseView() : null}
@@ -3497,7 +3471,9 @@ export const App = () => {
       <MixDetailModal
         state={mixModalState}
         favorite={modalFavorite}
-        onFavorite={() => void toggleFavorite()}
+        onFavorite={() => {
+          if (mixModalState) void toggleFavorite(mixModalState.item ?? mixToCabinetItem(mixModalState.mix));
+        }}
         selectedMixId={selectedMix?.id ?? ''}
         chooseStatus={chooseStatus}
         chooseError={chooseError}

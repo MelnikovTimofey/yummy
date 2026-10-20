@@ -1,12 +1,36 @@
-// Порядок ленты «Рилсы» (#263, design/design_handoff_reels — «Порядок ленты»):
-// подбор по онбордингу, затем остальные доступные миксы каталога без повторов.
-// Недоступные миксы уже отсекает backend.
+// Порядок ленты «Рилсы» (#263, #265, design/design_handoff_reels — «Порядок
+// ленты», «Вошедший гость»): голова ленты, затем остальные доступные миксы
+// каталога без повторов. Недоступные миксы уже отсекает backend.
+//
+// Голова — «Для вас» вошедшего гостя (режим personal, те же слоты и фразы, что
+// на Подборе, #245) или подбор по вкусам: онбординга у гостя без входа, вкусов
+// кабинета у вошедшего в режиме cold.
 
-type Taste = { likedProfiles: string[]; likedFlavors: string[] };
+import { forYouSlots, type ForYouRow, type GuestForYouPersonal } from './for-you-copy';
 
-export function orderReelFeed<T extends { id: string }>(recommended: T[], catalog: T[]): T[] {
+/** `slot` — надпись слота «Для вас» вместо профилей, `reason` — причина под
+ *  названием, `hint` — подсказка «Давно на одном вкусе» над «Шагом в сторону». */
+export type ReelEntry<T> = { mix: T; slot: string | null; reason: string | null; hint: string | null };
+
+export type ReelHead<T> = GuestForYouPersonal<T> | T[];
+
+const plain = <T>(mix: T): ReelEntry<T> => ({ mix, slot: null, reason: null, hint: null });
+
+const forYouEntries = <T>(response: GuestForYouPersonal<T>): ReelEntry<T>[] => {
+  const slots = forYouSlots(response);
+  const entry = (row: ForYouRow<T> | null, slot: string, hint: string | null = null) =>
+    row ? [{ mix: row.mix, slot, reason: row.reason, hint }] : [];
+  const fresh = [slots.hero, ...slots.taste].flatMap((row) => entry(row, 'Новое в вашем вкусе'));
+  // Подсказка ведёт на «Шаг в сторону», как на Подборе: он идёт первым.
+  return slots.hint
+    ? [...entry(slots.sidestep, 'Шаг в сторону', slots.hint.text), ...fresh, ...entry(slots.again, 'Снова')]
+    : [...fresh, ...entry(slots.sidestep, 'Шаг в сторону'), ...entry(slots.again, 'Снова')];
+};
+
+export function reelEntries<T extends { id: string }>(head: ReelHead<T>, catalog: T[]): ReelEntry<T>[] {
   const seen = new Set<string>();
-  return [...recommended, ...catalog].filter((mix) => {
+  const first = Array.isArray(head) ? head.map(plain) : forYouEntries(head);
+  return [...first, ...catalog.map(plain)].filter(({ mix }) => {
     if (seen.has(mix.id)) return false;
     seen.add(mix.id);
     return true;
@@ -14,30 +38,24 @@ export function orderReelFeed<T extends { id: string }>(recommended: T[], catalo
 }
 
 // Полоса над Подбором (#264): первые восемь рилсов ленты в её порядке.
-export const reelStrip = <T extends { id: string }>(recommended: T[], catalog: T[]): T[] =>
-  orderReelFeed(recommended, catalog).slice(0, 8);
+export const reelStrip = <T extends { id: string }>(head: ReelHead<T>, catalog: T[]) =>
+  reelEntries(head, catalog).slice(0, 8);
 
-/** `taste: null` — гость не прошёл онбординг. `recommendations` и `catalog` —
- *  уже загруженные выдачи: их не запрашиваем повторно. */
+/** `head` и `catalog` — уже загруженные выдачи (`null` — ещё нет): их не
+ *  запрашиваем повторно. Пустая голова — гость не прошёл онбординг. */
 export async function loadReelFeed<T extends { id: string }>({
-  taste,
-  recommendations,
+  head,
   catalog,
-  fetchRecommendations,
+  fetchHead,
   fetchCatalog,
 }: {
-  taste: Taste | null;
-  recommendations: T[] | null;
+  head: ReelHead<T> | null;
   catalog: T[] | null;
-  fetchRecommendations: (taste: Taste) => Promise<T[]>;
+  fetchHead: () => Promise<ReelHead<T>>;
   fetchCatalog: () => Promise<T[]>;
-}): Promise<T[]> {
-  const hasTaste = Boolean(taste && (taste.likedProfiles.length || taste.likedFlavors.length));
-  const [recommended, all] = await Promise.all([
-    recommendations ?? (hasTaste && taste ? fetchRecommendations(taste) : Promise.resolve([])),
-    catalog ?? fetchCatalog(),
-  ]);
-  return orderReelFeed(recommended, all);
+}): Promise<ReelEntry<T>[]> {
+  const [first, all] = await Promise.all([head ?? fetchHead(), catalog ?? fetchCatalog()]);
+  return reelEntries(first, all);
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');

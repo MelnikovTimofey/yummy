@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { reelCounter } from '@/lib/reel-feed';
+import { reelCounter, type ReelEntry } from '@/lib/reel-feed';
 import { Reel, type ReelFeedMix } from './Reel';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -11,7 +11,7 @@ const subscribeReducedMotion = (onChange: () => void) => {
 const prefersReducedMotion = () => window.matchMedia(REDUCED_MOTION).matches;
 
 type FeedProps<T extends ReelFeedMix> = {
-  items: T[];
+  items: ReelEntry<T>[];
   /** Индекс живёт выше экрана: «Готово» после «Покурить» возвращает на тот же рилс. */
   index: number;
   onIndexChange: (index: number) => void;
@@ -20,11 +20,24 @@ type FeedProps<T extends ReelFeedMix> = {
   choice: { mixId: string; status: 'loading' | 'error'; error: string } | null;
   onOpen: (mix: T) => void;
   onChoose: (mix: T) => void;
+  isFavorite: (mix: T) => boolean;
+  onFavorite: (mix: T) => void;
 };
 
 // Лента «Рилсы» (#263): вертикальная прокрутка со снапом — один жест, один рилс.
 // Рендерятся только активный рилс и соседи, дальше — пустые слоты той же высоты.
-export function Feed<T extends ReelFeedMix>({ items, index, onIndexChange, hint, goneIds, choice, onOpen, onChoose }: FeedProps<T>) {
+export function Feed<T extends ReelFeedMix>({
+  items,
+  index,
+  onIndexChange,
+  hint,
+  goneIds,
+  choice,
+  onOpen,
+  onChoose,
+  isFavorite,
+  onFavorite,
+}: FeedProps<T>) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
   const animated = !useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion);
@@ -53,11 +66,16 @@ export function Feed<T extends ReelFeedMix>({ items, index, onIndexChange, hint,
         <p className="reel-count">{reelCounter(index, items.length)}</p>
       </header>
       <div className="reels" ref={scrollerRef} onScroll={onScroll}>
-        {items.map((mix, i) => (
+        {items.map(({ mix, slot, reason, hint: bubble }, i) => (
           <div key={mix.id} className="reel-slot">
             {Math.abs(i - index) <= 1 ? (
               <Reel
                 mix={mix}
+                slot={slot}
+                reason={reason}
+                bubble={bubble}
+                favorite={isFavorite(mix)}
+                onFavorite={() => onFavorite(mix)}
                 active={i === index}
                 animated={animated}
                 paused={paused}

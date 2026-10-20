@@ -2827,6 +2827,47 @@ select:focus-visible {
   overflow: hidden;
 }
 
+.reel-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.reel-name-row .reel-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Сердечко справа от названия (#265), как в карточке микса — не акцентное. */
+.reel-name-row .heart-btn {
+  margin: -2px -8px 0 auto;
+}
+
+/* «Для вас» вошедшего гостя (#265, мокапы li-taste, li-again, li-bubble). */
+.reel-reason {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text-0);
+}
+
+.reel-bubble {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-guest-row);
+  border: 1px solid var(--line);
+  background: rgba(20, 20, 23, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.reel-bubble-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+
 .reel-meta {
   display: flex;
   align-items: center;
