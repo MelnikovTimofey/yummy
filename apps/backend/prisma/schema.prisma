@@ -214,6 +214,7 @@ model Mix {
   railMixes       RailMix[]
   ratings         MixRating[]
   smokeEvents     SmokeCtaEvent[]
+  guestFavorites  GuestFavorite[]
 }
 
 model MixComponent {
@@ -260,41 +261,94 @@ model RailMix {
   @@index([mixId])
 }
 
+// Снимок названия и профилей — чтобы история гостя пережила удаление микса
+// мастером (PRD §5.3): mixId тогда становится null, снимок остаётся.
 model SmokeCtaEvent {
-  id        String    @id @default(uuid())
-  mixId     String
-  createdAt DateTime  @default(now())
-  mix       Mix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  id          String        @id @default(uuid())
+  mixId       String?
+  guestId     String?
+  mixName     String
+  mixProfiles Json          @default("[]")
+  createdAt   DateTime      @default(now())
+  mix         Mix?          @relation(fields: [mixId], references: [id], onDelete: SetNull)
+  guest       GuestAccount? @relation(fields: [guestId], references: [id], onDelete: SetNull)
 
   @@index([mixId])
+  @@index([guestId, createdAt])
 }
 
+// У вошедшего гостя одна оценка на микс (повторная заменяет), у анонимов —
+// сколько угодно: NULL в guestId уникальность не нарушает.
 model MixRating {
-  id        String    @id @default(uuid())
+  id        String        @id @default(uuid())
   mixId     String
+  guestId   String?
   value     Int
-  source    String    @default("guest")
-  createdAt DateTime  @default(now())
-  mix       Mix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  source    String        @default("guest")
+  createdAt DateTime      @default(now())
+  mix       Mix           @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  guest     GuestAccount? @relation(fields: [guestId], references: [id], onDelete: SetNull)
 
+  @@unique([guestId, mixId])
   @@index([mixId])
   @@index([createdAt])
 }
 
 // Гостевой микс из «Намиксуй»: снимок состава без FK на Tobacco, чтобы событие
-// пережило удаление табака, и без связи с гостем (PRD §4). В статистику
-// каталога (SmokeCtaEvent) не попадает.
+// пережило удаление табака. У вошедшего гостя попадает в его историю (PRD §4
+// п. 5); в статистику каталога (SmokeCtaEvent) не попадает.
 model CustomMixSmokeEvent {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
+  guestId    String?
   components Json
   signature  String
   name       String
   harmony    Int
-  swipes     Json     @default("[]")
-  createdAt  DateTime @default(now())
+  swipes     Json            @default("[]")
+  createdAt  DateTime        @default(now())
+  guest      GuestAccount?   @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  favorites  GuestFavorite[]
 
   @@index([signature])
   @@index([createdAt])
+  @@index([guestId, createdAt])
+}
+
+// Кабинет гостя (#151, PRD §4 п. 4): только Telegram id, согласие и вкусы из
+// онбординга. Удаление учётки удаляет избранное, а события и оценки остаются
+// в статистике без связи с гостем.
+model GuestAccount {
+  id                   String                @id @default(uuid())
+  telegramId           String                @unique
+  consentAt            DateTime
+  likedProfiles        Json                  @default("[]")
+  likedFlavors         Json                  @default("[]")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  favorites            GuestFavorite[]
+  smokeEvents          SmokeCtaEvent[]
+  customMixSmokeEvents CustomMixSmokeEvent[]
+  ratings              MixRating[]
+}
+
+// Избранное: каталожный микс (mixId) или собранный в «Намиксуй»
+// (customMixEventId), одно из двух — следит код. Снимок названия и профилей
+// нужен, когда мастер удалил микс: строка остаётся с «Больше не готовим».
+model GuestFavorite {
+  id               String               @id @default(uuid())
+  guestId          String
+  mixId            String?
+  customMixEventId String?
+  mixName          String
+  mixProfiles      Json                 @default("[]")
+  createdAt        DateTime             @default(now())
+  guest            GuestAccount         @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  mix              Mix?                 @relation(fields: [mixId], references: [id], onDelete: SetNull)
+  customMixEvent   CustomMixSmokeEvent? @relation(fields: [customMixEventId], references: [id], onDelete: Cascade)
+
+  @@unique([guestId, mixId])
+  @@unique([guestId, customMixEventId])
+  @@index([guestId, createdAt])
 }
 
 // Полка точки (#152): что точка держит. Каталог (Tobacco) о наличии не знает —

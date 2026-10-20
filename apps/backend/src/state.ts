@@ -70,7 +70,7 @@ export type StaffRailView = RailView & {
 };
 
 export type SmokeCtaEvent = {
-  mixId: string;
+  mixId: string | null;
   createdAt: string;
 };
 
@@ -1455,9 +1455,11 @@ const nextRailId = async (name: string) => {
 type StorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 const wipeStorage = async (tx: StorageTx) => {
+  await tx.guestFavorite.deleteMany();
   await tx.smokeCtaEvent.deleteMany();
   await tx.customMixSmokeEvent.deleteMany();
   await tx.mixRating.deleteMany();
+  await tx.guestAccount.deleteMany();
   await tx.railMix.deleteMany();
   await tx.mixComponent.deleteMany();
   await tx.rail.deleteMany();
@@ -2423,9 +2425,10 @@ export const updateMix = async (id: string, payload: MixPatch) => {
   return getMixById(id);
 };
 
-// Жёсткое удаление микса. Связи (components, railMixes, ratings, smokeEvents)
-// снимаются каскадом из schema.prisma — поэтому микс автоматически уходит из
-// всех рейлов, в которые входил. Статистические рейлы пересчитываются на лету.
+// Жёсткое удаление микса. Связи (components, railMixes, ratings) снимаются
+// каскадом из schema.prisma — поэтому микс автоматически уходит из всех рейлов,
+// в которые входил. Статистические рейлы пересчитываются на лету. События
+// «Покурить» и избранное гостей остаются со снимком названия, mixId — null.
 export const deleteMix = async (id: string): Promise<{ id: string; name: string } | null> => {
   await ensureAppState();
 
@@ -2563,17 +2566,17 @@ export const updateRail = async (id: string, payload: RailPatch) => {
   return (await getStaffRails()).find((rail) => rail.id === id) ?? null;
 };
 
-export const recordSmokeCtaEvent = async (mixId: string) => {
+export const recordSmokeCtaEvent = async (mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles'>) => {
   await ensureAppState();
 
   const event = await prisma.smokeCtaEvent.create({
-    data: { mixId },
+    data: { mixId: mix.id, mixName: mix.name, mixProfiles: mix.flavorProfiles },
   });
 
   return {
-    mixId: event.mixId,
+    mixId: mix.id,
     createdAt: event.createdAt.toISOString(),
-  } satisfies SmokeCtaEvent;
+  };
 };
 
 export const createCustomMixSmokeEvent = async (data: {
@@ -2662,7 +2665,7 @@ export const getSmokeCtaSummary = async () => {
   ]);
 
   const counts = events.reduce<Record<string, number>>((acc, event) => {
-    acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
+    if (event.mixId) acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -2768,7 +2771,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
   ]);
 
   const smokeCounts = smokeEvents.reduce<Record<string, number>>((acc, event) => {
-    acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
+    if (event.mixId) acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
     return acc;
   }, {});
 

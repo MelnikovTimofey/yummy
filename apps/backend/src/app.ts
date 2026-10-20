@@ -410,7 +410,7 @@ export const buildApp = () => {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
 
-    const event = await recordSmokeCtaEvent(mixId);
+    const event = await recordSmokeCtaEvent(mix);
     return reply.status(201).send({
       ok: true,
       recordedAt: event.createdAt,
