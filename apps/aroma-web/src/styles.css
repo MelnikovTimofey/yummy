@@ -300,7 +300,7 @@ select:focus-visible {
 .bottom-nav {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 0 8px var(--safe-bottom);
   border-top: 1px solid var(--line);
   background: var(--guest-topbar-bg);
@@ -2077,4 +2077,221 @@ select:focus-visible {
   .cinema-actions .ghost-button {
     width: 100%;
   }
+}
+
+/* ── Кабинет гостя (#243, design/design_handoff_guest_cabinet) ── */
+
+.cab,
+.cab-anon {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 12px var(--gutter) calc(32px + var(--safe-bottom));
+}
+
+.cab-anon {
+  justify-items: start;
+  padding-top: 20px;
+}
+
+.cab-title,
+.cab-anon-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-guest-h1);
+  line-height: 1.05;
+  color: var(--text-0);
+}
+
+.cab-benefits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.cab-benefits li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+
+.cab-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transform: translateY(-2px);
+}
+
+.cab-anon-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.cab-anon-form {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.cab-anon-form .aroma-access-age-text {
+  line-height: 1.4;
+}
+
+.cab-link {
+  color: var(--text-0);
+}
+
+.cab-link:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+.cab-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.cab-error-start {
+  text-align: left;
+}
+
+/* Экран ожидания входа (#239): точка дышит, пока бот не подтвердил код. */
+.cab-wait-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+.cab-wait-status {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.cab-wait-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  animation: cab-wait-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes cab-wait-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-wait-dot {
+    animation: none;
+  }
+}
+
+.cab-wait-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.cab-toast {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-guest-row);
+  border: 1px solid var(--line);
+  background: var(--guest-card-bg);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.cab-tastes {
+  display: grid;
+  gap: 8px;
+}
+
+.cab-tastes-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cab-tastes-edit {
+  justify-self: start;
+  padding: 4px 0;
+}
+
+.cab-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cab-danger-link {
+  color: var(--danger);
+}
+
+.cab-sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cab-danger {
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.cab-delete-sheet button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Вернувшийся гость на знакомстве: тихая строка под главной кнопкой. */
+.cab-returning {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  border: 0;
+  background: transparent;
+  padding: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cab-returning:disabled {
+  cursor: default;
+}
+
+.cab-returning-cta {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-0);
 }

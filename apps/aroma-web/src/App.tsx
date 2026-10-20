@@ -1,4 +1,4 @@
-import { type PointerEvent as ReactPointerEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import { type PointerEvent as ReactPointerEvent, FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -6,9 +6,27 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { ChevronRight, KeyRound } from 'lucide-react';
 
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
+import { Cabinet } from '@/components/cabinet/Cabinet';
+import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
+import { DeleteCabinetSheet } from '@/components/cabinet/DeleteCabinetSheet';
+import { LoginWait } from '@/components/cabinet/LoginWait';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst, normalizeSearchText } from '@/lib/catalog';
+import { fetchAsGuest, guestSession } from '@/lib/guest-client';
+import {
+  canOfferLogin,
+  clearPendingLogin,
+  createLoginPoller,
+  loginReturnView,
+  readPendingLogin,
+  savePendingLogin,
+  type GuestLoginStart,
+  type GuestLoginStatus,
+  type GuestMe,
+  type LoginOrigin,
+  type PendingLogin,
+} from '@/lib/guest-session';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
@@ -24,8 +42,10 @@ type GuestView =
   | 'catalog'
   | 'rail'
   | 'smoke-confirmation'
-  | 'mixer';
-type AppTab = 'recommendations' | 'showcase' | 'catalog';
+  | 'mixer'
+  | 'cabinet'
+  | 'login';
+type AppTab = 'recommendations' | 'showcase' | 'catalog' | 'cabinet';
 type MixerReturnView = AppTab | 'rail';
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
@@ -351,7 +371,19 @@ const normalizeRail = (item: unknown, index: number): HomeRail => {
   };
 };
 
-const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: string): Promise<T> => {
+class RequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+// `auth` — запрос с токеном кабинета (#243): `optional` — гостевое событие, на
+// 401 токен стирается и запрос повторяется анонимно; `required` — /guest/me*,
+// на 401 гость выходит из кабинета.
+const requestJson = async <T,>(path: string, options: RequestInit = {}, auth?: 'optional' | 'required'): Promise<T> => {
   const hasBody = options.body !== undefined;
   const headers = new Headers(options.headers ?? {});
 
@@ -359,32 +391,29 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, token?: 
     headers.set('content-type', 'application/json');
   }
 
-  if (token) {
-    headers.set('authorization', `Bearer ${token}`);
-  }
-
   let response: Response;
 
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
-      ...options,
-      headers,
-      signal: AbortSignal.timeout(requestTimeoutMs),
-    });
+    const url = `${apiBaseUrl}${path}`;
+    const init = { ...options, headers, signal: AbortSignal.timeout(requestTimeoutMs) };
+    response = auth
+      ? await fetchAsGuest(url, init, { anonymousRetry: auth === 'optional' })
+      : await fetch(url, init);
   } catch (cause) {
     // Без таймаута недоступный хост держит запрос до системного TCP-таймаута (~75 секунд).
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
-    throw new Error(
+    throw new RequestError(
       timedOut
         ? 'Ателье не ответило вовремя. Попробуйте ещё раз.'
         : 'Нет связи с Ателье. Попробуйте ещё раз.',
+      0,
     );
   }
 
   const payload = (await response.json().catch(() => null)) as unknown;
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(payload, 'Не получилось. Попробуйте ещё раз.'));
+    throw new RequestError(extractErrorMessage(payload, 'Не получилось. Попробуйте ещё раз.'), response.status);
   }
 
   return payload as T;
@@ -458,7 +487,7 @@ const sendSmokeCta = async (mixId: string) => {
   const payload = await requestJson<unknown>('/guest/events/smoke-cta', {
     method: 'POST',
     body: JSON.stringify({ mixId }),
-  });
+  }, 'optional');
 
   return payload as { ok: true };
 };
@@ -467,7 +496,7 @@ const sendMixRating = async (mixId: string, value: number) => {
   const payload = await requestJson<unknown>(`/guest/mixes/${mixId}/rating`, {
     method: 'POST',
     body: JSON.stringify({ value }),
-  });
+  }, 'optional');
 
   const record = isRecord(payload) ? payload : {};
   const ratingRecord = isRecord(record.rating) ? record.rating : {};
@@ -487,6 +516,43 @@ const sendMixRating = async (mixId: string, value: number) => {
     message: typeof record.message === 'string' ? record.message : undefined,
   } satisfies MixRatingResult;
 };
+
+// ── Кабинет гостя (#243) ──
+
+const fetchLoginConfig = async () => {
+  const payload = await requestJson<unknown>('/guest/auth/telegram/config');
+  const record = isRecord(payload) ? payload : {};
+  return typeof record.botUsername === 'string' && record.botUsername ? record.botUsername : null;
+};
+
+const startGuestLogin = (body: { consent: boolean; likedProfiles: string[]; likedFlavors: string[] }) =>
+  requestJson<GuestLoginStart>('/guest/auth/telegram/start', { method: 'POST', body: JSON.stringify(body) });
+
+// Неизвестный код — backend уже почистил его как просроченный.
+const fetchGuestLoginStatus = async (code: string) => {
+  try {
+    return await requestJson<GuestLoginStatus>(`/guest/auth/telegram/status?code=${encodeURIComponent(code)}`);
+  } catch (cause) {
+    if (cause instanceof RequestError && cause.status === 404) return { status: 'expired' } as const;
+    throw cause;
+  }
+};
+
+const fetchGuestMe = () => requestJson<GuestMe>('/guest/me', {}, 'required');
+
+const saveGuestTaste = (taste: { likedProfiles: string[]; likedFlavors: string[] }) =>
+  requestJson<GuestMe>('/guest/me/onboarding', { method: 'PUT', body: JSON.stringify(taste) }, 'required');
+
+const deleteGuestAccount = () => requestJson<unknown>('/guest/me', { method: 'DELETE' }, 'required');
+
+const TELEGRAM_ERROR = 'Telegram не ответил. Попробуйте ещё раз — подбор и каталог работают и без входа.';
+const CONSENT_REQUIRED_ERROR = 'Кабинета ещё нет — отметьте согласие и войдите снова.';
+const SIGNED_IN_NOTICE = 'Вы вошли. Вкусы из онбординга сохранены в кабинете.';
+
+type LoginState =
+  | { phase: 'idle' }
+  | { phase: 'starting'; origin: LoginOrigin }
+  | ({ phase: 'waiting' | 'expired' } & PendingLogin);
 
 // Ramp состава микса — слой данных, значения в packages/design-tokens/profile-colors.css
 const COMPOSITION_PALETTE = [
@@ -917,6 +983,9 @@ export const App = () => {
     if (!granted) {
       return 'access';
     }
+    if (!guestSession.token() && readPendingLogin(localStorage, new Date())) {
+      return 'login';
+    }
     if (!seen) {
       return 'intro';
     }
@@ -986,6 +1055,26 @@ export const App = () => {
   const [catalogFilters, setCatalogFilters] = useState<CatalogFilterTag[]>([]);
   const [catalogFiltersOpen, setCatalogFiltersOpen] = useState(false);
   const [railProfileFilters, setRailProfileFilters] = useState<string[]>([]);
+
+  // ── Кабинет гостя (#243) ──
+  const guestToken = useSyncExternalStore(guestSession.subscribe, guestSession.token);
+  const signedIn = guestToken !== null;
+  // undefined — конфиг входа ещё не запрашивали или он не пришёл.
+  const [botUsername, setBotUsername] = useState<string | null | undefined>(undefined);
+  const loginConfigRequestedRef = useRef(false);
+  const [me, setMe] = useState<GuestMe | null>(null);
+  const [meStatus, setMeStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [cabinetError, setCabinetError] = useState('');
+  const [cabinetNotice, setCabinetNotice] = useState('');
+  const [login, setLogin] = useState<LoginState>(() => {
+    const pending = guestSession.token() ? null : readPendingLogin(localStorage, new Date());
+    return pending ? { phase: 'waiting', ...pending } : { phase: 'idle' };
+  });
+  const [loginError, setLoginError] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [deleteError, setDeleteError] = useState('');
+  const preferencesReturnRef = useRef<'recommendations' | 'cabinet'>('recommendations');
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -1187,8 +1276,9 @@ export const App = () => {
     setCatalogFilters([]);
   };
 
-  const openPreferencesEditing = () => {
+  const openPreferencesEditing = (returnTo: 'recommendations' | 'cabinet' = 'recommendations') => {
     preferencesSnapshotRef.current = { profiles: likedProfiles, flavors: likedFlavors };
+    preferencesReturnRef.current = returnTo;
     setEditingPreferences(true);
     setView('onboarding');
   };
@@ -1201,7 +1291,7 @@ export const App = () => {
     }
     preferencesSnapshotRef.current = null;
     setEditingPreferences(false);
-    setView('recommendations');
+    setView(preferencesReturnRef.current);
   };
 
   const finishIntro = () => {
@@ -1270,7 +1360,224 @@ export const App = () => {
       preferencesSnapshotRef.current = null;
       setEditingPreferences(false);
       setView('recommendations');
+      if (guestSession.token()) {
+        void saveTasteToCabinet({ likedProfiles, likedFlavors });
+      }
     }
+  };
+
+  // ── Кабинет гостя (#243) ──
+
+  const friendlyError = (cause: unknown) =>
+    cause instanceof RequestError && cause.status === 0 ? cause.message : 'Не получилось. Попробуйте ещё раз.';
+
+  const saveTasteToCabinet = async (taste: { likedProfiles: string[]; likedFlavors: string[] }) => {
+    try {
+      setMe(await saveGuestTaste(taste));
+      setCabinetError('');
+    } catch (cause) {
+      if (guestSession.token()) setCabinetError(friendlyError(cause));
+    }
+  };
+
+  const loadMe = async () => {
+    setMeStatus('loading');
+    setCabinetError('');
+    try {
+      setMe(await fetchGuestMe());
+      setMeStatus('ready');
+    } catch (cause) {
+      setMeStatus('error');
+      if (guestSession.token()) setCabinetError(friendlyError(cause));
+    }
+  };
+
+  // Конфиг входа нужен только экранам с кнопкой входа: у анонима, который туда
+  // не заходит, новых запросов нет.
+  useEffect(() => {
+    if (!accessGranted || signedIn || botUsername !== undefined || loginConfigRequestedRef.current) {
+      return;
+    }
+    if (view !== 'cabinet' && view !== 'intro') {
+      return;
+    }
+    loginConfigRequestedRef.current = true;
+    fetchLoginConfig()
+      .then(setBotUsername)
+      .catch(() => {
+        loginConfigRequestedRef.current = false;
+      });
+  }, [accessGranted, signedIn, botUsername, view]);
+
+  // Вошедший гость узнаёт себя на старте и при повторном открытии кабинета после сбоя.
+  useEffect(() => {
+    if (!accessGranted || !signedIn) {
+      return;
+    }
+    if (meStatus === 'idle' || (meStatus === 'error' && view === 'cabinet')) {
+      void loadMe();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessGranted, signedIn, view]);
+
+  // Выход, удаление или 401 на /guest/me* — кабинет снова анонимный.
+  useEffect(() => {
+    if (!signedIn) {
+      setMe(null);
+      setMeStatus('idle');
+      setCabinetNotice('');
+      setCabinetError('');
+    }
+  }, [signedIn]);
+
+  const completeLogin = (token: string | null, nextMe: GuestMe, origin: LoginOrigin) => {
+    clearPendingLogin(localStorage);
+    setLogin({ phase: 'idle' });
+    setLoginError('');
+    setCabinetError('');
+    setMe(nextMe);
+    setMeStatus('ready');
+    if (token) {
+      guestSession.signIn(token);
+    }
+
+    const savedTaste = nextMe.likedProfiles.length > 0 || nextMe.likedFlavors.length > 0;
+    const tasteChanged =
+      JSON.stringify([nextMe.likedProfiles, nextMe.likedFlavors]) !== JSON.stringify([likedProfiles, likedFlavors]);
+    if (savedTaste) {
+      setOnboardingDone(true);
+      if (tasteChanged) {
+        setLikedProfiles(nextMe.likedProfiles);
+        setLikedFlavors(nextMe.likedFlavors);
+        void loadRecommendations(nextMe.likedProfiles, nextMe.likedFlavors);
+      }
+    }
+    if (origin === 'intro') {
+      setIntroSeen(true);
+    }
+
+    const next = loginReturnView(origin, nextMe);
+    setCabinetNotice(next === 'cabinet' ? SIGNED_IN_NOTICE : '');
+    setView(next);
+  };
+
+  const failLogin = (origin: LoginOrigin, message: string, to: GuestView = origin) => {
+    clearPendingLogin(localStorage);
+    setLogin({ phase: 'idle' });
+    setLoginError(message);
+    setView(to);
+  };
+
+  const beginLogin = async (origin: LoginOrigin, consent: boolean) => {
+    setLogin({ phase: 'starting', origin });
+    setLoginError('');
+    try {
+      const started = await startGuestLogin({ consent, likedProfiles, likedFlavors });
+      const pending: PendingLogin = {
+        code: started.code,
+        botUrl: started.botUrl,
+        expiresAt: started.expiresAt,
+        origin,
+        consent,
+      };
+      savePendingLogin(localStorage, pending);
+      setLogin({ phase: 'waiting', ...pending });
+      setView('login');
+      // Та же вкладка, а не window.open: после await жест гостя уже потерян, и
+      // Safari на iPhone блокирует всплывающее окно. Переход на t.me открывает
+      // приложение Telegram, страница остаётся и ждёт подтверждения.
+      window.location.href = started.botUrl;
+    } catch {
+      failLogin(origin, TELEGRAM_ERROR);
+    }
+  };
+
+  const cancelLogin = () => {
+    const origin = login.phase === 'idle' ? 'cabinet' : login.origin;
+    clearPendingLogin(localStorage);
+    setLogin({ phase: 'idle' });
+    setView(origin);
+  };
+
+  const onLoginSettled = (status: Exclude<GuestLoginStatus, { status: 'pending' }>) => {
+    if (login.phase !== 'waiting') {
+      return;
+    }
+    const { origin } = login;
+    if (status.status === 'ok') {
+      completeLogin(status.token, status.me, origin);
+      return;
+    }
+    if (status.status === 'consent-required') {
+      failLogin(origin, CONSENT_REQUIRED_ERROR, 'cabinet');
+      return;
+    }
+    // Код мог погасить соседняя вкладка, куда гость вернулся по кнопке бота:
+    // тогда токен уже лежит в localStorage.
+    if (guestSession.token()) {
+      fetchGuestMe()
+        .then((nextMe) => completeLogin(null, nextMe, origin))
+        .catch(() => failLogin(origin, TELEGRAM_ERROR));
+      return;
+    }
+    clearPendingLogin(localStorage);
+    setLogin({ ...login, phase: 'expired' });
+  };
+
+  const loginHandlersRef = useRef({ onLoginSettled, onLoginError: () => {} });
+  loginHandlersRef.current = {
+    onLoginSettled,
+    onLoginError: () => failLogin(login.phase === 'idle' ? 'cabinet' : login.origin, TELEGRAM_ERROR),
+  };
+
+  const pollingCode = view === 'login' && login.phase === 'waiting' ? login.code : null;
+
+  useEffect(() => {
+    if (!pollingCode) {
+      return;
+    }
+    const poller = createLoginPoller({
+      check: () => fetchGuestLoginStatus(pollingCode),
+      onSettled: (status) => loginHandlersRef.current.onLoginSettled(status),
+      onError: () => loginHandlersRef.current.onLoginError(),
+      isHidden: () => document.visibilityState === 'hidden',
+    });
+    const wake = () => {
+      if (document.visibilityState === 'visible') {
+        void poller.wake();
+      }
+    };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('pageshow', wake);
+    poller.start();
+    wake();
+    return () => {
+      poller.stop();
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('pageshow', wake);
+    };
+  }, [pollingCode]);
+
+  const logout = () => {
+    guestSession.signOut();
+  };
+
+  const confirmDeleteCabinet = async () => {
+    setDeleteStatus('loading');
+    setDeleteError('');
+    try {
+      await deleteGuestAccount();
+      guestSession.signOut();
+    } catch (cause) {
+      // 401 — учётки уже нет, гость и так вышел.
+      if (guestSession.token()) {
+        setDeleteStatus('error');
+        setDeleteError(friendlyError(cause));
+        return;
+      }
+    }
+    setDeleteStatus('idle');
+    setDeleteOpen(false);
   };
 
   // После перезагрузки рекомендации теряются (живут только в state) — восстанавливаем
@@ -1597,6 +1904,24 @@ export const App = () => {
           <CTA pulse onClick={finishIntro}>
             Начать подбор
           </CTA>
+          {!signedIn && canOfferLogin(botUsername) ? (
+            <button
+              type="button"
+              className="cab-returning"
+              disabled={login.phase === 'starting'}
+              onClick={() => void beginLogin('intro', false)}
+            >
+              <span>Уже были у нас?</span>
+              <span className="cab-returning-cta">
+                {login.phase === 'starting' ? 'Открываем Telegram…' : 'Войти через Telegram'}
+              </span>
+            </button>
+          ) : null}
+          {loginError ? (
+            <p className="cab-error" role="alert">
+              {loginError}
+            </p>
+          ) : null}
         </div>
       </div>
     );
@@ -1817,7 +2142,7 @@ export const App = () => {
               : 'Откройте предпочтения, чтобы мы собрали подбор под текущее настроение, или сразу посмотрите весь каталог.'}
           </p>
           <div className="aroma-recs-empty-actions">
-            <CTA onClick={openPreferencesEditing}>
+            <CTA onClick={() => openPreferencesEditing()}>
               {recommendationStatus === 'ready' ? 'Изменить вкусы' : 'Открыть предпочтения'}
             </CTA>
             <button
@@ -1848,7 +2173,7 @@ export const App = () => {
       <section className="aroma-recs">
         <div className="aroma-recs-head">
           <p className="aroma-caps">{hasAnyMatch ? 'Лучшее совпадение' : 'Точных совпадений нет'}</p>
-          <Chip onClick={openPreferencesEditing}>Изменить вкусы</Chip>
+          <Chip onClick={() => openPreferencesEditing()}>Изменить вкусы</Chip>
         </div>
         {hasAnyMatch ? null : (
           <p className="aroma-recs-fallback-note">
@@ -2358,9 +2683,49 @@ export const App = () => {
   };
 
 
+  const renderCabinetView = () =>
+    signedIn ? (
+      <Cabinet
+        me={me}
+        loading={meStatus === 'loading'}
+        error={cabinetError}
+        notice={cabinetNotice}
+        onEditTastes={() => openPreferencesEditing('cabinet')}
+        onLogout={logout}
+        onDelete={() => {
+          setDeleteError('');
+          setDeleteStatus('idle');
+          setDeleteOpen(true);
+        }}
+      />
+    ) : (
+      <CabinetAnon
+        canLogin={canOfferLogin(botUsername)}
+        starting={login.phase === 'starting'}
+        error={loginError}
+        onLogin={() => void beginLogin('cabinet', true)}
+      />
+    );
+
+  const renderLoginView = () => (
+    <LoginWait
+      expired={login.phase !== 'waiting'}
+      botUrl={login.phase === 'waiting' ? login.botUrl : ''}
+      restarting={login.phase === 'starting'}
+      onRestart={() => {
+        if (login.phase === 'expired') {
+          void beginLogin(login.origin, login.consent);
+        }
+      }}
+      onCancel={cancelLogin}
+    />
+  );
+
   // Нижняя панель (#168) — на табах и в подборке; из неё же Миксер, который вернёт сюда.
   const navReturnView: MixerReturnView | null =
-    view === 'recommendations' || view === 'showcase' || view === 'catalog' || view === 'rail' ? view : null;
+    view === 'recommendations' || view === 'showcase' || view === 'catalog' || view === 'rail' || view === 'cabinet'
+      ? view
+      : null;
 
   return (
     <div className="app-bg">
@@ -2384,7 +2749,7 @@ export const App = () => {
         ) : (
           <>
             {renderTopbar()}
-            {view !== 'intro' ? renderSelectedMixBar() : null}
+            {view !== 'intro' && view !== 'login' ? renderSelectedMixBar() : null}
             <main className={view === 'intro' ? 'content content-intro' : 'content'}>
               {view === 'intro' ? renderIntroView() : null}
               {view === 'onboarding' ? renderOnboardingView() : null}
@@ -2392,11 +2757,21 @@ export const App = () => {
               {view === 'showcase' ? renderShowcaseView() : null}
               {view === 'catalog' ? renderCatalogView() : null}
               {view === 'rail' ? renderRailView() : null}
+              {view === 'cabinet' ? renderCabinetView() : null}
+              {view === 'login' ? renderLoginView() : null}
             </main>
             {navReturnView ? (
               <BottomNav
                 value={navReturnView === 'rail' ? 'showcase' : navReturnView}
-                onChange={(tab) => (tab === 'mixer' ? openMixer(navReturnView) : setView(tab))}
+                onChange={(tab) => {
+                  setCabinetNotice('');
+                  setLoginError('');
+                  if (tab === 'mixer') {
+                    openMixer(navReturnView);
+                  } else {
+                    setView(tab);
+                  }
+                }}
               />
             ) : null}
           </>
@@ -2426,6 +2801,14 @@ export const App = () => {
           onClose={() => setCatalogFiltersOpen(false)}
         />
       ) : null}
+
+      <DeleteCabinetSheet
+        open={deleteOpen && signedIn}
+        deleting={deleteStatus === 'loading'}
+        error={deleteError}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={() => void confirmDeleteCabinet()}
+      />
 
       <MixDetailModal
         state={mixModalState}
