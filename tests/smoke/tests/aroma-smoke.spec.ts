@@ -296,3 +296,27 @@ test('Aroma intro offers the returning guest to log in', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Начать подбор' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Уже были у нас\? Войти через Telegram/ })).toBeVisible();
 });
+
+// Сердечко в карточке микса (#244): у анонима оно не прячется — по нажатию
+// шторка «Избранное живёт в кабинете», «Не сейчас» закрывает только её.
+test('Aroma anonymous heart offers the cabinet and «Не сейчас» closes the prompt', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  await page.locator('.aroma-catalog-row').first().click();
+  const heart = page.getByRole('button', { name: 'В избранное' });
+  await expect(heart).toHaveAttribute('aria-pressed', 'false');
+  await heart.click();
+
+  const prompt = page.getByRole('dialog', { name: 'Избранное живёт в кабинете' });
+  await expect(prompt).toBeVisible();
+  await expect(prompt.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
+  await prompt.getByRole('button', { name: 'Не сейчас' }).click();
+  await expect(prompt).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Покурить' })).toBeVisible();
+});

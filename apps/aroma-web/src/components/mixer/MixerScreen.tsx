@@ -516,8 +516,13 @@ export function MixerScreen({
       <section className="mixer">
         <MixerMasterCard
           name={master.name}
-          tobaccos={chosenTobaccos}
-          shares={shares}
+          profiles={Array.from(new Set(chosenTobaccos.flatMap((tobacco) => tobacco.flavorProfiles))).slice(0, 3)}
+          components={chosenTobaccos.map((tobacco, index) => ({
+            id: tobacco.id,
+            manufacturer: tobacco.manufacturer,
+            name: tobacco.name,
+            proportion: shares[index],
+          }))}
           harmony={master.harmony}
           footnote={master.footnote}
           onDone={onExit}

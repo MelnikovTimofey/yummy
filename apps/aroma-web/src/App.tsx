@@ -6,12 +6,30 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { ChevronRight, KeyRound } from 'lucide-react';
 
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
-import { Cabinet } from '@/components/cabinet/Cabinet';
+import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
+import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
 import { DeleteCabinetSheet } from '@/components/cabinet/DeleteCabinetSheet';
+import { HeartButton } from '@/components/cabinet/HeartButton';
 import { LoginWait } from '@/components/cabinet/LoginWait';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
+import { MixerMasterCard, type MasterCardComponent } from '@/components/mixer/MixerMasterCard';
 import { MixerScreen } from '@/components/mixer/MixerScreen';
+import {
+  customDescription,
+  isFavorite,
+  missingTobacco,
+  smokeBlockReason,
+  withFavorite,
+  withOwnRating,
+  withoutFavorite,
+  type GuestCabinetCard,
+  type GuestCabinetItem,
+  type GuestFavoriteItem,
+  type GuestFavoritesResponse,
+  type GuestHistoryResponse,
+  type GuestMixRef,
+} from '@/lib/cabinet';
 import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst, normalizeSearchText } from '@/lib/catalog';
 import { fetchAsGuest, guestSession } from '@/lib/guest-client';
 import {
@@ -27,6 +45,7 @@ import {
   type LoginOrigin,
   type PendingLogin,
 } from '@/lib/guest-session';
+import { MixerApiError, sendCustomMixSmoke } from '@/lib/mixer/api';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
@@ -42,6 +61,7 @@ type GuestView =
   | 'catalog'
   | 'rail'
   | 'smoke-confirmation'
+  | 'custom-confirmation'
   | 'mixer'
   | 'cabinet'
   | 'login';
@@ -49,7 +69,7 @@ type AppTab = 'recommendations' | 'showcase' | 'catalog' | 'cabinet';
 type MixerReturnView = AppTab | 'rail';
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
-type MixSource = 'recommendations' | 'showcase' | 'catalog' | 'rail';
+type MixSource = 'recommendations' | 'showcase' | 'catalog' | 'rail' | CabinetListSource;
 
 type OnboardingOptions = {
   profiles: string[];
@@ -118,6 +138,7 @@ type HomeRail = {
 type SelectedMix = {
   id: string;
   source: MixSource;
+  mix: MixCard;
 };
 
 type MixRatingResult = {
@@ -129,9 +150,20 @@ type MixRatingResult = {
   message?: string;
 };
 
+// `item` — строка кабинета (#244): откуда сердечко, статус наличия и
+// собранный ли микс. `blockReason` — почему «Покурить» сейчас нельзя.
 type MixModalState = {
   mix: MixCard;
   source: MixSource;
+  item?: GuestCabinetItem;
+  blockReason?: string | null;
+};
+
+type CustomSmoke = {
+  name: string;
+  profiles: string[];
+  components: MasterCardComponent[];
+  harmony: number | null;
 };
 
 const storageKeys = {
@@ -160,6 +192,8 @@ const mixSourceLabels: Record<MixSource, string> = {
   showcase: 'Из витрины',
   catalog: 'Из каталога',
   rail: 'Из подборки',
+  history: 'Из истории',
+  favorites: 'Из избранного',
 };
 
 const railDescriptions: Record<RailType, string> = {
@@ -545,6 +579,73 @@ const saveGuestTaste = (taste: { likedProfiles: string[]; likedFlavors: string[]
 
 const deleteGuestAccount = () => requestJson<unknown>('/guest/me', { method: 'DELETE' }, 'required');
 
+// История и избранное (#244). Избранное — один раз на старте, история — при
+// открытии кабинета, на сердечко — PUT или DELETE.
+const fetchGuestHistory = (before: string | null) =>
+  requestJson<GuestHistoryResponse>(
+    `/guest/me/history${before ? `?before=${encodeURIComponent(before)}` : ''}`,
+    {},
+    'required',
+  );
+
+const fetchGuestFavorites = () => requestJson<GuestFavoritesResponse>('/guest/me/favorites', {}, 'required');
+
+// 204 без тела: requestJson вернёт null.
+const sendGuestFavorite = (ref: GuestMixRef, on: boolean) =>
+  requestJson<unknown>(
+    ref.kind === 'custom'
+      ? `/guest/me/favorites/custom/${encodeURIComponent(ref.eventId)}`
+      : `/guest/me/favorites/mixes/${encodeURIComponent(ref.mixId ?? '')}`,
+    { method: on ? 'PUT' : 'DELETE' },
+    'required',
+  );
+
+// Карточка из строки кабинета: каталожный микс «нет в наличии» не приходит в
+// каталоге гостя, собранного там нет вовсе.
+const cabinetItemToMix = (item: GuestCabinetItem, card: GuestCabinetCard): MixCard => ({
+  id: item.ref.kind === 'custom' ? item.ref.eventId : item.ref.mixId ?? '',
+  name: item.name,
+  description: item.ref.kind === 'custom' ? customDescription(card, new Date()) : card.description,
+  flavorProfiles: item.flavorProfiles,
+  flavors: card.flavors,
+  flavorTags: [],
+  avgRating: 0,
+  ratingsCount: 0,
+  popularity: 0,
+  available: item.status.kind === 'available',
+  createdAt: '',
+  components: card.components.map((component) => ({
+    id: component.tobaccoId,
+    name: component.name,
+    manufacturer: component.manufacturer,
+    flavors: [],
+    proportion: component.proportion,
+  })),
+});
+
+// Каталожный микс, открытый не из кабинета, в избранном — строка «в наличии».
+const mixToCabinetItem = (mix: MixCard): GuestCabinetItem => ({
+  ref: { kind: 'catalog', mixId: mix.id },
+  name: mix.name,
+  flavorProfiles: mix.flavorProfiles,
+  status: { kind: 'available' },
+  ownRating: null,
+  card: {
+    description: mix.description,
+    flavors: mix.flavors,
+    components: mix.components.map((component) => ({
+      tobaccoId: component.id,
+      manufacturer: component.manufacturer,
+      name: component.name,
+      proportion: component.proportion,
+    })),
+    harmony: null,
+    madeAt: null,
+  },
+});
+
+const EMPTY_HISTORY: CabinetHistory = { items: [], nextBefore: null, status: 'idle', loadingMore: false };
+
 const TELEGRAM_ERROR = 'Telegram не ответил. Попробуйте ещё раз — подбор и каталог работают и без входа.';
 const CONSENT_REQUIRED_ERROR = 'Кабинета ещё нет — отметьте согласие и войдите снова.';
 const SIGNED_IN_NOTICE = 'Вы вошли. Вкусы из онбординга сохранены в кабинете.';
@@ -637,11 +738,15 @@ const MixDetailModal = ({
   ratingStatus,
   ratingError,
   ratingMessage,
+  favorite,
+  onFavorite,
   onClose,
   onChoose,
   onRate,
 }: {
   state: MixModalState | null;
+  favorite: boolean;
+  onFavorite: () => void;
   selectedMixId: string;
   chooseStatus: 'idle' | 'loading' | 'ready' | 'error';
   chooseError: string;
@@ -661,7 +766,11 @@ const MixDetailModal = ({
     return null;
   }
 
-  const isSelected = selectedMixId === mix.id;
+  const custom = state.item?.ref.kind === 'custom';
+  const eyebrow = custom ? 'Собран вами' : source === 'history' || source === 'favorites' ? mixSourceLabels[source] : null;
+  const blockReason = state.blockReason ?? (!mix.available ? 'Этот микс сейчас недоступен по наличию.' : null);
+  const canSmoke = !blockReason;
+  const isSelected = !custom && selectedMixId === mix.id;
   const components = [...mix.components].sort(
     (left, right) => right.proportion - left.proportion,
   );
@@ -706,8 +815,10 @@ const MixDetailModal = ({
         <div className="aroma-mix-sheet-head">
           <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
           <div className="aroma-mix-sheet-head-text">
+            {eyebrow ? <p className="aroma-caps">{eyebrow}</p> : null}
             <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
           </div>
+          <HeartButton on={favorite} onClick={onFavorite} />
         </div>
 
         {mix.description ? (
@@ -766,6 +877,7 @@ const MixDetailModal = ({
           </section>
         ) : null}
 
+        {custom ? null : (
         <section className="aroma-mix-sheet-rating">
           <p className="aroma-caps">Ваша оценка</p>
           <div
@@ -795,10 +907,9 @@ const MixDetailModal = ({
           {ratingMessage ? <p className="status ok">{ratingMessage}</p> : null}
           {ratingError ? <p className="screen-status error">{ratingError}</p> : null}
         </section>
+        )}
 
-        {!mix.available ? (
-          <p className="screen-status error">Этот микс сейчас недоступен по наличию.</p>
-        ) : null}
+        {blockReason ? <p className="screen-status error">{blockReason}</p> : null}
         {chooseError ? <p className="screen-status error">{chooseError}</p> : null}
 
         <div className="aroma-mix-sheet-actions">
@@ -810,8 +921,8 @@ const MixDetailModal = ({
             Закрыть
           </button>
           <CTA
-            pulse={mix.available && !isSelected && chooseStatus !== 'loading'}
-            disabled={!mix.available || chooseStatus === 'loading' || isSelected}
+            pulse={canSmoke && !isSelected && chooseStatus !== 'loading'}
+            disabled={!canSmoke || chooseStatus === 'loading' || isSelected}
             onClick={onChoose}
           >
             {chooseStatus === 'loading'
@@ -1075,6 +1186,12 @@ export const App = () => {
   const [deleteStatus, setDeleteStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [deleteError, setDeleteError] = useState('');
   const preferencesReturnRef = useRef<'recommendations' | 'cabinet'>('recommendations');
+  // История и избранное (#244). null — избранное ещё не пришло.
+  const [history, setHistory] = useState<CabinetHistory>(EMPTY_HISTORY);
+  const [favorites, setFavorites] = useState<GuestFavoriteItem[] | null>(null);
+  const favoritesRequestedRef = useRef(false);
+  const [anonHeartOpen, setAnonHeartOpen] = useState(false);
+  const [customSmoke, setCustomSmoke] = useState<CustomSmoke | null>(null);
 
   useEffect(() => {
     if (ageConfirmed) {
@@ -1427,8 +1544,68 @@ export const App = () => {
       setMeStatus('idle');
       setCabinetNotice('');
       setCabinetError('');
+      setHistory(EMPTY_HISTORY);
+      setFavorites(null);
+      favoritesRequestedRef.current = false;
     }
   }, [signedIn]);
+
+  // Избранное — один раз на старте у вошедшего: из него сердечко на любой карточке.
+  useEffect(() => {
+    if (!accessGranted || !signedIn || favoritesRequestedRef.current) {
+      return;
+    }
+    favoritesRequestedRef.current = true;
+    fetchGuestFavorites()
+      .then((response) => setFavorites(response.items))
+      .catch(() => {
+        // Повторим при следующей смене экрана.
+        favoritesRequestedRef.current = false;
+      });
+  }, [accessGranted, signedIn, view]);
+
+  // История — при каждом открытии кабинета: после «Покурить» там новая строка.
+  useEffect(() => {
+    if (!accessGranted || !signedIn || view !== 'cabinet') {
+      return;
+    }
+    let cancelled = false;
+    setHistory((current) => ({ ...current, status: 'loading' }));
+    fetchGuestHistory(null)
+      .then((response) => {
+        if (!cancelled) setHistory({ items: response.items, nextBefore: response.nextBefore, status: 'ready', loadingMore: false });
+      })
+      .catch(() => {
+        if (!cancelled) setHistory((current) => ({ ...current, status: 'error' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessGranted, signedIn, view]);
+
+  const loadMoreHistory = async () => {
+    if (!history.nextBefore || history.loadingMore) {
+      return;
+    }
+    setHistory((current) => ({ ...current, loadingMore: true }));
+    try {
+      const response = await fetchGuestHistory(history.nextBefore);
+      setHistory((current) => ({
+        ...current,
+        items: [...current.items, ...response.items],
+        nextBefore: response.nextBefore,
+        loadingMore: false,
+      }));
+    } catch {
+      setHistory((current) => ({ ...current, loadingMore: false }));
+    }
+  };
+
+  const countPick = () => {
+    if (guestSession.token()) {
+      setMe((current) => (current ? { ...current, historyCount: current.historyCount + 1 } : current));
+    }
+  };
 
   const completeLogin = (token: string | null, nextMe: GuestMe, origin: LoginOrigin) => {
     clearPendingLogin(localStorage);
@@ -1597,14 +1774,103 @@ export const App = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessGranted, onboardingDone]);
 
-  const openMix = (mix: MixCard, source: MixSource) => {
-    setMixModalState({ mix, source });
+  const openMix = (mix: MixCard, source: MixSource, item?: GuestCabinetItem) => {
+    setMixModalState({ mix, source, item, blockReason: item ? smokeBlockReason(item.status) : null });
     setChooseStatus(selectedMix?.id === mix.id ? 'ready' : 'idle');
     setChooseError('');
     setRatingStatus('idle');
     setRatingError('');
     setRatingMessage('');
-    setRatingValue(null);
+    setRatingValue(item?.ownRating ?? null);
+  };
+
+  // Строка кабинета: микс в наличии берём из каталога, если он уже загружен.
+  const openCabinetItem = (item: GuestCabinetItem, source: CabinetListSource) => {
+    if (!item.card) {
+      return;
+    }
+    const live =
+      item.ref.kind === 'catalog' && item.ref.mixId && item.status.kind === 'available' ? findCatalogMix(item.ref.mixId) : undefined;
+    openMix(live ?? cabinetItemToMix(item, item.card), source, item);
+  };
+
+  const modalRef: GuestMixRef | null = mixModalState
+    ? mixModalState.item?.ref ?? { kind: 'catalog', mixId: mixModalState.mix.id }
+    : null;
+  const modalFavorite = Boolean(modalRef && signedIn && isFavorite(favorites, modalRef));
+
+  // Сердечко: локально сразу, на сбой — откат.
+  const toggleFavorite = async () => {
+    if (!mixModalState || !modalRef) {
+      return;
+    }
+    if (!signedIn) {
+      setAnonHeartOpen(true);
+      return;
+    }
+    const item = mixModalState.item ?? mixToCabinetItem(mixModalState.mix);
+    const on = !modalFavorite;
+    const previous = favorites ?? [];
+    setFavorites(on ? withFavorite(previous, item, new Date()) : withoutFavorite(previous, modalRef));
+    try {
+      await sendGuestFavorite(modalRef, on);
+    } catch {
+      if (guestSession.token()) setFavorites(previous);
+    }
+  };
+
+  // «Войти» из шторки сердечка — в кабинет, к согласию и входу через Telegram.
+  const loginFromHeart = () => {
+    setAnonHeartOpen(false);
+    setMixModalState(null);
+    setLoginError('');
+    setView('cabinet');
+  };
+
+  // Собранный микс из кабинета: то же событие, что «Покурить» в «Намиксуй».
+  // Сбой события не задерживает гостя — карточка мастеру открывается всё
+  // равно; 409 — табак закончился, причина остаётся на карточке.
+  const onSmokeCustom = async (item: GuestCabinetItem, card: GuestCabinetCard) => {
+    setChooseStatus('loading');
+    setChooseError('');
+    let harmony = card.harmony;
+    try {
+      const result = await sendCustomMixSmoke({
+        components: card.components.map(({ tobaccoId, proportion }) => ({ tobaccoId, proportion })),
+        name: item.name,
+        swipes: [],
+      });
+      harmony = result.harmony ?? harmony;
+      countPick();
+    } catch (cause) {
+      if (cause instanceof MixerApiError && cause.status === 409) {
+        const missing = missingTobacco(card, cause.tobaccoId);
+        setChooseStatus('idle');
+        setMixModalState((current) =>
+          current && {
+            ...current,
+            blockReason: missing
+              ? smokeBlockReason({ kind: 'unavailable', missing })
+              : 'Один из табаков только что закончился. Покурить этот микс сегодня не получится.',
+          },
+        );
+        return;
+      }
+    }
+    setChooseStatus('idle');
+    setMixModalState(null);
+    setCustomSmoke({
+      name: item.name,
+      profiles: item.flavorProfiles.slice(0, 3),
+      components: card.components.map((component) => ({
+        id: component.tobaccoId,
+        manufacturer: component.manufacturer,
+        name: component.name,
+        proportion: component.proportion,
+      })),
+      harmony,
+    });
+    setView('custom-confirmation');
   };
 
   const openMixer = (from: MixerReturnView) => {
@@ -1623,9 +1889,11 @@ export const App = () => {
 
     try {
       await sendSmokeCta(mix.id);
+      countPick();
       setSelectedMix({
         id: mix.id,
         source,
+        mix,
       });
       setChooseStatus('ready');
       setMixModalState(null);
@@ -1650,6 +1918,8 @@ export const App = () => {
     try {
       const result = await sendMixRating(mixModalState.mix.id, value);
       syncMixEverywhere(mixModalState.mix.id, (mix) => applyGuestRating(mix, result));
+      setHistory((current) => ({ ...current, items: withOwnRating(current.items, mixModalState.mix.id, result.value) }));
+      setFavorites((current) => current && withOwnRating(current, mixModalState.mix.id, result.value));
       setRatingStatus('ready');
       setRatingMessage(result.message ?? `Оценка ${result.value} сохранена.`);
     } catch (cause) {
@@ -1697,7 +1967,7 @@ export const App = () => {
           ...recommendations,
           ...catalogSourceMixes,
           ...showcaseRails.flatMap((rail) => rail.mixes),
-        ] as MixCard[]).find((mix) => mix.id === selectedMix.id) ?? null
+        ] as MixCard[]).find((mix) => mix.id === selectedMix.id) ?? selectedMix.mix
       : null;
 
   const renderBrand = () => (
@@ -1756,7 +2026,7 @@ export const App = () => {
       return null;
     }
 
-    if (view === 'smoke-confirmation' || view === 'mixer') {
+    if (view === 'smoke-confirmation' || view === 'custom-confirmation' || view === 'mixer') {
       return null;
     }
 
@@ -2368,6 +2638,8 @@ export const App = () => {
     }
 
     const mix = selectedMixCard;
+    const doneView: GuestView =
+      selectedMix?.source === 'history' || selectedMix?.source === 'favorites' ? 'cabinet' : 'recommendations';
     const components = [...mix.components].sort(
       (left, right) => right.proportion - left.proportion,
     );
@@ -2379,7 +2651,7 @@ export const App = () => {
           <button
             type="button"
             className="aroma-smoke-confirmation-done"
-            onClick={() => setView('recommendations')}
+            onClick={() => setView(doneView)}
           >
             Готово
           </button>
@@ -2421,7 +2693,7 @@ export const App = () => {
         <button
           type="button"
           className="aroma-mix-sheet-ghost aroma-smoke-confirmation-rate"
-          onClick={() => setView('recommendations')}
+          onClick={() => setView(doneView)}
         >
           Оценить, когда соберут
         </button>
@@ -2690,6 +2962,11 @@ export const App = () => {
         loading={meStatus === 'loading'}
         error={cabinetError}
         notice={cabinetNotice}
+        history={history}
+        favorites={favorites}
+        onOpen={openCabinetItem}
+        onMoreHistory={() => void loadMoreHistory()}
+        onGoRecs={() => setView('recommendations')}
         onEditTastes={() => openPreferencesEditing('cabinet')}
         onLogout={logout}
         onDelete={() => {
@@ -2736,6 +3013,17 @@ export const App = () => {
           renderAccessView()
         ) : view === 'smoke-confirmation' ? (
           renderSmokeConfirmationView()
+        ) : view === 'custom-confirmation' && customSmoke ? (
+          <section className="mixer">
+            <MixerMasterCard
+              name={customSmoke.name}
+              profiles={customSmoke.profiles}
+              components={customSmoke.components}
+              harmony={customSmoke.harmony}
+              footnote={null}
+              onDone={() => setView('cabinet')}
+            />
+          </section>
         ) : view === 'mixer' ? (
           <MixerScreen
             likedProfiles={likedProfiles}
@@ -2812,6 +3100,8 @@ export const App = () => {
 
       <MixDetailModal
         state={mixModalState}
+        favorite={modalFavorite}
+        onFavorite={() => void toggleFavorite()}
         selectedMixId={selectedMix?.id ?? ''}
         chooseStatus={chooseStatus}
         chooseError={chooseError}
@@ -2821,12 +3111,17 @@ export const App = () => {
         ratingMessage={ratingMessage}
         onClose={() => setMixModalState(null)}
         onChoose={() => {
-          if (mixModalState) {
+          const item = mixModalState?.item;
+          if (item?.ref.kind === 'custom' && item.card) {
+            void onSmokeCustom(item, item.card);
+          } else if (mixModalState) {
             void onChooseMix(mixModalState.mix, mixModalState.source);
           }
         }}
         onRate={(value) => void onSaveRating(value)}
       />
+
+      <AnonFavoriteSheet open={anonHeartOpen && !signedIn} onClose={() => setAnonHeartOpen(false)} onLogin={loginFromHeart} />
     </div>
   );
 };

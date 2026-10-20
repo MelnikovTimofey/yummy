@@ -1,25 +1,27 @@
 import { ProfileGlyph, SignatureBar } from '@/components/aroma';
-import type { PaletteTobacco } from '@/lib/mixer/types';
 import { ROLE_LABELS } from './ProportionSplit';
+import './mixer.css';
+
+export type MasterCardComponent = { id: string; manufacturer: string; name: string; proportion: number };
 
 // Карточка для мастера после «Покурить» — в той же подаче, что у миксов
-// каталога, плюс пометка «Собран гостем».
+// каталога, плюс пометка «Собран гостем». Её же открывает собранный микс из
+// кабинета (#244). Компоненты — в порядке чаши: основа, акцент, штрих.
 export function MixerMasterCard({
   name,
-  tobaccos,
-  shares,
+  profiles,
+  components,
   harmony,
   footnote,
   onDone,
 }: {
   name: string;
-  tobaccos: PaletteTobacco[];
-  shares: number[];
+  profiles: string[];
+  components: MasterCardComponent[];
   harmony: number | null;
   footnote: string | null;
   onDone: () => void;
 }) {
-  const profiles = Array.from(new Set(tobaccos.flatMap((tobacco) => tobacco.flavorProfiles))).slice(0, 3);
 
   return (
     <section className="aroma-smoke-confirmation mixer-master-card">
@@ -44,15 +46,15 @@ export function MixerMasterCard({
       <section className="aroma-smoke-confirmation-composition">
         <p className="aroma-caps">Состав</p>
         <ul className="aroma-smoke-confirmation-comp-list">
-          {tobaccos.map((tobacco, index) => (
-            <li key={tobacco.id} className="aroma-smoke-confirmation-comp-row">
+          {components.map((component, index) => (
+            <li key={component.id} className="aroma-smoke-confirmation-comp-row">
               <div className="aroma-smoke-confirmation-comp-text">
-                <span className="aroma-smoke-confirmation-comp-name">{tobacco.name}</span>
+                <span className="aroma-smoke-confirmation-comp-name">{component.name}</span>
                 <span className="aroma-caps aroma-smoke-confirmation-comp-maker">
-                  {`${tobacco.manufacturer} · ${ROLE_LABELS[index]}`}
+                  {`${component.manufacturer} · ${ROLE_LABELS[index]}`}
                 </span>
               </div>
-              <span className="aroma-smoke-confirmation-comp-share">{`${shares[index]}%`}</span>
+              <span className="aroma-smoke-confirmation-comp-share">{`${component.proportion}%`}</span>
             </li>
           ))}
         </ul>
