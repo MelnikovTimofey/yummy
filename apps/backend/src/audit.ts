@@ -9,9 +9,30 @@ export type AuditEntityType =
   | 'telegram-recipient'
   | 'mix'
   | 'rail'
-  | 'inventory';
+  | 'inventory'
+  | 'shelf'
+  | 'pack';
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'toggle' | 'archive';
+const AUDIT_ACTIONS = [
+  'create',
+  'update',
+  'delete',
+  'toggle',
+  'archive',
+  // Полка (src/shelf.ts).
+  'mark-empty',
+  'undo-empty',
+  'mark',
+  'open',
+  'add-pack',
+  'write-off',
+  'stop',
+  'add',
+  'remove',
+  'settings',
+] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export type AuditEventView = {
   id: string;
@@ -42,14 +63,11 @@ const isAuditEntityType = (value: string): value is AuditEntityType =>
   || value === 'telegram-recipient'
   || value === 'mix'
   || value === 'rail'
-  || value === 'inventory';
+  || value === 'inventory'
+  || value === 'shelf'
+  || value === 'pack';
 
-const isAuditAction = (value: string): value is AuditAction =>
-  value === 'create'
-  || value === 'update'
-  || value === 'delete'
-  || value === 'toggle'
-  || value === 'archive';
+const isAuditAction = (value: string): value is AuditAction => (AUDIT_ACTIONS as readonly string[]).includes(value);
 
 const parseDetails = (value: string | null) => {
   if (!value) {

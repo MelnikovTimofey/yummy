@@ -3,6 +3,7 @@ import type { Tobacco } from './catalog';
 import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
 import { createSecretHash } from './auth';
+import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -1461,6 +1462,14 @@ const wipeStorage = async (tx: StorageTx) => {
   await tx.mixComponent.deleteMany();
   await tx.rail.deleteMany();
   await tx.mix.deleteMany();
+  await tx.packMark.deleteMany();
+  await tx.pack.deleteMany();
+  await tx.shelfItem.deleteMany();
+  await tx.shelfSettings.deleteMany();
+  await tx.deliveryLine.deleteMany();
+  await tx.delivery.deleteMany();
+  await tx.supplierItem.deleteMany();
+  await tx.supplier.deleteMany();
   await tx.tobacco.deleteMany();
   await tx.introCard.deleteMany();
   await tx.dailyAccessCode.deleteMany();
@@ -1619,6 +1628,7 @@ const resetStorageWithSeedCatalog = async () => {
     await wipeStorage(tx);
     await insertOperationalState(tx, currentCodeWindow);
     await insertSeedCatalog(tx);
+    await startShelfFromStock(tx, new Date());
   });
 };
 
@@ -1856,24 +1866,30 @@ export const createTobacco = async (payload: Partial<TobaccoInput>) => {
   }
 
   const id = await nextTobaccoId(manufacturer, lineName, name);
+  const archived = typeof payload.archived === 'boolean' ? payload.archived : false;
 
-  await prisma.tobacco.create({
-    data: {
-      id,
-      manufacturer,
-      lineName,
-      name,
-      description: normalizeOptionalText(payload.description),
-      country: normalizeOptionalText(payload.country),
-      officialStrength: normalizeOptionalText(payload.officialStrength),
-      communityStrength: normalizeOptionalText(payload.communityStrength),
-      productionStatus: normalizeOptionalText(payload.productionStatus),
-      flavorProfiles: serializeList(normalizeTextList(payload.flavorProfiles)),
-      flavors: serializeList(normalizeTextList(payload.flavors)),
-      flavorTags: serializeList(normalizeTextList(payload.flavorTags)),
-      inStock: typeof payload.inStock === 'boolean' ? payload.inStock : true,
-      archived: typeof payload.archived === 'boolean' ? payload.archived : false,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.tobacco.create({
+      data: {
+        id,
+        manufacturer,
+        lineName,
+        name,
+        description: normalizeOptionalText(payload.description),
+        country: normalizeOptionalText(payload.country),
+        officialStrength: normalizeOptionalText(payload.officialStrength),
+        communityStrength: normalizeOptionalText(payload.communityStrength),
+        productionStatus: normalizeOptionalText(payload.productionStatus),
+        flavorProfiles: serializeList(normalizeTextList(payload.flavorProfiles)),
+        flavors: serializeList(normalizeTextList(payload.flavors)),
+        flavorTags: serializeList(normalizeTextList(payload.flavorTags)),
+        inStock: false,
+        archived,
+      },
+    });
+    if (payload.inStock !== false && !archived) {
+      await setStockedLegacy(tx, [id], true, new Date());
+    }
   });
 
   return (
@@ -1901,12 +1917,6 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
   }
 
   const nextArchived = typeof payload.archived === 'boolean' ? payload.archived : current.archived;
-  // Архивация всегда снимает табак с наличия; снятие из архива наличие не возвращает.
-  const nextInStock = nextArchived
-    ? false
-    : typeof payload.inStock === 'boolean'
-      ? payload.inStock
-      : current.inStock;
 
   const duplicate = await prisma.tobacco.findFirst({
     where: {
@@ -1926,35 +1936,43 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
     return { error: 'Такой табак уже существует в каталоге' };
   }
 
-  await prisma.tobacco.update({
-    where: { id },
-    data: {
-      manufacturer,
-      lineName,
-      name,
-      description: typeof payload.description === 'string' ? normalizeOptionalText(payload.description) : current.description,
-      country: typeof payload.country === 'string' ? normalizeOptionalText(payload.country) : current.country,
-      officialStrength: typeof payload.officialStrength === 'string'
-        ? normalizeOptionalText(payload.officialStrength)
-        : current.officialStrength,
-      communityStrength: typeof payload.communityStrength === 'string'
-        ? normalizeOptionalText(payload.communityStrength)
-        : current.communityStrength,
-      productionStatus: typeof payload.productionStatus === 'string'
-        ? normalizeOptionalText(payload.productionStatus)
-        : current.productionStatus,
-      flavorProfiles: Array.isArray(payload.flavorProfiles)
-        ? serializeList(normalizeTextList(payload.flavorProfiles))
-        : current.flavorProfiles,
-      flavors: Array.isArray(payload.flavors)
-        ? serializeList(normalizeTextList(payload.flavors))
-        : current.flavors,
-      flavorTags: Array.isArray(payload.flavorTags)
-        ? serializeList(normalizeTextList(payload.flavorTags))
-        : current.flavorTags,
-      inStock: nextInStock,
-      archived: nextArchived,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.tobacco.update({
+      where: { id },
+      data: {
+        manufacturer,
+        lineName,
+        name,
+        description: typeof payload.description === 'string' ? normalizeOptionalText(payload.description) : current.description,
+        country: typeof payload.country === 'string' ? normalizeOptionalText(payload.country) : current.country,
+        officialStrength: typeof payload.officialStrength === 'string'
+          ? normalizeOptionalText(payload.officialStrength)
+          : current.officialStrength,
+        communityStrength: typeof payload.communityStrength === 'string'
+          ? normalizeOptionalText(payload.communityStrength)
+          : current.communityStrength,
+        productionStatus: typeof payload.productionStatus === 'string'
+          ? normalizeOptionalText(payload.productionStatus)
+          : current.productionStatus,
+        flavorProfiles: Array.isArray(payload.flavorProfiles)
+          ? serializeList(normalizeTextList(payload.flavorProfiles))
+          : current.flavorProfiles,
+        flavors: Array.isArray(payload.flavors)
+          ? serializeList(normalizeTextList(payload.flavors))
+          : current.flavors,
+        flavorTags: Array.isArray(payload.flavorTags)
+          ? serializeList(normalizeTextList(payload.flavorTags))
+          : current.flavorTags,
+        archived: nextArchived,
+      },
+    });
+    // Наличие пишет только полка: архив снимает его через syncAvailability,
+    // а тумблер старого экрана переводится в банки.
+    if (typeof payload.inStock === 'boolean' && payload.inStock !== current.inStock && !nextArchived) {
+      await setStockedLegacy(tx, [id], payload.inStock, new Date());
+    } else {
+      await syncAvailability(tx, [id]);
+    }
   });
 
   return (
@@ -1973,10 +1991,9 @@ export const updateTobaccoInStock = async (id: string, inStock: boolean) => {
     return null;
   }
 
-  await prisma.tobacco.update({
-    where: { id },
-    data: { inStock },
-  });
+  if (current.inStock !== inStock) {
+    await prisma.$transaction((tx) => setStockedLegacy(tx, [id], inStock, new Date()));
+  }
 
   return (await getInventoryTobaccos({ archived: 'all' })).items.find((item) => item.id === id) ?? null;
 };
@@ -1998,15 +2015,6 @@ export const batchUpdateTobacco = async (
     };
   }
 
-  // Архивация всегда снимает с наличия; снятие из архива наличие не возвращает.
-  const data =
-    action === 'set-in-stock'
-      ? { inStock: true }
-      : action === 'set-out-of-stock'
-        ? { inStock: false }
-        : action === 'archive'
-          ? { archived: true, inStock: false }
-          : { archived: false };
   const currentItems = await prisma.tobacco.findMany({
     where: {
       id: {
@@ -2017,13 +2025,18 @@ export const batchUpdateTobacco = async (
   const currentIds = currentItems.map((item) => item.id);
   const skippedIds = normalizedIds.filter((id) => !currentIds.includes(id));
 
-  await prisma.tobacco.updateMany({
-    where: {
-      id: {
-        in: currentIds,
-      },
-    },
-    data,
+  await prisma.$transaction(async (tx) => {
+    if (action === 'set-in-stock' || action === 'set-out-of-stock') {
+      const inStock = action === 'set-in-stock';
+      const changed = currentItems.filter((item) => item.inStock !== inStock).map((item) => item.id);
+      await setStockedLegacy(tx, changed, inStock, new Date());
+      return;
+    }
+    await tx.tobacco.updateMany({
+      where: { id: { in: currentIds } },
+      data: { archived: action === 'archive' },
+    });
+    await syncAvailability(tx, currentIds);
   });
 
   const refreshed = await getInventoryTobaccos({

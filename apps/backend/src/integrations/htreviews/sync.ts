@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { prisma } from '../../db';
+import { setStockedLegacy } from '../../shelf';
 import { fetchHtReviewsCatalogSnapshot } from './catalog';
 import { brandUrlFromTobaccoUrl, lineUrlFromTobaccoUrl } from './parser';
 import type { HtReviewsImportOptions, HtReviewsImportedTobacco } from './types';
@@ -90,7 +91,8 @@ const toStableId = (item: HtReviewsImportedTobacco) => {
 
 const serializeList = (items: string[]) => JSON.stringify(items);
 
-const buildUpsertData = (item: HtReviewsImportedTobacco, inStock: boolean) => ({
+// Наличие (inStock) синхронизация не трогает: его пишет только полка.
+const buildUpsertData = (item: HtReviewsImportedTobacco) => ({
   manufacturer: item.manufacturer,
   lineName: item.lineName ?? '',
   name: item.name,
@@ -109,7 +111,6 @@ const buildUpsertData = (item: HtReviewsImportedTobacco, inStock: boolean) => ({
   flavorProfiles: serializeList(item.taxonomyCandidate.flavorProfiles),
   flavors: serializeList(item.taxonomyCandidate.flavors),
   flavorTags: serializeList(item.taxonomyCandidate.flavorTags),
-  inStock,
 });
 
 type HtReviewsStats = Pick<HtReviewsImportedTobacco, 'rating' | 'ratingsCount' | 'reviewsCount' | 'viewsCount'>;
@@ -213,18 +214,25 @@ export const syncHtReviewsCatalog = async (
           id: existing.id,
         },
         data: {
-          ...buildUpsertData(item, existing.inStock),
+          ...buildUpsertData(item),
           ...buildStatsData(item, new Date()),
         },
       });
       updated += 1;
     } else {
-      await prisma.tobacco.create({
-        data: {
-          id: toStableId(item),
-          ...buildUpsertData(item, defaultInStock),
-          ...buildStatsData(item, new Date()),
-        },
+      const id = toStableId(item);
+      await prisma.$transaction(async (tx) => {
+        await tx.tobacco.create({
+          data: {
+            id,
+            ...buildUpsertData(item),
+            ...buildStatsData(item, new Date()),
+            inStock: false,
+          },
+        });
+        if (defaultInStock) {
+          await setStockedLegacy(tx, [id], true, new Date());
+        }
       });
       created += 1;
     }
