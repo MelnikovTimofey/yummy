@@ -266,7 +266,7 @@ export const findSimilarMix = (
   return best;
 };
 
-const loadMixer = async () => {
+export const loadMixer = async () => {
   const mixes = await getAvailableMixCatalog();
   // Сродство и счётчики строим по всем опубликованным миксам, а не только по
   // тем, что сейчас в наличии: знание мастера о сочетаниях от склада не зависит.
