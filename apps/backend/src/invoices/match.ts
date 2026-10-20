@@ -18,6 +18,7 @@ const PHONETIC_MATCH = 0.9;
 const STEM_MATCH = 0.8;
 const MIN_STEM = 5;
 const MIN_PHONETIC_KEY = 2;
+const MIN_COMPOUND_KEY = 4;
 // Без бренда из каталога тот же вкус бывает у любого производителя — уверенность не выше половины.
 const NO_BRAND_FACTOR = 0.5;
 
@@ -172,7 +173,20 @@ const similarity = (left: string[], right: string[]) => {
   const used = new Set<number>();
   const strict = matchTokens(left, right, used, tokenSimilarity);
   const rest = strict.matched ? matchTokens(strict.unmatched, right, used, shortTokenSimilarity).matched : 0;
-  return (2 * (strict.matched + rest)) / (left.length + right.length);
+  return Math.max((2 * (strict.matched + rest)) / (left.length + right.length), compoundSimilarity(left, right));
+};
+
+// Слитное и раздельное написание: «Бабл Гам» ~ «Баблгам», «Black Berry» ~ «Blackberry».
+const compoundSimilarity = (left: string[], right: string[]) => {
+  if (left.length === right.length) {
+    return 0;
+  }
+  const [a, b] = [left.join(''), right.join('')];
+  if (a === b) {
+    return 1;
+  }
+  const key = phoneticKey(a);
+  return key.length >= MIN_COMPOUND_KEY && key === phoneticKey(b) ? PHONETIC_MATCH : 0;
 };
 
 const findInMemory = (line: { article?: string; name: string }, memory: SupplierMemoryItem[]) => {

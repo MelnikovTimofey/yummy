@@ -81,6 +81,25 @@ test('matchLine keeps a leading vowel and ignores one-consonant words in transli
   assert.equal(matchLine({ name: 'Black Burn 200г Айс Эппл' }, tricky)[0]?.tobaccoId, 'ice-apple');
 });
 
+test('matchLine matches a flavor written in one word on one side and in two on the other', () => {
+  const compound: CatalogTobacco[] = [
+    { id: 'sarma-bubblegum', manufacturer: 'Сарма', lineName: 'Классическая', name: 'Баблгам' },
+    { id: 'sarma-raspberry', manufacturer: 'Сарма', lineName: 'Классическая', name: 'Лесная малина' },
+    { id: 'bb-bubble-gum', manufacturer: 'Black Burn', lineName: null, name: 'Bubble Gum' },
+    { id: 'bb-blackberry', manufacturer: 'Black Burn', lineName: null, name: 'Blackberry' },
+  ];
+  const sarma = matchLine({ name: 'Табак для кальяна Сарма 25г Бабл Гам' }, compound)[0];
+  assert.equal(sarma?.tobaccoId, 'sarma-bubblegum');
+  assert.ok(sarma.confidence >= CONFIDENT_MATCH, `Бабл Гам: ${sarma.confidence}`);
+
+  const blackBurn = matchLine({ name: 'Табак для кальяна Black Burn 200г Баблгам' }, compound)[0];
+  assert.equal(blackBurn?.tobaccoId, 'bb-bubble-gum');
+  assert.ok(blackBurn.confidence >= CONFIDENT_MATCH, `Баблгам: ${blackBurn.confidence}`);
+
+  const blackBerry = matchLine({ name: 'Табак для кальяна Black Burn 200г Black Berry' }, compound)[0];
+  assert.equal(blackBerry?.tobaccoId, 'bb-blackberry');
+});
+
 test('matchLine counts a one-consonant word only next to a matched longer word', () => {
   const short: CatalogTobacco[] = [
     { id: 'pink-me', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Pink Me' },
