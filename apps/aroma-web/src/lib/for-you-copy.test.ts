@@ -57,9 +57,8 @@ test('«Шаг в сторону»: сродство профилей по об�
 });
 
 test('нейтральный «Шаг в сторону» не выдумывает сродства', () => {
-  const text = reasonText({ kind: 'sidestep-neutral', toProfile: 'spicy' });
-  assert.equal(text, 'Попробуйте что-то другое — пряное');
-  assert.doesNotMatch(text, /Мастера/);
+  // Без названия профиля — решение владельца 2026-10-20.
+  assert.equal(reasonText({ kind: 'sidestep-neutral', toProfile: 'spicy' }), 'Попробуйте что-то другое');
   assert.equal(reasonText({ kind: 'sidestep-neutral', toProfile: '' }), 'Попробуйте что-то другое');
 });
 
