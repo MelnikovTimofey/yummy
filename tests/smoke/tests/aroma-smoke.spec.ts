@@ -346,6 +346,36 @@ test('Aroma anonymous recommendations stay without «Для вас»', async ({ 
   expect(forYouRequests).toEqual([]);
 });
 
+// Ошибки backend гостю — только по-русски (#267): служебный `error` ответа на
+// экран не попадает, а сбой «Покурить» у героя виден на экране подбора.
+test('Aroma guest sees Russian errors instead of backend messages', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill('0000');
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await expect(page.getByText('Код не подошёл. Уточните его у мастера зала.')).toBeVisible();
+  await expect(page.getByText('Invalid access code')).toHaveCount(0);
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.locator('.aroma-onboarding-profile-grid button').first().click();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('button', { name: 'Показать подбор' }).click();
+
+  const heroSmoke = page.locator('.aroma-recs-hero').getByRole('button', { name: 'Покурить' });
+  await expect(page.getByRole('button', { name: /Изменить вкусы|Открыть предпочтения/ })).toBeVisible();
+  test.skip((await heroSmoke.count()) === 0, 'подбор пуст — нет героя с «Покурить»');
+
+  await page.route('**/guest/events/smoke-cta', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Mix not found' }) }),
+  );
+  await heroSmoke.click();
+  await expect(page.getByText('Этот микс сейчас недоступен по наличию.')).toBeVisible();
+  await expect(page.getByText('Mix not found')).toHaveCount(0);
+});
+
 // «Рилсы» (#263): третий пункт панели — лента миксов со снапом «один жест — один
 // рилс». Колесо переводит на следующий рилс; «Покурить» — то же событие и тот же
 // экран «Покажите мастеру», «Готово» возвращает на тот же рилс.

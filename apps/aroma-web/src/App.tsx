@@ -60,6 +60,7 @@ import {
   type PendingLogin,
 } from '@/lib/guest-session';
 import { MixerApiError, sendCustomMixSmoke } from '@/lib/mixer/api';
+import { RequestError, guestErrorText } from '@/lib/request-error';
 import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
@@ -213,6 +214,12 @@ const readStoredStringArray = (key: string): string[] => {
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3021';
 const requestTimeoutMs = 8000;
 
+const mixUnavailableText = 'Этот микс сейчас недоступен по наличию.';
+const noTasteText = 'Выберите хотя бы один профиль или вкус.';
+// 404 на smoke-cta и оценке — микс сняли с наличия, пока гость смотрел карточку.
+const mixGoneError = { 404: mixUnavailableText };
+const noTasteError = { 400: noTasteText };
+
 const mixSourceLabels: Record<MixSource, string> = {
   recommendations: 'Подбор для вас',
   mood: 'Под настроение',
@@ -307,14 +314,6 @@ const extractCollection = (payload: unknown, keys: string[]) => {
   }
 
   return [];
-};
-
-const extractErrorMessage = (payload: unknown, fallback: string) => {
-  if (isRecord(payload) && typeof payload.error === 'string' && payload.error.trim()) {
-    return payload.error;
-  }
-
-  return fallback;
 };
 
 const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().replace('.', ',')}%`;
@@ -433,15 +432,6 @@ const normalizeRail = (item: unknown, index: number): HomeRail => {
   };
 };
 
-class RequestError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
-
 // `auth` — запрос с токеном кабинета (#243): `optional` — гостевое событие, на
 // 401 токен стирается и запрос повторяется анонимно; `required` — /guest/me*,
 // на 401 гость выходит из кабинета.
@@ -465,17 +455,17 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, auth?: '
     // Без таймаута недоступный хост держит запрос до системного TCP-таймаута (~75 секунд).
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
     throw new RequestError(
+      0,
       timedOut
         ? 'Ателье не ответило вовремя. Попробуйте ещё раз.'
         : 'Нет связи с Ателье. Попробуйте ещё раз.',
-      0,
     );
   }
 
   const payload = (await response.json().catch(() => null)) as unknown;
 
   if (!response.ok) {
-    throw new RequestError(extractErrorMessage(payload, 'Не получилось. Попробуйте ещё раз.'), response.status);
+    throw new RequestError(response.status);
   }
 
   return payload as T;
@@ -831,7 +821,7 @@ const MixDetailModal = ({
     : source === 'history' || source === 'favorites' || source === 'reels'
       ? mixSourceLabels[source]
       : null;
-  const blockReason = state.blockReason ?? (!mix.available ? 'Этот микс сейчас недоступен по наличию.' : null);
+  const blockReason = state.blockReason ?? (!mix.available ? mixUnavailableText : null);
   const canSmoke = !blockReason;
   const isSelected = !custom && selectedMixId === mix.id;
   const components = [...mix.components].sort(
@@ -1343,7 +1333,7 @@ export const App = () => {
       setIntroStatus('ready');
     } catch (cause) {
       setIntroStatus('error');
-      setIntroError(cause instanceof Error ? cause.message : 'Не удалось загрузить знакомство');
+      setIntroError(guestErrorText(cause));
     }
   };
 
@@ -1361,7 +1351,7 @@ export const App = () => {
       setOptionsStatus('ready');
     } catch (cause) {
       setOptionsStatus('error');
-      setOptionsError(cause instanceof Error ? cause.message : 'Не удалось загрузить варианты вкусов');
+      setOptionsError(guestErrorText(cause));
     }
   };
 
@@ -1375,7 +1365,7 @@ export const App = () => {
       setShowcaseStatus('ready');
     } catch (cause) {
       setShowcaseStatus('error');
-      setShowcaseError(cause instanceof Error ? cause.message : 'Не удалось загрузить витрину');
+      setShowcaseError(guestErrorText(cause));
     }
   };
 
@@ -1397,7 +1387,7 @@ export const App = () => {
         return;
       }
       setCatalogStatus('error');
-      setCatalogError(cause instanceof Error ? cause.message : 'Не удалось загрузить каталог');
+      setCatalogError(guestErrorText(cause));
     }
   };
 
@@ -1524,7 +1514,7 @@ export const App = () => {
       setAccessStatus('success');
     } catch (cause) {
       setAccessStatus('error');
-      setAccessError(cause instanceof Error ? cause.message : 'Не удалось проверить код доступа.');
+      setAccessError(guestErrorText(cause, { 401: 'Код не подошёл. Уточните его у мастера зала.' }));
     }
   };
 
@@ -1542,7 +1532,7 @@ export const App = () => {
       return true;
     } catch (cause) {
       setRecommendationStatus('error');
-      setRecommendationError(cause instanceof Error ? cause.message : 'Не удалось собрать рекомендации.');
+      setRecommendationError(guestErrorText(cause, noTasteError));
       return false;
     }
   };
@@ -1552,7 +1542,7 @@ export const App = () => {
       ? { likedProfiles: moodDraft.profiles, likedFlavors: moodDraft.flavors }
       : { likedProfiles, likedFlavors };
     if (!taste.likedProfiles.length && !taste.likedFlavors.length) {
-      setSubmitError('Выберите хотя бы один профиль или вкус.');
+      setSubmitError(noTasteText);
       return;
     }
 
@@ -1576,7 +1566,7 @@ export const App = () => {
         }
       }
     } catch (cause) {
-      setSubmitError(cause instanceof Error ? cause.message : 'Не удалось собрать рекомендации.');
+      setSubmitError(guestErrorText(cause, noTasteError));
       return;
     } finally {
       setSubmitting(false);
@@ -1606,7 +1596,7 @@ export const App = () => {
       return data;
     } catch (cause) {
       if (forYouRequestRef.current === requestId) {
-        setForYou((current) => ({ ...current, status: 'error', error: friendlyError(cause) }));
+        setForYou((current) => ({ ...current, status: 'error', error: guestErrorText(cause) }));
       }
       throw cause;
     }
@@ -1626,15 +1616,12 @@ export const App = () => {
 
   // ── Кабинет гостя (#243) ──
 
-  const friendlyError = (cause: unknown) =>
-    cause instanceof RequestError && cause.status === 0 ? cause.message : 'Не получилось. Попробуйте ещё раз.';
-
   const saveTasteToCabinet = async (taste: { likedProfiles: string[]; likedFlavors: string[] }) => {
     try {
       setMe(await saveGuestTaste(taste));
       setCabinetError('');
     } catch (cause) {
-      if (guestSession.token()) setCabinetError(friendlyError(cause));
+      if (guestSession.token()) setCabinetError(guestErrorText(cause));
     }
   };
 
@@ -1646,7 +1633,7 @@ export const App = () => {
       setMeStatus('ready');
     } catch (cause) {
       setMeStatus('error');
-      if (guestSession.token()) setCabinetError(friendlyError(cause));
+      if (guestSession.token()) setCabinetError(guestErrorText(cause));
     }
   };
 
@@ -1923,7 +1910,7 @@ export const App = () => {
       // 401 — учётки уже нет, гость и так вышел.
       if (guestSession.token()) {
         setDeleteStatus('error');
-        setDeleteError(friendlyError(cause));
+        setDeleteError(guestErrorText(cause));
         return;
       }
     }
@@ -2082,7 +2069,7 @@ export const App = () => {
         return;
       }
       setChooseStatus('error');
-      setChooseError(cause instanceof Error ? cause.message : 'Не получилось отметить выбор. Попробуйте ещё раз.');
+      setChooseError(guestErrorText(cause, mixGoneError));
     }
   };
 
@@ -2117,7 +2104,7 @@ export const App = () => {
       });
       setReels((current) => (current.loadId === loadId ? { status: 'ready', items, error: '', loadId } : current));
     } catch (cause) {
-      setReels((current) => (current.loadId === loadId ? { ...current, status: 'error', error: friendlyError(cause) } : current));
+      setReels((current) => (current.loadId === loadId ? { ...current, status: 'error', error: guestErrorText(cause) } : current));
     }
   };
 
@@ -2132,7 +2119,7 @@ export const App = () => {
         setGoneReels((current) => [...current, mix.id]);
         setReelChoice(null);
       } else {
-        setReelChoice({ mixId: mix.id, status: 'error', error: friendlyError(cause) });
+        setReelChoice({ mixId: mix.id, status: 'error', error: guestErrorText(cause) });
       }
       return;
     }
@@ -2163,7 +2150,7 @@ export const App = () => {
       setRatingMessage(result.message ?? `Оценка ${result.value} сохранена.`);
     } catch (cause) {
       setRatingStatus('error');
-      setRatingError(cause instanceof Error ? cause.message : 'Не удалось сохранить оценку.');
+      setRatingError(guestErrorText(cause, mixGoneError));
     }
   };
 
@@ -3423,6 +3410,9 @@ export const App = () => {
               {view === 'onboarding' ? renderOnboardingView() : null}
               {view === 'recommendations' && stripItems.length ? (
                 <ReelStrip items={stripItems.map((entry) => entry.mix)} onOpen={(index) => void openReels(index)} />
+              ) : null}
+              {view === 'recommendations' && chooseError && !mixModalState ? (
+                <p className="screen-status error">{chooseError}</p>
               ) : null}
               {view === 'recommendations' ? renderRecommendationsView() : null}
               {view === 'showcase' ? renderShowcaseView() : null}
