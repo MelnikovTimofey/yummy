@@ -54,7 +54,7 @@ const buildRemoveKeyboardMarkup = () => ({
   remove_keyboard: true,
 });
 
-const normalizeCommandText = (text: string) => {
+export const normalizeCommandText = (text: string) => {
   const trimmed = text.trim();
   if (!trimmed.startsWith('/')) {
     return null;

@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { BotConfig } from './config';
 import { BOT_COMMANDS, TelegramBot } from './bot';
 import type { BackendClient } from './backend';
 import type { JsonStateStore } from './storage';
 import type { TelegramClient } from './telegram';
 
-const buildConfig = () => ({
+const buildConfig = (): BotConfig => ({
+  mode: 'staff',
   telegramBotToken: 'bot-token',
   telegramApiBaseUrl: 'https://api.telegram.org',
   backendUrl: 'https://backend.example',
@@ -14,6 +16,7 @@ const buildConfig = () => ({
   updateTimeoutSeconds: 25,
   broadcastHour: 9,
   broadcastMinute: 0,
+  guestLoginReturnUrl: '',
 });
 
 const buildBot = (setMyCommands: (commands: typeof BOT_COMMANDS) => Promise<unknown>) => {

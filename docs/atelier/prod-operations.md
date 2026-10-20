@@ -16,14 +16,14 @@
 | SSH | порт **49222**, только по ключу, `root` |
 | Каталог проекта | `/opt/atelier` (клон репо, `.env` с правами 600) |
 | Compose-файл | `docker-compose.prod.yml` (всегда с `--env-file .env`) |
-| Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot`, `proxy` (Caddy) |
+| Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot` (staff-бот кода смены), `telegram-guest-bot` (бот входа гостей в кабинет), `proxy` (Caddy) |
 | База данных | сервис `db` в том же compose, наружу не публикуется, volume `atelier_pg` |
 | Бэкапы | ежечасный `pg_dump` (:30 UTC) → `/opt/atelier/backups` (часовые 24 ч, дневные 14 дней) + S3 TimeWeb `ru-1`: `hourly/` (48 шт.), `daily/` (дамп 03:30 UTC, 30 шт.); проверка восстановления пн 04:00 UTC; cron `/etc/cron.d/atelier-pg-backup`, лог `/var/log/atelier-backup.log` |
 | Каталог табаков | синхронизация с htreviews.org: ночью 23:35 UTC вс–пт — бренды того, что есть в точке, сб 23:35 UTC — полный прогон; cron `/etc/cron.d/atelier-htreviews-sync`, лог `/var/log/atelier-htreviews-sync.log` (§6) |
 | Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
 | TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |
 | Firewall | ufw: `49222`, `80`, `443` |
-| Telegram | бот ходит в `api.telegram.org` через сервис `telegram-tunnel` → `lampa@186.246.25.8:37023` (Франкфурт); ключ `secrets/telegram-tunnel/`, на удалённой стороне ограничен `permitopen="api.telegram.org:443"` |
+| Telegram | оба бота ходят в `api.telegram.org` через сервис `telegram-tunnel` → `lampa@186.246.25.8:37023` (Франкфурт); ключ `secrets/telegram-tunnel/`, на удалённой стороне ограничен `permitopen="api.telegram.org:443"` |
 
 ```bash
 ssh -p 49222 root@201.24.60.80
@@ -115,6 +115,9 @@ scripts/atelier/deploy.sh telegram-bot
   зависимостей. Если вместе с сервисом изменилась и его зависимость (например,
   бот и backend) — перечислить обе: `deploy.sh backend telegram-bot`, или
   выкатить весь контур.
+- **Оба бота — один образ** `atelier-telegram-bot`, но теги у сервисов свои
+  (`ATELIER_TAG_TELEGRAM_BOT`, `ATELIER_TAG_TELEGRAM_GUEST_BOT`). Изменился код
+  `services/telegram-bot` — выкатывать оба: `deploy.sh telegram-bot telegram-guest-bot`.
 - **Миграции схемы** накатываются автоматически при рестарте backend
   (`prisma migrate deploy`). Перед рискованной миграцией — снять снэпшот БД (см. §6).
 - **Смена `PUBLIC_API_URL`/домена**: URL зашивается в бандлы фронтов при сборке в
@@ -219,6 +222,29 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
 > деактивированы. При развёртывании на новую пустую БД — сделать bootstrap
 > `admin` **до** запуска `proxy`.
 
+### Бот входа гостей (`telegram-guest-bot`)
+Отдельный бот `@aroma_atelier_client_bot` (токен `ATELIER_GUEST_LOGIN_BOT_TOKEN`
+в `.env`) — тот же образ, что staff-бот, в режиме `ATELIER_BOT_MODE=guest-login`.
+Гость жмёт на сайте «Войти через Telegram», в приложении Telegram — «Запустить»;
+бот подтверждает код входа (`POST /automation/guest-login/confirm`) и отвечает
+одним сообщением с кнопкой «Вернуться в Ателье». Staff-команд, кода смены,
+рассылок и heartbeat у него нет: `host-check.sh` следит за ним только как за
+запущенным сервисом compose, свежесть heartbeat — это staff-бот.
+
+Проверка после выкатки:
+1. `dc logs --tail=20 telegram-guest-bot` — строка `[guest-login-bot] started`, без
+   `poll error`.
+2. Написать боту `/start` без кода (с любого аккаунта) — придёт справка «Это бот
+   входа в кабинет Арома Ателье. Войти можно кнопкой «Войти через Telegram» на
+   сайте заведения.»
+3. Сквозной вход — с сайта, когда там появится кнопка (#243): «Войти через
+   Telegram» → «Запустить» → сообщение «Готово — вернитесь в Ателье.», в логах
+   `guest login confirmed: HTTP 200`.
+
+В логах бота нет имени, username, текста сообщений и кода входа — только факт
+подтверждения и HTTP-код backend (`200`, `404`/`410` — ссылка устарела, прочее —
+сбой). Постоянные `HTTP 401` — разъехался `ATELIER_AUTOMATION_KEY`.
+
 ### Создание/сброс staff-аккаунта
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env run --rm \
@@ -270,7 +296,7 @@ DEPLOY_TAG=<sha> scripts/atelier/deploy.sh telegram-bot  # один сервис
 | Симптом | Причина / решение |
 |---|---|
 | `backend` не стартует, `P1000 auth failed` | `POSTGRES_PASSWORD` в `.env` не совпадает с паролем, с которым volume `atelier_pg` инициализирован; проверить `docker compose ... exec db psql -U atelier -d atelier` |
-| `telegram-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ, в nsk-1 нет IPv6 — бот работает через `telegram-tunnel`. Проверить `ps` и `logs telegram-tunnel` (упал SSH до Франкфурта / сменился его host key → обновить `secrets/telegram-tunnel/known_hosts`) |
+| `telegram-bot` / `telegram-guest-bot` `getUpdates ETIMEDOUT` | IPv4 до Telegram заблокирован в РФ, в nsk-1 нет IPv6 — бот работает через `telegram-tunnel`. Проверить `ps` и `logs telegram-tunnel` (упал SSH до Франкфурта / сменился его host key → обновить `secrets/telegram-tunnel/known_hosts`) |
 | фронт отдаёт `403 Blocked request ... host not allowed` | домен не в `ATELIER_ALLOWED_HOSTS`; проверить `AROMA_DOMAIN`/`MASTER_DOMAIN` в `.env`, пересобрать фронт |
 | Caddy не выпускает TLS | DNS не указывает на `201.24.60.80`, либо `80`/`443` недоступны снаружи; логи `proxy` |
 | внешний доступ «висит» (рукопожатие ок, данных нет) | провайдерская inbound-фильтрация на IP; крайняя мера — сменить публичный IP |

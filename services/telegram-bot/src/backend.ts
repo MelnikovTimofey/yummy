@@ -102,4 +102,19 @@ export class BackendClient {
   async reportTelegramAutomationState(payload: TelegramAutomationReportPayload) {
     return this.postBodyJson<AutomationTelegramStateResponse>('/automation/telegram/state/report', payload);
   }
+
+  // Ответ гостю зависит только от HTTP-кода (200 / 404–410 / прочее), поэтому
+  // код и возвращаем; тело ответа с ошибкой не читаем и не логируем.
+  async confirmGuestLogin(payload: { code: string; telegramId: string }) {
+    const response = await fetch(`${this.config.backendUrl}/automation/guest-login/confirm`, {
+      method: 'POST',
+      headers: {
+        ...this.headers(),
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    await response.body?.cancel();
+    return response.status;
+  }
 }

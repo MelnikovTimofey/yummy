@@ -90,6 +90,25 @@
 | `ATELIER_DAILY_BROADCAST_HOUR` | час ежедневного `ensure` current code |
 | `ATELIER_DAILY_BROADCAST_MINUTE` | минута ежедневного `ensure` current code |
 | `ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS` | long-poll timeout |
+| `ATELIER_BOT_MODE` | режим образа: `staff` (по умолчанию) — бот кода смены; `guest-login` — бот входа гостей. Иное значение — бот не стартует |
+
+### Бот входа гостей (`telegram-guest-bot`, #266)
+
+Тот же образ в режиме `ATELIER_BOT_MODE=guest-login`: только подтверждение кода
+входа по `/start <код>`. Staff-команд, allowlist, кода смены, рассылок и отчётов
+состояния нет; state-файл не нужен (`ATELIER_BOT_STATE_PATH` и
+`ATELIER_DAILY_BROADCAST_*` не читаются).
+
+| Переменная | Назначение | В `docker-compose.prod.yml` |
+|---|---|---|
+| `ATELIER_BOT_MODE` | `guest-login` | задан в compose |
+| `TELEGRAM_BOT_TOKEN` | токен бота входа гостей (`@aroma_atelier_client_bot`), не staff-бота | из `ATELIER_GUEST_LOGIN_BOT_TOKEN` в `.env` |
+| `ATELIER_BACKEND_URL` | base URL backend | `http://backend:3021` |
+| `ATELIER_BACKEND_AUTOMATION_TOKEN` | тот же ключ, что у staff-бота | из `ATELIER_AUTOMATION_KEY` |
+| `ATELIER_GUEST_LOGIN_RETURN_URL` | адрес кнопки «Вернуться в Ателье» | `https://${AROMA_DOMAIN}` |
+| `ATELIER_TELEGRAM_API_BASE_URL`, `ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS` | как у staff-бота | по умолчанию |
+
+До Telegram — тем же путём, что staff-бот (`telegram-tunnel` в сети контура).
 
 ### Туннель до Telegram (хосты без IPv6)
 
@@ -115,7 +134,7 @@
 
 | Переменная | Назначение | Пример |
 |---|---|---|
-| `ATELIER_TAG_BACKEND`, `ATELIER_TAG_AROMA_WEB`, `ATELIER_TAG_MASTER_WEB`, `ATELIER_TAG_TELEGRAM_BOT`, `ATELIER_TAG_TELEGRAM_TUNNEL` | выкаченный тег образа сервиса в `ghcr.io/melnikovtimofey/atelier-<сервис>` (SHA коммита) | `4037385b…` |
+| `ATELIER_TAG_BACKEND`, `ATELIER_TAG_AROMA_WEB`, `ATELIER_TAG_MASTER_WEB`, `ATELIER_TAG_TELEGRAM_BOT`, `ATELIER_TAG_TELEGRAM_GUEST_BOT`, `ATELIER_TAG_TELEGRAM_TUNNEL` | выкаченный тег образа сервиса в `ghcr.io/melnikovtimofey/atelier-<сервис>` (SHA коммита); у `telegram-guest-bot` образ `atelier-telegram-bot` | `4037385b…` |
 
 ## 5a. Бэкап БД в S3 (прод-хост)
 
@@ -169,7 +188,7 @@
 
 1. `TELEGRAM_BOT_TOKEN`
 2. `ATELIER_GUEST_LOGIN_BOT_TOKEN` — бот входа гостей (#266), отдельный от staff-бота
-2. `ATELIER_BACKEND_AUTOMATION_TOKEN`
+3. `ATELIER_BACKEND_AUTOMATION_TOKEN`
 
 ### Бэкап БД
 
@@ -198,3 +217,5 @@
    - `ATELIER_BACKEND_URL`
    - `ATELIER_BACKEND_AUTOMATION_TOKEN`
    - `ATELIER_BOT_STATE_PATH`
+4. бот входа гостей:
+   - `ATELIER_GUEST_LOGIN_BOT_TOKEN` (compose без него не стартует)

@@ -23,7 +23,7 @@ tag_var() {
 }
 
 # db и proxy на публичных образах — их не тянем, чтобы не обновить postgres/caddy заодно.
-OWN_SERVICES=(backend aroma-web master-web telegram-bot telegram-tunnel)
+OWN_SERVICES=(backend aroma-web master-web telegram-bot telegram-guest-bot telegram-tunnel)
 
 git pull --ff-only -q origin main
 tag="${DEPLOY_TAG:-$(git rev-parse HEAD)}"
