@@ -327,15 +327,39 @@ function CabinetAnon({ error, onLogin }) {
   );
 }
 
-function TelegramStub({ onConfirm, onCancel }) {
+// Ожидание входа (#239, #243): сайт открыл чат с ботом и опрашивает статус кода.
+// Внизу — имитация ответа бота для мокапа; в приложении её нет.
+function LoginWait({ expired: initialExpired = false, onConfirmed, onRestart, onCancel }) {
+  const [expired, setExpired] = React.useState(initialExpired);
   return (
-    <section className="tg-stub">
-      <div className="tg-stub-box">
-        <p className="aroma-caps">Экран Telegram</p>
-        <p className="tg-stub-text">Здесь открывается Telegram: окно входа в браузере или приложение. Гость подтверждает вход на сайт заведения. Экран не наш — в мокапе заглушка.</p>
+    <section className="cab-anon cab-wait">
+      <ProfileGlyph profiles={['berry', 'citrus', 'minty']} size={72} />
+      <p className="aroma-caps">Вход через Telegram</p>
+      {expired ? (
+        <>
+          <h1 className="cab-anon-title">Ссылка устарела</h1>
+          <p className="cab-anon-note">Ссылка для входа живёт 10 минут. Начнём заново?</p>
+          <div className="cab-anon-form">
+            <AromaCTA onClick={() => { setExpired(false); onRestart(); }}>Войти через Telegram</AromaCTA>
+            <button type="button" className="aroma-skip" onClick={onCancel}>Отмена</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <h1 className="cab-anon-title">Подтвердите вход в Telegram</h1>
+          <p className="cab-wait-text">Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить» — эта страница войдёт сама.</p>
+          <p className="cab-wait-status" role="status"><span className="cab-wait-dot" aria-hidden />Ждём подтверждения…</p>
+          <div className="cab-anon-form">
+            <button type="button" className="aroma-ghost" onClick={() => {}}>Открыть Telegram ещё раз</button>
+            <button type="button" className="aroma-skip" onClick={onCancel}>Отмена</button>
+          </div>
+        </>
+      )}
+      <div className="tg-stub-box cab-wait-sim">
+        <p className="aroma-caps">Только в мокапе — ответ бота</p>
         <div className="tg-stub-actions">
-          <button type="button" className="aroma-ghost-sm" onClick={onCancel}>Отменить</button>
-          <button type="button" className="aroma-ghost-sm" onClick={onConfirm}>Подтвердить</button>
+          <button type="button" className="aroma-ghost-sm" onClick={onConfirmed}>Бот подтвердил</button>
+          <button type="button" className="aroma-ghost-sm" onClick={() => setExpired(true)}>Прошло 10 минут</button>
         </div>
       </div>
     </section>
@@ -573,7 +597,16 @@ function GuestPhone({ view: initialView = 'recs', logged: initialLogged = true, 
 
   let body;
   if (view === 'intro') body = <IntroReturning onLogin={login} onNext={() => setView('recs')} />;
-  else if (view === 'tg') body = <TelegramStub onConfirm={afterLogin} onCancel={() => setView('cabinet')} />;
+  else if (view === 'tg' || view === 'tg-expired') {
+    body = (
+      <>
+        <Topbar />
+        <main className="content">
+          <LoginWait expired={view === 'tg-expired'} onConfirmed={afterLogin} onRestart={() => setView('tg')} onCancel={() => setView('cabinet')} />
+        </main>
+      </>
+    );
+  }
   else if (view === 'confirm') body = <window.ConfirmationScreen mix={chosen} onDone={() => setView(logged ? 'cabinet' : 'recs')} />;
   else if (view === 'mixer') body = <StubScreen title="Миксер" text="«Намиксуй» не меняется. Собранный микс после «Покурить» попадает в историю вошедшего гостя." />;
   else {
@@ -641,7 +674,8 @@ const SHOTS = [
   { id: 'fy-mood', group: 'foryou', name: 'Под настроение · онбординг', note: '«Подобрать под настроение» под заголовком «Для вас». Обычный онбординг, сверху — что это только на этот визит.', props: { view: 'mood' } },
   { id: 'fy-mood-result', group: 'foryou', name: 'Под настроение · подбор', note: 'Подбор по онбордингу этого визита. «Для вас» и вкусы в кабинете не изменились, назад — одной ссылкой.', props: { view: 'mood-result', mood: ['citrus'] } },
   { id: 'cab-anon', group: 'cabinet', name: 'Кабинет без входа', note: 'Зачем входить, согласие и «Войти через Telegram». CTA неактивна, пока нет согласия.', props: { view: 'cabinet', logged: false } },
-  { id: 'cab-tg', group: 'cabinet', name: 'Вход: экран Telegram', note: 'Окно Telegram — не наше. После подтверждения гость возвращается туда, откуда пришёл.', props: { view: 'tg', logged: false } },
+  { id: 'cab-tg', group: 'cabinet', name: 'Вход: ждём подтверждения', note: 'Сайт открыл чат с ботом в Telegram и опрашивает статус. После «Запустить» в боте страница входит сама.', props: { view: 'tg', logged: false } },
+  { id: 'cab-tg-expired', group: 'cabinet', name: 'Вход: ссылка устарела', note: 'Код входа живёт 10 минут. Начать заново — одной кнопкой.', props: { view: 'tg-expired', logged: false } },
   { id: 'cab-tg-error', group: 'cabinet', name: 'Telegram не ответил', note: 'Ошибка одной фразой: что случилось и что работает без входа.', props: { view: 'cabinet', logged: false, tgError: true } },
   { id: 'cab-history', group: 'cabinet', name: 'История', note: 'Каждое нажатие «Покурить» по датам. Ваша оценка справа. Собранный микс помечен, удалённый мастером — «Больше не готовим».', props: { view: 'cabinet', toast: 'Вы вошли. Вкусы из онбординга сохранены в кабинете.' } },
   { id: 'cab-favorites', group: 'cabinet', name: 'Избранное', note: 'Каталожные и собранные миксы. Нет табака — пометка, удалён — «Больше не готовим». Длинное название в две строки.', props: { view: 'cabinet', cabTab: 'favorites' } },
