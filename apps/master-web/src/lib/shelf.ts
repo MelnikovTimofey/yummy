@@ -306,7 +306,7 @@ const PACK_STATE_TITLE: Record<ShelfPack['state'], string> = {
 
 export const packTitle = (pack: ShelfPack, index: number) => `${PACK_STATE_TITLE[pack.state]} · банка ${index}`;
 
-const fractionLabel = (fraction: number) =>
+export const fractionLabel = (fraction: number) =>
   fraction >= 0.99 ? '1' : MARK_OPTIONS.find((option) => Math.abs(option.value - fraction) < 0.01)?.label ?? decimal.format(fraction);
 
 const packSource = (pack: ShelfPack) => {
