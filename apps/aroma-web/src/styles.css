@@ -2870,8 +2870,13 @@ select:focus-visible {
 }
 
 .reel-empty-mark {
+  box-sizing: border-box;
   width: 56px;
-  height: auto;
+  height: 56px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  background: var(--bg-raised);
+  object-fit: contain;
 }
 
 .reels-status {
