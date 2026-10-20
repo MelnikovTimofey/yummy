@@ -2,7 +2,10 @@
 // Профили у миксов прода раздуты (4–8 штук) и не упорядочены по силе, поэтому сцена
 // берётся из flavors; профили — запасной путь, flavorTags не используются.
 
-export type SceneMotif = 'frost' | 'bloom' | 'juicy' | 'berry' | 'warm' | 'smoke';
+// general — общая сцена, когда ни один вкус не узнан (решение владельца 2026-10-20).
+export type SceneMotif = 'frost' | 'bloom' | 'juicy' | 'berry' | 'warm' | 'smoke' | 'general';
+
+type FlavorMotif = Exclude<SceneMotif, 'general'>;
 
 /** c1/c2 — id профилей: цвет сцены и цвет фигур второго мотива. */
 export type ReelSceneSpec = { primary: SceneMotif; secondary: SceneMotif | null; c1: string; c2: string };
@@ -11,7 +14,7 @@ type Motif = { profile: string; alt: string; words: string[] };
 
 // Словарь пополняется по мере появления новых вкусов в каталоге. Совпадение — по подстроке.
 // Порядок ключей важен: при полном равенстве побеждает мотив выше.
-const MOTIFS: Record<SceneMotif, Motif> = {
+const MOTIFS: Record<FlavorMotif, Motif> = {
   frost: { profile: 'minty', alt: 'fresh', words: ['холодок', 'мята', 'ментол', 'лёд', 'лед', 'ледян'] },
   bloom: {
     profile: 'floral_herbal',
@@ -45,26 +48,11 @@ const MOTIFS: Record<SceneMotif, Motif> = {
 const CITRUS = ['лимон', 'лайм', 'грейпфрут', 'апельсин', 'мандарин', 'бергамот'];
 const SPICE = ['корица', 'кардамон', 'перец', 'кашмир'];
 
-const PROFILE_TO_MOTIF: Record<string, SceneMotif> = {
-  minty: 'frost',
-  fresh: 'frost',
-  floral_herbal: 'bloom',
-  perfume: 'bloom',
-  citrus: 'juicy',
-  fruity: 'juicy',
-  sour: 'juicy',
-  berry: 'berry',
-  dessert: 'warm',
-  sweet: 'warm',
-  spicy: 'warm',
-  tobacco: 'smoke',
-};
-
 const countHits = (flavors: string[], words: string[]) => flavors.filter((flavor) => words.some((word) => flavor.includes(word))).length;
 
 export function pickScene(mix: { flavors: string[]; flavorProfiles: string[] }): ReelSceneSpec {
   const flavors = mix.flavors.map((flavor) => flavor.toLowerCase());
-  const scored = (Object.keys(MOTIFS) as SceneMotif[])
+  const scored = (Object.keys(MOTIFS) as FlavorMotif[])
     .map((id) => {
       const first = flavors.findIndex((flavor) => MOTIFS[id].words.some((word) => flavor.includes(word)));
       return { id, count: countHits(flavors, MOTIFS[id].words), first };
@@ -73,18 +61,17 @@ export function pickScene(mix: { flavors: string[]; flavorProfiles: string[] }):
     // Холод перебивает всё: самое яркое ощущение, и это пример клиента.
     .sort((a, b) => Number(b.id === 'frost') - Number(a.id === 'frost') || b.count - a.count || a.first - b.first);
 
-  const colorOf = (id: SceneMotif) => {
+  const colorOf = (id: FlavorMotif) => {
     if (id === 'juicy') return countHits(flavors, CITRUS) > 0 ? 'citrus' : 'fruity';
     if (id === 'warm') return countHits(flavors, SPICE) >= countHits(flavors, MOTIFS.warm.words) / 2 ? 'spicy' : 'dessert';
     return MOTIFS[id].profile;
   };
 
   if (scored.length === 0) {
-    const profile = mix.flavorProfiles[0];
-    const primary = (profile && PROFILE_TO_MOTIF[profile]) || 'smoke';
-    // Вкусов не узнали — сцена и её цвет по первому профилю.
-    const c1 = profile && PROFILE_TO_MOTIF[profile] ? profile : MOTIFS[primary].profile;
-    return { primary, secondary: null, c1, c2: MOTIFS[primary].alt };
+    // Мотив вкуса по одному профилю не угадываем: профили у миксов раздуты и не
+    // упорядочены. Неизвестный или пустой профиль — запасной цвет getProfileColor.
+    const profile = mix.flavorProfiles[0] ?? '';
+    return { primary: 'general', secondary: null, c1: profile, c2: profile };
   }
 
   const primary = scored[0].id;

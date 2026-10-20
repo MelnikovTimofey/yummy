@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react';
 import { getProfileColor } from '@/lib/profile-color';
 import type { ReelSceneSpec, SceneMotif } from '@/lib/reel-scene';
 
-// Общее для шести сцен стиля B (design/design_handoff_reels — «Мотивы стиля B»).
+// Общее для сцен стиля B (design/design_handoff_reels — «Мотивы стиля B»).
 // Сцена — чистая функция кадра: всё считается из frame и шума по seed, без Remotion,
 // поэтому тот же код рисует и Player, и статичный кадр.
 
@@ -86,6 +86,7 @@ const SHAPES: Record<SceneMotif, ReactNode> = {
   warm: <path d="M0 8V-8" strokeWidth={1.4} strokeLinecap="round" />,
   // Струя 40×120 с центром в (0, 0); рисуется снизу вверх через dashoffset.
   smoke: null,
+  general: <circle r={10} strokeWidth={1.2} />,
 };
 
 // ── Движение. y — в процентах высоты сцены, dx — в px, как сдвиги мокапа. ──
@@ -130,6 +131,14 @@ const MOTION: Record<SceneMotif, (t: number, p: Particle) => Pose> = {
     opacity: keys(t, [[0, 0], [0.25, 0.75], [1, 0]]),
     draw: 1 - 2 * t,
   }),
+  // Кольца поднимаются, расходятся и тают — без намёка на конкретный вкус.
+  general: (t, p) => ({
+    x: p.dx * 0.3 * Math.sin(2 * Math.PI * t),
+    y: -48 * easeInOut(t),
+    rotate: 0,
+    scale: 0.6 + 0.9 * t,
+    opacity: keys(t, [[0, 0], [0.2, 0.8], [1, 0]]),
+  }),
 };
 
 // Числа — из PARTICLES доски: n — фигур у главного мотива, nSecondary — у второго (треть).
@@ -140,6 +149,7 @@ const PARTICLES: Record<SceneMotif, { n: number; nSecondary: number; size: [numb
   berry: { n: 16, nSecondary: 3, size: [16, 24], y: [10, 60] },
   warm: { n: 26, nSecondary: 9, size: [12, 18], y: [85, 105] },
   smoke: { n: 7, nSecondary: 3, size: [30, 44], y: [70, 100] },
+  general: { n: 14, nSecondary: 0, size: [16, 30], y: [40, 100] },
 };
 
 function makeParticles(motif: SceneMotif, rand: () => number, count: number): Particle[] {

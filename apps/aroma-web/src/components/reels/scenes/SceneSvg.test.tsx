@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReelSceneSpec, SceneMotif } from '@/lib/reel-scene';
 import { SCENE_FRAMES, SceneSvg } from './SceneSvg';
 
-const MOTIFS: SceneMotif[] = ['frost', 'bloom', 'juicy', 'berry', 'warm', 'smoke'];
+const MOTIFS: SceneMotif[] = ['frost', 'bloom', 'juicy', 'berry', 'warm', 'smoke', 'general'];
 const spec = (primary: SceneMotif): ReelSceneSpec => ({ primary, secondary: 'smoke', c1: 'minty', c2: 'tobacco' });
 const render = (primary: SceneMotif, frame: number, seed = 'mix-catalog-hit-03') =>
   renderToStaticMarkup(<SceneSvg spec={spec(primary)} seed={seed} frame={frame} />);
