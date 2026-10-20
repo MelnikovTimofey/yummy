@@ -153,6 +153,22 @@ export const lineUrlFromTobaccoUrl = (tobaccoUrl: string): string | null => {
   return `${url.origin}/tobaccos/${brand}/${line}`;
 };
 
+export const brandUrlFromTobaccoUrl = (tobaccoUrl: string): string | null => {
+  let url: URL;
+  try {
+    url = new URL(tobaccoUrl);
+  } catch {
+    return null;
+  }
+
+  const [root, brand] = url.pathname.split('/').filter(Boolean);
+  if (root !== 'tobaccos' || !brand || RESERVED_TOBACCO_PATHS.has(brand)) {
+    return null;
+  }
+
+  return `${url.origin}/tobaccos/${brand}`;
+};
+
 export const extractCatalogEntryUrls = (html: string, baseUrl: string) => {
   const brandUrls = new Set<string>();
   const lineUrls = new Set<string>();
