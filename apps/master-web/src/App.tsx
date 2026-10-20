@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ShoppingCart } from 'lucide-react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
@@ -9,7 +10,8 @@ import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
 import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
-import { ShelfView } from '@/components/shelf/shelf-view';
+import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
+import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
 import { DeliveriesView } from '@/components/deliveries/deliveries-view';
 import { useStaffAccounts } from '@/hooks/use-staff-accounts';
@@ -26,6 +28,8 @@ import { CommandPalette, type CommandPaletteItem } from '@/components/shell/comm
 import { RailEditor } from '@/components/rails/rail-editor';
 import { RailsView } from '@/components/rails/rails-view';
 import { MasterTopBar } from '@/components/shell/topbar';
+import { MobileNav, MobileTopBar } from '@/components/shell/mobile-shell';
+import { mobileTitleFor } from '@/components/shell/mobile-nav';
 import {
   getWorkspacePanelId,
   getWorkspaceTabId,
@@ -146,6 +150,12 @@ export const App = () => {
   const [user, setUser] = useState<StaffUser | null>(null);
   const cmdK = useCmdK(user !== null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
+  const isPhone = useIsPhone();
+  const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
+  // Вернулись на полку — снова полка, а не «К заказу» (как до выноса режима в App).
+  useEffect(() => {
+    if (activeTab !== 'shelf') setShelfMode('shelf');
+  }, [activeTab]);
 
   const onAfterAccessSubmit = () => setActiveTab('access');
   const dailyCode = useDailyCode();
@@ -927,6 +937,8 @@ export const App = () => {
   const renderShelf = () => (
     <ShelfView
       shelf={shelf}
+      mode={shelfMode}
+      onModeChange={setShelfMode}
       onGoCatalog={() => setActiveTab('catalog')}
       onOpenInCatalog={(row) => {
         setCatalogView('all');
@@ -1173,25 +1185,57 @@ export const App = () => {
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
-        <MasterTopBar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          userName={user.name}
-          userRoleLabel={formatRoleLabel(user.role)}
-          onSignOut={onSignOut}
-          onOpenCommandPalette={() => cmdK.setOpen(true)}
-        />
+        {isPhone ? (
+          <MobileTopBar
+            title={mobileTitleFor(activeTab, shelfMode)}
+            action={
+              activeTab === 'shelf' ? (
+                <button
+                  type="button"
+                  className="icon-btn m-topbar__action"
+                  aria-label="К заказу"
+                  aria-pressed={shelfMode === 'reorder'}
+                  onClick={() => setShelfMode(shelfMode === 'reorder' ? 'shelf' : 'reorder')}
+                >
+                  <ShoppingCart size={18} strokeWidth={1.8} aria-hidden />
+                </button>
+              ) : null
+            }
+          />
+        ) : (
+          <MasterTopBar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            userName={user.name}
+            userRoleLabel={formatRoleLabel(user.role)}
+            onSignOut={onSignOut}
+            onOpenCommandPalette={() => cmdK.setOpen(true)}
+          />
+        )}
 
         <section className="master-stage">
           <div
             className="master-stage__panel"
             id={getWorkspacePanelId(activeTab)}
-            role="tabpanel"
-            aria-labelledby={getWorkspaceTabId(activeTab)}
+            role={isPhone ? undefined : 'tabpanel'}
+            aria-labelledby={isPhone ? undefined : getWorkspaceTabId(activeTab)}
           >
             {renderActiveWorkspace()}
           </div>
         </section>
+
+        {isPhone ? (
+          <MobileNav
+            activeTab={activeTab}
+            onTabChange={(tab) => {
+              if (tab === 'shelf') setShelfMode('shelf');
+              setActiveTab(tab);
+            }}
+            userName={user.name}
+            userRoleLabel={formatRoleLabel(user.role)}
+            onSignOut={onSignOut}
+          />
+        ) : null}
 
         <CommandPalette open={cmdK.open} onOpenChange={cmdK.setOpen} items={commandPaletteItems} />
       </main>

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Ellipsis, FileUp, Search } from 'lucide-react';
+import { Ellipsis, FileUp, Search, SlidersHorizontal } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import { formatCount, formatMetricValue, type ShelfRow } from '@/contracts';
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
+import { useIsPhone } from '@/hooks/use-is-phone';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { SHELF_MOBILE_CHIPS, defaultMobileShelfStatus, shelfMobileSummary } from '@/lib/shelf-mobile';
 import {
   EMPTY_SHELF_FILTERS,
   MARK_OPTIONS,
@@ -30,14 +33,20 @@ import { ShelfCard } from './shelf-card';
 import { ShelfFilterPanel } from './shelf-filter-panel';
 import { countReorder } from '@/lib/reorder';
 import { ShelfHeadMenu } from './shelf-head-menu';
+import { ShelfMarkSheet, ShelfMobileList } from './shelf-mobile';
 import { ShelfPips } from './shelf-pips';
 import { ShelfReorder } from './shelf-reorder';
 import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
 import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 
+export type ShelfMode = 'shelf' | 'reorder';
+
 type ShelfViewProps = {
   shelf: ShelfApi;
+  // Режим живёт в App: на телефоне «К заказу» включается из верхней панели.
+  mode: ShelfMode;
+  onModeChange: (mode: ShelfMode) => void;
   onGoCatalog: () => void;
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
@@ -58,13 +67,20 @@ const markLabel = (fraction: number) => MARK_OPTIONS.find((option) => option.val
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 
-export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUploadInvoice, openCardId, onCardOpened }: ShelfViewProps) => {
+export const ShelfView = ({ shelf, mode, onModeChange, onGoCatalog, onOpenInCatalog, onOpenMix, onUploadInvoice, openCardId, onCardOpened }: ShelfViewProps) => {
   const { view } = shelf;
   const rows = view?.rows ?? [];
   const settings = view?.settings ?? { bowlGrams: 18, leadDays: 7 };
 
+  const isPhone = useIsPhone();
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<ShelfStatusKey>('all');
+  // На телефоне полку открывают у стойки — сразу то, что заканчивается.
+  const phoneDefaulted = useRef(false);
+  const [status, setStatus] = useState<ShelfStatusKey>(() => {
+    if (!isPhone || !view) return 'all';
+    phoneDefaulted.current = true;
+    return defaultMobileShelfStatus(view.counters);
+  });
   const [filters, setFilters] = useState<ShelfFilters>(EMPTY_SHELF_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState<ShelfSortKey>('until');
@@ -73,7 +89,7 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
   const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement } | null>(null);
   const [pendingId, setPendingId] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
-  const [mode, setMode] = useState<'shelf' | 'reorder'>('shelf');
+  const [sheetId, setSheetId] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const toastSeq = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -102,12 +118,18 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
   );
 
   useEffect(() => {
+    if (!isPhone || !view || phoneDefaulted.current) return;
+    phoneDefaulted.current = true;
+    setStatus(defaultMobileShelfStatus(view.counters));
+  }, [isPhone, view]);
+
+  useEffect(() => {
     if (!openCardId || !rows.some((row) => row.tobacco.id === openCardId)) return;
-    setMode('shelf');
+    onModeChange('shelf');
     setActiveId(openCardId);
     setCardId(openCardId);
     onCardOpened?.();
-  }, [openCardId, rows, onCardOpened]);
+  }, [openCardId, rows, onCardOpened, onModeChange]);
 
   const reorderCount = countReorder(shelf.reorder);
   const headMenu = <ShelfHeadMenu onSettings={() => setSettingsOpen(true)} />;
@@ -121,6 +143,7 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
   );
   const menuRow = menu ? rows.find((row) => row.tobacco.id === menu.id) ?? null : null;
   const cardRow = cardId ? rows.find((row) => row.tobacco.id === cardId) ?? null : null;
+  const sheetRow = sheetId ? rows.find((row) => row.tobacco.id === sheetId) ?? null : null;
   const activeFilters = countActiveShelfFilters(filters);
 
   const notify = useCallback((next: Omit<Toast, 'id'>) => {
@@ -335,7 +358,144 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
     );
   }
 
-  const counters = view?.counters;
+  const cardSheet = cardRow ? (
+    <ShelfCard
+      row={cardRow}
+      settings={settings}
+      loadCard={shelf.loadCard}
+      onEmpty={(row) => void onEmpty(row)}
+      onMark={(row, fraction) => void onMark(row, fraction)}
+      onUndoEmpty={(row, packId) => void onUndoEmpty(row, packId)}
+      onUpdate={onUpdate}
+      onOpenCatalog={(row) => {
+        setCardId('');
+        onOpenInCatalog(row);
+      }}
+      onOpenMix={(mixId) => {
+        setCardId('');
+        onOpenMix(mixId);
+      }}
+      onClose={() => setCardId('')}
+    />
+  ) : null;
+  const toastNode = toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null;
+  const statusChip = ([key, label]: [ShelfStatusKey, string]) => (
+    <button
+      key={key}
+      type="button"
+      className={`filter-chip${status === key ? ' filter-chip--active' : ''}`}
+      aria-pressed={status === key}
+      onClick={() => setStatus(key)}
+    >
+      <span>{label}</span>
+      <span className="filter-chip__count">{formatMetricValue(view?.counters[key] ?? 0)}</span>
+    </button>
+  );
+
+  // Телефон (#215, #shot=shelf-mobile): карточки вместо таблицы, фильтры и
+  // отметка остатка — в нижних шторках. Заголовок раздела — в верхней панели.
+  if (isPhone) {
+    return (
+      <section className="shelf-page shelf-page--phone">
+        <h1 className="sr-only">Полка</h1>
+        {shelf.status === 'error' ? <p className="error-text">{shelf.error}</p> : null}
+        {shelf.status === 'loading' && !view ? <p className="meta-line">Загружаем полку…</p> : null}
+
+        {view && mode === 'reorder' ? <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} /> : null}
+
+        {view && mode === 'shelf' ? (
+          <>
+            <div className="m-shelf-search">
+              <div className="input m-shelf-search__field">
+                <Search size={16} aria-hidden />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  enterKeyHint="search"
+                  aria-label="Поиск по полке"
+                  placeholder="Табак или бренд"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="m-shelf-search__filters"
+                aria-label={activeFilters ? `Фильтры и сортировка · выбрано ${activeFilters}` : 'Фильтры и сортировка'}
+                aria-expanded={filtersOpen}
+                data-active={activeFilters > 0}
+                onClick={() => setFiltersOpen(true)}
+              >
+                <SlidersHorizontal size={18} aria-hidden />
+                {activeFilters ? <span className="m-shelf-search__badge">{activeFilters}</span> : null}
+              </button>
+            </div>
+            <div className="m-shelf-chips" role="group" aria-label="Статус на полке">
+              {SHELF_MOBILE_CHIPS.map(statusChip)}
+            </div>
+            <p className="m-shelf-summary">{shelfMobileSummary(view)}</p>
+            <ShelfMobileList
+              rows={shown}
+              leadDays={settings.leadDays}
+              pendingId={pendingId}
+              onEmpty={(row) => void onEmpty(row)}
+              onUnstop={(row) => void onToggleStop(row)}
+              onOpenSheet={(row) => setSheetId(row.tobacco.id)}
+              onOpenCard={(row) => setCardId(row.tobacco.id)}
+            />
+            {!shown.length ? <p className="empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
+          </>
+        ) : null}
+
+        {filtersOpen ? (
+          <BottomSheet label="Фильтры полки" onClose={() => setFiltersOpen(false)} className="m-filters-sheet">
+            <h2 className="m-filters-sheet__title">Фильтры</h2>
+            <label className="m-filters-sheet__sort">
+              <span>Сортировка</span>
+              <select className="select-input" value={sort} onChange={(event) => setSort(event.target.value as ShelfSortKey)}>
+                {SHELF_SORT_OPTIONS.map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ShelfFilterPanel rows={rows} filters={filters} onChange={setFilters} />
+            <div className="m-filters-sheet__actions">
+              {activeFilters ? (
+                <button type="button" className="btn" data-variant="ghost" onClick={() => setFilters(EMPTY_SHELF_FILTERS)}>
+                  Сбросить
+                </button>
+              ) : null}
+              <button type="button" className="btn" data-variant="primary" onClick={() => setFiltersOpen(false)}>
+                Показать: {formatMetricValue(shown.length)}
+              </button>
+            </div>
+          </BottomSheet>
+        ) : null}
+
+        {sheetRow ? (
+          <ShelfMarkSheet
+            row={sheetRow}
+            loadCard={shelf.loadCard}
+            onMark={(row, fraction) => {
+              setSheetId('');
+              void onMark(row, fraction);
+            }}
+            onEmpty={(row) => {
+              setSheetId('');
+              void onEmpty(row);
+            }}
+            onClose={() => setSheetId('')}
+          />
+        ) : null}
+        {cardSheet}
+        {settingsDialog}
+        {toastNode}
+      </section>
+    );
+  }
+
   const totals = view?.totals ?? { packs: 0, kg: 0 };
 
   return (
@@ -348,10 +508,10 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
         actions={
           <>
             <span className="shelf-seg" role="group" aria-label="Вид полки">
-              <button type="button" aria-pressed={mode === 'shelf'} onClick={() => setMode('shelf')}>
+              <button type="button" aria-pressed={mode === 'shelf'} onClick={() => onModeChange('shelf')}>
                 Полка
               </button>
-              <button type="button" aria-pressed={mode === 'reorder'} onClick={() => setMode('reorder')}>
+              <button type="button" aria-pressed={mode === 'reorder'} onClick={() => onModeChange('reorder')}>
                 {reorderCount === null ? 'К заказу' : `К заказу · ${formatMetricValue(reorderCount)}`}
               </button>
             </span>
@@ -409,18 +569,7 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
                   <span className="kbd" aria-hidden="true">/</span>
                 </div>
                 <div className="shelf-toolbar__chips" role="group" aria-label="Статус на полке">
-                  {SHELF_STATUS_CHIPS.map(([key, label]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`filter-chip${status === key ? ' filter-chip--active' : ''}`}
-                      aria-pressed={status === key}
-                      onClick={() => setStatus(key)}
-                    >
-                      <span>{label}</span>
-                      <span className="filter-chip__count">{formatMetricValue(counters?.[key] ?? 0)}</span>
-                    </button>
-                  ))}
+                  {SHELF_STATUS_CHIPS.map(statusChip)}
                 </div>
                 <button
                   type="button"
@@ -609,28 +758,9 @@ export const ShelfView = ({ shelf, onGoCatalog, onOpenInCatalog, onOpenMix, onUp
         <ShelfRowMenu row={menuRow} anchor={menu.anchor} actions={rowActions} onClose={() => setMenu(null)} />
       ) : null}
 
-      {cardRow ? (
-        <ShelfCard
-          row={cardRow}
-          settings={settings}
-          loadCard={shelf.loadCard}
-          onEmpty={(row) => void onEmpty(row)}
-          onMark={(row, fraction) => void onMark(row, fraction)}
-          onUndoEmpty={(row, packId) => void onUndoEmpty(row, packId)}
-          onUpdate={onUpdate}
-          onOpenCatalog={(row) => {
-            setCardId('');
-            onOpenInCatalog(row);
-          }}
-          onOpenMix={(mixId) => {
-            setCardId('');
-            onOpenMix(mixId);
-          }}
-          onClose={() => setCardId('')}
-        />
-      ) : null}
+      {cardSheet}
 
-      {toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null}
+      {toastNode}
     </section>
   );
 };
