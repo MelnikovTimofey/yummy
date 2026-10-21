@@ -34,9 +34,14 @@
 1. `POST /guest/access-code/verify`;
 2. параллельно, как `App.tsx` после ввода кода: `GET /guest/intro/cards`, `GET /guest/onboarding/options`,
    `GET /guest/catalog/mixes` (дважды: онбординг и каталог), `GET /guest/home/rails`;
-3. `POST /guest/onboarding/recommendations` 1–3 раза со случайными профилями и вкусами из options;
-4. `POST /guest/events/smoke-cta` по одному из первых трёх рекомендованных миксов;
-5. у доли `MIXER_SHARE` сессий — миксер: `GET /guest/mixer/palette`, `POST /guest/mixer/evaluate` 1–3 раза,
+3. у доли `LOGIN_SHARE` сессий — вход до подбора, как «Уже были у нас?»: старт входа, подтверждение с ключом
+   автоматизации, опрос статуса, `GET /guest/me`, `GET /guest/me/favorites` (один раз за визит);
+4. подбор 1–3 раза со случайными профилями и вкусами из options: у гостя без входа
+   `POST /guest/onboarding/recommendations`, у вошедшего `PUT /guest/me/onboarding` и `GET /guest/me/for-you`,
+   как `submitPlan` в aroma-web;
+5. `POST /guest/events/smoke-cta` по одному из первых трёх подобранных миксов; у вошедшего — с токеном, затем
+   `GET /guest/me/history` и сердечко `PUT /guest/me/favorites/mixes/:id`;
+6. у доли `MIXER_SHARE` сессий — миксер: `GET /guest/mixer/palette`, `POST /guest/mixer/evaluate` 1–3 раза,
    `POST /guest/events/custom-mix-smoke`.
 
 Между шагами гость думает от 1 до `THINK_MAX_S` секунд.
@@ -52,7 +57,8 @@
 | `BURST_SESSIONS` | `40` | сессий во всплеске (за одну минуту) |
 | `BURST_AT_MIN` | `7` | минута начала всплеска |
 | `MIXER_SHARE` | `0.5` | доля сессий с миксером |
-| `LOGIN_SHARE` | `0` | доля сессий со входом в кабинет через бота (#239): старт, подтверждение с ключом автоматизации, опрос статуса, `GET /guest/me`, «Покурить» с токеном, `GET /guest/me/history`, сердечко (#240). Нужен `ATELIER_AUTOMATION_KEY`; учётки прогона (Telegram id `999000…`) удаляет `cleanup.mjs` |
+| `LOGIN_SHARE` | `0` | доля сессий со входом в кабинет через бота (#239), путь — шаги 3–5 выше. Нужен `ATELIER_AUTOMATION_KEY`; учётки прогона (Telegram id `999000…`) удаляет `cleanup.mjs` |
+| `LOGIN_GUESTS` | `30` | сколько разных учёток делят вошедшие сессии. Вернувшийся гость копит историю, и с трёх выборов `GET /guest/me/for-you` считает личную выдачу — самый тяжёлый гостевой маршрут. Доля личного режима — строкой в отчёте |
 | `THINK_MAX_S` | `5` | максимальная пауза между шагами, с |
 | `OUT_DIR` | `.` | куда писать `summary.json` |
 
@@ -72,7 +78,9 @@ docker run --rm -v "$PWD/scripts/atelier/load:/scripts:ro" -e BASE_URL=http://ho
   grafana/k6:2.3.0 run --quiet /scripts/guest-flow.js
 ```
 
-В демо-засеве нет табаков в наличии, поэтому миксер пропускается. Для полного пути восстановить
+В демо-засеве нет табаков в наличии, поэтому миксер пропускается. Для ветки входа backend нужен
+`ATELIER_GUEST_LOGIN_BOT_USERNAME` (любое имя, бот не вызывается) и в k6 — `-e LOGIN_SHARE=1
+-e ATELIER_AUTOMATION_KEY=…` из `apps/backend/.env`. Для полного пути восстановить
 `snapshots/atelier-product-data.dump` в отдельную БД и оставить в наличии пару сотен табаков.
 
 ## Прогон на проде

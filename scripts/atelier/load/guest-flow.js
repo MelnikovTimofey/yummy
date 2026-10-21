@@ -13,6 +13,8 @@ const BURST_AT_MIN = Number(__ENV.BURST_AT_MIN || 7);
 const MIXER_SHARE = Number(__ENV.MIXER_SHARE || 0.5);
 // Доля сессий со входом в кабинет (#239): бота подменяет вызов confirm с ключом автоматизации.
 const LOGIN_SHARE = Number(__ENV.LOGIN_SHARE || 0);
+// Пул учёток: вернувшийся гость копит историю, и «Для вас» выходит из холодного режима (MIN_FOR_YOU_PICKS = 3).
+const LOGIN_GUESTS = Number(__ENV.LOGIN_GUESTS || 30);
 const AUTOMATION_KEY = __ENV.ATELIER_AUTOMATION_KEY;
 const THINK_MAX_S = Number(__ENV.THINK_MAX_S || 5);
 const OUT_DIR = (__ENV.OUT_DIR || '.').replace(/\/$/, '');
@@ -39,6 +41,8 @@ const ENDPOINTS = [
   'GET /guest/catalog/mixes',
   'GET /guest/home/rails',
   'POST /guest/onboarding/recommendations',
+  'PUT /guest/me/onboarding',
+  'GET /guest/me/for-you',
   'POST /guest/events/smoke-cta',
   'GET /guest/mixer/palette',
   'POST /guest/mixer/evaluate',
@@ -46,12 +50,14 @@ const ENDPOINTS = [
   'POST /guest/auth/telegram/start',
   'GET /guest/auth/telegram/status',
   'GET /guest/me',
+  'GET /guest/me/favorites',
   'GET /guest/me/history',
   'PUT /guest/me/favorites/mixes',
 ];
 
 const serverErrors = new Rate('server_errors');
 const guestTimeouts = new Rate('guest_timeouts');
+const forYouPersonal = new Rate('for_you_personal');
 
 const thresholds = { server_errors: ['rate==0'], guest_timeouts: ['rate==0'] };
 // Порог по каждому эндпоинту нужен ещё и затем, чтобы k6 посчитал по нему p95/p99 в итогах.
@@ -88,14 +94,17 @@ const track = (name, res) => {
   return res;
 };
 
-const request = (method, path, body) => {
-  const name = `${method} ${path.split('?')[0]}`;
-  const params = { headers: body === undefined ? {} : JSON_HEADERS, tags: { name } };
+const request = (method, path, body, { token, name = `${method} ${path.split('?')[0]}` } = {}) => {
+  const headers = body === undefined ? {} : { ...JSON_HEADERS };
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
+  const params = { headers, tags: { name } };
   return { method, url: `${BASE_URL}${path}`, body: body === undefined ? null : JSON.stringify(body), params, name };
 };
 
-const send = (method, path, body) => {
-  const req = request(method, path, body);
+const send = (method, path, body, opts) => {
+  const req = request(method, path, body, opts);
   return track(req.name, http.request(req.method, req.url, req.body, req.params));
 };
 
@@ -162,13 +171,13 @@ export function setup() {
 }
 
 // Вход через бота: старт, подтверждение «ботом», 1–3 опроса статуса, /guest/me.
-const login = (mixes) => {
+const login = () => {
   think();
   const started = readJson(send('POST', '/guest/auth/telegram/start', { consent: true }));
   if (!started) {
-    return;
+    return null;
   }
-  const telegramId = `${LOAD_TELEGRAM_PREFIX}${randInt(100000, 999999)}`;
+  const telegramId = `${LOAD_TELEGRAM_PREFIX}${100000 + randInt(1, LOGIN_GUESTS)}`;
   for (let poll = randInt(0, 2); poll > 0; poll -= 1) {
     send('GET', `/guest/auth/telegram/status?code=${started.code}`);
     sleep(2);
@@ -179,27 +188,24 @@ const login = (mixes) => {
   });
   const token = readJson(send('GET', `/guest/auth/telegram/status?code=${started.code}`), 'token');
   if (!token) {
-    return;
+    return null;
   }
-  // Вошедший гость: кабинет, «Покурить» в историю, история и сердечко (#240).
-  const authed = (method, path, body, name) => {
-    const req = request(method, path, body);
-    req.name = name || req.name;
-    req.params.tags = { name: req.name };
-    req.params.headers = { ...req.params.headers, authorization: `Bearer ${token}` };
-    return track(req.name, http.request(req.method, req.url, req.body, req.params));
-  };
-  authed('GET', '/guest/me');
-  if (mixes.length) {
-    const mix = pick(mixes);
-    const smoke = readJson(authed('POST', '/guest/events/smoke-cta', { mixId: mix.id }));
-    if (smoke) {
-      console.log(`created SmokeCtaEvent ${smoke.mixId} ${smoke.recordedAt}`);
-    }
-    think();
-    authed('GET', '/guest/me/history');
-    authed('PUT', `/guest/me/favorites/mixes/${mix.id}`, undefined, 'PUT /guest/me/favorites/mixes');
+  send('GET', '/guest/me', undefined, { token });
+  // Избранное — один раз за визит, из него сердечко на карточках (App.tsx).
+  send('GET', '/guest/me/favorites', undefined, { token });
+  return token;
+};
+
+// Холодный режим отдаёт items, как подбор онбординга; личный — карточки трёх слотов.
+const forYouMixes = (forYou) => {
+  if (!forYou) {
+    return [];
   }
+  forYouPersonal.add(forYou.mode !== 'cold');
+  if (forYou.mode === 'cold') {
+    return forYou.items || [];
+  }
+  return [...forYou.fresh, ...forYou.sidestep, ...forYou.again].map((card) => card.mix);
 };
 
 export default function () {
@@ -216,6 +222,9 @@ export default function () {
     request('GET', '/guest/catalog/mixes'),
   ]);
 
+  // Вход до подбора — как «Уже были у нас?» на знакомстве; дальше все запросы гостя с токеном.
+  const token = Math.random() < LOGIN_SHARE ? login() : null;
+
   const profiles = readJson(options, 'profiles') || [];
   const flavors = readJson(options, 'flavors') || [];
   let recommended = [];
@@ -224,21 +233,29 @@ export default function () {
       think();
       const likedProfiles = pickSome(profiles, 1, 3);
       const likedFlavors = pickSome(flavors, likedProfiles.length ? 0 : 1, 2);
-      const recs = send('POST', '/guest/onboarding/recommendations', { likedProfiles, likedFlavors });
-      recommended = readJson(recs, 'items') || [];
+      const taste = { likedProfiles, likedFlavors };
+      if (token) {
+        // У вошедшего вкусы уходят в кабинет, а Подбор — это «Для вас» (submitPlan в aroma-web).
+        send('PUT', '/guest/me/onboarding', taste, { token });
+        recommended = forYouMixes(readJson(send('GET', '/guest/me/for-you', undefined, { token })));
+      } else {
+        recommended = readJson(send('POST', '/guest/onboarding/recommendations', taste), 'items') || [];
+      }
     }
   }
 
   const mixes = recommended.length ? recommended.slice(0, 3) : readJson(catalog, 'items') || [];
-  if (Math.random() < LOGIN_SHARE) {
-    login(mixes);
-  }
   if (mixes.length) {
     think();
-    const smoke = send('POST', '/guest/events/smoke-cta', { mixId: pick(mixes).id });
-    const event = readJson(smoke);
+    const mix = pick(mixes);
+    const event = readJson(send('POST', '/guest/events/smoke-cta', { mixId: mix.id }, { token }));
     if (event) {
       console.log(`created SmokeCtaEvent ${event.mixId} ${event.recordedAt}`);
+    }
+    if (token) {
+      think();
+      send('GET', '/guest/me/history', undefined, { token });
+      send('PUT', `/guest/me/favorites/mixes/${mix.id}`, undefined, { token, name: 'PUT /guest/me/favorites/mixes' });
     }
   }
 
@@ -260,11 +277,12 @@ export default function () {
   }
 
   think();
-  const smoke = send('POST', '/guest/events/custom-mix-smoke', {
-    components: bowl,
-    name: MIX_NAME,
-    swipes: randomSwipes(tobaccos),
-  });
+  const smoke = send(
+    'POST',
+    '/guest/events/custom-mix-smoke',
+    { components: bowl, name: MIX_NAME, swipes: randomSwipes(tobaccos) },
+    { token },
+  );
   const event = readJson(smoke);
   if (event) {
     console.log(`created CustomMixSmokeEvent ${event.id}`);
@@ -286,6 +304,7 @@ export function handleSummary(data) {
     `Сессий: ${metric('iterations').count || 0}, одновременно сессий до ${metric('vus').max || 0}`,
     `Запросов: ${requests.count || 0} (${(requests.rate || 0).toFixed(1)} в секунду в среднем)`,
     `5xx и обрывы: ${pct(metric('server_errors').rate || 0)}, дольше ${GUEST_TIMEOUT_MS / 1000} с: ${pct(metric('guest_timeouts').rate || 0)}`,
+    `«Для вас» в личном режиме: ${pct(metric('for_you_personal').rate || 0)} из ${metric('for_you_personal').passes + metric('for_you_personal').fails || 0}`,
     '',
     '| Эндпоинт | Запросов | p50, мс | p95, мс | p99, мс | max, мс | 5xx |',
     '|---|---:|---:|---:|---:|---:|---:|',
