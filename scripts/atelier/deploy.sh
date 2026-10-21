@@ -25,7 +25,13 @@ tag_var() {
 # db и proxy на публичных образах — их не тянем, чтобы не обновить postgres/caddy заодно.
 OWN_SERVICES=(backend aroma-web master-web telegram-bot telegram-guest-bot telegram-tunnel)
 
-git pull --ff-only -q origin main
+# bash уже прочитал OWN_SERVICES из старой версии файла: без перезапуска сервис,
+# добавленный этим pull, поднимется в `up` без своего тега (#285).
+if [[ -z "${ATELIER_DEPLOY_PULLED:-}" ]]; then
+  git pull --ff-only -q origin main
+  ATELIER_DEPLOY_PULLED=1 exec scripts/atelier/deploy.sh "$@"
+fi
+
 tag="${DEPLOY_TAG:-$(git rev-parse HEAD)}"
 
 if (( $# > 0 )); then
