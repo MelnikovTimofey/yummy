@@ -175,6 +175,15 @@ test('shelfLevel: полоса — доля от уровня после при�
     value: '—',
     hint: 'прихода не было',
   });
+  // Расчёт дошёл до нуля, но «Закончился» никто не отмечал — это оценка, а не факт.
+  assert.deepEqual(shelfLevel(row({ status: 'check', daysLeft: null, leftGrams: 0, fullGrams: 200 })), {
+    share: 0,
+    tone: 'crit',
+    none: false,
+    empty: false,
+    value: '≈ 0 г',
+    hint: 'из 200 г после прихода',
+  });
   assert.equal(shelfLevel(row({ leftGrams: 1234.6, fullGrams: 1500 })).value, '≈ 1 235 г');
 });
 

@@ -237,14 +237,15 @@ export const shelfLevel = (row: ShelfRow): ShelfLevel => {
     return { share: 0, tone: 'normal', none: true, empty: false, value: '—', hint: 'прихода не было' };
   }
   const hint = `из ${formatNumber(row.fullGrams)} г после прихода`;
-  if (row.leftGrams <= 0) return { share: 0, tone: 'normal', none: true, empty: true, value: '0 г', hint };
+  // «Проверьте остаток»: расчёт мог дойти до нуля, но это оценка, а не отметка.
+  if (row.leftGrams <= 0 && row.status !== 'check') return { share: 0, tone: 'normal', none: true, empty: true, value: '0 г', hint };
   const tone = row.status === 'check' || (row.daysLeft !== null && row.daysLeft <= 3) ? 'crit' : row.status === 'ending' ? 'low' : 'normal';
   return {
-    share: row.fullGrams > 0 ? Math.min(1, row.leftGrams / row.fullGrams) : 0,
+    share: row.fullGrams > 0 ? Math.min(1, Math.max(0, row.leftGrams) / row.fullGrams) : 0,
     tone,
     none: false,
     empty: false,
-    value: formatGrams(row.leftGrams),
+    value: `≈ ${formatNumber(Math.max(0, row.leftGrams))} г`,
     hint,
   };
 };

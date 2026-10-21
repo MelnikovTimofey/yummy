@@ -639,12 +639,12 @@ export const ShelfView = ({
                 <table className="shelf-table">
                   <colgroup>
                     <col />
-                    <col style={{ width: 200 }} />
-                    <col style={{ width: 116 }} />
-                    <col style={{ width: 180 }} />
-                    <col style={{ width: 140 }} />
-                    <col style={{ width: 64 }} />
-                    <col style={{ width: 236 }} />
+                    <col style={{ width: 228 }} />
+                    <col style={{ width: 112 }} />
+                    <col style={{ width: 184 }} />
+                    <col style={{ width: 132 }} />
+                    <col style={{ width: 60 }} />
+                    <col style={{ width: 228 }} />
                   </colgroup>
                   <thead>
                     <tr>

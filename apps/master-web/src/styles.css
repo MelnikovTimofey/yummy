@@ -6152,7 +6152,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-menu__sep { height: 1px; margin: 4px 0; background: var(--border-subtle); }
 
-.shelf-menu.shelf-menu--wide { width: 340px; padding: 8px; }
+.shelf-menu.shelf-menu--wide { width: 380px; padding: 8px; }
 .shelf-menu__item.shelf-menu__item--danger { color: var(--danger); }
 
 /* --- «Сколько осталось?», приход и списание (#306) ------------------- */
