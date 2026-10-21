@@ -20,6 +20,8 @@ export type DeliveryLinePatch = {
   tobaccoId?: string | null;
   qty?: number;
   grams?: number | null;
+  // Поправка прихода в граммах; null — сброс к «кол-во × граммы по счёту».
+  receivedGrams?: number | null;
   priceKop?: number | null;
   arrived?: boolean;
   kind?: DeliveryLineKind;
@@ -130,8 +132,8 @@ export const useDeliveries = (token: string) => {
     [token],
   );
 
-  // Карточка каталога для строки «нет в каталоге». inStock: false — банку на
-  // полку кладёт приёмка поставки, а не создание карточки.
+  // Карточка каталога для строки «нет в каталоге». inStock: false — приход на
+  // полку пишет приёмка поставки, а не создание карточки.
   const createTobacco = useCallback(
     async (input: NewTobaccoInput) =>
       normalizeInventoryTobacco(

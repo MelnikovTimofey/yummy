@@ -10,14 +10,18 @@ import {
   deliveryTitle,
   formatDay,
   formatFullDate,
+  formatWeight,
   formatMoney,
   formatPrice,
   guessTobaccoFromLine,
   lineMatch,
+  lineGramsHint,
   lineMatchHint,
   localDateInput,
+  meanGramKop,
   monthMeta,
   monthTitle,
+  parseReceivedGrams,
   parseRubles,
   readUploadError,
   receivedAtFromInput,
@@ -38,6 +42,7 @@ const line = (patch: Partial<DeliveryLine> = {}): DeliveryLine => ({
   priceKop: 155000,
   sumKop: 155000,
   grams: 200,
+  receivedGrams: 200,
   kind: 'tobacco',
   arrived: true,
   tobacco: { id: 't1', manufacturer: 'Black Burn', lineName: '', name: 'Raspberries', shelfStatus: 'active' },
@@ -168,7 +173,7 @@ test('deliveryStatusTag: черновик, принята, стартовый п
     invoiceDate: null,
     receivedAt: null,
     lines: 0,
-    packs: 0,
+    grams: 0,
     totalKop: null,
     createdAt: '',
     ...patch,
@@ -200,13 +205,50 @@ test('sumCheck сверяет сумму строк с итогом счёта',
   });
 });
 
-test('acceptLabel и тост приёмки', () => {
+test('acceptLabel: строки без табака или граммов блокируют приёмку', () => {
   assert.equal(acceptLabel(0), 'Принять поставку');
-  assert.equal(acceptLabel(1), 'Выберите табак в 1 строке');
-  assert.equal(acceptLabel(4), 'Выберите табак в 4 строках');
-  assert.equal(acceptLabel(21), 'Выберите табак в 21 строке');
-  assert.equal(acceptedToastTitle(15), 'Принято: 15 банок на полке');
-  assert.equal(acceptedToastTitle(1), 'Принято: 1 банка на полке');
+  assert.equal(acceptLabel(1), 'Выберите табак или граммы в 1 строке');
+  assert.equal(acceptLabel(4), 'Выберите табак или граммы в 4 строках');
+  assert.equal(acceptLabel(21), 'Выберите табак или граммы в 21 строке');
+});
+
+test('formatWeight: до килограмма — граммы, дальше — кг с одной цифрой после запятой', () => {
+  assert.equal(formatWeight(0), '0 г');
+  assert.equal(formatWeight(450), '450 г');
+  assert.equal(formatWeight(1000), '1 кг');
+  assert.equal(formatWeight(2600), '2,6 кг');
+  assert.equal(formatWeight(2649), '2,6 кг');
+  assert.equal(formatWeight(2650), '2,7 кг');
+  assert.equal(plain(formatWeight(12400)), '12,4 кг');
+});
+
+test('тост приёмки — в граммах и килограммах на полке', () => {
+  assert.equal(acceptedToastTitle(2600), 'Принято: 2,6 кг на полке');
+  assert.equal(acceptedToastTitle(400), 'Принято: 400 г на полке');
+});
+
+test('lineGramsHint: «2 × 200 г по счёту», «200 г по счёту», без граммов — «укажите граммы»', () => {
+  assert.equal(lineGramsHint(line()), '200 г по счёту');
+  assert.equal(lineGramsHint(line({ qty: 2, receivedGrams: 400 })), '2 × 200 г по счёту');
+  assert.equal(lineGramsHint(line({ grams: null, receivedGrams: null })), 'укажите граммы');
+  // Мастер вписал граммы руками, фасовки в счёте нет.
+  assert.equal(lineGramsHint(line({ grams: null, receivedGrams: 250 })), 'указано вручную');
+});
+
+test('parseReceivedGrams: пусто — сброс к счёту, целое > 0 — граммы, иначе — ошибка', () => {
+  assert.equal(parseReceivedGrams(''), null);
+  assert.equal(parseReceivedGrams('  '), null);
+  assert.equal(parseReceivedGrams('400'), 400);
+  assert.equal(parseReceivedGrams(' 1 200 '), 1200);
+  assert.equal(parseReceivedGrams('0'), undefined);
+  assert.equal(parseReceivedGrams('12,5'), undefined);
+  assert.equal(parseReceivedGrams('много'), undefined);
+  assert.equal(parseReceivedGrams('250001'), undefined);
+});
+
+test('meanGramKop: средняя цена грамма за месяц, без приходов — null', () => {
+  assert.equal(meanGramKop({ monthKop: 2227000, monthGrams: 2800 }), 2227000 / 2800);
+  assert.equal(meanGramKop({ monthKop: 0, monthGrams: 0 }), null);
 });
 
 test('readUploadError различает нечитаемый PDF, дубликат и прочие ошибки', () => {
@@ -232,10 +274,10 @@ test('месяц: «ЗА ОКТЯБРЬ» и «октябрь: 3 счёта»', 
   const now = new Date(2026, 9, 20, 12);
   assert.equal(monthTitle(now), 'октябрь');
   const items: DeliveryListItem[] = [
-    { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, packs: 1, totalKop: 1, createdAt: '2026-10-18T09:00:00.000Z' },
-    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 1, packs: 1, totalKop: 1, createdAt: '2026-10-02T09:00:00.000Z' },
-    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: null, lines: 1, packs: 1, totalKop: 1, createdAt: '2026-10-01T09:00:00.000Z' },
-    { id: '4', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 0, packs: 9, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
+    { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, grams: 200, totalKop: 1, createdAt: '2026-10-18T09:00:00.000Z' },
+    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 1, grams: 200, totalKop: 1, createdAt: '2026-10-02T09:00:00.000Z' },
+    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: null, lines: 1, grams: 200, totalKop: 1, createdAt: '2026-10-01T09:00:00.000Z' },
+    { id: '4', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 0, grams: 1800, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
   ];
   assert.equal(monthMeta(items, now), 'октябрь: 2 счёта');
 });

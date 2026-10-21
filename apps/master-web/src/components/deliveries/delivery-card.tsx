@@ -10,10 +10,13 @@ import {
   deliveryTitle,
   formatMoney,
   formatPrice,
+  formatWeight,
   guessTobaccoFromLine,
+  lineGramsHint,
   lineMatch,
   lineMatchHint,
   localDateInput,
+  parseReceivedGrams,
   receivedAtFromInput,
   sumCheck,
   summarizeLines,
@@ -21,9 +24,6 @@ import {
 import { describeShelfError } from '@/lib/shelf';
 import { AddLineDialog, CreateTobaccoDialog, DeleteDraftDialog } from './delivery-dialogs';
 import { TobaccoPicker } from './tobacco-picker';
-
-const MAX_QTY = 50;
-const MAX_GRAMS = 5000;
 
 export type Notify = (toast: { title: string; text: string; error?: boolean; action?: { label: string; onClick: () => void } }) => void;
 
@@ -53,26 +53,27 @@ const Toggle = ({ checked, label, disabled, onChange }: { checked: boolean; labe
   </button>
 );
 
-// Фасовка правится на месте: сохраняем по уходу из поля или Enter.
-const GramsInput = ({ line, disabled, onSave }: { line: DeliveryLine; disabled: boolean; onSave: (grams: number | null) => void }) => {
-  const [value, setValue] = useState(line.grams === null ? '' : String(line.grams));
-  useEffect(() => setValue(line.grams === null ? '' : String(line.grams)), [line.grams]);
+// Приход правится на месте, если пришло не всё: сохраняем по уходу из поля или
+// Enter. Пустое поле — вернуть «кол-во × граммы по счёту».
+const ReceivedInput = ({ line, disabled, onSave }: { line: DeliveryLine; disabled: boolean; onSave: (grams: number | null) => void }) => {
+  const shown = line.receivedGrams === null ? '' : String(line.receivedGrams);
+  const [value, setValue] = useState(shown);
+  useEffect(() => setValue(shown), [shown]);
   const commit = () => {
-    const text = value.trim();
-    const grams = text ? Number(text) : null;
-    if (grams === line.grams) return;
-    if (grams !== null && (!Number.isInteger(grams) || grams < 1 || grams > MAX_GRAMS)) {
-      setValue(line.grams === null ? '' : String(line.grams));
+    const grams = parseReceivedGrams(value);
+    if (grams === undefined || grams === line.receivedGrams) {
+      setValue(shown);
       return;
     }
     onSave(grams);
   };
   return (
-    <span className="deliv-grams">
+    <span className="deliv-grams" data-state={line.arrived ? undefined : 'off'}>
       <input
         className="deliv-grams__input"
+        data-tone={line.receivedGrams === null ? 'warn' : undefined}
         inputMode="numeric"
-        aria-label={`Фасовка строки ${line.n}, граммов`}
+        aria-label={`Приход строки ${line.n}, граммов`}
         value={value}
         disabled={disabled}
         placeholder="—"
@@ -86,6 +87,8 @@ const GramsInput = ({ line, disabled, onSave }: { line: DeliveryLine; disabled: 
     </span>
   );
 };
+
+const lineSumKop = (line: DeliveryLine) => line.sumKop ?? (line.priceKop === null ? null : line.priceKop * line.qty);
 
 export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepted, onDeleted }: DeliveryCardScreenProps) => {
   const [card, setCard] = useState<DeliveryCard | null>(initial);
@@ -237,8 +240,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
             <col />
             <col style={{ width: '31%' }} />
             <col style={{ width: 118 }} />
-            <col style={{ width: 92 }} />
-            <col style={{ width: 104 }} />
+            <col style={{ width: 150 }} />
             <col style={{ width: 104 }} />
             <col style={{ width: 76 }} />
             {draft ? <col style={{ width: 44 }} /> : null}
@@ -249,9 +251,8 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
               <th scope="col">Строка счёта</th>
               <th scope="col">Табак на полке</th>
               <th scope="col" aria-label="Сопоставление" />
-              <th scope="col">Фасовка</th>
-              <th scope="col">Банок</th>
-              <th scope="col" className="shelf-table__num">Цена</th>
+              <th scope="col">Приход</th>
+              <th scope="col" className="shelf-table__num">Сумма</th>
               <th scope="col" className="deliv-center">Пришло</th>
               {draft ? <th scope="col" aria-label="Удалить" /> : null}
             </tr>
@@ -265,6 +266,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
               const hint = isCreated ? `новая карточка каталога${line.newOnShelf ? ' · новый на полке' : ''}` : lineMatchHint(line);
               const skip = match === 'skip';
               const selectTone = match === 'none' ? 'danger' : match === 'suggest' || match === 'weak' ? 'warn' : undefined;
+              const gramsHint = lineGramsHint(line);
               return (
                 <tr key={line.id} data-line-id={line.id} data-match={match}>
                   <td className="shelf-faint shelf-num">{line.n}</td>
@@ -355,40 +357,18 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                   <td>
                     {skip ? (
                       <span className="shelf-faint">—</span>
-                    ) : draft ? (
-                      <GramsInput line={line} disabled={busy} onSave={(grams) => void patchLine(line, { grams })} />
                     ) : (
-                      <span className="shelf-num">{line.grams ? `${line.grams} г` : '—'}</span>
-                    )}
-                  </td>
-                  <td>
-                    {skip ? (
-                      <span className="shelf-faint">—</span>
-                    ) : draft ? (
-                      <span className="deliv-stepper">
-                        <button
-                          type="button"
-                          aria-label={`Меньше банок в строке ${line.n}`}
-                          disabled={busy || line.qty <= 1}
-                          onClick={() => void patchLine(line, { qty: line.qty - 1 })}
-                        >
-                          −
-                        </button>
-                        <span aria-label={`Банок в строке ${line.n}`}>{line.qty}</span>
-                        <button
-                          type="button"
-                          aria-label={`Больше банок в строке ${line.n}`}
-                          disabled={busy || line.qty >= MAX_QTY}
-                          onClick={() => void patchLine(line, { qty: line.qty + 1 })}
-                        >
-                          +
-                        </button>
+                      <span className="deliv-match">
+                        {draft ? (
+                          <ReceivedInput line={line} disabled={busy} onSave={(receivedGrams) => void patchLine(line, { receivedGrams })} />
+                        ) : (
+                          <span className="shelf-num">{line.receivedGrams === null ? '—' : `${line.receivedGrams} г`}</span>
+                        )}
+                        <small className={line.receivedGrams === null ? 'deliv-warn' : undefined}>{gramsHint}</small>
                       </span>
-                    ) : (
-                      <span className="shelf-num">{line.qty}</span>
                     )}
                   </td>
-                  <td className="shelf-table__num shelf-num">{formatPrice(line.priceKop)}</td>
+                  <td className="shelf-table__num shelf-num">{formatPrice(lineSumKop(line))}</td>
                   <td className="deliv-center">
                     {skip ? null : (
                       <Toggle
@@ -446,8 +426,10 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
           </label>
           <p className="deliv-footbar__summary">
             {sum.tone ? <span className={sum.tone === 'ok' ? 'deliv-ok' : 'deliv-warn'}>{sum.short}</span> : <span>{sum.short}</span>}
-            {` · будет ${formatCount(card.packsToCreate, ['банка', 'банки', 'банок'])}`}
-            {card.pendingLines ? <span className="deliv-warn">{` · без табака: ${formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}`}</span> : null}
+            {` · на полку ≈ ${formatWeight(card.gramsToReceive)}`}
+            {card.pendingLines ? (
+              <span className="deliv-warn">{` · без табака или граммов: ${formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}`}</span>
+            ) : null}
           </p>
           <button type="button" className="btn" data-variant="ghost" onClick={onBack}>
             Сохранить черновик
