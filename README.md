@@ -69,7 +69,7 @@ docker compose down -v                    # стоп + сброс данных (
 [`snapshots/atelier-product-data.dump`](snapshots/atelier-product-data.dump)
 (custom-format `pg_restore`, ~1.4 МБ): весь каталог табаков (~11 500) + 15 миксов +
 5 prepared-рейлов + полка точки: в наличии ровно 269 табаков Nomad (лист «Категории
-табаков», как на проде), у каждого запись полки и одна банка «Стартового прихода». Разворачивается за секунды,
+табаков», как на проде), у каждого запись полки и «Стартовый приход» в граммах. Разворачивается за секунды,
 сеть и краулинг htreviews не нужны:
 
 ```bash
@@ -78,7 +78,7 @@ docker compose up -d db
 cd apps/backend && npx prisma db push && npm run prisma:seed && cd -
 # 2) заменить демо-контент продуктовыми данными из снэпшота
 docker compose exec -T db psql -U atelier -d atelier \
-  -c 'TRUNCATE "Tobacco","Mix","MixComponent","Rail","RailMix","Delivery","ShelfItem","Pack" CASCADE;'
+  -c 'TRUNCATE "Tobacco","Mix","MixComponent","Rail","RailMix","Delivery","ShelfItem","StockEntry" CASCADE;'
 docker compose exec -T db pg_restore -U atelier -d atelier --no-owner --data-only --disable-triggers \
   < snapshots/atelier-product-data.dump
 docker compose up -d backend aroma-web master-web

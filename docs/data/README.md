@@ -85,9 +85,9 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 
 В репозитории лежит [`../../snapshots/atelier-product-data.dump`](../../snapshots/atelier-product-data.dump)
 — custom-format `pg_restore` дамп **продуктовых таблиц и полки** (`Tobacco`,
-`Mix`, `MixComponent`, `Rail`, `RailMix`, `Delivery`, `ShelfItem`, `Pack`), ~1.4 МБ.
+`Mix`, `MixComponent`, `Rail`, `RailMix`, `Delivery`, `ShelfItem`, `StockEntry`), ~1.4 МБ.
 В наличии — только 269 табаков точки Nomad (лист «Категории табаков», как на проде):
-у каждого запись полки и одна банка «Стартового прихода»; остальной каталог — не в
+у каждого запись полки и «Стартовый приход» в граммах; остальной каталог — не в
 наличии. Гостю из 15 демо-миксов виден один — остальным нужны табаки не с полки Nomad. Им
 поднимают готовое наполнение за секунды без краулинга htreviews — см. раздел
 «Быстрое развёртывание (из снэпшота)» в корневом [`README.md`](../../README.md).
@@ -99,13 +99,13 @@ curl -s http://127.0.0.1:3021/guest/home/rails | jq '.items[] | {name, type, mix
 docker exec yummy-db-1 pg_dump -U atelier -d atelier -Fc --no-owner --no-privileges \
   -t 'public."Tobacco"' -t 'public."Mix"' -t 'public."MixComponent"' \
   -t 'public."Rail"' -t 'public."RailMix"' -t 'public."Delivery"' \
-  -t 'public."ShelfItem"' -t 'public."Pack"' -f /tmp/product.dump
+  -t 'public."ShelfItem"' -t 'public."StockEntry"' -f /tmp/product.dump
 docker cp yummy-db-1:/tmp/product.dump snapshots/atelier-product-data.dump
 ```
 
 Наличие в снэпшоте задаётся полкой, а не флагом: `inStock` — кэш правила «на полке,
-не стоп, есть банка, не архив» (PRD §4 п.8). Чтобы изменить состав наличия, правьте
-полку (`ShelfItem`/`Pack`) и пересчитывайте `inStock`, а не ставьте флаг вручную.
+не стоп, есть остаток по учёту, не архив» (PRD §4 п.8). Чтобы изменить состав наличия, правьте
+полку (`ShelfItem`/`StockEntry`) и пересчитывайте `inStock`, а не ставьте флаг вручную.
 
 ### Что снэпшот не содержит
 
