@@ -6845,7 +6845,7 @@ button.chip .chip__count[hidden] {
 
 .reorder-stepper button:hover:not(:disabled) { color: var(--text-primary); }
 .reorder-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.reorder-stepper output { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.reorder-stepper output { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
 
 .reorder-copied {
   display: grid;
