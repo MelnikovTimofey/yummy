@@ -594,17 +594,17 @@ function Board() {
   return (
     <div className="board">
       <header className="board-head">
-        <p className="aroma-caps">#314 · мокап на согласование · раунд 1</p>
+        <p className="aroma-caps">#314 · мокап согласован 2026-10-21 · выбран A с описанием</p>
         <h1 className="board-title">Рилс без дока</h1>
         <p className="board-text">Сейчас вся информация о миксе — плотный док на нижней половине рилса, сцена видна только сверху. Но сцена — абстрактный фон, а не видео: перекрывать её не страшно. Поэтому главное — название и описание — переезжает в центр, а внизу остаются рейтинг, сердечко, полоса состава и кнопки. Профили и строка вкусов уходят: их передают сцена и описание.</p>
         <p className="board-text">Два варианта: A · Афиша — всё видно сразу; C · История — та же афиша в финале, но перед ней ≈ 4 с рассказа: название, затем вкусы по одному. У каждого — с описанием и без: описание есть у всех миксов прода, но мастер может завести микс без него. Миксы — витрина прода на 15 октября; сцены — CSS-приближение Remotion из #153.</p>
       </header>
       <section className="board-section" id="a">
-        <h2 className="board-h2">A · Афиша</h2>
+        <h2 className="board-h2">A · Афиша — выбран</h2>
         <div className="board-row">{row('A')}</div>
       </section>
       <section className="board-section" id="c">
-        <h2 className="board-h2">C · История</h2>
+        <h2 className="board-h2">C · История — отвергнут</h2>
         <div className="timeline">
           <div className="timeline-step"><p className="aroma-caps">0–1,8 с · название</p><p>Название по центру, крупно. Соседний рилс при свайпе показывает этот же кадр.</p></div>
           <div className="timeline-step"><p className="aroma-caps">1,8–4,2 с · вкусы</p><p>До четырёх вкусов по одному, каждый со своим мотивом сцены. Больше четырёх — «и ещё N».</p></div>
