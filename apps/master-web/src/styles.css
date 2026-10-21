@@ -6579,9 +6579,10 @@ button.chip .chip__count[hidden] {
 .deliv-link:disabled { opacity: 0.5; cursor: progress; }
 
 .deliv-grams { display: inline-flex; align-items: center; gap: 4px; }
+.deliv-grams[data-state="off"] { opacity: 0.45; }
 
 .deliv-grams__input {
-  width: 52px;
+  width: 72px;
   height: 28px;
   padding: 0 6px;
   border: 1px solid var(--border-subtle);
@@ -6596,29 +6597,8 @@ button.chip .chip__count[hidden] {
 
 .deliv-grams__input:hover { border-color: var(--border-default); }
 .deliv-grams__input:focus { outline: none; border-color: var(--accent); }
-
-.deliv-stepper {
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-}
-
-.deliv-stepper button {
-  width: 24px;
-  height: 26px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.deliv-stepper button:hover:not(:disabled) { color: var(--text-primary); }
-.deliv-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.deliv-stepper span { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.deliv-grams__input[data-tone="warn"] { border-color: var(--warning); }
+.deliv-match small.deliv-warn { color: var(--warning); }
 
 /* --- Нижняя панель приёмки -------------------------------------------- */
 
@@ -6638,6 +6618,7 @@ button.chip .chip__count[hidden] {
 }
 
 .deliv-footbar__summary { flex: 1; min-width: 240px; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.deliv-footbar__summary > span { white-space: nowrap; }
 
 .deliv-date { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-muted); }
 
@@ -6845,7 +6826,7 @@ button.chip .chip__count[hidden] {
 
 .reorder-stepper button:hover:not(:disabled) { color: var(--text-primary); }
 .reorder-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.reorder-stepper output { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.reorder-stepper output { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
 
 .reorder-copied {
   display: grid;

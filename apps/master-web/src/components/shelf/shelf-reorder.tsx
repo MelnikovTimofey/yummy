@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Copy } from 'lucide-react';
-import { formatCount, type ReorderGroup, type ReorderView } from '@/contracts';
-import { formatMoney } from '@/lib/deliveries';
+import type { ReorderGroup, ReorderView } from '@/contracts';
+import { formatGramPrice } from '@/lib/shelf';
 import { formatApproxRub } from '@/lib/shelf-dashboard';
 import {
   groupCaption,
   groupKey,
-  orderText,
+  groupOrderText,
+  REORDER_STEP_GRAMS,
+  reorderHint,
   reorderItemName,
   reorderRate,
   reorderSum,
@@ -25,8 +27,8 @@ type ShelfReorderProps = {
 
 const supplierTitle = (group: ReorderGroup) => group.supplier?.name ?? 'Поставщик не выбран';
 
-// «К заказу» (#213, #shot=reorder): группы по последнему поставщику. Количество
-// мастер правит здесь же — оно не сохраняется, а уходит в текст для чата.
+// «К заказу» (#213, #310, #shot=reorder): группы по последнему поставщику. Граммы
+// мастер правит здесь же — они не сохраняются, а уходят в текст для чата.
 export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
   const [quantities, setQuantities] = useState<ReorderQuantities>({});
   const [copiedKey, setCopiedKey] = useState('');
@@ -35,7 +37,10 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
     return error ? <p className="error-text">{error}</p> : <p className="meta-line">Считаем, что пора заказать…</p>;
   }
 
-  const groups = reorder.groups.map((group) => ({ group, items: withQuantities(group.items, quantities) }));
+  const groups = reorder.groups.map((group) => {
+    const items = withQuantities(group.items, quantities);
+    return { group, items, text: groupOrderText(group, items, reorder.text, quantities) };
+  });
   const copied = groups.find(({ group }) => groupKey(group) === copiedKey);
 
   const onCopy = async (group: ReorderGroup, text: string) => {
@@ -53,7 +58,7 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
       {error ? <p className="error-text">{error}</p> : null}
       {!groups.length ? <p className="empty reorder__empty">Заказывать нечего. Полка в порядке.</p> : null}
 
-      {groups.map(({ group, items }) => {
+      {groups.map(({ group, items, text }) => {
         const sum = reorderSum(items);
         const caption = groupCaption(group);
         const title = supplierTitle(group);
@@ -63,7 +68,7 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
               <h2>{title}</h2>
               <span className="reorder-group__caption">{caption}</span>
               {sum !== null ? <span className="shelf-num reorder-group__sum">{formatApproxRub(sum)}</span> : null}
-              <button type="button" className="btn" data-size="sm" onClick={() => void onCopy(group, orderText(items))}>
+              <button type="button" className="btn" data-size="sm" onClick={() => void onCopy(group, text)}>
                 <Copy size={14} aria-hidden />
                 Скопировать заказ
               </button>
@@ -72,17 +77,17 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
               <colgroup>
                 <col />
                 <col style={{ width: 170 }} />
+                <col style={{ width: 190 }} />
                 <col style={{ width: 170 }} />
-                <col style={{ width: 150 }} />
-                <col style={{ width: 140 }} />
+                <col style={{ width: 130 }} />
               </colgroup>
               <thead>
                 <tr>
                   <th scope="col">Табак</th>
                   <th scope="col">Хватит до</th>
-                  <th scope="col">Расход</th>
+                  <th scope="col">Расход · остаток</th>
                   <th scope="col">Заказать</th>
-                  <th scope="col">Последняя цена</th>
+                  <th scope="col">Цена грамма</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,7 +95,7 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
                   const name = reorderItemName(item);
                   const until = untilLabel(item, reorder.settings.leadDays);
                   const step = (delta: number) =>
-                    setQuantities((current) => ({ ...current, [item.tobacco.id]: stepQuantity(item.quantity, delta) }));
+                    setQuantities((current) => ({ ...current, [item.tobacco.id]: stepQuantity(item.quantityGrams, delta) }));
                   return (
                     <tr key={item.tobacco.id} data-tobacco-id={item.tobacco.id}>
                       <td>{name}</td>
@@ -103,16 +108,16 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
                       <td className={item.rateKind === 'own' ? 'shelf-num' : 'shelf-faint'}>{reorderRate(item)}</td>
                       <td>
                         <span className="reorder-stepper" role="group" aria-label={`Заказать: ${name}`}>
-                          <button type="button" aria-label="Меньше" disabled={item.quantity <= 1} onClick={() => step(-1)}>
+                          <button type="button" aria-label="Меньше" disabled={item.quantityGrams <= REORDER_STEP_GRAMS} onClick={() => step(-1)}>
                             −
                           </button>
-                          <output aria-live="polite">{item.quantity}</output>
+                          <output aria-live="polite">{item.quantityGrams} г</output>
                           <button type="button" aria-label="Больше" onClick={() => step(1)}>
                             +
                           </button>
                         </span>
                       </td>
-                      <td className="shelf-num">{formatMoney(item.lastPriceKop)}</td>
+                      <td className="shelf-num">{formatGramPrice(item.gramPriceKop)}</td>
                     </tr>
                   );
                 })}
@@ -126,13 +131,11 @@ export const ShelfReorder = ({ reorder, error, notify }: ShelfReorderProps) => {
         <section className="reorder-copied" aria-label="Текст заказа">
           <p className="reorder-copied__eyebrow">Скопировано · {supplierTitle(copied.group)}</p>
           <h2>Текст для чата с поставщиком</h2>
-          <pre>{orderText(copied.items)}</pre>
+          <pre>{copied.text}</pre>
         </section>
       ) : null}
 
-      <p className="reorder__hint">
-        Количество — расход на 21 день, округлено до банки. Срок поставки — {formatCount(reorder.settings.leadDays, ['день', 'дня', 'дней'])} (настройка полки).
-      </p>
+      <p className="reorder__hint">{reorderHint(reorder.settings.leadDays)}</p>
     </div>
   );
 };

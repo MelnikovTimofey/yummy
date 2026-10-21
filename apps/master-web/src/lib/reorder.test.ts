@@ -5,8 +5,10 @@ import {
   countReorder,
   groupCaption,
   groupKey,
+  groupOrderText,
   orderText,
   reorderItemName,
+  reorderHint,
   reorderRate,
   reorderSum,
   stepQuantity,
@@ -24,9 +26,9 @@ const item = (patch: Partial<ReorderItem> & { id?: string; name?: string; brand?
     endsAt: '2026-11-21T10:00:00.000Z',
     rate: 21,
     rateKind: 'own',
-    quantity: 3,
-    packWeight: 200,
-    lastPriceKop: 155000,
+    leftGrams: 40,
+    quantityGrams: 450,
+    gramPriceKop: 775,
     ...rest,
   };
 };
@@ -44,32 +46,52 @@ test('reorderItemName: бренд, линейка и вкус через про�
   assert.equal(reorderItemName(item({ brand: 'DARKSIDE', line: 'Core', name: 'Blackcurrant' })), 'DARKSIDE Core Blackcurrant');
 });
 
-test('orderText повторяет формат backend (shelf-insights orderText)', () => {
+test('orderText повторяет формат backend (shelf-insights orderText): граммы', () => {
   assert.equal(
-    orderText([item(), item({ id: 't2', brand: 'Sebero', name: 'Лимонная шипучка', quantity: 2 })]),
-    'Добрый день! Заказ:\nBlack Burn Cane Mint 200 г — 3 шт\nSebero Лимонная шипучка 200 г — 2 шт\nСпасибо!',
+    orderText([item(), item({ id: 't2', brand: 'Sebero', name: 'Лимонная шипучка', quantityGrams: 350 })]),
+    'Добрый день! Заказ:\nBlack Burn Cane Mint — 450 г\nSebero Лимонная шипучка — 350 г\nСпасибо!',
   );
 });
 
-test('withQuantities: локальное количество меняет и текст, и сумму группы', () => {
-  const items = [item(), item({ id: 't2', name: 'Pear lemonade', quantity: 2 })];
-  const changed = withQuantities(items, { t2: 4 });
-  assert.deepEqual(changed.map((line) => line.quantity), [3, 4]);
-  assert.equal(reorderSum(changed), 3 * 155000 + 4 * 155000);
-  assert.match(orderText(changed), /Black Burn Pear lemonade 200 г — 4 шт/);
+test('withQuantities: локальные граммы меняют и текст, и сумму группы', () => {
+  const items = [item(), item({ id: 't2', name: 'Pear lemonade', quantityGrams: 200 })];
+  const changed = withQuantities(items, { t2: 300 });
+  assert.deepEqual(changed.map((line) => line.quantityGrams), [450, 300]);
+  assert.equal(reorderSum(changed), 450 * 775 + 300 * 775);
+  assert.match(orderText(changed), /Black Burn Pear lemonade — 300 г/);
   // Исходные строки не трогаем.
-  assert.equal(items[1].quantity, 2);
+  assert.equal(items[1].quantityGrams, 200);
 });
 
-test('reorderSum: нет цены хоть у одной строки — суммы нет', () => {
-  assert.equal(reorderSum([item(), item({ id: 't2', lastPriceKop: null })]), null);
+test('reorderSum: цена грамма дробная — сумма в целых копейках; нет цены — суммы нет', () => {
+  assert.equal(reorderSum([item({ quantityGrams: 150, gramPriceKop: 7.75 * 100 + 0.333 })]), Math.round(150 * 775.333));
+  assert.equal(reorderSum([item(), item({ id: 't2', gramPriceKop: null })]), null);
   assert.equal(reorderSum([]), null);
 });
 
-test('stepQuantity: не меньше одной банки и не больше 99', () => {
-  assert.equal(stepQuantity(3, 1), 4);
-  assert.equal(stepQuantity(1, -1), 1);
-  assert.equal(stepQuantity(99, 1), 99);
+test('stepQuantity: шаг ± 50 г, не меньше 50 г', () => {
+  assert.equal(stepQuantity(450, 1), 500);
+  assert.equal(stepQuantity(450, -1), 400);
+  assert.equal(stepQuantity(50, -1), 50);
+  // Чужое количество от backend выравниваем к шагу.
+  assert.equal(stepQuantity(130, 1), 150);
+  assert.equal(stepQuantity(130, -1), 100);
+});
+
+test('groupOrderText: без правок — текст из ответа, после правки — пересобран в граммах', () => {
+  const items = [item(), item({ id: 't2', name: 'Pear lemonade', quantityGrams: 200 })];
+  const g = group(items);
+  const text = [{ supplierId: 's1', text: 'текст backend' }];
+  assert.equal(groupOrderText(g, items, text, {}), 'текст backend');
+  assert.equal(groupOrderText(g, items, text, { t9: 100 }), 'текст backend');
+  // Вернули степпер к исходному — снова текст backend.
+  assert.equal(groupOrderText(g, items, text, { t2: 200 }), 'текст backend');
+  const changed = withQuantities(items, { t2: 250 });
+  assert.equal(groupOrderText(g, changed, text, { t2: 250 }), orderText(changed));
+  // Группа без поставщика — ключ null; текста нет — собираем сами.
+  const none = group(items, { supplier: null });
+  assert.equal(groupOrderText(none, items, [{ supplierId: null, text: 'без поставщика' }], {}), 'без поставщика');
+  assert.equal(groupOrderText(g, items, [], {}), orderText(items));
 });
 
 test('countReorder считает строки во всех группах, без данных — null', () => {
@@ -90,7 +112,7 @@ test('groupCaption: последний счёт со статусом, план 
     'последний счёт 12 ноя, принят',
   );
   assert.equal(groupCaption(group([item({ status: 'plan' })], { supplier: null, lastInvoice: null })), 'в плане из каталога');
-  assert.equal(groupCaption(group([item({ status: 'out' })], { supplier: null, lastInvoice: null })), 'банки пришли без счёта поставщика');
+  assert.equal(groupCaption(group([item({ status: 'out' })], { supplier: null, lastInvoice: null })), 'приход без счёта поставщика');
   assert.equal(groupCaption(group([item()], { lastInvoice: null })), '');
 });
 
@@ -106,10 +128,21 @@ test('untilLabel: закончился, в плане, дата с днями и
   assert.deepEqual(untilLabel(item({ daysLeft: null, endsAt: null }), 7), { text: '—', days: null, tone: 'faint' });
 });
 
-test('reorderRate: нет расхода — прочерк, оценка по бренду помечена', () => {
-  assert.equal(reorderRate(item()), '21 г/день');
-  assert.equal(reorderRate(item({ rate: null, rateKind: 'none' })), '—');
-  assert.equal(reorderRate(item({ rate: 9.5, rateKind: 'brand' })), '≈ 9,5 г/день · бренд');
+test('reorderRate: свой расход с остатком, по бренду — без остатка, нет расхода — «мало данных»', () => {
+  assert.equal(reorderRate(item()), '21 г/день · 40 г');
+  assert.equal(reorderRate(item({ leftGrams: 0, rate: 15 })), '15 г/день · 0 г');
+  assert.equal(reorderRate(item({ leftGrams: null })), '21 г/день');
+  assert.equal(reorderRate(item({ rate: 12, rateKind: 'brand' })), '≈ 12 г/день · бренд');
+  assert.equal(reorderRate(item({ rate: null, rateKind: 'none', leftGrams: null })), 'мало данных');
+  assert.equal(reorderRate(item({ rate: null, rateKind: 'none' })), 'мало данных · 40 г');
+});
+
+test('reorderHint: формулировка мокапа и срок поставки из настроек точки', () => {
+  assert.equal(
+    reorderHint(7),
+    'Заказать — расход на 21 день минус остаток, вверх до 50 г; шаг ± 50 г. Срок поставки — 7 дней (настройка точки).',
+  );
+  assert.match(reorderHint(1), /Срок поставки — 1 день/);
 });
 
 test('validateShelfSettings: целые числа в границах backend', () => {
