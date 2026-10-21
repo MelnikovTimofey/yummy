@@ -376,7 +376,7 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   await expect(reorderToggle).toHaveAttribute('aria-pressed', 'true');
   // Группы поставщиков или пустое состояние — зависит от полки в базе.
   await expect(page.locator('.reorder-group, .reorder__empty').first()).toBeVisible();
-  await expect(page.locator('.reorder__hint')).toContainText('Количество — расход на 21 день');
+  await expect(page.locator('.reorder__hint')).toContainText('Заказать — расход на 21 день минус остаток');
 
   await page.getByRole('button', { name: 'Меню полки' }).click();
   await page.getByRole('menuitem', { name: /Настройки полки/ }).click();
@@ -413,11 +413,11 @@ test('Master catalog shows purchase ideas from htreviews without planning anythi
 });
 
 // Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
-// Табак берётся с полки, поэтому приёмка лишь добавляет ему банку в запас:
+// Табак берётся с полки, поэтому приёмка лишь добавила бы ему граммы:
 // гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
-// остаётся поставка с уникальным номером «SMOKE-…» и одна банка.
+// осталась бы поставка с уникальным номером «SMOKE-…» и приход.
 // Неразрушающий, как весь прогон (README smoke): черновик доводится до готовности
-// к приёмке и удаляется — принятая поставка оставила бы банки и поставку в базе.
+// к приёмке и удаляется — принятая поставка оставила бы приход и поставку в базе.
 test('Master deliveries prepare a manual draft with a catalog tobacco and discard it', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
@@ -451,14 +451,16 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
     .filter({ hasText: manufacturer })
     .first()
     .click();
-  await addLine.getByLabel('Цена за банку, ₽').fill('1 550');
+  await addLine.getByLabel('Цена за штуку, ₽').fill('1 550');
+  // Без граммов в названии строка ждала бы их и блокировала приёмку.
+  await addLine.getByLabel('Граммов в штуке').fill('200');
   await addLine.getByRole('button', { name: 'Добавить строку' }).click();
   await expect(addLine).toBeHidden();
 
   const line = page.locator('tr[data-line-id]');
   await expect(line).toHaveCount(1);
   await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
-  await expect(page.locator('.deliv-footbar')).toContainText('будет 1 банка');
+  await expect(page.locator('.deliv-footbar')).toContainText('на полку ≈ 200 г');
 
   await expect(page.getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
 
