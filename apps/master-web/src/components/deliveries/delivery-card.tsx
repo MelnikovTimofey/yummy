@@ -426,9 +426,13 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
           </label>
           <p className="deliv-footbar__summary">
             {sum.tone ? <span className={sum.tone === 'ok' ? 'deliv-ok' : 'deliv-warn'}>{sum.short}</span> : <span>{sum.short}</span>}
-            {` · на полку ≈ ${formatWeight(card.gramsToReceive)}`}
+            {' · '}
+            <span>на полку ≈ {formatWeight(card.gramsToReceive)}</span>
             {card.pendingLines ? (
-              <span className="deliv-warn">{` · без табака или граммов: ${formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}`}</span>
+              <>
+                {' · '}
+                <span className="deliv-warn">без табака или граммов: {formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}</span>
+              </>
             ) : null}
           </p>
           <button type="button" className="btn" data-variant="ghost" onClick={onBack}>
