@@ -2903,6 +2903,17 @@ select:focus-visible {
   text-align: center;
 }
 
+/* Конец ленты (#298): тот же центрированный регистр, что у пустой ленты. */
+.reel-end {
+  height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px 28px;
+  text-align: center;
+}
+
 .reel-empty-mark {
   box-sizing: border-box;
   width: 56px;

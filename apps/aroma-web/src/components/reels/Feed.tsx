@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReelEntry } from '@/lib/reel-feed';
+import { FeedEnd } from './FeedEnd';
 import { Reel, type ReelFeedMix } from './Reel';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -22,6 +23,7 @@ type FeedProps<T extends ReelFeedMix> = {
   onChoose: (mix: T) => void;
   isFavorite: (mix: T) => boolean;
   onFavorite: (mix: T) => void;
+  onMixer: () => void;
 };
 
 // Лента «Рилсы» (#263): вертикальная прокрутка со снапом — один жест, один рилс.
@@ -37,9 +39,13 @@ export function Feed<T extends ReelFeedMix>({
   onChoose,
   isFavorite,
   onFavorite,
+  onMixer,
 }: FeedProps<T>) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
+  // Слайд-приглашение после последнего микса — не рилс: индекс ленты на нём
+  // не меняется, только последний рилс перестаёт играть.
+  const [atEnd, setAtEnd] = useState(false);
   const animated = !useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion);
 
   useLayoutEffect(() => {
@@ -52,7 +58,9 @@ export function Feed<T extends ReelFeedMix>({
   const onScroll = () => {
     const scroller = scrollerRef.current;
     if (!scroller || !scroller.clientHeight) return;
-    const next = Math.min(items.length - 1, Math.max(0, Math.round(scroller.scrollTop / scroller.clientHeight)));
+    const position = Math.max(0, Math.round(scroller.scrollTop / scroller.clientHeight));
+    setAtEnd(position >= items.length);
+    const next = Math.min(items.length - 1, position);
     if (next !== index) {
       setPaused(false);
       onIndexChange(next);
@@ -74,7 +82,7 @@ export function Feed<T extends ReelFeedMix>({
                 bubble={bubble}
                 favorite={isFavorite(mix)}
                 onFavorite={() => onFavorite(mix)}
-                active={i === index}
+                active={i === index && !atEnd}
                 animated={animated}
                 paused={paused}
                 hint={hint && i === 0}
@@ -88,6 +96,9 @@ export function Feed<T extends ReelFeedMix>({
             ) : null}
           </div>
         ))}
+        <div className="reel-slot">
+          <FeedEnd onMixer={onMixer} />
+        </div>
       </div>
     </div>
   );

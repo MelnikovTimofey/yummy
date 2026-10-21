@@ -435,6 +435,34 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(reelsTab).toHaveAttribute('aria-current', 'page');
 });
 
+// Конец ленты (#298): после последнего микса — слайд-приглашение, «Намиксуй»
+// открывает Миксер, «Назад» возвращает в рилсы.
+test('Aroma reels feed ends with an invitation to «Намиксуй»', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  const reelsTab = nav.getByRole('button', { name: 'Рилсы', exact: true });
+  await reelsTab.click();
+  await expect(page.locator('.reel-reveal .reel-name')).toBeVisible();
+
+  const end = page.getByRole('region', { name: 'Конец ленты' });
+  const feed = page.locator('.reels');
+  await feed.evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
+  await expect(end).toBeInViewport();
+  await expect(end.getByText('Не нашли своё?')).toBeVisible();
+
+  await end.getByRole('button', { name: 'Намиксуй' }).click();
+  await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  await expect(reelsTab).toHaveAttribute('aria-current', 'page');
+});
+
 // Полоса рилсов над Подбором (#264): кружки в порядке ленты, кружок открывает
 // раздел «Рилсы» на своём миксе. Remotion на Подборе не рендерится.
 test('Aroma reel strip above recommendations opens the feed on the tapped mix', async ({ page }) => {

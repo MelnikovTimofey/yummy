@@ -3363,6 +3363,7 @@ export const App = () => {
         onChoose={(mix) => void onChooseReel(mix)}
         isFavorite={isFavoriteMix}
         onFavorite={(mix) => void toggleFavorite(mixToCabinetItem(mix))}
+        onMixer={() => openMixer('reels')}
       />
     );
   };
