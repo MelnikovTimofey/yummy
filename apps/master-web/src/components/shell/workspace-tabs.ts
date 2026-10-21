@@ -20,7 +20,7 @@ export type WorkspaceTabDescriptor = {
 
 export const workspaceTabs: WorkspaceTabDescriptor[] = [
   { id: 'dashboard', label: 'Дашборд', kicker: 'Сводка смены', icon: LayoutDashboard },
-  { id: 'shelf', label: 'Полка', kicker: 'Банки, расход и прогноз', icon: Package },
+  { id: 'shelf', label: 'Полка', kicker: 'Остаток, расход и прогноз', icon: Package },
   { id: 'deliveries', label: 'Поставки', kicker: 'Счета поставщиков и приход', icon: Truck },
   { id: 'catalog', label: 'Каталог', kicker: 'Карточки htreviews и свои', icon: Library },
   { id: 'mixes', label: 'Миксы', kicker: 'Каталог состава', icon: Blend },

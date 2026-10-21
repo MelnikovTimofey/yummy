@@ -820,7 +820,7 @@ export const App = () => {
             flavors: payload.flavors,
             flavorTags: payload.flavorTags,
             // Наличие правится на «Полке»; при создании карточки можно сразу
-            // поставить табак на полку (backend добавит одну банку).
+            // поставить табак на полку (backend запишет приход типичной фасовки бренда).
             ...(payload.id ? {} : { inStock: payload.inStock }),
           }),
         },

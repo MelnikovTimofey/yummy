@@ -114,7 +114,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
             </div>
           </>
         ) : (
-          <p className="empty">Расхода пока нет: он появится после первой пустой банки или отметки остатка.</p>
+          <p className="empty">Расхода пока нет: он появится после первой отметки остатка или «Закончился».</p>
         )}
       </article>
     </>
