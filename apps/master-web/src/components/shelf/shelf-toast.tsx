@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { CircleCheck, Info, TriangleAlert } from 'lucide-react';
 
 export type ShelfToastData = {
   id: number;
   title: string;
   text: string;
   error?: boolean;
+  // Пояснение, а не ошибка: отметка выше расчёта (#shot=edge-more).
+  warn?: boolean;
   undo?: () => Promise<unknown>;
   action?: { label: string; onClick: () => void };
 };
@@ -29,8 +31,8 @@ export const ShelfToast = ({ toast, onUndo, onClose }: { toast: ShelfToastData; 
   }, [left, onClose]);
 
   return (
-    <div className="shelf-toast" role="status" data-tone={toast.error ? 'danger' : undefined}>
-      {toast.error ? <TriangleAlert size={16} aria-hidden /> : <CircleCheck size={16} aria-hidden />}
+    <div className="shelf-toast" role="status" data-tone={toast.error ? 'danger' : toast.warn ? 'warning' : undefined}>
+      {toast.error ? <TriangleAlert size={16} aria-hidden /> : toast.warn ? <Info size={16} aria-hidden /> : <CircleCheck size={16} aria-hidden />}
       <p>
         <b>{toast.title}</b>
         {toast.text ? ` — ${toast.text}` : null}

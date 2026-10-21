@@ -989,7 +989,7 @@ export const InventoryView = ({
                   onClick={() => updateEditorDraft('inStock', !editorDraft.inStock)}
                   disabled={saveStatus === 'loading'}
                   aria-label="Сразу на полку"
-                  title={editorDraft.inStock ? 'Сразу на полку с одной банкой' : 'Только в каталог'}
+                  title={editorDraft.inStock ? 'Сразу на полку' : 'Только в каталог'}
                 >
                   <span className="toggle__track" aria-hidden="true">
                     <span className="toggle__thumb" />
@@ -1261,7 +1261,7 @@ export const InventoryView = ({
       <MasterPageHeader
         eyebrow="КАТАЛОГ · HTREVIEWS"
         title="Каталог"
-        subtitle="Все табаки: карточки htreviews и свои. Банки и расход — на «Полке»."
+        subtitle="Все табаки: карточки htreviews и свои. Остаток и расход — на «Полке»."
         meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])} · ${formatMetricValue(meta.inMixesCount)} в миксах`}
         actions={
           <>

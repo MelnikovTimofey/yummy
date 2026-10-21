@@ -1,37 +1,54 @@
-import type { ReorderGroup, ReorderItem, ReorderView, ShelfRateKind, ShelfSettings, ShelfStatus, ShelfTobaccoRef } from '../contracts';
+import { formatCount, type ReorderGroup, type ReorderItem, type ReorderView, type ShelfRateKind, type ShelfSettings, type ShelfStatus, type ShelfTobaccoRef } from '../contracts';
 import { formatDay } from './deliveries';
-import { formatRate, formatShelfDate, type ShelfTone } from './shelf';
+import { formatDecimal, formatNumber, formatShelfDate, type ShelfTone } from './shelf';
 
-// Чистая логика «К заказу» (#213): количество меняется локально, поэтому
-// текст заказа и сумма группы пересчитываются здесь, а не берутся с backend.
+// Чистая логика «К заказу» (#213, #310): граммы заказа меняются локально, поэтому
+// текст заказа и сумма группы пересчитываются здесь, а без правок берутся с backend.
 
-export const REORDER_MAX_QUANTITY = 99;
+// Зеркало REORDER_STEP_GRAMS в apps/backend/src/stock.ts.
+export const REORDER_STEP_GRAMS = 50;
 
 export const reorderItemName = (item: { tobacco: Pick<ShelfTobaccoRef, 'manufacturer' | 'lineName' | 'name'> }) =>
   [item.tobacco.manufacturer, item.tobacco.lineName, item.tobacco.name].filter(Boolean).join(' ');
 
 // Зеркало orderText в apps/backend/src/shelf-insights.ts.
-export const orderText = (items: Array<Pick<ReorderItem, 'tobacco' | 'packWeight' | 'quantity'>>) =>
-  [
-    'Добрый день! Заказ:',
-    ...items.map((item) => `${reorderItemName(item)} ${item.packWeight} г — ${item.quantity} шт`),
-    'Спасибо!',
-  ].join('\n');
+export const orderText = (items: Array<Pick<ReorderItem, 'tobacco' | 'quantityGrams'>>) =>
+  ['Добрый день! Заказ:', ...items.map((item) => `${reorderItemName(item)} — ${item.quantityGrams} г`), 'Спасибо!'].join('\n');
 
+// Граммы заказа по id табака.
 export type ReorderQuantities = Record<string, number>;
 
 export const withQuantities = (items: ReorderItem[], quantities: ReorderQuantities) =>
   items.map((item) => {
-    const quantity = quantities[item.tobacco.id];
-    return quantity === undefined ? item : { ...item, quantity };
+    const quantityGrams = quantities[item.tobacco.id];
+    return quantityGrams === undefined ? item : { ...item, quantityGrams };
   });
 
+// Зеркало sumKop группы в backend: Σ граммы × цена грамма.
 export const reorderSum = (items: ReorderItem[]) =>
-  items.length && items.every((item) => item.lastPriceKop !== null)
-    ? items.reduce((total, item) => total + item.quantity * item.lastPriceKop!, 0)
+  items.length && items.every((item) => item.gramPriceKop !== null)
+    ? Math.round(items.reduce((total, item) => total + item.quantityGrams * item.gramPriceKop!, 0))
     : null;
 
-export const stepQuantity = (current: number, delta: number) => Math.min(REORDER_MAX_QUANTITY, Math.max(1, current + delta));
+export const stepQuantity = (current: number, delta: number) => {
+  const aligned = delta > 0 ? Math.floor(current / REORDER_STEP_GRAMS) : Math.ceil(current / REORDER_STEP_GRAMS);
+  return Math.max(1, aligned + delta) * REORDER_STEP_GRAMS;
+};
+
+// Пока мастер не менял граммы группы, копируем текст backend как есть.
+export const groupOrderText = (
+  group: ReorderGroup,
+  items: ReorderItem[],
+  texts: ReorderView['text'],
+  quantities: ReorderQuantities,
+) => {
+  const changed = group.items.some((item) => {
+    const quantity = quantities[item.tobacco.id];
+    return quantity !== undefined && quantity !== item.quantityGrams;
+  });
+  const fromBackend = texts.find((entry) => entry.supplierId === (group.supplier?.id ?? null));
+  return !changed && fromBackend ? fromBackend.text : orderText(items);
+};
 
 export const countReorder = (view: Pick<ReorderView, 'groups'> | null) =>
   view ? view.groups.reduce((total, group) => total + group.items.length, 0) : null;
@@ -43,7 +60,7 @@ export const groupCaption = (group: ReorderGroup) => {
     return `последний счёт ${formatDay(group.lastInvoice.date)}, ${group.lastInvoice.status === 'draft' ? 'черновик' : 'принят'}`;
   }
   if (group.supplier) return '';
-  return group.items.every((item) => item.status === 'plan') ? 'в плане из каталога' : 'банки пришли без счёта поставщика';
+  return group.items.every((item) => item.status === 'plan') ? 'в плане из каталога' : 'приход без счёта поставщика';
 };
 
 type UntilInput = { status: ShelfStatus; daysLeft: number | null; endsAt: string | null; rateKind?: ShelfRateKind };
@@ -62,7 +79,15 @@ export const untilLabel = (item: UntilInput, leadDays: number): { text: string; 
   };
 };
 
-export const reorderRate = (item: Pick<ReorderItem, 'rate' | 'rateKind'>) => (item.rate === null ? '—' : formatRate(item));
+export const reorderRate = (item: Pick<ReorderItem, 'rate' | 'rateKind' | 'leftGrams'>) => {
+  if (item.rateKind === 'brand' && item.rate !== null) return `≈ ${formatDecimal(item.rate)} г/день · бренд`;
+  const rate = item.rateKind === 'own' && item.rate !== null ? `${formatDecimal(item.rate)} г/день` : 'мало данных';
+  return item.leftGrams === null ? rate : `${rate} · ${formatNumber(item.leftGrams)} г`;
+};
+
+export const reorderHint = (leadDays: number) =>
+  `Заказать — расход на 21 день минус остаток, вверх до ${REORDER_STEP_GRAMS} г; шаг ± ${REORDER_STEP_GRAMS} г. ` +
+  `Срок поставки — ${formatCount(leadDays, ['день', 'дня', 'дней'])} (настройка точки).`;
 
 // Границы — как в apps/backend/src/shelf.ts (updateSettings).
 const SETTINGS_FIELDS = [

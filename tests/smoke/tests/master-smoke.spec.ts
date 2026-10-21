@@ -58,7 +58,7 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
   // Батч-флоу неразрушающий: табак убирается с полки и тут же возвращается.
-  // Банки при этом не трогаются, поэтому вернувшийся табак снова виден гостю,
+  // Остаток при этом не трогается, поэтому вернувшийся табак снова виден гостю,
   // а прогон не меняет состояние базы — важно и для демо-seed, и для снапшота.
   // Первая строка при сортировке по умолчанию («сначала по наличию») — табак
   // в наличии, то есть на полке (#211).
@@ -162,21 +162,21 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
 });
 
-// «Закончилась» — главное действие полки (#211): одно нажатие, тост
-// с отменой. Сценарий неразрушающий: отмена возвращает банку в работу.
-test('Master shelf marks a pack empty and undoes it from the toast', async ({ page }) => {
+// «Закончился» — главное действие полки (#211, #309): одно нажатие, тост
+// с отменой. Сценарий неразрушающий: отмена удаляет отметку 0 г из журнала.
+test('Master shelf marks a tobacco out and undoes it from the toast', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
 
-  const emptyButton = (row: Locator) => row.getByRole('button', { name: 'Закончилась', exact: true });
+  const emptyButton = (row: Locator) => row.getByRole('button', { name: 'Закончился', exact: true });
   const first = page
     .locator('table.shelf-table tbody tr[data-tobacco-id]')
-    .filter({ has: page.getByRole('button', { name: 'Закончилась', exact: true }) })
+    .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
     .first();
   await expect(first).toBeVisible();
-  // Строка адресуется по id: после «Закончилась» сортировка «Хватит до»
+  // Строка адресуется по id: после «Закончился» сортировка «Хватит до»
   // переставляет закончившийся табак наверх.
   const id = await first.getAttribute('data-tobacco-id');
   const row = page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
@@ -184,14 +184,14 @@ test('Master shelf marks a pack empty and undoes it from the toast', async ({ pa
   await emptyButton(row).click();
   const toast = page.locator('.shelf-toast');
   await expect(toast).toBeVisible();
-  await expect(toast).toContainText(/банка пустая|табак закончился/);
+  await expect(toast).toContainText(/закончился: 0 г/);
   await toast.getByRole('button', { name: /Отменить/ }).click();
   await expect(toast).toBeHidden();
   await expect(emptyButton(row)).toBeVisible();
 });
 
 // «Полка» на телефоне (#215): у стойки мастер открывает полку из нижней
-// навигации, жмёт «Закончилась» в карточке и отменяет из тоста, а шторку
+// навигации, жмёт «Закончился» в карточке и отменяет из тоста, а шторку
 // «Сколько осталось?» закрывает без отметки. Неразрушающий.
 // «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
 // окна отмечает его просмотренным для логина. Неразрушающий: отметка живёт в
@@ -230,7 +230,7 @@ test('Master «What\'s new»: the dot stays until the release is read, then is g
 test.describe('Master on a phone', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test('Master shelf on a phone: bottom navigation, «Закончилась» with undo, remaining sheet closes without a mark', async ({ page }) => {
+  test('Master shelf on a phone: bottom navigation, «Закончился» with undo, remaining sheet closes without a mark', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
@@ -247,10 +247,10 @@ test.describe('Master on a phone', () => {
 
     // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
-    const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончилась', exact: true });
+    const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончился', exact: true });
     const first = page
       .locator('.m-shelf-card')
-      .filter({ has: page.getByRole('button', { name: 'Закончилась', exact: true }) })
+      .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
       .first();
     await expect(first).toBeVisible();
     const id = await first.getAttribute('data-tobacco-id');
@@ -261,17 +261,20 @@ test.describe('Master on a phone', () => {
     await emptyButton(card).click();
     const toast = page.locator('.shelf-toast');
     await expect(toast).toBeVisible();
-    await expect(toast).toContainText(/банка пустая|табак закончился/);
+    await expect(toast).toContainText(/закончился: 0 г/);
     await toast.getByRole('button', { name: /Отменить/ }).click();
     await expect(toast).toBeHidden();
     await expect(emptyButton(card)).toBeVisible();
 
-    await card.getByRole('button', { name: /^Сколько осталось/ }).click();
+    await card.getByRole('button', { name: 'Осталось…', exact: true }).click();
     const sheet = page.getByRole('dialog', { name: /^Сколько осталось/ });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole('group', { name: 'Сколько осталось в открытой' }).getByRole('button')).toHaveCount(5);
-    await expect(sheet).toContainText('Можно не отмечать — отметка только уточняет прогноз.');
-    await expect(sheet.getByRole('button', { name: /^Закончилась/ })).toBeVisible();
+    // Доли от уровня после прихода — с граммами на кнопке.
+    const shares = sheet.getByRole('group', { name: 'Сколько осталось' }).getByRole('button');
+    await expect(shares).toHaveCount(4);
+    await expect(shares.first()).toContainText(/\d+ г/);
+    await expect(sheet).toContainText('Можно не отмечать — отметка только уточняет расход и прогноз.');
+    await expect(sheet.getByRole('button', { name: /^Закончился · 0 г/ })).toBeVisible();
     // Тап по затемнению над шторкой закрывает её без отметки.
     await page.mouse.click(187, 40);
     await expect(sheet).toBeHidden();
@@ -289,10 +292,10 @@ test.describe('Master on a phone', () => {
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
 
-    // Берём табак с открытой банкой — у него доступно и списание.
+    // Берём табак с остатком — у него доступно и списание.
     const first = page
       .locator('.m-shelf-card')
-      .filter({ has: page.getByRole('button', { name: 'Закончилась', exact: true }) })
+      .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
       .first();
     await expect(first).toBeVisible();
     await first.locator('.m-shelf-card__name').click();
@@ -302,17 +305,16 @@ test.describe('Master on a phone', () => {
     await card.getByRole('button', { name: /^Действия:/ }).click();
     const actions = page.getByRole('dialog', { name: /^Действия:/ });
     await expect(actions).toBeVisible();
-    await expect(actions.getByRole('group', { name: 'Сколько осталось в открытой' }).getByRole('button')).toHaveCount(5);
-    for (const name of ['Вскрыть ещё одну банку', 'Добавить банку вручную', 'Списать банку…']) {
+    for (const name of ['Добавить приход без счёта…', 'Списать…']) {
       await expect(actions.getByRole('button', { name, exact: true })).toBeVisible();
     }
     await expect(actions.getByRole('button', { name: /стоп для гостей$/i })).toBeVisible();
     await expect(actions.getByRole('button', { name: /^Убрать с полки/ })).toBeVisible();
 
-    await actions.getByRole('button', { name: 'Списать банку…', exact: true }).click();
-    const writeOff = page.getByRole('dialog', { name: 'Списать банку' });
+    await actions.getByRole('button', { name: 'Списать…', exact: true }).click();
+    const writeOff = page.getByRole('dialog', { name: 'Списать', exact: true });
     await expect(writeOff.getByLabel('Причина')).toBeVisible();
-    await expect(writeOff.getByRole('button', { name: 'Списать', exact: true })).toBeDisabled();
+    await expect(writeOff.getByRole('button', { name: /^Списать/ })).toBeDisabled();
     // Тап по затемнению закрывает шторку, карточка остаётся.
     await page.mouse.click(187, 40);
     await expect(writeOff).toBeHidden();
@@ -374,7 +376,7 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   await expect(reorderToggle).toHaveAttribute('aria-pressed', 'true');
   // Группы поставщиков или пустое состояние — зависит от полки в базе.
   await expect(page.locator('.reorder-group, .reorder__empty').first()).toBeVisible();
-  await expect(page.locator('.reorder__hint')).toContainText('Количество — расход на 21 день');
+  await expect(page.locator('.reorder__hint')).toContainText('Заказать — расход на 21 день минус остаток');
 
   await page.getByRole('button', { name: 'Меню полки' }).click();
   await page.getByRole('menuitem', { name: /Настройки полки/ }).click();
@@ -411,11 +413,11 @@ test('Master catalog shows purchase ideas from htreviews without planning anythi
 });
 
 // Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
-// Табак берётся с полки, поэтому приёмка лишь добавляет ему банку в запас:
+// Табак берётся с полки, поэтому приёмка лишь добавила бы ему граммы:
 // гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
-// остаётся поставка с уникальным номером «SMOKE-…» и одна банка.
+// осталась бы поставка с уникальным номером «SMOKE-…» и приход.
 // Неразрушающий, как весь прогон (README smoke): черновик доводится до готовности
-// к приёмке и удаляется — принятая поставка оставила бы банки и поставку в базе.
+// к приёмке и удаляется — принятая поставка оставила бы приход и поставку в базе.
 test('Master deliveries prepare a manual draft with a catalog tobacco and discard it', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
@@ -449,14 +451,16 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
     .filter({ hasText: manufacturer })
     .first()
     .click();
-  await addLine.getByLabel('Цена за банку, ₽').fill('1 550');
+  await addLine.getByLabel('Цена за штуку, ₽').fill('1 550');
+  // Без граммов в названии строка ждала бы их и блокировала приёмку.
+  await addLine.getByLabel('Граммов в штуке').fill('200');
   await addLine.getByRole('button', { name: 'Добавить строку' }).click();
   await expect(addLine).toBeHidden();
 
   const line = page.locator('tr[data-line-id]');
   await expect(line).toHaveCount(1);
   await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
-  await expect(page.locator('.deliv-footbar')).toContainText('будет 1 банка');
+  await expect(page.locator('.deliv-footbar')).toContainText('на полку ≈ 200 г');
 
   await expect(page.getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
 

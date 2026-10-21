@@ -1,13 +1,14 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useId, useState } from 'react';
 import { Ellipsis } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import type { ShelfCard, ShelfRow } from '@/contracts';
-import { parseManualPack, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
-import { SHEET_MARK_OPTIONS, markTargetPack, openPackLine, sheetEmptyLabel, shelfMobileAction } from '@/lib/shelf-mobile';
-import { ShelfPips } from './shelf-pips';
+import type { ShelfRow } from '@/contracts';
+import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
+import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
+import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
+import { ShelfLevel } from './shelf-level';
 import type { ShelfRowActions } from './shelf-row-menu';
 
-// «Полка» на телефоне (#215, #shot=shelf-mobile, shelf-mobile-sheet).
+// «Полка» на телефоне (#215, #306, #shot=shelf-mobile, shelf-mobile-sheet).
 
 const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
 
@@ -24,7 +25,7 @@ type ShelfMobileListProps = {
 export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, onOpenSheet, onOpenCard }: ShelfMobileListProps) => (
   <ul className="m-shelf-list" aria-label="Табаки на полке">
     {rows.map((row) => {
-      const action = shelfMobileAction(row);
+      const actions = shelfMobileActions(row);
       const until = shelfUntil(row, leadDays);
       const line = shelfStatusLine(row);
       const busy = pendingId === row.tobacco.id;
@@ -32,41 +33,37 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
         <li key={row.tobacco.id} className="m-shelf-card" data-tobacco-id={row.tobacco.id}>
           <button type="button" className="m-shelf-card__name shelf-name" onClick={() => onOpenCard(row)}>
             <b>{row.tobacco.name}</b>
-            <span>
-              {row.tobacco.manufacturer} · {row.packWeight} г
-            </span>
+            <span>{row.tobacco.manufacturer}</span>
           </button>
-          {action.kind === 'none' ? (
-            <span className="m-shelf-card__note shelf-faint">{action.label}</span>
-          ) : (
-            <button
-              type="button"
-              className="m-shelf-card__primary"
-              disabled={busy || action.disabled}
-              onClick={() => {
-                if (action.kind === 'empty') onEmpty(row);
-                else if (action.kind === 'check') onOpenSheet(row);
-                else onUnstop(row);
-              }}
-            >
-              {action.label}
-            </button>
-          )}
+          <span className="shelf-until m-shelf-card__until">
+            {/* Прогноза нет — на телефоне без прочерка, хватает статус-строки. */}
+            {until.text !== '—' ? (
+              <span className="shelf-num" data-tone={until.tone}>
+                {until.text}
+                {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
+              </span>
+            ) : null}
+            {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
+          </span>
           <div className="m-shelf-card__meta">
-            <button type="button" className="m-shelf-card__pips" aria-label={`Сколько осталось: ${fullName(row)}`} onClick={() => onOpenSheet(row)}>
-              <ShelfPips row={row} />
-            </button>
-            <span className="shelf-until m-shelf-card__until">
-              {/* Прогноза нет — на телефоне без прочерка, хватает статус-строки. */}
-              {until.text !== '—' ? (
-                <span className="shelf-num" data-tone={until.tone}>
-                  {until.text}
-                  {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
-                </span>
-              ) : null}
-              {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
-            </span>
+            <ShelfLevel row={row} />
+            {actions.note ? <span className="m-shelf-card__note shelf-faint">{actions.note}</span> : null}
           </div>
+          {actions.left ? (
+            <div className="m-shelf-card__acts">
+              <button type="button" className="m-shelf-card__left" disabled={busy} onClick={() => onOpenSheet(row)}>
+                {actions.left}
+              </button>
+              <button
+                type="button"
+                className="m-shelf-card__primary"
+                disabled={busy}
+                onClick={() => (actions.right === 'unstop' ? onUnstop(row) : onEmpty(row))}
+              >
+                {actions.right === 'unstop' ? 'Снять стоп' : 'Закончился'}
+              </button>
+            </div>
+          ) : null}
         </li>
       );
     })}
@@ -75,64 +72,85 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
 
 type ShelfMarkSheetProps = {
   row: ShelfRow;
-  loadCard: (tobaccoId: string) => Promise<ShelfCard>;
-  onMark: (row: ShelfRow, fraction: number) => void;
+  onCount: (row: ShelfRow, input: CountInput) => void;
   onEmpty: (row: ShelfRow) => void;
   onClose: () => void;
 };
 
-// Шторка «Сколько осталось?»: отметка — по желанию, «Закончилась» — крупно.
-export const ShelfMarkSheet = ({ row, loadCard, onMark, onEmpty, onClose }: ShelfMarkSheetProps) => {
-  const target = markTargetPack(row);
-  const targetId = target?.id ?? '';
-  const tobaccoId = row.tobacco.id;
-  // Последняя отметка есть только в карточке — строка полки её не несёт.
-  const [marks, setMarks] = useState<ShelfCard['packs'][number]['marks'] | null>(null);
-
-  useEffect(() => {
-    if (!targetId) return;
-    let cancelled = false;
-    loadCard(tobaccoId)
-      .then((card) => {
-        if (!cancelled) setMarks(card.packs.find((pack) => pack.id === targetId)?.marks ?? []);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [loadCard, tobaccoId, targetId]);
+// Шторка «Сколько осталось?»: доля или граммы — и «Сохранить»; «Закончился» — крупно.
+export const ShelfMarkSheet = ({ row, onCount, onEmpty, onClose }: ShelfMarkSheetProps) => {
+  const [fraction, setFraction] = useState<number | null>(null);
+  const [value, setValue] = useState('');
+  const inputId = useId();
+  const grams = parseGrams(value);
+  const full = row.fullGrams;
+  const items = shelfRowMenu(row);
+  const input: CountInput | null = grams !== null ? { grams } : fraction !== null ? { fraction } : null;
 
   return (
     <BottomSheet label={`Сколько осталось: ${fullName(row)}`} onClose={onClose} className="m-mark-sheet">
       <div className="m-mark-sheet__head">
-        <p className="m-mark-sheet__eyebrow">
-          {row.tobacco.manufacturer} · {row.packWeight} г
-        </p>
+        <p className="m-mark-sheet__eyebrow">{row.tobacco.manufacturer}</p>
         <h2 className="m-mark-sheet__title">{row.tobacco.name}</h2>
-        <p className="m-mark-sheet__line">{openPackLine(row, marks)}</p>
+        <p className="m-mark-sheet__line">{sheetLine(row)}</p>
       </div>
-      <div className="m-mark-sheet__marks">
-        <h3 className="m-mark-sheet__h3">Сколько осталось в открытой?</h3>
-        <div className="m-mark-sheet__fracs" role="group" aria-label="Сколько осталось в открытой">
-          {SHEET_MARK_OPTIONS.map((option) => (
-            <button
-              key={option.label}
-              type="button"
-              className="m-mark-sheet__frac"
-              disabled={!target}
-              aria-label={option.hint ? `Осталось ${option.label}, ${option.hint}` : `Осталось ${option.label}`}
-              onClick={() => onMark(row, option.value)}
-            >
-              {option.label}
-              {option.hint ? <small>{option.hint}</small> : null}
-            </button>
-          ))}
+      <form
+        className="m-mark-sheet__marks"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (input) onCount(row, input);
+        }}
+      >
+        <h3 className="m-mark-sheet__h3">Сколько осталось?</h3>
+        <div className="m-mark-sheet__fracs" role="group" aria-label="Сколько осталось">
+          {MARK_OPTIONS.map((option) => {
+            const optionGrams = full === null ? null : fractionGrams(full, option.value);
+            return (
+              <button
+                key={option.label}
+                type="button"
+                className="m-mark-sheet__frac"
+                aria-pressed={fraction === option.value}
+                disabled={full === null || !items.canMark}
+                aria-label={optionGrams === null ? `Осталось ${option.label}` : `Осталось ${option.label}, ${optionGrams} г`}
+                onClick={() => {
+                  setFraction(option.value);
+                  setValue('');
+                }}
+              >
+                {option.label}
+                {optionGrams === null ? null : <small>{formatNumber(optionGrams)} г</small>}
+              </button>
+            );
+          })}
         </div>
-        <p className="m-mark-sheet__hint">Можно не отмечать — отметка только уточняет прогноз.</p>
-      </div>
-      {target ? (
+        <label className="m-mark-sheet__h3" htmlFor={inputId}>
+          Или точно, если взвесили
+        </label>
+        <div className="m-mark-sheet__exact">
+          <span className="shelf-grams" data-on={value ? true : undefined}>
+            <input
+              id={inputId}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="граммы"
+              value={value}
+              onChange={(event) => {
+                setValue(event.target.value);
+                setFraction(null);
+              }}
+            />
+            <span>г</span>
+          </span>
+          <button type="submit" className="m-mark-sheet__save" disabled={!input || !items.canMark}>
+            Сохранить
+          </button>
+        </div>
+        <p className="m-mark-sheet__hint">Можно не отмечать — отметка только уточняет расход и прогноз.</p>
+      </form>
+      {items.canEmpty ? (
         <button type="button" className="m-mark-sheet__empty" onClick={() => onEmpty(row)}>
-          {sheetEmptyLabel(row)}
+          Закончился · 0 г
         </button>
       ) : null}
     </BottomSheet>
@@ -145,15 +163,12 @@ type ShelfActionsSheetProps = {
   onClose: () => void;
 };
 
-type ActionsMode = 'main' | 'add-pack' | 'write-off';
+type ActionsMode = 'main' | 'receipt' | 'writeoff';
 
 // Действия карточки на телефоне (#228): те же пункты, что в меню «⋯» строки
 // на десктопе (#shot=shelf-menu), формы — в этой же шторке.
 export const ShelfActionsSheet = ({ row, actions, onClose }: ShelfActionsSheetProps) => {
   const [mode, setMode] = useState<ActionsMode>('main');
-  const [weight, setWeight] = useState(String(row.packWeight));
-  const [price, setPrice] = useState('');
-  const [reason, setReason] = useState('');
   const items = shelfRowMenu(row);
 
   const act = (run: () => void) => {
@@ -161,107 +176,38 @@ export const ShelfActionsSheet = ({ row, actions, onClose }: ShelfActionsSheetPr
     run();
   };
 
-  const submitPack = (event: FormEvent) => {
-    event.preventDefault();
-    const pack = parseManualPack(weight, price);
-    if (pack) act(() => actions.onAddPack(row, pack));
-  };
-
-  const submitWriteOff = (event: FormEvent) => {
-    event.preventDefault();
-    const text = reason.trim();
-    if (text) act(() => actions.onWriteOff(row, text));
-  };
-
-  const label = mode === 'add-pack' ? 'Добавить банку вручную' : mode === 'write-off' ? 'Списать банку' : `Действия: ${fullName(row)}`;
+  const label = mode === 'receipt' ? 'Приход без счёта' : mode === 'writeoff' ? 'Списать' : `Действия: ${fullName(row)}`;
 
   return (
     <BottomSheet label={label} onClose={onClose} className="m-actions">
       <div className="m-mark-sheet__head">
-        <p className="m-mark-sheet__eyebrow">
-          {row.tobacco.manufacturer} · {row.packWeight} г
-        </p>
+        <p className="m-mark-sheet__eyebrow">{row.tobacco.manufacturer}</p>
         <h2 className="m-mark-sheet__title">{mode === 'main' ? row.tobacco.name : label}</h2>
         {mode === 'main' ? null : <p className="m-mark-sheet__line">{row.tobacco.name}</p>}
       </div>
 
       {mode === 'main' ? (
-        <>
-          <div className="m-mark-sheet__marks">
-            <h3 className="m-mark-sheet__h3">Сколько осталось в открытой?</h3>
-            <div className="m-mark-sheet__fracs" role="group" aria-label="Сколько осталось в открытой">
-              {SHEET_MARK_OPTIONS.map((option) => (
-                <button
-                  key={option.label}
-                  type="button"
-                  className="m-mark-sheet__frac"
-                  disabled={!items.canMark}
-                  aria-label={option.hint ? `Осталось ${option.label}, ${option.hint}` : `Осталось ${option.label}`}
-                  onClick={() => act(() => actions.onMark(row, option.value))}
-                >
-                  {option.label}
-                  {option.hint ? <small>{option.hint}</small> : null}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="m-actions__list">
-            <button type="button" className="m-actions__item" disabled={!items.canOpenAnother} onClick={() => act(() => actions.onOpenAnother(row))}>
-              Вскрыть ещё одну банку
-            </button>
-            <button type="button" className="m-actions__item" onClick={() => setMode('add-pack')}>
-              Добавить банку вручную
-            </button>
-            <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
-              {items.stopLabel}
-            </button>
-            <button type="button" className="m-actions__item" disabled={!items.canWriteOff} onClick={() => setMode('write-off')}>
-              Списать банку…
-            </button>
-            <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
-              Убрать с полки <span className="shelf-faint">история останется</span>
-            </button>
-          </div>
-        </>
+        <div className="m-actions__list">
+          <button type="button" className="m-actions__item" onClick={() => setMode('receipt')}>
+            Добавить приход без счёта…
+          </button>
+          <button type="button" className="m-actions__item" disabled={!items.canWriteOff} onClick={() => setMode('writeoff')}>
+            Списать…
+          </button>
+          <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
+            {items.stopLabel}
+          </button>
+          <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
+            Убрать с полки <span className="shelf-faint">история останется</span>
+          </button>
+        </div>
       ) : null}
 
-      {mode === 'add-pack' ? (
-        <form className="m-actions__form" onSubmit={submitPack}>
-          <label className="m-actions__field">
-            <span>Вес, г</span>
-            <input className="text-input" inputMode="numeric" value={weight} onChange={(event) => setWeight(event.target.value)} />
-          </label>
-          <label className="m-actions__field">
-            <span>Цена банки, ₽ — если известна</span>
-            <input className="text-input" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
-          </label>
-          <div className="m-actions__form-actions">
-            <button type="button" className="btn" data-variant="ghost" onClick={() => setMode('main')}>
-              Назад
-            </button>
-            <button type="submit" className="btn" data-variant="primary" disabled={!parseManualPack(weight, price)}>
-              Добавить
-            </button>
-          </div>
-        </form>
+      {mode === 'receipt' ? (
+        <ShelfReceiptForm row={row} onSubmit={(input) => act(() => actions.onReceipt(row, input))} onCancel={() => setMode('main')} autoFocus={false} />
       ) : null}
-
-      {mode === 'write-off' ? (
-        <form className="m-actions__form" onSubmit={submitWriteOff}>
-          <p className="m-mark-sheet__hint">{items.writeOffHint}</p>
-          <label className="m-actions__field">
-            <span>Причина</span>
-            <input className="text-input" value={reason} placeholder="Брак, пересорт, потеря" onChange={(event) => setReason(event.target.value)} />
-          </label>
-          <div className="m-actions__form-actions">
-            <button type="button" className="btn" data-variant="ghost" onClick={() => setMode('main')}>
-              Назад
-            </button>
-            <button type="submit" className="btn" data-variant="danger" disabled={!reason.trim()}>
-              Списать
-            </button>
-          </div>
-        </form>
+      {mode === 'writeoff' ? (
+        <ShelfWriteOffForm row={row} onSubmit={(input) => act(() => actions.onWriteOff(row, input))} onCancel={() => setMode('main')} autoFocus={false} />
       ) : null}
     </BottomSheet>
   );

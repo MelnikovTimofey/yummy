@@ -3,18 +3,21 @@ import { Copy, FileUp, FileWarning, LoaderCircle } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import { ShelfToast, type ShelfToastData } from '@/components/shelf/shelf-toast';
-import { formatCount, formatMetricValue, type DeliveryCard } from '@/contracts';
+import { formatMetricValue, type DeliveryCard } from '@/contracts';
 import type { DeliveriesApi } from '@/hooks/use-deliveries';
 import {
   acceptedToastTitle,
   deliveryStatusTag,
   formatDay,
   formatMoney,
+  formatWeight,
+  meanGramKop,
   monthMeta,
   monthTitle,
   readUploadError,
   type UploadError,
 } from '@/lib/deliveries';
+import { formatGramPrice } from '@/lib/shelf';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
 import { ManualDeliveryDialog } from './delivery-dialogs';
 
@@ -109,7 +112,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           onAccepted={(card) => {
             backToList();
             onAccepted();
-            notify({ title: acceptedToastTitle(card.packs), text: '', action: { label: 'Открыть полку', onClick: onOpenShelf } });
+            notify({ title: acceptedToastTitle(card.grams), text: '', action: { label: 'Открыть полку', onClick: onOpenShelf } });
           }}
           onDeleted={() => {
             backToList();
@@ -128,7 +131,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
   const month = monthTitle(now);
   const drafts = items.filter((item) => item.status === 'draft');
   const oldestDraft = drafts[drafts.length - 1];
-  const meanPackKop = totals && totals.monthPacks ? Math.round(totals.monthKop / totals.monthPacks / 100) * 100 : null;
+  const gramKop = totals ? meanGramKop(totals) : null;
 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -176,7 +179,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
       {totals ? (
         <MasterStatsRow
           tiles={[
-            { label: `ЗА ${month.toLocaleUpperCase('ru-RU')}`, value: formatMoney(totals.monthKop), hint: formatCount(totals.monthPacks, ['банка', 'банки', 'банок']) },
+            { label: `ЗА ${month.toLocaleUpperCase('ru-RU')}`, value: formatMoney(totals.monthKop), hint: totals.monthGrams ? `≈ ${formatWeight(totals.monthGrams)} табака` : 'приходов не было' },
             {
               label: 'ЖДУТ ПРИХОДА',
               value: formatMetricValue(totals.drafts),
@@ -187,9 +190,9 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
             },
             { label: 'ПОСТАВЩИКОВ', value: formatMetricValue(totals.suppliers), hint: `сопоставлений в памяти: ${formatMetricValue(totals.memoryItems)}` },
             {
-              label: 'ЦЕНА БАНКИ',
-              value: meanPackKop === null ? '—' : formatMoney(meanPackKop),
-              hint: meanPackKop === null ? 'в этом месяце приходов не было' : `в среднем за ${month}`,
+              label: 'ЦЕНА ГРАММА',
+              value: formatGramPrice(gramKop),
+              hint: gramKop === null ? 'в этом месяце приходов не было' : `в среднем за ${month}`,
             },
           ]}
         />
@@ -200,7 +203,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           <div className="deliv-alert" role="alert">
             <Copy size={16} aria-hidden />
             <p className="deliv-alert__text">
-              <b>{failure.error.message}.</b> Второй раз те же банки не создаём.
+              <b>{failure.error.message}.</b> Второй раз тот же приход не пишем.
             </p>
             <button
               type="button"
@@ -279,7 +282,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
               <col />
               <col style={{ width: 150 }} />
               <col style={{ width: 80 }} />
-              <col style={{ width: 80 }} />
+              <col style={{ width: 96 }} />
               <col style={{ width: 130 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 200 }} />
@@ -290,7 +293,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                 <th scope="col">Поставщик</th>
                 <th scope="col">Счёт</th>
                 <th scope="col" className="shelf-table__num">Строк</th>
-                <th scope="col" className="shelf-table__num">Банок</th>
+                <th scope="col" className="shelf-table__num">Приход</th>
                 <th scope="col" className="shelf-table__num">Сумма</th>
                 <th scope="col">Пришло</th>
                 <th scope="col">Статус</th>
@@ -315,7 +318,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                     <td>{item.supplier ?? <span className="shelf-faint">{item.kind === 'start' ? 'без поставщика' : '—'}</span>}</td>
                     <td className="shelf-num">{item.number ? `№ ${item.number}` : <span className="shelf-faint">—</span>}</td>
                     <td className="shelf-table__num shelf-num">{formatMetricValue(item.lines)}</td>
-                    <td className="shelf-table__num shelf-num">{formatMetricValue(item.packs)}</td>
+                    <td className="shelf-table__num shelf-num">{item.grams ? formatWeight(item.grams) : <span className="shelf-faint">—</span>}</td>
                     <td className="shelf-table__num shelf-num">{formatMoney(item.totalKop)}</td>
                     <td className="shelf-num">{item.receivedAt ? formatDay(item.receivedAt) : <span className="shelf-faint">—</span>}</td>
                     <td>

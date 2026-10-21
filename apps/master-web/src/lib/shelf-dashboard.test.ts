@@ -53,8 +53,8 @@ test('spendRows: полоса — доля от общей суммы, «без 
 });
 
 test('bowlCostTile и stockValueTile: без цен — прочерк с причиной', () => {
-  assert.deepEqual(bowlCostTile(13700, 18), { value: '≈ 137 ₽', hint: '18 г по средней цене табаков в работе' });
-  assert.deepEqual(bowlCostTile(null, 18), { value: '—', hint: 'нет цен прихода у табаков в работе' });
+  assert.deepEqual(bowlCostTile(13700, 18), { value: '≈ 137 ₽', hint: '18 г по средней цене грамма табаков на полке' });
+  assert.deepEqual(bowlCostTile(null, 18), { value: '—', hint: 'нет цен прихода у табаков на полке' });
   assert.equal(plain(stockValueTile(59400000).value), '≈ 594 000 ₽');
   assert.equal(stockValueTile(59400000).hint, 'по ценам прихода');
   assert.deepEqual(stockValueTile(0), { value: '—', hint: 'нет цен прихода' });
