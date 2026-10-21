@@ -413,6 +413,10 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
 
   const activeName = page.locator('.reel-reveal .reel-name');
   const firstName = (await activeName.innerText()).trim();
+  // Афиша (#314): описание (без него — вкусы) и состав видны без «Подробнее».
+  const firstReel = page.locator('.reel', { has: page.locator('.reel-reveal') });
+  await expect(firstReel.locator('.reel-desc, .reel-flavors')).toBeVisible();
+  await expect(firstReel.getByRole('list', { name: 'Состав микса' })).toBeVisible();
   test.skip((await page.locator('.reel-slot').count()) < 2, 'в наличии один микс — листать некуда');
 
   const feed = page.locator('.reels');
