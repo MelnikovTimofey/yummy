@@ -5,10 +5,10 @@ import { CONFIDENT_MATCH, matchLine, normalizeName, type CatalogTobacco, type Su
 import { parseInvoice } from './invoices/parse';
 import { extractTextItems } from './invoices/pdf-text';
 import type { TextPage } from './invoices/types';
-import { defaultPackWeight, syncAvailability, type ShelfActor, type ShelfItemStatus } from './shelf';
+import { ensureOnShelf, syncAvailability, type ShelfActor, type ShelfItemStatus } from './shelf';
 
 // Поставки (#152, срез 3): счёт поставщика → черновик со строками → приёмка
-// создаёт банки на полке и запоминает сопоставления строк в SupplierItem.
+// пишет приходы в граммах на полку и запоминает сопоставления строк в SupplierItem.
 
 type Tx = Prisma.TransactionClient;
 
@@ -60,6 +60,8 @@ export type DeliveryLineView = {
   priceKop: number | null;
   sumKop: number | null;
   grams: number | null;
+  // Сколько граммов придёт: поправка мастера или qty × grams; null — граммы неизвестны.
+  receivedGrams: number | null;
   kind: LineKind;
   arrived: boolean;
   tobacco: { id: string; manufacturer: string; lineName: string; name: string; shelfStatus: ShelfItemStatus | null } | null;
@@ -86,9 +88,9 @@ export type DeliveryCard = {
   // null — сверять не с чем: у ручной поставки нет итога счёта.
   sumMatches: boolean | null;
   pendingLines: number;
-  packsToCreate: number;
-  // Сколько банок создала приёмка; у черновика 0.
-  packs: number;
+  gramsToReceive: number;
+  // Сколько граммов пришло по приёмке; у черновика 0.
+  grams: number;
 };
 
 export type DeliveryListItem = {
@@ -100,18 +102,20 @@ export type DeliveryListItem = {
   invoiceDate: string | null;
   receivedAt: string | null;
   lines: number;
-  packs: number;
+  grams: number;
   totalKop: number | null;
   createdAt: string;
 };
 
 export type DeliveryList = {
   items: DeliveryListItem[];
-  totals: { monthKop: number; monthPacks: number; drafts: number; suppliers: number; memoryItems: number };
+  totals: { monthKop: number; monthGrams: number; drafts: number; suppliers: number; memoryItems: number };
 };
 
 type LineRecord = {
   qty: number;
+  grams: number | null;
+  receivedGrams: number | null;
   priceKop: number | null;
   sumKop: number | null;
   kind: string;
@@ -120,13 +124,16 @@ type LineRecord = {
 };
 
 const lineSum = (line: LineRecord) => line.sumKop ?? (line.priceKop !== null ? line.priceKop * line.qty : 0);
-const createsPacks = (line: LineRecord) => line.kind === 'tobacco' && line.arrived && line.tobaccoId !== null;
-const isPending = (line: LineRecord) => line.kind === 'tobacco' && line.arrived && line.tobaccoId === null;
+export const lineGrams = (line: Pick<LineRecord, 'qty' | 'grams' | 'receivedGrams'>) =>
+  line.receivedGrams ?? (line.grams === null ? null : line.qty * line.grams);
+const isReceived = (line: LineRecord) => line.kind === 'tobacco' && line.arrived;
+const createsReceipt = (line: LineRecord) => isReceived(line) && line.tobaccoId !== null && lineGrams(line) !== null;
+const isPending = (line: LineRecord) => isReceived(line) && (line.tobaccoId === null || lineGrams(line) === null);
 
 const summarize = (lines: LineRecord[]) => ({
   linesSumKop: lines.reduce((total, line) => total + lineSum(line), 0),
   pendingLines: lines.filter(isPending).length,
-  packsToCreate: lines.filter(createsPacks).reduce((total, line) => total + line.qty, 0),
+  gramsToReceive: lines.filter(createsReceipt).reduce((total, line) => total + lineGrams(line)!, 0),
 });
 
 const iso = (value: Date | null) => (value ? value.toISOString() : null);
@@ -161,7 +168,7 @@ const cardSelect = {
   createdAt: true,
   supplier: { select: { id: true, name: true, inn: true } },
   lines: { orderBy: { n: 'asc' } },
-  _count: { select: { packs: true } },
+  entries: { select: { grams: true } },
 } satisfies Prisma.DeliverySelect;
 
 const loadDelivery = async (client: Tx, id: string) => {
@@ -211,6 +218,7 @@ export const getDelivery = async (id: string): Promise<DeliveryCard> => {
       priceKop: line.priceKop,
       sumKop: line.sumKop,
       grams: line.grams,
+      receivedGrams: lineGrams(line),
       kind: line.kind as LineKind,
       arrived: line.arrived,
       tobacco: tobacco
@@ -244,7 +252,7 @@ export const getDelivery = async (id: string): Promise<DeliveryCard> => {
     lines,
     ...summary,
     sumMatches: record.totalKop === null ? null : summary.linesSumKop === record.totalKop,
-    packs: record._count.packs,
+    grams: record.entries.reduce((total, entry) => total + entry.grams, 0),
   };
 };
 
@@ -268,16 +276,18 @@ export const listDeliveries = async (now = new Date()): Promise<DeliveryList> =>
       totalKop: true,
       createdAt: true,
       supplier: { select: { name: true } },
-      lines: { select: { qty: true, priceKop: true, sumKop: true, kind: true, arrived: true, tobaccoId: true } },
-      _count: { select: { packs: true } },
+      lines: {
+        select: { qty: true, grams: true, receivedGrams: true, priceKop: true, sumKop: true, kind: true, arrived: true, tobaccoId: true },
+      },
+      entries: { select: { grams: true } },
     },
     orderBy: [{ createdAt: 'desc' }],
   });
 
   const from = monthStart(now);
-  const monthPacks = await prisma.pack.findMany({
-    where: { delivery: { status: 'received', kind: { not: 'start' }, receivedAt: { gte: from, lte: now } } },
-    select: { priceKop: true },
+  const monthReceipts = await prisma.stockEntry.findMany({
+    where: { kind: 'receipt', delivery: { status: 'received', kind: { not: 'start' }, receivedAt: { gte: from, lte: now } } },
+    select: { grams: true, priceKop: true },
   });
 
   return {
@@ -292,15 +302,15 @@ export const listDeliveries = async (now = new Date()): Promise<DeliveryList> =>
         invoiceDate: isoDate(record.invoiceDate),
         receivedAt: iso(record.receivedAt),
         lines: record.lines.length,
-        // У черновика — сколько банок даст приёмка сейчас.
-        packs: record.status === 'draft' ? summary.packsToCreate : record._count.packs,
+        // У черновика — сколько граммов даст приёмка сейчас.
+        grams: record.status === 'draft' ? summary.gramsToReceive : record.entries.reduce((total, entry) => total + entry.grams, 0),
         totalKop: record.totalKop ?? (record.lines.length ? summary.linesSumKop : null),
         createdAt: record.createdAt.toISOString(),
       };
     }),
     totals: {
-      monthKop: monthPacks.reduce((total, pack) => total + (pack.priceKop ?? 0), 0),
-      monthPacks: monthPacks.length,
+      monthKop: monthReceipts.reduce((total, receipt) => total + (receipt.priceKop ?? 0), 0),
+      monthGrams: monthReceipts.reduce((total, receipt) => total + receipt.grams, 0),
       drafts: records.filter((record) => record.status === 'draft').length,
       suppliers: await prisma.supplier.count(),
       memoryItems: await prisma.supplierItem.count(),
@@ -481,9 +491,10 @@ const checkInt = (value: number | null | undefined, min: number, max: number, me
   }
 };
 
-const checkLineFields = (input: { qty?: number; grams?: number | null; priceKop?: number | null }) => {
-  checkInt(input.qty, 1, MAX_QTY, `Количество банок — целое число от 1 до ${MAX_QTY}`);
-  checkInt(input.grams, 1, MAX_GRAMS, `Фасовка — целое число граммов от 1 до ${MAX_GRAMS}`);
+const checkLineFields = (input: { qty?: number; grams?: number | null; receivedGrams?: number | null; priceKop?: number | null }) => {
+  checkInt(input.qty, 1, MAX_QTY, `Количество по счёту — целое число от 1 до ${MAX_QTY}`);
+  checkInt(input.grams, 1, MAX_GRAMS, `Граммы в штуке — целое число от 1 до ${MAX_GRAMS}`);
+  checkInt(input.receivedGrams, 1, MAX_QTY * MAX_GRAMS, 'Приход — целое число граммов больше нуля');
   checkInt(input.priceKop, 0, Number.MAX_SAFE_INTEGER, 'Цена — целое число копеек, не меньше нуля');
 };
 
@@ -497,6 +508,7 @@ export type LinePatch = {
   tobaccoId?: string | null;
   qty?: number;
   grams?: number | null;
+  receivedGrams?: number | null;
   priceKop?: number | null;
   arrived?: boolean;
   kind?: LineKind;
@@ -516,6 +528,7 @@ export const updateLine = async (deliveryId: string, lineId: string, patch: Line
           : {}),
         ...(patch.qty !== undefined ? { qty: patch.qty } : {}),
         ...(patch.grams !== undefined ? { grams: patch.grams } : {}),
+        ...(patch.receivedGrams !== undefined ? { receivedGrams: patch.receivedGrams } : {}),
         ...(patch.priceKop !== undefined ? { priceKop: patch.priceKop } : {}),
         ...(patch.arrived !== undefined ? { arrived: patch.arrived } : {}),
         ...(patch.kind !== undefined ? { kind: patch.kind } : {}),
@@ -551,7 +564,7 @@ export const addLine = async (
 ): Promise<DeliveryCard> => {
   const rawName = input.rawName.trim();
   if (!rawName) throw new DeliveryValidationError('Укажите название строки');
-  if (input.qty === undefined) throw new DeliveryValidationError('Укажите количество банок');
+  if (input.qty === undefined) throw new DeliveryValidationError('Укажите количество по счёту');
   checkLineFields(input);
 
   const catalog = input.tobaccoId ? [] : await loadCatalog();
@@ -614,49 +627,41 @@ export const acceptDelivery = async (
       const delivery = await loadDraft(tx, id);
       const pending = delivery.lines.filter(isPending).length;
       if (pending) {
-        throw new DeliveryConflictError('pending_lines', `Выберите табак в строках без сопоставления: ${pending}`, { count: pending });
+        throw new DeliveryConflictError('pending_lines', `Выберите табак и укажите граммы в строках: ${pending}`, { count: pending });
       }
       const receivedAt = input.receivedAt ?? delivery.receivedAt ?? new Date();
       // Условное обновление берёт блокировку строки: повторное нажатие «Принять» ждёт
-      // и видит уже принятую поставку, банки второй раз не создаются.
+      // и видит уже принятую поставку, приход второй раз не пишется.
       const claimed = await tx.delivery.updateMany({ where: { id, status: 'draft' }, data: { status: 'received', receivedAt } });
       if (!claimed.count) throw new DeliveryConflictError('not_draft', 'Поставка уже принята — менять её нельзя');
 
-      const accepted = delivery.lines.filter(createsPacks);
+      const accepted = delivery.lines.filter(createsReceipt);
       const tobaccoIds = [...new Set(accepted.map((line) => line.tobaccoId!))];
-      const tobaccos = await tx.tobacco.findMany({
-        where: { id: { in: tobaccoIds } },
-        select: { id: true, manufacturer: true, shelfItem: { select: { id: true, status: true, packWeight: true } } },
-      });
-      const shelf = new Map<string, { id: string; packWeight: number }>();
-      for (const tobacco of tobaccos) {
-        const item = tobacco.shelfItem;
-        if (item) {
-          if (item.status !== 'active') await tx.shelfItem.update({ where: { id: item.id }, data: { status: 'active' } });
-          shelf.set(tobacco.id, item);
-        } else {
-          const grams = accepted.find((line) => line.tobaccoId === tobacco.id)?.grams;
-          const packWeight = grams ?? defaultPackWeight(tobacco.manufacturer);
-          shelf.set(tobacco.id, await tx.shelfItem.create({ data: { tobaccoId: tobacco.id, status: 'active', packWeight } }));
-        }
-      }
+      const shelf = new Map<string, string>();
+      for (const tobaccoId of tobaccoIds) shelf.set(tobaccoId, (await ensureOnShelf(tx, tobaccoId, 'active')).id);
 
-      let packs = 0;
+      // Пришло меньше, чем по счёту, — цена прихода пропорциональна граммам.
+      let grams = 0;
       let sumKop = 0;
       for (const line of accepted) {
-        const item = shelf.get(line.tobaccoId!)!;
-        await tx.pack.createMany({
-          data: Array.from({ length: line.qty }, () => ({
-            shelfItemId: item.id,
-            weight: line.grams ?? item.packWeight,
-            priceKop: line.priceKop,
-            receivedAt,
+        const received = lineGrams(line)!;
+        const billed = line.grams === null ? received : line.qty * line.grams;
+        const lineKop = line.sumKop ?? (line.priceKop === null ? null : line.priceKop * line.qty);
+        const priceKop = lineKop === null ? null : Math.round((lineKop * received) / billed);
+        await tx.stockEntry.create({
+          data: {
+            shelfItemId: shelf.get(line.tobaccoId!)!,
+            kind: 'receipt',
+            grams: received,
+            at: receivedAt,
+            priceKop,
             deliveryId: id,
             deliveryLineId: line.id,
-          })),
+            actorLogin: actor.login,
+          },
         });
-        packs += line.qty;
-        sumKop += (line.priceKop ?? 0) * line.qty;
+        grams += received;
+        sumKop += priceKop ?? 0;
       }
 
       if (delivery.supplierId) {
@@ -671,7 +676,7 @@ export const acceptDelivery = async (
       }
 
       await syncAvailability(tx, tobaccoIds);
-      await audit(tx, actor, { action: 'accept', entityId: id, entityLabel: labelOf(delivery), details: { packs, sumKop } });
+      await audit(tx, actor, { action: 'accept', entityId: id, entityLabel: labelOf(delivery), details: { grams, sumKop } });
     },
     { timeout: 30_000 },
   );

@@ -1465,8 +1465,7 @@ const wipeStorage = async (tx: StorageTx) => {
   await tx.mixComponent.deleteMany();
   await tx.rail.deleteMany();
   await tx.mix.deleteMany();
-  await tx.packMark.deleteMany();
-  await tx.pack.deleteMany();
+  await tx.stockEntry.deleteMany();
   await tx.shelfItem.deleteMany();
   await tx.shelfSettings.deleteMany();
   await tx.deliveryLine.deleteMany();
@@ -1982,7 +1981,7 @@ export const updateTobacco = async (id: string, payload: TobaccoPatch) => {
       },
     });
     // Наличие пишет только полка: архив снимает его через syncAvailability,
-    // а тумблер старого экрана переводится в банки.
+    // а тумблер старого экрана переводится в остаток полки.
     if (typeof payload.inStock === 'boolean' && payload.inStock !== current.inStock && !nextArchived) {
       await setStockedLegacy(tx, [id], payload.inStock, new Date());
     } else {

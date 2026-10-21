@@ -21,16 +21,18 @@ test.beforeEach(async () => {
 type Row = {
   tobacco: { id: string };
   status: string;
-  openPacks: Array<{ id: string; fraction: number }>;
-  sealedCount: number;
+  leftGrams: number | null;
+  fullGrams: number | null;
+  lastCount: { grams: number; fraction: number | null } | null;
   stopped: boolean;
   guestAvailable: boolean;
   shelfStatus: string;
 };
 
+// Сид ставит табаки в наличии на полку стартовым приходом.
 const firstShelfTobacco = async () => {
   const item = await prisma.shelfItem.findFirstOrThrow({
-    where: { status: 'active', packs: { some: { emptiedAt: null, writtenOffAt: null } } },
+    where: { status: 'active', entries: { some: { kind: 'receipt' } } },
     orderBy: { tobaccoId: 'asc' },
   });
   return item.tobaccoId;
@@ -50,16 +52,17 @@ test('shelf overview lists rows, counters, totals and settings', async () => {
   const body = response.json() as {
     rows: Row[];
     counters: Record<string, number>;
-    totals: { packs: number; kg: number };
+    totals: { kg: number };
     settings: { bowlGrams: number; leadDays: number };
   };
   assert.ok(body.rows.length > 0);
   assert.equal(body.counters.all, body.rows.length);
-  assert.ok(body.totals.packs >= body.rows.length);
+  assert.ok(body.totals.kg > 0);
+  assert.ok(body.rows.every((row) => row.leftGrams === null || row.leftGrams <= (row.fullGrams ?? 0)));
   assert.deepEqual(body.settings, { bowlGrams: 18, leadDays: 7 });
 });
 
-test('marking a pack empty takes the tobacco off the guest menu and undo brings it back', async () => {
+test('«Закончился» takes the tobacco off the guest menu and deleting the entry brings it back', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
   const headers = { authorization: `Bearer ${token}` };
@@ -67,36 +70,50 @@ test('marking a pack empty takes the tobacco off the guest menu and undo brings 
 
   const emptied = await app.inject({ method: 'POST', url: `/staff/shelf/${tobaccoId}/empty`, headers });
   assert.equal(emptied.statusCode, 200);
-  const { packId, item } = emptied.json() as { packId: string; item: Row };
+  const { entryId, item } = emptied.json() as { entryId: string; item: Row };
   assert.equal(item.status, 'out');
+  assert.equal(item.leftGrams, 0);
   assert.equal(item.guestAvailable, false);
   assert.equal((await prisma.tobacco.findUniqueOrThrow({ where: { id: tobaccoId } })).inStock, false);
 
   const again = await app.inject({ method: 'POST', url: `/staff/shelf/${tobaccoId}/empty`, headers });
   assert.equal(again.statusCode, 409);
-  assert.equal((again.json() as { code: string }).code, 'no_open_pack');
+  assert.equal((again.json() as { code: string }).code, 'no_stock');
 
-  const undone = await app.inject({ method: 'POST', url: `/staff/shelf/packs/${packId}/undo-empty`, headers });
+  const undone = await app.inject({ method: 'DELETE', url: `/staff/shelf/entries/${entryId}`, headers });
   assert.equal(undone.statusCode, 200);
   assert.equal((undone.json() as { item: Row }).item.guestAvailable, true);
   assert.equal((await prisma.tobacco.findUniqueOrThrow({ where: { id: tobaccoId } })).inStock, true);
 });
 
-test('marks, stop, extra packs and card go through the shelf API', async () => {
+test('counts by share or grams, receipts, write-offs, stop and card go through the shelf API', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
   const headers = { authorization: `Bearer ${token}` };
   const tobaccoId = await firstShelfTobacco();
+  const post = (path: string, payload: Record<string, unknown>) =>
+    app.inject({ method: 'POST', url: `/staff/shelf/${tobaccoId}/${path}`, headers, payload });
 
-  const badMark = await app.inject({ method: 'POST', url: `/staff/shelf/${tobaccoId}/marks`, headers, payload: { fraction: 0.6 } });
-  assert.equal(badMark.statusCode, 400);
+  assert.equal((await post('counts', { fraction: 0.6 })).statusCode, 400);
+  assert.equal((await post('counts', { grams: -1 })).statusCode, 400);
 
-  const mark = await app.inject({ method: 'POST', url: `/staff/shelf/${tobaccoId}/marks`, headers, payload: { fraction: 0.5 } });
-  assert.equal(mark.statusCode, 200);
+  const half = await post('counts', { fraction: 0.5 });
+  assert.equal(half.statusCode, 200);
+  const halfRow = (half.json() as { item: Row }).item;
+  assert.equal(halfRow.lastCount?.fraction, 0.5);
+  assert.equal(halfRow.lastCount?.grams, Math.round(halfRow.fullGrams! / 2));
 
-  const pack = await app.inject({ method: 'POST', url: `/staff/shelf/${tobaccoId}/packs`, headers, payload: { weight: 250 } });
-  assert.equal(pack.statusCode, 200);
-  assert.equal((pack.json() as { item: Row }).item.sealedCount, 1);
+  const exact = await post('counts', { grams: 80 });
+  assert.equal((exact.json() as { item: Row }).item.leftGrams, 80);
+
+  const receipt = await post('receipts', { grams: 250, priceKop: 180_000 });
+  assert.equal(receipt.statusCode, 200);
+  assert.equal((receipt.json() as { item: Row }).item.fullGrams, 330);
+
+  assert.equal((await post('write-offs', { grams: 30 })).statusCode, 400);
+  const writeOff = await post('write-offs', { grams: 30, reason: 'отсырел' });
+  assert.equal(writeOff.statusCode, 200);
+  assert.equal((writeOff.json() as { item: Row }).item.leftGrams, 300);
 
   const stop = await app.inject({ method: 'PATCH', url: `/staff/shelf/${tobaccoId}`, headers, payload: { stopped: true, stopNote: 'бережём' } });
   assert.equal(stop.statusCode, 200);
@@ -109,9 +126,23 @@ test('marks, stop, extra packs and card go through the shelf API', async () => {
 
   const card = await app.inject({ method: 'GET', url: `/staff/shelf/${tobaccoId}`, headers });
   assert.equal(card.statusCode, 200);
-  const cardBody = (card.json() as { item: Row & { packs: Array<{ marks: unknown[] }> } }).item;
-  assert.equal(cardBody.packs.length, 2);
-  assert.ok(cardBody.packs.some((item) => item.marks.length === 1));
+  const cardBody = (card.json() as {
+    item: Row & { history: Array<{ kind: string; grams: number; delivery: unknown }>; weekly: unknown[]; gramPriceKop: number };
+  }).item;
+  assert.deepEqual(cardBody.history.map((entry) => [entry.kind, entry.grams]).slice(0, 4), [
+    ['writeoff', 30],
+    ['receipt', 250],
+    ['count', 80],
+    ['count', halfRow.lastCount!.grams],
+  ]);
+  assert.equal(cardBody.weekly.length, 5);
+  assert.equal(cardBody.gramPriceKop, 720);
+
+  // Стартовый приход живёт вместе с поставкой — удалить его из истории нельзя.
+  const start = cardBody.history.at(-1) as { id?: string; delivery: unknown };
+  const fromDelivery = await app.inject({ method: 'DELETE', url: `/staff/shelf/entries/${start.id}`, headers });
+  assert.equal(fromDelivery.statusCode, 409);
+  assert.equal((fromDelivery.json() as { code: string }).code, 'entry_from_delivery');
 
   const missing = await app.inject({ method: 'GET', url: '/staff/shelf/no-such-tobacco', headers });
   assert.equal(missing.statusCode, 404);

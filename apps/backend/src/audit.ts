@@ -12,6 +12,7 @@ export type AuditEntityType =
   | 'inventory'
   | 'shelf'
   | 'pack'
+  | 'stock'
   | 'delivery';
 
 const AUDIT_ACTIONS = [
@@ -20,13 +21,16 @@ const AUDIT_ACTIONS = [
   'delete',
   'toggle',
   'archive',
-  // Полка (src/shelf.ts).
+  // Полка (src/shelf.ts). mark, open, add-pack и undo-empty остались от банок (#152) — для старых записей.
   'mark-empty',
   'undo-empty',
   'mark',
   'open',
   'add-pack',
   'write-off',
+  'count',
+  'receipt',
+  'delete-entry',
   'stop',
   'add',
   'remove',
@@ -69,6 +73,7 @@ const isAuditEntityType = (value: string): value is AuditEntityType =>
   || value === 'inventory'
   || value === 'shelf'
   || value === 'pack'
+  || value === 'stock'
   || value === 'delivery';
 
 const isAuditAction = (value: string): value is AuditAction => (AUDIT_ACTIONS as readonly string[]).includes(value);

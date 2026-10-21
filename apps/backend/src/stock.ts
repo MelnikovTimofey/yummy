@@ -1,19 +1,18 @@
-export type PackMark = { at: Date; fraction: number };
+// Остаток табака в граммах (#306): журнал приходов, отметок и списаний.
+// «Закончился» — отметка 0 г. Расход считается по отрезкам между отметками.
 
-export type Pack = {
+export type StockEntryKind = 'receipt' | 'count' | 'writeoff';
+
+export type StockEntry = {
   id: string;
-  weight: number;
-  price: number | null;
-  receivedAt: Date;
-  openedAt: Date | null;
-  emptiedAt: Date | null;
-  writtenOffAt: Date | null;
-  marks: PackMark[];
+  kind: StockEntryKind;
+  // receipt — пришло, count — стало, writeoff — списано.
+  grams: number;
+  at: Date;
+  priceKop: number | null;
 };
 
-export type PackState = 'sealed' | 'open' | 'empty' | 'written_off';
-
-export type ResolvedPack = Pack & { state: PackState };
+export type Segment = { from: number; to: number; grams: number; closedBy: string; excluded: boolean };
 
 export type Rate =
   | { gramsPerDay: number; kind: 'own' | 'brand' }
@@ -24,26 +23,35 @@ export type ShelfSettings = { bowlGrams: number; leadDays: number };
 export type ShelfItem = {
   tobaccoId: string;
   brand: string;
-  packWeight: number;
   keepStocked: boolean;
   plan: boolean;
   stopped: boolean;
-  packs: Pack[];
+  entries: StockEntry[];
 };
 
 export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 
+export type StockState = {
+  received: boolean;
+  // По учёту, без расхода: последняя отметка + приходы − списания.
+  bookGrams: number;
+  // По расчёту сейчас; null — прихода не было.
+  leftGrams: number | null;
+  // Уровень сразу после последнего прихода — база долей.
+  fullGrams: number | null;
+  // Расчёт ушёл ниже учёта из-за расхода, а не из-за свежей отметки.
+  spent: boolean;
+};
+
 export type ShelfForecast = {
   tobaccoId: string;
   status: ShelfStatus;
-  last: boolean;
-  overdue: boolean;
+  inStock: boolean;
   guestAvailable: boolean;
   rate: number | null;
   rateKind: Rate['kind'];
-  openPacks: number;
-  sealedPacks: number;
-  remainingGrams: number;
+  leftGrams: number | null;
+  fullGrams: number | null;
   daysLeft: number | null;
   endsAt: Date | null;
 };
@@ -51,7 +59,7 @@ export type ShelfForecast = {
 export type ReorderLine = {
   tobaccoId: string;
   status: ShelfStatus;
-  quantity: number;
+  quantityGrams: number;
   daysLeft: number | null;
   endsAt: Date | null;
 };
@@ -61,121 +69,106 @@ export const DEFAULT_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7 };
 const DAY_MS = 86_400_000;
 const RATE_WINDOW_DAYS = 60;
 const REORDER_DAYS = 21;
-const OVERDUE_SHARE = 0.1;
+const REORDER_STEP_GRAMS = 50;
+const REORDER_FALLBACK_GRAMS = 200;
+const CHECK_SHARE = 0.1;
+const CORRECTION_MS = 30 * 60_000;
+const MIN_SEGMENT_MS = 6 * 3_600_000;
 const WEEKDAY_WINDOW_DAYS = 28;
 const WEEKDAY_MIN_EVENTS = 50;
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
-const endOf = (pack: Pack) => pack.emptiedAt ?? pack.writtenOffAt;
 
-// Самая ранняя точка не раньше `from`, когда у табака нет ни одной открытой
-// банки; null — какая-то банка открыта до сих пор.
-const firstGap = (from: number, intervals: Array<[number, number | null]>) => {
-  let time = from;
-  for (;;) {
-    const covering = intervals.find(([start, end]) => start <= time && (end === null || time < end));
-    if (!covering) return time;
-    if (covering[1] === null) return null;
-    time = covering[1];
+const ordered = (entries: StockEntry[]) =>
+  entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => a.entry.at.getTime() - b.entry.at.getTime() || a.index - b.index)
+    .map(({ entry }) => entry);
+
+type Anchor = { at: number; level: number };
+
+type WalkHandlers = {
+  receipt?: (anchor: Anchor | null, came: number, gone: number, entry: StockEntry) => void;
+  count?: (entry: StockEntry) => void;
+};
+
+// Проход по журналу: от точки отсчёта (первый приход или отметка) копятся
+// приходы и списания до следующей отметки. Пока остаток был 0, дни не идут:
+// приход после «Закончился» сам становится точкой отсчёта. Отметка вскоре после
+// предыдущей («½», а потом «точно 180 г») заменяет её, а не открывает отрезок в минуту.
+const walk = (entries: StockEntry[], on: WalkHandlers = {}) => {
+  const result: Segment[] = [];
+  let anchor: Anchor | null = null;
+  let came = 0;
+  let gone = 0;
+  type Running = { anchor: Anchor | null; came: number; gone: number };
+  let last: (Running & { at: number; segment: boolean }) | null = null;
+  for (const entry of ordered(entries)) {
+    const at = entry.at.getTime();
+    if (entry.kind === 'receipt') {
+      on.receipt?.(anchor, came, gone, entry);
+      if (!anchor || (anchor.level === 0 && !came && !gone)) anchor = { at, level: entry.grams };
+      else came += entry.grams;
+      last = null;
+    } else if (entry.kind === 'writeoff') {
+      if (anchor) gone += entry.grams;
+      last = null;
+    } else {
+      if (last && at - last.at < CORRECTION_MS) {
+        if (last.segment) result.pop();
+        ({ anchor, came, gone } = last);
+      }
+      const before: Running = { anchor, came, gone };
+      if (anchor) {
+        const grams = anchor.level + came - gone - entry.grams;
+        result.push({ from: anchor.at, to: at, grams, closedBy: entry.id, excluded: grams < 0 || at - anchor.at < MIN_SEGMENT_MS });
+      }
+      last = { at, ...before, segment: anchor !== null };
+      on.count?.(entry);
+      anchor = { at, level: entry.grams };
+      came = 0;
+      gone = 0;
+    }
   }
+  return { segments: result, anchor, came, gone };
 };
 
-// Мастер вскрытие не отмечает: если у табака нет банки в работе, в работу
-// уходит старейшая из запаса — с прихода или с момента, когда закончилась
-// предыдущая. Явный openedAt — «вскрыть ещё одну» параллельно.
-export const resolvePacks = (packs: Pack[]): ResolvedPack[] => {
-  const opened = new Map<string, Date>();
-  const intervals: Array<[number, number | null]> = [];
-  for (const pack of packs) {
-    if (!pack.openedAt) continue;
-    opened.set(pack.id, pack.openedAt);
-    intervals.push([pack.openedAt.getTime(), endOf(pack)?.getTime() ?? null]);
-  }
+export const segments = (entries: StockEntry[]): Segment[] => walk(entries).segments;
 
-  const queue = packs
-    .map((pack, index) => ({ pack, index }))
-    .filter(({ pack }) => !pack.openedAt)
-    .sort((a, b) => a.pack.receivedAt.getTime() - b.pack.receivedAt.getTime() || a.index - b.index)
-    .map(({ pack }) => pack);
+const counted = (entries: StockEntry[]) =>
+  segments(entries).filter((segment) => !segment.excluded && segment.to > segment.from);
 
-  for (const pack of queue) {
-    const openAt = firstGap(pack.receivedAt.getTime(), intervals);
-    if (openAt === null) break;
-    if (pack.writtenOffAt && pack.writtenOffAt.getTime() <= openAt) continue;
-    opened.set(pack.id, new Date(openAt));
-    intervals.push([openAt, endOf(pack)?.getTime() ?? null]);
-  }
-
-  return packs.map((pack) => {
-    const openedAt = opened.get(pack.id) ?? null;
-    const state: PackState = pack.writtenOffAt
-      ? 'written_off'
-      : pack.emptiedAt
-        ? 'empty'
-        : openedAt
-          ? 'open'
-          : 'sealed';
-    return { ...pack, openedAt, state };
-  });
-};
-
-const lastMark = (pack: ResolvedPack): PackMark => {
-  const marks = [...pack.marks].sort((a, b) => a.at.getTime() - b.at.getTime());
-  return marks[marks.length - 1] ?? { at: pack.openedAt!, fraction: 1 };
-};
-
-// Завершённые отрезки шкалы банки: от вскрытия через отметки к «Закончилась».
-// Текущий отрезок (от последней точки до сейчас) не завершён и сюда не входит.
-// Отметка выше предыдущей — исправление: её отрезок не расход, но точкой
-// отсчёта дальше служит она.
-const segments = (pack: ResolvedPack) => {
-  if (!pack.openedAt || pack.state === 'written_off') return [];
-  const points: PackMark[] = [
-    { at: pack.openedAt, fraction: 1 },
-    ...[...pack.marks].sort((a, b) => a.at.getTime() - b.at.getTime()),
-  ];
-  if (pack.emptiedAt) points.push({ at: pack.emptiedAt, fraction: 0 });
-  return points.slice(1).flatMap((point, index) => {
-    const previous = points[index];
-    if (point.fraction > previous.fraction) return [];
-    return [{ from: previous.at.getTime(), to: point.at.getTime(), grams: pack.weight * (previous.fraction - point.fraction) }];
-  });
-};
-
-const unionLength = (intervals: Array<[number, number]>) => {
-  let total = 0;
-  let end = -Infinity;
-  for (const [from, to] of [...intervals].sort((a, b) => a[0] - b[0])) {
-    if (to <= end) continue;
-    total += to - Math.max(from, end);
-    end = to;
-  }
-  return total;
-};
-
-// Расход — табака, а не банки: граммы всех банок делятся на время, когда
-// хоть одна была в работе, чтобы параллельные банки не делили расход пополам.
-export const consumptionRate = (packs: Pack[], now: Date): Rate => {
+export const consumptionRate = (entries: StockEntry[], now: Date): Rate => {
   const windowStart = now.getTime() - RATE_WINDOW_DAYS * DAY_MS;
   let grams = 0;
-  const covered: Array<[number, number]> = [];
-  for (const segment of resolvePacks(packs).flatMap(segments)) {
-    if (segment.to <= segment.from) continue;
+  let days = 0;
+  for (const segment of counted(entries)) {
     const from = Math.max(segment.from, windowStart);
     const to = Math.min(segment.to, now.getTime());
     if (to <= from) continue;
     grams += (segment.grams * (to - from)) / (segment.to - segment.from);
-    covered.push([from, to]);
+    days += (to - from) / DAY_MS;
   }
-  const days = unionLength(covered) / DAY_MS;
   return days > 0 ? { gramsPerDay: grams / days, kind: 'own' } : { gramsPerDay: null, kind: 'none' };
 };
 
 export type Period = { from: Date; to: Date };
 
-// Граммы завершённых отрезков шкалы, разнесённые по времени отрезка равномерно.
-export const consumptionByPeriod = (packs: Pack[], periods: Period[]): number[] => {
-  const all = resolvePacks(packs).flatMap(segments).filter((segment) => segment.to > segment.from);
+// Недели с понедельника в часовом поясе процесса; последняя — текущая, до сейчас.
+export const weekPeriods = (now: Date, count: number): Array<Period & { partial: boolean }> => {
+  const monday = now.getDate() - ((now.getDay() + 6) % 7);
+  return Array.from({ length: count }, (_, index) => {
+    const back = count - 1 - index;
+    const from = new Date(now.getFullYear(), now.getMonth(), monday - 7 * back);
+    return back
+      ? { from, to: new Date(now.getFullYear(), now.getMonth(), monday - 7 * back + 7), partial: false }
+      : { from, to: now, partial: true };
+  });
+};
+
+// Граммы завершённых отрезков, разнесённые по времени отрезка равномерно.
+export const consumptionByPeriod = (entries: StockEntry[], periods: Period[]): number[] => {
+  const all = counted(entries);
   return periods.map(({ from, to }) =>
     sum(
       all.map((segment) => {
@@ -211,68 +204,56 @@ export const withBrandFallback = (rate: Rate, brandRates: number[]): Rate => {
   return { gramsPerDay: median(brandRates), kind: 'brand' };
 };
 
-const openInterval = (pack: ResolvedPack): [number, number] | null =>
-  pack.openedAt ? [pack.openedAt.getTime(), endOf(pack)?.getTime() ?? Infinity] : null;
+const estimate = (anchor: Anchor, came: number, gone: number, gramsPerDay: number | null, at: number) =>
+  Math.max(0, anchor.level + came - gone - (gramsPerDay ?? 0) * Math.max(0, at - anchor.at) / DAY_MS);
 
-// Дни, взвешенные долей банки: пока в работе k банок, каждая уходит в k раз медленнее.
-const sharedDays = (from: number, to: number, intervals: Array<[number, number]>) => {
-  const cuts = [from, to, ...intervals.flat().filter((time) => time > from && time < to)].sort((a, b) => a - b);
-  let days = 0;
-  for (let index = 1; index < cuts.length; index += 1) {
-    const middle = (cuts[index - 1] + cuts[index]) / 2;
-    const open = intervals.filter(([start, end]) => start <= middle && middle < end).length;
-    days += (cuts[index] - cuts[index - 1]) / DAY_MS / Math.max(1, open);
-  }
-  return days;
+// Уровень после прихода — база долей; отметка выше него (досыпали без счёта)
+// поднимает уровень, чтобы полоса не уходила за 100 %.
+export const stockState = (entries: StockEntry[], gramsPerDay: number | null, now: Date): StockState => {
+  let full: number | null = null;
+  const end = walk(entries, {
+    receipt: (anchor, came, gone, entry) => {
+      full = (anchor ? estimate(anchor, came, gone, gramsPerDay, entry.at.getTime()) : 0) + entry.grams;
+    },
+    count: (entry) => {
+      if (full === null || entry.grams > full) full = entry.grams;
+    },
+  });
+  if (!end.anchor) return { received: false, bookGrams: 0, leftGrams: null, fullGrams: null, spent: false };
+  const book = Math.max(0, end.anchor.level + end.came - end.gone);
+  const left = estimate(end.anchor, end.came, end.gone, gramsPerDay, now.getTime());
+  return { received: true, bookGrams: book, leftGrams: left, fullGrams: full, spent: left < book };
 };
 
-// packs — все банки табака: по ним видно, сколько банок было в работе одновременно.
-export const openRemaining = (
-  pack: ResolvedPack,
-  gramsPerDay: number | null,
-  now: Date,
-  packs: ResolvedPack[] = [pack],
-) => {
-  const mark = lastMark(pack);
-  const intervals = packs.map(openInterval).filter((interval): interval is [number, number] => interval !== null);
-  const spent = gramsPerDay === null ? 0 : gramsPerDay * sharedDays(mark.at.getTime(), now.getTime(), intervals);
-  const grams = Math.max(0, pack.weight * mark.fraction - spent);
-  return { grams, overdue: grams < pack.weight * OVERDUE_SHARE };
-};
+export const fractionGrams = (fullGrams: number, fraction: number) => Math.round(fullGrams * fraction);
 
 export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: ShelfSettings): ShelfForecast => {
-  const packs = resolvePacks(item.packs);
-  const open = packs.filter((pack) => pack.state === 'open');
-  const sealed = packs.filter((pack) => pack.state === 'sealed');
-  const remaining = open.map((pack) => openRemaining(pack, rate.gramsPerDay, now, packs));
-  const remainingGrams = sum(remaining.map((entry) => entry.grams)) + sum(sealed.map((pack) => pack.weight));
-  const daysLeft = rate.gramsPerDay ? remainingGrams / rate.gramsPerDay : null;
-  const overdue = remaining.some((entry) => entry.overdue);
-  const stocked = open.length + sealed.length > 0;
+  const state = stockState(item.entries, rate.gramsPerDay, now);
+  const inStock = state.bookGrams > 0;
+  const daysLeft = inStock && rate.gramsPerDay ? state.leftGrams! / rate.gramsPerDay : null;
+  const check = state.spent && state.fullGrams !== null && state.leftGrams! < state.fullGrams * CHECK_SHARE;
 
-  const status: ShelfStatus = !stocked
-    ? item.plan && !packs.length
-      ? 'plan'
-      : 'out'
-    : item.stopped
-      ? 'stop'
-      : overdue
-        ? 'check'
-        : daysLeft !== null && daysLeft <= settings.leadDays
-          ? 'ending'
-          : 'ok';
+  const status: ShelfStatus = !state.received
+    ? item.plan ? 'plan' : 'out'
+    : !inStock
+      ? 'out'
+      : item.stopped
+        ? 'stop'
+        : check
+          ? 'check'
+          : daysLeft !== null && daysLeft <= settings.leadDays
+            ? 'ending'
+            : 'ok';
 
   return {
     tobaccoId: item.tobaccoId,
     status,
-    last: open.length === 1 && !sealed.length,
-    overdue,
-    guestAvailable: stocked && !item.stopped,
+    inStock,
+    guestAvailable: inStock && !item.stopped,
     rate: rate.gramsPerDay,
     rateKind: rate.kind,
-    openPacks: open.length,
-    sealedPacks: sealed.length,
-    remainingGrams,
+    leftGrams: state.leftGrams,
+    fullGrams: state.fullGrams,
     daysLeft,
     endsAt: daysLeft === null ? null : new Date(now.getTime() + daysLeft * DAY_MS),
   };
@@ -281,7 +262,7 @@ export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: 
 // Прогноз всей полки: табак без своих данных получает медиану расхода
 // своего бренда.
 export const forecastShelf = (items: ShelfItem[], now: Date, settings: ShelfSettings): ShelfForecast[] => {
-  const rates = items.map((item) => consumptionRate(item.packs, now));
+  const rates = items.map((item) => consumptionRate(item.entries, now));
   const brandRates = new Map<string, number[]>();
   items.forEach((item, index) => {
     const rate = rates[index];
@@ -293,10 +274,15 @@ export const forecastShelf = (items: ShelfItem[], now: Date, settings: ShelfSett
 };
 
 export const todayForecast = (forecasts: ShelfForecast[], bowlGrams: number) => {
-  const grams = sum(forecasts.filter((forecast) => forecast.openPacks > 0).map((forecast) => forecast.rate ?? 0));
+  const grams = sum(forecasts.filter((forecast) => forecast.inStock).map((forecast) => forecast.rate ?? 0));
   return { grams, bowls: grams / bowlGrams };
 };
 
+const roundUpToStep = (grams: number) => Math.max(1, Math.ceil(grams / REORDER_STEP_GRAMS)) * REORDER_STEP_GRAMS;
+
+const lastReceipt = (entries: StockEntry[]) => ordered(entries).filter((entry) => entry.kind === 'receipt').pop();
+
+// Без расхода заказываем столько же, сколько пришло в прошлый раз.
 export const reorderList = (items: ShelfItem[], forecasts: ShelfForecast[], settings: ShelfSettings): ReorderLine[] => {
   const byId = new Map(forecasts.map((forecast) => [forecast.tobaccoId, forecast]));
   const lines: ReorderLine[] = [];
@@ -305,10 +291,13 @@ export const reorderList = (items: ShelfItem[], forecasts: ShelfForecast[], sett
     if (!forecast || !(item.keepStocked || item.plan)) continue;
     const missing = forecast.status === 'out' || forecast.status === 'plan';
     if (!missing && !(forecast.daysLeft !== null && forecast.daysLeft <= settings.leadDays)) continue;
+    const left = forecast.inStock ? forecast.leftGrams ?? 0 : 0;
     lines.push({
       tobaccoId: item.tobaccoId,
       status: forecast.status,
-      quantity: forecast.rate ? Math.max(1, Math.ceil((forecast.rate * REORDER_DAYS) / item.packWeight)) : 1,
+      quantityGrams: forecast.rate
+        ? roundUpToStep(forecast.rate * REORDER_DAYS - left)
+        : roundUpToStep(lastReceipt(item.entries)?.grams ?? REORDER_FALLBACK_GRAMS),
       daysLeft: forecast.daysLeft,
       endsAt: forecast.endsAt,
     });
@@ -321,12 +310,12 @@ export const reorderList = (items: ShelfItem[], forecasts: ShelfForecast[], sett
     .map(({ line }) => line);
 };
 
-export const gramPrice = (pack: Pack) => (pack.price === null ? null : pack.price / pack.weight);
+export const gramPrice = (entries: StockEntry[]) => {
+  const priced = ordered(entries).filter((entry) => entry.kind === 'receipt' && entry.priceKop !== null && entry.grams > 0).pop();
+  return priced ? priced.priceKop! / priced.grams : null;
+};
 
-export const bowlCost = (packs: ResolvedPack[], bowlGrams: number) => {
-  const prices = packs
-    .filter((pack) => pack.state === 'open')
-    .map(gramPrice)
-    .filter((price): price is number => price !== null);
-  return prices.length ? (bowlGrams * sum(prices)) / prices.length : null;
+export const bowlCost = (gramPrices: Array<number | null>, bowlGrams: number) => {
+  const known = gramPrices.filter((price): price is number => price !== null);
+  return known.length ? (bowlGrams * sum(known)) / known.length : null;
 };

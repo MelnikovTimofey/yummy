@@ -3,6 +3,7 @@ import test from 'node:test';
 import { buildApp } from './app';
 import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import { prisma } from './db';
+import { bookOf } from './shelf';
 import { resetAppState } from './state';
 
 const loginStaff = async (app: ReturnType<typeof buildApp>) => {
@@ -697,23 +698,23 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
 
 // Переходный режим до экрана «Полка» (#210): старые эндпоинты «Табаков» пишут
 // наличие через полку, и кэш inStock всегда совпадает с правилом полки.
+const entriesOf = (tobaccoId: string) =>
+  prisma.stockEntry.findMany({ where: { shelfItem: { tobaccoId } }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] });
+
+const book = async (tobaccoId: string) => bookOf(await entriesOf(tobaccoId));
+
 const assertAvailabilityMatchesShelf = async () => {
-  const tobaccos = await prisma.tobacco.findMany({
-    include: { shelfItem: { include: { packs: { where: { emptiedAt: null, writtenOffAt: null } } } } },
-  });
+  const tobaccos = await prisma.tobacco.findMany({ include: { shelfItem: true } });
   for (const tobacco of tobaccos) {
     const expected = !tobacco.archived
       && tobacco.shelfItem?.status === 'active'
       && !tobacco.shelfItem.stopped
-      && tobacco.shelfItem.packs.length > 0;
+      && (await book(tobacco.id)) > 0;
     assert.equal(tobacco.inStock, expected, tobacco.id);
   }
 };
 
-const stockedPacks = (tobaccoId: string) =>
-  prisma.pack.count({ where: { shelfItem: { tobaccoId }, emptiedAt: null, writtenOffAt: null } });
-
-test('тумблер наличия старого экрана переводится в банки полки', async () => {
+test('тумблер наличия старого экрана переводится в остаток полки', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
   const patch = (id: string, payload: Record<string, unknown>) =>
@@ -724,32 +725,32 @@ test('тумблер наличия старого экрана переводи
       payload,
     });
 
-  // «Есть» для табака не с полки — на полку с одной банкой фасовки по умолчанию.
+  // «Есть» для табака не с полки — на полку с приходом типичной фасовки бренда, без поставки.
   assert.equal((await patch('tobacco-peach-silk', { inStock: true })).statusCode, 200);
-  const peach = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'tobacco-peach-silk' }, include: { packs: true } });
+  const peach = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'tobacco-peach-silk' } });
   assert.equal(peach.status, 'active');
-  assert.deepEqual(peach.packs.map((pack) => [pack.weight, pack.deliveryId]), [[peach.packWeight, null]]);
+  assert.deepEqual((await entriesOf('tobacco-peach-silk')).map((entry) => [entry.kind, entry.grams, entry.deliveryId]), [['receipt', 200, null]]);
 
-  // «Нет» — банки в запасе и в работе закончились, запись на полке остаётся.
+  // «Нет» — «Закончился», запись на полке остаётся.
   const off = await patch('tobacco-mint-veil', { inStock: false });
   assert.equal((off.json() as { item: { inStock: boolean } }).item.inStock, false);
-  assert.equal(await stockedPacks('tobacco-mint-veil'), 0);
+  assert.equal(await book('tobacco-mint-veil'), 0);
   assert.equal((await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'tobacco-mint-veil' } })).status, 'active');
 
-  // Снова «есть» — новая банка, а не воскрешение пустой.
+  // Снова «есть» — новый приход поверх «Закончился».
   await patch('tobacco-mint-veil', { inStock: true });
-  assert.equal(await stockedPacks('tobacco-mint-veil'), 1);
-  assert.equal(await prisma.pack.count({ where: { shelfItem: { tobaccoId: 'tobacco-mint-veil' } } }), 2);
+  assert.equal(await book('tobacco-mint-veil'), 200);
+  const entries = (await entriesOf('tobacco-mint-veil')).length;
 
   // Повтор того же значения ничего не меняет.
   await patch('tobacco-mint-veil', { inStock: true, name: 'Mint Veil' });
-  assert.equal(await prisma.pack.count({ where: { shelfItem: { tobaccoId: 'tobacco-mint-veil' } } }), 2);
+  assert.equal((await entriesOf('tobacco-mint-veil')).length, entries);
 
   await assertAvailabilityMatchesShelf();
   await app.close();
 });
 
-test('архив снимает наличие, не трогая полку; из архива наличие возвращается по банкам', async () => {
+test('архив снимает наличие, не трогая полку; из архива наличие возвращается по остатку', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
   const batch = (ids: string[], action: string) =>
@@ -761,7 +762,7 @@ test('архив снимает наличие, не трогая полку; и
     });
 
   await batch(['tobacco-mint-veil', 'tobacco-berry-oasis'], 'archive');
-  assert.equal(await stockedPacks('tobacco-mint-veil'), 1);
+  assert.ok((await book('tobacco-mint-veil')) > 0);
   await assertAvailabilityMatchesShelf();
 
   const back = await batch(['tobacco-mint-veil'], 'unarchive');
@@ -770,10 +771,10 @@ test('архив снимает наличие, не трогая полку; и
   await assertAvailabilityMatchesShelf();
 
   await batch(['tobacco-mint-veil', 'tobacco-peach-silk'], 'set-out-of-stock');
-  assert.equal(await stockedPacks('tobacco-mint-veil'), 0);
+  assert.equal(await book('tobacco-mint-veil'), 0);
   await batch(['tobacco-mint-veil', 'tobacco-peach-silk'], 'set-in-stock');
-  assert.equal(await stockedPacks('tobacco-mint-veil'), 1);
-  assert.equal(await stockedPacks('tobacco-peach-silk'), 1);
+  assert.ok((await book('tobacco-mint-veil')) > 0);
+  assert.ok((await book('tobacco-peach-silk')) > 0);
   await assertAvailabilityMatchesShelf();
   await app.close();
 });
@@ -793,8 +794,7 @@ test('новая карточка в наличии сразу встаёт на
   const absent = (await create('Lime Ghost', false)).json() as { item: { id: string; inStock: boolean } };
 
   assert.equal(stocked.item.inStock, true);
-  const shelf = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: stocked.item.id }, include: { packs: true } });
-  assert.deepEqual([shelf.packWeight, shelf.packs.length, shelf.packs[0]?.weight], [250, 1, 250]);
+  assert.deepEqual((await entriesOf(stocked.item.id)).map((entry) => [entry.kind, entry.grams]), [['receipt', 250]]);
   assert.equal(absent.item.inStock, false);
   assert.equal(await prisma.shelfItem.count({ where: { tobaccoId: absent.item.id } }), 0);
   await assertAvailabilityMatchesShelf();
