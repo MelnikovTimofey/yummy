@@ -369,9 +369,19 @@ select:focus-visible {
   overflow-y: auto;
   display: grid;
   gap: 12px;
+  /* строки по контенту: на коротком экране свободная высота уходит вниз, а не
+     раздувает строки и не отрывает «Для вас» от полосы рилсов (#304) */
+  align-content: start;
   min-height: 0;
   min-width: 0;
   flex: 1 1 auto;
+}
+
+/* Знакомство и онбординг — на всю высоту экрана, CTA прижат к низу: их
+   min-height: 100% держится только на растянутой строке грида. */
+.content-intro,
+.content-onboarding {
+  align-content: stretch;
 }
 
 .content-intro {
