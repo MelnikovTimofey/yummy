@@ -249,6 +249,18 @@ export const shelfLevel = (row: ShelfRow): ShelfLevel => {
   };
 };
 
+// Подпись к остатку в карточке: от чего считается «сейчас».
+export const remainHint = (row: ShelfRow) => {
+  const count = freshCount(row);
+  if (count?.grams === 0) return `закончился ${formatShelfDate(count.at)}`;
+  if (count) {
+    const label = count.fraction !== null ? `${fractionLabel(count.fraction)} — ${formatNumber(count.grams)} г` : `${formatNumber(count.grams)} г`;
+    return `${label} по отметке ${formatShelfDate(count.at)}`;
+  }
+  if (row.lastReceipt && row.fullGrams !== null) return `из ${formatNumber(row.fullGrams)} г после прихода ${formatShelfDate(row.lastReceipt.at)}`;
+  return 'прихода не было';
+};
+
 export const formatRate = (row: Pick<ShelfRow, 'rate' | 'rateKind'>) => {
   if (row.rateKind === 'none' || row.rate === null) return 'мало данных';
   if (row.rateKind === 'brand') return `≈ ${formatDecimal(row.rate)} г/день · бренд`;

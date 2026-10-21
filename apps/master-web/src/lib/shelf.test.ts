@@ -24,6 +24,7 @@ import {
   parseGrams,
   parseReceipt,
   receiptToastText,
+  remainHint,
   relativeDay,
   resolveShelfShortcut,
   shelfLevel,
@@ -393,4 +394,12 @@ test('weekLabel: неделя с понедельника, последняя �
   assert.equal(weekLabel({ from: '2026-10-19T00:00:00', to: '2026-10-26T00:00:00', partial: false }), '19–25 окт');
   assert.equal(weekLabel({ from: '2026-10-26T00:00:00', to: '2026-11-02T00:00:00', partial: false }), '26 окт–1 ноя');
   assert.equal(weekLabel({ from: '2026-11-16T00:00:00', to: '2026-11-19T15:00:00', partial: true }), '16–19 ноя');
+});
+
+test('remainHint: откуда остаток — отметка после прихода, приход или «Закончился»', () => {
+  assert.equal(remainHint(row({ lastCount: { at: '2026-11-17T10:00:00', grams: 330, fraction: null } })), '330 г по отметке 17 ноя');
+  assert.equal(remainHint(row({ lastCount: { at: '2026-11-15T10:00:00', grams: 375, fraction: 0.75 } })), '¾ — 375 г по отметке 15 ноя');
+  assert.equal(remainHint(row()), 'из 400 г после прихода 12 ноя');
+  assert.equal(remainHint(row({ status: 'out', leftGrams: 0, lastCount: { at: '2026-11-17T10:00:00', grams: 0, fraction: null } })), 'закончился 17 ноя');
+  assert.equal(remainHint(row({ leftGrams: null, fullGrams: null, lastReceipt: null })), 'прихода не было');
 });

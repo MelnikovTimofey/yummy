@@ -9,22 +9,24 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { SHELF_MOBILE_CHIPS, defaultMobileShelfStatus, shelfMobileSummary } from '@/lib/shelf-mobile';
 import {
   EMPTY_SHELF_FILTERS,
-  MARK_OPTIONS,
   SHELF_SORT_OPTIONS,
   SHELF_STATUS_CHIPS,
   countActiveShelfFilters,
+  countOverToastText,
+  countToastText,
   describeShelfError,
   emptyToastText,
   filterShelfRows,
-  formatGrams,
+  formatDecimal,
   formatNumber,
-  formatRate,
   formatShelfDate,
-  pickWriteOffPack,
+  receiptToastText,
   resolveShelfShortcut,
+  shelfRowMenu,
   shelfStatusLine,
   shelfUntil,
   sortShelfRows,
+  writeOffToastText,
   type ShelfFilters,
   type ShelfSortKey,
   type ShelfStatusKey,
@@ -33,10 +35,11 @@ import { ShelfCard } from './shelf-card';
 import { ShelfFilterPanel } from './shelf-filter-panel';
 import { countReorder } from '@/lib/reorder';
 import { ShelfHeadMenu } from './shelf-head-menu';
+import type { CountInput } from './shelf-forms';
+import { ShelfLevel } from './shelf-level';
 import { ShelfMarkSheet, ShelfMobileList } from './shelf-mobile';
-import { ShelfPips } from './shelf-pips';
 import { ShelfReorder } from './shelf-reorder';
-import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
+import { ShelfRowMenu, type ShelfMenuMode, type ShelfRowActions } from './shelf-row-menu';
 import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 
@@ -65,7 +68,7 @@ const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
 const today = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
 
 const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
-const markLabel = (fraction: number) => MARK_OPTIONS.find((option) => option.value === fraction)?.label ?? 'полная';
+const SUBTITLE = 'Сколько табака осталось, расход и прогноз. Закончился — одна кнопка, остаток — когда удобно.';
 
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
@@ -101,7 +104,7 @@ export const ShelfView = ({
   const [sort, setSort] = useState<ShelfSortKey>('until');
   const [activeId, setActiveId] = useState('');
   const [cardId, setCardId] = useState('');
-  const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement; mode: ShelfMenuMode } | null>(null);
   const [pendingId, setPendingId] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const [sheetId, setSheetId] = useState('');
@@ -186,17 +189,28 @@ export const ShelfView = ({
   const onEmpty = useCallback(
     (row: ShelfRow) =>
       run(row, async () => {
-        const { packId, item } = await shelf.markEmpty(row.tobacco.id);
-        return { title: fullName(row), text: emptyToastText(row, item), undo: () => shelf.undoEmpty(packId) };
+        const { entryId, item } = await shelf.markEmpty(row.tobacco.id);
+        return { title: fullName(row), text: emptyToastText(item), undo: () => shelf.deleteEntry(entryId) };
       }),
     [run, shelf],
   );
 
-  const onMark = useCallback(
-    (row: ShelfRow, fraction: number) =>
+  // Отметка выше расчёта принимается, но отрезок в расход не идёт
+  // (#shot=edge-more): это видно только по записи в истории карточки.
+  const onCount = useCallback(
+    (row: ShelfRow, input: CountInput) =>
       run(row, async () => {
-        await shelf.mark(row.tobacco.id, fraction);
-        return { title: fullName(row), text: `отмечено: осталось ${markLabel(fraction)}. Прогноз пересчитан.` };
+        const { entryId, item } = await shelf.count(row.tobacco.id, input);
+        const count = item.lastCount ?? { grams: 'grams' in input ? input.grams : 0, fraction: 'fraction' in input ? input.fraction : null };
+        const undo = () => shelf.deleteEntry(entryId);
+        if (row.leftGrams !== null && count.grams > row.leftGrams) {
+          const entry = await shelf.loadCard(row.tobacco.id).then(
+            (card) => card.history.find((item) => item.id === entryId),
+            () => undefined,
+          );
+          if (entry?.excluded) return { title: fullName(row), text: countOverToastText(count, row.leftGrams), warn: true, undo };
+        }
+        return { title: fullName(row), text: countToastText(count), undo };
       }),
     [run, shelf],
   );
@@ -216,24 +230,18 @@ export const ShelfView = ({
   );
 
   const rowActions: ShelfRowActions = {
-    onMark,
+    onEmpty,
+    onCount,
     onToggleStop,
-    onOpenAnother: (row) =>
+    onReceipt: (row, input) =>
       run(row, async () => {
-        const item = await shelf.openAnother(row.tobacco.id);
-        return { title: fullName(row), text: `вскрыта ещё одна банка. В запасе: ${formatNumber(item.sealedCount)}.` };
+        const item = await shelf.addReceipt(row.tobacco.id, input);
+        return { title: fullName(row), text: receiptToastText(input.grams, item) };
       }),
-    onAddPack: (row, input) =>
+    onWriteOff: (row, input) =>
       run(row, async () => {
-        await shelf.addPack(row.tobacco.id, input);
-        return { title: fullName(row), text: `добавлена банка ${formatNumber(input.weight)} г.` };
-      }),
-    onWriteOff: (row, reason) =>
-      run(row, async () => {
-        const packId = row.openPacks[0]?.id ?? pickWriteOffPack(await shelf.loadCard(row.tobacco.id))?.id;
-        if (!packId) return { title: fullName(row), text: 'списывать нечего: банок нет.', error: true };
-        await shelf.writeOff(packId, reason);
-        return { title: fullName(row), text: `банка списана: ${reason}.` };
+        const { entryId, item } = await shelf.writeOff(row.tobacco.id, input);
+        return { title: fullName(row), text: writeOffToastText(input.grams, input.reason, item), undo: () => shelf.deleteEntry(entryId) };
       }),
     onRemove: (row) =>
       run(row, async () => {
@@ -241,8 +249,8 @@ export const ShelfView = ({
         if (cardId === row.tobacco.id) setCardId('');
         return {
           title: fullName(row),
-          text: 'убран с полки, история банок осталась.',
-          undo: () => shelf.add(row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active'),
+          text: 'убран с полки, история осталась.',
+          undo: () => shelf.add(row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active', false),
         };
       }),
   };
@@ -262,17 +270,19 @@ export const ShelfView = ({
     await shelf.update(row.tobacco.id, patch);
   }, [shelf]);
 
-  const onUndoEmpty = useCallback(
-    (row: ShelfRow, packId: string) =>
-      run(row, async () => {
-        await shelf.undoEmpty(packId);
-        return { title: fullName(row), text: 'банка снова в работе.' };
-      }),
-    [run, shelf],
-  );
+  const onDeleteEntry = useCallback(async (_row: ShelfRow, entryId: string) => {
+    await shelf.deleteEntry(entryId);
+  }, [shelf]);
 
-  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onMark, onUndo });
-  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onMark, onUndo };
+  // «Сколько осталось?» по клавише O — у кнопки «Осталось…» строки, иначе у «⋯».
+  const openLeft = useCallback((row: ShelfRow) => {
+    const tr = tableRef.current?.querySelector(`tr[data-tobacco-id="${CSS.escape(row.tobacco.id)}"]`);
+    const anchor = tr?.querySelector<HTMLElement>('[data-left-anchor]') ?? tr?.querySelector<HTMLElement>('[data-menu-anchor]');
+    if (anchor) setMenu({ id: row.tobacco.id, anchor, mode: 'left' });
+  }, []);
+
+  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft });
+  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -312,10 +322,16 @@ export const ShelfView = ({
           }
           return;
         case 'empty':
-          if (active?.openPacks.length) void state.onEmpty(active);
+          if (active && shelfRowMenu(active).canEmpty) void state.onEmpty(active);
+          return;
+        case 'left':
+          if (active && shelfRowMenu(active).canMark) {
+            event.preventDefault();
+            state.openLeft(active);
+          }
           return;
         case 'mark':
-          if (active?.openPacks.length) void state.onMark(active, shortcut.fraction);
+          if (active && shelfRowMenu(active).canMark && active.fullGrams !== null) void state.onCount(active, { fraction: shortcut.fraction });
           return;
         case 'undo':
           void state.onUndo();
@@ -351,11 +367,11 @@ export const ShelfView = ({
   if (shelf.status !== 'error' && view && !rows.length) {
     return (
       <section className="shelf-page">
-        <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle="Банки на полке, расход и прогноз." actions={headMenu} />
+        <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle={SUBTITLE} actions={headMenu} />
         <div className="shelf-empty">
           <h2>Полка пуста</h2>
           <p>
-            Банки появляются из поставок. Загрузите первый счёт поставщика — строки сопоставим с каталогом, вы проверите и
+            Остаток появляется из поставок. Загрузите первый счёт поставщика — строки сопоставим с каталогом, вы проверите и
             примете. Табаки, которые уже стоят на полке, можно добавить из каталога без счёта.
           </p>
           <div className="shelf-empty__actions">
@@ -378,8 +394,8 @@ export const ShelfView = ({
       settings={settings}
       loadCard={shelf.loadCard}
       onEmpty={(row) => void onEmpty(row)}
-      onMark={(row, fraction) => void onMark(row, fraction)}
-      onUndoEmpty={(row, packId) => void onUndoEmpty(row, packId)}
+      onCount={(row, input) => void onCount(row, input)}
+      onDeleteEntry={onDeleteEntry}
       onUpdate={onUpdate}
       onOpenCatalog={(row) => {
         setCardId('');
@@ -492,10 +508,9 @@ export const ShelfView = ({
         {sheetRow ? (
           <ShelfMarkSheet
             row={sheetRow}
-            loadCard={shelf.loadCard}
-            onMark={(row, fraction) => {
+            onCount={(row, input) => {
               setSheetId('');
-              void onMark(row, fraction);
+              void onCount(row, input);
             }}
             onEmpty={(row) => {
               setSheetId('');
@@ -511,15 +526,15 @@ export const ShelfView = ({
     );
   }
 
-  const totals = view?.totals ?? { packs: 0, kg: 0 };
+  const totals = view?.totals ?? { kg: 0 };
 
   return (
     <section className="shelf-page">
       <MasterPageHeader
         eyebrow={`ИНВЕНТАРИЗАЦИЯ · ${eyebrowDate}`}
         title="Полка"
-        subtitle="Банки на полке, расход и прогноз. Закончилась банка — одна кнопка."
-        meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])} · ${formatCount(totals.packs, ['банка', 'банки', 'банок'])}` : undefined}
+        subtitle={SUBTITLE}
+        meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])} · ≈ ${kg.format(totals.kg)} кг` : undefined}
         actions={
           <>
             <span className="shelf-seg" role="group" aria-label="Вид полки">
@@ -547,7 +562,7 @@ export const ShelfView = ({
         <>
           <MasterStatsRow
             tiles={[
-              { label: 'НА ПОЛКЕ', value: formatMetricValue(view.counters.all), hint: `${formatCount(totals.packs, ['банка', 'банки', 'банок'])} · ≈ ${kg.format(totals.kg)} кг` },
+              { label: 'НА ПОЛКЕ', value: formatMetricValue(view.counters.all), hint: `≈ ${kg.format(totals.kg)} кг табака` },
               {
                 label: 'ЗАКАНЧИВАЕТСЯ',
                 value: formatMetricValue(view.counters.ending),
@@ -624,19 +639,17 @@ export const ShelfView = ({
                 <table className="shelf-table">
                   <colgroup>
                     <col />
-                    <col style={{ width: 110 }} />
-                    <col style={{ width: 88 }} />
-                    <col style={{ width: 168 }} />
                     <col style={{ width: 200 }} />
-                    <col style={{ width: 150 }} />
+                    <col style={{ width: 116 }} />
+                    <col style={{ width: 180 }} />
+                    <col style={{ width: 140 }} />
                     <col style={{ width: 64 }} />
-                    <col style={{ width: 186 }} />
+                    <col style={{ width: 236 }} />
                   </colgroup>
                   <thead>
                     <tr>
                       <th scope="col">Табак</th>
-                      <th scope="col">Банки</th>
-                      <th scope="col" className="shelf-table__num">Остаток</th>
+                      <th scope="col">Остаток</th>
                       <th scope="col">Расход</th>
                       <th scope="col">Хватит до</th>
                       <th scope="col">Приход</th>
@@ -649,7 +662,10 @@ export const ShelfView = ({
                       const until = shelfUntil(row, settings.leadDays);
                       const line = shelfStatusLine(row);
                       const busy = pendingId === row.tobacco.id;
-                      const menuOpen = menu?.id === row.tobacco.id;
+                      const menuOpen = menu?.id === row.tobacco.id && menu.mode !== 'left';
+                      const leftOpen = menu?.id === row.tobacco.id && menu.mode === 'left';
+                      const openLeftAt = (anchor: HTMLElement) =>
+                        setMenu(leftOpen ? null : { id: row.tobacco.id, anchor, mode: 'left' });
                       let primary;
                       if (row.status === 'out' || row.status === 'plan') {
                         primary = <span className="shelf-faint shelf-table__note">в «К заказу»</span>;
@@ -665,17 +681,34 @@ export const ShelfView = ({
                             type="button"
                             className="btn"
                             data-size="sm"
+                            data-variant="primary"
+                            data-left-anchor
+                            aria-expanded={leftOpen}
                             disabled={busy}
-                            onClick={(event) => setMenu({ id: row.tobacco.id, anchor: event.currentTarget })}
+                            onClick={(event) => openLeftAt(event.currentTarget)}
                           >
                             Отметить остаток
                           </button>
                         );
                       } else {
                         primary = (
-                          <button type="button" className="btn" data-size="sm" disabled={busy || !row.openPacks.length} onClick={() => void onEmpty(row)}>
-                            Закончилась
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn"
+                              data-size="sm"
+                              data-variant="ghost"
+                              data-left-anchor
+                              aria-expanded={leftOpen}
+                              disabled={busy}
+                              onClick={(event) => openLeftAt(event.currentTarget)}
+                            >
+                              Осталось…
+                            </button>
+                            <button type="button" className="btn" data-size="sm" disabled={busy} onClick={() => void onEmpty(row)}>
+                              Закончился
+                            </button>
+                          </>
                         );
                       }
 
@@ -692,22 +725,23 @@ export const ShelfView = ({
                           <td>
                             <span className="shelf-name">
                               <b>{row.tobacco.name}</b>
-                              <span>
-                                {row.tobacco.manufacturer} · {row.packWeight} г
+                              <span>{row.tobacco.manufacturer}</span>
+                            </span>
+                          </td>
+                          <td>
+                            <ShelfLevel row={row} />
+                          </td>
+                          <td>
+                            {row.rateKind === 'none' || row.rate === null ? (
+                              <span className="shelf-faint">мало данных</span>
+                            ) : row.rateKind === 'brand' ? (
+                              <span className="shelf-until" title="Своих отметок ещё мало — медиана бренда">
+                                <span className="shelf-num">≈ {formatDecimal(row.rate)} г/день</span>
+                                <small data-tone="faint">по бренду</small>
                               </span>
-                            </span>
-                          </td>
-                          <td>
-                            <ShelfPips row={row} />
-                          </td>
-                          <td className="shelf-table__num shelf-num">{formatGrams(row.remainingGrams)}</td>
-                          <td>
-                            <span
-                              className={`shelf-table__rate ${row.rateKind === 'own' ? 'shelf-num' : 'shelf-faint'}`}
-                              title={row.rateKind === 'brand' ? `${formatRate(row)}: своих данных ещё нет — медиана бренда` : undefined}
-                            >
-                              {formatRate(row)}
-                            </span>
+                            ) : (
+                              <span className="shelf-num">{formatDecimal(row.rate)} г/день</span>
+                            )}
                           </td>
                           <td>
                             <span className="shelf-until">
@@ -721,7 +755,10 @@ export const ShelfView = ({
                           <td>
                             {row.lastReceipt ? (
                               <span className="shelf-name shelf-name--receipt">
-                                <b>{formatShelfDate(row.lastReceipt.receivedAt)}</b>
+                                <b>
+                                  {formatShelfDate(row.lastReceipt.at)}
+                                  <span className="shelf-faint"> · +{formatNumber(row.lastReceipt.grams)} г</span>
+                                </b>
                                 <span>{row.lastReceipt.label}</span>
                               </span>
                             ) : (
@@ -737,10 +774,11 @@ export const ShelfView = ({
                               <button
                                 type="button"
                                 className="icon-btn"
+                                data-menu-anchor
                                 aria-label={`Ещё действия: ${fullName(row)}`}
                                 aria-expanded={menuOpen}
                                 disabled={busy}
-                                onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget })}
+                                onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget, mode: 'main' })}
                               >
                                 <Ellipsis size={15} aria-hidden />
                               </button>
@@ -757,7 +795,8 @@ export const ShelfView = ({
               <div className="shelf-keys" aria-hidden="true">
                 <span><b className="kbd">/</b> поиск</span>
                 <span><b className="kbd">↑</b><b className="kbd">↓</b> строка</span>
-                <span><b className="kbd">E</b> закончилась</span>
+                <span><b className="kbd">E</b> закончился</span>
+                <span><b className="kbd">O</b> сколько осталось</span>
                 <span><b className="kbd">1</b>–<b className="kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
                 <span><b className="kbd">Enter</b> карточка</span>
                 <span><b className="kbd">Z</b> отменить</span>
@@ -770,7 +809,7 @@ export const ShelfView = ({
       {settingsDialog}
 
       {menu && menuRow ? (
-        <ShelfRowMenu row={menuRow} anchor={menu.anchor} actions={rowActions} onClose={() => setMenu(null)} />
+        <ShelfRowMenu row={menuRow} anchor={menu.anchor} mode={menu.mode} actions={rowActions} onClose={() => setMenu(null)} />
       ) : null}
 
       {cardSheet}
