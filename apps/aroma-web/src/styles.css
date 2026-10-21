@@ -245,10 +245,6 @@ select:focus-visible {
   background: var(--guest-control-bg-soft);
 }
 
-.topbar-icon-btn + .topbar-icon-btn {
-  margin-left: 0;
-}
-
 /* Карточка для мастера: бордо — только метка-точка, иконка остаётся приглушённой. */
 .topbar-master-card {
   position: relative;

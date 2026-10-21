@@ -163,9 +163,6 @@ function GuestApp() {
                       <span className="topbar-master-card-dot" aria-hidden />
                     </button>
                   ) : null}
-                  <button type="button" className="topbar-icon-btn" aria-label="Сменить код" title="Сменить код" onClick={() => { setView('access'); setCode(''); setAgeOk(false); setSelected(null); }}>
-                    <Icon name="KeyRound" size={20} />
-                  </button>
                 </div>
                 {view === 'intro' ? (
                   <nav className="guest-stage-nav" aria-label="Маршрут знакомства">

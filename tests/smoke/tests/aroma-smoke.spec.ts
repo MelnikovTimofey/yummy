@@ -199,7 +199,7 @@ test('Aroma guest navigates with the bottom bar and opens the mixer from it', as
 
   await expect(nav).toBeVisible();
   await expect(nav.getByRole('button')).toHaveCount(6);
-  await expect(page.getByRole('button', { name: 'Сменить код', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сменить код', exact: true })).toHaveCount(0);
   const catalogTab = nav.getByRole('button', { name: 'Каталог', exact: true });
   await expect(catalogTab).toHaveAttribute('aria-current', 'page');
 
