@@ -2,7 +2,7 @@ import { type PointerEvent as ReactPointerEvent, type ReactNode, FormEvent, useE
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { ChevronRight, ClipboardList, KeyRound } from 'lucide-react';
+import { ChevronRight, ClipboardList } from 'lucide-react';
 
 import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
 import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
@@ -2153,27 +2153,6 @@ export const App = () => {
     }
   };
 
-  const onResetAccess = () => {
-    setAccessGranted(false);
-    setAccessStatus('idle');
-    setAccessError('');
-    setCode('');
-    setView('access');
-    setRecommendations([]);
-    setRecommendationStatus('idle');
-    setRecommendationError('');
-    setSelectedMix(null);
-    setMixModalState(null);
-    setChooseStatus('idle');
-    setChooseError('');
-    setRatingStatus('idle');
-    setRatingError('');
-    setRatingMessage('');
-    setRatingValue(null);
-    setSelectedRail(null);
-    resetCatalogFilters();
-  };
-
   const availableProfileOptions = profileOptions.filter((option) =>
     !options.profiles.length || options.profiles.includes(option.value),
   );
@@ -2293,15 +2272,6 @@ export const App = () => {
         <div className="topbar-main-row">
           {renderBrand()}
           {renderMasterCardButton()}
-          <button
-            type="button"
-            className="topbar-icon-btn"
-            onClick={onResetAccess}
-            aria-label="Сменить код"
-            title="Сменить код"
-          >
-            <KeyRound size={20} strokeWidth={1.8} aria-hidden />
-          </button>
         </div>
         {view === 'intro' ? renderJourneyNav('intro') : null}
         {view === 'onboarding' && !moodDraft ? renderOnboardingProgress() : null}
