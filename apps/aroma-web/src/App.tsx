@@ -3414,7 +3414,7 @@ export const App = () => {
         ) : (
           <>
             {renderTopbar()}
-            <main className={view === 'intro' ? 'content content-intro' : 'content'}>
+            <main className={view === 'intro' || view === 'onboarding' ? `content content-${view}` : 'content'}>
               {view === 'intro' ? renderIntroView() : null}
               {view === 'onboarding' ? renderOnboardingView() : null}
               {view === 'recommendations' && stripItems.length ? (
