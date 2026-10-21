@@ -95,6 +95,7 @@ PR должен считаться `needs-human-review`, если затрону
    - `docs/atelier/deployment-smoke-checklist.md`
 4. process-governance files:
    - `CLAUDE.md`
+   - `PRD.md` — продуктовая семантика и инварианты
    - `docs/**`
    - `.github/**`
    - `.claude/**`

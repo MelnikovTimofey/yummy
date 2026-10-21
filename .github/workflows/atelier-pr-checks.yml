@@ -14,6 +14,7 @@ on:
       - .github/**
       - .claude/**
       - CLAUDE.md
+      - PRD.md
       - docs/**
 
 permissions:
@@ -81,6 +82,8 @@ jobs:
               - 'tests/smoke/tests/helpers.ts'
               - 'tests/smoke/README.md'
               - 'CLAUDE.md'
+              # Источник правды по продуктовой семантике и инвариантам (#132).
+              - 'PRD.md'
               - 'docs/**'
             design_tokens:
               - 'packages/design-tokens/**'
