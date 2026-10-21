@@ -65,20 +65,19 @@ import { listAuditEvents, recordAuditEvent } from './audit';
 import { getCatalogIdeas } from './catalog-ideas';
 import { registerShelfInsightsRoutes } from './shelf-insights';
 import {
-  addMark,
-  addPack,
+  addCount,
+  addReceipt,
   addToShelf,
+  deleteEntry,
   getSettings,
   getShelf,
   getShelfItem,
   markEmpty,
-  openAnother,
   removeFromShelf,
   setStop,
   ShelfConflictError,
   ShelfNotFoundError,
   ShelfValidationError,
-  undoEmpty,
   updateSettings,
   updateShelfItem,
   writeOff,
@@ -249,11 +248,10 @@ export const buildApp = () => {
       shelfUpdate: 'PATCH /staff/shelf/:tobaccoId',
       shelfRemove: 'DELETE /staff/shelf/:tobaccoId',
       shelfEmpty: 'POST /staff/shelf/:tobaccoId/empty',
-      shelfMark: 'POST /staff/shelf/:tobaccoId/marks',
-      shelfOpen: 'POST /staff/shelf/:tobaccoId/open',
-      shelfAddPack: 'POST /staff/shelf/:tobaccoId/packs',
-      shelfUndoEmpty: 'POST /staff/shelf/packs/:packId/undo-empty',
-      shelfWriteOff: 'POST /staff/shelf/packs/:packId/write-off',
+      shelfCount: 'POST /staff/shelf/:tobaccoId/counts',
+      shelfReceipt: 'POST /staff/shelf/:tobaccoId/receipts',
+      shelfWriteOff: 'POST /staff/shelf/:tobaccoId/write-offs',
+      shelfDeleteEntry: 'DELETE /staff/shelf/entries/:entryId',
       shelfSettings: 'GET /staff/shelf/settings',
       shelfSettingsUpdate: 'PATCH /staff/shelf/settings',
       deliveriesList: 'GET /staff/deliveries',
@@ -2092,7 +2090,7 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
-  // Ошибки домена полки → HTTP: не найдено 404, конфликт состояния банок 409, неверный ввод 400.
+  // Ошибки домена полки → HTTP: не найдено 404, конфликт состояния остатка 409, неверный ввод 400.
   const sendShelf = async <T>(reply: FastifyReply, run: () => Promise<T>) => {
     try {
       return reply.send(await run());
@@ -2110,7 +2108,7 @@ export const buildApp = () => {
     }
   };
   const tobaccoParam = (request: FastifyRequest) => (request.params as { tobaccoId?: string }).tobaccoId?.trim() ?? '';
-  const packParam = (request: FastifyRequest) => (request.params as { packId?: string }).packId?.trim() ?? '';
+  const entryParam = (request: FastifyRequest) => (request.params as { entryId?: string }).entryId?.trim() ?? '';
 
   app.get('/staff/shelf', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
@@ -2158,7 +2156,6 @@ export const buildApp = () => {
       stopped?: unknown;
       stopNote?: unknown;
       keepStocked?: unknown;
-      packWeight?: unknown;
       note?: unknown;
     };
     const tobaccoId = tobaccoParam(request);
@@ -2169,7 +2166,6 @@ export const buildApp = () => {
       }
       const patch = {
         keepStocked: typeof body.keepStocked === 'boolean' ? body.keepStocked : undefined,
-        packWeight: typeof body.packWeight === 'number' ? body.packWeight : undefined,
         note: typeof body.note === 'string' ? body.note : undefined,
       };
       if (Object.values(patch).some((value) => value !== undefined)) {
@@ -2194,48 +2190,33 @@ export const buildApp = () => {
     return sendShelf(reply, () => markEmpty(user, tobaccoParam(request)));
   });
 
-  app.post('/staff/shelf/:tobaccoId/marks', async (request, reply) => {
+  app.post('/staff/shelf/:tobaccoId/counts', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    const body = (request.body ?? {}) as { fraction?: unknown };
-    if (typeof body.fraction !== 'number') {
-      return reply.status(400).send({ error: 'fraction is required' } satisfies ApiError);
-    }
-    return sendShelf(reply, async () => ({ item: await addMark(user, tobaccoParam(request), body.fraction as number) }));
+    const body = (request.body ?? {}) as { fraction?: unknown; grams?: unknown };
+    return sendShelf(reply, () => addCount(user, tobaccoParam(request), { fraction: body.fraction, grams: body.grams }));
   });
 
-  app.post('/staff/shelf/:tobaccoId/open', async (request, reply) => {
+  app.post('/staff/shelf/:tobaccoId/receipts', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    return sendShelf(reply, async () => ({ item: await openAnother(user, tobaccoParam(request)) }));
-  });
-
-  app.post('/staff/shelf/:tobaccoId/packs', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { weight?: unknown; priceKop?: unknown };
+    const body = (request.body ?? {}) as { grams?: unknown; priceKop?: unknown };
     return sendShelf(reply, async () => ({
-      item: await addPack(user, tobaccoParam(request), {
-        weight: typeof body.weight === 'number' ? body.weight : undefined,
-        priceKop: typeof body.priceKop === 'number' ? body.priceKop : undefined,
-      }),
+      item: (await addReceipt(user, tobaccoParam(request), { grams: body.grams, priceKop: body.priceKop })).item,
     }));
   });
 
-  app.post('/staff/shelf/packs/:packId/undo-empty', async (request, reply) => {
+  app.post('/staff/shelf/:tobaccoId/write-offs', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    return sendShelf(reply, async () => ({ item: await undoEmpty(user, packParam(request)) }));
+    const body = (request.body ?? {}) as { grams?: unknown; reason?: unknown };
+    return sendShelf(reply, () => writeOff(user, tobaccoParam(request), { grams: body.grams, reason: body.reason }));
   });
 
-  app.post('/staff/shelf/packs/:packId/write-off', async (request, reply) => {
+  app.delete('/staff/shelf/entries/:entryId', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    const body = (request.body ?? {}) as { reason?: unknown };
-    if (typeof body.reason !== 'string' || !body.reason.trim()) {
-      return reply.status(400).send({ error: 'reason is required' } satisfies ApiError);
-    }
-    return sendShelf(reply, async () => ({ item: await writeOff(user, packParam(request), (body.reason as string).trim()) }));
+    return sendShelf(reply, async () => ({ item: await deleteEntry(user, entryParam(request)) }));
   });
 
   app.get('/staff/dashboard/summary', async (request, reply) => {
@@ -2430,7 +2411,7 @@ const registerDeliveryRoutes = (app: FastifyInstance) => {
         rawName: readText(body?.rawName, 'Название') ?? '',
         qty: readNumber(body?.qty, 'Количество') ?? invalid('Укажите количество банок'),
         priceKop: readNumber(body?.priceKop, 'Цена', true),
-        grams: readNumber(body?.grams, 'Фасовка', true),
+        grams: readNumber(body?.grams, 'Граммы в штуке', true),
         tobaccoId: readText(body?.tobaccoId, 'Табак'),
         kind: readKind(body?.kind),
       });
@@ -2448,7 +2429,8 @@ const registerDeliveryRoutes = (app: FastifyInstance) => {
       const card = await updateLine(id, lineId, {
         tobaccoId: readText(body?.tobaccoId, 'Табак'),
         qty: readNumber(body?.qty, 'Количество') ?? undefined,
-        grams: readNumber(body?.grams, 'Фасовка', true),
+        grams: readNumber(body?.grams, 'Граммы в штуке', true),
+        receivedGrams: readNumber(body?.receivedGrams, 'Приход', true),
         priceKop: readNumber(body?.priceKop, 'Цена', true),
         arrived: readBoolean(body?.arrived, 'Пришло'),
         kind: readKind(body?.kind),

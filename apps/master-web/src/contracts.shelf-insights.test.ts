@@ -18,17 +18,17 @@ test('normalizeReorderView: группы, строки, настройки и т
             endsAt: '2026-11-21T10:00:00.000Z',
             rate: 21,
             rateKind: 'own',
-            quantity: 3,
-            packWeight: 200,
-            lastPriceKop: 155000,
+            leftGrams: 40,
+            quantityGrams: 450,
+            gramPriceKop: 775,
           },
         ],
-        sumKop: 465000,
+        sumKop: 348750,
       },
       {
         supplier: null,
         lastInvoice: null,
-        items: [{ tobacco: { id: 't2', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' }, status: 'plan', quantity: 1, packWeight: 250 }],
+        items: [{ tobacco: { id: 't2', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' }, status: 'plan', quantityGrams: 250 }],
         sumKop: null,
       },
     ],
@@ -40,7 +40,7 @@ test('normalizeReorderView: группы, строки, настройки и т
   const [first, second] = view.groups;
   assert.deepEqual(first.supplier, { id: 's1', name: 'Каспий Опт' });
   assert.deepEqual(first.lastInvoice, { number: '04102', date: '2026-11-18', status: 'draft' });
-  assert.equal(first.sumKop, 465000);
+  assert.equal(first.sumKop, 348750);
   assert.deepEqual(first.items[0], {
     tobacco,
     status: 'ending',
@@ -48,9 +48,9 @@ test('normalizeReorderView: группы, строки, настройки и т
     endsAt: '2026-11-21T10:00:00.000Z',
     rate: 21,
     rateKind: 'own',
-    quantity: 3,
-    packWeight: 200,
-    lastPriceKop: 155000,
+    leftGrams: 40,
+    quantityGrams: 450,
+    gramPriceKop: 775,
   });
 
   assert.equal(second.supplier, null);
@@ -63,9 +63,9 @@ test('normalizeReorderView: группы, строки, настройки и т
     endsAt: null,
     rate: null,
     rateKind: 'none',
-    quantity: 1,
-    packWeight: 250,
-    lastPriceKop: null,
+    leftGrams: null,
+    quantityGrams: 250,
+    gramPriceKop: null,
   });
 
   assert.deepEqual(view.settings, { bowlGrams: 20, leadDays: 5 });

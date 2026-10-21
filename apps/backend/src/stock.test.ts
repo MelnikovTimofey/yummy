@@ -5,257 +5,160 @@ import {
   consumptionByPeriod,
   consumptionRate,
   forecastShelf,
+  fractionGrams,
   gramPrice,
-  openRemaining,
   reorderList,
-  resolvePacks,
+  segments,
   shelfForecast,
+  stockState,
   todayForecast,
   weekdayFactor,
   withBrandFallback,
   DEFAULT_SETTINGS,
-  type Pack,
   type Rate,
   type ShelfItem,
+  type StockEntry,
 } from './stock';
 
 const DAY = 86_400_000;
 const START = Date.UTC(2026, 10, 1);
 const day = (n: number) => new Date(START + n * DAY);
 
-const pack = (overrides: Partial<Pack> & { id: string }): Pack => ({
-  weight: 250,
-  price: null,
-  receivedAt: day(0),
-  openedAt: null,
-  emptiedAt: null,
-  writtenOffAt: null,
-  marks: [],
-  ...overrides,
+let seq = 0;
+const entry = (kind: StockEntry['kind'], grams: number, at: number, priceKop: number | null = null): StockEntry => ({
+  id: `${kind}-${(seq += 1)}`,
+  kind,
+  grams,
+  at: day(at),
+  priceKop,
 });
+const receipt = (grams: number, at: number, priceKop: number | null = null) => entry('receipt', grams, at, priceKop);
+const count = (grams: number, at: number) => entry('count', grams, at);
+const writeoff = (grams: number, at: number) => entry('writeoff', grams, at);
 
 const item = (overrides: Partial<ShelfItem> & { tobaccoId: string }): ShelfItem => ({
   brand: 'Тест',
-  packWeight: 250,
   keepStocked: true,
   plan: false,
   stopped: false,
-  packs: [],
+  entries: [],
   ...overrides,
 });
 
 const own = (gramsPerDay: number): Rate => ({ gramsPerDay, kind: 'own' });
 const none: Rate = { gramsPerDay: null, kind: 'none' };
 
-const stateOf = (packs: Pack[]) =>
-  resolvePacks(packs).map((resolved) => [resolved.id, resolved.state, resolved.openedAt?.getTime() ?? null]);
-
 const approx = (actual: number | null, expected: number) => {
   assert.ok(actual !== null, 'ожидалось число');
   assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} ≠ ${expected}`);
 };
 
-// --- автовскрытие ----------------------------------------------------------
+const shape = (entries: StockEntry[]) =>
+  segments(entries).map((segment) => [segment.from, segment.to, segment.grams, segment.excluded]);
 
-test.describe('resolvePacks', () => {
-  test('of two packs received the same day only the first is opened', () => {
-    assert.deepEqual(stateOf([pack({ id: 'a' }), pack({ id: 'b' })]), [
-      ['a', 'open', day(0).getTime()],
-      ['b', 'sealed', null],
+// --- отрезки -----------------------------------------------------------------
+
+test.describe('segments', () => {
+  test('first receipt starts the scale, a count closes a segment', () => {
+    assert.deepEqual(shape([receipt(400, 0), count(200, 10)]), [[day(0).getTime(), day(10).getTime(), 200, false]]);
+  });
+
+  test('receipts and write-offs between counts: was + came − written off − is', () => {
+    const entries = [receipt(400, 0), count(300, 5), receipt(250, 7), writeoff(50, 8), count(400, 10)];
+    assert.deepEqual(shape(entries).map(([, , grams]) => grams), [100, 100]);
+  });
+
+  test('«Закончился» is a count of zero', () => {
+    assert.deepEqual(shape([receipt(250, 0), count(0, 10)]), [[day(0).getTime(), day(10).getTime(), 250, false]]);
+  });
+
+  test('days at zero do not count: after «Закончился» the scale restarts at the receipt', () => {
+    const entries = [receipt(250, 0), count(0, 10), receipt(400, 15), count(200, 25)];
+    assert.deepEqual(shape(entries), [
+      [day(0).getTime(), day(10).getTime(), 250, false],
+      [day(15).getTime(), day(25).getTime(), 200, false],
     ]);
   });
 
-  test('the next pack opens when the previous one is emptied', () => {
-    assert.deepEqual(stateOf([pack({ id: 'a', emptiedAt: day(10) }), pack({ id: 'b' })]), [
-      ['a', 'empty', day(0).getTime()],
-      ['b', 'open', day(10).getTime()],
+  test('a count above what could be left is kept but excluded', () => {
+    const entries = [receipt(400, 0), count(100, 10), count(300, 12), count(200, 20)];
+    assert.deepEqual(shape(entries), [
+      [day(0).getTime(), day(10).getTime(), 300, false],
+      [day(10).getTime(), day(12).getTime(), -200, true],
+      [day(12).getTime(), day(20).getTime(), 100, false],
     ]);
   });
 
-  test('a pack arriving while another is open stays sealed', () => {
-    assert.deepEqual(stateOf([pack({ id: 'a' }), pack({ id: 'b', receivedAt: day(5) })]), [
-      ['a', 'open', day(0).getTime()],
-      ['b', 'sealed', null],
+  test('a segment remembers the count that closed it', () => {
+    const closing = count(200, 10);
+    assert.equal(segments([receipt(400, 0), closing])[0].closedBy, closing.id);
+  });
+
+  test('entries are taken in time order, ties keep input order', () => {
+    const entries = [count(200, 10), receipt(400, 0)];
+    assert.deepEqual(shape(entries).map(([, , grams]) => grams), [200]);
+  });
+
+  test('a count within 30 minutes after another one replaces it', () => {
+    const half = count(200, 10);
+    const exact = { ...count(180, 10), at: new Date(day(10).getTime() + 5 * 60_000) };
+    const result = segments([receipt(400, 0), half, exact]);
+    assert.deepEqual(result.map((segment) => [segment.from, segment.to, segment.grams, segment.closedBy]), [
+      [day(0).getTime(), exact.at.getTime(), 220, exact.id],
     ]);
   });
 
-  test('a pack arriving after the shelf ran out opens on arrival', () => {
-    assert.deepEqual(stateOf([pack({ id: 'a', emptiedAt: day(5) }), pack({ id: 'b', receivedAt: day(8) })]), [
-      ['a', 'empty', day(0).getTime()],
-      ['b', 'open', day(8).getTime()],
-    ]);
+  test('a receipt in between keeps both counts', () => {
+    const later = { ...count(300, 10), at: new Date(day(10).getTime() + 5 * 60_000) };
+    const entries = [receipt(400, 0), count(200, 10), { ...receipt(100, 10), at: new Date(day(10).getTime() + 60_000) }, later];
+    assert.deepEqual(shape(entries).map(([, , grams]) => grams), [200, 0]);
   });
 
-  test('the oldest pack opens first, ties keep input order', () => {
-    const packs = [
-      pack({ id: 'late', receivedAt: day(3) }),
-      pack({ id: 'first', receivedAt: day(1) }),
-      pack({ id: 'second', receivedAt: day(1) }),
-    ];
-    assert.deepEqual(stateOf(packs), [
-      ['late', 'sealed', null],
-      ['first', 'open', day(1).getTime()],
-      ['second', 'sealed', null],
-    ]);
+  test('a segment shorter than 6 hours says nothing about the rate', () => {
+    const quick = { ...count(240, 0), at: new Date(day(0).getTime() + 60 * 60_000) };
+    assert.deepEqual(shape([receipt(250, 0), quick]), [[day(0).getTime(), quick.at.getTime(), 10, true]]);
   });
 
-  test('explicit openedAt opens a second pack in parallel', () => {
-    const packs = [pack({ id: 'a' }), pack({ id: 'b', openedAt: day(4) }), pack({ id: 'c' })];
-    assert.deepEqual(stateOf(packs), [
-      ['a', 'open', day(0).getTime()],
-      ['b', 'open', day(4).getTime()],
-      ['c', 'sealed', null],
-    ]);
-  });
-
-  test('auto-open waits for an explicitly opened pack too', () => {
-    const packs = [
-      pack({ id: 'a', emptiedAt: day(5) }),
-      pack({ id: 'b', openedAt: day(3), emptiedAt: day(9) }),
-      pack({ id: 'c' }),
-    ];
-    assert.deepEqual(stateOf(packs), [
-      ['a', 'empty', day(0).getTime()],
-      ['b', 'empty', day(3).getTime()],
-      ['c', 'open', day(9).getTime()],
-    ]);
-  });
-
-  test('undoing «Закончилась» reopens the pack and reseals the next one', () => {
-    const emptied = [pack({ id: 'a', emptiedAt: day(10) }), pack({ id: 'b' })];
-    const undone = [pack({ id: 'a' }), pack({ id: 'b' })];
-    assert.equal(resolvePacks(emptied)[1].state, 'open');
-    assert.deepEqual(stateOf(undone), [
-      ['a', 'open', day(0).getTime()],
-      ['b', 'sealed', null],
-    ]);
-  });
-
-  test('a pack written off while sealed is never opened and does not block the queue', () => {
-    const packs = [
-      pack({ id: 'a', emptiedAt: day(10) }),
-      pack({ id: 'b', writtenOffAt: day(4) }),
-      pack({ id: 'c' }),
-    ];
-    assert.deepEqual(stateOf(packs), [
-      ['a', 'empty', day(0).getTime()],
-      ['b', 'written_off', null],
-      ['c', 'open', day(10).getTime()],
-    ]);
-  });
-
-  test('writing off an open pack opens the next one', () => {
-    const packs = [pack({ id: 'a', writtenOffAt: day(3) }), pack({ id: 'b' })];
-    assert.deepEqual(stateOf(packs), [
-      ['a', 'written_off', day(0).getTime()],
-      ['b', 'open', day(3).getTime()],
-    ]);
+  test('a count before any receipt starts the scale', () => {
+    assert.deepEqual(shape([count(300, 0), count(100, 10)]).map(([, , grams]) => grams), [200]);
   });
 });
 
-// --- расход ----------------------------------------------------------------
+// --- расход ------------------------------------------------------------------
 
 test.describe('consumptionRate', () => {
-  test('full packs: grams over days', () => {
-    const packs = [
-      pack({ id: 'a', emptiedAt: day(10) }),
-      pack({ id: 'b', emptiedAt: day(20) }),
-      pack({ id: 'c' }),
-    ];
-    const rate = consumptionRate(packs, day(25));
-    assert.equal(rate.kind, 'own');
-    approx(rate.gramsPerDay, 25);
+  test('grams over days of finished segments', () => {
+    const entries = [receipt(400, 0), count(200, 10), count(0, 30)];
+    assert.deepEqual(consumptionRate(entries, day(40)), own(400 / 30));
   });
 
-  test('marks count, the running segment does not', () => {
-    const packs = [pack({ id: 'a', marks: [{ at: day(4), fraction: 0.5 }] })];
-    const rate = consumptionRate(packs, day(30));
-    assert.equal(rate.kind, 'own');
-    approx(rate.gramsPerDay, 31.25);
+  test('the running segment does not count', () => {
+    assert.deepEqual(consumptionRate([receipt(400, 0)], day(40)), none);
   });
 
-  test('marks and «Закончилась» on one pack', () => {
-    const packs = [
-      pack({
-        id: 'a',
-        weight: 200,
-        emptiedAt: day(12),
-        marks: [
-          { at: day(8), fraction: 0.25 },
-          { at: day(3), fraction: 0.75 },
-        ],
-      }),
-    ];
-    approx(consumptionRate(packs, day(12)).gramsPerDay, 200 / 12);
+  test('days at zero waiting for a delivery are not days of consumption', () => {
+    const entries = [receipt(250, 0), count(0, 10), receipt(250, 20), count(0, 30)];
+    assert.deepEqual(consumptionRate(entries, day(40)), own(500 / 20));
   });
 
   test('only the last 60 days count, a straddling segment proportionally', () => {
-    const packs = [
-      pack({ id: 'a', emptiedAt: day(20) }),
-      pack({ id: 'b', emptiedAt: day(30) }),
-      pack({ id: 'c' }),
-    ];
-    // окно с 10-го дня: половина первой банки (125 г за 10 дней) + вторая (250 г за 10 дней)
-    approx(consumptionRate(packs, day(70)).gramsPerDay, 375 / 20);
+    const entries = [receipt(400, 0), count(200, 20), count(0, 40)];
+    // окно с 10-го дня: половина первого отрезка (100 г за 10 дней) и весь второй
+    approx(consumptionRate(entries, day(70)).gramsPerDay, 300 / 30);
   });
 
-  test('written-off packs are excluded', () => {
-    const packs = [
-      pack({ id: 'a', writtenOffAt: day(10), marks: [{ at: day(5), fraction: 0.75 }] }),
-      pack({ id: 'b', emptiedAt: day(20) }),
-    ];
-    approx(consumptionRate(packs, day(25)).gramsPerDay, 25);
-  });
-
-  test('packs opened together and emptied together: rate of the tobacco, not of a pack', () => {
-    const packs = [
-      pack({ id: 'a', openedAt: day(0), emptiedAt: day(10) }),
-      pack({ id: 'b', openedAt: day(0), emptiedAt: day(10) }),
-    ];
-    approx(consumptionRate(packs, day(12)).gramsPerDay, 50);
-  });
-
-  test('a pack opened while another is open: days are the union of intervals', () => {
-    const packs = [
-      pack({ id: 'a', openedAt: day(0), emptiedAt: day(10) }),
-      pack({ id: 'b', openedAt: day(5), emptiedAt: day(15) }),
-    ];
-    approx(consumptionRate(packs, day(20)).gramsPerDay, 500 / 15);
-  });
-
-  test('a correcting mark gives no grams and no days, and becomes the new start', () => {
-    const packs = [
-      pack({
-        id: 'a',
-        emptiedAt: day(10),
-        marks: [
-          { at: day(4), fraction: 0.5 },
-          { at: day(6), fraction: 0.75 },
-        ],
-      }),
-    ];
-    // 0–4: 125 г; 4–6: исправление, не считается; 6–10: 187,5 г
-    approx(consumptionRate(packs, day(10)).gramsPerDay, 312.5 / 8);
-  });
-
-  test('a correction right after a mark keeps the earlier segment only', () => {
-    const packs = [pack({ id: 'a', marks: [{ at: day(1), fraction: 0.5 }, { at: day(2), fraction: 0.75 }] })];
-    approx(consumptionRate(packs, day(5)).gramsPerDay, 125);
-  });
-
-  test('no finished segment means no data', () => {
-    assert.deepEqual(consumptionRate([pack({ id: 'a' }), pack({ id: 'b' })], day(30)), none);
-    assert.deepEqual(consumptionRate([], day(30)), none);
+  test('excluded segments give neither grams nor days', () => {
+    const entries = [receipt(400, 0), count(100, 10), count(300, 12), count(200, 20)];
+    approx(consumptionRate(entries, day(30)).gramsPerDay, 400 / 18);
   });
 
   test('segments older than the window mean no data', () => {
-    const packs = [pack({ id: 'a', emptiedAt: day(10) }), pack({ id: 'b' })];
-    assert.deepEqual(consumptionRate(packs, day(100)), none);
+    assert.deepEqual(consumptionRate([receipt(400, 0), count(0, 10)], day(100)), none);
   });
 
-  test('undoing «Закончилась» drops the finished segment', () => {
-    assert.equal(consumptionRate([pack({ id: 'a', emptiedAt: day(10) })], day(12)).kind, 'own');
-    assert.equal(consumptionRate([pack({ id: 'a' })], day(12)).kind, 'none');
+  test('written-off grams are not consumption', () => {
+    const entries = [receipt(400, 0), writeoff(100, 5), count(100, 10)];
+    approx(consumptionRate(entries, day(20)).gramsPerDay, 200 / 10);
   });
 });
 
@@ -274,278 +177,206 @@ test.describe('withBrandFallback', () => {
   });
 });
 
-// --- остаток ---------------------------------------------------------------
+// --- остаток -----------------------------------------------------------------
 
-test.describe('openRemaining', () => {
-  const opened = (overrides: Partial<Pack> = {}) => resolvePacks([pack({ id: 'a', ...overrides })])[0];
-
-  test('counts from opening without marks', () => {
-    assert.deepEqual(openRemaining(opened(), 10, day(5)), { grams: 200, overdue: false });
+test.describe('stockState', () => {
+  test('nothing received: no stock and no level', () => {
+    assert.deepEqual(stockState([], 10, day(5)), { received: false, bookGrams: 0, leftGrams: null, fullGrams: null, spent: false });
   });
 
-  test('counts from the last mark', () => {
-    const resolved = opened({ marks: [{ at: day(4), fraction: 0.5 }, { at: day(1), fraction: 0.75 }] });
-    assert.deepEqual(openRemaining(resolved, 10, day(6)), { grams: 105, overdue: false });
+  test('left: last count + receipts − write-offs − rate × days since the count', () => {
+    const entries = [receipt(400, 0), count(300, 10), receipt(200, 12), writeoff(50, 13)];
+    const state = stockState(entries, 10, day(15));
+    assert.equal(state.bookGrams, 450);
+    assert.equal(state.leftGrams, 400);
   });
 
-  test('without a rate the last mark is the remainder', () => {
-    const resolved = opened({ weight: 300, marks: [{ at: day(4), fraction: 1 / 3 }] });
-    approx(openRemaining(resolved, null, day(40)).grams, 100);
-    assert.equal(openRemaining(resolved, null, day(40)).overdue, false);
+  test('without a rate the book is what is left', () => {
+    assert.equal(stockState([receipt(400, 0), count(300, 10)], null, day(15)).leftGrams, 300);
   });
 
-  test('below 10 % of the weight asks for a check', () => {
-    assert.deepEqual(openRemaining(opened(), 24, day(10)), { grams: 10, overdue: true });
+  test('never below zero', () => {
+    assert.equal(stockState([receipt(100, 0)], 10, day(30)).leftGrams, 0);
   });
 
-  test('packs open in parallel share the rate', () => {
-    const packs = resolvePacks([pack({ id: 'a', openedAt: day(0) }), pack({ id: 'b', openedAt: day(0) })]);
-    assert.deepEqual(openRemaining(packs[0], 50, day(4), packs), { grams: 150, overdue: false });
+  test('full is the level right after the last receipt', () => {
+    // к 10-му дню по расчёту осталось 400 − 10 × 10 = 300, пришло ещё 250
+    assert.equal(stockState([receipt(400, 0), receipt(250, 10)], 10, day(12)).fullGrams, 550);
   });
 
-  test('the share changes when a second pack is opened', () => {
-    const packs = resolvePacks([pack({ id: 'a' }), pack({ id: 'b', openedAt: day(4) })]);
-    // a: 4 дня один (80 г) + 2 дня вдвоём (20 г); b: 2 дня вдвоём (20 г)
-    assert.deepEqual(openRemaining(packs[0], 20, day(6), packs), { grams: 150, overdue: false });
-    assert.deepEqual(openRemaining(packs[1], 20, day(6), packs), { grams: 230, overdue: false });
+  test('after «Закончился» the next receipt is the whole level', () => {
+    assert.equal(stockState([receipt(400, 0), count(0, 5), receipt(250, 10)], 10, day(12)).fullGrams, 250);
   });
 
-  test('a pack emptied earlier shared the rate only while it was open', () => {
-    const packs = resolvePacks([pack({ id: 'a', emptiedAt: day(4) }), pack({ id: 'b', openedAt: day(2) })]);
-    // b: 2 дня вдвоём (20 г) + 4 дня один (80 г)
-    assert.deepEqual(openRemaining(packs[1], 20, day(8), packs), { grams: 150, overdue: false });
+  test('a count above the level raises it', () => {
+    assert.equal(stockState([receipt(200, 0), count(300, 5)], 10, day(6)).fullGrams, 300);
   });
 
-  test('never goes below zero', () => {
-    assert.deepEqual(openRemaining(opened(), 30, day(20)), { grams: 0, overdue: true });
+  test('spent: the estimate went below the book because of consumption', () => {
+    assert.equal(stockState([receipt(400, 0)], 10, day(5)).spent, true);
+    assert.equal(stockState([receipt(400, 0)], null, day(5)).spent, false);
+  });
+
+  test('«Закончился» and a full write-off empty the book', () => {
+    assert.equal(stockState([receipt(400, 0), count(0, 5)], 10, day(6)).bookGrams, 0);
+    assert.equal(stockState([receipt(400, 0), writeoff(400, 5)], 10, day(6)).bookGrams, 0);
   });
 });
 
-// --- прогноз по табаку -----------------------------------------------------
+test.describe('fractionGrams', () => {
+  test('a share of the level after the receipt, whole grams', () => {
+    assert.equal(fractionGrams(400, 0.5), 200);
+    assert.equal(fractionGrams(400, 1 / 3), 133);
+  });
+});
+
+// --- прогноз -----------------------------------------------------------------
 
 test.describe('shelfForecast', () => {
-  // первая банка ушла за 10 дней: расход 25 г/день
-  const history = () => [pack({ id: 'a', emptiedAt: day(10) })];
+  const now = day(20);
+  const settings = DEFAULT_SETTINGS;
 
-  test('ok: remainder, days and date', () => {
-    const shelf = item({ tobaccoId: 't', packs: [...history(), pack({ id: 'b' }), pack({ id: 'c' })] });
-    const forecast = shelfForecast(shelf, own(25), day(12), DEFAULT_SETTINGS);
+  test('ok: left, days and date', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(300, 10)] }), own(10), now, settings);
     assert.equal(forecast.status, 'ok');
-    assert.equal(forecast.last, false);
-    assert.equal(forecast.overdue, false);
+    assert.equal(forecast.leftGrams, 200);
+    assert.equal(forecast.fullGrams, 400);
+    approx(forecast.daysLeft, 20);
+    assert.equal(forecast.endsAt?.getTime(), day(40).getTime());
     assert.equal(forecast.guestAvailable, true);
-    assert.equal(forecast.rate, 25);
-    assert.equal(forecast.rateKind, 'own');
-    assert.equal(forecast.openPacks, 1);
-    assert.equal(forecast.sealedPacks, 1);
-    approx(forecast.remainingGrams, 450);
-    approx(forecast.daysLeft, 18);
-    assert.equal(forecast.endsAt?.getTime(), day(30).getTime());
+    assert.equal(forecast.inStock, true);
   });
 
-  test('parallel open packs do not double the spend', () => {
-    const shelf = item({ tobaccoId: 't', packs: [pack({ id: 'a', openedAt: day(0) }), pack({ id: 'b', openedAt: day(0) })] });
-    const forecast = shelfForecast(shelf, own(50), day(4), DEFAULT_SETTINGS);
-    approx(forecast.remainingGrams, 300);
-    approx(forecast.daysLeft, 6);
-  });
-
-  test('last pack is a flag, not a status', () => {
-    const shelf = item({ tobaccoId: 't', packs: [...history(), pack({ id: 'b' })] });
-    const forecast = shelfForecast(shelf, own(25), day(12), DEFAULT_SETTINGS);
-    assert.equal(forecast.status, 'ok');
-    assert.equal(forecast.last, true);
-  });
-
-  test('ending when days left fit into the lead time, together with last', () => {
-    const shelf = item({ tobaccoId: 't', packs: [...history(), pack({ id: 'b' })] });
-    const forecast = shelfForecast(shelf, own(25), day(14), DEFAULT_SETTINGS);
-    approx(forecast.daysLeft, 6);
+  test('ending when days left fit into the lead time', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(100, 15)] }), own(10), now, settings);
     assert.equal(forecast.status, 'ending');
-    assert.equal(forecast.last, true);
   });
 
-  test('check when an open pack should have run out', () => {
-    const shelf = item({ tobaccoId: 't', packs: [...history(), pack({ id: 'b' }), pack({ id: 'c' })] });
-    const forecast = shelfForecast(shelf, own(25), day(30), DEFAULT_SETTINGS);
-    assert.equal(forecast.overdue, true);
+  test('check when the estimate fell below 10 % of the level', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(100, 10)] }), own(9), now, settings);
+    assert.equal(forecast.leftGrams, 10);
     assert.equal(forecast.status, 'check');
-    approx(forecast.remainingGrams, 250);
+    assert.equal(forecast.guestAvailable, true);
   });
 
-  test('out when no sealed or open pack is left', () => {
-    const shelf = item({ tobaccoId: 't', packs: [...history(), pack({ id: 'b', writtenOffAt: day(2) })] });
-    const forecast = shelfForecast(shelf, own(25), day(12), DEFAULT_SETTINGS);
+  test('a fresh low count is not a reason to check', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(20, 20)] }), own(10), now, settings);
+    assert.equal(forecast.status, 'ending');
+  });
+
+  test('out after «Закончился»: hidden from guests', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(0, 10)] }), own(10), now, settings);
     assert.equal(forecast.status, 'out');
+    assert.equal(forecast.leftGrams, 0);
     assert.equal(forecast.guestAvailable, false);
-    assert.equal(forecast.remainingGrams, 0);
-    assert.equal(forecast.daysLeft, 0);
+    assert.equal(forecast.inStock, false);
+  });
+
+  test('the forecast alone never hides a tobacco', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(100, 0)] }), own(10), now, settings);
+    assert.equal(forecast.leftGrams, 0);
+    assert.equal(forecast.guestAvailable, true);
   });
 
   test('stop hides a stocked tobacco from guests', () => {
-    const shelf = item({ tobaccoId: 't', stopped: true, packs: [pack({ id: 'a' })] });
-    const forecast = shelfForecast(shelf, none, day(1), DEFAULT_SETTINGS);
+    const forecast = shelfForecast(item({ tobaccoId: 't', stopped: true, entries: [receipt(400, 0)] }), none, now, settings);
     assert.equal(forecast.status, 'stop');
     assert.equal(forecast.guestAvailable, false);
+    assert.equal(forecast.inStock, true);
   });
 
-  test('stop without packs is out', () => {
-    const shelf = item({ tobaccoId: 't', stopped: true, packs: history() });
-    assert.equal(shelfForecast(shelf, none, day(12), DEFAULT_SETTINGS).status, 'out');
-  });
-
-  test('plan: never had a pack', () => {
-    const planned = shelfForecast(item({ tobaccoId: 't', plan: true }), none, day(1), DEFAULT_SETTINGS);
-    assert.equal(planned.status, 'plan');
-    assert.equal(planned.guestAvailable, false);
-    const ranOut = shelfForecast(item({ tobaccoId: 't', plan: true, packs: history() }), none, day(12), DEFAULT_SETTINGS);
-    assert.equal(ranOut.status, 'out');
+  test('plan: never received', () => {
+    assert.equal(shelfForecast(item({ tobaccoId: 't', plan: true }), none, now, settings).status, 'plan');
+    assert.equal(shelfForecast(item({ tobaccoId: 't' }), none, now, settings).status, 'out');
   });
 
   test('without a rate there is no date', () => {
-    const shelf = item({ tobaccoId: 't', packs: [pack({ id: 'a' }), pack({ id: 'b' })] });
-    const forecast = shelfForecast(shelf, none, day(3), DEFAULT_SETTINGS);
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0)] }), none, now, settings);
     assert.equal(forecast.status, 'ok');
-    assert.equal(forecast.rate, null);
-    assert.equal(forecast.rateKind, 'none');
     assert.equal(forecast.daysLeft, null);
     assert.equal(forecast.endsAt, null);
-    approx(forecast.remainingGrams, 500);
   });
 });
 
 test.describe('forecastShelf', () => {
   test('falls back to the median of own rates of the same brand', () => {
     const items = [
-      item({ tobaccoId: 'fast', brand: 'A', packs: [pack({ id: 'a', emptiedAt: day(10) }), pack({ id: 'b' })] }),
-      item({ tobaccoId: 'slow', brand: 'A', packs: [pack({ id: 'c', emptiedAt: day(25) }), pack({ id: 'd' })] }),
-      item({ tobaccoId: 'new', brand: 'A', packs: [pack({ id: 'e', receivedAt: day(26) })] }),
-      item({ tobaccoId: 'alone', brand: 'B', packs: [pack({ id: 'f' })] }),
+      item({ tobaccoId: 'a', brand: 'X', entries: [receipt(400, 0), count(200, 10)] }),
+      item({ tobaccoId: 'b', brand: 'X', entries: [receipt(400, 0), count(0, 10)] }),
+      item({ tobaccoId: 'c', brand: 'X', entries: [receipt(400, 15)] }),
+      item({ tobaccoId: 'd', brand: 'Y', entries: [receipt(400, 15)] }),
     ];
-    const forecasts = forecastShelf(items, day(30), DEFAULT_SETTINGS);
-    assert.deepEqual(
-      forecasts.map((forecast) => [forecast.tobaccoId, forecast.rateKind, forecast.rate]),
-      [
-        ['fast', 'own', 25],
-        ['slow', 'own', 10],
-        ['new', 'brand', 17.5],
-        ['alone', 'none', null],
-      ],
-    );
+    const [, , c, d] = forecastShelf(items, day(20), DEFAULT_SETTINGS);
+    assert.equal(c.rateKind, 'brand');
+    approx(c.rate, 30);
+    assert.equal(d.rateKind, 'none');
   });
 });
 
-// --- дашборд ---------------------------------------------------------------
-
 test.describe('todayForecast', () => {
-  test('sums rates of tobaccos with an open pack', () => {
+  test('sums rates of tobaccos in stock, stop included', () => {
     const items = [
-      item({ tobaccoId: 'a', packs: [pack({ id: 'a1', emptiedAt: day(10) }), pack({ id: 'a2' })] }),
-      item({ tobaccoId: 'b', packs: [pack({ id: 'b1', weight: 200, emptiedAt: day(20) }), pack({ id: 'b2' })] }),
-      item({ tobaccoId: 'gone', packs: [pack({ id: 'g1', emptiedAt: day(5) })] }),
-      item({ tobaccoId: 'fresh', brand: 'Другой', packs: [pack({ id: 'f1' })] }),
+      item({ tobaccoId: 'a', entries: [receipt(400, 0), count(300, 10)] }),
+      item({ tobaccoId: 'b', stopped: true, entries: [receipt(400, 0), count(200, 10)] }),
+      item({ tobaccoId: 'c', entries: [receipt(400, 0), count(0, 10)] }),
     ];
-    const forecasts = forecastShelf(items, day(21), DEFAULT_SETTINGS);
-    const today = todayForecast(forecasts, 18);
-    approx(today.grams, 25 + 10);
-    approx(today.bowls, 35 / 18);
+    const today = todayForecast(forecastShelf(items, day(12), DEFAULT_SETTINGS), 18);
+    approx(today.grams, 10 + 20);
+    approx(today.bowls, 30 / 18);
   });
 });
 
 test.describe('reorderList', () => {
-  test('keeps stocked and planned tobaccos that run out within the lead time', () => {
+  test('needs for 21 days minus what is left, rounded up to 50 g', () => {
     const items = [
-      item({ tobaccoId: 'ok', packs: [pack({ id: 'o1', emptiedAt: day(10) }), pack({ id: 'o2' }), pack({ id: 'o3' })] }),
-      item({ tobaccoId: 'ending', packs: [pack({ id: 'e1', emptiedAt: day(10) }), pack({ id: 'e2' })] }),
-      item({ tobaccoId: 'sooner', packs: [pack({ id: 's1', emptiedAt: day(5) }), pack({ id: 's2' })] }),
-      item({ tobaccoId: 'casual', keepStocked: false, packs: [pack({ id: 'c1', emptiedAt: day(10) }), pack({ id: 'c2' })] }),
-      item({ tobaccoId: 'out', packs: [pack({ id: 'x1', emptiedAt: day(14) })] }),
-      item({ tobaccoId: 'casual-out', keepStocked: false, packs: [pack({ id: 'y1', emptiedAt: day(14) })] }),
-      item({ tobaccoId: 'idea', brand: 'Новый', keepStocked: false, plan: true }),
-      item({ tobaccoId: 'small', packWeight: 25, packs: [pack({ id: 'm1', weight: 25, emptiedAt: day(5) }), pack({ id: 'm2', weight: 25 })] }),
+      // расход 16 г/день, к 20-му дню осталось 80 г: 16 × 21 − 80 = 256 → 300
+      item({ tobaccoId: 'ending', entries: [receipt(400, 0), count(96, 19)] }),
+      item({ tobaccoId: 'out', entries: [receipt(250, 0), count(0, 10)] }),
+      item({ tobaccoId: 'plan', plan: true, keepStocked: false }),
+      item({ tobaccoId: 'enough', entries: [receipt(1000, 0), count(900, 10)] }),
+      item({ tobaccoId: 'not-kept', keepStocked: false, entries: [receipt(250, 0), count(0, 10)] }),
     ];
-    const now = day(15);
-    const forecasts = forecastShelf(items, now, DEFAULT_SETTINGS);
-    const lines = reorderList(items, forecasts, DEFAULT_SETTINGS);
-    assert.deepEqual(
-      lines.map((line) => [line.tobaccoId, line.status, line.quantity, line.endsAt?.getTime() ?? null]),
-      [
-        // 250 г за 14 дней: ceil(250/14 × 21 / 250) = 2
-        ['out', 'out', 2, now.getTime()],
-        ['idea', 'plan', 1, null],
-        // 50 г/день, со вскрытия 10 дней: остаток 0, «проверьте»; ceil(50 × 21 / 250) = 5
-        ['sooner', 'check', 5, now.getTime()],
-        // 25 г за 5 дней: остаток 0; ceil(5 × 21 / 25) = 5
-        ['small', 'check', 5, now.getTime()],
-        // 25 г/день, со вскрытия 5 дней: остаток 125 г, 5 дней
-        ['ending', 'ending', 3, day(20).getTime()],
-      ],
-    );
+    const lines = reorderList(items, forecastShelf(items, day(20), DEFAULT_SETTINGS), DEFAULT_SETTINGS);
+    assert.deepEqual(lines.map((line) => [line.tobaccoId, line.status, line.quantityGrams]), [
+      ['out', 'out', 550],
+      // своего расхода нет — медиана бренда (16, 25, 10, 25 → 20,5) × 21 = 430,5 → 450
+      ['plan', 'plan', 450],
+      ['ending', 'ending', 300],
+    ]);
+  });
+
+  test('without a rate orders what came last time', () => {
+    const items = [item({ tobaccoId: 'a', entries: [receipt(375, 0), count(0, 0)] })];
+    const [line] = reorderList(items, forecastShelf(items, day(1), DEFAULT_SETTINGS), DEFAULT_SETTINGS);
+    assert.equal(line.quantityGrams, 400);
   });
 });
 
-// --- деньги ----------------------------------------------------------------
+// --- деньги ------------------------------------------------------------------
 
 test.describe('money', () => {
-  test('gram price is pack price over weight', () => {
-    assert.equal(gramPrice(pack({ id: 'a', price: 150_000 })), 600);
-    assert.equal(gramPrice(pack({ id: 'a' })), null);
+  test('gram price comes from the last priced receipt', () => {
+    approx(gramPrice([receipt(400, 0, 300_000), receipt(250, 5, 200_000), receipt(100, 6)]), 800);
+    assert.equal(gramPrice([receipt(400, 0)]), null);
   });
 
-  test('bowl cost averages gram prices of open packs with a price', () => {
-    const packs = resolvePacks([
-      pack({ id: 'a', price: 150_000 }),
-      pack({ id: 'b', price: 10_000, openedAt: day(1) }),
-      pack({ id: 'c', price: 999_999 }),
-      pack({ id: 'd', openedAt: day(1) }),
-    ]);
-    // открыты a (600 коп/г), b (40 коп/г) и d без цены; c в запасе
-    assert.equal(bowlCost(packs, 18), 18 * 320);
-  });
-
-  test('no priced open pack, no bowl cost', () => {
-    assert.equal(bowlCost(resolvePacks([pack({ id: 'a' })]), 18), null);
+  test('bowl cost averages gram prices that are known', () => {
+    approx(bowlCost([700, null, 900], 18), 18 * 800);
+    assert.equal(bowlCost([null], 18), null);
   });
 });
-
-// --- расход по периодам ------------------------------------------------------
 
 test.describe('consumptionByPeriod', () => {
-  const period = (from: number, to: number) => ({ from: day(from), to: day(to) });
-
-  test('a finished pack spreads evenly over its time', () => {
-    const packs = [pack({ id: 'a', emptiedAt: day(10) })];
-    assert.deepEqual(consumptionByPeriod(packs, [period(-3, 0), period(0, 5), period(5, 12)]), [0, 125, 125]);
+  test('a segment spreads evenly over its days', () => {
+    const entries = [receipt(400, 0), count(0, 20)];
+    assert.deepEqual(consumptionByPeriod(entries, [{ from: day(0), to: day(10) }, { from: day(10), to: day(30) }]), [200, 200]);
   });
 
-  test('marks split the scale into segments with their own pace', () => {
-    const packs = [pack({ id: 'a', marks: [{ at: day(4), fraction: 0.5 }], emptiedAt: day(10) })];
-    const [first, second] = consumptionByPeriod(packs, [period(0, 2), period(2, 8)]);
-    approx(first, 62.5);
-    approx(second, 62.5 + (125 * 4) / 6);
-  });
-
-  test('the running segment does not count yet', () => {
-    const packs = [pack({ id: 'a', marks: [{ at: day(4), fraction: 0.5 }] })];
-    assert.deepEqual(consumptionByPeriod(packs, [period(0, 4), period(4, 30)]), [125, 0]);
-  });
-
-  test('written-off packs and correcting marks give no grams', () => {
-    const packs = [
-      pack({ id: 'a', writtenOffAt: day(3), openedAt: day(0) }),
-      pack({ id: 'b', marks: [{ at: day(4), fraction: 0.5 }, { at: day(6), fraction: 0.75 }], emptiedAt: day(9) }),
-    ];
-    // a списана, b вскрыта на её месте с day(3): ½ за 1 день, исправление, ¾ за 3 дня
-    assert.deepEqual(consumptionByPeriod(packs, [period(0, 30)]), [125 + 187.5]);
-  });
-
-  test('grams of several packs add up', () => {
-    const packs = [pack({ id: 'a', emptiedAt: day(5) }), pack({ id: 'b', emptiedAt: day(10) })];
-    assert.deepEqual(consumptionByPeriod(packs, [period(0, 5), period(5, 10)]), [250, 250]);
+  test('excluded segments and the running one give nothing', () => {
+    const entries = [receipt(400, 0), count(100, 10), count(300, 12)];
+    assert.deepEqual(consumptionByPeriod(entries, [{ from: day(0), to: day(30) }]), [300]);
   });
 });
-
-// --- день недели -------------------------------------------------------------
 
 test.describe('weekdayFactor', () => {
   // Четверг 12 февраля 2026; окно — 28 полных дней с 15 января (тоже четверг).

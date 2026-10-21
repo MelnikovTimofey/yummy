@@ -1,13 +1,14 @@
-import { formatCount, type ShelfCounters, type ShelfOpenPack, type ShelfRow, type ShelfView } from '../contracts';
-import { MARK_OPTIONS, formatNumber, formatShelfDate, fractionLabel, type ShelfStatusKey } from './shelf';
+import { formatCount, type ShelfCounters, type ShelfRow, type ShelfView } from '../contracts';
+import { formatGrams, formatNumber, formatShelfDate, type ShelfStatusKey } from './shelf';
 
-// «Полка» на телефоне (#215): мастер у стойки отмечает «Закончилась» и остаток.
+// «Полка» на телефоне (#215, #306): мастер у стойки жмёт «Закончился» и,
+// когда удобно, отмечает остаток.
 
 // Чипы прокручиваются по горизонтали, поэтому первыми — те, ради которых
 // открывают полку с телефона.
 export const SHELF_MOBILE_CHIPS: Array<[ShelfStatusKey, string]> = [
   ['ending', 'Заканчивается'],
-  ['last', 'Последняя'],
+  ['check', 'Проверьте'],
   ['out', 'Закончились'],
   ['all', 'Все'],
   ['ok', 'Есть'],
@@ -18,67 +19,42 @@ export const SHELF_MOBILE_CHIPS: Array<[ShelfStatusKey, string]> = [
 export const defaultMobileShelfStatus = (counters: Pick<ShelfCounters, 'ending'>): ShelfStatusKey =>
   counters.ending > 0 ? 'ending' : 'all';
 
-export type ShelfMobileAction = {
-  kind: 'empty' | 'check' | 'unstop' | 'none';
-  label: string;
-  disabled: boolean;
+// Кнопки карточки: слева — шторка «Сколько осталось?», справа — «Закончился»
+// или «Снять стоп». Закончился или в плане — только подпись.
+export type ShelfMobileActions = {
+  note: string | null;
+  left: string | null;
+  right: 'empty' | 'unstop' | null;
 };
 
-export const shelfMobileAction = (row: ShelfRow): ShelfMobileAction => {
+export const shelfMobileActions = (row: Pick<ShelfRow, 'status'>): ShelfMobileActions => {
   switch (row.status) {
     case 'out':
     case 'plan':
-      return { kind: 'none', label: 'в «К заказу»', disabled: true };
+      return { note: 'в «К заказу»', left: null, right: null };
     case 'stop':
-      return { kind: 'unstop', label: 'Снять стоп', disabled: false };
+      return { note: null, left: 'Осталось…', right: 'unstop' };
     case 'check':
-      return { kind: 'check', label: 'Проверить', disabled: false };
+      return { note: null, left: 'Отметить остаток', right: 'empty' };
     default:
-      return { kind: 'empty', label: 'Закончилась', disabled: !row.openPacks.length };
+      return { note: null, left: 'Осталось…', right: 'empty' };
   }
 };
 
-export const sheetEmptyLabel = (row: ShelfRow) =>
-  row.openPacks.length <= 1 && row.sealedCount === 0 ? 'Закончилась · запаса нет' : 'Закончилась';
+export const sheetLine = (row: Pick<ShelfRow, 'leftGrams' | 'fullGrams' | 'lastReceipt'>) =>
+  row.fullGrams === null || !row.lastReceipt
+    ? 'Прихода ещё не было'
+    : `После прихода ${formatShelfDate(row.lastReceipt.at)} было ${formatNumber(row.fullGrams)} г · сейчас ${formatGrams(row.leftGrams ?? 0)}`;
 
-// Backend отмечает и опустошает самую старую открытую банку.
-export const markTargetPack = (row: ShelfRow): ShelfOpenPack | null =>
-  [...row.openPacks].sort((a, b) => a.openedAt.localeCompare(b.openedAt))[0] ?? null;
-
-const dayStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-
-export const relativeDay = (iso: string, now = new Date()) => {
-  const days = Math.round((dayStart(now) - dayStart(new Date(iso))) / 86_400_000);
-  if (days === 0) return 'сегодня';
-  if (days === 1) return 'вчера';
-  return formatShelfDate(iso);
-};
-
-// marks === null — отметки ещё не загружены.
-export const openPackLine = (row: ShelfRow, marks: Array<{ at: string; fraction: number }> | null, now = new Date()) => {
-  const pack = markTargetPack(row);
-  if (!pack) return row.sealedCount ? `Открытой банки нет · в запасе: ${formatNumber(row.sealedCount)}` : 'Банок нет';
-  const title = row.openPacks.length > 1 ? `Открытая банка 1 из ${row.openPacks.length}` : 'Открытая банка';
-  const parts = [title, `вскрыта ${formatShelfDate(pack.openedAt)}`];
-  if (marks) {
-    const last = marks[marks.length - 1];
-    parts.push(last ? `отметка ${fractionLabel(last.fraction)} ${relativeDay(last.at, now)}` : 'отметок нет');
-  }
-  return parts.join(' · ');
-};
-
-export const SHEET_MARK_OPTIONS: Array<{ label: string; value: number; hint?: string }> = [
-  { label: '1', value: 1, hint: 'полная' },
-  ...MARK_OPTIONS,
-];
+const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
 
 export const shelfMobileSummary = (view: {
   counters: Pick<ShelfView['counters'], 'all'>;
-  totals: Pick<ShelfView['totals'], 'packs'>;
+  totals: ShelfView['totals'];
   today: ShelfView['today'];
 }) =>
   [
     formatCount(view.counters.all, ['позиция', 'позиции', 'позиций']),
-    formatCount(view.totals.packs, ['банка', 'банки', 'банок']),
+    `≈ ${kg.format(view.totals.kg)} кг`,
     `сегодня ≈ ${formatNumber(view.today.grams)} г, ${formatCount(Math.round(view.today.bowls), ['чаша', 'чаши', 'чаш'])}`,
   ].join(' · ');

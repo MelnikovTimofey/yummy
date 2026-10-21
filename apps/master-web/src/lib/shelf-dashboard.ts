@@ -36,8 +36,8 @@ export const spendRows = (spend: ShelfDashboard['spend']) =>
 
 export const bowlCostTile = (kop: number | null, bowlGrams: number) =>
   kop === null
-    ? { value: '—', hint: 'нет цен прихода у табаков в работе' }
-    : { value: formatApproxRub(kop), hint: `${bowlGrams} г по средней цене табаков в работе` };
+    ? { value: '—', hint: 'нет цен прихода у табаков на полке' }
+    : { value: formatApproxRub(kop), hint: `${bowlGrams} г по средней цене грамма табаков на полке` };
 
 export const stockValueTile = (kop: number) =>
   kop > 0 ? { value: formatApproxRub(kop), hint: 'по ценам прихода' } : { value: '—', hint: 'нет цен прихода' };

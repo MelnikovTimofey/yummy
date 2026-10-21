@@ -5858,8 +5858,10 @@ button.chip .chip__count[hidden] {
 }
 
 /* =====================================================================
-   Полка (#211) — по design/design_handoff_inventory (#shot=shelf,
-   shelf-menu, shelf-undo, shelf-drawer, edge-empty, edge-few).
+   Полка (#211, #306) — по design/design_handoff_inventory и
+   design/design_handoff_inventory_grams (#shot=shelf, shelf-left,
+   shelf-menu, shelf-receipt, shelf-writeoff, shelf-undo, shelf-drawer,
+   edge-more, edge-check, edge-few).
    ===================================================================== */
 
 .shelf-page {
@@ -5881,6 +5883,7 @@ button.chip .chip__count[hidden] {
 .shelf-until small[data-tone="danger"] { color: var(--danger); }
 [data-tone="faint"].shelf-num,
 .shelf-until small[data-tone="faint"] { color: var(--text-faint); }
+[data-tone="warning"].shelf-toast { color: var(--warning); }
 .shelf-until small[data-tone="muted"] { color: var(--text-muted); }
 
 .shelf-toolbar {
@@ -6055,35 +6058,41 @@ button.chip .chip__count[hidden] {
 .shelf-until { display: grid; gap: 1px; }
 .shelf-until small { font-size: var(--fs-xs); }
 
-/* --- Банки-пипсы ----------------------------------------------------- */
+/* --- Остаток: полоса и граммы (#306) -------------------------------- */
 
-.shelf-pips { display: inline-flex; align-items: flex-end; gap: 3px; height: 18px; }
+.shelf-level { display: inline-grid; grid-template-columns: 56px minmax(0, auto); align-items: center; gap: 8px; min-width: 0; }
 
-.shelf-pip {
+.shelf-level__bar {
   position: relative;
-  display: inline-block;
-  width: 9px;
-  height: 16px;
-  box-sizing: border-box;
+  height: 6px;
   overflow: hidden;
-  border: 1px solid var(--border-strong);
-  border-radius: 2px;
-  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill);
+  background: var(--bg-base);
 }
 
-.shelf-pip i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--text-secondary); }
-.shelf-pip[data-tone="low"] i { background: var(--warning); }
-.shelf-pip[data-tone="crit"] i { background: var(--danger); }
-.shelf-pip--sealed { background: var(--text-secondary); border-color: var(--text-secondary); }
-.shelf-pip--none { border-style: dashed; border-color: var(--border-default); }
+.shelf-level__bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill); background: var(--text-secondary); }
+.shelf-level__bar[data-tone="low"] i { background: var(--warning); }
+.shelf-level__bar[data-tone="crit"] i { background: var(--danger); }
+.shelf-level__bar[data-none] { border-style: dashed; border-color: var(--border-default); }
 
-.shelf-pips__meta {
-  margin-left: 6px;
+.shelf-level__copy { display: grid; min-width: 0; line-height: 1.2; }
+.shelf-level__copy b { font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shelf-level__copy b[data-tone="danger"] { color: var(--danger); }
+.shelf-level__copy b[data-tone="faint"] { color: var(--text-faint); }
+
+.shelf-level__copy small {
+  overflow: hidden;
   font-size: var(--fs-xs);
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
+
+.shelf-level--lg { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.shelf-level--lg .shelf-level__bar { height: 8px; }
+.shelf-level--lg .shelf-level__copy b { font-size: var(--fs-lg); }
 
 .shelf-keys {
   display: flex;
@@ -6120,23 +6129,6 @@ button.chip .chip__count[hidden] {
   color: var(--text-faint);
 }
 
-.shelf-menu__fracs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 2px 4px 2px; }
-
-.shelf-menu__frac {
-  height: 32px;
-  min-width: 34px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-  background: var(--bg-raised);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.shelf-menu__frac:hover:not(:disabled) { border-color: var(--accent-border); background: var(--accent-soft); }
-.shelf-menu__frac:disabled { opacity: 0.4; cursor: not-allowed; }
-
 .shelf-menu__item {
   display: flex;
   align-items: center;
@@ -6160,12 +6152,84 @@ button.chip .chip__count[hidden] {
 
 .shelf-menu__sep { height: 1px; margin: 4px 0; background: var(--border-subtle); }
 
-.shelf-menu__form { display: grid; gap: 8px; padding: 0 4px 4px; }
-.shelf-menu__hint { margin: 0 4px; font-size: var(--fs-xs); color: var(--text-muted); }
+.shelf-menu.shelf-menu--wide { width: 380px; padding: 8px; }
+.shelf-menu__item.shelf-menu__item--danger { color: var(--danger); }
 
-.shelf-menu__field { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--text-muted); }
+/* --- «Сколько осталось?», приход и списание (#306) ------------------- */
 
-.shelf-menu__field .text-input,
+.shelf-fracs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 2px 4px 6px; }
+
+.shelf-frac {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.shelf-frac small { font-size: 10.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.shelf-frac:hover:not(:disabled),
+.shelf-frac:focus-visible { border-color: var(--accent-border); background: var(--accent-soft); outline: none; }
+.shelf-frac:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.shelf-exact { display: flex; align-items: center; gap: 6px; padding: 4px; }
+.shelf-exact label { flex: 1; font-size: var(--fs-sm); color: var(--text-secondary); }
+
+.shelf-grams {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: var(--bg-base);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.shelf-grams[data-on],
+.shelf-grams:focus-within { border-color: var(--accent); }
+
+.shelf-grams input {
+  width: 52px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  outline: none;
+}
+
+.shelf-grams input::placeholder { color: var(--text-faint); }
+
+.shelf-note { margin: 0; padding: 2px 8px 4px; font-size: var(--fs-xs); line-height: 1.4; color: var(--text-faint); }
+
+.shelf-form { display: grid; gap: 8px; padding: 2px 4px 4px; }
+.shelf-form .shelf-note { padding: 0; }
+
+.shelf-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.shelf-form .text-input { height: 30px; padding: 0 10px; border-radius: var(--r-sm); font-size: var(--fs-sm); }
+.shelf-form__actions { display: flex; justify-content: flex-end; gap: 6px; }
+
 .shelf-card__stop-note .text-input {
   height: 30px;
   padding: 0 10px;
@@ -6173,7 +6237,6 @@ button.chip .chip__count[hidden] {
   font-size: var(--fs-sm);
 }
 
-.shelf-menu__form-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
 /* --- Тост «Закончилась» и отмена -------------------------------------- */
 
@@ -6271,17 +6334,17 @@ button.chip .chip__count[hidden] {
 
 .shelf-card__body { display: grid; gap: 18px; align-content: start; padding: 16px 22px 28px; }
 
-.shelf-card__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.shelf-card__level { display: grid; gap: 10px; }
+.shelf-card__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-.shelf-card__marks {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--fs-sm);
+.shelf-card__left {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
 }
-
-.shelf-card__marks .shelf-faint { margin-right: 4px; }
-.shelf-card__marks .shelf-menu__frac { height: 32px; }
 
 .shelf-card__tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
@@ -6325,21 +6388,32 @@ button.chip .chip__count[hidden] {
 
 .shelf-card__note { margin: 0; font-size: var(--fs-sm); }
 
-.shelf-card__packs { border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
+.shelf-history { border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
 
-.shelf-card__pack {
+.shelf-history__item {
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 70px minmax(0, 1fr) 28px;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.shelf-card__pack:last-child { border-bottom: 0; }
-.shelf-card__pack-copy { display: grid; gap: 1px; min-width: 0; }
-.shelf-card__pack-copy b { font-weight: 500; font-size: var(--fs-sm); }
-.shelf-card__pack-copy span { font-size: var(--fs-xs); color: var(--text-muted); }
+.shelf-history__item:last-child { border-bottom: 0; }
+.shelf-history__grams { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shelf-history__grams[data-tone="plus"] { color: var(--success); }
+.shelf-history__grams[data-tone="zero"] { color: var(--danger); }
+.shelf-history__copy { display: grid; gap: 1px; min-width: 0; }
+.shelf-history__copy b { font-weight: 500; font-size: var(--fs-sm); }
+.shelf-history__copy span { font-size: var(--fs-xs); color: var(--text-muted); }
+.shelf-history__actions { position: relative; }
+
+.shelf-history__menu.shelf-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 240px;
+}
 
 .shelf-card__bars {
   display: flex;
@@ -6367,6 +6441,12 @@ button.chip .chip__count[hidden] {
   background: var(--chart-1);
 }
 
+.shelf-card__bar[data-partial] i {
+  border: 1px solid var(--chart-1);
+  border-bottom: 0;
+  background: repeating-linear-gradient(135deg, var(--chart-1) 0 4px, transparent 4px 8px);
+}
+
 .shelf-card__bar span { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .shelf-card__bar small { font-size: 10.5px; color: var(--text-faint); }
 
@@ -6381,14 +6461,6 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-card__setting small { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
-
-.shelf-card__select.select-input {
-  width: 100px;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-}
 
 .shelf-card__stop-note { display: flex; gap: 8px; }
 .shelf-card__mix { font-size: var(--fs-sm); }
@@ -6507,9 +6579,10 @@ button.chip .chip__count[hidden] {
 .deliv-link:disabled { opacity: 0.5; cursor: progress; }
 
 .deliv-grams { display: inline-flex; align-items: center; gap: 4px; }
+.deliv-grams[data-state="off"] { opacity: 0.45; }
 
 .deliv-grams__input {
-  width: 52px;
+  width: 72px;
   height: 28px;
   padding: 0 6px;
   border: 1px solid var(--border-subtle);
@@ -6524,29 +6597,8 @@ button.chip .chip__count[hidden] {
 
 .deliv-grams__input:hover { border-color: var(--border-default); }
 .deliv-grams__input:focus { outline: none; border-color: var(--accent); }
-
-.deliv-stepper {
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-}
-
-.deliv-stepper button {
-  width: 24px;
-  height: 26px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.deliv-stepper button:hover:not(:disabled) { color: var(--text-primary); }
-.deliv-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.deliv-stepper span { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.deliv-grams__input[data-tone="warn"] { border-color: var(--warning); }
+.deliv-match small.deliv-warn { color: var(--warning); }
 
 /* --- Нижняя панель приёмки -------------------------------------------- */
 
@@ -6566,6 +6618,7 @@ button.chip .chip__count[hidden] {
 }
 
 .deliv-footbar__summary { flex: 1; min-width: 240px; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.deliv-footbar__summary > span { white-space: nowrap; }
 
 .deliv-date { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-muted); }
 
@@ -6773,7 +6826,7 @@ button.chip .chip__count[hidden] {
 
 .reorder-stepper button:hover:not(:disabled) { color: var(--text-primary); }
 .reorder-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.reorder-stepper output { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.reorder-stepper output { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
 
 .reorder-copied {
   display: grid;
@@ -7308,19 +7361,21 @@ button.chip .chip__count[hidden] {
   gap: 10px;
 }
 
-/* Пипсы — цель касания 40 px, визуально на месте. */
-.m-shelf-card__pips {
-  display: inline-flex;
-  align-items: center;
+.m-shelf-card__acts { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.m-shelf-card__acts .m-shelf-card__primary { width: 100%; }
+
+.m-shelf-card__left {
   min-height: 40px;
-  margin: -8px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: var(--r-sm);
+  padding: 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
   background: transparent;
-  color: inherit;
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
+
+.m-shelf-card__left:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .m-shelf-card__until { justify-items: end; text-align: right; font-size: 13px; }
 
@@ -7360,7 +7415,7 @@ button.chip .chip__count[hidden] {
   color: var(--text-muted);
 }
 
-.m-mark-sheet__fracs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.m-mark-sheet__fracs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 
 .m-mark-sheet__frac {
   display: grid;
@@ -7377,10 +7432,39 @@ button.chip .chip__count[hidden] {
 }
 
 .m-mark-sheet__frac small { font-size: 10px; color: var(--text-faint); }
-.m-mark-sheet__frac:active:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.m-mark-sheet__frac:active:not(:disabled),
+.m-mark-sheet__frac[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .m-mark-sheet__frac:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .m-mark-sheet__hint { margin: 0; font-size: 12px; color: var(--text-faint); }
+
+.m-mark-sheet__marks label.m-mark-sheet__h3 { margin-top: 6px; }
+.m-mark-sheet__exact { display: flex; align-items: center; gap: 8px; }
+
+/* 16 px и больше — иначе iOS увеличивает страницу при фокусе в поле. */
+.m-mark-sheet__exact .shelf-grams { flex: 1; height: 46px; padding: 0 12px; border-radius: var(--r-md); font-size: 18px; }
+.m-mark-sheet__exact .shelf-grams input { flex: 1; width: auto; text-align: left; }
+
+.m-mark-sheet__save {
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.m-mark-sheet__save:disabled { border-color: var(--border-default); background: transparent; color: var(--text-faint); cursor: not-allowed; }
+
+.m-actions .shelf-form { gap: 14px; padding: 0; }
+.m-actions .shelf-form__row { font-size: var(--fs-md); }
+.m-actions .shelf-grams { height: 44px; font-size: 16px; }
+.m-actions .shelf-grams input { width: 80px; }
+.m-actions .shelf-form .text-input { height: 44px; font-size: 16px; }
+.m-actions .shelf-form__actions .btn { height: 44px; padding: 0 18px; }
 
 .m-mark-sheet__empty {
   height: 50px;
@@ -7439,12 +7523,6 @@ button.chip .chip__count[hidden] {
 .m-actions__item .shelf-faint { font-size: var(--fs-xs); }
 .m-actions__item--sep { margin-top: 4px; border-top: 1px solid var(--border-subtle); border-radius: 0; }
 
-.m-actions__form { display: grid; gap: 14px; }
-.m-actions__field { display: grid; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
-/* 16 px — иначе iOS увеличивает страницу при фокусе в поле. */
-.m-actions__field .text-input { height: 44px; font-size: 16px; }
-.m-actions__form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.m-actions__form-actions .btn { height: 44px; padding: 0 18px; }
 
 .shelf-card__head-actions { display: flex; gap: 4px; margin-right: -10px; }
 .shelf-card__head-actions .icon-btn { width: 44px; height: 44px; }

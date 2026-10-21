@@ -174,8 +174,8 @@ test.describe('custom mix smoke event', () => {
     assert.ok(created && !('error' in created));
 
     const body = (await smoke({ components: [{ tobaccoId: created.id, proportion: 100 }] })).json() as Created;
-    // Полка не даёт удалить табак (Restrict) — убираем её банки и запись вместе с ним.
-    await prisma.pack.deleteMany({ where: { shelfItem: { tobaccoId: created.id } } });
+    // Полка не даёт удалить табак (Restrict) — убираем её журнал и запись вместе с ним.
+    await prisma.stockEntry.deleteMany({ where: { shelfItem: { tobaccoId: created.id } } });
     await prisma.shelfItem.delete({ where: { tobaccoId: created.id } });
     await prisma.tobacco.delete({ where: { id: created.id } });
 

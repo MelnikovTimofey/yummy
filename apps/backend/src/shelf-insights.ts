@@ -6,16 +6,16 @@ import {
   bowlCost,
   consumptionByPeriod,
   gramPrice,
-  openRemaining,
   reorderList,
-  resolvePacks,
   todayForecast,
   weekdayFactor,
-  type Period,
+  weekPeriods,
   type ShelfForecast,
   type ShelfSettings,
   type ShelfStatus,
 } from './stock';
+
+export { weekPeriods };
 
 // «К заказу» и блок «Полка» дашборда (#152, срез 4): только чтение полки,
 // поставок и «Покурить». Недели, месяц и день недели — в часовом поясе процесса.
@@ -35,16 +35,16 @@ export type ReorderItemView = {
   endsAt: string | null;
   rate: number | null;
   rateKind: ShelfForecast['rateKind'];
-  quantity: number;
-  packWeight: number;
-  lastPriceKop: number | null;
+  leftGrams: number | null;
+  quantityGrams: number;
+  gramPriceKop: number | null;
 };
 
 export type ReorderGroup = {
   supplier: SupplierRef | null;
   lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
   items: ReorderItemView[];
-  // null — хоть у одной строки нет последней цены.
+  // null — хоть у одной строки нет цены грамма.
   sumKop: number | null;
 };
 
@@ -77,22 +77,20 @@ const tobaccoOf = (record: ShelfRecord): TobaccoRef => ({
 
 // --- к заказу ----------------------------------------------------------------
 
-type OrderLine = { tobacco: Pick<TobaccoRef, 'manufacturer' | 'lineName' | 'name'>; packWeight: number; quantity: number };
+type OrderLine = { tobacco: Pick<TobaccoRef, 'manufacturer' | 'lineName' | 'name'>; quantityGrams: number };
 
 export const orderText = (lines: OrderLine[]) =>
   [
     'Добрый день! Заказ:',
-    ...lines.map(({ tobacco, packWeight, quantity }) =>
-      `${[tobacco.manufacturer, tobacco.lineName, tobacco.name].filter(Boolean).join(' ')} ${packWeight} г — ${quantity} шт`,
+    ...lines.map(({ tobacco, quantityGrams }) =>
+      `${[tobacco.manufacturer, tobacco.lineName, tobacco.name].filter(Boolean).join(' ')} — ${quantityGrams} г`,
     ),
     'Спасибо!',
   ].join('\n');
 
-// Банки отсортированы по приходу: берём последнюю с поставщиком и последнюю с ценой.
+// Журнал отсортирован по времени: берём последний приход с поставщиком.
 const lastSupplier = (record: ShelfRecord): SupplierRef | null =>
-  [...record.packs].reverse().find((pack) => pack.delivery?.supplier)?.delivery?.supplier ?? null;
-
-const lastPrice = (record: ShelfRecord) => [...record.packs].reverse().find((pack) => pack.priceKop !== null)?.priceKop ?? null;
+  [...record.entries].reverse().find((entry) => entry.delivery?.supplier)?.delivery?.supplier ?? null;
 
 const loadLastInvoices = async (supplierIds: string[]) => {
   const invoices = await prisma.delivery.findMany({
@@ -116,13 +114,13 @@ const loadLastInvoices = async (supplierIds: string[]) => {
 
 export const getReorder = async (now = new Date()): Promise<ReorderView> => {
   const { records, items, forecasts, settings } = await loadShelf(now);
-  const byId = new Map(records.map((record, index) => [record.tobaccoId, { record, forecast: forecasts[index] }]));
+  const byId = new Map(records.map((record, index) => [record.tobaccoId, { record, item: items[index], forecast: forecasts[index] }]));
 
   // reorderList уже отсортирован по срочности: группы идут в порядке первой строки,
   // «Поставщик не выбран» — последней.
   const groups = new Map<string | null, ReorderGroup>();
   for (const line of reorderList(items, forecasts, settings)) {
-    const { record, forecast } = byId.get(line.tobaccoId)!;
+    const { record, item, forecast } = byId.get(line.tobaccoId)!;
     const supplier = lastSupplier(record);
     const key = supplier?.id ?? null;
     if (!groups.has(key)) groups.set(key, { supplier, lastInvoice: null, items: [], sumKop: null });
@@ -133,9 +131,9 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
       endsAt: iso(line.endsAt),
       rate: forecast.rate,
       rateKind: forecast.rateKind,
-      quantity: line.quantity,
-      packWeight: record.packWeight,
-      lastPriceKop: lastPrice(record),
+      leftGrams: forecast.leftGrams === null ? null : Math.round(forecast.leftGrams),
+      quantityGrams: line.quantityGrams,
+      gramPriceKop: gramPrice(item.entries),
     });
   }
 
@@ -143,11 +141,11 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
   const ordered = [...groups.values()].sort((a, b) => Number(a.supplier === null) - Number(b.supplier === null));
   const result = ordered.map((group) => {
     const invoice = group.supplier ? invoices.get(group.supplier.id) : undefined;
-    const priced = group.items.every((item) => item.lastPriceKop !== null);
+    const priced = group.items.every((item) => item.gramPriceKop !== null);
     return {
       ...group,
       lastInvoice: invoice ? { number: invoice.number, date: invoice.date, status: invoice.status } : null,
-      sumKop: priced ? sum(group.items.map((item) => item.quantity * item.lastPriceKop!)) : null,
+      sumKop: priced ? Math.round(sum(group.items.map((item) => item.quantityGrams * item.gramPriceKop!))) : null,
     };
   });
 
@@ -159,18 +157,6 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
 };
 
 // --- дашборд -----------------------------------------------------------------
-
-// Недели с понедельника; последняя — текущая, до сейчас.
-export const weekPeriods = (now: Date, count: number): Array<Period & { partial: boolean }> => {
-  const monday = now.getDate() - ((now.getDay() + 6) % 7);
-  return Array.from({ length: count }, (_, index) => {
-    const back = count - 1 - index;
-    const from = new Date(now.getFullYear(), now.getMonth(), monday - 7 * back);
-    return back
-      ? { from, to: new Date(now.getFullYear(), now.getMonth(), monday - 7 * back + 7), partial: false }
-      : { from, to: now, partial: true };
-  });
-};
 
 const loadSmokeEvents = async (now: Date) => {
   const since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - WEEKDAY_WINDOW_DAYS);
@@ -192,18 +178,19 @@ const loadSmokeEvents = async (now: Date) => {
 
 const loadMonthSpend = async (now: Date) => {
   const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const packs = await prisma.pack.findMany({
+  const receipts = await prisma.stockEntry.findMany({
     where: {
+      kind: 'receipt',
       priceKop: { not: null },
       delivery: { status: 'received', kind: { not: 'start' }, receivedAt: { gte: from, lte: now } },
     },
     select: { priceKop: true, delivery: { select: { supplier: { select: { id: true, name: true } } } } },
   });
   const bySupplier = new Map<string | null, { supplier: SupplierRef | null; sumKop: number }>();
-  for (const pack of packs) {
-    const supplier = pack.delivery?.supplier ?? null;
+  for (const receipt of receipts) {
+    const supplier = receipt.delivery?.supplier ?? null;
     const entry = bySupplier.get(supplier?.id ?? null) ?? { supplier, sumKop: 0 };
-    entry.sumKop += pack.priceKop!;
+    entry.sumKop += receipt.priceKop!;
     bySupplier.set(supplier?.id ?? null, entry);
   }
   const rows = [...bySupplier.values()].sort((a, b) => b.sumKop - a.sumKop);
@@ -244,24 +231,18 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
   const base = todayForecast(forecasts, settings.bowlGrams);
   const grams = base.grams * (factor ?? 1);
 
-  const resolved = items.map((item) => resolvePacks(item.packs));
-  const cost = bowlCost(resolved.flat(), settings.bowlGrams);
+  const prices = items.map((item) => gramPrice(item.entries));
+  const cost = bowlCost(prices.filter((_, index) => forecasts[index].inStock), settings.bowlGrams);
   const stockValue = sum(
-    resolved.flatMap((packs, index) =>
-      packs.map((pack) => {
-        const price = gramPrice(pack);
-        if (price === null) return 0;
-        if (pack.state === 'sealed') return pack.weight * price;
-        if (pack.state === 'open') return openRemaining(pack, forecasts[index].rate, now, packs).grams * price;
-        return 0;
-      }),
+    forecasts.map((forecast, index) =>
+      forecast.inStock && prices[index] !== null ? (forecast.leftGrams ?? 0) * prices[index]! : 0,
     ),
   );
 
   const periods = weekPeriods(now, WEEKS);
   const weekGrams = periods.map(() => 0);
   for (const item of history) {
-    consumptionByPeriod(item.packs, periods).forEach((value, index) => {
+    consumptionByPeriod(item.entries, periods).forEach((value, index) => {
       weekGrams[index] += value;
     });
   }

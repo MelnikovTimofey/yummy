@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
 import { createLatestRequestGuard } from '@/lib/latest-request-guard';
-import { summarizeShelf } from '@/lib/shelf';
+import { defaultReceiptGrams, summarizeShelf } from '@/lib/shelf';
 import {
   normalizeReorderView,
   normalizeShelfCard,
-  normalizeShelfEmptyResponse,
+  normalizeShelfEntryResponse,
   normalizeShelfRow,
   normalizeShelfSettings,
   normalizeShelfView,
@@ -22,7 +22,6 @@ export type ShelfPatch = {
   stopped?: boolean;
   stopNote?: string;
   keepStocked?: boolean;
-  packWeight?: number;
   note?: string;
 };
 
@@ -32,7 +31,6 @@ const json = (method: string, body?: unknown): RequestInit => ({
 });
 
 const shelfPath = (tobaccoId: string) => `/staff/shelf/${encodeURIComponent(tobaccoId)}`;
-const packPath = (packId: string) => `/staff/shelf/packs/${encodeURIComponent(packId)}`;
 
 // Полка грузится одним запросом; после действия строка приходит с сервера,
 // а счётчики пересчитываются на месте, без перезагрузки всей полки.
@@ -92,33 +90,42 @@ export const useShelf = (token: string) => {
     [applyRow, token],
   );
 
-  const markEmpty = useCallback(async (tobaccoId: string) => {
-    const response = normalizeShelfEmptyResponse(await requestJson<unknown>(`${shelfPath(tobaccoId)}/empty`, json('POST'), token));
+  // «Закончился», отметка и списание возвращают id записи журнала — для отмены в тосте.
+  const sendEntry = useCallback(async (path: string, init: RequestInit) => {
+    const response = normalizeShelfEntryResponse(await requestJson<unknown>(path, init, token));
     applyRow(response.item);
     return response;
   }, [applyRow, token]);
 
-  const undoEmpty = useCallback((packId: string) => send(`${packPath(packId)}/undo-empty`, json('POST')), [send]);
-  const mark = useCallback((tobaccoId: string, fraction: number) => send(`${shelfPath(tobaccoId)}/marks`, json('POST', { fraction })), [send]);
-  const openAnother = useCallback((tobaccoId: string) => send(`${shelfPath(tobaccoId)}/open`, json('POST')), [send]);
-  const addPack = useCallback(
-    (tobaccoId: string, input: { weight?: number; priceKop?: number } = {}) => send(`${shelfPath(tobaccoId)}/packs`, json('POST', input)),
+  const markEmpty = useCallback((tobaccoId: string) => sendEntry(`${shelfPath(tobaccoId)}/empty`, json('POST')), [sendEntry]);
+  const count = useCallback(
+    (tobaccoId: string, input: { fraction: number } | { grams: number }) => sendEntry(`${shelfPath(tobaccoId)}/counts`, json('POST', input)),
+    [sendEntry],
+  );
+  const writeOff = useCallback(
+    (tobaccoId: string, input: { grams: number; reason: string }) => sendEntry(`${shelfPath(tobaccoId)}/write-offs`, json('POST', input)),
+    [sendEntry],
+  );
+  const addReceipt = useCallback(
+    (tobaccoId: string, input: { grams: number; priceKop?: number }) => send(`${shelfPath(tobaccoId)}/receipts`, json('POST', input)),
     [send],
   );
-  const writeOff = useCallback((packId: string, reason: string) => send(`${packPath(packId)}/write-off`, json('POST', { reason })), [send]);
+  // Отмена в тосте и удаление из истории карточки.
+  const deleteEntry = useCallback((entryId: string) => send(`/staff/shelf/entries/${encodeURIComponent(entryId)}`, json('DELETE')), [send]);
   const update = useCallback((tobaccoId: string, patch: ShelfPatch) => send(shelfPath(tobaccoId), json('PATCH', patch)), [send]);
   const remove = useCallback((tobaccoId: string) => send(shelfPath(tobaccoId), json('DELETE')), [send]);
 
-  // «На полку» из каталога: табак держим — значит, на полке есть банка.
-  // Сервис полки при добавлении банку не создаёт, поэтому добавляем её сами,
-  // если у табака их нет.
-  const add = useCallback(async (tobaccoId: string, shelfStatus: 'active' | 'plan' = 'active') => {
+  // «На полку» из каталога: табак держим — значит, он есть. Сервис полки при
+  // добавлении прихода не пишет, поэтому, если остатка нет, добавляем приход
+  // типичной фасовки бренда — как тумблер наличия на backend. Отмена «Убрать
+  // с полки» возвращает строку как была, без прихода (restock = false).
+  const add = useCallback(async (tobaccoId: string, shelfStatus: 'active' | 'plan' = 'active', restock = true) => {
     const item = await send('/staff/shelf', json('POST', { tobaccoId, status: shelfStatus }));
-    if (shelfStatus === 'active' && !item.openPacks.length && !item.sealedCount) {
-      return addPack(tobaccoId);
+    if (restock && shelfStatus === 'active' && item.status === 'out') {
+      return addReceipt(tobaccoId, { grams: defaultReceiptGrams(item.tobacco.manufacturer) });
     }
     return item;
-  }, [addPack, send]);
+  }, [addReceipt, send]);
 
   const loadCard = useCallback(
     async (tobaccoId: string) => normalizeShelfCard(await requestJson<unknown>(shelfPath(tobaccoId), {}, token)),
@@ -151,11 +158,10 @@ export const useShelf = (token: string) => {
     loadReorder,
     reset,
     markEmpty,
-    undoEmpty,
-    mark,
-    openAnother,
-    addPack,
+    count,
     writeOff,
+    addReceipt,
+    deleteEntry,
     update,
     remove,
     add,

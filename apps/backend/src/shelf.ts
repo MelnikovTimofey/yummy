@@ -4,23 +4,26 @@ import type { StaffUser } from './auth';
 import { prisma } from './db';
 import {
   bowlCost,
+  consumptionByPeriod,
   DEFAULT_SETTINGS,
   forecastShelf,
+  fractionGrams,
   gramPrice,
-  openRemaining,
-  resolvePacks,
+  segments,
+  stockState,
   todayForecast,
-  type Pack,
-  type PackState,
+  weekPeriods,
   type ShelfForecast,
   type ShelfItem,
   type ShelfSettings,
   type ShelfStatus,
+  type StockEntry,
+  type StockEntryKind,
 } from './stock';
 
-// Полка точки (#152): единственный модуль, который пишет Tobacco.inStock.
-// Наличие для гостя = на полке (active) И не стоп И есть банка в запасе или
-// в работе И табак не в архиве.
+// Полка точки (#152, #306): единственный модуль, который пишет Tobacco.inStock.
+// Наличие для гостя = на полке (active) И не стоп И остаток по учёту больше нуля
+// И табак не в архиве. Остаток — журнал StockEntry в граммах.
 
 type Tx = Prisma.TransactionClient;
 
@@ -34,7 +37,7 @@ export class ShelfNotFoundError extends Error {
 export class ShelfConflictError extends Error {
   name = 'ShelfConflictError';
   constructor(
-    readonly code: 'no_open_pack' | 'no_sealed_pack' | 'pack_not_empty' | 'pack_closed',
+    readonly code: 'no_stock' | 'no_receipt' | 'entry_from_delivery',
     message: string,
   ) {
     super(message);
@@ -45,13 +48,15 @@ export class ShelfValidationError extends Error {
   name = 'ShelfValidationError';
 }
 
-export const MARK_FRACTIONS = [1, 0.75, 0.5, 1 / 3, 0.25] as const;
+export const MARK_FRACTIONS = [0.75, 0.5, 1 / 3, 0.25] as const;
 
 const DAY_MS = 86_400_000;
-const MAX_PACK_GRAMS = 5000;
+const MAX_GRAMS = 20_000;
+const HISTORY_WEEKS = 5;
 const BIG_PACK_BRANDS = ['DARKSIDE', 'Starline'];
 
-export const defaultPackWeight = (manufacturer: string) => (BIG_PACK_BRANDS.includes(manufacturer) ? 250 : 200);
+// Типичная фасовка бренда — для прихода без счёта из старого тумблера наличия.
+export const defaultReceiptGrams = (manufacturer: string) => (BIG_PACK_BRANDS.includes(manufacturer) ? 250 : 200);
 
 const parseList = (value: string): string[] => {
   try {
@@ -81,52 +86,38 @@ const shelfInclude = {
       sourceUrl: true,
     },
   },
-  packs: {
+  entries: {
     include: {
-      marks: { orderBy: { at: 'asc' } },
       delivery: { select: { id: true, kind: true, number: true, supplier: { select: { id: true, name: true } } } },
     },
-    orderBy: [{ receivedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+    orderBy: [{ at: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
   },
 } satisfies Prisma.ShelfItemInclude;
 
 export type ShelfRecord = Prisma.ShelfItemGetPayload<{ include: typeof shelfInclude }>;
-type PackRecord = ShelfRecord['packs'][number];
+type EntryRecord = ShelfRecord['entries'][number];
 
-const toStockPack = (pack: PackRecord): Pack => ({
-  id: pack.id,
-  weight: pack.weight,
-  price: pack.priceKop,
-  receivedAt: pack.receivedAt,
-  openedAt: pack.openedAt,
-  emptiedAt: pack.emptiedAt,
-  writtenOffAt: pack.writtenOffAt,
-  marks: pack.marks.map((mark) => ({ at: mark.at, fraction: mark.fraction })),
+const toStockEntry = (entry: EntryRecord): StockEntry => ({
+  id: entry.id,
+  kind: entry.kind as StockEntryKind,
+  grams: entry.grams,
+  at: entry.at,
+  priceKop: entry.priceKop,
 });
 
-const toStockItem = (record: ShelfRecord): ShelfItem => ({
+export const toStockItem = (record: ShelfRecord): ShelfItem => ({
   tobaccoId: record.tobaccoId,
   brand: record.tobacco.manufacturer,
-  packWeight: record.packWeight,
   keepStocked: record.keepStocked,
   plan: record.status === 'plan',
   stopped: record.stopped,
-  packs: record.packs.map(toStockPack),
+  entries: record.entries.map(toStockEntry),
 });
 
 const loadItem = async (client: Tx, tobaccoId: string) => {
   const record = await client.shelfItem.findUnique({ where: { tobaccoId }, include: shelfInclude });
   if (!record) throw new ShelfNotFoundError(`Табака ${tobaccoId} нет на полке`);
   return record;
-};
-
-const loadPack = async (client: Tx, packId: string) => {
-  const pack = await client.pack.findUnique({
-    where: { id: packId },
-    include: { shelfItem: { include: shelfInclude } },
-  });
-  if (!pack) throw new ShelfNotFoundError(`Банка ${packId} не найдена`);
-  return pack;
 };
 
 const ON_SHELF = { in: ['active', 'plan'] };
@@ -157,16 +148,9 @@ export type ShelfTobaccoView = {
   sourceUrl: string | null;
 };
 
-export type OpenPackView = {
-  id: string;
-  weight: number;
-  openedAt: string;
-  // Оценка доли остатка сейчас — для пипсов.
-  fraction: number;
-};
-
 export type ReceiptView = {
-  receivedAt: string;
+  at: string;
+  grams: number;
   kind: 'invoice' | 'start' | 'manual';
   number: string | null;
   label: string;
@@ -176,73 +160,72 @@ export type ShelfRow = {
   tobacco: ShelfTobaccoView;
   shelfStatus: ShelfItemStatus;
   status: ShelfStatus;
-  last: boolean;
-  overdue: boolean;
   guestAvailable: boolean;
-  openPacks: OpenPackView[];
-  sealedCount: number;
-  remainingGrams: number;
+  leftGrams: number | null;
+  fullGrams: number | null;
+  lastReceipt: ReceiptView | null;
+  lastCount: { at: string; grams: number; fraction: number | null } | null;
   rate: number | null;
   rateKind: ShelfForecast['rateKind'];
   daysLeft: number | null;
   endsAt: string | null;
-  lastReceipt: ReceiptView | null;
   mixCount: number;
   keepStocked: boolean;
   stopped: boolean;
   stopNote: string | null;
-  packWeight: number;
   note: string | null;
 };
 
-export type ShelfCounters = Record<'all' | 'ok' | 'last' | 'ending' | 'out' | 'stop' | 'plan', number>;
+export type ShelfCounters = Record<'all' | ShelfStatus, number>;
 
 export type ShelfView = {
   rows: ShelfRow[];
   counters: ShelfCounters;
-  totals: { packs: number; kg: number };
+  totals: { kg: number };
   today: { grams: number; bowls: number };
   settings: ShelfSettings;
 };
 
-export type PackHistoryView = {
+export type StockEntryView = {
   id: string;
-  state: PackState;
-  weight: number;
+  kind: StockEntryKind;
+  grams: number;
+  fraction: number | null;
+  at: string;
   priceKop: number | null;
-  receivedAt: string;
-  openedAt: string | null;
-  emptiedAt: string | null;
-  writtenOffAt: string | null;
-  writeOffReason: string | null;
+  reason: string | null;
+  actorLogin: string | null;
   delivery: { id: string; kind: string; number: string | null; supplier: string | null } | null;
-  marks: Array<{ at: string; fraction: number }>;
-  // Только у пустых: сколько банка прожила в работе и расход по ней.
-  usage: { days: number; gramsPerDay: number } | null;
+  // У отметки: расход отрезка, который она закрыла.
+  usage: { from: string; gramsPerDay: number } | null;
+  // У отметки: отрезок отрицательный (досыпали без счёта, ошиблись раньше) и в расход не пошёл.
+  excluded: boolean;
 };
 
 export type ShelfCard = ShelfRow & {
-  packs: PackHistoryView[];
+  history: StockEntryView[];
+  weekly: Array<{ from: string; to: string; gramsPerDay: number; partial: boolean }>;
   gramPriceKop: number | null;
   bowlCostKop: number | null;
   mixes: Array<{ id: string; name: string }>;
   settings: ShelfSettings;
 };
 
-const receiptOf = (pack: PackRecord): ReceiptView => {
-  const kind = (pack.delivery?.kind ?? 'manual') as ReceiptView['kind'];
-  const label = pack.delivery?.supplier?.name
+const receiptOf = (entry: EntryRecord): ReceiptView => {
+  const kind = (entry.delivery?.kind ?? 'manual') as ReceiptView['kind'];
+  const label = entry.delivery?.supplier?.name
     ?? (kind === 'start' ? 'Стартовый приход' : kind === 'invoice' ? 'По счёту' : 'Вручную');
-  return { receivedAt: pack.receivedAt.toISOString(), kind, number: pack.delivery?.number ?? null, label };
+  return { at: entry.at.toISOString(), grams: entry.grams, kind, number: entry.delivery?.number ?? null, label };
 };
 
-const toRow = (record: ShelfRecord, forecast: ShelfForecast, now: Date, mixCount: number): ShelfRow => {
-  const packs = resolvePacks(record.packs.map(toStockPack));
-  const open = packs
-    .filter((pack) => pack.state === 'open')
-    .sort((a, b) => a.openedAt!.getTime() - b.openedAt!.getTime());
-  const latest = record.packs[record.packs.length - 1];
+const lastOf = (record: ShelfRecord, kind: StockEntryKind) =>
+  [...record.entries].reverse().find((entry) => entry.kind === kind) ?? null;
 
+const round = (grams: number | null) => (grams === null ? null : Math.round(grams));
+
+const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number): ShelfRow => {
+  const receipt = lastOf(record, 'receipt');
+  const count = lastOf(record, 'count');
   return {
     tobacco: {
       id: record.tobacco.id,
@@ -258,27 +241,19 @@ const toRow = (record: ShelfRecord, forecast: ShelfForecast, now: Date, mixCount
     },
     shelfStatus: record.status as ShelfItemStatus,
     status: forecast.status,
-    last: forecast.last,
-    overdue: forecast.overdue,
     guestAvailable: forecast.guestAvailable && record.status === 'active' && !record.tobacco.archived,
-    openPacks: open.map((pack) => ({
-      id: pack.id,
-      weight: pack.weight,
-      openedAt: pack.openedAt!.toISOString(),
-      fraction: openRemaining(pack, forecast.rate, now, packs).grams / pack.weight,
-    })),
-    sealedCount: forecast.sealedPacks,
-    remainingGrams: forecast.remainingGrams,
+    leftGrams: round(forecast.leftGrams),
+    fullGrams: round(forecast.fullGrams),
+    lastReceipt: receipt ? receiptOf(receipt) : null,
+    lastCount: count ? { at: count.at.toISOString(), grams: count.grams, fraction: count.fraction } : null,
     rate: forecast.rate,
     rateKind: forecast.rateKind,
     daysLeft: forecast.daysLeft,
     endsAt: iso(forecast.endsAt),
-    lastReceipt: latest ? receiptOf(latest) : null,
     mixCount,
     keepStocked: record.keepStocked,
     stopped: record.stopped,
     stopNote: record.stopNote,
-    packWeight: record.packWeight,
     note: record.note,
   };
 };
@@ -296,15 +271,20 @@ const countBy = (items: Array<{ tobaccoId: string }>) => {
 
 // Медиана расхода бренда — по всей полке бренда, поэтому одна строка
 // считается вместе с соседями по бренду.
-const buildRow = async (client: Tx, record: ShelfRecord, now: Date) => {
+const forecastOf = async (client: Tx, record: ShelfRecord, now: Date) => {
   const neighbours = await client.shelfItem.findMany({
     where: { status: ON_SHELF, tobacco: { manufacturer: record.tobacco.manufacturer }, NOT: { id: record.id } },
     include: shelfInclude,
   });
   const settings = await loadSettings(client);
   const [forecast] = forecastShelf([record, ...neighbours].map(toStockItem), now, settings);
+  return { forecast, settings };
+};
+
+const buildRow = async (client: Tx, record: ShelfRecord, now: Date) => {
+  const { forecast, settings } = await forecastOf(client, record, now);
   const mixes = await loadMixes(client, [record.tobaccoId]);
-  return { row: toRow(record, forecast, now, mixes.length), settings, mixes };
+  return { row: toRow(record, forecast, mixes.length), forecast, settings, mixes };
 };
 
 const rowOf = async (tobaccoId: string, now: Date) => (await buildRow(prisma, await loadItem(prisma, tobaccoId), now)).row;
@@ -318,30 +298,29 @@ export const loadShelf = async (now: Date) => {
   return { records, items, forecasts: forecastShelf(items, now, settings), settings };
 };
 
-// Банки всех табаков, когда-либо стоявших на полке, — для истории расхода.
+// Журналы всех табаков, когда-либо стоявших на полке, — для истории расхода.
 export const loadShelfHistory = async () =>
   (await prisma.shelfItem.findMany({ include: shelfInclude })).map(toStockItem);
 
 export const getShelf = async (now = new Date()): Promise<ShelfView> => {
   const { records, forecasts, settings } = await loadShelf(now);
   const mixCounts = countBy(await loadMixes(prisma, records.map((record) => record.tobaccoId)));
-  const rows = records.map((record, index) => toRow(record, forecasts[index], now, mixCounts.get(record.tobaccoId) ?? 0));
+  const rows = records.map((record, index) => toRow(record, forecasts[index], mixCounts.get(record.tobaccoId) ?? 0));
 
-  const withStatus = (...statuses: ShelfStatus[]) => rows.filter((row) => statuses.includes(row.status)).length;
+  const withStatus = (status: ShelfStatus) => rows.filter((row) => row.status === status).length;
   return {
     rows,
     counters: {
       all: rows.length,
-      ok: withStatus('ok', 'check'),
-      last: rows.filter((row) => row.last).length,
+      ok: withStatus('ok'),
       ending: withStatus('ending'),
+      check: withStatus('check'),
       out: withStatus('out'),
       stop: withStatus('stop'),
       plan: withStatus('plan'),
     },
     totals: {
-      packs: rows.reduce((total, row) => total + row.openPacks.length + row.sealedCount, 0),
-      kg: rows.reduce((total, row) => total + row.remainingGrams, 0) / 1000,
+      kg: forecasts.reduce((total, forecast) => total + (forecast.inStock ? forecast.leftGrams ?? 0 : 0), 0) / 1000,
     },
     today: todayForecast(forecasts, settings.bowlGrams),
     settings,
@@ -351,46 +330,58 @@ export const getShelf = async (now = new Date()): Promise<ShelfView> => {
 export const getShelfItem = async (tobaccoId: string, now = new Date()): Promise<ShelfCard> => {
   const record = await loadItem(prisma, tobaccoId);
   const { row, settings, mixes } = await buildRow(prisma, record, now);
-  const resolved = resolvePacks(record.packs.map(toStockPack));
-  const priced = resolved.filter((pack) => pack.price !== null);
+  const entries = record.entries.map(toStockEntry);
+  const closed = new Map(segments(entries).map((segment) => [segment.closedBy, segment]));
+  const periods = weekPeriods(now, HISTORY_WEEKS);
+  const weekGrams = consumptionByPeriod(entries, periods);
+  const price = gramPrice(entries);
 
   return {
     ...row,
-    packs: resolved.map((pack, index) => {
-      const source = record.packs[index];
-      const days = pack.state === 'empty' && pack.openedAt
-        ? (pack.emptiedAt!.getTime() - pack.openedAt.getTime()) / DAY_MS
-        : 0;
+    history: [...record.entries].reverse().map((entry) => {
+      const segment = closed.get(entry.id);
+      const days = segment ? (segment.to - segment.from) / DAY_MS : 0;
       return {
-        id: pack.id,
-        state: pack.state,
-        weight: pack.weight,
-        priceKop: pack.price,
-        receivedAt: pack.receivedAt.toISOString(),
-        openedAt: iso(pack.openedAt),
-        emptiedAt: iso(pack.emptiedAt),
-        writtenOffAt: iso(pack.writtenOffAt),
-        writeOffReason: source.writeOffReason,
-        delivery: source.delivery
+        id: entry.id,
+        kind: entry.kind as StockEntryKind,
+        grams: entry.grams,
+        fraction: entry.fraction,
+        at: entry.at.toISOString(),
+        priceKop: entry.priceKop,
+        reason: entry.reason,
+        actorLogin: entry.actorLogin,
+        delivery: entry.delivery
           ? {
-              id: source.delivery.id,
-              kind: source.delivery.kind,
-              number: source.delivery.number,
-              supplier: source.delivery.supplier?.name ?? null,
+              id: entry.delivery.id,
+              kind: entry.delivery.kind,
+              number: entry.delivery.number,
+              supplier: entry.delivery.supplier?.name ?? null,
             }
           : null,
-        marks: pack.marks.map((mark) => ({ at: mark.at.toISOString(), fraction: mark.fraction })),
-        usage: days > 0 ? { days, gramsPerDay: pack.weight / days } : null,
+        usage: segment && !segment.excluded && days > 0
+          ? { from: new Date(segment.from).toISOString(), gramsPerDay: segment.grams / days }
+          : null,
+        excluded: segment?.excluded ?? false,
       };
     }),
-    gramPriceKop: priced.length ? gramPrice(priced[priced.length - 1]) : null,
-    bowlCostKop: bowlCost(resolved, settings.bowlGrams),
+    weekly: periods.map((period, index) => ({
+      from: period.from.toISOString(),
+      to: period.to.toISOString(),
+      gramsPerDay: weekGrams[index] / ((period.to.getTime() - period.from.getTime()) / DAY_MS),
+      partial: period.partial,
+    })),
+    gramPriceKop: price,
+    bowlCostKop: bowlCost([price], settings.bowlGrams),
     mixes: mixes.map((item) => item.mix).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
     settings,
   };
 };
 
 // --- наличие и аудит ---------------------------------------------------------
+
+// Остаток по учёту, без расхода: от него — наличие для гостя.
+export const bookOf = (entries: Array<{ kind: string; grams: number; at: Date; id: string; priceKop: number | null }>) =>
+  stockState(entries.map((entry) => ({ ...entry, kind: entry.kind as StockEntryKind })), null, new Date()).bookGrams;
 
 export const syncAvailability = async (tx: Tx, tobaccoIds: string[]) => {
   const records = await tx.tobacco.findMany({
@@ -403,7 +394,10 @@ export const syncAvailability = async (tx: Tx, tobaccoIds: string[]) => {
         select: {
           status: true,
           stopped: true,
-          packs: { where: { emptiedAt: null, writtenOffAt: null }, select: { id: true }, take: 1 },
+          entries: {
+            select: { id: true, kind: true, grams: true, at: true, priceKop: true },
+            orderBy: [{ at: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          },
         },
       },
     },
@@ -412,7 +406,7 @@ export const syncAvailability = async (tx: Tx, tobaccoIds: string[]) => {
     !record.archived
     && record.shelfItem?.status === 'active'
     && !record.shelfItem.stopped
-    && record.shelfItem.packs.length > 0;
+    && bookOf(record.shelfItem.entries) > 0;
 
   const on = records.filter((record) => available(record) && !record.inStock).map((record) => record.id);
   const off = records.filter((record) => !available(record) && record.inStock).map((record) => record.id);
@@ -425,7 +419,7 @@ const label = (record: ShelfRecord) => `${record.tobacco.manufacturer} · ${reco
 const audit = (
   tx: Tx,
   actor: ShelfActor,
-  event: { action: AuditAction; entityType: 'shelf' | 'pack'; entityId: string; entityLabel: string; details?: Record<string, unknown> },
+  event: { action: AuditAction; entityType: 'shelf' | 'stock'; entityId: string; entityLabel: string; details?: Record<string, unknown> },
 ) =>
   tx.auditEvent.create({
     data: {
@@ -440,128 +434,132 @@ const audit = (
     },
   });
 
-// --- банки -------------------------------------------------------------------
+// --- журнал ------------------------------------------------------------------
 
-const currentOpen = (record: ShelfRecord) =>
-  resolvePacks(record.packs.map(toStockPack))
-    .filter((pack) => pack.state === 'open')
-    .sort((a, b) => a.openedAt!.getTime() - b.openedAt!.getTime())[0];
-
-const requireOpen = (record: ShelfRecord) => {
-  const pack = currentOpen(record);
-  if (!pack) throw new ShelfConflictError('no_open_pack', 'У табака нет открытой банки');
-  return pack;
-};
-
-export const markEmpty = async (actor: ShelfActor, tobaccoId: string, now = new Date()) => {
-  const packId = await prisma.$transaction(async (tx) => {
-    const record = await loadItem(tx, tobaccoId);
-    const pack = requireOpen(record);
-    await tx.pack.update({ where: { id: pack.id }, data: { emptiedAt: now } });
-    await syncAvailability(tx, [tobaccoId]);
-    await audit(tx, actor, { action: 'mark-empty', entityType: 'pack', entityId: pack.id, entityLabel: label(record), details: { tobaccoId } });
-    return pack.id;
-  });
-  return { packId, item: await rowOf(tobaccoId, now) };
-};
-
-export const undoEmpty = async (actor: ShelfActor, packId: string, now = new Date()) => {
-  const tobaccoId = await prisma.$transaction(async (tx) => {
-    const pack = await loadPack(tx, packId);
-    if (!pack.emptiedAt || pack.writtenOffAt) throw new ShelfConflictError('pack_not_empty', 'Банка не отмечена пустой');
-    await tx.pack.update({ where: { id: packId }, data: { emptiedAt: null } });
-    await syncAvailability(tx, [pack.shelfItem.tobaccoId]);
-    await audit(tx, actor, {
-      action: 'undo-empty',
-      entityType: 'pack',
-      entityId: packId,
-      entityLabel: label(pack.shelfItem),
-      details: { tobaccoId: pack.shelfItem.tobaccoId, emptiedAt: pack.emptiedAt.toISOString() },
-    });
-    return pack.shelfItem.tobaccoId;
-  });
-  return rowOf(tobaccoId, now);
-};
-
-export const addMark = async (actor: ShelfActor, tobaccoId: string, fraction: number, now = new Date()) => {
-  const value = MARK_FRACTIONS.find((allowed) => Math.abs(allowed - fraction) < 1e-6);
-  if (value === undefined) throw new ShelfValidationError('Остаток отмечается долей 1, ¾, ½, ⅓ или ¼');
-  await prisma.$transaction(async (tx) => {
-    const record = await loadItem(tx, tobaccoId);
-    const pack = requireOpen(record);
-    await tx.packMark.create({ data: { packId: pack.id, fraction: value, at: now, actorLogin: actor.login } });
-    await audit(tx, actor, { action: 'mark', entityType: 'pack', entityId: pack.id, entityLabel: label(record), details: { tobaccoId, fraction: value } });
-  });
-  return rowOf(tobaccoId, now);
-};
-
-export const openAnother = async (actor: ShelfActor, tobaccoId: string, now = new Date()) => {
-  await prisma.$transaction(async (tx) => {
-    const record = await loadItem(tx, tobaccoId);
-    const pack = resolvePacks(record.packs.map(toStockPack)).find((item) => item.state === 'sealed');
-    if (!pack) throw new ShelfConflictError('no_sealed_pack', 'В запасе нет банок');
-    await tx.pack.update({ where: { id: pack.id }, data: { openedAt: now } });
-    await audit(tx, actor, { action: 'open', entityType: 'pack', entityId: pack.id, entityLabel: label(record), details: { tobaccoId } });
-  });
-  return rowOf(tobaccoId, now);
-};
-
-const checkGrams = (value: number, field: string) => {
-  if (!Number.isInteger(value) || value < 1 || value > MAX_PACK_GRAMS) {
-    throw new ShelfValidationError(`${field}: целое число граммов от 1 до ${MAX_PACK_GRAMS}`);
+const checkGrams = (value: unknown, field: string, min: number) => {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > MAX_GRAMS) {
+    throw new ShelfValidationError(`${field}: целое число граммов от ${min} до ${MAX_GRAMS}`);
   }
+  return value;
 };
 
-export const addPack = async (
+type EntryInput = {
+  kind: StockEntryKind;
+  grams: number;
+  fraction?: number | null;
+  priceKop?: number | null;
+  reason?: string | null;
+};
+
+const writeEntry = async (
   actor: ShelfActor,
   tobaccoId: string,
-  input: { weight?: number; priceKop?: number | null },
-  now = new Date(),
+  action: AuditAction,
+  now: Date,
+  build: (record: ShelfRecord, tx: Tx) => Promise<EntryInput>,
 ) => {
-  if (input.weight !== undefined) checkGrams(input.weight, 'Вес банки');
-  if (input.priceKop != null && (!Number.isInteger(input.priceKop) || input.priceKop < 0)) {
-    throw new ShelfValidationError('Цена банки: целое число копеек, не меньше нуля');
-  }
-  await prisma.$transaction(async (tx) => {
+  const entryId = await prisma.$transaction(async (tx) => {
     const record = await loadItem(tx, tobaccoId);
-    const pack = await tx.pack.create({
-      data: {
-        shelfItemId: record.id,
-        weight: input.weight ?? record.packWeight,
-        priceKop: input.priceKop ?? null,
-        receivedAt: now,
-      },
+    const input = await build(record, tx);
+    const entry = await tx.stockEntry.create({
+      data: { shelfItemId: record.id, at: now, actorLogin: actor.login, ...input },
     });
-    // Банка пришла — табак точно держим, даже если он был в плане или убран.
-    if (record.status !== 'active') await tx.shelfItem.update({ where: { id: record.id }, data: { status: 'active' } });
+    // Пришло — табак точно держим, даже если он был в плане или убран.
+    if (input.kind === 'receipt' && record.status !== 'active') {
+      await tx.shelfItem.update({ where: { id: record.id }, data: { status: 'active' } });
+    }
     await syncAvailability(tx, [tobaccoId]);
     await audit(tx, actor, {
-      action: 'add-pack',
-      entityType: 'pack',
-      entityId: pack.id,
+      action,
+      entityType: 'stock',
+      entityId: entry.id,
       entityLabel: label(record),
-      details: { tobaccoId, weight: pack.weight, priceKop: pack.priceKop },
+      details: { tobaccoId, ...input },
     });
+    return entry.id;
   });
-  return rowOf(tobaccoId, now);
+  return { entryId, item: await rowOf(tobaccoId, now) };
 };
 
-export const writeOff = async (actor: ShelfActor, packId: string, reason: string, now = new Date()) => {
-  const note = reason.trim();
-  if (!note) throw new ShelfValidationError('Укажите причину списания');
+const requireStock = (record: ShelfRecord) => {
+  if (bookOf(record.entries) <= 0) throw new ShelfConflictError('no_stock', 'Табак уже закончился');
+};
+
+export const markEmpty = (actor: ShelfActor, tobaccoId: string, now = new Date()) =>
+  writeEntry(actor, tobaccoId, 'mark-empty', now, async (record) => {
+    requireStock(record);
+    return { kind: 'count', grams: 0 };
+  });
+
+// Доля — от уровня сразу после последнего прихода; хранится вместе с граммами,
+// в которые превратилась.
+export const addCount = (
+  actor: ShelfActor,
+  tobaccoId: string,
+  input: { fraction?: unknown; grams?: unknown },
+  now = new Date(),
+) =>
+  writeEntry(actor, tobaccoId, 'count', now, async (record, tx) => {
+    if (input.fraction !== undefined && input.fraction !== null) {
+      const fraction = MARK_FRACTIONS.find((allowed) => typeof input.fraction === 'number' && Math.abs(allowed - input.fraction) < 1e-6);
+      if (fraction === undefined) throw new ShelfValidationError('Остаток отмечается долей ¾, ½, ⅓ или ¼ — или в граммах');
+      const { forecast } = await forecastOf(tx, record, now);
+      if (forecast.fullGrams === null) throw new ShelfConflictError('no_receipt', 'Прихода ещё не было — укажите граммы');
+      return { kind: 'count', grams: fractionGrams(forecast.fullGrams, fraction), fraction };
+    }
+    return { kind: 'count', grams: checkGrams(input.grams, 'Остаток', 0) };
+  });
+
+export const addReceipt = async (
+  actor: ShelfActor,
+  tobaccoId: string,
+  input: { grams?: unknown; priceKop?: unknown },
+  now = new Date(),
+) => {
+  const grams = checkGrams(input.grams, 'Приход', 1);
+  if (input.priceKop != null && (typeof input.priceKop !== 'number' || !Number.isInteger(input.priceKop) || input.priceKop < 0)) {
+    throw new ShelfValidationError('Цена прихода: целое число копеек, не меньше нуля');
+  }
+  const priceKop = (input.priceKop as number | null | undefined) ?? null;
+  return writeEntry(actor, tobaccoId, 'receipt', now, async () => ({ kind: 'receipt', grams, priceKop }));
+};
+
+export const writeOff = async (
+  actor: ShelfActor,
+  tobaccoId: string,
+  input: { grams?: unknown; reason?: unknown },
+  now = new Date(),
+) => {
+  const grams = checkGrams(input.grams, 'Списание', 1);
+  const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+  if (!reason) throw new ShelfValidationError('Укажите причину списания');
+  return writeEntry(actor, tobaccoId, 'write-off', now, async (record) => {
+    requireStock(record);
+    return { kind: 'writeoff', grams, reason };
+  });
+};
+
+// Отмена в тосте и исправление из истории. Приход по счёту живёт вместе с поставкой.
+export const deleteEntry = async (actor: ShelfActor, entryId: string, now = new Date()) => {
   const tobaccoId = await prisma.$transaction(async (tx) => {
-    const pack = await loadPack(tx, packId);
-    if (pack.emptiedAt || pack.writtenOffAt) throw new ShelfConflictError('pack_closed', 'Банка уже пустая или списана');
-    await tx.pack.update({ where: { id: packId }, data: { writtenOffAt: now, writeOffReason: note } });
-    await syncAvailability(tx, [pack.shelfItem.tobaccoId]);
-    await audit(tx, actor, {
-      action: 'write-off',
-      entityType: 'pack',
-      entityId: packId,
-      entityLabel: label(pack.shelfItem),
-      details: { tobaccoId: pack.shelfItem.tobaccoId, reason: note },
+    const entry = await tx.stockEntry.findUnique({
+      where: { id: entryId },
+      include: { shelfItem: { include: shelfInclude } },
     });
-    return pack.shelfItem.tobaccoId;
+    if (!entry) throw new ShelfNotFoundError(`Запись ${entryId} не найдена`);
+    if (entry.deliveryId) {
+      throw new ShelfConflictError('entry_from_delivery', 'Приход по поставке удаляется только вместе с поставкой');
+    }
+    await tx.stockEntry.delete({ where: { id: entryId } });
+    await syncAvailability(tx, [entry.shelfItem.tobaccoId]);
+    await audit(tx, actor, {
+      action: 'delete-entry',
+      entityType: 'stock',
+      entityId: entryId,
+      entityLabel: label(entry.shelfItem),
+      details: { tobaccoId: entry.shelfItem.tobaccoId, kind: entry.kind, grams: entry.grams, at: entry.at.toISOString() },
+    });
+    return entry.shelfItem.tobaccoId;
   });
   return rowOf(tobaccoId, now);
 };
@@ -582,13 +580,11 @@ export const setStop = async (actor: ShelfActor, tobaccoId: string, stopped: boo
 export const updateShelfItem = async (
   actor: ShelfActor,
   tobaccoId: string,
-  patch: { keepStocked?: boolean; packWeight?: number; note?: string | null },
+  patch: { keepStocked?: boolean; note?: string | null },
   now = new Date(),
 ) => {
-  if (patch.packWeight !== undefined) checkGrams(patch.packWeight, 'Фасовка');
   const data = {
     ...(patch.keepStocked !== undefined ? { keepStocked: patch.keepStocked } : {}),
-    ...(patch.packWeight !== undefined ? { packWeight: patch.packWeight } : {}),
     ...(patch.note !== undefined ? { note: patch.note?.trim() || null } : {}),
   };
   await prisma.$transaction(async (tx) => {
@@ -601,15 +597,13 @@ export const updateShelfItem = async (
 
 // Повторное добавление убранного табака возвращает его на полку; то, что уже
 // держим, в план не понижается.
-const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan') => {
+export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan') => {
   const tobacco = await tx.tobacco.findUnique({
     where: { id: tobaccoId },
-    select: { manufacturer: true, shelfItem: { select: { id: true, status: true } } },
+    select: { shelfItem: { select: { id: true, status: true } } },
   });
   if (!tobacco) throw new ShelfNotFoundError(`Табак ${tobaccoId} не найден в каталоге`);
-  if (!tobacco.shelfItem) {
-    return tx.shelfItem.create({ data: { tobaccoId, status, packWeight: defaultPackWeight(tobacco.manufacturer) } });
-  }
+  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status } });
   const next = tobacco.shelfItem.status === 'active' ? 'active' : status;
   return tobacco.shelfItem.status === next
     ? tx.shelfItem.findUniqueOrThrow({ where: { id: tobacco.shelfItem.id } })
@@ -661,8 +655,8 @@ export const updateSettings = async (actor: ShelfActor, patch: { bowlGrams?: num
 
 // --- старт и переходный режим ------------------------------------------------
 
-// То же, что миграция shelf_packs_deliveries делает на проде (README §8):
-// для сида тестов и dev-БД.
+// Стартовый приход для сида тестов и dev-БД: табаки в наличии встают на полку
+// с типичной для бренда фасовкой (README #152 §8).
 export const startShelfFromStock = async (tx: Tx, now: Date) => {
   await tx.shelfSettings.upsert({ where: { id: 1 }, create: { id: 1, ...DEFAULT_SETTINGS }, update: {} });
   const tobaccos = await tx.tobacco.findMany({
@@ -672,33 +666,39 @@ export const startShelfFromStock = async (tx: Tx, now: Date) => {
   if (!tobaccos.length) return;
   const delivery = await tx.delivery.create({ data: { kind: 'start', status: 'received', receivedAt: now } });
   for (const tobacco of tobaccos) {
-    const weight = defaultPackWeight(tobacco.manufacturer);
     await tx.shelfItem.create({
       data: {
         tobaccoId: tobacco.id,
-        packWeight: weight,
-        packs: { create: { weight, receivedAt: now, deliveryId: delivery.id } },
+        entries: { create: { kind: 'receipt', grams: defaultReceiptGrams(tobacco.manufacturer), at: now, deliveryId: delivery.id } },
       },
     });
   }
 };
 
-// Старый экран «Табаки» (до среза 2) переключает наличие тумблером. «Есть» —
-// табак на полке, без стопа и хотя бы с одной банкой; «нет» — все банки в запасе
-// и в работе закончились сейчас. Аудит пишет эндпоинт инвентаря.
+// Тумблер наличия «Каталога» и создания карточки. «Есть» — табак на полке, без
+// стопа и с остатком: если остатка нет, приход типичной фасовки бренда. «Нет» —
+// «Закончился». Аудит пишет эндпоинт инвентаря.
 export const setStockedLegacy = async (tx: Tx, tobaccoIds: string[], inStock: boolean, now: Date) => {
-  if (inStock) {
-    for (const tobaccoId of tobaccoIds) {
-      const item = await ensureOnShelf(tx, tobaccoId, 'active');
-      if (item.stopped) await tx.shelfItem.update({ where: { id: item.id }, data: { stopped: false, stopNote: null } });
-      const stocked = await tx.pack.count({ where: { shelfItemId: item.id, emptiedAt: null, writtenOffAt: null } });
-      if (!stocked) await tx.pack.create({ data: { shelfItemId: item.id, weight: item.packWeight, receivedAt: now } });
-    }
-  } else {
-    await tx.pack.updateMany({
-      where: { shelfItem: { tobaccoId: { in: tobaccoIds } }, emptiedAt: null, writtenOffAt: null },
-      data: { emptiedAt: now },
+  const records = await tx.tobacco.findMany({
+    where: { id: { in: tobaccoIds } },
+    select: { id: true, manufacturer: true },
+  });
+  for (const tobacco of records) {
+    const item = inStock ? await ensureOnShelf(tx, tobacco.id, 'active') : await tx.shelfItem.findUnique({ where: { tobaccoId: tobacco.id } });
+    if (!item) continue;
+    const entries = await tx.stockEntry.findMany({
+      where: { shelfItemId: item.id },
+      orderBy: [{ at: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     });
+    const stocked = bookOf(entries) > 0;
+    if (inStock) {
+      if (item.stopped) await tx.shelfItem.update({ where: { id: item.id }, data: { stopped: false, stopNote: null } });
+      if (!stocked) {
+        await tx.stockEntry.create({ data: { shelfItemId: item.id, kind: 'receipt', grams: defaultReceiptGrams(tobacco.manufacturer), at: now } });
+      }
+    } else if (stocked) {
+      await tx.stockEntry.create({ data: { shelfItemId: item.id, kind: 'count', grams: 0, at: now } });
+    }
   }
   await syncAvailability(tx, tobaccoIds);
 };

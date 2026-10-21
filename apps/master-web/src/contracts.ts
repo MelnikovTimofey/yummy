@@ -1635,13 +1635,14 @@ export const parseDateTimeLocalInput = (value: string) => {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
 };
 
-// --- Полка (#211): ответы /staff/shelf* ------------------------------------
+// --- Полка (#211, #306): ответы /staff/shelf* ------------------------------
 
 export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
 export type ShelfRateKind = 'own' | 'brand' | 'none';
-export type ShelfPackState = 'sealed' | 'open' | 'empty' | 'written_off';
 export type ShelfReceiptKind = 'invoice' | 'start' | 'manual';
+// «Закончился» — отметка (count) с 0 г.
+export type StockEntryKind = 'receipt' | 'count' | 'writeoff';
 
 export type ShelfTobacco = {
   id: string;
@@ -1656,62 +1657,64 @@ export type ShelfTobacco = {
   sourceUrl: string | null;
 };
 
-export type ShelfOpenPack = { id: string; weight: number; openedAt: string; fraction: number };
-
-export type ShelfReceipt = { receivedAt: string; kind: ShelfReceiptKind; number: string | null; label: string };
+export type ShelfReceipt = { at: string; grams: number; kind: ShelfReceiptKind; number: string | null; label: string };
 
 export type ShelfRow = {
   tobacco: ShelfTobacco;
   shelfStatus: ShelfItemStatus;
   status: ShelfStatus;
-  last: boolean;
-  overdue: boolean;
   guestAvailable: boolean;
-  openPacks: ShelfOpenPack[];
-  sealedCount: number;
-  remainingGrams: number;
+  // Остаток сейчас по расчёту; null — прихода не было.
+  leftGrams: number | null;
+  // Уровень сразу после последнего прихода — база долей ¾ ½ ⅓ ¼ и полосы.
+  fullGrams: number | null;
+  lastReceipt: ShelfReceipt | null;
+  lastCount: { at: string; grams: number; fraction: number | null } | null;
   rate: number | null;
   rateKind: ShelfRateKind;
   daysLeft: number | null;
   endsAt: string | null;
-  lastReceipt: ShelfReceipt | null;
   mixCount: number;
   keepStocked: boolean;
   stopped: boolean;
   stopNote: string | null;
-  packWeight: number;
   note: string | null;
 };
 
-export type ShelfCounterKey = 'all' | 'ok' | 'last' | 'ending' | 'out' | 'stop' | 'plan';
+export type ShelfCounterKey = 'all' | ShelfStatus;
 export type ShelfCounters = Record<ShelfCounterKey, number>;
 export type ShelfSettings = { bowlGrams: number; leadDays: number };
 
 export type ShelfView = {
   rows: ShelfRow[];
   counters: ShelfCounters;
-  totals: { packs: number; kg: number };
+  totals: { kg: number };
   today: { grams: number; bowls: number };
   settings: ShelfSettings;
 };
 
-export type ShelfPack = {
+export type StockEntry = {
   id: string;
-  state: ShelfPackState;
-  weight: number;
+  kind: StockEntryKind;
+  grams: number;
+  fraction: number | null;
+  at: string;
   priceKop: number | null;
-  receivedAt: string;
-  openedAt: string | null;
-  emptiedAt: string | null;
-  writtenOffAt: string | null;
-  writeOffReason: string | null;
+  reason: string | null;
+  actorLogin: string | null;
   delivery: { id: string; kind: string; number: string | null; supplier: string | null } | null;
-  marks: Array<{ at: string; fraction: number }>;
-  usage: { days: number; gramsPerDay: number } | null;
+  // У отметки: расход отрезка, который она закрыла.
+  usage: { from: string; gramsPerDay: number } | null;
+  // У отметки: отрезок отрицательный и в расход не пошёл.
+  excluded: boolean;
 };
 
+export type ShelfWeek = { from: string; to: string; gramsPerDay: number; partial: boolean };
+
 export type ShelfCard = ShelfRow & {
-  packs: ShelfPack[];
+  // Новые сверху.
+  history: StockEntry[];
+  weekly: ShelfWeek[];
   gramPriceKop: number | null;
   bowlCostKop: number | null;
   mixes: Array<{ id: string; name: string }>;
@@ -1721,7 +1724,6 @@ export type ShelfCard = ShelfRow & {
 export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7 };
 
 const SHELF_STATUSES: ShelfStatus[] = ['ok', 'ending', 'check', 'stop', 'out', 'plan'];
-const SHELF_PACK_STATES: ShelfPackState[] = ['sealed', 'open', 'empty', 'written_off'];
 
 const toNullableString = (value: unknown) => (value == null ? null : String(value));
 
@@ -1740,6 +1742,7 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
   const raw = isRecord(value) ? value : {};
   const tobacco = isRecord(raw.tobacco) ? raw.tobacco : {};
   const receipt = isRecord(raw.lastReceipt) ? raw.lastReceipt : null;
+  const count = isRecord(raw.lastCount) ? raw.lastCount : null;
 
   return {
     tobacco: {
@@ -1756,34 +1759,29 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     },
     shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
     status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
-    last: toBoolean(raw.last, false),
-    overdue: toBoolean(raw.overdue, false),
     guestAvailable: toBoolean(raw.guestAvailable, false),
-    openPacks: (Array.isArray(raw.openPacks) ? raw.openPacks : []).filter(isRecord).map((pack) => ({
-      id: String(pack.id ?? ''),
-      weight: toNumber(pack.weight, 0),
-      openedAt: toIsoString(pack.openedAt, ''),
-      fraction: toNumber(pack.fraction, 0),
-    })),
-    sealedCount: toNumber(raw.sealedCount, 0),
-    remainingGrams: toNumber(raw.remainingGrams, 0),
-    rate: toNullableNumber(raw.rate),
-    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
-    daysLeft: toNullableNumber(raw.daysLeft),
-    endsAt: toIsoString(raw.endsAt, '') || null,
+    leftGrams: toNullableNumber(raw.leftGrams),
+    fullGrams: toNullableNumber(raw.fullGrams),
     lastReceipt: receipt
       ? {
-          receivedAt: toIsoString(receipt.receivedAt, ''),
+          at: toIsoString(receipt.at, ''),
+          grams: toNumber(receipt.grams, 0),
           kind: pickOne(receipt.kind, ['invoice', 'start', 'manual'] as const, 'manual'),
           number: toNullableString(receipt.number),
           label: String(receipt.label ?? ''),
         }
       : null,
+    lastCount: count
+      ? { at: toIsoString(count.at, ''), grams: toNumber(count.grams, 0), fraction: toNullableNumber(count.fraction) }
+      : null,
+    rate: toNullableNumber(raw.rate),
+    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
+    daysLeft: toNullableNumber(raw.daysLeft),
+    endsAt: toIsoString(raw.endsAt, '') || null,
     mixCount: toNumber(raw.mixCount, 0),
     keepStocked: toBoolean(raw.keepStocked, true),
     stopped: toBoolean(raw.stopped, false),
     stopNote: toNullableString(raw.stopNote),
-    packWeight: toNumber(raw.packWeight, 200),
     note: toNullableString(raw.note),
   };
 };
@@ -1799,33 +1797,32 @@ export const normalizeShelfView = (value: unknown): ShelfView => {
     counters: {
       all: toNumber(counters.all, 0),
       ok: toNumber(counters.ok, 0),
-      last: toNumber(counters.last, 0),
       ending: toNumber(counters.ending, 0),
+      check: toNumber(counters.check, 0),
       out: toNumber(counters.out, 0),
       stop: toNumber(counters.stop, 0),
       plan: toNumber(counters.plan, 0),
     },
-    totals: { packs: toNumber(totals.packs, 0), kg: toNumber(totals.kg, 0) },
+    totals: { kg: toNumber(totals.kg, 0) },
     today: { grams: toNumber(today.grams, 0), bowls: toNumber(today.bowls, 0) },
     settings: normalizeShelfSettings(raw.settings),
   };
 };
 
-const normalizeShelfPack = (value: unknown): ShelfPack => {
+const normalizeStockEntry = (value: unknown): StockEntry => {
   const raw = isRecord(value) ? value : {};
   const delivery = isRecord(raw.delivery) ? raw.delivery : null;
   const usage = isRecord(raw.usage) ? raw.usage : null;
 
   return {
     id: String(raw.id ?? ''),
-    state: pickOne(raw.state, SHELF_PACK_STATES, 'sealed'),
-    weight: toNumber(raw.weight, 0),
+    kind: pickOne(raw.kind, ['receipt', 'count', 'writeoff'] as const, 'count'),
+    grams: toNumber(raw.grams, 0),
+    fraction: toNullableNumber(raw.fraction),
+    at: toIsoString(raw.at, ''),
     priceKop: toNullableNumber(raw.priceKop),
-    receivedAt: toIsoString(raw.receivedAt, ''),
-    openedAt: toIsoString(raw.openedAt, '') || null,
-    emptiedAt: toIsoString(raw.emptiedAt, '') || null,
-    writtenOffAt: toIsoString(raw.writtenOffAt, '') || null,
-    writeOffReason: toNullableString(raw.writeOffReason),
+    reason: toNullableString(raw.reason),
+    actorLogin: toNullableString(raw.actorLogin),
     delivery: delivery
       ? {
           id: String(delivery.id ?? ''),
@@ -1834,11 +1831,8 @@ const normalizeShelfPack = (value: unknown): ShelfPack => {
           supplier: toNullableString(delivery.supplier),
         }
       : null,
-    marks: (Array.isArray(raw.marks) ? raw.marks : []).filter(isRecord).map((mark) => ({
-      at: toIsoString(mark.at, ''),
-      fraction: toNumber(mark.fraction, 0),
-    })),
-    usage: usage ? { days: toNumber(usage.days, 0), gramsPerDay: toNumber(usage.gramsPerDay, 0) } : null,
+    usage: usage ? { from: toIsoString(usage.from, ''), gramsPerDay: toNumber(usage.gramsPerDay, 0) } : null,
+    excluded: toBoolean(raw.excluded, false),
   };
 };
 
@@ -1848,7 +1842,13 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
 
   return {
     ...normalizeShelfRow(record),
-    packs: (Array.isArray(record.packs) ? record.packs : []).map(normalizeShelfPack),
+    history: (Array.isArray(record.history) ? record.history : []).map(normalizeStockEntry),
+    weekly: (Array.isArray(record.weekly) ? record.weekly : []).filter(isRecord).map((week) => ({
+      from: toIsoString(week.from, ''),
+      to: toIsoString(week.to, ''),
+      gramsPerDay: toNumber(week.gramsPerDay, 0),
+      partial: toBoolean(week.partial, false),
+    })),
     gramPriceKop: toNullableNumber(record.gramPriceKop),
     bowlCostKop: toNullableNumber(record.bowlCostKop),
     mixes: (Array.isArray(record.mixes) ? record.mixes : []).filter(isRecord).map((mix) => ({
@@ -1859,9 +1859,10 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
   };
 };
 
-export const normalizeShelfEmptyResponse = (value: unknown) => {
+// Ответ «Закончился», отметки и списания: entryId — для отмены в тосте.
+export const normalizeShelfEntryResponse = (value: unknown) => {
   const raw = isRecord(value) ? value : {};
-  return { packId: String(raw.packId ?? ''), item: normalizeShelfRow(raw.item) };
+  return { entryId: String(raw.entryId ?? ''), item: normalizeShelfRow(raw.item) };
 };
 
 // --- «К заказу» и блок «Полка» дашборда (#213) -------------------------------
@@ -1876,16 +1877,16 @@ export type ReorderItem = {
   endsAt: string | null;
   rate: number | null;
   rateKind: ShelfRateKind;
-  quantity: number;
-  packWeight: number;
-  lastPriceKop: number | null;
+  leftGrams: number | null;
+  quantityGrams: number;
+  gramPriceKop: number | null;
 };
 
 export type ReorderGroup = {
   supplier: ShelfSupplierRef | null;
   lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
   items: ReorderItem[];
-  // null — хоть у одной строки нет последней цены.
+  // null — хоть у одной строки нет цены грамма.
   sumKop: number | null;
 };
 
@@ -1934,9 +1935,9 @@ const normalizeReorderItem = (value: unknown): ReorderItem => {
     endsAt: toIsoString(raw.endsAt, '') || null,
     rate: toNullableNumber(raw.rate),
     rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
-    quantity: toNumber(raw.quantity, 1),
-    packWeight: toNumber(raw.packWeight, 200),
-    lastPriceKop: toNullableNumber(raw.lastPriceKop),
+    leftGrams: toNullableNumber(raw.leftGrams),
+    quantityGrams: toNumber(raw.quantityGrams, 0),
+    gramPriceKop: toNullableNumber(raw.gramPriceKop),
   };
 };
 
@@ -2022,12 +2023,13 @@ export type DeliveryListItem = {
   invoiceDate: string | null;
   receivedAt: string | null;
   lines: number;
-  packs: number;
+  // У черновика — сколько граммов даст приёмка, у принятой — сколько пришло.
+  grams: number;
   totalKop: number | null;
   createdAt: string;
 };
 
-export type DeliveryTotals = { monthKop: number; monthPacks: number; drafts: number; suppliers: number; memoryItems: number };
+export type DeliveryTotals = { monthKop: number; monthGrams: number; drafts: number; suppliers: number; memoryItems: number };
 
 export type DeliveryList = { items: DeliveryListItem[]; totals: DeliveryTotals };
 
@@ -2049,7 +2051,10 @@ export type DeliveryLine = {
   unit: string | null;
   priceKop: number | null;
   sumKop: number | null;
+  // Граммы в штуке по счёту.
   grams: number | null;
+  // Сколько граммов придёт: поправка мастера или qty × grams; null — граммы неизвестны.
+  receivedGrams: number | null;
   kind: DeliveryLineKind;
   arrived: boolean;
   tobacco: { id: string; manufacturer: string; lineName: string; name: string; shelfStatus: ShelfItemStatus | null } | null;
@@ -2075,8 +2080,8 @@ export type DeliveryCard = {
   linesSumKop: number;
   sumMatches: boolean | null;
   pendingLines: number;
-  packsToCreate: number;
-  packs: number;
+  gramsToReceive: number;
+  grams: number;
 };
 
 const DELIVERY_KINDS = ['invoice', 'manual', 'start'] as const;
@@ -2101,6 +2106,7 @@ const normalizeDeliveryLine = (value: unknown): DeliveryLine => {
     priceKop: toNullableNumber(raw.priceKop),
     sumKop: toNullableNumber(raw.sumKop),
     grams: toNullableNumber(raw.grams),
+    receivedGrams: toNullableNumber(raw.receivedGrams),
     kind: pickOne(raw.kind, ['tobacco', 'skip'] as const, 'tobacco'),
     arrived: toBoolean(raw.arrived, true),
     tobacco: tobacco
@@ -2148,8 +2154,8 @@ export const normalizeDeliveryCard = (value: unknown): DeliveryCard => {
     linesSumKop: toNumber(raw.linesSumKop, 0),
     sumMatches: typeof raw.sumMatches === 'boolean' ? raw.sumMatches : null,
     pendingLines: toNumber(raw.pendingLines, 0),
-    packsToCreate: toNumber(raw.packsToCreate, 0),
-    packs: toNumber(raw.packs, 0),
+    gramsToReceive: toNumber(raw.gramsToReceive, 0),
+    grams: toNumber(raw.grams, 0),
   };
 };
 
@@ -2167,13 +2173,13 @@ export const normalizeDeliveryList = (value: unknown): DeliveryList => {
       invoiceDate: toDateOnly(item.invoiceDate),
       receivedAt: toIsoString(item.receivedAt, '') || null,
       lines: toNumber(item.lines, 0),
-      packs: toNumber(item.packs, 0),
+      grams: toNumber(item.grams, 0),
       totalKop: toNullableNumber(item.totalKop),
       createdAt: toIsoString(item.createdAt, ''),
     })),
     totals: {
       monthKop: toNumber(totals.monthKop, 0),
-      monthPacks: toNumber(totals.monthPacks, 0),
+      monthGrams: toNumber(totals.monthGrams, 0),
       drafts: toNumber(totals.drafts, 0),
       suppliers: toNumber(totals.suppliers, 0),
       memoryItems: toNumber(totals.memoryItems, 0),

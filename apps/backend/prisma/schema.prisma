@@ -60,44 +60,44 @@ model TelegramRecipient {
 }
 
 model TelegramOperator {
-  id                  String    @id
-  name                String
-  phone               String    @unique
-  active              Boolean   @default(true)
-  linkedChatId        String?   @unique
+  id                   String    @id
+  name                 String
+  phone                String    @unique
+  active               Boolean   @default(true)
+  linkedChatId         String?   @unique
   linkedTelegramUserId String?
-  linkedUsername      String?
-  linkedDisplayName   String?
-  linkedAt            DateTime?
-  lastCodeRequestedAt DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  linkedUsername       String?
+  linkedDisplayName    String?
+  linkedAt             DateTime?
+  lastCodeRequestedAt  DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([active])
   @@index([linkedChatId])
 }
 
 model TelegramAutomationState {
-  id                    String    @id
-  lastHeartbeatAt       DateTime?
-  lastRotateAt          DateTime?
-  lastRotateCodeId      String?
-  lastRotateCodeValue   String?
-  lastBroadcastAt       DateTime?
-  lastBroadcastCodeId   String?
-  lastBroadcastCodeValue String?
-  lastBroadcastDayKey   String?
-  lastRequestAt         DateTime?
-  lastRequestChatId     String?
-  lastRequestOperatorId String?
+  id                      String    @id
+  lastHeartbeatAt         DateTime?
+  lastRotateAt            DateTime?
+  lastRotateCodeId        String?
+  lastRotateCodeValue     String?
+  lastBroadcastAt         DateTime?
+  lastBroadcastCodeId     String?
+  lastBroadcastCodeValue  String?
+  lastBroadcastDayKey     String?
+  lastRequestAt           DateTime?
+  lastRequestChatId       String?
+  lastRequestOperatorId   String?
   lastRequestOperatorName String?
-  lastRequestPhone      String?
-  lastRequestCodeId     String?
-  lastRequestCodeValue  String?
-  lastErrorAt           DateTime?
-  lastErrorMessage      String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  lastRequestPhone        String?
+  lastRequestCodeId       String?
+  lastRequestCodeValue    String?
+  lastErrorAt             DateTime?
+  lastErrorMessage        String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 }
 
 model AuditEvent {
@@ -118,38 +118,38 @@ model AuditEvent {
 }
 
 model Tobacco {
-  id              String            @id
-  manufacturer    String
-  lineName        String            @default("")
-  name            String
-  alias           String?
-  description     String?
-  sourceKind      String?
-  sourceUrl       String?
-  sourceExternalId String?          @unique
-  sourceNumericId String?
-  country         String?
-  officialStrength String?
+  id                String         @id
+  manufacturer      String
+  lineName          String         @default("")
+  name              String
+  alias             String?
+  description       String?
+  sourceKind        String?
+  sourceUrl         String?
+  sourceExternalId  String?        @unique
+  sourceNumericId   String?
+  country           String?
+  officialStrength  String?
   communityStrength String?
-  productionStatus String?
-  imageUrl        String?
-  rawSourceTags   String?
-  flavorProfiles  String
-  flavors         String
-  flavorTags      String
-  inStock         Boolean           @default(false)
-  archived        Boolean           @default(false)
-  rating          Float?
-  ratingsCount    Int?
-  reviewsCount    Int?
-  viewsCount      Int?
-  statsSyncedAt   DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  mixComponents   MixComponent[]
-  shelfItem       ShelfItem?
-  supplierItems   SupplierItem[]
-  deliveryLines   DeliveryLine[]
+  productionStatus  String?
+  imageUrl          String?
+  rawSourceTags     String?
+  flavorProfiles    String
+  flavors           String
+  flavorTags        String
+  inStock           Boolean        @default(false)
+  archived          Boolean        @default(false)
+  rating            Float?
+  ratingsCount      Int?
+  reviewsCount      Int?
+  viewsCount        Int?
+  statsSyncedAt     DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  mixComponents     MixComponent[]
+  shelfItem         ShelfItem?
+  supplierItems     SupplierItem[]
+  deliveryLines     DeliveryLine[]
 
   @@unique([sourceKind, sourceNumericId])
   @@index([manufacturer, lineName, name])
@@ -159,27 +159,27 @@ model Tobacco {
 }
 
 model FlavorProfileCatalog {
-  key         String   @id
-  label       String
-  tobaccoCount Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  key          String   @id
+  label        String
+  tobaccoCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model FlavorCatalog {
-  key         String   @id
-  label       String
-  tobaccoCount Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  key          String   @id
+  label        String
+  tobaccoCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model FlavorTagCatalog {
-  key         String   @id
-  label       String
-  tobaccoCount Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  key          String   @id
+  label        String
+  tobaccoCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model SourceTagMapping {
@@ -200,32 +200,32 @@ model SourceTagMapping {
 }
 
 model Mix {
-  id              String            @id
-  name            String
-  description     String
-  flavorProfiles  String
-  flavors         String
-  flavorTags      String
-  available       Boolean           @default(true)
-  baseAvgRating   Float             @default(4.5)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  components      MixComponent[]
-  railMixes       RailMix[]
-  ratings         MixRating[]
-  smokeEvents     SmokeCtaEvent[]
-  guestFavorites  GuestFavorite[]
+  id             String          @id
+  name           String
+  description    String
+  flavorProfiles String
+  flavors        String
+  flavorTags     String
+  available      Boolean         @default(true)
+  baseAvgRating  Float           @default(4.5)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  components     MixComponent[]
+  railMixes      RailMix[]
+  ratings        MixRating[]
+  smokeEvents    SmokeCtaEvent[]
+  guestFavorites GuestFavorite[]
 }
 
 model MixComponent {
-  id         String      @id @default(uuid())
+  id         String   @id @default(uuid())
   mixId      String
-  tobaccoId   String
-  proportion  Int         @default(50)
-  sortOrder   Int         @default(0)
-  createdAt   DateTime    @default(now())
-  mix         Mix    @relation(fields: [mixId], references: [id], onDelete: Cascade)
-  tobacco     Tobacco @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
+  tobaccoId  String
+  proportion Int      @default(50)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  mix        Mix      @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  tobacco    Tobacco  @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
 
   @@unique([mixId, tobaccoId])
   @@index([mixId])
@@ -233,14 +233,14 @@ model MixComponent {
 }
 
 model Rail {
-  id          String         @id
+  id          String    @id
   name        String
   description String
   type        String
-  active      Boolean        @default(true)
-  isSystem    Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  active      Boolean   @default(true)
+  isSystem    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   mixes       RailMix[]
 
   @@index([type])
@@ -248,13 +248,13 @@ model Rail {
 }
 
 model RailMix {
-  id         String    @id @default(uuid())
-  railId     String
-  mixId      String
-  sortOrder  Int       @default(0)
-  createdAt  DateTime  @default(now())
-  rail       Rail @relation(fields: [railId], references: [id], onDelete: Cascade)
-  mix        Mix  @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  railId    String
+  mixId     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  rail      Rail     @relation(fields: [railId], references: [id], onDelete: Cascade)
+  mix       Mix      @relation(fields: [mixId], references: [id], onDelete: Cascade)
 
   @@unique([railId, mixId])
   @@index([railId])
@@ -371,57 +371,45 @@ model GuestFavorite {
 // Полка точки (#152): что точка держит. Каталог (Tobacco) о наличии не знает —
 // Tobacco.inStock только кэш, который пишет сервис полки (src/shelf.ts).
 model ShelfItem {
-  id          String   @id @default(uuid())
-  tobaccoId   String   @unique
-  status      String   @default("active")
-  keepStocked Boolean  @default(true)
-  stopped     Boolean  @default(false)
+  id          String       @id @default(uuid())
+  tobaccoId   String       @unique
+  status      String       @default("active")
+  keepStocked Boolean      @default(true)
+  stopped     Boolean      @default(false)
   stopNote    String?
-  packWeight  Int
   note        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tobacco     Tobacco  @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
-  packs       Pack[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tobacco     Tobacco      @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
+  entries     StockEntry[]
 
   @@index([status])
 }
 
-// Банка (пачка 25 г — тоже банка). openedAt — только явное «вскрыть ещё одну»;
-// обычное вскрытие выводит resolvePacks (src/stock.ts).
-model Pack {
+// Журнал остатка табака в граммах (#306): receipt — пришло, count — стало
+// («Закончился» — 0 г), writeoff — списано. Расход и прогноз — src/stock.ts.
+model StockEntry {
   id             String        @id @default(uuid())
   shelfItemId    String
-  weight         Int
+  kind           String
+  grams          Int
+  // Отметка долей ¾ ½ ⅓ ¼ от уровня после последнего прихода; grams — во что она превратилась.
+  fraction       Float?
+  at             DateTime
+  // У прихода — цена всего прихода.
   priceKop       Int?
-  receivedAt     DateTime
-  openedAt       DateTime?
-  emptiedAt      DateTime?
-  writtenOffAt   DateTime?
-  writeOffReason String?
+  reason         String?
   deliveryId     String?
   deliveryLineId String?
+  actorLogin     String?
   createdAt      DateTime      @default(now())
   shelfItem      ShelfItem     @relation(fields: [shelfItemId], references: [id], onDelete: Restrict)
   delivery       Delivery?     @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
   deliveryLine   DeliveryLine? @relation(fields: [deliveryLineId], references: [id], onDelete: SetNull)
-  marks          PackMark[]
 
-  @@index([shelfItemId])
+  @@index([shelfItemId, at])
   @@index([deliveryId])
   @@index([deliveryLineId])
-}
-
-model PackMark {
-  id         String   @id @default(uuid())
-  packId     String
-  fraction   Float
-  at         DateTime
-  actorLogin String?
-  createdAt  DateTime @default(now())
-  pack       Pack     @relation(fields: [packId], references: [id], onDelete: Cascade)
-
-  @@index([packId])
 }
 
 model ShelfSettings {
@@ -475,30 +463,32 @@ model Delivery {
   updatedAt   DateTime       @updatedAt
   supplier    Supplier?      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   lines       DeliveryLine[]
-  packs       Pack[]
+  entries     StockEntry[]
 
   @@index([supplierId])
   @@index([status])
 }
 
 model DeliveryLine {
-  id          String   @id @default(uuid())
-  deliveryId  String
-  n           Int
-  rawName     String
-  article     String?
-  qty         Int
-  unit        String?
-  priceKop    Int?
-  sumKop      Int?
-  grams       Int?
-  tobaccoId   String?
-  kind        String   @default("tobacco")
-  arrived     Boolean  @default(true)
-  matchReason String?
-  delivery    Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  tobacco     Tobacco? @relation(fields: [tobaccoId], references: [id], onDelete: SetNull)
-  packs       Pack[]
+  id            String       @id @default(uuid())
+  deliveryId    String
+  n             Int
+  rawName       String
+  article       String?
+  qty           Int
+  unit          String?
+  priceKop      Int?
+  sumKop        Int?
+  grams         Int?
+  tobaccoId     String?
+  kind          String       @default("tobacco")
+  arrived       Boolean      @default(true)
+  // Сколько граммов пришло, если мастер поправил; иначе qty × grams.
+  receivedGrams Int?
+  matchReason   String?
+  delivery      Delivery     @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  tobacco       Tobacco?     @relation(fields: [tobaccoId], references: [id], onDelete: SetNull)
+  entries       StockEntry[]
 
   @@index([deliveryId])
   @@index([tobaccoId])

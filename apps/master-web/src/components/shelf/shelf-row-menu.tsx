@@ -1,41 +1,48 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ShelfRow } from '@/contracts';
-import { MARK_OPTIONS, parseManualPack, shelfRowMenu } from '@/lib/shelf';
+import { formatNumber, formatShelfDate, shelfRowMenu } from '@/lib/shelf';
+import { ShelfLeftPanel, ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
 
 export type ShelfRowActions = {
-  onMark: (row: ShelfRow, fraction: number) => void;
-  onOpenAnother: (row: ShelfRow) => void;
-  onAddPack: (row: ShelfRow, input: { weight: number; priceKop?: number }) => void;
+  onEmpty: (row: ShelfRow) => void;
+  onCount: (row: ShelfRow, input: CountInput) => void;
+  onReceipt: (row: ShelfRow, input: { grams: number; priceKop?: number }) => void;
+  onWriteOff: (row: ShelfRow, input: { grams: number; reason: string }) => void;
   onToggleStop: (row: ShelfRow) => void;
-  onWriteOff: (row: ShelfRow, reason: string) => void;
   onRemove: (row: ShelfRow) => void;
 };
+
+// left — «Сколько осталось?», main — меню «⋯», дальше — формы из меню.
+export type ShelfMenuMode = 'left' | 'main' | 'receipt' | 'writeoff';
 
 type ShelfRowMenuProps = {
   row: ShelfRow;
   anchor: HTMLElement;
+  mode: ShelfMenuMode;
   actions: ShelfRowActions;
   onClose: () => void;
 };
 
-type Mode = 'main' | 'add-pack' | 'write-off';
-
 const GAP = 4;
 const EDGE = 8;
 
-// Меню «⋯» строки полки. Живёт в портале поверх страницы: таблица обрезает
-// переполнение по горизонтали, а меню у нижних строк должно открываться вверх.
-export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProps) => {
+const leftLabel = (row: ShelfRow) =>
+  row.lastReceipt && row.fullGrams !== null
+    ? `Сколько осталось · после прихода ${formatShelfDate(row.lastReceipt.at)} было ${formatNumber(row.fullGrams)} г`
+    : 'Сколько осталось';
+
+// Всплывашка строки полки. Живёт в портале поверх страницы: таблица обрезает
+// переполнение по горизонтали, а у нижних строк всплывашка открывается вверх.
+export const ShelfRowMenu = ({ row, anchor, mode: initialMode, actions, onClose }: ShelfRowMenuProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [mode, setMode] = useState<Mode>('main');
+  const [mode, setMode] = useState<ShelfMenuMode>(initialMode);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
-  const [weight, setWeight] = useState(String(row.packWeight));
-  const [price, setPrice] = useState('');
-  const [reason, setReason] = useState('');
 
   const items = shelfRowMenu(row);
   const name = `${row.tobacco.manufacturer} ${row.tobacco.name}`;
+
+  useEffect(() => setMode(initialMode), [initialMode]);
 
   useLayoutEffect(() => {
     const place = () => {
@@ -77,62 +84,41 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
   }, [anchor, onClose]);
 
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('button:not(:disabled), input')?.focus();
+    if (mode === 'main') ref.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
   }, [mode]);
 
-  const submitPack = (event: FormEvent) => {
-    event.preventDefault();
-    const pack = parseManualPack(weight, price);
-    if (pack) actions.onAddPack(row, pack);
-  };
-
-  const submitWriteOff = (event: FormEvent) => {
-    event.preventDefault();
-    if (reason.trim()) actions.onWriteOff(row, reason.trim());
-  };
+  const label = mode === 'left' ? leftLabel(row) : mode === 'receipt' ? 'Приход без счёта' : mode === 'writeoff' ? 'Списать' : null;
 
   return createPortal(
     <div
       ref={ref}
-      className="shelf-menu"
+      className={`shelf-menu${mode === 'main' ? '' : ' shelf-menu--wide'}`}
       role="dialog"
-      aria-label={`Действия: ${name}`}
+      aria-label={label ? `${label}: ${name}` : `Действия: ${name}`}
       style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }}
       onClick={(event) => event.stopPropagation()}
     >
+      {label ? <span className="shelf-menu__label">{label}</span> : null}
+
+      {mode === 'left' ? (
+        <ShelfLeftPanel
+          row={row}
+          autoFocus
+          onCount={(input) => actions.onCount(row, input)}
+          onEmpty={items.canEmpty ? () => actions.onEmpty(row) : undefined}
+        />
+      ) : null}
+
       {mode === 'main' ? (
         <>
-          <span className="shelf-menu__label">Сколько осталось в открытой</span>
-          <div className="shelf-menu__fracs">
-            {MARK_OPTIONS.map((option, index) => (
-              <button
-                key={option.label}
-                type="button"
-                className="shelf-menu__frac"
-                disabled={!items.canMark}
-                title={`Осталось ${option.label} · клавиша ${index + 1}`}
-                aria-label={`Осталось ${option.label}`}
-                onClick={() => actions.onMark(row, option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <button type="button" className="shelf-menu__item" disabled={!items.canMark} onClick={() => actions.onMark(row, 1)}>
-            Банка полная
+          <button type="button" className="shelf-menu__item" onClick={() => setMode('receipt')}>
+            Добавить приход без счёта…
           </button>
-          <div className="shelf-menu__sep" />
-          <button type="button" className="shelf-menu__item" disabled={!items.canOpenAnother} onClick={() => actions.onOpenAnother(row)}>
-            Вскрыть ещё одну банку
-          </button>
-          <button type="button" className="shelf-menu__item" onClick={() => setMode('add-pack')}>
-            Добавить банку вручную
+          <button type="button" className="shelf-menu__item" disabled={!items.canWriteOff} onClick={() => setMode('writeoff')}>
+            Списать…
           </button>
           <button type="button" className="shelf-menu__item" onClick={() => actions.onToggleStop(row)}>
             {items.stopLabel}
-          </button>
-          <button type="button" className="shelf-menu__item" disabled={!items.canWriteOff} onClick={() => setMode('write-off')}>
-            Списать банку…
           </button>
           <div className="shelf-menu__sep" />
           <button type="button" className="shelf-menu__item" onClick={() => actions.onRemove(row)}>
@@ -141,51 +127,8 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
         </>
       ) : null}
 
-      {mode === 'add-pack' ? (
-        <form className="shelf-menu__form" onSubmit={submitPack}>
-          <span className="shelf-menu__label">Добавить банку вручную</span>
-          <label className="shelf-menu__field">
-            <span>Вес, г</span>
-            <input className="text-input" inputMode="numeric" value={weight} onChange={(event) => setWeight(event.target.value)} />
-          </label>
-          <label className="shelf-menu__field">
-            <span>Цена банки, ₽ — если известна</span>
-            <input className="text-input" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
-          </label>
-          <div className="shelf-menu__form-actions">
-            <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={() => setMode('main')}>
-              Назад
-            </button>
-            <button type="submit" className="btn" data-size="sm" data-variant="primary">
-              Добавить
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      {mode === 'write-off' ? (
-        <form className="shelf-menu__form" onSubmit={submitWriteOff}>
-          <span className="shelf-menu__label">Списать банку</span>
-          <p className="shelf-menu__hint">{items.writeOffHint}</p>
-          <label className="shelf-menu__field">
-            <span>Причина</span>
-            <input
-              className="text-input"
-              value={reason}
-              placeholder="Брак, пересорт, потеря"
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </label>
-          <div className="shelf-menu__form-actions">
-            <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={() => setMode('main')}>
-              Назад
-            </button>
-            <button type="submit" className="btn" data-size="sm" data-variant="danger" disabled={!reason.trim()}>
-              Списать
-            </button>
-          </div>
-        </form>
-      ) : null}
+      {mode === 'receipt' ? <ShelfReceiptForm row={row} onSubmit={(input) => actions.onReceipt(row, input)} onCancel={onClose} /> : null}
+      {mode === 'writeoff' ? <ShelfWriteOffForm row={row} onSubmit={(input) => actions.onWriteOff(row, input)} onCancel={onClose} /> : null}
     </div>,
     document.body,
   );

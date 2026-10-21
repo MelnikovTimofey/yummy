@@ -1,4 +1,4 @@
-import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
+import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListItem, type DeliveryTotals } from '../contracts';
 
 // Чистая логика экрана «Поставки» (#212): подписи разбора, сверка суммы,
 // деньги и даты. Решения о сопоставлении принимает backend, здесь — только
@@ -185,9 +185,39 @@ const linesPrepositional = (count: number) => {
   return `${count} ${mod10 === 1 && mod100 !== 11 ? 'строке' : 'строках'}`;
 };
 
-export const acceptLabel = (pending: number) => (pending ? `Выберите табак в ${linesPrepositional(pending)}` : 'Принять поставку');
+// Строка без табака или без граммов не даёт принять поставку (pendingLines backend).
+export const acceptLabel = (pending: number) =>
+  pending ? `Выберите табак или граммы в ${linesPrepositional(pending)}` : 'Принять поставку';
 
-export const acceptedToastTitle = (packs: number) => `Принято: ${formatCount(packs, ['банка', 'банки', 'банок'])} на полке`;
+export const acceptedToastTitle = (grams: number) => `Принято: ${formatWeight(grams)} на полке`;
+
+// --- граммы прихода --------------------------------------------------------------
+
+const kilograms = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+
+export const formatWeight = (grams: number) =>
+  grams < 1000 ? `${Math.round(grams)} г` : `${kilograms.format(Math.round(grams / 100) / 10)} кг`;
+
+// Подсказка под полем «Приход»: что написано в счёте.
+export const lineGramsHint = (line: Pick<DeliveryLine, 'qty' | 'grams' | 'receivedGrams'>) => {
+  if (line.grams === null) return line.receivedGrams === null ? 'укажите граммы' : 'указано вручную';
+  return line.qty > 1 ? `${line.qty} × ${line.grams} г по счёту` : `${line.grams} г по счёту`;
+};
+
+// Границы — как в apps/backend/src/deliveries.ts (MAX_QTY × MAX_GRAMS).
+const MAX_RECEIVED_GRAMS = 50 * 5000;
+
+// Пусто — null (сброс к «кол-во × граммы по счёту»); мусор — undefined.
+export const parseReceivedGrams = (value: string): number | null | undefined => {
+  const text = value.replace(/[\s\u00a0\u202f]/g, '');
+  if (!text) return null;
+  if (!/^\d+$/.test(text)) return undefined;
+  const grams = Number(text);
+  return grams >= 1 && grams <= MAX_RECEIVED_GRAMS ? grams : undefined;
+};
+
+export const meanGramKop = (totals: Pick<DeliveryTotals, 'monthKop' | 'monthGrams'>) =>
+  totals.monthGrams ? totals.monthKop / totals.monthGrams : null;
 
 // --- ошибки загрузки -----------------------------------------------------------
 

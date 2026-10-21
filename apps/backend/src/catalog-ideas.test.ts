@@ -232,7 +232,7 @@ test('табак, который держат на полке, не станов
       manufacturer: 'Ателье Reserve',
       name: 'Держим на стопе',
       sourceUrl: 'https://htreviews.org/tobaccos/atelier/reserve/kept',
-      shelfItem: { create: { status: 'active', stopped: true, packWeight: 200 } },
+      shelfItem: { create: { status: 'active', stopped: true } },
     },
   });
   await prisma.tobacco.create({
@@ -242,7 +242,7 @@ test('табак, который держат на полке, не станов
       manufacturer: 'Ателье Reserve',
       name: 'В плане',
       sourceUrl: 'https://htreviews.org/tobaccos/atelier/reserve/planned',
-      shelfItem: { create: { status: 'plan', packWeight: 200 } },
+      shelfItem: { create: { status: 'plan' } },
     },
   });
 

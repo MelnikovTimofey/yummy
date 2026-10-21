@@ -172,9 +172,9 @@ export const AddLineDialog = ({
     const priceKop = parseRubles(price);
     const weight = readInt(grams, 1, MAX_GRAMS);
     if (!name) return submit.setError('Укажите название строки или выберите табак.');
-    if (!count) return submit.setError(`Банок — целое число от 1 до ${MAX_QTY}.`);
+    if (!count) return submit.setError(`Штук — целое число от 1 до ${MAX_QTY}.`);
     if (priceKop === undefined) return submit.setError('Цена — число рублей, например 1 550 или 1 550,50.');
-    if (weight === undefined) return submit.setError(`Фасовка — целое число граммов от 1 до ${MAX_GRAMS}.`);
+    if (weight === undefined) return submit.setError(`Граммы в штуке — целое число от 1 до ${MAX_GRAMS}.`);
     void submit.run(() =>
       onAdd({
         rawName: name,
@@ -241,17 +241,17 @@ export const AddLineDialog = ({
         </span>
       </Field>
       <div className="deliv-form-row deliv-form-row--three">
-        <Field label="Банок">
+        <Field label="Штук">
           <span className="input">
             <input inputMode="numeric" value={qty} onChange={(event) => setQty(event.target.value)} />
           </span>
         </Field>
-        <Field label="Цена за банку, ₽">
+        <Field label="Цена за штуку, ₽">
           <span className="input">
             <input inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="1 550" />
           </span>
         </Field>
-        <Field label="Фасовка, г">
+        <Field label="Граммов в штуке">
           <span className="input">
             <input inputMode="numeric" value={grams} onChange={(event) => setGrams(event.target.value)} placeholder="из названия" />
           </span>
@@ -282,7 +282,7 @@ export const CreateTobaccoDialog = ({
     const weight = readInt(grams, 1, MAX_GRAMS);
     if (!manufacturer.trim()) return submit.setError('Нужен бренд.');
     if (!name.trim()) return submit.setError('Нужно название табака.');
-    if (weight === undefined) return submit.setError(`Фасовка — целое число граммов от 1 до ${MAX_GRAMS}.`);
+    if (weight === undefined) return submit.setError(`Граммы в штуке — целое число от 1 до ${MAX_GRAMS}.`);
     void submit.run(() => onCreate({ manufacturer: manufacturer.trim(), lineName: lineName.trim(), name: name.trim() }, weight));
   };
 
@@ -291,7 +291,7 @@ export const CreateTobaccoDialog = ({
       open
       eyebrow="Каталог · новая карточка"
       title="Создать карточку"
-      description={`Из строки «${initial.rawName}». Банка встанет на полку при приёмке поставки.`}
+      description={`Из строки «${initial.rawName}». Табак встанет на полку при приёмке поставки.`}
       error={submit.error}
       busy={submit.busy}
       submitLabel="Создать и выбрать"
@@ -315,7 +315,7 @@ export const CreateTobaccoDialog = ({
           <input value={name} onChange={(event) => setName(event.target.value)} />
         </span>
       </Field>
-      <Field label="Фасовка, г">
+      <Field label="Граммов в штуке">
         <span className="input deliv-form-narrow">
           <input inputMode="numeric" value={grams} onChange={(event) => setGrams(event.target.value)} placeholder="200" />
         </span>
@@ -333,7 +333,7 @@ export const DeleteDraftDialog = ({ open, title, onClose, onDelete }: { open: bo
       open={open}
       eyebrow="Поставка · черновик"
       title="Удалить черновик?"
-      description={`${title}: строки и файл счёта удалятся. Банки по черновику не создавались, полка не изменится.`}
+      description={`${title}: строки и файл счёта удалятся. Приход по черновику не записывался, полка не изменится.`}
       error={submit.error}
       busy={submit.busy}
       submitLabel="Удалить черновик"

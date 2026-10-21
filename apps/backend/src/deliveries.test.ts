@@ -132,7 +132,9 @@ test.describe('черновик из счёта', () => {
 
     // Без табака: 3 × Blansh, ананас, две шипучки Sebero.
     assert.equal(card.pendingLines, 6);
-    assert.equal(card.packsToCreate, 9);
+    const ready = card.lines.filter((line) => line.kind === 'tobacco' && line.arrived && line.tobacco && line.receivedGrams !== null);
+    assert.equal(card.gramsToReceive, ready.reduce((total, line) => total + line.receivedGrams!, 0));
+    assert.equal(lineOf(card, 8).receivedGrams, 400, 'малина ×2 по 200 г');
 
     const supplier = await prisma.supplier.findUniqueOrThrow({ where: { inn: '7700000001' } });
     assert.equal(supplier.format, 'b');
@@ -238,10 +240,10 @@ test.describe('приёмка', () => {
       assert.deepEqual(error.extra, { count: 6 });
       return true;
     });
-    assert.equal(await prisma.pack.count({ where: { deliveryId: card.id } }), 0);
+    assert.equal(await prisma.stockEntry.count({ where: { deliveryId: card.id } }), 0);
   });
 
-  test('создаёт банки с ценой и весом, ставит новые табаки на полку, запоминает строки', async () => {
+  test('пишет приходы в граммах с ценой строки, ставит новые табаки на полку, запоминает строки', async () => {
     const card = await createDraftFromPages(actor, 'b.pdf', FILE, loadFixture('b'));
     const ready = await resolveInvoiceB(card);
     assert.equal(ready.pendingLines, 0);
@@ -252,28 +254,23 @@ test.describe('приёмка', () => {
 
     assert.equal(accepted.status, 'received');
     assert.equal(accepted.receivedAt, receivedAt.toISOString());
-    // 6 строк Black Burn (малина ×2) + барбарис + 2 × Сарма + Хулиган.
-    assert.equal(accepted.packs, 11);
+    // 6 строк Black Burn (малина ×2) по 200 г + барбарис 200 г + Сарма 25 г и 200 г + Хулиган 200 г.
+    assert.equal(accepted.grams, 2025);
 
-    const raspberries = await prisma.pack.findMany({ where: { shelfItem: { tobaccoId: 'bb-raspberries' } } });
-    assert.equal(raspberries.length, 2);
-    for (const pack of raspberries) {
-      assert.equal(pack.weight, 200);
-      assert.equal(pack.priceKop, 155000);
-      assert.deepEqual(pack.receivedAt, receivedAt);
-      assert.equal(pack.deliveryId, card.id);
-      assert.equal(pack.deliveryLineId, lineOf(card, 8).id);
-    }
+    const raspberries = await prisma.stockEntry.findMany({ where: { shelfItem: { tobaccoId: 'bb-raspberries' } } });
+    assert.deepEqual(
+      raspberries.map((entry) => [entry.kind, entry.grams, entry.priceKop, entry.at, entry.deliveryId, entry.deliveryLineId, entry.actorLogin]),
+      [['receipt', 400, 310000, receivedAt, card.id, lineOf(card, 8).id, 'admin']],
+    );
 
-    const bubble = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'sarma-bubble' }, include: { packs: true } });
+    const bubble = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'sarma-bubble' }, include: { entries: true } });
     assert.equal(bubble.status, 'active');
-    assert.equal(bubble.packWeight, 25);
-    assert.deepEqual(bubble.packs.map((pack) => pack.weight), [25]);
+    assert.deepEqual(bubble.entries.map((entry) => entry.grams), [25]);
     assert.equal(await inStock('sarma-bubble'), true);
     assert.equal(lineOf(accepted, 13).newOnShelf, false);
 
     // «Смородиновая» не пришла, Blansh и «ОБЛАКО» — не табак.
-    assert.equal(await prisma.pack.count({ where: { deliveryLineId: { in: [1, 2, 3, 4, 12].map((n) => lineOf(card, n).id) } } }), 0);
+    assert.equal(await prisma.stockEntry.count({ where: { deliveryLineId: { in: [1, 2, 3, 4, 12].map((n) => lineOf(card, n).id) } } }), 0);
 
     const memory = await prisma.supplierItem.findMany({ where: { supplierId: card.supplier!.id } });
     assert.equal(memory.length, 10);
@@ -285,25 +282,36 @@ test.describe('приёмка', () => {
 
     const events = await prisma.auditEvent.findMany({ where: { entityType: 'delivery', action: 'accept' } });
     assert.equal(events.length, 1);
-    assert.deepEqual(JSON.parse(events[0].details!), { packs: 11, sumKop: 1575000 });
+    assert.deepEqual(JSON.parse(events[0].details!), { grams: 2025, sumKop: 1575000 });
 
     await assert.rejects(acceptDelivery(actor, card.id), (error) => error instanceof DeliveryConflictError && error.code === 'not_draft');
     await assert.rejects(updateLine(card.id, lineOf(card, 8).id, { qty: 1 }), DeliveryConflictError);
     await assert.rejects(deleteDelivery(actor, card.id), DeliveryConflictError);
   });
 
-  test('табак из плана или убранный с полки оживает, фасовка записи не меняется', async () => {
-    await prisma.shelfItem.create({ data: { tobaccoId: 'bb-raspberries', status: 'dropped', packWeight: 250 } });
+  test('пришло меньше, чем по счёту: граммы правит мастер, цена — пропорционально', async () => {
+    const card = await createDraftFromPages(actor, 'b.pdf', FILE, loadFixture('b'));
+    await resolveInvoiceB(card);
+    const updated = await updateLine(card.id, lineOf(card, 8).id, { receivedGrams: 200 });
+    assert.equal(lineOf(updated, 8).receivedGrams, 200);
+    await assert.rejects(updateLine(card.id, lineOf(card, 8).id, { receivedGrams: 0 }), DeliveryValidationError);
+    await acceptDelivery(actor, card.id);
+
+    const [entry] = await prisma.stockEntry.findMany({ where: { deliveryLineId: lineOf(card, 8).id } });
+    assert.deepEqual([entry.grams, entry.priceKop], [200, 155000]);
+  });
+
+  test('табак из плана или убранный с полки оживает', async () => {
+    await prisma.shelfItem.create({ data: { tobaccoId: 'bb-raspberries', status: 'dropped' } });
     const card = await createDraftFromPages(actor, 'b.pdf', FILE, loadFixture('b'));
     assert.equal(lineOf(card, 8).tobacco?.shelfStatus, 'dropped');
     assert.equal(lineOf(card, 8).newOnShelf, true);
     await resolveInvoiceB(card);
     await acceptDelivery(actor, card.id);
 
-    const item = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'bb-raspberries' }, include: { packs: true } });
+    const item = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'bb-raspberries' }, include: { entries: true } });
     assert.equal(item.status, 'active');
-    assert.equal(item.packWeight, 250);
-    assert.deepEqual(item.packs.map((pack) => pack.weight), [200, 200]);
+    assert.deepEqual(item.entries.map((entry) => entry.grams), [400]);
     assert.equal(await inStock('bb-raspberries'), true);
   });
 
@@ -323,7 +331,7 @@ test.describe('приёмка', () => {
     assert.equal(lineOf(second, 8).matchReason, 'memory');
   });
 
-  test('двойное нажатие «Принять» не создаёт банки дважды', async () => {
+  test('двойное нажатие «Принять» не пишет приход дважды', async () => {
     const card = await createDraftFromPages(actor, 'b.pdf', FILE, loadFixture('b'));
     await resolveInvoiceB(card);
     const results = await Promise.allSettled([acceptDelivery(actor, card.id), acceptDelivery(actor, card.id)]);
@@ -331,7 +339,7 @@ test.describe('приёмка', () => {
     assert.deepEqual(results.map((result) => result.status).sort(), ['fulfilled', 'rejected']);
     const rejected = results.find((result) => result.status === 'rejected') as PromiseRejectedResult;
     assert.ok(rejected.reason instanceof DeliveryConflictError && rejected.reason.code === 'not_draft');
-    assert.equal(await prisma.pack.count({ where: { deliveryId: card.id } }), 11);
+    assert.equal(await prisma.stockEntry.count({ where: { deliveryId: card.id } }), 10);
   });
 
   test('принятая поставка с тем же номером — тоже дубликат', async () => {
@@ -373,17 +381,22 @@ test.describe('ручная поставка', () => {
     await assert.rejects(addLine(draft.id, { rawName: ' ', qty: 1 }), DeliveryValidationError);
     await assert.rejects(addLine(draft.id, { rawName: 'x', qty: 0 }), DeliveryValidationError);
 
+    // В «Что-то своё» граммов нет — строка ждёт, пока мастер их укажет.
+    assert.equal(lineOf(card, 3).receivedGrams, null);
+    assert.equal(card.pendingLines, 1);
+    await assert.rejects(acceptDelivery(actor, draft.id), (error) => error instanceof DeliveryConflictError && error.code === 'pending_lines');
+    await updateLine(draft.id, lineOf(card, 3).id, { receivedGrams: 200 });
+
     const accepted = await acceptDelivery(actor, draft.id);
-    assert.equal(accepted.packs, 3);
-    const panama = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'hlg-panama' }, include: { packs: true } });
-    assert.equal(panama.packWeight, 200);
-    assert.deepEqual(panama.packs.map((pack) => [pack.weight, pack.priceKop]), [[200, null]]);
+    assert.equal(accepted.grams, 600);
+    const panama = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'hlg-panama' }, include: { entries: true } });
+    assert.deepEqual(panama.entries.map((entry) => [entry.grams, entry.priceKop]), [[200, null]]);
   });
 
   test('без поставщика — черновик без поставщика, память не пишется', async () => {
     const draft = await createManualDraft(actor, {});
     assert.equal(draft.supplier, null);
-    await addLine(draft.id, { rawName: 'Panama', qty: 1, tobaccoId: 'hlg-panama' });
+    await addLine(draft.id, { rawName: 'Panama', qty: 1, grams: 200, tobaccoId: 'hlg-panama' });
     await acceptDelivery(actor, draft.id);
     assert.equal(await prisma.supplierItem.count(), 0);
   });
@@ -393,7 +406,7 @@ test.describe('список и удаление', () => {
   test('KPI месяца — по принятым в этом месяце, стартовый приход в суммы не идёт', async () => {
     const now = new Date('2026-10-20T12:00:00Z');
     const old = await createManualDraft(actor, { supplierName: 'Южный табак', number: '1' });
-    await addLine(old.id, { rawName: 'x', qty: 1, priceKop: 100000, tobaccoId: 'hlg-panama' });
+    await addLine(old.id, { rawName: 'x', qty: 1, grams: 200, priceKop: 100000, tobaccoId: 'hlg-panama' });
     await acceptDelivery(actor, old.id, { receivedAt: new Date('2026-09-20T12:00:00Z') });
 
     const card = await createDraftFromPages(actor, 'b.pdf', FILE, loadFixture('b'));
@@ -402,7 +415,7 @@ test.describe('список и удаление', () => {
     await createDraftFromPages(actor, 'b2.pdf', FILE, replaceItem(loadFixture('b'), TITLE_B, 'СЧЕТ № 01002 от 20.10.2026'));
 
     const list = await listDeliveries(now);
-    assert.deepEqual(list.totals, { monthKop: 1575000, monthPacks: 11, drafts: 1, suppliers: 2, memoryItems: 11 });
+    assert.deepEqual(list.totals, { monthKop: 1575000, monthGrams: 2025, drafts: 1, suppliers: 2, memoryItems: 11 });
     assert.equal(list.items.length, 4);
     assert.ok(list.items.some((item) => item.kind === 'start'));
 
@@ -413,7 +426,7 @@ test.describe('список и удаление', () => {
     assert.equal(draft.totalKop, 2227000);
 
     const received = list.items.find((item) => item.id === card.id)!;
-    assert.equal(received.packs, 11);
+    assert.equal(received.grams, 2025);
     assert.equal(received.receivedAt, '2026-10-16T12:00:00.000Z');
   });
 
