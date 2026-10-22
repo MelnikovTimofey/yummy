@@ -144,6 +144,26 @@ function Toast({ toast }) {
   );
 }
 
+// Панель выбранных: одно действие на всех, одна отмена на всех.
+function BulkBar({ rows, onClear, onEmpty }) {
+  if (!rows.length) return null;
+  const skip = rows.filter((r) => r.status === 'out' || r.status === 'plan').length;
+  const stop = rows.every((r) => r.status === 'stop');
+  return (
+    <PaOverlay>
+      <div className="pa-bulk" role="toolbar" aria-label="Выбранные табаки">
+        <b>Выбрано {rows.length}</b>
+        <span className="inv-faint">{rows.slice(0, 3).map((r) => r.name).join(', ')}{rows.length > 3 ? ' и ещё ' + (rows.length - 3) : ''}</span>
+        <span className="grow" />
+        <MasterButton size="sm" onClick={onEmpty}>Закончились{skip ? ' · ' + (rows.length - skip) : ''} <span className="inv-kbd" style={{ marginLeft: 6 }}>E</span></MasterButton>
+        <MasterButton size="sm" variant="ghost">{stop ? 'Снять стоп' : 'Стоп для гостей'}</MasterButton>
+        <MasterButton size="sm" variant="ghost">Держим постоянно…</MasterButton>
+        <MasterIconButton label="Снять выделение" small onClick={onClear}><Ic name="X" size={14} /></MasterIconButton>
+      </div>
+    </PaOverlay>
+  );
+}
+
 function Actions({ row, pop, setPop, onMark }) {
   const ref = React.useRef(null);
   const open = pop === row.id;
@@ -158,19 +178,27 @@ function Actions({ row, pop, setPop, onMark }) {
   );
 }
 
-function ShelfTable({ onOpen, pop, setPop, onMark }) {
+function Check({ on, mixed, onClick, label }) {
+  return <span role="checkbox" aria-checked={mixed ? 'mixed' : on} aria-label={label} className={'pa-check' + (on ? ' on' : '') + (mixed ? ' mixed' : '')} onClick={(e) => { e.stopPropagation(); onClick(); }}>{on ? '✓' : mixed ? '–' : ''}</span>;
+}
+
+function ShelfTable({ rows, onOpen, pop, setPop, onMark, selected, setSelected }) {
+  const ids = SHELF.map((r) => r.id);
+  const toggle = (id) => setSelected(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   return (
     <MasterList
-      onRowClick={(row) => onOpen(row.id)}
+      onRowClick={(row) => (selected.length ? toggle(row.id) : onOpen(row.id))}
+      selectedIds={selected}
       columns={[
+        { key: 'sel', label: <Check on={selected.length === ids.length} mixed={selected.length > 0 && selected.length < ids.length} label="Выбрать все" onClick={() => setSelected(selected.length ? [] : ids)} />, width: '28px', render: (r) => <Check on={selected.includes(r.id)} label={'Выбрать ' + r.name} onClick={() => toggle(r.id)} /> },
         { key: 'name', label: 'ТАБАК', width: 'minmax(0,1.3fr)', render: (r) => <span className="inv-name"><b>{r.name}{PA_TRIAL_IDS.includes(r.id) ? <MasterTag tone="neutral" style={{ marginLeft: 8 }}>проба</MasterTag> : null}</b><span>{r.brand}</span></span> },
         { key: 'left', label: 'ОСТАТОК', width: '190px', render: (r) => <Level row={r} /> },
         { key: 'rate', label: 'РАСХОД', width: '130px', render: (r) => <MonthRate row={r} /> },
         { key: 'until', label: 'ХВАТИТ ДО', width: '170px', render: (r) => <Until row={r} /> },
         { key: 'arrived', label: 'ПРИХОД', width: '118px', render: (r) => <span className="inv-name"><b style={{ fontWeight: 400, fontSize: 13 }}>{r.arrived}</b><span>{r.supplier}</span></span> },
-        { key: 'actions', label: '', width: '200px', align: 'right', render: (r) => <Actions row={r} pop={pop} setPop={setPop} onMark={onMark} /> },
+        { key: 'actions', label: '', width: '200px', align: 'right', render: (r) => (selected.length ? null : <Actions row={r} pop={pop} setPop={setPop} onMark={onMark} />) },
       ]}
-      rows={SHELF}
+      rows={rows}
     />
   );
 }
@@ -502,6 +530,18 @@ function ShelfScreen({ init = {} }) {
   const [pop, setPop] = React.useState(init.pop || null);
   const [toast, setToast] = React.useState(null);
   const onMark = (row, text) => setToast({ title: row.brand + ' ' + row.name, text: 'осталось ' + text + '. Расход в месяц и «закончится» пересчитаны.' });
+  const [selected, setSelected] = React.useState(init.selected || []);
+  const [emptied, setEmptied] = React.useState(init.emptied || []);
+  const rows = SHELF.map((r) => (emptied.includes(r.id) ? { ...r, left: 0, status: 'out', until: 'закончился сегодня', days: 0 } : r));
+  const chosen = rows.filter((r) => selected.includes(r.id));
+  const onBulkEmpty = () => {
+    const done = chosen.filter((r) => r.status !== 'out' && r.status !== 'plan');
+    const skipped = chosen.length - done.length;
+    setEmptied([...emptied, ...done.map((r) => r.id)]);
+    setSelected([]);
+    setToast({ title: 'Закончились: ' + done.length, text: 'гости их больше не видят. Миксов скрыто: ' + done.reduce((n, r) => n + r.mixes, 0) + '. Держим постоянно — добавлены в «К заказу».' + (skipped ? ' Пропущено ' + skipped + ': уже закончились.' : '') });
+  };
+  React.useEffect(() => { if (init.bulkToast) onBulkEmpty(); }, []);
   const s = GR.stats;
   const count = init.unknown ? 5 : 7;
   return (
@@ -529,7 +569,9 @@ function ShelfScreen({ init = {} }) {
             { label: 'ЗАКОНЧИЛИСЬ', value: s.out, hint: 'держим постоянно — в «К заказу»', tone: 'danger' },
             { label: 'В МЕСЯЦ УХОДИТ', value: '≈ 16 кг', hint: '≈ 540 г в день · 30 чаш по 18 г' },
           ]} />
-          <ShelfTable onOpen={setDrawer} pop={pop} setPop={setPop} onMark={onMark} />
+          <ShelfTable rows={rows} onOpen={setDrawer} pop={pop} setPop={setPop} onMark={onMark} selected={selected} setSelected={setSelected} />
+          <BulkBar rows={chosen} onClear={() => setSelected([])} onEmpty={onBulkEmpty} />
+          <div className="inv-keys"><span><b className="inv-kbd">X</b> выбрать строку</span><span><b className="inv-kbd">Shift</b> + клик — диапазон</span><span><b className="inv-kbd">E</b> выбранные закончились</span><span><b className="inv-kbd">Esc</b> снять выделение</span></div>
         </>
       ) : view === 'reorder' ? <Reorder copied={init.copied} unknown={init.unknown} /> : <Purchase sub={init.sub} noBudget={init.noBudget} few={init.few} />}
       <Drawer key={drawer} id={drawer} onClose={() => setDrawer(null)} onMark={onMark} />
@@ -550,12 +592,19 @@ function Settings({ onClose }) {
           <span className="inv-muted">Из них считаются чаши в прогнозе, «Заканчивается», «К заказу» и бюджет в «Закупке».</span>
         </div>
         <div className="pa-dlg-body">
-          <label className="pa-field">Граммовка чаши, г<span className="gr-input"><b>18</b></span></label>
-          <label className="pa-field">Срок поставки, дней<span className="gr-input"><b>7</b></span></label>
-          <label className="pa-field wide">Бюджет на табак, ₽ в месяц<span className="gr-input on"><b>150 000</b><span>₽</span></span>
-            <span className="inv-faint" style={{ fontSize: 12 }}>Необязательно. Покажем, сколько из него съедает база и сколько остаётся на то, чего нет, и на пробы.</span>
+          <label className="pa-field">Граммовка чаши, г<span className="gr-input"><b>18</b></span>
+            <span className="pa-help">Сколько табака уходит на одну чашу. Из неё — «чаш сегодня» в прогнозе и себестоимость чаши.</span>
           </label>
-          <p className="hint wide" style={{ margin: 0 }}>Интервал между поставками считается сам по принятым счетам: сейчас примерно раз в {PA.interval.days} дней.</p>
+          <label className="pa-field">Срок поставки, дней<span className="gr-input"><b>7</b></span>
+            <span className="pa-help">Сколько дней от заявки поставщику до табака на полке. Табак, который закончится раньше, — «Заканчивается» и в «К заказу»: заказать сейчас, иначе полка опустеет до поставки.</span>
+          </label>
+          <label className="pa-field wide">Бюджет на табак, ₽ в месяц<span className="gr-input on"><b>150 000</b><span>₽</span></span>
+            <span className="pa-help">Сколько в месяц можно потратить на табак. Необязательно. Покажем, сколько съедает база — табаки «держим постоянно», — и сколько остаётся на то, чего нет, и на пробы.</span>
+          </label>
+          <div className="pa-calc wide">
+            <Ic name="Calculator" size={14} />
+            <span><b>Считается само:</b> интервал между поставками — по принятым счетам, сейчас примерно раз в {PA.interval.days} дней. С ним «К заказу» видит до {PA.interval.horizon}: {PA.interval.days} дней до следующей заявки + 7 дней поставки.</span>
+          </div>
         </div>
         <div className="pa-dlg-foot">
           <MasterButton variant="ghost" onClick={onClose}>Отмена</MasterButton>
@@ -622,7 +671,9 @@ function PaApp_({ start = 'shelf', init = {} }) {
 }
 
 // ── Телефон: отметка пробы у стойки ──
-function MShelf({ sheet }) {
+function MShelf({ sheet, select }) {
+  const [picked, setPicked] = React.useState(select ? ['bb-cane', 'bb-pear', 'bb-rasp'] : []);
+  const pick = (id) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const [mark, setMark] = React.useState(null);
   const [open, setOpen] = React.useState(sheet ? 'bb-rasp' : null);
   const [frac, setFrac] = React.useState(null);
@@ -631,10 +682,10 @@ function MShelf({ sheet }) {
     <div className="phone">
       <header className="m-top">
         <img src={PA_MARK} alt="" />
-        <h1>Полка</h1>
-        <MasterIconButton label="К заказу"><Ic name="ShoppingCart" /></MasterIconButton>
+        <h1>{select ? 'Выбрано ' + picked.length : 'Полка'}</h1>
+        {select ? <button className="m-ghost-btn" style={{ height: 34 }}>Готово</button> : <><button className="m-ghost-btn" style={{ height: 34 }}>Выбрать</button><MasterIconButton label="К заказу"><Ic name="ShoppingCart" /></MasterIconButton></>}
       </header>
-      <div className="m-body">
+      <div className="m-body" style={select ? { bottom: 118 } : null}>
         <div className="m-search"><Ic name="Search" size={16} /> Табак или бренд</div>
         <div className="m-chips">
           <FilterChip active count={269}>Все</FilterChip>
@@ -644,24 +695,32 @@ function MShelf({ sheet }) {
         {rows.map((r) => {
           const trial = PA.trials.find((t) => t.id === r.id);
           return (
-            <article className="m-card" key={r.id}>
-              <span className="inv-name"><b>{r.name}</b><span>{r.brand}</span></span>
+            <article className={'m-card' + (picked.includes(r.id) ? ' m-picked' : '')} key={r.id} onClick={select ? () => pick(r.id) : undefined}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 }}>{select ? <Check on={picked.includes(r.id)} label={'Выбрать ' + r.name} onClick={() => pick(r.id)} /> : null}<span className="inv-name"><b>{r.name}</b><span>{r.brand}</span></span></div>
               <span style={{ fontSize: 13, textAlign: 'right' }}><Until row={r} /></span>
               <div className="m-card-meta"><Level row={r} /><span style={{ fontSize: 13 }}><MonthRate row={r} /></span></div>
-              {trial ? (
+              {trial && !select ? (
                 <div className="m-trial">
                   <span>Проба · как зашла?</span>
                   <TrialMark value={r.id === 'bb-pear' ? 'yes' : mark} onChange={setMark} />
                 </div>
               ) : null}
-              <div className="m-acts">
-                <button className="m-ghost-btn" onClick={() => setOpen(r.id)}>Осталось…</button>
-                <button className="m-empty-btn">Закончился</button>
-              </div>
+              {select ? null : (
+                <div className="m-acts">
+                  <button className="m-ghost-btn" onClick={() => setOpen(r.id)}>Осталось…</button>
+                  <button className="m-empty-btn">Закончился</button>
+                </div>
+              )}
             </article>
           );
         })}
       </div>
+      {select ? (
+        <div className="m-bulk">
+          <button className="m-big" disabled={!picked.length}>Закончились · {picked.length}</button>
+          <div className="m-acts" style={{ gridColumn: 'auto' }}><button className="m-ghost-btn">Стоп для гостей</button><button className="m-ghost-btn">Держим постоянно…</button></div>
+        </div>
+      ) : null}
       <nav className="m-nav"><span>Дашборд</span><span className="on">Полка</span><span>Поставки</span><span>Ещё</span></nav>
       {open ? (() => {
         const row = SHELF.find((r) => r.id === open);
@@ -701,6 +760,9 @@ const PA_SHOTS = [
   { id: 'reorder-copied', group: 'order', name: 'К заказу · текст заявки', note: 'Только названия — объём мастер впишет в чате сам.', start: 'shelf', init: { view: 'reorder', copied: true }, tall: true },
   { id: 'shelf', group: 'order', name: 'Полка', note: '#323. Колонка «Расход» — в г/мес, как в «К заказу» и карточке. «Заканчивается» — до следующей поставки. Новинки помечены «проба».', start: 'shelf' },
   { id: 'shelf-left', group: 'order', name: 'Полка · «Сколько осталось?»', note: 'Без изменений с #306: доля ¾ ½ ⅓ ¼ от уровня после прихода или точно в граммах.', start: 'shelf', init: { pop: 'bb-rasp' } },
+  { id: 'shelf-bulk', group: 'bulk', name: 'Полка · выбрано 5', note: 'Чекбоксы слева, Shift — диапазон. Внизу панель: «Закончились», стоп, «держим постоянно». Клик по строке в режиме выбора — выбрать, а не открыть карточку.', start: 'shelf', init: { selected: ['bb-cane', 'ds-blackcurrant', 'bb-pear', 'ds-peach', 'sb-lemon'] } },
+  { id: 'shelf-bulk-done', group: 'bulk', name: 'Полка · закончились разом', note: 'Одна отмена на всех, 10 секунд. Уже закончившиеся пропускаются и называются в тосте.', start: 'shelf', init: { selected: ['bb-cane', 'ds-blackcurrant', 'bb-pear', 'ds-peach', 'sb-lemon'], bulkToast: true } },
+  { id: 'mobile-bulk', group: 'bulk', name: 'Телефон · выбрать несколько', note: '«Выбрать» в шапке → касание по карточке выбирает; внизу «Закончились · 3».', phone: true, select: true },
   { id: 'card', group: 'order', name: 'Карточка · прогноз', note: '#323. Расход — г/мес, под ним г/день. Остаток «≈ … · прогноз»: отметка была 17 ноя, дальше — по расходу.', start: 'shelf', init: { drawer: 'bb-rasp' }, tall: true },
   { id: 'card-exact', group: 'order', name: 'Карточка · указал мастер', note: 'Мастер взвесил сегодня: остаток без «≈», подпись «указал мастер».', start: 'shelf', init: { drawer: 'bb-cane' }, tall: true },
   { id: 'card-trial', group: 'order', name: 'Карточка пробы', note: '#329. Отметка «зашло / не зашло» — одно касание, можно поменять.', start: 'shelf', init: { drawer: 'bb-pear' }, tall: true },
@@ -720,7 +782,7 @@ const PA_SHOTS = [
 ];
 
 function ShotView({ shot }) {
-  if (shot.phone) return <MShelf sheet={shot.sheet} />;
+  if (shot.phone) return <MShelf sheet={shot.sheet} select={shot.select} />;
   return <PaDesk tall={shot.tall}><PaApp_ start={shot.start} init={shot.init} /></PaDesk>;
 }
 
@@ -754,6 +816,7 @@ function Board() {
         <PaDesk tall><PaApp_ start="shelf" init={{ view: 'purchase' }} /></PaDesk>
       </section>
       <section className="board-section"><h2 className="board-h2">Прогноз вместо количества</h2><div className="board-row">{section('order')}</div></section>
+      <section className="board-section"><h2 className="board-h2">Несколько табаков разом</h2><div className="board-row">{section('bulk')}</div></section>
       <section className="board-section"><h2 className="board-h2">Бюджет</h2><div className="board-row">{section('budget')}</div></section>
       <section className="board-section"><h2 className="board-h2">Закупка</h2><div className="board-row">{section('purchase')}</div></section>
       <section className="board-section"><h2 className="board-h2">Телефон за стойкой</h2><div className="board-row">{section('mobile')}</div></section>
