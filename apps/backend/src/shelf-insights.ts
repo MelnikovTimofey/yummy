@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { prisma } from './db';
 import type { DeliveryStatus } from './deliveries';
-import { loadShelf, loadShelfHistory, type ShelfRecord } from './shelf';
+import { horizonView, loadShelf, loadShelfHistory, type HorizonView, type ShelfRecord } from './shelf';
 import {
+  baseBudget,
   bowlCost,
   consumptionByPeriod,
   gramPrice,
@@ -13,6 +14,7 @@ import {
   type ShelfForecast,
   type ShelfSettings,
   type ShelfStatus,
+  type SupplyInterval,
 } from './stock';
 
 export { weekPeriods };
@@ -35,29 +37,42 @@ export type ReorderItemView = {
   endsAt: string | null;
   rate: number | null;
   rateKind: ShelfForecast['rateKind'];
+  monthGrams: number | null;
   leftGrams: number | null;
-  quantityGrams: number;
   gramPriceKop: number | null;
+  // Закончится не за срок поставки, а до следующей поставки по интервалу.
+  byInterval: boolean;
 };
 
 export type ReorderGroup = {
   supplier: SupplierRef | null;
   lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
   items: ReorderItemView[];
-  // null — хоть у одной строки нет цены грамма.
-  sumKop: number | null;
 };
 
 export type ReorderView = {
   groups: ReorderGroup[];
   settings: ShelfSettings;
+  interval: SupplyInterval;
+  horizon: HorizonView;
   text: Array<{ supplierId: string | null; text: string }>;
+};
+
+// База — Σ расход в месяц × цена грамма по «держим постоянно»; unknownCount — без
+// цены или расхода, в базу не вошли. leftKop — остаётся на то, чего нет, и пробы.
+export type BudgetView = {
+  budgetKop: number | null;
+  baseKop: number;
+  baseCount: number;
+  unknownCount: number;
+  leftKop: number | null;
 };
 
 export type ShelfDashboard = {
   today: { grams: number; bowls: number; weekdayFactor: number | null; weekday: number };
   ending: Array<{ tobacco: TobaccoRef; status: ShelfStatus; daysLeft: number | null; endsAt: string | null }>;
   spend: { month: string; bySupplier: Array<{ supplier: SupplierRef | null; sumKop: number }>; totalKop: number };
+  budget: BudgetView;
   bowlCostKop: number | null;
   stockValueKop: number;
   weekly: Array<{ from: string; to: string; grams: number; partial: boolean }>;
@@ -77,14 +92,13 @@ const tobaccoOf = (record: ShelfRecord): TobaccoRef => ({
 
 // --- к заказу ----------------------------------------------------------------
 
-type OrderLine = { tobacco: Pick<TobaccoRef, 'manufacturer' | 'lineName' | 'name'>; quantityGrams: number };
+type OrderLine = { tobacco: Pick<TobaccoRef, 'manufacturer' | 'lineName' | 'name'> };
 
+// Только названия: сколько заказать, мастер впишет сам (#323).
 export const orderText = (lines: OrderLine[]) =>
   [
     'Добрый день! Заказ:',
-    ...lines.map(({ tobacco, quantityGrams }) =>
-      `${[tobacco.manufacturer, tobacco.lineName, tobacco.name].filter(Boolean).join(' ')} — ${quantityGrams} г`,
-    ),
+    ...lines.map(({ tobacco }) => [tobacco.manufacturer, tobacco.lineName, tobacco.name].filter(Boolean).join(' ')),
     'Спасибо!',
   ].join('\n');
 
@@ -113,17 +127,17 @@ const loadLastInvoices = async (supplierIds: string[]) => {
 };
 
 export const getReorder = async (now = new Date()): Promise<ReorderView> => {
-  const { records, items, forecasts, settings } = await loadShelf(now);
+  const { records, items, forecasts, settings, interval, horizon } = await loadShelf(now);
   const byId = new Map(records.map((record, index) => [record.tobaccoId, { record, item: items[index], forecast: forecasts[index] }]));
 
   // reorderList уже отсортирован по срочности: группы идут в порядке первой строки,
   // «Поставщик не выбран» — последней.
   const groups = new Map<string | null, ReorderGroup>();
-  for (const line of reorderList(items, forecasts, settings)) {
+  for (const line of reorderList(items, forecasts, horizon)) {
     const { record, item, forecast } = byId.get(line.tobaccoId)!;
     const supplier = lastSupplier(record);
     const key = supplier?.id ?? null;
-    if (!groups.has(key)) groups.set(key, { supplier, lastInvoice: null, items: [], sumKop: null });
+    if (!groups.has(key)) groups.set(key, { supplier, lastInvoice: null, items: [] });
     groups.get(key)!.items.push({
       tobacco: tobaccoOf(record),
       status: line.status,
@@ -131,9 +145,10 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
       endsAt: iso(line.endsAt),
       rate: forecast.rate,
       rateKind: forecast.rateKind,
+      monthGrams: forecast.monthGrams,
       leftGrams: forecast.leftGrams === null ? null : Math.round(forecast.leftGrams),
-      quantityGrams: line.quantityGrams,
       gramPriceKop: gramPrice(item.entries),
+      byInterval: line.byInterval,
     });
   }
 
@@ -141,17 +156,17 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
   const ordered = [...groups.values()].sort((a, b) => Number(a.supplier === null) - Number(b.supplier === null));
   const result = ordered.map((group) => {
     const invoice = group.supplier ? invoices.get(group.supplier.id) : undefined;
-    const priced = group.items.every((item) => item.gramPriceKop !== null);
     return {
       ...group,
       lastInvoice: invoice ? { number: invoice.number, date: invoice.date, status: invoice.status } : null,
-      sumKop: priced ? Math.round(sum(group.items.map((item) => item.quantityGrams * item.gramPriceKop!))) : null,
     };
   });
 
   return {
     groups: result,
     settings,
+    interval,
+    horizon: horizonView(horizon, now),
     text: result.map((group) => ({ supplierId: group.supplier?.id ?? null, text: orderText(group.items) })),
   };
 };
@@ -228,8 +243,8 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
   ]);
 
   const factor = weekdayFactor(smoke.events, smoke.first, now);
-  const base = todayForecast(forecasts, settings.bowlGrams);
-  const grams = base.grams * (factor ?? 1);
+  const today = todayForecast(forecasts, settings.bowlGrams);
+  const grams = today.grams * (factor ?? 1);
 
   const prices = items.map((item) => gramPrice(item.entries));
   const cost = bowlCost(prices.filter((_, index) => forecasts[index].inStock), settings.bowlGrams);
@@ -238,6 +253,14 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
       forecast.inStock && prices[index] !== null ? (forecast.leftGrams ?? 0) * prices[index]! : 0,
     ),
   );
+
+  const base = baseBudget(
+    forecasts
+      .map((forecast, index) => ({ forecast, record: records[index], price: prices[index] }))
+      .filter(({ record }) => record.status === 'active' && record.keepStocked)
+      .map(({ forecast, price }) => ({ monthGrams: forecast.monthGrams, gramPriceKop: price })),
+  );
+  const baseKop = Math.round(base.kop);
 
   const periods = weekPeriods(now, WEEKS);
   const weekGrams = periods.map(() => 0);
@@ -251,6 +274,13 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
     today: { grams, bowls: grams / settings.bowlGrams, weekdayFactor: factor, weekday: ((now.getDay() + 6) % 7) + 1 },
     ending: endingOf(records, forecasts),
     spend,
+    budget: {
+      budgetKop: settings.budgetKop,
+      baseKop,
+      baseCount: base.count,
+      unknownCount: base.unknown,
+      leftKop: settings.budgetKop === null ? null : settings.budgetKop - baseKop,
+    },
     bowlCostKop: cost === null ? null : Math.round(cost),
     stockValueKop: Math.round(stockValue),
     weekly: periods.map((period, index) => ({
