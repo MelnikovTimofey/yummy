@@ -1,20 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  baseBudget,
   bowlCost,
   consumptionByPeriod,
   consumptionRate,
   forecastShelf,
   fractionGrams,
   gramPrice,
+  horizonOf,
+  isTrial,
   reorderList,
   segments,
   shelfForecast,
   stockState,
+  supplyInterval,
   todayForecast,
   weekdayFactor,
   withBrandFallback,
-  DEFAULT_SETTINGS,
+  type Horizon,
   type Rate,
   type ShelfItem,
   type StockEntry,
@@ -232,9 +236,12 @@ test.describe('fractionGrams', () => {
 
 // --- прогноз -----------------------------------------------------------------
 
+// Срок поставки 7 дней, интервала нет — как до #325.
+const LEAD: Horizon = { leadDays: 7, days: 7 };
+
 test.describe('shelfForecast', () => {
   const now = day(20);
-  const settings = DEFAULT_SETTINGS;
+  const settings = LEAD;
 
   test('ok: left, days and date', () => {
     const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(300, 10)] }), own(10), now, settings);
@@ -250,6 +257,19 @@ test.describe('shelfForecast', () => {
   test('ending when days left fit into the lead time', () => {
     const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0), count(100, 15)] }), own(10), now, settings);
     assert.equal(forecast.status, 'ending');
+  });
+
+  test('ending when days left fit into the horizon: interval + lead time', () => {
+    // хватит на 15 дней: за срок поставки не кончится, до следующей поставки — да
+    const entries = [receipt(400, 0), count(200, 15)];
+    assert.equal(shelfForecast(item({ tobaccoId: 't', entries }), own(10), now, LEAD).status, 'ok');
+    assert.equal(shelfForecast(item({ tobaccoId: 't', entries }), own(10), now, { leadDays: 7, days: 17 }).status, 'ending');
+  });
+
+  test('a month of consumption is grams per day × 30', () => {
+    const forecast = shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0)] }), own(12.5), now, settings);
+    assert.equal(forecast.monthGrams, 375);
+    assert.equal(shelfForecast(item({ tobaccoId: 't', entries: [receipt(400, 0)] }), none, now, settings).monthGrams, null);
   });
 
   test('check when the estimate fell below 10 % of the level', () => {
@@ -306,7 +326,7 @@ test.describe('forecastShelf', () => {
       item({ tobaccoId: 'c', brand: 'X', entries: [receipt(400, 15)] }),
       item({ tobaccoId: 'd', brand: 'Y', entries: [receipt(400, 15)] }),
     ];
-    const [, , c, d] = forecastShelf(items, day(20), DEFAULT_SETTINGS);
+    const [, , c, d] = forecastShelf(items, day(20), LEAD);
     assert.equal(c.rateKind, 'brand');
     approx(c.rate, 30);
     assert.equal(d.rateKind, 'none');
@@ -320,35 +340,125 @@ test.describe('todayForecast', () => {
       item({ tobaccoId: 'b', stopped: true, entries: [receipt(400, 0), count(200, 10)] }),
       item({ tobaccoId: 'c', entries: [receipt(400, 0), count(0, 10)] }),
     ];
-    const today = todayForecast(forecastShelf(items, day(12), DEFAULT_SETTINGS), 18);
+    const today = todayForecast(forecastShelf(items, day(12), LEAD), 18);
     approx(today.grams, 10 + 20);
     approx(today.bowls, 30 / 18);
   });
 });
 
 test.describe('reorderList', () => {
-  test('needs for 21 days minus what is left, rounded up to 50 g', () => {
-    const items = [
-      // расход 16 г/день, к 20-му дню осталось 80 г: 16 × 21 − 80 = 256 → 300
-      item({ tobaccoId: 'ending', entries: [receipt(400, 0), count(96, 19)] }),
-      item({ tobaccoId: 'out', entries: [receipt(250, 0), count(0, 10)] }),
-      item({ tobaccoId: 'plan', plan: true, keepStocked: false }),
-      item({ tobaccoId: 'enough', entries: [receipt(1000, 0), count(900, 10)] }),
-      item({ tobaccoId: 'not-kept', keepStocked: false, entries: [receipt(250, 0), count(0, 10)] }),
-    ];
-    const lines = reorderList(items, forecastShelf(items, day(20), DEFAULT_SETTINGS), DEFAULT_SETTINGS);
-    assert.deepEqual(lines.map((line) => [line.tobaccoId, line.status, line.quantityGrams]), [
-      ['out', 'out', 550],
-      // своего расхода нет — медиана бренда (16, 25, 10, 25 → 20,5) × 21 = 430,5 → 450
-      ['plan', 'plan', 450],
-      ['ending', 'ending', 300],
+  const scenario = () => [
+    // расход 16 г/день, к 20-му дню осталось 80 г — хватит на 5 дней
+    item({ tobaccoId: 'ending', entries: [receipt(400, 0), count(96, 19)] }),
+    item({ tobaccoId: 'out', entries: [receipt(250, 0), count(0, 10)] }),
+    item({ tobaccoId: 'plan', plan: true, keepStocked: false }),
+    // расход 12 г/день, к 20-му дню осталось 160 г — хватит на 13 дней
+    item({ tobaccoId: 'by-interval', entries: [receipt(400, 0), count(280, 10)] }),
+    item({ tobaccoId: 'enough', entries: [receipt(1000, 0), count(900, 10)] }),
+    item({ tobaccoId: 'not-kept', keepStocked: false, entries: [receipt(250, 0), count(0, 10)] }),
+  ];
+
+  test('missing first, then by the date it ends; no quantity', () => {
+    const items = scenario();
+    const lines = reorderList(items, forecastShelf(items, day(20), LEAD), LEAD);
+    assert.deepEqual(lines.map((line) => [line.tobaccoId, line.status, line.byInterval]), [
+      ['out', 'out', false],
+      ['plan', 'plan', false],
+      ['ending', 'ending', false],
     ]);
+    assert.equal('quantityGrams' in lines[0], false);
   });
 
-  test('without a rate orders what came last time', () => {
-    const items = [item({ tobaccoId: 'a', entries: [receipt(375, 0), count(0, 0)] })];
-    const [line] = reorderList(items, forecastShelf(items, day(1), DEFAULT_SETTINGS), DEFAULT_SETTINGS);
-    assert.equal(line.quantityGrams, 400);
+  test('with an interval takes what ends before the next delivery arrives', () => {
+    const items = scenario();
+    const horizon = horizonOf(7, { days: 10, invoices: 4 });
+    const lines = reorderList(items, forecastShelf(items, day(20), horizon), horizon);
+    assert.deepEqual(lines.map((line) => [line.tobaccoId, line.status, line.byInterval]), [
+      ['out', 'out', false],
+      ['plan', 'plan', false],
+      ['ending', 'ending', false],
+      ['by-interval', 'ending', true],
+    ]);
+  });
+});
+
+// --- интервал поставок -------------------------------------------------------
+
+test.describe('supplyInterval', () => {
+  const NOW = new Date(2026, 10, 19, 15);
+  const back = (days: number, hour = 12) => new Date(2026, 10, 19 - days, hour);
+
+  test('no or two invoices: no interval yet', () => {
+    assert.deepEqual(supplyInterval([], NOW), { days: null, invoices: 0 });
+    assert.deepEqual(supplyInterval([back(20), back(10)], NOW), { days: null, invoices: 2 });
+  });
+
+  test('three and more: median of days between them', () => {
+    assert.deepEqual(supplyInterval([back(30), back(20), back(8)], NOW), { days: 11, invoices: 3 });
+    assert.deepEqual(supplyInterval([back(40), back(30), back(20), back(10)], NOW), { days: 10, invoices: 4 });
+  });
+
+  test('an outlier does not move the median', () => {
+    assert.deepEqual(supplyInterval([back(85), back(30), back(20), back(10), back(0)], NOW), { days: 10, invoices: 5 });
+  });
+
+  test('order of dates does not matter, calendar days count, not hours', () => {
+    assert.deepEqual(supplyInterval([back(10, 23), back(30, 1), back(20, 9)], NOW), { days: 10, invoices: 3 });
+  });
+
+  test('invoices of one day are one delivery day', () => {
+    assert.deepEqual(supplyInterval([back(20, 10), back(20, 18), back(10)], NOW), { days: null, invoices: 3 });
+    assert.deepEqual(supplyInterval([back(30), back(20, 10), back(20, 18), back(10)], NOW), { days: 10, invoices: 4 });
+  });
+
+  test('only the last 90 days count', () => {
+    assert.deepEqual(supplyInterval([back(120), back(100), back(80), back(70)], NOW), { days: null, invoices: 2 });
+    assert.deepEqual(supplyInterval([back(90), back(80), back(70)], NOW), { days: 10, invoices: 3 });
+  });
+
+  test('horizon: interval + lead time, without an interval — lead time', () => {
+    assert.deepEqual(horizonOf(7, { days: 10, invoices: 6 }), { leadDays: 7, days: 17 });
+    assert.deepEqual(horizonOf(7, { days: null, invoices: 2 }), { leadDays: 7, days: 7 });
+  });
+});
+
+// --- откуда остаток ----------------------------------------------------------
+
+test.describe('leftSource', () => {
+  const NOW = new Date(2026, 10, 19, 20);
+  const at = (dayOfNovember: number, hour: number) => new Date(2026, 10, dayOfNovember, hour);
+  const make = (kind: StockEntry['kind'], grams: number, when: Date): StockEntry => ({ id: `${kind}-${(seq += 1)}`, kind, grams, at: when, priceKop: null });
+  const source = (entries: StockEntry[]) => shelfForecast(item({ tobaccoId: 't', entries }), own(10), NOW, LEAD).leftSource;
+
+  test('a count made today is what the master said', () => {
+    assert.equal(source([make('receipt', 400, at(1, 12)), make('count', 120, at(19, 9))]), 'mark');
+  });
+
+  test('a count made yesterday is already a forecast', () => {
+    assert.equal(source([make('receipt', 400, at(1, 12)), make('count', 120, at(18, 23))]), 'forecast');
+  });
+
+  test('after «Закончился» zero is exact on any day', () => {
+    assert.equal(source([make('receipt', 400, at(1, 12)), make('count', 0, at(10, 12))]), 'mark');
+  });
+
+  test('a receipt after today’s count turns it back into a forecast', () => {
+    assert.equal(source([make('count', 120, at(19, 9)), make('receipt', 200, at(19, 11))]), 'forecast');
+    assert.equal(source([make('receipt', 400, at(1, 12))]), 'forecast');
+  });
+
+  test('nothing received — no left and no source', () => {
+    assert.equal(source([]), null);
+  });
+});
+
+// --- проба -------------------------------------------------------------------
+
+test.describe('isTrial', () => {
+  test('first came to the shelf within the last 60 days', () => {
+    assert.equal(isTrial(day(0), day(60)), true);
+    assert.equal(isTrial(day(0), day(61)), false);
+    assert.equal(isTrial(null, day(1)), false);
   });
 });
 
@@ -363,6 +473,20 @@ test.describe('money', () => {
   test('bowl cost averages gram prices that are known', () => {
     approx(bowlCost([700, null, 900], 18), 18 * 800);
     assert.equal(bowlCost([null], 18), null);
+  });
+
+  test('base: a month of consumption × gram price, unknown ones are counted, not summed', () => {
+    assert.deepEqual(
+      baseBudget([
+        { monthGrams: 300, gramPriceKop: 800 },
+        { monthGrams: 150, gramPriceKop: 760 },
+        { monthGrams: null, gramPriceKop: 800 },
+        { monthGrams: 200, gramPriceKop: null },
+        { monthGrams: 0, gramPriceKop: 900 },
+      ]),
+      { kop: 300 * 800 + 150 * 760, count: 5, unknown: 2 },
+    );
+    assert.deepEqual(baseBudget([]), { kop: 0, count: 0, unknown: 0 });
   });
 });
 

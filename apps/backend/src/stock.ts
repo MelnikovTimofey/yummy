@@ -18,7 +18,13 @@ export type Rate =
   | { gramsPerDay: number; kind: 'own' | 'brand' }
   | { gramsPerDay: null; kind: 'none' };
 
-export type ShelfSettings = { bowlGrams: number; leadDays: number };
+export type ShelfSettings = { bowlGrams: number; leadDays: number; budgetKop: number | null };
+
+// Интервал поставок по принятым счетам (#325): days — null, пока дней поставок меньше трёх.
+export type SupplyInterval = { days: number | null; invoices: number };
+
+// «Заканчивается» и «К заказу» — что закончится в пределах days: интервал + срок поставки.
+export type Horizon = { leadDays: number; days: number };
 
 export type ShelfItem = {
   tobaccoId: string;
@@ -43,6 +49,9 @@ export type StockState = {
   spent: boolean;
 };
 
+// mark — остаток указал мастер: отметка сегодня или ноль после «Закончился»; иначе прогноз.
+export type LeftSource = 'mark' | 'forecast';
+
 export type ShelfForecast = {
   tobaccoId: string;
   status: ShelfStatus;
@@ -50,7 +59,9 @@ export type ShelfForecast = {
   guestAvailable: boolean;
   rate: number | null;
   rateKind: Rate['kind'];
+  monthGrams: number | null;
   leftGrams: number | null;
+  leftSource: LeftSource | null;
   fullGrams: number | null;
   daysLeft: number | null;
   endsAt: Date | null;
@@ -59,18 +70,20 @@ export type ShelfForecast = {
 export type ReorderLine = {
   tobaccoId: string;
   status: ShelfStatus;
-  quantityGrams: number;
   daysLeft: number | null;
   endsAt: Date | null;
+  // Закончится не за срок поставки, а до следующей поставки по интервалу.
+  byInterval: boolean;
 };
 
-export const DEFAULT_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7 };
+export const DEFAULT_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7, budgetKop: null };
 
 const DAY_MS = 86_400_000;
 const RATE_WINDOW_DAYS = 60;
-const REORDER_DAYS = 21;
-const REORDER_STEP_GRAMS = 50;
-const REORDER_FALLBACK_GRAMS = 200;
+const MONTH_DAYS = 30;
+const INTERVAL_WINDOW_DAYS = 90;
+const INTERVAL_MIN_DAYS = 3;
+const TRIAL_WINDOW_DAYS = 60;
 const CHECK_SHARE = 0.1;
 const CORRECTION_MS = 30 * 60_000;
 const MIN_SEGMENT_MS = 6 * 3_600_000;
@@ -78,6 +91,8 @@ const WEEKDAY_WINDOW_DAYS = 28;
 const WEEKDAY_MIN_EVENTS = 50;
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+
+const localDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const ordered = (entries: StockEntry[]) =>
   entries
@@ -198,6 +213,26 @@ const median = (values: number[]) => {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
+// dates — даты принятых счетов (дата счёта, иначе дата приёмки). Счета одного дня —
+// одна поставка; дни — календарные в часовом поясе процесса.
+export const supplyInterval = (dates: Date[], now: Date): SupplyInterval => {
+  const windowStart = localDay(now).getTime() - INTERVAL_WINDOW_DAYS * DAY_MS;
+  const inWindow = dates.filter((date) => date.getTime() >= windowStart && date <= now);
+  const days = [...new Set(inWindow.map((date) => localDay(date).getTime()))].sort((a, b) => a - b);
+  if (days.length < INTERVAL_MIN_DAYS) return { days: null, invoices: inWindow.length };
+  const gaps = days.slice(1).map((day, index) => Math.round((day - days[index]) / DAY_MS));
+  return { days: Math.round(median(gaps)), invoices: inWindow.length };
+};
+
+export const horizonOf = (leadDays: number, interval: SupplyInterval): Horizon => ({
+  leadDays,
+  days: (interval.days ?? 0) + leadDays,
+});
+
+// Проба (#329) — табак, впервые пришедший на полку за 60 дней.
+export const isTrial = (firstReceiptAt: Date | null, now: Date) =>
+  firstReceiptAt !== null && now.getTime() - firstReceiptAt.getTime() <= TRIAL_WINDOW_DAYS * DAY_MS;
+
 // brandRates — собственные расходы других табаков того же бренда на полке.
 export const withBrandFallback = (rate: Rate, brandRates: number[]): Rate => {
   if (rate.kind !== 'none' || !brandRates.length) return rate;
@@ -227,7 +262,15 @@ export const stockState = (entries: StockEntry[], gramsPerDay: number | null, no
 
 export const fractionGrams = (fullGrams: number, fraction: number) => Math.round(fullGrams * fraction);
 
-export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: ShelfSettings): ShelfForecast => {
+// Ноль по учёту — «Закончился» или списано всё: точная цифра в любой день.
+const leftSourceOf = (entries: StockEntry[], state: StockState, now: Date): LeftSource | null => {
+  if (!state.received) return null;
+  if (state.bookGrams <= 0) return 'mark';
+  const last = ordered(entries).pop();
+  return last?.kind === 'count' && localDay(last.at).getTime() === localDay(now).getTime() ? 'mark' : 'forecast';
+};
+
+export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, horizon: Horizon): ShelfForecast => {
   const state = stockState(item.entries, rate.gramsPerDay, now);
   const inStock = state.bookGrams > 0;
   const daysLeft = inStock && rate.gramsPerDay ? state.leftGrams! / rate.gramsPerDay : null;
@@ -241,7 +284,7 @@ export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: 
         ? 'stop'
         : check
           ? 'check'
-          : daysLeft !== null && daysLeft <= settings.leadDays
+          : daysLeft !== null && daysLeft <= horizon.days
             ? 'ending'
             : 'ok';
 
@@ -252,7 +295,9 @@ export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: 
     guestAvailable: inStock && !item.stopped,
     rate: rate.gramsPerDay,
     rateKind: rate.kind,
+    monthGrams: rate.gramsPerDay === null ? null : rate.gramsPerDay * MONTH_DAYS,
     leftGrams: state.leftGrams,
+    leftSource: leftSourceOf(item.entries, state, now),
     fullGrams: state.fullGrams,
     daysLeft,
     endsAt: daysLeft === null ? null : new Date(now.getTime() + daysLeft * DAY_MS),
@@ -261,7 +306,7 @@ export const shelfForecast = (item: ShelfItem, rate: Rate, now: Date, settings: 
 
 // Прогноз всей полки: табак без своих данных получает медиану расхода
 // своего бренда.
-export const forecastShelf = (items: ShelfItem[], now: Date, settings: ShelfSettings): ShelfForecast[] => {
+export const forecastShelf = (items: ShelfItem[], now: Date, horizon: Horizon): ShelfForecast[] => {
   const rates = items.map((item) => consumptionRate(item.entries, now));
   const brandRates = new Map<string, number[]>();
   items.forEach((item, index) => {
@@ -269,7 +314,7 @@ export const forecastShelf = (items: ShelfItem[], now: Date, settings: ShelfSett
     if (rate.kind === 'own') brandRates.set(item.brand, [...(brandRates.get(item.brand) ?? []), rate.gramsPerDay]);
   });
   return items.map((item, index) =>
-    shelfForecast(item, withBrandFallback(rates[index], brandRates.get(item.brand) ?? []), now, settings),
+    shelfForecast(item, withBrandFallback(rates[index], brandRates.get(item.brand) ?? []), now, horizon),
   );
 };
 
@@ -278,28 +323,21 @@ export const todayForecast = (forecasts: ShelfForecast[], bowlGrams: number) => 
   return { grams, bowls: grams / bowlGrams };
 };
 
-const roundUpToStep = (grams: number) => Math.max(1, Math.ceil(grams / REORDER_STEP_GRAMS)) * REORDER_STEP_GRAMS;
-
-const lastReceipt = (entries: StockEntry[]) => ordered(entries).filter((entry) => entry.kind === 'receipt').pop();
-
-// Без расхода заказываем столько же, сколько пришло в прошлый раз.
-export const reorderList = (items: ShelfItem[], forecasts: ShelfForecast[], settings: ShelfSettings): ReorderLine[] => {
+// Сколько заказать, решает мастер (#323): строка — только что и когда закончится.
+export const reorderList = (items: ShelfItem[], forecasts: ShelfForecast[], horizon: Horizon): ReorderLine[] => {
   const byId = new Map(forecasts.map((forecast) => [forecast.tobaccoId, forecast]));
   const lines: ReorderLine[] = [];
   for (const item of items) {
     const forecast = byId.get(item.tobaccoId);
     if (!forecast || !(item.keepStocked || item.plan)) continue;
     const missing = forecast.status === 'out' || forecast.status === 'plan';
-    if (!missing && !(forecast.daysLeft !== null && forecast.daysLeft <= settings.leadDays)) continue;
-    const left = forecast.inStock ? forecast.leftGrams ?? 0 : 0;
+    if (!missing && !(forecast.daysLeft !== null && forecast.daysLeft <= horizon.days)) continue;
     lines.push({
       tobaccoId: item.tobaccoId,
       status: forecast.status,
-      quantityGrams: forecast.rate
-        ? roundUpToStep(forecast.rate * REORDER_DAYS - left)
-        : roundUpToStep(lastReceipt(item.entries)?.grams ?? REORDER_FALLBACK_GRAMS),
       daysLeft: forecast.daysLeft,
       endsAt: forecast.endsAt,
+      byInterval: !missing && forecast.daysLeft! > horizon.leadDays,
     });
   }
   const rank = (line: ReorderLine) =>
@@ -318,4 +356,15 @@ export const gramPrice = (entries: StockEntry[]) => {
 export const bowlCost = (gramPrices: Array<number | null>, bowlGrams: number) => {
   const known = gramPrices.filter((price): price is number => price !== null);
   return known.length ? (bowlGrams * sum(known)) / known.length : null;
+};
+
+// База в месяц (#326): Σ расход в месяц × цена грамма по табакам, которые держим
+// постоянно. Без цены или расхода табак не суммируется, а считается в unknown.
+export const baseBudget = (lines: Array<{ monthGrams: number | null; gramPriceKop: number | null }>) => {
+  const known = lines.filter((line) => line.monthGrams !== null && line.gramPriceKop !== null);
+  return {
+    kop: sum(known.map((line) => line.monthGrams! * line.gramPriceKop!)),
+    count: lines.length,
+    unknown: lines.length - known.length,
+  };
 };
