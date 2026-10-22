@@ -89,8 +89,71 @@ function Until({ row }) {
 }
 
 const PA_TRIAL_IDS = PA.trials.map((t) => t.id);
+const PA_FRACS = [['¾', 0.75], ['½', 0.5], ['⅓', 1 / 3], ['¼', 0.25]];
 
-function ShelfTable({ onOpen }) {
+// «Сколько осталось?» — без изменений с #306: доля от уровня после прихода или точные граммы.
+function LeftPop({ row, pos, onMark }) {
+  const [value, setValue] = React.useState('');
+  return (
+    <div className="inv-pop gr-pop" style={pos} onClick={(e) => e.stopPropagation()}>
+      <span className="inv-pop-label">Сколько осталось · после прихода {row.arrived} было {row.full} г</span>
+      <div className="gr-fracs">
+        {PA_FRACS.map(([f, k]) => (
+          <button key={f} className="gr-frac" onClick={() => onMark(row, f + ' — ' + Math.round(row.full * k) + ' г')}>{f}<small>{Math.round(row.full * k)} г</small></button>
+        ))}
+      </div>
+      <div className="inv-sep" />
+      <div className="gr-exact">
+        <label>Точно, если взвесили</label>
+        <span className={'gr-input' + (value ? ' on' : '')} onClick={() => setValue(value || '180')}><b>{value || <span className="inv-faint">—</span>}</b><span>г</span></span>
+        <MasterButton size="sm" variant={value ? 'primary' : 'ghost'} disabled={!value} onClick={() => onMark(row, value + ' г')}>Сохранить</MasterButton>
+      </div>
+      <p className="gr-note">Сейчас по расчёту ≈ {row.left} г. Отмечать не обязательно — отметка уточняет расход и прогноз.</p>
+    </div>
+  );
+}
+
+function usePos(open, ref) {
+  const [pos, setPos] = React.useState(null);
+  React.useLayoutEffect(() => {
+    if (!open || !ref.current) { setPos(null); return; }
+    const desk = ref.current.closest('.desk');
+    const a = ref.current.getBoundingClientRect();
+    const d = desk.getBoundingClientRect();
+    setPos(a.bottom - d.top > d.height * 0.55 ? { bottom: d.bottom - a.top + 4, right: d.right - a.right } : { top: a.bottom - d.top + 4, right: d.right - a.right });
+  }, [open]);
+  return pos;
+}
+
+function Toast({ toast }) {
+  if (!toast) return null;
+  return (
+    <PaOverlay>
+      <div className="inv-toast" role="status">
+        <Ic name="CircleCheck" />
+        <p><b>{toast.title}</b> — {toast.text}</p>
+        <span className="inv-toast-timer">10 с</span>
+        <MasterButton size="sm">Отменить</MasterButton>
+      </div>
+    </PaOverlay>
+  );
+}
+
+function Actions({ row, pop, setPop, onMark }) {
+  const ref = React.useRef(null);
+  const open = pop === row.id;
+  const pos = usePos(open, ref);
+  if (row.status === 'out' || row.status === 'plan') return <span className="inv-faint" style={{ fontSize: 12 }}>в «К заказу»</span>;
+  return (
+    <span className="cell-actions" ref={ref} onClick={(e) => e.stopPropagation()}>
+      <MasterButton size="sm" variant={row.status === 'check' ? 'primary' : 'ghost'} onClick={() => setPop(open ? null : row.id)}>{row.status === 'check' ? 'Отметить остаток' : 'Осталось…'}</MasterButton>
+      {row.status === 'check' ? null : <MasterButton size="sm">Закончился</MasterButton>}
+      {open && pos ? <PaOverlay><LeftPop row={row} pos={pos} onMark={(r, t) => { setPop(null); onMark(r, t); }} /></PaOverlay> : null}
+    </span>
+  );
+}
+
+function ShelfTable({ onOpen, pop, setPop, onMark }) {
   return (
     <MasterList
       onRowClick={(row) => onOpen(row.id)}
@@ -100,7 +163,7 @@ function ShelfTable({ onOpen }) {
         { key: 'rate', label: 'РАСХОД', width: '130px', render: (r) => <MonthRate row={r} /> },
         { key: 'until', label: 'ХВАТИТ ДО', width: '170px', render: (r) => <Until row={r} /> },
         { key: 'arrived', label: 'ПРИХОД', width: '118px', render: (r) => <span className="inv-name"><b style={{ fontWeight: 400, fontSize: 13 }}>{r.arrived}</b><span>{r.supplier}</span></span> },
-        { key: 'actions', label: '', width: '200px', align: 'right', render: () => <span className="cell-actions"><MasterButton size="sm" variant="ghost">Осталось…</MasterButton><MasterButton size="sm">Закончился</MasterButton></span> },
+        { key: 'actions', label: '', width: '200px', align: 'right', render: (r) => <Actions row={r} pop={pop} setPop={setPop} onMark={onMark} /> },
       ]}
       rows={GR.shelf}
     />
@@ -117,10 +180,11 @@ function TrialMark({ value, onChange, big }) {
   );
 }
 
-function Drawer({ id, onClose }) {
+function Drawer({ id, onClose, onMark }) {
   const row = GR.shelf.find((r) => r.id === id);
   const trial = PA.trials.find((t) => t.id === id);
   const [mark, setMark] = React.useState(trial ? trial.mark : null);
+  const [left, setLeft] = React.useState(false);
   if (!row) return null;
   const rasp = row.id === 'bb-rasp';
   return (
@@ -155,8 +219,15 @@ function Drawer({ id, onClose }) {
           <Level row={row} lg />
           <div style={{ display: 'flex', gap: 8 }}>
             <MasterButton variant="primary">Закончился</MasterButton>
-            <MasterButton>Сколько осталось…</MasterButton>
+            <MasterButton onClick={() => setLeft(!left)}>Сколько осталось…</MasterButton>
           </div>
+          {left ? (
+            <div className="gr-fracs" style={{ padding: 0 }}>
+              {PA_FRACS.map(([f, k]) => (
+                <button key={f} className="gr-frac" onClick={() => { setLeft(false); onMark(row, f + ' — ' + Math.round(row.full * k) + ' г'); }}>{f}<small>{Math.round(row.full * k)} г</small></button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="inv-kv">
@@ -423,6 +494,9 @@ function ShelfScreen({ init = {} }) {
   const [view, setView] = React.useState(init.view || 'shelf');
   const [drawer, setDrawer] = React.useState(init.drawer || null);
   const [settings, setSettings] = React.useState(!!init.settings);
+  const [pop, setPop] = React.useState(init.pop || null);
+  const [toast, setToast] = React.useState(null);
+  const onMark = (row, text) => setToast({ title: row.brand + ' ' + row.name, text: 'осталось ' + text + '. Расход в месяц и «закончится» пересчитаны.' });
   const s = GR.stats;
   const count = init.unknown ? 5 : 7;
   return (
@@ -450,10 +524,11 @@ function ShelfScreen({ init = {} }) {
             { label: 'ЗАКОНЧИЛИСЬ', value: s.out, hint: 'держим постоянно — в «К заказу»', tone: 'danger' },
             { label: 'В МЕСЯЦ УХОДИТ', value: '≈ 16 кг', hint: '≈ 540 г в день · 30 чаш по 18 г' },
           ]} />
-          <ShelfTable onOpen={setDrawer} />
+          <ShelfTable onOpen={setDrawer} pop={pop} setPop={setPop} onMark={onMark} />
         </>
       ) : view === 'reorder' ? <Reorder copied={init.copied} unknown={init.unknown} /> : <Purchase sub={init.sub} noBudget={init.noBudget} few={init.few} />}
-      <Drawer key={drawer} id={drawer} onClose={() => setDrawer(null)} />
+      <Drawer key={drawer} id={drawer} onClose={() => setDrawer(null)} onMark={onMark} />
+      <Toast toast={toast} />
       {settings ? <Settings onClose={() => setSettings(false)} /> : null}
     </div>
   );
@@ -542,8 +617,10 @@ function PaApp_({ start = 'shelf', init = {} }) {
 }
 
 // ── Телефон: отметка пробы у стойки ──
-function MShelf() {
+function MShelf({ sheet }) {
   const [mark, setMark] = React.useState(null);
+  const [open, setOpen] = React.useState(sheet ? 'bb-rasp' : null);
+  const [frac, setFrac] = React.useState(null);
   const rows = GR.shelf.filter((r) => ['bb-cane', 'bb-pear', 'sr-passion', 'bb-rasp'].includes(r.id));
   return (
     <div className="phone">
@@ -573,7 +650,7 @@ function MShelf() {
                 </div>
               ) : null}
               <div className="m-acts">
-                <button className="m-ghost-btn">Осталось…</button>
+                <button className="m-ghost-btn" onClick={() => setOpen(r.id)}>Осталось…</button>
                 <button className="m-empty-btn">Закончился</button>
               </div>
             </article>
@@ -581,6 +658,34 @@ function MShelf() {
         })}
       </div>
       <nav className="m-nav"><span>Дашборд</span><span className="on">Полка</span><span>Поставки</span><span>Ещё</span></nav>
+      {open ? (() => {
+        const row = GR.shelf.find((r) => r.id === open);
+        return (
+          <>
+            <div className="m-scrim" onClick={() => setOpen(null)} />
+            <section className="m-sheet" role="dialog" aria-label={'Сколько осталось: ' + row.name}>
+              <span className="m-grab" />
+              <div>
+                <p className="inv-eyebrow">{row.brand}</p>
+                <h2>{row.name}</h2>
+                <span className="inv-muted">После прихода {row.arrived} было {row.full} г · сейчас ≈ {row.left} г</span>
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <h3 className="inv-h3">Сколько осталось?</h3>
+                <div className="m-fracs four">
+                  {PA_FRACS.map(([f, k]) => <button key={f} className={'m-frac' + (frac === f ? ' on' : '')} onClick={() => setFrac(f)}>{f}<small>{Math.round(row.full * k)} г</small></button>)}
+                </div>
+                <h3 className="inv-h3" style={{ marginTop: 6 }}>Или точно, если взвесили</h3>
+                <div className="m-exact">
+                  <span className="gr-input"><b><span className="inv-faint">граммы</span></b><span>г</span></span>
+                  <button className="m-save" disabled={!frac} onClick={() => setOpen(null)}>Сохранить</button>
+                </div>
+              </div>
+              <button className="m-big">Закончился · 0 г</button>
+            </section>
+          </>
+        );
+      })() : null}
     </div>
   );
 }
@@ -590,6 +695,7 @@ const PA_SHOTS = [
   { id: 'reorder', group: 'order', name: 'К заказу', note: '#323 + #325. Количества и суммы нет: «закончится», расход в месяц, остаток. В список попадает всё, что закончится до следующей поставки с запасом на срок поставки.', start: 'shelf', init: { view: 'reorder' }, tall: true },
   { id: 'reorder-copied', group: 'order', name: 'К заказу · текст заявки', note: 'Только названия — объём мастер впишет в чате сам.', start: 'shelf', init: { view: 'reorder', copied: true }, tall: true },
   { id: 'shelf', group: 'order', name: 'Полка', note: '#323. Колонка «Расход» — в г/мес, как в «К заказу» и карточке. «Заканчивается» — до следующей поставки. Новинки помечены «проба».', start: 'shelf' },
+  { id: 'shelf-left', group: 'order', name: 'Полка · «Сколько осталось?»', note: 'Без изменений с #306: доля ¾ ½ ⅓ ¼ от уровня после прихода или точно в граммах.', start: 'shelf', init: { pop: 'bb-rasp' } },
   { id: 'card', group: 'order', name: 'Карточка', note: '#323. Расход — г/мес, под ним г/день.', start: 'shelf', init: { drawer: 'bb-rasp' }, tall: true },
   { id: 'card-trial', group: 'order', name: 'Карточка пробы', note: '#329. Отметка «зашло / не зашло» — одно касание, можно поменять.', start: 'shelf', init: { drawer: 'bb-pear' }, tall: true },
   { id: 'settings', group: 'budget', name: 'Настройки полки', note: '#326. Бюджет на табак в ₽ в месяц — необязательное поле.', start: 'shelf', init: { view: 'reorder', settings: true } },
@@ -600,6 +706,7 @@ const PA_SHOTS = [
   { id: 'purchase-idle', group: 'purchase', name: 'Закупка · Лежит', note: '#330. Заморожено денег; выключить «Держим» — не докупать.', start: 'shelf', init: { view: 'purchase', sub: 'idle' } },
   { id: 'purchase-profiles', group: 'purchase', name: 'Закупка · Вкусы', note: '#331. Расход направления против доли на полке; переход в «Идеи».', start: 'shelf', init: { view: 'purchase', sub: 'profiles' }, tall: true },
   { id: 'mobile-trial', group: 'mobile', name: 'Телефон · отметка пробы', phone: true },
+  { id: 'mobile-left', group: 'mobile', name: 'Телефон · «Сколько осталось?»', note: 'Без изменений с #306.', phone: true, sheet: true },
   { id: 'edge-interval', group: 'edge', name: 'Интервал поставок неизвестен', note: 'Меньше 3 принятых счетов: считаем по сроку поставки, как сейчас.', start: 'shelf', init: { view: 'reorder', unknown: true } },
   { id: 'edge-no-budget', group: 'edge', name: 'Бюджет не указан', note: 'Показываем стоимость базы и предлагаем указать бюджет.', start: 'shelf', init: { view: 'purchase', sub: 'base', noBudget: true }, tall: true },
   { id: 'edge-dash-no-budget', group: 'edge', name: 'Дашборд без бюджета', start: 'dashboard', init: { noBudget: true } },
@@ -607,7 +714,7 @@ const PA_SHOTS = [
 ];
 
 function ShotView({ shot }) {
-  if (shot.phone) return <MShelf />;
+  if (shot.phone) return <MShelf sheet={shot.sheet} />;
   return <PaDesk tall={shot.tall}><PaApp_ start={shot.start} init={shot.init} /></PaDesk>;
 }
 
