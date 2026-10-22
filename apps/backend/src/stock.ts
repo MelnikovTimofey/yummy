@@ -86,8 +86,8 @@ const INTERVAL_WINDOW_DAYS = 90;
 const INTERVAL_MIN_DAYS = 3;
 const TRIAL_WINDOW_DAYS = 60;
 const CHECK_SHARE = 0.1;
-const CORRECTION_MS = 30 * 60_000;
-const MIN_SEGMENT_MS = 6 * 3_600_000;
+export const CORRECTION_MS = 30 * 60_000;
+export const MIN_SEGMENT_MS = 6 * 3_600_000;
 const WEEKDAY_WINDOW_DAYS = 28;
 const WEEKDAY_MIN_EVENTS = 50;
 
@@ -154,8 +154,8 @@ export const segments = (entries: StockEntry[]): Segment[] => walk(entries).segm
 const counted = (entries: StockEntry[]) =>
   segments(entries).filter((segment) => !segment.excluded && segment.to > segment.from);
 
-export const consumptionRate = (entries: StockEntry[], now: Date): Rate => {
-  const windowStart = now.getTime() - RATE_WINDOW_DAYS * DAY_MS;
+export const consumptionRate = (entries: StockEntry[], now: Date, windowDays = RATE_WINDOW_DAYS): Rate => {
+  const windowStart = now.getTime() - windowDays * DAY_MS;
   let grams = 0;
   let days = 0;
   for (const segment of counted(entries)) {
@@ -208,7 +208,7 @@ export const weekdayFactor = (events: Date[], first: Date | null, now: Date): nu
   return sameDay / (WEEKDAY_WINDOW_DAYS / 7) / (inWindow.length / WEEKDAY_WINDOW_DAYS);
 };
 
-const median = (values: number[]) => {
+export const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;

@@ -151,6 +151,13 @@ test.describe('consumptionRate', () => {
     approx(consumptionRate(entries, day(70)).gramsPerDay, 300 / 30);
   });
 
+  test('a shorter window for «Лежит»: 21 days', () => {
+    const entries = [receipt(400, 0), count(300, 20), count(0, 40)];
+    // окно с 19-го дня: 1/20 первого отрезка (5 г за день) и весь второй
+    approx(consumptionRate(entries, day(40), 21).gramsPerDay, 305 / 21);
+    approx(consumptionRate(entries, day(40)).gramsPerDay, 400 / 40);
+  });
+
   test('excluded segments give neither grams nor days', () => {
     const entries = [receipt(400, 0), count(100, 10), count(300, 12), count(200, 20)];
     approx(consumptionRate(entries, day(30)).gramsPerDay, 400 / 18);
