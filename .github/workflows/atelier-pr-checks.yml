@@ -11,6 +11,10 @@ on:
       - packages/**
       - services/telegram-bot/**
       - tests/smoke/**
+      - scripts/**
+      - docker-compose.prod.yml
+      - Caddyfile
+      - .env.prod.example
       - .github/**
       - .claude/**
       - CLAUDE.md
@@ -67,6 +71,12 @@ jobs:
               - 'services/telegram-bot/.env.example'
               - 'docs/atelier/env-matrix.md'
               - 'docs/atelier/deployment-smoke-checklist.md'
+              # Выкатка и обслуживание прода (#132). scripts/atelier/load/** — нагрузочный
+              # сценарий, на прод не попадает и под ревью не нужен.
+              - 'scripts/atelier/*'
+              - 'docker-compose.prod.yml'
+              - 'Caddyfile'
+              - '.env.prod.example'
             # tests/smoke целиком здесь не стоит: сценарии в tests/*.spec.ts —
             # обычные тесты фич, их правит тот же срез, что меняет UI, и держать
             # из-за них весь PR в human-review нечем оправдать. Инфраструктура

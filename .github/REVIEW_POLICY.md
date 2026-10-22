@@ -93,6 +93,10 @@ PR должен считаться `needs-human-review`, если затрону
    - `services/telegram-bot/.env.example`
    - `docs/atelier/env-matrix.md`
    - `docs/atelier/deployment-smoke-checklist.md`
+   - выкатка и обслуживание прода: `scripts/atelier/*` (deploy, бэкапы,
+     мониторинг, cron), `docker-compose.prod.yml`, `Caddyfile`,
+     `.env.prod.example`; нагрузочный сценарий `scripts/atelier/load/**`
+     под ревью не попадает
 4. process-governance files:
    - `CLAUDE.md`
    - `PRD.md` — продуктовая семантика и инварианты
