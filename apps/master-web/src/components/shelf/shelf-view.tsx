@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ellipsis, FileUp, Search, SlidersHorizontal } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
-import { formatCount, formatMetricValue, type ShelfRow } from '@/contracts';
+import { DEFAULT_SHELF_SETTINGS, formatCount, formatMetricValue, type ShelfRow } from '@/contracts';
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -16,12 +16,14 @@ import {
   countToastText,
   describeShelfError,
   emptyToastText,
+  endingHint,
   filterShelfRows,
-  formatDecimal,
   formatNumber,
   formatShelfDate,
+  monthTile,
   receiptToastText,
   resolveShelfShortcut,
+  shelfMonthRate,
   shelfRowMenu,
   shelfStatusLine,
   shelfUntil,
@@ -88,7 +90,7 @@ export const ShelfView = ({
 }: ShelfViewProps) => {
   const { view } = shelf;
   const rows = view?.rows ?? [];
-  const settings = view?.settings ?? { bowlGrams: 18, leadDays: 7 };
+  const settings = view?.settings ?? DEFAULT_SHELF_SETTINGS;
 
   const isPhone = useIsPhone();
   const [query, setQuery] = useState('');
@@ -151,7 +153,13 @@ export const ShelfView = ({
   const reorderCount = countReorder(shelf.reorder);
   const headMenu = <ShelfHeadMenu onSettings={() => onSettingsOpenChange(true)} />;
   const settingsDialog = settingsOpen ? (
-    <ShelfSettingsDialog settings={settings} onSave={shelf.saveSettings} onClose={() => onSettingsOpenChange(false)} />
+    <ShelfSettingsDialog
+      settings={settings}
+      interval={view?.interval}
+      horizon={view?.horizon}
+      onSave={shelf.saveSettings}
+      onClose={() => onSettingsOpenChange(false)}
+    />
   ) : null;
 
   const shown = useMemo(
@@ -432,7 +440,9 @@ export const ShelfView = ({
         {shelf.status === 'error' ? <p className="error-text">{shelf.error}</p> : null}
         {shelf.status === 'loading' && !view ? <p className="meta-line">Загружаем полку…</p> : null}
 
-        {view && mode === 'reorder' ? <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} /> : null}
+        {view && mode === 'reorder' ? (
+          <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
+        ) : null}
 
         {view && mode === 'shelf' ? (
           <>
@@ -560,28 +570,21 @@ export const ShelfView = ({
 
       {view ? (
         <>
-          <MasterStatsRow
-            tiles={[
-              { label: 'НА ПОЛКЕ', value: formatMetricValue(view.counters.all), hint: `≈ ${kg.format(totals.kg)} кг табака` },
-              {
-                label: 'ЗАКАНЧИВАЕТСЯ',
-                value: formatMetricValue(view.counters.ending),
-                hint: `хватит на ${formatCount(settings.leadDays, ['день', 'дня', 'дней'])} и меньше`,
-                tone: 'warning',
-              },
-              { label: 'ЗАКОНЧИЛИСЬ', value: formatMetricValue(view.counters.out), hint: 'держим постоянно — в «К заказу»', tone: 'danger' },
-              {
-                label: 'СЕГОДНЯ УЙДЁТ',
-                value: `≈ ${formatNumber(view.today.grams)} г`,
-                hint: `≈ ${formatCount(Math.round(view.today.bowls), ['чаша', 'чаши', 'чаш'])} по ${settings.bowlGrams} г`,
-              },
-            ]}
-          />
-
-          {mode === 'reorder' ? <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} /> : null}
+          {mode === 'reorder' ? (
+            <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
+          ) : null}
 
           {mode === 'shelf' ? (
             <>
+              <MasterStatsRow
+                tiles={[
+                  { label: 'НА ПОЛКЕ', value: formatMetricValue(view.counters.all), hint: `≈ ${kg.format(totals.kg)} кг табака` },
+                  { label: 'ЗАКАНЧИВАЕТСЯ', value: formatMetricValue(view.counters.ending), hint: endingHint(view), tone: 'warning' },
+                  { label: 'ЗАКОНЧИЛИСЬ', value: formatMetricValue(view.counters.out), hint: 'держим постоянно — в «К заказу»', tone: 'danger' },
+                  { label: 'В МЕСЯЦ УХОДИТ', ...monthTile(view.today, settings.bowlGrams) },
+                ]}
+              />
+
               <div className="shelf-toolbar">
                 <div className="input shelf-toolbar__search">
                   <Search size={14} aria-hidden />
@@ -640,7 +643,7 @@ export const ShelfView = ({
                   <colgroup>
                     <col />
                     <col style={{ width: 228 }} />
-                    <col style={{ width: 112 }} />
+                    <col style={{ width: 130 }} />
                     <col style={{ width: 184 }} />
                     <col style={{ width: 132 }} />
                     <col style={{ width: 60 }} />
@@ -661,6 +664,7 @@ export const ShelfView = ({
                     {shown.map((row) => {
                       const until = shelfUntil(row, settings.leadDays);
                       const line = shelfStatusLine(row);
+                      const month = shelfMonthRate(row);
                       const busy = pendingId === row.tobacco.id;
                       const menuOpen = menu?.id === row.tobacco.id && menu.mode !== 'left';
                       const leftOpen = menu?.id === row.tobacco.id && menu.mode === 'left';
@@ -724,7 +728,10 @@ export const ShelfView = ({
                         >
                           <td>
                             <span className="shelf-name">
-                              <b>{row.tobacco.name}</b>
+                              <b>
+                                {row.tobacco.name}
+                                {row.trial ? <span className="tag shelf-name__tag">проба</span> : null}
+                              </b>
                               <span>{row.tobacco.manufacturer}</span>
                             </span>
                           </td>
@@ -732,15 +739,15 @@ export const ShelfView = ({
                             <ShelfLevel row={row} />
                           </td>
                           <td>
-                            {row.rateKind === 'none' || row.rate === null ? (
-                              <span className="shelf-faint">мало данных</span>
-                            ) : row.rateKind === 'brand' ? (
+                            {month.faint ? (
+                              <span className="shelf-faint">{month.value}</span>
+                            ) : month.hint ? (
                               <span className="shelf-until" title="Своих отметок ещё мало — медиана бренда">
-                                <span className="shelf-num">≈ {formatDecimal(row.rate)} г/день</span>
-                                <small data-tone="faint">по бренду</small>
+                                <span className="shelf-num">{month.value}</span>
+                                <small data-tone="faint">{month.hint}</small>
                               </span>
                             ) : (
-                              <span className="shelf-num">{formatDecimal(row.rate)} г/день</span>
+                              <span className="shelf-num">{month.value}</span>
                             )}
                           </td>
                           <td>

@@ -11,6 +11,7 @@ import { useShelf } from '@/hooks/use-shelf';
 import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
 import { ShelfMobileHeadMenu } from '@/components/shelf/shelf-mobile';
+import { ShelfSettingsDialog } from '@/components/shelf/shelf-settings-dialog';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
@@ -156,6 +157,8 @@ export const App = () => {
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
   const [shelfSettingsOpen, setShelfSettingsOpen] = useState(false);
+  // «Указать» бюджет на дашборде (#326): настройки полки поверх дашборда.
+  const [budgetSettingsOpen, setBudgetSettingsOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   // Вернулись на полку — снова полка, а не «К заказу» (как до выноса режима в App).
   useEffect(() => {
@@ -886,17 +889,34 @@ export const App = () => {
       summaryError={summaryError}
       onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
       shelfBlock={
-        <ShelfDashboardBlock
-          data={shelfDashboard.data}
-          status={shelfDashboard.status}
-          error={shelfDashboard.error}
-          bowlGrams={shelf.view?.settings.bowlGrams ?? DEFAULT_SHELF_SETTINGS.bowlGrams}
-          leadDays={shelf.view?.settings.leadDays ?? DEFAULT_SHELF_SETTINGS.leadDays}
-          onOpenTobacco={(tobaccoId) => {
-            setPendingShelfCard(tobaccoId);
-            setActiveTab('shelf');
-          }}
-        />
+        <>
+          <ShelfDashboardBlock
+            data={shelfDashboard.data}
+            status={shelfDashboard.status}
+            error={shelfDashboard.error}
+            bowlGrams={shelf.view?.settings.bowlGrams ?? DEFAULT_SHELF_SETTINGS.bowlGrams}
+            leadDays={shelf.view?.settings.leadDays ?? DEFAULT_SHELF_SETTINGS.leadDays}
+            onOpenTobacco={(tobaccoId) => {
+              setPendingShelfCard(tobaccoId);
+              setActiveTab('shelf');
+            }}
+            onSetBudget={() => setBudgetSettingsOpen(true)}
+          />
+          {/* Без загруженной полки настройки неизвестны — по умолчанию их не перезаписываем. */}
+          {budgetSettingsOpen && shelf.view ? (
+            <ShelfSettingsDialog
+              settings={shelf.view.settings}
+              interval={shelf.view.interval}
+              horizon={shelf.view.horizon}
+              onSave={async (settings) => {
+                const saved = await shelf.saveSettings(settings);
+                if (token) await shelfDashboard.reload(token);
+                return saved;
+              }}
+              onClose={() => setBudgetSettingsOpen(false)}
+            />
+          ) : null}
+        </>
       }
     />
   );

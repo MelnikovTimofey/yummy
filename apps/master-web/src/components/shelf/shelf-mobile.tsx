@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Ellipsis } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow } from '@/contracts';
-import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
+import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
 import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
 import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
@@ -28,6 +28,7 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
       const actions = shelfMobileActions(row);
       const until = shelfUntil(row, leadDays);
       const line = shelfStatusLine(row);
+      const month = shelfMonthRate(row);
       const busy = pendingId === row.tobacco.id;
       return (
         <li key={row.tobacco.id} className="m-shelf-card" data-tobacco-id={row.tobacco.id}>
@@ -47,7 +48,11 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
           </span>
           <div className="m-shelf-card__meta">
             <ShelfLevel row={row} />
-            {actions.note ? <span className="m-shelf-card__note shelf-faint">{actions.note}</span> : null}
+            {/* Расход в г/мес — как на десктопе (#shot=mobile-trial); закончился — подпись вместо кнопок. */}
+            <span className="m-shelf-card__rate">
+              <span className={month.faint ? 'shelf-faint' : 'shelf-num'}>{month.value}</span>
+              {actions.note ? <small className="shelf-faint">{actions.note}</small> : null}
+            </span>
           </div>
           {actions.left ? (
             <div className="m-shelf-card__acts">
@@ -232,7 +237,7 @@ export const ShelfMobileHeadMenu = ({ onSettings }: { onSettings: () => void }) 
                 onSettings();
               }}
             >
-              Настройки полки <span className="shelf-faint">чаша, срок поставки</span>
+              Настройки полки <span className="shelf-faint">чаша, срок поставки, бюджет</span>
             </button>
           </div>
         </BottomSheet>

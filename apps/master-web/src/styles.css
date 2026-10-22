@@ -6055,6 +6055,9 @@ button.chip .chip__count[hidden] {
 
 .shelf-name--receipt b { font-weight: 400; font-size: var(--fs-sm); }
 
+/* Метка «проба» у названия (#329, #shot=shelf): табак впервые пришёл за 60 дней. */
+.shelf-name .shelf-name__tag { height: 20px; margin-left: 8px; padding: 0 7px; vertical-align: 1px; color: var(--text-secondary); overflow: visible; }
+
 .shelf-until { display: grid; gap: 1px; }
 .shelf-until small { font-size: var(--fs-xs); }
 
@@ -6772,11 +6775,10 @@ button.chip .chip__count[hidden] {
 }
 
 .reorder-group__caption { flex: 1; font-size: var(--fs-sm); color: var(--text-muted); }
-.reorder-group__sum { font-size: var(--fs-sm); color: var(--text-muted); }
 
 .reorder-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 720px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: var(--fs-sm);
@@ -6805,28 +6807,26 @@ button.chip .chip__count[hidden] {
 
 .reorder-table tbody tr:last-child td { border-bottom: 0; }
 
-.reorder-stepper {
-  display: inline-flex;
+/* «закончится до следующей поставки» под названием (#325). */
+.reorder-why { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
+.reorder-table td:has(.reorder-why) { padding-top: 6px; padding-bottom: 6px; }
+
+/* Плашка интервала поставок над «К заказу» (#325, #shot=reorder, edge-interval). */
+.reorder-interval {
+  display: flex;
   align-items: center;
-  height: 30px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
 }
 
-.reorder-stepper button {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.reorder-stepper button:hover:not(:disabled) { color: var(--text-primary); }
-.reorder-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.reorder-stepper output { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+.reorder-interval > svg { flex-shrink: 0; color: var(--text-muted); }
+.reorder-interval__text { flex: 1; min-width: 0; }
+.reorder-interval b { color: var(--text-primary); font-weight: 500; }
 
 .reorder-copied {
   display: grid;
@@ -6847,6 +6847,7 @@ button.chip .chip__count[hidden] {
 }
 
 .reorder-copied h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; }
+.reorder-copied__hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 .reorder-copied pre {
   margin: 0;
@@ -6945,6 +6946,41 @@ button.chip .chip__count[hidden] {
 .shelf-dash__spend-row > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .shelf-dash__spend-row i { display: block; height: 8px; border-radius: 4px; background: var(--chart-2); }
 .shelf-dash__spend-row > span:last-child { text-align: right; }
+
+/* «Деньги» против бюджета (#326, #shot=dashboard): полоса «потрачено», отметка базы. */
+.shelf-dash__budget { display: grid; gap: 8px; }
+.shelf-dash__meter {
+  position: relative;
+  height: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--bg-base);
+}
+.shelf-dash__meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px 0 0 5px; background: var(--chart-1); }
+.shelf-dash__meter em { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text-primary); }
+.shelf-dash__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-xs); color: var(--text-muted); }
+.shelf-dash__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.shelf-dash__legend b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.shelf-dash__legend b[data-tone="success"] { color: var(--success); }
+.shelf-dash__legend b[data-tone="danger"] { color: var(--danger); }
+.shelf-dash__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--chart-1); }
+.shelf-dash__swatch--base { width: 2px; background: var(--text-primary); }
+
+.shelf-dash__invite {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+.shelf-dash__invite > span { flex: 1; min-width: 0; }
+.shelf-dash__invite b { color: var(--text-primary); font-weight: 500; }
+.shelf-dash__note { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 .shelf-dash__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
 .shelf-dash__kv div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
@@ -7351,7 +7387,8 @@ button.chip .chip__count[hidden] {
 }
 
 .m-shelf-card__primary:disabled { opacity: 0.45; cursor: not-allowed; }
-.m-shelf-card__note { align-self: center; font-size: var(--fs-xs); }
+.m-shelf-card__rate { display: grid; gap: 1px; justify-items: end; font-size: var(--fs-sm); text-align: right; }
+.m-shelf-card__rate small { font-size: var(--fs-xs); }
 
 .m-shelf-card__meta {
   grid-column: 1 / -1;
@@ -7526,6 +7563,30 @@ button.chip .chip__count[hidden] {
 
 .shelf-card__head-actions { display: flex; gap: 4px; margin-right: -10px; }
 .shelf-card__head-actions .icon-btn { width: 44px; height: 44px; }
+
+/* Настройки полки (#326, #shot=settings): два поля в ряд, бюджет и «Считается само» — на всю ширину. */
+.operator-dialog.shelf-settings { max-width: 560px; max-height: calc(100dvh - 24px); }
+.shelf-settings .operator-dialog__form { overflow: hidden; }
+.shelf-settings__body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; overflow-y: auto; }
+.shelf-settings__field--wide,
+.shelf-settings__calc { grid-column: 1 / -1; }
+.shelf-settings__help { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text-faint); }
+.shelf-settings__suffix { color: var(--text-muted); }
+.shelf-settings__calc {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.shelf-settings__calc > svg { flex-shrink: 0; margin-top: 2px; }
+.shelf-settings__calc b { color: var(--text-secondary); font-weight: 500; }
+.operator-dialog--phone .shelf-settings__body { grid-template-columns: minmax(0, 1fr); }
 
 /* Настройки полки — нижней шторкой на всю ширину. translate — отдельно:
    Tailwind v4 центрирует диалог свойством translate, а не transform. */
