@@ -73,11 +73,14 @@ import {
   getShelf,
   getShelfItem,
   markEmpty,
+  markEmptyMany,
   removeFromShelf,
   setStop,
+  setTrialVerdict,
   ShelfConflictError,
   ShelfNotFoundError,
   ShelfValidationError,
+  undoEmptyBatch,
   updateSettings,
   updateShelfItem,
   writeOff,
@@ -248,6 +251,8 @@ export const buildApp = () => {
       shelfUpdate: 'PATCH /staff/shelf/:tobaccoId',
       shelfRemove: 'DELETE /staff/shelf/:tobaccoId',
       shelfEmpty: 'POST /staff/shelf/:tobaccoId/empty',
+      shelfEmptyMany: 'POST /staff/shelf/empty',
+      shelfUndoBatch: 'DELETE /staff/shelf/batches/:batchId',
       shelfCount: 'POST /staff/shelf/:tobaccoId/counts',
       shelfReceipt: 'POST /staff/shelf/:tobaccoId/receipts',
       shelfWriteOff: 'POST /staff/shelf/:tobaccoId/write-offs',
@@ -2125,10 +2130,11 @@ export const buildApp = () => {
   app.patch('/staff/shelf/settings', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    const body = (request.body ?? {}) as { bowlGrams?: unknown; leadDays?: unknown };
+    const body = (request.body ?? {}) as { bowlGrams?: unknown; leadDays?: unknown; budgetKop?: unknown };
     return sendShelf(reply, () => updateSettings(user, {
       bowlGrams: typeof body.bowlGrams === 'number' ? body.bowlGrams : undefined,
       leadDays: typeof body.leadDays === 'number' ? body.leadDays : undefined,
+      budgetKop: body.budgetKop,
     }));
   });
 
@@ -2157,12 +2163,16 @@ export const buildApp = () => {
       stopNote?: unknown;
       keepStocked?: unknown;
       note?: unknown;
+      trialVerdict?: unknown;
     };
     const tobaccoId = tobaccoParam(request);
     return sendShelf(reply, async () => {
       let item = null;
       if (typeof body.stopped === 'boolean') {
         item = await setStop(user, tobaccoId, body.stopped, typeof body.stopNote === 'string' ? body.stopNote : undefined);
+      }
+      if (body.trialVerdict !== undefined) {
+        item = await setTrialVerdict(user, tobaccoId, body.trialVerdict);
       }
       const patch = {
         keepStocked: typeof body.keepStocked === 'boolean' ? body.keepStocked : undefined,
@@ -2182,6 +2192,20 @@ export const buildApp = () => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
     return sendShelf(reply, async () => ({ item: await removeFromShelf(user, tobaccoParam(request)) }));
+  });
+
+  app.post('/staff/shelf/empty', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { tobaccoIds?: unknown };
+    return sendShelf(reply, () => markEmptyMany(user, body.tobaccoIds));
+  });
+
+  app.delete('/staff/shelf/batches/:batchId', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const batchId = (request.params as { batchId?: string }).batchId?.trim() ?? '';
+    return sendShelf(reply, () => undoEmptyBatch(user, batchId));
   });
 
   app.post('/staff/shelf/:tobaccoId/empty', async (request, reply) => {

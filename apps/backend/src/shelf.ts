@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import type { AuditAction } from './audit';
 import type { StaffUser } from './auth';
@@ -9,16 +10,22 @@ import {
   forecastShelf,
   fractionGrams,
   gramPrice,
+  horizonOf,
+  isTrial,
   segments,
   stockState,
+  supplyInterval,
   todayForecast,
   weekPeriods,
+  type Horizon,
+  type LeftSource,
   type ShelfForecast,
   type ShelfItem,
   type ShelfSettings,
   type ShelfStatus,
   type StockEntry,
   type StockEntryKind,
+  type SupplyInterval,
 } from './stock';
 
 // Полка точки (#152, #306): единственный модуль, который пишет Tobacco.inStock.
@@ -52,6 +59,12 @@ export const MARK_FRACTIONS = [0.75, 0.5, 1 / 3, 0.25] as const;
 
 const DAY_MS = 86_400_000;
 const MAX_GRAMS = 20_000;
+// 10 млн ₽ в месяц — заведомо больше бюджета одной точки.
+const MAX_BUDGET_KOP = 1_000_000_000;
+const MAX_BATCH = 500;
+const INTERVAL_LOOKBACK_DAYS = 92;
+const TRIAL_VERDICTS = ['yes', 'no'] as const;
+const BATCH_PREFIX = 'batch:';
 const HISTORY_WEEKS = 5;
 const BIG_PACK_BRANDS = ['DARKSIDE', 'Starline'];
 
@@ -124,8 +137,37 @@ const ON_SHELF = { in: ['active', 'plan'] };
 
 const loadSettings = async (client: Tx): Promise<ShelfSettings> => {
   const row = await client.shelfSettings.findUnique({ where: { id: 1 } });
-  return row ? { bowlGrams: row.bowlGrams, leadDays: row.leadDays } : { ...DEFAULT_SETTINGS };
+  return row ? { bowlGrams: row.bowlGrams, leadDays: row.leadDays, budgetKop: row.budgetKop } : { ...DEFAULT_SETTINGS };
 };
+
+// Принятые поставки, кроме стартовой: дата счёта, иначе дата приёмки (#325).
+const loadInterval = async (client: Tx, now: Date) => {
+  const since = new Date(now.getTime() - INTERVAL_LOOKBACK_DAYS * DAY_MS);
+  const deliveries = await client.delivery.findMany({
+    where: {
+      status: 'received',
+      kind: { not: 'start' },
+      OR: [{ invoiceDate: { gte: since } }, { invoiceDate: null, receivedAt: { gte: since } }],
+    },
+    select: { invoiceDate: true, receivedAt: true },
+  });
+  const dates = deliveries
+    .map((delivery) => delivery.invoiceDate ?? delivery.receivedAt)
+    .filter((date): date is Date => date !== null);
+  return supplyInterval(dates, now);
+};
+
+const loadPlanning = async (client: Tx, now: Date) => {
+  const [settings, interval] = await Promise.all([loadSettings(client), loadInterval(client, now)]);
+  return { settings, interval, horizon: horizonOf(settings.leadDays, interval) };
+};
+
+export type HorizonView = { days: number; until: string };
+
+export const horizonView = (horizon: Horizon, now: Date): HorizonView => ({
+  days: horizon.days,
+  until: new Date(now.getTime() + horizon.days * DAY_MS).toISOString(),
+});
 
 const loadMixes = async (client: Tx, tobaccoIds: string[]) =>
   client.mixComponent.findMany({
@@ -165,8 +207,12 @@ export type ShelfRow = {
   fullGrams: number | null;
   lastReceipt: ReceiptView | null;
   lastCount: { at: string; grams: number; fraction: number | null } | null;
+  // Откуда остаток: указал мастер (сегодня или «Закончился») или прогноз.
+  leftSource: LeftSource | null;
   rate: number | null;
   rateKind: ShelfForecast['rateKind'];
+  // Расход в месяц = г/день × 30.
+  monthGrams: number | null;
   daysLeft: number | null;
   endsAt: string | null;
   mixCount: number;
@@ -174,7 +220,13 @@ export type ShelfRow = {
   stopped: boolean;
   stopNote: string | null;
   note: string | null;
+  // Проба — впервые пришёл на полку за 60 дней; отметка мастера «зашло / не зашло».
+  trial: boolean;
+  trialVerdict: TrialVerdict | null;
+  trialMarkedAt: string | null;
 };
+
+export type TrialVerdict = (typeof TRIAL_VERDICTS)[number];
 
 export type ShelfCounters = Record<'all' | ShelfStatus, number>;
 
@@ -184,6 +236,8 @@ export type ShelfView = {
   totals: { kg: number };
   today: { grams: number; bowls: number };
   settings: ShelfSettings;
+  interval: SupplyInterval;
+  horizon: HorizonView;
 };
 
 export type StockEntryView = {
@@ -223,7 +277,13 @@ const lastOf = (record: ShelfRecord, kind: StockEntryKind) =>
 
 const round = (grams: number | null) => (grams === null ? null : Math.round(grams));
 
-const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number): ShelfRow => {
+// Стартовый приход — табак уже стоял на полке до учёта, это не проба.
+const trialOf = (record: ShelfRecord, now: Date) => {
+  const first = record.entries.find((entry) => entry.kind === 'receipt');
+  return isTrial(first && first.delivery?.kind !== 'start' ? first.at : null, now);
+};
+
+const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number, now: Date): ShelfRow => {
   const receipt = lastOf(record, 'receipt');
   const count = lastOf(record, 'count');
   return {
@@ -246,8 +306,10 @@ const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number): 
     fullGrams: round(forecast.fullGrams),
     lastReceipt: receipt ? receiptOf(receipt) : null,
     lastCount: count ? { at: count.at.toISOString(), grams: count.grams, fraction: count.fraction } : null,
+    leftSource: forecast.leftSource,
     rate: forecast.rate,
     rateKind: forecast.rateKind,
+    monthGrams: forecast.monthGrams,
     daysLeft: forecast.daysLeft,
     endsAt: iso(forecast.endsAt),
     mixCount,
@@ -255,6 +317,9 @@ const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number): 
     stopped: record.stopped,
     stopNote: record.stopNote,
     note: record.note,
+    trial: trialOf(record, now),
+    trialVerdict: record.trialVerdict as TrialVerdict | null,
+    trialMarkedAt: iso(record.trialMarkedAt),
   };
 };
 
@@ -276,15 +341,15 @@ const forecastOf = async (client: Tx, record: ShelfRecord, now: Date) => {
     where: { status: ON_SHELF, tobacco: { manufacturer: record.tobacco.manufacturer }, NOT: { id: record.id } },
     include: shelfInclude,
   });
-  const settings = await loadSettings(client);
-  const [forecast] = forecastShelf([record, ...neighbours].map(toStockItem), now, settings);
+  const { settings, horizon } = await loadPlanning(client, now);
+  const [forecast] = forecastShelf([record, ...neighbours].map(toStockItem), now, horizon);
   return { forecast, settings };
 };
 
 const buildRow = async (client: Tx, record: ShelfRecord, now: Date) => {
   const { forecast, settings } = await forecastOf(client, record, now);
   const mixes = await loadMixes(client, [record.tobaccoId]);
-  return { row: toRow(record, forecast, mixes.length), forecast, settings, mixes };
+  return { row: toRow(record, forecast, mixes.length, now), forecast, settings, mixes };
 };
 
 const rowOf = async (tobaccoId: string, now: Date) => (await buildRow(prisma, await loadItem(prisma, tobaccoId), now)).row;
@@ -293,9 +358,9 @@ const rowOf = async (tobaccoId: string, now: Date) => (await buildRow(prisma, aw
 // один табак.
 export const loadShelf = async (now: Date) => {
   const records = (await prisma.shelfItem.findMany({ where: { status: ON_SHELF }, include: shelfInclude })).sort(byName);
-  const settings = await loadSettings(prisma);
+  const { settings, interval, horizon } = await loadPlanning(prisma, now);
   const items = records.map(toStockItem);
-  return { records, items, forecasts: forecastShelf(items, now, settings), settings };
+  return { records, items, forecasts: forecastShelf(items, now, horizon), settings, interval, horizon };
 };
 
 // Журналы всех табаков, когда-либо стоявших на полке, — для истории расхода.
@@ -303,9 +368,9 @@ export const loadShelfHistory = async () =>
   (await prisma.shelfItem.findMany({ include: shelfInclude })).map(toStockItem);
 
 export const getShelf = async (now = new Date()): Promise<ShelfView> => {
-  const { records, forecasts, settings } = await loadShelf(now);
+  const { records, forecasts, settings, interval, horizon } = await loadShelf(now);
   const mixCounts = countBy(await loadMixes(prisma, records.map((record) => record.tobaccoId)));
-  const rows = records.map((record, index) => toRow(record, forecasts[index], mixCounts.get(record.tobaccoId) ?? 0));
+  const rows = records.map((record, index) => toRow(record, forecasts[index], mixCounts.get(record.tobaccoId) ?? 0, now));
 
   const withStatus = (status: ShelfStatus) => rows.filter((row) => row.status === status).length;
   return {
@@ -324,6 +389,8 @@ export const getShelf = async (now = new Date()): Promise<ShelfView> => {
     },
     today: todayForecast(forecasts, settings.bowlGrams),
     settings,
+    interval,
+    horizon: horizonView(horizon, now),
   };
 };
 
@@ -491,6 +558,87 @@ export const markEmpty = (actor: ShelfActor, tobaccoId: string, now = new Date()
     return { kind: 'count', grams: 0 };
   });
 
+export type EmptySkip = { tobaccoId: string; reason: 'out' | 'plan' };
+
+const batchIds = (value: unknown) => {
+  if (!Array.isArray(value) || !value.length || value.length > MAX_BATCH || !value.every((id) => typeof id === 'string' && id.trim())) {
+    throw new ShelfValidationError(`Список табаков: от 1 до ${MAX_BATCH} id`);
+  }
+  return [...new Set(value.map((id: string) => id.trim()))];
+};
+
+// «Закончились» разом (#333): на каждый табак — та же отметка 0 г, что и одиночная,
+// с общим пакетом в reason для одной отмены. Закончившиеся и «в плане» пропускаются.
+export const markEmptyMany = async (actor: ShelfActor, tobaccoIds: unknown, now = new Date()) => {
+  const ids = batchIds(tobaccoIds);
+  const batchId = randomUUID();
+  const { done, skipped, hiddenMixes } = await prisma.$transaction(async (tx) => {
+    const records = new Map(
+      (await tx.shelfItem.findMany({ where: { tobaccoId: { in: ids } }, include: shelfInclude })).map((record) => [record.tobaccoId, record]),
+    );
+    const missing = ids.filter((id) => !records.has(id));
+    if (missing.length) throw new ShelfNotFoundError(`Табаков нет на полке: ${missing.join(', ')}`);
+
+    const done: string[] = [];
+    const skipped: EmptySkip[] = [];
+    for (const id of ids) {
+      const record = records.get(id)!;
+      if (record.status === 'plan') {
+        skipped.push({ tobaccoId: id, reason: 'plan' });
+        continue;
+      }
+      if (bookOf(record.entries) <= 0) {
+        skipped.push({ tobaccoId: id, reason: 'out' });
+        continue;
+      }
+      const entry = await tx.stockEntry.create({
+        data: { shelfItemId: record.id, kind: 'count', grams: 0, at: now, actorLogin: actor.login, reason: `${BATCH_PREFIX}${batchId}` },
+      });
+      await audit(tx, actor, {
+        action: 'mark-empty',
+        entityType: 'stock',
+        entityId: entry.id,
+        entityLabel: label(record),
+        details: { tobaccoId: id, kind: 'count', grams: 0, batchId },
+      });
+      done.push(id);
+    }
+    await syncAvailability(tx, done);
+    const mixes = done.length ? await loadMixes(tx, done) : [];
+    return { done, skipped, hiddenMixes: new Set(mixes.map((item) => item.mix.id)).size };
+  });
+  const items = [];
+  for (const id of done) items.push(await rowOf(id, now));
+  return { batchId, done, skipped, hiddenMixes, items };
+};
+
+export const undoEmptyBatch = async (actor: ShelfActor, batchId: string, now = new Date()) => {
+  const tobaccoIds = await prisma.$transaction(async (tx) => {
+    const entries = await tx.stockEntry.findMany({
+      where: { kind: 'count', reason: `${BATCH_PREFIX}${batchId}` },
+      include: { shelfItem: { include: shelfInclude } },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!entries.length) throw new ShelfNotFoundError(`Пакет ${batchId} не найден`);
+    await tx.stockEntry.deleteMany({ where: { id: { in: entries.map((entry) => entry.id) } } });
+    const ids = entries.map((entry) => entry.shelfItem.tobaccoId);
+    await syncAvailability(tx, ids);
+    for (const entry of entries) {
+      await audit(tx, actor, {
+        action: 'delete-entry',
+        entityType: 'stock',
+        entityId: entry.id,
+        entityLabel: label(entry.shelfItem),
+        details: { tobaccoId: entry.shelfItem.tobaccoId, kind: entry.kind, grams: entry.grams, at: entry.at.toISOString(), batchId },
+      });
+    }
+    return ids;
+  });
+  const items = [];
+  for (const id of tobaccoIds) items.push(await rowOf(id, now));
+  return { items };
+};
+
 // Доля — от уровня сразу после последнего прихода; хранится вместе с граммами,
 // в которые превратилась.
 export const addCount = (
@@ -595,6 +743,20 @@ export const updateShelfItem = async (
   return rowOf(tobaccoId, now);
 };
 
+// Отметка мастера по пробе (#329): yes / no, null — снять.
+export const setTrialVerdict = async (actor: ShelfActor, tobaccoId: string, verdict: unknown, now = new Date()) => {
+  if (verdict !== null && !TRIAL_VERDICTS.includes(verdict as TrialVerdict)) {
+    throw new ShelfValidationError('Отметка пробы: yes, no или null');
+  }
+  const trialVerdict = verdict as TrialVerdict | null;
+  await prisma.$transaction(async (tx) => {
+    const record = await loadItem(tx, tobaccoId);
+    await tx.shelfItem.update({ where: { id: record.id }, data: { trialVerdict, trialMarkedAt: trialVerdict ? now : null } });
+    await audit(tx, actor, { action: 'update', entityType: 'shelf', entityId: tobaccoId, entityLabel: label(record), details: { trialVerdict } });
+  });
+  return rowOf(tobaccoId, now);
+};
+
 // Повторное добавление убранного табака возвращает его на полку; то, что уже
 // держим, в план не понижается.
 export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan') => {
@@ -634,22 +796,28 @@ export const removeFromShelf = async (actor: ShelfActor, tobaccoId: string, now 
 
 export const getSettings = () => loadSettings(prisma);
 
-export const updateSettings = async (actor: ShelfActor, patch: { bowlGrams?: number; leadDays?: number }) => {
-  const check = (value: number | undefined, min: number, max: number, field: string) => {
-    if (value !== undefined && (!Number.isInteger(value) || value < min || value > max)) {
+// budgetKop: null — бюджет не указан.
+export const updateSettings = async (
+  actor: ShelfActor,
+  patch: { bowlGrams?: number; leadDays?: number; budgetKop?: unknown },
+): Promise<ShelfSettings> => {
+  const check = (value: unknown, min: number, max: number, field: string) => {
+    if (value !== undefined && (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max)) {
       throw new ShelfValidationError(`${field}: целое число от ${min} до ${max}`);
     }
   };
   check(patch.bowlGrams, 1, 100, 'Граммовка чаши');
   check(patch.leadDays, 1, 60, 'Срок поставки');
+  if (patch.budgetKop !== null) check(patch.budgetKop, 0, MAX_BUDGET_KOP, 'Бюджет на табак, копеек');
   const data = {
     ...(patch.bowlGrams !== undefined ? { bowlGrams: patch.bowlGrams } : {}),
     ...(patch.leadDays !== undefined ? { leadDays: patch.leadDays } : {}),
+    ...(patch.budgetKop !== undefined ? { budgetKop: patch.budgetKop as number | null } : {}),
   };
   return prisma.$transaction(async (tx) => {
     const row = await tx.shelfSettings.upsert({ where: { id: 1 }, create: { id: 1, ...DEFAULT_SETTINGS, ...data }, update: data });
     await audit(tx, actor, { action: 'settings', entityType: 'shelf', entityId: 'settings', entityLabel: 'Настройки полки', details: data });
-    return { bowlGrams: row.bowlGrams, leadDays: row.leadDays };
+    return { bowlGrams: row.bowlGrams, leadDays: row.leadDays, budgetKop: row.budgetKop };
   });
 };
 
