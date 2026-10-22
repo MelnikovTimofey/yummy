@@ -6968,9 +6968,11 @@ button.chip .chip__count[hidden] {
 }
 
 .purchase-table tbody tr:last-child td { border-bottom: 0; }
+.purchase-table td.shelf-faint { color: var(--text-faint); }
 .purchase-table [data-align="center"] { text-align: center; }
 
-.purchase-app { color: var(--text-faint); }
+.purchase-app,
+.purchase-table .purchase-app { color: var(--text-faint); }
 .purchase-flag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); }
 .purchase-flag[data-tone="warning"] { color: var(--warning); }
 .purchase-flag[data-tone="faint"] { color: var(--text-faint); }
