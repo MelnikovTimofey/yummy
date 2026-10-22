@@ -248,9 +248,11 @@ test.describe('Master on a phone', () => {
     // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
     const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончился', exact: true });
+    // У «проверьте остаток» вместо «Осталось…» — «Отметить остаток»: берём обычную карточку.
     const first = page
       .locator('.m-shelf-card')
       .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
+      .filter({ has: page.getByRole('button', { name: 'Осталось…', exact: true }) })
       .first();
     await expect(first).toBeVisible();
     const id = await first.getAttribute('data-tobacco-id');
@@ -358,15 +360,17 @@ test.describe('Master on a phone', () => {
   });
 });
 
-// Прогноз и «К заказу» (#213): блок «Полка» на дашборде, переключатель
-// «К заказу» и настройки полки. Неразрушающий: количество в «К заказу» не
-// сохраняется, настройки закрываются «Отменой».
+// Прогноз и «К заказу» (#213, #323, #325, #326): блок «Полка» на дашборде с
+// бюджетом, переключатель «К заказу» и настройки полки. Неразрушающий: в «К заказу»
+// ничего не меняется, настройки закрываются «Отменой».
 test('Master dashboard shows the shelf forecast, shelf opens reorder and settings without saving', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
   const forecast = page.getByRole('article', { name: 'Прогноз расхода' });
   await expect(forecast.getByRole('heading', { name: 'Прогноз расхода' })).toBeVisible();
   await expect(forecast).toContainText(/≈ [\d\s ]+ г/);
+  // «Деньги»: бюджет указан — «<Месяц>: бюджет …», нет — приглашение его указать.
+  await expect(page.getByRole('article', { name: 'Деньги' })).toContainText(/бюджет/);
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
@@ -374,9 +378,18 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   const reorderToggle = page.getByRole('group', { name: 'Вид полки' }).getByRole('button', { name: /^К заказу/ });
   await reorderToggle.click();
   await expect(reorderToggle).toHaveAttribute('aria-pressed', 'true');
+  // Плашка интервала поставок: известен по счетам или пока нет.
+  await expect(page.locator('.reorder-interval')).toContainText(/Поставки примерно раз в|Интервал поставок пока неизвестен/);
   // Группы поставщиков или пустое состояние — зависит от полки в базе.
   await expect(page.locator('.reorder-group, .reorder__empty').first()).toBeVisible();
-  await expect(page.locator('.reorder__hint')).toContainText('Заказать — расход на 21 день минус остаток');
+  const groups = page.locator('.reorder-group');
+  if (await groups.count()) {
+    await expect(groups.first().getByRole('columnheader', { name: 'Расход в месяц' })).toBeVisible();
+    await expect(groups.first().getByRole('button', { name: 'Скопировать заявку' })).toBeVisible();
+  }
+  // Сколько заказать, решает мастер: ни степпера, ни суммы.
+  await expect(page.getByRole('group', { name: /^Заказать:/ })).toHaveCount(0);
+  await expect(page.locator('.reorder__hint')).toContainText('Сколько заказать, решает мастер.');
 
   await page.getByRole('button', { name: 'Меню полки' }).click();
   await page.getByRole('menuitem', { name: /Настройки полки/ }).click();
@@ -384,6 +397,10 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
   await expect(settings.getByLabel('Граммовка чаши, г')).toHaveValue(/^\d+$/);
   await expect(settings.getByLabel('Срок поставки, дней')).toHaveValue(/^\d+$/);
+  // Бюджет необязателен: пусто или рубли с пробелами между разрядами.
+  await expect(settings.getByLabel('Бюджет на табак, ₽ в месяц')).toHaveValue(/^[\d\s ]*$/);
+  await expect(settings).toContainText('Сколько табака уходит на одну чашу.');
+  await expect(settings).toContainText('Считается само:');
   await settings.getByRole('button', { name: 'Отмена' }).click();
   await expect(settings).toBeHidden();
 });
