@@ -66,8 +66,8 @@ function Level({ row, lg }) {
     <span className={'lvl' + (lg ? ' lg' : '')}>
       <span className={'lvl-bar' + tone + (row.left === 0 ? ' none' : '')}><i style={{ width: Math.max(row.left ? 4 : 0, share * 100) + '%' }} /></span>
       <span className="lvl-copy">
-        <b className={row.left === 0 ? 'inv-danger' : ''}>{row.left === 0 ? '0 г' : '≈ ' + row.left + ' г'}</b>
-        <small>из {row.full} г после прихода</small>
+        <b className={row.left === 0 ? 'inv-danger' : ''}>{paExact(row) ? row.left + ' г' : '≈ ' + row.left + ' г'}</b>
+        <small>{paExact(row) ? 'указал мастер' : 'прогноз'}</small>
       </span>
     </span>
   );
@@ -87,6 +87,11 @@ function Until({ row }) {
   if (row.days == null) return <span className="inv-faint">—</span>;
   return <span className={'inv-num ' + (row.days <= 3 ? 'inv-danger' : row.days <= 7 ? 'inv-warn' : '')}>{row.until} <span className="inv-faint">· {row.days} дн</span></span>;
 }
+
+// Cane Mint мастер взвесил сегодня: 40 г — его отметка, не прогноз.
+const SHELF = GR.shelf.map((r) => (r.id === 'bb-cane' ? { ...r, markedToday: true } : r));
+// Остаток точный, пока его указал мастер: отметка сегодня или «Закончился».
+const paExact = (row) => row.left === 0 || !!row.markedToday;
 
 const PA_TRIAL_IDS = PA.trials.map((t) => t.id);
 const PA_FRACS = [['¾', 0.75], ['½', 0.5], ['⅓', 1 / 3], ['¼', 0.25]];
@@ -165,7 +170,7 @@ function ShelfTable({ onOpen, pop, setPop, onMark }) {
         { key: 'arrived', label: 'ПРИХОД', width: '118px', render: (r) => <span className="inv-name"><b style={{ fontWeight: 400, fontSize: 13 }}>{r.arrived}</b><span>{r.supplier}</span></span> },
         { key: 'actions', label: '', width: '200px', align: 'right', render: (r) => <Actions row={r} pop={pop} setPop={setPop} onMark={onMark} /> },
       ]}
-      rows={GR.shelf}
+      rows={SHELF}
     />
   );
 }
@@ -181,7 +186,7 @@ function TrialMark({ value, onChange, big }) {
 }
 
 function Drawer({ id, onClose, onMark }) {
-  const row = GR.shelf.find((r) => r.id === id);
+  const row = SHELF.find((r) => r.id === id);
   const trial = PA.trials.find((t) => t.id === id);
   const [mark, setMark] = React.useState(trial ? trial.mark : null);
   const [left, setLeft] = React.useState(false);
@@ -232,7 +237,7 @@ function Drawer({ id, onClose, onMark }) {
 
         <div className="inv-kv">
           <div><span>Хватит до</span><b>{row.until}</b><small>{row.days != null ? row.days + ' дней' : '—'}</small></div>
-          <div><span>Остаток</span><b>≈ {row.left} г</b><small>из {row.full} г после прихода {row.arrived}</small></div>
+          <div><span>Остаток</span><b>{paExact(row) ? '' : '≈ '}{row.left} г</b><small>{paExact(row) ? 'указал мастер сегодня' : 'прогноз'} · из {row.full} г после прихода {row.arrived}</small></div>
           <div><span>Расход</span><b>{row.rate ? (row.rateKind === 'brand' ? '≈ ' : '') + paMonth(row.rate) + ' г/мес' : <span className="inv-faint">мало данных</span>}</b><small>{row.rate ? '≈ ' + paNum(row.rate) + ' г/день' + (row.rateKind === 'brand' ? ' · по бренду' : rasp ? ' · по 3 отметкам за 60 дней' : '') : 'появится после первой отметки'}</small></div>
           <div><span>Цена грамма</span><b>7,75 ₽</b><small>≈ 140 ₽ на чашу 18 г</small></div>
         </div>
@@ -621,7 +626,7 @@ function MShelf({ sheet }) {
   const [mark, setMark] = React.useState(null);
   const [open, setOpen] = React.useState(sheet ? 'bb-rasp' : null);
   const [frac, setFrac] = React.useState(null);
-  const rows = GR.shelf.filter((r) => ['bb-cane', 'bb-pear', 'sr-passion', 'bb-rasp'].includes(r.id));
+  const rows = SHELF.filter((r) => ['bb-cane', 'bb-pear', 'sr-passion', 'bb-rasp'].includes(r.id));
   return (
     <div className="phone">
       <header className="m-top">
@@ -659,7 +664,7 @@ function MShelf({ sheet }) {
       </div>
       <nav className="m-nav"><span>Дашборд</span><span className="on">Полка</span><span>Поставки</span><span>Ещё</span></nav>
       {open ? (() => {
-        const row = GR.shelf.find((r) => r.id === open);
+        const row = SHELF.find((r) => r.id === open);
         return (
           <>
             <div className="m-scrim" onClick={() => setOpen(null)} />
@@ -696,7 +701,8 @@ const PA_SHOTS = [
   { id: 'reorder-copied', group: 'order', name: 'К заказу · текст заявки', note: 'Только названия — объём мастер впишет в чате сам.', start: 'shelf', init: { view: 'reorder', copied: true }, tall: true },
   { id: 'shelf', group: 'order', name: 'Полка', note: '#323. Колонка «Расход» — в г/мес, как в «К заказу» и карточке. «Заканчивается» — до следующей поставки. Новинки помечены «проба».', start: 'shelf' },
   { id: 'shelf-left', group: 'order', name: 'Полка · «Сколько осталось?»', note: 'Без изменений с #306: доля ¾ ½ ⅓ ¼ от уровня после прихода или точно в граммах.', start: 'shelf', init: { pop: 'bb-rasp' } },
-  { id: 'card', group: 'order', name: 'Карточка', note: '#323. Расход — г/мес, под ним г/день.', start: 'shelf', init: { drawer: 'bb-rasp' }, tall: true },
+  { id: 'card', group: 'order', name: 'Карточка · прогноз', note: '#323. Расход — г/мес, под ним г/день. Остаток «≈ … · прогноз»: отметка была 17 ноя, дальше — по расходу.', start: 'shelf', init: { drawer: 'bb-rasp' }, tall: true },
+  { id: 'card-exact', group: 'order', name: 'Карточка · указал мастер', note: 'Мастер взвесил сегодня: остаток без «≈», подпись «указал мастер».', start: 'shelf', init: { drawer: 'bb-cane' }, tall: true },
   { id: 'card-trial', group: 'order', name: 'Карточка пробы', note: '#329. Отметка «зашло / не зашло» — одно касание, можно поменять.', start: 'shelf', init: { drawer: 'bb-pear' }, tall: true },
   { id: 'settings', group: 'budget', name: 'Настройки полки', note: '#326. Бюджет на табак в ₽ в месяц — необязательное поле.', start: 'shelf', init: { view: 'reorder', settings: true } },
   { id: 'dashboard', group: 'budget', name: 'Дашборд · Деньги', note: '#326. Потрачено против бюджета, отметка базы, остаток на пробы.', start: 'dashboard' },
