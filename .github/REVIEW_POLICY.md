@@ -99,7 +99,6 @@ PR должен считаться `needs-human-review`, если затрону
      под ревью не попадает
 4. process-governance files:
    - `CLAUDE.md`
-   - `PRD.md` — продуктовая семантика и инварианты
    - `docs/**`
    - `.github/**`
    - `.claude/**`
