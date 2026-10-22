@@ -71,7 +71,7 @@ const BIG_PACK_BRANDS = ['DARKSIDE', 'Starline'];
 // Типичная фасовка бренда — для прихода без счёта из старого тумблера наличия.
 export const defaultReceiptGrams = (manufacturer: string) => (BIG_PACK_BRANDS.includes(manufacturer) ? 250 : 200);
 
-const parseList = (value: string): string[] => {
+export const parseList = (value: string): string[] => {
   try {
     const parsed = JSON.parse(value) as unknown;
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
@@ -278,7 +278,7 @@ const lastOf = (record: ShelfRecord, kind: StockEntryKind) =>
 const round = (grams: number | null) => (grams === null ? null : Math.round(grams));
 
 // Стартовый приход — табак уже стоял на полке до учёта, это не проба.
-const trialOf = (record: ShelfRecord, now: Date) => {
+export const trialOf = (record: ShelfRecord, now: Date) => {
   const first = record.entries.find((entry) => entry.kind === 'receipt');
   return isTrial(first && first.delivery?.kind !== 'start' ? first.at : null, now);
 };
@@ -362,6 +362,9 @@ export const loadShelf = async (now: Date) => {
   const items = records.map(toStockItem);
   return { records, items, forecasts: forecastShelf(items, now, horizon), settings, interval, horizon };
 };
+
+// Убранные с полки: их расход за прошлые недели — тоже расход точки.
+export const loadDroppedShelf = () => prisma.shelfItem.findMany({ where: { status: 'dropped' }, include: shelfInclude });
 
 // Журналы всех табаков, когда-либо стоявших на полке, — для истории расхода.
 export const loadShelfHistory = async () =>

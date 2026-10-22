@@ -272,6 +272,7 @@ export const buildApp = () => {
       deliveryLinesDelete: 'DELETE /staff/deliveries/:id/lines/:lineId',
       shelfReorder: 'GET /staff/shelf/reorder',
       shelfDashboard: 'GET /staff/shelf/dashboard',
+      shelfPurchase: 'GET /staff/shelf/purchase',
       dashboardSummary: 'GET /staff/dashboard/summary',
       dailyCodesList: 'GET /staff/access/daily-codes',
       dailyCodesCreate: 'POST /staff/access/daily-codes',
