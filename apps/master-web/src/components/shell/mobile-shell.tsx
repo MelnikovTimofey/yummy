@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { LogOut, Sparkles } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { MOBILE_MORE_TABS, MOBILE_NAV, mobileNavItemFor } from './mobile-nav';
+import { MOBILE_MORE_TABS, MOBILE_NAV, mobileNavItemFor, openSection } from './mobile-nav';
 import type { WorkspaceTab } from './workspace-tabs';
 
-// Оболочка «Мастера» на телефоне (≤ 640 px, #215, #shot=shelf-mobile):
+// Оболочка «Мастера» на телефоне (PHONE_QUERY, #215, #shot=shelf-mobile):
 // компактная верхняя панель и нижняя навигация вместо вкладок.
 
 export const MobileTopBar = ({ title, action }: { title: string; action?: ReactNode }) => (
@@ -40,7 +40,7 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
             data-active={active === item.id}
             aria-current={active === item.id ? 'page' : undefined}
             aria-expanded={item.id === 'more' ? moreOpen : undefined}
-            onClick={() => (item.id === 'more' ? setMoreOpen(true) : onTabChange(item.id))}
+            onClick={() => (item.id === 'more' ? setMoreOpen(true) : openSection(item.id, onTabChange))}
           >
             {item.label}
             {item.id === 'more' && whatsNew?.unseen ? <span className="wn-dot m-nav__dot" aria-hidden="true" /> : null}
@@ -65,7 +65,7 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
                     aria-current={activeTab === tab.id ? 'page' : undefined}
                     onClick={() => {
                       setMoreOpen(false);
-                      onTabChange(tab.id);
+                      openSection(tab.id, onTabChange);
                     }}
                   >
                     <Icon size={18} strokeWidth={1.8} aria-hidden />
