@@ -6055,8 +6055,18 @@ button.chip .chip__count[hidden] {
 
 .shelf-name--receipt b { font-weight: 400; font-size: var(--fs-sm); }
 
-/* Метка «проба» у названия (#329, #shot=shelf): табак впервые пришёл за 60 дней. */
-.shelf-name .shelf-name__tag { height: 20px; margin-left: 8px; padding: 0 7px; vertical-align: 1px; color: var(--text-secondary); overflow: visible; }
+/* Метка «проба» рядом с названием (#329, #shot=shelf): табак впервые пришёл за 60 дней.
+   Вне .shelf-name — длинное название обрезается, а метка остаётся видна. */
+.shelf-name-row { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.shelf-trial-tag {
+  flex-shrink: 0;
+  height: 20px;
+  padding: 0 7px;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 .shelf-until { display: grid; gap: 1px; }
 .shelf-until small { font-size: var(--fs-xs); }

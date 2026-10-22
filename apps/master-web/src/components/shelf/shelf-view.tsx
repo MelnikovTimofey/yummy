@@ -727,12 +727,12 @@ export const ShelfView = ({
                           }}
                         >
                           <td>
-                            <span className="shelf-name">
-                              <b>
-                                {row.tobacco.name}
-                                {row.trial ? <span className="tag shelf-name__tag">проба</span> : null}
-                              </b>
-                              <span>{row.tobacco.manufacturer}</span>
+                            <span className="shelf-name-row">
+                              <span className="shelf-name">
+                                <b>{row.tobacco.name}</b>
+                                <span>{row.tobacco.manufacturer}</span>
+                              </span>
+                              {row.trial ? <span className="tag shelf-trial-tag">проба</span> : null}
                             </span>
                           </td>
                           <td>
