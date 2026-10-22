@@ -17,7 +17,7 @@ export type JournalEntry = StockEntry & { start?: boolean };
 
 const DAY_MS = 86_400_000;
 const MONTH_DAYS = 30;
-const FAST_WINDOW_DAYS = 60;
+export const FAST_WINDOW_DAYS = 60;
 export const FAST_DAYS = 3;
 export const IDLE_DAYS = 21;
 export const IDLE_GRAMS_PER_DAY = 2;
