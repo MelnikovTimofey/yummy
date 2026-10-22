@@ -194,7 +194,8 @@ Production-ветка репозитория — `main`. Соглашение п
    `gh pr merge <num> --squash --delete-branch`, не дожидаясь
    подтверждения. «Оранжевый» smoke не мерджить — см. §3.
    Если хоть один триггер сработал (`apps/backend/prisma/**`,
-   auth-paths, runtime/env/bot ops, process-governance) — ждать
+   auth-paths, runtime/env/bot ops и скрипты выкатки прода,
+   process-governance) — ждать
    человеческого ревью. Сценарии `tests/smoke/tests/*.spec.ts`
    триггером **не** являются: §3 требует править их в том же PR, что
    правит UI, поэтому обычный срез с обновлённым smoke мерджится сам.

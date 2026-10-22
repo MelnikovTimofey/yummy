@@ -8,6 +8,7 @@ on:
       - .github/**
       - .claude/**
       - CLAUDE.md
+      - PRD.md
       - docs/**
   push:
     branches:
@@ -16,6 +17,7 @@ on:
       - .github/**
       - .claude/**
       - CLAUDE.md
+      - PRD.md
       - docs/**
 
 permissions:
@@ -65,7 +67,7 @@ jobs:
             --exclude-dir=archive \
             --exclude=atelier-docs-lint.yml \
             "TODO|Structuring This Skill|Resources \(optional\)" \
-            .claude .github docs CLAUDE.md)
+            .claude .github docs CLAUDE.md PRD.md)
           status=$?
           set -e
 
