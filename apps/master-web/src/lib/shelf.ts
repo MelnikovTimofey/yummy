@@ -384,7 +384,10 @@ export type ShelfShortcut =
   | { type: 'empty' }
   | { type: 'left' }
   | { type: 'mark'; fraction: number }
-  | { type: 'undo' };
+  | { type: 'undo' }
+  // Выбор нескольких (#333): X — строку в выделение, Esc — снять выделение.
+  | { type: 'select' }
+  | { type: 'clear' };
 
 // По коду клавиши, а не по символу: на русской раскладке E — это «у», Z — «я».
 export const resolveShelfShortcut = ({
@@ -406,6 +409,8 @@ export const resolveShelfShortcut = ({
   if (code === 'KeyE') return { type: 'empty' };
   if (code === 'KeyO') return { type: 'left' };
   if (code === 'KeyZ') return { type: 'undo' };
+  if (code === 'KeyX') return { type: 'select' };
+  if (key === 'Escape') return { type: 'clear' };
   const digit = /^Digit([1-4])$/.exec(code);
   if (digit) return { type: 'mark', fraction: MARK_OPTIONS[Number(digit[1]) - 1].value };
   return null;

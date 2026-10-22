@@ -350,6 +350,10 @@ test('resolveShelfShortcut: клавиши полки по коду клавиш
   assert.deepEqual(resolveShelfShortcut({ key: '1', code: 'Digit1' }), { type: 'mark', fraction: 0.75 });
   assert.deepEqual(resolveShelfShortcut({ key: '3', code: 'Digit3' }), { type: 'mark', fraction: 1 / 3 });
   assert.deepEqual(resolveShelfShortcut({ key: 'я', code: 'KeyZ' }), { type: 'undo' });
+  // Выбор нескольких (#333): X — строка в выделение, Esc — снять выделение.
+  assert.deepEqual(resolveShelfShortcut({ key: 'ч', code: 'KeyX' }), { type: 'select' });
+  assert.deepEqual(resolveShelfShortcut({ key: 'Escape', code: 'Escape' }), { type: 'clear' });
+  assert.equal(resolveShelfShortcut({ key: 'Escape', code: 'Escape', inField: true }), null);
   assert.equal(resolveShelfShortcut({ key: 'e', code: 'KeyE', inField: true }), null);
   assert.equal(resolveShelfShortcut({ key: 'e', code: 'KeyE', modifier: true }), null);
   assert.equal(resolveShelfShortcut({ key: 'q', code: 'KeyQ' }), null);

@@ -1902,6 +1902,38 @@ export const normalizeShelfEntryResponse = (value: unknown) => {
   return { entryId: String(raw.entryId ?? ''), item: normalizeShelfRow(raw.item) };
 };
 
+// «Закончились» разом (#333): POST /staff/shelf/empty. batchId — для одной отмены
+// на всех; пропущенные — уже закончившиеся (out) и «в плане» (plan).
+export type ShelfEmptySkip = { tobaccoId: string; reason: 'out' | 'plan' };
+export type ShelfEmptyManyResponse = {
+  batchId: string;
+  done: string[];
+  skipped: ShelfEmptySkip[];
+  hiddenMixes: number;
+  items: ShelfRow[];
+};
+
+const shelfRows = (value: unknown) => (Array.isArray(value) ? value : []).filter(isRecord).map(normalizeShelfRow);
+
+export const normalizeShelfEmptyManyResponse = (value: unknown): ShelfEmptyManyResponse => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    batchId: String(raw.batchId ?? ''),
+    done: toStringList(raw.done),
+    skipped: (Array.isArray(raw.skipped) ? raw.skipped : []).filter(isRecord).map((skip) => ({
+      tobaccoId: String(skip.tobaccoId ?? ''),
+      reason: skip.reason === 'plan' ? 'plan' : 'out',
+    })),
+    hiddenMixes: toNullableNumber(raw.hiddenMixes) ?? 0,
+    items: shelfRows(raw.items),
+  };
+};
+
+// Отмена пакета: DELETE /staff/shelf/batches/:batchId — строки после отмены.
+export const normalizeShelfBatchUndoResponse = (value: unknown): { items: ShelfRow[] } => ({
+  items: shelfRows(isRecord(value) ? value.items : null),
+});
+
 // --- «К заказу» и блок «Полка» дашборда (#213) -------------------------------
 
 export type ShelfTobaccoRef = { id: string; manufacturer: string; lineName: string; name: string };
