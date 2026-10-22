@@ -94,7 +94,7 @@ export const ShelfSettingsDialog = ({ settings, interval, horizon, onSave, onClo
           <p className="operator-dialog__eyebrow">Полка · настройки</p>
           <DialogTitle className="operator-dialog__title">Настройки полки</DialogTitle>
           <DialogDescription className="operator-dialog__sub">
-            Из них считаются чаши в прогнозе, «Заканчивается», «К заказу» и бюджет на дашборде.
+            Из них считаются чаши в прогнозе, «Заканчивается», «К заказу» и бюджет в «Закупке».
           </DialogDescription>
         </DialogHeader>
         <form className="operator-dialog__form" onSubmit={(event) => void submit(event)} noValidate>

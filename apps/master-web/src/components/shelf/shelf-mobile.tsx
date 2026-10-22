@@ -1,12 +1,13 @@
 import { useId, useState } from 'react';
 import { Ellipsis } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import type { ShelfRow } from '@/contracts';
+import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
 import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
 import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
 import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
 import type { ShelfRowActions } from './shelf-row-menu';
+import { TrialMark } from './shelf-trial-mark';
 
 // «Полка» на телефоне (#215, #306, #shot=shelf-mobile, shelf-mobile-sheet).
 
@@ -20,9 +21,10 @@ type ShelfMobileListProps = {
   onUnstop: (row: ShelfRow) => void;
   onOpenSheet: (row: ShelfRow) => void;
   onOpenCard: (row: ShelfRow) => void;
+  onTrialVerdict: (row: ShelfRow, verdict: ShelfTrialVerdict | null) => Promise<void>;
 };
 
-export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, onOpenSheet, onOpenCard }: ShelfMobileListProps) => (
+export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, onOpenSheet, onOpenCard, onTrialVerdict }: ShelfMobileListProps) => (
   <ul className="m-shelf-list" aria-label="Табаки на полке">
     {rows.map((row) => {
       const actions = shelfMobileActions(row);
@@ -54,6 +56,18 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
               {actions.note ? <small className="shelf-faint">{actions.note}</small> : null}
             </span>
           </div>
+          {/* Проба (#329, #shot=mobile-trial): отметка у стойки, одно касание. */}
+          {row.trial ? (
+            <div className="m-shelf-card__trial">
+              <span>Проба · как зашла?</span>
+              <TrialMark
+                value={row.trialVerdict}
+                size="lg"
+                label={`Как зашла проба: ${fullName(row)}`}
+                onChange={(next) => onTrialVerdict(row, next)}
+              />
+            </div>
+          ) : null}
           {actions.left ? (
             <div className="m-shelf-card__acts">
               <button type="button" className="m-shelf-card__left" disabled={busy} onClick={() => onOpenSheet(row)}>

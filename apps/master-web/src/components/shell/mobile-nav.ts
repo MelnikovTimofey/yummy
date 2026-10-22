@@ -16,7 +16,7 @@ export const MOBILE_MORE_TABS: WorkspaceTabDescriptor[] = workspaceTabs.filter((
 
 export const mobileNavItemFor = (tab: WorkspaceTab): MobileNavItem => (PRIMARY.includes(tab) ? tab : 'more');
 
-export const mobileTitleFor = (tab: WorkspaceTab, shelfMode: 'shelf' | 'reorder') => {
+export const mobileTitleFor = (tab: WorkspaceTab, shelfMode: 'shelf' | 'reorder' | 'purchase') => {
   if (tab === 'shelf' && shelfMode === 'reorder') return 'К заказу';
   return workspaceTabs.find((item) => item.id === tab)?.label ?? '';
 };

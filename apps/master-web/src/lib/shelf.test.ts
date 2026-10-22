@@ -24,6 +24,7 @@ import {
   formatShelfDate,
   fractionGrams,
   historyEntry,
+  trialArrival,
   matchShelfStatus,
   shelfChipCount,
   parseGrams,
@@ -474,4 +475,10 @@ test('monthTile: «В месяц уходит» — расход дня × 30, �
   assert.deepEqual(monthTile({ grams: 540, bowls: 30 }, 18), { value: '≈ 16 кг', hint: '≈ 540 г в день · 30 чаш по 18 г' });
   assert.deepEqual(monthTile({ grams: 18, bowls: 1 }, 18), { value: '≈ 0,5 кг', hint: '≈ 18 г в день · 1 чаша по 18 г' });
   assert.deepEqual(monthTile({ grams: 0, bowls: 0 }, 18), { value: '—', hint: 'расход появится после первой отметки' });
+});
+
+test('trialArrival: первый приход пробы — самый старый в истории (#329)', () => {
+  assert.equal(trialArrival(card.history), 'пришёл впервые 1 окт, 250 г');
+  assert.equal(trialArrival(card.history.filter((entry) => entry.kind !== 'receipt')), null);
+  assert.equal(trialArrival([]), null);
 });

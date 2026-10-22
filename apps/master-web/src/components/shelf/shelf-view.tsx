@@ -2,7 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ellipsis, FileUp, Search, SlidersHorizontal } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow } from '@/components/shell/master-stats-row';
-import { DEFAULT_SHELF_SETTINGS, formatCount, formatMetricValue, type ShelfRow } from '@/contracts';
+import {
+  DEFAULT_SHELF_SETTINGS,
+  formatCount,
+  formatMetricValue,
+  type ShelfRow,
+  type ShelfTobaccoRef,
+  type ShelfTrialVerdict,
+} from '@/contracts';
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -41,12 +48,14 @@ import { ShelfHeadMenu } from './shelf-head-menu';
 import type { CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
 import { ShelfMarkSheet, ShelfMobileList } from './shelf-mobile';
+import { ShelfPurchase } from './shelf-purchase';
 import { ShelfReorder } from './shelf-reorder';
 import { ShelfRowMenu, type ShelfMenuMode, type ShelfRowActions } from './shelf-row-menu';
 import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 
-export type ShelfMode = 'shelf' | 'reorder';
+// purchase — «Закупка» (#327–#331), только на десктопе.
+export type ShelfMode = 'shelf' | 'reorder' | 'purchase';
 
 type ShelfViewProps = {
   shelf: ShelfApi;
@@ -54,6 +63,8 @@ type ShelfViewProps = {
   mode: ShelfMode;
   onModeChange: (mode: ShelfMode) => void;
   onGoCatalog: () => void;
+  // «Идеи: <направление>» во «Вкусах» — «Идеи для закупки» каталога.
+  onOpenIdeas: () => void;
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
   onUploadInvoice: (file: File) => void;
@@ -71,6 +82,7 @@ const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
 const today = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
 
 const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
+const tobaccoName = (tobacco: ShelfTobaccoRef) => `${tobacco.manufacturer} ${tobacco.name}`;
 const SUBTITLE = 'Сколько табака осталось, расход и прогноз. Закончился — одна кнопка, остаток — когда удобно.';
 
 const isField = (target: EventTarget | null) =>
@@ -81,6 +93,7 @@ export const ShelfView = ({
   mode,
   onModeChange,
   onGoCatalog,
+  onOpenIdeas,
   onOpenInCatalog,
   onOpenMix,
   onUploadInvoice,
@@ -150,6 +163,13 @@ export const ShelfView = ({
     setCardId(openCardId);
     onCardOpened?.();
   }, [openCardId, rows, onCardOpened, onModeChange]);
+
+  // «Закупку» перечитываем при входе в вид и после смены настроек (бюджет).
+  const { loadPurchase } = shelf;
+  const settingsVersion = view?.settings;
+  useEffect(() => {
+    if (mode === 'purchase' && !isPhone) void loadPurchase();
+  }, [isPhone, loadPurchase, mode, settingsVersion]);
 
   const reorderCount = countReorder(shelf.reorder);
   const headMenu = <ShelfHeadMenu onSettings={() => onSettingsOpenChange(true)} />;
@@ -274,6 +294,35 @@ export const ShelfView = ({
       notify({ title, text: describeShelfError(cause), error: true });
     }
   }, [notify, toast]);
+
+  // «Держим» в «Закупке»: видно сразу; подсказки базы и бюджет пересчитывает сервер.
+  const onPurchaseKeep = useCallback(
+    async (tobacco: ShelfTobaccoRef, keepStocked: boolean) => {
+      shelf.patchPurchaseItem(tobacco.id, { keepStocked });
+      try {
+        await shelf.update(tobacco.id, { keepStocked });
+      } catch (cause) {
+        notify({ title: tobaccoName(tobacco), text: describeShelfError(cause), error: true });
+      }
+      void shelf.loadPurchase();
+    },
+    [notify, shelf],
+  );
+
+  // Отметка пробы (#329) — в «Закупке» и на телефоне; не сохранилась — тост,
+  // «Закупку» перечитываем, чтобы вернуть отметку с сервера.
+  const onTrialVerdict = useCallback(
+    async (tobacco: ShelfTobaccoRef, trialVerdict: ShelfTrialVerdict | null) => {
+      shelf.patchPurchaseItem(tobacco.id, { trialVerdict });
+      try {
+        await shelf.update(tobacco.id, { trialVerdict });
+      } catch (cause) {
+        notify({ title: tobaccoName(tobacco), text: describeShelfError(cause), error: true });
+        if (shelf.purchase) void shelf.loadPurchase();
+      }
+    },
+    [notify, shelf],
+  );
 
   const onUpdate = useCallback(async (row: ShelfRow, patch: ShelfPatch) => {
     await shelf.update(row.tobacco.id, patch);
@@ -445,7 +494,7 @@ export const ShelfView = ({
           <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
         ) : null}
 
-        {view && mode === 'shelf' ? (
+        {view && mode !== 'reorder' ? (
           <>
             <div className="m-shelf-search">
               <div className="input m-shelf-search__field">
@@ -484,6 +533,7 @@ export const ShelfView = ({
               onUnstop={(row) => void onToggleStop(row)}
               onOpenSheet={(row) => setSheetId(row.tobacco.id)}
               onOpenCard={(row) => setCardId(row.tobacco.id)}
+              onTrialVerdict={(row, verdict) => onTrialVerdict(row.tobacco, verdict)}
             />
             {!shown.length ? <p className="empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
           </>
@@ -555,6 +605,9 @@ export const ShelfView = ({
               <button type="button" aria-pressed={mode === 'reorder'} onClick={() => onModeChange('reorder')}>
                 {reorderCount === null ? 'К заказу' : `К заказу · ${formatMetricValue(reorderCount)}`}
               </button>
+              <button type="button" aria-pressed={mode === 'purchase'} onClick={() => onModeChange('purchase')}>
+                Закупка
+              </button>
             </span>
             <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
               Добавить из каталога
@@ -573,6 +626,17 @@ export const ShelfView = ({
         <>
           {mode === 'reorder' ? (
             <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
+          ) : null}
+
+          {mode === 'purchase' ? (
+            <ShelfPurchase
+              purchase={shelf.purchase}
+              error={shelf.purchaseError}
+              onSettings={() => onSettingsOpenChange(true)}
+              onKeep={onPurchaseKeep}
+              onVerdict={onTrialVerdict}
+              onIdeas={onOpenIdeas}
+            />
           ) : null}
 
           {mode === 'shelf' ? (

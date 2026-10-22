@@ -2,7 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
 import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { defaultReceiptGrams, summarizeShelf } from '@/lib/shelf';
+import { patchPurchase, type PurchasePatch } from '@/lib/purchase';
 import {
+  normalizePurchaseView,
   normalizeReorderView,
   normalizeShelfCard,
   normalizeShelfEntryResponse,
@@ -10,6 +12,7 @@ import {
   normalizeShelfSettings,
   normalizeShelfView,
   readEntityPayload,
+  type PurchaseView,
   type ReorderView,
   type ShelfRow,
   type ShelfSettings,
@@ -46,6 +49,28 @@ export const useShelf = (token: string) => {
   const [reorder, setReorder] = useState<ReorderView | null>(null);
   const [reorderError, setReorderError] = useState('');
   const reorderGuard = useRef(createLatestRequestGuard()).current;
+  // «Закупка» (#327–#331) — по запросу: считается по журналу за 30–90 дней.
+  const [purchase, setPurchase] = useState<PurchaseView | null>(null);
+  const [purchaseError, setPurchaseError] = useState('');
+  const purchaseGuard = useRef(createLatestRequestGuard()).current;
+
+  const loadPurchase = useCallback(async () => {
+    const ticket = purchaseGuard.start();
+    try {
+      const next = normalizePurchaseView(await requestJson<unknown>('/staff/shelf/purchase', {}, token));
+      if (purchaseGuard.isStale(ticket)) return;
+      setPurchase(next);
+      setPurchaseError('');
+    } catch (cause) {
+      if (purchaseGuard.isStale(ticket)) return;
+      setPurchaseError(cause instanceof Error ? cause.message : 'Не удалось загрузить «Закупку»');
+    }
+  }, [purchaseGuard, token]);
+
+  // «Держим» и отметка пробы видны в «Закупке» сразу, до перечитывания.
+  const patchPurchaseItem = useCallback((tobaccoId: string, patch: PurchasePatch) => {
+    setPurchase((current) => (current ? patchPurchase(current, tobaccoId, patch) : current));
+  }, []);
 
   const loadReorder = useCallback(async (nextToken: string = token) => {
     const ticket = reorderGuard.start();
@@ -144,12 +169,15 @@ export const useShelf = (token: string) => {
 
   const reset = useCallback(() => {
     reorderGuard.start();
+    purchaseGuard.start();
+    setPurchase(null);
+    setPurchaseError('');
     setView(null);
     setStatus('idle');
     setError('');
     setReorder(null);
     setReorderError('');
-  }, [reorderGuard]);
+  }, [purchaseGuard, reorderGuard]);
 
   return {
     view,
@@ -157,6 +185,10 @@ export const useShelf = (token: string) => {
     error,
     reorder,
     reorderError,
+    purchase,
+    purchaseError,
+    loadPurchase,
+    patchPurchaseItem,
     reload,
     loadReorder,
     reset,

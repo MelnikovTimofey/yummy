@@ -511,3 +511,9 @@ export const weekLabel = (week: Pick<ShelfWeek, 'from' | 'to' | 'partial'>) => {
     ? `${from.getDate()}–${to.getDate()} ${MONTHS[to.getMonth()]}`
     : `${from.getDate()} ${MONTHS[from.getMonth()]}–${to.getDate()} ${MONTHS[to.getMonth()]}`;
 };
+
+// Блок «Проба» в карточке (#329, #shot=card-trial): история — новые сверху, первый приход — последний в ней.
+export const trialArrival = (history: StockEntry[]) => {
+  const first = [...history].reverse().find((entry) => entry.kind === 'receipt');
+  return first ? `пришёл впервые ${formatShelfDate(first.at)}, ${formatNumber(first.grams)} г` : null;
+};

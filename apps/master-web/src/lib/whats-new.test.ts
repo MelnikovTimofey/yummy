@@ -110,12 +110,15 @@ test('данные выпусков целостны: id уникальны, у 
   }
 });
 
-test('последний выпуск — прогноз вместо количества: один слайд со ссылкой на «К заказу»', () => {
+test('последний выпуск — прогноз вместо количества и «Закупка»: ссылки на «К заказу» и «Закупку»', () => {
   const latest = WHATS_NEW[0];
   assert.equal(latest.id, '2026-10-purchase');
   assert.equal(latest.label, '22 октября');
-  assert.deepEqual(latest.slides.map((slide) => slide.title), ['«К заказу» без количества']);
-  const [slide] = latest.slides;
+  assert.deepEqual(latest.slides.map((slide) => slide.title), ['«К заказу» без количества', '«Закупка» и отметка пробы']);
+  const [slide, purchase] = latest.slides;
+  assert.deepEqual(purchase.action, { label: 'Открыть «Закупку»', tab: 'shelf', view: 'purchase' });
+  assert.ok('list' in purchase && purchase.list.some((line) => line.includes('Зашло')));
+  assert.ok(!/шаг|± ?50/i.test(JSON.stringify(purchase)));
   assert.deepEqual(slide.action, { label: 'Открыть «К заказу»', tab: 'shelf', view: 'reorder' });
   assert.ok('list' in slide && slide.list.some((line) => line.includes('Бюджет на табак')));
   // Количество к заказу больше не предлагаем — в тексте ни «шага», ни «сколько заказать» от сервиса.

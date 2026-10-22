@@ -6874,6 +6874,235 @@ button.chip .chip__count[hidden] {
 }
 
 /* =====================================================================
+   «Закупка» (#327–#331) — третий вид «Полки» по
+   design/design_handoff_purchase_analytics (#shot=purchase-base,
+   purchase-fast, purchase-trials, purchase-idle, purchase-profiles,
+   edge-no-budget, edge-few). «В приложении» — бледнее: справочно.
+   ===================================================================== */
+
+.purchase { display: grid; gap: 12px; }
+.purchase-budget-wrap { display: grid; gap: 8px; }
+
+.purchase-budget {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow: hidden;
+}
+
+.purchase-budget > div { display: grid; gap: 3px; padding: 14px 16px; border-right: 1px solid var(--border-subtle); }
+.purchase-budget > div:last-child { border-right: 0; }
+
+.purchase-budget span {
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.purchase-budget b {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 24px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-budget b[data-tone="success"] { color: var(--success); }
+.purchase-budget b[data-tone="danger"] { color: var(--danger); }
+.purchase-budget small { font-size: var(--fs-xs); color: var(--text-faint); }
+
+.purchase-hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.purchase-warn { color: var(--warning); }
+
+.purchase-toolbar .shelf-toolbar__chips { flex: 1; }
+.purchase-toolbar__date { font-size: var(--fs-sm); color: var(--text-faint); white-space: nowrap; }
+
+.purchase-section { display: grid; gap: 10px; }
+.purchase-section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.purchase-section__head h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; color: var(--text-primary); }
+.purchase-section__head p { margin: 2px 0 0; max-width: 80ch; font-size: var(--fs-sm); color: var(--text-muted); }
+.purchase-frozen { font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; }
+.purchase-frozen b { font-weight: 500; color: var(--text-primary); }
+
+.purchase-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.purchase-table-shell {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow-x: auto;
+}
+
+.purchase-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--fs-md);
+}
+
+.purchase-table th {
+  height: 34px;
+  padding: 0 12px;
+  text-align: left;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.purchase-table td {
+  height: 46px;
+  padding: 6px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.purchase-table tbody tr:last-child td { border-bottom: 0; }
+.purchase-table [data-align="center"] { text-align: center; }
+
+.purchase-app { color: var(--text-faint); }
+.purchase-flag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); }
+.purchase-flag[data-tone="warning"] { color: var(--warning); }
+.purchase-flag[data-tone="faint"] { color: var(--text-faint); }
+.purchase-danger { color: var(--danger); }
+.purchase-stack { display: grid; gap: 1px; }
+.purchase-stack small { font-size: var(--fs-xs); color: var(--text-faint); }
+
+[data-tone="success"].shelf-num { color: var(--success); }
+[data-tone="muted"].shelf-num { color: var(--text-muted); }
+
+.purchase-verdict { font-size: var(--fs-sm); line-height: 1.35; color: var(--text-secondary); }
+.purchase-verdict[data-tone="muted"] { color: var(--text-muted); }
+.purchase-verdict[data-tone="faint"] { color: var(--text-faint); }
+
+.purchase-profiles {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.purchase-prof {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 220px;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.purchase-prof:last-child { border-bottom: 0; }
+
+.purchase-prof--head {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.purchase-prof__name { display: inline-flex; align-items: center; gap: 8px; }
+.purchase-prof__flag { display: grid; gap: 4px; justify-items: start; }
+
+.purchase-bars { display: grid; gap: 4px; }
+
+.purchase-bar {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: center;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.purchase-bar i { display: block; height: 8px; border-radius: 4px; }
+.purchase-bar i[data-kind="shelf"] { background: var(--text-faint); }
+.purchase-bar i[data-kind="app"] { box-sizing: border-box; border: 1px dashed var(--text-faint); }
+.purchase-bar b { font-weight: 400; text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.purchase-bar--app { opacity: 0.6; }
+
+.purchase-few {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 40px 32px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-lg);
+}
+
+.purchase-few h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 22px; color: var(--text-primary); }
+.purchase-few p { margin: 0; max-width: 64ch; line-height: 1.5; color: var(--text-muted); }
+
+/* «Зашло / Не зашло» (#329): в «Закупке», в карточке и на телефоне. */
+.trial-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.trial-mark button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.trial-mark button + button { border-left: 1px solid var(--border-default); }
+.trial-mark button:hover { color: var(--text-primary); }
+.trial-mark button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.trial-mark button[aria-pressed="true"][data-verdict="yes"] { background: var(--success-soft); color: var(--text-primary); }
+.trial-mark button[aria-pressed="true"][data-verdict="no"] { background: var(--danger-soft); color: var(--text-primary); }
+.trial-mark[data-size="lg"] button { padding: 8px 12px; font-size: 14px; }
+
+/* Блок «Проба» в карточке (#shot=card-trial). */
+.shelf-trial {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.shelf-trial__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-size: var(--fs-sm); color: var(--text-primary); }
+.shelf-trial__row b { font-weight: 500; }
+.shelf-trial__muted { color: var(--text-muted); }
+.shelf-trial__note { margin: 0; font-size: var(--fs-sm); color: var(--text-faint); }
+
+/* Полоса «Проба · как зашла?» на телефоне (#shot=mobile-trial). */
+.m-shelf-card__trial {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* =====================================================================
    Дашборд: блок «Полка» (#213) — по #shot=dashboard.
    ===================================================================== */
 

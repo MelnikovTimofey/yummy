@@ -968,6 +968,11 @@ export const App = () => {
       mode={shelfMode}
       onModeChange={setShelfMode}
       onGoCatalog={() => setActiveTab('catalog')}
+      onOpenIdeas={() => {
+        // Смена вкладки сама перечитает идеи.
+        setCatalogView('ideas');
+        setActiveTab('catalog');
+      }}
       onOpenInCatalog={(row) => {
         setCatalogView('all');
         setActiveTab('catalog');
@@ -1167,7 +1172,8 @@ export const App = () => {
     };
     const openWhatsNewAction = (action: WhatsNewAction) => {
       closeWhatsNew();
-      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : 'shelf');
+      // «Закупка» — только на десктопе: на телефоне — полка.
+      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : action.view === 'purchase' && !isPhone ? 'purchase' : 'shelf');
       if (action.tab === 'catalog') {
         setCatalogView(action.view === 'ideas' ? 'ideas' : 'all');
         // Смена вкладки сама перечитает идеи; уже в каталоге — перечитываем здесь.
