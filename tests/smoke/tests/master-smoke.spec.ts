@@ -190,9 +190,54 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
   await expect(emptyButton(row)).toBeVisible();
 });
 
-// «Полка» на телефоне (#215): у стойки мастер открывает полку из нижней
-// навигации, жмёт «Закончился» в карточке и отменяет из тоста, а шторку
-// «Сколько осталось?» закрывает без отметки. Неразрушающий.
+// Несколько табаков разом (#333, #shot=shelf-bulk, shelf-bulk-done): чекбоксы,
+// панель «Выбрано N», «Закончились» одним действием и одна отмена на всех.
+// Неразрушающий: отмена пакета удаляет отметки 0 г из журнала.
+test('Master shelf selects several tobaccos, marks them out at once and undoes it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const emptyButton = page.getByRole('button', { name: 'Закончился', exact: true });
+  const inStock = page.locator('table.shelf-table tbody tr[data-tobacco-id]').filter({ has: emptyButton });
+  await expect(inStock.nth(1)).toBeVisible();
+  // Строки — по id: после «Закончились» сортировка переставит их наверх.
+  const ids = [await inStock.nth(0).getAttribute('data-tobacco-id'), await inStock.nth(1).getAttribute('data-tobacco-id')];
+  const rows = ids.map((id) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`));
+
+  const selectAll = page.getByRole('checkbox', { name: 'Выбрать все' });
+  await expect(selectAll).toHaveAttribute('aria-checked', 'false');
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+
+  // Esc снимает выделение.
+  await rows[0].getByRole('checkbox', { name: /^Выбрать / }).click();
+  await expect(bar).toContainText('Выбрано 1');
+  await expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
+  await page.keyboard.press('Escape');
+  await expect(bar).toHaveCount(0);
+
+  for (const row of rows) await row.getByRole('checkbox', { name: /^Выбрать / }).click();
+  await expect(bar).toContainText('Выбрано 2');
+  for (const row of rows) await expect(row.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+  // В режиме выбора кнопок строки нет.
+  await expect(emptyButton).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Держим постоянно…' })).toBeVisible();
+
+  await bar.getByRole('button', { name: /^Закончились/ }).click();
+  await expect(bar).toHaveCount(0);
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText('Закончились: 2');
+  await expect(toast).toContainText('гости их больше не видят');
+  for (const row of rows) await expect(row).toContainText('в «К заказу»');
+
+  await toast.getByRole('button', { name: /Отменить/ }).click();
+  await expect(toast).toBeHidden();
+  for (const row of rows) await expect(row.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
+});
+
 // «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
 // окна отмечает его просмотренным для логина. Неразрушающий: отметка живёт в
 // localStorage, а он у Playwright свежий на каждый тест.
@@ -338,6 +383,52 @@ test.describe('Master on a phone', () => {
     await expect.poll(async () => (await settings.boundingBox())?.width).toBe(375);
     await settings.getByRole('button', { name: 'Отмена' }).click();
     await expect(settings).toBeHidden();
+  });
+
+  // Выбор нескольких на телефоне (#333, #shot=mobile-bulk): «Выбрать» в шапке,
+  // касание по карточке выбирает, внизу «Закончились · N». Неразрушающий:
+  // режим выбора закрывается «Готово» без действия.
+  test('Master shelf on a phone: «Выбрать» picks cards by tap and «Готово» leaves without changes', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
+    await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
+
+    const first = page
+      .locator('.m-shelf-card')
+      .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
+      .first();
+    await expect(first).toBeVisible();
+    const id = await first.getAttribute('data-tobacco-id');
+    const card = page.locator(`.m-shelf-card[data-tobacco-id="${id}"]`);
+
+    const title = page.locator('.m-topbar__title');
+    await page.getByRole('button', { name: 'Выбрать', exact: true }).click();
+    await expect(title).toHaveText('Выбрано 0');
+    // В режиме выбора кнопок карточек нет.
+    await expect(page.getByRole('button', { name: 'Закончился', exact: true })).toHaveCount(0);
+    const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+    await expect(bar.getByRole('button', { name: 'Закончились · 0' })).toBeDisabled();
+
+    await card.tap();
+    await expect(title).toHaveText('Выбрано 1');
+    await expect(card.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+    await expect(bar.getByRole('button', { name: 'Закончились · 1' })).toBeEnabled();
+    await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Держим постоянно…' })).toBeVisible();
+    // Повторное касание снимает выбор.
+    await card.tap();
+    await expect(title).toHaveText('Выбрано 0');
+    await card.tap();
+
+    await page.getByRole('button', { name: 'Готово', exact: true }).click();
+    await expect(title).toHaveText('Полка');
+    await expect(bar).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
+    await expect(page.locator('.shelf-toast')).toBeHidden();
   });
 
   test('Master «What\'s new» on a phone opens full screen from «Ещё»', async ({ page }) => {
@@ -491,9 +582,10 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await openWorkspace(page, 'Полка');
   const shelfRow = page.locator('table.shelf-table tbody tr[data-tobacco-id]').first();
   await expect(shelfRow).toBeVisible();
-  // Первая ячейка — табак (в колонке «Приход» тоже есть .shelf-name).
+  // Вторая ячейка — табак: первая — чекбокс выбора (#333), а в колонке
+  // «Приход» тоже есть .shelf-name.
   // textContent, а не innerText: подпись бренда в CSS набрана капслоком.
-  const nameCell = shelfRow.locator('td').first();
+  const nameCell = shelfRow.locator('td').nth(1);
   const tobaccoName = ((await nameCell.locator('.shelf-name b').textContent()) ?? '').trim();
   const manufacturer = ((await nameCell.locator('.shelf-name span').textContent()) ?? '').split(' · ')[0].trim();
 
