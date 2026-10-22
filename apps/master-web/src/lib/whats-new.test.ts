@@ -110,12 +110,19 @@ test('данные выпусков целостны: id уникальны, у 
   }
 });
 
-test('последний выпуск — прогноз вместо количества и «Закупка»: ссылки на «К заказу» и «Закупку»', () => {
+test('последний выпуск — прогноз вместо количества, «Закупка» и несколько табаков разом', () => {
   const latest = WHATS_NEW[0];
   assert.equal(latest.id, '2026-10-purchase');
   assert.equal(latest.label, '22 октября');
-  assert.deepEqual(latest.slides.map((slide) => slide.title), ['«К заказу» без количества', '«Закупка» и отметка пробы']);
-  const [slide, purchase] = latest.slides;
+  assert.deepEqual(latest.slides.map((slide) => slide.title), [
+    '«К заказу» без количества',
+    '«Закупка» и отметка пробы',
+    'Несколько табаков разом',
+  ]);
+  const [slide, purchase, bulk] = latest.slides;
+  // #333: выбор на полке и на телефоне, ссылка — на полку.
+  assert.deepEqual(bulk.action, { label: 'Открыть полку', tab: 'shelf' });
+  assert.ok('list' in bulk && bulk.list.some((line) => line.includes('Shift')) && bulk.list.some((line) => line.includes('«Выбрать»')));
   assert.deepEqual(purchase.action, { label: 'Открыть «Закупку»', tab: 'shelf', view: 'purchase' });
   assert.ok('list' in purchase && purchase.list.some((line) => line.includes('Зашло')));
   assert.ok(!/шаг|± ?50/i.test(JSON.stringify(purchase)));

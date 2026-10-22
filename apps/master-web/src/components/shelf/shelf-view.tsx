@@ -41,6 +41,8 @@ import {
   type ShelfSortKey,
   type ShelfStatusKey,
 } from '@/lib/shelf';
+import { bulkEmptyToast, bulkKeepToast, bulkStopToast, bulkSummary, headCheck, selectRange, toggleSelected } from '@/lib/shelf-bulk';
+import { ShelfBulkBar, ShelfCheck, ShelfMobileBulk, type ShelfBulkActions } from './shelf-bulk';
 import { ShelfCard } from './shelf-card';
 import { ShelfFilterPanel } from './shelf-filter-panel';
 import { countReorder } from '@/lib/reorder';
@@ -74,6 +76,10 @@ type ShelfViewProps = {
   // Карточка, которую открыли извне (дашборд → «Заканчивается»).
   openCardId?: string;
   onCardOpened?: () => void;
+  // Выбранные табаки (#333). Живут в App: на телефоне режим выбора включается
+  // из верхней панели. null — не выбираем; на телефоне [] — режим выбора без отметок.
+  selection: string[] | null;
+  onSelectionChange: (next: string[] | null) => void;
 };
 
 type Toast = ShelfToastData;
@@ -101,6 +107,8 @@ export const ShelfView = ({
   onSettingsOpenChange,
   openCardId,
   onCardOpened,
+  selection,
+  onSelectionChange,
 }: ShelfViewProps) => {
   const { view } = shelf;
   const rows = view?.rows ?? [];
@@ -191,6 +199,45 @@ export const ShelfView = ({
   const cardRow = cardId ? rows.find((row) => row.tobacco.id === cardId) ?? null : null;
   const sheetRow = sheetId ? rows.find((row) => row.tobacco.id === sheetId) ?? null : null;
   const activeFilters = countActiveShelfFilters(filters);
+
+  const selected = useMemo(() => selection ?? [], [selection]);
+  const selecting = selected.length > 0;
+  const picking = isPhone && selection !== null;
+  const shownIds = useMemo(() => shown.map((row) => row.tobacco.id), [shown]);
+  // В порядке таблицы: так и названия на панели идут сверху вниз.
+  const chosen = useMemo(() => shown.filter((row) => selected.includes(row.tobacco.id)), [shown, selected]);
+  const summary = bulkSummary(chosen);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  // Строка прошлого клика — начало диапазона для Shift + клик.
+  const anchorId = useRef<string | null>(null);
+
+  // На десктопе пустое выделение — это «не выбираем»; на телефоне режим выбора
+  // держится до «Готово».
+  const setSelected = useCallback(
+    (next: string[]) => onSelectionChange(isPhone ? next : next.length ? next : null),
+    [isPhone, onSelectionChange],
+  );
+  const clearSelection = useCallback(() => {
+    anchorId.current = null;
+    onSelectionChange(null);
+  }, [onSelectionChange]);
+  const pick = useCallback(
+    (id: string, range: boolean) => {
+      setSelected(range ? selectRange(shownIds, anchorId.current, id, selected) : toggleSelected(selected, id));
+      anchorId.current = id;
+    },
+    [selected, setSelected, shownIds],
+  );
+
+  // Сменили фильтр — выделение сбрасывается: в нём могли остаться невидимые строки.
+  // Смену вида и раздела сбрасывает App.
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  useEffect(() => {
+    if (!selectionRef.current?.length) return;
+    anchorId.current = null;
+    onSelectionChange(isPhone ? [] : null);
+  }, [query, status, filters, isPhone, onSelectionChange]);
 
   const notify = useCallback((next: Omit<Toast, 'id'>) => {
     toastSeq.current += 1;
@@ -324,6 +371,64 @@ export const ShelfView = ({
     [notify, shelf],
   );
 
+  // «Закончились» для выбранных (#333): одно действие и одна отмена на всех.
+  const onBulkEmpty = useCallback(async () => {
+    if (bulkBusy || !summary.emptyCount) return;
+    const before = selection;
+    clearSelection();
+    setBulkBusy(true);
+    try {
+      const response = await shelf.emptyMany(chosen);
+      const batchId = response.batchId;
+      notify({ ...bulkEmptyToast(response), ...(response.done.length ? { undo: () => shelf.undoBatch(batchId) } : {}) });
+    } catch (cause) {
+      onSelectionChange(before);
+      notify({ title: 'Не отмечено', text: describeShelfError(cause), error: true });
+    } finally {
+      setBulkBusy(false);
+    }
+  }, [bulkBusy, chosen, clearSelection, notify, onSelectionChange, selection, shelf, summary.emptyCount]);
+
+  // Стоп и «держим постоянно» для выбранных: меняются только те, у кого другое значение.
+  const onBulkPatch = useCallback(
+    async (ids: string[], patch: ShelfPatch, back: ShelfPatch, toast: { title: string; text: string }) => {
+      const before = selection;
+      clearSelection();
+      if (!ids.length) {
+        notify(toast);
+        return;
+      }
+      const patchMany = async (next: ShelfPatch) => {
+        const { failed } = await shelf.updateMany(ids, next);
+        if (failed.length) throw failed[0];
+      };
+      setBulkBusy(true);
+      try {
+        await patchMany(patch);
+        notify({ ...toast, undo: () => patchMany(back) });
+      } catch (cause) {
+        onSelectionChange(before);
+        notify({ title: 'Не сохранилось', text: describeShelfError(cause), error: true });
+      } finally {
+        setBulkBusy(false);
+      }
+    },
+    [clearSelection, notify, onSelectionChange, selection, shelf],
+  );
+
+  const bulkActions: ShelfBulkActions = {
+    onEmpty: () => void onBulkEmpty(),
+    onStop: () => {
+      const stopped = !summary.allStopped;
+      const ids = chosen.filter((row) => row.stopped !== stopped).map((row) => row.tobacco.id);
+      void onBulkPatch(ids, { stopped }, { stopped: !stopped }, bulkStopToast(chosen.length, stopped));
+    },
+    onKeep: (keepStocked) => {
+      const ids = chosen.filter((row) => row.keepStocked !== keepStocked).map((row) => row.tobacco.id);
+      void onBulkPatch(ids, { keepStocked }, { keepStocked: !keepStocked }, bulkKeepToast(chosen.length, keepStocked));
+    },
+  };
+
   const onUpdate = useCallback(async (row: ShelfRow, patch: ShelfPatch) => {
     await shelf.update(row.tobacco.id, patch);
   }, [shelf]);
@@ -339,8 +444,8 @@ export const ShelfView = ({
     if (anchor) setMenu({ id: row.tobacco.id, anchor, mode: 'left' });
   }, []);
 
-  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft });
-  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft };
+  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft, selecting, onBulkEmpty, pick, clearSelection });
+  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft, selecting, onBulkEmpty, pick, clearSelection };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -380,15 +485,31 @@ export const ShelfView = ({
           }
           return;
         case 'empty':
-          if (active && shelfRowMenu(active).canEmpty) void state.onEmpty(active);
+          if (state.selecting) void state.onBulkEmpty();
+          else if (active && shelfRowMenu(active).canEmpty) void state.onEmpty(active);
+          return;
+        case 'select':
+          if (active) {
+            event.preventDefault();
+            state.pick(active.tobacco.id, false);
+          }
+          return;
+        case 'clear':
+          if (state.selecting) {
+            event.preventDefault();
+            state.clearSelection();
+          }
           return;
         case 'left':
+          // В режиме выбора кнопок строки нет — отметка остатка только по одному.
+          if (state.selecting) return;
           if (active && shelfRowMenu(active).canMark) {
             event.preventDefault();
             state.openLeft(active);
           }
           return;
         case 'mark':
+          if (state.selecting) return;
           if (active && shelfRowMenu(active).canMark && active.fullGrams !== null) void state.onCount(active, { fraction: shortcut.fraction });
           return;
         case 'undo':
@@ -529,6 +650,8 @@ export const ShelfView = ({
               rows={shown}
               leadDays={settings.leadDays}
               pendingId={pendingId}
+              picked={picking ? selected : null}
+              onPick={(row) => pick(row.tobacco.id, false)}
               onEmpty={(row) => void onEmpty(row)}
               onUnstop={(row) => void onToggleStop(row)}
               onOpenSheet={(row) => setSheetId(row.tobacco.id)}
@@ -582,6 +705,7 @@ export const ShelfView = ({
         ) : null}
         {cardSheet}
         {settingsDialog}
+        {picking && view && mode !== 'reorder' ? <ShelfMobileBulk summary={summary} busy={bulkBusy} actions={bulkActions} /> : null}
         {toastNode}
       </section>
     );
@@ -590,7 +714,7 @@ export const ShelfView = ({
   const totals = view?.totals ?? { kg: 0 };
 
   return (
-    <section className="shelf-page">
+    <section className="shelf-page" data-selecting={selecting || undefined}>
       <MasterPageHeader
         eyebrow={`ИНВЕНТАРИЗАЦИЯ · ${eyebrowDate}`}
         title="Полка"
@@ -706,6 +830,7 @@ export const ShelfView = ({
               <div className="shelf-table-shell">
                 <table className="shelf-table">
                   <colgroup>
+                    <col style={{ width: 44 }} />
                     <col />
                     <col style={{ width: 228 }} />
                     <col style={{ width: 130 }} />
@@ -716,6 +841,16 @@ export const ShelfView = ({
                   </colgroup>
                   <thead>
                     <tr>
+                      <th scope="col" className="shelf-table__check">
+                        <ShelfCheck
+                          checked={headCheck(selected, shownIds)}
+                          label="Выбрать все"
+                          onToggle={() => {
+                            anchorId.current = null;
+                            setSelected(selected.length ? [] : shownIds);
+                          }}
+                        />
+                      </th>
                       <th scope="col">Табак</th>
                       <th scope="col">Остаток</th>
                       <th scope="col">Расход</th>
@@ -781,16 +916,33 @@ export const ShelfView = ({
                         );
                       }
 
+                      const isSelected = selected.includes(row.tobacco.id);
                       return (
                         <tr
                           key={row.tobacco.id}
                           data-tobacco-id={row.tobacco.id}
                           data-active={row.tobacco.id === activeId}
-                          onClick={() => {
+                          data-selected={isSelected || undefined}
+                          onMouseDown={(event) => {
+                            if (event.shiftKey) event.preventDefault();
+                          }}
+                          // В режиме выбора клик по строке выбирает, а не открывает карточку.
+                          onClick={(event) => {
                             setActiveId(row.tobacco.id);
-                            setCardId(row.tobacco.id);
+                            if (selecting || event.shiftKey) pick(row.tobacco.id, event.shiftKey);
+                            else setCardId(row.tobacco.id);
                           }}
                         >
+                          <td className="shelf-table__check">
+                            <ShelfCheck
+                              checked={isSelected}
+                              label={`Выбрать ${fullName(row)}`}
+                              onToggle={(range) => {
+                                setActiveId(row.tobacco.id);
+                                pick(row.tobacco.id, range);
+                              }}
+                            />
+                          </td>
                           <td>
                             <span className="shelf-name-row">
                               <span className="shelf-name">
@@ -840,21 +992,24 @@ export const ShelfView = ({
                           <td className="shelf-table__num shelf-num">
                             {row.mixCount ? formatMetricValue(row.mixCount) : <span className="shelf-faint">—</span>}
                           </td>
-                          <td onClick={(event) => event.stopPropagation()}>
-                            <span className="shelf-table__actions">
-                              {primary}
-                              <button
-                                type="button"
-                                className="icon-btn"
-                                data-menu-anchor
-                                aria-label={`Ещё действия: ${fullName(row)}`}
-                                aria-expanded={menuOpen}
-                                disabled={busy}
-                                onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget, mode: 'main' })}
-                              >
-                                <Ellipsis size={15} aria-hidden />
-                              </button>
-                            </span>
+                          <td onClick={selecting ? undefined : (event) => event.stopPropagation()}>
+                            {/* В режиме выбора кнопки строки скрыты (#shot=shelf-bulk). */}
+                            {selecting ? null : (
+                              <span className="shelf-table__actions">
+                                {primary}
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  data-menu-anchor
+                                  aria-label={`Ещё действия: ${fullName(row)}`}
+                                  aria-expanded={menuOpen}
+                                  disabled={busy}
+                                  onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget, mode: 'main' })}
+                                >
+                                  <Ellipsis size={15} aria-hidden />
+                                </button>
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -864,15 +1019,28 @@ export const ShelfView = ({
                 {!shown.length ? <p className="empty shelf-table__empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
               </div>
 
-              <div className="shelf-keys" aria-hidden="true">
-                <span><b className="kbd">/</b> поиск</span>
-                <span><b className="kbd">↑</b><b className="kbd">↓</b> строка</span>
-                <span><b className="kbd">E</b> закончился</span>
-                <span><b className="kbd">O</b> сколько осталось</span>
-                <span><b className="kbd">1</b>–<b className="kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
-                <span><b className="kbd">Enter</b> карточка</span>
-                <span><b className="kbd">Z</b> отменить</span>
-              </div>
+              {selecting ? (
+                <>
+                  <ShelfBulkBar summary={summary} busy={bulkBusy} actions={bulkActions} onClear={clearSelection} />
+                  <div className="shelf-keys" aria-hidden="true">
+                    <span><b className="kbd">X</b> выбрать строку</span>
+                    <span><b className="kbd">Shift</b> + клик — диапазон</span>
+                    <span><b className="kbd">E</b> выбранные закончились</span>
+                    <span><b className="kbd">Esc</b> снять выделение</span>
+                  </div>
+                </>
+              ) : (
+                <div className="shelf-keys" aria-hidden="true">
+                  <span><b className="kbd">/</b> поиск</span>
+                  <span><b className="kbd">↑</b><b className="kbd">↓</b> строка</span>
+                  <span><b className="kbd">E</b> закончился</span>
+                  <span><b className="kbd">O</b> сколько осталось</span>
+                  <span><b className="kbd">1</b>–<b className="kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
+                  <span><b className="kbd">X</b> выбрать</span>
+                  <span><b className="kbd">Enter</b> карточка</span>
+                  <span><b className="kbd">Z</b> отменить</span>
+                </div>
+              )}
             </>
           ) : null}
         </>

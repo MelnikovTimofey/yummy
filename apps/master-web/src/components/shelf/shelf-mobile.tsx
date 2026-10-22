@@ -4,6 +4,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
 import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
 import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
+import { ShelfCheck } from './shelf-bulk';
 import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
 import type { ShelfRowActions } from './shelf-row-menu';
@@ -17,6 +18,9 @@ type ShelfMobileListProps = {
   rows: ShelfRow[];
   leadDays: number;
   pendingId: string;
+  // Режим выбора (#333, #shot=mobile-bulk): null — обычная полка.
+  picked: string[] | null;
+  onPick: (row: ShelfRow) => void;
   onEmpty: (row: ShelfRow) => void;
   onUnstop: (row: ShelfRow) => void;
   onOpenSheet: (row: ShelfRow) => void;
@@ -24,20 +28,49 @@ type ShelfMobileListProps = {
   onTrialVerdict: (row: ShelfRow, verdict: ShelfTrialVerdict | null) => Promise<void>;
 };
 
-export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, onOpenSheet, onOpenCard, onTrialVerdict }: ShelfMobileListProps) => (
-  <ul className="m-shelf-list" aria-label="Табаки на полке">
+export const ShelfMobileList = ({
+  rows,
+  leadDays,
+  pendingId,
+  picked,
+  onPick,
+  onEmpty,
+  onUnstop,
+  onOpenSheet,
+  onOpenCard,
+  onTrialVerdict,
+}: ShelfMobileListProps) => (
+  <ul className="m-shelf-list" aria-label="Табаки на полке" data-picking={picked ? true : undefined}>
     {rows.map((row) => {
       const actions = shelfMobileActions(row);
       const until = shelfUntil(row, leadDays);
       const line = shelfStatusLine(row);
       const month = shelfMonthRate(row);
       const busy = pendingId === row.tobacco.id;
+      const isPicked = picked?.includes(row.tobacco.id) ?? false;
       return (
-        <li key={row.tobacco.id} className="m-shelf-card" data-tobacco-id={row.tobacco.id}>
-          <button type="button" className="m-shelf-card__name shelf-name" onClick={() => onOpenCard(row)}>
-            <b>{row.tobacco.name}</b>
-            <span>{row.tobacco.manufacturer}</span>
-          </button>
+        <li
+          key={row.tobacco.id}
+          className="m-shelf-card"
+          data-tobacco-id={row.tobacco.id}
+          data-picked={isPicked || undefined}
+          // В режиме выбора касание по карточке выбирает табак.
+          onClick={picked ? () => onPick(row) : undefined}
+        >
+          {picked ? (
+            <span className="m-shelf-card__pick">
+              <ShelfCheck checked={isPicked} label={`Выбрать ${fullName(row)}`} onToggle={() => onPick(row)} />
+              <span className="shelf-name">
+                <b>{row.tobacco.name}</b>
+                <span>{row.tobacco.manufacturer}</span>
+              </span>
+            </span>
+          ) : (
+            <button type="button" className="m-shelf-card__name shelf-name" onClick={() => onOpenCard(row)}>
+              <b>{row.tobacco.name}</b>
+              <span>{row.tobacco.manufacturer}</span>
+            </button>
+          )}
           <span className="shelf-until m-shelf-card__until">
             {/* Прогноза нет — на телефоне без прочерка, хватает статус-строки. */}
             {until.text !== '—' ? (
@@ -57,7 +90,7 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
             </span>
           </div>
           {/* Проба (#329, #shot=mobile-trial): отметка у стойки, одно касание. */}
-          {row.trial ? (
+          {row.trial && !picked ? (
             <div className="m-shelf-card__trial">
               <span>Проба · как зашла?</span>
               <TrialMark
@@ -68,7 +101,7 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
               />
             </div>
           ) : null}
-          {actions.left ? (
+          {actions.left && !picked ? (
             <div className="m-shelf-card__acts">
               <button type="button" className="m-shelf-card__left" disabled={busy} onClick={() => onOpenSheet(row)}>
                 {actions.left}

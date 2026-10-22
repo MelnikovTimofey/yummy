@@ -157,6 +157,8 @@ export const App = () => {
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
   const [shelfSettingsOpen, setShelfSettingsOpen] = useState(false);
+  // Выбранные табаки на полке (#333); на телефоне [] — режим выбора без отметок.
+  const [shelfSelection, setShelfSelection] = useState<string[] | null>(null);
   // «Указать» бюджет на дашборде (#326): настройки полки поверх дашборда.
   const [budgetSettingsOpen, setBudgetSettingsOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
@@ -166,6 +168,8 @@ export const App = () => {
     setShelfMode('shelf');
     setShelfSettingsOpen(false);
   }, [activeTab]);
+  // Сменили вид или раздел — выделение на полке сбрасывается.
+  useEffect(() => setShelfSelection(null), [activeTab, shelfMode]);
 
   const onAfterAccessSubmit = () => setActiveTab('access');
   const dailyCode = useDailyCode();
@@ -987,6 +991,8 @@ export const App = () => {
       onSettingsOpenChange={setShelfSettingsOpen}
       openCardId={pendingShelfCard}
       onCardOpened={() => setPendingShelfCard('')}
+      selection={shelfSelection}
+      onSelectionChange={setShelfSelection}
     />
   );
 
@@ -1238,16 +1244,28 @@ export const App = () => {
       })),
     ];
 
+    // Режим выбора на телефоне (#shot=mobile-bulk): «Выбрано N» и «Готово» в верхней панели.
+    const shelfPicking = isPhone && activeTab === 'shelf' && shelfSelection !== null;
+
     return (
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
         {isPhone ? (
           <MobileTopBar
-            title={mobileTitleFor(activeTab, shelfMode)}
+            title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab, shelfMode)}
             action={
-              activeTab === 'shelf' ? (
+              shelfPicking ? (
+                <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection(null)}>
+                  Готово
+                </button>
+              ) : activeTab === 'shelf' ? (
                 <>
+                  {shelfMode === 'shelf' ? (
+                    <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
+                      Выбрать
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="icon-btn m-topbar__action"

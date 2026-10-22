@@ -5989,7 +5989,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1224px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -6294,6 +6294,82 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-toast .btn .kbd { margin-left: 2px; }
+
+/* --- Выбор нескольких табаков (#333, #shot=shelf-bulk) -------------- */
+
+.shelf-table th.shelf-table__check,
+.shelf-table td.shelf-table__check { padding: 0 0 0 16px; }
+
+.shelf-check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-fg);
+  box-sizing: border-box;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+/* Попасть пальцем и мышью проще, чем в квадрат 16 px. */
+.shelf-check::before { content: ''; position: absolute; inset: -8px; }
+.shelf-check[aria-checked="true"],
+.shelf-check[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); }
+.shelf-check:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.shelf-table tbody tr[data-selected] { background: var(--accent-soft); }
+.shelf-page[data-selecting] { padding-bottom: 72px; }
+
+.shelf-bulk {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 59;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(900px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sm);
+}
+
+.shelf-bulk > b { font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+
+.shelf-bulk__names {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+}
+
+.shelf-bulk .btn .kbd { margin-left: 6px; }
+.shelf-bulk__keep { position: relative; display: inline-flex; }
+
+.shelf-menu.shelf-bulk__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  width: 300px;
+}
+
+.shelf-bulk__menu .shelf-menu__item { display: grid; justify-items: start; gap: 2px; }
+
+/* Ошибка действия возвращает выделение — тост над панелью, а не под ней. */
+.shelf-bulk ~ .shelf-toast { bottom: 84px; }
 
 /* --- Пустая полка ---------------------------------------------------- */
 
@@ -7656,6 +7732,54 @@ button.chip .chip__count[hidden] {
 .m-shelf-card__left:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .m-shelf-card__until { justify-items: end; text-align: right; font-size: 13px; }
+
+/* Режим выбора на телефоне (#333, #shot=mobile-bulk). */
+.m-topbar__text-btn {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.m-shelf-list[data-picking] { padding-bottom: 120px; }
+.m-shelf-list[data-picking] .m-shelf-card { cursor: pointer; }
+.m-shelf-card[data-picked] { border-color: var(--accent-border); background: var(--accent-soft); }
+.m-shelf-card__pick { display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 2px; }
+.m-shelf-card__pick .shelf-name b { white-space: normal; font-size: var(--fs-md); }
+
+.m-shelf-bulk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + var(--safe-bottom));
+  z-index: 44;
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+}
+
+.m-shelf-bulk__empty {
+  height: 44px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.m-shelf-bulk__empty:disabled { opacity: 0.45; cursor: not-allowed; }
+.m-shelf-bulk__acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.m-shelf-bulk ~ .shelf-toast { bottom: calc(56px + var(--safe-bottom) + 128px); }
 
 /* --- Шторка «Сколько осталось?» --------------------------------------- */
 
