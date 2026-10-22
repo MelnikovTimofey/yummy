@@ -1,6 +1,6 @@
 import { workspaceTabs, type WorkspaceTab, type WorkspaceTabDescriptor } from './workspace-tabs';
 
-// Нижняя навигация телефона (≤ 640 px, #215): у стойки нужны дашборд, полка
+// Нижняя навигация телефона (#215, граница — PHONE_QUERY): у стойки нужны дашборд, полка
 // и поставки, остальные разделы — в «Ещё».
 
 export type MobileNavItem = WorkspaceTab | 'more';
@@ -16,7 +16,17 @@ export const MOBILE_MORE_TABS: WorkspaceTabDescriptor[] = workspaceTabs.filter((
 
 export const mobileNavItemFor = (tab: WorkspaceTab): MobileNavItem => (PRIMARY.includes(tab) ? tab : 'more');
 
-export const mobileTitleFor = (tab: WorkspaceTab, shelfMode: 'shelf' | 'reorder') => {
+// Раздел открывается с начала, а не на прокрутке прошлого раздела (#334).
+export const openSection = (
+  tab: WorkspaceTab,
+  onTabChange: (tab: WorkspaceTab) => void,
+  scrollToTop = () => window.scrollTo({ top: 0 }),
+) => {
+  onTabChange(tab);
+  scrollToTop();
+};
+
+export const mobileTitleFor =(tab: WorkspaceTab, shelfMode: 'shelf' | 'reorder') => {
   if (tab === 'shelf' && shelfMode === 'reorder') return 'К заказу';
   return workspaceTabs.find((item) => item.id === tab)?.label ?? '';
 };

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MOBILE_MORE_TABS, MOBILE_NAV, mobileNavItemFor, mobileTitleFor } from './mobile-nav';
+import { MOBILE_MORE_TABS, MOBILE_NAV, mobileNavItemFor, mobileTitleFor, openSection } from './mobile-nav';
 
 test('нижняя навигация: Дашборд · Полка · Поставки · Ещё', () => {
   assert.deepEqual(
@@ -23,4 +23,10 @@ test('заголовок верхней панели — раздел, на по
   assert.equal(mobileTitleFor('shelf', 'reorder'), 'К заказу');
   assert.equal(mobileTitleFor('dashboard', 'reorder'), 'Дашборд');
   assert.equal(mobileTitleFor('rails', 'shelf'), 'Рейлы');
+});
+
+test('раздел из нижней навигации открывается с начала, а не на прокрутке прошлого (#334)', () => {
+  const calls: string[] = [];
+  openSection('dashboard', (tab) => calls.push(`tab:${tab}`), () => calls.push('top'));
+  assert.deepEqual(calls, ['tab:dashboard', 'top']);
 });
