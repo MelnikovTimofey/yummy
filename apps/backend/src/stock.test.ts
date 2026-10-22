@@ -371,7 +371,7 @@ test.describe('reorderList', () => {
 
   test('with an interval takes what ends before the next delivery arrives', () => {
     const items = scenario();
-    const horizon = horizonOf(7, { days: 10, invoices: 4 });
+    const horizon = horizonOf(7, { days: 10, deliveries: 4 });
     const lines = reorderList(items, forecastShelf(items, day(20), horizon), horizon);
     assert.deepEqual(lines.map((line) => [line.tobaccoId, line.status, line.byInterval]), [
       ['out', 'out', false],
@@ -389,36 +389,36 @@ test.describe('supplyInterval', () => {
   const back = (days: number, hour = 12) => new Date(2026, 10, 19 - days, hour);
 
   test('no or two invoices: no interval yet', () => {
-    assert.deepEqual(supplyInterval([], NOW), { days: null, invoices: 0 });
-    assert.deepEqual(supplyInterval([back(20), back(10)], NOW), { days: null, invoices: 2 });
+    assert.deepEqual(supplyInterval([], NOW), { days: null, deliveries: 0 });
+    assert.deepEqual(supplyInterval([back(20), back(10)], NOW), { days: null, deliveries: 2 });
   });
 
   test('three and more: median of days between them', () => {
-    assert.deepEqual(supplyInterval([back(30), back(20), back(8)], NOW), { days: 11, invoices: 3 });
-    assert.deepEqual(supplyInterval([back(40), back(30), back(20), back(10)], NOW), { days: 10, invoices: 4 });
+    assert.deepEqual(supplyInterval([back(30), back(20), back(8)], NOW), { days: 11, deliveries: 3 });
+    assert.deepEqual(supplyInterval([back(40), back(30), back(20), back(10)], NOW), { days: 10, deliveries: 4 });
   });
 
   test('an outlier does not move the median', () => {
-    assert.deepEqual(supplyInterval([back(85), back(30), back(20), back(10), back(0)], NOW), { days: 10, invoices: 5 });
+    assert.deepEqual(supplyInterval([back(85), back(30), back(20), back(10), back(0)], NOW), { days: 10, deliveries: 5 });
   });
 
   test('order of dates does not matter, calendar days count, not hours', () => {
-    assert.deepEqual(supplyInterval([back(10, 23), back(30, 1), back(20, 9)], NOW), { days: 10, invoices: 3 });
+    assert.deepEqual(supplyInterval([back(10, 23), back(30, 1), back(20, 9)], NOW), { days: 10, deliveries: 3 });
   });
 
-  test('invoices of one day are one delivery day', () => {
-    assert.deepEqual(supplyInterval([back(20, 10), back(20, 18), back(10)], NOW), { days: null, invoices: 3 });
-    assert.deepEqual(supplyInterval([back(30), back(20, 10), back(20, 18), back(10)], NOW), { days: 10, invoices: 4 });
+  test('invoices of one day are one delivery', () => {
+    assert.deepEqual(supplyInterval([back(20, 10), back(20, 18), back(10)], NOW), { days: null, deliveries: 2 });
+    assert.deepEqual(supplyInterval([back(30), back(20, 10), back(20, 18), back(10)], NOW), { days: 10, deliveries: 3 });
   });
 
   test('only the last 90 days count', () => {
-    assert.deepEqual(supplyInterval([back(120), back(100), back(80), back(70)], NOW), { days: null, invoices: 2 });
-    assert.deepEqual(supplyInterval([back(90), back(80), back(70)], NOW), { days: 10, invoices: 3 });
+    assert.deepEqual(supplyInterval([back(120), back(100), back(80), back(70)], NOW), { days: null, deliveries: 2 });
+    assert.deepEqual(supplyInterval([back(90), back(80), back(70)], NOW), { days: 10, deliveries: 3 });
   });
 
   test('horizon: interval + lead time, without an interval — lead time', () => {
-    assert.deepEqual(horizonOf(7, { days: 10, invoices: 6 }), { leadDays: 7, days: 17 });
-    assert.deepEqual(horizonOf(7, { days: null, invoices: 2 }), { leadDays: 7, days: 7 });
+    assert.deepEqual(horizonOf(7, { days: 10, deliveries: 6 }), { leadDays: 7, days: 17 });
+    assert.deepEqual(horizonOf(7, { days: null, deliveries: 2 }), { leadDays: 7, days: 7 });
   });
 });
 

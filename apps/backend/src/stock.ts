@@ -20,8 +20,9 @@ export type Rate =
 
 export type ShelfSettings = { bowlGrams: number; leadDays: number; budgetKop: number | null };
 
-// Интервал поставок по принятым счетам (#325): days — null, пока дней поставок меньше трёх.
-export type SupplyInterval = { days: number | null; invoices: number };
+// Интервал поставок по принятым счетам (#325): deliveries — дней поставок за 90 дней
+// (счета одного дня — одна поставка); days — null, пока их меньше трёх.
+export type SupplyInterval = { days: number | null; deliveries: number };
 
 // «Заканчивается» и «К заказу» — что закончится в пределах days: интервал + срок поставки.
 export type Horizon = { leadDays: number; days: number };
@@ -213,15 +214,15 @@ const median = (values: number[]) => {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
-// dates — даты принятых счетов (дата счёта, иначе дата приёмки). Счета одного дня —
-// одна поставка; дни — календарные в часовом поясе процесса.
+// dates — даты принятых счетов (дата счёта, иначе дата приёмки); дни — календарные
+// в часовом поясе процесса.
 export const supplyInterval = (dates: Date[], now: Date): SupplyInterval => {
   const windowStart = localDay(now).getTime() - INTERVAL_WINDOW_DAYS * DAY_MS;
   const inWindow = dates.filter((date) => date.getTime() >= windowStart && date <= now);
   const days = [...new Set(inWindow.map((date) => localDay(date).getTime()))].sort((a, b) => a - b);
-  if (days.length < INTERVAL_MIN_DAYS) return { days: null, invoices: inWindow.length };
+  if (days.length < INTERVAL_MIN_DAYS) return { days: null, deliveries: days.length };
   const gaps = days.slice(1).map((day, index) => Math.round((day - days[index]) / DAY_MS));
-  return { days: Math.round(median(gaps)), invoices: inWindow.length };
+  return { days: Math.round(median(gaps)), deliveries: days.length };
 };
 
 export const horizonOf = (leadDays: number, interval: SupplyInterval): Horizon => ({
