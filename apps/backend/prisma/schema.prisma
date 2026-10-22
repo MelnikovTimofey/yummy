@@ -371,17 +371,20 @@ model GuestFavorite {
 // Полка точки (#152): что точка держит. Каталог (Tobacco) о наличии не знает —
 // Tobacco.inStock только кэш, который пишет сервис полки (src/shelf.ts).
 model ShelfItem {
-  id          String       @id @default(uuid())
-  tobaccoId   String       @unique
-  status      String       @default("active")
-  keepStocked Boolean      @default(true)
-  stopped     Boolean      @default(false)
-  stopNote    String?
-  note        String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  tobacco     Tobacco      @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
-  entries     StockEntry[]
+  id            String       @id @default(uuid())
+  tobaccoId     String       @unique
+  status        String       @default("active")
+  keepStocked   Boolean      @default(true)
+  stopped       Boolean      @default(false)
+  stopNote      String?
+  note          String?
+  // Отметка мастера по пробе (#329): yes — зашло, no — не зашло.
+  trialVerdict  String?
+  trialMarkedAt DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  tobacco       Tobacco      @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
+  entries       StockEntry[]
 
   @@index([status])
 }
@@ -416,6 +419,8 @@ model ShelfSettings {
   id        Int      @id @default(1)
   bowlGrams Int      @default(18)
   leadDays  Int      @default(7)
+  // Бюджет на табак в месяц (#326), необязательный.
+  budgetKop Int?
   updatedAt DateTime @updatedAt
 }
 
