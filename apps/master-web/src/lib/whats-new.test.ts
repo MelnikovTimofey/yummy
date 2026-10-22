@@ -36,7 +36,7 @@ const release = (id: string): WhatsNewRelease => ({ id, label: id, slides: [{ ti
 test('последний выпуск — первый в списке; выпусков нет — null', () => {
   assert.equal(latestRelease([release('new'), release('old')])?.id, 'new');
   assert.equal(latestRelease([]), null);
-  assert.equal(latestRelease()?.id, '2026-10-grams');
+  assert.equal(latestRelease()?.id, '2026-10-purchase');
 });
 
 test('непросмотрено, пока сохранённый id не совпал с последним выпуском', () => {
@@ -110,8 +110,20 @@ test('данные выпусков целостны: id уникальны, у 
   }
 });
 
-test('последний выпуск — полка в граммах: один слайд со ссылкой на полку', () => {
+test('последний выпуск — прогноз вместо количества: один слайд со ссылкой на «К заказу»', () => {
   const latest = WHATS_NEW[0];
+  assert.equal(latest.id, '2026-10-purchase');
+  assert.equal(latest.label, '22 октября');
+  assert.deepEqual(latest.slides.map((slide) => slide.title), ['«К заказу» без количества']);
+  const [slide] = latest.slides;
+  assert.deepEqual(slide.action, { label: 'Открыть «К заказу»', tab: 'shelf', view: 'reorder' });
+  assert.ok('list' in slide && slide.list.some((line) => line.includes('Бюджет на табак')));
+  // Количество к заказу больше не предлагаем — в тексте ни «шага», ни «сколько заказать» от сервиса.
+  assert.ok(!/шаг|± ?50/i.test(JSON.stringify(slide)));
+});
+
+test('выпуск «Полка в граммах»: один слайд со ссылкой на полку', () => {
+  const latest = WHATS_NEW.find((item) => item.id === '2026-10-grams')!;
   assert.equal(latest.id, '2026-10-grams');
   assert.equal(latest.label, '21 октября');
   assert.deepEqual(latest.slides.map((slide) => slide.title), ['Полка в граммах']);

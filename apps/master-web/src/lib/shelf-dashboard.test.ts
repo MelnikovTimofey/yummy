@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   bowlCostTile,
   forecastCaption,
+  moneyCard,
   spendRows,
   spendTitle,
   stockValueTile,
@@ -81,4 +82,50 @@ test('weekBars: высота от максимума, граммы округл�
   assert.ok(Math.abs(bars[1].height - 0.5) < 0.001);
   assert.equal(weekBars([{ from: '2026-11-02', to: '2026-11-08', grams: 0, partial: false }]), null);
   assert.equal(weekBars([]), null);
+});
+
+const spend = { month: '2026-11', bySupplier: [], totalKop: 8721600 };
+const budget = { budgetKop: 15000000, baseKop: 11200000, baseCount: 40, unknownCount: 9, leftKop: 3800000 };
+const segmentsText = (segments: Array<{ text: string }>) => plain(segments.map((segment) => segment.text).join(''));
+
+test('moneyCard с бюджетом: заголовок месяца, потрачено, база и остаток на пробы', () => {
+  const card = moneyCard({ spend, budget });
+  assert.equal(card.kind, 'budget');
+  if (card.kind !== 'budget') return;
+  assert.equal(plain(card.title), 'Ноябрь: бюджет 150 000 ₽');
+  assert.equal(plain(card.spent), 'потрачено 87 216 ₽');
+  assert.equal(plain(card.base), 'база ≈ 112 000 ₽ в месяц');
+  assert.deepEqual({ ...card.left, value: plain(card.left.value) }, { label: 'на пробы остаётся', value: '≈ 38 000 ₽', tone: 'success' });
+  assert.ok(Math.abs(card.spentShare - 0.58144) < 0.001);
+  assert.ok(Math.abs(card.baseShare - 0.74667) < 0.001);
+  assert.equal(card.unknown, 'У 9 табаков базы нет цены — сумма базы неполная.');
+});
+
+test('moneyCard: у всех цена — без предупреждения; база больше бюджета — полосы не вылезают', () => {
+  const full = moneyCard({ spend, budget: { ...budget, unknownCount: 0 } });
+  assert.equal(full.kind === 'budget' && full.unknown, null);
+  const one = moneyCard({ spend, budget: { ...budget, unknownCount: 1 } });
+  assert.equal(one.kind === 'budget' && one.unknown, 'У 1 табака базы нет цены — сумма базы неполная.');
+
+  const over = moneyCard({ spend: { ...spend, totalKop: 20000000 }, budget: { ...budget, budgetKop: 10000000, leftKop: -1200000 } });
+  assert.equal(over.kind, 'budget');
+  if (over.kind !== 'budget') return;
+  assert.deepEqual({ ...over.left, value: plain(over.left.value) }, { label: 'база больше бюджета на', value: '≈ 12 000 ₽', tone: 'danger' });
+  assert.equal(over.spentShare, 1);
+  assert.equal(over.baseShare, 1);
+
+  const zero = moneyCard({ spend, budget: { ...budget, budgetKop: 0, leftKop: -11200000 } });
+  assert.equal(zero.kind === 'budget' && zero.spentShare, 1);
+});
+
+test('moneyCard без бюджета: траты за месяц и приглашение указать бюджет', () => {
+  const card = moneyCard({ spend, budget: { ...budget, budgetKop: null, leftKop: null } });
+  assert.equal(card.kind, 'none');
+  if (card.kind !== 'none') return;
+  assert.equal(card.title, 'Траты за ноябрь');
+  assert.equal(segmentsText(card.invite), 'База стоит ≈ 112 000 ₽ в месяц. Укажите бюджет — покажем остаток на пробы.');
+  assert.deepEqual(card.invite.filter((segment) => segment.strong).map((segment) => plain(segment.text)), ['≈ 112 000 ₽']);
+  // Базы нет — нечего и называть.
+  const empty = moneyCard({ spend, budget: { budgetKop: null, baseKop: 0, baseCount: 0, unknownCount: 0, leftKop: null } });
+  assert.equal(empty.kind === 'none' && segmentsText(empty.invite), 'Укажите бюджет на табак — покажем остаток на пробы.');
 });

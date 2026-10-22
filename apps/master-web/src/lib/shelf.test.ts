@@ -16,7 +16,11 @@ import {
   formatBowlCost,
   formatGramPrice,
   formatGrams,
-  formatRate,
+  cardRateHint,
+  endingHint,
+  formatMonthGrams,
+  monthTile,
+  shelfMonthRate,
   formatShelfDate,
   fractionGrams,
   historyEntry,
@@ -48,8 +52,10 @@ const row = (patch: Partial<ShelfRow> & { name?: string; brand?: string; profile
       leftGrams: 300,
       fullGrams: 400,
       lastReceipt: { at: '2026-11-12T10:00:00', grams: 400, kind: 'invoice', number: '03944', label: 'Каспий Опт' },
+      leftSource: 'forecast',
       rate: 10,
       rateKind: 'own',
+      monthGrams: 300,
       daysLeft: 20,
       endsAt: '2026-12-09T10:00:00.000Z',
     }),
@@ -154,18 +160,27 @@ test('fractionGrams: доля от уровня после прихода, ка�
   assert.equal(fractionGrams(250, 0.25), 63);
 });
 
-test('shelfLevel: полоса — доля от уровня после прихода, цифра — граммы сейчас', () => {
-  assert.deepEqual(shelfLevel(row()), { share: 0.75, tone: 'normal', none: false, empty: false, value: '≈ 300 г', hint: 'из 400 г после прихода' });
+test('shelfLevel: полоса — доля от уровня после прихода, цифра — граммы сейчас, подпись — откуда цифра', () => {
+  assert.deepEqual(shelfLevel(row()), { share: 0.75, tone: 'normal', none: false, empty: false, value: '≈ 300 г', hint: 'прогноз' });
+  // Мастер указал остаток сегодня — точная цифра, без «≈».
+  assert.deepEqual(shelfLevel(row({ leftSource: 'mark', leftGrams: 40, fullGrams: 400, status: 'ending', daysLeft: 2 })), {
+    share: 0.1,
+    tone: 'crit',
+    none: false,
+    empty: false,
+    value: '40 г',
+    hint: 'указал мастер',
+  });
   assert.equal(shelfLevel(row({ status: 'ending', daysLeft: 6, leftGrams: 55, fullGrams: 250 })).tone, 'low');
   assert.equal(shelfLevel(row({ status: 'ending', daysLeft: 2, leftGrams: 40 })).tone, 'crit');
   assert.equal(shelfLevel(row({ status: 'check', daysLeft: null, leftGrams: 18, fullGrams: 200 })).tone, 'crit');
-  assert.deepEqual(shelfLevel(row({ status: 'out', leftGrams: 0, fullGrams: 200 })), {
+  assert.deepEqual(shelfLevel(row({ status: 'out', leftGrams: 0, fullGrams: 200, leftSource: 'mark' })), {
     share: 0,
     tone: 'normal',
     none: true,
     empty: true,
     value: '0 г',
-    hint: 'из 200 г после прихода',
+    hint: 'указал мастер',
   });
   assert.deepEqual(shelfLevel(row({ status: 'plan', leftGrams: null, fullGrams: null, lastReceipt: null })), {
     share: 0,
@@ -182,7 +197,7 @@ test('shelfLevel: полоса — доля от уровня после при�
     none: false,
     empty: false,
     value: '≈ 0 г',
-    hint: 'из 200 г после прихода',
+    hint: 'прогноз',
   });
   assert.equal(shelfLevel(row({ leftGrams: 1234.6, fullGrams: 1500 })).value, '≈ 1 235 г');
 });
@@ -236,10 +251,6 @@ test('форматирование граммов, расхода, дат и д�
   assert.equal(formatGrams(289.6), '≈ 290 г');
   assert.equal(formatGrams(1250), '≈ 1 250 г');
   assert.equal(formatGrams(0), '0 г');
-  assert.equal(formatRate(row({ rate: 13.2 })), '13 г/день');
-  assert.equal(formatRate(row({ rate: 8.46 })), '8,5 г/день');
-  assert.equal(formatRate(row({ rate: 10, rateKind: 'brand' })), '≈ 10 г/день · бренд');
-  assert.equal(formatRate(row({ rate: null, rateKind: 'none' })), 'мало данных');
   assert.equal(formatShelfDate('2026-05-03T10:00:00.000Z'), '3 мая');
   assert.equal(formatShelfDate(''), '—');
   assert.equal(formatGramPrice(775), '7,75 ₽');
@@ -405,10 +416,51 @@ test('weekLabel: неделя с понедельника, последняя �
   assert.equal(weekLabel({ from: '2026-11-16T00:00:00', to: '2026-11-19T15:00:00', partial: true }), '16–19 ноя');
 });
 
-test('remainHint: откуда остаток — отметка после прихода, приход или «Закончился»', () => {
-  assert.equal(remainHint(row({ lastCount: { at: '2026-11-17T10:00:00', grams: 330, fraction: null } })), '330 г по отметке 17 ноя');
-  assert.equal(remainHint(row({ lastCount: { at: '2026-11-15T10:00:00', grams: 375, fraction: 0.75 } })), '¾ — 375 г по отметке 15 ноя');
-  assert.equal(remainHint(row()), 'из 400 г после прихода 12 ноя');
-  assert.equal(remainHint(row({ status: 'out', leftGrams: 0, lastCount: { at: '2026-11-17T10:00:00', grams: 0, fraction: null } })), 'закончился 17 ноя');
-  assert.equal(remainHint(row({ leftGrams: null, fullGrams: null, lastReceipt: null })), 'прихода не было');
+test('remainHint: «указал мастер сегодня» или «прогноз» — от уровня после прихода', () => {
+  assert.equal(remainHint(row(), NOW), 'прогноз · из 400 г после прихода 12 ноя');
+  // Отметка была раньше — дальше остаток по расходу, это прогноз.
+  assert.equal(remainHint(row({ lastCount: { at: '2026-11-17T10:00:00', grams: 330, fraction: null } }), NOW), 'прогноз · из 400 г после прихода 12 ноя');
+  assert.equal(
+    remainHint(row({ leftSource: 'mark', leftGrams: 40, lastCount: { at: '2026-11-19T12:00:00', grams: 40, fraction: null } }), NOW),
+    'указал мастер сегодня · из 400 г после прихода 12 ноя',
+  );
+  assert.equal(
+    remainHint(row({ status: 'out', leftSource: 'mark', leftGrams: 0, lastCount: { at: '2026-11-17T10:00:00', grams: 0, fraction: null } }), NOW),
+    'закончился 17 ноя · из 400 г после прихода 12 ноя',
+  );
+  // Обнулило списание — отметки нет, но цифра точная.
+  assert.equal(remainHint(row({ status: 'out', leftSource: 'mark', leftGrams: 0 }), NOW), 'указал мастер · из 400 г после прихода 12 ноя');
+  assert.equal(remainHint(row({ leftGrams: null, fullGrams: null, lastReceipt: null, leftSource: null }), NOW), 'прихода не было');
+});
+
+test('formatMonthGrams: расход в месяц до десятков граммов, малый — до грамма', () => {
+  assert.equal(formatMonthGrams(441), '440');
+  assert.equal(formatMonthGrams(297), '300');
+  assert.equal(formatMonthGrams(6.3), '6');
+  assert.equal(formatMonthGrams(1234).replace(/\u00a0/g, ' '), '1 230');
+});
+
+test('shelfMonthRate: колонка «Расход» — г/мес, по бренду с «≈», без данных — «мало данных»', () => {
+  assert.deepEqual(shelfMonthRate(row({ monthGrams: 630 })), { value: '630 г/мес', hint: null, faint: false });
+  assert.deepEqual(shelfMonthRate(row({ monthGrams: 297, rateKind: 'brand' })), { value: '≈ 300 г/мес', hint: 'по бренду', faint: false });
+  assert.deepEqual(shelfMonthRate(row({ monthGrams: null, rate: null, rateKind: 'none' })), { value: 'мало данных', hint: null, faint: true });
+});
+
+test('cardRateHint: г/день под расходом в месяц и откуда он', () => {
+  assert.equal(cardRateHint(row({ rate: 14.7 }), 3), '≈ 14,7 г/день · по 3 отметкам за 60 дней');
+  assert.equal(cardRateHint(row({ rate: 14.7 }), 1), '≈ 14,7 г/день · по 1 отметке за 60 дней');
+  assert.equal(cardRateHint(row({ rate: 21 }), 0), '≈ 21 г/день · по отметкам остатка');
+  assert.equal(cardRateHint(row({ rate: 10, rateKind: 'brand' }), 0), '≈ 10 г/день · по бренду');
+  assert.equal(cardRateHint(row({ rate: null, rateKind: 'none', monthGrams: null }), 0), 'появится после первой отметки');
+});
+
+test('endingHint: «Заканчивается» — до следующей поставки, без интервала — за срок поставки', () => {
+  assert.equal(endingHint({ interval: { days: 10, deliveries: 6 }, horizon: { days: 17, until: '2026-12-06T10:00:00.000Z' } }), 'до следующей поставки, до 6 дек');
+  assert.equal(endingHint({ interval: { days: null, deliveries: 2 }, horizon: { days: 7, until: '2026-11-26T10:00:00.000Z' } }), 'за срок поставки, до 26 ноя');
+});
+
+test('monthTile: «В месяц уходит» — расход дня × 30, чаши в день', () => {
+  assert.deepEqual(monthTile({ grams: 540, bowls: 30 }, 18), { value: '≈ 16 кг', hint: '≈ 540 г в день · 30 чаш по 18 г' });
+  assert.deepEqual(monthTile({ grams: 18, bowls: 1 }, 18), { value: '≈ 0,5 кг', hint: '≈ 18 г в день · 1 чаша по 18 г' });
+  assert.deepEqual(monthTile({ grams: 0, bowls: 0 }, 18), { value: '—', hint: 'расход появится после первой отметки' });
 });

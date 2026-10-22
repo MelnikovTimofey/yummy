@@ -1048,8 +1048,10 @@ const rawRow = {
   fullGrams: 400,
   lastReceipt: { at: '2026-11-12T10:00:00.000Z', grams: 400, kind: 'invoice', number: '03944', label: 'Каспий Опт' },
   lastCount: { at: '2026-11-17T10:00:00.000Z', grams: 330, fraction: null },
+  leftSource: 'forecast',
   rate: 14.7,
   rateKind: 'own',
+  monthGrams: 441,
   daysLeft: 20.4,
   endsAt: '2026-12-09T10:00:00.000Z',
   mixCount: 2,
@@ -1057,6 +1059,9 @@ const rawRow = {
   stopped: false,
   stopNote: null,
   note: null,
+  trial: true,
+  trialVerdict: 'yes',
+  trialMarkedAt: '2026-11-18T10:00:00.000Z',
 };
 
 test('normalizeShelfRow читает строку полки в граммах', () => {
@@ -1076,6 +1081,11 @@ test('normalizeShelfRow читает строку полки в граммах',
   assert.equal(row.rateKind, 'own');
   assert.equal(row.daysLeft, 20.4);
   assert.equal(row.mixCount, 2);
+  assert.equal(row.leftSource, 'forecast');
+  assert.equal(row.monthGrams, 441);
+  assert.equal(row.trial, true);
+  assert.equal(row.trialVerdict, 'yes');
+  assert.equal(row.trialMarkedAt, '2026-11-18T10:00:00.000Z');
 });
 
 test('normalizeShelfRow не доверяет неизвестным значениям; прихода не было — остатка нет', () => {
@@ -1091,6 +1101,14 @@ test('normalizeShelfRow не доверяет неизвестным значе�
   assert.equal(row.lastReceipt, null);
   assert.equal(row.lastCount, null);
   assert.equal(row.tobacco.name, '');
+  assert.equal(row.leftSource, null);
+  assert.equal(row.monthGrams, null);
+  assert.equal(row.trial, false);
+  assert.equal(row.trialVerdict, null);
+  assert.equal(row.trialMarkedAt, null);
+  assert.equal(normalizeShelfRow({ leftSource: 'guess', trialVerdict: 'maybe' }).leftSource, null);
+  assert.equal(normalizeShelfRow({ leftSource: 'mark', trialVerdict: 'maybe' }).trialVerdict, null);
+  assert.equal(normalizeShelfRow({ leftSource: 'mark' }).leftSource, 'mark');
 });
 
 test('normalizeShelfView собирает строки, счётчики с «проверьте остаток», килограммы и настройки', () => {
@@ -1099,13 +1117,17 @@ test('normalizeShelfView собирает строки, счётчики с «п
     counters: { all: 1, ok: 1, ending: 0, check: 0, out: 0, stop: 0, plan: 0 },
     totals: { kg: 0.3 },
     today: { grams: 15, bowls: 0.8 },
-    settings: { bowlGrams: 18, leadDays: 7 },
+    settings: { bowlGrams: 18, leadDays: 7, budgetKop: 15000000 },
+    interval: { days: 10, deliveries: 6 },
+    horizon: { days: 17, until: '2026-12-06T10:00:00.000Z' },
   });
   assert.equal(view.rows.length, 1);
   assert.deepEqual(view.counters, { all: 1, ok: 1, ending: 0, check: 0, out: 0, stop: 0, plan: 0 });
   assert.deepEqual(view.totals, { kg: 0.3 });
   assert.equal(view.today.grams, 15);
-  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7 });
+  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7, budgetKop: 15000000 });
+  assert.deepEqual(view.interval, { days: 10, deliveries: 6 });
+  assert.deepEqual(view.horizon, { days: 17, until: '2026-12-06T10:00:00.000Z' });
 });
 
 test('normalizeShelfView без данных — пустая полка с настройками по умолчанию', () => {
@@ -1113,7 +1135,9 @@ test('normalizeShelfView без данных — пустая полка с на
   assert.deepEqual(view.rows, []);
   assert.equal(view.counters.all, 0);
   assert.equal(view.counters.check, 0);
-  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7 });
+  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7, budgetKop: null });
+  assert.deepEqual(view.interval, { days: null, deliveries: 0 });
+  assert.deepEqual(view.horizon, { days: 7, until: '' });
 });
 
 test('normalizeShelfCard читает историю остатка, недели, цену и миксы', () => {

@@ -1640,6 +1640,9 @@ export const parseDateTimeLocalInput = (value: string) => {
 export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
 export type ShelfRateKind = 'own' | 'brand' | 'none';
+// mark — остаток указал мастер (отметка сегодня или «Закончился»), forecast — прогноз.
+export type ShelfLeftSource = 'mark' | 'forecast';
+export type ShelfTrialVerdict = 'yes' | 'no';
 export type ShelfReceiptKind = 'invoice' | 'start' | 'manual';
 // «Закончился» — отметка (count) с 0 г.
 export type StockEntryKind = 'receipt' | 'count' | 'writeoff';
@@ -1670,8 +1673,11 @@ export type ShelfRow = {
   fullGrams: number | null;
   lastReceipt: ShelfReceipt | null;
   lastCount: { at: string; grams: number; fraction: number | null } | null;
+  leftSource: ShelfLeftSource | null;
   rate: number | null;
   rateKind: ShelfRateKind;
+  // Расход в месяц = г/день × 30.
+  monthGrams: number | null;
   daysLeft: number | null;
   endsAt: string | null;
   mixCount: number;
@@ -1679,11 +1685,20 @@ export type ShelfRow = {
   stopped: boolean;
   stopNote: string | null;
   note: string | null;
+  // Проба (#329) — впервые пришёл на полку за 60 дней; отметка мастера «зашло / не зашло».
+  trial: boolean;
+  trialVerdict: ShelfTrialVerdict | null;
+  trialMarkedAt: string | null;
 };
 
 export type ShelfCounterKey = 'all' | ShelfStatus;
 export type ShelfCounters = Record<ShelfCounterKey, number>;
-export type ShelfSettings = { bowlGrams: number; leadDays: number };
+// budgetKop — бюджет на табак в месяц (#326), null — не указан.
+export type ShelfSettings = { bowlGrams: number; leadDays: number; budgetKop: number | null };
+// Интервал поставок по принятым счетам (#325): days — null, пока поставок меньше трёх.
+export type ShelfInterval = { days: number | null; deliveries: number };
+// Горизонт «Заканчивается» и «К заказу»: интервал + срок поставки; until — дата.
+export type ShelfHorizon = { days: number; until: string };
 
 export type ShelfView = {
   rows: ShelfRow[];
@@ -1691,6 +1706,8 @@ export type ShelfView = {
   totals: { kg: number };
   today: { grams: number; bowls: number };
   settings: ShelfSettings;
+  interval: ShelfInterval;
+  horizon: ShelfHorizon;
 };
 
 export type StockEntry = {
@@ -1721,7 +1738,7 @@ export type ShelfCard = ShelfRow & {
   settings: ShelfSettings;
 };
 
-export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7 };
+export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7, budgetKop: null };
 
 const SHELF_STATUSES: ShelfStatus[] = ['ok', 'ending', 'check', 'stop', 'out', 'plan'];
 
@@ -1735,7 +1752,19 @@ export const normalizeShelfSettings = (value: unknown): ShelfSettings => {
   return {
     bowlGrams: toNumber(raw.bowlGrams, DEFAULT_SHELF_SETTINGS.bowlGrams),
     leadDays: toNumber(raw.leadDays, DEFAULT_SHELF_SETTINGS.leadDays),
+    budgetKop: toNullableNumber(raw.budgetKop),
   };
+};
+
+const normalizeShelfInterval = (value: unknown): ShelfInterval => {
+  const raw = isRecord(value) ? value : {};
+  return { days: toNullableNumber(raw.days), deliveries: toNumber(raw.deliveries, 0) };
+};
+
+// Без ответа горизонт — срок поставки по умолчанию: интервал неизвестен.
+const normalizeShelfHorizon = (value: unknown, settings: ShelfSettings): ShelfHorizon => {
+  const raw = isRecord(value) ? value : {};
+  return { days: toNumber(raw.days, settings.leadDays), until: toIsoString(raw.until, '') };
 };
 
 export const normalizeShelfRow = (value: unknown): ShelfRow => {
@@ -1774,8 +1803,10 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     lastCount: count
       ? { at: toIsoString(count.at, ''), grams: toNumber(count.grams, 0), fraction: toNullableNumber(count.fraction) }
       : null,
+    leftSource: raw.leftSource === 'mark' || raw.leftSource === 'forecast' ? raw.leftSource : null,
     rate: toNullableNumber(raw.rate),
     rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
+    monthGrams: toNullableNumber(raw.monthGrams),
     daysLeft: toNullableNumber(raw.daysLeft),
     endsAt: toIsoString(raw.endsAt, '') || null,
     mixCount: toNumber(raw.mixCount, 0),
@@ -1783,6 +1814,9 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     stopped: toBoolean(raw.stopped, false),
     stopNote: toNullableString(raw.stopNote),
     note: toNullableString(raw.note),
+    trial: toBoolean(raw.trial, false),
+    trialVerdict: raw.trialVerdict === 'yes' || raw.trialVerdict === 'no' ? raw.trialVerdict : null,
+    trialMarkedAt: toIsoString(raw.trialMarkedAt, '') || null,
   };
 };
 
@@ -1791,6 +1825,7 @@ export const normalizeShelfView = (value: unknown): ShelfView => {
   const counters = isRecord(raw.counters) ? raw.counters : {};
   const totals = isRecord(raw.totals) ? raw.totals : {};
   const today = isRecord(raw.today) ? raw.today : {};
+  const settings = normalizeShelfSettings(raw.settings);
 
   return {
     rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow),
@@ -1805,7 +1840,9 @@ export const normalizeShelfView = (value: unknown): ShelfView => {
     },
     totals: { kg: toNumber(totals.kg, 0) },
     today: { grams: toNumber(today.grams, 0), bowls: toNumber(today.bowls, 0) },
-    settings: normalizeShelfSettings(raw.settings),
+    settings,
+    interval: normalizeShelfInterval(raw.interval),
+    horizon: normalizeShelfHorizon(raw.horizon, settings),
   };
 };
 
@@ -1877,22 +1914,26 @@ export type ReorderItem = {
   endsAt: string | null;
   rate: number | null;
   rateKind: ShelfRateKind;
+  monthGrams: number | null;
   leftGrams: number | null;
-  quantityGrams: number;
   gramPriceKop: number | null;
+  // Закончится не за срок поставки, а до следующей поставки по интервалу.
+  byInterval: boolean;
 };
 
+// Сколько заказать, решает мастер (#323): ни граммов, ни суммы в ответе нет.
 export type ReorderGroup = {
   supplier: ShelfSupplierRef | null;
   lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
   items: ReorderItem[];
-  // null — хоть у одной строки нет цены грамма.
-  sumKop: number | null;
 };
 
 export type ReorderView = {
   groups: ReorderGroup[];
   settings: ShelfSettings;
+  interval: ShelfInterval;
+  horizon: ShelfHorizon;
+  // Текст заявки — только названия.
   text: Array<{ supplierId: string | null; text: string }>;
 };
 
@@ -1903,6 +1944,9 @@ export type ShelfDashboard = {
   today: { grams: number; bowls: number; weekdayFactor: number | null; weekday: number };
   ending: Array<{ tobacco: ShelfTobaccoRef; status: ShelfStatus; daysLeft: number | null; endsAt: string | null }>;
   spend: { month: string; bySupplier: Array<{ supplier: ShelfSupplierRef | null; sumKop: number }>; totalKop: number };
+  // База — Σ расход в месяц × цена грамма по «держим постоянно»; unknownCount —
+  // без цены или расхода, в базу не вошли; leftKop — бюджет − база.
+  budget: { budgetKop: number | null; baseKop: number; baseCount: number; unknownCount: number; leftKop: number | null };
   bowlCostKop: number | null;
   stockValueKop: number;
   weekly: ShelfDashboardWeek[];
@@ -1935,9 +1979,10 @@ const normalizeReorderItem = (value: unknown): ReorderItem => {
     endsAt: toIsoString(raw.endsAt, '') || null,
     rate: toNullableNumber(raw.rate),
     rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
+    monthGrams: toNullableNumber(raw.monthGrams),
     leftGrams: toNullableNumber(raw.leftGrams),
-    quantityGrams: toNumber(raw.quantityGrams, 0),
     gramPriceKop: toNullableNumber(raw.gramPriceKop),
+    byInterval: toBoolean(raw.byInterval, false),
   };
 };
 
@@ -1955,15 +2000,17 @@ const normalizeReorderGroup = (value: unknown): ReorderGroup => {
         }
       : null,
     items: listOf(raw.items).map(normalizeReorderItem),
-    sumKop: toNullableNumber(raw.sumKop),
   };
 };
 
 export const normalizeReorderView = (value: unknown): ReorderView => {
   const raw = isRecord(value) ? value : {};
+  const settings = normalizeShelfSettings(raw.settings);
   return {
     groups: listOf(raw.groups).map(normalizeReorderGroup),
-    settings: normalizeShelfSettings(raw.settings),
+    settings,
+    interval: normalizeShelfInterval(raw.interval),
+    horizon: normalizeShelfHorizon(raw.horizon, settings),
     text: listOf(raw.text).filter(isRecord).map((entry) => ({
       supplierId: toNullableString(entry.supplierId),
       text: String(entry.text ?? ''),
@@ -1975,6 +2022,7 @@ export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
   const raw = isRecord(value) ? value : {};
   const today = isRecord(raw.today) ? raw.today : {};
   const spend = isRecord(raw.spend) ? raw.spend : {};
+  const budget = isRecord(raw.budget) ? raw.budget : {};
   return {
     today: {
       grams: toNumber(today.grams, 0),
@@ -1995,6 +2043,13 @@ export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
         sumKop: toNumber(entry.sumKop, 0),
       })),
       totalKop: toNumber(spend.totalKop, 0),
+    },
+    budget: {
+      budgetKop: toNullableNumber(budget.budgetKop),
+      baseKop: toNumber(budget.baseKop, 0),
+      baseCount: toNumber(budget.baseCount, 0),
+      unknownCount: toNumber(budget.unknownCount, 0),
+      leftKop: toNullableNumber(budget.leftKop),
     },
     bowlCostKop: toNullableNumber(raw.bowlCostKop),
     stockValueKop: toNumber(raw.stockValueKop, 0),
