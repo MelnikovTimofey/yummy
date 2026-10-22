@@ -13,6 +13,7 @@ import {
   type ReorderView,
   type ShelfRow,
   type ShelfSettings,
+  type ShelfTrialVerdict,
   type ShelfView,
 } from '@/contracts';
 
@@ -23,6 +24,8 @@ export type ShelfPatch = {
   stopNote?: string;
   keepStocked?: boolean;
   note?: string;
+  // Отметка пробы (#329): null — снять.
+  trialVerdict?: ShelfTrialVerdict | null;
 };
 
 const json = (method: string, body?: unknown): RequestInit => ({

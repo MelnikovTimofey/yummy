@@ -25,6 +25,7 @@ import {
   fractionGrams,
   historyEntry,
   matchShelfStatus,
+  shelfChipCount,
   parseGrams,
   parseReceipt,
   receiptToastText,
@@ -73,6 +74,16 @@ test('чипы полки: «Проверьте остаток» вместо «
     ['stop', 'Стоп'],
     ['plan', 'В плане'],
   ]);
+});
+
+test('matchShelfStatus и shelfChipCount: «Пробы» — по признаку trial, а не по статусу (#329)', () => {
+  assert.equal(matchShelfStatus(row({ trial: true, status: 'ending' }), 'trial'), true);
+  assert.equal(matchShelfStatus(row({ trial: false }), 'trial'), false);
+  const rows = [row({ trial: true }), row({ trial: true, status: 'out' }), row()];
+  const counters = { all: 3, ok: 2, ending: 0, check: 0, out: 1, stop: 0, plan: 0 };
+  assert.equal(shelfChipCount({ rows, counters }, 'trial'), 2);
+  assert.equal(shelfChipCount({ rows, counters }, 'out'), 1);
+  assert.equal(shelfChipCount(null, 'trial'), 0);
 });
 
 test('matchShelfStatus: статусы не пересекаются — как счётчики backend', () => {

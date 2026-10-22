@@ -2022,7 +2022,6 @@ export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
   const raw = isRecord(value) ? value : {};
   const today = isRecord(raw.today) ? raw.today : {};
   const spend = isRecord(raw.spend) ? raw.spend : {};
-  const budget = isRecord(raw.budget) ? raw.budget : {};
   return {
     today: {
       grams: toNumber(today.grams, 0),
@@ -2044,13 +2043,7 @@ export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
       })),
       totalKop: toNumber(spend.totalKop, 0),
     },
-    budget: {
-      budgetKop: toNullableNumber(budget.budgetKop),
-      baseKop: toNumber(budget.baseKop, 0),
-      baseCount: toNumber(budget.baseCount, 0),
-      unknownCount: toNumber(budget.unknownCount, 0),
-      leftKop: toNullableNumber(budget.leftKop),
-    },
+    budget: normalizeBudget(raw.budget),
     bowlCostKop: toNullableNumber(raw.bowlCostKop),
     stockValueKop: toNumber(raw.stockValueKop, 0),
     weekly: listOf(raw.weekly).filter(isRecord).map((week) => ({
@@ -2059,6 +2052,198 @@ export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
       grams: toNumber(week.grams, 0),
       partial: toBoolean(week.partial, false),
     })),
+  };
+};
+
+// --- «Закупка» (#327–#331): ответ /staff/shelf/purchase ----------------------
+// Решения — по расходу точки; app («Покурить» и оценки гостей) — справочно.
+// Деньги — в копейках, доли — 0…1, дни — дробные: округляет интерфейс.
+
+export type PurchaseAppStats = { smokes: number; rating: number | null; ratings: number };
+export type PurchaseBaseFlag = 'notBase' | 'idleBase';
+export type PurchaseProfileFlag = 'more' | 'less';
+
+export type PurchaseBaseRow = {
+  tobacco: ShelfTobaccoRef;
+  monthGrams: number | null;
+  rateKind: ShelfRateKind;
+  // Доля в расходе своих табаков; у «бренда» и «мало данных» — null.
+  share: number | null;
+  rubKop: number | null;
+  gramPriceKop: number | null;
+  app: PurchaseAppStats;
+  keepStocked: boolean;
+  flag: PurchaseBaseFlag | null;
+};
+
+export type PurchaseFastRow = {
+  tobacco: ShelfTobaccoRef;
+  receiptGrams: number;
+  receivedAt: string;
+  goneDays: number;
+  emptyAt: string;
+  emptyDays: number;
+  // Без табака до сих пор: следующего прихода ещё не было.
+  ongoing: boolean;
+  next: { grams: number; at: string } | null;
+  // Сколько раз за 60 дней приход уходил за 3 дня.
+  times: number;
+  status: ShelfStatus;
+};
+
+export type PurchaseTrialRow = {
+  tobacco: ShelfTobaccoRef;
+  receiptGrams: number;
+  receivedAt: string;
+  rate: number | null;
+  // Расход к медиане полки; null — отметок остатка ещё не было.
+  speed: number | null;
+  goneDays: number | null;
+  app: PurchaseAppStats;
+  mixCount: number;
+  trialVerdict: ShelfTrialVerdict | null;
+  trialMarkedAt: string | null;
+};
+
+export type PurchaseIdleRow = {
+  tobacco: ShelfTobaccoRef;
+  leftGrams: number;
+  rate21: number;
+  rubKop: number | null;
+  receivedAt: string;
+  days: number;
+  keepStocked: boolean;
+};
+
+export type PurchaseProfileRow = { key: string; spend: number; shelf: number; app: number; flag: PurchaseProfileFlag | null };
+
+export type PurchaseView = {
+  // Первая запись журнала остатка: с неё идёт учёт в граммах.
+  since: string | null;
+  budget: ShelfDashboard['budget'];
+  spend: { month: string; totalKop: number };
+  base: { enough: boolean; medianMonthGrams: number | null; counts: Record<PurchaseBaseFlag, number>; rows: PurchaseBaseRow[] };
+  fast: { enough: boolean; rows: PurchaseFastRow[] };
+  trials: { enough: boolean; medianRate: number | null; rows: PurchaseTrialRow[] };
+  idle: { enough: boolean; totalKop: number; unknownPriceCount: number; unmarkedCount: number; rows: PurchaseIdleRow[] };
+  // appEnough — «Покурить» за 30 дней хватает, чтобы показывать долю приложения.
+  profiles: { enough: boolean; appEvents: number; appEnough: boolean; rows: PurchaseProfileRow[] };
+};
+
+const recordOf = (value: unknown): UnknownRecord => (isRecord(value) ? value : {});
+const toMonth = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}$/.test(value) ? value : '');
+
+const normalizeBudget = (value: unknown): ShelfDashboard['budget'] => {
+  const budget = recordOf(value);
+  return {
+    budgetKop: toNullableNumber(budget.budgetKop),
+    baseKop: toNumber(budget.baseKop, 0),
+    baseCount: toNumber(budget.baseCount, 0),
+    unknownCount: toNumber(budget.unknownCount, 0),
+    leftKop: toNullableNumber(budget.leftKop),
+  };
+};
+
+const normalizeAppStats = (value: unknown): PurchaseAppStats => {
+  const raw = recordOf(value);
+  return { smokes: toNumber(raw.smokes, 0), rating: toNullableNumber(raw.rating), ratings: toNumber(raw.ratings, 0) };
+};
+
+const toVerdict = (value: unknown): ShelfTrialVerdict | null => (value === 'yes' || value === 'no' ? value : null);
+const RATE_KINDS = ['own', 'brand', 'none'] as const;
+
+export const normalizePurchaseView = (value: unknown): PurchaseView => {
+  const raw = recordOf(value);
+  const base = recordOf(raw.base);
+  const counts = recordOf(base.counts);
+  const fast = recordOf(raw.fast);
+  const trials = recordOf(raw.trials);
+  const idle = recordOf(raw.idle);
+  const profiles = recordOf(raw.profiles);
+  const spend = recordOf(raw.spend);
+  const rows = (section: UnknownRecord) => listOf(section.rows).filter(isRecord);
+
+  return {
+    since: toIsoString(raw.since, '') || null,
+    budget: normalizeBudget(raw.budget),
+    spend: { month: toMonth(spend.month), totalKop: toNumber(spend.totalKop, 0) },
+    base: {
+      enough: toBoolean(base.enough, false),
+      medianMonthGrams: toNullableNumber(base.medianMonthGrams),
+      counts: { notBase: toNumber(counts.notBase, 0), idleBase: toNumber(counts.idleBase, 0) },
+      rows: rows(base).map((row) => ({
+        tobacco: normalizeTobaccoRef(row.tobacco),
+        monthGrams: toNullableNumber(row.monthGrams),
+        rateKind: pickOne(row.rateKind, RATE_KINDS, 'none'),
+        share: toNullableNumber(row.share),
+        rubKop: toNullableNumber(row.rubKop),
+        gramPriceKop: toNullableNumber(row.gramPriceKop),
+        app: normalizeAppStats(row.app),
+        keepStocked: toBoolean(row.keepStocked, false),
+        flag: row.flag === 'notBase' || row.flag === 'idleBase' ? row.flag : null,
+      })),
+    },
+    fast: {
+      enough: toBoolean(fast.enough, false),
+      rows: rows(fast).map((row) => {
+        const next = isRecord(row.next) ? row.next : null;
+        return {
+          tobacco: normalizeTobaccoRef(row.tobacco),
+          receiptGrams: toNumber(row.receiptGrams, 0),
+          receivedAt: toIsoString(row.receivedAt, ''),
+          goneDays: toNumber(row.goneDays, 0),
+          emptyAt: toIsoString(row.emptyAt, ''),
+          emptyDays: toNumber(row.emptyDays, 0),
+          ongoing: toBoolean(row.ongoing, false),
+          next: next ? { grams: toNumber(next.grams, 0), at: toIsoString(next.at, '') } : null,
+          times: toNumber(row.times, 1),
+          status: pickOne(row.status, SHELF_STATUSES, 'ok'),
+        };
+      }),
+    },
+    trials: {
+      enough: toBoolean(trials.enough, false),
+      medianRate: toNullableNumber(trials.medianRate),
+      rows: rows(trials).map((row) => ({
+        tobacco: normalizeTobaccoRef(row.tobacco),
+        receiptGrams: toNumber(row.receiptGrams, 0),
+        receivedAt: toIsoString(row.receivedAt, ''),
+        rate: toNullableNumber(row.rate),
+        speed: toNullableNumber(row.speed),
+        goneDays: toNullableNumber(row.goneDays),
+        app: normalizeAppStats(row.app),
+        mixCount: toNumber(row.mixCount, 0),
+        trialVerdict: toVerdict(row.trialVerdict),
+        trialMarkedAt: toIsoString(row.trialMarkedAt, '') || null,
+      })),
+    },
+    idle: {
+      enough: toBoolean(idle.enough, false),
+      totalKop: toNumber(idle.totalKop, 0),
+      unknownPriceCount: toNumber(idle.unknownPriceCount, 0),
+      unmarkedCount: toNumber(idle.unmarkedCount, 0),
+      rows: rows(idle).map((row) => ({
+        tobacco: normalizeTobaccoRef(row.tobacco),
+        leftGrams: toNumber(row.leftGrams, 0),
+        rate21: toNumber(row.rate21, 0),
+        rubKop: toNullableNumber(row.rubKop),
+        receivedAt: toIsoString(row.receivedAt, ''),
+        days: toNumber(row.days, 0),
+        keepStocked: toBoolean(row.keepStocked, false),
+      })),
+    },
+    profiles: {
+      enough: toBoolean(profiles.enough, false),
+      appEvents: toNumber(profiles.appEvents, 0),
+      appEnough: toBoolean(profiles.appEnough, false),
+      rows: rows(profiles).map((row) => ({
+        key: String(row.key ?? ''),
+        spend: toNumber(row.spend, 0),
+        shelf: toNumber(row.shelf, 0),
+        app: toNumber(row.app, 0),
+        flag: row.flag === 'more' || row.flag === 'less' ? row.flag : null,
+      })),
+    },
   };
 };
 

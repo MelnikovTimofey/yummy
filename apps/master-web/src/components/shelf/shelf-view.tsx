@@ -23,6 +23,7 @@ import {
   monthTile,
   receiptToastText,
   resolveShelfShortcut,
+  shelfChipCount,
   shelfMonthRate,
   shelfRowMenu,
   shelfStatusLine,
@@ -427,7 +428,7 @@ export const ShelfView = ({
       onClick={() => setStatus(key)}
     >
       <span>{label}</span>
-      <span className="filter-chip__count">{formatMetricValue(view?.counters[key] ?? 0)}</span>
+      <span className="filter-chip__count">{formatMetricValue(shelfChipCount(view, key))}</span>
     </button>
   );
 

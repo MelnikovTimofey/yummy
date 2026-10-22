@@ -4,7 +4,8 @@ import { formatCount, type ShelfCounterKey, type ShelfCounters, type ShelfRow, t
 // небольшая (сотни строк), поэтому всё считается в браузере по загруженным строкам.
 // Остаток — в граммах (design/design_handoff_inventory_grams), банок нет.
 
-export type ShelfStatusKey = ShelfCounterKey;
+// trial — «Пробы» (#329): табак впервые пришёл за 60 дней, это признак, а не статус.
+export type ShelfStatusKey = ShelfCounterKey | 'trial';
 
 export const SHELF_STATUS_CHIPS: Array<[ShelfStatusKey, string]> = [
   ['all', 'Все'],
@@ -58,7 +59,13 @@ export const EMPTY_SHELF_FILTERS: ShelfFilters = {
 const strengthOf = (row: ShelfRow) =>
   row.tobacco.officialStrength?.trim() || row.tobacco.communityStrength?.trim() || '';
 
-export const matchShelfStatus = (row: ShelfRow, key: ShelfStatusKey) => key === 'all' || row.status === key;
+export const matchShelfStatus = (row: ShelfRow, key: ShelfStatusKey) =>
+  key === 'all' || (key === 'trial' ? row.trial : row.status === key);
+
+export const shelfChipCount = (view: Pick<ShelfView, 'rows' | 'counters'> | null, key: ShelfStatusKey) => {
+  if (!view) return 0;
+  return key === 'trial' ? view.rows.filter((row) => row.trial).length : view.counters[key];
+};
 
 const lower = (value: string) => value.toLocaleLowerCase('ru-RU');
 
