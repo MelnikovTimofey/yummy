@@ -451,6 +451,59 @@ test.describe('Master on a phone', () => {
     await dialog.getByRole('button', { name: 'Закрыть' }).click();
     await expect(dialog).toBeHidden();
   });
+
+  // #334: раздел открывается с начала, а нижнее меню остаётся в ширину экрана
+  // и у нижнего края, даже когда страница шире экрана (конструктор микса).
+  test('Master on a phone: sections open from the top, the bottom bar stays screen-wide', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await page.mouse.wheel(0, 3000);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+    await page.mouse.wheel(0, 3000);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
+    await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+    await page.locator('table.mixes-table tbody tr[data-mix-id]').first().click();
+    await expect(page.getByRole('button', { name: 'Назад к каталогу миксов' })).toBeVisible();
+    await page.mouse.wheel(0, 3000);
+    const box = await nav.boundingBox();
+    expect(box).toMatchObject({ x: 0, width: 375 });
+    expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(812);
+    await expect(nav.getByRole('button', { name: 'Ещё', exact: true })).toBeInViewport({ ratio: 1 });
+  });
+});
+
+// #334: повёрнутый телефон получает телефонную навигацию, а не десктопную
+// шапку с вкладками в несколько строк.
+test.describe('Master on a phone in landscape', () => {
+  test.use({ viewport: { width: 812, height: 375 }, isMobile: true, hasTouch: true });
+
+  test('Master on a landscape phone: bottom navigation instead of desktop tabs', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+
+    await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toHaveCount(0);
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await expect(nav).toBeInViewport({ ratio: 1 });
+    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
+    await expect(nav.getByRole('button', { name: 'Полка', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.m-shelf-card').first()).toBeVisible();
+  });
 });
 
 // Прогноз и «К заказу» (#213, #323, #325, #326): блок «Полка» на дашборде с

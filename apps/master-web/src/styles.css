@@ -7454,7 +7454,8 @@ button.chip .chip__count[hidden] {
 }
 
 /* =====================================================================
-   Телефон ≤ 640 px (#215) — по design/design_handoff_inventory
+   Телефон ≤ 640 px и повёрнутый телефон (#215, #334; граница —
+   PHONE_QUERY в hooks/use-is-phone.ts) — по design/design_handoff_inventory
    (#shot=shelf-mobile, shelf-mobile-sheet). Классы .m-* и .bottom-sheet
    рендерятся только на телефоне (useIsPhone), десктоп они не трогают.
    ===================================================================== */
@@ -7976,7 +7977,7 @@ button.chip .chip__count[hidden] {
 /* --- Общее для телефона: место под нижнюю навигацию, тост, карточка,
        широкие таблицы. -------------------------------------------------- */
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .shell--master-workspace {
     padding: 0 12px calc(56px + var(--safe-bottom) + 24px);
     gap: 12px;
