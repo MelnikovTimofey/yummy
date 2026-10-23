@@ -17,7 +17,9 @@ import { MixerMasterCard, type MixerSmoke } from '@/components/mixer/MixerMaster
 import { MixerScreen } from '@/components/mixer/MixerScreen';
 import { Feed } from '@/components/reels/Feed';
 import { FeedEmpty } from '@/components/reels/FeedEmpty';
-import { ReelStrip } from '@/components/reels/ReelStrip';
+import { PullPeek } from '@/components/reels/PullPeek';
+import { ReelsTeaser } from '@/components/reels/ReelsTeaser';
+import { usePullPast } from '@/components/reels/usePullPast';
 import {
   customDescription,
   isFavorite,
@@ -64,7 +66,7 @@ import { getProfileColor } from '@/lib/profile-color';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
-import { loadReelFeed, reelStrip, type ReelEntry, type ReelHead } from '@/lib/reel-feed';
+import { forYouPage, recsPage, reelFeed, RECS_ON_SCREEN, type RecsPage } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
@@ -1225,9 +1227,14 @@ export const App = () => {
   const [submitError, setSubmitError] = useState('');
   // Лента «Рилсы» (#263). Индекс — здесь, а не в ленте: «Готово» после
   // «Покурить» возвращает на тот же рилс. `loadId` пересоздаёт ленту с начала.
-  const [reels, setReels] = useState<{ status: 'idle' | 'loading' | 'ready' | 'error'; items: ReelEntry<MixCard>[]; error: string; loadId: number }>(
-    { status: 'idle', items: [], error: '', loadId: 0 },
-  );
+  // `continues` — лента продолжает непустой Подбор: на первом рилсе есть путь назад (#349).
+  const [reels, setReels] = useState<{
+    status: 'idle' | 'loading' | 'ready' | 'error';
+    items: MixCard[];
+    continues: boolean;
+    error: string;
+    loadId: number;
+  }>({ status: 'idle', items: [], continues: false, error: '', loadId: 0 });
   const [reelIndex, setReelIndex] = useState(0);
   const [reelSwiped, setReelSwiped] = useState(false);
   // Миксы, на которые smoke-cta ответил 404: табак кончился, пока гость листал.
@@ -2047,40 +2054,72 @@ export const App = () => {
     }
   };
 
-  // Голова ленты и полосы (#265): у вошедшего — уже загруженный Подбором «Для
-  // вас» (personal) или его подбор по вкусам кабинета (cold), у гостя без входа —
-  // подбор по онбордингу. null — ещё не загружена.
-  const forYouHead = (data: ForYouData): ReelHead<MixCard> => (data.mode === 'personal' ? data : data.items);
+  // Подбор глазами ленты (#349): у вошедшего — «Для вас» (personal) или подбор
+  // по вкусам кабинета (cold), у гостя без входа — подбор по онбордингу, в
+  // «Под настроение» — его подбор. null — ещё не загружен.
+  const forYouRecsPage = (data: ForYouData): RecsPage<MixCard> =>
+    data.mode === 'personal' ? forYouPage(data) : recsPage(data.items);
   const hasTaste = onboardingDone && (likedProfiles.length > 0 || likedFlavors.length > 0);
-  const anonHead: ReelHead<MixCard> | null = !hasTaste ? [] : recommendationStatus === 'ready' ? recommendations : null;
-  const shownHead = signedIn ? (forYou.data ? forYouHead(forYou.data) : null) : anonHead;
-  const stripItems = shownHead && catalogStatus === 'ready' ? reelStrip(shownHead, catalogSourceMixes) : [];
+  const shownRecs: RecsPage<MixCard> | null = mood?.items
+    ? recsPage(mood.items)
+    : signedIn
+      ? forYou.data
+        ? forYouRecsPage(forYou.data)
+        : null
+      : !hasTaste
+        ? recsPage([])
+        : recommendationStatus === 'ready'
+          ? recsPage(recommendations)
+          : null;
+  // Рилсы после Подбора — для тизера в его конце и кадра при дотягивании.
+  const continuation =
+    shownRecs?.shown.length && catalogStatus === 'ready' ? reelFeed(shownRecs, catalogSourceMixes) : null;
 
-  // «Рилсы» из панели — лента с начала, кружок полосы (#264) — с его номера.
-  // Кружок берёт ту же голову, что видна на Подборе, поэтому номер совпадает;
-  // из панели устаревший «Для вас» пересобирается — тем же запросом, что сделал
-  // бы Подбор. Каталог, если уже загружен, не запрашивается заново.
-  const openReels = async (start?: number) => {
+  // Лента продолжает Подбор (#349) — из тизера и из панели одна и та же.
+  // Устаревший «Для вас» пересобирается тем же запросом, что сделал бы Подбор.
+  // Каталог, если уже загружен, не запрашивается заново.
+  const openReels = async () => {
     const loadId = reels.loadId + 1;
-    const head = signedIn ? (forYou.data && (start !== undefined || !forYou.stale) ? forYouHead(forYou.data) : null) : anonHead;
-    setReelIndex(start ?? 0);
+    const page = signedIn && !mood?.items && forYou.stale ? null : shownRecs;
+    setReelIndex(0);
     setReelSwiped(false);
     setReelChoice(null);
     setView('reels');
     setReels((current) => ({ ...current, status: 'loading', error: '', loadId }));
     try {
-      const items = await loadReelFeed<MixCard>({
-        head,
-        catalog: catalogStatus === 'ready' ? catalogSourceMixes : null,
-        fetchHead: async () =>
-          signedIn ? forYouHead(await loadForYou()) : fetchRecommendations({ likedProfiles, likedFlavors }),
-        fetchCatalog: fetchCatalogMixes,
-      });
-      setReels((current) => (current.loadId === loadId ? { status: 'ready', items, error: '', loadId } : current));
+      const fetchPage = async () =>
+        signedIn ? forYouRecsPage(await loadForYou()) : recsPage(await fetchRecommendations({ likedProfiles, likedFlavors }));
+      const [shown, catalog] = await Promise.all([
+        page ?? fetchPage(),
+        catalogStatus === 'ready' ? catalogSourceMixes : fetchCatalogMixes(),
+      ]);
+      const items = reelFeed(shown, catalog);
+      setReels((current) =>
+        current.loadId === loadId
+          ? { status: 'ready', items, continues: shown.shown.length > 0, error: '', loadId }
+          : current,
+      );
     } catch (cause) {
       setReels((current) => (current.loadId === loadId ? { ...current, status: 'error', error: guestErrorText(cause) } : current));
     }
   };
+
+  // Назад с первого рилса — в конец Подбора, к тизеру.
+  const recsAtEnd = useRef(false);
+  const backToRecs = () => {
+    recsAtEnd.current = true;
+    setView('recommendations');
+  };
+
+  const mainRef = useRef<HTMLElement>(null);
+  const recsTravel = usePullPast(mainRef, 'bottom', view === 'recommendations' && continuation !== null, () => void openReels());
+
+  useEffect(() => {
+    const main = mainRef.current;
+    if (view !== 'recommendations' || !recsAtEnd.current || !main) return;
+    recsAtEnd.current = false;
+    main.scrollTop = main.scrollHeight;
+  }, [view]);
 
   // «Покурить» прямо из рилса: то же событие smoke-cta и тот же экран «Покажите
   // мастеру». 404 — микс кончился: CTA гаснет, лента остаётся на месте.
@@ -2729,7 +2768,7 @@ export const App = () => {
         ) : null}
         {rest.length ? (
           <div className="aroma-recs-list">
-            {rest.slice(0, 4).map((mix) => (
+            {rest.slice(0, RECS_ON_SCREEN - 1).map((mix) => (
               <button
                 key={mix.id}
                 type="button"
@@ -3259,14 +3298,14 @@ export const App = () => {
     if (reels.status !== 'ready') {
       return <p className="screen-status reels-status">Собираем ленту…</p>;
     }
-    if (!reels.items.length) {
+    if (!reels.items.length && !reels.continues) {
       return <FeedEmpty onRecs={() => setView('recommendations')} />;
     }
     return (
       <Feed
         key={reels.loadId}
         items={reels.items}
-        index={Math.min(reelIndex, reels.items.length - 1)}
+        index={Math.max(0, Math.min(reelIndex, reels.items.length - 1))}
         onIndexChange={(next) => {
           setReelIndex(next);
           setReelSwiped(true);
@@ -3280,6 +3319,7 @@ export const App = () => {
         isFavorite={isFavoriteMix}
         onFavorite={(mix) => void toggleFavorite(mixToCabinetItem(mix))}
         onMixer={() => openMixer('reels')}
+        onBack={reels.continues ? backToRecs : null}
       />
     );
   };
@@ -3332,22 +3372,32 @@ export const App = () => {
         ) : (
           <>
             {renderTopbar()}
-            <main className={view === 'intro' || view === 'onboarding' ? `content content-${view}` : 'content'}>
-              {view === 'intro' ? renderIntroView() : null}
-              {view === 'onboarding' ? renderOnboardingView() : null}
-              {view === 'recommendations' && stripItems.length ? (
-                <ReelStrip items={stripItems.map((entry) => entry.mix)} onOpen={(index) => void openReels(index)} />
-              ) : null}
-              {view === 'recommendations' && chooseError && !mixModalState ? (
-                <p className="screen-status error">{chooseError}</p>
-              ) : null}
-              {view === 'recommendations' ? renderRecommendationsView() : null}
-              {view === 'showcase' ? renderShowcaseView() : null}
-              {view === 'catalog' ? renderCatalogView() : null}
-              {view === 'rail' ? renderRailView() : null}
-              {view === 'cabinet' ? renderCabinetView() : null}
-              {view === 'login' ? renderLoginView() : null}
-            </main>
+            <div className="pull-host" data-pulling={recsTravel ? '' : undefined}>
+              <main
+                ref={mainRef}
+                className={view === 'intro' || view === 'onboarding' ? `content content-${view}` : 'content'}
+                style={recsTravel ? { transform: `translateY(${-recsTravel / 2}px)` } : undefined}
+              >
+                {view === 'intro' ? renderIntroView() : null}
+                {view === 'onboarding' ? renderOnboardingView() : null}
+                {view === 'recommendations' && chooseError && !mixModalState ? (
+                  <p className="screen-status error">{chooseError}</p>
+                ) : null}
+                {view === 'recommendations' ? renderRecommendationsView() : null}
+                {view === 'recommendations' && continuation ? (
+                  <ReelsTeaser
+                    label={continuation.length ? `Ещё ${continuation.length} ${pluralizeMixes(continuation.length)} в рилсах` : 'Других миксов нет'}
+                    onOpen={() => void openReels()}
+                  />
+                ) : null}
+                {view === 'showcase' ? renderShowcaseView() : null}
+                {view === 'catalog' ? renderCatalogView() : null}
+                {view === 'rail' ? renderRailView() : null}
+                {view === 'cabinet' ? renderCabinetView() : null}
+                {view === 'login' ? renderLoginView() : null}
+              </main>
+              <PullPeek edge="bottom" travel={recsTravel} mix={continuation?.[0] ?? null} />
+            </div>
             {renderBottomNav()}
           </>
         )}
