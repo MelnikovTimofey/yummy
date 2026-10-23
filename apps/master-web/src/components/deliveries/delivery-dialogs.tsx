@@ -11,9 +11,8 @@ const MAX_GRAMS = 5000;
 
 type ShellProps = {
   open: boolean;
-  eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   error: string;
   busy: boolean;
   submitLabel: string;
@@ -23,14 +22,14 @@ type ShellProps = {
   children?: ReactNode;
 };
 
-// Общая оболочка коротких форм поставок — в стиле диалогов раздела «Доступ».
-const FormDialog = ({ open, eyebrow, title, description, error, busy, submitLabel, submitVariant = 'primary', onClose, onSubmit, children }: ShellProps) => (
+// Общая оболочка коротких форм поставок в стиле диалогов раздела «Доступ»:
+// заголовок и, если есть что сказать, одна строка под ним (#365).
+const FormDialog = ({ open, title, description, error, busy, submitLabel, submitVariant = 'primary', onClose, onSubmit, children }: ShellProps) => (
   <Dialog open={open} onOpenChange={(next) => (next || busy ? null : onClose())}>
-    <DialogContent className="operator-dialog" showCloseButton={false}>
+    <DialogContent className="operator-dialog" showCloseButton={false} {...(description ? {} : { 'aria-describedby': undefined })}>
       <DialogHeader className="operator-dialog__head">
-        <p className="operator-dialog__eyebrow">{eyebrow}</p>
         <DialogTitle className="operator-dialog__title">{title}</DialogTitle>
-        <DialogDescription className="operator-dialog__sub">{description}</DialogDescription>
+        {description ? <DialogDescription className="operator-dialog__sub">{description}</DialogDescription> : null}
       </DialogHeader>
       <form
         className="operator-dialog__form"
@@ -39,10 +38,12 @@ const FormDialog = ({ open, eyebrow, title, description, error, busy, submitLabe
           onSubmit();
         }}
       >
-        <div className="operator-dialog__body">
-          {children}
-          {error ? <p className="operator-dialog__error">{error}</p> : null}
-        </div>
+        {children || error ? (
+          <div className="operator-dialog__body">
+            {children}
+            {error ? <p className="operator-dialog__error">{error}</p> : null}
+          </div>
+        ) : null}
         <footer className="operator-dialog__foot">
           <button type="button" className="btn" data-variant="ghost" disabled={busy} onClick={onClose}>
             Отмена
@@ -106,9 +107,8 @@ export const ManualDeliveryDialog = ({
   return (
     <FormDialog
       open={open}
-      eyebrow="Поставка · вручную"
       title="Заполнить вручную"
-      description="Шапка счёта. Строки добавите в черновике — так же, как после разбора PDF."
+      description="Строки добавите в черновике."
       error={submit.error}
       busy={submit.busy}
       submitLabel="Создать черновик"
@@ -172,9 +172,9 @@ export const AddLineDialog = ({
     const priceKop = parseRubles(price);
     const weight = readInt(grams, 1, MAX_GRAMS);
     if (!name) return submit.setError('Укажите название строки или выберите табак.');
-    if (!count) return submit.setError(`Штук — целое число от 1 до ${MAX_QTY}.`);
-    if (priceKop === undefined) return submit.setError('Цена — число рублей, например 1 550 или 1 550,50.');
-    if (weight === undefined) return submit.setError(`Граммы в штуке — целое число от 1 до ${MAX_GRAMS}.`);
+    if (!count) return submit.setError(`Неверное число штук. Укажите целое число от 1 до ${MAX_QTY}.`);
+    if (priceKop === undefined) return submit.setError('Неверная цена. Укажите рубли, например 1 550 или 1 550,50.');
+    if (weight === undefined) return submit.setError(`Неверные граммы в штуке. Укажите целое число от 1 до ${MAX_GRAMS}.`);
     void submit.run(() =>
       onAdd({
         rawName: name,
@@ -189,9 +189,7 @@ export const AddLineDialog = ({
   return (
     <FormDialog
       open={open}
-      eyebrow="Поставка · строка"
       title="Добавить строку"
-      description="Строка счёта, которую разбор не нашёл, или позиция ручной поставки."
       error={submit.error}
       busy={submit.busy}
       submitLabel="Добавить строку"
@@ -212,7 +210,7 @@ export const AddLineDialog = ({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Бренд или вкус — можно оставить пустым"
+              placeholder="Бренд или вкус"
               autoFocus
             />
           </span>
@@ -282,14 +280,13 @@ export const CreateTobaccoDialog = ({
     const weight = readInt(grams, 1, MAX_GRAMS);
     if (!manufacturer.trim()) return submit.setError('Нужен бренд.');
     if (!name.trim()) return submit.setError('Нужно название табака.');
-    if (weight === undefined) return submit.setError(`Граммы в штуке — целое число от 1 до ${MAX_GRAMS}.`);
+    if (weight === undefined) return submit.setError(`Неверные граммы в штуке. Укажите целое число от 1 до ${MAX_GRAMS}.`);
     void submit.run(() => onCreate({ manufacturer: manufacturer.trim(), lineName: lineName.trim(), name: name.trim() }, weight));
   };
 
   return (
     <FormDialog
       open
-      eyebrow="Каталог · новая карточка"
       title="Создать карточку"
       description={`Из строки «${initial.rawName}». Табак встанет на полку при приёмке поставки.`}
       error={submit.error}
@@ -326,14 +323,13 @@ export const CreateTobaccoDialog = ({
 
 // --- Удалить черновик -----------------------------------------------------------
 
-export const DeleteDraftDialog = ({ open, title, onClose, onDelete }: { open: boolean; title: string; onClose: () => void; onDelete: () => Promise<unknown> }) => {
+export const DeleteDraftDialog = ({ open, onClose, onDelete }: { open: boolean; onClose: () => void; onDelete: () => Promise<unknown> }) => {
   const submit = useSubmit();
   return (
     <FormDialog
       open={open}
-      eyebrow="Поставка · черновик"
       title="Удалить черновик?"
-      description={`${title}: строки и файл счёта удалятся. Приход по черновику не записывался, полка не изменится.`}
+      description="Строки и файл счёта удалятся. Полка не изменится."
       error={submit.error}
       busy={submit.busy}
       submitLabel="Удалить черновик"

@@ -28,7 +28,8 @@ export const formatWindow = (startsAt: string, endsAt: string) => {
   return `${dayMonth.format(start)} – ${dayMonth.format(end)}`;
 };
 
-const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => {
+// Ряд KPI остаётся только на дашборде (#348): подписи sentence case, под числом один факт.
+export const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => {
   const totalTobaccos = summary?.totalTobaccos ?? 0;
   const inStock = summary?.inStockCount ?? 0;
   const guestVisible = summary?.ops.guestVisibleMixesCount ?? 0;
@@ -42,20 +43,19 @@ const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => 
       hint: `из ${formatMetricValue(totalTobaccos)} табаков`,
     },
     {
-      label: 'Виден гостю',
+      label: 'Видно гостю',
       value: formatMetricValue(guestVisible),
-      hint: 'миксов на витрине',
+      hint: 'миксов',
+      tone: 'success',
     },
     {
       label: 'Заблокировано',
       value: formatMetricValue(blocked),
-      hint: 'из-за наличия',
       tone: blocked > 0 ? 'warning' : 'default',
     },
     {
       label: 'Активных рейлов',
       value: formatMetricValue(activeRails),
-      hint: 'в гостевой витрине',
     },
   ];
 };
@@ -92,7 +92,7 @@ export function DashboardView({
             <ol className="dashboard-page__rows">
               {topMixes.map((mix, index) => (
                 <li key={mix.mixId} className="dashboard-page__row">
-                  <span className="dashboard-page__rank">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="dashboard-page__rank">{index + 1}</span>
                   <div className="dashboard-page__row-copy">
                     <div className="dashboard-page__row-name">{mix.name}</div>
                     <div className="dashboard-page__row-meta cell-truncate">
@@ -148,7 +148,7 @@ export function DashboardView({
               ))}
             </ul>
           ) : (
-            <p className="empty">Нет блокировок. Витрина чистая.</p>
+            <p className="empty">Блокировок нет.</p>
           )}
         </aside>
       </div>

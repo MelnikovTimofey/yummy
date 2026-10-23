@@ -45,7 +45,7 @@ export const TobaccoOptionLabel = ({ option }: { option: TobaccoOption }) => (
     <b>{option.name}</b>
     <span className="shelf-faint">
       {option.manufacturer}
-      {option.lineName ? ` · ${option.lineName}` : ''}
+      {option.lineName ? ` ${option.lineName}` : ''}
     </span>
   </span>
 );

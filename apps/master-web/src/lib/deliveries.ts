@@ -1,4 +1,4 @@
-import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListItem, type DeliveryTotals } from '../contracts';
+import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
 
 // Чистая логика экрана «Поставки» (#212): подписи разбора, сверка суммы,
 // деньги и даты. Решения о сопоставлении принимает backend, здесь — только
@@ -22,7 +22,7 @@ export const LINE_MATCH_TAG: Record<LineMatch, { tone: TagTone; label: string }>
   suggest: { tone: 'warning', label: 'проверьте' },
   weak: { tone: 'warning', label: 'проверьте' },
   manual: { tone: 'info', label: 'выбрано' },
-  none: { tone: 'danger', label: 'не найдено' },
+  none: { tone: 'danger', label: 'нет в каталоге' },
   skip: { tone: 'ghost', label: 'не табак' },
 };
 
@@ -39,27 +39,24 @@ export const lineMatch = (line: DeliveryLine): LineMatch => {
   return 'manual';
 };
 
+// Подсказка под селектом — только то, чего не видно в нём и в метке строки (#365).
 export const lineMatchHint = (line: DeliveryLine) => {
   const match = lineMatch(line);
-  const suffix = line.tobacco && line.newOnShelf ? ' · новый на полке' : '';
+  const isNew = Boolean(line.tobacco && line.newOnShelf);
+  const withNew = (text: string) => [text, isNew ? 'новый на полке' : ''].filter(Boolean).join(', ');
   switch (match) {
     case 'skip':
-      return 'нет бренда и веса';
-    case 'memory':
-      return `по памяти: строка этого поставщика${suffix}`;
-    case 'catalog':
+      return 'не табак';
     case 'suggest':
-      return line.confidence === null
-        ? `предложено по каталогу${suffix}`
-        : `похоже на ${line.confidence} % · ${line.tobacco?.manufacturer ?? ''}${suffix}`;
-    case 'manual':
-      return `выбрано вручную${suffix}`;
+      return withNew(line.confidence === null ? 'предложено по каталогу' : `похоже на ${line.confidence} %`);
     case 'weak': {
       const top = topCandidate(line)!;
-      return `похоже на ${top.confidence} % · ${top.manufacturer} ${top.name}`;
+      return `похоже на ${top.manufacturer} ${top.name}, ${top.confidence} %`;
     }
     case 'none':
-      return line.candidates.length ? 'бренда нет в каталоге' : 'нет в каталоге';
+      return line.candidates.length ? 'бренда нет в каталоге' : '';
+    default:
+      return withNew('');
   }
 };
 
@@ -70,6 +67,34 @@ export const summarizeLines = (lines: DeliveryLine[]) => {
     summary[match === 'weak' ? 'suggest' : match] += 1;
   }
   return summary;
+};
+
+type Segment = { text: string; strong?: boolean };
+
+// Итог разбора одной фразой (#365): «Найдено 5 из 8 табаков. Проверьте 2 строки,
+// ещё 1 табака нет в каталоге. Одна строка не табак, она пропущена.»
+export const parseSummary = (lines: DeliveryLine[]): Segment[] => {
+  const summary = summarizeLines(lines);
+  const found = summary.memory + summary.catalog + summary.manual;
+  const total = found + summary.suggest + summary.none;
+  const segments: Segment[] = [];
+  if (total) {
+    segments.push({ text: 'Найдено ' }, { text: `${found} из ${formatCount(total, ['табака', 'табаков', 'табаков'])}`, strong: true }, { text: '.' });
+  }
+  const missing = summary.none ? `${formatCount(summary.none, ['табака', 'табаков', 'табаков'])} нет в каталоге` : '';
+  if (summary.suggest) {
+    const check = `Проверьте ${formatCount(summary.suggest, ['строку', 'строки', 'строк'])}`;
+    segments.push({ text: ` ${missing ? `${check}, ещё ${missing}` : check}.` });
+  } else if (missing) {
+    segments.push({ text: ` Ещё ${missing}.` });
+  }
+  if (summary.skip) {
+    segments.push({
+      text: ` ${summary.skip === 1 ? 'Одна строка не табак, она пропущена' : `${formatCount(summary.skip, ['строка', 'строки', 'строк'])} не табак, они пропущены`}.`,
+    });
+  }
+  if (segments.length) segments[0] = { ...segments[0], text: segments[0].text.trimStart() };
+  return segments;
 };
 
 // --- деньги и даты -------------------------------------------------------------
@@ -94,6 +119,7 @@ export const parseRubles = (value: string): number | null | undefined => {
 
 const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const MONTHS_OF = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
 // Дата счёта («2026-11-18») — календарный день без часового пояса; момент
 // (receivedAt, createdAt) показываем в местном времени.
@@ -127,39 +153,53 @@ export const receivedAtFromInput = (value: string, now: Date = new Date()) => {
   return date.toISOString();
 };
 
-export const monthTitle = (now: Date) => MONTHS[now.getMonth()];
-
 const inMonth = (value: string | null, now: Date) => {
   const date = toDate(value);
   return Boolean(date) && date!.getFullYear() === now.getFullYear() && date!.getMonth() === now.getMonth();
 };
 
+// Итог месяца в мете шапки вместо ряда KPI (#365): «Октябрь: 3 счёта, 43 400 ₽».
 export const monthMeta = (items: DeliveryListItem[], now: Date) => {
-  const count = items.filter((item) => item.kind !== 'start' && inMonth(item.invoiceDate ?? item.createdAt, now)).length;
-  return `${monthTitle(now)}: ${formatCount(count, ['счёт', 'счёта', 'счетов'])}`;
+  const invoices = items.filter((item) => item.kind !== 'start' && inMonth(item.invoiceDate ?? item.createdAt, now));
+  const sumKop = invoices.reduce((total, item) => total + (item.totalKop ?? 0), 0);
+  const month = MONTHS[now.getMonth()];
+  const count = formatCount(invoices.length, ['счёт', 'счёта', 'счетов']);
+  return `${month[0].toUpperCase()}${month.slice(1)}: ${count}${sumKop ? `, ${formatMoney(sumKop)}` : ''}`;
 };
 
 // --- шапка и статусы ----------------------------------------------------------
 
-export const deliveryTitle = (card: Pick<DeliveryCard, 'kind' | 'number' | 'invoiceDate'>) => {
+// «Каспий Опт, счёт № 03944»: дата счёта уходит в подзаголовок (#365).
+export const deliveryTitle = (card: Pick<DeliveryCard, 'kind' | 'number' | 'supplier'>) => {
   if (card.kind === 'start') return 'Стартовый приход';
-  const date = card.invoiceDate ? formatFullDate(card.invoiceDate) : '';
-  if (card.number) return date ? `Счёт № ${card.number} от ${date}` : `Счёт № ${card.number}`;
-  return date ? `Поставка от ${date}` : 'Поставка без номера';
+  const what = card.number ? `Счёт № ${card.number}` : 'Поставка без номера';
+  return card.supplier?.name ? `${card.supplier.name}, ${what[0].toLowerCase()}${what.slice(1)}` : what;
 };
 
-export const deliveryHeadline = (card: DeliveryCard) => {
-  const parts = [card.supplier?.name || 'Поставщик не указан'];
-  if (card.kind === 'invoice') parts.push(`загружен ${formatDay(card.createdAt)}`);
-  if (card.kind === 'manual') parts.push(`заполнена вручную ${formatDay(card.createdAt)}`);
-  if (card.status === 'received' && card.receivedAt) parts.push(`принята ${formatDay(card.receivedAt)}`);
-  return parts.join(' · ');
+// «18 ноября», в другом году — «30 декабря 2025».
+const formatLongDay = (value: string | null | undefined, now: Date) => {
+  const date = toDate(value);
+  if (!date) return '';
+  const day = `${date.getDate()} ${MONTHS_OF[date.getMonth()]}`;
+  return date.getFullYear() === now.getFullYear() ? day : `${day} ${date.getFullYear()}`;
+};
+
+export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => {
+  const parts: string[] = [];
+  if (card.invoiceDate) parts.push(`Счёт от ${formatLongDay(card.invoiceDate, now)}`);
+  else if (card.kind === 'invoice') parts.push(`Загружен ${formatLongDay(card.createdAt, now)}`);
+  else if (card.kind === 'manual') parts.push(`Заполнена вручную ${formatLongDay(card.createdAt, now)}`);
+  if (card.status === 'received' && card.receivedAt) {
+    parts.push(`${card.kind === 'start' ? 'Принят' : 'принята'} ${formatLongDay(card.receivedAt, now)}`);
+  }
+  const head = parts.length ? `${parts.join(', ')}.` : '';
+  return card.status === 'draft' ? `${head} Принимайте поставку, когда товар придёт.`.trim() : head;
 };
 
 export const deliveryStatusTag = (item: Pick<DeliveryListItem, 'kind' | 'status'>): { tone: TagTone; text: string } => {
-  if (item.kind === 'start') return { tone: 'ghost', text: 'Стартовый приход' };
+  if (item.kind === 'start') return { tone: 'ghost', text: 'стартовый приход' };
   return item.status === 'draft'
-    ? { tone: 'warning', text: 'черновик · ждёт прихода' }
+    ? { tone: 'warning', text: 'ждёт прихода' }
     : { tone: 'success', text: 'принята' };
 };
 
@@ -169,11 +209,11 @@ export const sumCheck = (card: Pick<DeliveryCard, 'linesSumKop' | 'totalKop' | '
     return { tone: null, short: `Сумма строк ${lines}`, alert: null };
   }
   const total = formatMoney(card.totalKop);
-  if (card.sumMatches) return { tone: 'ok' as const, short: `Сумма строк ${lines} = итог счёта`, alert: null };
+  if (card.sumMatches) return { tone: 'ok' as const, short: 'Сумма строк совпадает с итогом счёта', alert: null };
   const diff = card.totalKop - card.linesSumKop;
   return {
     tone: 'warn' as const,
-    short: `Сумма строк ${lines} ≠ итог ${total}`,
+    short: 'Сумма строк не совпадает с итогом счёта',
     alert: `Сумма строк ${lines} не сходится с итогом счёта ${total} (${diff > 0 ? 'не хватает' : 'лишние'} ${formatMoney(Math.abs(diff))})`,
   };
 };
@@ -216,9 +256,6 @@ export const parseReceivedGrams = (value: string): number | null | undefined => 
   return grams >= 1 && grams <= MAX_RECEIVED_GRAMS ? grams : undefined;
 };
 
-export const meanGramKop = (totals: Pick<DeliveryTotals, 'monthKop' | 'monthGrams'>) =>
-  totals.monthGrams ? totals.monthKop / totals.monthGrams : null;
-
 // --- ошибки загрузки -----------------------------------------------------------
 
 export type UploadError =
@@ -231,7 +268,7 @@ type ApiFailure = Error & { status?: number; payload?: unknown };
 export const readUploadError = (cause: unknown): UploadError => {
   const failure = cause instanceof Error ? (cause as ApiFailure) : null;
   if (!failure || typeof failure.status !== 'number') {
-    return { kind: 'other', message: 'Нет связи с сервером — счёт не загружен. Повторить позже.' };
+    return { kind: 'other', message: 'Нет связи с сервером, счёт не загружен. Попробуйте ещё раз.' };
   }
   const payload = (failure.payload && typeof failure.payload === 'object' ? failure.payload : {}) as Record<string, unknown>;
   if (failure.status === 422) return { kind: 'unreadable', message: failure.message };

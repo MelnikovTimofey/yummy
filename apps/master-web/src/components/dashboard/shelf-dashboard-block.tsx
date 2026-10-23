@@ -19,6 +19,7 @@ const BAR_MAX_PX = 110;
 
 // Блок «Полка» дашборда (#213, #326, #shot=dashboard, edge-dash-no-budget): прогноз
 // на сегодня, что заканчивается, деньги против бюджета и расход по неделям.
+// Карточка — заголовок и содержимое, без надписи над заголовком (#365).
 export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, onOpenTobacco, onSetBudget }: ShelfDashboardBlockProps) {
   if (!data) {
     if (status === 'error') return <div className="dashboard-page__error" role="status">{error}</div>;
@@ -26,7 +27,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
   }
 
   const spend = spendRows(data.spend);
-  const bowl = bowlCostTile(data.bowlCostKop, bowlGrams);
+  const bowl = bowlCostTile(data.bowlCostKop);
   const stock = stockValueTile(data.stockValueKop);
   const bars = weekBars(data.weekly);
   const money = moneyCard(data);
@@ -35,11 +36,10 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
     <>
       {error ? <div className="dashboard-page__error" role="status">{error}</div> : null}
       <div className="shelf-dash__columns">
-        <article className="dashboard-page__card" aria-label="Прогноз расхода">
-          <p className="shelf-dash__eyebrow">Полка сегодня</p>
-          <h2 className="dashboard-page__heading">Прогноз расхода</h2>
+        <article className="dashboard-page__card" aria-labelledby="shelf-dash-forecast">
+          <h2 className="dashboard-page__heading" id="shelf-dash-forecast">Прогноз на сегодня</h2>
           <div className="shelf-dash__forecast">
-            <b>≈ {formatNumber(data.today.grams)} г</b>
+            <b>{formatNumber(data.today.grams)} г</b>
             <span>{forecastCaption(data.today, bowlGrams)}</span>
           </div>
           <h3 className="shelf-dash__subhead">Заканчивается</h3>
@@ -55,7 +55,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
                       </span>
                       <span className="shelf-num" data-tone={until.tone}>
                         {until.text}
-                        {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
+                        {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
                       </span>
                     </button>
                   </li>
@@ -63,13 +63,13 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
               })}
             </ul>
           ) : (
-            <p className="empty">Ничего не заканчивается. Полка в порядке.</p>
+            <p className="empty">Ничего не заканчивается.</p>
           )}
         </article>
 
-        <article className="dashboard-page__card" aria-label="Деньги">
-          <p className="shelf-dash__eyebrow">Деньги</p>
-          <h2 className="dashboard-page__heading">{money.title}</h2>
+        <article className="dashboard-page__card" aria-labelledby="shelf-dash-money">
+          <h2 className="dashboard-page__heading" id="shelf-dash-money">{money.title}</h2>
+          {money.kind === 'none' && spend.length ? <b className="shelf-dash__total">{formatNumber(data.spend.totalKop / 100)} ₽</b> : null}
           {money.kind === 'budget' ? (
             <div className="shelf-dash__budget">
               <div
@@ -125,7 +125,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
               <small>{bowl.hint}</small>
             </div>
             <div>
-              <span>Табака на полке</span>
+              <span>Табак на полке</span>
               <b>{stock.value}</b>
               <small>{stock.hint}</small>
             </div>
@@ -134,9 +134,8 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
         </article>
       </div>
 
-      <article className="dashboard-page__card" aria-label="Расход по неделям">
-        <p className="shelf-dash__eyebrow">Расход</p>
-        <h2 className="dashboard-page__heading">По неделям, г</h2>
+      <article className="dashboard-page__card" aria-labelledby="shelf-dash-weeks">
+        <h2 className="dashboard-page__heading" id="shelf-dash-weeks">Расход по неделям, г</h2>
         {bars ? (
           <>
             <div className="shelf-dash__weeks">
@@ -154,7 +153,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
             </div>
           </>
         ) : (
-          <p className="empty">Расхода пока нет: он появится после первой отметки остатка или «Закончился».</p>
+          <p className="empty">Расхода пока нет. Он появится после первой отметки остатка.</p>
         )}
       </article>
     </>

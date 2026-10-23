@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, FileText, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Trash2, TriangleAlert } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { formatCount, type DeliveryCard, type DeliveryLine } from '@/contracts';
 import type { DeliveriesApi, DeliveryLinePatch } from '@/hooks/use-deliveries';
@@ -7,6 +7,7 @@ import {
   LINE_MATCH_TAG,
   acceptLabel,
   deliveryHeadline,
+  deliveryStatusTag,
   deliveryTitle,
   formatMoney,
   formatPrice,
@@ -17,9 +18,9 @@ import {
   lineMatchHint,
   localDateInput,
   parseReceivedGrams,
+  parseSummary,
   receivedAtFromInput,
   sumCheck,
-  summarizeLines,
 } from '@/lib/deliveries';
 import { describeShelfError } from '@/lib/shelf';
 import { AddLineDialog, CreateTobaccoDialog, DeleteDraftDialog } from './delivery-dialogs';
@@ -149,10 +150,12 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
 
   const draft = card.status === 'draft';
   const title = deliveryTitle(card);
-  const summary = summarizeLines(card.lines);
+  // Итог разбора — только у черновика из PDF: у ручной поставки разбора не было.
+  const summary = draft && card.kind === 'invoice' ? parseSummary(card.lines) : [];
   const sum = sumCheck(card);
   const pickerLine = picker ? card.lines.find((line) => line.id === picker.lineId) ?? null : null;
-  const eyebrow = card.kind === 'start' ? 'ПОСТАВКА · СТАРТОВЫЙ ПРИХОД' : draft ? 'ПОСТАВКА · ЧЕРНОВИК' : 'ПОСТАВКА · ПРИНЯТА';
+  const status = draft ? { tone: 'warning', text: 'черновик' } : deliveryStatusTag(card);
+  const total = card.totalKop !== null ? `итог счёта ${formatMoney(card.totalKop)}` : card.lines.length ? `сумма строк ${formatMoney(card.linesSumKop)}` : '';
 
   const accept = async () => {
     setAccepting(true);
@@ -179,16 +182,21 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
       </button>
 
       <MasterPageHeader
-        eyebrow={eyebrow}
         title={title}
-        subtitle={deliveryHeadline(card)}
-        meta={card.totalKop !== null ? `итог счёта ${formatMoney(card.totalKop)}` : card.lines.length ? `сумма строк ${formatMoney(card.linesSumKop)}` : undefined}
+        subtitle={deliveryHeadline(card) || undefined}
+        meta={
+          <span className="deliv-meta">
+            <span className={status.tone === 'ghost' ? 'tag tag--ghost' : 'tag'} data-tone={status.tone === 'ghost' ? undefined : status.tone}>
+              {status.text}
+            </span>
+            {total}
+          </span>
+        }
         actions={
           card.hasFile || draft ? (
             <>
               {card.hasFile ? (
                 <button type="button" className="btn" data-variant="ghost" onClick={openPdf}>
-                  <FileText size={14} aria-hidden />
                   Открыть PDF
                 </button>
               ) : null}
@@ -202,20 +210,10 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
         }
       />
 
-      {card.lines.length ? (
-        <div className="deliv-parse-head">
-          {summary.memory ? <span className="tag" data-tone="success"><span className="tag__dot deliv-dot" />{summary.memory} по памяти</span> : null}
-          {summary.catalog ? <span className="tag" data-tone="success"><span className="tag__dot deliv-dot" />{summary.catalog} по каталогу</span> : null}
-          {summary.suggest ? <span className="tag" data-tone="warning"><span className="tag__dot deliv-dot" />{summary.suggest} предложено — проверьте</span> : null}
-          {summary.none ? <span className="tag" data-tone="danger"><span className="tag__dot deliv-dot" />{summary.none} нет в каталоге</span> : null}
-          {summary.manual ? <span className="tag" data-tone="info"><span className="tag__dot deliv-dot" />{summary.manual} выбрано вручную</span> : null}
-          {summary.skip ? <span className="tag tag--ghost">{summary.skip} не табак — пропущено</span> : null}
-          {draft ? (
-            <span className="deliv-muted deliv-parse-head__hint">
-              Подтверждённое сопоставление запомним: следующий счёт этого поставщика разберётся сам.
-            </span>
-          ) : null}
-        </div>
+      {summary.length ? (
+        <p className="deliv-parse-line">
+          {summary.map((segment, index) => (segment.strong ? <b key={index}>{segment.text}</b> : <span key={index}>{segment.text}</span>))}
+        </p>
       ) : null}
 
       {sum.alert ? (
@@ -223,7 +221,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
           <TriangleAlert size={16} aria-hidden />
           <p className="deliv-alert__text">
             <b>{sum.alert}.</b>{' '}
-            {draft ? 'Возможно, одна строка не распозналась. Сверьте со счётом — принять поставку можно и так.' : null}
+            {draft ? 'Возможно, одна строка не распозналась. Сверьте со счётом. Принять поставку можно и так.' : null}
           </p>
           {draft ? (
             <button type="button" className="btn" data-size="sm" onClick={() => setAddOpen(true)}>
@@ -263,7 +261,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
               const busy = busyLine === line.id || accepting;
               const isCreated = Boolean(line.tobacco && created.has(line.tobacco.id) && line.matchReason === 'manual');
               const tag = isCreated ? { tone: 'info' as const, label: 'создана' } : LINE_MATCH_TAG[match];
-              const hint = isCreated ? `новая карточка каталога${line.newOnShelf ? ' · новый на полке' : ''}` : lineMatchHint(line);
+              const hint = isCreated ? (line.newOnShelf ? 'новый на полке' : '') : lineMatchHint(line);
               const skip = match === 'skip';
               const selectTone = match === 'none' ? 'danger' : match === 'suggest' || match === 'weak' ? 'warn' : undefined;
               const gramsHint = lineGramsHint(line);
@@ -280,12 +278,9 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                         <small>
                           {hint}
                           {draft ? (
-                            <>
-                              {' · '}
-                              <button type="button" className="shelf-link deliv-link" disabled={busy} onClick={() => void patchLine(line, { kind: 'tobacco' })}>
-                                это табак
-                              </button>
-                            </>
+                            <button type="button" className="shelf-link deliv-link" disabled={busy} onClick={() => void patchLine(line, { kind: 'tobacco' })}>
+                              это табак
+                            </button>
                           ) : null}
                         </small>
                       </span>
@@ -307,7 +302,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                                 <b>{line.tobacco.name}</b> <span className="shelf-faint">{line.tobacco.manufacturer}</span>
                               </span>
                             ) : (
-                              <span className="deliv-select__value">Выбрать табак…</span>
+                              <span className="deliv-select__value">Выбрать табак</span>
                             )}
                             <ChevronDown size={13} aria-hidden />
                           </button>
@@ -322,11 +317,10 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                             )}
                           </span>
                         )}
-                        <small>
-                          {hint}
-                          {draft && match === 'weak' ? (
-                            <>
-                              {' · '}
+                        {hint || (draft && (match === 'weak' || match === 'none')) ? (
+                          <small>
+                            {hint}
+                            {draft && match === 'weak' ? (
                               <button
                                 type="button"
                                 className="shelf-link deliv-link"
@@ -335,24 +329,23 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                               >
                                 выбрать
                               </button>
-                            </>
-                          ) : null}
-                          {draft && match === 'none' ? (
-                            <>
-                              {' · '}
+                            ) : null}
+                            {draft && match === 'none' ? (
                               <button type="button" className="shelf-link deliv-link" disabled={busy} onClick={() => setCreatingFor(line)}>
                                 создать карточку
                               </button>
-                            </>
-                          ) : null}
-                        </small>
+                            ) : null}
+                          </small>
+                        ) : null}
                       </span>
                     )}
                   </td>
                   <td>
-                    <span className={tag.tone === 'ghost' ? 'tag tag--ghost' : 'tag'} data-tone={tag.tone === 'ghost' ? undefined : tag.tone}>
-                      {tag.label}
-                    </span>
+                    {skip ? null : (
+                      <span className="tag" data-tone={tag.tone}>
+                        {tag.label}
+                      </span>
+                    )}
                   </td>
                   <td>
                     {skip ? (
@@ -399,7 +392,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
         </table>
         {!card.lines.length ? (
           <p className="empty shelf-table__empty">
-            {draft ? 'Строк пока нет. Добавьте строки счёта: название, количество, цена — и табак из каталога.' : 'В поставке нет строк.'}
+            {draft ? 'Строк пока нет. Добавьте первую строку счёта.' : 'В поставке нет строк.'}
           </p>
         ) : null}
       </div>
@@ -407,15 +400,24 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
       {draft ? (
         <div>
           <button type="button" className="btn" data-variant="ghost" onClick={() => setAddOpen(true)}>
-            + Добавить строку
+            Добавить строку
           </button>
         </div>
       ) : null}
 
       {draft ? (
         <div className="deliv-footbar">
+          <p className="deliv-footbar__summary">
+            <span className={sum.tone === 'ok' ? 'deliv-ok' : sum.tone === 'warn' ? 'deliv-warn' : undefined}>{sum.short}</span>
+            <span>
+              На полку <b>{formatWeight(card.gramsToReceive)}</b>
+            </span>
+            {card.pendingLines ? (
+              <span className="deliv-warn">Без табака или граммов: {formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}</span>
+            ) : null}
+          </p>
           <label className="deliv-date">
-            Дата прихода
+            Пришло
             <input
               type="date"
               className="deliv-date__input"
@@ -424,17 +426,6 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
               onChange={(event) => setReceivedDate(event.target.value || localDateInput(new Date()))}
             />
           </label>
-          <p className="deliv-footbar__summary">
-            {sum.tone ? <span className={sum.tone === 'ok' ? 'deliv-ok' : 'deliv-warn'}>{sum.short}</span> : <span>{sum.short}</span>}
-            {' · '}
-            <span>на полку ≈ {formatWeight(card.gramsToReceive)}</span>
-            {card.pendingLines ? (
-              <>
-                {' · '}
-                <span className="deliv-warn">без табака или граммов: {formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}</span>
-              </>
-            ) : null}
-          </p>
           <button type="button" className="btn" data-variant="ghost" onClick={onBack}>
             Сохранить черновик
           </button>
@@ -495,7 +486,6 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
       {deleteOpen ? (
         <DeleteDraftDialog
           open
-          title={title}
           onClose={() => setDeleteOpen(false)}
           onDelete={async () => {
             await api.remove(id);

@@ -19,8 +19,8 @@ const GAP = 4;
 const EDGE = 8;
 const MIN_WIDTH = 380;
 
-// Выбор табака для строки счёта: сверху предложения разбора, ниже — поиск
-// по всему каталогу, внизу — «создать карточку» и «не табак».
+// Выбор табака для строки счёта: сверху предложения разбора, ниже поиск
+// по всему каталогу, внизу «Создать карточку» и «Это не табак».
 export const TobaccoPicker = ({ line, anchor, search, onPick, onClear, onSkip, onCreate, onClose }: TobaccoPickerProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState('');
@@ -126,10 +126,10 @@ export const TobaccoPicker = ({ line, anchor, search, onPick, onClear, onSkip, o
 
       <div className="shelf-menu__sep" />
       <button type="button" className="shelf-menu__item" onClick={onCreate}>
-        Создать карточку…
+        Создать карточку
       </button>
       <button type="button" className="shelf-menu__item" onClick={onSkip}>
-        Не табак — пропустить
+        Это не табак
       </button>
       {line.tobacco ? (
         <button type="button" className="shelf-menu__item" onClick={onClear}>

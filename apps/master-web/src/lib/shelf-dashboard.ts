@@ -4,22 +4,25 @@ import { formatNumber } from './shelf';
 // Чистая логика блока «Полка» на дашборде (#213): подписи прогноза, траты,
 // деньги и столбики расхода по неделям.
 
-const WEEKDAYS = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
+// «По пятницам выбирают…»: дни недели в дательном падеже множественного числа.
+const ON_WEEKDAYS = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям'];
 const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
-export const formatApproxRub = (kop: number) => `≈ ${formatNumber(kop / 100)} ₽`;
+// Что это прогноз и оценка, говорят заголовок карточки и подписи, поэтому без «≈» (#365).
+const rub = (kop: number) => `${formatNumber(kop / 100)} ₽`;
 
 const weekdayNote = (factor: number | null, weekday: number) => {
-  if (factor === null) return 'без поправки на день недели — мало данных';
-  const name = WEEKDAYS[weekday - 1] ?? 'сегодня';
+  if (factor === null) return 'Мало данных, чтобы учесть день недели.';
+  const days = ON_WEEKDAYS[weekday - 1];
   const percent = Math.round((factor - 1) * 100);
-  if (percent === 0) return `${name}: как средний день по «Покурить»`;
-  return `${name}: ${percent > 0 ? '+' : '−'}${Math.abs(percent)} % к среднему дню по «Покурить»`;
+  const when = days ? `По ${days}` : 'Сегодня';
+  if (percent === 0) return `${when} выбирают как в средний день.`;
+  return `${when} выбирают на ${Math.abs(percent)} % ${percent > 0 ? 'чаще' : 'реже'} среднего дня.`;
 };
 
 export const forecastCaption = (today: ShelfDashboard['today'], bowlGrams: number) =>
-  `≈ ${formatCount(Math.round(today.bowls), ['чаша', 'чаши', 'чаш'])} по ${bowlGrams} г · ${weekdayNote(today.weekdayFactor, today.weekday)}`;
+  `${formatCount(Math.round(today.bowls), ['чаша', 'чаши', 'чаш'])} по ${bowlGrams} г. ${weekdayNote(today.weekdayFactor, today.weekday)}`;
 
 export const spendTitle = (month: string) => {
   const index = Number(month.slice(5, 7)) - 1;
@@ -34,7 +37,6 @@ export const spendRows = (spend: ShelfDashboard['spend']) =>
     share: spend.totalKop > 0 ? entry.sumKop / spend.totalKop : 0,
   }));
 
-const rub = (kop: number) => `${formatNumber(kop / 100)} ₽`;
 const share = (part: number, whole: number) => (whole > 0 ? Math.min(1, part / whole) : part > 0 ? 1 : 0);
 
 type Segment = { text: string; strong?: boolean };
@@ -61,8 +63,8 @@ export const moneyCard = ({ spend, budget }: Pick<ShelfDashboard, 'spend' | 'bud
       kind: 'none',
       title: spendTitle(spend.month),
       invite: budget.baseKop > 0
-        ? [{ text: 'База стоит ' }, { text: formatApproxRub(budget.baseKop), strong: true }, { text: ' в месяц. Укажите бюджет — покажем остаток на пробы.' }]
-        : [{ text: 'Укажите бюджет на табак — покажем остаток на пробы.' }],
+        ? [{ text: 'База стоит ' }, { text: rub(budget.baseKop), strong: true }, { text: ' в месяц. Бюджет на табак не указан.' }]
+        : [{ text: 'Бюджет на табак не указан.' }],
     };
   }
   const month = MONTHS[Number(spend.month.slice(5, 7)) - 1];
@@ -71,25 +73,23 @@ export const moneyCard = ({ spend, budget }: Pick<ShelfDashboard, 'spend' | 'bud
     kind: 'budget',
     title: `${month ? month[0].toUpperCase() + month.slice(1) : 'Месяц'}: бюджет ${rub(budget.budgetKop)}`,
     spent: `потрачено ${rub(spend.totalKop)}`,
-    base: `база ${formatApproxRub(budget.baseKop)} в месяц`,
+    base: `база ${rub(budget.baseKop)} в месяц`,
     left: left >= 0
-      ? { label: 'на пробы остаётся', value: formatApproxRub(left), tone: 'success' }
-      : { label: 'база больше бюджета на', value: formatApproxRub(-left), tone: 'danger' },
+      ? { label: 'на пробы остаётся', value: rub(left), tone: 'success' }
+      : { label: 'база больше бюджета на', value: rub(-left), tone: 'danger' },
     spentShare: share(spend.totalKop, budget.budgetKop),
     baseShare: share(budget.baseKop, budget.budgetKop),
     unknown: budget.unknownCount
-      ? `У ${formatCount(budget.unknownCount, ['табака', 'табаков', 'табаков'])} базы нет цены — сумма базы неполная.`
+      ? `У ${formatCount(budget.unknownCount, ['табака', 'табаков', 'табаков'])} базы нет цены, сумма базы неполная.`
       : null,
   };
 };
 
-export const bowlCostTile = (kop: number | null, bowlGrams: number) =>
-  kop === null
-    ? { value: '—', hint: 'нет цен прихода у табаков на полке' }
-    : { value: formatApproxRub(kop), hint: `${bowlGrams} г по средней цене грамма табаков на полке` };
+export const bowlCostTile = (kop: number | null) =>
+  kop === null ? { value: '—', hint: 'нет цен прихода' } : { value: rub(kop), hint: 'по ценам прихода' };
 
 export const stockValueTile = (kop: number) =>
-  kop > 0 ? { value: formatApproxRub(kop), hint: 'по ценам прихода' } : { value: '—', hint: 'нет цен прихода' };
+  kop > 0 ? { value: rub(kop), hint: 'по ценам прихода' } : { value: '—', hint: 'нет цен прихода' };
 
 // Дни недели — календарные «2026-11-16», без часового пояса.
 const dayParts = (value: string) => {
@@ -106,7 +106,7 @@ export const weekLabel = (week: ShelfDashboardWeek) => {
     else if (from.month === to.month) range = `${from.day}–${to.day} ${to.month}`;
     else range = `${from.day} ${from.month}–${to.day} ${to.month}`;
   }
-  return week.partial ? `${range} · идёт` : range;
+  return week.partial ? `${range}, идёт` : range;
 };
 
 export const weekBars = (weekly: ShelfDashboardWeek[]) => {

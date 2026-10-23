@@ -539,11 +539,15 @@ test.describe('Master on a phone in landscape', () => {
 test('Master dashboard shows the shelf forecast, shelf opens reorder and settings without saving', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
-  const forecast = page.getByRole('article', { name: 'Прогноз расхода' });
-  await expect(forecast.getByRole('heading', { name: 'Прогноз расхода' })).toBeVisible();
-  await expect(forecast).toContainText(/≈ [\d\s ]+ г/);
-  // «Деньги»: бюджет указан — «<Месяц>: бюджет …», нет — приглашение его указать.
-  await expect(page.getByRole('article', { name: 'Деньги' })).toContainText(/бюджет/);
+  // Канон #365: карточка — заголовок и содержимое, без надписи над ним и без «≈».
+  const forecast = page.getByRole('article', { name: 'Прогноз на сегодня' });
+  await expect(forecast.getByRole('heading', { name: 'Прогноз на сегодня' })).toBeVisible();
+  await expect(forecast).toContainText(/[\d\s ]+ г/);
+  await expect(page.locator('.dashboard-page')).not.toContainText('≈');
+  // Деньги: бюджет указан — «<Месяц>: бюджет …», нет — «Траты за <месяц>» и «Бюджет на табак не указан».
+  await expect(page.getByRole('article', { name: /^Траты за |: бюджет / })).toContainText(/бюджет/i);
+  // Ряд KPI остаётся только на дашборде.
+  await expect(page.locator('.dashboard-page .stats')).toHaveCount(1);
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
@@ -672,6 +676,9 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
 
   await openWorkspace(page, 'Поставки');
   await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeVisible();
+  // Итог месяца в мете шапки вместо ряда KPI (#365): «Октябрь: 3 счёта, 43 400 ₽».
+  await expect(page.locator('.master-page-header__meta')).toHaveText(/^[А-ЯЁ][а-яё]+: \d+ сч(ёт|ёта|етов)/);
+  await expect(page.locator('.deliv-page .stats')).toHaveCount(0);
 
   const number = `SMOKE-${Date.now()}`;
   await page.getByRole('button', { name: 'Заполнить вручную' }).click();
@@ -679,9 +686,10 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await manual.getByLabel('Номер счёта').fill(number);
   await manual.getByRole('button', { name: 'Создать черновик' }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`^Счёт № ${number}`), level: 1 })).toBeVisible();
-  await expect(page.getByText('ПОСТАВКА · ЧЕРНОВИК')).toBeVisible();
+  // Канон #365: статус тегом в мете шапки, а не надписью над заголовком.
+  await expect(page.locator('.master-page-header__meta')).toContainText('черновик');
 
-  await page.getByRole('button', { name: '+ Добавить строку' }).click();
+  await page.getByRole('button', { name: 'Добавить строку', exact: true }).click();
   const addLine = page.getByRole('dialog');
   await addLine.getByLabel('Табак из каталога').fill(tobaccoName);
   await addLine
@@ -700,7 +708,7 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   const line = page.locator('tr[data-line-id]');
   await expect(line).toHaveCount(1);
   await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
-  await expect(page.locator('.deliv-footbar')).toContainText('на полку ≈ 200 г');
+  await expect(page.locator('.deliv-footbar')).toContainText('На полку 200 г');
 
   await expect(page.getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
 
