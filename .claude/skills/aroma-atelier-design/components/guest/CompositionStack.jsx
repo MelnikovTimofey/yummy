@@ -18,7 +18,7 @@ export function CompositionStack({ components = [], showBar = true, style }) {
         {sorted.map((c, i) => (
           <li key={(c.id || c.name) + i} style={{ display: 'grid', gridTemplateColumns: '10px auto minmax(0,1fr) auto', alignItems: 'baseline', gap: 8 }}>
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: 'var(--r-pill)', alignSelf: 'center', background: PALETTE[i % PALETTE.length] }} />
-            <span className="aroma-caps" style={{ fontSize: 10, letterSpacing: '0.18em', whiteSpace: 'nowrap' }}>{c.manufacturer}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{c.manufacturer}</span>
             <span style={{ fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
             <span style={{ fontSize: 13, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{formatPercent(c.proportion)}</span>
           </li>

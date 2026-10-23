@@ -1,4 +1,4 @@
-// Back arrow + bordeaux progress bar + "1/2" counter, pinned in the guest topbar.
+// Back arrow + bordeaux progress bar + "1 из 2" counter, pinned in the guest topbar.
 export function OnboardingProgress({ step = 1, total = 2, onBack, style }) {
   const percent = Math.round((step / total) * 100);
   return (
@@ -12,9 +12,9 @@ export function OnboardingProgress({ step = 1, total = 2, onBack, style }) {
         ←
       </button>
       <div role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={step} style={{ height: 4, borderRadius: 'var(--r-pill)', background: 'rgba(150,148,142,0.16)', overflow: 'hidden' }}>
-        <span style={{ display: 'block', height: '100%', borderRadius: 'inherit', width: percent + '%', background: 'linear-gradient(90deg, var(--accent-deep) 0%, var(--accent) 100%)', transition: 'width var(--dur-slow) var(--ease-out)' }} />
+        <span style={{ display: 'block', height: '100%', borderRadius: 'inherit', width: percent + '%', background: 'var(--accent)', transition: 'width var(--dur-slow) var(--ease-out)' }} />
       </div>
-      <span className="aroma-caps" style={{ fontSize: 10.5, letterSpacing: '0.18em', color: 'var(--text-secondary)' }}>{step + '/' + total}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{step + ' из ' + total}</span>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// Мастер · staff screens. Recreation of apps/master-web views (login, dashboard, inventory, mixes, rails, access).
+// Мастер, экраны персонала. Recreation of apps/master-web views (login, dashboard, inventory, mixes, rails, access).
 const { MasterButton, MasterIconButton, MasterTag, MasterToggle, MasterInput, StatusPill, MasterStatsRow, MasterPageHeader, FilterChip, MasterList, EmptyState, MasterSortPill, MasterCard } = window.DesignSystem_1aef33;
 const D = window.MASTER_MOCK;
 
@@ -13,7 +13,6 @@ function LoginScreen({ login, setLogin, password, setPassword, error, loading, o
         </div>
         <section className="auth-card">
           <h1 className="auth-title">Войти в смену</h1>
-          <p className="auth-subtitle">Операционная консоль для кальянных мастеров и администраторов.</p>
           <form className="auth-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
             <div>
               <label className="auth-label" htmlFor="auth-login">Логин</label>
@@ -30,7 +29,7 @@ function LoginScreen({ login, setLogin, password, setPassword, error, loading, o
             <MasterButton type="submit" variant="primary" size="lg" disabled={loading} style={{ width: '100%' }}>{loading ? 'Проверяем…' : 'Войти'}</MasterButton>
           </form>
         </section>
-        <div className="auth-foot">v1.4.0 · demo: admin / admin</div>
+        <div className="auth-foot">Демо: любой логин и пароль</div>
       </div>
     </main>
   );
@@ -40,20 +39,22 @@ function DashboardScreen({ onNavigate }) {
   const [win, setWin] = React.useState('14d');
   return (
     <section className="page">
-      <MasterPageHeader eyebrow="Окно: 01 — 14 августа" title="Дашборд смены" subtitle="Что важно знать команде до открытия зала." meta="Актуально"
+      <MasterPageHeader title="Дашборд смены" meta="1–14 августа"
         actions={<div className="win-row">{[['7d', '7 дней'], ['14d', '14 дней'], ['30d', '30 дней']].map(([k, l]) => <FilterChip key={k} active={win === k} onClick={() => setWin(k)}>{l}</FilterChip>)}</div>} />
-      <MasterStatsRow tiles={[
-        { label: 'В НАЛИЧИИ', value: '1 204', hint: 'из 11 505 табаков' },
-        { label: 'ВИДЕН ГОСТЮ', value: 15, hint: 'миксов на витрине', tone: 'success' },
-        { label: 'ЗАБЛОКИРОВАНО', value: 1, hint: 'режет наличие', tone: 'warning' },
-        { label: 'КОД СМЕНЫ', value: '4821', tone: 'code' },
-      ]} />
+      <div className="kpi">
+        <MasterStatsRow tiles={[
+          { label: 'В наличии', value: '1 204', hint: 'из 11 505 табаков' },
+          { label: 'Видно гостю', value: 15, hint: 'миксов', tone: 'success' },
+          { label: 'Заблокировано', value: 1, tone: 'warning' },
+          { label: 'Код смены', value: '4821', tone: 'code' },
+        ]} />
+      </div>
       <div className="cols">
-        <MasterCard eyebrow="Спрос гостей" heading="Топ миксов недели">
+        <MasterCard heading="Топ миксов недели">
           <ol className="rank-list">
             {D.mixes.slice().sort((a, b) => b.chosen - a.chosen).map((mix, i) => (
               <li key={mix.id} className="rank-row">
-                <span className="rank-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="rank-num">{i + 1}</span>
                 <span className="rank-copy">
                   <span className="rank-name">{mix.name}</span>
                   <span className="rank-meta">{'Оценок ' + Math.round(mix.chosen / 2)}</span>
@@ -66,7 +67,7 @@ function DashboardScreen({ onNavigate }) {
             ))}
           </ol>
         </MasterCard>
-        <MasterCard eyebrow="Внимание" heading="Сигналы для команды">
+        <MasterCard heading="Сигналы для команды">
           <ul className="signal-list">
             <li className="signal-row">
               <span className="signal-copy">
@@ -93,24 +94,17 @@ function InventoryScreen() {
     .filter((t) => !q || (t.name + ' ' + t.manufacturer).toLowerCase().includes(q.toLowerCase()))
     .filter((t) => stock === 'all' || (stock === 'in' ? t.inStock : !t.inStock));
   const toggleStock = (row) => setItems((cur) => cur.map((t) => (t.id === row.id ? { ...t, inStock: !t.inStock } : t)));
-  const inStockCount = items.filter((t) => t.inStock).length;
   return (
     <section className="page">
-      <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Табаки" subtitle="Наличие, стоп-лист и зависимые миксы." meta={rows.length + ' из ' + items.length}
+      <MasterPageHeader title="Табаки" meta={rows.length + ' из ' + items.length}
         actions={<><MasterButton variant="ghost">Импорт htreviews</MasterButton><MasterButton variant="primary">Добавить табак</MasterButton></>} />
-      <MasterStatsRow tiles={[
-        { label: 'В КАТАЛОГЕ', value: items.length },
-        { label: 'В НАЛИЧИИ', value: inStockCount, tone: 'success' },
-        { label: 'СТОП-ЛИСТ', value: items.length - inStockCount, tone: 'warning' },
-        { label: 'ВЫБРАНО', value: selected.length, hint: 'для batch-действия' },
-      ]} />
       <div className="toolbar">
         <MasterInput icon={<i data-lucide="search" />} placeholder="Поиск по названию или производителю" value={q} onChange={setQ} style={{ minWidth: 280 }} />
         <div className="toolbar-filters">
           <FilterChip active={stock === 'all'} onClick={() => setStock('all')}>Все</FilterChip>
           <FilterChip active={stock === 'in'} onClick={() => setStock('in')}>В наличии</FilterChip>
           <FilterChip active={stock === 'out'} onClick={() => setStock('out')}>Нет в наличии</FilterChip>
-          <FilterChip count={2}>Производитель</FilterChip>
+          <FilterChip>Производитель</FilterChip>
           <FilterChip>Категории</FilterChip>
         </div>
         <MasterSortPill value={sort} onChange={setSort} options={[{ key: 'updated', label: 'По изменению' }, { key: 'name', label: 'По названию' }, { key: 'mixes', label: 'По числу миксов' }]} />
@@ -141,8 +135,7 @@ function InventoryScreen() {
         ]}
         rows={rows}
       />
-      {!rows.length ? <EmptyState>По фильтрам ничего не найдено.</EmptyState> : null}
-      <p className="hint">Показаны 6 позиций из 11 505 — таблица работает постранично, поиск идёт с debounce.</p>
+      {!rows.length ? <EmptyState>Ничего не найдено. Уберите один из фильтров.</EmptyState> : null}
     </section>
   );
 }
@@ -154,10 +147,10 @@ function MixesScreen() {
     const total = 100;
     return (
       <section className="page">
-        <MasterPageHeader eyebrow="РЕДАКТОР МИКСА" title={editing.name} subtitle="Состав, доли и видимость на витрине. Сумма долей — строго 100%."
+        <MasterPageHeader title={editing.name}
           actions={<><MasterButton variant="ghost" onClick={() => setEditing(null)}>Отмена</MasterButton><MasterButton variant="primary" onClick={() => setEditing(null)}>Сохранить</MasterButton></>} />
         <div className="cols">
-          <MasterCard eyebrow="Состав" heading="Компоненты">
+          <MasterCard heading="Состав">
             <MasterList
               columns={[
                 { key: 'name', label: 'ТАБАК', width: 'minmax(0,1.6fr)' },
@@ -176,10 +169,10 @@ function MixesScreen() {
               <span className="hint">{'Сумма: ' + total + '%'}</span>
             </div>
           </MasterCard>
-          <MasterCard eyebrow="Публикация" heading="Видимость">
+          <MasterCard heading="Видимость">
             <div className="field-row"><MasterToggle checked label="Виден гостю" /><span className="hint">Виден гостю</span></div>
             <div className="field-row"><MasterTag tone="accent">Больше всего выбирают</MasterTag><MasterTag tone="ghost">авто-рейл</MasterTag></div>
-            <p className="hint">Популярность и базовый рейтинг — производные от аналитики, вручную не задаются.</p>
+            <p className="hint">Популярность и рейтинг считаются по выборам и оценкам гостей, вручную не задаются.</p>
           </MasterCard>
         </div>
       </section>
@@ -187,12 +180,12 @@ function MixesScreen() {
   }
   return (
     <section className="page">
-      <MasterPageHeader eyebrow="МЕНЕДЖЕР МИКСОВ" title="Каталог миксов" subtitle="Состав, наличие и видимость на витрине." meta="15 миксов"
+      <MasterPageHeader title="Каталог миксов" meta="15 миксов"
         actions={<MasterButton variant="primary" onClick={() => setEditing({ name: 'Новый микс' })}>Новый микс</MasterButton>} />
       <div className="toolbar">
         <MasterInput icon={<i data-lucide="search" />} placeholder="Поиск по названию микса" style={{ minWidth: 280 }} />
         <div className="toolbar-filters">
-          <FilterChip active>Все</FilterChip><FilterChip>Виден гостю</FilterChip><FilterChip>Скрыт</FilterChip><FilterChip>Заблокирован</FilterChip><FilterChip count={1}>Рейл</FilterChip>
+          <FilterChip active>Все</FilterChip><FilterChip>Виден гостю</FilterChip><FilterChip>Скрыт</FilterChip><FilterChip>Заблокирован</FilterChip><FilterChip>Рейл</FilterChip>
         </div>
       </div>
       <MasterList
@@ -215,14 +208,8 @@ function RailsScreen() {
   const kind = { statistical: 'статистический', prepared: 'подготовленный', curated: 'от мастеров' };
   return (
     <section className="page">
-      <MasterPageHeader eyebrow="МЕНЕДЖЕР РЕЙЛОВ" title="Рейлы витрины" subtitle="Порядок и состав подборок, которые видит гость." meta="4 рейла"
+      <MasterPageHeader title="Рейлы витрины" meta="4 рейла"
         actions={<MasterButton variant="primary">Новый рейл</MasterButton>} />
-      <MasterStatsRow tiles={[
-        { label: 'ВСЕГО', value: 4 },
-        { label: 'РЕДАКТИРУЕМЫХ', value: 2, tone: 'success' },
-        { label: 'АВТО', value: 2, tone: 'warning' },
-        { label: 'ПУСТЫХ', value: 0 },
-      ]} />
       <MasterList
         onRowClick={() => {}}
         columns={[
@@ -233,14 +220,14 @@ function RailsScreen() {
         ]}
         rows={D.rails}
       />
-      <MasterCard eyebrow="Состав рейла" heading="Вечер в ателье" actions={<><MasterButton size="sm">Добавить микс</MasterButton><MasterButton size="sm" variant="ghost">Сохранить порядок</MasterButton></>}>
+      <MasterCard heading="Вечер в ателье" actions={<><MasterButton size="sm">Добавить микс</MasterButton><MasterButton size="sm" variant="ghost">Сохранить порядок</MasterButton></>}>
         <MasterList
           columns={[
             { key: 'pos', label: '#', width: '40px' },
             { key: 'name', label: 'МИКС', width: 'minmax(0,1fr)' },
             { key: 'actions', label: '', width: '90px', align: 'right', render: () => <span className="cell-actions" style={{ justifyContent: 'flex-end' }}><MasterIconButton small label="Выше"><i data-lucide="arrow-up" /></MasterIconButton><MasterIconButton small label="Ниже"><i data-lucide="arrow-down" /></MasterIconButton><MasterIconButton small label="Убрать"><i data-lucide="x" /></MasterIconButton></span> },
           ]}
-          rows={[{ id: '1', pos: '01', name: 'Лимонный пирог' }, { id: '2', pos: '02', name: 'Cinnamon Red Tea' }, { id: '3', pos: '03', name: 'Cheesecake Wild Forest' }, { id: '4', pos: '04', name: 'Молоко-Черника' }]}
+          rows={[{ id: '1', pos: 1, name: 'Лимонный пирог' }, { id: '2', pos: 2, name: 'Cinnamon Red Tea' }, { id: '3', pos: 3, name: 'Cheesecake Wild Forest' }, { id: '4', pos: 4, name: 'Молоко-Черника' }]}
         />
       </MasterCard>
     </section>
@@ -251,16 +238,19 @@ function AccessScreen() {
   const [ops, setOps] = React.useState(D.operators);
   return (
     <section className="page">
-      <MasterPageHeader eyebrow="ДОСТУП" title="Код смены и роли" subtitle="Ежедневный код, Telegram-allowlist и staff-аккаунты." meta="/staff/audit/events"
+      <MasterPageHeader title="Код смены и роли"
         actions={<MasterButton variant="primary">Обновить код</MasterButton>} />
-      <MasterStatsRow tiles={[
-        { label: 'КОД СМЕНЫ', value: '4821', tone: 'code', hint: 'действует до 06:00' },
-        { label: 'ОПЕРАТОРОВ', value: ops.length, hint: 'в allowlist' },
-        { label: 'ПРИВЯЗАНО', value: ops.filter((o) => o.linked).length, tone: 'success' },
-        { label: 'БОТ', value: 'online', tone: 'success', hint: 'heartbeat 30 сек назад' },
-      ]} />
+      <MasterCard heading="Код смены">
+        <div className="code-row">
+          <span className="code-value">4821</span>
+          <span className="code-meta">
+            <span>Действует до 06:00</span>
+            <span><MasterTag tone="success" dot>бот на связи</MasterTag> 30 сек назад</span>
+          </span>
+        </div>
+      </MasterCard>
       <div className="cols">
-        <MasterCard eyebrow="Telegram" heading="Allowlist операторов" actions={<MasterButton size="sm">Добавить оператора</MasterButton>}>
+        <MasterCard heading="Allowlist операторов" actions={<MasterButton size="sm">Добавить оператора</MasterButton>}>
           <MasterList
             columns={[
               { key: 'name', label: 'ОПЕРАТОР', width: 'minmax(0,1fr)' },
@@ -270,9 +260,9 @@ function AccessScreen() {
             ]}
             rows={ops}
           />
-          <p className="hint">Мастер не отправляет код из консоли — оператор запрашивает его в боте командой /code.</p>
+          <p className="hint">Мастер не отправляет код из консоли. Оператор запрашивает его в боте командой /code.</p>
         </MasterCard>
-        <MasterCard eyebrow="Только admin" heading="Staff-аккаунты" actions={<MasterButton size="sm">Новый аккаунт</MasterButton>}>
+        <MasterCard heading="Staff-аккаунты" actions={<><MasterTag tone="ghost">только admin</MasterTag><MasterButton size="sm">Новый аккаунт</MasterButton></>}>
           <MasterList
             columns={[
               { key: 'login', label: 'ЛОГИН', width: 'minmax(0,1fr)' },
@@ -283,7 +273,7 @@ function AccessScreen() {
           />
         </MasterCard>
       </div>
-      <MasterCard eyebrow="Журнал" heading="Последние staff-операции">
+      <MasterCard heading="Журнал staff-операций">
         <MasterList
           columns={[
             { key: 'at', label: 'КОГДА', width: '150px' },
