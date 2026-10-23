@@ -398,8 +398,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .rt-still:nth-child(3){rotate:7deg;translate:0 3px}
 .rt-still .scene{inset:auto;left:0;top:0;width:375px;height:560px;transform:scale(.134);transform-origin:0 0}
 .rt-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h3);line-height:1.25;color:var(--text-0)}
-.rt-note{margin:0;max-width:30ch;text-wrap:balance;font-size:12.5px;line-height:1.45;color:var(--text-2)}
-.rt-pull{display:inline-flex;flex-direction:column;align-items:center;margin-top:8px;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase}
+.rt-pull{display:inline-flex;color:var(--text-1)}
 .rt-pull svg{animation:reel-hint 2s var(--ease-out,ease) infinite}
 
 /* ── #349 · Дотягивание за край: лента приподнимается, снизу проступает первый рилс ── */
@@ -412,7 +411,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .pull-reveal-top{top:0;border-bottom:1px solid var(--line);background:var(--guest-shell-bg)}
 .pull-reveal .scene{inset:0 0 auto 0;height:560px}
 .pull-reveal-bottom::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,14,17,.7) 0%,transparent 60%);pointer-events:none}
-.pull-cue{position:relative;z-index:1;display:grid;justify-items:center;gap:6px;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase}
+.pull-cue{position:relative;z-index:1;color:var(--text-1)}
 .pull-cue-ready{color:var(--text-0)}
 .pull-ring{width:40px;height:40px;display:grid;place-items:center;position:relative}
 .pull-ring svg.ring{position:absolute;inset:0;rotate:-90deg}

@@ -158,9 +158,6 @@ function Topbar() {
           <img className="brand-mark" src="../../.claude/skills/aroma-atelier-design/assets/logo-mark-oxblood.svg" alt="" aria-hidden />
           <span className="brand">Арома Ателье</span>
         </button>
-        <button type="button" className="topbar-icon-btn" aria-label="Сменить код" title="Сменить код">
-          <Icon name="KeyRound" size={20} />
-        </button>
       </div>
     </header>
   );
@@ -263,28 +260,17 @@ function MixerInvite() {
 
 // Последний блок Подбора: под ним край, дотягивание за который открывает ленту. Тап — то же самое.
 function ReelsTeaser({ feed, onOpen }) {
-  const next = feed.slice(0, 3);
   const count = feed.length;
+  const title = count ? 'Ещё ' + count + ' ' + pluralRu(count, ['микс', 'микса', 'миксов']) + ' в рилсах' : 'Других миксов нет';
   return (
-    <button type="button" className="rt" onClick={onOpen} aria-label={'Дальше — рилсы. ' + (count ? 'Ещё ' + count + ' ' + pluralRu(count, ['микс', 'микса', 'миксов']) : 'Других миксов нет')}>
-      {next.length ? (
+    <button type="button" className="rt" onClick={onOpen}>
+      {count ? (
         <span className="rt-stills" aria-hidden>
-          {next.map((mix) => <span key={mix.id} className="rt-still"><Scene mix={mix} styleB playing={false} /></span>)}
+          {feed.slice(0, 3).map((mix) => <span key={mix.id} className="rt-still"><Scene mix={mix} styleB playing={false} /></span>)}
         </span>
       ) : null}
-      <span className="aroma-caps">Дальше — рилсы</span>
-      {count ? (
-        <>
-          <span className="rt-title">{'Ещё ' + count + ' ' + pluralRu(count, ['микс', 'микса', 'миксов']) + ' в наличии'}</span>
-          <span className="rt-note">Без повторов: того, что выше, там не будет.</span>
-        </>
-      ) : (
-        <>
-          <span className="rt-title">Других миксов сегодня нет</span>
-          <span className="rt-note">Всё, что есть в наличии, — уже выше.</span>
-        </>
-      )}
-      <span className="rt-pull"><Icon name="ChevronUp" size={18} />Потяните вверх</span>
+      <span className="rt-title">{title}</span>
+      <span className="rt-pull"><Icon name="ChevronUp" size={20} /></span>
     </button>
   );
 }
@@ -398,19 +384,18 @@ function usePull({ atEdge, sign, onFire, initial = 0 }) {
   return { pull, dragging, handlers };
 }
 
-function PullCue({ pull, ready, readyText }) {
+function PullCue({ pull, dir }) {
   const r = 18;
   const len = 2 * Math.PI * r;
   return (
-    <span className={'pull-cue' + (ready ? ' pull-cue-ready' : '')} role="status">
+    <span className={'pull-cue' + (pull >= PULL_FIRE ? ' pull-cue-ready' : '')} aria-hidden>
       <span className="pull-ring">
-        <svg className="ring" viewBox="0 0 40 40" aria-hidden>
+        <svg className="ring" viewBox="0 0 40 40">
           <circle className="ring-track" cx="20" cy="20" r={r} />
           <circle className="ring-fill" cx="20" cy="20" r={r} strokeDasharray={len} strokeDashoffset={len * (1 - Math.min(1, pull / PULL_FIRE))} />
         </svg>
-        <Icon name={readyText === 'Отпустите — к подбору' ? 'ChevronDown' : 'ChevronUp'} size={18} />
+        <Icon name={dir === 'down' ? 'ChevronDown' : 'ChevronUp'} size={18} />
       </span>
-      {ready ? readyText : 'Потяните ещё'}
     </span>
   );
 }
@@ -446,7 +431,7 @@ function RecsScreen({ persona, at, pull: initialPull, variantB, onReels }) {
       {teaser ? (
         <div className="pull-reveal pull-reveal-bottom" style={{ height: pull }} aria-hidden={!pull}>
           {feed[0] ? <Scene mix={feed[0]} styleB playing={false} /> : null}
-          {pull ? <PullCue pull={pull} ready={pull >= PULL_FIRE} readyText="Отпустите — рилсы" /> : null}
+          {pull ? <PullCue pull={pull} dir="up" /> : null}
         </div>
       ) : null}
     </div>
@@ -551,7 +536,7 @@ function ReelsScreen({ persona, backPull, onBack }) {
     <div className={'pull-wrap' + (dragging ? ' dragging' : '')} {...(canBack ? handlers : {})}>
       {canBack ? (
         <div className="pull-reveal pull-reveal-top" style={{ height: pull }} aria-hidden={!pull}>
-          {pull ? <PullCue pull={pull} ready={pull >= PULL_FIRE} readyText="Отпустите — к подбору" /> : null}
+          {pull ? <PullCue pull={pull} dir="down" /> : null}
         </div>
       ) : null}
       <div className="reels" ref={ref} style={{ transform: pull ? 'translateY(' + pull + 'px)' : undefined }}>
@@ -627,20 +612,20 @@ function Frame({ name, note, children }) {
 }
 
 const SHOTS = [
-  { id: 'end-anon', group: 'end', name: 'Без входа · конец Подбора', note: 'Герой и четыре «Тоже подходят», ниже — «Намиксуй», последним — тизер. Под тизером край: потянуть дальше — рилсы. Тап по тизеру — тоже рилсы.', props: { at: 'end' } },
-  { id: 'end-li', group: 'end', name: 'Вошедший · конец «Для вас»', note: 'После «Снова» — сразу тизер: «Намиксуй» в «Для вас» нет и сейчас. В ленте не будет ни одного из шести показанных миксов.', props: { persona: 'li', at: 'end' } },
-  { id: 'end-anon-b', group: 'end', name: 'Вариант Б · без «Намиксуй»', note: 'Тизер вместо приглашения: одна концовка вместо двух. «Намиксуй» остаётся в панели и в конце ленты (#298).', props: { at: 'end', variantB: true } },
-  { id: 'pull-mid', group: 'pull', name: 'Дотягивание · тянем', note: 'Гость уже в самом низу и тянет дальше. Подбор приподнимается за пальцем вдвое медленнее, снизу проступает сцена первого рилса. Кольцо — сколько осталось до порога.', props: { at: 'end', pull: 84 } },
-  { id: 'pull-ready', group: 'pull', name: 'Дотягивание · порог', note: 'Порог — 120 px сверх края. Кольцо закрылось: «Отпустите — рилсы». Отпустить раньше — Подбор вернётся на место, ничего не откроется.', props: { at: 'end', pull: 150 } },
-  { id: 'cont-first', group: 'reels', name: 'Первый рилс · без входа', note: '«Mr. Pink» — шестой в выдаче рекомендаций: на Подбор не влез, поэтому первый в ленте. Надписи слота нет. Сверху — «К подбору», снизу — «Листайте вверх».', props: { view: 'reels' } },
-  { id: 'cont-first-li', group: 'reels', name: 'Первый рилс · вошедший', note: 'У вошедшего продолжение — каталог без шести миксов «Для вас». Ни надписей слотов, ни причин: эти миксы гость ещё не видел.', props: { persona: 'li', view: 'reels' } },
-  { id: 'back-pull', group: 'reels', name: 'Свайп вниз · назад', note: 'На первом рилсе свайп вниз сдвигает ленту, сверху — «Отпустите — к подбору». Отпустил — конец Подбора, тизер на экране. Кнопка «К подбору» делает то же.', props: { view: 'reels', backPull: 150 } },
-  { id: 'nav-recs', group: 'nav', name: 'Подбор сверху · новая панель', note: 'Полосы кружков над Подбором больше нет. Панель: Подбор · Рилсы · Витрина · Каталог · Миксер · Кабинет.', props: {} },
-  { id: 'nav-reels', group: 'nav', name: 'Рилсы из панели', note: 'Та же лента, тот же первый рилс, что и из тизера. «К подбору» и свайп вниз ведут в конец Подбора.', props: { view: 'reels' } },
-  { id: 'empty-recs', group: 'edge', name: 'Подбор пуст', note: 'Онбординг пропущен — подбора нет, тизера тоже. Края для дотягивания нет.', props: { persona: 'empty' } },
-  { id: 'empty-reels', group: 'edge', name: 'Подбор пуст · рилсы из панели', note: 'Лента — весь каталог в его порядке. «К подбору» нет: возвращаться не к чему, свайп вниз на первом рилсе ничего не делает.', props: { persona: 'empty', view: 'reels' } },
-  { id: 'small-end', group: 'edge', name: 'Продолжение пустое · тизер', note: 'В наличии пять миксов, и все уже на Подборе. Тизер честно говорит, что других нет; дотягивание открывает конец ленты.', props: { persona: 'small', at: 'end' } },
-  { id: 'small-reels', group: 'edge', name: 'Продолжение пустое · конец ленты', note: 'Лента начинается сразу с конца (#298): «Не нашли своё? Намиксуй». Свайп вниз — обратно к Подбору.', props: { persona: 'small', view: 'reels' } },
+  { id: 'end-anon', group: 'end', name: 'Без входа', note: '«Намиксуй», под ним тизер. Под тизером — край.', props: { at: 'end' } },
+  { id: 'end-li', group: 'end', name: 'Вошедший', note: 'После «Снова» — тизер.', props: { persona: 'li', at: 'end' } },
+  { id: 'end-anon-b', group: 'end', name: 'Вариант Б', note: 'Тизер вместо «Намиксуй».', props: { at: 'end', variantB: true } },
+  { id: 'pull-mid', group: 'pull', name: 'Тянем', note: 'Кольцо — ход до порога.', props: { at: 'end', pull: 84 } },
+  { id: 'pull-ready', group: 'pull', name: 'Порог', note: '120 px сверх края. Отпустил — рилсы.', props: { at: 'end', pull: 150 } },
+  { id: 'cont-first', group: 'reels', name: 'Первый рилс', note: 'Шестой из выдачи — на Подбор не влез.', props: { view: 'reels' } },
+  { id: 'cont-first-li', group: 'reels', name: 'Первый рилс · вошедший', note: 'Каталог без шести миксов «Для вас».', props: { persona: 'li', view: 'reels' } },
+  { id: 'back-pull', group: 'reels', name: 'Назад', note: 'Свайп вниз — конец Подбора.', props: { view: 'reels', backPull: 150 } },
+  { id: 'nav-recs', group: 'nav', name: 'Подбор', note: 'Без полосы кружков.', props: {} },
+  { id: 'nav-reels', group: 'nav', name: 'Рилсы из панели', note: 'Та же лента.', props: { view: 'reels' } },
+  { id: 'empty-recs', group: 'edge', name: 'Подбор пуст', note: 'Тизера нет.', props: { persona: 'empty' } },
+  { id: 'empty-reels', group: 'edge', name: 'Подбор пуст · рилсы', note: 'Весь каталог. Назад некуда.', props: { persona: 'empty', view: 'reels' } },
+  { id: 'small-end', group: 'edge', name: 'Продолжение пустое', note: 'Все миксы уже на Подборе.', props: { persona: 'small', at: 'end' } },
+  { id: 'small-reels', group: 'edge', name: 'Продолжение пустое · рилсы', note: 'Сразу конец ленты (#298).', props: { persona: 'small', view: 'reels' } },
 ];
 
 function Shot({ id }) {
@@ -664,7 +649,7 @@ function NavCompare() {
   return (
     <div className="nav-compare">
       {row('Было', NAV_BEFORE)}
-      {row('Стало', NAV_AFTER, 'Подписи — только в aria-label, как сейчас. Порядок в BottomNav.tsx меняется, значки и подписи — нет.')}
+      {row('Стало', NAV_AFTER)}
     </div>
   );
 }
@@ -678,17 +663,16 @@ function Board() {
       <header className="board-head">
         <p className="aroma-caps">#349 · мокап на согласование</p>
         <h1 className="board-title">Рилсы после Подбора</h1>
-        <p className="board-text">Рилсы — второй пункт панели. Лента продолжает Подбор: долистал до конца, потянул дальше — открылись рилсы, и ни один микс с Подбора в них не повторяется. Свайп вниз на первом рилсе возвращает в конец Подбора. Полоса кружков над Подбором уходит.</p>
-        <p className="board-text">Телефоны живые: Подбор прокручивается, колесо или перетаскивание мышью у нижнего края тянет за край, тап по тизеру открывает ленту. На первом рилсе колесо вверх или перетаскивание вниз возвращают назад. Миксы — витрина прода на 15 октября.</p>
+        <p className="board-text">Подбор продолжается рилсами без повторов. Рилсы — второй пункт панели.</p>
+        <p className="board-text">Телефоны живые: колесо или мышь у нижнего края — дотягивание, тап по тизеру — рилсы.</p>
       </header>
       <section className="board-section">
         <h2 className="board-h2">Конец Подбора</h2>
-        <p className="board-note"><b>Порядок:</b> тизер — всегда последний блок, потому что он объясняет край под собой. «Намиксуй» гостя без входа — над тизером (основной вариант). Вариант Б убирает «Намиксуй» с Подбора: приглашение и так ждёт в конце ленты. Выбор — за владельцем.</p>
+        <p className="board-note">Основной вариант или Б — выбор владельца.</p>
         <div className="board-row">{row('end')}</div>
       </section>
       <section className="board-section">
         <h2 className="board-h2">Дотягивание за край</h2>
-        <p className="board-note">Долистать до низа мало: переход срабатывает, только если потянуть дальше края на 120 px. Случайный длинный свайп по Подбору ленту не откроет — он упрётся в край, и Подбор вернётся на место.</p>
         <div className="board-row">{row('pull')}</div>
       </section>
       <section className="board-section">
