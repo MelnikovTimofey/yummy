@@ -23,7 +23,7 @@ test.beforeEach(async () => {
   await resetAppState();
 });
 
-test('guest intro cards describe the onboarding flow', async () => {
+test('guest intro cards describe the onboarding flow in one line per step', async () => {
   const app = buildApp();
 
   try {
@@ -35,17 +35,43 @@ test('guest intro cards describe the onboarding flow', async () => {
     assert.equal(response.statusCode, 200);
 
     const body = response.json() as {
-      items: Array<{ step: number; title: string; bullets: string[] }>;
+      items: Array<{ step: number; title: string; description: string; bullets: string[] }>;
     };
 
     assert.deepEqual(
-      body.items.map((item) => item.step),
-      [1, 2, 3, 4],
+      body.items.map((item) => [item.step, item.title, item.description, item.bullets]),
+      [
+        [1, 'Выберите вкусы', 'Подбор соберём из табаков, которые сегодня есть в зале.', []],
+        [2, 'Посмотрите подборки', 'Миксы мастеров зала и то, что чаще выбирают гости.', []],
+        [3, 'Ищите в каталоге', 'В каталоге только миксы, которые сейчас можно заказать.', []],
+        [4, 'Начнём с подбора', 'Выберите вкусы, и мы покажем подходящие миксы.', []],
+      ],
     );
-    assert.equal(body.items[0]?.title, 'Расскажите, что хочется покурить');
-    assert.equal(body.items[2]?.title, 'Открывайте каталог');
-    assert.equal(body.items[3]?.title, 'Добро пожаловать в Арома Ателье');
-    assert.equal(body.items[0]?.bullets.includes('Рекомендации учитывают наличие табаков.'), true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('seeded rails describe their mixes without marketing copy', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/staff/rails',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as { items: Array<{ id: string; description: string }> };
+    const descriptionOf = (id: string) => body.items.find((item) => item.id === id)?.description;
+
+    assert.equal(descriptionOf('rail-prepared-fresh-line'), 'Лёгкие миксы для первого раза.');
+    assert.equal(descriptionOf('rail-prepared-sweet-line'), 'Сладкие и фруктовые миксы на долгий вечер.');
+    assert.equal(descriptionOf('rail-curated-evening-choice'), 'Миксы, которые советуют мастера зала.');
   } finally {
     await app.close();
   }
