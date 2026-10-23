@@ -311,17 +311,21 @@ test('readUploadError различает нечитаемый PDF, дублик�
   });
 });
 
-test('мета месяца: «Октябрь: 2 счёта, 43 400 ₽» по счетам этого месяца', () => {
+test('мета месяца: «Октябрь: 2 счёта, 28 500 ₽» по принятым в этом месяце счетам', () => {
   const now = new Date(2026, 9, 20, 12);
   const items: DeliveryListItem[] = [
+    // Черновик не считается: денег за него ещё не отдали, как и в «Тратах» Дашборда.
     { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, grams: 200, totalKop: 2480000, createdAt: '2026-10-18T09:00:00.000Z' },
-    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 1, grams: 200, totalKop: 1860000, createdAt: '2026-10-02T09:00:00.000Z' },
-    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: null, lines: 1, grams: 200, totalKop: 990000, createdAt: '2026-10-01T09:00:00.000Z' },
-    { id: '4', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 0, grams: 1800, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
+    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: '2026-10-02T09:00:00.000Z', lines: 1, grams: 200, totalKop: 1860000, createdAt: '2026-10-02T09:00:00.000Z' },
+    // Месяц — по дате прихода, а не счёта: так же считает Дашборд.
+    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: '2026-10-01T09:00:00.000Z', lines: 1, grams: 200, totalKop: 990000, createdAt: '2026-09-30T09:00:00.000Z' },
+    { id: '4', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-28', receivedAt: '2026-09-29T09:00:00.000Z', lines: 1, grams: 200, totalKop: 500000, createdAt: '2026-09-28T09:00:00.000Z' },
+    { id: '5', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: '2026-10-19T09:00:00.000Z', lines: 0, grams: 1800, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
   ];
-  assert.equal(plain(monthMeta(items, now)), 'Октябрь: 2 счёта, 43 400 ₽');
+  assert.equal(plain(monthMeta(items, now)), 'Октябрь: 2 счёта, 28 500 ₽');
   // Счёт без суммы не мешает: сумма только по тем, где она есть; без сумм — только число.
-  assert.equal(plain(monthMeta([{ ...items[0], totalKop: null }], now)), 'Октябрь: 1 счёт');
+  assert.equal(plain(monthMeta([{ ...items[1], totalKop: null }], now)), 'Октябрь: 1 счёт');
+  assert.equal(monthMeta([items[0]], now), 'Октябрь: 0 счетов');
   assert.equal(monthMeta([], now), 'Октябрь: 0 счетов');
 });
 

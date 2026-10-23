@@ -159,8 +159,9 @@ const inMonth = (value: string | null, now: Date) => {
 };
 
 // Итог месяца в мете шапки вместо ряда KPI (#365): «Октябрь: 3 счёта, 43 400 ₽».
+// Считаем как «Траты» на Дашборде: только принятые счета, месяц — по дате прихода.
 export const monthMeta = (items: DeliveryListItem[], now: Date) => {
-  const invoices = items.filter((item) => item.kind !== 'start' && inMonth(item.invoiceDate ?? item.createdAt, now));
+  const invoices = items.filter((item) => item.kind !== 'start' && item.status === 'received' && inMonth(item.receivedAt, now));
   const sumKop = invoices.reduce((total, item) => total + (item.totalKop ?? 0), 0);
   const month = MONTHS[now.getMonth()];
   const count = formatCount(invoices.length, ['счёт', 'счёта', 'счетов']);
