@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   adminCredentials,
   applyStockFilter,
@@ -357,6 +357,21 @@ test.describe('Master on a phone', () => {
     await expect(dialog).toBeHidden();
   });
 
+  // Колесо мыши крутит страницу плавно, и после mouse.wheel она ещё едет. Палец
+  // на телефоне инерцию останавливает тапом, поэтому ждём, пока страница встанет.
+  const scrollAndSettle = async (page: Page) => {
+    await page.mouse.wheel(0, 3000);
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const y = await page.evaluate(() => window.scrollY);
+        const settled = y > 0 && y === last;
+        last = y;
+        return settled;
+      })
+      .toBe(true);
+  };
+
   // #334: раздел открывается с начала, а нижнее меню остаётся в ширину экрана
   // и у нижнего края, даже когда страница шире экрана (конструктор микса).
   test('Master on a phone: sections open from the top, the bottom bar stays screen-wide', async ({ page }) => {
@@ -367,14 +382,12 @@ test.describe('Master on a phone', () => {
     await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
 
     const nav = page.getByRole('navigation', { name: 'Разделы' });
-    await page.mouse.wheel(0, 3000);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await scrollAndSettle(page);
     await nav.getByRole('button', { name: 'Полка', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
-    await page.mouse.wheel(0, 3000);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await scrollAndSettle(page);
     await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
     await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
     await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
