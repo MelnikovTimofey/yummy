@@ -1,4 +1,4 @@
-import { type PointerEvent as ReactPointerEvent, type ReactNode, FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type PointerEvent as ReactPointerEvent, type ReactNode, FormEvent, Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -2218,9 +2218,19 @@ export const App = () => {
         >
           ←
         </button>
-        <div className="aroma-onboarding-bar" role="progressbar" aria-valuemin={0} aria-valuemax={2} aria-valuenow={onboardingStep}>
+        <div
+          className="aroma-onboarding-bar"
+          role="progressbar"
+          aria-label={`Шаг ${onboardingStep} из 2`}
+          aria-valuemin={0}
+          aria-valuemax={2}
+          aria-valuenow={onboardingStep}
+        >
           <span className="aroma-onboarding-bar-fill" style={{ width: `${percent}%` }} />
         </div>
+        <span className="aroma-onboarding-step" aria-hidden>
+          {onboardingStep} из 2
+        </span>
       </div>
     );
   };
@@ -2285,17 +2295,16 @@ export const App = () => {
 
     return (
       <section className="aroma-access">
-        <div className="aroma-access-halo" aria-hidden />
         <div className="aroma-access-body">
           <div>
             <img className="aroma-access-mark" src="/logo-mark.svg" width="44" height="64" alt="" aria-hidden />
             <span className="aroma-access-brand">Арома<br />Ателье</span>
-            <p className="aroma-access-tagline">подбор кальянных миксов</p>
+            <p className="aroma-access-tagline">Подбор кальянных миксов</p>
           </div>
 
           <form className="aroma-access-form" onSubmit={onSubmitAccessCode}>
             <div className="aroma-access-code-block">
-              <label htmlFor="guest-access-code" className="aroma-caps aroma-access-code-label">
+              <label htmlFor="guest-access-code" className="aroma-access-code-label">
                 Код мастера
               </label>
               <input
@@ -2314,7 +2323,7 @@ export const App = () => {
                 }
               />
               <p className="aroma-access-code-hint">
-                Спросите у мастера зала — код действует до конца суток.
+                Код скажет мастер зала. Он действует до конца суток.
               </p>
             </div>
 
@@ -2336,11 +2345,7 @@ export const App = () => {
               </span>
             </label>
 
-            <CTA
-              type="submit"
-              disabled={cantSubmit}
-              pulse={!cantSubmit}
-            >
+            <CTA type="submit" disabled={cantSubmit}>
               {accessStatus === 'loading' ? 'Проверяем код…' : 'Войти в Ателье'}
             </CTA>
 
@@ -2349,7 +2354,10 @@ export const App = () => {
             ) : null}
           </form>
 
-          <p className="aroma-access-footer">18+ · Курение вредит здоровью</p>
+          <p className="aroma-access-footer">
+            <span className="aroma-age-badge">18+</span>
+            Курение вредит здоровью
+          </p>
         </div>
       </section>
     );
@@ -2383,7 +2391,7 @@ export const App = () => {
               {steps.map((step, index) => (
                 <li key={step.id} className="aroma-intro-step">
                   <span className="aroma-intro-step-num" aria-hidden>
-                    {String(index + 1).padStart(2, '0')}
+                    {index + 1}
                   </span>
                   <span className="aroma-intro-step-copy">
                     <strong>{step.title}</strong>
@@ -2396,7 +2404,7 @@ export const App = () => {
         </div>
 
         <div className="aroma-intro-dock">
-          <CTA pulse onClick={finishIntro}>
+          <CTA onClick={finishIntro}>
             Начать подбор
           </CTA>
           {!signedIn && canOfferLogin(botUsername) ? (
@@ -2466,7 +2474,7 @@ export const App = () => {
     const ctaDisabled =
       onboardingStep === 1
         ? optionsStatus !== 'ready'
-        : submitting || optionsStatus !== 'ready';
+        : submitting || optionsStatus !== 'ready' || (likedFlavorsNow.length > 0 && !matchingMixes.length);
     const ctaLabel =
       onboardingStep === 1
         ? 'Далее'
@@ -2487,17 +2495,14 @@ export const App = () => {
         <div className="aroma-onboarding-body">
           {onboardingStep === 1 ? (
             <>
-              <p className="aroma-caps">
-                {editingPreferences ? 'Правка вкусов · Шаг 01 · из 02 · Профили' : 'Шаг 01 · из 02 · Профили'}
-              </p>
               <h1 className="aroma-onboarding-title">С чего начнём?</h1>
               <p className="aroma-onboarding-hint">
                 {catalogueIsEmpty
-                  ? 'Мастер ещё не собрал ни одного микса — подбор появится, когда картотека наполнится.'
-                  : 'Несколько касаний по профилям, и мы поймём, в какую сторону смотреть.'}
+                  ? 'Миксов пока нет. Подбор появится, когда мастер их добавит.'
+                  : 'Можно выбрать несколько.'}
               </p>
               {optionsStatus === 'loading' ? (
-                <p className="screen-status">Подтягиваем доступные профили…</p>
+                <p className="screen-status">Загружаем профили…</p>
               ) : null}
               <div className="aroma-onboarding-profile-grid">
                 {availableProfileOptions.map((option) => {
@@ -2513,10 +2518,7 @@ export const App = () => {
                     >
                       <span
                         className="aroma-profile-card-dot"
-                        style={{
-                          background: color,
-                          boxShadow: active ? `0 0 0 4px ${color}22` : undefined,
-                        }}
+                        style={{ background: color }}
                         aria-hidden
                       />
                       <span className="aroma-profile-card-label">{option.label}</span>
@@ -2527,14 +2529,9 @@ export const App = () => {
             </>
           ) : (
             <>
-              <p className="aroma-caps">
-                {editingPreferences ? 'Правка вкусов · Шаг 02 · из 02 · Вкусы' : 'Шаг 02 · из 02 · Вкусы'}
-              </p>
               <h1 className="aroma-onboarding-title">Любимые ноты</h1>
               <p className="aroma-onboarding-hint">
-                {matchingMixes.length
-                  ? 'Опционально — но так подбор станет точнее. Приглушённые вкусы не встречаются в миксах с выбранными профилями.'
-                  : 'С этим набором миксов не осталось — снимите лишний вкус или вернитесь к профилям.'}
+                Можно пропустить. Бледные вкусы не встречаются в миксах с выбранными профилями.
               </p>
               <div className="aroma-onboarding-flavor-wrap">
                 {options.flavors.map((flavor) => {
@@ -2545,7 +2542,7 @@ export const App = () => {
                       key={flavor}
                       active={likedFlavorsNow.includes(flavor)}
                       dimmed={givesNothing}
-                      ariaLabel={givesNothing ? `${flavor} — нет миксов с выбранными профилями` : undefined}
+                      ariaLabel={givesNothing ? `${flavor}, нет миксов с выбранными профилями` : undefined}
                       onClick={() => toggleFlavor(flavor)}
                     >
                       {flavor}
@@ -2553,23 +2550,6 @@ export const App = () => {
                   );
                 })}
               </div>
-              {likedProfilesNow.length ? (
-                <div className="aroma-onboarding-selected">
-                  <p className="aroma-caps">Сейчас выбрано</p>
-                  <div className="aroma-onboarding-selected-row">
-                    {likedProfilesNow.map((profileId) => (
-                      <span key={profileId} className="aroma-onboarding-profile-tag">
-                        <span
-                          className="aroma-onboarding-profile-tag-dot"
-                          style={{ background: getProfileColor(profileId) }}
-                          aria-hidden
-                        />
-                        {formatProfileLabel(profileId)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </>
           )}
           {optionsError ? <p className="screen-status error">{optionsError}</p> : null}
@@ -2577,14 +2557,14 @@ export const App = () => {
         </div>
 
         <div className="aroma-onboarding-dock">
-          <p className="aroma-caps aroma-onboarding-tally" aria-live="polite">
+          <p className="aroma-onboarding-tally" aria-live="polite">
             {catalogueIsEmpty
               ? 'Картотека миксов пока пуста'
               : matchingMixes.length
                 ? `${pluralize(matchingMixes.length, ['Подходит', 'Подходят', 'Подходят'])} ${matchingMixes.length} ${pluralizeMixes(matchingMixes.length)}`
-                : 'Подходящих миксов нет'}
+                : 'Под такой набор миксов нет. Снимите один из вкусов.'}
           </p>
-          <CTA pulse={onboardingStep === 2 && !ctaDisabled} onClick={goNext} disabled={ctaDisabled}>
+          <CTA onClick={goNext} disabled={ctaDisabled}>
             {ctaLabel}
           </CTA>
           {editingPreferences ? null : (
@@ -2673,17 +2653,9 @@ export const App = () => {
       return (
         <section className="aroma-recs-empty">
           {prelude}
-          <p className="aroma-caps">
-            {status === 'ready' ? 'Подбор не найден' : 'Подбор пока пуст'}
-          </p>
           <h1 className="aroma-recs-empty-title">
             {status === 'ready' ? 'Ничего не найдено' : 'Сначала выберите вкусы'}
           </h1>
-          <p className="aroma-recs-empty-text">
-            {status === 'ready'
-              ? 'Попробуйте изменить профили и вкусы или сразу перейти в каталог.'
-              : 'Откройте предпочтения, чтобы мы собрали подбор под текущее настроение, или сразу посмотрите весь каталог.'}
-          </p>
           <div className="aroma-recs-empty-actions">
             <CTA onClick={() => (source === 'mood' ? startMood() : openPreferencesEditing())}>
               {status === 'ready' ? 'Изменить вкусы' : 'Открыть предпочтения'}
@@ -2697,7 +2669,7 @@ export const App = () => {
             </button>
           </div>
           {status === 'ready' ? (
-            <MixerInvite onOpen={() => openMixer('recommendations')} />
+            <MixerInvite note onOpen={() => openMixer('recommendations')} />
           ) : null}
         </section>
       );
@@ -2707,7 +2679,6 @@ export const App = () => {
       (mix) => mix.matchedProfiles.length > 0 || mix.matchedFlavors.length > 0,
     );
     const [hero, ...rest] = items;
-    const heroColor = getProfileColor(hero.flavorProfiles[0]);
     const heroComponents = [...hero.components]
       .sort((left, right) => right.proportion - left.proportion)
       .slice(0, 4);
@@ -2715,21 +2686,10 @@ export const App = () => {
     return (
       <section className="aroma-recs">
         {prelude}
-        <div className="aroma-recs-head">
-          <p className="aroma-caps">{hasAnyMatch ? 'Лучшее совпадение' : 'Точных совпадений нет'}</p>
-          {editChip ? <Chip onClick={() => openPreferencesEditing()}>Изменить вкусы</Chip> : null}
-        </div>
         {hasAnyMatch ? null : (
-          <p className="aroma-recs-fallback-note">
-            Ни один микс не совпал с выбором целиком — показываем самое близкое из картотеки.
-          </p>
+          <p className="aroma-recs-fallback-note">Точных совпадений нет. Вот самые близкие миксы.</p>
         )}
-        <article
-          className="aroma-recs-hero"
-          style={{
-            background: `radial-gradient(circle at 80% 0%, ${heroColor}55 0%, transparent 55%), var(--guest-card-bg)`,
-          }}
-        >
+        <article className="aroma-recs-hero">
           <div className="aroma-recs-hero-head">
             <ProfileGlyph profiles={hero.flavorProfiles} size={64} />
             <div className="aroma-recs-hero-head-text">
@@ -2759,7 +2719,7 @@ export const App = () => {
             <div className="aroma-recs-composition">
               {heroComponents.map((component) => (
                 <div className="aroma-recs-comp-row" key={component.id}>
-                  <span className="aroma-caps aroma-recs-comp-maker">{component.manufacturer}</span>
+                  <span className="aroma-recs-comp-maker">{component.manufacturer}</span>
                   <span className="aroma-recs-comp-name">{component.name}</span>
                   <span className="aroma-recs-comp-share">{Math.round(component.proportion)}%</span>
                 </div>
@@ -2769,54 +2729,55 @@ export const App = () => {
           <div className="aroma-recs-hero-meta">
             {hero.ratingsCount > 0 ? <RatingPill rating={hero.avgRating} /> : null}
             {hero.popularity > 0 ? (
-              <span className="aroma-caps">
+              <span className="aroma-recs-hero-count">
                 {`${hero.popularity} ${pluralize(hero.popularity, ['выбор', 'выбора', 'выборов'])}`}
               </span>
             ) : null}
           </div>
-          <CTA
-            pulse
-            disabled={chooseStatus === 'loading'}
-            onClick={() => void onChooseMix(hero, source)}
-          >
+          <CTA disabled={chooseStatus === 'loading'} onClick={() => void onChooseMix(hero, source)}>
             {chooseStatus === 'loading' && selectedMix?.id === hero.id ? 'Сохраняем…' : 'Покурить'}
           </CTA>
         </article>
 
+        {rest.length || editChip ? (
+          <div className="aroma-recs-section-row">
+            {rest.length ? <h2 className="aroma-recs-section-title">Тоже подходят</h2> : <span />}
+            {editChip ? (
+              <button type="button" className="aroma-text-link" onClick={() => openPreferencesEditing()}>
+                Изменить вкусы
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {rest.length ? (
-          <>
-            <p className="aroma-caps">Тоже подходят</p>
-            <div className="aroma-recs-list">
-              {rest.slice(0, 4).map((mix) => (
-                <button
-                  key={mix.id}
-                  type="button"
-                  className="aroma-recs-row"
-                  onClick={() => openMix(mix, source)}
-                >
-                  <div className="aroma-recs-row-main">
-                    <h3 className="aroma-recs-row-name">{mix.name}</h3>
-                    <SignatureBar profiles={mix.flavorProfiles} height={3} />
-                    <p className="aroma-recs-row-flavors">
-                      {mix.flavors.slice(0, 3).map((flavor, index) => (
-                        <span
-                          key={`${mix.id}-${flavor}`}
-                          className={cn(mix.matchedFlavors.includes(flavor) && 'aroma-recs-row-flavor-on')}
-                        >
-                          {index ? ' · ' : ''}
+          <div className="aroma-recs-list">
+            {rest.slice(0, 4).map((mix) => (
+              <button
+                key={mix.id}
+                type="button"
+                className="aroma-recs-row"
+                onClick={() => openMix(mix, source)}
+              >
+                <div className="aroma-recs-row-main">
+                  <h3 className="aroma-recs-row-name">{mix.name}</h3>
+                  <p className="aroma-recs-row-flavors">
+                    {mix.flavors.slice(0, 3).map((flavor, index) => (
+                      <Fragment key={`${mix.id}-${flavor}`}>
+                        {index ? ', ' : ''}
+                        <span className={cn(mix.matchedFlavors.includes(flavor) && 'aroma-recs-row-flavor-on')}>
                           {flavor}
                         </span>
-                      ))}
-                    </p>
-                  </div>
-                  {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
-                </button>
-              ))}
-            </div>
-          </>
+                      </Fragment>
+                    ))}
+                  </p>
+                </div>
+                {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
+              </button>
+            ))}
+          </div>
         ) : null}
 
-        <MixerInvite onOpen={() => openMixer('recommendations')} />
+        <MixerInvite note onOpen={() => openMixer('recommendations')} />
       </section>
     );
   };
@@ -2831,7 +2792,7 @@ export const App = () => {
     if (!showcaseRails.length) {
       return (
         <section className="aroma-showcase">
-          <MixerInvite strip onOpen={() => openMixer('showcase')} />
+          <MixerInvite onOpen={() => openMixer('showcase')} />
           <p className="screen-status">Подборки пока не опубликованы.</p>
         </section>
       );
@@ -2841,7 +2802,7 @@ export const App = () => {
     // под ним лента постеров, около двух на ширину экрана.
     return (
       <section className="aroma-showcase">
-        <MixerInvite strip onOpen={() => openMixer('showcase')} />
+        <MixerInvite onOpen={() => openMixer('showcase')} />
         {dedupeRails(
           showcaseRails.map((rail) => ({ ...rail, mixes: rail.mixes.filter((mix) => mix.available) })),
         ).map((rail) => {
@@ -3340,8 +3301,6 @@ export const App = () => {
 
   return (
     <div className="app-bg">
-      <div className="halo-top" />
-      <div className="halo-bottom" />
       <div className="phone-shell">
         {!accessGranted ? (
           renderAccessView()

@@ -72,8 +72,9 @@ test('Aroma guest returns to preferences from the recommendations screen and can
   await expect(editEntry).toBeVisible();
   await editEntry.click();
 
-  // Повторный вход отличим от первого прохода и открывается с выбранным ранее.
-  await expect(page.getByText('Правка вкусов · Шаг 01 · из 02 · Профили')).toBeVisible();
+  // Повторный вход отличим от первого прохода: без «Открыть каталог сразу» и с
+  // выбранным ранее.
+  await expect(page.getByRole('progressbar', { name: 'Шаг 1 из 2' })).toBeVisible();
   await expect(page.locator('.aroma-onboarding-profile-grid button[aria-pressed="true"]')).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Открыть каталог сразу' })).toHaveCount(0);
 
@@ -125,9 +126,9 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await page.getByRole('button', { name: 'Начать подбор' }).click();
   await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
 
-  // Вход — карточка-приглашение первой на «Витрине».
+  // Вход — строка-приглашение первой на «Витрине».
   await page.getByRole('button', { name: 'Витрина' }).click();
-  await page.getByRole('button', { name: /Намиксуйте сами/ }).click();
+  await page.getByRole('button', { name: 'Собрать свой микс' }).click();
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
 
   const take = page.getByRole('button', { name: 'Беру', exact: true });
@@ -168,7 +169,7 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await expect(page.getByText('Покажите мастеру')).toBeVisible();
   await expect(page.getByText(/Собран гостем/)).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
-  await expect(page.getByRole('button', { name: /Намиксуйте сами/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Собрать свой микс' })).toBeVisible();
 
   // Собранный микс — карточка для мастера в шапке (#289, #291); «Готово»
   // возвращает туда, откуда её открыли.
@@ -176,7 +177,7 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await expect(page.getByText('Покажите мастеру')).toBeVisible();
   await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
-  await expect(page.getByRole('button', { name: /Намиксуйте сами/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Собрать свой микс' })).toBeVisible();
 });
 
 // Нижняя панель (#168, #243, #263): шесть значков, имена — в aria-label. Панели нет на
