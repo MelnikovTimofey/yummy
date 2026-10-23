@@ -39,9 +39,9 @@ test('reelEntries: «Для вас» — новое во вкусе (герой 
     feed.slice(0, 6).map((entry) => entry.slot),
     ['Новое в вашем вкусе', 'Новое в вашем вкусе', 'Новое в вашем вкусе', 'Новое в вашем вкусе', 'Шаг в сторону', 'Снова'],
   );
-  assert.equal(feed[0].reason, 'Черника — рядом с вашими любимыми');
+  assert.equal(feed[0].reason, 'Черника, как в ваших любимых');
   assert.equal(feed[4].reason, 'Попробуйте что-то другое');
-  assert.equal(feed[5].reason, 'Ваша оценка ★ 5 · выбирали 5 раз');
+  assert.equal(feed[5].reason, 'Ваша оценка ★ 5, выбирали 5 раз');
   // После «Для вас» — без слота и причины, строки истории нет.
   assert.deepEqual(feed.slice(6).map((entry) => [entry.slot, entry.reason]), [[null, null], [null, null], [null, null]]);
   assert.ok(feed.every((entry) => entry.hint === null));
@@ -51,7 +51,7 @@ test('reelEntries: подсказка «Давно на одном вкусе» 
   const feed = reelEntries(forYou({ kind: 'same-mix', mixName: 'Морозная ягода', count: 4, outOf: 5 }), []);
   assert.deepEqual(ids(feed), ['s1', 'f1', 'f2', 'f3', 'f4', 'a1']);
   assert.equal(feed[0].slot, 'Шаг в сторону');
-  assert.equal(feed[0].hint, 'Четыре из пяти последних — «Морозная ягода». Мастер уважает постоянство, но рядом есть кое-что.');
+  assert.equal(feed[0].hint, 'Четыре из пяти последних выборов: «Морозная ягода». Попробуйте что-то рядом.');
   assert.ok(feed.slice(1).every((entry) => entry.hint === null));
 });
 

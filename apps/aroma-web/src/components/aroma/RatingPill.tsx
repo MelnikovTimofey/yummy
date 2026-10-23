@@ -2,13 +2,12 @@ import type { CSSProperties } from "react";
 
 type RatingPillProps = {
   rating: number;
-  count?: number;
   style?: CSSProperties;
 };
 
 const formatRating = (rating: number) => rating.toFixed(1).replace(".", ",");
 
-export function RatingPill({ rating, count, style }: RatingPillProps) {
+export function RatingPill({ rating, style }: RatingPillProps) {
   return (
     <span
       style={{
@@ -29,9 +28,6 @@ export function RatingPill({ rating, count, style }: RatingPillProps) {
         ★
       </span>
       <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatRating(rating)}</span>
-      {count != null && (
-        <span style={{ color: "var(--text-2)", fontSize: 10 }}>· {count}</span>
-      )}
     </span>
   );
 }

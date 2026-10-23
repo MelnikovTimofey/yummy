@@ -23,15 +23,15 @@ test('профиль склоняется в среднем роде и в тв�
 });
 
 test('«Снова»: оценка гостя и сколько раз выбирал', () => {
-  assert.equal(reasonText({ kind: 'again', rating: 5, timesChosen: 5 }), 'Ваша оценка ★ 5 · выбирали 5 раз');
+  assert.equal(reasonText({ kind: 'again', rating: 5, timesChosen: 5 }), 'Ваша оценка ★ 5, выбирали 5 раз');
   assert.equal(reasonText({ kind: 'again', rating: null, timesChosen: 2 }), 'Выбирали 2 раза');
-  assert.equal(reasonText({ kind: 'again', rating: 4, timesChosen: 1 }), 'Ваша оценка ★ 4 · выбирали 1 раз');
+  assert.equal(reasonText({ kind: 'again', rating: 4, timesChosen: 1 }), 'Ваша оценка ★ 4, выбирали 1 раз');
 });
 
 test('«Новое в вашем вкусе»: вкусы, затем похожий выбор, затем профили', () => {
   assert.equal(
     reasonText({ kind: 'taste', profiles: ['berry'], flavors: ['черника', 'холодок'], likeMixName: 'Морозная ягода' }),
-    'Черника и холодок — рядом с вашими любимыми',
+    'Черника и холодок, как в ваших любимых',
   );
   assert.equal(
     reasonText({ kind: 'taste', profiles: ['berry'], flavors: [], likeMixName: 'Морозная ягода' }),
@@ -65,18 +65,18 @@ test('нейтральный «Шаг в сторону» не выдумыва�
 test('подсказка «Давно на одном вкусе» называет факт и ничего не запрещает', () => {
   assert.equal(
     hintText({ kind: 'same-mix', mixName: 'Морозная ягода', count: 4, outOf: 5 }),
-    'Четыре из пяти последних — «Морозная ягода». Мастер уважает постоянство, но рядом есть кое-что.',
+    'Четыре из пяти последних выборов: «Морозная ягода». Попробуйте что-то рядом.',
   );
   assert.equal(
     hintText({ kind: 'same-mix', mixName: 'Морозная ягода', count: 5, outOf: 5 }),
-    'Все пять последних — «Морозная ягода». Мастер уважает постоянство, но рядом есть кое-что.',
+    'Все пять последних выборов: «Морозная ягода». Попробуйте что-то рядом.',
   );
   assert.equal(
     hintText({ kind: 'same-profile', profile: 'berry', count: 4, outOf: 5 }),
-    'Четыре из пяти последних — ягодное. Мастер уважает постоянство, но рядом есть кое-что.',
+    'Четыре из пяти последних выборов: ягодное. Попробуйте что-то рядом.',
   );
   for (const text of [hintText({ kind: 'same-profile', profile: 'berry', count: 4, outOf: 4 })]) {
-    assert.match(text, /^Все четыре последних — ягодное\./);
+    assert.match(text, /^Все четыре последних выборов: ягодное\./);
     assert.doesNotMatch(text, /нельзя|хватит|чаще|курите/i);
   }
 });
@@ -97,14 +97,14 @@ test('слоты A: герой и три строки, шаг в сторону,
   assert.equal(slots.hero?.reason, 'Ягодное, как вы любите');
   assert.deepEqual(slots.taste.map((row) => row.mix.id), ['f2', 'f3', 'f4']);
   assert.equal(slots.sidestep?.reason, 'Мастера часто сводят ягодное с цитрусовым');
-  assert.equal(slots.again?.reason, 'Ваша оценка ★ 5 · выбирали 3 раза');
+  assert.equal(slots.again?.reason, 'Ваша оценка ★ 5, выбирали 3 раза');
   assert.equal(slots.hint, null);
 });
 
 test('подсказка ведёт на микс «Шаг в сторону» и не убирает «Снова»', () => {
   const slots = forYouSlots(personal({ hint: { kind: 'same-mix', mixName: 'Микс a1', count: 4, outOf: 5 } }));
   assert.equal(slots.hint?.mix.id, 's1');
-  assert.match(slots.hint?.text ?? '', /^Четыре из пяти последних — «Микс a1»/);
+  assert.match(slots.hint?.text ?? '', /^Четыре из пяти последних выборов: «Микс a1»/);
   assert.equal(slots.again?.mix.id, 'a1');
   assert.equal(slots.sidestep?.mix.id, 's1');
 });
@@ -119,8 +119,8 @@ test('пустые слоты не показываются', () => {
 });
 
 test('«Под настроение» — профили этого визита, иначе вкусы', () => {
-  assert.equal(moodTitle({ profiles: ['citrus', 'berry'], flavors: ['мята'] }), 'Под настроение · Цитрусовый · Ягодный');
-  assert.equal(moodTitle({ profiles: [], flavors: ['мята', 'лайм'] }), 'Под настроение · мята · лайм');
+  assert.equal(moodTitle({ profiles: ['citrus', 'berry'], flavors: ['мята'] }), 'Под настроение: цитрусовый, ягодный');
+  assert.equal(moodTitle({ profiles: [], flavors: ['мята', 'лайм'] }), 'Под настроение: мята, лайм');
   assert.equal(moodTitle({ profiles: [], flavors: [] }), 'Под настроение');
 });
 

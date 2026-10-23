@@ -72,12 +72,11 @@ export function Feed<T extends ReelFeedMix>({
       {/* Без видимой шапки: экран целиком отдан сцене (#290). Заголовок — для скринридера. */}
       <h1 className="reels-heading">Рилсы</h1>
       <div className="reels" ref={scrollerRef} onScroll={onScroll}>
-        {items.map(({ mix, slot, reason, hint: bubble }, i) => (
+        {items.map(({ mix, reason, hint: bubble }, i) => (
           <div key={mix.id} className="reel-slot">
             {Math.abs(i - index) <= 1 ? (
               <Reel
                 mix={mix}
-                slot={slot}
                 reason={reason}
                 bubble={bubble}
                 favorite={isFavorite(mix)}

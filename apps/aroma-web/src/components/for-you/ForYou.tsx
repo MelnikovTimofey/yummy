@@ -1,12 +1,7 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
 import { CTA, ProfileGlyph, SignatureBar } from '@/components/aroma';
-import { getProfileColor } from '@/lib/profile-color';
 import {
   BACK_TO_FOR_YOU,
-  FOR_YOU_SUBTITLE,
   FOR_YOU_TITLE,
-  HINT_TITLE,
   MOOD_LINK,
   type ForYouRow,
   type ForYouSlots,
@@ -24,8 +19,7 @@ type ForYouMix = {
 export function MoodLink({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" className="fy-mood-link" onClick={onClick}>
-      <span>{MOOD_LINK}</span>
-      <ChevronRight size={18} strokeWidth={1.8} aria-hidden />
+      {MOOD_LINK}
     </button>
   );
 }
@@ -33,19 +27,18 @@ export function MoodLink({ onClick }: { onClick: () => void }) {
 export function BackToForYou({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" className="fy-mood-link" onClick={onClick}>
-      <ChevronLeft size={18} strokeWidth={1.8} aria-hidden />
-      <span>{BACK_TO_FOR_YOU}</span>
+      {BACK_TO_FOR_YOU}
     </button>
   );
 }
 
-// Строка «под настроение»: надпись капсами и что из этого следует. `onBack` —
+// Строка «под настроение»: что выбрано и что из этого следует. `onBack` —
 // стрелка на онбординге этого визита: к первому шагу или к «Для вас».
 export function MoodNote({
   title,
   text,
   onBack,
-  backLabel = 'Назад к «Для вас»',
+  backLabel = BACK_TO_FOR_YOU,
 }: {
   title: string;
   text: string;
@@ -60,7 +53,7 @@ export function MoodNote({
         </button>
       ) : null}
       <p className="fy-mood-note-text">
-        <span className="aroma-caps">{title}</span>
+        <span className="fy-mood-note-title">{title}</span>
         {text}
       </p>
     </div>
@@ -97,12 +90,7 @@ function ForYouHero<M extends ForYouMix>({
   const components = [...mix.components].sort((left, right) => right.proportion - left.proportion).slice(0, 4);
 
   return (
-    <article
-      className="aroma-recs-hero"
-      style={{
-        background: `radial-gradient(circle at 80% 0%, ${getProfileColor(mix.flavorProfiles[0])}55 0%, transparent 55%), var(--guest-card-bg)`,
-      }}
-    >
+    <article className="aroma-recs-hero">
       <button type="button" className="aroma-recs-hero-head fy-hero-open" onClick={() => onOpen(mix)}>
         <ProfileGlyph profiles={mix.flavorProfiles} size={64} />
         <span className="aroma-recs-hero-head-text">
@@ -115,21 +103,23 @@ function ForYouHero<M extends ForYouMix>({
         <div className="aroma-recs-composition">
           {components.map((component) => (
             <div className="aroma-recs-comp-row" key={component.id}>
-              <span className="aroma-caps aroma-recs-comp-maker">{component.manufacturer}</span>
+              {component.manufacturer ? (
+                <span className="aroma-recs-comp-maker">{component.manufacturer}</span>
+              ) : null}
               <span className="aroma-recs-comp-name">{component.name}</span>
               <span className="aroma-recs-comp-share">{Math.round(component.proportion)}%</span>
             </div>
           ))}
         </div>
       ) : null}
-      <CTA pulse disabled={chooseDisabled} onClick={() => onChoose(mix)}>
+      <CTA disabled={chooseDisabled} onClick={() => onChoose(mix)}>
         {choosing ? 'Сохраняем…' : 'Покурить'}
       </CTA>
     </article>
   );
 }
 
-// «Для вас», раскладка A · по слотам (мокап fy-a, fy-a-varied).
+// «Для вас», раскладка A по слотам (мокап fy-a, fy-a-varied).
 export function ForYou<M extends ForYouMix>({
   slots,
   choosingId,
@@ -151,23 +141,19 @@ export function ForYou<M extends ForYouMix>({
     <section className="aroma-recs">
       <header className="fy-head">
         <h1 className="fy-title">{FOR_YOU_TITLE}</h1>
-        <p className="fy-sub">{FOR_YOU_SUBTITLE}</p>
         <MoodLink onClick={onMood} />
       </header>
 
       {hint ? (
-        <section className="fy-bubble" aria-label={HINT_TITLE}>
-          <p className="aroma-caps">{HINT_TITLE}</p>
-          <p className="fy-bubble-text">{hint.text}</p>
-          <button type="button" className="fy-bubble-link" onClick={() => onOpen(hint.mix)}>
-            <ProfileGlyph profiles={hint.mix.flavorProfiles} size={28} />
-            <span className="fy-bubble-name">{hint.mix.name}</span>
-            <ChevronRight size={20} strokeWidth={1.8} aria-hidden />
+        <p className="fy-bubble">
+          {`${hint.text} `}
+          <button type="button" className="aroma-text-link" onClick={() => onOpen(hint.mix)}>
+            {hint.mix.name}
           </button>
-        </section>
+        </p>
       ) : null}
 
-      {hero || taste.length ? <p className="aroma-caps">Новое в вашем вкусе</p> : null}
+      {hero || taste.length ? <h2 className="aroma-recs-section-title">Новое в вашем вкусе</h2> : null}
       {hero ? (
         <ForYouHero
           row={hero}
@@ -187,14 +173,14 @@ export function ForYou<M extends ForYouMix>({
 
       {sidestep ? (
         <>
-          <p className="aroma-caps">Шаг в сторону</p>
+          <h2 className="aroma-recs-section-title">Шаг в сторону</h2>
           <ReasonRow row={sidestep} onOpen={onOpen} />
         </>
       ) : null}
 
       {again ? (
         <>
-          <p className="aroma-caps">Снова</p>
+          <h2 className="aroma-recs-section-title">Снова</h2>
           <ReasonRow row={again} onOpen={onOpen} />
         </>
       ) : null}

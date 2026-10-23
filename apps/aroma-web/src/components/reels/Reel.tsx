@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { ChevronUp, Play } from 'lucide-react';
 import { CTA, RatingPill } from '@/components/aroma';
 import { HeartButton } from '@/components/cabinet/HeartButton';
-import { HINT_TITLE } from '@/lib/for-you-copy';
 import { ReelStill } from './ReelStill';
 
 // Remotion — отдельным чанком при первом активном рилсе; пока он едет — статичный кадр.
@@ -25,9 +24,8 @@ const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().
 
 export type ReelProps = {
   mix: ReelFeedMix;
-  /** «Для вас» вошедшего гостя (#265): надпись слота над названием, причина
-   *  под описанием и подсказка «Давно на одном вкусе». */
-  slot: string | null;
+  /** «Для вас» вошедшего гостя (#265): причина под описанием и подсказка
+   *  «Давно на одном вкусе». */
   reason: string | null;
   bubble: string | null;
   favorite: boolean;
@@ -47,7 +45,6 @@ export type ReelProps = {
 
 export function Reel({
   mix,
-  slot,
   reason,
   bubble,
   favorite,
@@ -84,25 +81,20 @@ export function Reel({
         </span>
       ) : null}
 
-      {/* Афиша (#314): сцена — фон, а не видео, поэтому название и описание — по центру,
+      {/* Афиша (#314): сцена — фон, а не видео, поэтому название и описание по центру,
           а внизу только рейтинг, сердечко, состав и кнопки. */}
       <div className={active ? 'reel-poster reel-reveal' : 'reel-poster'}>
         <div className="reel-poster-top">
           {bubble ? (
-            <section className="reel-bubble" aria-label={HINT_TITLE}>
-              <p className="aroma-caps">{HINT_TITLE}</p>
-              <p className="reel-bubble-text">{bubble}</p>
-            </section>
+            <p className="reel-bubble">{bubble}</p>
           ) : null}
         </div>
         <div className="reel-poster-center">
-          {slot ? <p className="aroma-caps reel-slot-name">{slot}</p> : null}
           <h2 className="reel-name">{mix.name}</h2>
           {mix.description ? (
             <p className="reel-desc">{mix.description}</p>
           ) : mix.flavors.length ? (
-            // Неразрывный пробел держит точку при слове: строка не начинается с «·».
-            <p className="reel-flavors">{mix.flavors.join('\u00a0· ')}</p>
+            <p className="reel-flavors">{mix.flavors.join(', ')}</p>
           ) : null}
           {reason ? <p className="reel-reason">{reason}</p> : null}
         </div>
@@ -115,51 +107,41 @@ export function Reel({
           ) : null}
           <div className="reel-details">
             <div className="reel-meta">
-              {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} count={mix.ratingsCount} /> : null}
+              {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
               <HeartButton on={favorite} onClick={onFavorite} />
             </div>
             {gone ? (
               <p className="reel-toast" role="status">
-                Этот микс сейчас недоступен по наличию. Листайте дальше — остальные на месте.
+                Этот микс закончился. Листайте дальше.
               </p>
             ) : error ? (
               <p className="reel-toast" role="alert">
                 {error}
               </p>
             ) : components.length ? (
-              <>
-                <div className="reel-bar" aria-hidden>
-                  {components.map((component, index) => (
+              <ul className="reel-comp" aria-label="Состав микса">
+                {components.map((component, index) => (
+                  <li key={component.id}>
                     <span
-                      key={component.id}
-                      style={{ flexGrow: component.proportion, background: COMPOSITION_PALETTE[index % COMPOSITION_PALETTE.length] }}
+                      className="reel-comp-dot"
+                      style={{ background: COMPOSITION_PALETTE[index % COMPOSITION_PALETTE.length] }}
+                      aria-hidden
                     />
-                  ))}
-                </div>
-                <ul className={components.length === 1 ? 'reel-comp reel-comp-one' : 'reel-comp'} aria-label="Состав микса">
-                  {components.map((component, index) => (
-                    <li key={component.id}>
-                      <span
-                        className="reel-comp-dot"
-                        style={{ background: COMPOSITION_PALETTE[index % COMPOSITION_PALETTE.length] }}
-                        aria-hidden
-                      />
-                      <span className="reel-comp-text">
-                        <span className="aroma-caps reel-comp-maker">{component.manufacturer}</span>
-                        <span className="reel-comp-name">{component.name}</span>
-                      </span>
-                      <span className="reel-comp-share">{formatPercent(component.proportion)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
+                    {component.manufacturer ? (
+                      <span className="reel-comp-maker">{component.manufacturer}</span>
+                    ) : null}
+                    <span className="reel-comp-name">{component.name}</span>
+                    <span className="reel-comp-share">{formatPercent(component.proportion)}</span>
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </div>
           <div className="reel-actions">
             <button type="button" className="aroma-mix-sheet-ghost" onClick={onOpen}>
               Подробнее
             </button>
-            <CTA pulse={!gone && !choosing} disabled={gone || choosing} onClick={onChoose}>
+            <CTA disabled={gone || choosing} onClick={onChoose}>
               {choosing ? 'Сохраняем…' : 'Покурить'}
             </CTA>
           </div>
