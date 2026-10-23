@@ -5715,6 +5715,12 @@ button.chip .chip__count[hidden] {
   color: var(--warning);
 }
 
+/* Пустое состояние карточки — обычная строка под заголовком, без рамки и центровки. */
+.dashboard-page__card .empty {
+  padding: 0;
+  text-align: left;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -6442,14 +6448,14 @@ button.chip .chip__count[hidden] {
 .shelf-empty__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .deliv-back { align-self: flex-start; margin-bottom: -4px; }
-.deliv-muted { color: var(--text-muted); font-size: var(--fs-sm); }
 .deliv-ok { color: var(--success); }
 .deliv-warn { color: var(--warning); }
 .deliv-center { text-align: center; }
-.deliv-dot { background: currentColor; }
 
-.deliv-parse-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.deliv-parse-head__hint { margin-left: auto; }
+/* Статус тегом в мете шапки и итог разбора одной фразой (#365). */
+.deliv-meta { display: inline-flex; align-items: center; gap: 10px; }
+.deliv-parse-line { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.deliv-parse-line b { font-weight: 500; color: var(--text-primary); }
 
 /* --- Плашки: PDF без текста, дубликат, сумма не сходится -------------- */
 
@@ -6485,7 +6491,6 @@ button.chip .chip__count[hidden] {
   transition: border-color 120ms ease, background 120ms ease;
 }
 
-.deliv-drop b { color: var(--text-primary); font-weight: 500; }
 .deliv-drop:focus-visible { outline: none; border-color: var(--accent); }
 .deliv-drop[data-state="hover"] { border-color: var(--accent); background: var(--accent-soft); color: var(--text-primary); }
 .deliv-drop[data-state="busy"] { cursor: progress; border-color: var(--accent-border); }
@@ -6512,7 +6517,7 @@ button.chip .chip__count[hidden] {
 .deliv-raw--skip { opacity: 0.5; }
 
 .deliv-match { display: grid; gap: 3px; min-width: 0; }
-.deliv-match small { font-size: var(--fs-xs); color: var(--text-faint); }
+.deliv-match small { display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--fs-xs); color: var(--text-faint); }
 .deliv-match b { font-weight: 500; }
 
 .deliv-select {
@@ -6583,8 +6588,9 @@ button.chip .chip__count[hidden] {
   box-shadow: var(--shadow-md);
 }
 
-.deliv-footbar__summary { flex: 1; min-width: 240px; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.deliv-footbar__summary { display: flex; flex-wrap: wrap; gap: 4px 20px; flex: 1; min-width: 240px; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
 .deliv-footbar__summary > span { white-space: nowrap; }
+.deliv-footbar__summary b { font-weight: 500; color: var(--text-primary); }
 
 .deliv-date { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-muted); }
 
@@ -7045,14 +7051,6 @@ button.chip .chip__count[hidden] {
   .shelf-dash__columns { grid-template-columns: 1fr; }
 }
 
-.shelf-dash__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
 .shelf-dash__forecast { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); }
 
 .shelf-dash__forecast b {
@@ -7065,6 +7063,15 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-dash__forecast span { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.shelf-dash__total {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
 
 .shelf-dash__subhead {
   margin: 8px 0 0;

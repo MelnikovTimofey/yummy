@@ -18,13 +18,12 @@ import {
   lineGramsHint,
   lineMatchHint,
   localDateInput,
-  meanGramKop,
   monthMeta,
-  monthTitle,
   parseReceivedGrams,
   parseRubles,
   readUploadError,
   receivedAtFromInput,
+  parseSummary,
   summarizeLines,
   sumCheck,
 } from './deliveries';
@@ -84,14 +83,15 @@ test('lineMatch различает память, предложение, руч�
   assert.equal(lineMatchHint(noBrand), 'бренда нет в каталоге');
 });
 
-test('lineMatchHint подписывает выбор под селектом', () => {
-  assert.equal(lineMatchHint(line()), 'по памяти: строка этого поставщика');
-  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 86 })), 'похоже на 86 % · Black Burn');
-  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 64 })), 'похоже на 64 % · Black Burn');
+test('lineMatchHint: только то, чего не видно в селекте и метке, через запятую', () => {
+  assert.equal(lineMatchHint(line()), '');
+  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 86 })), '');
+  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 64 })), 'похоже на 64 %');
+  assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: 64, newOnShelf: true })), 'похоже на 64 %, новый на полке');
   assert.equal(lineMatchHint(line({ matchReason: 'catalog', confidence: null })), 'предложено по каталогу');
-  assert.equal(lineMatchHint(line({ matchReason: 'manual' })), 'выбрано вручную');
-  assert.equal(lineMatchHint(line({ matchReason: 'manual', newOnShelf: true })), 'выбрано вручную · новый на полке');
-  assert.equal(lineMatchHint(line({ tobacco: null, matchReason: null })), 'нет в каталоге');
+  assert.equal(lineMatchHint(line({ matchReason: 'manual' })), '');
+  assert.equal(lineMatchHint(line({ matchReason: 'manual', newOnShelf: true })), 'новый на полке');
+  assert.equal(lineMatchHint(line({ tobacco: null, matchReason: null })), '');
   assert.equal(
     lineMatchHint(
       line({
@@ -100,9 +100,9 @@ test('lineMatchHint подписывает выбор под селектом', 
         candidates: [{ id: 't9', manufacturer: 'Black Burn', lineName: '', name: 'Ananas Shock', confidence: 64, reason: 'catalog' }],
       }),
     ),
-    'похоже на 64 % · Black Burn Ananas Shock',
+    'похоже на Black Burn Ananas Shock, 64 %',
   );
-  assert.equal(lineMatchHint(line({ kind: 'skip', tobacco: null, matchReason: null })), 'нет бренда и веса');
+  assert.equal(lineMatchHint(line({ kind: 'skip', tobacco: null, matchReason: null })), 'не табак');
 });
 
 test('summarizeLines считает сводные метки разбора', () => {
@@ -117,6 +117,40 @@ test('summarizeLines считает сводные метки разбора', (
     line({ id: 'l7', matchReason: 'manual' }),
   ]);
   assert.deepEqual(summary, { memory: 2, catalog: 1, suggest: 2, none: 1, skip: 1, manual: 1 });
+});
+
+const skipLine = (id: string) => line({ id, kind: 'skip', tobacco: null, matchReason: null });
+const segmentsText = (segments: Array<{ text: string }>) => segments.map((segment) => segment.text).join('');
+
+test('parseSummary: итог разбора одной фразой вместо ряда меток', () => {
+  const full = parseSummary([
+    line(),
+    line({ id: 'l2' }),
+    line({ id: 'l3', matchReason: 'catalog', confidence: 90 }),
+    line({ id: 'l3b', matchReason: 'catalog', confidence: 70 }),
+    line({ id: 'l4', tobacco: null, matchReason: null, candidates: [{ id: 'x', manufacturer: 'A', lineName: '', name: 'B', confidence: 40, reason: 'catalog' }] }),
+    line({ id: 'l5', tobacco: null, matchReason: null }),
+    skipLine('l6'),
+    line({ id: 'l7', matchReason: 'manual' }),
+  ]);
+  assert.equal(
+    segmentsText(full),
+    'Найдено 4 из 7 табаков. Проверьте 2 строки, ещё 1 табака нет в каталоге. Одна строка не табак, она пропущена.',
+  );
+  assert.deepEqual(full.filter((segment) => segment.strong).map((segment) => segment.text), ['4 из 7 табаков']);
+
+  assert.equal(segmentsText(parseSummary([line()])), 'Найдено 1 из 1 табака.');
+  assert.equal(
+    segmentsText(parseSummary([line(), line({ id: 'l2', matchReason: 'catalog', confidence: 64 })])),
+    'Найдено 1 из 2 табаков. Проверьте 1 строку.',
+  );
+  assert.equal(
+    segmentsText(parseSummary([line(), line({ id: 'l2', tobacco: null, matchReason: null })])),
+    'Найдено 1 из 2 табаков. Ещё 1 табака нет в каталоге.',
+  );
+  assert.equal(segmentsText(parseSummary([line(), skipLine('s1'), skipLine('s2')])), 'Найдено 1 из 1 табака. 2 строки не табак, они пропущены.');
+  assert.equal(segmentsText(parseSummary([skipLine('s1')])), 'Одна строка не табак, она пропущена.');
+  assert.deepEqual(parseSummary([]), []);
 });
 
 test('деньги из копеек: итог в рублях и цена с копейками', () => {
@@ -143,23 +177,35 @@ test('даты: «18 ноя» и «18.11.2026», дата счёта без сд
   assert.equal(formatFullDate('2026-01-05T10:00:00.000Z'), '05.01.2026');
 });
 
-test('deliveryTitle собирает заголовок карточки', () => {
-  assert.equal(deliveryTitle(card({ number: '04102', invoiceDate: '2026-11-18' })), 'Счёт № 04102 от 18.11.2026');
+test('deliveryTitle: поставщик и номер счёта, дата уходит в подзаголовок', () => {
+  const supplier = { id: 's', name: 'Каспий Опт', inn: null };
+  assert.equal(deliveryTitle(card({ number: '04102', invoiceDate: '2026-11-18', supplier })), 'Каспий Опт, счёт № 04102');
   assert.equal(deliveryTitle(card({ number: '04102' })), 'Счёт № 04102');
-  assert.equal(deliveryTitle(card({ kind: 'manual', invoiceDate: '2026-11-18' })), 'Поставка от 18.11.2026');
-  assert.equal(deliveryTitle(card({ kind: 'manual' })), 'Поставка без номера');
+  assert.equal(deliveryTitle(card({ kind: 'manual', supplier })), 'Каспий Опт, поставка без номера');
+  assert.equal(deliveryTitle(card({ kind: 'manual', invoiceDate: '2026-11-18' })), 'Поставка без номера');
   assert.equal(deliveryTitle(card({ kind: 'start' })), 'Стартовый приход');
 });
 
-test('deliveryHeadline: поставщик, загрузка и приход', () => {
+test('deliveryHeadline: дата счёта и приход предложениями, без middot', () => {
+  const now = new Date(2026, 10, 20, 12);
   assert.equal(
-    deliveryHeadline(card({ supplier: { id: 's', name: 'Каспий Опт', inn: null } })),
-    'Каспий Опт · загружен 18 ноя',
+    deliveryHeadline(card({ invoiceDate: '2026-11-18' }), now),
+    'Счёт от 18 ноября. Принимайте поставку, когда товар придёт.',
   );
-  assert.equal(deliveryHeadline(card({ kind: 'manual' })), 'Поставщик не указан · заполнена вручную 18 ноя');
+  assert.equal(deliveryHeadline(card({}), now), 'Загружен 18 ноября. Принимайте поставку, когда товар придёт.');
+  assert.equal(deliveryHeadline(card({ kind: 'manual' }), now), 'Заполнена вручную 18 ноября. Принимайте поставку, когда товар придёт.');
   assert.equal(
-    deliveryHeadline(card({ status: 'received', receivedAt: '2026-11-19T12:00:00.000Z', supplier: { id: 's', name: 'Каспий Опт', inn: null } })),
-    'Каспий Опт · загружен 18 ноя · принята 19 ноя',
+    deliveryHeadline(card({ status: 'received', invoiceDate: '2026-11-18', receivedAt: '2026-11-19T12:00:00.000Z' }), now),
+    'Счёт от 18 ноября, принята 19 ноября.',
+  );
+  assert.equal(
+    deliveryHeadline(card({ kind: 'start', status: 'received', receivedAt: '2026-09-20T10:00:00.000Z' }), now),
+    'Принят 20 сентября.',
+  );
+  // Другой год называем явно.
+  assert.equal(
+    deliveryHeadline(card({ status: 'received', invoiceDate: '2025-12-30', receivedAt: '2026-01-05T12:00:00.000Z' }), now),
+    'Счёт от 30 декабря 2025, принята 5 января.',
   );
 });
 
@@ -178,20 +224,20 @@ test('deliveryStatusTag: черновик, принята, стартовый п
     createdAt: '',
     ...patch,
   });
-  assert.deepEqual(deliveryStatusTag(item({})), { tone: 'warning', text: 'черновик · ждёт прихода' });
+  assert.deepEqual(deliveryStatusTag(item({})), { tone: 'warning', text: 'ждёт прихода' });
   assert.deepEqual(deliveryStatusTag(item({ status: 'received' })), { tone: 'success', text: 'принята' });
-  assert.deepEqual(deliveryStatusTag(item({ kind: 'start', status: 'received' })), { tone: 'ghost', text: 'Стартовый приход' });
+  assert.deepEqual(deliveryStatusTag(item({ kind: 'start', status: 'received' })), { tone: 'ghost', text: 'стартовый приход' });
 });
 
-test('sumCheck сверяет сумму строк с итогом счёта', () => {
+test('sumCheck сверяет сумму строк с итогом счёта словами, без «=» и «≠»', () => {
   assert.deepEqual(plain(sumCheck(card({ linesSumKop: 2227000, totalKop: 2227000, sumMatches: true }))), {
     tone: 'ok',
-    short: 'Сумма строк 22 270 ₽ = итог счёта',
+    short: 'Сумма строк совпадает с итогом счёта',
     alert: null,
   });
   assert.deepEqual(plain(sumCheck(card({ linesSumKop: 2177000, totalKop: 2227000, sumMatches: false }))), {
     tone: 'warn',
-    short: 'Сумма строк 21 770 ₽ ≠ итог 22 270 ₽',
+    short: 'Сумма строк не совпадает с итогом счёта',
     alert: 'Сумма строк 21 770 ₽ не сходится с итогом счёта 22 270 ₽ (не хватает 500 ₽)',
   });
   assert.equal(
@@ -246,11 +292,6 @@ test('parseReceivedGrams: пусто — сброс к счёту, целое > 
   assert.equal(parseReceivedGrams('250001'), undefined);
 });
 
-test('meanGramKop: средняя цена грамма за месяц, без приходов — null', () => {
-  assert.equal(meanGramKop({ monthKop: 2227000, monthGrams: 2800 }), 2227000 / 2800);
-  assert.equal(meanGramKop({ monthKop: 0, monthGrams: 0 }), null);
-});
-
 test('readUploadError различает нечитаемый PDF, дубликат и прочие ошибки', () => {
   const error = (status: number, payload: unknown) => Object.assign(new Error(String((payload as { error?: string }).error)), { status, payload });
   assert.deepEqual(readUploadError(error(422, { error: 'В файле нет текста', code: 'no_text' })), {
@@ -266,20 +307,22 @@ test('readUploadError различает нечитаемый PDF, дублик�
   assert.deepEqual(readUploadError(error(400, { error: 'Файл больше 5 МБ' })), { kind: 'other', message: 'Файл больше 5 МБ' });
   assert.deepEqual(readUploadError(new TypeError('Failed to fetch')), {
     kind: 'other',
-    message: 'Нет связи с сервером — счёт не загружен. Повторить позже.',
+    message: 'Нет связи с сервером, счёт не загружен. Попробуйте ещё раз.',
   });
 });
 
-test('месяц: «ЗА ОКТЯБРЬ» и «октябрь: 3 счёта»', () => {
+test('мета месяца: «Октябрь: 2 счёта, 43 400 ₽» по счетам этого месяца', () => {
   const now = new Date(2026, 9, 20, 12);
-  assert.equal(monthTitle(now), 'октябрь');
   const items: DeliveryListItem[] = [
-    { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, grams: 200, totalKop: 1, createdAt: '2026-10-18T09:00:00.000Z' },
-    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 1, grams: 200, totalKop: 1, createdAt: '2026-10-02T09:00:00.000Z' },
-    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: null, lines: 1, grams: 200, totalKop: 1, createdAt: '2026-10-01T09:00:00.000Z' },
+    { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, grams: 200, totalKop: 2480000, createdAt: '2026-10-18T09:00:00.000Z' },
+    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 1, grams: 200, totalKop: 1860000, createdAt: '2026-10-02T09:00:00.000Z' },
+    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: null, lines: 1, grams: 200, totalKop: 990000, createdAt: '2026-10-01T09:00:00.000Z' },
     { id: '4', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: null, lines: 0, grams: 1800, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
   ];
-  assert.equal(monthMeta(items, now), 'октябрь: 2 счёта');
+  assert.equal(plain(monthMeta(items, now)), 'Октябрь: 2 счёта, 43 400 ₽');
+  // Счёт без суммы не мешает: сумма только по тем, где она есть; без сумм — только число.
+  assert.equal(plain(monthMeta([{ ...items[0], totalKop: null }], now)), 'Октябрь: 1 счёт');
+  assert.equal(monthMeta([], now), 'Октябрь: 0 счетов');
 });
 
 test('дата прихода: сегодня — текущее время, другой день — полдень этого дня', () => {

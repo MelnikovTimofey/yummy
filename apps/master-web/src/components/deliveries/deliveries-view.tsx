@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { Copy, FileUp, FileWarning, LoaderCircle } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import { ShelfToast, type ShelfToastData } from '@/components/shelf/shelf-toast';
 import { formatMetricValue, type DeliveryCard } from '@/contracts';
 import type { DeliveriesApi } from '@/hooks/use-deliveries';
@@ -11,13 +10,10 @@ import {
   formatDay,
   formatMoney,
   formatWeight,
-  meanGramKop,
   monthMeta,
-  monthTitle,
   readUploadError,
   type UploadError,
 } from '@/lib/deliveries';
-import { formatGramPrice } from '@/lib/shelf';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
 import { ManualDeliveryDialog } from './delivery-dialogs';
 
@@ -116,7 +112,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           }}
           onDeleted={() => {
             backToList();
-            notify({ title: 'Черновик удалён', text: 'полка не изменилась.' });
+            notify({ title: 'Черновик удалён', text: '' });
           }}
         />
         {toastNode}
@@ -126,12 +122,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
 
   const list = api.list;
   const items = list?.items ?? [];
-  const totals = list?.totals;
-  const now = new Date();
-  const month = monthTitle(now);
-  const drafts = items.filter((item) => item.status === 'draft');
-  const oldestDraft = drafts[drafts.length - 1];
-  const gramKop = totals ? meanGramKop(totals) : null;
 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -146,7 +136,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
     <section className="shelf-page deliv-page">
       <MasterPageHeader
         title="Поставки"
-        meta={list ? monthMeta(items, now) : undefined}
+        meta={list ? monthMeta(items, new Date()) : undefined}
         actions={
           <>
             <button type="button" className="btn" data-variant="ghost" onClick={() => setManualOpen(true)}>
@@ -173,28 +163,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
       />
 
       {api.status === 'error' ? <p className="error-text">{api.error}</p> : null}
-
-      {totals ? (
-        <MasterStatsRow
-          tiles={[
-            { label: `ЗА ${month.toLocaleUpperCase('ru-RU')}`, value: formatMoney(totals.monthKop), hint: totals.monthGrams ? `≈ ${formatWeight(totals.monthGrams)} табака` : 'приходов не было' },
-            {
-              label: 'ЖДУТ ПРИХОДА',
-              value: formatMetricValue(totals.drafts),
-              hint: oldestDraft
-                ? `${drafts.length > 1 ? 'старший черновик' : 'черновик'} от ${formatDay(oldestDraft.invoiceDate ?? oldestDraft.createdAt)}`
-                : 'черновиков нет',
-              tone: totals.drafts ? 'warning' : 'default',
-            },
-            { label: 'ПОСТАВЩИКОВ', value: formatMetricValue(totals.suppliers), hint: `сопоставлений в памяти: ${formatMetricValue(totals.memoryItems)}` },
-            {
-              label: 'ЦЕНА ГРАММА',
-              value: formatGramPrice(gramKop),
-              hint: gramKop === null ? 'в этом месяце приходов не было' : `в среднем за ${month}`,
-            },
-          ]}
-        />
-      ) : null}
 
       {failure ? (
         failure.error.kind === 'duplicate' ? (
@@ -259,15 +227,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
         onDrop={onDrop}
       >
         {uploading ? <LoaderCircle size={20} className="deliv-spin" aria-hidden /> : <FileUp size={20} aria-hidden />}
-        {uploading ? (
-          <span>
-            <b>Разбираем «{uploading}»…</b> Читаем строки и сопоставляем с каталогом.
-          </span>
-        ) : (
-          <span>
-            <b>Перетащите PDF счёта сюда</b> или нажмите «Загрузить счёт». Строки разберём и сопоставим с каталогом сами.
-          </span>
-        )}
+        <span>{uploading ? `Разбираем ${uploading}…` : 'Перетащите PDF счёта сюда'}</span>
       </div>
 
       {api.status === 'loading' && !list ? <p className="meta-line">Загружаем поставки…</p> : null}
@@ -321,7 +281,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                     <td className="shelf-num">{item.receivedAt ? formatDay(item.receivedAt) : <span className="shelf-faint">—</span>}</td>
                     <td>
                       <span className={tag.tone === 'ghost' ? 'tag tag--ghost' : 'tag'} data-tone={tag.tone === 'ghost' ? undefined : tag.tone}>
-                        {tag.tone === 'ghost' ? null : <span className="tag__dot deliv-dot" />}
                         {tag.text}
                       </span>
                     </td>
