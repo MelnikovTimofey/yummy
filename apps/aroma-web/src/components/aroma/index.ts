@@ -7,3 +7,4 @@ export { SignatureBar } from "./SignatureBar";
 export { RatingPill } from "./RatingPill";
 export { BottomNav } from "./BottomNav";
 export type { BottomNavTab } from "./BottomNav";
+export { MixListRow } from "./MixListRow";
