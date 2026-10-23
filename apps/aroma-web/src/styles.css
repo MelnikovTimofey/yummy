@@ -1084,35 +1084,50 @@ select:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* Приглашение в «Намиксуй»: строка без глифа и надписи над ней. */
+/* Приглашение в «Намиксуй», вариант A: бордовая карточка со значком панели,
+   чтобы не читалось ещё одной строкой микса. */
 .aroma-mixer-invite {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  min-height: 52px;
-  padding: 10px 10px 10px 14px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line);
-  background: var(--guest-row-bg);
+  min-height: 60px;
+  padding: 10px 10px 10px 12px;
+  border-radius: var(--r-guest-card);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
   color: var(--text-0);
   text-align: left;
   cursor: pointer;
-  transition: border-color 120ms;
+  transition: border-color var(--dur-fast);
 }
 
 .aroma-mixer-invite:hover {
-  border-color: rgba(142, 47, 60, 0.40);
+  border-color: var(--accent-hover);
 }
 
-.aroma-mixer-invite:focus-visible {
+.aroma-mixer-invite:focus-visible,
+.aroma-mixer-invite-outline-btn:focus-visible {
   outline: 2px solid var(--accent-hover);
   outline-offset: 2px;
 }
 
-.aroma-showcase > .aroma-mixer-invite {
+.aroma-showcase > .aroma-mixer-invite,
+.aroma-showcase > .aroma-mixer-invite-outline {
   width: auto;
   margin-inline: 20px;
+}
+
+.aroma-mixer-invite-tile {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--guest-chip-border-on);
+  background: var(--guest-chip-bg-on);
+  color: var(--guest-chip-ink-on);
 }
 
 .aroma-mixer-invite-text {
@@ -1128,6 +1143,7 @@ select:focus-visible {
 }
 
 .aroma-mixer-invite-note {
+  margin: 0;
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-2);
@@ -1137,6 +1153,46 @@ select:focus-visible {
   flex: 0 0 auto;
   margin-left: auto;
   color: var(--text-1);
+}
+
+/* Вариант B: вторичная кнопка-контур на всю ширину, подпись под ней. */
+.aroma-mixer-invite-outline {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.aroma-showcase > .aroma-mixer-invite-outline {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.aroma-mixer-invite-outline-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: var(--r-guest-control);
+  border: 1px solid var(--accent-border);
+  background: transparent;
+  color: var(--text-0);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.aroma-mixer-invite-outline-btn:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-soft);
+}
+
+.aroma-mixer-invite-outline .aroma-mixer-invite-note {
+  text-align: center;
 }
 
 /* Строка микса во всех гостевых списках (MixListRow). */
