@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ChevronRight, ClipboardList } from 'lucide-react';
 
-import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar } from '@/components/aroma';
+import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar, type BottomNavTab } from '@/components/aroma';
 import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
 import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
@@ -3233,21 +3233,21 @@ export const App = () => {
       ? view
       : null;
 
+  const openTab = (tab: Exclude<BottomNavTab, 'mixer'>) => {
+    setCabinetNotice('');
+    setLoginError('');
+    if (tab === 'reels') {
+      void openReels();
+    } else {
+      setView(tab);
+    }
+  };
+
   const renderBottomNav = () =>
     navReturnView ? (
       <BottomNav
         value={navReturnView === 'rail' ? 'showcase' : navReturnView}
-        onChange={(tab) => {
-          setCabinetNotice('');
-          setLoginError('');
-          if (tab === 'mixer') {
-            openMixer(navReturnView);
-          } else if (tab === 'reels') {
-            void openReels();
-          } else {
-            setView(tab);
-          }
-        }}
+        onChange={(tab) => (tab === 'mixer' ? openMixer(navReturnView) : openTab(tab))}
       />
     ) : null;
 
@@ -3318,6 +3318,10 @@ export const App = () => {
               // В «Намиксуй» гость мог нажать «Покурить» — это тоже выбор для «Для вас».
               invalidateForYou();
               setView(mixerReturnView);
+            }}
+            onNavigate={(tab) => {
+              invalidateForYou();
+              openTab(tab);
             }}
             canOpenMix={(mixId) => Boolean(findCatalogMix(mixId))}
             onOpenMix={(mixId) => {

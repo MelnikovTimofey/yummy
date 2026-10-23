@@ -604,7 +604,8 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0 16px;
+  /* 12px: три ссылки шага штриха встают в одну строку на 375px (#350). */
+  gap: 0 12px;
 }
 
 .mixer-link {
@@ -632,11 +633,18 @@
   outline-offset: 2px;
 }
 
-/* Низкие экраны: кольцо и кнопки меньше, чтобы колоде досталось ≥ 200 px. */
+/* Низкие экраны: кольцо и кнопки меньше, отступы плотнее — с нижней панелью
+   (#350) колоде достаётся ≥ 200 px и с двухстрочной репликой мастера. */
 @media (max-height: 740px) {
   .mixer {
     --ring: 72px;
     --round: 48px;
+  }
+
+  .mixer-swipe {
+    gap: 6px;
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 
   .mixer-bowl-name {
