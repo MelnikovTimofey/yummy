@@ -1299,6 +1299,13 @@ select:focus-visible {
   opacity: 0.8;
 }
 
+.aroma-catalog-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .aroma-catalog-empty {
   display: grid;
   gap: 10px;
@@ -1346,12 +1353,6 @@ select:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.aroma-catalog-chip-count {
-  margin-left: 3px;
-  color: var(--text-2);
-  font-variant-numeric: tabular-nums;
 }
 
 .aroma-catalog-sheet-search {
@@ -1688,6 +1689,22 @@ select:focus-visible {
   flex: 1 1 auto;
 }
 
+.aroma-mix-sheet-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* Подпись секции обычным регистром: UPPERCASE в госте только у CTA. */
+.aroma-label {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-1);
+}
+
 .aroma-mix-sheet-title {
   margin: 0;
   font-family: var(--font-display);
@@ -1752,13 +1769,14 @@ select:focus-visible {
 }
 
 .aroma-mix-sheet-comp-maker {
-  margin: 0;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 12px;
+  color: var(--text-2);
   white-space: nowrap;
 }
 
+/* Третья колонка и без производителя: доля остаётся справа. */
 .aroma-mix-sheet-comp-name {
+  grid-column: 3;
   font-size: 13px;
   color: var(--text-0);
   overflow: hidden;
@@ -1823,7 +1841,6 @@ select:focus-visible {
 .aroma-smoke-confirmation {
   flex: 1 1 auto;
   min-height: 0;
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -1831,28 +1848,20 @@ select:focus-visible {
   overflow-y: auto;
 }
 
-.aroma-smoke-confirmation::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 10%, rgba(142, 47, 60, 0.18) 0%, transparent 40%),
-    radial-gradient(circle at 50% 100%, rgba(142, 47, 60, 0.20) 0%, transparent 35%);
-  z-index: 0;
-}
-
-.aroma-smoke-confirmation > * {
-  position: relative;
-  z-index: 1;
-}
-
 .aroma-smoke-confirmation-topbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.aroma-smoke-confirmation-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-1);
 }
 
 .aroma-smoke-confirmation-done {
+  margin-left: auto;
   background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--r-guest-control);
@@ -1884,6 +1893,7 @@ select:focus-visible {
 
 .aroma-smoke-confirmation-profiles {
   margin: 0;
+  font-size: 13px;
   color: var(--text-1);
 }
 
@@ -1896,7 +1906,7 @@ select:focus-visible {
   border-radius: var(--r-guest-card);
   padding: 18px;
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(22, 22, 26, 0.88) 100%);
+  background: var(--guest-card-bg);
   display: grid;
   gap: 10px;
 }
@@ -1953,10 +1963,8 @@ select:focus-visible {
 }
 
 .aroma-rail-topbar {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 10px;
 }
 
 .aroma-rail-back {
@@ -1969,18 +1977,6 @@ select:focus-visible {
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-}
-
-.aroma-rail-topbar-text {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.aroma-rail-meta {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-2);
 }
 
 
@@ -2473,13 +2469,6 @@ select:focus-visible {
   color: var(--text-0);
 }
 
-.fy-sub {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-1);
-}
-
 .fy-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2510,62 +2499,24 @@ select:focus-visible {
 
 /* Подсказка против пузыря: информирует, ничего не прячет (PRD §6.5 п. 5). */
 .fy-bubble {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  padding: 12px 14px;
-  border-radius: var(--r-guest-card);
-  border: 1px solid var(--line);
-  background: var(--guest-card-bg);
-}
-
-.fy-bubble-text {
   margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-guest-row);
+  border: 1px solid var(--line-soft);
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-1);
 }
 
-.fy-bubble-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 6px 4px 6px 8px;
-  border-radius: var(--r-guest-control);
-  border: 1px solid var(--line-soft);
-  background: var(--guest-control-bg-soft);
+.fy-bubble .aroma-text-link {
+  padding: 0;
+  font-size: inherit;
   color: var(--text-0);
-  text-align: left;
-  cursor: pointer;
 }
 
-.fy-bubble-link:hover {
-  border-color: var(--accent-border);
-}
-
-.fy-bubble-link:focus-visible {
-  outline: 2px solid var(--accent-hover);
-  outline-offset: 2px;
-}
-
-.fy-bubble-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-family: var(--font-display);
-  font-size: 14.5px;
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Тихая ссылка: капсы, без рамки и заливки — главное действие на Подборе одно. */
+/* Тихая ссылка без рамки и заливки: главное действие на Подборе одно. */
 .fy-mood-link {
   justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   min-height: 36px;
   margin-top: 2px;
   padding: 0;
@@ -2607,6 +2558,12 @@ select:focus-visible {
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--text-1);
+}
+
+.fy-mood-note-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-0);
 }
 
 .fy-cold {
@@ -2775,20 +2732,6 @@ select:focus-visible {
   animation-delay: 220ms;
 }
 
-/* Полоса состава прорисовывается слева направо. */
-.reel-reveal .reel-bar {
-  animation: reel-bar 0.7s var(--ease-out) both;
-}
-
-@keyframes reel-bar {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
 @keyframes reel-in {
   from {
     opacity: 0;
@@ -2809,26 +2752,8 @@ select:focus-visible {
   flex-direction: column;
   align-items: center;
   color: var(--text-1);
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: 12px;
   pointer-events: none;
-}
-
-.reel-hint svg {
-  animation: reel-hint 2s var(--ease-out) infinite;
-}
-
-@keyframes reel-hint {
-  0%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
 }
 
 .reel-name {
@@ -2845,11 +2770,6 @@ select:focus-visible {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.reel-slot-name {
-  margin: 0;
-  color: var(--text-1);
 }
 
 .reel-desc {
@@ -2874,17 +2794,12 @@ select:focus-visible {
 }
 
 .reel-bubble {
-  display: grid;
-  gap: 4px;
+  margin: 0;
   padding: 10px 12px;
   border-radius: var(--r-guest-row);
   border: 1px solid var(--line);
   background: rgba(20, 20, 23, 0.72);
   backdrop-filter: blur(8px);
-}
-
-.reel-bubble-text {
-  margin: 0;
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--text-1);
@@ -2906,81 +2821,52 @@ select:focus-visible {
 .reel-flavors {
   margin: 0;
   max-width: 30ch;
-  font-size: 12px;
-  line-height: 1.7;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: 14px;
+  line-height: 1.4;
   color: var(--text-1);
   text-wrap: balance;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
 }
 
-/* Состав: полоса пропорций и две колонки — производитель, табак, доля. */
-.reel-bar {
-  display: flex;
-  height: 6px;
-  border-radius: var(--r-pill);
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.reel-bar span {
-  display: block;
-  height: 100%;
-  min-width: 4px;
-}
-
+/* Состав: точка, производитель, табак, доля. */
 .reel-comp {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 14px;
-}
-
-.reel-comp-one {
-  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
 .reel-comp li {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
-  align-items: start;
+  grid-template-columns: 8px auto minmax(0, 1fr) auto;
+  align-items: baseline;
   gap: 8px;
 }
 
 .reel-comp-dot {
   width: 8px;
   height: 8px;
-  margin-top: 5px;
   border-radius: var(--r-pill);
-}
-
-.reel-comp-text {
-  display: grid;
-  min-width: 0;
+  align-self: center;
 }
 
 .reel-comp-maker {
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 12px;
+  color: var(--text-2);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .reel-comp-name {
+  grid-column: 3;
   font-size: 13px;
-  line-height: 1.3;
   color: var(--text-0);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reel-comp-share {
-  margin-top: 14px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-0);
@@ -3026,6 +2912,14 @@ select:focus-visible {
   text-align: center;
 }
 
+.reel-empty-text {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
 .reel-empty-mark {
   box-sizing: border-box;
   width: 56px;
@@ -3043,9 +2937,7 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .reel-reveal .reel-poster-top > *,
   .reel-reveal .reel-poster-center > *,
-  .reel-reveal .reel-details,
-  .reel-reveal .reel-bar,
-  .reel-hint svg {
+  .reel-reveal .reel-details {
     animation: none;
   }
 }

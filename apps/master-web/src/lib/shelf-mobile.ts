@@ -1,5 +1,5 @@
 import { formatCount, type ShelfCounters, type ShelfRow, type ShelfView } from '../contracts';
-import { formatGrams, formatNumber, formatShelfDate, type ShelfStatusKey } from './shelf';
+import { afterReceiptLine, formatNumber, type ShelfStatusKey } from './shelf';
 
 // «Полка» на телефоне (#215, #306): мастер у стойки жмёт «Закончился» и,
 // когда удобно, отмечает остаток.
@@ -32,20 +32,17 @@ export const shelfMobileActions = (row: Pick<ShelfRow, 'status'>): ShelfMobileAc
   switch (row.status) {
     case 'out':
     case 'plan':
-      return { note: 'в «К заказу»', left: null, right: null };
+      return { note: 'в заказе', left: null, right: null };
     case 'stop':
-      return { note: null, left: 'Осталось…', right: 'unstop' };
+      return { note: null, left: 'Указать остаток', right: 'unstop' };
     case 'check':
       return { note: null, left: 'Отметить остаток', right: 'empty' };
     default:
-      return { note: null, left: 'Осталось…', right: 'empty' };
+      return { note: null, left: 'Указать остаток', right: 'empty' };
   }
 };
 
-export const sheetLine = (row: Pick<ShelfRow, 'leftGrams' | 'fullGrams' | 'lastReceipt'>) =>
-  row.fullGrams === null || !row.lastReceipt
-    ? 'Прихода ещё не было'
-    : `После прихода ${formatShelfDate(row.lastReceipt.at)} было ${formatNumber(row.fullGrams)} г · сейчас ${formatGrams(row.leftGrams ?? 0)}`;
+export const sheetLine = (row: Pick<ShelfRow, 'fullGrams' | 'lastReceipt'>) => afterReceiptLine(row) ?? 'Прихода ещё не было';
 
 const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
 
@@ -53,9 +50,7 @@ export const shelfMobileSummary = (view: {
   counters: Pick<ShelfView['counters'], 'all'>;
   totals: ShelfView['totals'];
   today: ShelfView['today'];
-}) =>
-  [
-    formatCount(view.counters.all, ['позиция', 'позиции', 'позиций']),
-    `≈ ${kg.format(view.totals.kg)} кг`,
-    `сегодня ≈ ${formatNumber(view.today.grams)} г, ${formatCount(Math.round(view.today.bowls), ['чаша', 'чаши', 'чаш'])}`,
-  ].join(' · ');
+}) => {
+  const stock = `${formatCount(view.counters.all, ['позиция', 'позиции', 'позиций'])}, ${kg.format(view.totals.kg)} кг.`;
+  return view.today.grams > 0 ? `${stock} Сегодня уйдёт ${formatNumber(view.today.grams)} г.` : stock;
+};

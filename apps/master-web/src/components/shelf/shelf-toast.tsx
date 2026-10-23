@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CircleCheck, Info, TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 
 export type ShelfToastData = {
   id: number;
@@ -16,6 +16,7 @@ const UNDO_SECONDS = 10;
 const NOTE_SECONDS = 5;
 
 // Тост полки и поставок: с отменой живёт 10 с, просто уведомление — 5 с.
+// Название жирной строкой, текст ниже отдельным предложением; иконка только у ошибки (#363).
 export const ShelfToast = ({ toast, onUndo, onClose }: { toast: ShelfToastData; onUndo: () => void; onClose: () => void }) => {
   const total = toast.undo ? UNDO_SECONDS : NOTE_SECONDS;
   const [left, setLeft] = useState(total);
@@ -32,10 +33,10 @@ export const ShelfToast = ({ toast, onUndo, onClose }: { toast: ShelfToastData; 
 
   return (
     <div className="shelf-toast" role="status" data-tone={toast.error ? 'danger' : toast.warn ? 'warning' : undefined}>
-      {toast.error ? <TriangleAlert size={16} aria-hidden /> : toast.warn ? <Info size={16} aria-hidden /> : <CircleCheck size={16} aria-hidden />}
+      {toast.error ? <TriangleAlert size={16} aria-hidden /> : null}
       <p>
         <b>{toast.title}</b>
-        {toast.text ? ` — ${toast.text}` : null}
+        {toast.text ? <span>{toast.text}</span> : null}
       </p>
       {toast.action ? (
         <button
@@ -53,8 +54,8 @@ export const ShelfToast = ({ toast, onUndo, onClose }: { toast: ShelfToastData; 
       {toast.undo ? (
         <>
           <span className="shelf-toast__timer">{left} с</span>
-          <button type="button" className="btn" data-size="sm" onClick={onUndo}>
-            Отменить <span className="kbd">Z</span>
+          <button type="button" className="btn" data-size="sm" title="Клавиша Z" onClick={onUndo}>
+            Отменить
           </button>
         </>
       ) : (

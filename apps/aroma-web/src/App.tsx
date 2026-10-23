@@ -65,7 +65,7 @@ import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
 import { loadReelFeed, reelStrip, type ReelEntry, type ReelHead } from '@/lib/reel-feed';
-import { dedupeRails, railKindIcon, railKindLabel, railOpenLabel } from '@/lib/showcase';
+import { dedupeRails, railKindIcon, railOpenLabel } from '@/lib/showcase';
 
 type GuestView =
   | 'access'
@@ -212,16 +212,6 @@ const noTasteText = 'Выберите хотя бы один профиль ил
 const mixGoneError = { 404: mixUnavailableText };
 const noTasteError = { 400: noTasteText };
 
-const mixSourceLabels: Record<MixSource, string> = {
-  recommendations: 'Подбор для вас',
-  mood: 'Под настроение',
-  showcase: 'Из витрины',
-  reels: 'Из рилсов',
-  catalog: 'Из каталога',
-  rail: 'Из подборки',
-  history: 'Из истории',
-  favorites: 'Из избранного',
-};
 
 const railDescriptions: Record<RailType, string> = {
   statistical: 'Миксы, к которым гости возвращаются чаще всего.',
@@ -350,7 +340,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
         manufacturer:
           typeof componentRecord.manufacturer === 'string' && componentRecord.manufacturer
             ? componentRecord.manufacturer
-            : '—',
+            : '',
         flavors: toStringList(componentRecord.flavors),
         proportion: toNumber(componentRecord.proportion, Math.round(100 / Math.max(1, extractCollection(record, ['components']).length))),
       };
@@ -808,11 +798,6 @@ const MixDetailModal = ({
   }
 
   const custom = state.item?.ref.kind === 'custom';
-  const eyebrow = custom
-    ? 'Собран вами'
-    : source === 'history' || source === 'favorites' || source === 'reels'
-      ? mixSourceLabels[source]
-      : null;
   const blockReason = state.blockReason ?? (!mix.available ? mixUnavailableText : null);
   const canSmoke = !blockReason;
   const isSelected = !custom && selectedMixId === mix.id;
@@ -820,7 +805,6 @@ const MixDetailModal = ({
     (left, right) => right.proportion - left.proportion,
   );
   const totalProportion = components.reduce((sum, item) => sum + item.proportion, 0) || 1;
-  const haloColor = getProfileColor(mix.flavorProfiles[0]);
 
   // Свайп вниз закрывает лист. Жест стартует только от верха прокрутки, чтобы не
   // конфликтовать с чтением длинного состава; ниже порога — лист пружинит назад.
@@ -849,19 +833,20 @@ const MixDetailModal = ({
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
           overflowY: 'auto',
-          background: `radial-gradient(circle at 88% 0%, ${haloColor}50 0%, transparent 50%), var(--guest-sheet-bg)`,
+          background: 'var(--guest-sheet-bg)',
         }}
       >
         <span className="aroma-mix-sheet-handle" aria-hidden />
         <DialogDescription className="sr-only">
-          Карточка микса с составом, рейтингом и действием «Покурить».
+          Карточка микса
         </DialogDescription>
 
         <div className="aroma-mix-sheet-head">
           <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
           <div className="aroma-mix-sheet-head-text">
-            {eyebrow ? <p className="aroma-caps">{eyebrow}</p> : null}
             <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
+            <SignatureBar profiles={mix.flavorProfiles} height={4} />
+            {custom ? <p className="aroma-mix-sheet-note">Собран вами</p> : null}
           </div>
           <HeartButton on={favorite} onClick={onFavorite} />
         </div>
@@ -885,7 +870,7 @@ const MixDetailModal = ({
 
         {components.length ? (
           <section className="aroma-mix-sheet-composition">
-            <p className="aroma-caps">Состав микса</p>
+            <h3 className="aroma-label">Состав</h3>
             <div className="aroma-mix-sheet-stack">
               {components.map((component, index) => (
                 <span
@@ -909,9 +894,9 @@ const MixDetailModal = ({
                     }}
                     aria-hidden
                   />
-                  <span className="aroma-caps aroma-mix-sheet-comp-maker">
-                    {component.manufacturer}
-                  </span>
+                  {component.manufacturer ? (
+                    <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
+                  ) : null}
                   <span className="aroma-mix-sheet-comp-name">{component.name}</span>
                   <span className="aroma-mix-sheet-comp-share">
                     {formatPercent(component.proportion)}
@@ -924,7 +909,7 @@ const MixDetailModal = ({
 
         {custom ? null : (
         <section className="aroma-mix-sheet-rating">
-          <p className="aroma-caps">Ваша оценка</p>
+          <h3 className="aroma-label">Ваша оценка</h3>
           <div
             className="aroma-mix-sheet-stars"
             role="group"
@@ -988,8 +973,6 @@ const CATALOG_SHEET_FLAVOR_LIMIT = 18;
 const CatalogFiltersSheet = ({
   profiles,
   flavors,
-  profileCounts,
-  flavorCounts,
   selected,
   resultCount,
   onToggle,
@@ -998,8 +981,6 @@ const CatalogFiltersSheet = ({
 }: {
   profiles: string[];
   flavors: string[];
-  profileCounts: Record<string, number>;
-  flavorCounts: Record<string, number>;
   selected: CatalogFilterTag[];
   resultCount: number;
   onToggle: (tag: CatalogFilterTag) => void;
@@ -1018,7 +999,6 @@ const CatalogFiltersSheet = ({
     : showAllFlavors
       ? flavors
       : flavors.slice(0, CATALOG_SHEET_FLAVOR_LIMIT);
-  const chipCountLabel = (label: string, count = 0) => `${label}, ${count} ${pluralizeMixes(count)}`;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -1063,25 +1043,23 @@ const CatalogFiltersSheet = ({
         </div>
 
         <section className="aroma-catalog-sheet-block">
-          <p className="aroma-caps">Характер</p>
+          <h3 className="aroma-label">Характер</h3>
           <div className="aroma-catalog-sheet-chips" role="group" aria-label="Характер">
             {profiles.map((profile) => (
               <Chip
                 key={profile}
                 color={getProfileColor(profile)}
                 active={isSelected('profile', profile)}
-                ariaLabel={chipCountLabel(formatProfileLabel(profile), profileCounts[profile])}
                 onClick={() => onToggle({ kind: 'profile', value: profile })}
               >
                 {formatProfileLabel(profile)}
-                <span className="aroma-catalog-chip-count">{profileCounts[profile] ?? 0}</span>
               </Chip>
             ))}
           </div>
         </section>
 
         <section className="aroma-catalog-sheet-block">
-          <p className="aroma-caps">Вкусы</p>
+          <h3 className="aroma-label">Вкусы</h3>
           <input
             type="search"
             className="aroma-catalog-sheet-search"
@@ -1097,11 +1075,9 @@ const CatalogFiltersSheet = ({
               <Chip
                 key={flavor}
                 active={isSelected('flavor', flavor)}
-                ariaLabel={chipCountLabel(flavor, flavorCounts[flavor])}
                 onClick={() => onToggle({ kind: 'flavor', value: flavor })}
               >
                 {flavor}
-                <span className="aroma-catalog-chip-count">{flavorCounts[flavor] ?? 0}</span>
               </Chip>
             ))}
           </div>
@@ -2719,7 +2695,9 @@ export const App = () => {
             <div className="aroma-recs-composition">
               {heroComponents.map((component) => (
                 <div className="aroma-recs-comp-row" key={component.id}>
-                  <span className="aroma-recs-comp-maker">{component.manufacturer}</span>
+                  {component.manufacturer ? (
+                    <span className="aroma-recs-comp-maker">{component.manufacturer}</span>
+                  ) : null}
                   <span className="aroma-recs-comp-name">{component.name}</span>
                   <span className="aroma-recs-comp-share">{Math.round(component.proportion)}%</span>
                 </div>
@@ -2882,11 +2860,16 @@ export const App = () => {
     const components = [...mix.components].sort(
       (left, right) => right.proportion - left.proportion,
     );
-    const profileLabels = mix.flavorProfiles.map(formatProfileLabel).join(' · ');
+    const profileLabels = mix.flavorProfiles
+      .map((profile, index) =>
+        index ? formatProfileLabel(profile).toLowerCase() : formatProfileLabel(profile),
+      )
+      .join(', ');
 
     return (
       <section className="aroma-smoke-confirmation">
         <div className="aroma-smoke-confirmation-topbar">
+          <p className="aroma-smoke-confirmation-note">Покажите мастеру</p>
           <button
             type="button"
             className="aroma-smoke-confirmation-done"
@@ -2897,30 +2880,31 @@ export const App = () => {
         </div>
 
         <div className="aroma-smoke-confirmation-stack">
-          <p className="aroma-caps aroma-smoke-confirmation-kicker">Покажите мастеру</p>
           <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
           <h1 className="aroma-smoke-confirmation-title">{mix.name}</h1>
           {profileLabels ? (
-            <p className="aroma-caps aroma-smoke-confirmation-profiles">{profileLabels}</p>
+            <p className="aroma-smoke-confirmation-profiles">{profileLabels}</p>
           ) : null}
           <SignatureBar profiles={mix.flavorProfiles} height={3} />
         </div>
 
         {components.length ? (
-          <section className="aroma-smoke-confirmation-composition">
-            <p className="aroma-caps">Состав</p>
-            <ul className="aroma-smoke-confirmation-comp-list">
-              {components.map((component) => (
-                <li key={component.id} className="aroma-smoke-confirmation-comp-row">
-                  <div className="aroma-smoke-confirmation-comp-text">
-                    <span className="aroma-smoke-confirmation-comp-name">
-                      {component.name}
-                    </span>
-                    <span className="aroma-caps aroma-smoke-confirmation-comp-maker">
-                      {component.manufacturer}
-                    </span>
-                  </div>
-                  <span className="aroma-smoke-confirmation-comp-share">
+          <section className="aroma-smoke-confirmation-composition" aria-label="Состав">
+            <ul className="aroma-mix-sheet-comp-list">
+              {components.map((component, index) => (
+                <li key={component.id} className="aroma-mix-sheet-comp-row">
+                  <span
+                    className="aroma-mix-sheet-comp-dot"
+                    style={{
+                      background: COMPOSITION_PALETTE[index % COMPOSITION_PALETTE.length],
+                    }}
+                    aria-hidden
+                  />
+                  {component.manufacturer ? (
+                    <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
+                  ) : null}
+                  <span className="aroma-mix-sheet-comp-name">{component.name}</span>
+                  <span className="aroma-mix-sheet-comp-share">
                     {formatPercent(component.proportion)}
                   </span>
                 </li>
@@ -2981,14 +2965,6 @@ export const App = () => {
           >
             ←
           </button>
-          <div className="aroma-rail-topbar-text">
-            <p className="aroma-caps">
-              {`Витрина · ${railKindLabel(rail)}`}
-            </p>
-            <p className="aroma-rail-meta">
-              {`${rail.mixes.length} ${pluralizeMixes(rail.mixes.length)}`}
-            </p>
-          </div>
         </header>
 
         <div className="aroma-rail-intro">
@@ -3038,7 +3014,7 @@ export const App = () => {
                 <h3 className="aroma-rail-row-name">{mix.name}</h3>
                 {mix.flavors.length ? (
                   <p className="aroma-rail-row-flavors">
-                    {mix.flavors.slice(0, 3).join(' · ')}
+                    {mix.flavors.slice(0, 3).join(', ')}
                   </p>
                 ) : null}
               </div>
@@ -3058,9 +3034,6 @@ export const App = () => {
     const catalogFilterLabel = (tag: CatalogFilterTag) =>
       tag.kind === 'profile' ? formatProfileLabel(tag.value) : tag.value;
     const lastCatalogFilter = catalogFilters[catalogFilters.length - 1];
-    const lastFilterLabel = lastCatalogFilter
-      ? catalogFilterLabel(lastCatalogFilter)
-      : query.trim();
     const hasAnyFilter = Boolean(query.trim()) || catalogFilters.length > 0;
     const isEmpty = !filteredCatalogMixes.length && catalogStatus === 'ready';
 
@@ -3111,7 +3084,7 @@ export const App = () => {
                   key={`${tag.kind}-${tag.value}`}
                   active
                   color={tag.kind === 'profile' ? getProfileColor(tag.value) : undefined}
-                  ariaLabel={`Убрать фильтр «${catalogFilterLabel(tag)}»`}
+                  ariaLabel={`Убрать фильтр ${catalogFilterLabel(tag)}`}
                   onClick={() => removeCatalogFilter(tag)}
                 >
                   {catalogFilterLabel(tag)}
@@ -3122,48 +3095,60 @@ export const App = () => {
           ) : null}
         </div>
 
-        <div className="aroma-catalog-meta">
-          <p className="aroma-caps">
-            {catalogStatus === 'loading'
-              ? 'Загружаем…'
-              : `Найдено · ${filteredCatalogMixes.length}`}
-          </p>
-          {hasAnyFilter && !isEmpty ? (
-            <button
-              type="button"
-              className="aroma-onboarding-skip"
-              onClick={resetCatalogFilters}
-            >
-              Сбросить
-            </button>
-          ) : null}
-        </div>
-
-        {catalogError ? <p className="screen-status error">{catalogError}</p> : null}
-        {isEmpty ? (
-          <div className="aroma-catalog-empty">
-            <p className="aroma-catalog-empty-text">
-              По выбранным фильтрам ничего не найдено. Даже мастер развёл руками.
+        {isEmpty ? null : (
+          <div className="aroma-catalog-meta">
+            <p className="aroma-catalog-count">
+              {catalogStatus === 'loading'
+                ? 'Загружаем…'
+                : `${filteredCatalogMixes.length} ${pluralizeMixes(filteredCatalogMixes.length)}`}
             </p>
-            <div className="aroma-catalog-empty-actions">
-              {lastFilterLabel ? (
-                <button
-                  type="button"
-                  className="aroma-catalog-empty-btn"
-                  onClick={() =>
-                    lastCatalogFilter ? removeCatalogFilter(lastCatalogFilter) : setQuery('')
-                  }
-                >
-                  {`Убрать «${lastFilterLabel}»`}
-                </button>
-              ) : null}
+            {hasAnyFilter ? (
               <button
                 type="button"
                 className="aroma-onboarding-skip"
                 onClick={resetCatalogFilters}
               >
-                Сбросить всё
+                Сбросить
               </button>
+            ) : null}
+          </div>
+        )}
+
+        {catalogError ? <p className="screen-status error">{catalogError}</p> : null}
+        {isEmpty ? (
+          <div className="aroma-catalog-empty">
+            <p className="aroma-catalog-empty-text">
+              {lastCatalogFilter
+                ? 'Ничего не найдено. Уберите один из фильтров.'
+                : 'Ничего не найдено. Измените запрос.'}
+            </p>
+            <div className="aroma-catalog-empty-actions">
+              {lastCatalogFilter ? (
+                <>
+                  <button
+                    type="button"
+                    className="aroma-catalog-empty-btn"
+                    onClick={() => removeCatalogFilter(lastCatalogFilter)}
+                  >
+                    {`Убрать: ${catalogFilterLabel(lastCatalogFilter).toLowerCase()}`}
+                  </button>
+                  <button
+                    type="button"
+                    className="aroma-onboarding-skip"
+                    onClick={resetCatalogFilters}
+                  >
+                    Сбросить всё
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="aroma-catalog-empty-btn"
+                  onClick={() => setQuery('')}
+                >
+                  Очистить поиск
+                </button>
+              )}
             </div>
           </div>
         ) : null}
@@ -3181,7 +3166,7 @@ export const App = () => {
                 <h3 className="aroma-catalog-row-name">{mix.name}</h3>
                 {mix.flavors.length ? (
                   <p className="aroma-catalog-row-flavors">
-                    {flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(' · ')}
+                    {flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(', ')}
                   </p>
                 ) : null}
               </div>
@@ -3372,8 +3357,6 @@ export const App = () => {
             formatProfileLabel,
           )}
           flavors={byCountDesc(options.flavors, options.flavorCounts)}
-          profileCounts={options.profileCounts}
-          flavorCounts={options.flavorCounts}
           selected={catalogFilters}
           resultCount={filteredCatalogMixes.length}
           onToggle={(tag) =>

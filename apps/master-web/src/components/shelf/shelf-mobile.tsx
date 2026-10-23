@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Ellipsis } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
-import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
+import { MARK_OPTIONS, formatNumber, fractionGrams, leftEstimateNote, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
 import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
 import { ShelfCheck } from './shelf-bulk';
 import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
@@ -76,10 +76,10 @@ export const ShelfMobileList = ({
             {until.text !== '—' ? (
               <span className="shelf-num" data-tone={until.tone}>
                 {until.text}
-                {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
+                {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
               </span>
             ) : null}
-            {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
+            {line && !until.text.startsWith(line.text) ? <small data-tone={line.tone}>{line.text}</small> : null}
           </span>
           <div className="m-shelf-card__meta">
             <ShelfLevel row={row} />
@@ -92,7 +92,7 @@ export const ShelfMobileList = ({
           {/* Проба (#329, #shot=mobile-trial): отметка у стойки, одно касание. */}
           {row.trial && !picked ? (
             <div className="m-shelf-card__trial">
-              <span>Проба · как зашла?</span>
+              <span>Как зашла проба?</span>
               <TrialMark
                 value={row.trialVerdict}
                 size="lg"
@@ -138,12 +138,13 @@ export const ShelfMarkSheet = ({ row, onCount, onEmpty, onClose }: ShelfMarkShee
   const full = row.fullGrams;
   const items = shelfRowMenu(row);
   const input: CountInput | null = grams !== null ? { grams } : fraction !== null ? { fraction } : null;
+  const note = leftEstimateNote(row);
 
   return (
     <BottomSheet label={`Сколько осталось: ${fullName(row)}`} onClose={onClose} className="m-mark-sheet">
       <div className="m-mark-sheet__head">
-        <p className="m-mark-sheet__eyebrow">{row.tobacco.manufacturer}</p>
         <h2 className="m-mark-sheet__title">{row.tobacco.name}</h2>
+        <p className="m-mark-sheet__brand">{row.tobacco.manufacturer}</p>
         <p className="m-mark-sheet__line">{sheetLine(row)}</p>
       </div>
       <form
@@ -198,11 +199,11 @@ export const ShelfMarkSheet = ({ row, onCount, onEmpty, onClose }: ShelfMarkShee
             Сохранить
           </button>
         </div>
-        <p className="m-mark-sheet__hint">Можно не отмечать — отметка только уточняет расход и прогноз.</p>
+        {note ? <p className="m-mark-sheet__hint">{note}</p> : null}
       </form>
       {items.canEmpty ? (
         <button type="button" className="m-mark-sheet__empty" onClick={() => onEmpty(row)}>
-          Закончился · 0 г
+          Закончился
         </button>
       ) : null}
     </BottomSheet>
@@ -233,18 +234,17 @@ export const ShelfActionsSheet = ({ row, actions, onClose }: ShelfActionsSheetPr
   return (
     <BottomSheet label={label} onClose={onClose} className="m-actions">
       <div className="m-mark-sheet__head">
-        <p className="m-mark-sheet__eyebrow">{row.tobacco.manufacturer}</p>
         <h2 className="m-mark-sheet__title">{mode === 'main' ? row.tobacco.name : label}</h2>
-        {mode === 'main' ? null : <p className="m-mark-sheet__line">{row.tobacco.name}</p>}
+        <p className="m-mark-sheet__brand">{mode === 'main' ? row.tobacco.manufacturer : fullName(row)}</p>
       </div>
 
       {mode === 'main' ? (
         <div className="m-actions__list">
           <button type="button" className="m-actions__item" onClick={() => setMode('receipt')}>
-            Добавить приход без счёта…
+            Приход без счёта
           </button>
           <button type="button" className="m-actions__item" disabled={!items.canWriteOff} onClick={() => setMode('writeoff')}>
-            Списать…
+            Списать
           </button>
           <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
             {items.stopLabel}
@@ -284,7 +284,7 @@ export const ShelfMobileHeadMenu = ({ onSettings }: { onSettings: () => void }) 
                 onSettings();
               }}
             >
-              Настройки полки <span className="shelf-faint">чаша, срок поставки, бюджет</span>
+              Настройки полки
             </button>
           </div>
         </BottomSheet>

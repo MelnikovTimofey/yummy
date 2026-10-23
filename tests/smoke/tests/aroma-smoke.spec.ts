@@ -29,8 +29,11 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
   const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
   const editorialShelf = page.getByRole('button', { name: /^Открыть подборку «.+», редакция$/ }).first();
   await expect(editorialShelf).toBeVisible();
+  const railName = (await editorialShelf.getAttribute('aria-label'))?.match(/«(.+)»/)?.[1] ?? '';
   await editorialShelf.click();
-  await expect(page.getByText('Витрина · Редакция')).toBeVisible();
+  // Подборка без крошки «Витрина · …» и счётчика (#360): «←» и заголовок.
+  await expect(page.getByRole('heading', { name: railName, level: 1 })).toBeVisible();
+  await expect(page.getByText(/^Витрина ·/)).toHaveCount(0);
   await page.getByRole('button', { name: 'Назад к витрине' }).click();
 
   await page.locator('.aroma-showcase-card').first().click();
@@ -39,7 +42,7 @@ test('Aroma guest flow opens after daily code and exposes showcase/catalog witho
 
   await nav.getByRole('button', { name: 'Каталог', exact: true }).click();
   await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
-  await expect(page.getByText(/Найдено/)).toBeVisible();
+  await expect(page.getByText(/^\d+ микс(а|ов)?$/)).toBeVisible();
   await expect(page.getByText('Вход для персонала')).toHaveCount(0);
 });
 
@@ -255,18 +258,28 @@ test('Aroma catalog keeps filters in one sheet and shows them as removable tags'
   const sheet = page.getByRole('dialog', { name: 'Фильтры' });
   await expect(sheet).toBeVisible();
   const flavor = sheet.getByRole('group', { name: 'Вкусы' }).getByRole('button').first();
-  const flavorName = (await flavor.getAttribute('aria-label'))?.split(',')[0] ?? '';
+  // Чипы шторки без счётчиков (#360): имя чипа — сам вкус.
+  const flavorName = (await flavor.innerText()).trim();
+  await expect(flavor).toHaveAccessibleName(flavorName);
   await flavor.click();
   await expect(flavor).toHaveAttribute('aria-pressed', 'true');
   await sheet.getByRole('button', { name: /^Показать \d+ микс/ }).click();
   await expect(sheet).toHaveCount(0);
 
-  const tag = page.getByRole('button', { name: `Убрать фильтр «${flavorName}»` });
+  const tag = page.getByRole('button', { name: `Убрать фильтр ${flavorName}` });
   await expect(tag).toBeVisible();
   await expect(page.getByRole('button', { name: 'Фильтры, выбрано 1' })).toBeVisible();
   await tag.click();
   await expect(tag).toHaveCount(0);
   await expect(filtersButton).toBeVisible();
+
+  // Пустая выдача по одному поиску (#360): факт и выход, без счётчика.
+  const search = page.getByRole('searchbox', { name: 'Поиск по каталогу' });
+  await search.fill('zzzqqq');
+  await expect(page.getByText('Ничего не найдено. Измените запрос.')).toBeVisible();
+  await expect(page.getByText(/^\d+ микс(а|ов)?$/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Очистить поиск' }).click();
+  await expect(search).toHaveValue('');
 });
 
 // Кабинет гостя (#243): последний пункт панели. Анонимный путь — согласие и CTA
@@ -473,7 +486,7 @@ test('Aroma reels feed ends with an invitation to «Намиксуй»', async (
   const feed = page.locator('.reels');
   await feed.evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
   await expect(end).toBeInViewport();
-  await expect(end.getByText('Не нашли своё?')).toBeVisible();
+  await expect(end.getByText('Это все миксы')).toBeVisible();
 
   await end.getByRole('button', { name: 'Намиксуй' }).click();
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
