@@ -29,16 +29,15 @@ export const groupOrderText = (group: ReorderGroup, texts: ReorderView['text']) 
 export const reorderMonth = (item: Pick<ReorderItem, 'monthGrams' | 'rateKind'>) => {
   if (item.rateKind === 'none' || item.monthGrams === null) return { value: 'мало данных', brand: false, few: true };
   const grams = `${formatMonthGrams(item.monthGrams)} г`;
-  return item.rateKind === 'brand' ? { value: `≈ ${grams}`, brand: true, few: false } : { value: grams, brand: false, few: false };
+  return { value: grams, brand: item.rateKind === 'brand', few: false };
 };
 
-export const REORDER_HINT =
-  'Сколько заказать, решает мастер. Расход в месяц — средний за 60 дней; «бренд» — своих отметок мало, взята медиана бренда.';
+export const REORDER_HINT = 'Сколько заказать, решает мастер. Расход в месяц средний за 60 дней. Если своих отметок мало, взята медиана бренда.';
 
-export const REORDER_COPY_HINT = 'Объём впишите сами — перед отправкой в чате.';
+export const REORDER_COPY_HINT = 'Объём впишите перед отправкой.';
 
-// Кусок подписи; strong — выделить жирным.
-export type TextSegment = { text: string; strong?: boolean };
+// Кусок подписи; strong — выделить жирным, tone — цветом (остаток бюджета в «Закупке»).
+export type TextSegment = { text: string; strong?: boolean; tone?: 'success' | 'danger' };
 
 // Зеркало INTERVAL_MIN_DAYS в apps/backend/src/stock.ts: меньше — интервал неизвестен.
 const INTERVAL_MIN_DELIVERIES = 3;
@@ -54,7 +53,7 @@ export const intervalNote = (interval: ShelfInterval, horizon: ShelfHorizon, lea
       segments: [
         { text: 'Интервал поставок пока неизвестен: принято ' },
         { text: invoices(interval.deliveries), strong: true },
-        { text: ` из ${INTERVAL_MIN_DELIVERIES} нужных. В списке — что закончится за срок поставки, ` },
+        { text: ` из ${INTERVAL_MIN_DELIVERIES} нужных. В списке то, что закончится за срок поставки, ` },
         { text: inDays(leadDays), strong: true },
         { text: '.' },
       ],
@@ -65,7 +64,7 @@ export const intervalNote = (interval: ShelfInterval, horizon: ShelfHorizon, lea
     segments: [
       { text: 'Поставки примерно ' },
       { text: `раз в ${inDays(interval.days)}`, strong: true },
-      { text: ` · по ${formatCount(interval.deliveries, ['счёту', 'счетам', 'счетам'])} за 90 дней. В списке — что закончится до следующей поставки с запасом на срок поставки: ` },
+      { text: `, по ${formatCount(interval.deliveries, ['счёту', 'счетам', 'счетам'])} за 90 дней. В списке то, что закончится до следующей поставки с запасом на срок поставки, ` },
       { text: `до ${formatShelfDate(horizon.until)}`, strong: true },
       { text: '.' },
     ],
@@ -76,8 +75,8 @@ export const intervalNote = (interval: ShelfInterval, horizon: ShelfHorizon, lea
 export const settingsCalcNote = (interval: ShelfInterval, horizon: ShelfHorizon, leadDays: number): TextSegment[] => {
   const until = formatShelfDate(horizon.until);
   const rest = interval.days === null
-    ? ` интервал между поставками — по принятым счетам. Пока принято ${invoices(interval.deliveries)} из ${INTERVAL_MIN_DELIVERIES} нужных — «К заказу» видит только срок поставки: до ${until}.`
-    : ` интервал между поставками — по принятым счетам, сейчас примерно раз в ${inDays(interval.days)}. С ним «К заказу» видит до ${until}: ${inDays(interval.days)} до следующей заявки + ${inDays(leadDays)} поставки.`;
+    ? ` интервал между поставками по принятым счетам. Пока принято ${invoices(interval.deliveries)} из ${INTERVAL_MIN_DELIVERIES} нужных, поэтому в заказе то, что закончится за срок поставки, до ${until}.`
+    : ` интервал между поставками по принятым счетам, сейчас примерно раз в ${inDays(interval.days)}. В заказе то, что закончится до ${until}: ${inDays(interval.days)} до следующей заявки и ${inDays(leadDays)} поставки.`;
   return [{ text: 'Считается само:', strong: true }, { text: rest }];
 };
 
@@ -96,7 +95,8 @@ export const groupCaption = (group: ReorderGroup) => {
 
 type UntilInput = { status: ShelfStatus; daysLeft: number | null; endsAt: string | null; rateKind?: ShelfRateKind };
 
-// «Хватит до» для «К заказу» и дашборда; тон — как на полке (shelfUntil).
+// «Хватит до» для «К заказу» и дашборда; тон — как на полке (shelfUntil). Оценка по
+// бренду без «~»: «по бренду» подписан расход рядом.
 export const untilLabel = (item: UntilInput, leadDays: number): { text: string; days: string | null; tone: ShelfTone } => {
   if (item.status === 'out') return { text: 'закончился', days: null, tone: 'danger' };
   if (item.status === 'plan') return { text: 'в плане', days: null, tone: 'faint' };
@@ -104,7 +104,7 @@ export const untilLabel = (item: UntilInput, leadDays: number): { text: string; 
   if (item.daysLeft === null || !item.endsAt) return { text: '—', days: null, tone: 'faint' };
   const days = Math.round(item.daysLeft);
   return {
-    text: `${item.rateKind === 'brand' ? '~' : ''}${formatShelfDate(item.endsAt)}`,
+    text: formatShelfDate(item.endsAt),
     days: `${days} дн`,
     tone: days <= 3 ? 'danger' : days <= leadDays ? 'warning' : 'default',
   };
@@ -112,8 +112,8 @@ export const untilLabel = (item: UntilInput, leadDays: number): { text: string; 
 
 // Границы — как в apps/backend/src/shelf.ts (updateSettings).
 const SETTINGS_FIELDS = [
-  { key: 'bowlGrams', label: 'Граммовка чаши', min: 1, max: 100 },
-  { key: 'leadDays', label: 'Срок поставки', min: 1, max: 60 },
+  { key: 'bowlGrams', min: 1, max: 100, error: 'Укажите граммовку чаши от 1 до 100 г.' },
+  { key: 'leadDays', min: 1, max: 60, error: 'Укажите срок поставки от 1 до 60 дней.' },
 ] as const;
 
 // MAX_BUDGET_KOP в backend — 1e9 копеек.
@@ -125,11 +125,11 @@ export const validateShelfSettings = (
   form: ShelfSettingsForm,
 ): { ok: true; value: ShelfSettings } | { ok: false; error: string } => {
   const value: ShelfSettings = { bowlGrams: 0, leadDays: 0, budgetKop: null };
-  for (const { key, label, min, max } of SETTINGS_FIELDS) {
+  for (const { key, min, max, error } of SETTINGS_FIELDS) {
     const text = form[key].trim();
     const number = Number(text);
     if (!/^\d+$/.test(text) || number < min || number > max) {
-      return { ok: false, error: `${label} — целое число от ${min} до ${max}.` };
+      return { ok: false, error };
     }
     value[key] = number;
   }
@@ -137,7 +137,7 @@ export const validateShelfSettings = (
   const budget = form.budget.replace(/\s/g, '');
   if (budget) {
     if (!/^\d+$/.test(budget) || Number(budget) > MAX_BUDGET_RUB) {
-      return { ok: false, error: 'Бюджет на табак — целое число рублей до 10 000 000 или пусто.' };
+      return { ok: false, error: 'Укажите бюджет в целых рублях, до 10 000 000, или оставьте поле пустым.' };
     }
     value.budgetKop = Number(budget) * 100;
   }

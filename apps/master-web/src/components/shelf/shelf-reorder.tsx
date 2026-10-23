@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarClock, Copy } from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
 import type { ReorderGroup, ReorderView } from '@/contracts';
 import { formatGramPrice, formatNumber } from '@/lib/shelf';
 import {
@@ -27,7 +27,15 @@ const supplierTitle = (group: ReorderGroup) => group.supplier?.name ?? 'Пост
 
 export const Segments = ({ segments }: { segments: TextSegment[] }) => (
   <>
-    {segments.map((segment, index) => (segment.strong ? <b key={index}>{segment.text}</b> : <span key={index}>{segment.text}</span>))}
+    {segments.map((segment, index) =>
+      segment.strong ? (
+        <b key={index} data-tone={segment.tone}>
+          {segment.text}
+        </b>
+      ) : (
+        <span key={index}>{segment.text}</span>
+      ),
+    )}
   </>
 );
 
@@ -47,9 +55,9 @@ export const ShelfReorder = ({ reorder, error, notify, onSettings }: ShelfReorde
     setCopiedKey(groupKey(group));
     try {
       await navigator.clipboard.writeText(groupOrderText(group, reorder.text));
-      notify({ title: 'Скопировано', text: `заявка для «${supplierTitle(group)}». Вставьте её в чат с поставщиком.` });
+      notify({ title: supplierTitle(group), text: 'Заявка скопирована.' });
     } catch {
-      notify({ title: supplierTitle(group), text: 'Не удалось скопировать автоматически — выделите текст заявки ниже.', error: true });
+      notify({ title: supplierTitle(group), text: 'Не удалось скопировать. Выделите текст заявки ниже.', error: true });
     }
   };
 
@@ -69,7 +77,7 @@ export const ShelfReorder = ({ reorder, error, notify, onSettings }: ShelfReorde
         ) : null}
       </div>
 
-      {!reorder.groups.length ? <p className="empty reorder__empty">Заказывать нечего. Полка в порядке.</p> : null}
+      {!reorder.groups.length ? <p className="empty reorder__empty">Заказывать нечего.</p> : null}
 
       {reorder.groups.map((group) => {
         const caption = groupCaption(group);
@@ -80,7 +88,6 @@ export const ShelfReorder = ({ reorder, error, notify, onSettings }: ShelfReorde
               <h2>{title}</h2>
               <span className="reorder-group__caption">{caption}</span>
               <button type="button" className="btn" data-size="sm" onClick={() => void onCopy(group)}>
-                <Copy size={14} aria-hidden />
                 Скопировать заявку
               </button>
             </header>
@@ -114,12 +121,12 @@ export const ShelfReorder = ({ reorder, error, notify, onSettings }: ShelfReorde
                       <td>
                         <span className="shelf-num" data-tone={until.tone}>
                           {until.text}
-                          {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
+                          {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
                         </span>
                       </td>
                       <td className={month.few ? 'shelf-faint' : 'shelf-num'}>
                         {month.value}
-                        {month.brand ? <span className="shelf-faint"> · бренд</span> : null}
+                        {month.brand ? <span className="shelf-faint"> по бренду</span> : null}
                       </td>
                       <td className="shelf-num">
                         {item.leftGrams === null ? <span className="shelf-faint">—</span> : `${formatNumber(item.leftGrams)} г`}
@@ -136,8 +143,7 @@ export const ShelfReorder = ({ reorder, error, notify, onSettings }: ShelfReorde
 
       {copied ? (
         <section className="reorder-copied" aria-label="Текст заявки">
-          <p className="reorder-copied__eyebrow">Скопировано · {supplierTitle(copied)}</p>
-          <h2>Текст для чата с поставщиком</h2>
+          <h2>{copied.supplier ? `Заявка для ${copied.supplier.name}` : 'Заявка'}</h2>
           <pre>{groupOrderText(copied, reorder.text)}</pre>
           <p className="reorder-copied__hint">{REORDER_COPY_HINT}</p>
         </section>

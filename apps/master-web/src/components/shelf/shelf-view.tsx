@@ -1018,17 +1018,7 @@ export const ShelfView = ({
                 {!shown.length ? emptyFiltered : null}
               </div>
 
-              {selecting ? (
-                <>
-                  <ShelfBulkBar summary={summary} busy={bulkBusy} actions={bulkActions} onClear={clearSelection} />
-                  <div className="shelf-keys" aria-hidden="true">
-                    <span><b className="kbd">X</b> выбрать строку</span>
-                    <span><b className="kbd">Shift</b> + клик — диапазон</span>
-                    <span><b className="kbd">E</b> выбранные закончились</span>
-                    <span><b className="kbd">Esc</b> снять выделение</span>
-                  </div>
-                </>
-              ) : null}
+              {selecting ? <ShelfBulkBar summary={summary} busy={bulkBusy} actions={bulkActions} onClear={clearSelection} /> : null}
             </>
           ) : null}
         </>

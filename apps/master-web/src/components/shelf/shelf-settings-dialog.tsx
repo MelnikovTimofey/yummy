@@ -1,7 +1,7 @@
 import { useId, useState, type FormEvent, type InputHTMLAttributes } from 'react';
 import { Calculator } from 'lucide-react';
 import { useIsPhone } from '@/hooks/use-is-phone';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ShelfHorizon, ShelfInterval, ShelfSettings } from '@/contracts';
 import { budgetInput, settingsCalcNote, validateShelfSettings } from '@/lib/reorder';
 import { describeShelfError } from '@/lib/shelf';
@@ -80,7 +80,11 @@ export const ShelfSettingsDialog = ({ settings, interval, horizon, onSave, onClo
 
   return (
     <Dialog open onOpenChange={(next) => (next || busy ? null : onClose())}>
-      <DialogContent className={`operator-dialog shelf-settings${isPhone ? ' operator-dialog--phone' : ''}`} showCloseButton={false}
+      <DialogContent
+        className={`operator-dialog shelf-settings${isPhone ? ' operator-dialog--phone' : ''}`}
+        showCloseButton={false}
+        // Подзаголовка нет: что считается из настроек, сказано под каждым полем.
+        aria-describedby={undefined}
         onOpenAutoFocus={
           isPhone
             ? (event) => {
@@ -91,24 +95,20 @@ export const ShelfSettingsDialog = ({ settings, interval, horizon, onSave, onClo
         }
       >
         <DialogHeader className="operator-dialog__head">
-          <p className="operator-dialog__eyebrow">Полка · настройки</p>
           <DialogTitle className="operator-dialog__title">Настройки полки</DialogTitle>
-          <DialogDescription className="operator-dialog__sub">
-            Из них считаются чаши в прогнозе, «Заканчивается», «К заказу» и бюджет в «Закупке».
-          </DialogDescription>
         </DialogHeader>
         <form className="operator-dialog__form" onSubmit={(event) => void submit(event)} noValidate>
           <div className="operator-dialog__body shelf-settings__body">
             <Field
               label="Граммовка чаши, г"
-              help="Сколько табака уходит на одну чашу. Из неё — «чаш сегодня» в прогнозе и себестоимость чаши."
+              help="Сколько табака уходит на одну чашу. По ней считаются чаши в прогнозе и себестоимость чаши."
               value={bowlGrams}
               onChange={setBowlGrams}
               inputProps={{ ...numeric, min: 1, max: 100, autoFocus: !isPhone }}
             />
             <Field
               label="Срок поставки, дней"
-              help="Сколько дней от заявки поставщику до табака на полке. Табак, который закончится раньше, — «Заканчивается» и в «К заказу»: заказать сейчас, иначе полка опустеет до поставки."
+              help="Сколько дней от заявки поставщику до табака на полке. Табак, который закончится раньше, попадёт в заказ."
               value={leadDays}
               onChange={setLeadDays}
               inputProps={{ ...numeric, min: 1, max: 60 }}
@@ -116,7 +116,7 @@ export const ShelfSettingsDialog = ({ settings, interval, horizon, onSave, onClo
             <Field
               wide
               label="Бюджет на табак, ₽ в месяц"
-              help="Сколько в месяц можно потратить на табак. Необязательно. Покажем, сколько съедает база — табаки «держим постоянно», — и сколько остаётся на то, чего нет, и на пробы."
+              help="Необязательно. В закупке видно, сколько уходит на базу и сколько остаётся на пробы."
               value={budget}
               onChange={setBudget}
               suffix="₽"

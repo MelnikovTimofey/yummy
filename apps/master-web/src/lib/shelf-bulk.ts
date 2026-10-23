@@ -51,16 +51,18 @@ const skipReason = (skipped: ShelfEmptyManyResponse['skipped']) => {
   return out && plan ? 'уже закончились или в плане' : plan ? 'в плане' : 'уже закончились';
 };
 
-// Тост #shot=shelf-bulk-done: одна отмена на всех, пропущенные — числом.
+// Тост #shot=shelf-bulk-done: одна отмена на всех, пропущенные — числом. Текст —
+// предложениями, как у тоста одного табака (emptyToastText).
 export const bulkEmptyToast = (response: ShelfEmptyManyResponse) => {
   const skipped = response.skipped.length ? `Пропущено ${formatNumber(response.skipped.length)}: ${skipReason(response.skipped)}.` : '';
   const title = `Закончились: ${formatNumber(response.done.length)}`;
   if (!response.done.length) return { title, text: skipped };
-  const parts = ['гости их больше не видят.'];
-  if (response.hiddenMixes) parts.push(`Миксов скрыто: ${formatNumber(response.hiddenMixes)}.`);
-  if (response.items.some((item) => item.keepStocked)) parts.push('Держим постоянно — добавлены в «К заказу».');
-  if (skipped) parts.push(skipped);
-  return { title, text: parts.join(' ') };
+  const kept = response.items.filter((item) => item.keepStocked).length;
+  const tail = [
+    response.hiddenMixes ? `скрыто миксов: ${formatNumber(response.hiddenMixes)}` : null,
+    kept ? `в заказ добавлено: ${formatNumber(kept)}` : null,
+  ].filter(Boolean).join(', ');
+  return { title, text: ['Гости их не видят.', tail ? `${tail[0].toUpperCase()}${tail.slice(1)}.` : '', skipped].filter(Boolean).join(' ') };
 };
 
 // Строка сразу после «Закончились», до ответа сервера: отметка 0 г от мастера.
@@ -77,10 +79,10 @@ export const optimisticEmpty = (row: ShelfRow, at: string): ShelfRow => ({
 
 export const bulkStopToast = (count: number, stopped: boolean) =>
   stopped
-    ? { title: `Стоп для гостей: ${formatNumber(count)}`, text: 'гости их больше не видят.' }
-    : { title: `Стоп снят: ${formatNumber(count)}`, text: 'гости снова видят те, что есть на полке.' };
+    ? { title: `Стоп для гостей: ${formatNumber(count)}`, text: 'Гости их не видят.' }
+    : { title: `Стоп снят: ${formatNumber(count)}`, text: 'Гости снова видят те, что есть на полке.' };
 
 export const bulkKeepToast = (count: number, keep: boolean) =>
   keep
-    ? { title: `Держим постоянно: ${formatNumber(count)}`, text: 'закончатся — попадут в «К заказу».' }
-    : { title: `Не держим постоянно: ${formatNumber(count)}`, text: 'в «К заказу» больше не попадут.' };
+    ? { title: `Держим постоянно: ${formatNumber(count)}`, text: 'Когда закончатся, попадут в заказ.' }
+    : { title: `Не держим постоянно: ${formatNumber(count)}`, text: 'В заказ больше не попадут.' };
