@@ -7,16 +7,13 @@ export type DailyCodeWindow = {
 
 const MOSCOW_OFFSET_MINUTES = 180;
 
-// Смена кода в 06:00, а не в полночь: смена, переходящая через полночь, живёт с одним кодом.
-const SHIFT_START_HOUR = 6;
-
 const HOUR_MS = 60 * 60_000;
 
+// Код действует до конца суток по Москве (#381): новый выпускается в полночь.
 export const getDailyCodeWindow = (referenceDate = new Date()): DailyCodeWindow => {
-  const shiftDate = new Date(referenceDate.getTime() + MOSCOW_OFFSET_MINUTES * 60_000 - SHIFT_START_HOUR * HOUR_MS);
+  const moscowDate = new Date(referenceDate.getTime() + MOSCOW_OFFSET_MINUTES * 60_000);
   const startsAt = new Date(
-    Date.UTC(shiftDate.getUTCFullYear(), shiftDate.getUTCMonth(), shiftDate.getUTCDate()) +
-      SHIFT_START_HOUR * HOUR_MS -
+    Date.UTC(moscowDate.getUTCFullYear(), moscowDate.getUTCMonth(), moscowDate.getUTCDate()) -
       MOSCOW_OFFSET_MINUTES * 60_000,
   );
 

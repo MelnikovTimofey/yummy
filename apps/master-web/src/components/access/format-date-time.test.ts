@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDayTime } from './format-date-time';
+import { formatCodeDay } from './format-date-time';
 
-test('formatDayTime: день, месяц словом и время через «в»', () => {
-  assert.equal(formatDayTime(new Date(2026, 9, 24, 6, 0).toISOString()), '24 октября в 06:00');
-  assert.equal(formatDayTime(new Date(2026, 0, 1, 14, 5).toISOString()), '1 января в 14:05');
+// Код живёт до полуночи по Москве (#381): срок — день кода, а не «24 октября в 00:00».
+test('formatCodeDay: день кода по Москве по концу его окна', () => {
+  assert.equal(formatCodeDay('2026-10-23T21:00:00.000Z'), '23 октября');
+  assert.equal(formatCodeDay('2026-01-01T21:00:00.000Z'), '1 января');
 });
 
-test('formatDayTime: без даты — прочерк', () => {
-  assert.equal(formatDayTime(''), '—');
-  assert.equal(formatDayTime('not-a-date'), '—');
+test('formatCodeDay: без даты — прочерк', () => {
+  assert.equal(formatCodeDay(''), '—');
+  assert.equal(formatCodeDay('not-a-date'), '—');
 });

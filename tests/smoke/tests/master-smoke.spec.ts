@@ -167,7 +167,7 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   await expect(page.getByRole('button', { name: 'Добавить оператора' })).toBeVisible();
   // Канон #366: код смены меняется ежедневно, подсказка одной строкой без иконки;
   // фильтры операторов без счётчиков.
-  await expect(page.locator('.daily-code-rotation')).toHaveText(/^Код меняется каждый день в 06:00/);
+  await expect(page.locator('.daily-code-rotation')).toHaveText(/^Код меняется каждый день в полночь/);
   await expect(page.locator('.daily-code-rotation svg')).toHaveCount(0);
   await expect(page.locator('.access-toolbar .chip__count')).toHaveCount(0);
   // AuditBlock убран со страницы целиком (mockup-trim) — журнал теперь

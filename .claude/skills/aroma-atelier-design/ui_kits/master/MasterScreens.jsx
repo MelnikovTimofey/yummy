@@ -244,7 +244,7 @@ function AccessScreen() {
         <div className="code-row">
           <span className="code-value">4821</span>
           <span className="code-meta">
-            <span>Действует до 06:00</span>
+            <span>Действует до полуночи</span>
             <span><MasterTag tone="success" dot>бот на связи</MasterTag> 30 сек назад</span>
           </span>
         </div>
