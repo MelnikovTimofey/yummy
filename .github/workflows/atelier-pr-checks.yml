@@ -215,6 +215,26 @@ jobs:
         working-directory: apps/aroma-web
         run: npm run build
 
+  # Скрипт живёт в master-web, но проверяет исходники обоих приложений (#368).
+  atelier-design-lint:
+    name: atelier-design-lint
+    needs: changes
+    if: needs.changes.outputs.aroma == 'true' || needs.changes.outputs.master == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/master-web/package-lock.json
+      - name: Install dependencies
+        working-directory: apps/master-web
+        run: npm ci
+      - name: Design lint
+        working-directory: apps/master-web
+        run: npm run lint:design
+
   atelier-master-build:
     name: atelier-master-build
     needs: changes
@@ -230,9 +250,6 @@ jobs:
       - name: Install dependencies
         working-directory: apps/master-web
         run: npm ci
-      - name: Design lint
-        working-directory: apps/master-web
-        run: npm run lint:design
       - name: Test
         working-directory: apps/master-web
         run: npm test

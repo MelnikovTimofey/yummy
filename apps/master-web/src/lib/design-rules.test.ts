@@ -33,12 +33,63 @@ test('findDesignViolations пропускает токены, хэш-маршр�
   assert.deepEqual(findDesignViolations(source), []);
 });
 
-// Эмодзи в системе нет; разрешённые символы — ★ ✓ ← → ↑ ↓ × ⌘ · ↕ (#102).
+// Эмодзи в системе нет; разрешённые символы — ★ ✓ ← → ↑ ↓ × ⌘ ↕ (#102).
 test('findDesignViolations ловит эмодзи, но не разрешённые символы', () => {
-  const source = ["const a = 'Готово 🔥';", "const b = '★ 4,8 · ⌘K ✓ ← ↕';"].join('\n');
+  const source = ["const a = 'Готово 🔥';", "const b = '★ 4,8 ⌘K ✓ ← ↕';"].join('\n');
 
   assert.deepEqual(
     findDesignViolations(source).map((item) => [item.line, item.rule]),
     [[1, 'emoji']],
+  );
+});
+
+// Признаки генерации из канона (#348): middot, тире между частями фразы, «≈»,
+// многоточие вне состояний процесса.
+test('findDesignViolations ловит middot, тире между частями фразы и «≈»', () => {
+  const source = [
+    "const a = `${brand} · ${line}`;",
+    "const b = 'Активен — гость видит на витрине';",
+    '        Цифры с последней синхронизации, отзывы —',
+    "const c = `≈ ${grams} г`;",
+  ].join('\n');
+
+  assert.deepEqual(
+    findDesignViolations(source).map((item) => [item.line, item.rule]),
+    [
+      [1, 'middot'],
+      [2, 'dash'],
+      [3, 'dash'],
+      [4, 'approx'],
+    ],
+  );
+});
+
+test('findDesignViolations пропускает одиночный прочерк и диапазон дат', () => {
+  const source = [
+    "const a = value ?? '—';",
+    '<td>—</td>',
+    '              —',
+    'return `${dayMonth.format(start)} – ${dayMonth.format(end)}`;',
+    '// Код смены — строкой (#366)',
+  ].join('\n');
+
+  assert.deepEqual(findDesignViolations(source), []);
+});
+
+test('findDesignViolations пускает многоточие только в состояниях процесса', () => {
+  const source = [
+    "{saving ? 'Сохраняем…' : 'Сохранить'}",
+    '<p className="meta-line">Загружаем полку…</p>',
+    "{uploading ? `Разбираем ${uploading}…` : 'Перетащите PDF'}",
+    'placeholder="Название, бренд, вкус…"',
+    "`Ещё ${hidden}…`",
+  ].join('\n');
+
+  assert.deepEqual(
+    findDesignViolations(source).map((item) => [item.line, item.rule]),
+    [
+      [4, 'ellipsis'],
+      [5, 'ellipsis'],
+    ],
   );
 });
