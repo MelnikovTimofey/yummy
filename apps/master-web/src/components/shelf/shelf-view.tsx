@@ -973,7 +973,7 @@ export const ShelfView = ({
                                 {until.text}
                                 {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
                               </span>
-                              {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
+                              {line && !until.text.startsWith(line.text) ? <small data-tone={line.tone}>{line.text}</small> : null}
                             </span>
                           </td>
                           <td>

@@ -172,16 +172,15 @@ test('fractionGrams: доля от уровня после прихода, ка�
   assert.equal(fractionGrams(250, 0.25), 63);
 });
 
-test('shelfLevel: полоса — доля от уровня после прихода, цифра — граммы сейчас, подпись — откуда цифра', () => {
-  assert.deepEqual(shelfLevel(row()), { share: 0.75, tone: 'normal', none: false, empty: false, value: '300 г', hint: 'прогноз' });
-  // Мастер указал остаток сегодня: подпись «указал мастер» вместо «прогноз».
+test('shelfLevel: полоса — доля от уровня после прихода, цифра — граммы сейчас, подпись — от какого уровня', () => {
+  assert.deepEqual(shelfLevel(row()), { share: 0.75, tone: 'normal', none: false, empty: false, value: '300 г', hint: 'из 400 г после прихода' });
   assert.deepEqual(shelfLevel(row({ leftSource: 'mark', leftGrams: 40, fullGrams: 400, status: 'ending', daysLeft: 2 })), {
     share: 0.1,
     tone: 'crit',
     none: false,
     empty: false,
     value: '40 г',
-    hint: 'указал мастер',
+    hint: 'из 400 г после прихода',
   });
   assert.equal(shelfLevel(row({ status: 'ending', daysLeft: 6, leftGrams: 55, fullGrams: 250 })).tone, 'low');
   assert.equal(shelfLevel(row({ status: 'ending', daysLeft: 2, leftGrams: 40 })).tone, 'crit');
@@ -192,7 +191,7 @@ test('shelfLevel: полоса — доля от уровня после при�
     none: true,
     empty: true,
     value: '0 г',
-    hint: 'указал мастер',
+    hint: 'из 200 г после прихода',
   });
   assert.deepEqual(shelfLevel(row({ status: 'plan', leftGrams: null, fullGrams: null, lastReceipt: null })), {
     share: 0,
@@ -209,7 +208,7 @@ test('shelfLevel: полоса — доля от уровня после при�
     none: false,
     empty: false,
     value: '0 г',
-    hint: 'прогноз',
+    hint: 'из 200 г после прихода',
   });
   assert.equal(shelfLevel(row({ leftGrams: 1234.6, fullGrams: 1500 })).value, '1 235 г');
 });

@@ -79,7 +79,7 @@ export const ShelfMobileList = ({
                 {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
               </span>
             ) : null}
-            {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
+            {line && !until.text.startsWith(line.text) ? <small data-tone={line.tone}>{line.text}</small> : null}
           </span>
           <div className="m-shelf-card__meta">
             <ShelfLevel row={row} />

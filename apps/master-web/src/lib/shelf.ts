@@ -239,15 +239,14 @@ export type ShelfLevel = {
   hint: string;
 };
 
-// Под остатком — откуда цифра (#323): «указал мастер» или «прогноз». Что число
-// расчётное, говорит шапка колонки «Остаток по учёту» (#363), «≈» в строках нет.
-const markedByMaster = (row: Pick<ShelfRow, 'leftSource'>) => row.leftSource === 'mark';
-
+// Что число расчётное, говорит один раз шапка колонки «Остаток по учёту» (#363):
+// в строке граммы без «≈», под ними — от какого уровня. Отметка мастера видна
+// строкой статуса в «Хватит до» («отметка ¾ вчера»).
 export const shelfLevel = (row: ShelfRow): ShelfLevel => {
   if (row.leftGrams === null || row.fullGrams === null) {
     return { share: 0, tone: 'normal', none: true, empty: false, value: '—', hint: 'прихода не было' };
   }
-  const hint = markedByMaster(row) ? 'указал мастер' : 'прогноз';
+  const hint = `из ${formatNumber(row.fullGrams)} г после прихода`;
   // «Проверьте остаток»: расчёт мог дойти до нуля, но это оценка, а не отметка.
   if (row.leftGrams <= 0 && row.status !== 'check') return { share: 0, tone: 'normal', none: true, empty: true, value: '0 г', hint };
   const tone = row.status === 'check' || (row.daysLeft !== null && row.daysLeft <= 3) ? 'crit' : row.status === 'ending' ? 'low' : 'normal';
@@ -262,6 +261,8 @@ export const shelfLevel = (row: ShelfRow): ShelfLevel => {
 };
 
 // Подпись к остатку в карточке (#shot=card, card-exact): кто дал цифру и от какого уровня.
+const markedByMaster = (row: Pick<ShelfRow, 'leftSource'>) => row.leftSource === 'mark';
+
 export const remainHint = (row: ShelfRow, now = new Date()) => {
   if (row.leftGrams === null || row.fullGrams === null || !row.lastReceipt) return 'прихода не было';
   const base = `из ${formatNumber(row.fullGrams)} г после прихода ${formatShelfDate(row.lastReceipt.at)}`;
