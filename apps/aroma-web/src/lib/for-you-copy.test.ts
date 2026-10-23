@@ -65,18 +65,19 @@ test('нейтральный «Шаг в сторону» не выдумыва�
 test('подсказка «Давно на одном вкусе» называет факт и ничего не запрещает', () => {
   assert.equal(
     hintText({ kind: 'same-mix', mixName: 'Морозная ягода', count: 4, outOf: 5 }),
-    'Четыре из пяти последних выборов: «Морозная ягода». Попробуйте что-то рядом.',
+    'Четыре из пяти последних миксов: «Морозная ягода»',
   );
   assert.equal(
     hintText({ kind: 'same-mix', mixName: 'Морозная ягода', count: 5, outOf: 5 }),
-    'Все пять последних выборов: «Морозная ягода». Попробуйте что-то рядом.',
+    'Все пять последних миксов: «Морозная ягода»',
   );
   assert.equal(
     hintText({ kind: 'same-profile', profile: 'berry', count: 4, outOf: 5 }),
-    'Четыре из пяти последних выборов: ягодное. Попробуйте что-то рядом.',
+    'Четыре из пяти последних миксов ягодные',
   );
+  assert.equal(hintText({ kind: 'same-profile', profile: 'fresh', count: 3, outOf: 4 }), 'Три из четырёх последних миксов свежие');
+  assert.equal(hintText({ kind: 'same-profile', profile: 'fruity', count: 4, outOf: 4 }), 'Все четыре последних микса фруктовые');
   for (const text of [hintText({ kind: 'same-profile', profile: 'berry', count: 4, outOf: 4 })]) {
-    assert.match(text, /^Все четыре последних выборов: ягодное\./);
     assert.doesNotMatch(text, /нельзя|хватит|чаще|курите/i);
   }
 });
@@ -104,7 +105,7 @@ test('слоты A: герой и три строки, шаг в сторону,
 test('подсказка ведёт на микс «Шаг в сторону» и не убирает «Снова»', () => {
   const slots = forYouSlots(personal({ hint: { kind: 'same-mix', mixName: 'Микс a1', count: 4, outOf: 5 } }));
   assert.equal(slots.hint?.mix.id, 's1');
-  assert.match(slots.hint?.text ?? '', /^Четыре из пяти последних выборов: «Микс a1»/);
+  assert.match(slots.hint?.text ?? '', /^Четыре из пяти последних миксов: «Микс a1»/);
   assert.equal(slots.again?.mix.id, 'a1');
   assert.equal(slots.sidestep?.mix.id, 's1');
 });
