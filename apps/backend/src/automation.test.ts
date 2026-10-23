@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { config } from './config';
+import { getDailyCodeWindow } from './daily-code';
+import { prisma } from './db';
 import { resetAppState } from './state';
 
 const automationHeaders = {
@@ -143,6 +145,36 @@ test('automation can read, ensure and rotate the current daily code', async () =
     assert.equal(refreshedBody.state, 'existing');
     assert.equal(refreshedBody.item.codeValue, rotatedBody.item.codeValue);
     assert.equal(refreshedBody.item.active, true);
+  } finally {
+    await app.close();
+  }
+});
+
+// Код, выпущенный по прежнему окну (06:00–06:00, #351), пересекается и с новыми
+// сутками. Истёкший код ensure не отдаёт, а выпускает новый (#381).
+test('automation ensure replaces an expired code that still overlaps the window', async () => {
+  const app = buildApp();
+  const window = getDailyCodeWindow();
+  const expiredAt = new Date(Math.max(Date.now() - 1000, window.startsAt.getTime() + 1));
+  await prisma.dailyAccessCode.updateMany({
+    data: { startsAt: new Date(window.startsAt.getTime() - 18 * 60 * 60_000), endsAt: expiredAt },
+  });
+
+  try {
+    const ensured = await app.inject({
+      method: 'POST',
+      url: '/automation/daily-code/ensure',
+      headers: automationHeaders,
+    });
+
+    assert.equal(ensured.statusCode, 200);
+    const body = ensured.json() as {
+      item: { codeValue: string; endsAt: string };
+      state: 'existing' | 'created';
+    };
+    assert.equal(body.state, 'created');
+    assert.notEqual(body.item.codeValue, '1234');
+    assert.equal(body.item.endsAt, window.endsAt.toISOString());
   } finally {
     await app.close();
   }

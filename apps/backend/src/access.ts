@@ -314,13 +314,15 @@ const mapTelegramOperator = (record: {
 const isUniqueConstraintError = (error: unknown) =>
   Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2002');
 
-const dailyCodeWindowFilter = (window = getDailyCodeWindow()) => ({
+// Код окна — тот, что ещё действует: код прежнего окна может пересекаться с
+// новыми сутками, но уже не проходит проверку гостя (#381).
+const dailyCodeWindowFilter = (window = getDailyCodeWindow(), now = new Date()) => ({
   active: true,
   startsAt: {
     lt: window.endsAt,
   },
   endsAt: {
-    gt: window.startsAt,
+    gt: now,
   },
 });
 
