@@ -181,7 +181,7 @@ export const formatOneDecimal = (value: number) => decimal.format(value);
 
 export const formatDecimal = (value: number) => (value < 10 ? decimal : integer).format(value);
 
-export const formatGrams = (grams: number) => (grams > 0 ? `≈ ${formatNumber(grams)} г` : '0 г');
+export const formatGrams = (grams: number) => `${formatNumber(Math.max(0, grams))} г`;
 
 export const fractionLabel = (fraction: number) =>
   fraction >= 0.99 ? '1' : MARK_OPTIONS.find((option) => Math.abs(option.value - fraction) < 0.01)?.label ?? decimal.format(fraction);
@@ -196,7 +196,7 @@ const freshCount = (row: Pick<ShelfRow, 'lastCount' | 'lastReceipt'>) =>
 export const shelfStatusLine = (row: ShelfRow, now = new Date()): { tone: ShelfTone; text: string } | null => {
   switch (row.status) {
     case 'stop':
-      return { tone: 'faint', text: row.stopNote ? `стоп для гостей · ${row.stopNote}` : 'стоп для гостей' };
+      return { tone: 'faint', text: row.stopNote ? `стоп для гостей: ${row.stopNote}` : 'стоп для гостей' };
     case 'out':
       return { tone: 'danger', text: 'закончился' };
     case 'ending':
@@ -222,7 +222,7 @@ export const shelfUntil = (row: ShelfRow, leadDays: number, now = new Date()): {
   if (row.status === 'plan' || row.daysLeft === null || !row.endsAt) return { text: '—', days: null, tone: 'faint' };
   const days = Math.round(row.daysLeft);
   return {
-    text: `${row.rateKind === 'brand' ? '~' : ''}${formatShelfDate(row.endsAt)}`,
+    text: formatShelfDate(row.endsAt),
     days: `${days} дн`,
     tone: days <= 3 ? 'danger' : days <= leadDays ? 'warning' : 'default',
   };
@@ -232,37 +232,37 @@ export type ShelfLevel = {
   // Доля от уровня после последнего прихода, 0…1.
   share: number;
   tone: 'normal' | 'low' | 'crit';
-  // Полоса пунктиром: остатка нет или прихода не было.
+  // Полоса пустая: остатка нет или прихода не было.
   none: boolean;
   empty: boolean;
   value: string;
   hint: string;
 };
 
-// Под остатком — откуда цифра (#323): «указал мастер» — без «≈», «прогноз» — с ним.
-const markedByMaster = (row: Pick<ShelfRow, 'leftSource'>) => row.leftSource === 'mark';
-
+// Что число расчётное, говорит один раз шапка колонки «Остаток по учёту» (#363):
+// в строке граммы без «≈», под ними — от какого уровня. Отметка мастера видна
+// строкой статуса в «Хватит до» («отметка ¾ вчера»).
 export const shelfLevel = (row: ShelfRow): ShelfLevel => {
   if (row.leftGrams === null || row.fullGrams === null) {
     return { share: 0, tone: 'normal', none: true, empty: false, value: '—', hint: 'прихода не было' };
   }
-  const exact = markedByMaster(row);
-  const hint = exact ? 'указал мастер' : 'прогноз';
+  const hint = `из ${formatNumber(row.fullGrams)} г после прихода`;
   // «Проверьте остаток»: расчёт мог дойти до нуля, но это оценка, а не отметка.
   if (row.leftGrams <= 0 && row.status !== 'check') return { share: 0, tone: 'normal', none: true, empty: true, value: '0 г', hint };
   const tone = row.status === 'check' || (row.daysLeft !== null && row.daysLeft <= 3) ? 'crit' : row.status === 'ending' ? 'low' : 'normal';
-  const grams = `${formatNumber(Math.max(0, row.leftGrams))} г`;
   return {
     share: row.fullGrams > 0 ? Math.min(1, Math.max(0, row.leftGrams) / row.fullGrams) : 0,
     tone,
     none: false,
     empty: false,
-    value: exact ? grams : `≈ ${grams}`,
+    value: formatGrams(row.leftGrams),
     hint,
   };
 };
 
 // Подпись к остатку в карточке (#shot=card, card-exact): кто дал цифру и от какого уровня.
+const markedByMaster = (row: Pick<ShelfRow, 'leftSource'>) => row.leftSource === 'mark';
+
 export const remainHint = (row: ShelfRow, now = new Date()) => {
   if (row.leftGrams === null || row.fullGrams === null || !row.lastReceipt) return 'прихода не было';
   const base = `из ${formatNumber(row.fullGrams)} г после прихода ${formatShelfDate(row.lastReceipt.at)}`;
@@ -272,13 +272,22 @@ export const remainHint = (row: ShelfRow, now = new Date()) => {
   return `${count ? `указал мастер ${relativeDay(count.at, now)}` : 'указал мастер'} · ${base}`;
 };
 
+// «Сколько осталось?» во всплывашке строки и в шторке телефона (#363, #shot=shelf-left).
+export const afterReceiptLine = (row: Pick<ShelfRow, 'fullGrams' | 'lastReceipt'>) =>
+  row.fullGrams === null || !row.lastReceipt
+    ? null
+    : `После прихода ${formatShelfDate(row.lastReceipt.at)} было ${formatNumber(row.fullGrams)} г`;
+
+export const leftEstimateNote = (row: Pick<ShelfRow, 'leftGrams'>) =>
+  row.leftGrams === null ? null : `По расчёту сейчас ${formatGrams(row.leftGrams)}.`;
+
 // Расход в месяц — до десятков граммов, как в мокапе; малый — до грамма.
 export const formatMonthGrams = (grams: number) => formatNumber(grams < 10 ? grams : Math.round(grams / 10) * 10);
 
 export const shelfMonthRate = (row: Pick<ShelfRow, 'monthGrams' | 'rateKind'>): { value: string; hint: string | null; faint: boolean } => {
   if (row.rateKind === 'none' || row.monthGrams === null) return { value: 'мало данных', hint: null, faint: true };
   const value = `${formatMonthGrams(row.monthGrams)} г/мес`;
-  return row.rateKind === 'brand' ? { value: `≈ ${value}`, hint: 'по бренду', faint: false } : { value, hint: null, faint: false };
+  return { value, hint: row.rateKind === 'brand' ? 'по бренду' : null, faint: false };
 };
 
 // Под расходом в месяц в карточке — г/день и откуда расход.
@@ -288,19 +297,6 @@ export const cardRateHint = (row: Pick<ShelfRow, 'rate' | 'rateKind'>, marks: nu
   if (row.rateKind === 'brand') return `${perDay} · по бренду`;
   return `${perDay} · ${marks ? `по ${formatCount(marks, ['отметке', 'отметкам', 'отметкам'])} за 60 дней` : 'по отметкам остатка'}`;
 };
-
-// Плитка «Заканчивается» (#325): горизонт — до следующей поставки, без интервала — срок поставки.
-export const endingHint = (view: Pick<ShelfView, 'interval' | 'horizon'>) =>
-  `${view.interval.days === null ? 'за срок поставки' : 'до следующей поставки'}, до ${formatShelfDate(view.horizon.until)}`;
-
-// Плитка «В месяц уходит» (#shot=shelf): прогноз дня × 30.
-export const monthTile = (today: ShelfView['today'], bowlGrams: number) =>
-  today.grams > 0
-    ? {
-        value: `≈ ${formatDecimal((today.grams * 30) / 1000)} кг`,
-        hint: `≈ ${formatNumber(today.grams)} г в день · ${formatCount(Math.round(today.bowls), ['чаша', 'чаши', 'чаш'])} по ${bowlGrams} г`,
-      }
-    : { value: '—', hint: 'расход появится после первой отметки' };
 
 const rubles = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -336,28 +332,28 @@ export const defaultReceiptGrams = (manufacturer: string) => (BIG_PACK_BRANDS.in
 // --- Тосты -------------------------------------------------------------------
 
 export const emptyToastText = (after: ShelfRow) => {
-  const hidden = after.mixCount ? `. Миксов скрыто: ${formatNumber(after.mixCount)}` : '';
-  const reorder = after.keepStocked ? ' Добавлен в «К заказу».' : '';
-  return `закончился: 0 г, гости его больше не видят${hidden}.${reorder}`;
+  const tail = [
+    after.mixCount ? `скрыто миксов: ${formatNumber(after.mixCount)}` : null,
+    after.keepStocked ? 'табак добавлен в заказ' : null,
+  ].filter(Boolean).join(', ');
+  return `Закончился, гости его не видят.${tail ? ` ${tail[0].toUpperCase()}${tail.slice(1)}.` : ''}`;
 };
 
 type Count = { grams: number; fraction: number | null };
 
-export const countToastText = (count: Count) => {
-  const left = count.fraction !== null ? `${fractionLabel(count.fraction)} — ${formatNumber(count.grams)} г` : `${formatNumber(count.grams)} г`;
-  return `осталось ${left}. Расход и «хватит до» пересчитаны.`;
-};
+export const countToastText = (count: Count) =>
+  `Осталось ${formatNumber(count.grams)} г${count.fraction !== null ? ` (${fractionLabel(count.fraction)})` : ''}.`;
 
 export const countOverToastText = (count: Count, expected: number) =>
-  `осталось ${formatNumber(count.grams)} г — больше, чем по расчёту (≈ ${formatNumber(expected)} г). Отметку сохранили, расход за этот отрезок не считаем.`;
+  `Осталось ${formatNumber(count.grams)} г, по расчёту было ${formatNumber(expected)} г. Отметка сохранена, этот отрезок в расход не идёт.`;
 
 export const writeOffToastText = (grams: number, reason: string, after: ShelfRow) =>
   after.status === 'out'
-    ? `списано ${formatNumber(grams)} г: ${reason}. Остатка нет — гости его больше не видят.`
-    : `списано ${formatNumber(grams)} г: ${reason}. Осталось ${formatGrams(after.leftGrams ?? 0)}.`;
+    ? `Списано ${formatNumber(grams)} г (${reason}). Остатка нет, гости табак не видят.`
+    : `Списано ${formatNumber(grams)} г (${reason}). Осталось ${formatGrams(after.leftGrams ?? 0)}.`;
 
 export const receiptToastText = (grams: number, after: ShelfRow) =>
-  `приход +${formatNumber(grams)} г. Сейчас ${formatGrams(after.leftGrams ?? 0)}.`;
+  `Приход +${formatNumber(grams)} г. Сейчас ${formatGrams(after.leftGrams ?? 0)}.`;
 
 // Зеркало подсчёта в apps/backend/src/shelf.ts (getShelf): после действия
 // строка приходит с сервера, а счётчики пересчитываются здесь.
@@ -420,7 +416,7 @@ export const describeShelfError = (cause: unknown) => {
   if (cause instanceof Error && typeof (cause as Error & { status?: number }).status === 'number') {
     return cause.message;
   }
-  return 'Нет связи с сервером — изменение не сохранено. Повторить позже.';
+  return 'Нет связи с сервером, изменение не сохранено. Попробуйте ещё раз.';
 };
 
 // Действия строки — одни и те же на десктопе, в карточке и на телефоне.

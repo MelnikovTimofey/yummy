@@ -169,6 +169,11 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+  // Канон #363: без KPI-ряда и строки клавиш, у «Все» числа нет, расчётность — в шапке колонки.
+  await expect(page.locator('.shelf-page .stats')).toHaveCount(0);
+  await expect(page.locator('.shelf-keys')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: 'Все', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Остаток по учёту' })).toBeVisible();
 
   const emptyButton = (row: Locator) => row.getByRole('button', { name: 'Закончился', exact: true });
   const first = page
@@ -184,8 +189,11 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
   await emptyButton(row).click();
   const toast = page.locator('.shelf-toast');
   await expect(toast).toBeVisible();
-  await expect(toast).toContainText(/закончился: 0 г/);
-  await toast.getByRole('button', { name: /Отменить/ }).click();
+  // Название жирной строкой, ниже отдельное предложение; иконки у успешного тоста нет (#363).
+  await expect(toast.locator('b')).not.toBeEmpty();
+  await expect(toast).toContainText('Закончился, гости его не видят.');
+  await expect(toast.locator('svg')).toHaveCount(0);
+  await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
   await expect(toast).toBeHidden();
   await expect(emptyButton(row)).toBeVisible();
 });
@@ -231,7 +239,7 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   await expect(toast).toBeVisible();
   await expect(toast).toContainText('Закончились: 2');
   await expect(toast).toContainText('гости их больше не видят');
-  for (const row of rows) await expect(row).toContainText('в «К заказу»');
+  for (const row of rows) await expect(row).toContainText('в заказе');
 
   await toast.getByRole('button', { name: /Отменить/ }).click();
   await expect(toast).toBeHidden();
@@ -296,11 +304,11 @@ test.describe('Master on a phone', () => {
     // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
     const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончился', exact: true });
-    // У «проверьте остаток» вместо «Осталось…» — «Отметить остаток»: берём обычную карточку.
+    // У «проверьте остаток» вместо «Указать остаток» — «Отметить остаток»: берём обычную карточку.
     const first = page
       .locator('.m-shelf-card')
       .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
-      .filter({ has: page.getByRole('button', { name: 'Осталось…', exact: true }) })
+      .filter({ has: page.getByRole('button', { name: 'Указать остаток', exact: true }) })
       .first();
     await expect(first).toBeVisible();
     const id = await first.getAttribute('data-tobacco-id');
@@ -311,20 +319,20 @@ test.describe('Master on a phone', () => {
     await emptyButton(card).click();
     const toast = page.locator('.shelf-toast');
     await expect(toast).toBeVisible();
-    await expect(toast).toContainText(/закончился: 0 г/);
-    await toast.getByRole('button', { name: /Отменить/ }).click();
+    await expect(toast).toContainText('Закончился, гости его не видят.');
+    await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
     await expect(toast).toBeHidden();
     await expect(emptyButton(card)).toBeVisible();
 
-    await card.getByRole('button', { name: 'Осталось…', exact: true }).click();
+    await card.getByRole('button', { name: 'Указать остаток', exact: true }).click();
     const sheet = page.getByRole('dialog', { name: /^Сколько осталось/ });
     await expect(sheet).toBeVisible();
     // Доли от уровня после прихода — с граммами на кнопке.
     const shares = sheet.getByRole('group', { name: 'Сколько осталось' }).getByRole('button');
     await expect(shares).toHaveCount(4);
     await expect(shares.first()).toContainText(/\d+ г/);
-    await expect(sheet).toContainText('Можно не отмечать — отметка только уточняет расход и прогноз.');
-    await expect(sheet.getByRole('button', { name: /^Закончился · 0 г/ })).toBeVisible();
+    await expect(sheet).toContainText(/По расчёту сейчас [\d\s ]+ г\./);
+    await expect(sheet.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
     // Тап по затемнению над шторкой закрывает её без отметки.
     await page.mouse.click(187, 40);
     await expect(sheet).toBeHidden();
@@ -355,13 +363,13 @@ test.describe('Master on a phone', () => {
     await card.getByRole('button', { name: /^Действия:/ }).click();
     const actions = page.getByRole('dialog', { name: /^Действия:/ });
     await expect(actions).toBeVisible();
-    for (const name of ['Добавить приход без счёта…', 'Списать…']) {
+    for (const name of ['Приход без счёта', 'Списать']) {
       await expect(actions.getByRole('button', { name, exact: true })).toBeVisible();
     }
     await expect(actions.getByRole('button', { name: /стоп для гостей$/i })).toBeVisible();
     await expect(actions.getByRole('button', { name: /^Убрать с полки/ })).toBeVisible();
 
-    await actions.getByRole('button', { name: 'Списать…', exact: true }).click();
+    await actions.getByRole('button', { name: 'Списать', exact: true }).click();
     const writeOff = page.getByRole('dialog', { name: 'Списать', exact: true });
     await expect(writeOff.getByLabel('Причина')).toBeVisible();
     await expect(writeOff.getByRole('button', { name: /^Списать/ })).toBeDisabled();
@@ -651,10 +659,9 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await expect(shelfRow).toBeVisible();
   // Вторая ячейка — табак: первая — чекбокс выбора (#333), а в колонке
   // «Приход» тоже есть .shelf-name.
-  // textContent, а не innerText: подпись бренда в CSS набрана капслоком.
   const nameCell = shelfRow.locator('td').nth(1);
   const tobaccoName = ((await nameCell.locator('.shelf-name b').textContent()) ?? '').trim();
-  const manufacturer = ((await nameCell.locator('.shelf-name span').textContent()) ?? '').split(' · ')[0].trim();
+  const manufacturer = ((await nameCell.locator('.shelf-name span').textContent()) ?? '').trim();
 
   await openWorkspace(page, 'Поставки');
   await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeVisible();

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ellipsis, FileUp, Search, SlidersHorizontal } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { MasterStatsRow } from '@/components/shell/master-stats-row';
 import {
   DEFAULT_SHELF_SETTINGS,
   formatCount,
@@ -23,11 +22,9 @@ import {
   countToastText,
   describeShelfError,
   emptyToastText,
-  endingHint,
   filterShelfRows,
   formatNumber,
   formatShelfDate,
-  monthTile,
   receiptToastText,
   resolveShelfShortcut,
   shelfChipCount,
@@ -296,7 +293,7 @@ export const ShelfView = ({
         const item = await shelf.update(row.tobacco.id, { stopped });
         return {
           title: fullName(row),
-          text: stopped ? 'стоп для гостей, гости его больше не видят.' : item.guestAvailable ? 'стоп снят, гости снова видят табак.' : 'стоп снят.',
+          text: stopped ? 'Стоп для гостей включён.' : item.guestAvailable ? 'Стоп снят, гости снова видят табак.' : 'Стоп снят.',
           undo: () => shelf.update(row.tobacco.id, { stopped: !stopped, ...(row.stopNote ? { stopNote: row.stopNote } : {}) }),
         };
       }),
@@ -323,7 +320,7 @@ export const ShelfView = ({
         if (cardId === row.tobacco.id) setCardId('');
         return {
           title: fullName(row),
-          text: 'убран с полки, история осталась.',
+          text: 'Убран с полки, история осталась.',
           undo: () => shelf.add(row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active', false),
         };
       }),
@@ -435,7 +432,7 @@ export const ShelfView = ({
     await shelf.deleteEntry(entryId);
   }, [shelf]);
 
-  // «Сколько осталось?» по клавише O — у кнопки «Осталось…» строки, иначе у «⋯».
+  // «Сколько осталось?» по клавише O — у кнопки «Указать остаток» строки, иначе у «⋯».
   const openLeft = useCallback((row: ShelfRow) => {
     const tr = tableRef.current?.querySelector(`tr[data-tobacco-id="${CSS.escape(row.tobacco.id)}"]`);
     const anchor = tr?.querySelector<HTMLElement>('[data-left-anchor]') ?? tr?.querySelector<HTMLElement>('[data-menu-anchor]');
@@ -545,10 +542,7 @@ export const ShelfView = ({
         <MasterPageHeader title="Полка" actions={headMenu} />
         <div className="shelf-empty">
           <h2>Полка пуста</h2>
-          <p>
-            Остаток появляется из поставок. Загрузите первый счёт поставщика — строки сопоставим с каталогом, вы проверите и
-            примете. Табаки, которые уже стоят на полке, можно добавить из каталога без счёта.
-          </p>
+          <p>Остаток появляется из поставок. Загрузите счёт или добавьте табаки из каталога.</p>
           <div className="shelf-empty__actions">
             {uploadButton}
             <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
@@ -585,6 +579,25 @@ export const ShelfView = ({
     />
   ) : null;
   const toastNode = toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null;
+  const emptyFiltered = (
+    <div className="empty shelf-table__empty">
+      <p>Ничего не найдено. Уберите один из фильтров.</p>
+      <button
+        type="button"
+        className="btn"
+        data-size="sm"
+        data-variant="ghost"
+        onClick={() => {
+          setQuery('');
+          setStatus('all');
+          setFilters(EMPTY_SHELF_FILTERS);
+        }}
+      >
+        Сбросить фильтры
+      </button>
+    </div>
+  );
+  // У «Все» числа нет: сколько всего, сказано в мете шапки (#363).
   const statusChip = ([key, label]: [ShelfStatusKey, string]) => (
     <button
       key={key}
@@ -594,7 +607,7 @@ export const ShelfView = ({
       onClick={() => setStatus(key)}
     >
       <span>{label}</span>
-      <span className="filter-chip__count">{formatMetricValue(shelfChipCount(view, key))}</span>
+      {key === 'all' ? null : <span className="filter-chip__count">{formatMetricValue(shelfChipCount(view, key))}</span>}
     </button>
   );
 
@@ -629,7 +642,7 @@ export const ShelfView = ({
               <button
                 type="button"
                 className="m-shelf-search__filters"
-                aria-label={activeFilters ? `Фильтры и сортировка · выбрано ${activeFilters}` : 'Фильтры и сортировка'}
+                aria-label={activeFilters ? `Фильтры и сортировка, выбрано ${activeFilters}` : 'Фильтры и сортировка'}
                 aria-expanded={filtersOpen}
                 data-active={activeFilters > 0}
                 onClick={() => setFiltersOpen(true)}
@@ -654,7 +667,7 @@ export const ShelfView = ({
               onOpenCard={(row) => setCardId(row.tobacco.id)}
               onTrialVerdict={(row, verdict) => onTrialVerdict(row.tobacco, verdict)}
             />
-            {!shown.length ? <p className="empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
+            {!shown.length ? emptyFiltered : null}
           </>
         ) : null}
 
@@ -721,7 +734,8 @@ export const ShelfView = ({
                 Полка
               </button>
               <button type="button" aria-pressed={mode === 'reorder'} onClick={() => onModeChange('reorder')}>
-                {reorderCount === null ? 'К заказу' : `К заказу · ${formatMetricValue(reorderCount)}`}
+                К заказу
+                {reorderCount ? <span className="shelf-seg__count">{formatMetricValue(reorderCount)}</span> : null}
               </button>
               <button type="button" aria-pressed={mode === 'purchase'} onClick={() => onModeChange('purchase')}>
                 Закупка
@@ -759,15 +773,6 @@ export const ShelfView = ({
 
           {mode === 'shelf' ? (
             <>
-              <MasterStatsRow
-                tiles={[
-                  { label: 'НА ПОЛКЕ', value: formatMetricValue(view.counters.all), hint: `≈ ${kg.format(totals.kg)} кг табака` },
-                  { label: 'ЗАКАНЧИВАЕТСЯ', value: formatMetricValue(view.counters.ending), hint: endingHint(view), tone: 'warning' },
-                  { label: 'ЗАКОНЧИЛИСЬ', value: formatMetricValue(view.counters.out), hint: 'держим постоянно — в «К заказу»', tone: 'danger' },
-                  { label: 'В МЕСЯЦ УХОДИТ', ...monthTile(view.today, settings.bowlGrams) },
-                ]}
-              />
-
               <div className="shelf-toolbar">
                 <div className="input shelf-toolbar__search">
                   <Search size={14} aria-hidden />
@@ -782,7 +787,6 @@ export const ShelfView = ({
                       if (event.key === 'Escape') event.currentTarget.blur();
                     }}
                   />
-                  <span className="kbd" aria-hidden="true">/</span>
                 </div>
                 <div className="shelf-toolbar__chips" role="group" aria-label="Статус на полке">
                   {SHELF_STATUS_CHIPS.map(statusChip)}
@@ -846,7 +850,7 @@ export const ShelfView = ({
                         />
                       </th>
                       <th scope="col">Табак</th>
-                      <th scope="col">Остаток</th>
+                      <th scope="col">Остаток по учёту</th>
                       <th scope="col">Расход</th>
                       <th scope="col">Хватит до</th>
                       <th scope="col">Приход</th>
@@ -866,7 +870,7 @@ export const ShelfView = ({
                         setMenu(leftOpen ? null : { id: row.tobacco.id, anchor, mode: 'left' });
                       let primary;
                       if (row.status === 'out' || row.status === 'plan') {
-                        primary = <span className="shelf-faint shelf-table__note">в «К заказу»</span>;
+                        primary = <span className="shelf-faint shelf-table__note">в заказе</span>;
                       } else if (row.status === 'stop') {
                         primary = (
                           <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
@@ -883,6 +887,7 @@ export const ShelfView = ({
                             data-left-anchor
                             aria-expanded={leftOpen}
                             disabled={busy}
+                            title="Клавиша O"
                             onClick={(event) => openLeftAt(event.currentTarget)}
                           >
                             Отметить остаток
@@ -899,11 +904,12 @@ export const ShelfView = ({
                               data-left-anchor
                               aria-expanded={leftOpen}
                               disabled={busy}
+                              title="Клавиша O"
                               onClick={(event) => openLeftAt(event.currentTarget)}
                             >
-                              Осталось…
+                              Указать остаток
                             </button>
-                            <button type="button" className="btn" data-size="sm" disabled={busy} onClick={() => void onEmpty(row)}>
+                            <button type="button" className="btn" data-size="sm" disabled={busy} title="Клавиша E" onClick={() => void onEmpty(row)}>
                               Закончился
                             </button>
                           </>
@@ -953,7 +959,7 @@ export const ShelfView = ({
                             {month.faint ? (
                               <span className="shelf-faint">{month.value}</span>
                             ) : month.hint ? (
-                              <span className="shelf-until" title="Своих отметок ещё мало — медиана бренда">
+                              <span className="shelf-until" title="Своих отметок мало, взята медиана бренда">
                                 <span className="shelf-num">{month.value}</span>
                                 <small data-tone="faint">{month.hint}</small>
                               </span>
@@ -965,17 +971,16 @@ export const ShelfView = ({
                             <span className="shelf-until">
                               <span className="shelf-num" data-tone={until.tone}>
                                 {until.text}
-                                {until.days ? <span className="shelf-faint"> · {until.days}</span> : null}
+                                {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
                               </span>
-                              {line && line.text !== until.text ? <small data-tone={line.tone}>{line.text}</small> : null}
+                              {line && !until.text.startsWith(line.text) ? <small data-tone={line.tone}>{line.text}</small> : null}
                             </span>
                           </td>
                           <td>
                             {row.lastReceipt ? (
                               <span className="shelf-name shelf-name--receipt">
                                 <b>
-                                  {formatShelfDate(row.lastReceipt.at)}
-                                  <span className="shelf-faint"> · +{formatNumber(row.lastReceipt.grams)} г</span>
+                                  {formatShelfDate(row.lastReceipt.at)}, +{formatNumber(row.lastReceipt.grams)} г
                                 </b>
                                 <span>{row.lastReceipt.label}</span>
                               </span>
@@ -1010,7 +1015,7 @@ export const ShelfView = ({
                     })}
                   </tbody>
                 </table>
-                {!shown.length ? <p className="empty shelf-table__empty">По фильтрам ничего. Полка на месте, просто не здесь.</p> : null}
+                {!shown.length ? emptyFiltered : null}
               </div>
 
               {selecting ? (
@@ -1023,18 +1028,7 @@ export const ShelfView = ({
                     <span><b className="kbd">Esc</b> снять выделение</span>
                   </div>
                 </>
-              ) : (
-                <div className="shelf-keys" aria-hidden="true">
-                  <span><b className="kbd">/</b> поиск</span>
-                  <span><b className="kbd">↑</b><b className="kbd">↓</b> строка</span>
-                  <span><b className="kbd">E</b> закончился</span>
-                  <span><b className="kbd">O</b> сколько осталось</span>
-                  <span><b className="kbd">1</b>–<b className="kbd">4</b> осталось ¾ ½ ⅓ ¼</span>
-                  <span><b className="kbd">X</b> выбрать</span>
-                  <span><b className="kbd">Enter</b> карточка</span>
-                  <span><b className="kbd">Z</b> отменить</span>
-                </div>
-              )}
+              ) : null}
             </>
           ) : null}
         </>
