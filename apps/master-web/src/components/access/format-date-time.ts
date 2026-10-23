@@ -1,15 +1,11 @@
-export const formatDateTimeDisplay = (value: string) => {
-  if (!value) {
-    return 'Не указано';
-  }
-
+// «24 октября в 06:00» — срок кода смены (#348).
+export const formatDayTime = (value: string) => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
+  if (!value || Number.isNaN(date.getTime())) {
+    return '—';
   }
 
-  return new Intl.DateTimeFormat('ru-RU', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  const day = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(date);
+  const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(date);
+  return `${day} в ${time}`;
 };

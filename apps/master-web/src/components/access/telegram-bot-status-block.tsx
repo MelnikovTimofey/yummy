@@ -73,17 +73,11 @@ export const TelegramBotStatusBlock = ({
   return (
     <section className="bot-status" aria-label="Статус Telegram-бота">
       <header className="bot-status__head">
-        <span className="bot-status__shield" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 3 4 6v6c0 4.5 3.4 8.5 8 9 4.6-.5 8-4.5 8-9V6l-8-3Z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
-        </span>
         <div className="bot-status__title">
           <p className="bot-status__name">Telegram-бот</p>
           <p className="bot-status__heartbeat">
             {heartbeatIso
-              ? `На связи в ${formatTimeOnly(heartbeatIso)} · ${relativeFromNow(heartbeatIso)}`
+              ? `На связи ${relativeFromNow(heartbeatIso)}, в ${formatTimeOnly(heartbeatIso)}`
               : 'Ещё не выходил на связь'}
           </p>
         </div>
@@ -102,7 +96,7 @@ export const TelegramBotStatusBlock = ({
 
       <article className="bot-status__history">
         <div className="bot-status__history__head">
-          <p className="eyebrow">Последние коды</p>
+          <p className="bot-status__history-title">Последние коды</p>
         </div>
         {history.length === 0 ? (
           <p className="meta-line">История пуста</p>

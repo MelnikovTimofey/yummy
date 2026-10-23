@@ -7,7 +7,7 @@ import type {
 } from '@/contracts';
 import { useCountdown, useTimeProgress } from '@/hooks/use-countdown';
 import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
-import { formatDateTimeDisplay } from './format-date-time';
+import { formatDayTime } from './format-date-time';
 import { TelegramBotStatusBlock } from './telegram-bot-status-block';
 import type { AccessLoadStatus, AccessRoleStatus } from './types';
 
@@ -34,30 +34,6 @@ const progressClass = (urgency: 'fresh' | 'soon' | 'expired') => {
   if (urgency === 'soon') return 'daily-code-progress__fill daily-code-progress__fill--soon';
   return 'daily-code-progress__fill';
 };
-
-const CopyIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-  </svg>
-);
-
-const RefreshIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-    <path d="M3 21v-5h5" />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-    <path d="M3 3v5h5" />
-    <path d="M12 7v5l4 2" />
-  </svg>
-);
 
 export const DailyCodeBlock = ({
   currentDailyCode,
@@ -101,7 +77,7 @@ export const DailyCodeBlock = ({
     <article className="card daily-code-card" aria-label="Код смены и статус Telegram-бота">
       <div className="daily-code-card__left">
         <div className="daily-code-hero__head">
-          <p className="eyebrow">Код смены</p>
+          <p className="daily-code-hero__title">Код смены</p>
           <span
             className={
               statusActive
@@ -109,7 +85,7 @@ export const DailyCodeBlock = ({
                 : 'daily-code-hero__status daily-code-hero__status--inactive'
             }
           >
-            <span className="status-pill__dot daily-code-hero__status-dot" />
+            <span className="status-pill__dot daily-code-hero__status-dot" aria-hidden="true" />
             <span>{statusLabel}</span>
           </span>
         </div>
@@ -131,7 +107,6 @@ export const DailyCodeBlock = ({
             onClick={handleCopy}
             disabled={!code}
           >
-            <CopyIcon />
             {copied ? 'Скопировано' : 'Скопировать'}
           </button>
           <button
@@ -143,14 +118,13 @@ export const DailyCodeBlock = ({
             }}
             disabled={isRotating}
           >
-            <RefreshIcon />
             {isRotating ? 'Выпускаем…' : 'Выпустить новый код'}
           </button>
         </div>
 
         {currentDailyCode.state === 'expired' ? (
           <p className="daily-code-progress__expires">
-            Код {currentDailyCode.code.codeValue} истёк {formatDateTimeDisplay(currentDailyCode.code.endsAt)}.
+            Код {currentDailyCode.code.codeValue} действовал до {formatDayTime(currentDailyCode.code.endsAt)}.
           </p>
         ) : null}
 
@@ -158,10 +132,10 @@ export const DailyCodeBlock = ({
           <div className="daily-code-progress" aria-live="polite">
             <div className="daily-code-progress__labels">
               <span className="daily-code-progress__expires">
-                Истекает {formatDateTimeDisplay(activeCode.endsAt)}
+                Истекает {formatDayTime(activeCode.endsAt)}
               </span>
-              <span className="mono daily-code-progress__remaining">
-                {countdown.expired ? 'истёк' : `осталось ${countdown.remaining}`}
+              <span className="daily-code-progress__remaining">
+                {countdown.expired ? countdown.remaining : `Осталось ${countdown.remaining}`}
               </span>
             </div>
             <div className="daily-code-progress__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
@@ -170,17 +144,9 @@ export const DailyCodeBlock = ({
           </div>
         ) : null}
 
-        <div className="daily-code-rotation">
-          <span className="daily-code-rotation__icon" aria-hidden="true">
-            <ClockIcon />
-          </span>
-          <div className="daily-code-rotation__text">
-            <p className="daily-code-rotation__title">Новый код каждый день</p>
-            <p className="daily-code-rotation__sub">
-              Действует с 06:00 до 06:00 следующего дня по московскому времени, операторы получают его в боте командой /code.
-            </p>
-          </div>
-        </div>
+        <p className="daily-code-rotation">
+          Код меняется каждый день в 06:00 по московскому времени, операторы получают его в боте командой /code.
+        </p>
 
         {dailyCodesStatus === 'loading' ? <p className="meta-line daily-code-hero__error">Загружаем код смены…</p> : null}
         {dailyCodesError ? <p className="error-text daily-code-hero__error">{dailyCodesError}</p> : null}

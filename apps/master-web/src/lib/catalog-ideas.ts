@@ -23,25 +23,18 @@ export const formatViews = (value: number | null) => {
   return `${decimal.format(Math.round(value / 100_000) / 10)} млн`;
 };
 
-const SECTIONS: Array<{ key: keyof CatalogIdeas; title: string; hint: string }> = [
-  {
-    key: 'popularOnShelfBrands',
-    title: 'Популярное у ваших брендов',
-    hint: 'Бренды полки, отсортированы по просмотрам на htreviews',
-  },
+// Пояснение только у «Высокого рейтинга»: поправка на число оценок неочевидна (#348).
+const SECTIONS: Array<{ key: keyof CatalogIdeas; title: string; hint?: string }> = [
+  { key: 'popularOnShelfBrands', title: 'Популярное у ваших брендов' },
   {
     key: 'topRated',
     title: 'Высокий рейтинг',
-    hint: 'С поправкой на число оценок: 5,0 с тремя оценками не обгоняет 4,7 с тысячей',
+    hint: 'С поправкой на число оценок: 5,0 с тремя оценками не обгоняет 4,7 с тысячей.',
   },
-  {
-    key: 'likeFastMoving',
-    title: 'Похоже на то, что быстро уходит',
-    hint: 'Вкусы и характеры десяти табаков с самым большим расходом',
-  },
+  { key: 'likeFastMoving', title: 'Похоже на то, что быстро уходит' },
 ];
 
-export type IdeaSection = { key: keyof CatalogIdeas; title: string; hint: string; items: CatalogIdea[] };
+export type IdeaSection = { key: keyof CatalogIdeas; title: string; hint?: string; items: CatalogIdea[] };
 
 // Идеи — только то, чего нет на полке. Табак «в плане» остаётся с меткой:
 // сервер считает полкой наличие, а план наличия не даёт.

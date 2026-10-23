@@ -83,6 +83,9 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
     .toBe(outOfStockBefore);
 
   await applyStockFilter(page, 'Все');
+  // Канон #366: счётчики остаются у чипов наличия, у «Все» и категорий чисел нет.
+  await expect(page.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Фильтр по категории' }).locator('.filter-chip__count')).toHaveCount(0);
 
   // Фильтр «Архив» (issue #129): по умолчанию архивные скрыты, чип не нажат.
   // Переключаем фильтр и убеждаемся, что он становится активным, затем
@@ -95,6 +98,11 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
 
   await openWorkspace(page, 'Миксы');
+  // Канон #366: из статусов число только у «Виден гостю», у профилей чисел нет.
+  const statusChips = page.getByRole('group', { name: 'Фильтр по статусу' });
+  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(1);
+  await expect(statusChips.getByRole('button', { name: 'Фильтр: Виден гостю' }).locator('.filter-chip__count')).toHaveCount(1);
+  await expect(page.getByRole('group', { name: 'Фильтр по категориям' }).locator('.filter-chip__count')).toHaveCount(0);
   const mixRow = await pinFirstMixRow(page);
   const mixName = await readMixName(mixRow);
   // Row-click открывает редактор (drawer-pattern из mockup'а Master).
@@ -138,7 +146,7 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
     has: page.getByText('Больше всего выбирают', { exact: true }),
   });
   await statisticalRail.getByRole('button', { name: 'Просмотр' }).click();
-  // Read-only drawer (статистический рейл): eyebrop «Редактирование рейла»,
+  // Read-only drawer (статистический рейл): без надзаголовка (#366),
   // h2 заголовок = имя рейла, ghost-tag «только просмотр» внутри шапки,
   // поле «Название рейла» дизаблено. Кнопки «Сохранить» нет, только
   // «Закрыть».
@@ -157,6 +165,11 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   // Primary-кнопка добавления оператора переехала из header в шапку
   // OperatorsBlock и переименована в «Добавить оператора» (mockup parity).
   await expect(page.getByRole('button', { name: 'Добавить оператора' })).toBeVisible();
+  // Канон #366: код смены меняется ежедневно, подсказка одной строкой без иконки;
+  // фильтры операторов без счётчиков.
+  await expect(page.locator('.daily-code-rotation')).toHaveText(/^Код меняется каждый день в 06:00/);
+  await expect(page.locator('.daily-code-rotation svg')).toHaveCount(0);
+  await expect(page.locator('.access-toolbar .chip__count')).toHaveCount(0);
   // AuditBlock убран со страницы целиком (mockup-trim) — журнал теперь
   // только за пределами Master, через /staff/audit/events API.
   await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
@@ -649,7 +662,7 @@ test('Master catalog shows purchase ideas from htreviews without planning anythi
     level: 2,
     name: /^(Популярное у ваших брендов|Высокий рейтинг|Похоже на то, что быстро уходит)$/,
   });
-  const empty = page.getByText('Идей пока нет: статистика htreviews появится после следующей синхронизации каталога.');
+  const empty = page.getByText('Идей пока нет. Статистика htreviews появится после следующей синхронизации каталога.');
   await expect(section.or(empty).first()).toBeVisible();
 
   await catalogView.getByRole('button', { name: 'Все табаки' }).click();

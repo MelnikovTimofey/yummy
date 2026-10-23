@@ -105,10 +105,7 @@ export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }:
 
       <div className="mix-builder__library-list" role="listbox" aria-label="Все табаки">
         {filtered.length === 0 ? (
-          <div className="mix-builder__library-empty">
-            <strong>Ничего не найдено</strong>
-            <p>Сбросить фильтры или изменить поиск.</p>
-          </div>
+          <p className="mix-builder__library-empty">Ничего не найдено. Измените поиск или фильтр.</p>
         ) : (
           filtered.map((tobacco) => {
             const isInMix = currentIds.includes(tobacco.id);
@@ -133,9 +130,10 @@ export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }:
                     ) : null}
                   </div>
                   <div className="mix-builder__library-item-meta">
-                    {tobacco.manufacturer}
-                    {tobacco.lineName ? ` · ${tobacco.lineName}` : ''}
-                    {tobacco.flavors?.length ? ` · ${tobacco.flavors.slice(0, 3).join(', ')}` : ''}
+                    {tobacco.lineName ? `${tobacco.manufacturer} ${tobacco.lineName}` : tobacco.manufacturer}
+                    {tobacco.flavors?.length ? (
+                      <span className="mix-builder__flavors">{tobacco.flavors.slice(0, 3).join(', ')}</span>
+                    ) : null}
                   </div>
                 </div>
                 <span className="mix-builder__library-item-action" aria-hidden="true">

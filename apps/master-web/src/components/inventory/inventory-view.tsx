@@ -79,7 +79,7 @@ type InventoryViewProps = {
 
 export type CatalogView = 'all' | 'ideas';
 
-// Фильтры в свёрнутом `<details>` блоке «Доп. фильтры». Бренд живёт здесь
+// Фильтры в свёрнутом `<details>` блоке «Ещё фильтры». Бренд живёт здесь
 // мультиселектом на весь список брендов (issue #119): чипов-топ-8 не хватало
 // для 279 брендов. Категории, наоборот, вынесены в видимый ряд чипов над
 // таблицей (см. categoryChips).
@@ -138,15 +138,11 @@ const uniqueStrings = (items: string[]) =>
   Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 
 
-type FilterChipEntry = {
-  value: string;
-  count: number;
-};
-
 // Чипы категорий для видимого ряда фильтров над таблицей. Категорий немного
 // (≤12 канонических), поэтому показываем все встречающиеся — без top-N среза,
-// который раньше прятал бренды (issue #119).
-const buildCategoryChips = (catalog: InventoryTobacco[]): FilterChipEntry[] => {
+// который раньше прятал бренды (issue #119). Частота задаёт только порядок:
+// чисел на чипах категорий нет (#348).
+const buildCategoryChips = (catalog: InventoryTobacco[]): string[] => {
   const counts = new Map<string, number>();
   for (const item of catalog) {
     for (const profile of item.flavorProfiles ?? []) {
@@ -165,7 +161,7 @@ const buildCategoryChips = (catalog: InventoryTobacco[]): FilterChipEntry[] => {
       }
       return formatFlavorProfileLabel(left[0]).localeCompare(formatFlavorProfileLabel(right[0]), 'ru');
     })
-    .map(([value, count]) => ({ value, count }));
+    .map(([value]) => value);
 };
 
 const buildSuggestionOptions = (items: Array<string | null | undefined>) =>
@@ -599,10 +595,6 @@ export const InventoryView = ({
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
   const categoryChips = buildCategoryChips(catalogOptions);
-  const categoryChipsCountIsApproximate = catalogOptions.length < meta.totalItems;
-  const categoryChipsTooltip = categoryChipsCountIsApproximate
-    ? 'Счётчик показывает, сколько раз категория встречается в загруженных позициях каталога (без учёта пагинации).'
-    : 'Счётчик показывает, сколько позиций в категории.';
 
   // Сколько полей блока «Дополнительно» заполнено — показываем бейджем у
   // summary, чтобы свёрнутый блок не читался как пустой (issue #126).
@@ -722,13 +714,12 @@ export const InventoryView = ({
       >
         <SheetHeader className="drawer__head tobacco-drawer__head">
           <div className="tobacco-drawer__head-copy">
-            <p className="tobacco-drawer__eyebrow">Карточка табака</p>
             <SheetTitle id={activeDialogTitleId} className="tobacco-drawer__title">
               {activeItem.name}
             </SheetTitle>
             <SheetDescription className="tobacco-detail-drawer__sub">
               {activeItem.manufacturer}
-              {activeItem.lineName ? ` • ${activeItem.lineName}` : ''}
+              {activeItem.lineName ? `, линейка ${activeItem.lineName}` : ''}
             </SheetDescription>
           </div>
           <div className="tobacco-detail-drawer__head-meta">
@@ -828,7 +819,7 @@ export const InventoryView = ({
           </section>
 
           <section className="tobacco-detail-drawer__section">
-            <p className="tobacco-detail-drawer__label">Категории · вкусы · теги</p>
+            <p className="tobacco-detail-drawer__label">Вкусовой профиль</p>
             <div className="tobacco-detail-drawer__taxonomy">
               {(activeItem.flavorProfiles ?? []).map((profile) => (
                 <ProfileTag key={`${activeItem.id}:detail:profile:${profile}`} profile={profile} />
@@ -866,7 +857,7 @@ export const InventoryView = ({
             <div className="tobacco-detail-drawer__mixes-head">
               <p className="tobacco-detail-drawer__label">Зависимые миксы</p>
               <p className="tobacco-detail-drawer__sub">
-                {formatMetricValue(activeItem.dependentMixCount ?? 0)} всего /{' '}
+                {formatMetricValue(activeItem.dependentMixCount ?? 0)} всего,{' '}
                 {formatMetricValue(activeItem.blockedDependentMixCount ?? 0)} блокируется по наличию
               </p>
             </div>
@@ -947,9 +938,6 @@ export const InventoryView = ({
       >
         <SheetHeader className="drawer__head tobacco-drawer__head">
           <div className="tobacco-drawer__head-copy">
-            {editorMode === 'edit' ? (
-              <p className="tobacco-drawer__eyebrow">Редактирование табака</p>
-            ) : null}
             <SheetTitle className="tobacco-drawer__title">
               {editorMode === 'edit'
                 ? editorDraft.name.trim() || 'Без названия'
@@ -1075,7 +1063,7 @@ export const InventoryView = ({
             </div>
 
             <div className="field field--wide">
-              <span className="field-label">Категория вкуса · можно несколько</span>
+              <span className="field-label">Категории вкуса</span>
               <div className="inventory-editor-identity__chips inventory-editor-identity__chips--wrap">
                 {flavorProfileOptions.map((profile) => {
                   const active = editorDraft.flavorProfiles.includes(profile);
@@ -1248,13 +1236,28 @@ export const InventoryView = ({
   const extraFilterSelectionCount = extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0);
 
   const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
-    // «Все» — сумма соседних чипов: backend считает их по выборке без фильтра наличия.
-    { value: 'all', label: 'Все', count: meta.inStockCount + meta.outOfStockCount, ariaLabel: 'Фильтр: Все' },
+    // У «Все» числа нет: сколько всего, сказано в мете шапки (#348).
+    { value: 'all', label: 'Все', count: 0, ariaLabel: 'Фильтр: Все' },
     { value: 'in-stock', label: 'В наличии', count: meta.inStockCount, ariaLabel: 'Фильтр: В наличии' },
     { value: 'out-of-stock', label: 'Нет наличия', count: meta.outOfStockCount, ariaLabel: 'Фильтр: Нет наличия' },
   ];
 
   const archivedActive = filters.archived === 'archived';
+  const filtersActive =
+    Boolean(filters.search) ||
+    filters.stock !== 'all' ||
+    filters.archived !== 'active' ||
+    filters.flavorProfiles.length > 0 ||
+    extraFilterGroups.some((group) => filters[group.key].length > 0);
+
+  const resetFilters = () => {
+    setSearchValue('');
+    onSearchChange('');
+    onStockChange('all');
+    onArchivedChange('active');
+    onClearFilterGroup('flavorProfiles');
+    extraFilterGroups.forEach((group) => onClearFilterGroup(group.key));
+  };
 
   return (
     <section className="tobaccos-page">
@@ -1296,7 +1299,7 @@ export const InventoryView = ({
               type="search"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Название, бренд, вкус…"
+              placeholder="Поиск по каталогу"
             />
           </div>
 
@@ -1313,9 +1316,11 @@ export const InventoryView = ({
                   onClick={() => onStockChange(tab.value)}
                 >
                   <span>{tab.label}</span>
-                  <span className="filter-chip__count" hidden={tab.value !== 'all' && tab.count === 0}>
-                    {formatMetricValue(tab.count)}
-                  </span>
+                  {tab.value === 'all' ? null : (
+                    <span className="filter-chip__count" hidden={tab.count === 0}>
+                      {formatMetricValue(tab.count)}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -1340,7 +1345,7 @@ export const InventoryView = ({
         {categoryChips.length ? (
           <div className="tobaccos-list__chip-filter" role="group" aria-label="Фильтр по категории">
             <span className="tobaccos-list__chip-filter-label">Категории</span>
-            {categoryChips.map(({ value, count }) => {
+            {categoryChips.map((value) => {
               const active = filters.flavorProfiles.includes(value);
               return (
                 <button
@@ -1348,11 +1353,9 @@ export const InventoryView = ({
                   type="button"
                   className={`filter-chip${active ? ' filter-chip--active' : ''}`}
                   aria-pressed={active}
-                  title={categoryChipsTooltip}
                   onClick={() => onToggleFilterValue('flavorProfiles', value)}
                 >
-                  <span>{formatFlavorProfileLabel(value)}</span>
-                  <span className="filter-chip__count">{formatMetricValue(count)}</span>
+                  {formatFlavorProfileLabel(value)}
                 </button>
               );
             })}
@@ -1363,7 +1366,8 @@ export const InventoryView = ({
       {extraFilterGroupsAvailable ? (
         <details className="inventory-extra-filters">
           <summary className="inventory-extra-filters__trigger">
-            Доп. фильтры
+            <ChevronDown size={13} aria-hidden className="inventory-extra-filters__chevron" />
+            Ещё фильтры
             {extraFilterSelectionCount > 0 ? (
               <span className="inventory-extra-filters__count" aria-hidden="true">
                 {formatMetricValue(extraFilterSelectionCount)}
@@ -1396,10 +1400,7 @@ export const InventoryView = ({
 
       {selectedIds.length ? (
         <div className="inventory-batch-bar">
-          <div>
-            <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
-            <p className="meta-line">Массовые действия ставят на полку, убирают с неё и архивируют.</p>
-          </div>
+          <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
           <div className="inventory-batch-bar__actions">
             <Button
               type="button"
@@ -1476,8 +1477,8 @@ export const InventoryView = ({
                 directionLabels={ALPHABET_DIRECTIONS}
                 {...sortHeaderProps}
               />
-              <th scope="col">Вкус / профиль</th>
-              <th className="inventory-table__stat" scope="col">★ htreviews</th>
+              <th scope="col">Вкус и профиль</th>
+              <th className="inventory-table__stat" scope="col">htreviews</th>
               <th className="inventory-table__stat" scope="col">Оценок</th>
               <th className="inventory-table__stat" scope="col">Просмотров</th>
               <th className="inventory-table__stock" scope="col">Полка</th>
@@ -1489,8 +1490,8 @@ export const InventoryView = ({
                 className="inventory-table__mixes"
                 {...sortHeaderProps}
               />
-              <th className="inventory-table__actions" scope="col" aria-label="Действия">
-                <span aria-hidden="true">⋯</span>
+              <th className="inventory-table__actions" scope="col">
+                <span className="sr-only">Действия</span>
               </th>
             </tr>
           </thead>
@@ -1543,16 +1544,19 @@ export const InventoryView = ({
                             </Badge>
                           ) : null}
                         </strong>
-                        <span className="inventory-cell__sub">
-                          {[strengthLabel, flavorsTop3].filter(Boolean).join(' · ')}
-                        </span>
+                        {strengthLabel || flavorsTop3 ? (
+                          <span className="inventory-cell__sub">
+                            {strengthLabel ? <span>{strengthLabel}</span> : null}
+                            {flavorsTop3 ? <span className="inventory-cell__flavors">{flavorsTop3}</span> : null}
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                     <td>
                       <div className="inventory-cell inventory-cell--brand">
                         <span>{item.manufacturer}</span>
                         {item.lineName ? (
-                          <span className="inventory-cell__faint">· {item.lineName}</span>
+                          <span className="inventory-cell__line">{item.lineName}</span>
                         ) : null}
                       </div>
                     </td>
@@ -1669,7 +1673,16 @@ export const InventoryView = ({
             ) : (
               <tr>
                 <td className="inventory-table__empty" colSpan={10}>
-                  По выбранным фильтрам ничего не найдено.
+                  {filtersActive ? (
+                    <div className="list-empty">
+                      <p>Ничего не найдено. Уберите один из фильтров.</p>
+                      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetFilters}>
+                        Сбросить фильтры
+                      </button>
+                    </div>
+                  ) : (
+                    'Каталог пуст.'
+                  )}
                 </td>
               </tr>
             )}

@@ -7,7 +7,7 @@ const baseNow = new Date('2026-05-26T12:00:00Z').getTime();
 test('computeCountdownState returns fresh state for >30 minutes ahead', () => {
   const endsAt = new Date(baseNow + 2 * 3600_000 + 14 * 60_000).toISOString();
   const state = computeCountdownState(endsAt, baseNow);
-  assert.equal(state.remaining, '2ч 14м');
+  assert.equal(state.remaining, '2 ч 14 мин');
   assert.equal(state.expired, false);
   assert.equal(state.urgency, 'fresh');
 });
@@ -17,7 +17,7 @@ test('computeCountdownState marks soon when ≤30 minutes remain', () => {
   const state = computeCountdownState(endsAt, baseNow);
   assert.equal(state.urgency, 'soon');
   assert.equal(state.expired, false);
-  assert.equal(state.remaining, '25м 00с');
+  assert.equal(state.remaining, '25 мин 00 с');
 });
 
 test('computeCountdownState marks expired when diff <= 0', () => {
@@ -44,6 +44,6 @@ test('computeCountdownState handles invalid ISO gracefully', () => {
 test('computeCountdownState renders seconds-only when <1 minute', () => {
   const endsAt = new Date(baseNow + 42_000).toISOString();
   const state = computeCountdownState(endsAt, baseNow);
-  assert.equal(state.remaining, '42с');
+  assert.equal(state.remaining, '42 с');
   assert.equal(state.urgency, 'soon');
 });

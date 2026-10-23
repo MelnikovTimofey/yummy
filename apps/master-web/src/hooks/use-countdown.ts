@@ -27,10 +27,10 @@ export const computeCountdownState = (endsAtIso: string, nowMs: number): Countdo
 
   const remaining =
     hours > 0
-      ? `${hours}ч ${minutes}м`
+      ? `${hours} ч ${minutes} мин`
       : minutes > 0
-        ? `${minutes}м ${seconds.toString().padStart(2, '0')}с`
-        : `${seconds}с`;
+        ? `${minutes} мин ${seconds.toString().padStart(2, '0')} с`
+        : `${seconds} с`;
 
   const urgency: CountdownUrgency = diff <= SOON_THRESHOLD_MS ? 'soon' : 'fresh';
 

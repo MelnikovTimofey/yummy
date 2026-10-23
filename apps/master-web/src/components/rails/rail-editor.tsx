@@ -6,7 +6,7 @@ import {
   type FormEvent,
   type SetStateAction,
 } from 'react';
-import { Check, ChevronDown, ChevronUp, Flame, GripVertical, Plus, Search, Star, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, GripVertical, Plus, Search, Star, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatMixStatusLabel, formatRailType, formatRating, resolveMixStatus } from '@/contracts';
@@ -124,7 +124,6 @@ export const RailEditor = ({
       >
         <header className="drawer__head rail-drawer__head">
           <div className="rail-drawer__head-copy">
-            {editor.id ? <p className="rail-drawer__eyebrow">Редактирование рейла</p> : null}
             <SheetTitle className="rail-drawer__title">{headerTitle}</SheetTitle>
             {locked && editor.readOnlyReason ? (
               <p className="rail-drawer__lock">{editor.readOnlyReason}</p>
@@ -156,7 +155,7 @@ export const RailEditor = ({
                 <input
                   value={pickerQuery}
                   onChange={(event) => setPickerQuery(event.target.value)}
-                  placeholder="Поиск микса…"
+                  placeholder="Поиск миксов"
                   disabled={locked}
                 />
               </div>
@@ -234,19 +233,17 @@ export const RailEditor = ({
               <div className="rail-drawer__field">
                 <div className="rail-drawer__section-head">
                   <h3 className="rail-drawer__section-title">
-                    Состав рейла · {editor.mixIds.length}
+                    Состав рейла <span className="rail-drawer__section-count">({editor.mixIds.length})</span>
                   </h3>
                   {!locked && selectedRailMixEntries.length > 1 ? (
-                    <span className="rail-drawer__hint">порядок — перетаскиванием</span>
+                    <span className="rail-drawer__hint">Порядок меняется перетаскиванием</span>
                   ) : null}
                 </div>
 
                 <div className="rail-drawer__mix-list">
                   {selectedRailMixEntries.length === 0 ? (
                     <div className="empty">
-                      {locked
-                        ? 'В рейле нет миксов.'
-                        : '← Миксы добавляются из списка слева'}
+                      В рейле пока нет миксов.
                     </div>
                   ) : (
                     selectedRailMixEntries.map(({ mixId, index, mix }) => (
@@ -284,7 +281,7 @@ export const RailEditor = ({
                           <div className="rail-drawer__mix-meta">
                             {mix
                               ? mix.description ||
-                                `${formatMixStatusLabel(resolveMixStatus(mix))} · Рейтинг ${formatRating(mix.avgRating)}`
+                                `${formatMixStatusLabel(resolveMixStatus(mix))}, рейтинг ${formatRating(mix.avgRating)}`
                               : 'Микс не найден в актуальном каталоге.'}
                           </div>
                         </div>
@@ -356,7 +353,7 @@ export const RailEditor = ({
                       ))
                     ) : (
                       <p className="rail-drawer__preview-empty">
-                        Пока пусто. Добавленные миксы гость увидит здесь.
+                        Миксов пока нет.
                       </p>
                     )}
                   </div>
@@ -385,7 +382,7 @@ export const RailEditor = ({
                 </span>
               </button>
               <span className="rail-drawer__foot-hint">
-                {editor.active ? 'Активен — гость видит на витрине' : 'Скрыт от гостя'}
+                {editor.active ? 'Виден на витрине' : 'Скрыт от гостя'}
               </span>
             </div>
             <div className="rail-drawer__foot-actions">
@@ -404,7 +401,6 @@ export const RailEditor = ({
                   data-variant="primary"
                   disabled={saveStatus === 'loading'}
                 >
-                  <Check size={14} aria-hidden />
                   {submitLabel}
                 </button>
               ) : null}

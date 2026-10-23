@@ -46,24 +46,10 @@ const relativeFromIso = (iso: string): string => {
   return `${days} д назад`;
 };
 
-const PlusIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14" />
-    <path d="M12 5v14" />
-  </svg>
-);
-
 const SearchIcon = () => (
   <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="11" cy="11" r="7" />
     <path d="m21 21-4.3-4.3" />
-  </svg>
-);
-
-const LinkIcon = () => (
-  <svg className="lucide" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
 
@@ -124,15 +110,7 @@ export const OperatorsBlock = ({
   const [filter, setFilter] = useState<FilterKey>('all');
   const [query, setQuery] = useState('');
 
-  const counts = useMemo(
-    () => ({
-      all: telegramOperators.length,
-      active: telegramOperators.filter((item) => filterPredicate(item, 'active')).length,
-      pending: telegramOperators.filter((item) => filterPredicate(item, 'pending')).length,
-      inactive: telegramOperators.filter((item) => filterPredicate(item, 'inactive')).length,
-    }),
-    [telegramOperators],
-  );
+  const linkedCount = telegramOperators.filter((item) => filterPredicate(item, 'active')).length;
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -166,7 +144,6 @@ export const OperatorsBlock = ({
               type="button"
               onClick={openNewDialog}
             >
-              <PlusIcon />
               Добавить оператора
             </button>
           ) : null}
@@ -190,21 +167,21 @@ export const OperatorsBlock = ({
               </label>
               {(
                 [
-                  ['all', 'Все', counts.all],
-                  ['active', 'Активны', counts.active],
-                  ['pending', 'Ждут привязки', counts.pending],
-                  ['inactive', 'Выключены', counts.inactive],
-                ] as Array<[FilterKey, string, number]>
-              ).map(([key, label, count]) => (
+                  ['all', 'Все'],
+                  ['active', 'Активны'],
+                  ['pending', 'Ждут привязки'],
+                  ['inactive', 'Выключены'],
+                ] as Array<[FilterKey, string]>
+              ).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
                   className="chip"
                   data-active={filter === key}
+                  aria-pressed={filter === key}
                   onClick={() => setFilter(key)}
                 >
                   {label}
-                  <span className="chip__count" hidden={key !== 'all' && count === 0}>{count}</span>
                 </button>
               ))}
             </div>
@@ -216,7 +193,7 @@ export const OperatorsBlock = ({
               <div>Telegram</div>
               <div>Последний код</div>
               <div style={{ textAlign: 'center' }}>Вкл.</div>
-              <div style={{ textAlign: 'right' }}>Действия</div>
+              <div className="sr-only">Действия</div>
             </div>
 
             {telegramOperatorsStatus === 'loading' && !telegramOperators.length ? (
@@ -226,8 +203,8 @@ export const OperatorsBlock = ({
             {visible.length === 0 && telegramOperatorsStatus !== 'loading' ? (
               <p className="access-card__empty meta-line">
                 {telegramOperators.length === 0
-                  ? 'Пока нет операторов в списке.'
-                  : 'Под фильтр ничего не подошло.'}
+                  ? 'Операторов пока нет.'
+                  : 'Ничего не найдено. Измените поиск или фильтр.'}
               </p>
             ) : null}
 
@@ -336,18 +313,11 @@ export const OperatorsBlock = ({
               );
             })}
 
-            {/* Инструкция нужна, пока ни один оператор не привязан к боту. */}
-            {counts.active === 0 ? (
-              <footer className="access-hint-row">
-                <LinkIcon />
-                <span><strong>1.</strong> Администратор добавляет оператора</span>
-                <span className="access-hint-row__arrow" aria-hidden="true">→</span>
-                <span><strong>2.</strong> Оператор пишет боту и шлёт контакт</span>
-                <span className="access-hint-row__arrow" aria-hidden="true">→</span>
-                <span><strong>3.</strong> Бот привязывает чат по номеру</span>
-                <span className="access-hint-row__arrow" aria-hidden="true">→</span>
-                <span><strong>4.</strong> Команда /code выдаёт актуальный код</span>
-              </footer>
+            {/* Подсказка нужна, пока ни один оператор не привязан к боту. */}
+            {linkedCount === 0 ? (
+              <p className="access-hint-row">
+                Оператор пишет боту и отправляет контакт. После привязки он получает код командой /code.
+              </p>
             ) : null}
           </>
         )}
@@ -364,9 +334,6 @@ export const OperatorsBlock = ({
       >
         <DialogContent className="operator-dialog">
           <DialogHeader className="operator-dialog__head">
-            {telegramOperatorEditor.id ? (
-              <p className="operator-dialog__eyebrow">Редактирование оператора</p>
-            ) : null}
             <DialogTitle className="operator-dialog__title">
               {telegramOperatorEditor.id
                 ? telegramOperatorEditor.name || 'Без имени'
