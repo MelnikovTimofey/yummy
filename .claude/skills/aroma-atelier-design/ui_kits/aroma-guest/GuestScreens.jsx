@@ -8,7 +8,6 @@ const railKind = { statistical: 'Выбор гостей', prepared: 'Редак
 // На Витрине тип полки виден значком, словами — в aria-label заголовка (railKindIcon в apps/aroma-web).
 // Полка «Оценки гостей» в приложении получает Star; в мок-данных кита её нет.
 const railKindIcon = { statistical: 'Users', prepared: 'Feather', curated: 'Flame' };
-const sourceLabel = { recommendations: 'Подбор для вас', showcase: 'Из витрины', catalog: 'Из каталога', rail: 'Из подборки', reels: 'Из рилсов' };
 const plural = (n) => { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'микс'; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'микса'; return 'миксов'; };
 
 // Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
@@ -22,24 +21,24 @@ function Icon({ name, size = 24, stroke = 1.8, fill = 'none' }) {
   );
 }
 
-function AccessScreen({ code, setCode, ageOk, setAgeOk, error, onSubmit }) {
+// markSrc — путь к знаку от страницы, которая подключает кит (мокапы в design/ лежат глубже).
+function AccessScreen({ code, setCode, ageOk, setAgeOk, error, onSubmit, markSrc = '../../assets/logo-mark-oxblood.svg' }) {
   const ready = code.length >= 4 && ageOk;
   return (
     <section className="aroma-access">
-      <div className="aroma-access-halo" aria-hidden />
       <div className="aroma-access-body">
         <div>
-          <img className="aroma-access-mark" src="../../assets/logo-mark-oxblood.svg" width="64" height="64" alt="" aria-hidden />
+          <img className="aroma-access-mark" src={markSrc} width="64" height="64" alt="" aria-hidden />
           <span className="aroma-access-brand">Арома<br />Ателье</span>
-          <p className="aroma-access-tagline">подбор кальянных миксов</p>
+          <p className="aroma-access-tagline">Подбор кальянных миксов</p>
         </div>
         <form className="aroma-access-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-          <AccessCodeInput value={code} onChange={setCode} />
+          <AccessCodeInput value={code} onChange={setCode} hint="Код скажет мастер зала. Он действует до конца суток." />
           <label className="aroma-access-age">
             <button type="button" role="checkbox" aria-checked={ageOk} className={'aroma-access-age-dot' + (ageOk ? ' on' : '')} onClick={() => setAgeOk(!ageOk)}>{ageOk ? <span aria-hidden>✓</span> : null}</button>
             <span className="aroma-access-age-text">Мне есть 18. Понимаю, что курение вредит здоровью.</span>
           </label>
-          <AromaCTA type="submit" pulse={ready} disabled={!ready}>Войти в Ателье</AromaCTA>
+          <AromaCTA type="submit" disabled={!ready}>Войти в Ателье</AromaCTA>
           {error ? <p className="guest-error">{error}</p> : null}
         </form>
         <p className="aroma-access-footer">18+ · Курение вредит здоровью</p>
@@ -52,37 +51,39 @@ function IntroScreen({ index, onNext, onSkip }) {
   const cards = M.introCards;
   const card = cards[index];
   const isLast = index === cards.length - 1;
-  const step = String(index + 1).padStart(2, '0');
   return (
     <div className="aroma-intro">
-      <span className="aroma-intro-watermark" aria-hidden>{step}</span>
       <div className="aroma-intro-body">
-        <p className="aroma-caps">{'Шаг ' + step + ' · из ' + String(cards.length).padStart(2, '0')}</p>
-        <div className="aroma-intro-content">
-          <h1 className="aroma-intro-title">{card.title}</h1>
-          <p className="aroma-intro-text">{card.description}</p>
-        </div>
+        <h1 className="aroma-intro-title">{card.title}</h1>
+        <p className="aroma-intro-text">{card.description}</p>
       </div>
       <div className="aroma-intro-dock">
-        <div className="aroma-intro-pips">
+        <div className="aroma-intro-pips" aria-label={'Шаг ' + (index + 1) + ' из ' + cards.length}>
           {cards.map((_, i) => <span key={i} className={'aroma-intro-pip' + (i === index ? ' on' : '')} aria-hidden />)}
         </div>
-        <AromaCTA pulse={isLast} onClick={onNext}>{isLast ? 'Перейти к подбору' : 'Дальше'}</AromaCTA>
+        <AromaCTA onClick={onNext}>{isLast ? 'Перейти к подбору' : 'Дальше'}</AromaCTA>
         {!isLast ? <button type="button" className="aroma-skip" onClick={onSkip}>Пропустить знакомство</button> : null}
       </div>
     </div>
   );
 }
 
+// Как в приложении: внутри профилей и внутри вкусов — «или», между ними — «и».
+const matchingMixes = (profiles, flavors) => M.mixes
+  .filter((m) => !profiles.length || m.flavorProfiles.some((p) => profiles.includes(p)))
+  .filter((m) => !flavors.length || m.flavors.some((f) => flavors.includes(f)));
+
 function OnboardingScreen({ step, profiles, flavors, toggleProfile, toggleFlavor, onNext, onSkip }) {
+  // Вкус бледный, если его нет ни в одном миксе с выбранными профилями.
+  const reachable = new Set(matchingMixes(profiles, []).flatMap((m) => m.flavors));
+  const count = matchingMixes(profiles, step === 2 ? flavors : []).length;
   return (
     <div className="aroma-onboarding">
       <div className="aroma-onboarding-body">
         {step === 1 ? (
           <>
-            <p className="aroma-caps">Шаг 1 · Профили</p>
             <h1 className="aroma-onboarding-title">С чего начнём?</h1>
-            <p className="aroma-onboarding-hint">Несколько касаний по профилям, и мы поймём, в какую сторону смотреть.</p>
+            <p className="aroma-onboarding-hint">Можно выбрать несколько.</p>
             <div className="aroma-profile-grid">
               {Object.keys(M.profileLabels).map((id) => (
                 <ProfileCard key={id} profile={id} label={label(id)} active={profiles.includes(id)} onClick={() => toggleProfile(id)} />
@@ -91,49 +92,45 @@ function OnboardingScreen({ step, profiles, flavors, toggleProfile, toggleFlavor
           </>
         ) : (
           <>
-            <p className="aroma-caps">Шаг 2 · Вкусы</p>
             <h1 className="aroma-onboarding-title">Любимые ноты</h1>
-            <p className="aroma-onboarding-hint">Опционально — но так подбор станет точнее.</p>
+            <p className="aroma-onboarding-hint">Можно пропустить. Бледные вкусы не встречаются в миксах с выбранными профилями.</p>
             <div className="aroma-flavor-wrap">
               {M.flavors.map((f) => (
-                <AromaChip key={f} active={flavors.includes(f)} onClick={() => toggleFlavor(f)}>{f}</AromaChip>
+                <AromaChip key={f} active={flavors.includes(f)} disabled={!reachable.has(f) && !flavors.includes(f)} onClick={() => toggleFlavor(f)}>{f}</AromaChip>
               ))}
             </div>
-            {profiles.length ? (
-              <div className="aroma-selected">
-                <p className="aroma-caps">Сейчас выбрано</p>
-                <div className="aroma-selected-row">
-                  {profiles.map((p) => (
-                    <span key={p} className="aroma-selected-tag">
-                      <span className="aroma-selected-dot" style={{ background: 'var(--profile-' + p.replace('_', '-') + ')' }} aria-hidden />
-                      {label(p)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </>
         )}
       </div>
       <div className="aroma-onboarding-dock">
-        <div className="aroma-onboarding-pips" aria-hidden>
-          <span className={'aroma-onboarding-pip' + (step >= 1 ? ' on' : '')} />
-          <span className={'aroma-onboarding-pip' + (step >= 2 ? ' on' : '')} />
-        </div>
-        <AromaCTA pulse={step === 2} onClick={onNext}>{step === 1 ? 'Далее' : 'Показать подбор'}</AromaCTA>
+        <p className="aroma-onboarding-count">{count ? (count === 1 ? 'Подходит 1 микс' : 'Подходят ' + count + ' ' + plural(count)) : 'Под такой набор миксов нет. Снимите один из вкусов.'}</p>
+        <AromaCTA disabled={!count} onClick={onNext}>{step === 1 ? 'Далее' : 'Показать подбор'}</AromaCTA>
         <button type="button" className="aroma-skip" onClick={onSkip}>Открыть каталог сразу</button>
       </div>
     </div>
   );
 }
 
-function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOpenCatalog }) {
+// Приглашение в «Намиксуй»: полосой на Витрине, строкой с пояснением в конце Подбора. Без глифа: профилей у него нет.
+function MixerInvite({ onOpen, note }) {
+  return (
+    <button type="button" className="aroma-mixer-invite" onClick={onOpen}>
+      <span className="aroma-mixer-invite-text">
+        <span className="aroma-mixer-invite-title">Собрать свой микс</span>
+        {note ? <span className="aroma-mixer-invite-note">Из табаков, которые сегодня есть на полках.</span> : null}
+      </span>
+      <Icon name="ChevronRight" size={20} />
+    </button>
+  );
+}
+
+const choices = (n) => { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'выбор'; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'выбора'; return 'выборов'; };
+
+function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOpenCatalog, onOpenMixer }) {
   if (!mixes.length) {
     return (
       <section className="aroma-recs-empty">
-        <p className="aroma-caps">Подбор не найден</p>
         <h1 className="aroma-empty-title">Ничего не найдено</h1>
-        <p className="aroma-empty-text">Попробуйте изменить профили и вкусы или сразу перейти в каталог.</p>
         <div className="aroma-empty-actions">
           <AromaCTA onClick={onOpenOnboarding}>Изменить вкусы</AromaCTA>
           <button type="button" className="aroma-skip" onClick={onOpenCatalog}>Открыть каталог</button>
@@ -142,11 +139,12 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
     );
   }
   const [hero, ...rest] = mixes;
-  const halo = 'var(--profile-' + (hero.flavorProfiles[0] || 'tobacco').replace('_', '-') + ')';
   return (
     <section className="aroma-recs">
-      <p className="aroma-caps">Лучшее совпадение</p>
-      <article className="aroma-recs-hero" style={{ background: 'radial-gradient(circle at 80% 0%, color-mix(in srgb, ' + halo + ' 33%, transparent) 0%, transparent 55%), linear-gradient(180deg, rgba(34,15,16,0.96) 0%, rgba(22,11,12,0.88) 100%)' }}>
+      <div className="aroma-recs-head">
+        <button type="button" className="aroma-ghost-sm" onClick={onOpenOnboarding}>Изменить вкусы</button>
+      </div>
+      <article className="aroma-recs-hero">
         <div className="aroma-recs-hero-head">
           <ProfileGlyph profiles={hero.flavorProfiles} size={64} />
           <div className="aroma-recs-hero-text">
@@ -158,28 +156,30 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
         <CompositionStack components={hero.components} showBar={false} />
         <div className="aroma-recs-hero-meta">
           {hero.ratingsCount ? <RatingPill rating={hero.avgRating} /> : null}
-          <span className="aroma-caps">{hero.popularity + ' выборов'}</span>
+          <span className="aroma-recs-hero-count">{hero.popularity + ' ' + choices(hero.popularity)}</span>
         </div>
-        <AromaCTA pulse onClick={() => onChoose(hero, 'recommendations')}>Покурить</AromaCTA>
+        <AromaCTA onClick={() => onChoose(hero, 'recommendations')}>Покурить</AromaCTA>
       </article>
       {rest.length ? (
         <>
-          <p className="aroma-caps">Тоже подходят</p>
+          <h2 className="aroma-section-title">Тоже подходят</h2>
           <div className="aroma-list">
             {rest.slice(0, 4).map((mix) => (
-              <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} showGlyph={false} showSignature onClick={() => onOpen(mix, 'recommendations')} />
+              <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} showGlyph={false} onClick={() => onOpen(mix, 'recommendations')} />
             ))}
           </div>
         </>
       ) : null}
+      {onOpenMixer ? <MixerInvite onOpen={onOpenMixer} note /> : null}
     </section>
   );
 }
 
 // Полки по образцу Okko (#175): заголовок с шевроном открывает подборку, под ним лента постеров.
-function ShowcaseScreen({ onOpen, onOpenRail }) {
+function ShowcaseScreen({ onOpen, onOpenRail, onOpenMixer }) {
   return (
     <section className="aroma-showcase">
+      {onOpenMixer ? <div className="aroma-showcase-invite"><MixerInvite onOpen={onOpenMixer} /></div> : null}
       {M.rails.map((rail) => (
         <section key={rail.id} className="aroma-showcase-rail">
           <h2 className="aroma-showcase-rail-head">
@@ -204,10 +204,8 @@ function ShowcaseScreen({ onOpen, onOpenRail }) {
 // Каталог по варианту B (#181): фильтр — метка { kind: 'profile' | 'flavor', value }, как CatalogFilterTag в приложении.
 const filterLabel = (tag) => (tag.kind === 'profile' ? label(tag.value) : tag.value);
 const sameFilter = (a, b) => a.kind === b.kind && a.value === b.value;
-// В приложении счётчики приходят из /guest/onboarding/options, в ките считаются по мок-миксам.
+// Счётчики нужны только для порядка чипов: частые первыми. На самих чипах чисел нет.
 const countBy = (pick) => M.mixes.reduce((acc, mix) => { pick(mix).forEach((v) => { acc[v] = (acc[v] || 0) + 1; }); return acc; }, {});
-const profileCounts = countBy((mix) => mix.flavorProfiles);
-const flavorCounts = countBy((mix) => mix.flavors);
 const byCountDesc = (values, counts, toLabel = (v) => v) => [...values].sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || toLabel(a).localeCompare(toLabel(b), 'ru'));
 // Сразу видны самые частые вкусы, остальные — по «Все N вкусов» или поиску.
 const SHEET_FLAVOR_LIMIT = 18;
@@ -225,7 +223,6 @@ function flavorsMatchedFirst(flavors, query, filters) {
 
 function CatalogScreen({ query, setQuery, filters, onRemoveFilter, onOpenFilters, results, onOpen, onReset }) {
   const last = filters[filters.length - 1];
-  const lastLabel = last ? filterLabel(last) : query.trim();
   const dirty = Boolean(query.trim()) || filters.length > 0;
   return (
     <section className="aroma-catalog">
@@ -249,17 +246,19 @@ function CatalogScreen({ query, setQuery, filters, onRemoveFilter, onOpenFilters
         ) : null}
       </div>
 
-      <div className="aroma-catalog-meta">
-        <p className="aroma-caps">{'Найдено · ' + results.length}</p>
-        {dirty && results.length ? <button type="button" className="aroma-skip" onClick={onReset}>Сбросить</button> : null}
-      </div>
+      {results.length ? (
+        <div className="aroma-catalog-meta">
+          <p className="aroma-catalog-count">{results.length + ' ' + plural(results.length)}</p>
+          {dirty ? <button type="button" className="aroma-skip" onClick={onReset}>Сбросить</button> : null}
+        </div>
+      ) : null}
 
       {!results.length ? (
         <div className="aroma-catalog-empty">
-          <p className="guest-status">По выбранным фильтрам ничего не найдено. Даже мастер развёл руками.</p>
+          <p className="guest-status">{last ? 'Ничего не найдено. Уберите один из фильтров.' : 'Ничего не найдено. Измените запрос.'}</p>
           <div className="aroma-catalog-empty-actions">
-            {lastLabel ? <button type="button" className="aroma-ghost-sm" onClick={() => (last ? onRemoveFilter(last) : setQuery(''))}>{'Убрать «' + lastLabel + '»'}</button> : null}
-            <button type="button" className="aroma-skip" onClick={onReset}>Сбросить всё</button>
+            {last ? <button type="button" className="aroma-ghost-sm" onClick={() => onRemoveFilter(last)}>{'Убрать: ' + filterLabel(last)}</button> : null}
+            <button type="button" className={last ? 'aroma-skip' : 'aroma-ghost-sm'} onClick={onReset}>{last ? 'Сбросить всё' : 'Очистить поиск'}</button>
           </div>
         </div>
       ) : null}
@@ -277,14 +276,17 @@ function CatalogFiltersSheet({ filters, onToggle, onReset, resultCount, onClose 
   const [find, setFind] = React.useState('');
   const [showAll, setShowAll] = React.useState(false);
   // Как availableProfileOptions в приложении: только характеры, которые есть в каталоге.
+  // Считаются при рендере: в _ds_bundle.js этот файл исполняется раньше mock-data.js.
+  const profileCounts = countBy((mix) => mix.flavorProfiles);
+  const flavorCounts = countBy((mix) => mix.flavors);
   const profiles = byCountDesc(Object.keys(M.profileLabels).filter((p) => profileCounts[p]), profileCounts, label);
   const flavors = byCountDesc(M.flavors, flavorCounts);
   const f = find.trim().toLowerCase();
   const visibleFlavors = f ? flavors.filter((x) => x.includes(f)) : showAll ? flavors : flavors.slice(0, SHEET_FLAVOR_LIMIT);
   const isOn = (tag) => filters.some((t) => sameFilter(t, tag));
-  const chip = (tag, count) => (
+  const chip = (tag) => (
     <AromaChip key={tag.value} active={isOn(tag)} profile={tag.kind === 'profile' ? tag.value : undefined} onClick={() => onToggle(tag)}>
-      {filterLabel(tag)}<span className="aroma-catalog-chip-count">{count}</span>
+      {filterLabel(tag)}
     </AromaChip>
   );
   return (
@@ -296,16 +298,16 @@ function CatalogFiltersSheet({ filters, onToggle, onReset, resultCount, onClose 
           {filters.length ? <button type="button" className="aroma-skip" onClick={onReset}>Сбросить</button> : null}
         </div>
         <section className="aroma-sheet-block">
-          <p className="aroma-caps">Характер</p>
+          <h3 className="aroma-label">Характер</h3>
           <div className="aroma-catalog-sheet-chips" role="group" aria-label="Характер">
-            {profiles.map((p) => chip({ kind: 'profile', value: p }, profileCounts[p] || 0))}
+            {profiles.map((p) => chip({ kind: 'profile', value: p }))}
           </div>
         </section>
         <section className="aroma-sheet-block">
-          <p className="aroma-caps">Вкусы</p>
+          <h3 className="aroma-label">Вкусы</h3>
           <input type="search" className="aroma-catalog-sheet-search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Найти вкус" aria-label="Найти вкус" enterKeyHint="search" autoComplete="off" />
           <div className="aroma-catalog-sheet-chips" role="group" aria-label="Вкусы">
-            {visibleFlavors.map((v) => chip({ kind: 'flavor', value: v }, flavorCounts[v] || 0))}
+            {visibleFlavors.map((v) => chip({ kind: 'flavor', value: v }))}
           </div>
           {f && !visibleFlavors.length ? <p className="aroma-catalog-sheet-hint">Такого вкуса в каталоге нет.</p> : null}
           {!f && !showAll && flavors.length > SHEET_FLAVOR_LIMIT ? (
@@ -326,10 +328,6 @@ function RailScreen({ rail, filters, toggleFilter, onBack, onOpen }) {
     <section className="aroma-rail">
       <header className="aroma-rail-topbar">
         <button type="button" className="aroma-rail-back" onClick={onBack} aria-label="Назад к витрине">←</button>
-        <div className="aroma-rail-topbar-text">
-          <p className="aroma-caps">{'Витрина · ' + railKind[rail.type]}</p>
-          <p className="aroma-rail-meta">{mixes.length + ' ' + plural(mixes.length)}</p>
-        </div>
       </header>
       <div className="aroma-rail-intro">
         <h1 className="aroma-rail-title">{rail.name}</h1>
@@ -361,15 +359,13 @@ function HeartButton({ on, onClick }) {
 function MixSheet({ state, rating, onRate, onClose, onChoose, favorite = false, onFavorite }) {
   if (!state) return null;
   const { mix, source } = state;
-  const halo = 'var(--profile-' + (mix.flavorProfiles[0] || 'tobacco').replace('_', '-') + ')';
   return (
     <div className="aroma-sheet-overlay" onClick={onClose}>
-      <section className="aroma-sheet" onClick={(e) => e.stopPropagation()} style={{ background: 'radial-gradient(circle at 88% 0%, color-mix(in srgb, ' + halo + ' 31%, transparent) 0%, transparent 50%), var(--guest-sheet-bg)' }}>
+      <section className="aroma-sheet" role="dialog" aria-label={mix.name} onClick={(e) => e.stopPropagation()} style={{ background: 'var(--guest-sheet-bg)' }}>
         <span className="aroma-sheet-handle" aria-hidden />
         <div className="aroma-sheet-head">
           <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
           <div className="aroma-sheet-head-text">
-            <p className="aroma-caps">{sourceLabel[source]}</p>
             <h2 className="aroma-sheet-title">{mix.name}</h2>
             <SignatureBar profiles={mix.flavorProfiles} height={4} />
           </div>
@@ -381,11 +377,11 @@ function MixSheet({ state, rating, onRate, onClose, onChoose, favorite = false, 
           {mix.flavors.map((f) => <AromaChip key={f}>{f}</AromaChip>)}
         </div>
         <section className="aroma-sheet-block">
-          <p className="aroma-caps">Состав микса</p>
+          <h3 className="aroma-label">Состав</h3>
           <CompositionStack components={mix.components} />
         </section>
         <section className="aroma-sheet-block">
-          <p className="aroma-caps">Ваша оценка</p>
+          <h3 className="aroma-label">Ваша оценка</h3>
           <div className="aroma-stars" role="group" aria-label="Оценка микса">
             {[1, 2, 3, 4, 5].map((v) => (
               <button key={v} type="button" className={'aroma-star' + (rating >= v ? ' on' : '')} onClick={() => onRate(v)} aria-label={'Оценить на ' + v}>★</button>
@@ -469,7 +465,7 @@ const PARTICLES = {
   warm: { n: 26, size: [12, 18], y: [85, 105] },
   smoke: { n: 7, size: [30, 44], y: [70, 100] },
 };
-// Бесшовный цикл ≈ 6 с; струи дыма прорисовываются вдвое медленнее.
+// Бесшовный цикл около 6 с; струи дыма прорисовываются вдвое медленнее.
 const CYCLE = 6;
 
 function particles(motif, rand, color, count) {
@@ -533,17 +529,16 @@ function Reel({ mix, index, total, active, paused, hint, favorite, onFavorite, o
       {paused ? <span className="reel-paused"><Icon name="Play" size={22} /></span> : null}
       <div className={'reel-dock' + (active ? ' reel-reveal' : '')} key={active ? 'on' : 'off'}>
         {hint ? <span className="reel-hint"><Icon name="ChevronUp" size={18} />Листайте вверх</span> : null}
-        <p className="aroma-caps">{mix.flavorProfiles.slice(0, 3).map(label).join(' · ')}</p>
         <div className="reel-name-row">
           <h2 className="reel-name">{mix.name}</h2>
           <HeartButton on={favorite} onClick={() => onFavorite(mix)} />
         </div>
-        {mix.ratingsCount ? <div><RatingPill rating={mix.avgRating} count={mix.ratingsCount} /></div> : null}
-        <p className="reel-flavors">{mix.flavors.join(' · ')}</p>
+        <p className="reel-flavors">{mix.flavors.join(', ')}</p>
+        {mix.ratingsCount ? <div><RatingPill rating={mix.avgRating} /></div> : null}
         <CompositionStack components={mix.components} showBar={false} />
         <div className="reel-actions">
           <button type="button" className="aroma-ghost" onClick={() => onOpen(mix, 'reels')}>Подробнее</button>
-          <AromaCTA pulse onClick={() => onChoose(mix, 'reels')}>Покурить</AromaCTA>
+          <AromaCTA onClick={() => onChoose(mix, 'reels')}>Покурить</AromaCTA>
         </div>
       </div>
     </section>
@@ -605,17 +600,16 @@ function ConfirmationScreen({ mix, onDone }) {
   return (
     <section className="aroma-confirm">
       <div className="aroma-confirm-topbar">
+        <p className="aroma-confirm-note">Покажите мастеру</p>
         <button type="button" className="aroma-confirm-done" onClick={onDone}>Готово</button>
       </div>
       <div className="aroma-confirm-stack">
-        <p className="aroma-caps aroma-confirm-kicker">Покажите мастеру</p>
         <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
         <h1 className="aroma-confirm-title">{mix.name}</h1>
-        <p className="aroma-caps">{mix.flavorProfiles.map(label).join(' · ')}</p>
+        <p className="aroma-confirm-profiles">{mix.flavorProfiles.map((p, i) => (i ? label(p).toLowerCase() : label(p))).join(', ')}</p>
         <SignatureBar profiles={mix.flavorProfiles} height={3} />
       </div>
-      <section className="aroma-confirm-composition">
-        <p className="aroma-caps">Состав</p>
+      <section className="aroma-confirm-composition" aria-label="Состав">
         <CompositionStack components={mix.components} showBar={false} />
       </section>
       <button type="button" className="aroma-ghost aroma-confirm-rate" onClick={onDone}>Оценить, когда соберут</button>
@@ -623,4 +617,4 @@ function ConfirmationScreen({ mix, onDone }) {
   );
 }
 
-Object.assign(window, { Icon, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen });
+Object.assign(window, { Icon, MixerInvite, AccessScreen, IntroScreen, OnboardingScreen, RecommendationsScreen, ShowcaseScreen, CatalogScreen, CatalogFiltersSheet, RailScreen, MixSheet, ReelStrip, ReelsScreen, ConfirmationScreen });

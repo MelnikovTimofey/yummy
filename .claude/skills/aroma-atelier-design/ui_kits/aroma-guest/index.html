@@ -1,13 +1,12 @@
 <!-- @dsCard group="Арома Ателье · Guest" viewport="430x780" name="Гостевое приложение" subtitle="18+ gate → знакомство → онбординг → нижняя панель: подбор / витрина / рилсы / каталог / миксер / кабинет → карточка" -->
 <!DOCTYPE html>
-<html lang="ru"><head><meta charset="utf-8"><title>Арома Ателье · Гость</title>
+<html lang="ru"><head><meta charset="utf-8"><title>Гостевой UI-кит Арома Ателье</title>
 <link rel="stylesheet" href="../../styles.css">
 <style>
 html,body,#root{margin:0;height:100%;width:100%}
 body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;background:var(--guest-room-bg)}
-.app-bg{min-height:100dvh;width:100%;display:grid;place-items:center;padding:16px;position:relative;overflow:hidden;background:var(--guest-halo-strong),var(--guest-halo-soft),linear-gradient(180deg,rgba(15,15,18,.94) 0%,rgba(20,20,23,1) 100%)}
-.halo-top{position:absolute;top:-100px;right:-48px;width:260px;height:260px;border-radius:999px;background:radial-gradient(circle,rgba(142, 47, 60,.55) 0%,rgba(142, 47, 60,0) 70%);filter:blur(10px);opacity:.72}
-.halo-bottom{position:absolute;bottom:-180px;left:-90px;width:320px;height:320px;border-radius:999px;background:radial-gradient(circle,rgba(142, 47, 60,.16) 0%,rgba(142, 47, 60,0) 72%);filter:blur(14px);opacity:.8}
+/* Атмосфера — одно бордовое гало сверху по центру; halo-кругов по углам нет (#348) */
+.app-bg{min-height:100dvh;width:100%;display:grid;place-items:center;padding:16px;position:relative;overflow:hidden;background:var(--guest-halo-strong),linear-gradient(180deg,rgba(15,15,18,.94) 0%,rgba(20,20,23,1) 100%)}
 .phone-shell{width:min(calc(100vw - 32px),430px);height:calc(100dvh - 32px);border:1px solid var(--line);border-radius:var(--r-guest-shell);background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-shell);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2}
 .topbar{display:grid;gap:8px;padding:6px 10px 6px 20px;border-bottom:1px solid var(--line);background:var(--guest-topbar-bg);position:sticky;top:0;z-index:20;box-shadow:0 12px 28px rgba(0,0,0,.18);backdrop-filter:blur(18px)}
 .topbar-main-row{display:flex;align-items:center;gap:12px;width:100%}
@@ -20,11 +19,15 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .guest-status{margin:0;color:var(--text-1);font-size:15px}
 .guest-error{margin:0;color:var(--danger);font-size:12px;text-align:center}
 .guest-ok{margin:0;color:var(--text-primary);font-size:12px}
-.aroma-skip{background:transparent;border:0;color:var(--text-2);font-size:11px;padding:4px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
-.aroma-ghost{border:1px solid var(--line);background:rgba(40,40,48,.5);color:var(--text-0);border-radius:14px;min-height:48px;padding:0 18px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;cursor:pointer}
-.aroma-ghost-sm{border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);border-radius:12px;min-height:44px;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:0 14px}
+/* Вторичные кнопки — sentence case: UPPERCASE в гостевом интерфейсе только у AromaCTA (#348) */
+.aroma-skip{background:transparent;border:0;color:var(--text-2);font-family:var(--font-body);font-size:13px;padding:4px;cursor:pointer}
+.aroma-ghost{border:1px solid var(--line);background:rgba(40,40,48,.5);color:var(--text-0);border-radius:var(--r-guest-control);min-height:48px;padding:0 18px;font-family:var(--font-body);font-size:14px;font-weight:500;cursor:pointer}
+.aroma-ghost-sm{border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);border-radius:var(--r-guest-control);min-height:40px;font-family:var(--font-body);font-size:13px;cursor:pointer;padding:0 14px}
+/* Заголовок секции и подпись блока вместо надписей .aroma-caps */
+.aroma-section-title{margin:4px 0 0;font-family:var(--font-display);font-size:19px;font-weight:400;line-height:1.15;color:var(--text-0)}
+.aroma-label{margin:0;font-family:var(--font-body);font-size:13px;font-weight:600;line-height:1.3;color:var(--text-1)}
 
-/* Тонкая шапка и нижняя панель (#168); шесть пунктов с «Рилсами» (#153): поля 4px, колонка ≈ 61px */
+/* Тонкая шапка и нижняя панель (#168); шесть пунктов с «Рилсами» (#153): поля 4px, колонка около 61px */
 .topbar-icon-btn{margin-left:auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
 .topbar-icon-btn:hover,.topbar-icon-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
 .topbar-icon-btn+.topbar-icon-btn{margin-left:0}
@@ -60,9 +63,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .reel-tap{position:absolute;inset:0;z-index:1;border:0;background:transparent;padding:0;cursor:pointer}
 .reel-tap:focus-visible{outline:2px solid var(--accent-hover);outline-offset:-4px}
 .reel-paused{position:absolute;left:50%;top:40%;z-index:2;width:56px;height:56px;margin:-28px 0 0 -28px;display:grid;place-items:center;border-radius:var(--r-pill);background:rgba(14,14,17,.55);border:1px solid var(--line);color:var(--text-0);pointer-events:none;backdrop-filter:blur(4px)}
-.reel-hint{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;flex-direction:column;align-items:center;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;pointer-events:none}
-.reel-hint svg{animation:reel-hint 2s var(--ease-out) infinite}
-@keyframes reel-hint{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-4px);opacity:1}}
+.reel-hint{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;flex-direction:column;align-items:center;color:var(--text-1);font-size:12px;pointer-events:none}
 /* текст — HTML-слой поверх сцены: читается скринридером и не дёргается при паузе */
 .reel-dock{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:10px;padding:56px 20px 20px;background:linear-gradient(180deg,transparent 0%,rgba(14,14,17,.72) 26%,rgba(14,14,17,.94) 100%)}
 .reel-dock>*{min-width:0}
@@ -107,15 +108,16 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .m-smoke svg path{stroke-dasharray:240;animation:m-draw var(--d,6s) linear infinite;animation-delay:var(--dl)}
 @keyframes m-draw{from{stroke-dashoffset:240}to{stroke-dashoffset:-240}}
 /* prefers-reduced-motion: сцена — статичный кадр, док появляется без анимации */
-@media (prefers-reduced-motion: reduce){.scene *,.scene::after,.reel-hint svg{animation-play-state:paused!important}.reel-reveal>*{animation:none}}
+@media (prefers-reduced-motion: reduce){.scene *,.scene::after{animation-play-state:paused!important}.reel-reveal>*{animation:none}}
 
 /* Access */
 .aroma-access{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
-.aroma-access-halo{position:absolute;inset:0;pointer-events:none;opacity:.92;background:radial-gradient(circle at 50% 12%,rgba(142, 47, 60,.30) 0%,transparent 38%),radial-gradient(circle at 12% 90%,rgba(142, 47, 60,.12) 0%,transparent 40%),radial-gradient(circle at 90% 86%,rgba(142, 47, 60,.16) 0%,transparent 38%)}
 .aroma-access-body{position:relative;z-index:1;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:clamp(24px,8vh,70px) 28px clamp(20px,3vh,28px);gap:clamp(18px,4vh,36px)}
 .aroma-access-mark{display:block;width:clamp(44px,7vh,64px);height:auto;margin-bottom:clamp(10px,2vh,18px)}
 .aroma-access-brand{display:block;font-family:var(--font-display);font-size:clamp(34px,7vh,46px);line-height:.96;color:var(--text-0)}
-.aroma-access-tagline{margin:clamp(8px,1.4vh,12px) 0 0;font-size:11px;letter-spacing:var(--caps-tracking-wide);text-transform:uppercase;color:var(--text-1)}
+.aroma-access-tagline{margin:clamp(8px,1.4vh,12px) 0 0;font-size:14px;color:var(--text-1)}
+/* AccessCodeInput рисует подпись поля классом .aroma-caps. До правки компонента sentence case задан здесь */
+.aroma-access-form label.aroma-caps{font-size:13px;letter-spacing:0;text-transform:none;color:var(--text-1)}
 .aroma-access-form{display:grid;gap:clamp(14px,2.6vh,24px);margin-top:auto}
 .aroma-access-age{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
 .aroma-access-age-dot{width:20px;height:20px;border-radius:999px;border:1px solid var(--line);background:transparent;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:var(--primary-foreground);font-size:12px;font-weight:700;cursor:pointer;padding:0}
@@ -125,17 +127,14 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 
 /* Intro */
 .aroma-intro{flex:1 1 auto;min-height:100%;position:relative;display:flex;flex-direction:column;padding:20px 24px 0;overflow:hidden}
-.aroma-intro-watermark{position:absolute;top:14px;right:22px;font-family:var(--font-display);font-size:96px;line-height:1;color:rgba(142, 47, 60,.08);pointer-events:none}
-.aroma-intro-body{flex:1 1 auto;display:flex;flex-direction:column;gap:18px;justify-content:center;z-index:1}
-.aroma-intro-content{display:flex;flex-direction:column;gap:18px}
+.aroma-intro-body{flex:1 1 auto;display:flex;flex-direction:column;gap:18px;justify-content:center}
 .aroma-intro-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-title);line-height:1.02;color:var(--text-0);text-wrap:pretty}
 .aroma-intro-text{margin:0;color:var(--text-1);font-size:15px;line-height:1.5;max-width:30ch}
 .aroma-intro-dock,.aroma-onboarding-dock{flex:0 0 auto;display:grid;gap:10px;padding:12px 0 22px;border-top:1px solid var(--line-soft);background:var(--guest-dock-fade)}
-.aroma-intro-pips,.aroma-onboarding-pips{display:flex;justify-content:center;gap:6px}
+.aroma-intro-pips{display:flex;justify-content:center;gap:6px}
 .aroma-intro-pip{width:6px;height:6px;border-radius:999px;background:rgba(142, 47, 60,.3);transition:width var(--dur-slow)}
 .aroma-intro-pip.on{width:22px;background:var(--primary)}
-.aroma-onboarding-pip{width:6px;height:6px;border-radius:999px;background:rgba(142, 47, 60,.3)}
-.aroma-onboarding-pip.on{background:var(--primary)}
+.aroma-onboarding-count{margin:0;text-align:center;font-size:13px;color:var(--text-1);font-variant-numeric:tabular-nums}
 
 /* Onboarding */
 .aroma-onboarding{flex:1 1 auto;min-height:100%;display:flex;flex-direction:column;padding:20px 20px 0;gap:12px}
@@ -144,12 +143,6 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-onboarding-hint{margin:0;color:var(--text-1);font-size:13px;line-height:1.5;max-width:32ch}
 .aroma-profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
 .aroma-flavor-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
-.aroma-selected{margin-top:6px;display:grid;gap:6px}
-.aroma-selected-row{display:flex;flex-wrap:wrap;gap:6px}
-.aroma-selected-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-1)}
-.aroma-selected-dot{width:8px;height:8px;border-radius:999px}
-
-/* Selected-mix bar */
 
 /* Recommendations */
 .aroma-recs{display:grid;gap:14px;align-content:start}
@@ -157,12 +150,23 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-empty-title{margin:0;font-family:var(--font-display);font-size:26px;line-height:1.05;color:var(--text-0)}
 .aroma-empty-text{margin:0 auto;font-size:14px;line-height:1.5;color:var(--text-1);max-width:30ch}
 .aroma-empty-actions{display:grid;gap:10px;margin-top:8px}
-.aroma-recs-hero{border-radius:var(--r-guest-hero);padding:18px;display:grid;gap:14px;border:1px solid var(--line);box-shadow:var(--shadow-guest-card)}
+/* Герой — ровная поверхность карточки, без подкраски гало профиля (#348) */
+.aroma-recs-head{display:flex;justify-content:flex-end}
+.aroma-recs-hero{border-radius:var(--r-guest-hero);padding:18px;display:grid;gap:14px;border:1px solid var(--line);background:var(--guest-card-bg);box-shadow:var(--shadow-guest-card)}
 .aroma-recs-hero-head{display:flex;gap:14px;align-items:flex-start}
 .aroma-recs-hero-text{min-width:0;display:grid;gap:6px}
 .aroma-recs-hero-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h2);line-height:1.1;color:var(--text-0)}
 .aroma-recs-hero-desc{margin:0;font-size:12.5px;line-height:1.45;color:var(--text-1)}
 .aroma-recs-hero-meta{display:flex;align-items:center;gap:10px}
+.aroma-recs-hero-count{font-size:12px;color:var(--text-2);font-variant-numeric:tabular-nums}
+/* Приглашение в «Намиксуй»: строка без глифа и без надписи над ней */
+.aroma-mixer-invite{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:10px 10px 10px 14px;border-radius:var(--r-guest-row);border:1px solid var(--border-subtle);background:var(--guest-row-bg);color:var(--text-0);text-align:left;cursor:pointer;transition:border-color var(--dur-fast)}
+.aroma-mixer-invite:hover{border-color:rgba(142,47,60,.40)}
+.aroma-mixer-invite>svg{flex:0 0 auto;margin-left:auto;color:var(--text-1)}
+.aroma-mixer-invite-text{min-width:0;display:grid;gap:3px}
+.aroma-mixer-invite-title{font-family:var(--font-display);font-size:16px;line-height:1.2}
+.aroma-mixer-invite-note{font-size:12px;line-height:1.4;color:var(--text-2)}
+.aroma-showcase-invite{padding:0 20px 4px}
 .aroma-list{display:grid;gap:8px}
 
 /* Showcase (#175): полка — заголовок с шевроном, под ним лента постеров, как у Okko */
@@ -198,12 +202,12 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-catalog-tags>button{flex:0 0 auto}
 .aroma-catalog-tag-x{margin-left:2px;opacity:.8}
 .aroma-catalog-meta{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aroma-catalog-count{margin:0;font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .aroma-catalog-empty{display:grid;gap:10px;justify-items:start}
 .aroma-catalog-empty-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .aroma-catalog-list{display:grid;gap:6px}
 .aroma-catalog-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .aroma-catalog-sheet-chips{display:flex;flex-wrap:wrap;gap:6px}
-.aroma-catalog-chip-count{margin-left:3px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .aroma-catalog-sheet-search{width:100%;box-sizing:border-box;height:40px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 12px;font-family:var(--font-body);font-size:16px;outline:none}
 .aroma-catalog-sheet-search::placeholder{color:var(--text-2)}
 .aroma-catalog-sheet-search:focus-visible{border-color:var(--accent-hover)}
@@ -215,10 +219,8 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 
 /* Rail */
 .aroma-rail{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding:12px 20px 20px;overflow-y:auto}
-.aroma-rail-topbar{display:grid;grid-template-columns:36px minmax(0,1fr);align-items:center;gap:10px}
+.aroma-rail-topbar{display:flex;align-items:center}
 .aroma-rail-back{width:36px;height:36px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-0);font-size:18px;cursor:pointer}
-.aroma-rail-topbar-text{min-width:0;display:grid;gap:2px}
-.aroma-rail-meta{margin:0;font-size:11px;color:var(--text-2)}
 .aroma-rail-intro{display:grid;gap:6px}
 .aroma-rail-title{margin:0;font-family:var(--font-display);font-size:26px;line-height:1.05;color:var(--text-0)}
 .aroma-rail-desc{margin:0;color:var(--text-1);font-size:13px;line-height:1.5;max-width:36ch}
@@ -240,11 +242,13 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-sheet-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:stretch}
 
 /* Smoke confirmation */
-.aroma-confirm{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;gap:22px;padding:20px 28px 28px;overflow-y:auto;background:radial-gradient(circle at 50% 10%,rgba(142, 47, 60,.18) 0%,transparent 40%),radial-gradient(circle at 50% 100%,rgba(142, 47, 60,.2) 0%,transparent 35%)}
-.aroma-confirm-topbar{display:flex;justify-content:flex-end}
-.aroma-confirm-done{background:transparent;border:1px solid var(--line);border-radius:var(--r-guest-control);padding:8px 16px;color:var(--text-0);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+/* «Покажите мастеру»: ровный фон, своего гало у экрана нет (#348) */
+.aroma-confirm{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;gap:22px;padding:20px 28px 28px;overflow-y:auto}
+.aroma-confirm-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aroma-confirm-note{margin:0;font-size:14px;color:var(--text-1)}
+.aroma-confirm-done{background:transparent;border:1px solid var(--line);border-radius:var(--r-guest-control);min-height:40px;padding:0 16px;color:var(--text-0);font-family:var(--font-body);font-size:13px;cursor:pointer}
 .aroma-confirm-stack{display:grid;gap:10px;justify-items:center;text-align:center}
-.aroma-confirm-kicker{color:var(--primary)}
+.aroma-confirm-profiles{margin:0;font-size:13px;color:var(--text-1)}
 .aroma-confirm-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-title);line-height:1.05;color:var(--text-0);max-width:14ch}
 .aroma-confirm-composition{border-radius:var(--r-guest-card);padding:18px;border:1px solid var(--line);background:var(--guest-card-bg);display:grid;gap:10px}
 .aroma-confirm-rate{margin-top:auto}
