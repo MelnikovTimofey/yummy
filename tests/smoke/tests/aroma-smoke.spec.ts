@@ -425,7 +425,7 @@ test('Aroma guest sees Russian errors instead of backend messages', async ({ pag
   await expect(page.getByText('Mix not found')).toHaveCount(0);
 });
 
-// «Рилсы» (#263): третий пункт панели — лента миксов со снапом «один жест — один
+// «Рилсы» (#263, #349): второй пункт панели — лента миксов со снапом «один жест — один
 // рилс». Колесо переводит на следующий рилс; «Покурить» — то же событие и тот же
 // экран «Покажите мастеру», «Готово» возвращает на тот же рилс.
 test('Aroma reels feed swipes to the next mix and returns after «Покурить»', async ({ page }) => {
@@ -475,8 +475,8 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(reelsTab).toHaveAttribute('aria-current', 'page');
 });
 
-// Конец ленты (#298): после последнего микса — слайд-приглашение, «Намиксуй»
-// открывает Миксер, «Назад» возвращает в рилсы.
+// Конец ленты (#298): после последнего микса — слайд-приглашение, «Собрать свой
+// микс» открывает Миксер, «Назад» возвращает в рилсы.
 test('Aroma reels feed ends with an invitation to «Намиксуй»', async ({ page }) => {
   await page.goto('/');
 
@@ -497,15 +497,22 @@ test('Aroma reels feed ends with an invitation to «Намиксуй»', async (
   await expect(end).toBeInViewport();
   await expect(end.getByText('Это все миксы')).toBeVisible();
 
-  await end.getByRole('button', { name: 'Намиксуй' }).click();
+  await end.getByRole('button', { name: 'Собрать свой микс' }).click();
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Назад', exact: true }).click();
   await expect(reelsTab).toHaveAttribute('aria-current', 'page');
 });
 
-// Полоса рилсов над Подбором (#264): кружки в порядке ленты, кружок открывает
-// раздел «Рилсы» на своём миксе. Remotion на Подборе не рендерится.
-test('Aroma reel strip above recommendations opens the feed on the tapped mix', async ({ page }) => {
+// Рилсы продолжают Подбор (#349): тизер в конце Подбора открывает ленту, в ней
+// нет миксов с Подбора; «К подбору» на первом рилсе возвращает к тизеру.
+// Рилсы — второй пункт панели. В seed пять миксов — весь подбор помещается на
+// экран, поэтому подбор урезан до двух: остальные обязаны прийти в ленту.
+test('Aroma reels continue the recommendations without repeating them', async ({ page }) => {
+  await page.route('**/guest/onboarding/recommendations', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    await route.fulfill({ response, json: { ...body, items: body.items.slice(0, 2) } });
+  });
   await page.goto('/');
 
   await page.getByLabel('Код мастера').fill(guestAccessCode);
@@ -516,20 +523,23 @@ test('Aroma reel strip above recommendations opens the feed on the tapped mix', 
   await page.getByRole('button', { name: 'Далее' }).click();
   await page.getByRole('button', { name: 'Показать подбор' }).click();
 
-  const strip = page.getByRole('list', { name: 'Рилсы' });
-  await expect(strip).toBeVisible();
-  const circles = strip.getByRole('button');
-  const count = await circles.count();
-  expect(count).toBeGreaterThan(0);
-  expect(count).toBeLessThanOrEqual(8);
-
-  const index = count > 1 ? 1 : 0;
-  const name = (await circles.nth(index).innerText()).trim();
-  await circles.nth(index).click();
-
   const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  await expect(nav.getByRole('button').nth(1)).toHaveAccessibleName('Рилсы');
+  await expect(page.getByRole('list', { name: 'Рилсы' })).toHaveCount(0);
+
+  const teaser = page.getByRole('button', { name: /^Ещё \d+ микс\S* в рилсах$/ });
+  await expect(teaser).toBeVisible();
+  const shown = (await page.locator('.aroma-recs-hero-title, .aroma-recs-row-name').allInnerTexts()).map((name) => name.trim());
+  expect(shown).toHaveLength(2);
+
+  await teaser.click();
   await expect(nav.getByRole('button', { name: 'Рилсы', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.reel-reveal .reel-name')).toHaveText(name);
+  const firstName = (await page.locator('.reel-reveal .reel-name').innerText()).trim();
+  expect(shown).not.toContain(firstName);
+
+  await page.getByRole('button', { name: 'К подбору' }).click();
+  await expect(nav.getByRole('button', { name: 'Подбор', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(teaser).toBeInViewport();
 });
 
 // Сердечко на рилсе (#265): у гостя без входа — та же шторка «Избранное хранится

@@ -2767,27 +2767,6 @@ select:focus-visible {
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
 }
 
-/* «Для вас» вошедшего гостя (#265, мокапы li-taste, li-again, li-bubble). */
-.reel-reason {
-  margin: 0;
-  max-width: 30ch;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: var(--text-1);
-}
-
-.reel-bubble {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line);
-  background: rgba(20, 20, 23, 0.72);
-  backdrop-filter: blur(8px);
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-1);
-}
-
 .reel-meta {
   display: flex;
   align-items: center;
@@ -2925,76 +2904,123 @@ select:focus-visible {
   }
 }
 
-/* ── Полоса рилсов над Подбором (#264, мокап entry-b) ──
-   Кружки со статичным кадром сцены, как Stories. Рамка — hairline и тонкое
-   кольцо --accent-border; акцентной заливки нет. */
-/* Обёртка — элемент грида .content: прокручиваемый элемент сам по себе там
-   сжимается по высоте и режет вторую строку названий. */
-.reel-strip-wrap {
-  min-width: 0;
-}
-
-.reel-strip {
+/* ── Рилсы продолжают Подбор (#349) ──
+   Тизер — последний блок Подбора; дотягивание за край открывает ленту, на
+   первом рилсе — обратно. Движение только в ответ на жест. */
+.pull-host {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0;
-  padding: 16px calc(var(--gutter) + 20px) 4px;
-  list-style: none;
-  overflow-x: auto;
-  scrollbar-width: none;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.reel-strip::-webkit-scrollbar {
-  display: none;
+.pull-host > .content,
+.pull-host > .reels-feed {
+  transition: transform 240ms ease;
 }
 
-.reel-strip > li {
-  flex: 0 0 auto;
+.pull-host[data-pulling] > .content,
+.pull-host[data-pulling] > .reels-feed {
+  transition: none;
 }
 
-.reel-strip-item {
-  width: 68px;
+.pull-peek {
+  position: absolute;
+  left: 0;
+  right: 0;
   display: grid;
-  gap: 6px;
+  place-items: center;
+  overflow: hidden;
+  background: var(--bg-base);
+  pointer-events: none;
+}
+
+.pull-peek-bottom {
+  bottom: 0;
+  border-top: 1px solid var(--line);
+}
+
+.pull-peek-top {
+  top: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pull-peek > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.pull-ring {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  background: rgba(20, 20, 23, 0.72);
+  color: var(--text-0);
+}
+
+.pull-ring-progress {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.pull-ring circle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.pull-ring-ready {
+  background: var(--accent);
+}
+
+.reels-teaser {
+  display: grid;
   justify-items: center;
-  padding: 0;
+  gap: 4px;
+  margin: 8px 0 4px;
+  padding: 12px var(--gutter);
   border: 0;
   background: transparent;
   color: var(--text-1);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
-.reel-strip-item:focus-visible {
+.reels-teaser-text {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--text-0);
+}
+
+.reels-teaser:focus-visible,
+.reel-back:focus-visible {
   outline: 2px solid var(--accent-hover);
   outline-offset: 2px;
+}
+
+.reel-back {
+  justify-self: center;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
   border-radius: var(--r-guest-control);
+  background: rgba(20, 20, 23, 0.72);
+  backdrop-filter: blur(8px);
+  color: var(--text-0);
+  font-size: 14px;
+  cursor: pointer;
 }
 
-.reel-strip-thumb {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  border-radius: var(--r-pill);
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px var(--line),
-    0 0 0 3px var(--bg-base),
-    0 0 0 4px var(--accent-border);
-}
-
-.reel-strip-name {
-  font-size: 10.5px;
-  line-height: 1.25;
-  text-align: center;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.reel-strip-wrap + .aroma-recs,
-.reel-strip-wrap + .aroma-recs-empty {
-  padding-top: 4px;
+@media (prefers-reduced-motion: reduce) {
+  .pull-host > .content,
+  .pull-host > .reels-feed {
+    transition: none;
+  }
 }

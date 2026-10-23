@@ -24,10 +24,8 @@ const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString().
 
 export type ReelProps = {
   mix: ReelFeedMix;
-  /** «Для вас» вошедшего гостя (#265): причина под описанием и подсказка
-   *  «Давно на одном вкусе». */
-  reason: string | null;
-  bubble: string | null;
+  /** Первый рилс продолжения Подбора (#349): кнопка «К подбору» сверху. */
+  onBack: (() => void) | null;
   favorite: boolean;
   onFavorite: () => void;
   /** Активный рилс играет сцену; соседи — статичный кадр. */
@@ -45,8 +43,7 @@ export type ReelProps = {
 
 export function Reel({
   mix,
-  reason,
-  bubble,
+  onBack,
   favorite,
   onFavorite,
   active,
@@ -85,8 +82,10 @@ export function Reel({
           а внизу только рейтинг, сердечко, состав и кнопки. */}
       <div className={active ? 'reel-poster reel-reveal' : 'reel-poster'}>
         <div className="reel-poster-top">
-          {bubble ? (
-            <p className="reel-bubble">{bubble}</p>
+          {onBack ? (
+            <button type="button" className="reel-back" onClick={onBack}>
+              К подбору
+            </button>
           ) : null}
         </div>
         <div className="reel-poster-center">
@@ -96,7 +95,6 @@ export function Reel({
           ) : mix.flavors.length ? (
             <p className="reel-flavors">{mix.flavors.join(', ')}</p>
           ) : null}
-          {reason ? <p className="reel-reason">{reason}</p> : null}
         </div>
         <div className="reel-poster-bottom">
           {hint ? (
