@@ -42,13 +42,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-const PlusIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14" />
-    <path d="M12 5v14" />
-  </svg>
-);
-
 export const StaffBlock = ({
   staffAccounts,
   staffAccountsStatus,
@@ -96,7 +89,6 @@ export const StaffBlock = ({
               type="button"
               onClick={openNewDialog}
             >
-              <PlusIcon />
               Создать сотрудника
             </button>
           ) : null}
@@ -115,7 +107,7 @@ export const StaffBlock = ({
               <div>Роль</div>
               <div>Последний вход</div>
               <div style={{ textAlign: 'center' }}>Вкл.</div>
-              <div style={{ textAlign: 'right' }}>Действия</div>
+              <div className="sr-only">Действия</div>
             </div>
 
             {staffAccountsStatus === 'loading' && !staffAccounts.length ? (
@@ -123,7 +115,7 @@ export const StaffBlock = ({
             ) : null}
 
             {staffAccountsStatus === 'ready' && !staffAccounts.length ? (
-              <p className="access-card__empty meta-line">Пока нет сотрудников.</p>
+              <p className="access-card__empty meta-line">Сотрудников пока нет.</p>
             ) : null}
 
             {staffAccounts.map((account) => {
@@ -139,7 +131,7 @@ export const StaffBlock = ({
                     <div
                       className={
                         isAdmin
-                          ? 'access-avatar access-avatar--square access-avatar--gradient'
+                          ? 'access-avatar access-avatar--square access-avatar--admin'
                           : 'access-avatar access-avatar--square'
                       }
                       aria-hidden="true"
@@ -214,16 +206,13 @@ export const StaffBlock = ({
       >
         <DialogContent className="operator-dialog">
           <DialogHeader className="operator-dialog__head">
-            {staffAccountEditor.id ? (
-              <p className="operator-dialog__eyebrow">Редактирование сотрудника</p>
-            ) : null}
             <DialogTitle className="operator-dialog__title">
               {staffAccountEditor.id
                 ? staffAccountEditor.name || 'Без имени'
                 : 'Создать сотрудника'}
             </DialogTitle>
             <DialogDescription className="operator-dialog__sub">
-              <strong>Admin</strong> может управлять всем: каталогом, учётками, кодом смены и журналом.
+              Admin управляет всем, staff не видит учётки и операторов бота.
             </DialogDescription>
           </DialogHeader>
 
@@ -308,9 +297,7 @@ export const StaffBlock = ({
                 </div>
 
                 <div className="operator-dialog__field">
-                  <label className="operator-dialog__label">
-                    Пароль {staffAccountEditor.id ? '(необязательно)' : '(обязательно)'}
-                  </label>
+                  <label className="operator-dialog__label">Пароль</label>
                   <div className="input">
                     <input
                       type="password"
@@ -319,7 +306,7 @@ export const StaffBlock = ({
                         setStaffAccountEditor((current) => ({ ...current, password: event.target.value }))
                       }
                       autoComplete="new-password"
-                      placeholder="Пусто — пароль не меняется"
+                      placeholder={staffAccountEditor.id ? 'Оставьте пустым, чтобы не менять' : undefined}
                     />
                   </div>
                 </div>

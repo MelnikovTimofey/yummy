@@ -695,13 +695,6 @@ p {
   overflow: visible;
 }
 
-.eyebrow {
-  margin-bottom: 6px;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-}
-
 /* Служебный слой: тот же sans, но 500 + трекинг + табличные цифры —
    выравнивание чисел даёт фигура, а не моноширина (канон). */
 .mono {
@@ -931,24 +924,6 @@ button.chip[data-active="true"] {
   background: var(--accent-soft);
   border-color: var(--accent-border, var(--border-subtle));
   color: var(--text-primary);
-}
-
-button.chip .chip__count {
-  margin-left: 6px;
-  padding: 0 6px;
-  border-radius: var(--r-xs);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  font-family: var(--font-meta);
-  font-variant-numeric: tabular-nums;
-  font-size: 10.5px;
-  line-height: 16px;
-  font-weight: 500;
-}
-
-button.chip[data-active="true"] .chip__count {
-  background: var(--accent);
-  color: var(--accent-fg);
 }
 
 /* !important у шторок перебивает utility-классы shadcn SheetContent
@@ -1422,6 +1397,14 @@ input[type="checkbox"] {
   color: var(--text-secondary);
 }
 
+.daily-code-hero__title,
+.bot-status__history-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 .daily-code-hero__status-dot {
   background: var(--success);
 }
@@ -1472,8 +1455,9 @@ input[type="checkbox"] {
 }
 
 .daily-code-progress__remaining {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .daily-code-progress__bar {
@@ -1485,13 +1469,13 @@ input[type="checkbox"] {
 
 .daily-code-progress__fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  background: var(--accent);
   border-radius: var(--r-pill);
   transition: width 0.8s ease;
 }
 
 .daily-code-progress__fill--soon {
-  background: linear-gradient(90deg, var(--warning), var(--accent));
+  background: var(--warning);
 }
 
 .daily-code-progress__fill--expired {
@@ -1499,40 +1483,7 @@ input[type="checkbox"] {
 }
 
 .daily-code-rotation {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--r-md);
-  background: var(--bg-base);
-  border: 1px solid var(--border-subtle);
-}
-
-.daily-code-rotation__icon {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--r-md);
-  background: var(--success-soft);
-  color: var(--success);
-  border: 1px solid var(--success-soft);
-  flex-shrink: 0;
-}
-
-.daily-code-rotation__text {
-  flex: 1;
-  min-width: 0;
-}
-
-.daily-code-rotation__title {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-primary);
-}
-
-.daily-code-rotation__sub {
-  margin: 2px 0 0;
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
@@ -1553,18 +1504,6 @@ input[type="checkbox"] {
   gap: 12px;
 }
 
-.bot-status__shield {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r-md);
-  background: var(--success-soft);
-  color: var(--success);
-  border: 1px solid var(--success);
-  flex-shrink: 0;
-}
-
 .bot-status__title {
   flex: 1;
   min-width: 0;
@@ -1579,11 +1518,9 @@ input[type="checkbox"] {
 
 .bot-status__heartbeat {
   margin: 2px 0 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  color: var(--muted-foreground);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
 .bot-status__badge {
@@ -1636,10 +1573,6 @@ input[type="checkbox"] {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-}
-
-.bot-status__history__head .eyebrow {
-  margin: 0;
 }
 
 .bot-status__history__list {
@@ -2528,8 +2461,7 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
-.filter-chip__count[hidden],
-button.chip .chip__count[hidden] {
+.filter-chip__count[hidden] {
   display: none;
 }
 
@@ -2842,7 +2774,7 @@ button.chip .chip__count[hidden] {
 }
 
 /* Operator dialog — centered modal под мокап AccessView » OperatorEditor.
-   Eyebrop + serif title + sub, body с toggle-row + 2 fields, footer
+   Serif title + sub, body с toggle-row + 2 fields, footer
    sticky с Отмена + Сохранить/Добавить. */
 .operator-dialog {
   max-width: 520px;
@@ -2862,14 +2794,6 @@ button.chip .chip__count[hidden] {
   gap: 4px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border-subtle);
-}
-
-.operator-dialog__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
 }
 
 .operator-dialog__title {
@@ -3041,10 +2965,10 @@ button.chip .chip__count[hidden] {
   color: var(--text-secondary);
 }
 
-.access-avatar--gradient {
-  background: var(--cta-gradient);
-  color: var(--accent-fg);
-  border-color: var(--accent);
+.access-avatar--admin {
+  background: var(--accent-deep);
+  color: var(--text-primary);
+  border-color: var(--accent-border);
 }
 
 .access-cell-phone {
@@ -3090,25 +3014,11 @@ button.chip .chip__count[hidden] {
 }
 
 .access-hint-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  margin: 0;
   padding: 10px 18px;
-  background: var(--bg-base);
   border-top: 1px solid var(--border-subtle);
   color: var(--text-muted);
   font-size: var(--fs-sm);
-  flex-wrap: wrap;
-}
-
-.access-hint-row strong {
-  color: var(--text-secondary);
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-.access-hint-row__arrow {
-  color: var(--text-faint);
 }
 
 .operator-dialog__role-switch {
