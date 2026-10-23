@@ -51,7 +51,7 @@ test('reelEntries: подсказка «Давно на одном вкусе» 
   const feed = reelEntries(forYou({ kind: 'same-mix', mixName: 'Морозная ягода', count: 4, outOf: 5 }), []);
   assert.deepEqual(ids(feed), ['s1', 'f1', 'f2', 'f3', 'f4', 'a1']);
   assert.equal(feed[0].slot, 'Шаг в сторону');
-  assert.equal(feed[0].hint, 'Четыре из пяти последних выборов: «Морозная ягода». Попробуйте что-то рядом.');
+  assert.equal(feed[0].hint, 'Четыре из пяти последних миксов: «Морозная ягода»');
   assert.ok(feed.slice(1).every((entry) => entry.hint === null));
 });
 

@@ -93,19 +93,29 @@ export const reasonText = (reason: GuestForYouReason): string => {
   }
 };
 
+const profilePlural = (profile: string) => {
+  const word = plainProfile(profile);
+  if (/ий$/.test(word)) return `${word.slice(0, -2)}ие`;
+  if (/(ый|ой)$/.test(word)) return `${word.slice(0, -2)}ые`;
+  return word;
+};
+
 const NOMINATIVE = ['', 'один', 'два', 'три', 'четыре', 'пять'];
 const GENITIVE = ['', 'одного', 'двух', 'трёх', 'четырёх', 'пяти'];
 
-const lastPicks = (count: number, outOf: number) => {
-  if (count === outOf) return `Все ${NOMINATIVE[count] ?? count} последних`;
-  return `${capitalize(NOMINATIVE[count] ?? String(count))} из ${GENITIVE[outOf] ?? outOf} последних`;
+const lastMixes = (count: number, outOf: number) => {
+  if (count === outOf) {
+    return `Все ${NOMINATIVE[count] ?? count} последних ${pluralize(count, ['микс', 'микса', 'миксов'])}`;
+  }
+  return `${capitalize(NOMINATIVE[count] ?? String(count))} из ${GENITIVE[outOf] ?? outOf} последних миксов`;
 };
 
-// Подсказка информирует и ничего не запрещает (PRD §6.5 п. 5).
-export const hintText = (hint: GuestForYouHint) => {
-  const subject = hint.kind === 'same-mix' ? `«${hint.mixName}»` : profileNeuter(hint.profile);
-  return `${lastPicks(hint.count, hint.outOf)} выборов: ${subject}. Попробуйте что-то рядом.`;
-};
+// Подсказка информирует и ничего не запрещает (PRD §6.5 п. 5). Подпись над
+// названием микса «Шаг в сторону», поэтому без призыва и точки.
+export const hintText = (hint: GuestForYouHint) =>
+  hint.kind === 'same-mix'
+    ? `${lastMixes(hint.count, hint.outOf)}: «${hint.mixName}»`
+    : `${lastMixes(hint.count, hint.outOf)} ${profilePlural(hint.profile)}`;
 
 export type ForYouRow<M> = { mix: M; reason: string };
 

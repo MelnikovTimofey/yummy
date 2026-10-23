@@ -145,12 +145,13 @@ export function ForYou<M extends ForYouMix>({
       </header>
 
       {hint ? (
-        <p className="fy-bubble">
-          {`${hint.text} `}
-          <button type="button" className="aroma-text-link" onClick={() => onOpen(hint.mix)}>
-            {hint.mix.name}
-          </button>
-        </p>
+        <button type="button" className="cab-row" onClick={() => onOpen(hint.mix)}>
+          <ProfileGlyph profiles={hint.mix.flavorProfiles} size={44} />
+          <span className="cab-row-text">
+            <span className="cab-row-reason">{hint.text}</span>
+            <span className="cab-row-name">{hint.mix.name}</span>
+          </span>
+        </button>
       ) : null}
 
       {hero || taste.length ? <h2 className="aroma-recs-section-title">Новое в вашем вкусе</h2> : null}
