@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>«Намиксуй» с панелью · мокап</title>
+<!-- Шрифты (Google Fonts) и токены дизайн-системы, затем канон приложения и живой mixer.css:
+     экран «Намиксуй» здесь свёрстан на тех же классах, что в apps/aroma-web. -->
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<link rel="stylesheet" href="../../apps/aroma-web/src/design-tokens.generated.css" />
+<link rel="stylesheet" href="../../apps/aroma-web/src/components/mixer/mixer.css" />
+<style>
+/* ── Оболочка гостя: копия правил apps/aroma-web/src/styles.css ── */
+:root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--gutter:20px;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;width:100%}
+html{background:var(--guest-room-bg)}
+body{font-family:var(--font-body);color:var(--text-0);overflow-x:hidden;background:radial-gradient(circle at top,rgba(142,47,60,.16),transparent 28%),radial-gradient(circle at 82% 16%,rgba(142,47,60,.10),transparent 22%),linear-gradient(180deg,#0F0F12 0%,#161619 40%,#141417 100%)}
+button,input,select,textarea{font:inherit}
+button:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.app-bg{min-height:100dvh;width:100%;display:grid;place-items:center;padding:0;position:relative;overflow:clip;background:radial-gradient(circle at 50% 0%,rgba(142,47,60,.16),transparent 34%),radial-gradient(circle at 80% 18%,rgba(142,47,60,.10),transparent 24%),linear-gradient(180deg,rgba(15,15,18,.94) 0%,rgba(20,20,23,1) 100%)}
+.phone-shell{width:100%;height:100dvh;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(28,28,33,.98) 0%,rgba(20,20,23,.98) 100%);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2}
+.halo-top{position:absolute;top:-100px;right:-48px;width:260px;height:260px;border-radius:var(--r-pill);background:radial-gradient(circle,rgba(142,47,60,.55) 0%,rgba(142,47,60,0) 70%);filter:blur(10px);opacity:.72}
+.halo-bottom{position:absolute;bottom:-180px;left:-90px;width:320px;height:320px;border-radius:var(--r-pill);background:radial-gradient(circle,rgba(142,47,60,.16) 0%,rgba(142,47,60,0) 72%);filter:blur(14px);opacity:.8}
+.bottom-nav{flex:0 0 auto;display:grid;padding:0 4px max(12px,var(--safe-bottom));border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
+.bottom-nav-item{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;border:0;background:transparent;color:var(--text-muted);cursor:pointer}
+.bottom-nav-item[aria-current="page"]{color:var(--text-0)}
+.bottom-nav-item[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 2px 2px;background:var(--accent)}
+.aroma-caps{margin:0;font-family:var(--font-body);font-size:11px;line-height:1.4;letter-spacing:.18em;text-transform:uppercase;color:var(--text-2);font-weight:500}
+.cta-pulse{animation:aroma-ember 1.6s ease-out infinite}
+@keyframes aroma-ember{0%{box-shadow:0 0 0 0 rgba(163,59,72,.45),0 14px 26px rgba(163,59,72,.32)}60%{box-shadow:0 0 0 18px rgba(163,59,72,0),0 14px 26px rgba(163,59,72,.32)}100%{box-shadow:0 0 0 0 rgba(163,59,72,0),0 14px 26px rgba(163,59,72,.32)}}
+.aroma-smoke-confirmation{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;gap:22px;padding:calc(20px + var(--safe-top)) 28px calc(28px + var(--safe-bottom));overflow-y:auto}
+.aroma-smoke-confirmation::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 10%,rgba(142,47,60,.18) 0%,transparent 40%),radial-gradient(circle at 50% 100%,rgba(142,47,60,.20) 0%,transparent 35%);z-index:0}
+.aroma-smoke-confirmation>*{position:relative;z-index:1}
+.aroma-smoke-confirmation-topbar{display:flex;justify-content:flex-end}
+.aroma-smoke-confirmation-done{background:transparent;border:1px solid var(--line);border-radius:var(--r-guest-control);padding:8px 16px;color:var(--text-0);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.aroma-smoke-confirmation-stack{display:grid;gap:10px;justify-items:center;text-align:center}
+.aroma-smoke-confirmation-kicker{color:var(--text-muted)}
+.aroma-smoke-confirmation-composition{border-radius:var(--r-guest-card);padding:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(34,34,41,.96) 0%,rgba(22,22,26,.88) 100%);display:grid;gap:10px}
+.aroma-smoke-confirmation-comp-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.aroma-smoke-confirmation-comp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:12px}
+.aroma-smoke-confirmation-comp-text{min-width:0;display:grid;gap:2px}
+.aroma-smoke-confirmation-comp-name{font-size:15px;color:var(--text-0)}
+.aroma-smoke-confirmation-comp-maker{font-size:10.5px}
+.aroma-smoke-confirmation-comp-share{font-family:var(--font-display);font-size:22px;color:var(--text-primary);font-variant-numeric:tabular-nums}
+
+/* ── Предложение для mixer.css: низкий экран с панелью ──
+   Панель забирает 65 px. На высоте до 740 px ход сборки уплотняется, чтобы колоде
+   осталось ≥ 200 px и с двухстрочной репликой мастера (#128). В реализации — без
+   [data-compact]: этот атрибут нужен только доске для сравнения «до / после». */
+@media (max-height: 740px) {
+  [data-compact] .mixer { --ring: 64px; }
+  [data-compact] .mixer-progress { padding-top: 6px; }
+  [data-compact] .mixer-swipe { gap: 6px; padding-top: 6px; padding-bottom: 6px; }
+  [data-compact] .mixer-filters { gap: 4px; }
+  [data-compact] .mixer-master-line { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; padding: 6px 10px; }
+  [data-compact] .mixer-master-avatar { width: 28px; height: 28px; font-size: 13px; }
+  /* Подпись «Мастер» прячется только визуально: аватар aria-hidden, читалке нужен текст. */
+  [data-compact] .mixer-master-body > .aroma-caps { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Три ссылки шага штриха встают в одну строку на 375 px. */
+  [data-compact] .mixer-links { gap: 0 12px; }
+}
+
+/* ── Только мокап: подсветка «Назад» и доска ── */
+.mixer-icon-btn[data-mock-hl]{border-color:var(--accent-hover);box-shadow:0 0 0 3px var(--accent-soft)}
+.board{min-height:100vh;padding:40px 48px 64px;display:grid;gap:40px;align-content:start;background:var(--guest-room-bg)}
+.board h1{margin:0;font-family:var(--font-display);font-weight:500;font-size:30px;color:var(--text-0)}
+.board h2{margin:0;font-family:var(--font-display);font-weight:500;font-size:22px;color:var(--text-0)}
+.board-lead{margin:8px 0 0;max-width:820px;font-size:14px;line-height:1.55;color:var(--text-1)}
+.board-section{display:grid;gap:16px}
+.board-section>.board-lead{margin:0}
+.board-row{display:flex;flex-wrap:nowrap;gap:20px;align-items:flex-start;overflow-x:auto}
+.frame,.flow-arrow{flex:none}
+.frame{display:grid;gap:10px;width:375px}
+.frame-name{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--text-muted)}
+.frame-name b{color:var(--text-0);font-weight:600}
+.frame iframe{display:block;box-sizing:content-box;width:375px;border:1px solid var(--line);border-radius:18px;background:#141417}
+.frame-note{margin:0;font-size:13px;line-height:1.5;color:var(--text-1)}
+.frame-note b{color:var(--text-0);font-weight:600}
+.flow-arrow{align-self:center;display:grid;justify-items:center;gap:4px;width:56px;color:var(--text-1);font-size:12px;text-align:center}
+.flow-arrow span:first-child{font-size:26px;color:var(--accent-hover)}
+.fit{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:6px;font-size:11px;letter-spacing:.06em;text-transform:none;font-weight:600}
+.fit[data-ok="true"]{color:#A9C9A5;border:1px solid rgba(110,154,106,.5)}
+.fit[data-ok="false"]{color:#E59A92;border:1px solid rgba(207,79,68,.55)}
+.shot{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--guest-room-bg)}
+.shot iframe{display:block;box-sizing:content-box;width:375px;border:1px solid var(--line);border-radius:18px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/lucide@0.470.0/dist/umd/lucide.js"></script>
+<script>
+// Палитра — реальные табаки полки прода (снапшот 2026-10-21): бренды, flavorProfiles,
+// flavors и холодок как в каталоге. Число миксов мастеров — по полке 19.10.2026.
+const PROFILE = {
+  citrus: '#e8b948', berry: '#a23048', floral_herbal: '#7a9560', fresh: '#7fb5a3', sweet: '#d98c5a',
+  spicy: '#c0492c', dessert: '#b07747', tobacco: '#7a5236', minty: '#6ba88a', fruity: '#dd8a4a',
+  perfume: '#c787a8', sour: '#bcb04a',
+};
+const LABEL = {
+  spicy: 'Пряный', dessert: 'Десертный', tobacco: 'Табачный', minty: 'Мятный', fruity: 'Фруктовый',
+  floral_herbal: 'Цветочно-травяной', citrus: 'Цитрусовый', berry: 'Ягодный', perfume: 'Парфюмный',
+  sweet: 'Сладкий', sour: 'Кислый', fresh: 'Свежий',
+};
+const T = {
+  peach: { brand: 'DARKSIDE', name: 'Virgin Peach 2.0', profiles: ['fruity'], flavors: ['персик'], mixes: 1 },
+  mango: { brand: 'DARKSIDE', name: 'Mango Lassi 2.0', profiles: ['fruity'], flavors: ['манго'] },
+  star: { brand: 'DARKSIDE', name: 'Falling Star', profiles: ['fruity'], flavors: ['манго', 'маракуйя'] },
+  bitter: { brand: 'DARKSIDE', name: 'Bittersweet', profiles: ['citrus', 'fruity', 'sour'], flavors: ['лимон', 'тоник'] },
+  orange: { brand: 'Black Burn', name: 'Red Orange', profiles: ['citrus', 'fruity', 'sour'], flavors: ['апельсин'] },
+  basil: { brand: 'DARKSIDE', name: 'Basil Blast', profiles: ['floral_herbal'], flavors: ['базилик'] },
+  mint: { brand: 'Black Burn', name: 'Cane Mint', profiles: ['fresh', 'minty'], flavors: ['мята'], cooling: true },
+  redtea: { brand: 'DARKSIDE', name: 'Red Tea', profiles: ['floral_herbal', 'spicy'], flavors: ['чай'] },
+  mintslide: { brand: 'DARKSIDE', name: 'Mintslide', profiles: ['dessert', 'fresh', 'minty', 'sweet'], flavors: ['жвачка', 'мята'], cooling: true },
+};
+const color = (t) => PROFILE[t.profiles[0]] ?? '#7a5236';
+const SHARES = { 1: [100], 2: [65, 35], 3: [55, 35, 10] };
+const ROLES = ['Основа', 'Акцент', 'Штрих'];
+const TURNS = [
+  { label: 'Основа', range: '40–70%' },
+  { label: 'Акцент', range: '20–40%' },
+  { label: 'Штрих', range: '5–15%' },
+];
+const NAV = [
+  ['recommendations', 'Подбор', 'sparkles'],
+  ['showcase', 'Витрина', 'gallery-horizontal-end'],
+  ['reels', 'Рилсы', 'clapperboard'],
+  ['catalog', 'Каталог', 'search'],
+  ['mixer', 'Миксер', 'blend'],
+  ['cabinet', 'Кабинет', 'circle-user-round'],
+];
+// Реплики мастера пока пусты (#128) — блок не рендерится. Для проверки высоты берём
+// двухстрочную реплику-заглушку: столько места займёт текст владельца.
+const LONG_LINE = 'Персик берёт на себя основу. Теперь нужен тот, кто его подсветит.';
+
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+function chip(label, { active = false, dot } = {}) {
+  const style = [
+    'display:inline-flex', 'align-items:center', 'gap:7px',
+    `border:1px solid ${active ? 'var(--guest-chip-border-on)' : 'var(--line)'}`,
+    `background:${active ? 'var(--guest-chip-bg-on)' : 'var(--guest-chip-bg)'}`,
+    `color:${active ? 'var(--guest-chip-ink-on)' : 'var(--text-1)'}`,
+    'border-radius:var(--r-guest-chip)', 'padding:7px 12px', 'font-size:12px',
+    `font-weight:${active ? 600 : 400}`, 'line-height:1.1', 'cursor:pointer',
+    `box-shadow:${active ? 'var(--highlight-inner)' : 'none'}`,
+  ].join(';');
+  const dotEl = dot
+    ? `<span aria-hidden style="width:6px;height:6px;border-radius:var(--r-pill);background:${dot};flex:0 0 auto;box-shadow:${active ? '0 0 0 2px var(--guest-chip-border-on)' : 'none'}"></span>`
+    : '';
+  return `<button type="button" aria-pressed="${active}" style="${style}">${dotEl}<span>${esc(label)}</span></button>`;
+}
+
+function ring(tobaccos, center, size) {
+  const R = 78, C = 2 * Math.PI * R, half = 94;
+  const shares = SHARES[tobaccos.length] ?? [];
+  const gap = tobaccos.length > 1 ? 4 : 0;
+  let offset = 0;
+  const segs = [0, 1, 2].map((i) => {
+    const t = tobaccos[i];
+    if (!t) return `<circle class="mixer-ring-seg" cx="${half}" cy="${half}" r="${R}" fill="none" stroke="transparent" stroke-width="22" stroke-dasharray="0 ${C}" transform="rotate(-90 ${half} ${half})"/>`;
+    const full = (C * shares[i]) / 100;
+    const seg = `<circle class="mixer-ring-seg" cx="${half}" cy="${half}" r="${R}" fill="none" stroke="${color(t)}" stroke-width="22" stroke-dasharray="${Math.max(0, full - gap)} ${C}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${half} ${half})"/>`;
+    offset += full;
+    return seg;
+  }).join('');
+  return `<div class="mixer-ring">
+    <span class="mixer-ring-halo" style="background:${tobaccos[0] ? color(tobaccos[0]) : 'transparent'}" aria-hidden></span>
+    <svg viewBox="0 0 188 188" aria-hidden><circle cx="${half}" cy="${half}" r="${R}" fill="none" stroke="var(--line)" stroke-width="22"/>${segs}</svg>
+    <div class="mixer-ring-center">${center}</div>
+  </div>`;
+}
+
+const draftName = (tobaccos) => {
+  const [base, ...rest] = tobaccos;
+  const named = [base, ...rest.filter((t) => !t.cooling)];
+  const notes = [...new Set(named.map((t) => t.flavors[0]))];
+  const joined = notes.length === 1 ? notes[0] : `${notes.slice(0, -1).join(', ')} и ${notes.at(-1)}`;
+  return joined[0].toUpperCase() + joined.slice(1) + (rest.some((t) => t.cooling) ? ' со льдом' : '');
+};
+
+function card(t, pos, match) {
+  const top = pos === 0;
+  const profileLine = t.profiles.slice(0, 2).map((p) => LABEL[p]).join(' · ');
+  return `<div class="mixer-card" data-pos="${pos}" style="--pc:${color(t)}" ${top ? `role="group" aria-roledescription="карта табака" aria-label="${esc(t.brand)} ${esc(t.name)}"` : 'aria-hidden="true"'}>
+    ${top ? '<span class="mixer-stamp mixer-stamp-take" aria-hidden>Беру</span><span class="mixer-stamp mixer-stamp-skip" aria-hidden>Дальше</span>' : ''}
+    <span class="mixer-card-profile"><span class="mixer-dot" style="background:${color(t)}" aria-hidden></span>${esc(profileLine)}</span>
+    <span class="aroma-caps mixer-card-brand">${esc(t.brand)}</span>
+    <span class="mixer-card-name">${esc(t.name)}</span>
+    <span class="mixer-card-flavors">${esc(t.flavors.join(' · '))}</span>
+    <div class="mixer-card-foot">
+      <div class="mixer-card-match"><b>${esc(match.value)}</b><span>${esc(match.caption)}</span></div>
+      ${t.cooling ? '<span class="mixer-card-tag">холодок</span>' : ''}
+    </div>
+  </div>`;
+}
+
+function topbar(hl) {
+  return `<header class="mixer-topbar">
+    <button type="button" class="mixer-icon-btn" aria-label="Назад" ${hl ? 'data-mock-hl' : ''}>←</button>
+    <h1 id="mixer-title" class="mixer-title">Намиксуй</h1>
+    <span aria-hidden></span>
+  </header>`;
+}
+
+function masterLine(text) {
+  if (!text) return '';
+  return `<div class="mixer-master-line">
+    <span class="mixer-master-avatar" aria-hidden>М</span>
+    <div class="mixer-master-body"><span class="aroma-caps">Мастер</span><span aria-live="polite"><span class="mixer-master-text" style="animation:none">${esc(text)}</span></span></div>
+  </div>`;
+}
+
+// Ход сборки: turn 0–2, chosen — табаки в чаше, deck — три верхние карты колоды.
+function swipe({ turn, chosen, deck, matches, shelves, count, fromOnboarding, line }) {
+  const progress = `<div class="mixer-progress">
+    <div class="mixer-progress-row">
+      <span class="aroma-caps">Ход 0${turn + 1} · из 03</span>
+      <span class="mixer-progress-role">${TURNS[turn].label} · <span>${TURNS[turn].range}</span></span>
+    </div>
+    <div class="mixer-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${turn}"><span style="width:${(turn / 3) * 100}%"></span></div>
+  </div>`;
+  const harmony = chosen.length === 1 ? 70 : 81;
+  const center = chosen.length
+    ? `<span class="mixer-ring-score">${harmony}</span>`
+    : '<span class="mixer-ring-caption">Пустая<br />чаша</span>';
+  const info = chosen.length
+    ? `<p class="mixer-bowl-name">${esc(draftName(chosen))}</p>
+       <ul class="mixer-bowl-comps">${chosen.map((t) => `<li><span class="mixer-dot" style="background:${color(t)}" aria-hidden></span>${esc(t.name)}</li>`).join('')}</ul>`
+    : '<p class="mixer-bowl-name" data-empty="true">Имя придумаем сами</p><p class="mixer-bowl-hint">Гармония появится после основы</p>';
+  const chips = [chip('Все', { active: !shelves.selected.length })]
+    .concat(shelves.order.map((p) => chip(LABEL[p], { active: shelves.selected.includes(p), dot: PROFILE[p] })))
+    .join('');
+  const word = count % 10 === 1 && count % 100 !== 11 ? 'табак' : [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100) ? 'табака' : 'табаков';
+  return `${progress}
+  <div class="mixer-swipe">
+    ${masterLine(line)}
+    <div class="mixer-bowl-row">${ring(chosen, center)}<div class="mixer-bowl-info">${info}</div></div>
+    <div class="mixer-filters">
+      <div class="mixer-filters-head">
+        <span class="aroma-caps">Полки</span>
+        <span class="mixer-filters-count" aria-live="polite">${fromOnboarding ? 'из вашего подбора · ' : ''}${count} ${word} в колоде · по кругу</span>
+      </div>
+      <div class="mixer-shelves" role="group" aria-label="Полки, можно несколько">${chips}</div>
+    </div>
+    <div class="mixer-deck-slot"><div class="mixer-deck">${deck.map((t, i) => card(t, i, matches[i])).reverse().join('')}</div></div>
+    <div class="mixer-actions">
+      <button type="button" class="mixer-round" aria-label="Дальше">×</button>
+      <button type="button" class="mixer-round mixer-round-take" aria-label="Беру">✓</button>
+    </div>
+    <div class="mixer-links">
+      <button type="button" class="mixer-link" disabled>Вернуть прошлую</button>
+      ${turn === 2 ? '<button type="button" class="mixer-link">Без штриха</button>' : ''}
+      <button type="button" class="mixer-link">Доверюсь мастеру</button>
+    </div>
+  </div>`;
+}
+
+const mixes = (n) => (n > 0 ? { value: String(n), caption: `${n === 1 ? 'микс' : n < 5 ? 'микса' : 'миксов'} мастеров с ним` } : { value: '—', caption: 'в миксах мастеров пока нет' });
+const pct = (v) => ({ value: `${v}%`, caption: 'совпадение с чашей' });
+const ALL_SHELVES = ['fruity', 'berry', 'dessert', 'citrus', 'floral_herbal', 'minty', 'spicy', 'tobacco', 'perfume'];
+
+const TURN_STATE = {
+  base: {
+    turn: 0, chosen: [], deck: [T.peach, T.mango, T.star], matches: [mixes(1), mixes(1), mixes(0)],
+    shelves: { order: ALL_SHELVES, selected: ['fruity'] }, count: 178, fromOnboarding: true,
+  },
+  accent: {
+    turn: 1, chosen: [T.peach], deck: [T.bitter, T.orange, T.basil], matches: [pct(84), pct(81), pct(66)],
+    shelves: { order: ALL_SHELVES.filter((p) => p !== 'perfume'), selected: [] }, count: 268,
+  },
+  twist: {
+    turn: 2, chosen: [T.peach, T.bitter], deck: [T.mint, T.redtea, T.mintslide], matches: [pct(79), pct(72), pct(70)],
+    shelves: { order: ['minty', 'spicy', 'fresh', 'floral_herbal', 'dessert'], selected: [] }, count: 14,
+  },
+};
+
+function reveal() {
+  const bowl = [T.peach, T.bitter, T.mint];
+  const shares = SHARES[3];
+  const radius = 'var(--r-guest-control)';
+  const segs = bowl.map((t, i) => `<div class="mixer-split-seg" style="flex-basis:${shares[i]}%;background:${color(t)};border-radius:${i === 0 ? radius : 0} ${i === 2 ? `${radius} ${radius}` : '0 0'} ${i === 0 ? radius : 0}">${shares[i] >= 10 ? `${shares[i]}%` : ''}</div>`).join('');
+  const handles = [55, 90].map((left) => `<div class="mixer-split-handle" role="slider" tabindex="0" style="left:${left}%"></div>`).join('');
+  const legend = bowl.map((t, i) => `<li><span class="mixer-dot" style="background:${color(t)}" aria-hidden></span>${ROLES[i]} · <b>${esc(t.brand)} ${esc(t.name)}</b> ${shares[i]}%</li>`).join('');
+  const meters = [['Сладость', 52], ['Кислинка', 46], ['Свежесть', 63], ['Плотность', 38]]
+    .map(([label, w]) => `<div class="mixer-meter"><span class="mixer-meter-label">${label}</span><span class="mixer-meter-track"><span style="width:${w}%"></span></span></div>`).join('');
+  return `<div class="mixer-progress">
+      <div class="mixer-progress-row"><span class="aroma-caps">Раскрытие</span><span class="aroma-caps">Ваш микс</span></div>
+      <div class="mixer-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="3"><span style="width:100%"></span></div>
+    </div>
+    <div class="mixer-reveal">
+      <div class="mixer-reveal-card">
+        <div class="mixer-reveal-head">
+          ${ring(bowl, '<span class="mixer-ring-score">79</span>')}
+          <div class="mixer-reveal-verdict"><span class="aroma-caps">Ваш микс · гармония</span><span class="mixer-verdict">Классическое сочетание</span></div>
+        </div>
+        <label class="mixer-name-field"><span class="aroma-caps">Название · можно переименовать</span>
+          <textarea class="mixer-name-input" rows="1" aria-label="Название микса" spellcheck="false" style="height:36px">${esc(draftName(bowl))}</textarea></label>
+      </div>
+      <div class="mixer-split"><span class="aroma-caps">Доли · тяните бегунки</span><div class="mixer-split-bar">${segs}${handles}</div><ul class="mixer-split-legend">${legend}</ul></div>
+      <div class="mixer-meters">${meters}</div>
+      <div class="mixer-similar"><span class="aroma-caps">В ателье такого нет</span><strong>Первое такое сочетание</strong><span></span><span class="mixer-similar-note">Похожих миксов в каталоге нет.</span></div>
+    </div>
+    <div class="mixer-dock">
+      <button type="button" class="cta-pulse" style="width:100%;border:1px solid var(--cta-solid-border);background:var(--cta-solid);color:var(--cta-solid-ink);border-radius:var(--r-guest-cta);min-height:52px;padding:0 18px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;cursor:pointer;box-shadow:var(--cta-solid-shadow)">Покурить</button>
+      <button type="button" class="mixer-link">Собрать заново</button>
+    </div>`;
+}
+
+function glyph(profiles, size) {
+  const pos = [{ l: 8, t: 8, s: 26, o: 0.92 }, { l: 22, t: 22, s: 24, o: 0.78 }, { l: 14, t: 28, s: 18, o: 0.62 }];
+  const k = size / 56;
+  const orbs = profiles.slice(0, 3).map((p, i) => {
+    const c = PROFILE[p];
+    return `<span style="position:absolute;left:${pos[i].l * k}px;top:${pos[i].t * k}px;width:${pos[i].s * k}px;height:${pos[i].s * k}px;border-radius:var(--r-pill);background:radial-gradient(circle at 30% 30%, ${c} 0%, ${c}66 70%, transparent 100%);opacity:${pos[i].o};mix-blend-mode:screen;filter:blur(2px)"></span>`;
+  }).join('');
+  return `<div aria-hidden style="width:${size}px;height:${size}px;border-radius:var(--r-guest-glyph);background:radial-gradient(circle at 30% 30%, var(--line-soft), transparent 70%), var(--bg-base);border:1px solid var(--line-soft);position:relative;flex:0 0 auto;overflow:hidden">${orbs}</div>`;
+}
+
+function masterCard() {
+  const bowl = [T.peach, T.bitter, T.mint];
+  const profiles = ['fruity', 'citrus', 'sour'];
+  const bar = profiles.map((p) => `<span style="flex:1;background:linear-gradient(90deg, ${PROFILE[p]} 0%, ${PROFILE[p]}aa 100%)"></span>`).join('');
+  const rows = bowl.map((t, i) => `<li class="aroma-smoke-confirmation-comp-row">
+      <div class="aroma-smoke-confirmation-comp-text"><span class="aroma-smoke-confirmation-comp-name">${esc(t.name)}</span><span class="aroma-caps aroma-smoke-confirmation-comp-maker">${esc(t.brand)} · ${ROLES[i]}</span></div>
+      <span class="aroma-smoke-confirmation-comp-share">${SHARES[3][i]}%</span></li>`).join('');
+  return `<section class="aroma-smoke-confirmation mixer-master-card">
+    <div class="aroma-smoke-confirmation-topbar"><button type="button" class="aroma-smoke-confirmation-done">Готово</button></div>
+    <div class="aroma-smoke-confirmation-stack">
+      <p class="aroma-caps aroma-smoke-confirmation-kicker">Покажите мастеру</p>
+      ${glyph(profiles, 96)}
+      <h1 class="mixer-master-card-title">${esc(draftName(bowl))}</h1>
+      <span class="mixer-verdict">Собран гостем · гармония 79</span>
+      <div aria-hidden style="display:flex;width:100%;height:3px;border-radius:999px;overflow:hidden;box-shadow:var(--highlight-inner)">${bar}</div>
+    </div>
+    <section class="aroma-smoke-confirmation-composition"><p class="aroma-caps">Состав</p><ul class="aroma-smoke-confirmation-comp-list">${rows}</ul></section>
+  </section>`;
+}
+
+function bottomNav(active = 'mixer') {
+  const items = NAV.map(([id, label, icon]) => `<button type="button" class="bottom-nav-item" aria-label="${label}" ${id === active ? 'aria-current="page"' : ''}><i data-lucide="${icon}" stroke-width="${id === active ? 2.1 : 1.8}" aria-hidden="true"></i></button>`).join('');
+  return `<nav class="bottom-nav" aria-label="Гостевая навигация" style="grid-template-columns:repeat(${NAV.length}, minmax(0, 1fr))">${items}</nav>`;
+}
+
+// Экраны: что рендерит один телефон. nav — видна ли нижняя панель.
+const SCREENS = {
+  'base': { nav: true, hl: true, body: () => swipe(TURN_STATE.base) },
+  'accent': { nav: true, hl: true, body: () => swipe(TURN_STATE.accent) },
+  'twist': { nav: true, hl: true, body: () => swipe(TURN_STATE.twist) },
+  'reveal': { nav: true, hl: true, body: reveal },
+  'master-nav': { nav: true, master: true },
+  'master-full': { nav: false, master: true },
+  'base-line': { nav: true, body: () => swipe({ ...TURN_STATE.base, line: LONG_LINE }) },
+  'twist-line': { nav: true, body: () => swipe({ ...TURN_STATE.twist, line: 'Холодок — лучшее, что случается с лимоном. Но в меру.' }) },
+  'base-now': { nav: false, body: () => swipe(TURN_STATE.base) },
+  'twist-now-line': { nav: false, body: () => swipe({ ...TURN_STATE.twist, line: 'Холодок — лучшее, что случается с лимоном. Но в меру.' }) },
+};
+
+function renderScreen(id) {
+  const s = SCREENS[id] ?? SCREENS.base;
+  const mixer = s.master
+    ? `<section class="mixer">${masterCard()}</section>`
+    : `<section class="mixer" aria-labelledby="mixer-title">${topbar(s.hl)}${s.body()}</section>`;
+  document.getElementById('root').innerHTML = `<div class="app-bg"><div class="halo-top"></div><div class="halo-bottom"></div>
+    <div class="phone-shell">${mixer}${s.nav ? bottomNav() : ''}</div></div>`;
+  lucide.createIcons();
+  // Отчёт для доски: помещается ли экран свайпов в высоту. Считается по запросу —
+  // после загрузки шрифтов: с запасным шрифтом строки короче и места кажется больше.
+  window.__fit = () => {
+    const swipeEl = document.querySelector('.mixer-swipe');
+    if (!swipeEl) return null;
+    const slot = document.querySelector('.mixer-deck-slot').getBoundingClientRect().height;
+    const last = document.querySelector('.mixer-links').getBoundingClientRect().bottom;
+    const limit = swipeEl.getBoundingClientRect().bottom - parseFloat(getComputedStyle(swipeEl).paddingBottom);
+    return { deck: Math.round(slot), clipped: Math.max(0, Math.round(last - limit)) };
+  };
+}
+
+// Доска: каждый телефон — iframe нужной высоты, поэтому media (max-height: 740px) и
+// container-запросы срабатывают так же, как на реальном экране.
+const FRAMES = {
+  'base-812': ['base', 812, 'Шаг основы', '<b>«Назад»</b> — на экран, откуда гость открыл «Намиксуй»: отменять нечего.'],
+  'accent-812': ['accent', 812, 'Шаг акцента', '<b>«Назад»</b> — снова выбор основы. Персик снимается из чаши, колода основы начинается сначала, полки — из подбора.'],
+  'twist-812': ['twist', 812, 'Шаг штриха', '<b>«Назад»</b> — снова выбор акцента. В чаше остаётся одна основа, как на экране слева.'],
+  'reveal-812': ['reveal', 812, 'Раскрытие', '<b>«Назад»</b> — снова шаг штриха с двумя табаками. Так же после «Без штриха» и «Доверюсь мастеру».'],
+  'base-667': ['base', 667, 'Основа', 'Реплик мастера пока нет (#128) — так экран выглядит на проде сегодня, плюс панель.', true],
+  'accent-667': ['accent', 667, 'Акцент', '', true],
+  'twist-667': ['twist', 667, 'Штрих', 'Три ссылки — в одну строку (просвет 12 px вместо 16).', true],
+  'reveal-667': ['reveal', 667, 'Раскрытие', '«Покурить» стоит над панелью, состав прокручивается под ним.', true],
+  'base-line-667': ['base-line', 667, 'Основа + реплика', 'Двухстрочная реплика мастера — когда владелец заполнит тексты #128. Аватар 28 px, подпись «Мастер» — только для читалки.', true],
+  'twist-line-667': ['twist-line', 667, 'Штрих + реплика', 'Худший случай: реплика и три ссылки.', true],
+  'twist-line-raw-667': ['twist-line', 667, 'Без уплотнения', 'Тот же экран на нынешнем mixer.css: «Беру/Дальше» и ссылки уходят под панель.'],
+  'twist-now-line-667': ['twist-now-line', 667, 'Сейчас, без панели', 'Для сравнения: худший случай на проде сегодня.'],
+  'base-now-548': ['base-now', 548, 'SE в Safari · сейчас', 'iPhone SE с панелями Safari: уже сегодня, без нашей панели, ссылки упираются в край.'],
+  'base-548': ['base', 548, 'SE в Safari · с панелью', 'С панелью кнопки и ссылки уходят под неё даже с уплотнением. Вне scope #350 — отдельная задача.', true],
+  'master-nav-812': ['master-nav', 812, 'Вариант А · с панелью', '«Готово» — на экран, откуда пришли; из панели — в любой раздел.'],
+  'master-full-812': ['master-full', 812, 'Вариант Б · без панели', 'Как сейчас и как у карточки микса из каталога: экран для мастера, «Готово» — единственный выход. <b>Рекомендуем.</b>'],
+  'master-nav-667': ['master-nav', 667, 'Вариант А', 'Помещается целиком и с панелью.'],
+  'master-full-667': ['master-full', 667, 'Вариант Б', ''],
+};
+
+function frame(key) {
+  const [screen, h, name, note, compact] = FRAMES[key];
+  return `<div class="frame" data-frame="${key}">
+    <p class="frame-name"><b>${name}</b> · 375×${h} <span class="fit" hidden></span></p>
+    <iframe src="mockups.html#screen=${screen}${compact ? '&compact=1' : ''}" height="${h}" title="${esc(name)}" loading="eager"></iframe>
+    ${note ? `<p class="frame-note">${note}</p>` : ''}
+  </div>`;
+}
+const arrow = (text) => `<div class="flow-arrow"><span>←</span><span>${text}</span></div>`;
+
+function renderBoard() {
+  document.getElementById('root').innerHTML = `<div class="board">
+    <header>
+      <h1>«Намиксуй» с нижней панелью и пошаговым «Назад» · #350</h1>
+      <p class="board-lead">На экране видна нижняя панель гостя, активен «Миксер». Стрелка в шапке отменяет прошлый ход;
+      на шаге основы ведёт туда, откуда гость пришёл. Уход через панель посреди сборки сбрасывает чашу.
+      Экран свёрстан на живом <code>mixer.css</code> из <code>apps/aroma-web</code>, рамки — iframe точного размера.
+      Подсвеченная стрелка — та самая «Назад».</p>
+    </header>
+
+    <section class="board-section">
+      <h2>Ходы сборки · 375×812</h2>
+      <p class="board-lead">Читать справа налево: каждое «Назад» отменяет один ход, чаша уменьшается на табак.</p>
+      <div class="board-row">
+        <div class="flow-arrow"><span>←</span><span>прошлый экран</span></div>
+        ${frame('base-812')}${arrow('Назад')}${frame('accent-812')}${arrow('Назад')}${frame('twist-812')}${arrow('Назад')}${frame('reveal-812')}
+      </div>
+    </section>
+
+    <section class="board-section">
+      <h2>Главная проверка · 375×667</h2>
+      <p class="board-lead">Помещаются ли вместе с панелью колода, «Беру/Дальше», ссылки и чаша. Метка над телефоном —
+      высота колоды и обрезано ли что-то снизу (колоде положено не меньше 200 px, <code>.mixer-deck-slot</code>).</p>
+      <div class="board-row">${frame('base-667')}${frame('accent-667')}${frame('twist-667')}${frame('reveal-667')}</div>
+      <p class="board-lead">С репликой мастера панель забирает у колоды больше, чем есть. Поэтому на высоте до 740 px
+      ход сборки уплотняется: кольцо 64 px, отступы 6 px, реплика с аватаром 28 px. Справа — тот же худший случай
+      без уплотнения и экран на проде сегодня.</p>
+      <div class="board-row">${frame('base-line-667')}${frame('twist-line-667')}${frame('twist-line-raw-667')}${frame('twist-now-line-667')}</div>
+      <p class="board-lead">Край вне scope: iPhone SE в Safari с панелями браузера (375×548).</p>
+      <div class="board-row">${frame('base-now-548')}${frame('base-548')}</div>
+    </section>
+
+    <section class="board-section">
+      <h2>«Покажите мастеру» · решение владельца</h2>
+      <p class="board-lead">Поведение «Готово» не меняется. Вопрос один: видна ли на карточке панель.</p>
+      <div class="board-row">${frame('master-nav-812')}${frame('master-full-812')}${frame('master-nav-667')}${frame('master-full-667')}</div>
+    </section>
+  </div>`;
+  document.querySelectorAll('.frame iframe').forEach((iframe) => {
+    iframe.addEventListener('load', () => {
+      const report = () => {
+        const fit = iframe.contentWindow.__fit();
+        const badge = iframe.closest('.frame').querySelector('.fit');
+        if (!fit) return;
+        badge.hidden = false;
+        const ok = fit.clipped === 0 && fit.deck >= 200;
+        badge.dataset.ok = String(ok);
+        badge.textContent = `колода ${fit.deck} px${fit.clipped ? ` · обрезано ${fit.clipped} px` : ''}`;
+      };
+      const fonts = iframe.contentWindow.document.fonts;
+      fonts.ready.then(() => setTimeout(report, 1200));
+      fonts.addEventListener('loadingdone', () => setTimeout(report, 50));
+    });
+  });
+}
+
+// #shot=<frame> — один телефон без доски, для скриншотов в issue и PR.
+function renderShot(key) {
+  const [screen, h, name, , compact] = FRAMES[key] ?? FRAMES['base-812'];
+  document.getElementById('root').innerHTML = `<div class="shot"><iframe src="mockups.html#screen=${screen}${compact ? '&compact=1' : ''}" height="${h}" title="${esc(name)}"></iframe></div>`;
+}
+
+function route() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  if (params.get('compact') === '1') document.body.dataset.compact = '';
+  else delete document.body.dataset.compact;
+  if (params.get('screen')) renderScreen(params.get('screen'));
+  else if (params.get('shot')) renderShot(params.get('shot'));
+  else renderBoard();
+}
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
