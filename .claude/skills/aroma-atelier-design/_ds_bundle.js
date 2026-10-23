@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"3c28e8a1a0a7","components/guest/AromaCTA.jsx":"74fa9fb65a2d","components/guest/AromaChip.jsx":"f5cacf379c55","components/guest/CompositionStack.jsx":"014fbbecfbe9","components/guest/GuestCard.jsx":"bc7a355b7168","components/guest/GuestTab.jsx":"324ea1ace990","components/guest/MixRow.jsx":"9076eab731a8","components/guest/OnboardingProgress.jsx":"19b5b3545830","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"7a98b5018446","components/guest/SegmentNav.jsx":"66a42206d513","components/guest/ShowcaseCard.jsx":"1ecc7593de3d","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"62c565135c7f","components/master/FilterChip.jsx":"1c8aea0a3a37","components/master/MasterButton.jsx":"68fc0867cbb9","components/master/MasterCard.jsx":"e86c412054ea","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"c795b42dc299","components/master/MasterSortPill.jsx":"e3cd2defb423","components/master/MasterStatsRow.jsx":"fb6ca7ea16d6","components/master/MasterTag.jsx":"ce360a2c206a","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"40d20e0177fa","components/master/StatusPill.jsx":"4965e9b5d117","ui_kits/aroma-guest/GuestApp.jsx":"b88c06efbcdb","ui_kits/aroma-guest/GuestScreens.jsx":"55d43d0d9c15","ui_kits/aroma-guest/mock-data.js":"137a193badbc","ui_kits/master/MasterApp.jsx":"bc84ff3c8365","ui_kits/master/MasterScreens.jsx":"030daa61aecc","ui_kits/master/mock-data.js":"7bbed34b2303"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"3c28e8a1a0a7","components/guest/AromaCTA.jsx":"74fa9fb65a2d","components/guest/AromaChip.jsx":"f5cacf379c55","components/guest/CompositionStack.jsx":"014fbbecfbe9","components/guest/GuestCard.jsx":"bc7a355b7168","components/guest/GuestTab.jsx":"324ea1ace990","components/guest/MixRow.jsx":"9076eab731a8","components/guest/OnboardingProgress.jsx":"19b5b3545830","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"7a98b5018446","components/guest/SegmentNav.jsx":"66a42206d513","components/guest/ShowcaseCard.jsx":"1ecc7593de3d","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"62c565135c7f","components/master/FilterChip.jsx":"1c8aea0a3a37","components/master/MasterButton.jsx":"68fc0867cbb9","components/master/MasterCard.jsx":"e86c412054ea","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"c795b42dc299","components/master/MasterSortPill.jsx":"e3cd2defb423","components/master/MasterStatsRow.jsx":"fb6ca7ea16d6","components/master/MasterTag.jsx":"ce360a2c206a","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"40d20e0177fa","components/master/StatusPill.jsx":"4965e9b5d117","ui_kits/aroma-guest/GuestApp.jsx":"b88c06efbcdb","ui_kits/aroma-guest/GuestScreens.jsx":"dfd436d6ddaf","ui_kits/aroma-guest/mock-data.js":"137a193badbc","ui_kits/master/MasterApp.jsx":"bc84ff3c8365","ui_kits/master/MasterScreens.jsx":"030daa61aecc","ui_kits/master/mock-data.js":"7bbed34b2303"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -2290,7 +2290,9 @@ function AccessScreen({
     className: "guest-error"
   }, error) : null), /*#__PURE__*/React.createElement("p", {
     className: "aroma-access-footer"
-  }, "18+ \xB7 \u041A\u0443\u0440\u0435\u043D\u0438\u0435 \u0432\u0440\u0435\u0434\u0438\u0442 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044E")));
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-age-badge"
+  }, "18+"), "\u041A\u0443\u0440\u0435\u043D\u0438\u0435 \u0432\u0440\u0435\u0434\u0438\u0442 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044E")));
 }
 function IntroScreen({
   index,
@@ -2408,13 +2410,16 @@ const choices = n => {
   if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'выбора';
   return 'выборов';
 };
+
+// editTastes: 'section' — ссылка в строке «Тоже подходят» (вариант A), 'topbar' — значок в шапке рисует страница (вариант B).
 function RecommendationsScreen({
   mixes,
   onOpen,
   onChoose,
   onOpenOnboarding,
   onOpenCatalog,
-  onOpenMixer
+  onOpenMixer,
+  editTastes = 'section'
 }) {
   if (!mixes.length) {
     return /*#__PURE__*/React.createElement("section", {
@@ -2434,13 +2439,7 @@ function RecommendationsScreen({
   const [hero, ...rest] = mixes;
   return /*#__PURE__*/React.createElement("section", {
     className: "aroma-recs"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "aroma-recs-head"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "aroma-ghost-sm",
-    onClick: onOpenOnboarding
-  }, "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u043A\u0443\u0441\u044B")), /*#__PURE__*/React.createElement("article", {
+  }, /*#__PURE__*/React.createElement("article", {
     className: "aroma-recs-hero"
   }, /*#__PURE__*/React.createElement("div", {
     className: "aroma-recs-hero-head"
@@ -2467,9 +2466,15 @@ function RecommendationsScreen({
     className: "aroma-recs-hero-count"
   }, hero.popularity + ' ' + choices(hero.popularity))), /*#__PURE__*/React.createElement(AromaCTA, {
     onClick: () => onChoose(hero, 'recommendations')
-  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C")), rest.length ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
+  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C")), rest.length || editTastes === 'section' ? /*#__PURE__*/React.createElement("div", {
+    className: "aroma-section-row"
+  }, rest.length ? /*#__PURE__*/React.createElement("h2", {
     className: "aroma-section-title"
-  }, "\u0422\u043E\u0436\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0442"), /*#__PURE__*/React.createElement("div", {
+  }, "\u0422\u043E\u0436\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0442") : /*#__PURE__*/React.createElement("span", null), editTastes === 'section' ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-text-link",
+    onClick: onOpenOnboarding
+  }, "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u043A\u0443\u0441\u044B") : null) : null, rest.length ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "aroma-list"
   }, rest.slice(0, 4).map(mix => /*#__PURE__*/React.createElement(MixRow, {
     key: mix.id,
@@ -3216,25 +3221,31 @@ function Reel({
     name: "Play",
     size: 22
   })) : null, /*#__PURE__*/React.createElement("div", {
-    className: 'reel-dock' + (active ? ' reel-reveal' : ''),
+    className: 'reel-poster' + (active ? ' reel-reveal' : ''),
     key: active ? 'on' : 'off'
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "reel-poster-center"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "reel-name"
+  }, mix.name), mix.description ? /*#__PURE__*/React.createElement("p", {
+    className: "reel-desc"
+  }, mix.description) : /*#__PURE__*/React.createElement("p", {
+    className: "reel-flavors"
+  }, mix.flavors.join(', '))), /*#__PURE__*/React.createElement("div", {
+    className: "reel-dock"
   }, hint ? /*#__PURE__*/React.createElement("span", {
     className: "reel-hint"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "ChevronUp",
     size: 18
   }), "\u041B\u0438\u0441\u0442\u0430\u0439\u0442\u0435 \u0432\u0432\u0435\u0440\u0445") : null, /*#__PURE__*/React.createElement("div", {
-    className: "reel-name-row"
-  }, /*#__PURE__*/React.createElement("h2", {
-    className: "reel-name"
-  }, mix.name), /*#__PURE__*/React.createElement(HeartButton, {
+    className: "reel-meta"
+  }, mix.ratingsCount ? /*#__PURE__*/React.createElement(RatingPill, {
+    rating: mix.avgRating
+  }) : null, /*#__PURE__*/React.createElement(HeartButton, {
     on: favorite,
     onClick: () => onFavorite(mix)
-  })), /*#__PURE__*/React.createElement("p", {
-    className: "reel-flavors"
-  }, mix.flavors.join(', ')), mix.ratingsCount ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(RatingPill, {
-    rating: mix.avgRating
-  })) : null, /*#__PURE__*/React.createElement(CompositionStack, {
+  })), /*#__PURE__*/React.createElement(CompositionStack, {
     components: mix.components,
     showBar: false
   }), /*#__PURE__*/React.createElement("div", {
@@ -3245,7 +3256,7 @@ function Reel({
     onClick: () => onOpen(mix, 'reels')
   }, "\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435"), /*#__PURE__*/React.createElement(AromaCTA, {
     onClick: () => onChoose(mix, 'reels')
-  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C"))));
+  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C")))));
 }
 
 // Лента: вертикальный свайп со снапом, один жест — один рилс. Играет только активный рилс,
