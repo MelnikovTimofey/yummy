@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react';
 import type { ShelfRow } from '@/contracts';
-import { MARK_OPTIONS, defaultReceiptGrams, formatNumber, fractionGrams, parseGrams, parseReceipt } from '@/lib/shelf';
+import { MARK_OPTIONS, defaultReceiptGrams, formatNumber, fractionGrams, leftEstimateNote, parseGrams, parseReceipt } from '@/lib/shelf';
 
 // Формы остатка (#306): «Сколько осталось?», приход без счёта, списание.
 // Одни и те же во всплывашке строки, в карточке и в шторке телефона.
@@ -22,6 +22,7 @@ export const ShelfLeftPanel = ({ row, onCount, onEmpty, autoFocus = false }: Lef
   const inputId = useId();
   const grams = parseGrams(value);
   const full = row.fullGrams;
+  const note = leftEstimateNote(row);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -68,15 +69,12 @@ export const ShelfLeftPanel = ({ row, onCount, onEmpty, autoFocus = false }: Lef
           Сохранить
         </button>
       </form>
-      <p className="shelf-note">
-        {row.leftGrams === null ? '' : `Сейчас по расчёту ≈ ${formatNumber(row.leftGrams)} г. `}
-        Отмечать не обязательно — отметка уточняет расход и прогноз.
-      </p>
+      {note ? <p className="shelf-note">{note}</p> : null}
       {onEmpty ? (
         <>
           <div className="shelf-menu__sep" />
           <button type="button" className="shelf-menu__item shelf-menu__item--danger" onClick={onEmpty}>
-            Закончился <span className="shelf-faint">0 г · гость перестанет видеть</span>
+            Закончился <span className="shelf-faint">гость перестанет видеть</span>
           </button>
         </>
       ) : null}
@@ -127,9 +125,7 @@ export const ShelfReceiptForm = ({ row, onSubmit, onCancel, autoFocus = true }: 
     <form className="shelf-form" onSubmit={submit}>
       <GramsField label="Сколько пришло" value={grams} unit="г" onChange={setGrams} autoFocus={autoFocus} />
       <GramsField label="Цена за весь приход" value={price} unit="₽" inputMode="decimal" onChange={setPrice} />
-      <p className="shelf-note">
-        Цена — по желанию, для цены грамма. Счёт поставщика лучше загрузить в «Поставки»: там сопоставление и цена сами.
-      </p>
+      <p className="shelf-note">Цену можно не указывать. Если есть счёт, загрузите его в разделе Поставки.</p>
       <div className="shelf-form__actions">
         <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={onCancel}>
           Отмена
@@ -142,7 +138,7 @@ export const ShelfReceiptForm = ({ row, onSubmit, onCancel, autoFocus = true }: 
   );
 };
 
-// «Списать…» (#shot=shelf-writeoff): по умолчанию весь остаток.
+// «Списать» (#shot=shelf-writeoff): по умолчанию весь остаток.
 export const ShelfWriteOffForm = ({ row, onSubmit, onCancel, autoFocus = true }: FormProps<{ grams: number; reason: string }>) => {
   const [grams, setGrams] = useState(String(Math.max(0, Math.round(row.leftGrams ?? 0)) || ''));
   const [reason, setReason] = useState('');
@@ -160,12 +156,12 @@ export const ShelfWriteOffForm = ({ row, onSubmit, onCancel, autoFocus = true }:
       <input
         className="text-input"
         aria-label="Причина списания"
-        placeholder="Причина: брак, пересорт, потеря"
+        placeholder="Причина, например брак"
         value={reason}
         autoFocus={autoFocus}
         onChange={(event) => setReason(event.target.value)}
       />
-      <p className="shelf-note">Списанное не идёт в расход и прогноз. Списали весь остаток — гость перестанет видеть табак.</p>
+      <p className="shelf-note">Списанное не учитывается в расходе. Если списать всё, гость перестанет видеть табак.</p>
       <div className="shelf-form__actions">
         <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={onCancel}>
           Отмена

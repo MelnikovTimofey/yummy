@@ -5924,7 +5924,8 @@ button.chip .chip__count[hidden] {
 .shelf-table .shelf-table__num { text-align: right; }
 .shelf-table__note { font-size: var(--fs-xs); }
 .shelf-table__rate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shelf-table__empty { margin: 12px; }
+.shelf-table__empty { display: grid; justify-items: center; gap: 10px; margin: 12px; }
+.shelf-table__empty p { margin: 0; }
 
 .shelf-table__actions {
   display: inline-flex;
@@ -5945,7 +5946,6 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-name span {
-  font-family: var(--font-meta);
   font-size: var(--fs-xs);
   color: var(--text-muted);
   white-space: nowrap;
@@ -5986,7 +5986,6 @@ button.chip .chip__count[hidden] {
 .shelf-level__bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill); background: var(--text-secondary); }
 .shelf-level__bar[data-tone="low"] i { background: var(--warning); }
 .shelf-level__bar[data-tone="crit"] i { background: var(--danger); }
-.shelf-level__bar[data-none] { border-style: dashed; border-color: var(--border-default); }
 
 .shelf-level__copy { display: grid; min-width: 0; line-height: 1.2; }
 .shelf-level__copy b { font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -6032,11 +6031,15 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-menu__label {
+  display: grid;
+  gap: 2px;
   padding: 6px 8px 4px;
-  font-family: var(--font-meta);
   font-size: var(--fs-sm);
-  color: var(--text-faint);
+  font-weight: 600;
+  color: var(--text-primary);
 }
+
+.shelf-menu__label small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
 
 .shelf-menu__item {
   display: flex;
@@ -6122,7 +6125,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-grams input::placeholder { color: var(--text-faint); }
 
-.shelf-note { margin: 0; padding: 2px 8px 4px; font-size: var(--fs-xs); line-height: 1.4; color: var(--text-faint); }
+.shelf-note { margin: 0; padding: 2px 8px 4px; font-size: var(--fs-xs); line-height: 1.4; color: var(--text-muted); }
 
 .shelf-form { display: grid; gap: 8px; padding: 2px 4px 4px; }
 .shelf-form .shelf-note { padding: 0; }
@@ -6174,13 +6177,15 @@ button.chip .chip__count[hidden] {
 
 .shelf-toast p {
   flex: 1;
+  display: grid;
+  gap: 2px;
   margin: 0;
   font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--text-secondary);
 }
 
-.shelf-toast b { font-weight: 500; color: var(--text-primary); }
+.shelf-toast b { font-weight: 600; color: var(--text-primary); }
 
 .shelf-toast__timer {
   font-family: var(--font-meta);
@@ -6189,7 +6194,6 @@ button.chip .chip__count[hidden] {
   font-variant-numeric: tabular-nums;
 }
 
-.shelf-toast .btn .kbd { margin-left: 2px; }
 
 /* --- Выбор нескольких табаков (#333, #shot=shelf-bulk) -------------- */
 
@@ -6697,6 +6701,9 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 0;
   background: transparent;
   color: var(--text-muted);
@@ -6711,6 +6718,19 @@ button.chip .chip__count[hidden] {
 .shelf-seg button:hover { color: var(--text-primary); }
 .shelf-seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--text-primary); }
 .shelf-seg button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+.shelf-seg__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: var(--r-xs);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
 
 .shelf-head-menu { position: relative; display: inline-flex; }
 
@@ -7658,12 +7678,7 @@ button.chip .chip__count[hidden] {
 
 .m-mark-sheet__head { display: grid; gap: 4px; }
 
-.m-mark-sheet__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-size: var(--fs-xs);
-  color: var(--accent-hover);
-}
+.m-mark-sheet__brand { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 .m-mark-sheet__title,
 .m-filters-sheet__title {
@@ -7868,7 +7883,6 @@ button.chip .chip__count[hidden] {
   /* Текст — на всю строку, таймер и «Отменить» — под ним справа. */
   .shelf-toast p { flex: 1 1 calc(100% - 30px); }
   .shelf-toast__timer { margin-left: auto; }
-  .shelf-toast .kbd { display: none; }
   .shelf-toast .btn { height: 36px; }
 
   .shelf-card {

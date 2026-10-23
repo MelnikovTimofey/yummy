@@ -36,28 +36,28 @@ test('чип по умолчанию: «Заканчивается», если �
   assert.equal(defaultMobileShelfStatus({ ending: 0 }), 'all');
 });
 
-test('кнопки карточки: «Осталось…» и «Закончился», у «проверьте» — «Отметить остаток»', () => {
-  assert.deepEqual(shelfMobileActions(row()), { note: null, left: 'Осталось…', right: 'empty' });
-  assert.deepEqual(shelfMobileActions(row({ status: 'ending' })), { note: null, left: 'Осталось…', right: 'empty' });
+test('кнопки карточки: «Указать остаток» и «Закончился», у «проверьте» — «Отметить остаток»', () => {
+  assert.deepEqual(shelfMobileActions(row()), { note: null, left: 'Указать остаток', right: 'empty' });
+  assert.deepEqual(shelfMobileActions(row({ status: 'ending' })), { note: null, left: 'Указать остаток', right: 'empty' });
   assert.deepEqual(shelfMobileActions(row({ status: 'check' })), { note: null, left: 'Отметить остаток', right: 'empty' });
-  assert.deepEqual(shelfMobileActions(row({ status: 'stop' })), { note: null, left: 'Осталось…', right: 'unstop' });
-  assert.deepEqual(shelfMobileActions(row({ status: 'out', leftGrams: 0 })), { note: 'в «К заказу»', left: null, right: null });
-  assert.deepEqual(shelfMobileActions(row({ status: 'plan', leftGrams: null, fullGrams: null })), { note: 'в «К заказу»', left: null, right: null });
+  assert.deepEqual(shelfMobileActions(row({ status: 'stop' })), { note: null, left: 'Указать остаток', right: 'unstop' });
+  assert.deepEqual(shelfMobileActions(row({ status: 'out', leftGrams: 0 })), { note: 'в заказе', left: null, right: null });
+  assert.deepEqual(shelfMobileActions(row({ status: 'plan', leftGrams: null, fullGrams: null })), { note: 'в заказе', left: null, right: null });
 });
 
-test('строка шторки: уровень после прихода и остаток сейчас', () => {
-  assert.equal(sheetLine(row()), 'После прихода 12 ноя было 400 г · сейчас ≈ 300 г');
-  assert.equal(sheetLine(row({ leftGrams: 0 })), 'После прихода 12 ноя было 400 г · сейчас 0 г');
+test('строка шторки: уровень после прихода, остаток по расчёту — подсказкой ниже', () => {
+  assert.equal(sheetLine(row()), 'После прихода 12 ноя было 400 г');
   assert.equal(sheetLine(row({ leftGrams: null, fullGrams: null, lastReceipt: null })), 'Прихода ещё не было');
 });
 
 test('сводка полки на телефоне — одна строка вместо KPI-плиток', () => {
   assert.equal(
-    shelfMobileSummary({ counters: { all: 269 }, totals: { kg: 78.04 }, today: { grams: 126.4, bowls: 7.02 } }),
-    '269 позиций · ≈ 78 кг · сегодня ≈ 126 г, 7 чаш',
+    shelfMobileSummary({ counters: { all: 269 }, totals: { kg: 78.04 }, today: { grams: 126.4, bowls: 7.02 } }).replace(/\u00a0/g, ' '),
+    '269 позиций, 78 кг. Сегодня уйдёт 126 г.',
   );
+  // Расхода ещё нет — прогноз дня не пишем.
   assert.equal(
     shelfMobileSummary({ counters: { all: 1 }, totals: { kg: 0.25 }, today: { grams: 0, bowls: 0 } }),
-    '1 позиция · ≈ 0,3 кг · сегодня ≈ 0 г, 0 чаш',
+    '1 позиция, 0,3 кг.',
   );
 });

@@ -7,7 +7,7 @@ export const ShelfLevel = ({ row, large = false }: { row: ShelfRow; large?: bool
   const level = shelfLevel(row);
   return (
     <span className={`shelf-level${large ? ' shelf-level--lg' : ''}`} title="Остаток от уровня после последнего прихода">
-      <span className="shelf-level__bar" data-tone={level.tone} data-none={level.none || undefined}>
+      <span className="shelf-level__bar" data-tone={level.tone}>
         {level.none ? null : <i style={{ width: `${Math.max(4, level.share * 100)}%` }} />}
       </span>
       <span className="shelf-level__copy">
