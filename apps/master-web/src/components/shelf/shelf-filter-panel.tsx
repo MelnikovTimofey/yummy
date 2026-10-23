@@ -43,7 +43,7 @@ export const ShelfFilterPanel = ({ rows, filters, onChange }: ShelfFilterPanelPr
         ))}
         {hiddenBrands > 0 || allBrands ? (
           <button type="button" className="shelf-filters__more" onClick={() => setAllBrands((current) => !current)}>
-            {allBrands ? 'Свернуть' : `Ещё ${formatMetricValue(hiddenBrands)}…`}
+            {allBrands ? 'Свернуть' : `Ещё ${formatMetricValue(hiddenBrands)}`}
           </button>
         ) : null}
       </div>

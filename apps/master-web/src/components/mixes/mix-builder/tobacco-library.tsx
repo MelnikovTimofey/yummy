@@ -99,7 +99,7 @@ export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }:
           </label>
         </div>
         <p className="mix-builder__library-count">
-          {loading ? 'Поиск…' : `${filtered.length} из ${source.length}`}
+          {loading ? 'Ищем…' : `${filtered.length} из ${source.length}`}
         </p>
       </div>
 
