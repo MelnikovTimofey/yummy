@@ -34,13 +34,11 @@ export type GuestForYouCold<R> = {
 export type GuestForYouResponse<M, R> = GuestForYouPersonal<M> | GuestForYouCold<R>;
 
 export const FOR_YOU_TITLE = 'Для вас';
-export const FOR_YOU_SUBTITLE = 'По вашим выборам, оценкам и избранному.';
-export const HINT_TITLE = 'Давно на одном вкусе';
-export const COLD_NOTE = '«Для вас» соберётся, когда у нас будет больше ваших выборов. Пока — по вкусам из онбординга.';
+export const COLD_NOTE = 'Пока подбираем по вкусам из онбординга. Личная подборка появится после нескольких выборов.';
 export const MOOD_LINK = 'Подобрать под настроение';
 export const MOOD_DRAFT_NOTE = 'Только на этот визит. Вкусы в кабинете не изменятся.';
-export const MOOD_RESULT_NOTE = 'Подбор на этот визит. «Для вас» и вкусы в кабинете не изменились.';
-export const BACK_TO_FOR_YOU = 'Вернуться к «Для вас»';
+export const MOOD_RESULT_NOTE = 'Подбор только на этот визит. Ваши вкусы не изменились.';
+export const BACK_TO_FOR_YOU = 'Назад к подбору';
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -79,10 +77,10 @@ export const reasonText = (reason: GuestForYouReason): string => {
   switch (reason.kind) {
     case 'again': {
       const times = `выбирали ${reason.timesChosen} ${pluralize(reason.timesChosen, ['раз', 'раза', 'раз'])}`;
-      return reason.rating ? `Ваша оценка ★ ${reason.rating} · ${times}` : capitalize(times);
+      return reason.rating ? `Ваша оценка ★ ${reason.rating}, ${times}` : capitalize(times);
     }
     case 'taste':
-      if (reason.flavors.length) return `${capitalize(joinAnd(reason.flavors))} — рядом с вашими любимыми`;
+      if (reason.flavors.length) return `${capitalize(joinAnd(reason.flavors))}, как в ваших любимых`;
       if (reason.likeMixName) return `Похоже на микс «${reason.likeMixName}», который вы выбирали`;
       if (reason.profiles.length) return `${capitalize(joinAnd(reason.profiles.map(profileNeuter)))}, как вы любите`;
       return 'В вашем вкусе';
@@ -106,7 +104,7 @@ const lastPicks = (count: number, outOf: number) => {
 // Подсказка информирует и ничего не запрещает (PRD §6.5 п. 5).
 export const hintText = (hint: GuestForYouHint) => {
   const subject = hint.kind === 'same-mix' ? `«${hint.mixName}»` : profileNeuter(hint.profile);
-  return `${lastPicks(hint.count, hint.outOf)} — ${subject}. Мастер уважает постоянство, но рядом есть кое-что.`;
+  return `${lastPicks(hint.count, hint.outOf)} выборов: ${subject}. Попробуйте что-то рядом.`;
 };
 
 export type ForYouRow<M> = { mix: M; reason: string };
@@ -137,8 +135,8 @@ export const forYouSlots = <M>(response: GuestForYouPersonal<M>): ForYouSlots<M>
 };
 
 export const moodTitle = ({ profiles, flavors }: { profiles: string[]; flavors: string[] }) => {
-  const picked = profiles.length ? profiles.map((profile) => profileLabelMap[profile] ?? profile) : flavors.slice(0, 3);
-  return ['Под настроение', ...picked].join(' · ');
+  const picked = profiles.length ? profiles.map(plainProfile) : flavors.slice(0, 3);
+  return picked.length ? `Под настроение: ${picked.join(', ')}` : 'Под настроение';
 };
 
 // Что делает «Показать подбор» в онбординге. «Под настроение» — подбор на

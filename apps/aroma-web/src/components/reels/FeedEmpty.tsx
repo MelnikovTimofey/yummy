@@ -3,9 +3,8 @@ export function FeedEmpty({ onRecs }: { onRecs: () => void }) {
   return (
     <section className="reel-empty">
       <img className="reel-empty-mark" src="/logo-mark.svg" width="56" height="56" alt="" aria-hidden />
-      <p className="aroma-caps">Рилсы</p>
-      <h1 className="aroma-recs-empty-title">Сейчас показать нечего</h1>
-      <p className="aroma-recs-empty-text">Ни одного микса в наличии. Мастер уже в курсе — спросите его, что будет сегодня.</p>
+      <h1 className="aroma-recs-empty-title">Миксов в наличии нет</h1>
+      <p className="reel-empty-text">Спросите мастера, что есть сегодня.</p>
       <button type="button" className="aroma-mix-sheet-ghost" onClick={onRecs}>
         К подбору
       </button>
