@@ -1,11 +1,12 @@
-// «24 октября в 06:00» — срок кода смены (#348).
-export const formatDayTime = (value: string) => {
-  const date = new Date(value);
-  if (!value || Number.isNaN(date.getTime())) {
+const codeDay = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' });
+
+// «23 октября» — день кода смены. Окно кончается в полночь по Москве, поэтому
+// берём последнюю миллисекунду окна (#381).
+export const formatCodeDay = (endsAt: string) => {
+  const date = new Date(endsAt);
+  if (!endsAt || Number.isNaN(date.getTime())) {
     return '—';
   }
 
-  const day = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(date);
-  const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(date);
-  return `${day} в ${time}`;
+  return codeDay.format(new Date(date.getTime() - 1));
 };
