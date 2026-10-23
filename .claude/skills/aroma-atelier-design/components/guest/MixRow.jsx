@@ -1,9 +1,8 @@
-// Mix list row: optional glyph, name + signature + flavour line, rating on the right.
+// Mix list row: optional glyph, name + flavour line, rating on the right.
 import { ProfileGlyph } from './ProfileGlyph.jsx';
-import { SignatureBar } from './SignatureBar.jsx';
 import { RatingPill } from './RatingPill.jsx';
 
-export function MixRow({ name, flavors = [], profiles = [], rating, glyphSize = 44, showGlyph = true, showSignature = false, onClick, style }) {
+export function MixRow({ name, flavors = [], profiles = [], rating, glyphSize = 44, showGlyph = true, onClick, style }) {
   return (
     <button
       type="button"
@@ -27,10 +26,9 @@ export function MixRow({ name, flavors = [], profiles = [], rating, glyphSize = 
       {showGlyph ? <ProfileGlyph profiles={profiles} size={glyphSize} /> : null}
       <span style={{ minWidth: 0, display: 'grid', gap: 4 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 14.5, lineHeight: 1.2, color: 'var(--text-primary)' }}>{name}</span>
-        {showSignature ? <SignatureBar profiles={profiles} height={3} /> : null}
         {flavors.length ? (
           <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {flavors.slice(0, 3).join(' · ')}
+            {flavors.slice(0, 3).join(', ')}
           </span>
         ) : null}
       </span>

@@ -45,11 +45,11 @@ function CabinetStub({ favorites, onOpen }) {
   return (
     <section className="kit-cabinet">
       <h1 className="kit-cabinet-title">Кабинет</h1>
-      <p className="aroma-caps">{'Избранное · ' + favorites.length}</p>
+      <h2 className="aroma-section-title">Избранное</h2>
       {favorites.length ? (
         favorites.map((mix) => <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} onClick={() => onOpen(mix, 'catalog')} />)
       ) : (
-        <p className="guest-status">Пока пусто. Сердечко на карточке микса — и он здесь.</p>
+        <p className="guest-status">Здесь появятся миксы, отмеченные сердечком.</p>
       )}
     </section>
   );
@@ -118,7 +118,7 @@ function GuestApp() {
   const openReels = (index) => { setReelsStart(index); setView('reels'); };
 
   const submitAccess = () => {
-    if (code.length < 4 || !ageOk) { setAccessError('Введите код доступа и подтвердите 18+.'); return; }
+    if (code.length < 4 || !ageOk) { setAccessError('Введите код мастера и подтвердите, что вам есть 18.'); return; }
     setAccessError(''); setView('intro');
   };
 
@@ -133,8 +133,6 @@ function GuestApp() {
 
   return (
     <div className="app-bg">
-      <div className="halo-top" />
-      <div className="halo-bottom" />
       <div className="phone-shell">
         {view === 'access' ? (
           <AccessScreen code={code} setCode={setCode} ageOk={ageOk} setAgeOk={setAgeOk} error={accessError} onSubmit={submitAccess} />
@@ -197,10 +195,10 @@ function GuestApp() {
               ) : null}
               {view === 'recommendations' ? <ReelStrip mixes={reelsFeed} onOpen={openReels} /> : null}
               {view === 'recommendations' ? (
-                <RecommendationsScreen mixes={recommendations} onOpen={openMix} onChoose={chooseMix} onOpenOnboarding={() => { setStep(1); setView('onboarding'); }} onOpenCatalog={() => setView('catalog')} />
+                <RecommendationsScreen mixes={recommendations} onOpen={openMix} onChoose={chooseMix} onOpenOnboarding={() => { setStep(1); setView('onboarding'); }} onOpenCatalog={() => setView('catalog')} onOpenMixer={() => goNav('mixer')} />
               ) : null}
               {view === 'showcase' ? (
-                <ShowcaseScreen onOpen={openMix} onOpenRail={(r) => { setRail(r); setRailFilters([]); setView('rail'); }} />
+                <ShowcaseScreen onOpen={openMix} onOpenRail={(r) => { setRail(r); setRailFilters([]); setView('rail'); }} onOpenMixer={() => goNav('mixer')} />
               ) : null}
               {view === 'catalog' ? (
                 <CatalogScreen

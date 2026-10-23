@@ -2,12 +2,11 @@ import type { CSSProperties, ReactNode } from 'react';
 
 /** One per Мастер module. The h1 is the workspace label — never nest another h2 under it. */
 export interface MasterPageHeaderProps {
-  /** Uppercase mono kicker, oxblood: «ИНВЕНТАРИЗАЦИЯ», «Окно: 01 — 14 августа». */
-  eyebrow?: string;
   title: string;
+  /** Only when it tells something the title and the actions don't. */
   subtitle?: string;
   actions?: ReactNode;
-  /** Mono status/route readout above the actions. */
+  /** Short status readout above the actions: «Обновлено в 14:05». */
   meta?: ReactNode;
   style?: CSSProperties;
 }

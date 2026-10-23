@@ -141,12 +141,11 @@ select:focus-visible {
   place-items: center;
   padding: 16px;
   position: relative;
-  /* clip, а не hidden: гало выходят за край, и hidden-контейнер браузер
-     прокручивал бы при фокусе — весь экран съезжал (#112). */
+  /* clip, а не hidden: hidden-контейнер браузер прокручивал бы при фокусе,
+     и весь экран съезжал (#112). */
   overflow: clip;
   background:
-    radial-gradient(circle at 50% 0%, rgba(142, 47, 60, 0.16), transparent 34%),
-    radial-gradient(circle at 80% 18%, rgba(142, 47, 60, 0.10), transparent 24%),
+    var(--guest-halo-strong),
     linear-gradient(180deg, rgba(15, 15, 18, 0.94) 0%, rgba(20, 20, 23, 1) 100%);
 }
 
@@ -167,29 +166,7 @@ select:focus-visible {
   z-index: 2;
 }
 
-.halo-top {
-  position: absolute;
-  top: -100px;
-  right: -48px;
-  width: 260px;
-  height: 260px;
-  border-radius: var(--r-pill);
-  background: radial-gradient(circle, rgba(142, 47, 60, 0.55) 0%, rgba(142, 47, 60, 0) 70%);
-  filter: blur(10px);
-  opacity: 0.72;
-}
 
-.halo-bottom {
-  position: absolute;
-  bottom: -180px;
-  left: -90px;
-  width: 320px;
-  height: 320px;
-  border-radius: var(--r-pill);
-  background: radial-gradient(circle, rgba(142, 47, 60, 0.16) 0%, rgba(142, 47, 60, 0) 72%);
-  filter: blur(14px);
-  opacity: 0.8;
-}
 
 .topbar {
   display: grid;
@@ -477,12 +454,10 @@ select:focus-visible {
   border-radius: var(--r-guest-control);
   background: rgba(40, 40, 48, 0.54);
   color: var(--text-1);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
   padding: 10px 12px;
   min-height: 44px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
   cursor: pointer;
 }
 
@@ -548,16 +523,6 @@ select:focus-visible {
   overflow: hidden;
 }
 
-.aroma-access-halo {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.92;
-  background:
-    radial-gradient(circle at 50% 12%, rgba(142, 47, 60, 0.30) 0%, transparent 38%),
-    radial-gradient(circle at 12% 90%, rgba(142, 47, 60, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 90% 86%, rgba(142, 47, 60, 0.16) 0%, transparent 38%);
-}
 
 .aroma-access-body {
   position: relative;
@@ -588,10 +553,8 @@ select:focus-visible {
 .aroma-access-tagline {
   margin: 12px 0 0;
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.4;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
   color: var(--text-1);
 }
 
@@ -607,6 +570,9 @@ select:focus-visible {
 }
 
 .aroma-access-code-label {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-1);
   text-align: left;
 }
 
@@ -684,12 +650,23 @@ select:focus-visible {
 
 .aroma-access-footer {
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   color: var(--text-2);
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.4;
-  text-align: center;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+}
+
+.aroma-age-badge {
+  border: 1px solid var(--line);
+  border-radius: var(--r-guest-badge);
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
 }
 
 .aroma-intro {
@@ -785,10 +762,16 @@ select:focus-visible {
 
 .aroma-onboarding-progress {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
   padding-top: 4px;
+}
+
+.aroma-onboarding-step {
+  font-size: 12px;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
 }
 
 .aroma-onboarding-back {
@@ -901,32 +884,6 @@ select:focus-visible {
   margin-top: 6px;
 }
 
-.aroma-onboarding-selected {
-  margin-top: 6px;
-  display: grid;
-  gap: 6px;
-}
-
-.aroma-onboarding-selected-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.aroma-onboarding-profile-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-1);
-}
-
-.aroma-onboarding-profile-tag-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-pill);
-}
-
 .aroma-onboarding-dock {
   flex: 0 0 auto;
   display: grid;
@@ -937,17 +894,19 @@ select:focus-visible {
 }
 
 .aroma-onboarding-tally {
+  margin: 0;
   text-align: center;
+  font-size: 13px;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
 }
 
 .aroma-onboarding-skip {
   background: transparent;
   border: 0;
   color: var(--text-2);
-  font-size: 11px;
+  font-size: 13px;
   padding: 4px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -964,13 +923,41 @@ select:focus-visible {
   align-content: start;
 }
 
-/* Заголовок подбора и вход в правку предпочтений в одной строке: ghost-кнопка,
-   а не второй CTA — главное действие на экране остаётся одно, «Покурить». */
-.aroma-recs-head {
+/* «Изменить вкусы» — тихой ссылкой в строке «Тоже подходят», а не вторым CTA:
+   главное действие на экране одно, «Покурить». */
+.aroma-recs-section-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  margin-top: 4px;
+}
+
+.aroma-recs-section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--text-0);
+}
+
+.aroma-text-link {
+  border: 0;
+  background: transparent;
+  padding: 6px 0;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.aroma-text-link:hover,
+.aroma-text-link:focus-visible {
+  color: var(--text-0);
 }
 
 .aroma-recs-empty {
@@ -985,15 +972,6 @@ select:focus-visible {
   font-size: 26px;
   line-height: 1.05;
   color: var(--text-0);
-}
-
-.aroma-recs-empty-text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-1);
-  max-width: 30ch;
-  margin-inline: auto;
 }
 
 .aroma-recs-empty-actions {
@@ -1028,6 +1006,7 @@ select:focus-visible {
   display: grid;
   gap: 14px;
   border: 1px solid var(--line);
+  background: var(--guest-card-bg);
   box-shadow:
     inset 0 1px 0 rgba(232, 230, 224, 0.04),
     0 18px 36px rgba(0, 0, 0, 0.18);
@@ -1073,9 +1052,8 @@ select:focus-visible {
 }
 
 .aroma-recs-comp-maker {
-  margin: 0;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 12px;
+  color: var(--text-2);
   white-space: nowrap;
 }
 
@@ -1098,6 +1076,67 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.aroma-recs-hero-count {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Приглашение в «Намиксуй»: строка без глифа и надписи над ней. */
+.aroma-mixer-invite {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 10px 10px 14px;
+  border-radius: var(--r-guest-row);
+  border: 1px solid var(--line);
+  background: var(--guest-row-bg);
+  color: var(--text-0);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+
+.aroma-mixer-invite:hover {
+  border-color: rgba(142, 47, 60, 0.40);
+}
+
+.aroma-mixer-invite:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+.aroma-showcase > .aroma-mixer-invite {
+  width: auto;
+  margin-inline: 20px;
+}
+
+.aroma-mixer-invite-text {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.aroma-mixer-invite-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.aroma-mixer-invite-note {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.aroma-mixer-invite-chevron {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--text-1);
 }
 
 .aroma-recs-list {
@@ -1287,9 +1326,7 @@ select:focus-visible {
   border-radius: var(--r-guest-control);
   min-height: 44px;
   padding: 0 14px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -1778,9 +1815,7 @@ select:focus-visible {
   border-radius: var(--r-guest-control);
   min-height: 48px;
   padding: 0 18px;
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -1823,9 +1858,7 @@ select:focus-visible {
   border-radius: var(--r-guest-control);
   padding: 8px 16px;
   color: var(--text-0);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -2304,9 +2337,7 @@ select:focus-visible {
 }
 
 .cab-returning-cta {
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
   color: var(--text-0);
 }
 
@@ -2414,9 +2445,7 @@ select:focus-visible {
   border-radius: var(--r-guest-control);
   min-height: 44px;
   padding: 0 14px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -2587,9 +2616,7 @@ select:focus-visible {
   background: transparent;
   color: var(--text-0);
   font-family: var(--font-body);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
   cursor: pointer;
 }
 
