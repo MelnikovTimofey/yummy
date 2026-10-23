@@ -48,7 +48,7 @@ function Nav({ value }) {
   );
 }
 
-function Topbar({ masterCard = false, children }) {
+function Topbar({ masterCard = false, editTastes = false, children }) {
   return (
     <header className="topbar">
       <div className="topbar-main-row">
@@ -56,6 +56,11 @@ function Topbar({ masterCard = false, children }) {
           <img className="brand-mark" src={MARK} alt="" aria-hidden />
           <span className="brand">Арома Ателье</span>
         </button>
+        {editTastes ? (
+          <button type="button" className="topbar-icon-btn" aria-label="Изменить вкусы" title="Изменить вкусы">
+            <window.Icon name="SlidersHorizontal" size={20} />
+          </button>
+        ) : null}
         {masterCard ? (
           <button type="button" className="topbar-icon-btn topbar-master-card" aria-label="Карточка для мастера" title="Карточка для мастера">
             <window.Icon name="ClipboardList" size={20} />
@@ -100,16 +105,16 @@ function OnboardingPhone({ step, initialProfiles, initialFlavors = [] }) {
   );
 }
 
-function RecsPhone({ sheetMix }) {
+function RecsPhone({ sheetMix, editTastes = 'section' }) {
   const [sheet, setSheet] = React.useState(sheetMix ? { mix: sheetMix, source: 'recommendations' } : null);
   const [rating, setRating] = React.useState(0);
   const [fav, setFav] = React.useState(false);
   return (
     <Phone>
-      <Topbar />
+      <Topbar editTastes={editTastes === 'topbar'} />
       <main className="content">
         <window.ReelStrip mixes={FEED} onOpen={noop} />
-        <window.RecommendationsScreen mixes={RECS} onOpen={(mix, source) => setSheet({ mix, source })} onChoose={noop} onOpenOnboarding={noop} onOpenCatalog={noop} onOpenMixer={noop} />
+        <window.RecommendationsScreen mixes={RECS} onOpen={(mix, source) => setSheet({ mix, source })} onChoose={noop} onOpenOnboarding={noop} onOpenCatalog={noop} onOpenMixer={noop} editTastes={editTastes} />
       </main>
       <Nav value="recommendations" />
       <window.MixSheet state={sheet} rating={rating} onRate={setRating} onClose={() => setSheet(null)} onChoose={noop} favorite={fav} onFavorite={() => setFav(!fav)} />
@@ -402,7 +407,8 @@ const SHOTS = [
       'Одно гало фона вместо трёх гало гейта.',
       'Подзаголовок «Подбор кальянных миксов» и подпись поля «Код мастера» обычным регистром.',
       'Подсказка двумя предложениями: «Код скажет мастер зала. Он действует до конца суток.»',
-      'У «Войти в Ателье» нет пульса. Юридический минимум и чекбокс 18+ не изменились.',
+      'У «Войти в Ателье» нет пульса. Чекбокс 18+ не изменился.',
+      'Строка 18+ без middot и капса: «18+» маленьким бейджем, рядом «Курение вредит здоровью» обычным текстом. Слова предупреждения те же.',
     ],
   },
   {
@@ -425,11 +431,19 @@ const SHOTS = [
   {
     id: 'recs', name: 'Подбор: герой и «Тоже подходят»', before: 'aroma-375-07-recommendations', render: () => <RecsPhone />,
     notes: [
-      'Нет надписи «Лучшее совпадение»: герой и так первый. «Изменить вкусы» осталась над ним.',
+      'Нет надписи «Лучшее совпадение»: герой и так первый.',
+      'Вариант A: «Изменить вкусы» — тихая ссылка в строке заголовка «Тоже подходят», отдельной строки над героем нет. Вариант B — следующая пара.',
       'Герой на ровной поверхности карточки, без подкраски гало профиля. Полоса профилей в герое осталась.',
       'Производитель в составе обычным регистром: «Darkside». Число выборов обычным текстом. У «Покурить» здесь нет пульса.',
       '«Тоже подходят» стал заголовком секции. В строках нет полосы профилей, вкусы через запятую.',
       'В конце строка «Собрать свой микс» вместо «Не нашли своё? Намиксуйте сами» с декоративным глифом.',
+    ],
+  },
+  {
+    id: 'recs-b', name: 'Подбор, вариант B: «Изменить вкусы» в шапке', before: 'aroma-375-07-recommendations', render: () => <RecsPhone editTastes="topbar" />,
+    notes: [
+      'Значок SlidersHorizontal в шапке только на Подборе, название в aria-label и title.',
+      'Компактнее варианта A, но без подписи действие менее заметно. Это шестой значок Lucide у гостя, его нужно добавить в ICONOGRAPHY.',
     ],
   },
   {
@@ -501,7 +515,8 @@ const SHOTS = [
     id: 'reel', name: 'Рилс', before: 'aroma-375-19-nav-Рилсы', render: () => <ReelPhone />,
     notes: [
       'Сцена не менялась: это согласованное исключение для рилсов.',
-      'Нет надписи профилей капсами над названием. Вкусы через запятую, у «★» нет числа оценок.',
+      'Афиша как в проде (#314): название и описание по центру сцены. В описании нет тире.',
+      'Нет надписи профилей капсами над названием. Производитель в составе обычным регистром, у «★» нет числа оценок.',
       '«Листайте вверх» обычным регистром и без прыгающей стрелки. «Подробнее» в sentence case, у «Покурить» нет пульса.',
     ],
   },

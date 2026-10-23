@@ -41,7 +41,7 @@ function AccessScreen({ code, setCode, ageOk, setAgeOk, error, onSubmit, markSrc
           <AromaCTA type="submit" disabled={!ready}>Войти в Ателье</AromaCTA>
           {error ? <p className="guest-error">{error}</p> : null}
         </form>
-        <p className="aroma-access-footer">18+ · Курение вредит здоровью</p>
+        <p className="aroma-access-footer"><span className="aroma-age-badge">18+</span>Курение вредит здоровью</p>
       </div>
     </section>
   );
@@ -126,7 +126,8 @@ function MixerInvite({ onOpen, note }) {
 
 const choices = (n) => { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'выбор'; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'выбора'; return 'выборов'; };
 
-function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOpenCatalog, onOpenMixer }) {
+// editTastes: 'section' — ссылка в строке «Тоже подходят» (вариант A), 'topbar' — значок в шапке рисует страница (вариант B).
+function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOpenCatalog, onOpenMixer, editTastes = 'section' }) {
   if (!mixes.length) {
     return (
       <section className="aroma-recs-empty">
@@ -141,9 +142,6 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
   const [hero, ...rest] = mixes;
   return (
     <section className="aroma-recs">
-      <div className="aroma-recs-head">
-        <button type="button" className="aroma-ghost-sm" onClick={onOpenOnboarding}>Изменить вкусы</button>
-      </div>
       <article className="aroma-recs-hero">
         <div className="aroma-recs-hero-head">
           <ProfileGlyph profiles={hero.flavorProfiles} size={64} />
@@ -160,9 +158,14 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
         </div>
         <AromaCTA onClick={() => onChoose(hero, 'recommendations')}>Покурить</AromaCTA>
       </article>
+      {rest.length || editTastes === 'section' ? (
+        <div className="aroma-section-row">
+          {rest.length ? <h2 className="aroma-section-title">Тоже подходят</h2> : <span />}
+          {editTastes === 'section' ? <button type="button" className="aroma-text-link" onClick={onOpenOnboarding}>Изменить вкусы</button> : null}
+        </div>
+      ) : null}
       {rest.length ? (
         <>
-          <h2 className="aroma-section-title">Тоже подходят</h2>
           <div className="aroma-list">
             {rest.slice(0, 4).map((mix) => (
               <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} showGlyph={false} onClick={() => onOpen(mix, 'recommendations')} />
@@ -527,18 +530,23 @@ function Reel({ mix, index, total, active, paused, hint, favorite, onFavorite, o
       <Scene mix={mix} playing={active && !paused} />
       <button type="button" className="reel-tap" aria-label={paused ? 'Продолжить' : 'Пауза'} onClick={onTogglePause} />
       {paused ? <span className="reel-paused"><Icon name="Play" size={22} /></span> : null}
-      <div className={'reel-dock' + (active ? ' reel-reveal' : '')} key={active ? 'on' : 'off'}>
-        {hint ? <span className="reel-hint"><Icon name="ChevronUp" size={18} />Листайте вверх</span> : null}
-        <div className="reel-name-row">
+      {/* Афиша (#314): сцена — фон, название и описание по центру, внизу рейтинг, сердечко, состав и кнопки. */}
+      <div className={'reel-poster' + (active ? ' reel-reveal' : '')} key={active ? 'on' : 'off'}>
+        <div className="reel-poster-center">
           <h2 className="reel-name">{mix.name}</h2>
-          <HeartButton on={favorite} onClick={() => onFavorite(mix)} />
+          {mix.description ? <p className="reel-desc">{mix.description}</p> : <p className="reel-flavors">{mix.flavors.join(', ')}</p>}
         </div>
-        <p className="reel-flavors">{mix.flavors.join(', ')}</p>
-        {mix.ratingsCount ? <div><RatingPill rating={mix.avgRating} /></div> : null}
-        <CompositionStack components={mix.components} showBar={false} />
-        <div className="reel-actions">
-          <button type="button" className="aroma-ghost" onClick={() => onOpen(mix, 'reels')}>Подробнее</button>
-          <AromaCTA onClick={() => onChoose(mix, 'reels')}>Покурить</AromaCTA>
+        <div className="reel-dock">
+          {hint ? <span className="reel-hint"><Icon name="ChevronUp" size={18} />Листайте вверх</span> : null}
+          <div className="reel-meta">
+            {mix.ratingsCount ? <RatingPill rating={mix.avgRating} /> : null}
+            <HeartButton on={favorite} onClick={() => onFavorite(mix)} />
+          </div>
+          <CompositionStack components={mix.components} showBar={false} />
+          <div className="reel-actions">
+            <button type="button" className="aroma-ghost" onClick={() => onOpen(mix, 'reels')}>Подробнее</button>
+            <AromaCTA onClick={() => onChoose(mix, 'reels')}>Покурить</AromaCTA>
+          </div>
         </div>
       </div>
     </section>

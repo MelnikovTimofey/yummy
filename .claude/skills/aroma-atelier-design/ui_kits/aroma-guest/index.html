@@ -25,6 +25,10 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-ghost-sm{border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);border-radius:var(--r-guest-control);min-height:40px;font-family:var(--font-body);font-size:13px;cursor:pointer;padding:0 14px}
 /* Заголовок секции и подпись блока вместо надписей .aroma-caps */
 .aroma-section-title{margin:4px 0 0;font-family:var(--font-display);font-size:19px;font-weight:400;line-height:1.15;color:var(--text-0)}
+.aroma-section-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:4px}
+.aroma-section-row .aroma-section-title{margin:0}
+.aroma-text-link{border:0;background:transparent;padding:6px 0;color:var(--text-1);font-family:var(--font-body);font-size:13px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;cursor:pointer}
+.aroma-text-link:hover,.aroma-text-link:focus-visible{color:var(--text-0)}
 .aroma-label{margin:0;font-family:var(--font-body);font-size:13px;font-weight:600;line-height:1.3;color:var(--text-1)}
 
 /* Тонкая шапка и нижняя панель (#168); шесть пунктов с «Рилсами» (#153): поля 4px, колонка около 61px */
@@ -65,18 +69,23 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .reel-paused{position:absolute;left:50%;top:40%;z-index:2;width:56px;height:56px;margin:-28px 0 0 -28px;display:grid;place-items:center;border-radius:var(--r-pill);background:rgba(14,14,17,.55);border:1px solid var(--line);color:var(--text-0);pointer-events:none;backdrop-filter:blur(4px)}
 .reel-hint{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;flex-direction:column;align-items:center;color:var(--text-1);font-size:12px;pointer-events:none}
 /* текст — HTML-слой поверх сцены: читается скринридером и не дёргается при паузе */
-.reel-dock{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:10px;padding:56px 20px 20px;background:linear-gradient(180deg,transparent 0%,rgba(14,14,17,.72) 26%,rgba(14,14,17,.94) 100%)}
+.reel-poster{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;pointer-events:none}
+.reel-poster button{pointer-events:auto}
+.reel-poster-center{flex:1 1 auto;min-height:0;display:grid;align-content:center;justify-items:center;gap:14px;padding:0 26px;text-align:center;background:radial-gradient(closest-side,rgba(14,14,17,.66) 0%,rgba(14,14,17,.34) 60%,transparent 100%)}
+.reel-poster-center>*{min-width:0;max-width:100%}
+.reel-dock{position:relative;display:grid;gap:10px;padding:40px 20px 20px;background:linear-gradient(180deg,transparent 0%,rgba(14,14,17,.62) 38%,rgba(14,14,17,.86) 100%)}
 .reel-dock>*{min-width:0}
+.reel-meta{display:flex;align-items:center;gap:8px}
+.reel-meta .heart-btn{margin:0 -8px 0 auto}
+.reel-name{margin:0;font-family:var(--font-display);font-size:34px;font-weight:400;line-height:1.35;color:var(--text-0);text-wrap:balance;text-shadow:0 2px 18px rgba(0,0,0,.55);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.reel-desc{margin:0;max-width:28ch;font-family:var(--font-display);font-size:18px;font-style:italic;line-height:1.38;color:var(--text-0);text-wrap:pretty;text-shadow:0 1px 12px rgba(0,0,0,.6)}
+.reel-flavors{margin:0;font-size:14px;line-height:1.4;color:var(--text-1);text-shadow:0 1px 12px rgba(0,0,0,.6)}
 .reel-reveal>*{animation:reel-in var(--dur-sheet) var(--ease-out) both}
 .reel-reveal>*:nth-child(2){animation-delay:60ms}
 .reel-reveal>*:nth-child(3){animation-delay:120ms}
 .reel-reveal>*:nth-child(4){animation-delay:180ms}
 .reel-reveal>*:nth-child(n+5){animation-delay:240ms}
 @keyframes reel-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.reel-name-row{display:flex;align-items:flex-start;gap:8px}
-.reel-name-row .heart-btn{margin:-2px -8px 0 auto}
-.reel-name{margin:0;flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:28px;line-height:1.2;color:var(--text-0);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.reel-flavors{margin:0;font-size:14px;line-height:1.4;color:var(--text-1)}
 .reel-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:2px}
 
 /* Сцены стиля B — CSS-приближение мокапа; в приложении композиции Remotion. Штрих 1,2–1,4 в цвете профиля, без заливки */
@@ -123,7 +132,8 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-access-age-dot{width:20px;height:20px;border-radius:999px;border:1px solid var(--line);background:transparent;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:var(--primary-foreground);font-size:12px;font-weight:700;cursor:pointer;padding:0}
 .aroma-access-age-dot.on{border-color:var(--primary);background:var(--primary)}
 .aroma-access-age-text{font-size:13px;color:var(--text-1);line-height:1.3}
-.aroma-access-footer{margin:0;color:var(--text-2);font-size:10.5px;text-align:center;letter-spacing:.16em;text-transform:uppercase}
+.aroma-access-footer{margin:0;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text-2);font-size:12px}
+.aroma-age-badge{border:1px solid var(--line);border-radius:var(--r-guest-badge);padding:1px 6px;font-weight:600;font-size:11px;color:var(--text-1);font-variant-numeric:tabular-nums}
 
 /* Intro */
 .aroma-intro{flex:1 1 auto;min-height:100%;position:relative;display:flex;flex-direction:column;padding:20px 24px 0;overflow:hidden}
