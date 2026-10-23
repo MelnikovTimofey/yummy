@@ -172,7 +172,8 @@ export function ForYou<M extends ForYouMix>({
         </div>
       ) : null}
 
-      {sidestep ? (
+      {/* Подсказка наверху уже ведёт на этот микс. */}
+      {sidestep && !hint ? (
         <>
           <h2 className="aroma-recs-section-title">Шаг в сторону</h2>
           <ReasonRow row={sidestep} onOpen={onOpen} />
