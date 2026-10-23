@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
 type MasterPageHeaderProps = {
-  /** eyebrow — служебный слой: uppercase 11px, --font-meta (e.g. «ИНВЕНТАРИЗАЦИЯ») */
+  /** Надзаголовок — по канону #348 в разделах не ставится; остался у карточки поставки до #365 */
   eyebrow?: string;
   /** Main page title — рендерится как `<h1>` Source Serif 4, 36px/1.05 */
   title: string;
-  /** 1-line lead под заголовком */
+  /** Подзаголовок — только если сообщает неочевидное */
   subtitle?: string;
   /** Правый блок — primary action + ghost-actions (рендерится в сетке справа) */
   actions?: ReactNode;
@@ -13,11 +13,8 @@ type MasterPageHeaderProps = {
   meta?: ReactNode;
 };
 
-// Унифицированный page-header под mockups.html прототипа master-refactor:
-// eyebrow + большой serif h1 + subtitle + правое крыло actions / meta.
-// Использовать в каждом экране (Tobaccos / Mixes / Rails / Access / Dashboard).
-// Заменяет старый паттерн «section-head с h2 внутри» — теперь h1 это label
-// текущего workspace, без вложенной h2.
+// Шапка раздела: serif h1 и справа мета и действия. Мета через запятую:
+// «290 позиций, 61,9 кг» (#348, design/design_handoff_ui_deslop).
 export const MasterPageHeader = ({
   eyebrow,
   title,

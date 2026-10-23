@@ -232,7 +232,6 @@ export const App = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [summaryStatus, setSummaryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [inventoryError, setInventoryError] = useState('');
   const [summaryError, setSummaryError] = useState('');
   const [toggleId, setToggleId] = useState('');
@@ -282,16 +281,13 @@ export const App = () => {
   };
 
   const loadSummary = async (nextToken: string, windowKey: DashboardWindowKey = dashboardWindow) => {
-    setSummaryStatus('loading');
     setSummaryError('');
 
     try {
       const response = await requestJson<unknown>(`/staff/dashboard/summary?window=${windowKey}`, {}, nextToken);
       setSummary(normalizeDashboardSummary(response));
-      setSummaryStatus('ready');
     } catch (cause) {
       setSummary(null);
-      setSummaryStatus('error');
       setSummaryError(cause instanceof Error ? cause.message : 'Не удалось загрузить сводку');
     }
   };
@@ -338,11 +334,11 @@ export const App = () => {
 
   useEffect(() => {
     if (!user) {
-      document.title = 'Ателье · Мастер — вход';
+      document.title = 'Вход в Мастер';
       return;
     }
     const tab = workspaceTabs.find((item) => item.id === activeTab) ?? workspaceTabs[0];
-    document.title = `${tab.label} — Ателье · Мастер`;
+    document.title = `${tab.label}, Ателье Мастер`;
   }, [user, activeTab]);
 
   useEffect(() => {
@@ -641,7 +637,6 @@ export const App = () => {
     setActiveTab('dashboard');
     setWhatsNewOpen(false);
     setInventoryStatus('idle');
-    setSummaryStatus('idle');
     setInventoryError('');
     setSummaryError('');
     setToggleId('');
@@ -889,7 +884,6 @@ export const App = () => {
   const renderDashboard = () => (
     <DashboardView
       summary={summary}
-      summaryStatus={summaryStatus}
       summaryError={summaryError}
       onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
       shelfBlock={
@@ -1193,7 +1187,6 @@ export const App = () => {
         id: `nav:${tab.id}`,
         label: `Перейти: ${tab.label}`,
         group: 'Навигация',
-        hint: tab.kicker,
         icon: tab.icon,
         keywords: `${tab.label} ${tab.kicker}`,
         onSelect: () => setActiveTab(tab.id),

@@ -84,9 +84,6 @@ export const RailsView = ({
     <header className="rails-page__header">
       <div className="rails-page__copy">
         <h1 className="rails-page__title">Рейлы</h1>
-        <p className="rails-page__subtitle">
-          Состав и порядок подборок для гостевой витрины.
-        </p>
       </div>
       <div className="rails-page__actions">
         <button

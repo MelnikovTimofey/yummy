@@ -243,6 +243,7 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
 // localStorage, а он у Playwright свежий на каждый тест.
 test('Master «What\'s new»: the dot stays until the release is read, then is gone after reload', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
+  await expect(page).toHaveTitle('Дашборд, Ателье Мастер');
 
   const unread = page.getByRole('button', { name: 'Что нового, есть непрочитанное' });
   await expect(unread).toBeVisible();

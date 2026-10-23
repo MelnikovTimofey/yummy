@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Command, Search, type LucideIcon } from 'lucide-react';
+import { Search, type LucideIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 export type CommandPaletteItem = {
@@ -138,21 +138,18 @@ export const CommandPalette = ({
             aria-label="Поиск команды"
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
           />
-          <kbd className="kbd text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
-            esc
-          </kbd>
         </div>
 
         <div ref={listRef} className="cmdk__list max-h-[60vh] overflow-y-auto py-1" role="listbox">
           {grouped.map(([groupLabel, bucket]) => (
             <div key={groupLabel} className="cmdk__group">
-              <div className="cmdk__group-label px-3 pt-2 pb-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="cmdk__group-label px-3 pt-2 pb-1 text-xs text-muted-foreground">
                 {groupLabel}
               </div>
               {bucket.items.map((item, indexInGroup) => {
                 const flatIndex = bucket.startIndex + indexInGroup;
                 const isActive = flatIndex === activeIndex;
-                const Icon: LucideIcon = item.icon ?? Command;
+                const Icon = item.icon;
                 return (
                   <button
                     key={item.id}
@@ -168,7 +165,7 @@ export const CommandPalette = ({
                     onMouseEnter={() => setActiveIndex(flatIndex)}
                     onClick={() => runItem(item)}
                   >
-                    <Icon size={14} aria-hidden="true" className="shrink-0" />
+                    {Icon ? <Icon size={14} aria-hidden="true" className="shrink-0" /> : null}
                     <span className="flex-1 text-left truncate">{item.label}</span>
                     {item.hint ? (
                       <span className="cmdk__item__hint text-xs text-muted-foreground shrink-0">

@@ -1,4 +1,4 @@
-import { ArrowRight, AlertCircle, Eye, EyeOff, Lock, User } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { FormEvent, KeyboardEvent, useState } from 'react';
 
 type LoginScreenStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -42,7 +42,7 @@ export const LoginScreen = ({
       <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
       <div className="auth-screen__container">
-        <div className="auth-screen__brand" aria-label="Ателье · Мастер">
+        <div className="auth-screen__brand" aria-label="Ателье Мастер">
           <img className="auth-screen__mark" src="/logo-mark.svg" width="21" height="30" alt="" aria-hidden="true" />
           <div className="auth-screen__brand-name">
             Ателье <em>Мастер</em>
@@ -51,9 +51,6 @@ export const LoginScreen = ({
 
         <section className="auth-screen__card">
           <h1 className="auth-screen__title">Войти в смену</h1>
-          <p className="auth-screen__subtitle">
-            Операционная консоль для кальянных мастеров и администраторов.
-          </p>
 
           <form className="auth-screen__form" onSubmit={onSubmit} autoComplete="on" noValidate>
             <div>
@@ -61,7 +58,6 @@ export const LoginScreen = ({
                 <span>Логин</span>
               </label>
               <div className="auth-screen__input">
-                <User className="auth-screen__icon" aria-hidden="true" />
                 <input
                   id="auth-login"
                   name="username"
@@ -83,7 +79,6 @@ export const LoginScreen = ({
                 <span>Пароль</span>
               </label>
               <div className="auth-screen__input">
-                <Lock className="auth-screen__icon" aria-hidden="true" />
                 <input
                   id="auth-password"
                   name="password"
@@ -132,8 +127,7 @@ export const LoginScreen = ({
               className="auth-screen__submit"
               disabled={loading}
             >
-              <span>{submitLabel}</span>
-              <ArrowRight className="auth-screen__submit-icon" aria-hidden="true" />
+              {submitLabel}
             </button>
           </form>
         </section>

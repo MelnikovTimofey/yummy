@@ -85,11 +85,9 @@ type ShelfViewProps = {
 type Toast = ShelfToastData;
 
 const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
-const today = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
 
 const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
 const tobaccoName = (tobacco: ShelfTobaccoRef) => `${tobacco.manufacturer} ${tobacco.name}`;
-const SUBTITLE = 'Сколько табака осталось, расход и прогноз. Закончился — одна кнопка, остаток — когда удобно.';
 
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
@@ -541,12 +539,10 @@ export const ShelfView = ({
     };
   }, []);
 
-  const eyebrowDate = today.format(new Date()).toLocaleUpperCase('ru-RU');
-
   if (shelf.status !== 'error' && view && !rows.length) {
     return (
       <section className="shelf-page">
-        <MasterPageHeader eyebrow="ИНВЕНТАРИЗАЦИЯ" title="Полка" subtitle={SUBTITLE} actions={headMenu} />
+        <MasterPageHeader title="Полка" actions={headMenu} />
         <div className="shelf-empty">
           <h2>Полка пуста</h2>
           <p>
@@ -716,10 +712,8 @@ export const ShelfView = ({
   return (
     <section className="shelf-page" data-selecting={selecting || undefined}>
       <MasterPageHeader
-        eyebrow={`ИНВЕНТАРИЗАЦИЯ · ${eyebrowDate}`}
         title="Полка"
-        subtitle={SUBTITLE}
-        meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])} · ≈ ${kg.format(totals.kg)} кг` : undefined}
+        meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])}, ${kg.format(totals.kg)} кг` : undefined}
         actions={
           <>
             <span className="shelf-seg" role="group" aria-label="Вид полки">

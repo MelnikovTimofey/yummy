@@ -98,11 +98,12 @@ test('данные выпусков целостны: id уникальны, у 
     assert.ok(item.label.trim(), `${item.id}: нет label`);
     assert.ok(item.slides.length > 0, `${item.id}: нет слайдов`);
     for (const slide of item.slides) {
-      assert.ok(slide.title.trim() && slide.text.trim(), `${item.id}: пустой слайд`);
+      assert.ok(slide.title.trim(), `${item.id}: слайд без заголовка`);
       const hasImage = 'image' in slide && Boolean(slide.image);
       const hasList = 'list' in slide && slide.list.length > 0;
       assert.ok(hasImage !== hasList, `${item.id} «${slide.title}»: нужна либо картинка, либо список`);
       if ('image' in slide) {
+        assert.ok(slide.text?.trim(), `${item.id} «${slide.title}»: у снимка нужен текст`);
         assert.ok(slide.image.startsWith(`/whats-new/${item.id}/`), `${slide.image}: не в папке выпуска`);
         if (slide.imagePhone) assert.ok(slide.imagePhone.startsWith(`/whats-new/${item.id}/`));
       }
@@ -110,23 +111,33 @@ test('данные выпусков целостны: id уникальны, у 
   }
 });
 
-test('последний выпуск — прогноз вместо количества, «Закупка» и несколько табаков разом', () => {
+// Канон #348: без middot, тире между частями фразы, кавычек вокруг названий, «≈» и многоточий.
+test('тексты выпусков по канону: без ·, —, «», ≈ и …', () => {
+  for (const item of WHATS_NEW) {
+    for (const slide of item.slides) {
+      const lines = [slide.title, slide.text ?? '', slide.action?.label ?? '', ...('list' in slide ? slide.list : [])];
+      for (const line of lines) assert.doesNotMatch(line, /[·—«»≈~…→]/, `${item.id}: ${line}`);
+    }
+  }
+});
+
+test('последний выпуск — прогноз вместо количества, закупка и несколько табаков сразу', () => {
   const latest = WHATS_NEW[0];
   assert.equal(latest.id, '2026-10-purchase');
   assert.equal(latest.label, '22 октября');
   assert.deepEqual(latest.slides.map((slide) => slide.title), [
-    '«К заказу» без количества',
-    '«Закупка» и отметка пробы',
-    'Несколько табаков разом',
+    'Заказ без количества',
+    'Закупка и отметка пробы',
+    'Несколько табаков сразу',
   ]);
   const [slide, purchase, bulk] = latest.slides;
   // #333: выбор на полке и на телефоне, ссылка — на полку.
   assert.deepEqual(bulk.action, { label: 'Открыть полку', tab: 'shelf' });
-  assert.ok('list' in bulk && bulk.list.some((line) => line.includes('Shift')) && bulk.list.some((line) => line.includes('«Выбрать»')));
-  assert.deepEqual(purchase.action, { label: 'Открыть «Закупку»', tab: 'shelf', view: 'purchase' });
+  assert.ok('list' in bulk && bulk.list.some((line) => line.includes('Shift')) && bulk.list.some((line) => line.includes('Выбрать')));
+  assert.deepEqual(purchase.action, { label: 'Открыть закупку', tab: 'shelf', view: 'purchase' });
   assert.ok('list' in purchase && purchase.list.some((line) => line.includes('Зашло')));
   assert.ok(!/шаг|± ?50/i.test(JSON.stringify(purchase)));
-  assert.deepEqual(slide.action, { label: 'Открыть «К заказу»', tab: 'shelf', view: 'reorder' });
+  assert.deepEqual(slide.action, { label: 'Открыть заказ', tab: 'shelf', view: 'reorder' });
   assert.ok('list' in slide && slide.list.some((line) => line.includes('Бюджет на табак')));
   // Количество к заказу больше не предлагаем — в тексте ни «шага», ни «сколько заказать» от сервиса.
   assert.ok(!/шаг|± ?50/i.test(JSON.stringify(slide)));
@@ -139,15 +150,15 @@ test('выпуск «Полка в граммах»: один слайд со с
   assert.deepEqual(latest.slides.map((slide) => slide.title), ['Полка в граммах']);
   const [slide] = latest.slides;
   assert.deepEqual(slide.action, { label: 'Открыть полку', tab: 'shelf' });
-  assert.ok(!/банк/i.test(slide.text));
+  assert.ok(!/банк/i.test(slide.text ?? ''));
 });
 
-test('гостевой выпуск: кабинет, «Для вас», рилсы и мелочи, без «Открыть раздел»', () => {
+test('гостевой выпуск: кабинет, подбор, рилсы и ещё изменения, без кнопки раздела', () => {
   const latest = WHATS_NEW.find((item) => item.id === '2026-10-guest')!;
   assert.equal(latest.id, '2026-10-guest');
   assert.deepEqual(
     latest.slides.map((slide) => slide.title),
-    ['Кабинет гостя', '«Для вас» на «Подборе»', 'Рилсы', 'И по мелочи'],
+    ['Кабинет гостя', 'Подбор для вошедшего гостя', 'Рилсы', 'Ещё изменения'],
   );
   // Гостевые экраны в «Мастере» не открыть — кнопки раздела нет.
   assert.ok(latest.slides.every((slide) => !slide.action));
@@ -160,14 +171,14 @@ test('выпуск инвентаря — 21 октября, 6 слайдов к
   assert.equal(first.label, '21 октября');
   assert.deepEqual(
     first.slides.map((slide) => slide.title),
-    ['Полка вместо «Табаков»', 'Поставки из счёта', 'К заказу и прогноз', 'Идеи для закупки', 'Полка на телефоне', 'И по мелочи'],
+    ['Полка вместо раздела Табаки', 'Поставки из счёта', 'К заказу и прогноз', 'Идеи для закупки', 'Полка на телефоне', 'Ещё изменения'],
   );
   assert.deepEqual(
     first.slides.map((slide) => slide.action && [slide.action.label, slide.action.tab, slide.action.view ?? null]),
     [
       ['Открыть полку', 'shelf', null],
       ['Открыть поставки', 'deliveries', null],
-      ['Открыть «К заказу»', 'shelf', 'reorder'],
+      ['Открыть заказ', 'shelf', 'reorder'],
       ['Открыть идеи', 'catalog', 'ideas'],
       undefined,
       undefined,
