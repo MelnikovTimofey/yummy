@@ -16,7 +16,7 @@ export function MasterStatsRow({ tiles = [], style }) {
     >
       {tiles.map((tile, i) => (
         <div key={(tile.label || '') + i} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 16px', background: 'var(--bg-raised)' }}>
-          <div style={{ fontFamily: 'var(--font-meta)', fontSize: 'var(--fs-xs)', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{tile.label}</div>
+          <div style={{ fontFamily: 'var(--font-meta)', fontSize: 'var(--fs-xs)', fontWeight: 500, color: 'var(--text-muted)' }}>{tile.label}</div>
           <div
             data-tone={tile.tone || 'default'}
             style={{

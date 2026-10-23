@@ -75,7 +75,7 @@ export function MasterTopBar({ items = [], active, onChange, userName = 'admin',
 
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-subtle)', background: 'var(--bg-raised)', lineHeight: 1.15 }}>
           <span style={{ fontSize: 'var(--fs-sm)', letterSpacing: '-0.01em', color: 'var(--text-secondary)' }}>{userName}</span>
-          <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-faint)' }}>{userRole}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{userRole}</span>
         </span>
 
         <button
