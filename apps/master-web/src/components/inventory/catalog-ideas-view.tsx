@@ -69,7 +69,7 @@ export const CatalogIdeasView = ({ ideas, shelfStatuses }: CatalogIdeasViewProps
   if (!sections.length) {
     return (
       <p className="catalog-ideas__empty">
-        Идей пока нет: статистика htreviews появится после следующей синхронизации каталога.
+        Идей пока нет. Статистика htreviews появится после следующей синхронизации каталога.
       </p>
     );
   }
@@ -81,7 +81,7 @@ export const CatalogIdeasView = ({ ideas, shelfStatuses }: CatalogIdeasViewProps
         <section key={section.key} className="catalog-ideas__section" aria-labelledby={`ideas-${section.key}`}>
           <div className="catalog-ideas__head">
             <h2 id={`ideas-${section.key}`}>{section.title}</h2>
-            <p>{section.hint}</p>
+            {section.hint ? <p>{section.hint}</p> : null}
           </div>
           <div className="catalog-ideas__grid">
             {section.items.map((idea) => (
@@ -96,8 +96,7 @@ export const CatalogIdeasView = ({ ideas, shelfStatuses }: CatalogIdeasViewProps
         </section>
       ))}
       <p className="catalog-ideas__hint">
-        Только табаки, которых нет на полке. Цифры — с последней синхронизации htreviews; отзывы и обсуждения — по
-        ссылке на сайте.
+        Табаков с полки здесь нет. Данные htreviews на дату последней синхронизации.
       </p>
     </div>
   );

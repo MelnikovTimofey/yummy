@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, type FormEventHandler } from 'react';
-import { ArrowLeft, Scale } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
@@ -154,13 +154,12 @@ export const MixBuilder = ({
           <span className="mix-builder__breadcrumb-label">
             {mode === 'edit' ? 'Редактирование микса' : 'Новый микс'}
           </span>
-          <span className="mix-builder__breadcrumb-divider" aria-hidden="true">·</span>
           <span className="mix-builder__breadcrumb-meta">{componentsCountLabel}</span>
           {totalPercent !== 100 ? (
             <span className="tag" data-tone="warning">
               {totalPercent > 100
-                ? `сумма ${totalPercent}% · лишние ${totalPercent - 100}%`
-                : `сумма ${totalPercent}% · осталось ${100 - totalPercent}%`}
+                ? `сумма ${totalPercent}%, лишние ${totalPercent - 100}%`
+                : `сумма ${totalPercent}%, не хватает ${100 - totalPercent}%`}
             </span>
           ) : null}
           {blockedByStock ? (
@@ -249,8 +248,7 @@ export const MixBuilder = ({
                 disabled={!editor.components.length}
                 title="Разделить поровну между всеми компонентами"
               >
-                <Scale size={14} aria-hidden="true" />
-                <span>Распределить поровну</span>
+                Распределить поровну
               </button>
             </header>
             <ProportionBar components={editor.components} onResize={onReplaceComponents} />
@@ -282,13 +280,6 @@ export const MixBuilder = ({
               </span>
             </header>
             <div className="mix-builder__components">
-              {editor.components.length ? (
-                <div className="mix-builder__components-head" aria-hidden="true">
-                  <span />
-                  <span>Табак</span>
-                  <span>Доля</span>
-                </div>
-              ) : null}
               {editor.components.length === 0 ? (
                 <div className="mix-builder__empty">
                   <strong>Состав пуст</strong>

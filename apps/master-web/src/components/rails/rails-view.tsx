@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatRailType } from '@/contracts';
 import { Button } from '@/components/ui/button';
@@ -92,7 +92,6 @@ export const RailsView = ({
           data-variant="ghost"
           onClick={openGuestShowcase}
         >
-          <Eye size={14} aria-hidden />
           Витрина гостя
         </button>
         <button
@@ -158,9 +157,9 @@ export const RailsView = ({
                       {tokens.length ? (
                         <span className="rails-table__mix-names">
                           {tokens.map((token, index) => (
-                            <span key={token.id} data-state={token.state}>
-                              {index > 0 ? ' · ' : ''}
-                              {token.name}
+                            <span key={token.id}>
+                              {index > 0 ? ', ' : ''}
+                              <span data-state={token.state}>{token.name}</span>
                             </span>
                           ))}
                         </span>
@@ -170,7 +169,6 @@ export const RailsView = ({
                   <td className="rails-table__actions" onClick={(event) => event.stopPropagation()}>
                     <div className="rails-table__action-group">
                       <button type="button" className="btn" data-size="sm" onClick={() => onOpenRail(rail)}>
-                        {rail.editable ? <Pencil size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
                         {rail.editable ? 'Редактировать' : 'Просмотр'}
                       </button>
                       {rail.editable ? (
@@ -195,7 +193,7 @@ export const RailsView = ({
         </table>
       </div>
     ) : railsStatus !== 'loading' ? (
-      <p className="rails-page__notice">Пока нет рейлов.</p>
+      <p className="rails-page__notice">Рейлов пока нет.</p>
     ) : null}
 
     <Dialog
@@ -208,8 +206,7 @@ export const RailsView = ({
         <DialogHeader>
           <DialogTitle>Удалить рейл «{railPendingDelete?.name}»?</DialogTitle>
           <DialogDescription>
-            Рейл будет удалён без возможности восстановления, а его миксы — убраны из
-            этой подборки. Сами миксы останутся в каталоге. Действие необратимо.
+            Рейл удалится насовсем. Миксы останутся в каталоге.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

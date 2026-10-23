@@ -71,9 +71,10 @@ export const ComponentCard = ({ component, index, tobacco, onPercentChange, onRe
           ) : null}
         </div>
         <div className="mix-builder__component-sub">
-          {tobacco.manufacturer}
-          {tobacco.lineName ? ` · ${tobacco.lineName}` : ''}
-          {tobacco.flavors?.length ? ` · ${tobacco.flavors.slice(0, 3).join(', ')}` : ''}
+          {tobacco.lineName ? `${tobacco.manufacturer} ${tobacco.lineName}` : tobacco.manufacturer}
+          {tobacco.flavors?.length ? (
+            <span className="mix-builder__flavors">{tobacco.flavors.slice(0, 3).join(', ')}</span>
+          ) : null}
         </div>
       </div>
       <div className="mix-builder__component-prop">

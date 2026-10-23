@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ChevronDown,
   Copy,
   Eye,
   EyeOff,
-  Flame,
   Pencil,
   Plus,
   Search,
@@ -86,18 +86,19 @@ type MixCatalogViewProps = {
 };
 
 // flavorProfiles вынесены из multi-select-фильтров — отдельная chip-полоса
-// внутри .mixes-list; остальные таксономии — в свёрнутом details «Доп. фильтры».
+// внутри .mixes-list; остальные таксономии — в свёрнутом details «Ещё фильтры».
 const mixFilterGroups: Array<{ key: MixFilterKey; title: string }> = [
   { key: 'manufacturers', title: 'Производители компонентов' },
   { key: 'flavors', title: 'Вкусы' },
   { key: 'flavorTags', title: 'Мета-теги' },
 ];
 
+// Счётчик только у «Виден гостю»: сколько миксов видит гость (#348).
 type MixStatusChip = {
   value: MixStatusFilter;
   label: string;
   ariaLabel: string;
-  count: number;
+  count?: number;
 };
 
 const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
@@ -114,16 +115,16 @@ const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => 
   if (status === 'blocked') {
     return (
       <span className="tag" data-tone="warning">
-        Блокирован
+        блокирован
       </span>
     );
   }
 
   if (status === 'hidden') {
-    return <span className="tag tag--ghost">Скрыт</span>;
+    return <span className="tag tag--ghost">скрыт</span>;
   }
 
-  return <span className="tag">Виден</span>;
+  return <span className="tag">виден</span>;
 };
 
 export const MixCatalogView = ({
@@ -182,16 +183,31 @@ export const MixCatalogView = ({
   }, [searchValue, filters.search, onSearchChange]);
 
   const statusChips: MixStatusChip[] = [
-    { value: 'all', label: 'Все', ariaLabel: 'Фильтр: Все', count: meta.totalItems },
+    { value: 'all', label: 'Все', ariaLabel: 'Фильтр: Все' },
     { value: 'guest-visible', label: 'Виден гостю', ariaLabel: 'Фильтр: Виден гостю', count: meta.guestVisibleCount },
-    { value: 'hidden', label: 'Скрыт', ariaLabel: 'Фильтр: Скрыт', count: meta.hiddenCount },
-    { value: 'blocked', label: 'Блокирован', ariaLabel: 'Фильтр: Блокирован', count: meta.blockedCount },
+    { value: 'hidden', label: 'Скрыт', ariaLabel: 'Фильтр: Скрыт' },
+    { value: 'blocked', label: 'Блокирован', ariaLabel: 'Фильтр: Блокирован' },
   ];
 
-  // Counts считаем по текущей странице items — глобальный per-profile-counter
-  // потребует расширения MixListMeta на бэке; пока достаточно подсветить
-  // распределение в видимой выборке. Options берём из backend-стороны, чтобы
-  // чипы не исчезали при пустой странице.
+  const filtersActive =
+    Boolean(filters.search) ||
+    filters.status !== 'all' ||
+    filters.railState !== 'all' ||
+    filters.flavorProfiles.length > 0 ||
+    mixFilterGroups.some((group) => filters[group.key].length > 0);
+
+  const resetFilters = () => {
+    setSearchValue('');
+    onSearchChange('');
+    onStatusChange('all');
+    onRailStateChange('all');
+    onClearFilterGroup('flavorProfiles');
+    mixFilterGroups.forEach((group) => onClearFilterGroup(group.key));
+  };
+
+  // Порядок чипов — по частоте профиля на текущей странице, чисел на чипах
+  // нет (#348). Options берём из backend-стороны, чтобы чипы не исчезали при
+  // пустой странице.
   const profileChips = useMemo(() => {
     const counts = new Map<string, number>();
     items.forEach((mix) => {
@@ -254,9 +270,9 @@ export const MixCatalogView = ({
               type="search"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Микс, табак, вкус…"
+              placeholder="Поиск миксов"
+              title="Клавиша /"
             />
-            <kbd className="mixes-list__kbd" aria-hidden="true">/</kbd>
           </div>
 
           <div className="mixes-list__filters" role="group" aria-label="Фильтр по статусу">
@@ -272,9 +288,11 @@ export const MixCatalogView = ({
                   onClick={() => onStatusChange(chip.value)}
                 >
                   <span>{chip.label}</span>
-                  <span className="filter-chip__count" hidden={chip.value !== 'all' && chip.count === 0}>
-                    {formatMetricValue(chip.count)}
-                  </span>
+                  {chip.count === undefined ? null : (
+                    <span className="filter-chip__count" hidden={chip.count === 0}>
+                      {formatMetricValue(chip.count)}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -294,8 +312,7 @@ export const MixCatalogView = ({
                   aria-pressed={active}
                   onClick={() => onToggleFilterValue('flavorProfiles', chip.value)}
                 >
-                  <span>{formatFlavorProfileLabel(chip.value)}</span>
-                  <span className="filter-chip__count">{formatMetricValue(chip.count)}</span>
+                  {formatFlavorProfileLabel(chip.value)}
                 </button>
               );
             })}
@@ -314,7 +331,8 @@ export const MixCatalogView = ({
         {extraFilterGroupsAvailable ? (
           <details className="inventory-extra-filters">
             <summary className="inventory-extra-filters__trigger">
-              Доп. фильтры
+              <ChevronDown size={13} aria-hidden className="inventory-extra-filters__chevron" />
+              Ещё фильтры
               {extraFilterSelectionCount > 0 ? (
                 <span className="inventory-extra-filters__count" aria-hidden="true">
                   {formatMetricValue(extraFilterSelectionCount)}
@@ -353,17 +371,17 @@ export const MixCatalogView = ({
         ) : null}
 
         {!items.length && status !== 'loading' ? (
-          <div className="mixes-empty">
-            <p className="mixes-empty__title">По выбранным фильтрам ничего не найдено.</p>
-            <button
-              type="button"
-              className="btn"
-              data-variant="primary"
-              onClick={onStartCreate}
-            >
-              <Plus size={14} aria-hidden />
-              Новый микс
-            </button>
+          <div className="empty list-empty">
+            {filtersActive ? (
+              <>
+                <p>Ничего не найдено. Уберите один из фильтров.</p>
+                <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetFilters}>
+                  Сбросить фильтры
+                </button>
+              </>
+            ) : (
+              <p>Миксов пока нет.</p>
+            )}
           </div>
         ) : (
           <div className="mixes-table-shell ops-table-shell">
@@ -396,7 +414,9 @@ export const MixCatalogView = ({
                     className="mixes-table__metric-col"
                     {...sortHeaderProps}
                   />
-                  <th scope="col" className="mixes-table__actions-col">Действия</th>
+                  <th scope="col" className="mixes-table__actions-col">
+                    <span className="sr-only">Действия</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -450,7 +470,6 @@ export const MixCatalogView = ({
                       <td>{renderMixStatus(mix)}</td>
                       <td className="mixes-table__metric-col">
                         <span className="mixes-cell__metric" title="Нажатия «Покурить»">
-                          <Flame size={11} aria-hidden="true" />
                           {formatMetricValue(mix.smokeCtaCount)}
                         </span>
                       </td>
@@ -545,15 +564,10 @@ export const MixCatalogView = ({
           <DialogHeader>
             <DialogTitle>Удалить микс «{mixPendingDelete?.name}»?</DialogTitle>
             <DialogDescription>
-              {mixPendingDelete && mixPendingDelete.railMemberships.length > 0 ? (
-                <>
-                  Микс участвует в рейлах:{' '}
-                  {mixPendingDelete.railMemberships.map((rail) => rail.name).join(', ')}. После
-                  удаления он будет убран из этих рейлов. Действие необратимо.
-                </>
-              ) : (
-                <>Микс будет удалён без возможности восстановления. Действие необратимо.</>
-              )}
+              Микс удалится насовсем.
+              {mixPendingDelete && mixPendingDelete.railMemberships.length > 0
+                ? ` Он пропадёт из рейлов: ${mixPendingDelete.railMemberships.map((rail) => rail.name).join(', ')}.`
+                : null}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

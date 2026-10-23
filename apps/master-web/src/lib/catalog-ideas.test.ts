@@ -56,7 +56,9 @@ const ideas: CatalogIdeas = {
 test('ideaSections: подборки по порядку мокапа, пустые скрыты', () => {
   const sections = ideaSections(ideas, new Map());
   assert.deepEqual(sections.map((section) => section.title), ['Популярное у ваших брендов', 'Высокий рейтинг']);
-  assert.equal(sections[0].hint, 'Бренды полки, отсортированы по просмотрам на htreviews');
+  // Пояснение только там, где порядок неочевиден (#348).
+  assert.equal(sections[0].hint, undefined);
+  assert.equal(sections[1].hint, 'С поправкой на число оценок: 5,0 с тремя оценками не обгоняет 4,7 с тысячей.');
   assert.deepEqual(sections[0].items.map((item) => item.id), ['a', 'b']);
 });
 

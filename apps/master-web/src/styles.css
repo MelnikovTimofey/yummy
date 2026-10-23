@@ -961,14 +961,6 @@ button.chip[data-active="true"] {
   gap: 2px;
 }
 
-.tobacco-drawer__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
 .tobacco-drawer__title {
   margin: 0;
   font-family: var(--font-serif);
@@ -1875,14 +1867,6 @@ input[type="checkbox"] {
   gap: 2px;
 }
 
-.rail-drawer__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
 .rail-drawer__title {
   margin: 0;
   font-family: var(--font-serif);
@@ -1976,8 +1960,13 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
+.rail-drawer__section-count {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
 .rail-drawer__hint {
-  font-family: var(--font-meta);
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
@@ -2172,9 +2161,7 @@ input[type="checkbox"] {
   width: 100%;
   aspect-ratio: 4 / 5;
   border-radius: var(--r-sm);
-  background:
-    linear-gradient(135deg, var(--accent-soft), transparent),
-    var(--bg-elevated);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
 }
 
@@ -2538,33 +2525,49 @@ input[type="checkbox"] {
   font-size: var(--fs-sm);
 }
 
-/* --- Доп. фильтры details — под мокап (внутри .tobaccos-list) -------- */
+/* --- «Ещё фильтры» — details-кнопка в строке под чипами Каталога и Миксов */
 
-.tobaccos-list .inventory-extra-filters {
+.tobaccos-list .inventory-extra-filters,
+.mixes-list .inventory-extra-filters {
+  border: 0;
   border-top: 1px solid var(--border-subtle);
   border-radius: 0;
+  padding: 6px 12px;
   background: transparent;
 }
 
-.tobaccos-list .inventory-extra-filters__trigger {
-  padding: 10px 12px;
-  font-family: var(--font-meta);
+.tobaccos-list .inventory-extra-filters__trigger,
+.mixes-list .inventory-extra-filters__trigger {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
   font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
+  color: var(--text-secondary);
 }
 
-.tobaccos-list .inventory-extra-filters__trigger:hover {
+.tobaccos-list .inventory-extra-filters__trigger:hover,
+.mixes-list .inventory-extra-filters__trigger:hover {
+  background: var(--bg-elevated);
   color: var(--text-primary);
 }
 
-.tobaccos-list .inventory-extra-filters__count {
+.inventory-extra-filters__chevron {
+  flex: none;
+  transition: transform 120ms ease;
+}
+
+.inventory-extra-filters[open] .inventory-extra-filters__chevron {
+  transform: rotate(180deg);
+}
+
+.tobaccos-list .inventory-extra-filters__count,
+.mixes-list .inventory-extra-filters__count {
   background: var(--bg-elevated);
   color: var(--text-secondary);
 }
 
+.mixes-list .inventory-filter-groups,
 .tobaccos-list .inventory-filter-groups {
   padding: 8px 12px 12px;
   background: transparent;
@@ -2628,24 +2631,6 @@ input[type="checkbox"] {
   background: transparent;
   border: 0;
   box-shadow: none;
-}
-
-.mixes-list__kbd {
-  margin-left: auto;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: 10.5px;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-xs);
-  pointer-events: none;
 }
 
 .mixes-list__filters {
@@ -2731,46 +2716,17 @@ input[type="checkbox"] {
   opacity: 0.78;
 }
 
-/* --- Доп. фильтры details — внутри .mixes-list ----------------------- */
-
-.mixes-list .inventory-extra-filters {
-  border-top: 1px solid var(--border-subtle);
-  border-radius: 0;
-  background: transparent;
+/* Пустой результат по фильтрам: факт и кнопка сброса в одну строку (#348). */
+.list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.mixes-list .inventory-extra-filters__trigger {
-  padding: 10px 12px;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
-}
-
-.mixes-list .inventory-extra-filters__trigger:hover {
-  color: var(--text-primary);
-}
-
-.mixes-list .inventory-extra-filters__count {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.mixes-list .inventory-filter-groups {
-  padding: 8px 12px 12px;
-  background: transparent;
-  border: 0;
-}
-
-/* --- Empty state внутри .mixes-list ---------------------------------- */
-
-.mixes-list .mixes-empty {
-  padding: 32px 16px;
-  border: 0;
-  background: transparent;
-  border-radius: 0;
+.list-empty p {
+  margin: 0;
 }
 
 /* Operator dialog — centered modal под мокап AccessView » OperatorEditor.
@@ -3027,6 +2983,8 @@ input[type="checkbox"] {
 }
 
 .inventory-batch-bar__title {
+  margin: 0;
+  align-self: center;
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--text-muted);
@@ -3430,6 +3388,15 @@ input[type="checkbox"] {
 .inventory-cell__faint {
   color: var(--text-muted);
   font-size: 0.82rem;
+}
+
+.inventory-cell__line,
+.inventory-cell__flavors {
+  color: var(--text-faint);
+}
+
+.inventory-cell__sub > * + * {
+  margin-left: 10px;
 }
 
 /* Row-toggle (slider) */
@@ -4603,15 +4570,9 @@ input[type="checkbox"] {
   color: var(--text-secondary);
 }
 
-.mix-builder__breadcrumb-divider {
-  color: var(--muted-foreground);
-}
-
 .mix-builder__breadcrumb-meta {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: 11px;
-  color: var(--muted-foreground);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
   white-space: nowrap;
 }
 
@@ -4703,23 +4664,11 @@ input[type="checkbox"] {
   min-height: 0;
 }
 
-.mix-builder__components-head,
 .mix-builder__component {
   display: grid;
   grid-template-columns: 10px 1fr auto;
   gap: 12px;
   align-items: center;
-}
-
-.mix-builder__components-head {
-  padding: 0 0 6px;
-  border-bottom: 1px solid var(--border-subtle);
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
 }
 
 .mix-builder__component {
@@ -4763,6 +4712,11 @@ input[type="checkbox"] {
 .mix-builder__component-badge--warning {
   color: var(--warning);
   background: var(--warning-soft);
+}
+
+.mix-builder__flavors {
+  margin-left: 10px;
+  color: var(--text-faint);
 }
 
 .mix-builder__component-sub {
@@ -4953,16 +4907,11 @@ input[type="checkbox"] {
 }
 
 .mix-builder__library-empty {
+  margin: 0;
   padding: 18px;
   text-align: center;
   color: var(--muted-foreground);
   font-size: 12px;
-}
-
-.mix-builder__library-empty strong {
-  display: block;
-  color: var(--foreground);
-  margin-bottom: 4px;
 }
 
 .mix-builder__library-item {
@@ -5372,25 +5321,9 @@ input[type="checkbox"] {
   margin-left: 2px;
 }
 
-.mixes-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 24px 0;
-  color: var(--muted-foreground);
-}
-
-.mixes-empty__title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
 /* =====================================================================
-   MasterPageHeader — общий page-header под mockups (eyebrow + large
-   serif h1 + subtitle + actions/meta справа). Заменяет старый паттерн
+   MasterPageHeader — общий page-header под mockups (large serif h1 +
+   subtitle + actions/meta справа). Заменяет старый паттерн
    «section-head с h2 внутри». Применяется на всех 5 master-экранах.
    ===================================================================== */
 
@@ -5408,14 +5341,6 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.master-page-header__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
 }
 
 .master-page-header__title {
