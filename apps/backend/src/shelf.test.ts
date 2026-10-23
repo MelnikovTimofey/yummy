@@ -11,12 +11,15 @@ import {
   getShelf,
   getShelfItem,
   markEmpty,
+  markEmptyMany,
   removeFromShelf,
   setStop,
+  setTrialVerdict,
   ShelfConflictError,
   ShelfNotFoundError,
   ShelfValidationError,
   syncAvailability,
+  undoEmptyBatch,
   updateSettings,
   updateShelfItem,
   writeOff,
@@ -27,6 +30,8 @@ const DAY = 86_400_000;
 const actor = { login: 'admin', name: 'Админ', role: 'admin' as const };
 const MINT = 'tobacco-mint-veil';
 const PEACH = 'tobacco-peach-silk';
+const BERRY = 'tobacco-berry-oasis';
+const CITRUS = 'tobacco-citrus-breeze';
 
 let start: Date;
 const at = (days: number) => new Date(start.getTime() + days * DAY);
@@ -54,7 +59,7 @@ test.describe('старт полки из наличия', () => {
       assert.deepEqual(item.entries.map((entry) => [entry.kind, entry.delivery?.kind]), [['receipt', 'start']]);
       assert.ok([200, 250].includes(item.entries[0].grams));
     }
-    assert.deepEqual(await getSettings(), { bowlGrams: 18, leadDays: 7 });
+    assert.deepEqual(await getSettings(), { bowlGrams: 18, leadDays: 7, budgetKop: null });
   });
 });
 
@@ -224,13 +229,141 @@ test.describe('стоп, настройки строки, полка и план
 
 test.describe('настройки полки', () => {
   test('граммовка чаши и срок поставки в границах', async () => {
-    assert.deepEqual(await updateSettings(actor, { bowlGrams: 20 }), { bowlGrams: 20, leadDays: 7 });
-    assert.deepEqual(await updateSettings(actor, { leadDays: 14 }), { bowlGrams: 20, leadDays: 14 });
+    assert.deepEqual(await updateSettings(actor, { bowlGrams: 20 }), { bowlGrams: 20, leadDays: 7, budgetKop: null });
+    assert.deepEqual(await updateSettings(actor, { leadDays: 14 }), { bowlGrams: 20, leadDays: 14, budgetKop: null });
     await assert.rejects(updateSettings(actor, { bowlGrams: 0 }), ShelfValidationError);
     await assert.rejects(updateSettings(actor, { bowlGrams: 101 }), ShelfValidationError);
     await assert.rejects(updateSettings(actor, { leadDays: 61 }), ShelfValidationError);
     await assert.rejects(updateSettings(actor, { leadDays: 1.5 }), ShelfValidationError);
-    assert.deepEqual(await getSettings(), { bowlGrams: 20, leadDays: 14 });
+    assert.deepEqual(await getSettings(), { bowlGrams: 20, leadDays: 14, budgetKop: null });
+  });
+
+  test('бюджет на табак — целые копейки в месяц или пусто', async () => {
+    assert.deepEqual(await updateSettings(actor, { budgetKop: 15_000_000 }), { bowlGrams: 18, leadDays: 7, budgetKop: 15_000_000 });
+    assert.equal((await updateSettings(actor, { leadDays: 10 })).budgetKop, 15_000_000);
+    assert.equal((await getSettings()).budgetKop, 15_000_000);
+    assert.equal((await updateSettings(actor, { budgetKop: 0 })).budgetKop, 0);
+    assert.equal((await updateSettings(actor, { budgetKop: null })).budgetKop, null);
+    for (const bad of [-1, 1.5, '150000', 1_000_000_001]) {
+      await assert.rejects(updateSettings(actor, { budgetKop: bad }), ShelfValidationError, String(bad));
+    }
+  });
+});
+
+test.describe('интервал поставок и прогноз', () => {
+  const invoice = (when: Date, status = 'received', kind = 'invoice') =>
+    prisma.delivery.create({ data: { kind, status, invoiceDate: kind === 'manual' ? null : when, receivedAt: when } });
+
+  test('«Заканчивается» — до следующей поставки, когда принято три счёта', async () => {
+    // Mint: 200 стартовых, на 5-й день 140 г — расход 12 г/день, к 6-му дню хватит на ≈ 10,7 дня.
+    await addCount(actor, MINT, { grams: 140 }, at(5));
+    await invoice(at(-20));
+    await invoice(at(-10), 'received', 'manual');
+    await invoice(at(0), 'draft');
+
+    const before = await getShelf(at(6));
+    assert.deepEqual(before.interval, { days: null, deliveries: 2 });
+    assert.equal(before.horizon.days, 7);
+    assert.equal(before.rows.find((row) => row.tobacco.id === MINT)!.status, 'ok');
+
+    await invoice(at(0));
+    const after = await getShelf(at(6));
+    assert.deepEqual(after.interval, { days: 10, deliveries: 3 });
+    assert.deepEqual(after.horizon, { days: 17, until: new Date(at(6).getTime() + 17 * DAY).toISOString() });
+    assert.equal(after.rows.find((row) => row.tobacco.id === MINT)!.status, 'ending');
+    assert.equal((await getShelfItem(MINT, at(6))).status, 'ending');
+  });
+
+  test('расход в месяц и откуда остаток: указал мастер сегодня, дальше прогноз', async () => {
+    const { item } = await addCount(actor, MINT, { grams: 100 }, at(5));
+    assert.equal(item.monthGrams, 20 * 30);
+    const row = async (when: Date) => (await getShelf(when)).rows.find((entry) => entry.tobacco.id === MINT)!;
+    assert.equal((await row(at(5))).leftSource, 'mark');
+    assert.equal((await row(at(6))).leftSource, 'forecast');
+    await markEmpty(actor, MINT, at(7));
+    assert.equal((await row(at(9))).leftSource, 'mark');
+  });
+});
+
+test.describe('проба', () => {
+  test('впервые пришёл на полку за 60 дней; стартовый приход — не проба', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+    await addReceipt(actor, PEACH, { grams: 25 }, at(2));
+    const trial = async (id: string, when: Date) => (await getShelf(when)).rows.find((row) => row.tobacco.id === id)!.trial;
+    assert.equal(await trial(PEACH, at(10)), true);
+    assert.equal(await trial(MINT, at(10)), false);
+    assert.equal(await trial(PEACH, at(63)), false);
+    assert.equal((await getShelfItem(PEACH, at(10))).trial, true);
+  });
+
+  test('отметка «зашло / не зашло» меняется и снимается, пишет аудит', async () => {
+    const yes = await setTrialVerdict(actor, MINT, 'yes', at(1));
+    assert.deepEqual([yes.trialVerdict, yes.trialMarkedAt], ['yes', at(1).toISOString()]);
+    const no = await setTrialVerdict(actor, MINT, 'no', at(2));
+    assert.deepEqual([no.trialVerdict, no.trialMarkedAt], ['no', at(2).toISOString()]);
+    const cleared = await setTrialVerdict(actor, MINT, null, at(3));
+    assert.deepEqual([cleared.trialVerdict, cleared.trialMarkedAt], [null, null]);
+
+    await assert.rejects(setTrialVerdict(actor, MINT, 'maybe', at(3)), ShelfValidationError);
+    await assert.rejects(setTrialVerdict(actor, 'tobacco-nope', 'yes', at(3)), ShelfNotFoundError);
+    const events = await prisma.auditEvent.findMany({ where: { entityType: 'shelf', entityId: MINT }, orderBy: { createdAt: 'asc' } });
+    assert.deepEqual(events.map((event) => [event.action, JSON.parse(event.details ?? '{}').trialVerdict]), [
+      ['update', 'yes'],
+      ['update', 'no'],
+      ['update', null],
+    ]);
+  });
+});
+
+test.describe('«Закончились» разом', () => {
+  test('отметка 0 г на каждый, пропуск закончившихся и плана, скрытые миксы и одна отмена', async () => {
+    await markEmpty(actor, CITRUS, at(1));
+    await addToShelf(actor, PEACH, 'plan', at(1));
+
+    const result = await markEmptyMany(actor, [MINT, BERRY, CITRUS, PEACH, MINT], at(5));
+    assert.deepEqual(result.done, [MINT, BERRY]);
+    assert.deepEqual(result.skipped, [
+      { tobaccoId: CITRUS, reason: 'out' },
+      { tobaccoId: PEACH, reason: 'plan' },
+    ]);
+    const mixes = await prisma.mixComponent.findMany({
+      where: { tobaccoId: { in: [MINT, BERRY] }, mix: { available: true } },
+      select: { mixId: true },
+    });
+    assert.equal(result.hiddenMixes, new Set(mixes.map((mix) => mix.mixId)).size);
+    assert.ok(result.hiddenMixes >= 5);
+    assert.deepEqual(result.items.map((item) => [item.tobacco.id, item.status, item.guestAvailable]), [
+      [MINT, 'out', false],
+      [BERRY, 'out', false],
+    ]);
+    // Расход — как при одиночной отметке: стартовые 200 г за 5 дней.
+    assert.equal(result.items[0].rate, 40);
+    assert.deepEqual([await inStock(MINT), await inStock(BERRY)], [false, false]);
+    const last = (await entriesOf(MINT)).at(-1)!;
+    assert.deepEqual([last.kind, last.grams, last.actorLogin], ['count', 0, 'admin']);
+
+    const events = await prisma.auditEvent.findMany({ where: { action: 'mark-empty' }, orderBy: { createdAt: 'asc' } });
+    assert.deepEqual(events.slice(1).map((event) => JSON.parse(event.details ?? '{}').batchId), [result.batchId, result.batchId]);
+
+    const undone = await undoEmptyBatch(actor, result.batchId, at(5));
+    assert.deepEqual(undone.items.map((item) => [item.tobacco.id, item.guestAvailable]), [
+      [MINT, true],
+      [BERRY, true],
+    ]);
+    assert.deepEqual([await inStock(MINT), await inStock(BERRY)], [true, true]);
+    assert.equal((await entriesOf(MINT)).length, 1);
+    // Отметка CITRUS не из пакета — на месте.
+    assert.equal((await entriesOf(CITRUS)).length, 2);
+    await assert.rejects(undoEmptyBatch(actor, result.batchId, at(5)), ShelfNotFoundError);
+  });
+
+  test('список табаков обязателен; неизвестный табак — ничего не записано', async () => {
+    await assert.rejects(markEmptyMany(actor, [], at(1)), ShelfValidationError);
+    await assert.rejects(markEmptyMany(actor, 'x', at(1)), ShelfValidationError);
+    await assert.rejects(markEmptyMany(actor, [MINT, 7], at(1)), ShelfValidationError);
+    await assert.rejects(markEmptyMany(actor, [MINT, 'tobacco-nope'], at(1)), ShelfNotFoundError);
+    assert.equal(await inStock(MINT), true);
+    assert.equal((await entriesOf(MINT)).length, 1);
   });
 });
 

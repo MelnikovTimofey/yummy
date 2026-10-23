@@ -8,6 +8,7 @@ import { formatGrams, formatNumber, formatShelfDate, type ShelfStatusKey } from 
 // открывают полку с телефона.
 export const SHELF_MOBILE_CHIPS: Array<[ShelfStatusKey, string]> = [
   ['ending', 'Заканчивается'],
+  ['trial', 'Пробы'],
   ['check', 'Проверьте'],
   ['out', 'Закончились'],
   ['all', 'Все'],

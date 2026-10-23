@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { prisma } from './db';
-import { addCount, addReceipt, addToShelf, getShelf, getShelfItem, markEmpty, removeFromShelf, writeOff } from './shelf';
-import { getReorder, getShelfDashboard, orderText, weekPeriods } from './shelf-insights';
+import { addCount, addReceipt, addToShelf, getShelf, getShelfItem, markEmpty, removeFromShelf, updateSettings, writeOff } from './shelf';
+import { getPurchase, getReorder, getShelfDashboard, orderText, weekPeriods } from './shelf-insights';
 import { resetAppState } from './state';
 
 const DAY = 86_400_000;
@@ -64,18 +64,14 @@ const receive = async (
 const keepOnly = (tobaccoIds: string[]) =>
   prisma.shelfItem.updateMany({ where: { tobaccoId: { notIn: tobaccoIds } }, data: { keepStocked: false } });
 
-// Расход на 21 день минус остаток, вверх до 50 г.
-const expectedGrams = (row: { rate: number | null; leftGrams: number | null }) =>
-  Math.max(1, Math.ceil(((row.rate ?? 0) * 21 - (row.leftGrams ?? 0)) / 50)) * 50;
-
 test.describe('текст заказа', () => {
-  test('строка на табак: бренд, линейка, вкус и граммы', () => {
+  test('строка на табак: бренд, линейка и вкус, объём мастер впишет сам', () => {
     assert.equal(
       orderText([
-        { tobacco: { manufacturer: 'Black Burn', lineName: '', name: 'Cane Mint' }, quantityGrams: 450 },
-        { tobacco: { manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' }, quantityGrams: 250 },
+        { tobacco: { manufacturer: 'Black Burn', lineName: '', name: 'Cane Mint' } },
+        { tobacco: { manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' } },
       ]),
-      'Добрый день! Заказ:\nBlack Burn Cane Mint — 450 г\nDARKSIDE Core Supernova — 250 г\nСпасибо!',
+      'Добрый день! Заказ:\nBlack Burn Cane Mint\nDARKSIDE Core Supernova\nСпасибо!',
     );
   });
 });
@@ -131,14 +127,16 @@ test.describe('к заказу', () => {
     return { kaspiy, yug };
   };
 
-  test('группы по последнему поставщику, граммы, цена грамма, суммы и текст', async () => {
+  test('группы по последнему поставщику, прогноз, расход в месяц, цена грамма и текст', async () => {
     const { kaspiy, yug } = await scenario();
     const now = at(8);
     const reorder = await getReorder(now);
     const rows = new Map((await getShelf(now)).rows.map((row) => [row.tobacco.id, row]));
-    const grams = (id: string) => expectedGrams(rows.get(id)!);
 
-    assert.deepEqual(reorder.settings, { bowlGrams: 18, leadDays: 7 });
+    assert.deepEqual(reorder.settings, { bowlGrams: 18, leadDays: 7, budgetKop: null });
+    // Поставки 1-го и 2-го дня — два дня из трёх нужных: интервала нет, горизонт — срок поставки.
+    assert.deepEqual(reorder.interval, { days: null, deliveries: 2 });
+    assert.deepEqual(reorder.horizon, { days: 7, until: new Date(now.getTime() + 7 * DAY).toISOString() });
     const bySupplier = new Map(reorder.groups.map((group) => [group.supplier?.id ?? null, group]));
     assert.equal(reorder.groups.length, 3);
     // С поставщиком — по срочности первой строки; «Поставщик не выбран» — всегда последней,
@@ -154,23 +152,25 @@ test.describe('к заказу', () => {
     ]);
     const mint = k.items[0];
     assert.equal(mint.rate, 50);
-    assert.equal(mint.quantityGrams, 1050);
+    assert.equal(mint.monthGrams, 1500);
+    assert.equal(mint.byInterval, false);
     assert.equal(mint.leftGrams, 0);
     assert.equal(mint.rateKind, 'own');
     assert.equal(mint.daysLeft, null);
     const berry = k.items[1];
     assert.equal(Math.round(berry.daysLeft!), 4);
     assert.equal(berry.endsAt, rows.get(BERRY)!.endsAt);
-    assert.equal(berry.quantityGrams, 600);
+    // Один прогноз: расход в месяц тот же, что на полке.
+    assert.equal(berry.monthGrams, rows.get(BERRY)!.monthGrams);
     assert.equal(berry.leftGrams, rows.get(BERRY)!.leftGrams);
-    assert.equal(k.sumKop, 1050 * 775 + 600 * 800);
+    assert.equal('sumKop' in k, false);
+    assert.equal('quantityGrams' in berry, false);
 
     const y = bySupplier.get(yug.id)!;
     assert.equal(y.lastInvoice, null);
-    assert.deepEqual(y.items.map((item) => [item.tobacco.id, item.status, item.gramPriceKop, item.quantityGrams]), [
-      [APPLE, 'ending', 900, grams(APPLE)],
+    assert.deepEqual(y.items.map((item) => [item.tobacco.id, item.status, item.gramPriceKop]), [
+      [APPLE, 'ending', 900],
     ]);
-    assert.equal(y.sumKop, grams(APPLE) * 900);
 
     const none = bySupplier.get(null)!;
     assert.equal(none.supplier, null);
@@ -179,27 +179,30 @@ test.describe('к заказу', () => {
       [HERBAL, 'out', null],
       [PEACH, 'plan', null],
     ]);
-    // Без своего расхода Peach заказывается по медиане бренда.
+    // Без своего расхода у Peach — медиана бренда.
     const peach = none.items.find((item) => item.tobacco.id === PEACH)!;
     assert.equal(peach.rateKind, 'brand');
-    assert.equal(peach.quantityGrams, grams(PEACH));
-    assert.equal(none.sumKop, null);
+    assert.equal(peach.monthGrams, peach.rate! * 30);
 
     const name = (id: string) => `${rows.get(id)!.tobacco.manufacturer} ${rows.get(id)!.tobacco.name}`;
     const text = reorder.text.find((entry) => entry.supplierId === kaspiy.id)!.text;
-    assert.equal(
-      text,
-      ['Добрый день! Заказ:', `${name(MINT)} — 1050 г`, `${name(BERRY)} — 600 г`, 'Спасибо!'].join('\n'),
-    );
+    assert.equal(text, ['Добрый день! Заказ:', name(MINT), name(BERRY), 'Спасибо!'].join('\n'));
     assert.deepEqual(reorder.text.map((entry) => entry.supplierId), reorder.groups.map((group) => group.supplier?.id ?? null));
   });
 
-  test('без цены хоть у одной строки сумма группы неизвестна', async () => {
-    const { kaspiy } = await scenario();
-    await prisma.stockEntry.updateMany({ where: { shelfItem: { tobaccoId: BERRY } }, data: { priceKop: null } });
-    const group = (await getReorder(at(8))).groups.find((item) => item.supplier?.id === kaspiy.id)!;
-    assert.equal(group.items[1].gramPriceKop, null);
-    assert.equal(group.sumKop, null);
+  test('с интервалом поставок — что закончится до следующей поставки', async () => {
+    await keepOnly([MINT]);
+    // Mint: 200 стартовых, на 5-й день 140 г — расход 12 г/день, к 6-му дню хватит на ≈ 10,7 дня.
+    await addCount(actor, MINT, { grams: 140 }, at(5));
+    for (const day of [-20, -10]) await receive(HERBAL, { at: at(day), grams: 50 });
+    assert.deepEqual((await getReorder(at(6))).groups, []);
+
+    await receive(HERBAL, { at: at(0), grams: 50 });
+    const reorder = await getReorder(at(6));
+    assert.deepEqual(reorder.interval, { days: 10, deliveries: 3 });
+    assert.equal(reorder.horizon.days, 17);
+    const [mint] = reorder.groups[0].items;
+    assert.deepEqual([mint.tobacco.id, mint.status, mint.byInterval], [MINT, 'ending', true]);
   });
 
   test('пустая полка — пустой список', async () => {
@@ -313,6 +316,21 @@ test.describe('дашборд полки', () => {
     assert.ok(Math.abs(dashboard.stockValueKop - value) <= 4 * 4995, `${dashboard.stockValueKop} ≠ ${value}`);
   });
 
+  test('бюджет: база в месяц по «держим постоянно», без цены — в счёт неизвестных', async () => {
+    await keepOnly([MINT, BERRY, APPLE]);
+    await berryRunning(160_000);
+    const now = at(8);
+    const berry = await getShelfItem(BERRY, now);
+    const base = Math.round(berry.monthGrams! * berry.gramPriceKop!);
+
+    const without = (await getShelfDashboard(now)).budget;
+    assert.deepEqual(without, { budgetKop: null, baseKop: base, baseCount: 3, unknownCount: 2, leftKop: null });
+
+    await updateSettings(actor, { budgetKop: 1_500_000 });
+    const withBudget = (await getShelfDashboard(now)).budget;
+    assert.deepEqual(withBudget, { budgetKop: 1_500_000, baseKop: base, baseCount: 3, unknownCount: 2, leftKop: 1_500_000 - base });
+  });
+
   test('без цен нет себестоимости чаши, табак на полке — ноль', async () => {
     const dashboard = await getShelfDashboard(at(1));
     assert.equal(dashboard.bowlCostKop, null);
@@ -356,6 +374,139 @@ test.describe('дашборд полки', () => {
   });
 });
 
+test.describe('закупка', () => {
+  const near = (actual: number | null | undefined, expected: number, delta = 1e-6) =>
+    assert.ok(actual !== null && actual !== undefined && Math.abs(actual - expected) < delta, `${actual} ≠ ${expected}`);
+
+  // Сид: все табаки в наличии пришли стартовым приходом 200 г в день 0.
+  const scenario = async () => {
+    // Mint — 10 г/день.
+    await addCount(actor, MINT, { grams: 100 }, at(10));
+    // Berry лежит: 20 г за 25 дней, цены нет (только стартовый приход).
+    await addCount(actor, BERRY, { grams: 180 }, at(25));
+    // Apple лежит: приход по счёту в день 1, 10 г за 19 дней, грамм — 8 ₽.
+    await receive(APPLE, { priceKop: 160_000, at: at(1) });
+    await addCount(actor, APPLE, { grams: 390 }, at(20));
+    // Herbal: 100 г по счёту ушли за 2 дня, следующего прихода нет.
+    await receive(HERBAL, { at: at(5), grams: 100 });
+    await markEmpty(actor, HERBAL, at(7));
+    // Peach — проба: 25 г впервые пришли в день 20 и ушли за 2 дня; не держим постоянно.
+    await addToShelf(actor, PEACH, 'active', at(19));
+    await prisma.shelfItem.update({ where: { tobaccoId: PEACH }, data: { keepStocked: false, trialVerdict: 'yes', trialMarkedAt: at(23) } });
+    await receive(PEACH, { at: at(20), grams: 25 });
+    await markEmpty(actor, PEACH, at(22));
+    await receive(PEACH, { at: at(24), grams: 100 });
+
+    // Приложение: «Ягодный рассвет» (berry + mint) — 2 раза, «Цитрусовый караван» (citrus + mint) — 1,
+    // событие за окном 30 дней не считается; «Намиксуй» с персиком — 1.
+    await prisma.smokeCtaEvent.createMany({
+      data: [
+        { mixId: 'mix-berry-dawn', mixName: 'Ягодный рассвет', mixProfiles: ['berry', 'minty'], createdAt: at(28) },
+        { mixId: 'mix-berry-dawn', mixName: 'Ягодный рассвет', mixProfiles: ['berry', 'minty'], createdAt: at(29) },
+        { mixId: 'mix-citrus-scout', mixName: 'Цитрусовый караван', mixProfiles: ['citrus'], createdAt: at(28) },
+        { mixId: 'mix-citrus-scout', mixName: 'Цитрусовый караван', mixProfiles: ['citrus'], createdAt: at(-10) },
+      ],
+    });
+    await prisma.customMixSmokeEvent.create({
+      data: {
+        components: [{ tobaccoId: PEACH, manufacturer: 'Ателье Reserve', name: 'Peach', proportion: 100 }],
+        signature: PEACH,
+        name: 'Персик',
+        harmony: 70,
+        createdAt: at(29),
+      },
+    });
+    await prisma.mixRating.createMany({ data: [{ mixId: 'mix-berry-dawn', value: 5 }, { mixId: 'mix-berry-dawn', value: 4 }] });
+  };
+
+  test('бюджет — тот же, что на дашборде', async () => {
+    await scenario();
+    await updateSettings(actor, { budgetKop: 1_500_000 });
+    const now = at(30);
+    const [purchase, dashboard] = await Promise.all([getPurchase(now), getShelfDashboard(now)]);
+    assert.deepEqual(purchase.budget, dashboard.budget);
+    assert.deepEqual(purchase.spend, { month: dashboard.spend.month, totalKop: dashboard.spend.totalKop });
+    assert.equal(purchase.since, start.toISOString());
+  });
+
+  test('база: расход, доля, приложение справочно и подсказки', async () => {
+    await scenario();
+    const { base } = await getPurchase(at(30));
+    assert.equal(base.enough, true);
+    const by = new Map(base.rows.map((row) => [row.tobacco.id, row]));
+    const mint = by.get(MINT)!;
+    near(mint.monthGrams, 300);
+    assert.equal(mint.rateKind, 'own');
+    assert.deepEqual(mint.app, { smokes: 3, rating: 4.5, ratings: 2 });
+    assert.equal(by.get(BERRY)!.flag, 'idleBase');
+    assert.equal(by.get(APPLE)!.flag, 'idleBase');
+    near(by.get(APPLE)!.rubKop, 15 * 800, 1);
+    assert.equal(by.get(PEACH)!.flag, 'notBase');
+    assert.equal(by.get(PEACH)!.keepStocked, false);
+    near(base.rows.reduce((total, row) => total + (row.share ?? 0), 0), 1);
+    assert.deepEqual(base.counts, { notBase: 1, idleBase: 2 });
+  });
+
+  test('закончились быстро, пробы и «лежит»', async () => {
+    await scenario();
+    const view = await getPurchase(at(30));
+
+    assert.equal(view.fast.enough, true);
+    assert.deepEqual(view.fast.rows.map((row) => row.tobacco.id), [HERBAL, PEACH]);
+    const [herbal, peach] = view.fast.rows;
+    assert.deepEqual([herbal.receiptGrams, herbal.receivedAt, herbal.emptyAt, herbal.ongoing, herbal.next, herbal.status], [
+      100, at(5).toISOString(), at(7).toISOString(), true, null, 'out',
+    ]);
+    near(herbal.goneDays, 2);
+    near(herbal.emptyDays, 23);
+    assert.deepEqual(peach.next, { grams: 100, at: at(24).toISOString() });
+
+    // Стартовый приход — не проба.
+    assert.deepEqual(view.trials.rows.map((row) => row.tobacco.id), [PEACH]);
+    const [trial] = view.trials.rows;
+    assert.equal(trial.receiptGrams, 25);
+    assert.equal(trial.receivedAt, at(20).toISOString());
+    near(trial.goneDays, 2);
+    assert.ok(trial.speed !== null && trial.speed > 1);
+    assert.deepEqual(trial.app, { smokes: 1, rating: null, ratings: 0 });
+    assert.equal(trial.mixCount, 1);
+    assert.deepEqual([trial.trialVerdict, trial.trialMarkedAt], ['yes', at(23).toISOString()]);
+
+    assert.deepEqual(view.idle.rows.map((row) => row.tobacco.id), [APPLE, BERRY]);
+    const [apple, berry] = view.idle.rows;
+    near(apple.rate21, 0.5);
+    assert.equal(apple.rubKop, apple.leftGrams * 800);
+    assert.equal(berry.rubKop, null);
+    assert.equal(view.idle.totalKop, apple.rubKop);
+    assert.equal(view.idle.unknownPriceCount, 1);
+    // Остальные табаки сида без отметок остатка — расход за 21 день неизвестен.
+    assert.ok(view.idle.unmarkedCount > 0);
+  });
+
+  test('вкусы — по flavorProfiles, доли в сумме дают 1', async () => {
+    await scenario();
+    const { profiles } = await getPurchase(at(30));
+    assert.equal(profiles.enough, true);
+    assert.equal(profiles.appEvents, 4);
+    assert.equal(profiles.appEnough, false);
+    for (const column of ['spend', 'shelf', 'app'] as const) {
+      near(profiles.rows.reduce((total, row) => total + row[column], 0), 1);
+    }
+    const herbal = profiles.rows.find((row) => row.key === 'floral_herbal')!;
+    assert.equal(herbal.flag, 'more');
+  });
+
+  test('без отметок — мало данных во всех разделах', async () => {
+    const view = await getPurchase(at(1));
+    assert.equal(view.base.enough, false);
+    assert.equal(view.fast.enough, false);
+    assert.equal(view.trials.enough, false);
+    assert.equal(view.idle.enough, false);
+    assert.equal(view.profiles.enough, false);
+    assert.ok(view.base.rows.every((row) => row.flag === null));
+  });
+});
+
 test.describe('HTTP', () => {
   const login = async (app: ReturnType<typeof buildApp>) => {
     const response = await app.inject({ method: 'POST', url: '/staff/auth/login', payload: { login: 'admin', password: 'admin' } });
@@ -364,7 +515,7 @@ test.describe('HTTP', () => {
 
   test('без токена — 401', async () => {
     const app = buildApp();
-    for (const url of ['/staff/shelf/reorder', '/staff/shelf/dashboard']) {
+    for (const url of ['/staff/shelf/reorder', '/staff/shelf/dashboard', '/staff/shelf/purchase']) {
       assert.equal((await app.inject({ method: 'GET', url })).statusCode, 401, url);
     }
   });
@@ -377,19 +528,27 @@ test.describe('HTTP', () => {
     const reorder = await app.inject({ method: 'GET', url: '/staff/shelf/reorder', headers });
     assert.equal(reorder.statusCode, 200);
     const body = reorder.json();
-    assert.deepEqual(Object.keys(body).sort(), ['groups', 'settings', 'text']);
+    assert.deepEqual(Object.keys(body).sort(), ['groups', 'horizon', 'interval', 'settings', 'text']);
     const item = body.groups[0].items.find((entry: { tobacco: { id: string } }) => entry.tobacco.id === MINT);
     assert.deepEqual(Object.keys(item).sort(), [
-      'daysLeft', 'endsAt', 'gramPriceKop', 'leftGrams', 'quantityGrams', 'rate', 'rateKind', 'status', 'tobacco',
+      'byInterval', 'daysLeft', 'endsAt', 'gramPriceKop', 'leftGrams', 'monthGrams', 'rate', 'rateKind', 'status', 'tobacco',
     ]);
-    assert.deepEqual(Object.keys(body.groups[0]).sort(), ['items', 'lastInvoice', 'sumKop', 'supplier']);
+    assert.deepEqual(Object.keys(body.groups[0]).sort(), ['items', 'lastInvoice', 'supplier']);
 
     const dashboard = await app.inject({ method: 'GET', url: '/staff/shelf/dashboard', headers });
     assert.equal(dashboard.statusCode, 200);
     const view = dashboard.json();
-    assert.deepEqual(Object.keys(view).sort(), ['bowlCostKop', 'ending', 'spend', 'stockValueKop', 'today', 'weekly']);
+    assert.deepEqual(Object.keys(view).sort(), ['bowlCostKop', 'budget', 'ending', 'spend', 'stockValueKop', 'today', 'weekly']);
     assert.deepEqual(Object.keys(view.today).sort(), ['bowls', 'grams', 'weekday', 'weekdayFactor']);
     assert.equal(view.weekly.length, 5);
     assert.equal(view.ending[0].tobacco.id, MINT);
+
+    const purchase = await app.inject({ method: 'GET', url: '/staff/shelf/purchase', headers });
+    assert.equal(purchase.statusCode, 200);
+    const sections = purchase.json();
+    assert.deepEqual(Object.keys(sections).sort(), ['base', 'budget', 'fast', 'idle', 'profiles', 'since', 'spend', 'trials']);
+    assert.deepEqual(Object.keys(sections.base.rows[0]).sort(), [
+      'app', 'flag', 'gramPriceKop', 'keepStocked', 'monthGrams', 'rateKind', 'rubKop', 'share', 'tobacco',
+    ]);
   });
 });

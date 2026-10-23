@@ -1,10 +1,11 @@
-import type { ShelfCounterKey, ShelfCounters, ShelfRow, ShelfWeek, StockEntry } from '../contracts';
+import { formatCount, type ShelfCounterKey, type ShelfCounters, type ShelfRow, type ShelfView, type ShelfWeek, type StockEntry } from '../contracts';
 
 // Чистая логика экрана «Полка» (#211, #306): фильтры, сортировка, подписи. Полка
 // небольшая (сотни строк), поэтому всё считается в браузере по загруженным строкам.
 // Остаток — в граммах (design/design_handoff_inventory_grams), банок нет.
 
-export type ShelfStatusKey = ShelfCounterKey;
+// trial — «Пробы» (#329): табак впервые пришёл за 60 дней, это признак, а не статус.
+export type ShelfStatusKey = ShelfCounterKey | 'trial';
 
 export const SHELF_STATUS_CHIPS: Array<[ShelfStatusKey, string]> = [
   ['all', 'Все'],
@@ -58,7 +59,13 @@ export const EMPTY_SHELF_FILTERS: ShelfFilters = {
 const strengthOf = (row: ShelfRow) =>
   row.tobacco.officialStrength?.trim() || row.tobacco.communityStrength?.trim() || '';
 
-export const matchShelfStatus = (row: ShelfRow, key: ShelfStatusKey) => key === 'all' || row.status === key;
+export const matchShelfStatus = (row: ShelfRow, key: ShelfStatusKey) =>
+  key === 'all' || (key === 'trial' ? row.trial : row.status === key);
+
+export const shelfChipCount = (view: Pick<ShelfView, 'rows' | 'counters'> | null, key: ShelfStatusKey) => {
+  if (!view) return 0;
+  return key === 'trial' ? view.rows.filter((row) => row.trial).length : view.counters[key];
+};
 
 const lower = (value: string) => value.toLocaleLowerCase('ru-RU');
 
@@ -232,41 +239,68 @@ export type ShelfLevel = {
   hint: string;
 };
 
+// Под остатком — откуда цифра (#323): «указал мастер» — без «≈», «прогноз» — с ним.
+const markedByMaster = (row: Pick<ShelfRow, 'leftSource'>) => row.leftSource === 'mark';
+
 export const shelfLevel = (row: ShelfRow): ShelfLevel => {
   if (row.leftGrams === null || row.fullGrams === null) {
     return { share: 0, tone: 'normal', none: true, empty: false, value: '—', hint: 'прихода не было' };
   }
-  const hint = `из ${formatNumber(row.fullGrams)} г после прихода`;
+  const exact = markedByMaster(row);
+  const hint = exact ? 'указал мастер' : 'прогноз';
   // «Проверьте остаток»: расчёт мог дойти до нуля, но это оценка, а не отметка.
   if (row.leftGrams <= 0 && row.status !== 'check') return { share: 0, tone: 'normal', none: true, empty: true, value: '0 г', hint };
   const tone = row.status === 'check' || (row.daysLeft !== null && row.daysLeft <= 3) ? 'crit' : row.status === 'ending' ? 'low' : 'normal';
+  const grams = `${formatNumber(Math.max(0, row.leftGrams))} г`;
   return {
     share: row.fullGrams > 0 ? Math.min(1, Math.max(0, row.leftGrams) / row.fullGrams) : 0,
     tone,
     none: false,
     empty: false,
-    value: `≈ ${formatNumber(Math.max(0, row.leftGrams))} г`,
+    value: exact ? grams : `≈ ${grams}`,
     hint,
   };
 };
 
-// Подпись к остатку в карточке: от чего считается «сейчас».
-export const remainHint = (row: ShelfRow) => {
+// Подпись к остатку в карточке (#shot=card, card-exact): кто дал цифру и от какого уровня.
+export const remainHint = (row: ShelfRow, now = new Date()) => {
+  if (row.leftGrams === null || row.fullGrams === null || !row.lastReceipt) return 'прихода не было';
+  const base = `из ${formatNumber(row.fullGrams)} г после прихода ${formatShelfDate(row.lastReceipt.at)}`;
+  if (!markedByMaster(row)) return `прогноз · ${base}`;
   const count = freshCount(row);
-  if (count?.grams === 0) return `закончился ${formatShelfDate(count.at)}`;
-  if (count) {
-    const label = count.fraction !== null ? `${fractionLabel(count.fraction)} — ${formatNumber(count.grams)} г` : `${formatNumber(count.grams)} г`;
-    return `${label} по отметке ${formatShelfDate(count.at)}`;
-  }
-  if (row.lastReceipt && row.fullGrams !== null) return `из ${formatNumber(row.fullGrams)} г после прихода ${formatShelfDate(row.lastReceipt.at)}`;
-  return 'прихода не было';
+  if (count?.grams === 0) return `закончился ${formatShelfDate(count.at)} · ${base}`;
+  return `${count ? `указал мастер ${relativeDay(count.at, now)}` : 'указал мастер'} · ${base}`;
 };
 
-export const formatRate = (row: Pick<ShelfRow, 'rate' | 'rateKind'>) => {
-  if (row.rateKind === 'none' || row.rate === null) return 'мало данных';
-  if (row.rateKind === 'brand') return `≈ ${formatDecimal(row.rate)} г/день · бренд`;
-  return `${formatDecimal(row.rate)} г/день`;
+// Расход в месяц — до десятков граммов, как в мокапе; малый — до грамма.
+export const formatMonthGrams = (grams: number) => formatNumber(grams < 10 ? grams : Math.round(grams / 10) * 10);
+
+export const shelfMonthRate = (row: Pick<ShelfRow, 'monthGrams' | 'rateKind'>): { value: string; hint: string | null; faint: boolean } => {
+  if (row.rateKind === 'none' || row.monthGrams === null) return { value: 'мало данных', hint: null, faint: true };
+  const value = `${formatMonthGrams(row.monthGrams)} г/мес`;
+  return row.rateKind === 'brand' ? { value: `≈ ${value}`, hint: 'по бренду', faint: false } : { value, hint: null, faint: false };
 };
+
+// Под расходом в месяц в карточке — г/день и откуда расход.
+export const cardRateHint = (row: Pick<ShelfRow, 'rate' | 'rateKind'>, marks: number) => {
+  if (row.rateKind === 'none' || row.rate === null) return 'появится после первой отметки';
+  const perDay = `≈ ${formatOneDecimal(row.rate)} г/день`;
+  if (row.rateKind === 'brand') return `${perDay} · по бренду`;
+  return `${perDay} · ${marks ? `по ${formatCount(marks, ['отметке', 'отметкам', 'отметкам'])} за 60 дней` : 'по отметкам остатка'}`;
+};
+
+// Плитка «Заканчивается» (#325): горизонт — до следующей поставки, без интервала — срок поставки.
+export const endingHint = (view: Pick<ShelfView, 'interval' | 'horizon'>) =>
+  `${view.interval.days === null ? 'за срок поставки' : 'до следующей поставки'}, до ${formatShelfDate(view.horizon.until)}`;
+
+// Плитка «В месяц уходит» (#shot=shelf): прогноз дня × 30.
+export const monthTile = (today: ShelfView['today'], bowlGrams: number) =>
+  today.grams > 0
+    ? {
+        value: `≈ ${formatDecimal((today.grams * 30) / 1000)} кг`,
+        hint: `≈ ${formatNumber(today.grams)} г в день · ${formatCount(Math.round(today.bowls), ['чаша', 'чаши', 'чаш'])} по ${bowlGrams} г`,
+      }
+    : { value: '—', hint: 'расход появится после первой отметки' };
 
 const rubles = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -350,7 +384,10 @@ export type ShelfShortcut =
   | { type: 'empty' }
   | { type: 'left' }
   | { type: 'mark'; fraction: number }
-  | { type: 'undo' };
+  | { type: 'undo' }
+  // Выбор нескольких (#333): X — строку в выделение, Esc — снять выделение.
+  | { type: 'select' }
+  | { type: 'clear' };
 
 // По коду клавиши, а не по символу: на русской раскладке E — это «у», Z — «я».
 export const resolveShelfShortcut = ({
@@ -372,6 +409,8 @@ export const resolveShelfShortcut = ({
   if (code === 'KeyE') return { type: 'empty' };
   if (code === 'KeyO') return { type: 'left' };
   if (code === 'KeyZ') return { type: 'undo' };
+  if (code === 'KeyX') return { type: 'select' };
+  if (key === 'Escape') return { type: 'clear' };
   const digit = /^Digit([1-4])$/.exec(code);
   if (digit) return { type: 'mark', fraction: MARK_OPTIONS[Number(digit[1]) - 1].value };
   return null;
@@ -476,4 +515,10 @@ export const weekLabel = (week: Pick<ShelfWeek, 'from' | 'to' | 'partial'>) => {
   return from.getMonth() === to.getMonth()
     ? `${from.getDate()}–${to.getDate()} ${MONTHS[to.getMonth()]}`
     : `${from.getDate()} ${MONTHS[from.getMonth()]}–${to.getDate()} ${MONTHS[to.getMonth()]}`;
+};
+
+// Блок «Проба» в карточке (#329, #shot=card-trial): история — новые сверху, первый приход — последний в ней.
+export const trialArrival = (history: StockEntry[]) => {
+  const first = [...history].reverse().find((entry) => entry.kind === 'receipt');
+  return first ? `пришёл впервые ${formatShelfDate(first.at)}, ${formatNumber(first.grams)} г` : null;
 };

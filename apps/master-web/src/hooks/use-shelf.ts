@@ -2,17 +2,24 @@ import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
 import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { defaultReceiptGrams, summarizeShelf } from '@/lib/shelf';
+import { optimisticEmpty } from '@/lib/shelf-bulk';
+import { patchPurchase, type PurchasePatch } from '@/lib/purchase';
 import {
+  normalizePurchaseView,
   normalizeReorderView,
+  normalizeShelfBatchUndoResponse,
   normalizeShelfCard,
+  normalizeShelfEmptyManyResponse,
   normalizeShelfEntryResponse,
   normalizeShelfRow,
   normalizeShelfSettings,
   normalizeShelfView,
   readEntityPayload,
+  type PurchaseView,
   type ReorderView,
   type ShelfRow,
   type ShelfSettings,
+  type ShelfTrialVerdict,
   type ShelfView,
 } from '@/contracts';
 
@@ -23,6 +30,8 @@ export type ShelfPatch = {
   stopNote?: string;
   keepStocked?: boolean;
   note?: string;
+  // Отметка пробы (#329): null — снять.
+  trialVerdict?: ShelfTrialVerdict | null;
 };
 
 const json = (method: string, body?: unknown): RequestInit => ({
@@ -43,6 +52,28 @@ export const useShelf = (token: string) => {
   const [reorder, setReorder] = useState<ReorderView | null>(null);
   const [reorderError, setReorderError] = useState('');
   const reorderGuard = useRef(createLatestRequestGuard()).current;
+  // «Закупка» (#327–#331) — по запросу: считается по журналу за 30–90 дней.
+  const [purchase, setPurchase] = useState<PurchaseView | null>(null);
+  const [purchaseError, setPurchaseError] = useState('');
+  const purchaseGuard = useRef(createLatestRequestGuard()).current;
+
+  const loadPurchase = useCallback(async () => {
+    const ticket = purchaseGuard.start();
+    try {
+      const next = normalizePurchaseView(await requestJson<unknown>('/staff/shelf/purchase', {}, token));
+      if (purchaseGuard.isStale(ticket)) return;
+      setPurchase(next);
+      setPurchaseError('');
+    } catch (cause) {
+      if (purchaseGuard.isStale(ticket)) return;
+      setPurchaseError(cause instanceof Error ? cause.message : 'Не удалось загрузить «Закупку»');
+    }
+  }, [purchaseGuard, token]);
+
+  // «Держим» и отметка пробы видны в «Закупке» сразу, до перечитывания.
+  const patchPurchaseItem = useCallback((tobaccoId: string, patch: PurchasePatch) => {
+    setPurchase((current) => (current ? patchPurchase(current, tobaccoId, patch) : current));
+  }, []);
 
   const loadReorder = useCallback(async (nextToken: string = token) => {
     const ticket = reorderGuard.start();
@@ -70,20 +101,28 @@ export const useShelf = (token: string) => {
     }
   }, [loadReorder, token]);
 
-  const applyRow = useCallback((item: ShelfRow) => {
+  // Строки с сервера (или оптимистичные) — на место, счётчики пересчитываются.
+  const putRows = useCallback((items: ShelfRow[]) => {
     setView((current) => {
       if (!current) return current;
-      const exists = current.rows.some((row) => row.tobacco.id === item.tobacco.id);
-      const rows = item.shelfStatus === 'dropped'
-        ? current.rows.filter((row) => row.tobacco.id !== item.tobacco.id)
-        : exists
-          ? current.rows.map((row) => (row.tobacco.id === item.tobacco.id ? item : row))
-          : [...current.rows, item];
+      let rows = current.rows;
+      for (const item of items) {
+        const exists = rows.some((row) => row.tobacco.id === item.tobacco.id);
+        rows = item.shelfStatus === 'dropped'
+          ? rows.filter((row) => row.tobacco.id !== item.tobacco.id)
+          : exists
+            ? rows.map((row) => (row.tobacco.id === item.tobacco.id ? item : row))
+            : [...rows, item];
+      }
       return { ...current, rows, ...summarizeShelf(rows) };
     });
+  }, []);
+
+  const applyRow = useCallback((item: ShelfRow) => {
+    putRows([item]);
     void loadReorder();
     return item;
-  }, [loadReorder]);
+  }, [loadReorder, putRows]);
 
   const send = useCallback(
     async (path: string, init: RequestInit) => applyRow(normalizeShelfRow(readEntityPayload(await requestJson<unknown>(path, init, token)))),
@@ -113,6 +152,48 @@ export const useShelf = (token: string) => {
   // Отмена в тосте и удаление из истории карточки.
   const deleteEntry = useCallback((entryId: string) => send(`/staff/shelf/entries/${encodeURIComponent(entryId)}`, json('DELETE')), [send]);
   const update = useCallback((tobaccoId: string, patch: ShelfPatch) => send(shelfPath(tobaccoId), json('PATCH', patch)), [send]);
+
+  // «Закончились» разом (#333): строки гаснут сразу, ошибка — возвращаем как были.
+  const emptyMany = useCallback(async (rows: ShelfRow[]) => {
+    const at = new Date().toISOString();
+    putRows(rows.map((row) => (row.status === 'out' || row.status === 'plan' ? row : optimisticEmpty(row, at))));
+    try {
+      const response = normalizeShelfEmptyManyResponse(
+        await requestJson<unknown>('/staff/shelf/empty', json('POST', { tobaccoIds: rows.map((row) => row.tobacco.id) }), token),
+      );
+      putRows(response.items);
+      void loadReorder();
+      return response;
+    } catch (cause) {
+      putRows(rows);
+      throw cause;
+    }
+  }, [loadReorder, putRows, token]);
+
+  // Одна отмена на весь пакет «Закончились».
+  const undoBatch = useCallback(async (batchId: string) => {
+    const { items } = normalizeShelfBatchUndoResponse(
+      await requestJson<unknown>(`/staff/shelf/batches/${encodeURIComponent(batchId)}`, json('DELETE'), token),
+    );
+    putRows(items);
+    void loadReorder();
+    return items;
+  }, [loadReorder, putRows, token]);
+
+  // Стоп и «держим постоянно» для нескольких: пакетного эндпоинта нет — по PATCH
+  // на табак, а строки и «К заказу» обновляются один раз в конце.
+  const updateMany = useCallback(async (tobaccoIds: string[], patch: ShelfPatch) => {
+    const results = await Promise.allSettled(
+      tobaccoIds.map(async (tobaccoId) =>
+        normalizeShelfRow(readEntityPayload(await requestJson<unknown>(shelfPath(tobaccoId), json('PATCH', patch), token))),
+      ),
+    );
+    const items = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    const failed = results.flatMap((result) => (result.status === 'rejected' ? [result.reason as unknown] : []));
+    putRows(items);
+    void loadReorder();
+    return { items, failed };
+  }, [loadReorder, putRows, token]);
   const remove = useCallback((tobaccoId: string) => send(shelfPath(tobaccoId), json('DELETE')), [send]);
 
   // «На полку» из каталога: табак держим — значит, он есть. Сервис полки при
@@ -141,12 +222,15 @@ export const useShelf = (token: string) => {
 
   const reset = useCallback(() => {
     reorderGuard.start();
+    purchaseGuard.start();
+    setPurchase(null);
+    setPurchaseError('');
     setView(null);
     setStatus('idle');
     setError('');
     setReorder(null);
     setReorderError('');
-  }, [reorderGuard]);
+  }, [purchaseGuard, reorderGuard]);
 
   return {
     view,
@@ -154,6 +238,10 @@ export const useShelf = (token: string) => {
     error,
     reorder,
     reorderError,
+    purchase,
+    purchaseError,
+    loadPurchase,
+    patchPurchaseItem,
     reload,
     loadReorder,
     reset,
@@ -163,6 +251,9 @@ export const useShelf = (token: string) => {
     addReceipt,
     deleteEntry,
     update,
+    emptyMany,
+    undoBatch,
+    updateMany,
     remove,
     add,
     loadCard,

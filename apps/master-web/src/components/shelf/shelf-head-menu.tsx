@@ -46,7 +46,7 @@ export const ShelfHeadMenu = ({ onSettings }: { onSettings: () => void }) => {
               onSettings();
             }}
           >
-            Настройки полки <span className="shelf-faint">чаша, срок поставки</span>
+            Настройки полки <span className="shelf-faint">чаша, срок поставки, бюджет</span>
           </button>
         </div>
       ) : null}

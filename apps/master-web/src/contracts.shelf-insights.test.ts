@@ -18,21 +18,22 @@ test('normalizeReorderView: группы, строки, настройки и т
             endsAt: '2026-11-21T10:00:00.000Z',
             rate: 21,
             rateKind: 'own',
+            monthGrams: 630,
             leftGrams: 40,
-            quantityGrams: 450,
             gramPriceKop: 775,
+            byInterval: true,
           },
         ],
-        sumKop: 348750,
       },
       {
         supplier: null,
         lastInvoice: null,
-        items: [{ tobacco: { id: 't2', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' }, status: 'plan', quantityGrams: 250 }],
-        sumKop: null,
+        items: [{ tobacco: { id: 't2', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' }, status: 'plan' }],
       },
     ],
-    settings: { bowlGrams: 20, leadDays: 5 },
+    settings: { bowlGrams: 20, leadDays: 5, budgetKop: 15000000 },
+    interval: { days: 10, deliveries: 6 },
+    horizon: { days: 15, until: '2026-12-04T10:00:00.000Z' },
     text: [{ supplierId: 's1', text: 'Добрый день! Заказ:' }, { supplierId: null, text: '…' }],
   });
 
@@ -40,7 +41,7 @@ test('normalizeReorderView: группы, строки, настройки и т
   const [first, second] = view.groups;
   assert.deepEqual(first.supplier, { id: 's1', name: 'Каспий Опт' });
   assert.deepEqual(first.lastInvoice, { number: '04102', date: '2026-11-18', status: 'draft' });
-  assert.equal(first.sumKop, 348750);
+  assert.equal('sumKop' in first, false);
   assert.deepEqual(first.items[0], {
     tobacco,
     status: 'ending',
@@ -48,14 +49,14 @@ test('normalizeReorderView: группы, строки, настройки и т
     endsAt: '2026-11-21T10:00:00.000Z',
     rate: 21,
     rateKind: 'own',
+    monthGrams: 630,
     leftGrams: 40,
-    quantityGrams: 450,
     gramPriceKop: 775,
+    byInterval: true,
   });
 
   assert.equal(second.supplier, null);
   assert.equal(second.lastInvoice, null);
-  assert.equal(second.sumKop, null);
   assert.deepEqual(second.items[0], {
     tobacco: { id: 't2', manufacturer: 'DARKSIDE', lineName: 'Core', name: 'Supernova' },
     status: 'plan',
@@ -63,19 +64,30 @@ test('normalizeReorderView: группы, строки, настройки и т
     endsAt: null,
     rate: null,
     rateKind: 'none',
+    monthGrams: null,
     leftGrams: null,
-    quantityGrams: 250,
     gramPriceKop: null,
+    byInterval: false,
   });
 
-  assert.deepEqual(view.settings, { bowlGrams: 20, leadDays: 5 });
+  assert.deepEqual(view.settings, { bowlGrams: 20, leadDays: 5, budgetKop: 15000000 });
+  assert.deepEqual(view.interval, { days: 10, deliveries: 6 });
+  assert.deepEqual(view.horizon, { days: 15, until: '2026-12-04T10:00:00.000Z' });
   assert.deepEqual(view.text, [{ supplierId: 's1', text: 'Добрый день! Заказ:' }, { supplierId: null, text: '…' }]);
 });
 
 test('normalizeReorderView переживает пустой и битый ответ', () => {
-  assert.deepEqual(normalizeReorderView(null), { groups: [], settings: { bowlGrams: 18, leadDays: 7 }, text: [] });
-  const view = normalizeReorderView({ groups: [{ items: 'x', lastInvoice: { date: 'вчера' } }] });
-  assert.deepEqual(view.groups[0], { supplier: null, lastInvoice: null, items: [], sumKop: null });
+  assert.deepEqual(normalizeReorderView(null), {
+    groups: [],
+    settings: { bowlGrams: 18, leadDays: 7, budgetKop: null },
+    // Интервал неизвестен — горизонт по сроку поставки.
+    interval: { days: null, deliveries: 0 },
+    horizon: { days: 7, until: '' },
+    text: [],
+  });
+  const view = normalizeReorderView({ groups: [{ items: 'x', lastInvoice: { date: 'вчера' } }], interval: { days: 'x', deliveries: 2 } });
+  assert.deepEqual(view.groups[0], { supplier: null, lastInvoice: null, items: [] });
+  assert.deepEqual(view.interval, { days: null, deliveries: 2 });
 });
 
 test('normalizeShelfDashboard: прогноз, заканчивается, траты и недели', () => {
@@ -87,6 +99,7 @@ test('normalizeShelfDashboard: прогноз, заканчивается, тр�
       bySupplier: [{ supplier: { id: 's1', name: 'Каспий Опт' }, sumKop: 5108000 }, { supplier: null, sumKop: 100 }],
       totalKop: 5108100,
     },
+    budget: { budgetKop: 15000000, baseKop: 11200000, baseCount: 40, unknownCount: 9, leftKop: 3800000 },
     bowlCostKop: 13700,
     stockValueKop: 59400000,
     weekly: [
@@ -103,6 +116,7 @@ test('normalizeShelfDashboard: прогноз, заканчивается, тр�
     bySupplier: [{ supplier: { id: 's1', name: 'Каспий Опт' }, sumKop: 5108000 }, { supplier: null, sumKop: 100 }],
     totalKop: 5108100,
   });
+  assert.deepEqual(dashboard.budget, { budgetKop: 15000000, baseKop: 11200000, baseCount: 40, unknownCount: 9, leftKop: 3800000 });
   assert.equal(dashboard.bowlCostKop, 13700);
   assert.equal(dashboard.stockValueKop, 59400000);
   assert.deepEqual(dashboard.weekly[1], { from: '2026-11-16', to: '2026-11-19', grams: 2190, partial: true });
@@ -116,9 +130,12 @@ test('normalizeShelfDashboard: без поправки на день недел�
   assert.deepEqual(dashboard.ending, []);
   assert.deepEqual(dashboard.weekly, []);
   assert.deepEqual(dashboard.spend, { month: '', bySupplier: [], totalKop: 0 });
+  // Бюджет не указан — остатка на пробы нет.
+  assert.deepEqual(dashboard.budget, { budgetKop: null, baseKop: 0, baseCount: 0, unknownCount: 0, leftKop: null });
 });
 
 test('normalizeShelfSettings: ответ PATCH и значения по умолчанию', () => {
-  assert.deepEqual(normalizeShelfSettings({ bowlGrams: 20, leadDays: 10 }), { bowlGrams: 20, leadDays: 10 });
-  assert.deepEqual(normalizeShelfSettings(undefined), { bowlGrams: 18, leadDays: 7 });
+  assert.deepEqual(normalizeShelfSettings({ bowlGrams: 20, leadDays: 10, budgetKop: 15000000 }), { bowlGrams: 20, leadDays: 10, budgetKop: 15000000 });
+  assert.deepEqual(normalizeShelfSettings({ bowlGrams: 20, leadDays: 10, budgetKop: null }), { bowlGrams: 20, leadDays: 10, budgetKop: null });
+  assert.deepEqual(normalizeShelfSettings(undefined), { bowlGrams: 18, leadDays: 7, budgetKop: null });
 });

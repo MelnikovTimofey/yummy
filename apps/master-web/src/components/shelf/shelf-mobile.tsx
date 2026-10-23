@@ -1,12 +1,14 @@
 import { useId, useState } from 'react';
 import { Ellipsis } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import type { ShelfRow } from '@/contracts';
-import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
+import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
+import { MARK_OPTIONS, formatNumber, fractionGrams, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
 import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
+import { ShelfCheck } from './shelf-bulk';
 import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
 import type { ShelfRowActions } from './shelf-row-menu';
+import { TrialMark } from './shelf-trial-mark';
 
 // «Полка» на телефоне (#215, #306, #shot=shelf-mobile, shelf-mobile-sheet).
 
@@ -16,25 +18,59 @@ type ShelfMobileListProps = {
   rows: ShelfRow[];
   leadDays: number;
   pendingId: string;
+  // Режим выбора (#333, #shot=mobile-bulk): null — обычная полка.
+  picked: string[] | null;
+  onPick: (row: ShelfRow) => void;
   onEmpty: (row: ShelfRow) => void;
   onUnstop: (row: ShelfRow) => void;
   onOpenSheet: (row: ShelfRow) => void;
   onOpenCard: (row: ShelfRow) => void;
+  onTrialVerdict: (row: ShelfRow, verdict: ShelfTrialVerdict | null) => Promise<void>;
 };
 
-export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, onOpenSheet, onOpenCard }: ShelfMobileListProps) => (
-  <ul className="m-shelf-list" aria-label="Табаки на полке">
+export const ShelfMobileList = ({
+  rows,
+  leadDays,
+  pendingId,
+  picked,
+  onPick,
+  onEmpty,
+  onUnstop,
+  onOpenSheet,
+  onOpenCard,
+  onTrialVerdict,
+}: ShelfMobileListProps) => (
+  <ul className="m-shelf-list" aria-label="Табаки на полке" data-picking={picked ? true : undefined}>
     {rows.map((row) => {
       const actions = shelfMobileActions(row);
       const until = shelfUntil(row, leadDays);
       const line = shelfStatusLine(row);
+      const month = shelfMonthRate(row);
       const busy = pendingId === row.tobacco.id;
+      const isPicked = picked?.includes(row.tobacco.id) ?? false;
       return (
-        <li key={row.tobacco.id} className="m-shelf-card" data-tobacco-id={row.tobacco.id}>
-          <button type="button" className="m-shelf-card__name shelf-name" onClick={() => onOpenCard(row)}>
-            <b>{row.tobacco.name}</b>
-            <span>{row.tobacco.manufacturer}</span>
-          </button>
+        <li
+          key={row.tobacco.id}
+          className="m-shelf-card"
+          data-tobacco-id={row.tobacco.id}
+          data-picked={isPicked || undefined}
+          // В режиме выбора касание по карточке выбирает табак.
+          onClick={picked ? () => onPick(row) : undefined}
+        >
+          {picked ? (
+            <span className="m-shelf-card__pick">
+              <ShelfCheck checked={isPicked} label={`Выбрать ${fullName(row)}`} onToggle={() => onPick(row)} />
+              <span className="shelf-name">
+                <b>{row.tobacco.name}</b>
+                <span>{row.tobacco.manufacturer}</span>
+              </span>
+            </span>
+          ) : (
+            <button type="button" className="m-shelf-card__name shelf-name" onClick={() => onOpenCard(row)}>
+              <b>{row.tobacco.name}</b>
+              <span>{row.tobacco.manufacturer}</span>
+            </button>
+          )}
           <span className="shelf-until m-shelf-card__until">
             {/* Прогноза нет — на телефоне без прочерка, хватает статус-строки. */}
             {until.text !== '—' ? (
@@ -47,9 +83,25 @@ export const ShelfMobileList = ({ rows, leadDays, pendingId, onEmpty, onUnstop, 
           </span>
           <div className="m-shelf-card__meta">
             <ShelfLevel row={row} />
-            {actions.note ? <span className="m-shelf-card__note shelf-faint">{actions.note}</span> : null}
+            {/* Расход в г/мес — как на десктопе (#shot=mobile-trial); закончился — подпись вместо кнопок. */}
+            <span className="m-shelf-card__rate">
+              <span className={month.faint ? 'shelf-faint' : 'shelf-num'}>{month.value}</span>
+              {actions.note ? <small className="shelf-faint">{actions.note}</small> : null}
+            </span>
           </div>
-          {actions.left ? (
+          {/* Проба (#329, #shot=mobile-trial): отметка у стойки, одно касание. */}
+          {row.trial && !picked ? (
+            <div className="m-shelf-card__trial">
+              <span>Проба · как зашла?</span>
+              <TrialMark
+                value={row.trialVerdict}
+                size="lg"
+                label={`Как зашла проба: ${fullName(row)}`}
+                onChange={(next) => onTrialVerdict(row, next)}
+              />
+            </div>
+          ) : null}
+          {actions.left && !picked ? (
             <div className="m-shelf-card__acts">
               <button type="button" className="m-shelf-card__left" disabled={busy} onClick={() => onOpenSheet(row)}>
                 {actions.left}
@@ -232,7 +284,7 @@ export const ShelfMobileHeadMenu = ({ onSettings }: { onSettings: () => void }) 
                 onSettings();
               }}
             >
-              Настройки полки <span className="shelf-faint">чаша, срок поставки</span>
+              Настройки полки <span className="shelf-faint">чаша, срок поставки, бюджет</span>
             </button>
           </div>
         </BottomSheet>

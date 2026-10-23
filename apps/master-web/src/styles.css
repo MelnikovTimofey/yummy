@@ -5989,7 +5989,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1224px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -6054,6 +6054,19 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-name--receipt b { font-weight: 400; font-size: var(--fs-sm); }
+
+/* Метка «проба» рядом с названием (#329, #shot=shelf): табак впервые пришёл за 60 дней.
+   Вне .shelf-name — длинное название обрезается, а метка остаётся видна. */
+.shelf-name-row { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.shelf-trial-tag {
+  flex-shrink: 0;
+  height: 20px;
+  padding: 0 7px;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 .shelf-until { display: grid; gap: 1px; }
 .shelf-until small { font-size: var(--fs-xs); }
@@ -6281,6 +6294,82 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-toast .btn .kbd { margin-left: 2px; }
+
+/* --- Выбор нескольких табаков (#333, #shot=shelf-bulk) -------------- */
+
+.shelf-table th.shelf-table__check,
+.shelf-table td.shelf-table__check { padding: 0 0 0 16px; }
+
+.shelf-check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-fg);
+  box-sizing: border-box;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+/* Попасть пальцем и мышью проще, чем в квадрат 16 px. */
+.shelf-check::before { content: ''; position: absolute; inset: -8px; }
+.shelf-check[aria-checked="true"],
+.shelf-check[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); }
+.shelf-check:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.shelf-table tbody tr[data-selected] { background: var(--accent-soft); }
+.shelf-page[data-selecting] { padding-bottom: 72px; }
+
+.shelf-bulk {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 59;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(900px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sm);
+}
+
+.shelf-bulk > b { font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+
+.shelf-bulk__names {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+}
+
+.shelf-bulk .btn .kbd { margin-left: 6px; }
+.shelf-bulk__keep { position: relative; display: inline-flex; }
+
+.shelf-menu.shelf-bulk__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  width: 300px;
+}
+
+.shelf-bulk__menu .shelf-menu__item { display: grid; justify-items: start; gap: 2px; }
+
+/* Ошибка действия возвращает выделение — тост над панелью, а не под ней. */
+.shelf-bulk ~ .shelf-toast { bottom: 84px; }
 
 /* --- Пустая полка ---------------------------------------------------- */
 
@@ -6772,11 +6861,10 @@ button.chip .chip__count[hidden] {
 }
 
 .reorder-group__caption { flex: 1; font-size: var(--fs-sm); color: var(--text-muted); }
-.reorder-group__sum { font-size: var(--fs-sm); color: var(--text-muted); }
 
 .reorder-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 720px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: var(--fs-sm);
@@ -6805,28 +6893,26 @@ button.chip .chip__count[hidden] {
 
 .reorder-table tbody tr:last-child td { border-bottom: 0; }
 
-.reorder-stepper {
-  display: inline-flex;
+/* «закончится до следующей поставки» под названием (#325). */
+.reorder-why { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
+.reorder-table td:has(.reorder-why) { padding-top: 6px; padding-bottom: 6px; }
+
+/* Плашка интервала поставок над «К заказу» (#325, #shot=reorder, edge-interval). */
+.reorder-interval {
+  display: flex;
   align-items: center;
-  height: 30px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
 }
 
-.reorder-stepper button {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.reorder-stepper button:hover:not(:disabled) { color: var(--text-primary); }
-.reorder-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
-.reorder-stepper output { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+.reorder-interval > svg { flex-shrink: 0; color: var(--text-muted); }
+.reorder-interval__text { flex: 1; min-width: 0; }
+.reorder-interval b { color: var(--text-primary); font-weight: 500; }
 
 .reorder-copied {
   display: grid;
@@ -6847,6 +6933,7 @@ button.chip .chip__count[hidden] {
 }
 
 .reorder-copied h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; }
+.reorder-copied__hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 .reorder-copied pre {
   margin: 0;
@@ -6860,6 +6947,237 @@ button.chip .chip__count[hidden] {
   color: var(--text-secondary);
   white-space: pre-wrap;
   user-select: all;
+}
+
+/* =====================================================================
+   «Закупка» (#327–#331) — третий вид «Полки» по
+   design/design_handoff_purchase_analytics (#shot=purchase-base,
+   purchase-fast, purchase-trials, purchase-idle, purchase-profiles,
+   edge-no-budget, edge-few). «В приложении» — бледнее: справочно.
+   ===================================================================== */
+
+.purchase { display: grid; gap: 12px; }
+.purchase-budget-wrap { display: grid; gap: 8px; }
+
+.purchase-budget {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow: hidden;
+}
+
+.purchase-budget > div { display: grid; gap: 3px; padding: 14px 16px; border-right: 1px solid var(--border-subtle); }
+.purchase-budget > div:last-child { border-right: 0; }
+
+.purchase-budget span {
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.purchase-budget b {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 24px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-budget b[data-tone="success"] { color: var(--success); }
+.purchase-budget b[data-tone="danger"] { color: var(--danger); }
+.purchase-budget small { font-size: var(--fs-xs); color: var(--text-faint); }
+
+.purchase-hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.purchase-warn { color: var(--warning); }
+
+.purchase-toolbar .shelf-toolbar__chips { flex: 1; }
+.purchase-toolbar__date { font-size: var(--fs-sm); color: var(--text-faint); white-space: nowrap; }
+
+.purchase-section { display: grid; gap: 10px; }
+.purchase-section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.purchase-section__head h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; color: var(--text-primary); }
+.purchase-section__head p { margin: 2px 0 0; max-width: 80ch; font-size: var(--fs-sm); color: var(--text-muted); }
+.purchase-frozen { font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; }
+.purchase-frozen b { font-weight: 500; color: var(--text-primary); }
+
+.purchase-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.purchase-table-shell {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  overflow-x: auto;
+}
+
+.purchase-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--fs-md);
+}
+
+.purchase-table th {
+  height: 34px;
+  padding: 0 12px;
+  text-align: left;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.purchase-table td {
+  height: 46px;
+  padding: 6px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.purchase-table tbody tr:last-child td { border-bottom: 0; }
+.purchase-table td.shelf-faint { color: var(--text-faint); }
+.purchase-table [data-align="center"] { text-align: center; }
+
+.purchase-app,
+.purchase-table .purchase-app { color: var(--text-faint); }
+.purchase-flag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); }
+.purchase-flag[data-tone="warning"] { color: var(--warning); }
+.purchase-flag[data-tone="faint"] { color: var(--text-faint); }
+.purchase-danger { color: var(--danger); }
+.purchase-stack { display: grid; gap: 1px; }
+.purchase-stack small { font-size: var(--fs-xs); color: var(--text-faint); }
+
+[data-tone="success"].shelf-num { color: var(--success); }
+[data-tone="muted"].shelf-num { color: var(--text-muted); }
+
+.purchase-verdict { font-size: var(--fs-sm); line-height: 1.35; color: var(--text-secondary); }
+.purchase-verdict[data-tone="muted"] { color: var(--text-muted); }
+.purchase-verdict[data-tone="faint"] { color: var(--text-faint); }
+
+.purchase-profiles {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.purchase-prof {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 220px;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.purchase-prof:last-child { border-bottom: 0; }
+
+.purchase-prof--head {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-family: var(--font-meta);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.purchase-prof__name { display: inline-flex; align-items: center; gap: 8px; }
+.purchase-prof__flag { display: grid; gap: 4px; justify-items: start; }
+
+.purchase-bars { display: grid; gap: 4px; }
+
+.purchase-bar {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: center;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.purchase-bar i { display: block; height: 8px; border-radius: 4px; }
+.purchase-bar i[data-kind="shelf"] { background: var(--text-faint); }
+.purchase-bar i[data-kind="app"] { box-sizing: border-box; border: 1px dashed var(--text-faint); }
+.purchase-bar b { font-weight: 400; text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.purchase-bar--app { opacity: 0.6; }
+
+.purchase-few {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 40px 32px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-lg);
+}
+
+.purchase-few h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 22px; color: var(--text-primary); }
+.purchase-few p { margin: 0; max-width: 64ch; line-height: 1.5; color: var(--text-muted); }
+
+/* «Зашло / Не зашло» (#329): в «Закупке», в карточке и на телефоне. */
+.trial-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.trial-mark button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.trial-mark button + button { border-left: 1px solid var(--border-default); }
+.trial-mark button:hover { color: var(--text-primary); }
+.trial-mark button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.trial-mark button[aria-pressed="true"][data-verdict="yes"] { background: var(--success-soft); color: var(--text-primary); }
+.trial-mark button[aria-pressed="true"][data-verdict="no"] { background: var(--danger-soft); color: var(--text-primary); }
+.trial-mark[data-size="lg"] button { padding: 8px 12px; font-size: 14px; }
+
+/* Блок «Проба» в карточке (#shot=card-trial). */
+.shelf-trial {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.shelf-trial__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-size: var(--fs-sm); color: var(--text-primary); }
+.shelf-trial__row b { font-weight: 500; }
+.shelf-trial__muted { color: var(--text-muted); }
+.shelf-trial__note { margin: 0; font-size: var(--fs-sm); color: var(--text-faint); }
+
+/* Полоса «Проба · как зашла?» на телефоне (#shot=mobile-trial). */
+.m-shelf-card__trial {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  font-size: 13px;
+  color: var(--text-primary);
 }
 
 /* =====================================================================
@@ -6945,6 +7263,41 @@ button.chip .chip__count[hidden] {
 .shelf-dash__spend-row > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .shelf-dash__spend-row i { display: block; height: 8px; border-radius: 4px; background: var(--chart-2); }
 .shelf-dash__spend-row > span:last-child { text-align: right; }
+
+/* «Деньги» против бюджета (#326, #shot=dashboard): полоса «потрачено», отметка базы. */
+.shelf-dash__budget { display: grid; gap: 8px; }
+.shelf-dash__meter {
+  position: relative;
+  height: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--bg-base);
+}
+.shelf-dash__meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px 0 0 5px; background: var(--chart-1); }
+.shelf-dash__meter em { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text-primary); }
+.shelf-dash__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-xs); color: var(--text-muted); }
+.shelf-dash__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.shelf-dash__legend b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.shelf-dash__legend b[data-tone="success"] { color: var(--success); }
+.shelf-dash__legend b[data-tone="danger"] { color: var(--danger); }
+.shelf-dash__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--chart-1); }
+.shelf-dash__swatch--base { width: 2px; background: var(--text-primary); }
+
+.shelf-dash__invite {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+.shelf-dash__invite > span { flex: 1; min-width: 0; }
+.shelf-dash__invite b { color: var(--text-primary); font-weight: 500; }
+.shelf-dash__note { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 .shelf-dash__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
 .shelf-dash__kv div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
@@ -7352,7 +7705,8 @@ button.chip .chip__count[hidden] {
 }
 
 .m-shelf-card__primary:disabled { opacity: 0.45; cursor: not-allowed; }
-.m-shelf-card__note { align-self: center; font-size: var(--fs-xs); }
+.m-shelf-card__rate { display: grid; gap: 1px; justify-items: end; font-size: var(--fs-sm); text-align: right; }
+.m-shelf-card__rate small { font-size: var(--fs-xs); }
 
 .m-shelf-card__meta {
   grid-column: 1 / -1;
@@ -7379,6 +7733,54 @@ button.chip .chip__count[hidden] {
 .m-shelf-card__left:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .m-shelf-card__until { justify-items: end; text-align: right; font-size: 13px; }
+
+/* Режим выбора на телефоне (#333, #shot=mobile-bulk). */
+.m-topbar__text-btn {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.m-shelf-list[data-picking] { padding-bottom: 120px; }
+.m-shelf-list[data-picking] .m-shelf-card { cursor: pointer; }
+.m-shelf-card[data-picked] { border-color: var(--accent-border); background: var(--accent-soft); }
+.m-shelf-card__pick { display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 2px; }
+.m-shelf-card__pick .shelf-name b { white-space: normal; font-size: var(--fs-md); }
+
+.m-shelf-bulk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + var(--safe-bottom));
+  z-index: 44;
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+}
+
+.m-shelf-bulk__empty {
+  height: 44px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.m-shelf-bulk__empty:disabled { opacity: 0.45; cursor: not-allowed; }
+.m-shelf-bulk__acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.m-shelf-bulk ~ .shelf-toast { bottom: calc(56px + var(--safe-bottom) + 128px); }
 
 /* --- Шторка «Сколько осталось?» --------------------------------------- */
 
@@ -7527,6 +7929,30 @@ button.chip .chip__count[hidden] {
 
 .shelf-card__head-actions { display: flex; gap: 4px; margin-right: -10px; }
 .shelf-card__head-actions .icon-btn { width: 44px; height: 44px; }
+
+/* Настройки полки (#326, #shot=settings): два поля в ряд, бюджет и «Считается само» — на всю ширину. */
+.operator-dialog.shelf-settings { max-width: 560px; max-height: calc(100dvh - 24px); }
+.shelf-settings .operator-dialog__form { overflow: hidden; }
+.shelf-settings__body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; overflow-y: auto; }
+.shelf-settings__field--wide,
+.shelf-settings__calc { grid-column: 1 / -1; }
+.shelf-settings__help { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text-faint); }
+.shelf-settings__suffix { color: var(--text-muted); }
+.shelf-settings__calc {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.shelf-settings__calc > svg { flex-shrink: 0; margin-top: 2px; }
+.shelf-settings__calc b { color: var(--text-secondary); font-weight: 500; }
+.operator-dialog--phone .shelf-settings__body { grid-template-columns: minmax(0, 1fr); }
 
 /* Настройки полки — нижней шторкой на всю ширину. translate — отдельно:
    Tailwind v4 центрирует диалог свойством translate, а не transform. */

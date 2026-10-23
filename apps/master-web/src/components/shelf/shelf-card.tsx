@@ -6,24 +6,28 @@ import { ProfileTag } from '@/components/ui/profile-tag';
 import { formatCount, type ShelfCard as ShelfCardData, type ShelfRow, type ShelfSettings } from '@/contracts';
 import type { ShelfPatch } from '@/hooks/use-shelf';
 import {
+  cardRateHint,
   countedMarks,
   describeShelfError,
   formatBowlCost,
   formatDecimal,
   formatGramPrice,
   formatOneDecimal,
-  formatRate,
   historyEntry,
   remainHint,
   shelfLevel,
+  shelfMonthRate,
   shelfRowMenu,
   shelfUntil,
+  trialArrival,
   weekLabel,
 } from '@/lib/shelf';
 import { ShelfLeftPanel, type CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
 import { ShelfActionsSheet } from './shelf-mobile';
 import type { ShelfRowActions } from './shelf-row-menu';
+import { ShelfToggle } from './shelf-toggle';
+import { TrialMark } from './shelf-trial-mark';
 
 type ShelfCardProps = {
   row: ShelfRow;
@@ -48,24 +52,9 @@ const Tile = ({ label, value, hint, faint = false }: { label: string; value: str
   </div>
 );
 
-const Toggle = ({ checked, label, disabled, onChange }: { checked: boolean; label: string; disabled?: boolean; onChange: (next: boolean) => void }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    aria-label={label}
-    disabled={disabled}
-    className={`toggle ${checked ? 'toggle--on' : 'toggle--off'}`}
-    onClick={() => onChange(!checked)}
-  >
-    <span className="toggle__track" aria-hidden="true">
-      <span className="toggle__thumb" />
-    </span>
-  </button>
-);
-
-// Карточка табака на полке (#306, #shot=shelf-drawer, edge-few): остаток,
-// прогноз, история журнала, расход по неделям, настройки.
+// Карточка табака на полке (#306, #323, #329, #shot=card, card-exact, card-trial, edge-few):
+// у пробы — отметка «зашло / не зашло»; остаток с подписью «прогноз» или «указал мастер»,
+// расход в месяц, история журнала, расход по неделям, настройки.
 export const ShelfCard = ({
   row,
   settings,
@@ -140,6 +129,7 @@ export const ShelfCard = ({
   const few = row.rateKind === 'none';
   const marks = card ? countedMarks(card.history) : 0;
   const weeks = card?.weekly ?? [];
+  const arrival = card ? trialArrival(card.history) : null;
   const maxWeek = Math.max(0, ...weeks.map((week) => week.gramsPerDay));
 
   const untilHint = row.rateKind === 'brand' && row.rate !== null
@@ -149,18 +139,12 @@ export const ShelfCard = ({
       : few
         ? 'появится вместе с расходом'
         : null;
-  const rateHint = row.rateKind === 'own'
-    ? marks
-      ? `по ${formatCount(marks, ['отметке', 'отметкам', 'отметкам'])} за 60 дней`
-      : 'по отметкам остатка'
-    : row.rateKind === 'brand'
-      ? 'своих отметок ещё мало — медиана бренда'
-      : 'появится после первой отметки остатка или «Закончился»';
 
   const tiles = [
     <Tile key="until" label="Хватит до" value={until.text} hint={untilHint} faint={until.tone === 'faint'} />,
     <Tile key="remain" label="Остаток" value={shelfLevel(row).value} hint={remainHint(row)} />,
-    <Tile key="rate" label="Расход" value={formatRate(row)} hint={rateHint} faint={few} />,
+    // Расход — в г/мес, как в «К заказу» и на полке (#323); под ним г/день.
+    <Tile key="rate" label="Расход" value={shelfMonthRate(row).value} hint={cardRateHint(row, marks)} faint={few} />,
     <Tile
       key="price"
       label="Цена грамма"
@@ -221,6 +205,22 @@ export const ShelfCard = ({
         </SheetHeader>
 
         <div className="shelf-card__body">
+          {row.trial ? (
+            <section className="shelf-trial" aria-label="Проба">
+              <p className="shelf-trial__row">
+                <span>
+                  <b>Проба</b>
+                  {arrival ? <span className="shelf-trial__muted"> · {arrival}</span> : null}
+                </span>
+              </p>
+              <div className="shelf-trial__row">
+                <span className="shelf-trial__muted">Как зашёл гостям в зале?</span>
+                <TrialMark value={row.trialVerdict} label="Как зашёл гостям в зале" onChange={(next) => save({ trialVerdict: next })} />
+              </div>
+              <p className="shelf-trial__note">Отзывы о заказах в зале есть только у мастера. Отметку можно поменять.</p>
+            </section>
+          ) : null}
+
           <div className="shelf-card__level">
             <ShelfLevel row={row} large />
             <div className="shelf-card__actions">
@@ -327,16 +327,16 @@ export const ShelfCard = ({
             <div className="shelf-card__setting">
               <span>
                 Держим постоянно
-                <small>закончится — попадёт в «К заказу»</small>
+                <small>закончится до следующей поставки — попадёт в «К заказу»</small>
               </span>
-              <Toggle checked={row.keepStocked} label="Держим постоянно" disabled={saving} onChange={(next) => void save({ keepStocked: next })} />
+              <ShelfToggle checked={row.keepStocked} label="Держим постоянно" disabled={saving} onChange={(next) => void save({ keepStocked: next })} />
             </div>
             <div className="shelf-card__setting">
               <span>
                 Стоп для гостей
                 <small>табак есть, но гостю не предлагать</small>
               </span>
-              <Toggle
+              <ShelfToggle
                 checked={row.stopped}
                 label="Стоп для гостей"
                 disabled={saving}

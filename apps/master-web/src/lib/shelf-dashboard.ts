@@ -34,6 +34,55 @@ export const spendRows = (spend: ShelfDashboard['spend']) =>
     share: spend.totalKop > 0 ? entry.sumKop / spend.totalKop : 0,
   }));
 
+const rub = (kop: number) => `${formatNumber(kop / 100)} ₽`;
+const share = (part: number, whole: number) => (whole > 0 ? Math.min(1, part / whole) : part > 0 ? 1 : 0);
+
+type Segment = { text: string; strong?: boolean };
+
+export type MoneyCard =
+  | { kind: 'none'; title: string; invite: Segment[] }
+  | {
+      kind: 'budget';
+      title: string;
+      spent: string;
+      base: string;
+      left: { label: string; value: string; tone: 'success' | 'danger' };
+      // Доли от бюджета, 0…1: полоса «потрачено» и отметка базы.
+      spentShare: number;
+      baseShare: number;
+      unknown: string | null;
+    };
+
+// Карточка «Деньги» (#326, #shot=dashboard, edge-dash-no-budget): потрачено против
+// бюджета, отметка базы и остаток на пробы; без бюджета — приглашение его указать.
+export const moneyCard = ({ spend, budget }: Pick<ShelfDashboard, 'spend' | 'budget'>): MoneyCard => {
+  if (budget.budgetKop === null) {
+    return {
+      kind: 'none',
+      title: spendTitle(spend.month),
+      invite: budget.baseKop > 0
+        ? [{ text: 'База стоит ' }, { text: formatApproxRub(budget.baseKop), strong: true }, { text: ' в месяц. Укажите бюджет — покажем остаток на пробы.' }]
+        : [{ text: 'Укажите бюджет на табак — покажем остаток на пробы.' }],
+    };
+  }
+  const month = MONTHS[Number(spend.month.slice(5, 7)) - 1];
+  const left = budget.leftKop ?? budget.budgetKop - budget.baseKop;
+  return {
+    kind: 'budget',
+    title: `${month ? month[0].toUpperCase() + month.slice(1) : 'Месяц'}: бюджет ${rub(budget.budgetKop)}`,
+    spent: `потрачено ${rub(spend.totalKop)}`,
+    base: `база ${formatApproxRub(budget.baseKop)} в месяц`,
+    left: left >= 0
+      ? { label: 'на пробы остаётся', value: formatApproxRub(left), tone: 'success' }
+      : { label: 'база больше бюджета на', value: formatApproxRub(-left), tone: 'danger' },
+    spentShare: share(spend.totalKop, budget.budgetKop),
+    baseShare: share(budget.baseKop, budget.budgetKop),
+    unknown: budget.unknownCount
+      ? `У ${formatCount(budget.unknownCount, ['табака', 'табаков', 'табаков'])} базы нет цены — сумма базы неполная.`
+      : null,
+  };
+};
+
 export const bowlCostTile = (kop: number | null, bowlGrams: number) =>
   kop === null
     ? { value: '—', hint: 'нет цен прихода у табаков на полке' }

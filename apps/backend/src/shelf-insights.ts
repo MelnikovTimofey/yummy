@@ -1,18 +1,46 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { prisma } from './db';
 import type { DeliveryStatus } from './deliveries';
-import { loadShelf, loadShelfHistory, type ShelfRecord } from './shelf';
 import {
+  appByTobacco,
+  baseList,
+  FAST_WINDOW_DAYS,
+  fastList,
+  idleList,
+  IDLE_DAYS,
+  profileShares,
+  shelfMedianRate,
+  trialRow,
+  type AppStats,
+  type BaseFlag,
+  type JournalEntry,
+  type ProfileFlag,
+} from './purchase';
+import {
+  horizonView,
+  loadDroppedShelf,
+  loadShelf,
+  loadShelfHistory,
+  parseList,
+  trialOf,
+  type HorizonView,
+  type ShelfRecord,
+  type TrialVerdict,
+} from './shelf';
+import {
+  baseBudget,
   bowlCost,
   consumptionByPeriod,
   gramPrice,
   reorderList,
   todayForecast,
+  type Rate,
   weekdayFactor,
   weekPeriods,
   type ShelfForecast,
   type ShelfSettings,
   type ShelfStatus,
+  type SupplyInterval,
 } from './stock';
 
 export { weekPeriods };
@@ -35,29 +63,42 @@ export type ReorderItemView = {
   endsAt: string | null;
   rate: number | null;
   rateKind: ShelfForecast['rateKind'];
+  monthGrams: number | null;
   leftGrams: number | null;
-  quantityGrams: number;
   gramPriceKop: number | null;
+  // Закончится не за срок поставки, а до следующей поставки по интервалу.
+  byInterval: boolean;
 };
 
 export type ReorderGroup = {
   supplier: SupplierRef | null;
   lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
   items: ReorderItemView[];
-  // null — хоть у одной строки нет цены грамма.
-  sumKop: number | null;
 };
 
 export type ReorderView = {
   groups: ReorderGroup[];
   settings: ShelfSettings;
+  interval: SupplyInterval;
+  horizon: HorizonView;
   text: Array<{ supplierId: string | null; text: string }>;
+};
+
+// База — Σ расход в месяц × цена грамма по «держим постоянно»; unknownCount — без
+// цены или расхода, в базу не вошли. leftKop — остаётся на то, чего нет, и пробы.
+export type BudgetView = {
+  budgetKop: number | null;
+  baseKop: number;
+  baseCount: number;
+  unknownCount: number;
+  leftKop: number | null;
 };
 
 export type ShelfDashboard = {
   today: { grams: number; bowls: number; weekdayFactor: number | null; weekday: number };
   ending: Array<{ tobacco: TobaccoRef; status: ShelfStatus; daysLeft: number | null; endsAt: string | null }>;
   spend: { month: string; bySupplier: Array<{ supplier: SupplierRef | null; sumKop: number }>; totalKop: number };
+  budget: BudgetView;
   bowlCostKop: number | null;
   stockValueKop: number;
   weekly: Array<{ from: string; to: string; grams: number; partial: boolean }>;
@@ -77,14 +118,13 @@ const tobaccoOf = (record: ShelfRecord): TobaccoRef => ({
 
 // --- к заказу ----------------------------------------------------------------
 
-type OrderLine = { tobacco: Pick<TobaccoRef, 'manufacturer' | 'lineName' | 'name'>; quantityGrams: number };
+type OrderLine = { tobacco: Pick<TobaccoRef, 'manufacturer' | 'lineName' | 'name'> };
 
+// Только названия: сколько заказать, мастер впишет сам (#323).
 export const orderText = (lines: OrderLine[]) =>
   [
     'Добрый день! Заказ:',
-    ...lines.map(({ tobacco, quantityGrams }) =>
-      `${[tobacco.manufacturer, tobacco.lineName, tobacco.name].filter(Boolean).join(' ')} — ${quantityGrams} г`,
-    ),
+    ...lines.map(({ tobacco }) => [tobacco.manufacturer, tobacco.lineName, tobacco.name].filter(Boolean).join(' ')),
     'Спасибо!',
   ].join('\n');
 
@@ -113,17 +153,17 @@ const loadLastInvoices = async (supplierIds: string[]) => {
 };
 
 export const getReorder = async (now = new Date()): Promise<ReorderView> => {
-  const { records, items, forecasts, settings } = await loadShelf(now);
+  const { records, items, forecasts, settings, interval, horizon } = await loadShelf(now);
   const byId = new Map(records.map((record, index) => [record.tobaccoId, { record, item: items[index], forecast: forecasts[index] }]));
 
   // reorderList уже отсортирован по срочности: группы идут в порядке первой строки,
   // «Поставщик не выбран» — последней.
   const groups = new Map<string | null, ReorderGroup>();
-  for (const line of reorderList(items, forecasts, settings)) {
+  for (const line of reorderList(items, forecasts, horizon)) {
     const { record, item, forecast } = byId.get(line.tobaccoId)!;
     const supplier = lastSupplier(record);
     const key = supplier?.id ?? null;
-    if (!groups.has(key)) groups.set(key, { supplier, lastInvoice: null, items: [], sumKop: null });
+    if (!groups.has(key)) groups.set(key, { supplier, lastInvoice: null, items: [] });
     groups.get(key)!.items.push({
       tobacco: tobaccoOf(record),
       status: line.status,
@@ -131,9 +171,10 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
       endsAt: iso(line.endsAt),
       rate: forecast.rate,
       rateKind: forecast.rateKind,
+      monthGrams: forecast.monthGrams,
       leftGrams: forecast.leftGrams === null ? null : Math.round(forecast.leftGrams),
-      quantityGrams: line.quantityGrams,
       gramPriceKop: gramPrice(item.entries),
+      byInterval: line.byInterval,
     });
   }
 
@@ -141,17 +182,17 @@ export const getReorder = async (now = new Date()): Promise<ReorderView> => {
   const ordered = [...groups.values()].sort((a, b) => Number(a.supplier === null) - Number(b.supplier === null));
   const result = ordered.map((group) => {
     const invoice = group.supplier ? invoices.get(group.supplier.id) : undefined;
-    const priced = group.items.every((item) => item.gramPriceKop !== null);
     return {
       ...group,
       lastInvoice: invoice ? { number: invoice.number, date: invoice.date, status: invoice.status } : null,
-      sumKop: priced ? Math.round(sum(group.items.map((item) => item.quantityGrams * item.gramPriceKop!))) : null,
     };
   });
 
   return {
     groups: result,
     settings,
+    interval,
+    horizon: horizonView(horizon, now),
     text: result.map((group) => ({ supplierId: group.supplier?.id ?? null, text: orderText(group.items) })),
   };
 };
@@ -219,6 +260,28 @@ const endingOf = (records: ShelfRecord[], forecasts: ShelfForecast[]) => {
     }));
 };
 
+const budgetOf = (
+  records: ShelfRecord[],
+  forecasts: ShelfForecast[],
+  prices: Array<number | null>,
+  settings: ShelfSettings,
+): BudgetView => {
+  const base = baseBudget(
+    forecasts
+      .map((forecast, index) => ({ forecast, record: records[index], price: prices[index] }))
+      .filter(({ record }) => record.status === 'active' && record.keepStocked)
+      .map(({ forecast, price }) => ({ monthGrams: forecast.monthGrams, gramPriceKop: price })),
+  );
+  const baseKop = Math.round(base.kop);
+  return {
+    budgetKop: settings.budgetKop,
+    baseKop,
+    baseCount: base.count,
+    unknownCount: base.unknown,
+    leftKop: settings.budgetKop === null ? null : settings.budgetKop - baseKop,
+  };
+};
+
 export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboard> => {
   const [{ records, items, forecasts, settings }, history, smoke, spend] = await Promise.all([
     loadShelf(now),
@@ -228,8 +291,8 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
   ]);
 
   const factor = weekdayFactor(smoke.events, smoke.first, now);
-  const base = todayForecast(forecasts, settings.bowlGrams);
-  const grams = base.grams * (factor ?? 1);
+  const today = todayForecast(forecasts, settings.bowlGrams);
+  const grams = today.grams * (factor ?? 1);
 
   const prices = items.map((item) => gramPrice(item.entries));
   const cost = bowlCost(prices.filter((_, index) => forecasts[index].inStock), settings.bowlGrams);
@@ -251,6 +314,7 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
     today: { grams, bowls: grams / settings.bowlGrams, weekdayFactor: factor, weekday: ((now.getDay() + 6) % 7) + 1 },
     ending: endingOf(records, forecasts),
     spend,
+    budget: budgetOf(records, forecasts, prices, settings),
     bowlCostKop: cost === null ? null : Math.round(cost),
     stockValueKop: Math.round(stockValue),
     weekly: periods.map((period, index) => ({
@@ -259,6 +323,279 @@ export const getShelfDashboard = async (now = new Date()): Promise<ShelfDashboar
       grams: weekGrams[index],
       partial: period.partial,
     })),
+  };
+};
+
+// --- закупка (#327–#331) -----------------------------------------------------
+
+const PURCHASE_MONTH_DAYS = 30;
+
+export type PurchaseView = {
+  // Первая запись журнала остатка: с неё идёт учёт в граммах.
+  since: string | null;
+  budget: BudgetView;
+  spend: { month: string; totalKop: number };
+  base: {
+    enough: boolean;
+    medianMonthGrams: number | null;
+    counts: Record<BaseFlag, number>;
+    rows: Array<{
+      tobacco: TobaccoRef;
+      monthGrams: number | null;
+      rateKind: Rate['kind'];
+      share: number | null;
+      rubKop: number | null;
+      gramPriceKop: number | null;
+      app: AppStats;
+      keepStocked: boolean;
+      flag: BaseFlag | null;
+    }>;
+  };
+  fast: {
+    enough: boolean;
+    rows: Array<{
+      tobacco: TobaccoRef;
+      receiptGrams: number;
+      receivedAt: string;
+      goneDays: number;
+      emptyAt: string;
+      emptyDays: number;
+      ongoing: boolean;
+      next: { grams: number; at: string } | null;
+      times: number;
+      status: ShelfStatus;
+    }>;
+  };
+  trials: {
+    enough: boolean;
+    medianRate: number | null;
+    rows: Array<{
+      tobacco: TobaccoRef;
+      receiptGrams: number;
+      receivedAt: string;
+      rate: number | null;
+      speed: number | null;
+      goneDays: number | null;
+      app: AppStats;
+      mixCount: number;
+      trialVerdict: TrialVerdict | null;
+      trialMarkedAt: string | null;
+    }>;
+  };
+  idle: {
+    enough: boolean;
+    totalKop: number;
+    unknownPriceCount: number;
+    unmarkedCount: number;
+    rows: Array<{
+      tobacco: TobaccoRef;
+      leftGrams: number;
+      rate21: number;
+      rubKop: number | null;
+      receivedAt: string;
+      days: number;
+      keepStocked: boolean;
+    }>;
+  };
+  profiles: {
+    enough: boolean;
+    appEvents: number;
+    appEnough: boolean;
+    rows: Array<{ key: string; spend: number; shelf: number; app: number; flag: ProfileFlag | null }>;
+  };
+};
+
+const NO_APP: AppStats = { smokes: 0, rating: null, ratings: 0 };
+
+const journalOf = (record: ShelfRecord): JournalEntry[] =>
+  record.entries.map((entry) => ({
+    id: entry.id,
+    kind: entry.kind as JournalEntry['kind'],
+    grams: entry.grams,
+    at: entry.at,
+    priceKop: entry.priceKop,
+    start: entry.delivery?.kind === 'start',
+  }));
+
+const stringsOf = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
+
+// Гостевые данные — только агрегаты по миксам: события без гостя, оценки — средним.
+const loadApp = async (tobaccoIds: string[], now: Date) => {
+  const since = new Date(now.getTime() - PURCHASE_MONTH_DAYS * DAY_MS);
+  const createdAt = { gte: since, lte: now };
+  const [components, events, custom] = await Promise.all([
+    prisma.mixComponent.findMany({
+      where: { tobaccoId: { in: tobaccoIds } },
+      select: { mixId: true, tobaccoId: true, mix: { select: { available: true } } },
+    }),
+    prisma.smokeCtaEvent.findMany({ where: { createdAt }, select: { mixId: true, mixProfiles: true } }),
+    prisma.customMixSmokeEvent.findMany({ where: { createdAt }, select: { components: true } }),
+  ]);
+  const ratings = await prisma.mixRating.groupBy({
+    by: ['mixId'],
+    where: { mixId: { in: [...new Set(components.map((component) => component.mixId))] } },
+    _avg: { value: true },
+    _count: { _all: true },
+  });
+  const customTobaccos = custom.map((event) =>
+    (Array.isArray(event.components) ? event.components : [])
+      .map((component) => (component as { tobaccoId?: unknown } | null)?.tobaccoId)
+      .filter((id): id is string => typeof id === 'string'),
+  );
+  const mixCount = new Map<string, number>();
+  for (const component of components) {
+    if (component.mix.available) mixCount.set(component.tobaccoId, (mixCount.get(component.tobaccoId) ?? 0) + 1);
+  }
+  return {
+    stats: appByTobacco({
+      components,
+      events,
+      custom: customTobaccos.map((ids) => ({ tobaccoIds: ids })),
+      ratings: ratings.map((rating) => ({ mixId: rating.mixId, avg: rating._avg.value ?? 0, count: rating._count._all })),
+    }),
+    mixCount,
+    eventProfiles: events.map((event) => stringsOf(event.mixProfiles)),
+    customTobaccos,
+  };
+};
+
+export const getPurchase = async (now = new Date()): Promise<PurchaseView> => {
+  const [{ records, items, forecasts, settings }, dropped, spend] = await Promise.all([
+    loadShelf(now),
+    loadDroppedShelf(),
+    loadMonthSpend(now),
+  ]);
+  const app = await loadApp(records.map((record) => record.tobaccoId), now);
+  const appOf = (record: ShelfRecord) => app.stats.get(record.tobaccoId) ?? NO_APP;
+
+  const prices = items.map((item) => gramPrice(item.entries));
+  const rows = records
+    .map((record, index) => ({ record, item: items[index], forecast: forecasts[index], price: prices[index], journal: journalOf(record) }))
+    .filter(({ record }) => record.status === 'active');
+  const byId = new Map(rows.map((row) => [row.record.tobaccoId, row]));
+  const rateOf = (forecast: ShelfForecast): Rate =>
+    forecast.rateKind === 'none' ? { gramsPerDay: null, kind: 'none' } : { gramsPerDay: forecast.rate!, kind: forecast.rateKind };
+
+  const firstEntry = [...records, ...dropped].flatMap((record) => record.entries.slice(0, 1)).map((entry) => entry.at.getTime());
+  const since = firstEntry.length ? new Date(Math.min(...firstEntry)) : null;
+
+  const base = baseList(
+    rows.map(({ record, forecast, price }) => ({
+      tobaccoId: record.tobaccoId,
+      keepStocked: record.keepStocked,
+      rate: rateOf(forecast),
+      gramPriceKop: price,
+    })),
+  );
+
+  const fastWindow = now.getTime() - FAST_WINDOW_DAYS * DAY_MS;
+  const fast = fastList(
+    rows.map(({ record, forecast, journal }) => ({ tobaccoId: record.tobaccoId, status: forecast.status, entries: journal })),
+    now,
+  );
+
+  const medianRate = shelfMedianRate(rows.map(({ forecast }) => rateOf(forecast)));
+  const trials = rows
+    .filter(({ record }) => trialOf(record, now))
+    .map(({ record, forecast, journal }) => {
+      const first = record.entries.find((entry) => entry.kind === 'receipt')!;
+      return { record, row: trialRow({ rate: rateOf(forecast), entries: journal, firstReceipt: { at: first.at, grams: first.grams } }, medianRate, now) };
+    })
+    .sort((a, b) => b.row.receivedAt.getTime() - a.row.receivedAt.getTime());
+
+  const idle = idleList(
+    rows.map(({ record, forecast, item, price }) => ({
+      tobaccoId: record.tobaccoId,
+      keepStocked: record.keepStocked,
+      stopped: record.stopped,
+      inStock: forecast.inStock,
+      leftGrams: forecast.leftGrams,
+      gramPriceKop: price,
+      entries: item.entries,
+    })),
+    now,
+  );
+
+  const month = [{ from: new Date(now.getTime() - PURCHASE_MONTH_DAYS * DAY_MS), to: now }];
+  const shelfProfiles = new Map([...records, ...dropped].map((record) => [record.tobaccoId, parseList(record.tobacco.flavorProfiles)]));
+  const profiles = profileShares({
+    spend: [...records, ...dropped].map((record) => ({
+      profiles: shelfProfiles.get(record.tobaccoId)!,
+      grams: consumptionByPeriod(journalOf(record), month)[0],
+    })),
+    shelf: rows.filter(({ forecast }) => forecast.inStock).map(({ record }) => ({ profiles: shelfProfiles.get(record.tobaccoId)! })),
+    app: [
+      ...app.eventProfiles.map((profiles) => ({ profiles })),
+      ...app.customTobaccos.map((ids) => ({ profiles: ids.flatMap((id) => shelfProfiles.get(id) ?? []) })),
+    ],
+  });
+
+  const tobacco = (tobaccoId: string) => tobaccoOf(byId.get(tobaccoId)!.record);
+  return {
+    since: iso(since),
+    budget: budgetOf(records, forecasts, prices, settings),
+    spend: { month: spend.month, totalKop: spend.totalKop },
+    base: {
+      enough: base.enough,
+      medianMonthGrams: base.medianMonthGrams,
+      counts: base.counts,
+      rows: base.rows.map(({ tobaccoId, ...row }) => ({
+        tobacco: tobacco(tobaccoId),
+        monthGrams: row.monthGrams,
+        rateKind: row.rateKind,
+        share: row.share,
+        rubKop: row.rubKop,
+        gramPriceKop: byId.get(tobaccoId)!.price,
+        app: appOf(byId.get(tobaccoId)!.record),
+        keepStocked: row.keepStocked,
+        flag: row.flag,
+      })),
+    },
+    fast: {
+      enough: rows.some(({ journal }) =>
+        journal.some((entry) => entry.kind === 'count' && entry.grams === 0 && entry.at.getTime() >= fastWindow),
+      ),
+      rows: fast.map((row) => ({
+        tobacco: tobacco(row.tobaccoId),
+        receiptGrams: row.grams,
+        receivedAt: row.receivedAt.toISOString(),
+        goneDays: row.goneDays,
+        emptyAt: row.emptyAt.toISOString(),
+        emptyDays: row.emptyDays,
+        ongoing: row.ongoing,
+        next: row.next && { grams: row.next.grams, at: row.next.at.toISOString() },
+        times: row.times,
+        status: row.status,
+      })),
+    },
+    trials: {
+      enough: medianRate !== null,
+      medianRate,
+      rows: trials.map(({ record, row }) => ({
+        tobacco: tobaccoOf(record),
+        receiptGrams: row.receiptGrams,
+        receivedAt: row.receivedAt.toISOString(),
+        rate: row.rate,
+        speed: row.speed,
+        goneDays: row.goneDays,
+        app: appOf(record),
+        mixCount: app.mixCount.get(record.tobaccoId) ?? 0,
+        trialVerdict: record.trialVerdict as TrialVerdict | null,
+        trialMarkedAt: iso(record.trialMarkedAt),
+      })),
+    },
+    idle: {
+      enough: since !== null && now.getTime() - since.getTime() > IDLE_DAYS * DAY_MS,
+      totalKop: idle.totalKop,
+      unknownPriceCount: idle.unknownPriceCount,
+      unmarkedCount: idle.unmarkedCount,
+      rows: idle.rows.map(({ tobaccoId, receivedAt, ...row }) => ({
+        tobacco: tobacco(tobaccoId),
+        ...row,
+        receivedAt: receivedAt.toISOString(),
+      })),
+    },
+    profiles,
   };
 };
 
@@ -275,5 +612,10 @@ export const registerShelfInsightsRoutes = (app: FastifyInstance, authenticate: 
   app.get('/staff/shelf/dashboard', async (request, reply) => {
     if (!(await authenticate(request, reply))) return;
     return reply.send(await getShelfDashboard());
+  });
+
+  app.get('/staff/shelf/purchase', async (request, reply) => {
+    if (!(await authenticate(request, reply))) return;
+    return reply.send(await getPurchase());
   });
 };

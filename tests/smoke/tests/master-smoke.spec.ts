@@ -190,9 +190,54 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
   await expect(emptyButton(row)).toBeVisible();
 });
 
-// «Полка» на телефоне (#215): у стойки мастер открывает полку из нижней
-// навигации, жмёт «Закончился» в карточке и отменяет из тоста, а шторку
-// «Сколько осталось?» закрывает без отметки. Неразрушающий.
+// Несколько табаков разом (#333, #shot=shelf-bulk, shelf-bulk-done): чекбоксы,
+// панель «Выбрано N», «Закончились» одним действием и одна отмена на всех.
+// Неразрушающий: отмена пакета удаляет отметки 0 г из журнала.
+test('Master shelf selects several tobaccos, marks them out at once and undoes it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const emptyButton = page.getByRole('button', { name: 'Закончился', exact: true });
+  const inStock = page.locator('table.shelf-table tbody tr[data-tobacco-id]').filter({ has: emptyButton });
+  await expect(inStock.nth(1)).toBeVisible();
+  // Строки — по id: после «Закончились» сортировка переставит их наверх.
+  const ids = [await inStock.nth(0).getAttribute('data-tobacco-id'), await inStock.nth(1).getAttribute('data-tobacco-id')];
+  const rows = ids.map((id) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`));
+
+  const selectAll = page.getByRole('checkbox', { name: 'Выбрать все' });
+  await expect(selectAll).toHaveAttribute('aria-checked', 'false');
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+
+  // Esc снимает выделение.
+  await rows[0].getByRole('checkbox', { name: /^Выбрать / }).click();
+  await expect(bar).toContainText('Выбрано 1');
+  await expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
+  await page.keyboard.press('Escape');
+  await expect(bar).toHaveCount(0);
+
+  for (const row of rows) await row.getByRole('checkbox', { name: /^Выбрать / }).click();
+  await expect(bar).toContainText('Выбрано 2');
+  for (const row of rows) await expect(row.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+  // В режиме выбора кнопок строки нет.
+  await expect(emptyButton).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Держим постоянно…' })).toBeVisible();
+
+  await bar.getByRole('button', { name: /^Закончились/ }).click();
+  await expect(bar).toHaveCount(0);
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText('Закончились: 2');
+  await expect(toast).toContainText('гости их больше не видят');
+  for (const row of rows) await expect(row).toContainText('в «К заказу»');
+
+  await toast.getByRole('button', { name: /Отменить/ }).click();
+  await expect(toast).toBeHidden();
+  for (const row of rows) await expect(row.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
+});
+
 // «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
 // окна отмечает его просмотренным для логина. Неразрушающий: отметка живёт в
 // localStorage, а он у Playwright свежий на каждый тест.
@@ -245,12 +290,16 @@ test.describe('Master on a phone', () => {
     await expect(shelfTab).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
 
+    // Чип «Пробы» (#329) — рядом со статусами, с числом проб.
+    await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Пробы\s*\d+$/ })).toBeVisible();
     // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
     const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончился', exact: true });
+    // У «проверьте остаток» вместо «Осталось…» — «Отметить остаток»: берём обычную карточку.
     const first = page
       .locator('.m-shelf-card')
       .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
+      .filter({ has: page.getByRole('button', { name: 'Осталось…', exact: true }) })
       .first();
     await expect(first).toBeVisible();
     const id = await first.getAttribute('data-tobacco-id');
@@ -336,6 +385,52 @@ test.describe('Master on a phone', () => {
     await expect(settings).toBeHidden();
   });
 
+  // Выбор нескольких на телефоне (#333, #shot=mobile-bulk): «Выбрать» в шапке,
+  // касание по карточке выбирает, внизу «Закончились · N». Неразрушающий:
+  // режим выбора закрывается «Готово» без действия.
+  test('Master shelf on a phone: «Выбрать» picks cards by tap and «Готово» leaves without changes', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
+    await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
+
+    const first = page
+      .locator('.m-shelf-card')
+      .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
+      .first();
+    await expect(first).toBeVisible();
+    const id = await first.getAttribute('data-tobacco-id');
+    const card = page.locator(`.m-shelf-card[data-tobacco-id="${id}"]`);
+
+    const title = page.locator('.m-topbar__title');
+    await page.getByRole('button', { name: 'Выбрать', exact: true }).click();
+    await expect(title).toHaveText('Выбрано 0');
+    // В режиме выбора кнопок карточек нет.
+    await expect(page.getByRole('button', { name: 'Закончился', exact: true })).toHaveCount(0);
+    const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+    await expect(bar.getByRole('button', { name: 'Закончились · 0' })).toBeDisabled();
+
+    await card.tap();
+    await expect(title).toHaveText('Выбрано 1');
+    await expect(card.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+    await expect(bar.getByRole('button', { name: 'Закончились · 1' })).toBeEnabled();
+    await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Держим постоянно…' })).toBeVisible();
+    // Повторное касание снимает выбор.
+    await card.tap();
+    await expect(title).toHaveText('Выбрано 0');
+    await card.tap();
+
+    await page.getByRole('button', { name: 'Готово', exact: true }).click();
+    await expect(title).toHaveText('Полка');
+    await expect(bar).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
+    await expect(page.locator('.shelf-toast')).toBeHidden();
+  });
+
   test('Master «What\'s new» on a phone opens full screen from «Ещё»', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
@@ -411,15 +506,17 @@ test.describe('Master on a phone in landscape', () => {
   });
 });
 
-// Прогноз и «К заказу» (#213): блок «Полка» на дашборде, переключатель
-// «К заказу» и настройки полки. Неразрушающий: количество в «К заказу» не
-// сохраняется, настройки закрываются «Отменой».
+// Прогноз и «К заказу» (#213, #323, #325, #326): блок «Полка» на дашборде с
+// бюджетом, переключатель «К заказу» и настройки полки. Неразрушающий: в «К заказу»
+// ничего не меняется, настройки закрываются «Отменой».
 test('Master dashboard shows the shelf forecast, shelf opens reorder and settings without saving', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
   const forecast = page.getByRole('article', { name: 'Прогноз расхода' });
   await expect(forecast.getByRole('heading', { name: 'Прогноз расхода' })).toBeVisible();
   await expect(forecast).toContainText(/≈ [\d\s ]+ г/);
+  // «Деньги»: бюджет указан — «<Месяц>: бюджет …», нет — приглашение его указать.
+  await expect(page.getByRole('article', { name: 'Деньги' })).toContainText(/бюджет/);
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
@@ -427,9 +524,18 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   const reorderToggle = page.getByRole('group', { name: 'Вид полки' }).getByRole('button', { name: /^К заказу/ });
   await reorderToggle.click();
   await expect(reorderToggle).toHaveAttribute('aria-pressed', 'true');
+  // Плашка интервала поставок: известен по счетам или пока нет.
+  await expect(page.locator('.reorder-interval')).toContainText(/Поставки примерно раз в|Интервал поставок пока неизвестен/);
   // Группы поставщиков или пустое состояние — зависит от полки в базе.
   await expect(page.locator('.reorder-group, .reorder__empty').first()).toBeVisible();
-  await expect(page.locator('.reorder__hint')).toContainText('Заказать — расход на 21 день минус остаток');
+  const groups = page.locator('.reorder-group');
+  if (await groups.count()) {
+    await expect(groups.first().getByRole('columnheader', { name: 'Расход в месяц' })).toBeVisible();
+    await expect(groups.first().getByRole('button', { name: 'Скопировать заявку' })).toBeVisible();
+  }
+  // Сколько заказать, решает мастер: ни степпера, ни суммы.
+  await expect(page.getByRole('group', { name: /^Заказать:/ })).toHaveCount(0);
+  await expect(page.locator('.reorder__hint')).toContainText('Сколько заказать, решает мастер.');
 
   await page.getByRole('button', { name: 'Меню полки' }).click();
   await page.getByRole('menuitem', { name: /Настройки полки/ }).click();
@@ -437,8 +543,60 @@ test('Master dashboard shows the shelf forecast, shelf opens reorder and setting
   await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
   await expect(settings.getByLabel('Граммовка чаши, г')).toHaveValue(/^\d+$/);
   await expect(settings.getByLabel('Срок поставки, дней')).toHaveValue(/^\d+$/);
+  // Бюджет необязателен: пусто или рубли с пробелами между разрядами.
+  await expect(settings.getByLabel('Бюджет на табак, ₽ в месяц')).toHaveValue(/^[\d\s ]*$/);
+  await expect(settings).toContainText('Сколько табака уходит на одну чашу.');
+  await expect(settings).toContainText('Считается само:');
   await settings.getByRole('button', { name: 'Отмена' }).click();
   await expect(settings).toBeHidden();
+});
+
+// «Закупка» (#327–#331): третий вид «Полки» — полоса бюджета, чипы разделов и
+// по каждому разделу либо данные, либо «Данных пока мало» (на seed расхода ещё
+// нет). Неразрушающий: «Держим» и отметки пробы не трогаем, настройки — «Отмена».
+test('Master shelf opens «Закупка»: budget strip, section chips and few-data state', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const views = page.getByRole('group', { name: 'Вид полки' }).getByRole('button');
+  await expect(views).toHaveText([/^Полка$/, /^К заказу/, /^Закупка$/]);
+  const purchase = page.getByRole('group', { name: 'Вид полки' }).getByRole('button', { name: 'Закупка', exact: true });
+  await purchase.click();
+  await expect(purchase).toHaveAttribute('aria-pressed', 'true');
+
+  // Бюджет указан — четыре плитки, нет — стоимость базы и «Указать бюджет».
+  const budget = page.getByLabel('Бюджет на табак', { exact: true });
+  const invite = page.getByRole('button', { name: 'Указать бюджет' });
+  await expect(budget.or(invite)).toBeVisible();
+  if (await invite.isVisible()) {
+    await expect(page.locator('.purchase .reorder-interval')).toContainText('Укажите бюджет на табак');
+    await invite.click();
+    const settings = page.getByRole('dialog');
+    await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
+    await expect(settings).toContainText('бюджет в «Закупке»');
+    await settings.getByRole('button', { name: 'Отмена' }).click();
+    await expect(settings).toBeHidden();
+  } else {
+    await expect(budget).toContainText('База в месяц');
+    await expect(budget).toContainText('Потрачено');
+  }
+
+  const sections = page.getByRole('group', { name: 'Разделы закупки' }).getByRole('button');
+  await expect(sections).toHaveText([/^База/, /^Закончились быстро/, /^Пробы/, /^Лежит/, /^Вкусы/]);
+  await expect(sections.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.purchase-toolbar__date')).toHaveText(/^за 30–60 дней · /);
+
+  const few = page.getByRole('heading', { name: 'Данных пока мало' });
+  const titles = ['Что держать в базе', 'Закончились быстро', 'Как зашли пробы', 'Что лежит', 'Вкусы: расход против полки'];
+  for (const [index, title] of titles.entries()) {
+    await sections.nth(index).click();
+    await expect(sections.nth(index)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('heading', { name: title, level: 2 }).or(few)).toBeVisible();
+    if (await few.isVisible()) await expect(page.locator('.purchase-few')).toContainText(/Учёт в граммах/);
+  }
+  // Сколько заказать, решает мастер: ни количества, ни суммы заказа.
+  await expect(page.getByRole('group', { name: /^Заказать:/ })).toHaveCount(0);
 });
 
 // «Идеи для закупки» (#214): подборки htreviews или пустое состояние — на seed
@@ -477,9 +635,10 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await openWorkspace(page, 'Полка');
   const shelfRow = page.locator('table.shelf-table tbody tr[data-tobacco-id]').first();
   await expect(shelfRow).toBeVisible();
-  // Первая ячейка — табак (в колонке «Приход» тоже есть .shelf-name).
+  // Вторая ячейка — табак: первая — чекбокс выбора (#333), а в колонке
+  // «Приход» тоже есть .shelf-name.
   // textContent, а не innerText: подпись бренда в CSS набрана капслоком.
-  const nameCell = shelfRow.locator('td').first();
+  const nameCell = shelfRow.locator('td').nth(1);
   const tobaccoName = ((await nameCell.locator('.shelf-name b').textContent()) ?? '').trim();
   const manufacturer = ((await nameCell.locator('.shelf-name span').textContent()) ?? '').split(' · ')[0].trim();
 

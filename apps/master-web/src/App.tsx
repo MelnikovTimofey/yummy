@@ -11,6 +11,7 @@ import { useShelf } from '@/hooks/use-shelf';
 import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
 import { ShelfMobileHeadMenu } from '@/components/shelf/shelf-mobile';
+import { ShelfSettingsDialog } from '@/components/shelf/shelf-settings-dialog';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
@@ -156,6 +157,10 @@ export const App = () => {
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
   const [shelfSettingsOpen, setShelfSettingsOpen] = useState(false);
+  // Выбранные табаки на полке (#333); на телефоне [] — режим выбора без отметок.
+  const [shelfSelection, setShelfSelection] = useState<string[] | null>(null);
+  // «Указать» бюджет на дашборде (#326): настройки полки поверх дашборда.
+  const [budgetSettingsOpen, setBudgetSettingsOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   // Вернулись на полку — снова полка, а не «К заказу» (как до выноса режима в App).
   useEffect(() => {
@@ -163,6 +168,8 @@ export const App = () => {
     setShelfMode('shelf');
     setShelfSettingsOpen(false);
   }, [activeTab]);
+  // Сменили вид или раздел — выделение на полке сбрасывается.
+  useEffect(() => setShelfSelection(null), [activeTab, shelfMode]);
 
   const onAfterAccessSubmit = () => setActiveTab('access');
   const dailyCode = useDailyCode();
@@ -886,17 +893,34 @@ export const App = () => {
       summaryError={summaryError}
       onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
       shelfBlock={
-        <ShelfDashboardBlock
-          data={shelfDashboard.data}
-          status={shelfDashboard.status}
-          error={shelfDashboard.error}
-          bowlGrams={shelf.view?.settings.bowlGrams ?? DEFAULT_SHELF_SETTINGS.bowlGrams}
-          leadDays={shelf.view?.settings.leadDays ?? DEFAULT_SHELF_SETTINGS.leadDays}
-          onOpenTobacco={(tobaccoId) => {
-            setPendingShelfCard(tobaccoId);
-            setActiveTab('shelf');
-          }}
-        />
+        <>
+          <ShelfDashboardBlock
+            data={shelfDashboard.data}
+            status={shelfDashboard.status}
+            error={shelfDashboard.error}
+            bowlGrams={shelf.view?.settings.bowlGrams ?? DEFAULT_SHELF_SETTINGS.bowlGrams}
+            leadDays={shelf.view?.settings.leadDays ?? DEFAULT_SHELF_SETTINGS.leadDays}
+            onOpenTobacco={(tobaccoId) => {
+              setPendingShelfCard(tobaccoId);
+              setActiveTab('shelf');
+            }}
+            onSetBudget={() => setBudgetSettingsOpen(true)}
+          />
+          {/* Без загруженной полки настройки неизвестны — по умолчанию их не перезаписываем. */}
+          {budgetSettingsOpen && shelf.view ? (
+            <ShelfSettingsDialog
+              settings={shelf.view.settings}
+              interval={shelf.view.interval}
+              horizon={shelf.view.horizon}
+              onSave={async (settings) => {
+                const saved = await shelf.saveSettings(settings);
+                if (token) await shelfDashboard.reload(token);
+                return saved;
+              }}
+              onClose={() => setBudgetSettingsOpen(false)}
+            />
+          ) : null}
+        </>
       }
     />
   );
@@ -948,6 +972,11 @@ export const App = () => {
       mode={shelfMode}
       onModeChange={setShelfMode}
       onGoCatalog={() => setActiveTab('catalog')}
+      onOpenIdeas={() => {
+        // Смена вкладки сама перечитает идеи.
+        setCatalogView('ideas');
+        setActiveTab('catalog');
+      }}
       onOpenInCatalog={(row) => {
         setCatalogView('all');
         setActiveTab('catalog');
@@ -962,6 +991,8 @@ export const App = () => {
       onSettingsOpenChange={setShelfSettingsOpen}
       openCardId={pendingShelfCard}
       onCardOpened={() => setPendingShelfCard('')}
+      selection={shelfSelection}
+      onSelectionChange={setShelfSelection}
     />
   );
 
@@ -1147,7 +1178,8 @@ export const App = () => {
     };
     const openWhatsNewAction = (action: WhatsNewAction) => {
       closeWhatsNew();
-      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : 'shelf');
+      // «Закупка» — только на десктопе: на телефоне — полка.
+      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : action.view === 'purchase' && !isPhone ? 'purchase' : 'shelf');
       if (action.tab === 'catalog') {
         setCatalogView(action.view === 'ideas' ? 'ideas' : 'all');
         // Смена вкладки сама перечитает идеи; уже в каталоге — перечитываем здесь.
@@ -1212,16 +1244,28 @@ export const App = () => {
       })),
     ];
 
+    // Режим выбора на телефоне (#shot=mobile-bulk): «Выбрано N» и «Готово» в верхней панели.
+    const shelfPicking = isPhone && activeTab === 'shelf' && shelfSelection !== null;
+
     return (
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
         {isPhone ? (
           <MobileTopBar
-            title={mobileTitleFor(activeTab, shelfMode)}
+            title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab, shelfMode)}
             action={
-              activeTab === 'shelf' ? (
+              shelfPicking ? (
+                <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection(null)}>
+                  Готово
+                </button>
+              ) : activeTab === 'shelf' ? (
                 <>
+                  {shelfMode === 'shelf' ? (
+                    <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
+                      Выбрать
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="icon-btn m-topbar__action"

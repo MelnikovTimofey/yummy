@@ -1,7 +1,8 @@
 import type { ShelfDashboard } from '@/contracts';
 import { untilLabel } from '@/lib/reorder';
 import { formatNumber } from '@/lib/shelf';
-import { bowlCostTile, forecastCaption, spendRows, spendTitle, stockValueTile, weekBars } from '@/lib/shelf-dashboard';
+import { bowlCostTile, forecastCaption, moneyCard, spendRows, stockValueTile, weekBars } from '@/lib/shelf-dashboard';
+import { Segments } from '@/components/shelf/shelf-reorder';
 
 type ShelfDashboardBlockProps = {
   data: ShelfDashboard | null;
@@ -10,13 +11,15 @@ type ShelfDashboardBlockProps = {
   bowlGrams: number;
   leadDays: number;
   onOpenTobacco: (tobaccoId: string) => void;
+  // «Указать» бюджет — открывает настройки полки.
+  onSetBudget: () => void;
 };
 
 const BAR_MAX_PX = 110;
 
-// Блок «Полка» дашборда (#213, #shot=dashboard): прогноз на сегодня, что
-// заканчивается, траты месяца и расход по неделям.
-export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, onOpenTobacco }: ShelfDashboardBlockProps) {
+// Блок «Полка» дашборда (#213, #326, #shot=dashboard, edge-dash-no-budget): прогноз
+// на сегодня, что заканчивается, деньги против бюджета и расход по неделям.
+export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, onOpenTobacco, onSetBudget }: ShelfDashboardBlockProps) {
   if (!data) {
     if (status === 'error') return <div className="dashboard-page__error" role="status">{error}</div>;
     return <p className="meta-line">Считаем прогноз полки…</p>;
@@ -26,6 +29,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
   const bowl = bowlCostTile(data.bowlCostKop, bowlGrams);
   const stock = stockValueTile(data.stockValueKop);
   const bars = weekBars(data.weekly);
+  const money = moneyCard(data);
 
   return (
     <>
@@ -65,7 +69,32 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
 
         <article className="dashboard-page__card" aria-label="Деньги">
           <p className="shelf-dash__eyebrow">Деньги</p>
-          <h2 className="dashboard-page__heading">{spendTitle(data.spend.month)}</h2>
+          <h2 className="dashboard-page__heading">{money.title}</h2>
+          {money.kind === 'budget' ? (
+            <div className="shelf-dash__budget">
+              <div
+                className="shelf-dash__meter"
+                role="img"
+                aria-label={`${money.spent} из бюджета, ${money.base}`}
+              >
+                <i style={{ width: `${money.spentShare * 100}%` }} />
+                <em style={{ left: `calc(${money.baseShare * 100}% - 1px)` }} />
+              </div>
+              <div className="shelf-dash__legend">
+                <span>
+                  <i className="shelf-dash__swatch" aria-hidden="true" />
+                  {money.spent}
+                </span>
+                <span>
+                  <i className="shelf-dash__swatch shelf-dash__swatch--base" aria-hidden="true" />
+                  {money.base}
+                </span>
+                <span>
+                  {money.left.label} <b data-tone={money.left.tone}>{money.left.value}</b>
+                </span>
+              </div>
+            </div>
+          ) : null}
           {spend.length ? (
             <div className="shelf-dash__spend">
               {spend.map((row) => (
@@ -79,6 +108,16 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
           ) : (
             <p className="empty">В этом месяце принятых поставок с ценами нет.</p>
           )}
+          {money.kind === 'none' ? (
+            <div className="shelf-dash__invite">
+              <span>
+                <Segments segments={money.invite} />
+              </span>
+              <button type="button" className="btn" data-size="sm" onClick={onSetBudget}>
+                Указать
+              </button>
+            </div>
+          ) : null}
           <div className="shelf-dash__kv">
             <div>
               <span>Себестоимость чаши</span>
@@ -91,6 +130,7 @@ export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, 
               <small>{stock.hint}</small>
             </div>
           </div>
+          {money.kind === 'budget' && money.unknown ? <p className="shelf-dash__note">{money.unknown}</p> : null}
         </article>
       </div>
 
