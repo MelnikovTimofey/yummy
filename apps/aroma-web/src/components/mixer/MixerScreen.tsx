@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BottomNav, type BottomNavTab } from '@/components/aroma';
 
 import { evaluateBowl, fetchMixerPalette, MixerApiError, sendCustomMixSmoke } from '@/lib/mixer/api';
 import {
@@ -54,12 +55,15 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 export function MixerScreen({
   likedProfiles,
   onExit,
+  onNavigate,
   onSmoked,
   canOpenMix,
   onOpenMix,
 }: {
   likedProfiles: string[];
   onExit: () => void;
+  /** Нижняя панель (#350): уход в другой раздел бросает незаконченную чашу. */
+  onNavigate: (tab: Exclude<BottomNavTab, 'mixer'>) => void;
   /** Собранный микс становится карточкой для мастера в шапке приложения. */
   onSmoked: (card: MixerSmoke) => void;
   canOpenMix: (mixId: string) => boolean;
@@ -374,10 +378,28 @@ export function MixerScreen({
     later(done, 900 + added * LUCK_STAGGER_MS);
   };
 
-  // «Назад» — на экран, откуда гость пришёл, а не отмена прошлого выбора (#293).
+  // «Назад» отменяет прошлый ход, на основе — на экран, откуда гость пришёл (#350).
+  // Раскрытие возвращает на штрих с двумя табаками — и после «Без штриха».
   const back = () => {
     if (busyRef.current) return;
+    setNotice(null);
+    if (phase === 'reveal') {
+      startTurn(2, chosen.slice(0, 2));
+      say(TURNS[2].line);
+      return;
+    }
+    if (phase === 'swipe' && turn > 0) {
+      const target = (turn - 1) as Turn;
+      startTurn(target, chosen.slice(0, target));
+      say(TURNS[target].line);
+      return;
+    }
     onExit();
+  };
+
+  const navigate = (tab: BottomNavTab) => {
+    if (busyRef.current || tab === 'mixer') return;
+    onNavigate(tab);
   };
 
   const bowlProfiles = Array.from(new Set(chosenTobaccos.flatMap((tobacco) => tobacco.flavorProfiles))).slice(0, 3);
@@ -523,171 +545,174 @@ export function MixerScreen({
   }
 
   return (
-    <section className="mixer" aria-labelledby="mixer-title">
-      <header className="mixer-topbar">
-        <button type="button" className="mixer-icon-btn" onClick={back} aria-label="Назад">
-          ←
-        </button>
-        <h1 id="mixer-title" className="mixer-title">
-          Намиксуй
-        </h1>
-        <span aria-hidden />
-      </header>
-      {progress}
-
-      {phase === 'loading' ? <p className="screen-status">Раскладываем табаки…</p> : null}
-
-      {phase === 'error' ? (
-        <div className="mixer-status">
-          <p className="screen-status error">Не получилось загрузить табаки. Попробуйте ещё раз.</p>
-          <button type="button" className="aroma-mix-sheet-ghost" onClick={() => void load()}>
-            Повторить
+    <>
+      <section className="mixer" aria-labelledby="mixer-title">
+        <header className="mixer-topbar">
+          <button type="button" className="mixer-icon-btn" onClick={back} aria-label="Назад">
+            ←
           </button>
-        </div>
-      ) : null}
+          <h1 id="mixer-title" className="mixer-title">
+            Намиксуй
+          </h1>
+          <span aria-hidden />
+        </header>
+        {progress}
 
-      {phase === 'swipe' ? (
-        <div className="mixer-swipe">
-          <MasterLine line={line} />
-          {notice ? (
-            <p className="mixer-notice" role="alert">
-              {notice}
-            </p>
-          ) : null}
+        {phase === 'loading' ? <p className="screen-status">Раскладываем табаки…</p> : null}
 
-          <div className="mixer-bowl-row">
-            <BowlRing
-              ringRef={ringRef}
-              tobaccos={chosenTobaccos}
-              shares={shares}
-              center={
-                chosenTobaccos.length ? (
-                  <span className="mixer-ring-score">{harmonyOf(chosenTobaccos, shares, palette.affinity)}</span>
-                ) : null
-              }
-            />
-            {chosenTobaccos.length ? (
-              <div className="mixer-bowl-info">
-                <p className="mixer-bowl-name">{mixName}</p>
-                <ul className="mixer-bowl-comps">
-                  {chosenTobaccos.map((tobacco) => (
-                    <li key={tobacco.id}>
-                      <span
-                        className="mixer-dot"
-                        style={{ background: getProfileColor(tobacco.flavorProfiles[0]) }}
-                        aria-hidden
-                      />
-                      {tobacco.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="mixer-bowl-hint">Гармония появится после основы</p>
-            )}
-          </div>
-
-          {pool.length ? (
-            <ShelfFilter
-              shelves={shelfOrder}
-              selected={shelves}
-              count={underFilter.length}
-              fromOnboarding={fromOnboarding}
-              onToggle={(shelf) =>
-                changeShelves(shelves.includes(shelf) ? shelves.filter((item) => item !== shelf) : [...shelves, shelf])
-              }
-              onAll={() => changeShelves([])}
-            />
-          ) : null}
-
-          <div className="mixer-deck-slot" data-dim={dimDeck ? 'true' : undefined}>
-            <SwipeDeck
-              ref={deckRef}
-              cards={cards}
-              version={deckView.version}
-              entrance={deckView.entrance}
-              matchFor={matchFor}
-              busy={busy}
-              empty={emptyDeck}
-              onSwipeRight={take}
-              onSwipeLeft={skip}
-            />
-          </div>
-
-          <div className="mixer-actions">
-            <button
-              type="button"
-              className="mixer-round"
-              aria-label="Дальше"
-              disabled={!cards.length || busy}
-              onClick={skip}
-            >
-              ×
-            </button>
-            <button
-              type="button"
-              className="mixer-round mixer-round-take"
-              aria-label="Беру"
-              disabled={!cards.length || busy}
-              onClick={take}
-            >
-              ✓
+        {phase === 'error' ? (
+          <div className="mixer-status">
+            <p className="screen-status error">Не получилось загрузить табаки. Попробуйте ещё раз.</p>
+            <button type="button" className="aroma-mix-sheet-ghost" onClick={() => void load()}>
+              Повторить
             </button>
           </div>
+        ) : null}
 
-          <div className="mixer-links">
-            <button
-              type="button"
-              className="mixer-link"
-              disabled={!deck.history.length || busy}
-              onClick={rewind}
-            >
-              Вернуть прошлую
-            </button>
-            {turn === 2 ? (
-              <button type="button" className="mixer-link" disabled={busy} onClick={skipTwist}>
-                Без штриха
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="mixer-link"
-              disabled={busy || !palette.tobaccos.length}
-              onClick={trustTheMaster}
-            >
-              Доверюсь мастеру
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {phase === 'reveal' ? (
-        <>
-          <div className="mixer-reveal">
+        {phase === 'swipe' ? (
+          <div className="mixer-swipe">
             <MasterLine line={line} />
             {notice ? (
               <p className="mixer-notice" role="alert">
                 {notice}
               </p>
             ) : null}
-            <MixerReveal
-              tobaccos={chosenTobaccos}
-              shares={shares}
-              evaluation={evaluation}
-              evaluationFailed={evaluationFailed}
-              name={mixName}
-              canOpenMix={canOpenMix}
-              onRename={setCustomName}
-              onSharesChange={setShares}
-              onSharesCommit={onSharesCommit}
-              onOpenMix={onOpenMix}
-            />
-          </div>
-          <MixerRevealDock smoking={smoking} onSmoke={() => void smoke()} onRestart={() => begin(palette.tobaccos)} />
-        </>
-      ) : null}
 
-      <PourLayer ref={pourRef} />
-    </section>
+            <div className="mixer-bowl-row">
+              <BowlRing
+                ringRef={ringRef}
+                tobaccos={chosenTobaccos}
+                shares={shares}
+                center={
+                  chosenTobaccos.length ? (
+                    <span className="mixer-ring-score">{harmonyOf(chosenTobaccos, shares, palette.affinity)}</span>
+                  ) : null
+                }
+              />
+              {chosenTobaccos.length ? (
+                <div className="mixer-bowl-info">
+                  <p className="mixer-bowl-name">{mixName}</p>
+                  <ul className="mixer-bowl-comps">
+                    {chosenTobaccos.map((tobacco) => (
+                      <li key={tobacco.id}>
+                        <span
+                          className="mixer-dot"
+                          style={{ background: getProfileColor(tobacco.flavorProfiles[0]) }}
+                          aria-hidden
+                        />
+                        {tobacco.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="mixer-bowl-hint">Гармония появится после основы</p>
+              )}
+            </div>
+
+            {pool.length ? (
+              <ShelfFilter
+                shelves={shelfOrder}
+                selected={shelves}
+                count={underFilter.length}
+                fromOnboarding={fromOnboarding}
+                onToggle={(shelf) =>
+                  changeShelves(shelves.includes(shelf) ? shelves.filter((item) => item !== shelf) : [...shelves, shelf])
+                }
+                onAll={() => changeShelves([])}
+              />
+            ) : null}
+
+            <div className="mixer-deck-slot" data-dim={dimDeck ? 'true' : undefined}>
+              <SwipeDeck
+                ref={deckRef}
+                cards={cards}
+                version={deckView.version}
+                entrance={deckView.entrance}
+                matchFor={matchFor}
+                busy={busy}
+                empty={emptyDeck}
+                onSwipeRight={take}
+                onSwipeLeft={skip}
+              />
+            </div>
+
+            <div className="mixer-actions">
+              <button
+                type="button"
+                className="mixer-round"
+                aria-label="Дальше"
+                disabled={!cards.length || busy}
+                onClick={skip}
+              >
+                ×
+              </button>
+              <button
+                type="button"
+                className="mixer-round mixer-round-take"
+                aria-label="Беру"
+                disabled={!cards.length || busy}
+                onClick={take}
+              >
+                ✓
+              </button>
+            </div>
+
+            <div className="mixer-links">
+              <button
+                type="button"
+                className="mixer-link"
+                disabled={!deck.history.length || busy}
+                onClick={rewind}
+              >
+                Вернуть прошлую
+              </button>
+              {turn === 2 ? (
+                <button type="button" className="mixer-link" disabled={busy} onClick={skipTwist}>
+                  Без штриха
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="mixer-link"
+                disabled={busy || !palette.tobaccos.length}
+                onClick={trustTheMaster}
+              >
+                Доверюсь мастеру
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === 'reveal' ? (
+          <>
+            <div className="mixer-reveal">
+              <MasterLine line={line} />
+              {notice ? (
+                <p className="mixer-notice" role="alert">
+                  {notice}
+                </p>
+              ) : null}
+              <MixerReveal
+                tobaccos={chosenTobaccos}
+                shares={shares}
+                evaluation={evaluation}
+                evaluationFailed={evaluationFailed}
+                name={mixName}
+                canOpenMix={canOpenMix}
+                onRename={setCustomName}
+                onSharesChange={setShares}
+                onSharesCommit={onSharesCommit}
+                onOpenMix={onOpenMix}
+              />
+            </div>
+            <MixerRevealDock smoking={smoking} onSmoke={() => void smoke()} onRestart={() => begin(palette.tobaccos)} />
+          </>
+        ) : null}
+
+        <PourLayer ref={pourRef} />
+      </section>
+      <BottomNav value="mixer" onChange={navigate} />
+    </>
   );
 }

@@ -198,7 +198,8 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
 
 // Нижняя панель (#168, #243, #263): шесть значков, имена — в aria-label. Панели нет на
 // знакомстве и в онбординге; Миксер из панели открывается на весь экран и
-// «Назад» возвращает на экран, откуда гость пришёл, — и посреди сборки (#293).
+// В «Намиксуй» видна панель (#350): «Назад» отменяет ход, на основе — на экран,
+// откуда гость пришёл; через панель — в любой раздел.
 test('Aroma guest navigates with the bottom bar and opens the mixer from it', async ({ page }) => {
   await page.goto('/');
 
@@ -228,15 +229,23 @@ test('Aroma guest navigates with the bottom bar and opens the mixer from it', as
   await catalogTab.click();
   await nav.getByRole('button', { name: 'Миксер', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
-  await expect(nav).toHaveCount(0);
+  await expect(nav.getByRole('button', { name: 'Миксер', exact: true })).toHaveAttribute('aria-current', 'page');
   const take = page.getByRole('button', { name: 'Беру', exact: true });
   await expect(take).toBeEnabled();
   await take.click();
   await expect(page.getByText('Ход 2 из 3')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  const back = page.getByRole('button', { name: 'Назад', exact: true });
+  await back.click();
+  await expect(page.getByText('Ход 1 из 3')).toBeVisible();
+  await back.click();
   await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
   await expect(catalogTab).toHaveAttribute('aria-current', 'page');
+
+  await nav.getByRole('button', { name: 'Миксер', exact: true }).click();
+  await expect(take).toBeEnabled();
+  await showcaseTab.click();
+  await expect(showcaseTab).toHaveAttribute('aria-current', 'page');
 });
 
 // Каталог (#181): поиск и фильтры в одном месте. «Фильтры» открывает шторку
