@@ -1,5 +1,5 @@
-// Ops surface panel: raised gradient, hairline border, optional eyebrow + heading.
-export function MasterCard({ children, eyebrow, heading, actions, style }) {
+// Ops surface panel: raised gradient, hairline border, optional heading.
+export function MasterCard({ children, heading, actions, style }) {
   return (
     <section
       style={{
@@ -15,12 +15,9 @@ export function MasterCard({ children, eyebrow, heading, actions, style }) {
         ...style,
       }}
     >
-      {eyebrow || heading || actions ? (
+      {heading || actions ? (
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
-            {eyebrow ? <p style={{ margin: 0, fontFamily: 'var(--font-meta)', fontSize: 'var(--fs-xs)', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{eyebrow}</p> : null}
-            {heading ? <h3 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'var(--fs-xl)', lineHeight: 1.15, color: 'var(--text-primary)' }}>{heading}</h3> : null}
-          </div>
+          {heading ? <h3 style={{ margin: 0, minWidth: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'var(--fs-xl)', lineHeight: 1.15, color: 'var(--text-primary)' }}>{heading}</h3> : <span />}
           {actions ? <div style={{ display: 'inline-flex', gap: 8, flexShrink: 0 }}>{actions}</div> : null}
         </div>
       ) : null}

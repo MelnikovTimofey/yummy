@@ -16,7 +16,7 @@ window.MASTER_MOCK = {
     { id: 'x5', name: 'Лимонный пирог', components: 2, rails: 'Вечер в ателье', status: 'hidden', rating: 4.5, chosen: 87 },
   ],
   rails: [
-    { id: 'r1', name: 'Больше всего выбирают', type: 'statistical', mixes: 5, editable: false, reason: 'Пересчитывается по событиям «Покурить»' },
+    { id: 'r1', name: 'Больше всего выбирают', type: 'statistical', mixes: 5, editable: false, reason: 'Пересчитывается по выборам гостей' },
     { id: 'r2', name: 'Лучшие оценки', type: 'statistical', mixes: 5, editable: false, reason: 'Пересчитывается по оценкам гостей' },
     { id: 'r3', name: 'Вечер в ателье', type: 'prepared', mixes: 4, editable: true, reason: '' },
     { id: 'r4', name: 'Советуют мастера', type: 'curated', mixes: 4, editable: true, reason: '' },
@@ -31,8 +31,8 @@ window.MASTER_MOCK = {
     { id: 's2', login: 'atelier', role: 'master', active: true },
   ],
   audit: [
-    { id: 'a1', at: '14 авг, 18:22', action: 'inventory.toggle', entity: 'Cosmo Flower → нет в наличии', who: 'atelier' },
-    { id: 'a2', at: '14 авг, 17:05', action: 'mix.update', entity: 'Морозная ягода · состав', who: 'admin' },
+    { id: 'a1', at: '14 авг, 18:22', action: 'inventory.toggle', entity: 'Cosmo Flower, нет в наличии', who: 'atelier' },
+    { id: 'a2', at: '14 авг, 17:05', action: 'mix.update', entity: 'Морозная ягода, состав', who: 'admin' },
     { id: 'a3', at: '14 авг, 09:00', action: 'code.rotate', entity: 'Код смены 4821', who: 'system' },
   ],
 };

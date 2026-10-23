@@ -1,8 +1,8 @@
 // Daily-code field: no box, one hairline underline, huge tracked serif digits.
-export function AccessCodeInput({ value, onChange, label = 'Код мастера', hint = 'Спросите у мастера зала — действует до 06:00.', maxLength = 4, id = 'guest-access-code' }) {
+export function AccessCodeInput({ value, onChange, label = 'Код мастера', hint = 'Код скажет мастер зала. Он действует до 06:00.', maxLength = 4, id = 'guest-access-code' }) {
   return (
     <div style={{ display: 'grid', gap: 0 }}>
-      <label htmlFor={id} className="aroma-caps" style={{ textAlign: 'left' }}>{label}</label>
+      <label htmlFor={id} style={{ textAlign: 'left', fontSize: 13, color: 'var(--text-secondary)' }}>{label}</label>
       <input
         id={id}
         type="text"

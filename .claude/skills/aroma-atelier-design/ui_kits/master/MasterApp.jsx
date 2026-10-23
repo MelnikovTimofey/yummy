@@ -1,4 +1,4 @@
-// Мастер shell: login → workspace with 5 module tabs and a ⌘K command palette.
+// Мастер shell: login, then workspace with 5 module tabs and a ⌘K command palette.
 const { MasterTopBar } = window.DesignSystem_1aef33;
 const { LoginScreen, DashboardScreen, InventoryScreen, MixesScreen, RailsScreen, MasterAccessScreen } = window;
 
@@ -19,14 +19,14 @@ function CommandPalette({ open, onClose, onNavigate }) {
   return (
     <div className="cmdk-overlay" onClick={onClose}>
       <div className="cmdk" onClick={(e) => e.stopPropagation()}>
-        <input autoFocus className="cmdk-input" placeholder="Найти или сделать…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input autoFocus className="cmdk-input" placeholder="Найти или сделать" value={q} onChange={(e) => setQ(e.target.value)} />
         <ul className="cmdk-list">
           {items.map((i) => (
             <li key={i.id} className="cmdk-item" onClick={() => { if (TABS.some((t) => t.id === i.id)) onNavigate(i.id); onClose(); }}>
               <span>{i.label}</span><span className="cmdk-group">{i.group}</span>
             </li>
           ))}
-          {!items.length ? <li className="cmdk-empty">Ничего не найдено</li> : null}
+          {!items.length ? <li className="cmdk-empty">Ничего не найдено.</li> : null}
         </ul>
       </div>
     </div>

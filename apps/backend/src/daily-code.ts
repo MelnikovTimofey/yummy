@@ -7,22 +7,22 @@ export type DailyCodeWindow = {
 
 const MOSCOW_OFFSET_MINUTES = 180;
 
-const toMoscowDate = (date: Date) => new Date(date.getTime() + MOSCOW_OFFSET_MINUTES * 60_000);
+// Смена кода в 06:00, а не в полночь: смена, переходящая через полночь, живёт с одним кодом.
+const SHIFT_START_HOUR = 6;
 
-const fromMoscowDate = (date: Date) => new Date(date.getTime() - MOSCOW_OFFSET_MINUTES * 60_000);
+const HOUR_MS = 60 * 60_000;
 
 export const getDailyCodeWindow = (referenceDate = new Date()): DailyCodeWindow => {
-  const moscowDate = toMoscowDate(referenceDate);
-  const daysSinceMonday = (moscowDate.getUTCDay() + 6) % 7;
-  const startMoscow = new Date(
-    Date.UTC(moscowDate.getUTCFullYear(), moscowDate.getUTCMonth(), moscowDate.getUTCDate() - daysSinceMonday),
+  const shiftDate = new Date(referenceDate.getTime() + MOSCOW_OFFSET_MINUTES * 60_000 - SHIFT_START_HOUR * HOUR_MS);
+  const startsAt = new Date(
+    Date.UTC(shiftDate.getUTCFullYear(), shiftDate.getUTCMonth(), shiftDate.getUTCDate()) +
+      SHIFT_START_HOUR * HOUR_MS -
+      MOSCOW_OFFSET_MINUTES * 60_000,
   );
-  const endMoscow = new Date(startMoscow);
-  endMoscow.setUTCDate(endMoscow.getUTCDate() + 7);
 
   return {
-    startsAt: fromMoscowDate(startMoscow),
-    endsAt: fromMoscowDate(endMoscow),
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 24 * HOUR_MS),
   };
 };
 

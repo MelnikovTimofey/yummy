@@ -15,7 +15,7 @@ export function FilterChip({ children, active = false, count, onClick, style }) 
         fontFamily: 'var(--font-sans)',
         fontSize: 'var(--fs-sm)',
         background: active ? 'var(--accent-soft)' : 'var(--bg-raised)',
-        color: active ? 'var(--accent)' : 'var(--text-secondary)',
+        color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
         border: '1px solid ' + (active ? 'var(--accent-border)' : 'var(--border-subtle)'),
         cursor: 'pointer',
         transition: 'var(--transition-state)',

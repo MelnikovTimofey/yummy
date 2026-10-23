@@ -29,7 +29,7 @@ export function MasterSortPill({ value, options = [], onChange, label = 'Сор�
                 role="option"
                 aria-selected={selected}
                 onClick={() => { onChange && onChange(o.key); setOpen(false); }}
-                style={{ padding: '6px 8px', borderRadius: 'var(--r-xs)', fontSize: 'var(--fs-md)', color: selected ? 'var(--accent)' : 'var(--text-secondary)', background: selected ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}
+                style={{ padding: '6px 8px', borderRadius: 'var(--r-xs)', fontSize: 'var(--fs-md)', color: selected ? 'var(--text-primary)' : 'var(--text-secondary)', background: selected ? 'var(--accent-soft)' : 'transparent', cursor: 'pointer' }}
               >
                 {o.label}
               </li>

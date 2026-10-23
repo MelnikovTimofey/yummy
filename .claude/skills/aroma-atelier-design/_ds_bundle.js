@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"078dcd1c6f80","components/guest/AromaCTA.jsx":"d0ef7a831e2c","components/guest/AromaChip.jsx":"d48f28e16469","components/guest/CompositionStack.jsx":"b4e221bf4fa9","components/guest/GuestCard.jsx":"c94b74225d19","components/guest/GuestTab.jsx":"c3e9cd0a93af","components/guest/MixRow.jsx":"0cfeadb642ec","components/guest/OnboardingProgress.jsx":"49fe4556566b","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"6cddf458a9b4","components/guest/SegmentNav.jsx":"1a81a15b6898","components/guest/ShowcaseCard.jsx":"3ed43574c80a","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"ee94201468f4","components/master/FilterChip.jsx":"908eb54e1fd6","components/master/MasterButton.jsx":"d451b95219c4","components/master/MasterCard.jsx":"42ee828a3369","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"936f7e156b21","components/master/MasterSortPill.jsx":"3e49247805ec","components/master/MasterStatsRow.jsx":"7b2d3cca3f8c","components/master/MasterTag.jsx":"4302936b03fb","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"21d08e47c68d","components/master/StatusPill.jsx":"0c904524b5ce","ui_kits/aroma-guest/GuestApp.jsx":"ce9153d8081d","ui_kits/aroma-guest/GuestScreens.jsx":"12d4d7db931a","ui_kits/aroma-guest/mock-data.js":"0299600a2abd","ui_kits/master/MasterApp.jsx":"88327fe27578","ui_kits/master/MasterScreens.jsx":"85682e225ad2","ui_kits/master/mock-data.js":"5ddb0b6756d1"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"3c28e8a1a0a7","components/guest/AromaCTA.jsx":"74fa9fb65a2d","components/guest/AromaChip.jsx":"f5cacf379c55","components/guest/CompositionStack.jsx":"014fbbecfbe9","components/guest/GuestCard.jsx":"bc7a355b7168","components/guest/GuestTab.jsx":"324ea1ace990","components/guest/MixRow.jsx":"9076eab731a8","components/guest/OnboardingProgress.jsx":"19b5b3545830","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"7a98b5018446","components/guest/SegmentNav.jsx":"66a42206d513","components/guest/ShowcaseCard.jsx":"1ecc7593de3d","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"62c565135c7f","components/master/FilterChip.jsx":"1c8aea0a3a37","components/master/MasterButton.jsx":"68fc0867cbb9","components/master/MasterCard.jsx":"e86c412054ea","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"c795b42dc299","components/master/MasterSortPill.jsx":"e3cd2defb423","components/master/MasterStatsRow.jsx":"fb6ca7ea16d6","components/master/MasterTag.jsx":"ce360a2c206a","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"40d20e0177fa","components/master/StatusPill.jsx":"4965e9b5d117","ui_kits/aroma-guest/GuestApp.jsx":"b88c06efbcdb","ui_kits/aroma-guest/GuestScreens.jsx":"dfd436d6ddaf","ui_kits/aroma-guest/mock-data.js":"137a193badbc","ui_kits/master/MasterApp.jsx":"bc84ff3c8365","ui_kits/master/MasterScreens.jsx":"030daa61aecc","ui_kits/master/mock-data.js":"7bbed34b2303"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -15,7 +15,7 @@ function AccessCodeInput({
   value,
   onChange,
   label = 'Код мастера',
-  hint = 'Спросите у мастера зала — действует до 06:00.',
+  hint = 'Код скажет мастер зала. Он действует до 06:00.',
   maxLength = 4,
   id = 'guest-access-code'
 }) {
@@ -26,9 +26,10 @@ function AccessCodeInput({
     }
   }, /*#__PURE__*/React.createElement("label", {
     htmlFor: id,
-    className: "aroma-caps",
     style: {
-      textAlign: 'left'
+      textAlign: 'left',
+      fontSize: 13,
+      color: 'var(--text-secondary)'
     }
   }, label), /*#__PURE__*/React.createElement("input", {
     id: id,
@@ -71,7 +72,7 @@ Object.assign(__ds_scope, { AccessCodeInput });
 
 // components/guest/AromaCTA.jsx
 try { (() => {
-// Guest primary action — solid oxblood CTA, full width, uppercase tracking, optional ember pulse.
+// Guest primary action — solid bordeaux CTA, full width, uppercase tracking, optional ember pulse.
 function AromaCTA({
   children,
   onClick,
@@ -153,7 +154,7 @@ function AromaChip({
       border: '1px solid ' + (active ? 'var(--guest-chip-border-on)' : 'var(--border-subtle)'),
       background: active ? 'var(--guest-chip-bg-on)' : 'var(--guest-chip-bg)',
       color: active ? 'var(--guest-chip-ink-on)' : 'var(--text-secondary)',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-guest-chip)',
       padding: isLg ? '10px 14px' : '7px 12px',
       fontFamily: 'var(--font-body)',
       fontSize: isLg ? 13 : 12,
@@ -243,10 +244,9 @@ function CompositionStack({
       background: PALETTE[i % PALETTE.length]
     }
   }), /*#__PURE__*/React.createElement("span", {
-    className: "aroma-caps",
     style: {
-      fontSize: 10,
-      letterSpacing: '0.18em',
+      fontSize: 12,
+      color: 'var(--text-muted)',
       whiteSpace: 'nowrap'
     }
   }, c.manufacturer), /*#__PURE__*/React.createElement("span", {
@@ -292,10 +292,9 @@ function GuestCard({
   }, title ? /*#__PURE__*/React.createElement("p", {
     style: {
       margin: 0,
-      fontSize: 12,
-      letterSpacing: '0.1em',
-      textTransform: 'uppercase',
-      color: 'var(--text-secondary)'
+      fontSize: 14,
+      fontWeight: 600,
+      color: 'var(--text-primary)'
     }
   }, title) : null, children);
 }
@@ -304,7 +303,8 @@ Object.assign(__ds_scope, { GuestCard });
 
 // components/guest/GuestTab.jsx
 try { (() => {
-// Pill tab used in the guest topbar nav rows (.tab / .tab.active upstream).
+// Tab used in the guest topbar nav rows (.tab / .tab.active upstream). Active is quiet:
+// graphite fill, cream ink and a 2px bordeaux mark — solid accent belongs to the CTA only.
 function GuestTab({
   children,
   active = false,
@@ -315,17 +315,16 @@ function GuestTab({
     type: "button",
     onClick: onClick,
     style: {
-      border: '1px solid ' + (active ? 'rgba(142, 47, 60,0.4)' : 'var(--border-subtle)'),
-      borderRadius: 'var(--r-pill)',
-      background: active ? 'linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%)' : 'var(--guest-control-bg-soft)',
-      color: active ? 'var(--primary-foreground)' : 'var(--text-secondary)',
+      border: '1px solid ' + (active ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
+      borderRadius: 'var(--r-guest-control)',
+      background: active ? 'var(--segment-active-bg)' : 'var(--guest-control-bg-soft)',
+      color: active ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
+      boxShadow: active ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
       fontFamily: 'var(--font-body)',
-      fontSize: 11,
+      fontSize: 13,
       lineHeight: 1.2,
       padding: '10px 12px',
       minHeight: 44,
-      textTransform: 'uppercase',
-      letterSpacing: '0.6px',
       fontWeight: active ? 600 : 400,
       cursor: 'pointer',
       ...style
@@ -337,7 +336,7 @@ Object.assign(__ds_scope, { GuestTab });
 
 // components/guest/OnboardingProgress.jsx
 try { (() => {
-// Back arrow + oxblood progress bar + "1/2" counter, pinned in the guest topbar.
+// Back arrow + bordeaux progress bar + "1 из 2" counter, pinned in the guest topbar.
 function OnboardingProgress({
   step = 1,
   total = 2,
@@ -386,17 +385,16 @@ function OnboardingProgress({
       height: '100%',
       borderRadius: 'inherit',
       width: percent + '%',
-      background: 'linear-gradient(90deg, var(--accent-deep) 0%, var(--accent) 100%)',
+      background: 'var(--accent)',
       transition: 'width var(--dur-slow) var(--ease-out)'
     }
   })), /*#__PURE__*/React.createElement("span", {
-    className: "aroma-caps",
     style: {
-      fontSize: 10.5,
-      letterSpacing: '0.18em',
-      color: 'var(--text-secondary)'
+      fontSize: 12,
+      color: 'var(--text-secondary)',
+      fontVariantNumeric: 'tabular-nums'
     }
-  }, step + '/' + total));
+  }, step + ' из ' + total));
 }
 Object.assign(__ds_scope, { OnboardingProgress });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/guest/OnboardingProgress.jsx", error: String((e && e.message) || e) }); }
@@ -560,7 +558,7 @@ function RatingPill({
       background: 'var(--rating-bg)',
       border: '1px solid var(--rating-border)',
       color: 'var(--rating-ink)',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-guest-badge)',
       padding: '3px 9px',
       fontFamily: 'var(--font-body)',
       fontSize: 11,
@@ -582,14 +580,15 @@ function RatingPill({
       color: 'var(--text-muted)',
       fontSize: 10
     }
-  }, "\xB7 ", count) : null);
+  }, "(", count, ")") : null);
 }
 Object.assign(__ds_scope, { RatingPill });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/guest/RatingPill.jsx", error: String((e && e.message) || e) }); }
 
 // components/guest/SegmentNav.jsx
 try { (() => {
-// Equal-width segmented control (guest journey / app tabs). Active segment is oxblood.
+// Equal-width segmented control (guest journey / app tabs). Active segment is quiet:
+// graphite, cream ink, 2px bordeaux mark.
 function SegmentNav({
   items,
   value,
@@ -614,15 +613,14 @@ function SegmentNav({
       onClick: () => onChange && onChange(it.id),
       style: {
         border: '1px solid ' + (isActive ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-guest-control)',
         padding: '10px 8px',
         minHeight: 40,
         background: isActive ? 'var(--segment-active-bg)' : 'var(--segment-idle-bg)',
         color: isActive ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
+        boxShadow: isActive ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
         fontFamily: 'var(--font-body)',
-        fontSize: 11,
-        letterSpacing: '0.10em',
-        textTransform: 'uppercase',
+        fontSize: 13,
         fontWeight: isActive ? 600 : 500,
         cursor: 'pointer'
       }
@@ -682,7 +680,7 @@ Object.assign(__ds_scope, { SignatureBar });
 
 // components/guest/MixRow.jsx
 try { (() => {
-// Mix list row: optional glyph, name + signature + flavour line, rating on the right.
+// Mix list row: optional glyph, name + flavour line, rating on the right.
 
 function MixRow({
   name,
@@ -691,7 +689,6 @@ function MixRow({
   rating,
   glyphSize = 44,
   showGlyph = true,
-  showSignature = false,
   onClick,
   style
 }) {
@@ -729,10 +726,7 @@ function MixRow({
       lineHeight: 1.2,
       color: 'var(--text-primary)'
     }
-  }, name), showSignature ? /*#__PURE__*/React.createElement(__ds_scope.SignatureBar, {
-    profiles: profiles,
-    height: 3
-  }) : null, flavors.length ? /*#__PURE__*/React.createElement("span", {
+  }, name), flavors.length ? /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
       color: 'var(--text-secondary)',
@@ -740,7 +734,7 @@ function MixRow({
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap'
     }
-  }, flavors.slice(0, 3).join(' · ')) : null), rating != null ? /*#__PURE__*/React.createElement(__ds_scope.RatingPill, {
+  }, flavors.slice(0, 3).join(', ')) : null), rating != null ? /*#__PURE__*/React.createElement(__ds_scope.RatingPill, {
     rating: rating
   }) : null);
 }
@@ -842,18 +836,15 @@ Object.assign(__ds_scope, { ShowcaseCard });
 
 // components/master/EmptyState.jsx
 try { (() => {
-// Dashed empty placeholder (.empty) — for zero-result tables and unfilled panels.
+// Empty state (.empty) — plain muted text in the flow, for zero-result tables and unfilled panels.
 function EmptyState({
   children,
   style
 }) {
   return /*#__PURE__*/React.createElement("p", {
     style: {
-      border: '1px dashed var(--border-default)',
-      borderRadius: 'var(--r-md)',
-      padding: 20,
+      padding: '12px 0',
       margin: 0,
-      textAlign: 'center',
       color: 'var(--text-muted)',
       fontSize: 'var(--fs-sm)',
       ...style
@@ -883,11 +874,11 @@ function FilterChip({
       gap: 6,
       height: 26,
       padding: '0 10px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-sm)',
       fontFamily: 'var(--font-sans)',
       fontSize: 'var(--fs-sm)',
       background: active ? 'var(--accent-soft)' : 'var(--bg-raised)',
-      color: active ? 'var(--accent)' : 'var(--text-secondary)',
+      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
       border: '1px solid ' + (active ? 'var(--accent-border)' : 'var(--border-subtle)'),
       cursor: 'pointer',
       transition: 'var(--transition-state)',
@@ -1001,10 +992,9 @@ Object.assign(__ds_scope, { MasterButton });
 
 // components/master/MasterCard.jsx
 try { (() => {
-// Ops surface panel: raised gradient, hairline border, optional eyebrow + heading.
+// Ops surface panel: raised gradient, hairline border, optional heading.
 function MasterCard({
   children,
-  eyebrow,
   heading,
   actions,
   style
@@ -1022,39 +1012,24 @@ function MasterCard({
       boxShadow: 'var(--shadow-md)',
       ...style
     }
-  }, eyebrow || heading || actions ? /*#__PURE__*/React.createElement("div", {
+  }, heading || actions ? /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: 12
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gap: 4,
-      minWidth: 0
-    }
-  }, eyebrow ? /*#__PURE__*/React.createElement("p", {
+  }, heading ? /*#__PURE__*/React.createElement("h3", {
     style: {
       margin: 0,
-      fontFamily: 'var(--font-meta)',
-      fontSize: 'var(--fs-xs)',
-      fontWeight: 500,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)'
-    }
-  }, eyebrow) : null, heading ? /*#__PURE__*/React.createElement("h3", {
-    style: {
-      margin: 0,
+      minWidth: 0,
       fontFamily: 'var(--font-serif)',
       fontWeight: 500,
       fontSize: 'var(--fs-xl)',
       lineHeight: 1.15,
       color: 'var(--text-primary)'
     }
-  }, heading) : null), actions ? /*#__PURE__*/React.createElement("div", {
+  }, heading) : /*#__PURE__*/React.createElement("span", null), actions ? /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'inline-flex',
       gap: 8,
@@ -1247,9 +1222,8 @@ Object.assign(__ds_scope, { MasterList });
 
 // components/master/MasterPageHeader.jsx
 try { (() => {
-// Module header: mono eyebrow, big serif h1, lead, right-aligned actions / meta.
+// Module header: big serif h1, optional lead, right-aligned actions / meta. No eyebrow above the title.
 function MasterPageHeader({
-  eyebrow,
   title,
   subtitle,
   actions,
@@ -1273,17 +1247,7 @@ function MasterPageHeader({
       flexDirection: 'column',
       gap: 6
     }
-  }, eyebrow ? /*#__PURE__*/React.createElement("p", {
-    style: {
-      margin: 0,
-      fontFamily: 'var(--font-meta)',
-      fontSize: 'var(--fs-xs)',
-      fontWeight: 500,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)'
-    }
-  }, eyebrow) : null, /*#__PURE__*/React.createElement("h1", {
+  }, /*#__PURE__*/React.createElement("h1", {
     style: {
       margin: 0,
       fontFamily: 'var(--font-serif)',
@@ -1314,7 +1278,6 @@ function MasterPageHeader({
       fontFamily: 'var(--font-meta)',
       fontSize: 12,
       color: 'var(--text-muted)',
-      letterSpacing: '0.06em',
       fontVariantNumeric: 'tabular-nums'
     }
   }, meta) : null, actions ? /*#__PURE__*/React.createElement("div", {
@@ -1359,7 +1322,7 @@ function MasterSortPill({
       gap: 6,
       height: 28,
       padding: '0 10px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-md)',
       background: 'var(--bg-raised)',
       border: '1px solid var(--border-subtle)',
       color: 'var(--text-secondary)',
@@ -1405,7 +1368,7 @@ function MasterSortPill({
         padding: '6px 8px',
         borderRadius: 'var(--r-xs)',
         fontSize: 'var(--fs-md)',
-        color: selected ? 'var(--accent)' : 'var(--text-secondary)',
+        color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
         background: selected ? 'var(--accent-soft)' : 'transparent',
         cursor: 'pointer'
       }
@@ -1452,8 +1415,6 @@ function MasterStatsRow({
       fontFamily: 'var(--font-meta)',
       fontSize: 'var(--fs-xs)',
       fontWeight: 500,
-      letterSpacing: '0.1em',
-      textTransform: 'uppercase',
       color: 'var(--text-muted)'
     }
   }, tile.label), /*#__PURE__*/React.createElement("div", {
@@ -1660,7 +1621,12 @@ function MasterTopBar({
       letterSpacing: '0.02em',
       color: 'var(--text-primary)'
     }
-  }, "\u0410\u0442\u0435\u043B\u044C\u0435 \xB7 \u041C\u0430\u0441\u0442\u0435\u0440")), /*#__PURE__*/React.createElement("nav", {
+  }, "\u0410\u0442\u0435\u043B\u044C\u0435 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 400,
+      color: 'var(--text-muted)'
+    }
+  }, "\u041C\u0430\u0441\u0442\u0435\u0440"))), /*#__PURE__*/React.createElement("nav", {
     role: "tablist",
     style: {
       display: 'flex',
@@ -1717,7 +1683,7 @@ function MasterTopBar({
       alignItems: 'center',
       gap: 6,
       padding: '4px 10px 4px 8px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-md)',
       fontSize: 'var(--fs-sm)',
       color: 'var(--text-secondary)',
       background: 'var(--bg-raised)',
@@ -1747,7 +1713,7 @@ function MasterTopBar({
       alignItems: 'center',
       gap: 8,
       padding: '4px 10px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-sm)',
       border: '1px solid var(--border-subtle)',
       background: 'var(--bg-raised)',
       lineHeight: 1.15
@@ -1760,9 +1726,7 @@ function MasterTopBar({
     }
   }, userName), /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: 10,
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
+      fontSize: 11,
       color: 'var(--text-faint)'
     }
   }, userRole)), /*#__PURE__*/React.createElement("button", {
@@ -1803,11 +1767,6 @@ function StatusPill({
     warning: 'var(--warning)',
     danger: 'var(--danger)'
   }[tone] || 'var(--success)';
-  const dotSoft = {
-    success: 'var(--success-soft)',
-    warning: 'var(--warning-soft)',
-    danger: 'var(--danger-soft)'
-  }[tone] || 'var(--success-soft)';
   const Tag = onClick ? 'button' : 'span';
   return /*#__PURE__*/React.createElement(Tag, {
     type: onClick ? 'button' : undefined,
@@ -1817,7 +1776,7 @@ function StatusPill({
       alignItems: 'center',
       gap: 6,
       padding: '4px 10px 4px 8px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-sm)',
       fontFamily: 'var(--font-sans)',
       fontSize: 'var(--fs-sm)',
       color: 'var(--text-secondary)',
@@ -1832,8 +1791,7 @@ function StatusPill({
       width: 6,
       height: 6,
       borderRadius: 'var(--r-pill)',
-      background: dotColor,
-      boxShadow: '0 0 0 3px ' + dotSoft
+      background: dotColor
     }
   }) : null, /*#__PURE__*/React.createElement("span", null, children), kbd ? /*#__PURE__*/React.createElement("span", {
     style: {
@@ -1859,11 +1817,11 @@ Object.assign(__ds_scope, { StatusPill });
 
 // ui_kits/aroma-guest/GuestApp.jsx
 try { (() => {
-// Guest flow: access → intro → onboarding → (подбор / витрина / каталог / рейл) → карточка → подтверждение.
+// Guest flow: access → intro → onboarding → (подбор / витрина / рилсы / каталог / рейл / миксер / кабинет) → карточка → подтверждение.
 const {
-  SegmentNav,
   GuestTab,
-  OnboardingProgress
+  OnboardingProgress,
+  MixRow
 } = window.DesignSystem_1aef33;
 const {
   AccessScreen,
@@ -1872,12 +1830,105 @@ const {
   RecommendationsScreen,
   ShowcaseScreen,
   CatalogScreen,
+  CatalogFiltersSheet,
   RailScreen,
   MixSheet,
+  ReelStrip,
+  ReelsScreen,
   ConfirmationScreen,
-  GuestSelectedBar
+  Icon
 } = window;
 const MOCK = window.AROMA_MOCK;
+
+// Нижняя панель (#168): только значки, название — в aria-label, активный пункт кремовый с чертой акцента.
+// «Рилсы» (#153) — третьим, ближе к центру, как Reels в Instagram.
+const NAV_ITEMS = [{
+  id: 'recommendations',
+  label: 'Подбор',
+  icon: 'Sparkles'
+}, {
+  id: 'showcase',
+  label: 'Витрина',
+  icon: 'GalleryHorizontalEnd'
+}, {
+  id: 'reels',
+  label: 'Рилсы',
+  icon: 'Clapperboard'
+}, {
+  id: 'catalog',
+  label: 'Каталог',
+  icon: 'Search'
+}, {
+  id: 'mixer',
+  label: 'Миксер',
+  icon: 'Blend'
+}, {
+  id: 'cabinet',
+  label: 'Кабинет',
+  icon: 'CircleUserRound'
+}];
+function BottomNav({
+  value,
+  onChange
+}) {
+  return /*#__PURE__*/React.createElement("nav", {
+    className: "bottom-nav",
+    "aria-label": "\u0413\u043E\u0441\u0442\u0435\u0432\u0430\u044F \u043D\u0430\u0432\u0438\u0433\u0430\u0446\u0438\u044F"
+  }, NAV_ITEMS.map(item => /*#__PURE__*/React.createElement("button", {
+    key: item.id,
+    type: "button",
+    className: "bottom-nav-item",
+    "aria-label": item.label,
+    "aria-current": value === item.id ? 'page' : undefined,
+    onClick: () => onChange(item.id)
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: item.icon,
+    stroke: value === item.id ? 2.1 : 1.8
+  }))));
+}
+
+// Экрана «Намиксуй» в ките нет — заглушка показывает только полноэкранный режим без панели и возврат.
+function MixerStub({
+  onBack
+}) {
+  return /*#__PURE__*/React.createElement("section", {
+    className: "kit-mixer"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "kit-mixer-top"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-rail-back",
+    onClick: onBack,
+    "aria-label": "\u041D\u0430\u0437\u0430\u0434"
+  }, "\u2190"), /*#__PURE__*/React.createElement("h1", {
+    className: "kit-mixer-title"
+  }, "\u041D\u0430\u043C\u0438\u043A\u0441\u0443\u0439")), /*#__PURE__*/React.createElement("p", {
+    className: "guest-status"
+  }, "\u0421\u0431\u043E\u0440\u043A\u0443 \u043C\u0438\u043A\u0441\u0430 \u0437\u0430 \u0442\u0440\u0438 \u0445\u043E\u0434\u0430 \u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0438: \u044D\u043A\u0440\u0430\u043D MixerScreen \u0432 apps/aroma-web."));
+}
+
+// Кабинета в ките нет: вход через Telegram, история и «Для вас» — в design/design_handoff_guest_cabinet/.
+// Заглушка показывает только избранное, которое гость отметил сердечком в карточке микса.
+function CabinetStub({
+  favorites,
+  onOpen
+}) {
+  return /*#__PURE__*/React.createElement("section", {
+    className: "kit-cabinet"
+  }, /*#__PURE__*/React.createElement("h1", {
+    className: "kit-cabinet-title"
+  }, "\u041A\u0430\u0431\u0438\u043D\u0435\u0442"), /*#__PURE__*/React.createElement("h2", {
+    className: "aroma-section-title"
+  }, "\u0418\u0437\u0431\u0440\u0430\u043D\u043D\u043E\u0435"), favorites.length ? favorites.map(mix => /*#__PURE__*/React.createElement(MixRow, {
+    key: mix.id,
+    name: mix.name,
+    profiles: mix.flavorProfiles,
+    flavors: mix.flavors,
+    onClick: () => onOpen(mix, 'catalog')
+  })) : /*#__PURE__*/React.createElement("p", {
+    className: "guest-status"
+  }, "\u0417\u0434\u0435\u0441\u044C \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043C\u0438\u043A\u0441\u044B, \u043E\u0442\u043C\u0435\u0447\u0435\u043D\u043D\u044B\u0435 \u0441\u0435\u0440\u0434\u0435\u0447\u043A\u043E\u043C."));
+}
 function GuestApp() {
   const [view, setView] = React.useState('access');
   const [code, setCode] = React.useState('');
@@ -1888,15 +1939,16 @@ function GuestApp() {
   const [likedProfiles, setLikedProfiles] = React.useState([]);
   const [likedFlavors, setLikedFlavors] = React.useState([]);
   const [query, setQuery] = React.useState('');
-  const [catalogProfiles, setCatalogProfiles] = React.useState([]);
-  const [catalogFlavors, setCatalogFlavors] = React.useState([]);
-  const [sort, setSort] = React.useState('popularity');
-  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const [catalogFilters, setCatalogFilters] = React.useState([]);
+  const [catalogFiltersOpen, setCatalogFiltersOpen] = React.useState(false);
   const [rail, setRail] = React.useState(null);
   const [railFilters, setRailFilters] = React.useState([]);
   const [sheet, setSheet] = React.useState(null);
   const [rating, setRating] = React.useState(0);
   const [selected, setSelected] = React.useState(null);
+  const [mixerReturn, setMixerReturn] = React.useState('recommendations');
+  const [favoriteIds, setFavoriteIds] = React.useState([]);
+  const [reelsStart, setReelsStart] = React.useState(0);
   const toggle = setter => value => setter(cur => cur.includes(value) ? cur.filter(v => v !== value) : [...cur, value]);
   const recommendations = React.useMemo(() => {
     const scored = MOCK.mixes.map(mix => {
@@ -1909,10 +1961,21 @@ function GuestApp() {
     }).filter(x => likedProfiles.length || likedFlavors.length ? x.score > 0.4 : true).sort((a, b) => b.score - a.score);
     return scored.slice(0, 5).map(x => x.mix);
   }, [likedProfiles, likedFlavors]);
+
+  // Лента рилсов: подбор по онбордингу, затем остальные миксы каталога без повторов.
+  const reelsFeed = React.useMemo(() => [...recommendations, ...MOCK.mixes.filter(mix => !recommendations.includes(mix))], [recommendations]);
+
+  // Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и». Сортировки нет (#181): по алфавиту.
   const catalogResults = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MOCK.mixes.filter(m => !q || (m.name + ' ' + m.description + ' ' + m.flavors.join(' ') + ' ' + m.components.map(c => c.name + ' ' + c.manufacturer).join(' ')).toLowerCase().includes(q)).filter(m => !catalogProfiles.length || m.flavorProfiles.some(p => catalogProfiles.includes(p))).filter(m => !catalogFlavors.length || m.flavors.some(f => catalogFlavors.includes(f))).sort((a, b) => sort === 'rating' ? b.avgRating - a.avgRating : sort === 'newest' ? b.id.localeCompare(a.id) : b.popularity - a.popularity);
-  }, [query, catalogProfiles, catalogFlavors, sort]);
+    const of = kind => catalogFilters.filter(t => t.kind === kind).map(t => t.value);
+    const profiles = of('profile');
+    const flavors = of('flavor');
+    return MOCK.mixes.filter(m => !q || [m.name, m.description, ...m.flavors, ...m.components.flatMap(c => [c.name, c.manufacturer])].join(' ').toLowerCase().includes(q)).filter(m => !profiles.length || m.flavorProfiles.some(p => profiles.includes(p))).filter(m => !flavors.length || m.flavors.some(f => flavors.includes(f))).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  }, [query, catalogFilters]);
+  const sameFilter = (a, b) => a.kind === b.kind && a.value === b.value;
+  const removeCatalogFilter = tag => setCatalogFilters(cur => cur.filter(t => !sameFilter(t, tag)));
+  const toggleCatalogFilter = tag => setCatalogFilters(cur => cur.some(t => sameFilter(t, tag)) ? cur.filter(t => !sameFilter(t, tag)) : [...cur, tag]);
   const openMix = (mix, source) => {
     setSheet({
       mix,
@@ -1921,6 +1984,7 @@ function GuestApp() {
     setRating(0);
   };
   const chooseMix = (mix, source) => {
+    if (source === 'reels') setReelsStart(reelsFeed.indexOf(mix));
     setSelected({
       mix,
       source
@@ -1928,22 +1992,32 @@ function GuestApp() {
     setSheet(null);
     setView('confirmation');
   };
+  const openReels = index => {
+    setReelsStart(index);
+    setView('reels');
+  };
   const submitAccess = () => {
     if (code.length < 4 || !ageOk) {
-      setAccessError('Введите код доступа и подтвердите 18+.');
+      setAccessError('Введите код мастера и подтвердите, что вам есть 18.');
       return;
     }
     setAccessError('');
     setView('intro');
   };
-  const appTab = ['recommendations', 'showcase', 'catalog'].includes(view) ? view : null;
+  const toggleFavorite = mix => setFavoriteIds(cur => cur.includes(mix.id) ? cur.filter(id => id !== mix.id) : [...cur, mix.id]);
+  const navView = ['recommendations', 'showcase', 'catalog', 'rail', 'cabinet'].includes(view) ? view : null;
+  const goNav = tab => {
+    if (tab === 'mixer') setMixerReturn(view);
+    // Рилсы в панели всегда открывают ленту с начала.
+    if (tab === 'reels') {
+      openReels(0);
+      return;
+    }
+    setView(tab);
+  };
   return /*#__PURE__*/React.createElement("div", {
     className: "app-bg"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "halo-top"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "halo-bottom"
-  }), /*#__PURE__*/React.createElement("div", {
     className: "phone-shell"
   }, view === 'access' ? /*#__PURE__*/React.createElement(AccessScreen, {
     code: code,
@@ -1954,8 +2028,24 @@ function GuestApp() {
     onSubmit: submitAccess
   }) : view === 'confirmation' ? /*#__PURE__*/React.createElement(ConfirmationScreen, {
     mix: selected.mix,
-    onDone: () => setView('recommendations')
-  }) : /*#__PURE__*/React.createElement(React.Fragment, null, view !== 'rail' ? /*#__PURE__*/React.createElement("header", {
+    onDone: () => setView(selected.source === 'reels' ? 'reels' : 'recommendations')
+  }) : view === 'mixer' ? /*#__PURE__*/React.createElement(MixerStub, {
+    onBack: () => setView(mixerReturn)
+  }) : view === 'reels' ?
+  /*#__PURE__*/
+  // Шапки нет, лента на всю высоту над панелью; «Готово» после «Покурить» возвращает на тот же рилс.
+  React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(ReelsScreen, {
+    key: reelsStart,
+    mixes: reelsFeed,
+    start: reelsStart,
+    favoriteIds: favoriteIds,
+    onFavorite: toggleFavorite,
+    onOpen: openMix,
+    onChoose: chooseMix
+  }), /*#__PURE__*/React.createElement(BottomNav, {
+    value: "reels",
+    onChange: goNav
+  })) : /*#__PURE__*/React.createElement(React.Fragment, null, view !== 'rail' ? /*#__PURE__*/React.createElement("header", {
     className: "topbar"
   }, /*#__PURE__*/React.createElement("div", {
     className: "topbar-main-row"
@@ -1968,22 +2058,21 @@ function GuestApp() {
     src: "../../assets/logo-mark-oxblood.svg",
     alt: "",
     "aria-hidden": true
-  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("p", {
+  }), /*#__PURE__*/React.createElement("span", {
     className: "brand"
-  }, "\u0410\u0440\u043E\u043C\u0430 \u0410\u0442\u0435\u043B\u044C\u0435"), /*#__PURE__*/React.createElement("p", {
-    className: "tagline"
-  }, "\u043F\u043E\u0434\u0431\u043E\u0440 \u043C\u0438\u043A\u0441\u043E\u0432"))), /*#__PURE__*/React.createElement("div", {
-    className: "topbar-right"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, "\u0410\u0440\u043E\u043C\u0430 \u0410\u0442\u0435\u043B\u044C\u0435")), selected ? /*#__PURE__*/React.createElement("button", {
     type: "button",
-    className: "header-auth-btn",
-    onClick: () => {
-      setView('access');
-      setCode('');
-      setAgeOk(false);
-      setSelected(null);
-    }
-  }, "\u041D\u043E\u0432\u044B\u0439 \u043A\u043E\u0434"))), view === 'intro' ? /*#__PURE__*/React.createElement("nav", {
+    className: "topbar-icon-btn topbar-master-card",
+    "aria-label": 'Карточка для мастера: ' + selected.mix.name,
+    title: "\u041A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u0434\u043B\u044F \u043C\u0430\u0441\u0442\u0435\u0440\u0430",
+    onClick: () => openMix(selected.mix, selected.source)
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "ClipboardList",
+    size: 20
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "topbar-master-card-dot",
+    "aria-hidden": true
+  })) : null), view === 'intro' ? /*#__PURE__*/React.createElement("nav", {
     className: "guest-stage-nav",
     "aria-label": "\u041C\u0430\u0440\u0448\u0440\u0443\u0442 \u0437\u043D\u0430\u043A\u043E\u043C\u0441\u0442\u0432\u0430"
   }, /*#__PURE__*/React.createElement(GuestTab, {
@@ -1994,24 +2083,7 @@ function GuestApp() {
     step: step,
     total: 2,
     onBack: () => step === 2 ? setStep(1) : setView('intro')
-  }) : null, appTab ? /*#__PURE__*/React.createElement(SegmentNav, {
-    value: appTab,
-    onChange: setView,
-    items: [{
-      id: 'recommendations',
-      label: 'Подбор'
-    }, {
-      id: 'showcase',
-      label: 'Витрина'
-    }, {
-      id: 'catalog',
-      label: 'Каталог'
-    }]
-  }) : null) : null, selected && view !== 'intro' && view !== 'rail' ? /*#__PURE__*/React.createElement(GuestSelectedBar, {
-    mix: selected.mix,
-    source: selected.source,
-    onOpen: () => openMix(selected.mix, selected.source)
-  }) : null, /*#__PURE__*/React.createElement("main", {
+  }) : null) : null, /*#__PURE__*/React.createElement("main", {
     className: view === 'intro' ? 'content content-intro' : 'content'
   }, view === 'intro' ? /*#__PURE__*/React.createElement(IntroScreen, {
     index: introIndex,
@@ -2028,11 +2100,12 @@ function GuestApp() {
         setStep(2);
         return;
       }
-      setCatalogProfiles(likedProfiles);
-      setCatalogFlavors(likedFlavors);
       setView('recommendations');
     },
     onSkip: () => setView('catalog')
+  }) : null, view === 'recommendations' ? /*#__PURE__*/React.createElement(ReelStrip, {
+    mixes: reelsFeed,
+    onOpen: openReels
   }) : null, view === 'recommendations' ? /*#__PURE__*/React.createElement(RecommendationsScreen, {
     mixes: recommendations,
     onOpen: openMix,
@@ -2041,45 +2114,54 @@ function GuestApp() {
       setStep(1);
       setView('onboarding');
     },
-    onOpenCatalog: () => setView('catalog')
+    onOpenCatalog: () => setView('catalog'),
+    onOpenMixer: () => goNav('mixer')
   }) : null, view === 'showcase' ? /*#__PURE__*/React.createElement(ShowcaseScreen, {
     onOpen: openMix,
     onOpenRail: r => {
       setRail(r);
       setRailFilters([]);
       setView('rail');
-    }
+    },
+    onOpenMixer: () => goNav('mixer')
   }) : null, view === 'catalog' ? /*#__PURE__*/React.createElement(CatalogScreen, {
     query: query,
     setQuery: setQuery,
-    profiles: catalogProfiles,
-    toggleProfile: toggle(setCatalogProfiles),
-    flavors: catalogFlavors,
-    toggleFlavor: toggle(setCatalogFlavors),
-    sort: sort,
-    setSort: setSort,
-    popoverOpen: popoverOpen,
-    setPopoverOpen: setPopoverOpen,
+    filters: catalogFilters,
+    onRemoveFilter: removeCatalogFilter,
+    onOpenFilters: () => setCatalogFiltersOpen(true),
     results: catalogResults,
     onOpen: openMix,
     onReset: () => {
       setQuery('');
-      setCatalogProfiles([]);
-      setCatalogFlavors([]);
-      setSort('popularity');
+      setCatalogFilters([]);
     }
+  }) : null, view === 'cabinet' ? /*#__PURE__*/React.createElement(CabinetStub, {
+    favorites: MOCK.mixes.filter(mix => favoriteIds.includes(mix.id)),
+    onOpen: openMix
   }) : null, view === 'rail' && rail ? /*#__PURE__*/React.createElement(RailScreen, {
     rail: rail,
     filters: railFilters,
     toggleFilter: p => p === null ? setRailFilters([]) : toggle(setRailFilters)(p),
     onBack: () => setView('showcase'),
     onOpen: openMix
-  }) : null))), /*#__PURE__*/React.createElement(MixSheet, {
+  }) : null), navView ? /*#__PURE__*/React.createElement(BottomNav, {
+    value: navView === 'rail' ? 'showcase' : navView,
+    onChange: goNav
+  }) : null)), catalogFiltersOpen ? /*#__PURE__*/React.createElement(CatalogFiltersSheet, {
+    filters: catalogFilters,
+    onToggle: toggleCatalogFilter,
+    onReset: () => setCatalogFilters([]),
+    resultCount: catalogResults.length,
+    onClose: () => setCatalogFiltersOpen(false)
+  }) : null, /*#__PURE__*/React.createElement(MixSheet, {
     state: sheet,
     rating: rating,
     onRate: setRating,
     onClose: () => setSheet(null),
-    onChoose: chooseMix
+    onChoose: chooseMix,
+    favorite: Boolean(sheet && favoriteIds.includes(sheet.mix.id)),
+    onFavorite: toggleFavorite
   }));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(GuestApp, null));
@@ -2106,16 +2188,19 @@ const {
 } = window.DesignSystem_1aef33;
 const M = window.AROMA_MOCK;
 const label = p => M.profileLabels[p] || p;
+// Без оценок гостей «★» нет: avgRating такого микса — базовый из Мастера, не мнение гостей (#185).
+const guestRating = mix => mix.ratingsCount ? mix.avgRating : null;
 const railKind = {
   statistical: 'Выбор гостей',
   prepared: 'Редакция',
   curated: 'Мастера'
 };
-const sourceLabel = {
-  recommendations: 'Подбор для вас',
-  showcase: 'Из витрины',
-  catalog: 'Из каталога',
-  rail: 'Из подборки'
+// На Витрине тип полки виден значком, словами — в aria-label заголовка (railKindIcon в apps/aroma-web).
+// Полка «Оценки гостей» в приложении получает Star; в мок-данных кита её нет.
+const railKindIcon = {
+  statistical: 'Users',
+  prepared: 'Feather',
+  curated: 'Flame'
 };
 const plural = n => {
   const a = n % 10,
@@ -2124,25 +2209,50 @@ const plural = n => {
   if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'микса';
   return 'миксов';
 };
+
+// Иконка Lucide из UMD-сборки как React-элемент (в приложении — lucide-react).
+function Icon({
+  name,
+  size = 24,
+  stroke = 1.8,
+  fill = 'none'
+}) {
+  const node = window.lucide.icons[name];
+  const children = node[0] === 'svg' ? node[2] : node;
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: fill,
+    stroke: "currentColor",
+    strokeWidth: stroke,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true
+  }, children.map(([tag, attrs], i) => React.createElement(tag, {
+    key: i,
+    ...attrs
+  })));
+}
+
+// markSrc — путь к знаку от страницы, которая подключает кит (мокапы в design/ лежат глубже).
 function AccessScreen({
   code,
   setCode,
   ageOk,
   setAgeOk,
   error,
-  onSubmit
+  onSubmit,
+  markSrc = '../../assets/logo-mark-oxblood.svg'
 }) {
   const ready = code.length >= 4 && ageOk;
   return /*#__PURE__*/React.createElement("section", {
     className: "aroma-access"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "aroma-access-halo",
-    "aria-hidden": true
-  }), /*#__PURE__*/React.createElement("div", {
     className: "aroma-access-body"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("img", {
     className: "aroma-access-mark",
-    src: "../../assets/logo-mark-oxblood.svg",
+    src: markSrc,
     width: "64",
     height: "64",
     alt: "",
@@ -2151,7 +2261,7 @@ function AccessScreen({
     className: "aroma-access-brand"
   }, "\u0410\u0440\u043E\u043C\u0430", /*#__PURE__*/React.createElement("br", null), "\u0410\u0442\u0435\u043B\u044C\u0435"), /*#__PURE__*/React.createElement("p", {
     className: "aroma-access-tagline"
-  }, "\u043F\u043E\u0434\u0431\u043E\u0440 \u043A\u0430\u043B\u044C\u044F\u043D\u043D\u044B\u0445 \u043C\u0438\u043A\u0441\u043E\u0432")), /*#__PURE__*/React.createElement("form", {
+  }, "\u041F\u043E\u0434\u0431\u043E\u0440 \u043A\u0430\u043B\u044C\u044F\u043D\u043D\u044B\u0445 \u043C\u0438\u043A\u0441\u043E\u0432")), /*#__PURE__*/React.createElement("form", {
     className: "aroma-access-form",
     onSubmit: e => {
       e.preventDefault();
@@ -2159,7 +2269,8 @@ function AccessScreen({
     }
   }, /*#__PURE__*/React.createElement(AccessCodeInput, {
     value: code,
-    onChange: setCode
+    onChange: setCode,
+    hint: "\u041A\u043E\u0434 \u0441\u043A\u0430\u0436\u0435\u0442 \u043C\u0430\u0441\u0442\u0435\u0440 \u0437\u0430\u043B\u0430. \u041E\u043D \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0434\u043E \u043A\u043E\u043D\u0446\u0430 \u0441\u0443\u0442\u043E\u043A."
   }), /*#__PURE__*/React.createElement("label", {
     className: "aroma-access-age"
   }, /*#__PURE__*/React.createElement("button", {
@@ -2174,13 +2285,14 @@ function AccessScreen({
     className: "aroma-access-age-text"
   }, "\u041C\u043D\u0435 \u0435\u0441\u0442\u044C 18. \u041F\u043E\u043D\u0438\u043C\u0430\u044E, \u0447\u0442\u043E \u043A\u0443\u0440\u0435\u043D\u0438\u0435 \u0432\u0440\u0435\u0434\u0438\u0442 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044E.")), /*#__PURE__*/React.createElement(AromaCTA, {
     type: "submit",
-    pulse: ready,
     disabled: !ready
   }, "\u0412\u043E\u0439\u0442\u0438 \u0432 \u0410\u0442\u0435\u043B\u044C\u0435"), error ? /*#__PURE__*/React.createElement("p", {
     className: "guest-error"
   }, error) : null), /*#__PURE__*/React.createElement("p", {
     className: "aroma-access-footer"
-  }, "18+ \xB7 \u041A\u0443\u0440\u0435\u043D\u0438\u0435 \u0432\u0440\u0435\u0434\u0438\u0442 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044E")));
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-age-badge"
+  }, "18+"), "\u041A\u0443\u0440\u0435\u043D\u0438\u0435 \u0432\u0440\u0435\u0434\u0438\u0442 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044E")));
 }
 function IntroScreen({
   index,
@@ -2190,32 +2302,24 @@ function IntroScreen({
   const cards = M.introCards;
   const card = cards[index];
   const isLast = index === cards.length - 1;
-  const step = String(index + 1).padStart(2, '0');
   return /*#__PURE__*/React.createElement("div", {
     className: "aroma-intro"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "aroma-intro-watermark",
-    "aria-hidden": true
-  }, step), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     className: "aroma-intro-body"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, 'Шаг ' + step + ' · из ' + String(cards.length).padStart(2, '0')), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-intro-content"
   }, /*#__PURE__*/React.createElement("h1", {
     className: "aroma-intro-title"
   }, card.title), /*#__PURE__*/React.createElement("p", {
     className: "aroma-intro-text"
-  }, card.description))), /*#__PURE__*/React.createElement("div", {
+  }, card.description)), /*#__PURE__*/React.createElement("div", {
     className: "aroma-intro-dock"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "aroma-intro-pips"
+    className: "aroma-intro-pips",
+    "aria-label": 'Шаг ' + (index + 1) + ' из ' + cards.length
   }, cards.map((_, i) => /*#__PURE__*/React.createElement("span", {
     key: i,
     className: 'aroma-intro-pip' + (i === index ? ' on' : ''),
     "aria-hidden": true
   }))), /*#__PURE__*/React.createElement(AromaCTA, {
-    pulse: isLast,
     onClick: onNext
   }, isLast ? 'Перейти к подбору' : 'Дальше'), !isLast ? /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -2223,6 +2327,9 @@ function IntroScreen({
     onClick: onSkip
   }, "\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0437\u043D\u0430\u043A\u043E\u043C\u0441\u0442\u0432\u043E") : null));
 }
+
+// Как в приложении: внутри профилей и внутри вкусов — «или», между ними — «и».
+const matchingMixes = (profiles, flavors) => M.mixes.filter(m => !profiles.length || m.flavorProfiles.some(p => profiles.includes(p))).filter(m => !flavors.length || m.flavors.some(f => flavors.includes(f)));
 function OnboardingScreen({
   step,
   profiles,
@@ -2232,17 +2339,18 @@ function OnboardingScreen({
   onNext,
   onSkip
 }) {
+  // Вкус бледный, если его нет ни в одном миксе с выбранными профилями.
+  const reachable = new Set(matchingMixes(profiles, []).flatMap(m => m.flavors));
+  const count = matchingMixes(profiles, step === 2 ? flavors : []).length;
   return /*#__PURE__*/React.createElement("div", {
     className: "aroma-onboarding"
   }, /*#__PURE__*/React.createElement("div", {
     className: "aroma-onboarding-body"
-  }, step === 1 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0428\u0430\u0433 1 \xB7 \u041F\u0440\u043E\u0444\u0438\u043B\u0438"), /*#__PURE__*/React.createElement("h1", {
+  }, step === 1 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", {
     className: "aroma-onboarding-title"
   }, "\u0421 \u0447\u0435\u0433\u043E \u043D\u0430\u0447\u043D\u0451\u043C?"), /*#__PURE__*/React.createElement("p", {
     className: "aroma-onboarding-hint"
-  }, "\u041D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u0430\u0441\u0430\u043D\u0438\u0439 \u043F\u043E \u043F\u0440\u043E\u0444\u0438\u043B\u044F\u043C, \u0438 \u043C\u044B \u043F\u043E\u0439\u043C\u0451\u043C, \u0432 \u043A\u0430\u043A\u0443\u044E \u0441\u0442\u043E\u0440\u043E\u043D\u0443 \u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C."), /*#__PURE__*/React.createElement("div", {
+  }, "\u041C\u043E\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E."), /*#__PURE__*/React.createElement("div", {
     className: "aroma-profile-grid"
   }, Object.keys(M.profileLabels).map(id => /*#__PURE__*/React.createElement(ProfileCard, {
     key: id,
@@ -2250,44 +2358,23 @@ function OnboardingScreen({
     label: label(id),
     active: profiles.includes(id),
     onClick: () => toggleProfile(id)
-  })))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0428\u0430\u0433 2 \xB7 \u0412\u043A\u0443\u0441\u044B"), /*#__PURE__*/React.createElement("h1", {
+  })))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", {
     className: "aroma-onboarding-title"
   }, "\u041B\u044E\u0431\u0438\u043C\u044B\u0435 \u043D\u043E\u0442\u044B"), /*#__PURE__*/React.createElement("p", {
     className: "aroma-onboarding-hint"
-  }, "\u041E\u043F\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E \u2014 \u043D\u043E \u0442\u0430\u043A \u043F\u043E\u0434\u0431\u043E\u0440 \u0441\u0442\u0430\u043D\u0435\u0442 \u0442\u043E\u0447\u043D\u0435\u0435."), /*#__PURE__*/React.createElement("div", {
+  }, "\u041C\u043E\u0436\u043D\u043E \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C. \u0411\u043B\u0435\u0434\u043D\u044B\u0435 \u0432\u043A\u0443\u0441\u044B \u043D\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0430\u044E\u0442\u0441\u044F \u0432 \u043C\u0438\u043A\u0441\u0430\u0445 \u0441 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u043C\u0438 \u043F\u0440\u043E\u0444\u0438\u043B\u044F\u043C\u0438."), /*#__PURE__*/React.createElement("div", {
     className: "aroma-flavor-wrap"
   }, M.flavors.map(f => /*#__PURE__*/React.createElement(AromaChip, {
     key: f,
     active: flavors.includes(f),
+    disabled: !reachable.has(f) && !flavors.includes(f),
     onClick: () => toggleFlavor(f)
-  }, f))), profiles.length ? /*#__PURE__*/React.createElement("div", {
-    className: "aroma-selected"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0421\u0435\u0439\u0447\u0430\u0441 \u0432\u044B\u0431\u0440\u0430\u043D\u043E"), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-selected-row"
-  }, profiles.map(p => /*#__PURE__*/React.createElement("span", {
-    key: p,
-    className: "aroma-selected-tag"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "aroma-selected-dot",
-    style: {
-      background: 'var(--profile-' + p.replace('_', '-') + ')'
-    },
-    "aria-hidden": true
-  }), label(p))))) : null)), /*#__PURE__*/React.createElement("div", {
+  }, f))))), /*#__PURE__*/React.createElement("div", {
     className: "aroma-onboarding-dock"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "aroma-onboarding-pips",
-    "aria-hidden": true
-  }, /*#__PURE__*/React.createElement("span", {
-    className: 'aroma-onboarding-pip' + (step >= 1 ? ' on' : '')
-  }), /*#__PURE__*/React.createElement("span", {
-    className: 'aroma-onboarding-pip' + (step >= 2 ? ' on' : '')
-  })), /*#__PURE__*/React.createElement(AromaCTA, {
-    pulse: step === 2,
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "aroma-onboarding-count"
+  }, count ? count === 1 ? 'Подходит 1 микс' : 'Подходят ' + count + ' ' + plural(count) : 'Под такой набор миксов нет. Снимите один из вкусов.'), /*#__PURE__*/React.createElement(AromaCTA, {
+    disabled: !count,
     onClick: onNext
   }, step === 1 ? 'Далее' : 'Показать подбор'), /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -2295,23 +2382,51 @@ function OnboardingScreen({
     onClick: onSkip
   }, "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0442\u0430\u043B\u043E\u0433 \u0441\u0440\u0430\u0437\u0443")));
 }
+
+// Приглашение в «Намиксуй»: полосой на Витрине, строкой с пояснением в конце Подбора. Без глифа: профилей у него нет.
+function MixerInvite({
+  onOpen,
+  note
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-mixer-invite",
+    onClick: onOpen
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-mixer-invite-text"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-mixer-invite-title"
+  }, "\u0421\u043E\u0431\u0440\u0430\u0442\u044C \u0441\u0432\u043E\u0439 \u043C\u0438\u043A\u0441"), note ? /*#__PURE__*/React.createElement("span", {
+    className: "aroma-mixer-invite-note"
+  }, "\u0418\u0437 \u0442\u0430\u0431\u0430\u043A\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0435\u0441\u0442\u044C \u043D\u0430 \u043F\u043E\u043B\u043A\u0430\u0445.") : null), /*#__PURE__*/React.createElement(Icon, {
+    name: "ChevronRight",
+    size: 20
+  }));
+}
+const choices = n => {
+  const a = n % 10,
+    b = n % 100;
+  if (a === 1 && b !== 11) return 'выбор';
+  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 'выбора';
+  return 'выборов';
+};
+
+// editTastes: 'section' — ссылка в строке «Тоже подходят» (вариант A), 'topbar' — значок в шапке рисует страница (вариант B).
 function RecommendationsScreen({
   mixes,
   onOpen,
   onChoose,
   onOpenOnboarding,
-  onOpenCatalog
+  onOpenCatalog,
+  onOpenMixer,
+  editTastes = 'section'
 }) {
   if (!mixes.length) {
     return /*#__PURE__*/React.createElement("section", {
       className: "aroma-recs-empty"
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "aroma-caps"
-    }, "\u041F\u043E\u0434\u0431\u043E\u0440 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D"), /*#__PURE__*/React.createElement("h1", {
+    }, /*#__PURE__*/React.createElement("h1", {
       className: "aroma-empty-title"
-    }, "\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E"), /*#__PURE__*/React.createElement("p", {
-      className: "aroma-empty-text"
-    }, "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u043F\u0440\u043E\u0444\u0438\u043B\u0438 \u0438 \u0432\u043A\u0443\u0441\u044B \u0438\u043B\u0438 \u0441\u0440\u0430\u0437\u0443 \u043F\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u043A\u0430\u0442\u0430\u043B\u043E\u0433."), /*#__PURE__*/React.createElement("div", {
+    }, "\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E"), /*#__PURE__*/React.createElement("div", {
       className: "aroma-empty-actions"
     }, /*#__PURE__*/React.createElement(AromaCTA, {
       onClick: onOpenOnboarding
@@ -2322,16 +2437,10 @@ function RecommendationsScreen({
     }, "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0442\u0430\u043B\u043E\u0433")));
   }
   const [hero, ...rest] = mixes;
-  const halo = 'var(--profile-' + (hero.flavorProfiles[0] || 'tobacco').replace('_', '-') + ')';
   return /*#__PURE__*/React.createElement("section", {
     className: "aroma-recs"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u041B\u0443\u0447\u0448\u0435\u0435 \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0435"), /*#__PURE__*/React.createElement("article", {
-    className: "aroma-recs-hero",
-    style: {
-      background: 'radial-gradient(circle at 80% 0%, color-mix(in srgb, ' + halo + ' 33%, transparent) 0%, transparent 55%), linear-gradient(180deg, rgba(34,15,16,0.96) 0%, rgba(22,11,12,0.88) 100%)'
-    }
+  }, /*#__PURE__*/React.createElement("article", {
+    className: "aroma-recs-hero"
   }, /*#__PURE__*/React.createElement("div", {
     className: "aroma-recs-hero-head"
   }, /*#__PURE__*/React.createElement(ProfileGlyph, {
@@ -2351,78 +2460,130 @@ function RecommendationsScreen({
     showBar: false
   }), /*#__PURE__*/React.createElement("div", {
     className: "aroma-recs-hero-meta"
-  }, /*#__PURE__*/React.createElement(RatingPill, {
+  }, hero.ratingsCount ? /*#__PURE__*/React.createElement(RatingPill, {
     rating: hero.avgRating
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "aroma-caps"
-  }, hero.popularity + ' выборов')), /*#__PURE__*/React.createElement(AromaCTA, {
-    pulse: true,
+  }) : null, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-recs-hero-count"
+  }, hero.popularity + ' ' + choices(hero.popularity))), /*#__PURE__*/React.createElement(AromaCTA, {
     onClick: () => onChoose(hero, 'recommendations')
-  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C")), rest.length ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0422\u043E\u0436\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0442"), /*#__PURE__*/React.createElement("div", {
+  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C")), rest.length || editTastes === 'section' ? /*#__PURE__*/React.createElement("div", {
+    className: "aroma-section-row"
+  }, rest.length ? /*#__PURE__*/React.createElement("h2", {
+    className: "aroma-section-title"
+  }, "\u0422\u043E\u0436\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0442") : /*#__PURE__*/React.createElement("span", null), editTastes === 'section' ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-text-link",
+    onClick: onOpenOnboarding
+  }, "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u043A\u0443\u0441\u044B") : null) : null, rest.length ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "aroma-list"
   }, rest.slice(0, 4).map(mix => /*#__PURE__*/React.createElement(MixRow, {
     key: mix.id,
     name: mix.name,
     profiles: mix.flavorProfiles,
     flavors: mix.flavors,
-    rating: mix.avgRating,
+    rating: guestRating(mix),
     showGlyph: false,
-    showSignature: true,
     onClick: () => onOpen(mix, 'recommendations')
-  })))) : null);
+  })))) : null, onOpenMixer ? /*#__PURE__*/React.createElement(MixerInvite, {
+    onOpen: onOpenMixer,
+    note: true
+  }) : null);
 }
+
+// Полки по образцу Okko (#175): заголовок с шевроном открывает подборку, под ним лента постеров.
 function ShowcaseScreen({
   onOpen,
-  onOpenRail
+  onOpenRail,
+  onOpenMixer
 }) {
   return /*#__PURE__*/React.createElement("section", {
     className: "aroma-showcase"
-  }, M.rails.map(rail => /*#__PURE__*/React.createElement("section", {
+  }, onOpenMixer ? /*#__PURE__*/React.createElement("div", {
+    className: "aroma-showcase-invite"
+  }, /*#__PURE__*/React.createElement(MixerInvite, {
+    onOpen: onOpenMixer
+  })) : null, M.rails.map(rail => /*#__PURE__*/React.createElement("section", {
     key: rail.id,
     className: "aroma-showcase-rail"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "aroma-showcase-head"
   }, /*#__PURE__*/React.createElement("h2", {
-    className: "aroma-showcase-title"
+    className: "aroma-showcase-rail-head"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-showcase-rail-open",
+    onClick: () => onOpenRail(rail),
+    "aria-label": 'Открыть подборку «' + rail.name + '», ' + railKind[rail.type].toLowerCase()
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-showcase-rail-icon"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: railKindIcon[rail.type],
+    size: 16
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "aroma-showcase-rail-title"
   }, rail.name), /*#__PURE__*/React.createElement("span", {
-    className: "aroma-caps aroma-showcase-kind"
-  }, railKind[rail.type])), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-scroller"
+    className: "aroma-showcase-rail-chevron"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "ChevronRight",
+    size: 22
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "aroma-showcase-scroller"
   }, rail.mixIds.map(id => {
     const mix = M.mixes.find(m => m.id === id);
     return /*#__PURE__*/React.createElement(ShowcaseCard, {
       key: id,
       name: mix.name,
       profiles: mix.flavorProfiles,
-      flavors: mix.flavors,
-      rating: mix.avgRating,
+      rating: guestRating(mix),
       onClick: () => onOpen(mix, 'showcase')
     });
-  }), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "aroma-showcase-all",
-    onClick: () => onOpenRail(rail),
-    "aria-label": 'Открыть весь рейл «' + rail.name + '»'
-  }, "\u0412\u0441\u0435")))));
+  })))));
+}
+
+// Каталог по варианту B (#181): фильтр — метка { kind: 'profile' | 'flavor', value }, как CatalogFilterTag в приложении.
+const filterLabel = tag => tag.kind === 'profile' ? label(tag.value) : tag.value;
+const sameFilter = (a, b) => a.kind === b.kind && a.value === b.value;
+// Счётчики нужны только для порядка чипов: частые первыми. На самих чипах чисел нет.
+const countBy = pick => M.mixes.reduce((acc, mix) => {
+  pick(mix).forEach(v => {
+    acc[v] = (acc[v] || 0) + 1;
+  });
+  return acc;
+}, {});
+const byCountDesc = (values, counts, toLabel = v => v) => [...values].sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || toLabel(a).localeCompare(toLabel(b), 'ru'));
+// Сразу видны самые частые вкусы, остальные — по «Все N вкусов» или поиску.
+const SHEET_FLAVOR_LIMIT = 18;
+function FiltersIcon() {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 16 16",
+    fill: "none",
+    "aria-hidden": true
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M2 4h12M5 8h6M7 12h2",
+    stroke: "currentColor",
+    strokeWidth: "1.5",
+    strokeLinecap: "round"
+  }));
+}
+
+// Совпавшие с меткой или текстом вкусы — первыми, чтобы было видно, почему микс в выдаче.
+function flavorsMatchedFirst(flavors, query, filters) {
+  const q = query.trim().toLowerCase();
+  const hit = f => filters.some(t => t.kind === 'flavor' && t.value === f) || q !== '' && f.includes(q);
+  return [...flavors.filter(hit), ...flavors.filter(f => !hit(f))];
 }
 function CatalogScreen({
   query,
   setQuery,
-  profiles,
-  toggleProfile,
-  flavors,
-  toggleFlavor,
-  sort,
-  setSort,
-  popoverOpen,
-  setPopoverOpen,
+  filters,
+  onRemoveFilter,
+  onOpenFilters,
   results,
   onOpen,
   onReset
 }) {
-  const dirty = Boolean(query) || profiles.length || flavors.length || sort !== 'popularity';
+  const last = filters[filters.length - 1];
+  const dirty = Boolean(query.trim()) || filters.length > 0;
   return /*#__PURE__*/React.createElement("section", {
     className: "aroma-catalog"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2434,78 +2595,155 @@ function CatalogScreen({
     className: "aroma-catalog-search",
     value: query,
     onChange: e => setQuery(e.target.value),
-    placeholder: "\u041F\u043E\u0438\u0441\u043A \u043F\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044E \u0438 \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044E",
+    placeholder: "\u041C\u0438\u043A\u0441, \u0432\u043A\u0443\u0441, \u0442\u0430\u0431\u0430\u043A",
+    "aria-label": "\u041F\u043E\u0438\u0441\u043A \u043F\u043E \u043A\u0430\u0442\u0430\u043B\u043E\u0433\u0443",
+    enterKeyHint: "search",
     autoComplete: "off"
   }), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    className: "aroma-catalog-icon-btn",
-    onClick: () => setPopoverOpen(!popoverOpen),
-    "aria-label": "\u0424\u0438\u043B\u044C\u0442\u0440\u044B \u0438 \u0441\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u043A\u0430",
-    "aria-expanded": popoverOpen
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "16",
-    height: "16",
-    viewBox: "0 0 16 16",
-    fill: "none",
+    className: 'aroma-catalog-filter-btn' + (filters.length ? ' aroma-catalog-filter-btn-on' : ''),
+    onClick: onOpenFilters,
+    "aria-label": filters.length ? 'Фильтры, выбрано ' + filters.length : 'Фильтры'
+  }, /*#__PURE__*/React.createElement(FiltersIcon, null), /*#__PURE__*/React.createElement("span", null, "\u0424\u0438\u043B\u044C\u0442\u0440\u044B"), filters.length ? /*#__PURE__*/React.createElement("span", {
+    className: "aroma-catalog-filter-count"
+  }, filters.length) : null)), filters.length ? /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-tags",
+    role: "group",
+    "aria-label": "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0444\u0438\u043B\u044C\u0442\u0440\u044B"
+  }, filters.map(tag => /*#__PURE__*/React.createElement(AromaChip, {
+    key: tag.kind + '-' + tag.value,
+    active: true,
+    profile: tag.kind === 'profile' ? tag.value : undefined,
+    onClick: () => onRemoveFilter(tag)
+  }, filterLabel(tag), /*#__PURE__*/React.createElement("span", {
+    className: "aroma-catalog-tag-x",
     "aria-hidden": true
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2 4h12M5 8h6M7 12h2",
-    stroke: "currentColor",
-    strokeWidth: "1.5",
-    strokeLinecap: "round"
-  })), flavors.length || sort !== 'popularity' ? /*#__PURE__*/React.createElement("span", {
-    className: "aroma-catalog-icon-dot",
-    "aria-hidden": true
-  }) : null)), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-chip-scroll"
-  }, Object.keys(M.profileLabels).map(id => /*#__PURE__*/React.createElement(AromaChip, {
-    key: id,
-    profile: id,
-    active: profiles.includes(id),
-    onClick: () => toggleProfile(id)
-  }, label(id))))), popoverOpen ? /*#__PURE__*/React.createElement("div", {
-    className: "aroma-catalog-popover",
-    role: "dialog",
-    "aria-label": "\u0424\u0438\u043B\u044C\u0442\u0440\u044B \u043A\u0430\u0442\u0430\u043B\u043E\u0433\u0430"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0421\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u043A\u0430"), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-catalog-sort"
-  }, [['popularity', 'По популярности'], ['rating', 'По рейтингу'], ['newest', 'Сначала новое']].map(([v, l]) => /*#__PURE__*/React.createElement("button", {
-    key: v,
-    type: "button",
-    className: 'aroma-sort-btn' + (sort === v ? ' on' : ''),
-    onClick: () => setSort(v)
-  }, l))), /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0412\u043A\u0443\u0441\u044B"), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-flavor-scroll"
-  }, M.flavors.map(f => /*#__PURE__*/React.createElement(AromaChip, {
-    key: f,
-    active: flavors.includes(f),
-    onClick: () => toggleFlavor(f)
-  }, f))), /*#__PURE__*/React.createElement(AromaCTA, {
-    onClick: () => setPopoverOpen(false)
-  }, "\u0413\u043E\u0442\u043E\u0432\u043E")) : null, /*#__PURE__*/React.createElement("div", {
+  }, "\xD7")))) : null), results.length ? /*#__PURE__*/React.createElement("div", {
     className: "aroma-catalog-meta"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, 'Найдено · ' + results.length), dirty ? /*#__PURE__*/React.createElement("button", {
+    className: "aroma-catalog-count"
+  }, results.length + ' ' + plural(results.length)), dirty ? /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "aroma-skip",
     onClick: onReset
-  }, "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C") : null), !results.length ? /*#__PURE__*/React.createElement("p", {
+  }, "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C") : null) : null, !results.length ? /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-empty"
+  }, /*#__PURE__*/React.createElement("p", {
     className: "guest-status"
-  }, "\u041F\u043E \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u043C \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u043C \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.") : null, /*#__PURE__*/React.createElement("div", {
-    className: "aroma-list"
+  }, last ? 'Ничего не найдено. Уберите один из фильтров.' : 'Ничего не найдено. Измените запрос.'), /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-empty-actions"
+  }, last ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-ghost-sm",
+    onClick: () => onRemoveFilter(last)
+  }, 'Убрать: ' + filterLabel(last)) : null, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: last ? 'aroma-skip' : 'aroma-ghost-sm',
+    onClick: onReset
+  }, last ? 'Сбросить всё' : 'Очистить поиск'))) : null, /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-list"
   }, results.map(mix => /*#__PURE__*/React.createElement(MixRow, {
     key: mix.id,
     name: mix.name,
     profiles: mix.flavorProfiles,
-    flavors: mix.flavors,
-    rating: mix.avgRating,
+    flavors: flavorsMatchedFirst(mix.flavors, query, filters),
+    rating: guestRating(mix),
+    glyphSize: 36,
+    style: {
+      padding: '7px 12px'
+    },
     onClick: () => onOpen(mix, 'catalog')
   }))));
+}
+
+// Шторка «Фильтры» — разметка карточки микса; выбор применяется сразу, CTA только закрывает.
+function CatalogFiltersSheet({
+  filters,
+  onToggle,
+  onReset,
+  resultCount,
+  onClose
+}) {
+  const [find, setFind] = React.useState('');
+  const [showAll, setShowAll] = React.useState(false);
+  // Как availableProfileOptions в приложении: только характеры, которые есть в каталоге.
+  // Считаются при рендере: в _ds_bundle.js этот файл исполняется раньше mock-data.js.
+  const profileCounts = countBy(mix => mix.flavorProfiles);
+  const flavorCounts = countBy(mix => mix.flavors);
+  const profiles = byCountDesc(Object.keys(M.profileLabels).filter(p => profileCounts[p]), profileCounts, label);
+  const flavors = byCountDesc(M.flavors, flavorCounts);
+  const f = find.trim().toLowerCase();
+  const visibleFlavors = f ? flavors.filter(x => x.includes(f)) : showAll ? flavors : flavors.slice(0, SHEET_FLAVOR_LIMIT);
+  const isOn = tag => filters.some(t => sameFilter(t, tag));
+  const chip = tag => /*#__PURE__*/React.createElement(AromaChip, {
+    key: tag.value,
+    active: isOn(tag),
+    profile: tag.kind === 'profile' ? tag.value : undefined,
+    onClick: () => onToggle(tag)
+  }, filterLabel(tag));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "aroma-sheet-overlay",
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("section", {
+    className: "aroma-sheet",
+    role: "dialog",
+    "aria-label": "\u0424\u0438\u043B\u044C\u0442\u0440\u044B",
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: 'var(--guest-sheet-bg)'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "aroma-sheet-handle",
+    "aria-hidden": true
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-sheet-head"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "aroma-sheet-title"
+  }, "\u0424\u0438\u043B\u044C\u0442\u0440\u044B"), filters.length ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-skip",
+    onClick: onReset
+  }, "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C") : null), /*#__PURE__*/React.createElement("section", {
+    className: "aroma-sheet-block"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "aroma-label"
+  }, "\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440"), /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-sheet-chips",
+    role: "group",
+    "aria-label": "\u0425\u0430\u0440\u0430\u043A\u0442\u0435\u0440"
+  }, profiles.map(p => chip({
+    kind: 'profile',
+    value: p
+  })))), /*#__PURE__*/React.createElement("section", {
+    className: "aroma-sheet-block"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "aroma-label"
+  }, "\u0412\u043A\u0443\u0441\u044B"), /*#__PURE__*/React.createElement("input", {
+    type: "search",
+    className: "aroma-catalog-sheet-search",
+    value: find,
+    onChange: e => setFind(e.target.value),
+    placeholder: "\u041D\u0430\u0439\u0442\u0438 \u0432\u043A\u0443\u0441",
+    "aria-label": "\u041D\u0430\u0439\u0442\u0438 \u0432\u043A\u0443\u0441",
+    enterKeyHint: "search",
+    autoComplete: "off"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "aroma-catalog-sheet-chips",
+    role: "group",
+    "aria-label": "\u0412\u043A\u0443\u0441\u044B"
+  }, visibleFlavors.map(v => chip({
+    kind: 'flavor',
+    value: v
+  }))), f && !visibleFlavors.length ? /*#__PURE__*/React.createElement("p", {
+    className: "aroma-catalog-sheet-hint"
+  }, "\u0422\u0430\u043A\u043E\u0433\u043E \u0432\u043A\u0443\u0441\u0430 \u0432 \u043A\u0430\u0442\u0430\u043B\u043E\u0433\u0435 \u043D\u0435\u0442.") : null, !f && !showAll && flavors.length > SHEET_FLAVOR_LIMIT ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-skip aroma-catalog-sheet-more",
+    onClick: () => setShowAll(true)
+  }, 'Все ' + flavors.length + ' вкусов') : null), /*#__PURE__*/React.createElement(AromaCTA, {
+    disabled: !resultCount,
+    onClick: onClose
+  }, resultCount ? 'Показать ' + resultCount + ' ' + plural(resultCount) : 'Ничего не найдено')));
 }
 function RailScreen({
   rail,
@@ -2526,16 +2764,7 @@ function RailScreen({
     className: "aroma-rail-back",
     onClick: onBack,
     "aria-label": "\u041D\u0430\u0437\u0430\u0434 \u043A \u0432\u0438\u0442\u0440\u0438\u043D\u0435"
-  }, "\u2190"), /*#__PURE__*/React.createElement("div", {
-    className: "aroma-rail-topbar-text"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, 'Витрина · ' + railKind[rail.type]), /*#__PURE__*/React.createElement("p", {
-    className: "aroma-rail-meta"
-  }, mixes.length + ' ' + plural(mixes.length))), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    className: "aroma-rail-code"
-  }, "\u041D\u043E\u0432\u044B\u0439 \u043A\u043E\u0434")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2190")), /*#__PURE__*/React.createElement("div", {
     className: "aroma-rail-intro"
   }, /*#__PURE__*/React.createElement("h1", {
     className: "aroma-rail-title"
@@ -2562,32 +2791,53 @@ function RailScreen({
     name: mix.name,
     profiles: mix.flavorProfiles,
     flavors: mix.flavors,
-    rating: mix.avgRating,
+    rating: guestRating(mix),
     glyphSize: 60,
     onClick: () => onOpen(mix, 'rail')
   }))));
+}
+
+// Сердечко (#151): не акцентное — выключено --text-muted, включено кремовое с заливкой.
+function HeartButton({
+  on,
+  onClick
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "heart-btn",
+    "aria-pressed": on,
+    "aria-label": on ? 'Убрать из избранного' : 'В избранное',
+    onClick: onClick
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "Heart",
+    size: 22,
+    fill: on ? 'currentColor' : 'none'
+  }));
 }
 function MixSheet({
   state,
   rating,
   onRate,
   onClose,
-  onChoose
+  onChoose,
+  favorite = false,
+  onFavorite
 }) {
   if (!state) return null;
   const {
     mix,
     source
   } = state;
-  const halo = 'var(--profile-' + (mix.flavorProfiles[0] || 'tobacco').replace('_', '-') + ')';
   return /*#__PURE__*/React.createElement("div", {
     className: "aroma-sheet-overlay",
     onClick: onClose
   }, /*#__PURE__*/React.createElement("section", {
     className: "aroma-sheet",
+    role: "dialog",
+    "aria-label": mix.name,
     onClick: e => e.stopPropagation(),
     style: {
-      background: 'radial-gradient(circle at 88% 0%, color-mix(in srgb, ' + halo + ' 31%, transparent) 0%, transparent 50%), var(--guest-sheet-bg)'
+      background: 'var(--guest-sheet-bg)'
     }
   }, /*#__PURE__*/React.createElement("span", {
     className: "aroma-sheet-handle",
@@ -2599,14 +2849,15 @@ function MixSheet({
     size: 72
   }), /*#__PURE__*/React.createElement("div", {
     className: "aroma-sheet-head-text"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, sourceLabel[source]), /*#__PURE__*/React.createElement("h2", {
+  }, /*#__PURE__*/React.createElement("h2", {
     className: "aroma-sheet-title"
   }, mix.name), /*#__PURE__*/React.createElement(SignatureBar, {
     profiles: mix.flavorProfiles,
     height: 4
-  }))), /*#__PURE__*/React.createElement("p", {
+  })), onFavorite ? /*#__PURE__*/React.createElement(HeartButton, {
+    on: favorite,
+    onClick: () => onFavorite(mix)
+  }) : null), /*#__PURE__*/React.createElement("p", {
     className: "aroma-sheet-desc"
   }, mix.description), /*#__PURE__*/React.createElement("div", {
     className: "aroma-sheet-tags"
@@ -2619,14 +2870,14 @@ function MixSheet({
     key: f
   }, f))), /*#__PURE__*/React.createElement("section", {
     className: "aroma-sheet-block"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0421\u043E\u0441\u0442\u0430\u0432 \u043C\u0438\u043A\u0441\u0430"), /*#__PURE__*/React.createElement(CompositionStack, {
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "aroma-label"
+  }, "\u0421\u043E\u0441\u0442\u0430\u0432"), /*#__PURE__*/React.createElement(CompositionStack, {
     components: mix.components
   })), /*#__PURE__*/React.createElement("section", {
     className: "aroma-sheet-block"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "aroma-label"
   }, "\u0412\u0430\u0448\u0430 \u043E\u0446\u0435\u043D\u043A\u0430"), /*#__PURE__*/React.createElement("div", {
     className: "aroma-stars",
     role: "group",
@@ -2645,10 +2896,423 @@ function MixSheet({
     type: "button",
     className: "aroma-ghost",
     onClick: onClose
-  }, "\u0417\u0430\u043A\u0440\u044B\u0442\u044C"), /*#__PURE__*/React.createElement(AromaCTA, {
+  }, source === 'reels' ? 'К рилсам' : 'Закрыть'), /*#__PURE__*/React.createElement(AromaCTA, {
     pulse: true,
     onClick: () => onChoose(mix, source)
   }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C"))));
+}
+
+// ── Рилсы (#153) ──
+// Сознательное исключение из VISUAL FOUNDATIONS: линейные мотивы и анимированный фон — только в разделе «Рилсы»
+// и в кружках полосы над Подбором. Сцены здесь — CSS-приближение мокапа design/design_handoff_reels/,
+// в приложении это композиции Remotion в @remotion/player.
+
+// Правило выбора сцены: профили у миксов раздуты и не упорядочены по силе, поэтому сцена берётся из flavors.
+const MOTIFS = {
+  frost: {
+    profile: 'minty',
+    alt: 'fresh',
+    words: ['холодок', 'мята', 'ментол', 'лёд', 'лед', 'ледян']
+  },
+  bloom: {
+    profile: 'floral_herbal',
+    alt: 'perfume',
+    words: ['цветочн', 'лаванда', 'ромашка', 'роза', 'бузина', 'жасмин', 'хвойн', 'базилик', 'тархун', 'травян', 'можжевельник', 'чай']
+  },
+  juicy: {
+    profile: 'citrus',
+    alt: 'fruity',
+    words: ['лимон', 'лайм', 'грейпфрут', 'апельсин', 'мандарин', 'бергамот', 'ананас', 'манго', 'банан', 'киви', 'персик', 'яблоко', 'груша', 'арбуз', 'дыня', 'кокос', 'марула', 'кола', 'энергетик', 'огурец']
+  },
+  berry: {
+    profile: 'berry',
+    alt: 'fruity',
+    words: ['малина', 'клубника', 'черника', 'вишня', 'ежевика', 'голубика', 'клюква', 'смородина', 'барбарис', 'виноград', 'ягод', 'ревень']
+  },
+  warm: {
+    profile: 'dessert',
+    alt: 'spicy',
+    words: ['ваниль', 'шоколад', 'какао', 'печенье', 'пирог', 'чизкейк', 'тирамису', 'молоко', 'булочка', 'корица', 'кардамон', 'перец', 'кашмир', 'мед', 'мёд', 'орех', 'орчата', 'ром', 'жвачка']
+  },
+  smoke: {
+    profile: 'tobacco',
+    alt: 'spicy',
+    words: ['табачн', 'сигар', 'бекон', 'томат', 'копчен']
+  }
+};
+const CITRUS = ['лимон', 'лайм', 'грейпфрут', 'апельсин', 'мандарин', 'бергамот'];
+const SPICE = ['корица', 'кардамон', 'перец', 'кашмир'];
+const PROFILE_TO_MOTIF = {
+  minty: 'frost',
+  fresh: 'frost',
+  floral_herbal: 'bloom',
+  perfume: 'bloom',
+  citrus: 'juicy',
+  fruity: 'juicy',
+  sour: 'juicy',
+  berry: 'berry',
+  dessert: 'warm',
+  sweet: 'warm',
+  spicy: 'warm',
+  tobacco: 'smoke'
+};
+const profileVar = profile => 'var(--profile-' + profile.replace('_', '-') + ')';
+const hits = (flavors, words) => flavors.filter(f => words.some(w => f.toLowerCase().includes(w)));
+function pickScene(mix) {
+  const scored = Object.entries(MOTIFS).map(([id, motif]) => {
+    const found = hits(mix.flavors, motif.words);
+    return {
+      id,
+      count: found.length,
+      first: found.length ? mix.flavors.indexOf(found[0]) : 99
+    };
+  }).filter(m => m.count)
+  // Холод перебивает всё: самое яркое ощущение.
+  .sort((a, b) => (b.id === 'frost') - (a.id === 'frost') || b.count - a.count || a.first - b.first);
+  const primary = scored[0] ? scored[0].id : PROFILE_TO_MOTIF[mix.flavorProfiles[0]] || 'smoke';
+  const secondary = scored[1] ? scored[1].id : null;
+  const colorOf = id => {
+    if (id === 'juicy') return hits(mix.flavors, CITRUS).length ? 'citrus' : 'fruity';
+    if (id === 'warm') return hits(mix.flavors, SPICE).length >= hits(mix.flavors, MOTIFS.warm.words).length / 2 ? 'spicy' : 'dessert';
+    return MOTIFS[id].profile;
+  };
+  return {
+    primary,
+    secondary,
+    c1: colorOf(primary),
+    c2: secondary ? colorOf(secondary) : MOTIFS[primary].alt
+  };
+}
+
+// Детерминированный шум: один и тот же микс всегда выглядит одинаково (в Remotion — random(seed) с seed = mix.id).
+function seeded(text) {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h = Math.imul(h ^ h >>> 15, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
+
+// Мотивы стиля B: штрих 1,2–1,4 в цвете профиля, без заливки, как у знака «Дым».
+const SHAPES = {
+  frost: /*#__PURE__*/React.createElement("svg", {
+    viewBox: "-12 -12 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.2",
+    strokeLinecap: "round"
+  }, [0, 60, 120].map(r => /*#__PURE__*/React.createElement("g", {
+    key: r,
+    transform: 'rotate(' + r + ')'
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M0 -11V11"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M-3 -8L0 -5L3 -8M-3 8L0 5L3 8"
+  })))),
+  bloom: /*#__PURE__*/React.createElement("svg", {
+    viewBox: "-12 -12 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.2"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M0 -11C6 -5 6 5 0 11C-6 5 -6 -5 0 -11Z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M0 -8V8",
+    strokeLinecap: "round"
+  })),
+  juicy: /*#__PURE__*/React.createElement("svg", {
+    viewBox: "-12 -12 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.2"
+  }, /*#__PURE__*/React.createElement("circle", {
+    r: "10"
+  }), /*#__PURE__*/React.createElement("circle", {
+    r: "7.5"
+  }), [0, 60, 120].map(r => /*#__PURE__*/React.createElement("path", {
+    key: r,
+    d: "M0 -7.5V7.5",
+    transform: 'rotate(' + r + ')'
+  }))),
+  berry: /*#__PURE__*/React.createElement("svg", {
+    viewBox: "-12 -12 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.2"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "-4",
+    cy: "2",
+    r: "5"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "4",
+    cy: "3",
+    r: "5"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "0",
+    cy: "-4",
+    r: "5"
+  })),
+  warm: /*#__PURE__*/React.createElement("svg", {
+    viewBox: "-12 -12 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.4",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M0 8V-8"
+  })),
+  smoke: /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 40 120",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.4",
+    strokeLinecap: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M20 118C4 96 36 78 20 58C6 40 32 22 22 2"
+  }))
+};
+const PARTICLES = {
+  frost: {
+    n: 26,
+    size: [10, 18],
+    y: [-8, 10]
+  },
+  bloom: {
+    n: 12,
+    size: [14, 22],
+    y: [70, 100]
+  },
+  juicy: {
+    n: 16,
+    size: [16, 26],
+    y: [80, 105]
+  },
+  berry: {
+    n: 16,
+    size: [16, 24],
+    y: [10, 60]
+  },
+  warm: {
+    n: 26,
+    size: [12, 18],
+    y: [85, 105]
+  },
+  smoke: {
+    n: 7,
+    size: [30, 44],
+    y: [70, 100]
+  }
+};
+// Бесшовный цикл около 6 с; струи дыма прорисовываются вдвое медленнее.
+const CYCLE = 6;
+function particles(motif, rand, color, count) {
+  const cfg = PARTICLES[motif];
+  const [lo, hi] = cfg.size;
+  return Array.from({
+    length: count || cfg.n
+  }, (_, i) => {
+    const s = lo + rand() * (hi - lo);
+    const style = {
+      '--x': (rand() * 100).toFixed(1) + '%',
+      '--y': (cfg.y[0] + rand() * (cfg.y[1] - cfg.y[0])).toFixed(1) + '%',
+      '--s': Math.round(motif === 'smoke' ? s * 3 : s) + 'px',
+      '--dl': (-rand() * CYCLE).toFixed(2) + 's',
+      '--d': CYCLE * (motif === 'smoke' ? 2 : 1) + 's',
+      '--dx': Math.round((rand() - 0.5) * 80) + 'px',
+      '--pc': profileVar(color)
+    };
+    if (motif === 'smoke') style.width = Math.round(s) + 'px';
+    return /*#__PURE__*/React.createElement("span", {
+      key: motif + i,
+      className: 'p m-' + motif,
+      style: style
+    }, SHAPES[motif]);
+  });
+}
+function Scene({
+  mix,
+  playing = true
+}) {
+  const {
+    primary,
+    secondary,
+    c1,
+    c2
+  } = pickScene(mix);
+  const rand = seeded(mix.id);
+  return /*#__PURE__*/React.createElement("div", {
+    className: 'scene' + (playing ? '' : ' scene-paused'),
+    style: {
+      '--c1': profileVar(c1),
+      '--c2': profileVar(c2)
+    },
+    "aria-hidden": true
+  }, primary === 'frost' ? /*#__PURE__*/React.createElement("span", {
+    className: "frost-rim"
+  }) : null, primary === 'bloom' ? /*#__PURE__*/React.createElement("span", {
+    className: "bloom-core"
+  }, [0, 72, 144, 216, 288].map((r, i) => /*#__PURE__*/React.createElement("span", {
+    key: r,
+    className: "bloom-petal",
+    style: {
+      rotate: r + 'deg',
+      animationDelay: -i * 0.4 + 's'
+    }
+  }))) : null, primary === 'juicy' ? /*#__PURE__*/React.createElement("span", {
+    className: "juicy-ring"
+  }) : null, primary === 'warm' ? /*#__PURE__*/React.createElement("span", {
+    className: "warm-glow"
+  }) : null, particles(primary, rand, c1), secondary ? particles(secondary, rand, c2, Math.ceil(PARTICLES[secondary].n / 3)) : null);
+}
+
+// Полоса превью над Подбором: первые восемь миксов ленты, статичный кадр сцены в кружке 60px.
+function ReelStrip({
+  mixes,
+  onOpen
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "reel-strip",
+    role: "list",
+    "aria-label": "\u0420\u0438\u043B\u0441\u044B"
+  }, mixes.slice(0, 8).map((mix, i) => /*#__PURE__*/React.createElement("button", {
+    key: mix.id,
+    type: "button",
+    role: "listitem",
+    className: "reel-strip-item",
+    onClick: () => onOpen(i)
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "reel-strip-thumb"
+  }, /*#__PURE__*/React.createElement(Scene, {
+    mix: mix,
+    playing: false
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "reel-strip-name"
+  }, mix.name))));
+}
+function Reel({
+  mix,
+  index,
+  total,
+  active,
+  paused,
+  hint,
+  favorite,
+  onFavorite,
+  onTogglePause,
+  onOpen,
+  onChoose
+}) {
+  return /*#__PURE__*/React.createElement("section", {
+    className: "reel",
+    "aria-label": mix.name
+  }, /*#__PURE__*/React.createElement(Scene, {
+    mix: mix,
+    playing: active && !paused
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "reel-tap",
+    "aria-label": paused ? 'Продолжить' : 'Пауза',
+    onClick: onTogglePause
+  }), paused ? /*#__PURE__*/React.createElement("span", {
+    className: "reel-paused"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "Play",
+    size: 22
+  })) : null, /*#__PURE__*/React.createElement("div", {
+    className: 'reel-poster' + (active ? ' reel-reveal' : ''),
+    key: active ? 'on' : 'off'
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "reel-poster-center"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "reel-name"
+  }, mix.name), mix.description ? /*#__PURE__*/React.createElement("p", {
+    className: "reel-desc"
+  }, mix.description) : /*#__PURE__*/React.createElement("p", {
+    className: "reel-flavors"
+  }, mix.flavors.join(', '))), /*#__PURE__*/React.createElement("div", {
+    className: "reel-dock"
+  }, hint ? /*#__PURE__*/React.createElement("span", {
+    className: "reel-hint"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "ChevronUp",
+    size: 18
+  }), "\u041B\u0438\u0441\u0442\u0430\u0439\u0442\u0435 \u0432\u0432\u0435\u0440\u0445") : null, /*#__PURE__*/React.createElement("div", {
+    className: "reel-meta"
+  }, mix.ratingsCount ? /*#__PURE__*/React.createElement(RatingPill, {
+    rating: mix.avgRating
+  }) : null, /*#__PURE__*/React.createElement(HeartButton, {
+    on: favorite,
+    onClick: () => onFavorite(mix)
+  })), /*#__PURE__*/React.createElement(CompositionStack, {
+    components: mix.components,
+    showBar: false
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "reel-actions"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "aroma-ghost",
+    onClick: () => onOpen(mix, 'reels')
+  }, "\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435"), /*#__PURE__*/React.createElement(AromaCTA, {
+    onClick: () => onChoose(mix, 'reels')
+  }, "\u041F\u043E\u043A\u0443\u0440\u0438\u0442\u044C")))));
+}
+
+// Лента: вертикальный свайп со снапом, один жест — один рилс. Играет только активный рилс,
+// соседи — статичный кадр, дальше — пустые слоты той же высоты.
+function ReelsScreen({
+  mixes,
+  start = 0,
+  favoriteIds,
+  onFavorite,
+  onOpen,
+  onChoose
+}) {
+  const ref = React.useRef(null);
+  const [active, setActive] = React.useState(start);
+  const [paused, setPaused] = React.useState(false);
+  const [swiped, setSwiped] = React.useState(false);
+  React.useEffect(() => {
+    const root = ref.current;
+    root.scrollTop = start * root.clientHeight;
+    // Первый вызов observer — стартовый рилс, это ещё не свайп.
+    let initial = true;
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting || initial) return;
+        setActive(Number(e.target.dataset.i));
+        setPaused(false);
+        setSwiped(true);
+      });
+      initial = false;
+    }, {
+      root,
+      threshold: 0.6
+    });
+    root.querySelectorAll('[data-i]').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "reels",
+    ref: ref
+  }, mixes.map((mix, i) => /*#__PURE__*/React.createElement("div", {
+    key: mix.id,
+    "data-i": i,
+    className: "reel-slot"
+  }, Math.abs(i - active) <= 1 ? /*#__PURE__*/React.createElement(Reel, {
+    mix: mix,
+    index: i,
+    total: mixes.length,
+    active: i === active,
+    paused: i === active && paused,
+    hint: i === start && !swiped,
+    favorite: favoriteIds.includes(mix.id),
+    onFavorite: onFavorite,
+    onTogglePause: () => setPaused(!paused),
+    onOpen: onOpen,
+    onChoose: onChoose
+  }) : null)));
 }
 function ConfirmationScreen({
   mix,
@@ -2658,29 +3322,28 @@ function ConfirmationScreen({
     className: "aroma-confirm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "aroma-confirm-topbar"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "aroma-confirm-note"
+  }, "\u041F\u043E\u043A\u0430\u0436\u0438\u0442\u0435 \u043C\u0430\u0441\u0442\u0435\u0440\u0443"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "aroma-confirm-done",
     onClick: onDone
   }, "\u0413\u043E\u0442\u043E\u0432\u043E")), /*#__PURE__*/React.createElement("div", {
     className: "aroma-confirm-stack"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps aroma-confirm-kicker"
-  }, "\u041F\u043E\u043A\u0430\u0436\u0438\u0442\u0435 \u043C\u0430\u0441\u0442\u0435\u0440\u0443"), /*#__PURE__*/React.createElement(ProfileGlyph, {
+  }, /*#__PURE__*/React.createElement(ProfileGlyph, {
     profiles: mix.flavorProfiles,
     size: 96
   }), /*#__PURE__*/React.createElement("h1", {
     className: "aroma-confirm-title"
   }, mix.name), /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, mix.flavorProfiles.map(label).join(' · ')), /*#__PURE__*/React.createElement(SignatureBar, {
+    className: "aroma-confirm-profiles"
+  }, mix.flavorProfiles.map((p, i) => i ? label(p).toLowerCase() : label(p)).join(', ')), /*#__PURE__*/React.createElement(SignatureBar, {
     profiles: mix.flavorProfiles,
     height: 3
   })), /*#__PURE__*/React.createElement("section", {
-    className: "aroma-confirm-composition"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "aroma-caps"
-  }, "\u0421\u043E\u0441\u0442\u0430\u0432"), /*#__PURE__*/React.createElement(CompositionStack, {
+    className: "aroma-confirm-composition",
+    "aria-label": "\u0421\u043E\u0441\u0442\u0430\u0432"
+  }, /*#__PURE__*/React.createElement(CompositionStack, {
     components: mix.components,
     showBar: false
   })), /*#__PURE__*/React.createElement("button", {
@@ -2690,43 +3353,27 @@ function ConfirmationScreen({
   }, "\u041E\u0446\u0435\u043D\u0438\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u0441\u043E\u0431\u0435\u0440\u0443\u0442"));
 }
 Object.assign(window, {
+  Icon,
+  MixerInvite,
   AccessScreen,
   IntroScreen,
   OnboardingScreen,
   RecommendationsScreen,
   ShowcaseScreen,
   CatalogScreen,
+  CatalogFiltersSheet,
   RailScreen,
   MixSheet,
-  ConfirmationScreen,
-  GuestSelectedBar: function ({
-    mix,
-    source,
-    onOpen
-  }) {
-    return /*#__PURE__*/React.createElement("div", {
-      className: "aroma-selected-shell"
-    }, /*#__PURE__*/React.createElement(GuestCard, {
-      compact: true,
-      title: "\u041A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u0434\u043B\u044F \u043C\u0430\u0441\u0442\u0435\u0440\u0430",
-      style: {
-        display: 'grid',
-        gap: 10
-      }
-    }, /*#__PURE__*/React.createElement("p", {
-      className: "aroma-selected-text"
-    }, mix.name + ' · ' + sourceLabel[source]), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      className: "aroma-ghost-sm",
-      onClick: onOpen
-    }, "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443")));
-  }
+  ReelStrip,
+  ReelsScreen,
+  ConfirmationScreen
 });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/aroma-guest/GuestScreens.jsx", error: String((e && e.message) || e) }); }
 
 // ui_kits/aroma-guest/mock-data.js
 try { (() => {
 // Mock catalogue for the Арома Ателье guest kit — real mixes from docs/data/top-20-mixes.md.
+// ratingsCount: 0 — микс без оценок гостей: avgRating у него базовый из Мастера, «★» не показывается (#185).
 window.AROMA_MOCK = {
   profileLabels: {
     sweet: 'Сладкий',
@@ -2745,20 +3392,20 @@ window.AROMA_MOCK = {
   flavors: ['земляника', 'лесные ягоды', 'чёрный чай', 'кола', 'банан', 'манго', 'мороженое', 'клубника', 'лимон', 'ананас', 'апельсин', 'корица', 'дыня', 'мята', 'мандарин', 'молоко', 'черника', 'печенье', 'чизкейк', 'виноград'],
   introCards: [{
     id: 'i1',
-    title: 'Мы подберём микс под ваше настроение',
-    description: 'Пара вопросов о вкусах — и подбор соберётся из того, что реально есть на кухне сегодня.'
+    title: 'Подберём микс под ваши вкусы',
+    description: 'Выберите профили и вкусы. Подбор соберём из табаков, которые сегодня есть в зале.'
   }, {
     id: 'i2',
-    title: 'Витрина — если хочется выбрать глазами',
-    description: 'Подборки редакции, миксы мастеров зала и то, что чаще всего выбирают гости.'
+    title: 'Подборки на витрине',
+    description: 'Миксы мастеров зала и то, что чаще выбирают гости.'
   }, {
     id: 'i3',
-    title: 'Каталог — если точно знаете, что ищете',
-    description: 'Поиск и фильтры по категориям и вкусам. Недоступные позиции не показываем.'
+    title: 'Каталог для тех, кто знает, что ищет',
+    description: 'Поиск по названию, вкусу и табаку. Миксов, которых сейчас нет, в каталоге нет.'
   }, {
     id: 'i4',
-    title: 'Готово — покажите карточку мастеру',
-    description: 'Нажмите «Покурить», и на экране останется чистая карточка с составом.'
+    title: 'Покажите карточку мастеру',
+    description: 'Когда выберете микс, на экране останется карточка с составом.'
   }],
   mixes: [{
     id: 'm1',
@@ -2767,6 +3414,7 @@ window.AROMA_MOCK = {
     flavorProfiles: ['berry', 'fresh'],
     flavors: ['земляника', 'лесные ягоды', 'чёрный чай'],
     avgRating: 4.7,
+    ratingsCount: 38,
     popularity: 214,
     components: [{
       id: 'c1',
@@ -2791,6 +3439,7 @@ window.AROMA_MOCK = {
     flavorProfiles: ['sweet', 'floral_herbal'],
     flavors: ['кола', 'цветочный'],
     avgRating: 4.4,
+    ratingsCount: 21,
     popularity: 168,
     components: [{
       id: 'c4',
@@ -2811,10 +3460,11 @@ window.AROMA_MOCK = {
   }, {
     id: 'm3',
     name: 'Тропики',
-    description: 'Банан и манго-ласси — плотно и сладко, без холодка.',
+    description: 'Банан и манго-ласси. Плотный и сладкий, без холодка.',
     flavorProfiles: ['fruity', 'dessert'],
     flavors: ['банан', 'манго', 'йогурт'],
     avgRating: 4.5,
+    ratingsCount: 0,
     popularity: 151,
     components: [{
       id: 'c7',
@@ -2830,10 +3480,11 @@ window.AROMA_MOCK = {
   }, {
     id: 'm4',
     name: 'Клубничный лёд',
-    description: 'Клубника с мороженым — самый спокойный вход для новичка.',
+    description: 'Клубника с мороженым. Спокойный микс для первого раза.',
     flavorProfiles: ['berry', 'dessert'],
     flavors: ['клубника', 'мороженое'],
     avgRating: 4.3,
+    ratingsCount: 12,
     popularity: 139,
     components: [{
       id: 'c9',
@@ -2853,6 +3504,7 @@ window.AROMA_MOCK = {
     flavorProfiles: ['citrus', 'fruity'],
     flavors: ['лимон', 'ананас'],
     avgRating: 4.2,
+    ratingsCount: 7,
     popularity: 121,
     components: [{
       id: 'c11',
@@ -2872,6 +3524,7 @@ window.AROMA_MOCK = {
     flavorProfiles: ['citrus', 'sweet'],
     flavors: ['апельсин', 'мандарин', 'ром-пунш'],
     avgRating: 4.6,
+    ratingsCount: 16,
     popularity: 118,
     components: [{
       id: 'c13',
@@ -2892,10 +3545,11 @@ window.AROMA_MOCK = {
   }, {
     id: 'm7',
     name: 'Cinnamon Red Tea',
-    description: 'Корица и чёрный чай — согревающий осенний микс.',
+    description: 'Корица на чёрном чае.',
     flavorProfiles: ['spicy', 'tobacco'],
     flavors: ['корица', 'чёрный чай'],
     avgRating: 4.1,
+    ratingsCount: 5,
     popularity: 96,
     components: [{
       id: 'c16',
@@ -2911,10 +3565,11 @@ window.AROMA_MOCK = {
   }, {
     id: 'm8',
     name: 'Pineapple Mint',
-    description: 'Ананас с мятой — свежо и легко.',
+    description: 'Ананас с мятой.',
     flavorProfiles: ['fruity', 'minty'],
     flavors: ['ананас', 'мята'],
     avgRating: 4.4,
+    ratingsCount: 9,
     popularity: 108,
     components: [{
       id: 'c18',
@@ -2934,6 +3589,7 @@ window.AROMA_MOCK = {
     flavorProfiles: ['dessert', 'citrus'],
     flavors: ['лимонный пирог', 'молоко'],
     avgRating: 4.5,
+    ratingsCount: 0,
     popularity: 87,
     components: [{
       id: 'c20',
@@ -2953,6 +3609,7 @@ window.AROMA_MOCK = {
     flavorProfiles: ['dessert', 'berry'],
     flavors: ['чизкейк', 'лесные ягоды', 'виноград'],
     avgRating: 4.8,
+    ratingsCount: 27,
     popularity: 176,
     components: [{
       id: 'c22',
@@ -2973,10 +3630,11 @@ window.AROMA_MOCK = {
   }, {
     id: 'm11',
     name: 'Молоко-Черника',
-    description: 'Черника с молоком — сладко и просто.',
+    description: 'Черника с молоком.',
     flavorProfiles: ['berry', 'dessert'],
     flavors: ['молоко', 'черника'],
     avgRating: 4.0,
+    ratingsCount: 4,
     popularity: 74,
     components: [{
       id: 'c25',
@@ -2992,10 +3650,11 @@ window.AROMA_MOCK = {
   }, {
     id: 'm12',
     name: 'Bodrum Tangerine',
-    description: 'Мандарин, мята и жвачка — освежающая классика.',
+    description: 'Мандарин, мята и жвачка.',
     flavorProfiles: ['citrus', 'minty'],
     flavors: ['мандарин', 'мята', 'жвачка'],
     avgRating: 4.2,
+    ratingsCount: 0,
     popularity: 92,
     components: [{
       id: 'c27',
@@ -3022,15 +3681,15 @@ window.AROMA_MOCK = {
     mixIds: ['m1', 'm10', 'm2', 'm3', 'm4']
   }, {
     id: 'r2',
-    name: 'Вечер в ателье',
+    name: 'Бабушкин буфет',
     type: 'prepared',
-    description: 'Подборка для быстрого старта в фирменной стилистике ателье.',
-    mixIds: ['m9', 'm7', 'm10', 'm11']
+    description: 'Молоко, пирог и сладкое. Тёплые десертные миксы без льда.',
+    mixIds: ['m11', 'm9', 'm3', 'm7']
   }, {
     id: 'r3',
     name: 'Советуют мастера',
     type: 'curated',
-    description: 'Выразительные сочетания, которые чаще советуют мастера зала.',
+    description: 'Миксы, которые советуют мастера зала.',
     mixIds: ['m6', 'm5', 'm8', 'm12']
   }]
 };
@@ -3038,7 +3697,7 @@ window.AROMA_MOCK = {
 
 // ui_kits/master/MasterApp.jsx
 try { (() => {
-// Мастер shell: login → workspace with 5 module tabs and a ⌘K command palette.
+// Мастер shell: login, then workspace with 5 module tabs and a ⌘K command palette.
 const {
   MasterTopBar
 } = window.DesignSystem_1aef33;
@@ -3095,7 +3754,7 @@ function CommandPalette({
   }, /*#__PURE__*/React.createElement("input", {
     autoFocus: true,
     className: "cmdk-input",
-    placeholder: "\u041D\u0430\u0439\u0442\u0438 \u0438\u043B\u0438 \u0441\u0434\u0435\u043B\u0430\u0442\u044C\u2026",
+    placeholder: "\u041D\u0430\u0439\u0442\u0438 \u0438\u043B\u0438 \u0441\u0434\u0435\u043B\u0430\u0442\u044C",
     value: q,
     onChange: e => setQ(e.target.value)
   }), /*#__PURE__*/React.createElement("ul", {
@@ -3111,7 +3770,7 @@ function CommandPalette({
     className: "cmdk-group"
   }, i.group))), !items.length ? /*#__PURE__*/React.createElement("li", {
     className: "cmdk-empty"
-  }, "\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E") : null)));
+  }, "\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.") : null)));
 }
 function MasterApp() {
   React.useEffect(() => {
@@ -3197,7 +3856,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.c
 
 // ui_kits/master/MasterScreens.jsx
 try { (() => {
-// Мастер · staff screens. Recreation of apps/master-web views (login, dashboard, inventory, mixes, rails, access).
+// Мастер, экраны персонала. Recreation of apps/master-web views (login, dashboard, inventory, mixes, rails, access).
 const {
   MasterButton,
   MasterIconButton,
@@ -3243,9 +3902,7 @@ function LoginScreen({
     className: "auth-card"
   }, /*#__PURE__*/React.createElement("h1", {
     className: "auth-title"
-  }, "\u0412\u043E\u0439\u0442\u0438 \u0432 \u0441\u043C\u0435\u043D\u0443"), /*#__PURE__*/React.createElement("p", {
-    className: "auth-subtitle"
-  }, "\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u043E\u043D\u043D\u0430\u044F \u043A\u043E\u043D\u0441\u043E\u043B\u044C \u0434\u043B\u044F \u043A\u0430\u043B\u044C\u044F\u043D\u043D\u044B\u0445 \u043C\u0430\u0441\u0442\u0435\u0440\u043E\u0432 \u0438 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u043E\u0432."), /*#__PURE__*/React.createElement("form", {
+  }, "\u0412\u043E\u0439\u0442\u0438 \u0432 \u0441\u043C\u0435\u043D\u0443"), /*#__PURE__*/React.createElement("form", {
     className: "auth-form",
     onSubmit: e => {
       e.preventDefault();
@@ -3293,7 +3950,7 @@ function LoginScreen({
     }
   }, loading ? 'Проверяем…' : 'Войти'))), /*#__PURE__*/React.createElement("div", {
     className: "auth-foot"
-  }, "v1.4.0 \xB7 demo: admin / admin")));
+  }, "\u0414\u0435\u043C\u043E: \u043B\u044E\u0431\u043E\u0439 \u043B\u043E\u0433\u0438\u043D \u0438 \u043F\u0430\u0440\u043E\u043B\u044C")));
 }
 function DashboardScreen({
   onNavigate
@@ -3302,10 +3959,8 @@ function DashboardScreen({
   return /*#__PURE__*/React.createElement("section", {
     className: "page"
   }, /*#__PURE__*/React.createElement(MasterPageHeader, {
-    eyebrow: "\u041E\u043A\u043D\u043E: 01 \u2014 14 \u0430\u0432\u0433\u0443\u0441\u0442\u0430",
     title: "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043C\u0435\u043D\u044B",
-    subtitle: "\u0427\u0442\u043E \u0432\u0430\u0436\u043D\u043E \u0437\u043D\u0430\u0442\u044C \u043A\u043E\u043C\u0430\u043D\u0434\u0435 \u0434\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u044F \u0437\u0430\u043B\u0430.",
-    meta: "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E",
+    meta: "1\u201314 \u0430\u0432\u0433\u0443\u0441\u0442\u0430",
     actions: /*#__PURE__*/React.createElement("div", {
       className: "win-row"
     }, [['7d', '7 дней'], ['14d', '14 дней'], ['30d', '30 дней']].map(([k, l]) => /*#__PURE__*/React.createElement(FilterChip, {
@@ -3313,30 +3968,30 @@ function DashboardScreen({
       active: win === k,
       onClick: () => setWin(k)
     }, l)))
-  }), /*#__PURE__*/React.createElement(MasterStatsRow, {
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "kpi"
+  }, /*#__PURE__*/React.createElement(MasterStatsRow, {
     tiles: [{
-      label: 'В НАЛИЧИИ',
+      label: 'В наличии',
       value: '1 204',
       hint: 'из 11 505 табаков'
     }, {
-      label: 'ВИДЕН ГОСТЮ',
+      label: 'Видно гостю',
       value: 15,
-      hint: 'миксов на витрине',
+      hint: 'миксов',
       tone: 'success'
     }, {
-      label: 'ЗАБЛОКИРОВАНО',
+      label: 'Заблокировано',
       value: 1,
-      hint: 'режет наличие',
       tone: 'warning'
     }, {
-      label: 'КОД СМЕНЫ',
+      label: 'Код смены',
       value: '4821',
       tone: 'code'
     }]
-  }), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
     className: "cols"
   }, /*#__PURE__*/React.createElement(MasterCard, {
-    eyebrow: "\u0421\u043F\u0440\u043E\u0441 \u0433\u043E\u0441\u0442\u0435\u0439",
     heading: "\u0422\u043E\u043F \u043C\u0438\u043A\u0441\u043E\u0432 \u043D\u0435\u0434\u0435\u043B\u0438"
   }, /*#__PURE__*/React.createElement("ol", {
     className: "rank-list"
@@ -3345,7 +4000,7 @@ function DashboardScreen({
     className: "rank-row"
   }, /*#__PURE__*/React.createElement("span", {
     className: "rank-num"
-  }, String(i + 1).padStart(2, '0')), /*#__PURE__*/React.createElement("span", {
+  }, i + 1), /*#__PURE__*/React.createElement("span", {
     className: "rank-copy"
   }, /*#__PURE__*/React.createElement("span", {
     className: "rank-name"
@@ -3362,7 +4017,6 @@ function DashboardScreen({
   }, /*#__PURE__*/React.createElement("i", {
     "data-lucide": "star"
   }), " ", String(mix.rating).replace('.', ','))))))), /*#__PURE__*/React.createElement(MasterCard, {
-    eyebrow: "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435",
     heading: "\u0421\u0438\u0433\u043D\u0430\u043B\u044B \u0434\u043B\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u044B"
   }, /*#__PURE__*/React.createElement("ul", {
     className: "signal-list"
@@ -3390,36 +4044,16 @@ function InventoryScreen() {
     ...t,
     inStock: !t.inStock
   } : t));
-  const inStockCount = items.filter(t => t.inStock).length;
   return /*#__PURE__*/React.createElement("section", {
     className: "page"
   }, /*#__PURE__*/React.createElement(MasterPageHeader, {
-    eyebrow: "\u0418\u041D\u0412\u0415\u041D\u0422\u0410\u0420\u0418\u0417\u0410\u0426\u0418\u042F",
     title: "\u0422\u0430\u0431\u0430\u043A\u0438",
-    subtitle: "\u041D\u0430\u043B\u0438\u0447\u0438\u0435, \u0441\u0442\u043E\u043F-\u043B\u0438\u0441\u0442 \u0438 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u0435 \u043C\u0438\u043A\u0441\u044B.",
     meta: rows.length + ' из ' + items.length,
     actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(MasterButton, {
       variant: "ghost"
     }, "\u0418\u043C\u043F\u043E\u0440\u0442 htreviews"), /*#__PURE__*/React.createElement(MasterButton, {
       variant: "primary"
     }, "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0442\u0430\u0431\u0430\u043A"))
-  }), /*#__PURE__*/React.createElement(MasterStatsRow, {
-    tiles: [{
-      label: 'В КАТАЛОГЕ',
-      value: items.length
-    }, {
-      label: 'В НАЛИЧИИ',
-      value: inStockCount,
-      tone: 'success'
-    }, {
-      label: 'СТОП-ЛИСТ',
-      value: items.length - inStockCount,
-      tone: 'warning'
-    }, {
-      label: 'ВЫБРАНО',
-      value: selected.length,
-      hint: 'для batch-действия'
-    }]
   }), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(MasterInput, {
@@ -3443,9 +4077,7 @@ function InventoryScreen() {
   }, "\u0412 \u043D\u0430\u043B\u0438\u0447\u0438\u0438"), /*#__PURE__*/React.createElement(FilterChip, {
     active: stock === 'out',
     onClick: () => setStock('out')
-  }, "\u041D\u0435\u0442 \u0432 \u043D\u0430\u043B\u0438\u0447\u0438\u0438"), /*#__PURE__*/React.createElement(FilterChip, {
-    count: 2
-  }, "\u041F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C"), /*#__PURE__*/React.createElement(FilterChip, null, "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0438")), /*#__PURE__*/React.createElement(MasterSortPill, {
+  }, "\u041D\u0435\u0442 \u0432 \u043D\u0430\u043B\u0438\u0447\u0438\u0438"), /*#__PURE__*/React.createElement(FilterChip, null, "\u041F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C"), /*#__PURE__*/React.createElement(FilterChip, null, "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0438")), /*#__PURE__*/React.createElement(MasterSortPill, {
     value: sort,
     onChange: setSort,
     options: [{
@@ -3523,9 +4155,7 @@ function InventoryScreen() {
       }, row.inStock ? 'в наличии' : 'нет'))
     }],
     rows: rows
-  }), !rows.length ? /*#__PURE__*/React.createElement(EmptyState, null, "\u041F\u043E \u0444\u0438\u043B\u044C\u0442\u0440\u0430\u043C \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E.") : null, /*#__PURE__*/React.createElement("p", {
-    className: "hint"
-  }, "\u041F\u043E\u043A\u0430\u0437\u0430\u043D\u044B 6 \u043F\u043E\u0437\u0438\u0446\u0438\u0439 \u0438\u0437 11 505 \u2014 \u0442\u0430\u0431\u043B\u0438\u0446\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u043F\u043E\u0441\u0442\u0440\u0430\u043D\u0438\u0447\u043D\u043E, \u043F\u043E\u0438\u0441\u043A \u0438\u0434\u0451\u0442 \u0441 debounce."));
+  }), !rows.length ? /*#__PURE__*/React.createElement(EmptyState, null, "\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E. \u0423\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u0438\u0437 \u0444\u0438\u043B\u044C\u0442\u0440\u043E\u0432.") : null);
 }
 function MixesScreen() {
   const [editing, setEditing] = React.useState(null);
@@ -3539,9 +4169,7 @@ function MixesScreen() {
     return /*#__PURE__*/React.createElement("section", {
       className: "page"
     }, /*#__PURE__*/React.createElement(MasterPageHeader, {
-      eyebrow: "\u0420\u0415\u0414\u0410\u041A\u0422\u041E\u0420 \u041C\u0418\u041A\u0421\u0410",
       title: editing.name,
-      subtitle: "\u0421\u043E\u0441\u0442\u0430\u0432, \u0434\u043E\u043B\u0438 \u0438 \u0432\u0438\u0434\u0438\u043C\u043E\u0441\u0442\u044C \u043D\u0430 \u0432\u0438\u0442\u0440\u0438\u043D\u0435. \u0421\u0443\u043C\u043C\u0430 \u0434\u043E\u043B\u0435\u0439 \u2014 \u0441\u0442\u0440\u043E\u0433\u043E 100%.",
       actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(MasterButton, {
         variant: "ghost",
         onClick: () => setEditing(null)
@@ -3552,8 +4180,7 @@ function MixesScreen() {
     }), /*#__PURE__*/React.createElement("div", {
       className: "cols"
     }, /*#__PURE__*/React.createElement(MasterCard, {
-      eyebrow: "\u0421\u043E\u0441\u0442\u0430\u0432",
-      heading: "\u041A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u044B"
+      heading: "\u0421\u043E\u0441\u0442\u0430\u0432"
     }, /*#__PURE__*/React.createElement(MasterList, {
       columns: [{
         key: 'name',
@@ -3594,7 +4221,6 @@ function MixesScreen() {
     }, "\u0420\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043F\u043E\u0440\u043E\u0432\u043D\u0443"), /*#__PURE__*/React.createElement("span", {
       className: "hint"
     }, 'Сумма: ' + total + '%'))), /*#__PURE__*/React.createElement(MasterCard, {
-      eyebrow: "\u041F\u0443\u0431\u043B\u0438\u043A\u0430\u0446\u0438\u044F",
       heading: "\u0412\u0438\u0434\u0438\u043C\u043E\u0441\u0442\u044C"
     }, /*#__PURE__*/React.createElement("div", {
       className: "field-row"
@@ -3611,14 +4237,12 @@ function MixesScreen() {
       tone: "ghost"
     }, "\u0430\u0432\u0442\u043E-\u0440\u0435\u0439\u043B")), /*#__PURE__*/React.createElement("p", {
       className: "hint"
-    }, "\u041F\u043E\u043F\u0443\u043B\u044F\u0440\u043D\u043E\u0441\u0442\u044C \u0438 \u0431\u0430\u0437\u043E\u0432\u044B\u0439 \u0440\u0435\u0439\u0442\u0438\u043D\u0433 \u2014 \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u043D\u044B\u0435 \u043E\u0442 \u0430\u043D\u0430\u043B\u0438\u0442\u0438\u043A\u0438, \u0432\u0440\u0443\u0447\u043D\u0443\u044E \u043D\u0435 \u0437\u0430\u0434\u0430\u044E\u0442\u0441\u044F."))));
+    }, "\u041F\u043E\u043F\u0443\u043B\u044F\u0440\u043D\u043E\u0441\u0442\u044C \u0438 \u0440\u0435\u0439\u0442\u0438\u043D\u0433 \u0441\u0447\u0438\u0442\u0430\u044E\u0442\u0441\u044F \u043F\u043E \u0432\u044B\u0431\u043E\u0440\u0430\u043C \u0438 \u043E\u0446\u0435\u043D\u043A\u0430\u043C \u0433\u043E\u0441\u0442\u0435\u0439, \u0432\u0440\u0443\u0447\u043D\u0443\u044E \u043D\u0435 \u0437\u0430\u0434\u0430\u044E\u0442\u0441\u044F."))));
   }
   return /*#__PURE__*/React.createElement("section", {
     className: "page"
   }, /*#__PURE__*/React.createElement(MasterPageHeader, {
-    eyebrow: "\u041C\u0415\u041D\u0415\u0414\u0416\u0415\u0420 \u041C\u0418\u041A\u0421\u041E\u0412",
     title: "\u041A\u0430\u0442\u0430\u043B\u043E\u0433 \u043C\u0438\u043A\u0441\u043E\u0432",
-    subtitle: "\u0421\u043E\u0441\u0442\u0430\u0432, \u043D\u0430\u043B\u0438\u0447\u0438\u0435 \u0438 \u0432\u0438\u0434\u0438\u043C\u043E\u0441\u0442\u044C \u043D\u0430 \u0432\u0438\u0442\u0440\u0438\u043D\u0435.",
     meta: "15 \u043C\u0438\u043A\u0441\u043E\u0432",
     actions: /*#__PURE__*/React.createElement(MasterButton, {
       variant: "primary",
@@ -3640,9 +4264,7 @@ function MixesScreen() {
     className: "toolbar-filters"
   }, /*#__PURE__*/React.createElement(FilterChip, {
     active: true
-  }, "\u0412\u0441\u0435"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0412\u0438\u0434\u0435\u043D \u0433\u043E\u0441\u0442\u044E"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0421\u043A\u0440\u044B\u0442"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0417\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D"), /*#__PURE__*/React.createElement(FilterChip, {
-    count: 1
-  }, "\u0420\u0435\u0439\u043B"))), /*#__PURE__*/React.createElement(MasterList, {
+  }, "\u0412\u0441\u0435"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0412\u0438\u0434\u0435\u043D \u0433\u043E\u0441\u0442\u044E"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0421\u043A\u0440\u044B\u0442"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0417\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D"), /*#__PURE__*/React.createElement(FilterChip, null, "\u0420\u0435\u0439\u043B"))), /*#__PURE__*/React.createElement(MasterList, {
     onRowClick: row => setEditing(row),
     columns: [{
       key: 'name',
@@ -3689,29 +4311,11 @@ function RailsScreen() {
   return /*#__PURE__*/React.createElement("section", {
     className: "page"
   }, /*#__PURE__*/React.createElement(MasterPageHeader, {
-    eyebrow: "\u041C\u0415\u041D\u0415\u0414\u0416\u0415\u0420 \u0420\u0415\u0419\u041B\u041E\u0412",
     title: "\u0420\u0435\u0439\u043B\u044B \u0432\u0438\u0442\u0440\u0438\u043D\u044B",
-    subtitle: "\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0438 \u0441\u043E\u0441\u0442\u0430\u0432 \u043F\u043E\u0434\u0431\u043E\u0440\u043E\u043A, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u0438\u0434\u0438\u0442 \u0433\u043E\u0441\u0442\u044C.",
     meta: "4 \u0440\u0435\u0439\u043B\u0430",
     actions: /*#__PURE__*/React.createElement(MasterButton, {
       variant: "primary"
     }, "\u041D\u043E\u0432\u044B\u0439 \u0440\u0435\u0439\u043B")
-  }), /*#__PURE__*/React.createElement(MasterStatsRow, {
-    tiles: [{
-      label: 'ВСЕГО',
-      value: 4
-    }, {
-      label: 'РЕДАКТИРУЕМЫХ',
-      value: 2,
-      tone: 'success'
-    }, {
-      label: 'АВТО',
-      value: 2,
-      tone: 'warning'
-    }, {
-      label: 'ПУСТЫХ',
-      value: 0
-    }]
   }), /*#__PURE__*/React.createElement(MasterList, {
     onRowClick: () => {},
     columns: [{
@@ -3744,7 +4348,6 @@ function RailsScreen() {
     }],
     rows: D.rails
   }), /*#__PURE__*/React.createElement(MasterCard, {
-    eyebrow: "\u0421\u043E\u0441\u0442\u0430\u0432 \u0440\u0435\u0439\u043B\u0430",
     heading: "\u0412\u0435\u0447\u0435\u0440 \u0432 \u0430\u0442\u0435\u043B\u044C\u0435",
     actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(MasterButton, {
       size: "sm"
@@ -3790,19 +4393,19 @@ function RailsScreen() {
     }],
     rows: [{
       id: '1',
-      pos: '01',
+      pos: 1,
       name: 'Лимонный пирог'
     }, {
       id: '2',
-      pos: '02',
+      pos: 2,
       name: 'Cinnamon Red Tea'
     }, {
       id: '3',
-      pos: '03',
+      pos: 3,
       name: 'Cheesecake Wild Forest'
     }, {
       id: '4',
-      pos: '04',
+      pos: 4,
       name: 'Молоко-Черника'
     }]
   })));
@@ -3812,37 +4415,24 @@ function AccessScreen() {
   return /*#__PURE__*/React.createElement("section", {
     className: "page"
   }, /*#__PURE__*/React.createElement(MasterPageHeader, {
-    eyebrow: "\u0414\u041E\u0421\u0422\u0423\u041F",
     title: "\u041A\u043E\u0434 \u0441\u043C\u0435\u043D\u044B \u0438 \u0440\u043E\u043B\u0438",
-    subtitle: "\u0415\u0436\u0435\u0434\u043D\u0435\u0432\u043D\u044B\u0439 \u043A\u043E\u0434, Telegram-allowlist \u0438 staff-\u0430\u043A\u043A\u0430\u0443\u043D\u0442\u044B.",
-    meta: "/staff/audit/events",
     actions: /*#__PURE__*/React.createElement(MasterButton, {
       variant: "primary"
     }, "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u043A\u043E\u0434")
-  }), /*#__PURE__*/React.createElement(MasterStatsRow, {
-    tiles: [{
-      label: 'КОД СМЕНЫ',
-      value: '4821',
-      tone: 'code',
-      hint: 'действует до 06:00'
-    }, {
-      label: 'ОПЕРАТОРОВ',
-      value: ops.length,
-      hint: 'в allowlist'
-    }, {
-      label: 'ПРИВЯЗАНО',
-      value: ops.filter(o => o.linked).length,
-      tone: 'success'
-    }, {
-      label: 'БОТ',
-      value: 'online',
-      tone: 'success',
-      hint: 'heartbeat 30 сек назад'
-    }]
-  }), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(MasterCard, {
+    heading: "\u041A\u043E\u0434 \u0441\u043C\u0435\u043D\u044B"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "code-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "code-value"
+  }, "4821"), /*#__PURE__*/React.createElement("span", {
+    className: "code-meta"
+  }, /*#__PURE__*/React.createElement("span", null, "\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0434\u043E 06:00"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(MasterTag, {
+    tone: "success",
+    dot: true
+  }, "\u0431\u043E\u0442 \u043D\u0430 \u0441\u0432\u044F\u0437\u0438"), " 30 \u0441\u0435\u043A \u043D\u0430\u0437\u0430\u0434")))), /*#__PURE__*/React.createElement("div", {
     className: "cols"
   }, /*#__PURE__*/React.createElement(MasterCard, {
-    eyebrow: "Telegram",
     heading: "Allowlist \u043E\u043F\u0435\u0440\u0430\u0442\u043E\u0440\u043E\u0432",
     actions: /*#__PURE__*/React.createElement(MasterButton, {
       size: "sm"
@@ -3881,12 +4471,13 @@ function AccessScreen() {
     rows: ops
   }), /*#__PURE__*/React.createElement("p", {
     className: "hint"
-  }, "\u041C\u0430\u0441\u0442\u0435\u0440 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442 \u043A\u043E\u0434 \u0438\u0437 \u043A\u043E\u043D\u0441\u043E\u043B\u0438 \u2014 \u043E\u043F\u0435\u0440\u0430\u0442\u043E\u0440 \u0437\u0430\u043F\u0440\u0430\u0448\u0438\u0432\u0430\u0435\u0442 \u0435\u0433\u043E \u0432 \u0431\u043E\u0442\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0439 /code.")), /*#__PURE__*/React.createElement(MasterCard, {
-    eyebrow: "\u0422\u043E\u043B\u044C\u043A\u043E admin",
+  }, "\u041C\u0430\u0441\u0442\u0435\u0440 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442 \u043A\u043E\u0434 \u0438\u0437 \u043A\u043E\u043D\u0441\u043E\u043B\u0438. \u041E\u043F\u0435\u0440\u0430\u0442\u043E\u0440 \u0437\u0430\u043F\u0440\u0430\u0448\u0438\u0432\u0430\u0435\u0442 \u0435\u0433\u043E \u0432 \u0431\u043E\u0442\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0439 /code.")), /*#__PURE__*/React.createElement(MasterCard, {
     heading: "Staff-\u0430\u043A\u043A\u0430\u0443\u043D\u0442\u044B",
-    actions: /*#__PURE__*/React.createElement(MasterButton, {
+    actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(MasterTag, {
+      tone: "ghost"
+    }, "\u0442\u043E\u043B\u044C\u043A\u043E admin"), /*#__PURE__*/React.createElement(MasterButton, {
       size: "sm"
-    }, "\u041D\u043E\u0432\u044B\u0439 \u0430\u043A\u043A\u0430\u0443\u043D\u0442")
+    }, "\u041D\u043E\u0432\u044B\u0439 \u0430\u043A\u043A\u0430\u0443\u043D\u0442"))
   }, /*#__PURE__*/React.createElement(MasterList, {
     columns: [{
       key: 'login',
@@ -3910,8 +4501,7 @@ function AccessScreen() {
     }],
     rows: D.staff
   }))), /*#__PURE__*/React.createElement(MasterCard, {
-    eyebrow: "\u0416\u0443\u0440\u043D\u0430\u043B",
-    heading: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 staff-\u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438"
+    heading: "\u0416\u0443\u0440\u043D\u0430\u043B staff-\u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0439"
   }, /*#__PURE__*/React.createElement(MasterList, {
     columns: [{
       key: 'at',
@@ -4050,7 +4640,7 @@ window.MASTER_MOCK = {
     type: 'statistical',
     mixes: 5,
     editable: false,
-    reason: 'Пересчитывается по событиям «Покурить»'
+    reason: 'Пересчитывается по выборам гостей'
   }, {
     id: 'r2',
     name: 'Лучшие оценки',
@@ -4107,13 +4697,13 @@ window.MASTER_MOCK = {
     id: 'a1',
     at: '14 авг, 18:22',
     action: 'inventory.toggle',
-    entity: 'Cosmo Flower → нет в наличии',
+    entity: 'Cosmo Flower, нет в наличии',
     who: 'atelier'
   }, {
     id: 'a2',
     at: '14 авг, 17:05',
     action: 'mix.update',
-    entity: 'Морозная ягода · состав',
+    entity: 'Морозная ягода, состав',
     who: 'admin'
   }, {
     id: 'a3',

@@ -1,4 +1,4 @@
-Quiet tab (`.tab` upstream) for the pre-onboarding journey nav: graphite when active, with a bordeaux mark.
+Quiet tab (`.tab` upstream) for the pre-onboarding journey nav: graphite when active, with a bordeaux mark. Sentence case.
 
 ```jsx
 <GuestTab active>Знакомство</GuestTab>
