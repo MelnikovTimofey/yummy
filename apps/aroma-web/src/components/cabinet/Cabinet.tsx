@@ -57,9 +57,6 @@ export function Cabinet({
   onDelete: () => void;
 }) {
   const [tab, setTab] = useState<CabinetListSource>('history');
-  // История приходит страницами по 50, поэтому счётчик — из /guest/me.
-  const historyCount = Math.max(me?.historyCount ?? 0, history.items.length);
-  const favoritesCount = favorites?.length ?? me?.favoritesCount ?? 0;
 
   const renderHistory = () => {
     if (history.status === 'loading' && !history.items.length) {
@@ -73,13 +70,13 @@ export function Cabinet({
       );
     }
     if (!history.items.length) {
-      return <CabinetEmpty text="Вы ещё ничего не выбирали. Нажмёте «Покурить» — микс появится здесь." onGoRecs={onGoRecs} />;
+      return <CabinetEmpty text="Здесь появятся миксы, которые вы выберете." onGoRecs={onGoRecs} />;
     }
     return (
       <div className="cab-list">
         {groupHistory(history.items, new Date()).map((group) => (
           <section key={group.key} className="cab-group" aria-label={group.label}>
-            <p className="aroma-caps">{group.label}</p>
+            <h2 className="cab-label">{group.label}</h2>
             {group.items.map((item) => (
               <CabinetRow key={item.id} item={item} onOpen={() => onOpen(item, 'history')} />
             ))}
@@ -99,7 +96,7 @@ export function Cabinet({
       return <p className="cab-anon-note">Загружаем избранное…</p>;
     }
     if (!favorites.length) {
-      return <CabinetEmpty text="Пока пусто. Сердечко на карточке микса — и он здесь." onGoRecs={onGoRecs} />;
+      return <CabinetEmpty text="Здесь появятся миксы, отмеченные сердечком." onGoRecs={onGoRecs} />;
     }
     return (
       <div className="cab-list cab-group">
@@ -121,7 +118,7 @@ export function Cabinet({
 
       {me ? (
         <section className="cab-tastes">
-          <p className="aroma-caps">Ваши вкусы</p>
+          <h2 className="cab-label">Ваши вкусы</h2>
           {me.likedProfiles.length || me.likedFlavors.length ? (
             <div className="cab-tastes-row">
               {me.likedProfiles.map((profile) => (
@@ -152,8 +149,8 @@ export function Cabinet({
 
       <SegmentNav
         items={[
-          { id: 'history', label: `История · ${historyCount}` },
-          { id: 'favorites', label: `Избранное · ${favoritesCount}` },
+          { id: 'history', label: 'История' },
+          { id: 'favorites', label: 'Избранное' },
         ]}
         value={tab}
         onChange={(id) => setTab(id as CabinetListSource)}

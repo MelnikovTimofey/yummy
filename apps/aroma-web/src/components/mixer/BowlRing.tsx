@@ -45,11 +45,6 @@ export function BowlRing({
 
   return (
     <div className="mixer-ring" ref={ringRef} data-quick={quick ? 'true' : undefined}>
-      <span
-        className="mixer-ring-halo"
-        style={{ background: tobaccos[0] ? getProfileColor(tobaccos[0].flavorProfiles[0]) : 'transparent' }}
-        aria-hidden
-      />
       <svg viewBox={`0 0 ${RING_VIEWBOX} ${RING_VIEWBOX}`} aria-hidden>
         <circle cx={half} cy={half} r={RING_RADIUS} fill="none" stroke="var(--line)" strokeWidth={RING_STROKE} />
         {[0, 1, 2].map((index) => {

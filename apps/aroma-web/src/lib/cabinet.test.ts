@@ -128,16 +128,16 @@ test('карточка: нет табака — «Покурить» неакт�
   assert.equal(smokeBlockReason({ kind: 'available' }), null);
   assert.equal(
     smokeBlockReason({ kind: 'unavailable', missing: 'Oven Black Currant' }),
-    'Сейчас нет: Oven Black Currant. Покурить этот микс сегодня не получится.',
+    'Сейчас нет: Oven Black Currant.',
   );
 });
 
 test('карточка собранного микса: дата и вердикт гармонии, как в «Намиксуй»', () => {
   assert.equal(
     customDescription(customCard, NOW),
-    'Собран вами в «Намиксуй» 11 октября. Вердикт гармонии — «Классическое сочетание».',
+    'Собран вами 11 октября. Гармония: классическое сочетание.',
   );
-  assert.equal(customDescription({ ...customCard, harmony: null }, NOW), 'Собран вами в «Намиксуй» 11 октября.');
+  assert.equal(customDescription({ ...customCard, harmony: null }, NOW), 'Собран вами 11 октября.');
 });
 
 test('409 на собранном миксе называет табак «бренд табак»', () => {

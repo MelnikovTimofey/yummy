@@ -1,4 +1,4 @@
-import { ProfileGlyph, SignatureBar } from '@/components/aroma';
+import { ProfileGlyph } from '@/components/aroma';
 import { rowMark, rowNote, rowOpens, type GuestCabinetItem } from '@/lib/cabinet';
 import { cn } from '@/lib/utils';
 
@@ -18,9 +18,8 @@ export function CabinetRow({ item, onOpen }: { item: GuestCabinetItem; onOpen: (
     >
       <ProfileGlyph profiles={item.flavorProfiles} size={44} />
       <span className="cab-row-text">
-        {mark ? <span className="aroma-caps cab-mark">{mark}</span> : null}
+        {mark ? <span className="cab-mark">{mark}</span> : null}
         <span className="cab-row-name">{item.name}</span>
-        <SignatureBar profiles={item.flavorProfiles} height={3} />
         {note ? <span className="cab-row-note">{note}</span> : null}
       </span>
       {item.ownRating ? (

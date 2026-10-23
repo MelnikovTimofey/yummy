@@ -22,10 +22,9 @@ export function ShelfFilter({
   return (
     <div className="mixer-filters">
       <div className="mixer-filters-head">
-        <span className="aroma-caps">Полки</span>
+        <h2 className="mixer-label">Полки</h2>
         <span className="mixer-filters-count" aria-live="polite">
-          {fromOnboarding ? 'из вашего подбора · ' : ''}
-          {`${count} ${pluralize(count, ['табак', 'табака', 'табаков'])} в колоде · по кругу`}
+          {`${count} ${pluralize(count, ['табак', 'табака', 'табаков'])}${fromOnboarding ? ' из вашего подбора' : ''}`}
         </span>
       </div>
       <div className="mixer-shelves" role="group" aria-label="Полки, можно несколько">

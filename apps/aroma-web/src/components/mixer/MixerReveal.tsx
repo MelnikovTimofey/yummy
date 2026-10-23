@@ -36,7 +36,7 @@ function NameField({ value, onChange }: { value: string; onChange: (value: strin
 
   return (
     <label className="mixer-name-field">
-      <span className="aroma-caps">Название · можно переименовать</span>
+      <span className="mixer-label">Название</span>
       <textarea
         ref={ref}
         className="mixer-name-input"
@@ -90,16 +90,10 @@ export function MixerReveal({
             tobaccos={tobaccos}
             shares={shares}
             quick
-            center={
-              evaluation ? (
-                <span className="mixer-ring-score">{evaluation.harmony}</span>
-              ) : (
-                <span className="mixer-ring-caption">{evaluationFailed ? '—' : 'Считаем…'}</span>
-              )
-            }
+            center={evaluation ? <span className="mixer-ring-score">{evaluation.harmony}</span> : null}
           />
           <div className="mixer-reveal-verdict">
-            <span className="aroma-caps">Ваш микс · гармония</span>
+            <h2 className="mixer-label">Гармония</h2>
             {evaluation ? (
               <span className="mixer-verdict">{verdictLabel(evaluation.verdict)}</span>
             ) : (
@@ -143,26 +137,17 @@ export function MixerReveal({
         similar ? (
           canOpenMix(similar.id) ? (
             <button type="button" className="mixer-similar" onClick={() => onOpenMix(similar.id)}>
-              <span className="aroma-caps">В ателье похоже</span>
-              <strong>{similar.name}</strong>
+              <span>{`Похоже на: ${similar.name}, ${similar.similarity}%`}</span>
               {similar.ratingsCount > 0 ? <RatingPill rating={similar.avgRating} /> : null}
-              <span className="mixer-similar-note">{`Совпадение ${similar.similarity}% · открыть микс мастера`}</span>
             </button>
           ) : (
             <div className="mixer-similar">
-              <span className="aroma-caps">В ателье похоже</span>
-              <strong>{similar.name}</strong>
+              <span>{`Похоже на: ${similar.name}, ${similar.similarity}%`}</span>
               {similar.ratingsCount > 0 ? <RatingPill rating={similar.avgRating} /> : null}
-              <span className="mixer-similar-note">{`Совпадение ${similar.similarity}%`}</span>
             </div>
           )
         ) : (
-          <div className="mixer-similar">
-            <span className="aroma-caps">В ателье такого нет</span>
-            <strong>Первое такое сочетание</strong>
-            <span />
-            <span className="mixer-similar-note">Похожих миксов в каталоге нет.</span>
-          </div>
+          <p className="mixer-similar">Похожих миксов в каталоге нет.</p>
         )
       ) : null}
     </>
@@ -180,7 +165,7 @@ export function MixerRevealDock({
 }) {
   return (
     <div className="mixer-dock">
-      <CTA pulse={!smoking} disabled={smoking} onClick={onSmoke}>
+      <CTA disabled={smoking} onClick={onSmoke}>
         {smoking ? 'Отмечаем…' : 'Покурить'}
       </CTA>
       <button type="button" className="mixer-link" onClick={onRestart}>

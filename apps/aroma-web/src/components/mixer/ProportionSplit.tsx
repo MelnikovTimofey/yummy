@@ -4,7 +4,7 @@ import { moveBoundary } from '@/lib/mixer/bowl';
 import { getProfileColor } from '@/lib/profile-color';
 import type { PaletteTobacco } from '@/lib/mixer/types';
 
-export const ROLE_LABELS = ['Основа', 'Акцент', 'Штрих'] as const;
+const ROLE_LABELS = ['Основа', 'Акцент', 'Штрих'] as const;
 
 const r = 'var(--r-guest-control)';
 
@@ -75,7 +75,7 @@ export function ProportionSplit({
 
   return (
     <div className="mixer-split">
-      <span className="aroma-caps">Доли · тяните бегунки</span>
+      <h2 className="mixer-label">Доли</h2>
       <div className="mixer-split-bar" ref={barRef}>
         {tobaccos.map((tobacco, index) => (
           <div
@@ -118,9 +118,9 @@ export function ProportionSplit({
               style={{ background: getProfileColor(tobacco.flavorProfiles[0]) }}
               aria-hidden
             />
-            {`${ROLE_LABELS[index]} · `}
+            {`${ROLE_LABELS[index]}: `}
             <b>{`${tobacco.manufacturer} ${tobacco.name}`.trim()}</b>
-            {` ${shares[index]}%`}
+            {`, ${shares[index]}%`}
           </li>
         ))}
       </ul>

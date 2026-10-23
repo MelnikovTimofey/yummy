@@ -10,7 +10,6 @@ export function MasterLine({ line }: { line: string | null }) {
         М
       </span>
       <div className="mixer-master-body">
-        <span className="aroma-caps">Мастер</span>
         <span aria-live="polite">
           <span key={line} className="mixer-master-text">
             {line}

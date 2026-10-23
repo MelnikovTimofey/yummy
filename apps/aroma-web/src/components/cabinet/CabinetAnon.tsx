@@ -1,11 +1,9 @@
 import { useState } from 'react';
 
-import { CTA, ProfileGlyph } from '@/components/aroma';
+import { CTA } from '@/components/aroma';
 import { cn } from '@/lib/utils';
 
 const POLICY_URL = 'https://nomadlounge.ru/agreement/';
-
-export const CABINET_GLYPH = ['berry', 'citrus', 'minty'];
 
 // Кабинет без входа (#243, мокап cab-anon). Без бота — только объяснение.
 export function CabinetAnon({
@@ -24,24 +22,9 @@ export function CabinetAnon({
 
   return (
     <section className="cab-anon">
-      <ProfileGlyph profiles={CABINET_GLYPH} size={72} />
-      <p className="aroma-caps">Кабинет</p>
-      <h1 className="cab-anon-title">Запомним, что вам понравилось</h1>
-      <ul className="cab-benefits">
-        <li>
-          <span className="cab-dot" aria-hidden />
-          История: что и когда вы выбирали
-        </li>
-        <li>
-          <span className="cab-dot" aria-hidden />
-          Избранное — любимые и собранные вами миксы
-        </li>
-        <li>
-          <span className="cab-dot" aria-hidden />
-          «Для вас» на Подборе — без онбординга в следующий раз
-        </li>
-      </ul>
-      <p className="cab-anon-note">Без входа всё работает как прежде. Кабинет действует в этом заведении.</p>
+      <h1 className="cab-anon-title">Кабинет</h1>
+      <p className="cab-anon-text">Сохраним историю выборов и избранное. Подбор будет их учитывать.</p>
+      <p className="cab-anon-note">Кабинет работает только в этом заведении.</p>
 
       {canLogin ? (
         <div className="cab-anon-form">

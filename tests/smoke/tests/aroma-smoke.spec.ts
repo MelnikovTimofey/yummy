@@ -121,6 +121,8 @@ test('Aroma onboarding shows how many mixes stand behind the current choice', as
 // мастера. Сценарий не зависит от конкретных табаков: берёт верхнюю карту
 // каждой колоды, а если штриха в наличии нет — пропускает ход.
 test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card', async ({ page }) => {
+  // Запас на добор чаши после 409: каждый возврат на ход — ещё несколько карт.
+  test.setTimeout(60_000);
   await page.goto('/');
 
   await page.getByLabel('Код мастера').fill(guestAccessCode);
@@ -135,7 +137,7 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
 
   const take = page.getByRole('button', { name: 'Беру', exact: true });
-  await expect(page.getByText('Ход 01 · из 03')).toBeVisible();
+  await expect(page.getByText('Ход 1 из 3')).toBeVisible();
   await expect(take).toBeEnabled();
 
   // Основа — свайп вправо дальше порога 90 px.
@@ -148,36 +150,47 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await page.mouse.up();
 
   // Акцент — кнопкой «Беру».
-  await expect(page.getByText('Ход 02 · из 03')).toBeVisible();
+  await expect(page.getByText('Ход 2 из 3')).toBeVisible();
   await expect(page.getByText('совпадение с чашей').first()).toBeVisible();
   await take.click();
+  await expect(page.getByText('Ход 3 из 3')).toBeVisible();
 
-  // Штрих — необязательный ход.
-  await expect(page.getByText('Ход 03 · из 03')).toBeVisible();
-  if (await take.isEnabled()) {
-    await take.click();
-  } else {
-    await page.getByRole('button', { name: 'Без штриха' }).click();
-  }
-
-  // Раскрытие: имя, доли, «Покурить».
-  await expect(page.getByText('Раскрытие')).toBeVisible();
-  await expect(page.getByLabel('Название микса')).not.toHaveValue('');
-  const mixName = (await page.getByLabel('Название микса').inputValue()).trim();
-  await expect(page.getByText('Доли · тяните бегунки')).toBeVisible();
-  await expect(page.getByRole('slider').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Покурить' }).click();
+  // Штрих необязателен: берём верхнюю карту, а без штриха в наличии — «Без
+  // штриха». Табак из чаши может закончиться и на раскрытии: master-smoke в
+  // соседнем воркере отмечает «Закончился» первые строки Полки. Тогда оценка
+  // или «Покурить» получают 409, и Миксер возвращает гостя на ход этого табака,
+  // поэтому чаша добирается заново, пока не откроется карточка для мастера.
+  const withoutTwist = page.getByRole('button', { name: 'Без штриха' });
+  const nameField = page.getByLabel('Название микса');
+  const similar = page.getByText(/^(Похоже на: .+, \d+%|Похожих миксов в каталоге нет\.)$/);
+  const masterCard = page.getByText('Покажите мастеру', { exact: true });
+  let mixName = '';
+  await expect(async () => {
+    if (await similar.isVisible()) {
+      // Раскрытие с готовой оценкой: имя, доли, «Покурить».
+      mixName = (await nameField.inputValue()).trim();
+      expect(mixName).not.toBe('');
+      await expect(page.getByRole('heading', { name: 'Гармония', level: 2 })).toBeVisible({ timeout: 1_000 });
+      await expect(page.getByRole('heading', { name: 'Доли', level: 2 })).toBeVisible({ timeout: 1_000 });
+      await expect(page.getByRole('slider').first()).toBeVisible({ timeout: 1_000 });
+      await page.getByRole('button', { name: 'Покурить' }).click({ timeout: 1_000 });
+    } else if ((await take.isVisible()) && (await take.isEnabled())) {
+      await take.click({ timeout: 1_000 });
+    } else if ((await withoutTwist.isVisible()) && (await withoutTwist.isEnabled())) {
+      await withoutTwist.click({ timeout: 1_000 });
+    }
+    await expect(masterCard).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [250], timeout: 20_000 });
 
   // Карточка для мастера открывается и при сбое аналитического события.
-  await expect(page.getByText('Покажите мастеру')).toBeVisible();
-  await expect(page.getByText(/Собран гостем/)).toBeVisible();
+  await expect(page.getByText(/^Собран гостем/)).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
   await expect(page.getByRole('button', { name: 'Собрать свой микс' })).toBeVisible();
 
   // Собранный микс — карточка для мастера в шапке (#289, #291); «Готово»
   // возвращает туда, откуда её открыли.
   await page.getByRole('button', { name: `Карточка для мастера: ${mixName}` }).click();
-  await expect(page.getByText('Покажите мастеру')).toBeVisible();
+  await expect(masterCard).toBeVisible();
   await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
   await expect(page.getByRole('button', { name: 'Собрать свой микс' })).toBeVisible();
@@ -219,7 +232,7 @@ test('Aroma guest navigates with the bottom bar and opens the mixer from it', as
   const take = page.getByRole('button', { name: 'Беру', exact: true });
   await expect(take).toBeEnabled();
   await take.click();
-  await expect(page.getByText('Ход 02 · из 03')).toBeVisible();
+  await expect(page.getByText('Ход 2 из 3')).toBeVisible();
 
   await page.getByRole('button', { name: 'Назад', exact: true }).click();
   await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
@@ -286,7 +299,7 @@ const openCabinet = async (page: Page, botUsername: string | null) => {
   const cabinetTab = nav.getByRole('button', { name: 'Кабинет', exact: true });
   await cabinetTab.click();
   await expect(cabinetTab).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('heading', { name: 'Запомним, что вам понравилось', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Кабинет', level: 1 })).toBeVisible();
 };
 
 test('Aroma cabinet asks for consent before «Войти через Telegram»', async ({ page }) => {
@@ -305,7 +318,7 @@ test('Aroma cabinet asks for consent before «Войти через Telegram»',
 test('Aroma cabinet without a login bot only explains itself', async ({ page }) => {
   await openCabinet(page, null);
 
-  await expect(page.getByText('Без входа всё работает как прежде. Кабинет действует в этом заведении.')).toBeVisible();
+  await expect(page.getByText('Кабинет работает только в этом заведении.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Войти через Telegram' })).toHaveCount(0);
   await expect(page.getByRole('checkbox')).toHaveCount(0);
 });
@@ -325,7 +338,7 @@ test('Aroma intro offers the returning guest to log in', async ({ page }) => {
 });
 
 // Сердечко в карточке микса (#244): у анонима оно не прячется — по нажатию
-// шторка «Избранное живёт в кабинете», «Не сейчас» закрывает только её.
+// шторка «Избранное хранится в кабинете», «Не сейчас» закрывает только её.
 test('Aroma anonymous heart offers the cabinet and «Не сейчас» closes the prompt', async ({ page }) => {
   await page.goto('/');
 
@@ -340,7 +353,7 @@ test('Aroma anonymous heart offers the cabinet and «Не сейчас» closes 
   await expect(heart).toHaveAttribute('aria-pressed', 'false');
   await heart.click();
 
-  const prompt = page.getByRole('dialog', { name: 'Избранное живёт в кабинете' });
+  const prompt = page.getByRole('dialog', { name: 'Избранное хранится в кабинете' });
   await expect(prompt).toBeVisible();
   await expect(prompt.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
   await prompt.getByRole('button', { name: 'Не сейчас' }).click();
@@ -510,7 +523,7 @@ test('Aroma reel strip above recommendations opens the feed on the tapped mix', 
   await expect(page.locator('.reel-reveal .reel-name')).toHaveText(name);
 });
 
-// Сердечко на рилсе (#265): у гостя без входа — та же шторка «Избранное живёт
+// Сердечко на рилсе (#265): у гостя без входа — та же шторка «Избранное хранится
 // в кабинете», что в карточке микса (#244); «Не сейчас» возвращает в ленту.
 test('Aroma anonymous heart on a reel offers the cabinet and «Не сейчас» closes the prompt', async ({ page }) => {
   await page.goto('/');
@@ -527,7 +540,7 @@ test('Aroma anonymous heart on a reel offers the cabinet and «Не сейчас
   await expect(heart).toHaveAttribute('aria-pressed', 'false');
   await heart.click();
 
-  const prompt = page.getByRole('dialog', { name: 'Избранное живёт в кабинете' });
+  const prompt = page.getByRole('dialog', { name: 'Избранное хранится в кабинете' });
   await expect(prompt).toBeVisible();
   await expect(prompt.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
   await prompt.getByRole('button', { name: 'Не сейчас' }).click();

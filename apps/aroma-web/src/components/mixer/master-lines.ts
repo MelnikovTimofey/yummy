@@ -3,7 +3,7 @@ import type { PaletteTobacco, Turn, Verdict } from '@/lib/mixer/types';
 // Реплики мастера на экране «Намиксуй». Тексты пишет владелец продукта (#128):
 // по одной или несколько фраз на ключ, `{name}` подставляется там, где есть
 // имя. Пустой ключ — мастер молчит, на экране остаётся прошлая реплика.
-// Границы тона — .claude/skills/aroma-atelier-design/readme.md, раздел «Юмор».
+// Тон — .claude/skills/aroma-atelier-design/readme.md, CONTENT FUNDAMENTALS: без шуток.
 
 export type MasterLineKey =
   | 'turn.base'
