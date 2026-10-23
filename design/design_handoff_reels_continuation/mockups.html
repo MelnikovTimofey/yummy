@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Рилсы после Подбора · мокап</title>
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<style>
+/* ── Экранные классы гостевого UI-кита (копия из ui_kits/aroma-guest/index.html) ── */
+html,body,#root{margin:0;height:100%;width:100%}
+body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;background:var(--guest-room-bg)}
+.app-bg{min-height:100dvh;width:100%;display:grid;place-items:center;padding:16px;position:relative;overflow:hidden;background:var(--guest-halo-strong),var(--guest-halo-soft),linear-gradient(180deg,rgba(15,15,18,.94) 0%,rgba(20,20,23,1) 100%)}
+.halo-top{position:absolute;top:-100px;right:-48px;width:260px;height:260px;border-radius:999px;background:radial-gradient(circle,rgba(142, 47, 60,.55) 0%,rgba(142, 47, 60,0) 70%);filter:blur(10px);opacity:.72}
+.halo-bottom{position:absolute;bottom:-180px;left:-90px;width:320px;height:320px;border-radius:999px;background:radial-gradient(circle,rgba(142, 47, 60,.16) 0%,rgba(142, 47, 60,0) 72%);filter:blur(14px);opacity:.8}
+.phone-shell{width:min(calc(100vw - 32px),430px);height:calc(100dvh - 32px);border:1px solid var(--line);border-radius:var(--r-guest-shell);background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-shell);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2}
+.topbar{display:grid;gap:8px;padding:6px 10px 6px 20px;border-bottom:1px solid var(--line);background:var(--guest-topbar-bg);position:sticky;top:0;z-index:20;box-shadow:0 12px 28px rgba(0,0,0,.18);backdrop-filter:blur(18px)}
+.topbar-main-row{display:flex;align-items:center;gap:12px;width:100%}
+.brand-home-btn{border:0;background:transparent;padding:0;min-height:40px;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px}
+.brand-mark{width:auto;height:22px;flex:0 0 auto}
+.brand{margin:0;font-family:var(--font-display);font-size:19px;line-height:1;letter-spacing:.01em;color:var(--text-0);white-space:nowrap}
+.guest-stage-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.content{padding:12px 20px;overflow-y:auto;overflow-x:hidden;display:grid;gap:12px;min-height:0;flex:1 1 auto;align-content:start;scrollbar-width:thin;scrollbar-color:#3A3A40 #1A1A1D}
+.content-intro{padding:0;gap:0}
+.guest-status{margin:0;color:var(--text-1);font-size:15px}
+.guest-error{margin:0;color:var(--danger);font-size:12px;text-align:center}
+.guest-ok{margin:0;color:var(--text-primary);font-size:12px}
+.aroma-skip{background:transparent;border:0;color:var(--text-2);font-size:11px;padding:4px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.aroma-ghost{border:1px solid var(--line);background:rgba(40,40,48,.5);color:var(--text-0);border-radius:14px;min-height:48px;padding:0 18px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;cursor:pointer}
+.aroma-ghost-sm{border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);border-radius:12px;min-height:44px;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:0 14px}
+
+/* Тонкая шапка и нижняя панель (#168) */
+.topbar-icon-btn{margin-left:auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
+.topbar-icon-btn:hover,.topbar-icon-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
+.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0 8px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
+.bottom-nav-item{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;border:0;background:transparent;color:var(--text-muted);cursor:pointer}
+.bottom-nav-item[aria-current="page"]{color:var(--text-0)}
+.bottom-nav-item[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 2px 2px;background:var(--accent)}
+.kit-mixer{flex:1 1 auto;display:grid;gap:16px;align-content:start;padding:12px 20px}
+.kit-mixer-top{display:grid;grid-template-columns:36px 1fr 36px;align-items:center}
+.kit-mixer-title{margin:0;text-align:center;font-family:var(--font-display);font-size:22px;color:var(--text-0)}
+
+/* Access */
+.aroma-access{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+.aroma-access-halo{position:absolute;inset:0;pointer-events:none;opacity:.92;background:radial-gradient(circle at 50% 12%,rgba(142, 47, 60,.30) 0%,transparent 38%),radial-gradient(circle at 12% 90%,rgba(142, 47, 60,.12) 0%,transparent 40%),radial-gradient(circle at 90% 86%,rgba(142, 47, 60,.16) 0%,transparent 38%)}
+.aroma-access-body{position:relative;z-index:1;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:clamp(24px,8vh,70px) 28px clamp(20px,3vh,28px);gap:clamp(18px,4vh,36px)}
+.aroma-access-mark{display:block;width:clamp(44px,7vh,64px);height:auto;margin-bottom:clamp(10px,2vh,18px)}
+.aroma-access-brand{display:block;font-family:var(--font-display);font-size:clamp(34px,7vh,46px);line-height:.96;color:var(--text-0)}
+.aroma-access-tagline{margin:clamp(8px,1.4vh,12px) 0 0;font-size:11px;letter-spacing:var(--caps-tracking-wide);text-transform:uppercase;color:var(--text-1)}
+.aroma-access-form{display:grid;gap:clamp(14px,2.6vh,24px);margin-top:auto}
+.aroma-access-age{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+.aroma-access-age-dot{width:20px;height:20px;border-radius:999px;border:1px solid var(--line);background:transparent;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:var(--primary-foreground);font-size:12px;font-weight:700;cursor:pointer;padding:0}
+.aroma-access-age-dot.on{border-color:var(--primary);background:var(--primary)}
+.aroma-access-age-text{font-size:13px;color:var(--text-1);line-height:1.3}
+.aroma-access-footer{margin:0;color:var(--text-2);font-size:10.5px;text-align:center;letter-spacing:.16em;text-transform:uppercase}
+
+/* Intro */
+.aroma-intro{flex:1 1 auto;min-height:100%;position:relative;display:flex;flex-direction:column;padding:20px 24px 0;overflow:hidden}
+.aroma-intro-watermark{position:absolute;top:14px;right:22px;font-family:var(--font-display);font-size:96px;line-height:1;color:rgba(142, 47, 60,.08);pointer-events:none}
+.aroma-intro-body{flex:1 1 auto;display:flex;flex-direction:column;gap:18px;justify-content:center;z-index:1}
+.aroma-intro-content{display:flex;flex-direction:column;gap:18px}
+.aroma-intro-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-title);line-height:1.02;color:var(--text-0);text-wrap:pretty}
+.aroma-intro-text{margin:0;color:var(--text-1);font-size:15px;line-height:1.5;max-width:30ch}
+.aroma-intro-dock,.aroma-onboarding-dock{flex:0 0 auto;display:grid;gap:10px;padding:12px 0 22px;border-top:1px solid var(--line-soft);background:var(--guest-dock-fade)}
+.aroma-intro-pips,.aroma-onboarding-pips{display:flex;justify-content:center;gap:6px}
+.aroma-intro-pip{width:6px;height:6px;border-radius:999px;background:rgba(142, 47, 60,.3);transition:width var(--dur-slow)}
+.aroma-intro-pip.on{width:22px;background:var(--primary)}
+.aroma-onboarding-pip{width:6px;height:6px;border-radius:999px;background:rgba(142, 47, 60,.3)}
+.aroma-onboarding-pip.on{background:var(--primary)}
+
+/* Onboarding */
+.aroma-onboarding{flex:1 1 auto;min-height:100%;display:flex;flex-direction:column;padding:20px 20px 0;gap:12px}
+.aroma-onboarding-body{flex:1 1 auto;display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto}
+.aroma-onboarding-title{margin:8px 0 0;font-family:var(--font-display);font-size:var(--fs-guest-h1);line-height:1.05;color:var(--text-0)}
+.aroma-onboarding-hint{margin:0;color:var(--text-1);font-size:13px;line-height:1.5;max-width:32ch}
+.aroma-profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+.aroma-flavor-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.aroma-selected{margin-top:6px;display:grid;gap:6px}
+.aroma-selected-row{display:flex;flex-wrap:wrap;gap:6px}
+.aroma-selected-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-1)}
+.aroma-selected-dot{width:8px;height:8px;border-radius:999px}
+
+/* Selected-mix bar */
+.aroma-selected-shell{padding:8px 20px 0;border-bottom:1px solid var(--line-soft);background:var(--guest-topbar-bg)}
+.aroma-selected-text{margin:0;font-size:14px;line-height:1.55}
+
+/* Recommendations */
+.aroma-recs{display:grid;gap:14px;align-content:start}
+.aroma-recs-empty{display:grid;gap:14px;align-content:center;text-align:center;min-height:50dvh}
+.aroma-empty-title{margin:0;font-family:var(--font-display);font-size:26px;line-height:1.05;color:var(--text-0)}
+.aroma-empty-text{margin:0 auto;font-size:14px;line-height:1.5;color:var(--text-1);max-width:30ch}
+.aroma-empty-actions{display:grid;gap:10px;margin-top:8px}
+.aroma-recs-hero{border-radius:var(--r-guest-hero);padding:18px;display:grid;gap:14px;border:1px solid var(--line);box-shadow:var(--shadow-guest-card)}
+.aroma-recs-hero-head{display:flex;gap:14px;align-items:flex-start}
+.aroma-recs-hero-text{min-width:0;display:grid;gap:6px}
+.aroma-recs-hero-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h2);line-height:1.1;color:var(--text-0)}
+.aroma-recs-hero-desc{margin:0;font-size:12.5px;line-height:1.45;color:var(--text-1)}
+.aroma-recs-hero-meta{display:flex;align-items:center;gap:10px}
+.aroma-list{display:grid;gap:8px}
+
+/* Showcase (#175): полка — заголовок с шевроном, под ним лента постеров, как у Okko */
+.aroma-showcase{display:grid;gap:12px;align-content:start;padding:0 0 8px;margin:0 -20px}
+.aroma-showcase-rail{display:grid;gap:2px}
+.aroma-showcase-rail-head{margin:0;padding:0 6px 0 20px;font:inherit}
+.aroma-showcase-rail-open{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:0;border:0;background:transparent;color:var(--text-0);text-align:left;cursor:pointer}
+.aroma-showcase-rail-open:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.aroma-showcase-rail-icon{flex:0 0 auto;display:inline-flex;margin-right:-2px;color:var(--text-2)}
+.aroma-showcase-rail-title{min-width:0;font-family:var(--font-display);font-size:19px;line-height:1.15;letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aroma-showcase-rail-chevron{flex:0 0 auto;display:inline-flex;margin:0 5px 0 auto;color:var(--text-1)}
+.aroma-showcase-rail-open:hover .aroma-showcase-rail-chevron,.aroma-showcase-rail-open:focus-visible .aroma-showcase-rail-chevron{color:var(--text-0)}
+/* вертикальный паддинг — запас под focus-обводку постера: overflow-x обрезает и по вертикали */
+.aroma-showcase-scroller{display:flex;gap:8px;overflow-x:auto;padding:4px 20px;scroll-snap-type:x proximity;scroll-padding-inline:20px;scrollbar-width:none}
+.aroma-showcase-scroller::-webkit-scrollbar{display:none}
+.aroma-showcase-scroller>button:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+
+/* Catalog (#181, вариант B): поле и кнопка «Фильтры», метки выбранного, шторка — по .aroma-catalog-* в apps/aroma-web */
+.aroma-catalog{display:grid;gap:12px;align-content:start;position:relative}
+.aroma-catalog-rail{display:grid;gap:8px;position:sticky;top:0;z-index:2;margin:-12px -20px 2px;padding:12px 20px 10px;border-bottom:1px solid var(--line-soft);background:rgba(20,20,23,.92);backdrop-filter:blur(12px)}
+.aroma-catalog-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+/* 16px — меньший кегль iOS Safari увеличивает при фокусе */
+.aroma-catalog-search{width:100%;box-sizing:border-box;height:44px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 14px;font-family:var(--font-body);font-size:16px;outline:none}
+.aroma-catalog-search::placeholder{color:var(--text-2)}
+.aroma-catalog-search:focus-visible{border-color:var(--accent-hover)}
+.aroma-catalog-filter-btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-1);font-family:var(--font-body);font-size:13px;white-space:nowrap;cursor:pointer}
+.aroma-catalog-filter-btn-on{border-color:var(--guest-chip-border-on);color:var(--text-0)}
+.aroma-catalog-filter-btn:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.aroma-catalog-filter-count{color:var(--guest-chip-ink-on);font-weight:600;font-variant-numeric:tabular-nums}
+/* метки — одной строкой с прокруткой: шапка не растёт, сколько ни выбери */
+.aroma-catalog-tags{display:flex;gap:6px;overflow-x:auto;margin:0 -20px;padding:0 20px 2px;scrollbar-width:none}
+.aroma-catalog-tags::-webkit-scrollbar{display:none}
+.aroma-catalog-tags>button{flex:0 0 auto}
+.aroma-catalog-tag-x{margin-left:2px;opacity:.8}
+.aroma-catalog-meta{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aroma-catalog-empty{display:grid;gap:10px;justify-items:start}
+.aroma-catalog-empty-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.aroma-catalog-list{display:grid;gap:6px}
+.aroma-catalog-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.aroma-catalog-sheet-chips{display:flex;flex-wrap:wrap;gap:6px}
+.aroma-catalog-chip-count{margin-left:3px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.aroma-catalog-sheet-search{width:100%;box-sizing:border-box;height:40px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg);color:var(--text-0);padding:0 12px;font-family:var(--font-body);font-size:16px;outline:none}
+.aroma-catalog-sheet-search::placeholder{color:var(--text-2)}
+.aroma-catalog-sheet-search:focus-visible{border-color:var(--accent-hover)}
+.aroma-catalog-sheet-hint{margin:0;font-size:12px;color:var(--text-2)}
+.aroma-catalog-sheet-more{justify-self:start;padding:0}
+.aroma-chip-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.aroma-chip-scroll::-webkit-scrollbar{display:none}
+.aroma-chip-scroll>button{flex:0 0 auto}
+
+/* Rail */
+.aroma-rail{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding:12px 20px 20px;overflow-y:auto}
+.aroma-rail-topbar{display:grid;grid-template-columns:36px minmax(0,1fr);align-items:center;gap:10px}
+.aroma-rail-back{width:36px;height:36px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-0);font-size:18px;cursor:pointer}
+.aroma-rail-topbar-text{min-width:0;display:grid;gap:2px}
+.aroma-rail-meta{margin:0;font-size:11px;color:var(--text-2)}
+.aroma-rail-intro{display:grid;gap:6px}
+.aroma-rail-title{margin:0;font-family:var(--font-display);font-size:26px;line-height:1.05;color:var(--text-0)}
+.aroma-rail-desc{margin:0;color:var(--text-1);font-size:13px;line-height:1.5;max-width:36ch}
+
+/* Mix sheet */
+.aroma-sheet-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
+.aroma-sheet{width:min(calc(100vw - 16px),430px);max-height:92%;overflow-y:auto;display:grid;gap:14px;border:1px solid var(--line);border-radius:var(--r-guest-sheet) var(--r-guest-sheet) 0 0;box-shadow:var(--shadow-guest-sheet);padding:12px 20px 20px;animation:aroma-sheet-up var(--dur-sheet) var(--ease-out)}
+@keyframes aroma-sheet-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.aroma-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(142, 47, 60,.32);margin:0 auto 6px}
+.aroma-sheet-head{display:flex;gap:14px;align-items:flex-start}
+.aroma-sheet-head-text{min-width:0;display:grid;gap:6px;flex:1 1 auto}
+.aroma-sheet-title{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.05;color:var(--text-0)}
+.aroma-sheet-desc{margin:0;color:var(--text-1);font-size:13.5px;line-height:1.5}
+.aroma-sheet-tags{display:flex;flex-wrap:wrap;gap:6px}
+.aroma-sheet-block{display:grid;gap:10px}
+.aroma-stars{display:flex;gap:8px}
+.aroma-star{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:rgba(40,40,48,.9);color:var(--text-2);font-size:18px;cursor:pointer;padding:0}
+.aroma-star.on{border-color:var(--guest-chip-border-on);background:var(--guest-chip-bg-on);color:var(--guest-chip-ink-on)}
+.aroma-sheet-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:stretch}
+
+/* Smoke confirmation */
+.aroma-confirm{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:column;gap:22px;padding:20px 28px 28px;overflow-y:auto;background:radial-gradient(circle at 50% 10%,rgba(142, 47, 60,.18) 0%,transparent 40%),radial-gradient(circle at 50% 100%,rgba(142, 47, 60,.2) 0%,transparent 35%)}
+.aroma-confirm-topbar{display:flex;justify-content:flex-end}
+.aroma-confirm-done{background:transparent;border:1px solid var(--line);border-radius:var(--r-guest-control);padding:8px 16px;color:var(--text-0);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.aroma-confirm-stack{display:grid;gap:10px;justify-items:center;text-align:center}
+.aroma-confirm-kicker{color:var(--primary)}
+.aroma-confirm-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-title);line-height:1.05;color:var(--text-0);max-width:14ch}
+.aroma-confirm-composition{border-radius:var(--r-guest-card);padding:18px;border:1px solid var(--line);background:var(--guest-card-bg);display:grid;gap:10px}
+.aroma-confirm-rate{margin-top:auto}
+
+/* ── Доска мокапа ── */
+.board{padding:32px 32px 64px;display:grid;gap:36px}
+.board-head{display:grid;gap:8px;max-width:72ch}
+.board-title{margin:0;font-family:var(--font-display);font-size:34px;line-height:1.05;color:var(--text-0)}
+.board-text{margin:0;color:var(--text-1);font-size:14px;line-height:1.55}
+.board-section{display:grid;gap:16px}
+.board-h2{margin:0;font-family:var(--font-display);font-size:22px;color:var(--text-0)}
+.board-row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.frame{display:grid;gap:10px;width:375px;margin:0}
+.frame-label{display:grid;gap:3px;align-content:start;min-height:54px}
+.frame-name{margin:0;font-size:13px;font-weight:600;color:var(--text-0)}
+.frame-note{margin:0;font-size:12px;line-height:1.45;color:var(--text-2)}
+.frame .phone-shell,.shot .phone-shell{width:375px;height:780px}
+.shot .phone-shell{border-radius:0;border:0}
+.frame .aroma-sheet-overlay,.shot .aroma-sheet-overlay{position:absolute}
+.frame .aroma-sheet,.shot .aroma-sheet{width:100%;box-sizing:border-box}
+.tweaks{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.tweak{display:flex;gap:6px;align-items:center}
+.tweak .aroma-caps{margin-right:4px}
+.tweak button{min-height:32px;padding:0 12px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-1);font-size:12px;cursor:pointer}
+.tweak button.on{border-color:var(--guest-chip-border-on);background:var(--guest-chip-bg-on);color:var(--guest-chip-ink-on);font-weight:600}
+
+/* ── Новое (#153): «рилсы» миксов ── */
+.bottom-nav.nav-6{grid-template-columns:repeat(6,minmax(0,1fr));padding:0 4px var(--safe-bottom,0px)}
+.content,.aroma-recs,.aroma-list{grid-template-columns:minmax(0,1fr)}
+.frame-label{min-height:74px}
+
+/* Вход A: тихая ссылка над подбором, как «Подобрать под настроение» (#151) */
+.reel-entry-link{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0;border:0;background:transparent;color:var(--text-0);font-family:var(--font-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.reel-entry-link:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.reel-entry-icon{display:inline-flex;color:var(--text-muted)}
+
+/* Вход B: полоса превью над подбором */
+/* у прокручиваемого элемента в grid минимальная высота 0 — без min-height строка схлопывается */
+.reel-strip{display:flex;align-items:flex-start;gap:10px;min-height:96px;overflow-x:auto;margin:0 -20px;padding:2px 20px 4px;scrollbar-width:none}
+.reel-strip::-webkit-scrollbar{display:none}
+.reel-strip-item{flex:0 0 auto;width:68px;display:grid;gap:6px;justify-items:center;padding:0;border:0;background:transparent;color:var(--text-1);cursor:pointer}
+.reel-strip-item:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.reel-strip-thumb{position:relative;width:60px;height:60px;border-radius:var(--r-pill);overflow:hidden;box-shadow:0 0 0 1px var(--line),0 0 0 3px var(--bg-base,#141417),0 0 0 4px var(--accent-border)}
+.reel-strip-name{font-size:10.5px;line-height:1.25;text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Лента: вертикальная прокрутка со снапом, рилс — на всю высоту телефона */
+.reels{position:relative;flex:1 1 auto;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.reels::-webkit-scrollbar{display:none}
+.reel{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;display:flex;flex-direction:column}
+.reel-slot{height:100%;scroll-snap-align:start}
+.reel-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 20px 18px;pointer-events:none;background:linear-gradient(180deg,rgba(14,14,17,.55) 0%,transparent 100%)}
+.reel-title{margin:0;font-family:var(--font-display);font-size:22px;line-height:1;color:var(--text-0)}
+.reel-count{margin:0;font-size:11px;letter-spacing:.16em;color:var(--text-1);font-variant-numeric:tabular-nums}
+.reel-tap{position:absolute;inset:0;z-index:1;border:0;background:transparent;padding:0;cursor:pointer}
+.reel-tap:focus-visible{outline:2px solid var(--accent-hover);outline-offset:-4px}
+.reel-paused{position:absolute;left:50%;top:40%;z-index:2;width:56px;height:56px;margin:-28px 0 0 -28px;display:grid;place-items:center;border-radius:var(--r-pill);background:rgba(14,14,17,.55);border:1px solid var(--line);color:var(--text-0);pointer-events:none;backdrop-filter:blur(4px)}
+.reel-hint{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;flex-direction:column;align-items:center;gap:0;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;pointer-events:none}
+.reel-hint svg{animation:reel-hint 2s var(--ease-out,ease) infinite}
+@keyframes reel-hint{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-4px);opacity:1}}
+
+/* Текстовый слой: HTML поверх сцены, док с fade снизу */
+.reel-dock{position:absolute;left:0;right:0;bottom:0;z-index:2;display:grid;gap:10px;padding:56px 20px 20px;background:linear-gradient(180deg,transparent 0%,rgba(14,14,17,.72) 26%,rgba(14,14,17,.94) 100%)}
+.reel-dock>*{min-width:0}
+.reel-reveal>*{animation:reel-in var(--dur-sheet,240ms) var(--ease-out,ease) both}
+.reel-reveal>*:nth-child(2){animation-delay:60ms}
+.reel-reveal>*:nth-child(3){animation-delay:120ms}
+.reel-reveal>*:nth-child(4){animation-delay:180ms}
+.reel-reveal>*:nth-child(n+5){animation-delay:240ms}
+@keyframes reel-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.reel-name-row{display:flex;align-items:flex-start;gap:8px}
+.reel-name-row .heart-btn{margin:-2px -8px 0 auto}
+.reel-name{margin:0;flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:28px;line-height:1.06;color:var(--text-0);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.reel-meta{display:flex;align-items:center;gap:10px;min-height:20px}
+.reel-reason{margin:0;font-size:13.5px;line-height:1.45;color:var(--text-0)}
+.reel-own{font-size:12px;color:var(--text-1);font-variant-numeric:tabular-nums}
+.reel-bubble{display:grid;gap:4px;padding:10px 12px;border-radius:var(--r-guest-row);border:1px solid var(--line);background:rgba(20,20,23,.72);backdrop-filter:blur(8px)}
+.reel-bubble-text{margin:0;font-size:12.5px;line-height:1.45;color:var(--text-1)}
+.reel-sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.reel-stub{display:grid;gap:8px;padding:12px 0}
+.heart-btn{flex:0 0 auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
+.heart-btn[aria-pressed="true"]{color:var(--text-0)}
+.heart-btn:hover,.heart-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
+.reel-flavors{margin:0;font-size:14px;line-height:1.4;color:var(--text-1)}
+.reel-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:2px}
+.reel-toast{margin:0;padding:10px 12px;border-radius:var(--r-guest-row);border:1px solid var(--line);background:var(--guest-card-bg);font-size:12.5px;line-height:1.45;color:var(--text-primary)}
+.reel-empty{flex:1 1 auto;display:grid;align-content:center;gap:14px;padding:24px 28px;text-align:center;justify-items:center}
+
+/* ── Сцены ── */
+.scene{position:absolute;inset:0;overflow:hidden;background:radial-gradient(120% 80% at 50% 30%,color-mix(in srgb,var(--c1) 22%,#141417) 0%,#121215 62%,#0e0e11 100%)}
+.scene::after{content:"";position:absolute;inset:0;background:radial-gradient(70% 50% at 50% 38%,color-mix(in srgb,var(--c1) 20%,transparent) 0%,transparent 70%);animation:scene-breathe 6s ease-in-out infinite}
+@keyframes scene-breathe{0%,100%{opacity:.7}50%{opacity:1}}
+.scene-paused *,.scene-paused::after,.scene-paused::before{animation-play-state:paused!important}
+.p{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);animation-duration:var(--d,6s);animation-delay:var(--dl);animation-iteration-count:infinite;animation-timing-function:linear;will-change:transform,opacity}
+.p svg{display:block;width:100%;height:100%;overflow:visible}
+.p-a{border-radius:var(--r-pill);background:radial-gradient(circle at 35% 35%,color-mix(in srgb,var(--pc) 90%,#fff) 0%,var(--pc) 40%,transparent 72%);mix-blend-mode:screen;filter:blur(var(--b,1px))}
+.p-b{color:color-mix(in srgb,var(--pc) 80%,#fff 20%)}
+
+/* Холод: иней по краям, медленная снежная пыль */
+.frost-rim{position:absolute;inset:0;box-shadow:inset 0 0 36px 4px color-mix(in srgb,var(--c1) 55%,transparent),inset 0 0 90px 8px color-mix(in srgb,var(--c2) 18%,transparent);animation:frost-rim 6s ease-in-out infinite}
+@keyframes frost-rim{0%,100%{opacity:.55}50%{opacity:1}}
+.m-frost{animation-name:m-fall}
+@keyframes m-fall{0%{transform:translate(0,-40px) rotate(0);opacity:0}12%{opacity:.95}50%{transform:translate(var(--dx),330px) rotate(90deg)}88%{opacity:.85}100%{transform:translate(0,700px) rotate(180deg);opacity:0}}
+
+/* Цветы и травы: раскрытие и плывущие лепестки */
+.bloom-core{position:absolute;left:50%;top:34%;width:0;height:0;animation:bloom-spin 12s linear infinite}
+.bloom-petal{position:absolute;left:-38px;top:-110px;width:76px;height:110px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;transform-origin:50% 100%;background:radial-gradient(ellipse at 50% 30%,color-mix(in srgb,var(--c1) 85%,#fff) 0%,var(--c1) 45%,transparent 75%);mix-blend-mode:screen;filter:blur(10px);opacity:.75;animation:bloom-open 6s ease-in-out infinite}
+.bloom-core-b .bloom-petal{background:none;filter:none;border:1.4px solid color-mix(in srgb,var(--c1) 80%,#fff 20%);opacity:.85}
+@keyframes bloom-spin{to{transform:rotate(360deg)}}
+@keyframes bloom-open{0%,100%{scale:.72}50%{scale:1}}
+.m-bloom{animation-name:m-drift}
+@keyframes m-drift{0%{transform:translate(0,0) rotate(0);opacity:0}15%{opacity:.9}100%{transform:translate(var(--dx),-520px) rotate(220deg);opacity:0}}
+
+/* Сок: тёплое солнце и пузырьки вверх */
+.juicy-sun{position:absolute;left:50%;top:30%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:var(--r-pill);background:radial-gradient(circle,color-mix(in srgb,var(--c1) 80%,#fff 10%) 0%,color-mix(in srgb,var(--c1) 45%,transparent) 38%,transparent 70%);mix-blend-mode:screen;filter:blur(6px);animation:juicy-sun 6s ease-in-out infinite}
+.juicy-sun-b{background:none;filter:none;border:1.4px solid color-mix(in srgb,var(--c1) 75%,#fff 25%);width:200px;height:200px;margin:-100px 0 0 -100px;animation:bloom-spin 24s linear infinite}
+@keyframes juicy-sun{0%,100%{transform:translateY(6px) scale(.96)}50%{transform:translateY(-6px) scale(1.04)}}
+.m-juicy{animation-name:m-rise}
+@keyframes m-rise{0%{transform:translate(0,40px);opacity:0}15%{opacity:.9}100%{transform:translate(var(--dx),-620px);opacity:0}}
+.p-a.m-juicy{background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.55) 0%,transparent 30%),radial-gradient(circle,transparent 52%,color-mix(in srgb,var(--pc) 85%,#fff) 60%,transparent 72%);filter:none}
+
+/* Ягоды: капли, расходящиеся, как чернила в воде */
+.m-berry{animation-name:m-ink;animation-timing-function:ease-out}
+@keyframes m-ink{0%{transform:translateY(-30px) scale(.25);opacity:0}20%{transform:translateY(0) scale(.6);opacity:.95}100%{transform:translateY(60px) scale(1.9);opacity:0}}
+.p-a.m-berry{filter:blur(6px)}
+.p-b.m-berry{animation-name:m-fall}
+
+/* Тепло: угли и искры вверх, свечение снизу */
+.warm-glow{position:absolute;left:-10%;right:-10%;bottom:-10%;height:60%;background:radial-gradient(60% 70% at 50% 100%,color-mix(in srgb,var(--c1) 85%,#fff 5%) 0%,color-mix(in srgb,var(--c1) 35%,transparent) 45%,transparent 75%);animation:scene-breathe 3s ease-in-out infinite}
+.m-warm{animation-name:m-ember;animation-timing-function:ease-out}
+@keyframes m-ember{0%{transform:translate(0,0);opacity:0}10%{opacity:1}50%{opacity:.5}60%{opacity:.95}100%{transform:translate(var(--dx),-560px);opacity:0}}
+
+/* Дым: размытые клубы и струи вверх */
+.m-smoke{animation-name:m-wisp;animation-timing-function:ease-in-out}
+@keyframes m-wisp{0%{transform:translate(0,40px) scale(.6);opacity:0}25%{opacity:.75}100%{transform:translate(var(--dx),-460px) scale(1.8);opacity:0}}
+.p-a.m-smoke{background:radial-gradient(circle,color-mix(in srgb,var(--pc) 45%,#E8E6E0 55%) 0%,transparent 68%);filter:blur(12px);mix-blend-mode:screen}
+.p-a.m-warm{background:radial-gradient(circle,#fff6e8 0%,color-mix(in srgb,var(--pc) 70%,#fff 30%) 35%,transparent 70%);filter:blur(.4px);box-shadow:0 0 8px 2px color-mix(in srgb,var(--pc) 60%,transparent)}
+.p-b.m-smoke svg path{stroke-dasharray:240;animation:m-draw var(--d,6s) linear infinite;animation-delay:var(--dl)}
+@keyframes m-draw{from{stroke-dashoffset:240}to{stroke-dashoffset:-240}}
+
+@media (prefers-reduced-motion: reduce){.scene *,.scene::after{animation-play-state:paused!important}.reel-reveal>*{animation:none}}
+
+/* Доска: плитки сцен и таблица правила */
+.scene-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;max-width:1280px}
+.scene-tile{display:grid;gap:8px;margin:0}
+.scene-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scene-box{position:relative;height:260px;border-radius:var(--r-guest-card);overflow:hidden;border:1px solid var(--line)}
+.scene-box-off{opacity:.55}
+.scene-box-label{position:absolute;left:10px;bottom:8px;z-index:2;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-1)}
+.scene-tile-name{margin:0;font-size:13px;font-weight:600;color:var(--text-0)}
+.scene-tile-note{margin:0;font-size:12px;line-height:1.45;color:var(--text-2)}
+.rule-table{border-collapse:collapse;max-width:1100px;font-size:12.5px;color:var(--text-1)}
+.rule-table th{text-align:left;font-weight:500;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);padding:6px 14px 6px 0;border-bottom:1px solid var(--line)}
+.rule-table td{padding:7px 14px 7px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.rule-table td:first-child{font-family:var(--font-display);font-size:14px;color:var(--text-0);white-space:nowrap}
+.rule-hit{color:var(--text-0)}
+
+/* ── #314 · A · Афиша: текст по центру сцены, без дока ── */
+/* Слой текста не ловит тапы: тап по сцене — пауза, кнопки и сердечко нажимаются как обычно. */
+.pv{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;pointer-events:none}
+.pv button,.pv .reel-bubble{pointer-events:auto}
+.pv-top{display:grid;gap:10px;padding:16px 20px 0;min-height:24px}
+.pv-center{flex:1 1 auto;min-height:0;display:grid;align-content:center;justify-items:center;gap:14px;padding:0 26px;text-align:center;background:radial-gradient(closest-side,rgba(14,14,17,.66) 0%,rgba(14,14,17,.34) 60%,transparent 100%)}
+.pv-slot{margin:0;color:var(--text-1)}
+.pv-name{margin:0;font-family:var(--font-display);font-size:34px;line-height:1.04;color:var(--text-0);text-wrap:balance;text-shadow:0 2px 18px rgba(0,0,0,.55);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.pv-desc{margin:0;max-width:28ch;font-family:var(--font-display);font-style:italic;font-size:18px;line-height:1.38;color:var(--text-0);text-wrap:pretty;text-shadow:0 1px 12px rgba(0,0,0,.6)}
+.pv-flavors{margin:0;max-width:30ch;font-size:12px;line-height:1.7;letter-spacing:.18em;text-transform:uppercase;color:var(--text-1);text-wrap:balance}
+.pv-reason{margin:0;max-width:30ch;font-size:13.5px;line-height:1.45;color:var(--text-1)}
+.pv-bottom{position:relative;display:grid;gap:12px;padding:40px 20px 18px;background:linear-gradient(180deg,transparent 0%,rgba(14,14,17,.62) 38%,rgba(14,14,17,.86) 100%)}
+.pv-bottom .reel-hint{bottom:calc(100% - 22px)}
+.pv-meta{display:flex;align-items:center;gap:10px;min-height:40px}
+.pv-meta .heart-btn{margin:0 -8px 0 auto}
+.pv-bar{display:flex;height:6px;border-radius:var(--r-pill);overflow:hidden;background:rgba(255,255,255,.06)}
+.pv-bar span{display:block;height:100%;min-width:4px}
+.pv-comp{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+.pv-comp-one{grid-template-columns:1fr}
+.pv-comp li{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:start;gap:8px}
+.pv-comp-dot{margin-top:5px}
+.pv-comp-share{margin-top:14px}
+.pv-comp-dot{width:8px;height:8px;border-radius:var(--r-pill)}
+.pv-comp-text{display:grid;min-width:0}
+.pv-comp-maker{font-size:10px;letter-spacing:.18em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-comp-name{font-size:13px;line-height:1.3;color:var(--text-0);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pv-comp-share{font-size:13px;font-weight:500;color:var(--text-0);font-variant-numeric:tabular-nums}
+.pv-details{display:grid;gap:12px}
+.pv-enter .pv-center>*,.pv-enter .pv-details,.pv-enter .pv-top>*{animation:reel-in var(--dur-sheet,240ms) var(--ease-out,ease) both}
+.pv-enter .pv-center>:nth-child(2){animation-delay:80ms}
+.pv-enter .pv-center>:nth-child(n+3){animation-delay:160ms}
+.pv-enter .pv-details{animation-delay:220ms}
+.pv-enter .pv-bar{animation:st-bar .7s var(--ease-out,ease) both}
+
+@keyframes st-bar{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@media (prefers-reduced-motion: reduce){.pv-enter .pv-center>*,.pv-enter .pv-details,.pv-enter .pv-top>*,.pv-enter .pv-bar{animation:none}}
+
+/* ── Из приложения: «Для вас» (#245) и «Намиксуй» (#298) — копии styles.css и mixer.css ── */
+.aroma-recs-hero-head-text{min-width:0;display:grid;gap:6px}
+.fy-head{display:grid;gap:4px}
+.fy-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h1);line-height:1.05;color:var(--text-0)}
+.fy-sub{margin:0;font-size:13px;line-height:1.5;color:var(--text-1)}
+.fy-list{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.fy-mood-link{justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:36px;margin-top:2px;padding:0;border:0;background:transparent;color:var(--text-0);font-family:var(--font-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.cab-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-guest-row);border:1px solid var(--border-subtle);background:var(--guest-row-bg);color:var(--text-primary);text-align:left;cursor:pointer}
+.cab-row-text{min-width:0;display:grid;gap:4px}
+.cab-row-name{font-family:var(--font-display);font-size:14.5px;line-height:1.35;color:var(--text-primary)}
+.cab-row-reason{font-size:11.5px;line-height:1.35;color:var(--text-secondary)}
+.mixer-invite{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:center;width:100%;padding:14px 16px;border-radius:var(--r-guest-card);border:1px solid var(--line);background:var(--guest-card-bg);box-shadow:var(--shadow-guest-card);color:inherit;text-align:left;cursor:pointer}
+.mixer-invite-text{display:grid;gap:2px;min-width:0}
+.mixer-invite-title{font-family:var(--font-display);font-size:var(--fs-guest-h3);line-height:1.25;color:var(--text-0)}
+.mixer-invite-note{font-size:12.5px;line-height:1.4;color:var(--text-2)}
+.reel-end{height:100%;display:grid;align-content:center;justify-items:center;gap:14px;padding:24px 28px;text-align:center}
+.reel-end .aroma-empty-text{margin:0}
+
+/* ── #349 · Тизер «Дальше — рилсы»: последний блок Подбора, под ним — край ── */
+.rt{width:100%;display:grid;justify-items:center;gap:6px;margin-top:4px;padding:22px 0 20px;border:0;border-top:1px solid var(--line-soft);background:transparent;color:inherit;text-align:center;cursor:pointer}
+.rt:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px;border-radius:var(--r-guest-control)}
+.rt-stills{display:flex;justify-content:center;margin-bottom:8px}
+.rt-still{position:relative;width:46px;height:64px;margin-left:-10px;border-radius:10px;overflow:hidden;border:1px solid var(--line);box-shadow:0 0 0 2px #141417;background:#121215}
+.rt-still:first-child{margin-left:0;rotate:-7deg;translate:0 3px}
+.rt-still:nth-child(2){z-index:1;width:50px;height:70px}
+.rt-still:nth-child(3){rotate:7deg;translate:0 3px}
+.rt-still .scene{inset:auto;left:0;top:0;width:375px;height:560px;transform:scale(.134);transform-origin:0 0}
+.rt-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h3);line-height:1.25;color:var(--text-0)}
+.rt-note{margin:0;max-width:30ch;text-wrap:balance;font-size:12.5px;line-height:1.45;color:var(--text-2)}
+.rt-pull{display:inline-flex;flex-direction:column;align-items:center;margin-top:8px;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase}
+.rt-pull svg{animation:reel-hint 2s var(--ease-out,ease) infinite}
+
+/* ── #349 · Дотягивание за край: лента приподнимается, снизу проступает первый рилс ── */
+.pull-wrap{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.pull-wrap>.content,.pull-wrap>.reels{transition:transform var(--dur-sheet,240ms) var(--ease-out,ease)}
+.pull-wrap.dragging>.content,.pull-wrap.dragging>.reels{transition:none}
+.pull-reveal{position:absolute;left:0;right:0;z-index:5;overflow:hidden;display:grid;place-items:center;transition:height var(--dur-sheet,240ms) var(--ease-out,ease)}
+.dragging>.pull-reveal{transition:none}
+.pull-reveal-bottom{bottom:0;border-top:1px solid var(--line)}
+.pull-reveal-top{top:0;border-bottom:1px solid var(--line);background:var(--guest-shell-bg)}
+.pull-reveal .scene{inset:0 0 auto 0;height:560px}
+.pull-reveal-bottom::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,14,17,.7) 0%,transparent 60%);pointer-events:none}
+.pull-cue{position:relative;z-index:1;display:grid;justify-items:center;gap:6px;color:var(--text-1);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase}
+.pull-cue-ready{color:var(--text-0)}
+.pull-ring{width:40px;height:40px;display:grid;place-items:center;position:relative}
+.pull-ring svg.ring{position:absolute;inset:0;rotate:-90deg}
+.pull-ring circle{fill:none;stroke-width:2}
+.pull-ring .ring-track{stroke:var(--line)}
+.pull-ring .ring-fill{stroke:var(--accent);transition:stroke-dashoffset 80ms linear}
+.pull-cue-ready .pull-ring{background:var(--accent);border-radius:var(--r-pill);color:var(--primary-foreground,#fff)}
+.pull-cue-ready .pull-ring svg.ring{display:none}
+
+/* ── #349 · Первый рилс продолжения: путь назад, к концу Подбора ── */
+.reel-back{position:absolute;top:12px;left:50%;translate:-50% 0;z-index:3;display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:0 12px 0 8px;border-radius:var(--r-pill);border:1px solid var(--line-soft);background:rgba(14,14,17,.55);backdrop-filter:blur(8px);color:var(--text-1);font-family:var(--font-body);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}
+.reel-back:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.reel-slot-end{background:var(--guest-shell-bg)}
+
+/* ── Доска: панель «было / стало» ── */
+.nav-compare{display:grid;gap:14px;max-width:420px}
+.nav-compare-row{display:grid;gap:6px}
+.nav-compare .bottom-nav{border:1px solid var(--line);border-radius:var(--r-guest-row)}
+.nav-compare-labels{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:0 4px;font-size:10.5px;color:var(--text-2);text-align:center}
+.nav-compare-labels .on{color:var(--text-0)}
+.board-note{margin:0;max-width:72ch;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-guest-row);background:var(--guest-card-bg);font-size:13px;line-height:1.55;color:var(--text-1)}
+.board-note b{color:var(--text-0);font-weight:600}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.470.0/dist/umd/lucide.js"></script>
+<script src="../../.claude/skills/aroma-atelier-design/_ds_bundle.js"></script>
+<script src="../design_handoff_showcase_compact/showcase-data.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="../../.claude/skills/aroma-atelier-design/ui_kits/aroma-guest/GuestScreens.jsx"></script>
+<script type="text/babel" src="board.jsx"></script>
+</body>
+</html>
