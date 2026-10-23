@@ -6,13 +6,16 @@ import type { PaletteTobacco } from '@/lib/mixer/types';
 
 export type CardPosition = 0 | 1 | 2;
 
-export type CardMatch = { value: string; caption: string };
+export type CardMatch = { value: string | null; caption: string };
 
 const profileLine = (tobacco: PaletteTobacco) =>
   tobacco.flavorProfiles
     .slice(0, 2)
-    .map((profile) => profileLabelMap[profile] ?? profile)
-    .join(' · ');
+    .map((profile, index) => {
+      const label = profileLabelMap[profile] ?? profile;
+      return index ? label.toLowerCase() : label;
+    })
+    .join(', ');
 
 export function TobaccoCard({
   tobacco,
@@ -70,14 +73,18 @@ export function TobaccoCard({
         <span className="mixer-dot" style={{ background: color }} aria-hidden />
         {profileLine(tobacco)}
       </span>
-      <span className="aroma-caps mixer-card-brand">{tobacco.manufacturer}</span>
+      <span className="mixer-card-brand">{tobacco.manufacturer}</span>
       <span className="mixer-card-name">{tobacco.name}</span>
-      <span className="mixer-card-flavors">{tobacco.flavors.join(' · ')}</span>
+      <span className="mixer-card-flavors">{tobacco.flavors.join(', ')}</span>
       <div className="mixer-card-foot">
-        <div className="mixer-card-match">
-          <b>{match.value}</b>
-          <span>{match.caption}</span>
-        </div>
+        {match.value ? (
+          <div className="mixer-card-match">
+            <b>{match.value}</b>
+            <span>{match.caption}</span>
+          </div>
+        ) : (
+          <span className="mixer-card-caption">{match.caption}</span>
+        )}
         {tobacco.cooling ? <span className="mixer-card-tag">холодок</span> : null}
       </div>
     </div>

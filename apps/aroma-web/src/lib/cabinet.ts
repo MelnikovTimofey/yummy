@@ -91,12 +91,13 @@ export const rowNote = (item: GuestCabinetItem) =>
 export const rowOpens = (item: GuestCabinetItem) => item.status.kind !== 'deleted' && item.card !== null;
 
 export const smokeBlockReason = (status: GuestMixStatus) =>
-  status.kind === 'unavailable' ? `Сейчас нет: ${status.missing}. Покурить этот микс сегодня не получится.` : null;
+  status.kind === 'unavailable' ? `Сейчас нет: ${status.missing}.` : null;
 
 export const customDescription = (card: GuestCabinetCard, now: Date) => {
   const made = card.madeAt ? ` ${formatDay(new Date(card.madeAt), now)}` : '';
-  const verdict = card.harmony === null ? '' : ` Вердикт гармонии — «${verdictLabel(verdictForScore(card.harmony))}».`;
-  return `Собран вами в «Намиксуй»${made}.${verdict}`;
+  const verdict =
+    card.harmony === null ? '' : ` Гармония: ${verdictLabel(verdictForScore(card.harmony)).toLowerCase()}.`;
+  return `Собран вами${made}.${verdict}`;
 };
 
 // 409 «табак закончился» на собранном миксе приходит с tobaccoId.

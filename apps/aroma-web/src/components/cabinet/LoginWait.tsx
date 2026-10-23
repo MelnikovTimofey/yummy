@@ -1,6 +1,4 @@
-import { CTA, ProfileGlyph } from '@/components/aroma';
-
-import { CABINET_GLYPH } from './CabinetAnon';
+import { CTA } from '@/components/aroma';
 
 // Ожидание входа через бота (#239, #243; мокап cab-tg и cab-tg-expired).
 // «Открыть Telegram ещё раз» — настоящая ссылка: нажатие на t.me надёжнее
@@ -20,8 +18,6 @@ export function LoginWait({
 }) {
   return (
     <section className="cab-anon cab-wait">
-      <ProfileGlyph profiles={CABINET_GLYPH} size={72} />
-      <p className="aroma-caps">Вход через Telegram</p>
       {expired ? (
         <>
           <h1 className="cab-anon-title">Ссылка устарела</h1>
@@ -39,10 +35,9 @@ export function LoginWait({
         <>
           <h1 className="cab-anon-title">Подтвердите вход в Telegram</h1>
           <p className="cab-wait-text">
-            Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить» — эта страница войдёт сама.
+            Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить», и кабинет откроется здесь.
           </p>
           <p className="cab-wait-status" role="status">
-            <span className="cab-wait-dot" aria-hidden />
             Ждём подтверждения…
           </p>
           <div className="cab-anon-form">

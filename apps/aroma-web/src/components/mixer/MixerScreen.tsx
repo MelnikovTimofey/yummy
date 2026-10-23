@@ -482,17 +482,13 @@ export function MixerScreen({
     <>
       На выбранных полках пусто.
       <br />
-      Снимите фильтр или нажмите «Все».
+      Снимите фильтр или выберите все полки.
     </>
   );
 
   const progress =
     phase === 'reveal' ? (
       <div className="mixer-progress">
-        <div className="mixer-progress-row">
-          <span className="aroma-caps">Раскрытие</span>
-          <span className="aroma-caps">Ваш микс</span>
-        </div>
         <div className="mixer-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={3} aria-valuenow={3}>
           <span style={{ width: '100%' }} />
         </div>
@@ -500,9 +496,9 @@ export function MixerScreen({
     ) : phase === 'swipe' ? (
       <div className="mixer-progress">
         <div className="mixer-progress-row">
-          <span className="aroma-caps">{`Ход 0${turn + 1} · из 03`}</span>
+          <span className="mixer-progress-step">{`Ход ${turn + 1} из 3`}</span>
           <span className="mixer-progress-role">
-            {TURNS[turn].label} · <span>{TURNS[turn].range}</span>
+            {TURNS[turn].label}, <span>{TURNS[turn].range}</span>
           </span>
         </div>
         <div className="mixer-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={3} aria-valuenow={turn}>
@@ -567,20 +563,12 @@ export function MixerScreen({
               center={
                 chosenTobaccos.length ? (
                   <span className="mixer-ring-score">{harmonyOf(chosenTobaccos, shares, palette.affinity)}</span>
-                ) : (
-                  <span className="mixer-ring-caption">
-                    Пустая
-                    <br />
-                    чаша
-                  </span>
-                )
+                ) : null
               }
             />
-            <div className="mixer-bowl-info">
-              <p className="mixer-bowl-name" data-empty={chosenTobaccos.length ? undefined : 'true'}>
-                {chosenTobaccos.length ? mixName : 'Имя придумаем сами'}
-              </p>
-              {chosenTobaccos.length ? (
+            {chosenTobaccos.length ? (
+              <div className="mixer-bowl-info">
+                <p className="mixer-bowl-name">{mixName}</p>
                 <ul className="mixer-bowl-comps">
                   {chosenTobaccos.map((tobacco) => (
                     <li key={tobacco.id}>
@@ -593,10 +581,10 @@ export function MixerScreen({
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="mixer-bowl-hint">Гармония появится после основы</p>
-              )}
-            </div>
+              </div>
+            ) : (
+              <p className="mixer-bowl-hint">Гармония появится после основы</p>
+            )}
           </div>
 
           {pool.length ? (

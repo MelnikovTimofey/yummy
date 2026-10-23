@@ -687,8 +687,8 @@ const EMPTY_FOR_YOU: ForYouState = { status: 'idle', data: null, error: '', stal
 // вернувшемуся гостю есть что показать и без сохранённых вкусов.
 const FOR_YOU_MIN_PICKS = 3;
 
-const TELEGRAM_ERROR = 'Telegram не ответил. Попробуйте ещё раз — подбор и каталог работают и без входа.';
-const CONSENT_REQUIRED_ERROR = 'Кабинета ещё нет — отметьте согласие и войдите снова.';
+const TELEGRAM_ERROR = 'Telegram не ответил. Попробуйте ещё раз.';
+const CONSENT_REQUIRED_ERROR = 'Кабинета ещё нет. Отметьте согласие и войдите снова.';
 const SIGNED_IN_NOTICE = 'Вы вошли. Вкусы из онбординга сохранены в кабинете.';
 
 type LoginState =

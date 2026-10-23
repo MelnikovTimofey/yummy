@@ -5,15 +5,15 @@ import { hintText, mixCountCaption, pluralize, verdictLabel } from './copy';
 test('verdictLabel — спокойные фактические вердикты', () => {
   assert.equal(verdictLabel('classic'), 'Классическое сочетание');
   assert.equal(verdictLabel('confident'), 'Уверенное сочетание');
-  assert.equal(verdictLabel('bold'), 'Смелый эксперимент');
-  assert.equal(verdictLabel('ask-master'), 'Мастер переспросит');
+  assert.equal(verdictLabel('bold'), 'Необычное сочетание');
+  assert.equal(verdictLabel('ask-master'), 'Спорное сочетание');
 });
 
 test('hintText по видам подсказок evaluate', () => {
   assert.equal(hintText({ kind: 'too-cold', value: 25 }), 'Холодка 25%. Обычно хватает 10–15%.');
   assert.equal(hintText({ kind: 'too-cold' }), 'Холодка больше 20%. Обычно хватает 10–15%.');
-  assert.equal(hintText({ kind: 'weak-base' }), 'Основа меньше 35% — главный вкус теряется.');
-  assert.equal(hintText({ kind: 'heavy-twist' }), 'Штрих больше 25% — он перетягивает вкус.');
+  assert.equal(hintText({ kind: 'weak-base' }), 'Основа меньше 35%, главный вкус теряется.');
+  assert.equal(hintText({ kind: 'heavy-twist' }), 'Штрих больше 25% и перебивает вкус.');
   assert.equal(hintText({ kind: 'mono' }), 'Один табак. Добавьте акцент.');
 });
 
@@ -27,7 +27,7 @@ test('pluralize согласует число руками', () => {
 });
 
 test('mixCountCaption на карте основы', () => {
-  assert.deepEqual(mixCountCaption(0), { value: '—', caption: 'в миксах мастеров пока нет' });
+  assert.deepEqual(mixCountCaption(0), { value: null, caption: 'В миксах мастеров не встречается' });
   assert.deepEqual(mixCountCaption(1), { value: '1', caption: 'микс мастеров с ним' });
   assert.deepEqual(mixCountCaption(4), { value: '4', caption: 'микса мастеров с ним' });
   assert.deepEqual(mixCountCaption(12), { value: '12', caption: 'миксов мастеров с ним' });

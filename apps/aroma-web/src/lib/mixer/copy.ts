@@ -4,8 +4,8 @@ import type { EvaluationHint, Verdict } from './types';
 const verdictLabels: Record<Verdict, string> = {
   classic: 'Классическое сочетание',
   confident: 'Уверенное сочетание',
-  bold: 'Смелый эксперимент',
-  'ask-master': 'Мастер переспросит',
+  bold: 'Необычное сочетание',
+  'ask-master': 'Спорное сочетание',
 };
 
 export const verdictLabel = (verdict: Verdict) => verdictLabels[verdict];
@@ -15,9 +15,9 @@ export const hintText = (hint: EvaluationHint) => {
     case 'too-cold':
       return `Холодка ${hint.value === undefined ? 'больше 20' : hint.value}%. Обычно хватает 10–15%.`;
     case 'weak-base':
-      return 'Основа меньше 35% — главный вкус теряется.';
+      return 'Основа меньше 35%, главный вкус теряется.';
     case 'heavy-twist':
-      return 'Штрих больше 25% — он перетягивает вкус.';
+      return 'Штрих больше 25% и перебивает вкус.';
     case 'mono':
       return 'Один табак. Добавьте акцент.';
   }
@@ -31,10 +31,10 @@ export const pluralize = (count: number, [one, few, many]: readonly [string, str
   return many;
 };
 
-export const mixCountCaption = (count: number) =>
+export const mixCountCaption = (count: number): { value: string | null; caption: string } =>
   count > 0
     ? {
         value: String(count),
         caption: `${pluralize(count, ['микс', 'микса', 'миксов'])} мастеров с ним`,
       }
-    : { value: '—', caption: 'в миксах мастеров пока нет' };
+    : { value: null, caption: 'В миксах мастеров не встречается' };

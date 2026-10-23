@@ -31,10 +31,9 @@ export function AnonFavoriteSheet({
         }}
       >
         <span className="aroma-mix-sheet-handle" aria-hidden />
-        <p className="aroma-caps">Избранное</p>
-        <DialogTitle className="aroma-mix-sheet-title">Избранное живёт в кабинете</DialogTitle>
+        <DialogTitle className="aroma-mix-sheet-title">Избранное хранится в кабинете</DialogTitle>
         <DialogDescription className="aroma-mix-sheet-desc">
-          Войдите через Telegram — и микс будет ждать вас в следующий раз. Без входа подбор работает как прежде.
+          Войдите через Telegram, чтобы сохранить микс.
         </DialogDescription>
         <div className="cab-sheet-actions">
           <button type="button" className="aroma-mix-sheet-ghost" onClick={onClose}>
