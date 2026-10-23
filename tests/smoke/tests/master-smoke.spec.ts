@@ -231,14 +231,16 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   // В режиме выбора кнопок строки нет.
   await expect(emptyButton).toHaveCount(0);
   await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
-  await expect(bar.getByRole('button', { name: 'Держим постоянно…' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Держим постоянно', exact: true })).toBeVisible();
+  // Строки клавиш под таблицей нет: клавиши — в title (#364).
+  await expect(page.locator('.shelf-keys')).toHaveCount(0);
 
-  await bar.getByRole('button', { name: /^Закончились/ }).click();
+  await bar.getByRole('button', { name: 'Закончились', exact: true }).click();
   await expect(bar).toHaveCount(0);
   const toast = page.locator('.shelf-toast');
   await expect(toast).toBeVisible();
   await expect(toast).toContainText('Закончились: 2');
-  await expect(toast).toContainText('гости их больше не видят');
+  await expect(toast).toContainText('Гости их не видят.');
   for (const row of rows) await expect(row).toContainText('в заказе');
 
   await toast.getByRole('button', { name: /Отменить/ }).click();
@@ -359,6 +361,9 @@ test.describe('Master on a phone', () => {
     await first.locator('.m-shelf-card__name').click();
     const card = page.locator('.shelf-card');
     await expect(card).toBeVisible();
+    // Бренд строкой под названием, без надзаголовка; кнопка без многоточия (#364).
+    await expect(card.locator('.shelf-card__brand')).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Указать остаток', exact: true })).toBeVisible();
 
     await card.getByRole('button', { name: /^Действия:/ }).click();
     const actions = page.getByRole('dialog', { name: /^Действия:/ });
@@ -395,7 +400,7 @@ test.describe('Master on a phone', () => {
   });
 
   // Выбор нескольких на телефоне (#333, #shot=mobile-bulk): «Выбрать» в шапке,
-  // касание по карточке выбирает, внизу «Закончились · N». Неразрушающий:
+  // касание по карточке выбирает, внизу «Закончились», число — в шапке. Неразрушающий:
   // режим выбора закрывается «Готово» без действия.
   test('Master shelf on a phone: «Выбрать» picks cards by tap and «Готово» leaves without changes', async ({ page }) => {
     await page.goto('/');
@@ -420,14 +425,14 @@ test.describe('Master on a phone', () => {
     // В режиме выбора кнопок карточек нет.
     await expect(page.getByRole('button', { name: 'Закончился', exact: true })).toHaveCount(0);
     const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
-    await expect(bar.getByRole('button', { name: 'Закончились · 0' })).toBeDisabled();
+    await expect(bar.getByRole('button', { name: 'Закончились', exact: true })).toBeDisabled();
 
     await card.tap();
     await expect(title).toHaveText('Выбрано 1');
     await expect(card.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
-    await expect(bar.getByRole('button', { name: 'Закончились · 1' })).toBeEnabled();
+    await expect(bar.getByRole('button', { name: 'Закончились', exact: true })).toBeEnabled();
     await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'Держим постоянно…' })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Держим постоянно', exact: true })).toBeVisible();
     // Повторное касание снимает выбор.
     await card.tap();
     await expect(title).toHaveText('Выбрано 0');
@@ -587,27 +592,29 @@ test('Master shelf opens «Закупка»: budget strip, section chips and few
   await purchase.click();
   await expect(purchase).toHaveAttribute('aria-pressed', 'true');
 
-  // Бюджет указан — четыре плитки, нет — стоимость базы и «Указать бюджет».
-  const budget = page.getByLabel('Бюджет на табак', { exact: true });
-  const invite = page.getByRole('button', { name: 'Указать бюджет' });
-  await expect(budget.or(invite)).toBeVisible();
+  // Полоса бюджета — одна строка (#364): бюджет указан — бюджет, база и потрачено,
+  // нет — стоимость базы и «Указать бюджет».
+  const budget = page.getByRole('note', { name: 'Бюджет на табак' });
+  await expect(budget).toBeVisible();
+  const invite = budget.getByRole('button', { name: 'Указать бюджет' });
   if (await invite.isVisible()) {
-    await expect(page.locator('.purchase .reorder-interval')).toContainText('Укажите бюджет на табак');
+    await expect(budget).toContainText('Бюджет на табак не указан.');
     await invite.click();
     const settings = page.getByRole('dialog');
     await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
-    await expect(settings).toContainText('бюджет в «Закупке»');
+    await expect(settings).toContainText('В закупке видно, сколько уходит на базу');
     await settings.getByRole('button', { name: 'Отмена' }).click();
     await expect(settings).toBeHidden();
   } else {
-    await expect(budget).toContainText('База в месяц');
-    await expect(budget).toContainText('Потрачено');
+    await expect(budget).toContainText(/^Бюджет на \S+ /);
+    await expect(budget).toContainText('По принятым счетам потрачено');
   }
 
   const sections = page.getByRole('group', { name: 'Разделы закупки' }).getByRole('button');
   await expect(sections).toHaveText([/^База/, /^Закончились быстро/, /^Пробы/, /^Лежит/, /^Вкусы/]);
   await expect(sections.first()).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.purchase-toolbar__date')).toHaveText(/^за 30–60 дней · /);
+  // Разделы — навигация, а не фильтры-статусы: без счётчиков (#364).
+  await expect(page.getByRole('group', { name: 'Разделы закупки' }).locator('.filter-chip__count')).toHaveCount(0);
 
   const few = page.getByRole('heading', { name: 'Данных пока мало' });
   const titles = ['Что держать в базе', 'Закончились быстро', 'Как зашли пробы', 'Что лежит', 'Вкусы: расход против полки'];

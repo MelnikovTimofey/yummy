@@ -10,7 +10,6 @@ import {
   countedMarks,
   describeShelfError,
   formatBowlCost,
-  formatDecimal,
   formatGramPrice,
   formatOneDecimal,
   historyEntry,
@@ -44,16 +43,19 @@ type ShelfCardProps = {
   actions?: ShelfRowActions;
 };
 
-const Tile = ({ label, value, hint, faint = false }: { label: string; value: string; hint?: string | null; faint?: boolean }) => (
-  <div className="shelf-card__tile">
-    <span>{label}</span>
-    <b className={faint ? 'shelf-faint' : undefined}>{value}</b>
-    {hint ? <small>{hint}</small> : null}
+// Строка списка «подпись: значение» вместо плитки (#364): ряд плиток — только на Дашборде.
+const Fact = ({ label, value, hint, faint = false }: { label: string; value: string; hint?: string | null; faint?: boolean }) => (
+  <div className="shelf-card__fact">
+    <dt>{label}</dt>
+    <dd>
+      <b className={faint ? 'shelf-faint' : undefined}>{value}</b>
+      {hint ? <small>{hint}</small> : null}
+    </dd>
   </div>
 );
 
-// Карточка табака на полке (#306, #323, #329, #shot=card, card-exact, card-trial, edge-few):
-// у пробы — отметка «зашло / не зашло»; остаток с подписью «прогноз» или «указал мастер»,
+// Карточка табака на полке (#306, #323, #329, #364): бренд под названием, у пробы —
+// отметка «зашло / не зашло»; остаток с подписью «прогноз» или «указал мастер»,
 // расход в месяц, история журнала, расход по неделям, настройки.
 export const ShelfCard = ({
   row,
@@ -132,27 +134,25 @@ export const ShelfCard = ({
   const arrival = card ? trialArrival(card.history) : null;
   const maxWeek = Math.max(0, ...weeks.map((week) => week.gramsPerDay));
 
-  const untilHint = row.rateKind === 'brand' && row.rate !== null
-    ? `по бренду ${row.tobacco.manufacturer}: ≈ ${formatDecimal(row.rate)} г/день`
-    : days !== null
-      ? formatCount(days, ['день', 'дня', 'дней'])
-      : few
-        ? 'появится вместе с расходом'
-        : null;
-
-  const tiles = [
-    <Tile key="until" label="Хватит до" value={until.text} hint={untilHint} faint={until.tone === 'faint'} />,
-    <Tile key="remain" label="Остаток" value={shelfLevel(row).value} hint={remainHint(row)} />,
-    // Расход — в г/мес, как в «К заказу» и на полке (#323); под ним г/день.
-    <Tile key="rate" label="Расход" value={shelfMonthRate(row).value} hint={cardRateHint(row, marks)} faint={few} />,
-    <Tile
+  const facts = [
+    <Fact
+      key="until"
+      label="Хватит до"
+      value={until.text}
+      hint={days !== null ? formatCount(days, ['день', 'дня', 'дней']) : null}
+      faint={until.tone === 'faint'}
+    />,
+    <Fact key="remain" label="Остаток" value={shelfLevel(row).value} hint={remainHint(row)} />,
+    // Расход — в г/мес, как в «К заказу» и на полке (#323); рядом г/день.
+    <Fact key="rate" label="Расход" value={shelfMonthRate(row).value} hint={cardRateHint(row, marks)} faint={few} />,
+    <Fact
       key="price"
       label="Цена грамма"
       value={formatGramPrice(card?.gramPriceKop ?? null)}
-      hint={formatBowlCost(card?.bowlCostKop ?? null, settings.bowlGrams) ?? 'цены нет — появится с приходом по счёту'}
+      hint={formatBowlCost(card?.bowlCostKop ?? null, settings.bowlGrams) ?? 'появится с приходом по счёту'}
     />,
   ];
-  if (few) tiles.unshift(tiles.splice(2, 1)[0]);
+  if (few) facts.unshift(facts.splice(2, 1)[0]);
 
   return (
     <Sheet open onOpenChange={(open) => (open ? null : onClose())}>
@@ -166,10 +166,8 @@ export const ShelfCard = ({
         }}
       >
         <SheetHeader className="shelf-card__head">
-          <div className="shelf-card__eyebrow-row">
-            <p className="shelf-card__eyebrow">
-              {row.tobacco.manufacturer} · {row.shelfStatus === 'plan' ? 'в плане' : 'на полке'}
-            </p>
+          <div className="shelf-card__title-row">
+            <SheetTitle className="shelf-card__title">{row.tobacco.name}</SheetTitle>
             {actions ? (
               <span className="shelf-card__head-actions">
                 <button
@@ -191,9 +189,9 @@ export const ShelfCard = ({
               </button>
             )}
           </div>
-          <SheetTitle className="shelf-card__title">{row.tobacco.name}</SheetTitle>
-          <SheetDescription className="sr-only">Карточка табака на полке: остаток, история, расход и настройки.</SheetDescription>
+          <SheetDescription className="shelf-card__brand">{row.tobacco.manufacturer}</SheetDescription>
           <div className="shelf-card__links">
+            {row.shelfStatus === 'plan' ? <span className="tag">в плане</span> : null}
             {row.tobacco.flavorProfiles.map((profile) => (
               <ProfileTag key={profile} profile={profile} />
             ))}
@@ -207,17 +205,14 @@ export const ShelfCard = ({
         <div className="shelf-card__body">
           {row.trial ? (
             <section className="shelf-trial" aria-label="Проба">
-              <p className="shelf-trial__row">
-                <span>
-                  <b>Проба</b>
-                  {arrival ? <span className="shelf-trial__muted"> · {arrival}</span> : null}
-                </span>
+              <p className="shelf-trial__row shelf-trial__row--head">
+                <b>Проба</b>
+                {arrival ? <span className="shelf-trial__muted">{arrival}</span> : null}
               </p>
               <div className="shelf-trial__row">
                 <span className="shelf-trial__muted">Как зашёл гостям в зале?</span>
                 <TrialMark value={row.trialVerdict} label="Как зашёл гостям в зале" onChange={(next) => save({ trialVerdict: next })} />
               </div>
-              <p className="shelf-trial__note">Отзывы о заказах в зале есть только у мастера. Отметку можно поменять.</p>
             </section>
           ) : null}
 
@@ -234,7 +229,7 @@ export const ShelfCard = ({
                 disabled={!items.canMark}
                 onClick={() => setLeftOpen((current) => !current)}
               >
-                Сколько осталось…
+                Указать остаток
               </button>
             </div>
             {leftOpen && items.canMark ? (
@@ -250,7 +245,7 @@ export const ShelfCard = ({
             ) : null}
           </div>
 
-          <div className="shelf-card__tiles">{tiles}</div>
+          <dl className="shelf-card__facts">{facts}</dl>
 
           {loadError ? <p className="error-text">{loadError}</p> : null}
 
@@ -264,12 +259,13 @@ export const ShelfCard = ({
                     const open = entryMenu === entry.id;
                     return (
                       <div className="shelf-history__item" key={entry.id}>
+                        <span className="shelf-history__date">{line.date}</span>
                         <span className="shelf-history__grams" data-tone={line.tone}>
                           {line.grams}
                         </span>
                         <span className="shelf-history__copy">
                           <b>{line.title}</b>
-                          <span>{line.line}</span>
+                          {line.line ? <span>{line.line}</span> : null}
                         </span>
                         {line.deletable ? (
                           <span className="shelf-history__actions">
@@ -327,7 +323,7 @@ export const ShelfCard = ({
             <div className="shelf-card__setting">
               <span>
                 Держим постоянно
-                <small>закончится до следующей поставки — попадёт в «К заказу»</small>
+                <small>попадёт в заказ, если закончится до поставки</small>
               </span>
               <ShelfToggle checked={row.keepStocked} label="Держим постоянно" disabled={saving} onChange={(next) => void save({ keepStocked: next })} />
             </div>
@@ -354,7 +350,7 @@ export const ShelfCard = ({
                 <input
                   className="text-input"
                   aria-label="Заметка к стопу"
-                  placeholder="Заметка: например, «стоп до декабря»"
+                  placeholder="Например, до декабря"
                   value={stopNote}
                   onChange={(event) => setStopNote(event.target.value)}
                 />
@@ -375,7 +371,7 @@ export const ShelfCard = ({
                 </button>
               ))
             ) : (
-              <p className="shelf-faint shelf-card__note">{card ? 'Пока ни в одном миксе.' : '…'}</p>
+              card ? <p className="shelf-faint shelf-card__note">Пока ни в одном миксе.</p> : null
             )}
           </section>
         </div>

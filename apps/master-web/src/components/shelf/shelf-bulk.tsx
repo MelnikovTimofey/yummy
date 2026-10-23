@@ -20,6 +20,8 @@ export const ShelfCheck = ({
     role="checkbox"
     aria-checked={checked}
     aria-label={label}
+    // Клавиши — в title, строки подсказок под таблицей нет (#364).
+    title="Клавиша X. Shift и клик выделяют диапазон"
     className="shelf-check"
     // Shift + клик не выделяет текст таблицы.
     onMouseDown={(event) => {
@@ -41,11 +43,11 @@ export type ShelfBulkActions = {
 };
 
 const KEEP_OPTIONS: Array<[boolean, string, string]> = [
-  [true, 'Держим постоянно', 'закончатся — попадут в «К заказу»'],
-  [false, 'Не держим постоянно', 'в «К заказу» не попадут'],
+  [true, 'Держим постоянно', 'попадут в заказ, когда закончатся'],
+  [false, 'Не держим постоянно', 'в заказ не попадут'],
 ];
 
-// «Держим постоянно…» на десктопе: меню над панелью, вкл или выкл для всех выбранных.
+// «Держим постоянно» на десктопе: меню над панелью, вкл или выкл для всех выбранных.
 const KeepMenu = ({ disabled, onKeep }: { disabled: boolean; onKeep: (keep: boolean) => void }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement | null>(null);
@@ -81,7 +83,7 @@ const KeepMenu = ({ disabled, onKeep }: { disabled: boolean; onKeep: (keep: bool
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        Держим постоянно…
+        Держим постоянно
       </button>
       {open ? (
         <div className="shelf-menu shelf-bulk__menu" role="menu" aria-label="Держим постоянно">
@@ -121,35 +123,34 @@ export const ShelfBulkBar = ({
   <div className="shelf-bulk" role="toolbar" aria-label="Выбранные табаки">
     <b>Выбрано {formatNumber(summary.count)}</b>
     <span className="shelf-bulk__names">{summary.names}</span>
-    <button type="button" className="btn" data-size="sm" disabled={busy || !summary.emptyCount} onClick={actions.onEmpty}>
-      Закончились{summary.skipCount ? ` · ${formatNumber(summary.emptyCount)}` : ''}
-      <span className="kbd" aria-hidden="true">E</span>
+    <button type="button" className="btn" data-size="sm" disabled={busy || !summary.emptyCount} title="Клавиша E" onClick={actions.onEmpty}>
+      Закончились
     </button>
     <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={actions.onStop}>
       {summary.allStopped ? 'Снять стоп' : 'Стоп для гостей'}
     </button>
     <KeepMenu disabled={busy} onKeep={actions.onKeep} />
-    <button type="button" className="icon-btn" aria-label="Снять выделение" onClick={onClear}>
+    <button type="button" className="icon-btn" aria-label="Снять выделение" title="Клавиша Esc" onClick={onClear}>
       <X size={14} aria-hidden />
     </button>
   </div>
 );
 
-// Телефон (#shot=mobile-bulk): внизу «Закончились · N», стоп и «Держим постоянно…».
+// Телефон (#shot=mobile-bulk): внизу «Закончились», стоп и «Держим постоянно»; сколько выбрано — в шапке.
 export const ShelfMobileBulk = ({ summary, busy, actions }: { summary: BulkSummary; busy: boolean; actions: ShelfBulkActions }) => {
   const [keepOpen, setKeepOpen] = useState(false);
   return (
     <>
       <div className="m-shelf-bulk" role="toolbar" aria-label="Выбранные табаки">
         <button type="button" className="m-shelf-bulk__empty" disabled={busy || !summary.emptyCount} onClick={actions.onEmpty}>
-          Закончились · {formatNumber(summary.emptyCount)}
+          Закончились
         </button>
         <div className="m-shelf-bulk__acts">
           <button type="button" className="m-shelf-card__left" disabled={busy || !summary.count} onClick={actions.onStop}>
             {summary.allStopped ? 'Снять стоп' : 'Стоп для гостей'}
           </button>
           <button type="button" className="m-shelf-card__left" disabled={busy || !summary.count} onClick={() => setKeepOpen(true)}>
-            Держим постоянно…
+            Держим постоянно
           </button>
         </div>
       </div>

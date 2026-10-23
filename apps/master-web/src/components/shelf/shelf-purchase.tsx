@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { flavorProfileColor, formatMetricValue, type PurchaseView, type ShelfTobaccoRef, type ShelfTrialVerdict } from '@/contracts';
 import {
   PURCHASE_SECTIONS,
@@ -10,8 +10,6 @@ import {
   idleNotes,
   idleRowView,
   profileBars,
-  purchaseDate,
-  sectionCount,
   trialRowView,
   trialVerdictText,
   type PurchaseSection,
@@ -36,6 +34,7 @@ const Name = ({ tobacco }: { tobacco: ShelfTobaccoRef }) => (
   </span>
 );
 
+// Подпись под заголовком раздела — только критерий отбора, его из заголовка не видно.
 const Section = ({ title, text, extra, children }: { title: string; text: string; extra?: ReactNode; children: ReactNode }) => (
   <section className="purchase-section" aria-label={title}>
     <div className="purchase-section__head">
@@ -80,44 +79,33 @@ const FewData = ({ since }: { since: string | null }) => (
   </div>
 );
 
-// Полоса бюджета (#326, #shot=purchase-base, edge-no-budget): с бюджетом — четыре
-// плитки, без — стоимость базы и «Указать бюджет».
+// Полоса бюджета (#326): одна строка, а не ряд плиток — KPI-ряд только на Дашборде (#364).
+// Без бюджета — стоимость базы и «Указать бюджет», с бюджетом — «Настройки».
 const BudgetStrip = ({ purchase, onSettings }: { purchase: PurchaseView; onSettings: () => void }) => {
   const strip = budgetStrip(purchase);
-  const unknown = strip.unknown ? (
-    <p className="purchase-hint">
-      <span className="purchase-warn">{strip.unknown.warn}</span>
-      {strip.unknown.text}
-    </p>
-  ) : null;
-  if (strip.kind === 'none') {
-    return (
-      <div className="purchase-budget-wrap">
-        <div className="reorder-interval" role="note">
-          <Wallet size={15} aria-hidden />
-          <span className="reorder-interval__text">
-            <Segments segments={strip.segments} />
-          </span>
+  return (
+    <div className="purchase-budget-wrap">
+      <div className="reorder-interval" role="note" aria-label="Бюджет на табак">
+        <Wallet size={15} aria-hidden />
+        <span className="reorder-interval__text">
+          <Segments segments={strip.segments} />
+        </span>
+        {strip.kind === 'none' ? (
           <button type="button" className="btn" data-size="sm" data-variant="primary" onClick={onSettings}>
             Указать бюджет
           </button>
-        </div>
-        {unknown}
+        ) : (
+          <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={onSettings}>
+            Настройки
+          </button>
+        )}
       </div>
-    );
-  }
-  return (
-    <div className="purchase-budget-wrap">
-      <div className="purchase-budget" aria-label="Бюджет на табак">
-        {strip.tiles.map((tile) => (
-          <div key={tile.label}>
-            <span>{tile.label}</span>
-            <b data-tone={tile.tone}>{tile.value}</b>
-            <small>{tile.hint}</small>
-          </div>
-        ))}
-      </div>
-      {unknown}
+      {strip.unknown ? (
+        <p className="purchase-hint">
+          <span className="purchase-warn">{strip.unknown.warn}</span>
+          {strip.unknown.text}
+        </p>
+      ) : null}
     </div>
   );
 };
@@ -146,7 +134,11 @@ const BaseSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
   return (
     <Section
       title="Что держать в базе"
-      text="По расходу точки за 30 дней — в нём все кальяны, включая заказы в зале. «В приложении» — выбор гостей в Арома Ателье, только часть заказов: в подсказки не входит."
+      text={
+        showApp
+          ? 'Расход точки за 30 дней, включая заказы в зале. Выбор гостей в приложении показан для справки и в подсказки не входит.'
+          : 'Расход точки за 30 дней, включая заказы в зале.'
+      }
     >
       <div className="purchase-sub" role="group" aria-label="Подсказки базы">
         {chip('all', 'Все')}
@@ -173,7 +165,7 @@ const BaseSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
               </td>
               <td className={line.few ? 'shelf-faint' : 'shelf-num'}>
                 {line.month}
-                {line.brand ? <span className="shelf-faint"> · бренд</span> : null}
+                {line.brand ? <span className="shelf-faint"> по бренду</span> : null}
               </td>
               <td className={line.share === '—' ? 'shelf-faint' : 'shelf-num'}>{line.share}</td>
               <td className={line.rub === '—' ? 'shelf-faint' : 'shelf-num'}>{line.rub}</td>
@@ -181,7 +173,6 @@ const BaseSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
               <td>
                 {line.flag ? (
                   <span className="purchase-flag" data-tone={line.flag.tone}>
-                    {line.flag.up ? <TrendingUp size={13} aria-hidden /> : <TrendingDown size={13} aria-hidden />}
                     {line.flag.text}
                   </span>
                 ) : null}
@@ -206,7 +197,7 @@ const BaseSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
 const FastSection = ({ purchase }: { purchase: PurchaseView }) => (
   <Section
     title="Закончились быстро"
-    text="Приход ушёл за 3 дня и быстрее — за 60 дней. «Без табака» — сколько дней полка стояла пустой до следующего прихода."
+    text="Приходы за 60 дней, которые ушли за 3 дня и быстрее. Без табака: сколько дней полка стояла пустой до следующего прихода."
   >
     {purchase.fast.rows.length ? (
       <Table
@@ -227,8 +218,7 @@ const FastSection = ({ purchase }: { purchase: PurchaseView }) => (
                 <Name tobacco={row.tobacco} />
               </td>
               <td className="shelf-num">
-                {line.receipt}
-                <span className="shelf-faint"> · {line.receivedAt}</span>
+                {line.receivedAt}, {line.receipt}
               </td>
               <td>
                 <span className="purchase-stack">
@@ -238,7 +228,7 @@ const FastSection = ({ purchase }: { purchase: PurchaseView }) => (
               </td>
               <td className="shelf-num">
                 {line.empty}
-                {line.ongoing ? <span className="shelf-faint"> · идёт</span> : null}
+                {line.ongoing ? <span className="shelf-faint">, идёт</span> : null}
               </td>
               <td className={line.next ? 'shelf-num' : 'shelf-faint'}>{line.next ?? 'прихода ещё не было'}</td>
               <td>
@@ -259,7 +249,7 @@ const FastSection = ({ purchase }: { purchase: PurchaseView }) => (
 const TrialsSection = ({ purchase, onVerdict }: { purchase: PurchaseView; onVerdict: ShelfPurchaseProps['onVerdict'] }) => (
   <Section
     title="Как зашли пробы"
-    text="Табаки, впервые пришедшие за 60 дней. Главное — скорость расхода и ваша отметка: отзывы о заказах в зале есть только у мастера."
+    text="Табаки, которые впервые пришли за 60 дней."
   >
     {purchase.trials.rows.length ? (
       <>
@@ -282,8 +272,7 @@ const TrialsSection = ({ purchase, onVerdict }: { purchase: PurchaseView; onVerd
                   <Name tobacco={row.tobacco} />
                 </td>
                 <td className="shelf-num">
-                  {line.receipt}
-                  <span className="shelf-faint"> · {line.receivedAt}</span>
+                  {line.receivedAt}, {line.receipt}
                 </td>
                 <td>
                   {line.speed ? (
@@ -320,7 +309,7 @@ const TrialsSection = ({ purchase, onVerdict }: { purchase: PurchaseView; onVerd
             );
           })}
         </Table>
-        <p className="purchase-hint">«Нет в миксах» — гости приложения пробу не увидят: добавьте её в микс. Рейтинг htreviews — в карточке каталога.</p>
+        {purchase.trials.rows.some((row) => row.mixCount === 0) ? <p className="purchase-hint">Пробу без миксов гости приложения не видят.</p> : null}
       </>
     ) : (
       <p className="empty">За 60 дней новых табаков на полке не было.</p>
@@ -333,10 +322,10 @@ const IdleSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
   return (
     <Section
       title="Что лежит"
-      text="В наличии, пришёл больше 21 дня назад, расход за 21 день — меньше 2 г в день. Табак на стопе для гостей сюда не попадает."
+      text="Пришли больше 21 дня назад и расходуются медленнее 2 г в день. Табак на стопе для гостей сюда не попадает."
       extra={
         <span className="purchase-frozen">
-          заморожено <b className="shelf-num">{notes.total}</b>
+          Заморожено <b className="shelf-num">{notes.total}</b>
         </span>
       }
     >
@@ -344,7 +333,7 @@ const IdleSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
         <Table
           columns={[
             { label: 'Табак' },
-            { label: 'Остаток', width: 110 },
+            { label: 'Остаток по учёту', width: 160 },
             { label: 'Расход за 21 день', width: 160 },
             { label: 'Денег в нём', width: 130 },
             { label: 'Приход', width: 140 },
@@ -363,7 +352,7 @@ const IdleSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
                 <td className={line.rub === '—' ? 'shelf-faint' : 'shelf-num'}>{line.rub}</td>
                 <td className="shelf-num">
                   {line.receivedAt}
-                  <span className="shelf-faint"> · {line.days}</span>
+                  <span className="shelf-faint">, {line.days}</span>
                 </td>
                 <td data-align="center">
                   <ShelfToggle
@@ -378,11 +367,11 @@ const IdleSection = ({ purchase, onKeep, busy }: { purchase: PurchaseView; onKee
           })}
         </Table>
       ) : (
-        <p className="empty">Ничего не лежит: всё, что пришло больше 21 дня назад, расходится.</p>
+        <p className="empty">Ничего не лежит.</p>
       )}
       {notes.unmarked ? <p className="purchase-hint">{notes.unmarked}</p> : null}
       {notes.unknownPrice ? <p className="purchase-hint">{notes.unknownPrice}</p> : null}
-      <p className="purchase-hint">Выключить «Держим» — табак не попадёт в «К заказу», когда закончится. Гость его видит, пока он есть на полке.</p>
+      <p className="purchase-hint">Табак, который не держим постоянно, не попадёт в заказ, когда закончится. Гости видят его, пока он есть на полке.</p>
     </Section>
   );
 };
@@ -394,14 +383,14 @@ const ProfilesSection = ({ purchase, onIdeas }: { purchase: PurchaseView; onIdea
       title="Вкусы: расход против полки"
       text={
         showApp
-          ? 'Доля направления в расходе точки за 30 дней и доля табаков этого направления на полке. Выбор в приложении — для справки, часть заказов.'
+          ? 'Доля направления в расходе точки за 30 дней и доля табаков этого направления на полке. Выбор в приложении показан для справки.'
           : 'Доля направления в расходе точки за 30 дней и доля табаков этого направления на полке.'
       }
     >
       <div className="purchase-profiles">
         <div className="purchase-prof purchase-prof--head">
           <span>Направление</span>
-          <span>{showApp ? 'Расход · полка · в приложении' : 'Расход · полка'}</span>
+          <span>Доля</span>
           <span />
         </div>
         {profileBars(purchase.profiles.rows).map((row) => (
@@ -481,25 +470,19 @@ export const ShelfPurchase = ({ purchase, error, onSettings, onKeep, onVerdict, 
       <BudgetStrip purchase={purchase} onSettings={onSettings} />
       <div className="shelf-toolbar purchase-toolbar">
         <div className="shelf-toolbar__chips" role="group" aria-label="Разделы закупки">
-          {PURCHASE_SECTIONS.map(([key, label]) => {
-            const count = sectionCount(purchase, key);
-            return (
-              <button
-                key={key}
-                type="button"
-                className={`filter-chip${section === key ? ' filter-chip--active' : ''}`}
-                aria-pressed={section === key}
-                onClick={() => setSection(key)}
-              >
-                <span>{label}</span>
-                <span className="filter-chip__count" hidden={count === null}>
-                  {formatMetricValue(count ?? 0)}
-                </span>
-              </button>
-            );
-          })}
+          {/* Разделы — навигация, а не фильтры-статусы: без счётчиков (#364). */}
+          {PURCHASE_SECTIONS.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`filter-chip${section === key ? ' filter-chip--active' : ''}`}
+              aria-pressed={section === key}
+              onClick={() => setSection(key)}
+            >
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
-        <span className="purchase-toolbar__date">{purchaseDate()}</span>
       </div>
       {body}
     </div>

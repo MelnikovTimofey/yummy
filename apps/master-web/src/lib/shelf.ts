@@ -260,16 +260,14 @@ export const shelfLevel = (row: ShelfRow): ShelfLevel => {
   };
 };
 
-// Подпись к остатку в карточке (#shot=card, card-exact): кто дал цифру и от какого уровня.
-const markedByMaster = (row: Pick<ShelfRow, 'leftSource'>) => row.leftSource === 'mark';
-
+// Подпись к остатку в карточке (#shot=card, card-exact): кто дал цифру. От какого
+// уровня — уже под полосой остатка над списком.
 export const remainHint = (row: ShelfRow, now = new Date()) => {
   if (row.leftGrams === null || row.fullGrams === null || !row.lastReceipt) return 'прихода не было';
-  const base = `из ${formatNumber(row.fullGrams)} г после прихода ${formatShelfDate(row.lastReceipt.at)}`;
-  if (!markedByMaster(row)) return `прогноз · ${base}`;
+  if (row.leftSource !== 'mark') return 'прогноз';
   const count = freshCount(row);
-  if (count?.grams === 0) return `закончился ${formatShelfDate(count.at)} · ${base}`;
-  return `${count ? `указал мастер ${relativeDay(count.at, now)}` : 'указал мастер'} · ${base}`;
+  if (count?.grams === 0) return `закончился ${formatShelfDate(count.at)}`;
+  return count ? `указал мастер ${relativeDay(count.at, now)}` : 'указал мастер';
 };
 
 // «Сколько осталось?» во всплывашке строки и в шторке телефона (#363, #shot=shelf-left).
@@ -290,12 +288,12 @@ export const shelfMonthRate = (row: Pick<ShelfRow, 'monthGrams' | 'rateKind'>): 
   return { value, hint: row.rateKind === 'brand' ? 'по бренду' : null, faint: false };
 };
 
-// Под расходом в месяц в карточке — г/день и откуда расход.
+// Под расходом в месяц в карточке — г/день и откуда расход; без расхода «мало данных» уже в значении.
 export const cardRateHint = (row: Pick<ShelfRow, 'rate' | 'rateKind'>, marks: number) => {
-  if (row.rateKind === 'none' || row.rate === null) return 'появится после первой отметки';
-  const perDay = `≈ ${formatOneDecimal(row.rate)} г/день`;
-  if (row.rateKind === 'brand') return `${perDay} · по бренду`;
-  return `${perDay} · ${marks ? `по ${formatCount(marks, ['отметке', 'отметкам', 'отметкам'])} за 60 дней` : 'по отметкам остатка'}`;
+  if (row.rateKind === 'none' || row.rate === null) return null;
+  const perDay = `${formatOneDecimal(row.rate)} г/день`;
+  if (row.rateKind === 'brand') return `${perDay} по бренду`;
+  return `${perDay} ${marks ? `по ${formatCount(marks, ['отметке', 'отметкам', 'отметкам'])} за 60 дней` : 'по отметкам остатка'}`;
 };
 
 const rubles = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -303,7 +301,7 @@ const rubles = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximu
 export const formatGramPrice = (kop: number | null) => (kop === null ? '—' : `${rubles.format(kop / 100)} ₽`);
 
 export const formatBowlCost = (kop: number | null, bowlGrams: number) =>
-  kop === null ? null : `≈ ${formatNumber(kop / 100)} ₽ на чашу ${bowlGrams} г`;
+  kop === null ? null : `${formatNumber(kop / 100)} ₽ за чашу ${bowlGrams} г`;
 
 const MAX_GRAMS = 20_000;
 
@@ -441,6 +439,7 @@ export const shelfRowMenu = (row: Pick<ShelfRow, 'status' | 'stopped'>): ShelfRo
 // --- Карточка: история и расход ----------------------------------------------
 
 export type HistoryLine = {
+  date: string;
   grams: string;
   tone: 'plus' | 'count' | 'zero' | 'minus';
   title: string;
@@ -458,11 +457,12 @@ const receiptSource = (entry: StockEntry) => {
 const usageText = (entry: StockEntry) => {
   if (entry.excluded) return 'в расход не пошло';
   if (!entry.usage) return null;
-  return `расход с ${formatShelfDate(entry.usage.from)} — ${formatOneDecimal(entry.usage.gramsPerDay)} г/день`;
+  return `расход с ${formatShelfDate(entry.usage.from)}: ${formatOneDecimal(entry.usage.gramsPerDay)} г/день`;
 };
 
-const join = (parts: Array<string | null | undefined>) => parts.filter(Boolean).join(' · ');
+const join = (parts: Array<string | null | undefined>) => parts.filter(Boolean).join(', ');
 
+// Дата — своей колонкой в истории карточки, остальное через запятую.
 export const historyEntry = (entry: StockEntry): HistoryLine => {
   const date = formatShelfDate(entry.at);
   const grams = formatNumber(entry.grams);
@@ -471,27 +471,29 @@ export const historyEntry = (entry: StockEntry): HistoryLine => {
       ? [`${formatNumber(entry.priceKop / 100)} ₽`, `${formatGramPrice(entry.priceKop / entry.grams)}/г`]
       : [];
     return {
+      date,
       grams: `+${grams} г`,
       tone: 'plus',
       title: 'Приход',
-      line: join([date, ...receiptSource(entry), ...price]),
+      line: join([...receiptSource(entry), ...price]),
       deletable: entry.delivery === null,
     };
   }
   if (entry.kind === 'writeoff') {
-    return { grams: `−${grams} г`, tone: 'minus', title: 'Списание', line: join([date, entry.reason, entry.actorLogin]), deletable: true };
+    return { date, grams: `−${grams} г`, tone: 'minus', title: 'Списание', line: join([entry.reason, entry.actorLogin]), deletable: true };
   }
   if (entry.grams === 0) {
-    return { grams: '0 г', tone: 'zero', title: 'Закончился', line: join([date, entry.actorLogin, usageText(entry)]), deletable: true };
+    return { date, grams: '0 г', tone: 'zero', title: 'Закончился', line: join([entry.actorLogin, usageText(entry)]), deletable: true };
   }
   const how = entry.fraction !== null
     ? `${fractionLabel(entry.fraction)} от ${formatNumber(entry.grams / entry.fraction)} г`
     : 'точно в граммах';
   return {
+    date,
     grams: `${grams} г`,
     tone: 'count',
     title: `Осталось ${entry.fraction !== null ? fractionLabel(entry.fraction) : `${grams} г`}`,
-    line: join([date, how, entry.actorLogin, usageText(entry)]),
+    line: join([how, entry.actorLogin, usageText(entry)]),
     deletable: true,
   };
 };

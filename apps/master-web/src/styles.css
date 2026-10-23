@@ -6004,16 +6004,6 @@ button.chip .chip__count[hidden] {
 .shelf-level--lg .shelf-level__bar { height: 8px; }
 .shelf-level--lg .shelf-level__copy b { font-size: var(--fs-lg); }
 
-.shelf-keys {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-}
-
-.shelf-keys span { display: inline-flex; align-items: center; gap: 5px; }
-
 /* --- Меню строки ----------------------------------------------------- */
 
 .shelf-menu {
@@ -6297,14 +6287,8 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-card__head { display: grid; gap: 6px; padding: 20px 22px 0; }
-.shelf-card__eyebrow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-
-.shelf-card__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-size: 11px;
-  color: var(--accent);
-}
+.shelf-card__title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.shelf-card__brand { margin: -2px 0 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 .shelf-card__title {
   margin: 0;
@@ -6331,31 +6315,31 @@ button.chip .chip__count[hidden] {
   background: var(--bg-elevated);
 }
 
-.shelf-card__tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* «Хватит до», остаток, расход, цена — список «подпись: значение», не плитки (#364). */
+.shelf-card__facts { display: grid; margin: 0; border-top: 1px solid var(--border-subtle); }
 
-.shelf-card__tile {
+.shelf-card__fact {
   display: grid;
-  gap: 2px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-md);
-}
-
-.shelf-card__tile span {
-  font-family: var(--font-meta);
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
   font-size: var(--fs-sm);
-  color: var(--text-faint);
 }
 
-.shelf-card__tile b {
+.shelf-card__fact dt { color: var(--text-muted); }
+.shelf-card__fact dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; min-width: 0; }
+
+.shelf-card__fact b {
   font-weight: 500;
-  font-size: 17px;
+  font-size: var(--fs-md);
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
-.shelf-card__tile b.shelf-faint { color: var(--text-faint); }
-.shelf-card__tile small { font-size: var(--fs-xs); color: var(--text-muted); }
+.shelf-card__fact b.shelf-faint { color: var(--text-faint); }
+.shelf-card__fact small { font-size: var(--fs-xs); color: var(--text-muted); }
 
 .shelf-card__section { display: grid; gap: 8px; }
 
@@ -6373,7 +6357,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-history__item {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr) 28px;
+  grid-template-columns: 48px 62px minmax(0, 1fr) 28px;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
@@ -6381,6 +6365,7 @@ button.chip .chip__count[hidden] {
 }
 
 .shelf-history__item:last-child { border-bottom: 0; }
+.shelf-history__date { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .shelf-history__grams { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .shelf-history__grams[data-tone="plus"] { color: var(--success); }
 .shelf-history__grams[data-tone="zero"] { color: var(--danger); }
@@ -6821,6 +6806,8 @@ button.chip .chip__count[hidden] {
 .reorder-interval > svg { flex-shrink: 0; color: var(--text-muted); }
 .reorder-interval__text { flex: 1; min-width: 0; }
 .reorder-interval b { color: var(--text-primary); font-weight: 500; }
+.reorder-interval b[data-tone="success"] { color: var(--success); }
+.reorder-interval b[data-tone="danger"] { color: var(--danger); }
 
 .reorder-copied {
   display: grid;
@@ -6829,13 +6816,6 @@ button.chip .chip__count[hidden] {
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-lg);
   background: var(--bg-raised);
-}
-
-.reorder-copied__eyebrow {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
 }
 
 .reorder-copied h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; }
@@ -6865,41 +6845,10 @@ button.chip .chip__count[hidden] {
 .purchase { display: grid; gap: 12px; }
 .purchase-budget-wrap { display: grid; gap: 8px; }
 
-.purchase-budget {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-  overflow: hidden;
-}
-
-.purchase-budget > div { display: grid; gap: 3px; padding: 14px 16px; border-right: 1px solid var(--border-subtle); }
-.purchase-budget > div:last-child { border-right: 0; }
-
-.purchase-budget span {
-  font-family: var(--font-meta);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
-.purchase-budget b {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: 24px;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.purchase-budget b[data-tone="success"] { color: var(--success); }
-.purchase-budget b[data-tone="danger"] { color: var(--danger); }
-.purchase-budget small { font-size: var(--fs-xs); color: var(--text-faint); }
-
 .purchase-hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 .purchase-warn { color: var(--warning); }
 
 .purchase-toolbar .shelf-toolbar__chips { flex: 1; }
-.purchase-toolbar__date { font-size: var(--fs-sm); color: var(--text-faint); white-space: nowrap; }
 
 .purchase-section { display: grid; gap: 10px; }
 .purchase-section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
@@ -7052,20 +7001,19 @@ button.chip .chip__count[hidden] {
 .trial-mark button[aria-pressed="true"][data-verdict="no"] { background: var(--danger-soft); color: var(--text-primary); }
 .trial-mark[data-size="lg"] button { padding: 8px 12px; font-size: 14px; }
 
-/* Блок «Проба» в карточке (#shot=card-trial). */
+/* Блок «Проба» в карточке (#shot=card-trial): ровная поверхность, без винной заливки (#364). */
 .shelf-trial {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-md);
-  background: var(--accent-soft);
 }
 
 .shelf-trial__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; font-size: var(--fs-sm); color: var(--text-primary); }
 .shelf-trial__row b { font-weight: 500; }
+.shelf-trial__row--head { justify-content: flex-start; }
 .shelf-trial__muted { color: var(--text-muted); }
-.shelf-trial__note { margin: 0; font-size: var(--fs-sm); color: var(--text-faint); }
 
 /* Полоса «Проба · как зашла?» на телефоне (#shot=mobile-trial). */
 .m-shelf-card__trial {

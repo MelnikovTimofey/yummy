@@ -13,8 +13,6 @@ import {
   patchPurchase,
   profileBars,
   profileDirection,
-  purchaseDate,
-  sectionCount,
   trialRowView,
   trialVerdictText,
 } from './purchase';
@@ -68,76 +66,51 @@ test('разделы «Закупки» по порядку мокапа', () =>
   ]);
 });
 
-test('sectionCount: что требует внимания; без данных — без числа', () => {
-  const data = view();
-  assert.equal(sectionCount(data, 'base'), 4);
-  assert.equal(sectionCount(data, 'fast'), 3);
-  assert.equal(sectionCount(data, 'trials'), 2);
-  assert.equal(sectionCount(data, 'idle'), 1);
-  assert.equal(sectionCount(data, 'profiles'), 2);
-  const few = view({ base: { enough: false, counts: { notBase: 1 } }, fast: { enough: false, rows: [] } });
-  assert.equal(sectionCount(few, 'base'), null);
-  assert.equal(sectionCount(few, 'fast'), null);
-});
+const text = (segments: Array<{ text: string }>) => plain(segments.map((segment) => segment.text).join(''));
+const strong = (segments: Array<{ text: string; strong?: boolean; tone?: string }>) =>
+  segments.filter((segment) => segment.strong).map((segment) => ({ text: plain(segment.text), tone: segment.tone }));
 
-test('purchaseDate: «за 30–60 дней · чт, 19 ноября»', () => {
-  assert.equal(purchaseDate(new Date(2026, 10, 19, 12)), 'за 30–60 дней · чт, 19 ноября');
-});
-
-test('budgetStrip: с бюджетом — четыре плитки, остаток на пробы и доля потраченного', () => {
+test('budgetStrip: с бюджетом — одна строка вместо плиток: бюджет, база, остаток на пробы и потрачено', () => {
   const strip = budgetStrip(view());
   assert.equal(strip.kind, 'budget');
-  if (strip.kind !== 'budget') return;
-  assert.deepEqual(
-    strip.tiles.map((tile) => ({ ...tile, value: plain(tile.value), hint: plain(tile.hint) })),
-    [
-      { label: 'Бюджет · ноябрь', value: '150 000 ₽', hint: 'настройка полки', tone: 'default' },
-      { label: 'База в месяц', value: '≈ 112 000 ₽', hint: '214 табаков «держим постоянно»', tone: 'default' },
-      { label: 'Остаётся на пробы', value: '≈ 38 000 ₽', hint: 'и на то, чего нет', tone: 'success' },
-      { label: 'Потрачено в ноябре', value: '87 216 ₽', hint: 'по принятым счетам · 58 % бюджета', tone: 'default' },
-    ],
+  assert.equal(
+    text(strip.segments),
+    'Бюджет на ноябрь 150 000 ₽. База из 214 табаков стоит 112 000 ₽ в месяц, на пробы остаётся 38 000 ₽. По принятым счетам потрачено 87 216 ₽, 58 % бюджета.',
   );
+  assert.deepEqual(strong(strip.segments), [
+    { text: '150 000 ₽', tone: undefined },
+    { text: '112 000 ₽', tone: undefined },
+    { text: '38 000 ₽', tone: 'success' },
+    { text: '87 216 ₽', tone: undefined },
+  ]);
   assert.deepEqual(strip.unknown, {
-    warn: 'У 9 табаков базы нет цены',
-    text: ' — стартовый остаток заводился без счёта. Сумма базы станет точной после их первого прихода по счёту.',
+    warn: 'У 9 табаков базы нет цены.',
+    text: ' Стартовый остаток заводился без счёта, сумма базы уточнится с их первым приходом по счёту.',
   });
 });
 
-test('budgetStrip: база больше бюджета — плитка красная, а не «остаётся»', () => {
+test('budgetStrip: база больше бюджета — сумма превышения красная', () => {
   const strip = budgetStrip(view({ budget: { budgetKop: 10000000, baseKop: 11200000, baseCount: 1, unknownCount: 0, leftKop: -1200000 } }));
-  assert.equal(strip.kind, 'budget');
-  if (strip.kind !== 'budget') return;
-  assert.deepEqual({ ...strip.tiles[2], value: plain(strip.tiles[2].value) }, {
-    label: 'База больше бюджета на',
-    value: '≈ 12 000 ₽',
-    hint: 'на пробы не остаётся',
-    tone: 'danger',
-  });
-  assert.equal(strip.tiles[1].hint, '1 табак «держим постоянно»');
+  assert.equal(
+    text(strip.segments),
+    'Бюджет на ноябрь 100 000 ₽. База из 1 табака стоит 112 000 ₽ в месяц, это больше бюджета на 12 000 ₽. По принятым счетам потрачено 87 216 ₽, 87 % бюджета.',
+  );
+  assert.deepEqual(strong(strip.segments)[2], { text: '12 000 ₽', tone: 'danger' });
   assert.equal(strip.unknown, null);
 });
 
-test('budgetStrip: без бюджета — стоимость базы и приглашение указать бюджет', () => {
-  const strip = budgetStrip(view({ budget: { budgetKop: null, baseKop: 11200000, unknownCount: 1 } }));
+test('budgetStrip: без бюджета — стоимость базы и факт, что бюджета нет (кнопка рядом)', () => {
+  const strip = budgetStrip(view({ budget: { budgetKop: null, baseKop: 11200000, baseCount: 214, unknownCount: 1 } }));
   assert.equal(strip.kind, 'none');
-  if (strip.kind !== 'none') return;
-  assert.deepEqual(
-    strip.segments.map((segment) => ({ ...segment, text: plain(segment.text) })),
-    [
-      { text: 'База в месяц стоит ' },
-      { text: '≈ 112 000 ₽', strong: true },
-      { text: '. Укажите бюджет на табак — покажем, сколько остаётся на то, чего нет, и на пробы.' },
-    ],
-  );
-  assert.equal(strip.unknown?.warn, 'У 1 табака базы нет цены');
+  assert.equal(text(strip.segments), 'База из 214 табаков стоит 112 000 ₽ в месяц. Бюджет на табак не указан.');
+  assert.equal(strip.unknown?.warn, 'У 1 табака базы нет цены.');
 
   const empty = budgetStrip(view({ budget: { budgetKop: null, baseKop: 0 } }));
   assert.equal(empty.kind, 'none');
-  if (empty.kind !== 'none') return;
-  assert.deepEqual(empty.segments, [{ text: 'Укажите бюджет на табак — покажем, сколько остаётся на то, чего нет, и на пробы.' }]);
+  assert.deepEqual(empty.segments, [{ text: 'Бюджет на табак не указан.' }]);
 });
 
-test('baseRowView: свой расход — граммы, доля, рубли; бренд — «≈ · бренд» без доли и флага', () => {
+test('baseRowView: свой расход — граммы, доля, рубли; бренд — без «≈», с подписью, без доли и флага', () => {
   const own = baseRowView(view().base.rows[0]);
   assert.deepEqual({ ...own, rub: plain(own.rub) }, {
     month: '630 г',
@@ -159,15 +132,15 @@ test('baseRowView: свой расход — граммы, доля, рубли;
       ],
     },
   }).base.rows.map(baseRowView);
-  assert.deepEqual({ ...brand, rub: plain(brand.rub) }, { month: '≈ 300 г', brand: true, few: false, share: '—', rub: '≈ 2 280 ₽', app: '—', flag: null });
+  assert.deepEqual({ ...brand, rub: plain(brand.rub) }, { month: '300 г', brand: true, few: false, share: '—', rub: '2 280 ₽', app: '—', flag: null });
   assert.deepEqual(none, { month: 'мало данных', brand: false, few: true, share: '—', rub: '—', app: '—', flag: null });
   assert.equal(flagged.share, '0,2 %');
-  assert.deepEqual(flagged.flag, { text: 'почти не берут', tone: 'faint', up: false });
+  assert.deepEqual(flagged.flag, { text: 'почти не берут', tone: 'faint' });
   assert.equal(zero.share, '0 %');
   assert.equal(zero.month, '0 г');
   assert.equal(zero.rub, '0 ₽');
   const notBase = baseRowView(view().base.rows[1]);
-  assert.deepEqual(notBase.flag, { text: 'берут часто, не в базе', tone: 'warning', up: true });
+  assert.deepEqual(notBase.flag, { text: 'берут часто, не в базе', tone: 'warning' });
 });
 
 test('fastRowView: приход, ушёл за, дни без табака, что дальше и сейчас', () => {
@@ -216,7 +189,7 @@ test('fastRowView: приход, ушёл за, дни без табака, чт
     times: null,
     empty: '8 дн',
     ongoing: false,
-    next: '+500 г 12 ноя',
+    next: '12 ноя, +500 г',
     now: { text: 'заканчивается', tone: 'warning' },
   });
 });
@@ -244,22 +217,22 @@ test('trialRowView: скорость к полке, «ушла за», прил�
     receivedAt: '14 ноя',
     speed: { text: '×2,8 к полке', fast: true },
     gone: 'ушла за 2 дня',
-    app: { kind: 'stats', text: '3 · ★ 4,8' },
+    app: { kind: 'stats', text: '3 выбора, ★ 4,8' },
   });
   assert.deepEqual(panama.speed, { text: '×0,8 к полке', fast: false });
   assert.equal(panama.gone, null);
   assert.deepEqual(panama.app, { kind: 'noMixes', text: 'нет в миксах' });
   assert.equal(passion.speed, null);
-  assert.deepEqual(passion.app, { kind: 'stats', text: '2 · ★ —' });
+  assert.deepEqual(passion.app, { kind: 'stats', text: '2 выбора' });
 });
 
-test('trialVerdictText: скорость словами и отметка мастера', () => {
-  assert.deepEqual(trialVerdictText(2.8, null), { text: 'расходится быстрее полки · ждёт вашей отметки', tone: 'default' });
-  assert.deepEqual(trialVerdictText(1.2, 'yes'), { text: 'расходится быстрее полки · гостям зашло', tone: 'default' });
-  assert.deepEqual(trialVerdictText(0.8, 'no'), { text: 'расходится медленнее полки · гостям не зашло', tone: 'muted' });
-  assert.deepEqual(trialVerdictText(0.8, null), { text: 'расходится медленнее полки · ждёт вашей отметки', tone: 'muted' });
-  assert.deepEqual(trialVerdictText(0.8, 'yes'), { text: 'расходится медленнее полки · гостям зашло', tone: 'default' });
-  assert.deepEqual(trialVerdictText(null, 'yes'), { text: 'мало данных: отметок остатка ещё не было', tone: 'faint' });
+test('trialVerdictText: скорость словами и отметка мастера, через запятую', () => {
+  assert.deepEqual(trialVerdictText(2.8, null), { text: 'расходится быстрее полки, ждёт отметки', tone: 'default' });
+  assert.deepEqual(trialVerdictText(1.2, 'yes'), { text: 'расходится быстрее полки, гостям зашло', tone: 'default' });
+  assert.deepEqual(trialVerdictText(0.8, 'no'), { text: 'расходится медленнее полки, гостям не зашло', tone: 'muted' });
+  assert.deepEqual(trialVerdictText(0.8, null), { text: 'расходится медленнее полки, ждёт отметки', tone: 'muted' });
+  assert.deepEqual(trialVerdictText(0.8, 'yes'), { text: 'расходится медленнее полки, гостям зашло', tone: 'default' });
+  assert.deepEqual(trialVerdictText(null, 'yes'), { text: 'мало данных', tone: 'faint' });
 });
 
 test('nextTrialVerdict: повторный клик по выбранному снимает отметку', () => {
@@ -279,19 +252,19 @@ test('idleRowView и заметки под «Лежит»', () => {
       ],
     },
   }).idle.rows.map(idleRowView);
-  assert.deepEqual({ ...gummy, rub: plain(gummy.rub) }, { left: '≈ 480 г', rate: '1 г/день', rub: '3 600 ₽', receivedAt: '15 окт', days: '35 дн' });
+  assert.deepEqual({ ...gummy, rub: plain(gummy.rub) }, { left: '480 г', rate: '1 г/день', rub: '3 600 ₽', receivedAt: '15 окт', days: '35 дн' });
   assert.equal(pear.rate, '0 г');
   assert.equal(pear.rub, '—');
   assert.equal(cola.rate, '1,5 г/день');
 
   const notes = idleNotes(view({ idle: { enough: true, totalKop: 925000, unmarkedCount: 3, unknownPriceCount: 1, rows: [] } }).idle);
-  assert.equal(plain(notes.total), '≈ 9 250 ₽');
-  assert.equal(notes.unmarked, 'Ещё 3 табака без отметок остатка за 21 день — их расход неизвестен.');
-  assert.equal(notes.unknownPrice, 'У 1 табака нет цены прихода — в «заморожено» не вошёл.');
+  assert.equal(plain(notes.total), '9 250 ₽');
+  assert.equal(notes.unmarked, 'Ещё у 3 табаков нет отметок остатка за 21 день, их расход неизвестен.');
+  assert.equal(notes.unknownPrice, 'У 1 табака нет цены прихода, в сумму он не вошёл.');
   const clean = idleNotes(view({ idle: { enough: true, totalKop: 0, rows: [] } }).idle);
   assert.equal(clean.unmarked, null);
   assert.equal(clean.unknownPrice, null);
-  assert.equal(idleNotes(view({ idle: { unknownPriceCount: 2 } }).idle).unknownPrice, 'У 2 табаков нет цены прихода — в «заморожено» не вошли.');
+  assert.equal(idleNotes(view({ idle: { unknownPriceCount: 2 } }).idle).unknownPrice, 'У 2 табаков нет цены прихода, в сумму они не вошли.');
 });
 
 test('profileDirection: направление в единственном числе, как в мокапе', () => {
@@ -318,24 +291,36 @@ test('profileBars: проценты и ширина полос от наибол
   assert.equal(bars[2].ideas, null);
 });
 
-test('fewDataText: сколько дней идёт учёт и когда ждать цифры', () => {
+test('fewDataText: сколько дней идёт учёт, когда ждать цифры и что для них нужно', () => {
   const now = new Date(2026, 10, 19, 12);
+  const need = 'Для них нужны счета в поставках и отметки, когда табак закончился.';
   assert.equal(
     fewDataText(new Date(2026, 10, 16, 9).toISOString(), now),
-    'Учёт в граммах идёт 3 дня. Расход и всё, что из него следует, появится через 2–4 недели: заносите счета в «Поставки» и жмите «Закончился», когда табак кончился. Ориентир — 14 декабря; раньше цифры случайные.',
+    `Учёт в граммах идёт 3 дня. Цифры появятся через 2–4 недели, ориентировочно 14 декабря. ${need}`,
   );
   assert.equal(
     fewDataText(new Date(2026, 10, 19, 9).toISOString(), now),
-    'Учёт в граммах идёт с сегодняшнего дня. Расход и всё, что из него следует, появится через 2–4 недели: заносите счета в «Поставки» и жмите «Закончился», когда табак кончился. Ориентир — 17 декабря; раньше цифры случайные.',
+    `Учёт в граммах идёт с сегодняшнего дня. Цифры появятся через 2–4 недели, ориентировочно 17 декабря. ${need}`,
   );
-  assert.equal(
+  assert.equal(fewDataText(null, now), `Учёт в граммах ещё не начался. Цифры появятся через 2–4 недели после первого счёта. ${need}`);
+  assert.equal(fewDataText(new Date(2026, 8, 1).toISOString(), now), `Учёт в граммах идёт 79 дней, но отметок пока мало. ${need}`);
+});
+
+test('тексты «Закупки» без middot, тире между частями, «≈», кавычек и точки с запятой', () => {
+  const now = new Date(2026, 10, 19, 12);
+  const lines = [
+    text(budgetStrip(view()).segments),
+    text(budgetStrip(view({ budget: { budgetKop: 10000000, baseKop: 11200000, baseCount: 1, leftKop: -1200000 } })).segments),
+    text(budgetStrip(view({ budget: { budgetKop: null, baseKop: 11200000, baseCount: 3 } })).segments),
+    budgetStrip(view()).unknown?.warn ?? '',
+    budgetStrip(view()).unknown?.text ?? '',
+    ...Object.values(idleNotes(view({ idle: { enough: true, totalKop: 925000, unmarkedCount: 3, unknownPriceCount: 1, rows: [] } }).idle)).map(String),
+    trialVerdictText(2.8, null).text,
     fewDataText(null, now),
-    'Учёт в граммах ещё не начался. Расход и всё, что из него следует, появится через 2–4 недели после первого счёта: заносите счета в «Поставки» и жмите «Закончился», когда табак кончился.',
-  );
-  assert.equal(
+    fewDataText(new Date(2026, 10, 16, 9).toISOString(), now),
     fewDataText(new Date(2026, 8, 1).toISOString(), now),
-    'Учёт в граммах идёт 79 дней, но отметок пока мало. Заносите счета в «Поставки» и жмите «Закончился», когда табак кончился, — цифры появятся по мере отметок.',
-  );
+  ];
+  for (const line of lines) assert.doesNotMatch(line, /[·≈«»;~]| — /);
 });
 
 test('patchPurchase: «Держим» и отметка пробы меняют строки всех разделов', () => {

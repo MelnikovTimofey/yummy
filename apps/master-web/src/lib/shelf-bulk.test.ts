@@ -72,7 +72,7 @@ test('bulkSummary: первые три названия, «и ещё», скол
   assert.equal(bulkSummary([]).allStopped, false);
 });
 
-test('bulkEmptyToast: число, скрытые миксы, «К заказу» и пропущенные — как в мокапе', () => {
+test('bulkEmptyToast: число, скрытые миксы, сколько добавлено в заказ и пропущенные', () => {
   const toast = bulkEmptyToast(
     normalizeShelfEmptyManyResponse({
       batchId: 'b1',
@@ -85,16 +85,20 @@ test('bulkEmptyToast: число, скрытые миксы, «К заказу»
   assert.equal(toast.title, 'Закончились: 4');
   assert.equal(
     toast.text,
-    'гости их больше не видят. Миксов скрыто: 7. Держим постоянно — добавлены в «К заказу». Пропущено 1: уже закончились.',
+    'Гости их не видят. Скрыто миксов: 7, в заказ добавлено: 1. Пропущено 1: уже закончились.',
   );
 });
 
 test('bulkEmptyToast: без миксов и «держим» — короче; «в плане» называется своими словами', () => {
   const base = { batchId: 'b1', done: ['a'], hiddenMixes: 0, items: [{ tobacco: { id: 'a' }, keepStocked: false }] };
-  assert.equal(bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [] })).text, 'гости их больше не видят.');
+  assert.equal(bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [] })).text, 'Гости их не видят.');
+  assert.equal(
+    bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [], items: [{ tobacco: { id: 'a' }, keepStocked: true }] })).text,
+    'Гости их не видят. В заказ добавлено: 1.',
+  );
   assert.equal(
     bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [{ tobaccoId: 'p', reason: 'plan' }] })).text,
-    'гости их больше не видят. Пропущено 1: в плане.',
+    'Гости их не видят. Пропущено 1: в плане.',
   );
   assert.equal(
     bulkEmptyToast(
@@ -106,7 +110,7 @@ test('bulkEmptyToast: без миксов и «держим» — короче; 
         ],
       }),
     ).text,
-    'гости их больше не видят. Пропущено 2: уже закончились или в плане.',
+    'Гости их не видят. Пропущено 2: уже закончились или в плане.',
   );
 });
 
@@ -132,9 +136,9 @@ test('optimisticEmpty: строка сразу «закончился» с от�
   assert.equal(optimisticEmpty(row('Panama', { stopped: true, status: 'stop' }), at).status, 'out');
 });
 
-test('тосты стопа и «держим постоянно» для нескольких', () => {
-  assert.deepEqual(bulkStopToast(3, true), { title: 'Стоп для гостей: 3', text: 'гости их больше не видят.' });
-  assert.deepEqual(bulkStopToast(2, false), { title: 'Стоп снят: 2', text: 'гости снова видят те, что есть на полке.' });
-  assert.deepEqual(bulkKeepToast(4, true), { title: 'Держим постоянно: 4', text: 'закончатся — попадут в «К заказу».' });
-  assert.deepEqual(bulkKeepToast(1, false), { title: 'Не держим постоянно: 1', text: 'в «К заказу» больше не попадут.' });
+test('тосты стопа и «держим постоянно» для нескольких: текст предложением с заглавной', () => {
+  assert.deepEqual(bulkStopToast(3, true), { title: 'Стоп для гостей: 3', text: 'Гости их не видят.' });
+  assert.deepEqual(bulkStopToast(2, false), { title: 'Стоп снят: 2', text: 'Гости снова видят те, что есть на полке.' });
+  assert.deepEqual(bulkKeepToast(4, true), { title: 'Держим постоянно: 4', text: 'Когда закончатся, попадут в заказ.' });
+  assert.deepEqual(bulkKeepToast(1, false), { title: 'Не держим постоянно: 1', text: 'В заказ больше не попадут.' });
 });
