@@ -24,9 +24,7 @@ export function SegmentNav({ items, value, onChange, style }) {
               color: isActive ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
               boxShadow: isActive ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
               fontFamily: 'var(--font-body)',
-              fontSize: 11,
-              letterSpacing: '0.10em',
-              textTransform: 'uppercase',
+              fontSize: 13,
               fontWeight: isActive ? 600 : 500,
               cursor: 'pointer',
             }}

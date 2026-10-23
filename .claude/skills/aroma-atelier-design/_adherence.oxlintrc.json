@@ -101,8 +101,8 @@
         "message": "<MasterButton> type must be one of 'button' | 'submit'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='MasterCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|eyebrow|heading|actions|style|key|ref|className|style|children)$/]",
-        "message": "<MasterCard> doesn't accept that prop. Declared props: children, eyebrow, heading, actions, style."
+        "selector": "JSXOpeningElement[name.name='MasterCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|heading|actions|style|key|ref|className|style|children)$/]",
+        "message": "<MasterCard> doesn't accept that prop. Declared props: children, heading, actions, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='MasterIconButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|label|small|disabled|onClick|style|key|ref|className|style|children)$/]",
@@ -125,8 +125,8 @@
         "message": "<MasterListColumn> align must be one of 'left' | 'right' | 'center'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='MasterPageHeader'] > JSXAttribute > JSXIdentifier[name!=/^(?:eyebrow|title|subtitle|actions|meta|style|key|ref|className|style|children)$/]",
-        "message": "<MasterPageHeader> doesn't accept that prop. Declared props: eyebrow, title, subtitle, actions, meta, style."
+        "selector": "JSXOpeningElement[name.name='MasterPageHeader'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|subtitle|actions|meta|style|key|ref|className|style|children)$/]",
+        "message": "<MasterPageHeader> doesn't accept that prop. Declared props: title, subtitle, actions, meta, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='MasterSortOption'] > JSXAttribute > JSXIdentifier[name!=/^(?:key|label|key|ref|className|style|children)$/]",
@@ -157,8 +157,8 @@
         "message": "<MasterTopBarItem> doesn't accept that prop. Declared props: id, label, icon."
       },
       {
-        "selector": "JSXOpeningElement[name.name='MixRow'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|flavors|profiles|rating|glyphSize|showGlyph|showSignature|onClick|style|key|ref|className|style|children)$/]",
-        "message": "<MixRow> doesn't accept that prop. Declared props: name, flavors, profiles, rating, glyphSize, showGlyph, showSignature, onClick, style."
+        "selector": "JSXOpeningElement[name.name='MixRow'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|flavors|profiles|rating|glyphSize|showGlyph|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<MixRow> doesn't accept that prop. Declared props: name, flavors, profiles, rating, glyphSize, showGlyph, onClick, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='OnboardingProgress'] > JSXAttribute > JSXIdentifier[name!=/^(?:step|total|onBack|style|key|ref|className|style|children)$/]",

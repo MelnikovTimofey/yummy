@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-/** Dashed, quiet empty state. One sentence, no illustration. */
+/** Quiet empty state: muted text in the flow, no frame. Fact first, then the next step. */
 export interface EmptyStateProps {
   children?: ReactNode;
   style?: CSSProperties;

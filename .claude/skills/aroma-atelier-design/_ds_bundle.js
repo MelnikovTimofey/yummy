@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"078dcd1c6f80","components/guest/AromaCTA.jsx":"d0ef7a831e2c","components/guest/AromaChip.jsx":"d48f28e16469","components/guest/CompositionStack.jsx":"b4e221bf4fa9","components/guest/GuestCard.jsx":"c94b74225d19","components/guest/GuestTab.jsx":"c3e9cd0a93af","components/guest/MixRow.jsx":"0cfeadb642ec","components/guest/OnboardingProgress.jsx":"49fe4556566b","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"6cddf458a9b4","components/guest/SegmentNav.jsx":"1a81a15b6898","components/guest/ShowcaseCard.jsx":"3ed43574c80a","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"ee94201468f4","components/master/FilterChip.jsx":"908eb54e1fd6","components/master/MasterButton.jsx":"d451b95219c4","components/master/MasterCard.jsx":"42ee828a3369","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"936f7e156b21","components/master/MasterSortPill.jsx":"3e49247805ec","components/master/MasterStatsRow.jsx":"7b2d3cca3f8c","components/master/MasterTag.jsx":"4302936b03fb","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"21d08e47c68d","components/master/StatusPill.jsx":"0c904524b5ce","ui_kits/aroma-guest/GuestApp.jsx":"ce9153d8081d","ui_kits/aroma-guest/GuestScreens.jsx":"12d4d7db931a","ui_kits/aroma-guest/mock-data.js":"0299600a2abd","ui_kits/master/MasterApp.jsx":"88327fe27578","ui_kits/master/MasterScreens.jsx":"85682e225ad2","ui_kits/master/mock-data.js":"5ddb0b6756d1"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"078dcd1c6f80","components/guest/AromaCTA.jsx":"74fa9fb65a2d","components/guest/AromaChip.jsx":"f5cacf379c55","components/guest/CompositionStack.jsx":"014fbbecfbe9","components/guest/GuestCard.jsx":"bc7a355b7168","components/guest/GuestTab.jsx":"324ea1ace990","components/guest/MixRow.jsx":"9076eab731a8","components/guest/OnboardingProgress.jsx":"94ca7a6a1040","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"be47a7d43b17","components/guest/SegmentNav.jsx":"66a42206d513","components/guest/ShowcaseCard.jsx":"1ecc7593de3d","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"62c565135c7f","components/master/FilterChip.jsx":"36f9c96618f4","components/master/MasterButton.jsx":"68fc0867cbb9","components/master/MasterCard.jsx":"e86c412054ea","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"c795b42dc299","components/master/MasterSortPill.jsx":"c13d8670ec1b","components/master/MasterStatsRow.jsx":"7b2d3cca3f8c","components/master/MasterTag.jsx":"ce360a2c206a","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"a437c18b2fa2","components/master/StatusPill.jsx":"3b6aa3c99ae2","ui_kits/aroma-guest/GuestApp.jsx":"ce9153d8081d","ui_kits/aroma-guest/GuestScreens.jsx":"12d4d7db931a","ui_kits/aroma-guest/mock-data.js":"0299600a2abd","ui_kits/master/MasterApp.jsx":"88327fe27578","ui_kits/master/MasterScreens.jsx":"85682e225ad2","ui_kits/master/mock-data.js":"5ddb0b6756d1"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -71,7 +71,7 @@ Object.assign(__ds_scope, { AccessCodeInput });
 
 // components/guest/AromaCTA.jsx
 try { (() => {
-// Guest primary action — solid oxblood CTA, full width, uppercase tracking, optional ember pulse.
+// Guest primary action — solid bordeaux CTA, full width, uppercase tracking, optional ember pulse.
 function AromaCTA({
   children,
   onClick,
@@ -153,7 +153,7 @@ function AromaChip({
       border: '1px solid ' + (active ? 'var(--guest-chip-border-on)' : 'var(--border-subtle)'),
       background: active ? 'var(--guest-chip-bg-on)' : 'var(--guest-chip-bg)',
       color: active ? 'var(--guest-chip-ink-on)' : 'var(--text-secondary)',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-guest-chip)',
       padding: isLg ? '10px 14px' : '7px 12px',
       fontFamily: 'var(--font-body)',
       fontSize: isLg ? 13 : 12,
@@ -243,10 +243,9 @@ function CompositionStack({
       background: PALETTE[i % PALETTE.length]
     }
   }), /*#__PURE__*/React.createElement("span", {
-    className: "aroma-caps",
     style: {
-      fontSize: 10,
-      letterSpacing: '0.18em',
+      fontSize: 12,
+      color: 'var(--text-muted)',
       whiteSpace: 'nowrap'
     }
   }, c.manufacturer), /*#__PURE__*/React.createElement("span", {
@@ -292,10 +291,9 @@ function GuestCard({
   }, title ? /*#__PURE__*/React.createElement("p", {
     style: {
       margin: 0,
-      fontSize: 12,
-      letterSpacing: '0.1em',
-      textTransform: 'uppercase',
-      color: 'var(--text-secondary)'
+      fontSize: 14,
+      fontWeight: 600,
+      color: 'var(--text-primary)'
     }
   }, title) : null, children);
 }
@@ -304,7 +302,8 @@ Object.assign(__ds_scope, { GuestCard });
 
 // components/guest/GuestTab.jsx
 try { (() => {
-// Pill tab used in the guest topbar nav rows (.tab / .tab.active upstream).
+// Tab used in the guest topbar nav rows (.tab / .tab.active upstream). Active is quiet:
+// graphite fill, cream ink and a 2px bordeaux mark — solid accent belongs to the CTA only.
 function GuestTab({
   children,
   active = false,
@@ -315,17 +314,16 @@ function GuestTab({
     type: "button",
     onClick: onClick,
     style: {
-      border: '1px solid ' + (active ? 'rgba(142, 47, 60,0.4)' : 'var(--border-subtle)'),
-      borderRadius: 'var(--r-pill)',
-      background: active ? 'linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%)' : 'var(--guest-control-bg-soft)',
-      color: active ? 'var(--primary-foreground)' : 'var(--text-secondary)',
+      border: '1px solid ' + (active ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
+      borderRadius: 'var(--r-guest-control)',
+      background: active ? 'var(--segment-active-bg)' : 'var(--guest-control-bg-soft)',
+      color: active ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
+      boxShadow: active ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
       fontFamily: 'var(--font-body)',
-      fontSize: 11,
+      fontSize: 13,
       lineHeight: 1.2,
       padding: '10px 12px',
       minHeight: 44,
-      textTransform: 'uppercase',
-      letterSpacing: '0.6px',
       fontWeight: active ? 600 : 400,
       cursor: 'pointer',
       ...style
@@ -337,7 +335,7 @@ Object.assign(__ds_scope, { GuestTab });
 
 // components/guest/OnboardingProgress.jsx
 try { (() => {
-// Back arrow + oxblood progress bar + "1/2" counter, pinned in the guest topbar.
+// Back arrow + bordeaux progress bar + "1/2" counter, pinned in the guest topbar.
 function OnboardingProgress({
   step = 1,
   total = 2,
@@ -560,7 +558,7 @@ function RatingPill({
       background: 'var(--rating-bg)',
       border: '1px solid var(--rating-border)',
       color: 'var(--rating-ink)',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-guest-badge)',
       padding: '3px 9px',
       fontFamily: 'var(--font-body)',
       fontSize: 11,
@@ -589,7 +587,8 @@ Object.assign(__ds_scope, { RatingPill });
 
 // components/guest/SegmentNav.jsx
 try { (() => {
-// Equal-width segmented control (guest journey / app tabs). Active segment is oxblood.
+// Equal-width segmented control (guest journey / app tabs). Active segment is quiet:
+// graphite, cream ink, 2px bordeaux mark.
 function SegmentNav({
   items,
   value,
@@ -614,15 +613,14 @@ function SegmentNav({
       onClick: () => onChange && onChange(it.id),
       style: {
         border: '1px solid ' + (isActive ? 'var(--segment-active-border)' : 'var(--border-subtle)'),
-        borderRadius: 'var(--r-pill)',
+        borderRadius: 'var(--r-guest-control)',
         padding: '10px 8px',
         minHeight: 40,
         background: isActive ? 'var(--segment-active-bg)' : 'var(--segment-idle-bg)',
         color: isActive ? 'var(--segment-active-ink)' : 'var(--text-secondary)',
+        boxShadow: isActive ? 'inset 0 -2px 0 var(--segment-active-mark)' : 'none',
         fontFamily: 'var(--font-body)',
-        fontSize: 11,
-        letterSpacing: '0.10em',
-        textTransform: 'uppercase',
+        fontSize: 13,
         fontWeight: isActive ? 600 : 500,
         cursor: 'pointer'
       }
@@ -682,7 +680,7 @@ Object.assign(__ds_scope, { SignatureBar });
 
 // components/guest/MixRow.jsx
 try { (() => {
-// Mix list row: optional glyph, name + signature + flavour line, rating on the right.
+// Mix list row: optional glyph, name + flavour line, rating on the right.
 
 function MixRow({
   name,
@@ -691,7 +689,6 @@ function MixRow({
   rating,
   glyphSize = 44,
   showGlyph = true,
-  showSignature = false,
   onClick,
   style
 }) {
@@ -729,10 +726,7 @@ function MixRow({
       lineHeight: 1.2,
       color: 'var(--text-primary)'
     }
-  }, name), showSignature ? /*#__PURE__*/React.createElement(__ds_scope.SignatureBar, {
-    profiles: profiles,
-    height: 3
-  }) : null, flavors.length ? /*#__PURE__*/React.createElement("span", {
+  }, name), flavors.length ? /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
       color: 'var(--text-secondary)',
@@ -740,7 +734,7 @@ function MixRow({
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap'
     }
-  }, flavors.slice(0, 3).join(' · ')) : null), rating != null ? /*#__PURE__*/React.createElement(__ds_scope.RatingPill, {
+  }, flavors.slice(0, 3).join(', ')) : null), rating != null ? /*#__PURE__*/React.createElement(__ds_scope.RatingPill, {
     rating: rating
   }) : null);
 }
@@ -842,18 +836,15 @@ Object.assign(__ds_scope, { ShowcaseCard });
 
 // components/master/EmptyState.jsx
 try { (() => {
-// Dashed empty placeholder (.empty) — for zero-result tables and unfilled panels.
+// Empty state (.empty) — plain muted text in the flow, for zero-result tables and unfilled panels.
 function EmptyState({
   children,
   style
 }) {
   return /*#__PURE__*/React.createElement("p", {
     style: {
-      border: '1px dashed var(--border-default)',
-      borderRadius: 'var(--r-md)',
-      padding: 20,
+      padding: '12px 0',
       margin: 0,
-      textAlign: 'center',
       color: 'var(--text-muted)',
       fontSize: 'var(--fs-sm)',
       ...style
@@ -883,7 +874,7 @@ function FilterChip({
       gap: 6,
       height: 26,
       padding: '0 10px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-sm)',
       fontFamily: 'var(--font-sans)',
       fontSize: 'var(--fs-sm)',
       background: active ? 'var(--accent-soft)' : 'var(--bg-raised)',
@@ -1001,10 +992,9 @@ Object.assign(__ds_scope, { MasterButton });
 
 // components/master/MasterCard.jsx
 try { (() => {
-// Ops surface panel: raised gradient, hairline border, optional eyebrow + heading.
+// Ops surface panel: raised gradient, hairline border, optional heading.
 function MasterCard({
   children,
-  eyebrow,
   heading,
   actions,
   style
@@ -1022,39 +1012,24 @@ function MasterCard({
       boxShadow: 'var(--shadow-md)',
       ...style
     }
-  }, eyebrow || heading || actions ? /*#__PURE__*/React.createElement("div", {
+  }, heading || actions ? /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: 12
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gap: 4,
-      minWidth: 0
-    }
-  }, eyebrow ? /*#__PURE__*/React.createElement("p", {
+  }, heading ? /*#__PURE__*/React.createElement("h3", {
     style: {
       margin: 0,
-      fontFamily: 'var(--font-meta)',
-      fontSize: 'var(--fs-xs)',
-      fontWeight: 500,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)'
-    }
-  }, eyebrow) : null, heading ? /*#__PURE__*/React.createElement("h3", {
-    style: {
-      margin: 0,
+      minWidth: 0,
       fontFamily: 'var(--font-serif)',
       fontWeight: 500,
       fontSize: 'var(--fs-xl)',
       lineHeight: 1.15,
       color: 'var(--text-primary)'
     }
-  }, heading) : null), actions ? /*#__PURE__*/React.createElement("div", {
+  }, heading) : /*#__PURE__*/React.createElement("span", null), actions ? /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'inline-flex',
       gap: 8,
@@ -1247,9 +1222,8 @@ Object.assign(__ds_scope, { MasterList });
 
 // components/master/MasterPageHeader.jsx
 try { (() => {
-// Module header: mono eyebrow, big serif h1, lead, right-aligned actions / meta.
+// Module header: big serif h1, optional lead, right-aligned actions / meta. No eyebrow above the title.
 function MasterPageHeader({
-  eyebrow,
   title,
   subtitle,
   actions,
@@ -1273,17 +1247,7 @@ function MasterPageHeader({
       flexDirection: 'column',
       gap: 6
     }
-  }, eyebrow ? /*#__PURE__*/React.createElement("p", {
-    style: {
-      margin: 0,
-      fontFamily: 'var(--font-meta)',
-      fontSize: 'var(--fs-xs)',
-      fontWeight: 500,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)'
-    }
-  }, eyebrow) : null, /*#__PURE__*/React.createElement("h1", {
+  }, /*#__PURE__*/React.createElement("h1", {
     style: {
       margin: 0,
       fontFamily: 'var(--font-serif)',
@@ -1314,7 +1278,6 @@ function MasterPageHeader({
       fontFamily: 'var(--font-meta)',
       fontSize: 12,
       color: 'var(--text-muted)',
-      letterSpacing: '0.06em',
       fontVariantNumeric: 'tabular-nums'
     }
   }, meta) : null, actions ? /*#__PURE__*/React.createElement("div", {
@@ -1359,7 +1322,7 @@ function MasterSortPill({
       gap: 6,
       height: 28,
       padding: '0 10px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-md)',
       background: 'var(--bg-raised)',
       border: '1px solid var(--border-subtle)',
       color: 'var(--text-secondary)',
@@ -1660,7 +1623,12 @@ function MasterTopBar({
       letterSpacing: '0.02em',
       color: 'var(--text-primary)'
     }
-  }, "\u0410\u0442\u0435\u043B\u044C\u0435 \xB7 \u041C\u0430\u0441\u0442\u0435\u0440")), /*#__PURE__*/React.createElement("nav", {
+  }, "\u0410\u0442\u0435\u043B\u044C\u0435 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 400,
+      color: 'var(--text-muted)'
+    }
+  }, "\u041C\u0430\u0441\u0442\u0435\u0440"))), /*#__PURE__*/React.createElement("nav", {
     role: "tablist",
     style: {
       display: 'flex',
@@ -1717,7 +1685,7 @@ function MasterTopBar({
       alignItems: 'center',
       gap: 6,
       padding: '4px 10px 4px 8px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-md)',
       fontSize: 'var(--fs-sm)',
       color: 'var(--text-secondary)',
       background: 'var(--bg-raised)',
@@ -1747,7 +1715,7 @@ function MasterTopBar({
       alignItems: 'center',
       gap: 8,
       padding: '4px 10px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-sm)',
       border: '1px solid var(--border-subtle)',
       background: 'var(--bg-raised)',
       lineHeight: 1.15
@@ -1817,7 +1785,7 @@ function StatusPill({
       alignItems: 'center',
       gap: 6,
       padding: '4px 10px 4px 8px',
-      borderRadius: 'var(--r-pill)',
+      borderRadius: 'var(--r-sm)',
       fontFamily: 'var(--font-sans)',
       fontSize: 'var(--fs-sm)',
       color: 'var(--text-secondary)',

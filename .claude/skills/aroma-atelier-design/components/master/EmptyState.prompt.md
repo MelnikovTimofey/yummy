@@ -1,8 +1,8 @@
 Zero-state copy inside a console surface.
 
 ```jsx
-<EmptyState>Нет блокировок. Витрина чистая.</EmptyState>
-<EmptyState>Пока нет данных по спросу.</EmptyState>
+<EmptyState>Блокировок нет.</EmptyState>
+<EmptyState>Ничего не найдено. Уберите один из фильтров.</EmptyState>
 ```
 
-Full sentence with a period, fact first — the console never apologises. A dry one-liner is welcome after the fact (see «Юмор» in the skill readme). No icon, no illustration.
+Fact first, then the next step if there is one. A full sentence with a period, no apology, no joke (see «Пустые состояния» in the skill readme). Plain muted text in the flow: no dashed frame, no icon, no illustration.

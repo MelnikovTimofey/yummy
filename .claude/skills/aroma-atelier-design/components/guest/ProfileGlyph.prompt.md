@@ -7,3 +7,4 @@ Stands in for product imagery: three blurred, screen-blended orbs in the mix's f
 - Sizes in use upstream: 44 (catalog/showcase rows), 56 (default), 60 (rail rows), 64 (recommendation hero), 72 (mix sheet), 96 (smoke confirmation).
 - Always `aria-hidden` — it is decoration; the mix name carries the meaning.
 - Never replace with an emoji, icon or photo.
+- Only where it shows the profiles of a concrete mix or tobacco. Never as an illustration of an empty screen, a sign-in prompt or an invitation (no hard-coded `['berry','citrus','minty']`).

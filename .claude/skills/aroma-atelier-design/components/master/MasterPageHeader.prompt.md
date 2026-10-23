@@ -1,13 +1,15 @@
-Opens every Мастер screen: mono eyebrow → 36px serif title → one-line lead, actions on the right.
+Opens every Мастер screen: 36px serif title, actions on the right.
 
 ```jsx
 <MasterPageHeader
-  eyebrow="МЕНЕДЖЕР МИКСОВ"
   title="Каталог миксов"
-  subtitle="Состав, наличие и видимость на витрине."
-  meta="Актуально"
+  meta="Обновлено в 14:05"
   actions={<MasterButton variant="primary">Новый микс</MasterButton>}
+/>
+<MasterPageHeader
+  title="Доступ"
+  subtitle="Код меняется каждый понедельник, операторы получают его командой /code."
 />
 ```
 
-Subtitles are one plain sentence with a period. Never stack two headers on one screen.
+No eyebrow above the title. A subtitle only when it tells something the title and the actions don't — never a summary of the screen («Состав, наличие и видимость на витрине.»). Never stack two headers on one screen.

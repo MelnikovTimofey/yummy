@@ -21,7 +21,7 @@ export function MasterTopBar({ items = [], active, onChange, userName = 'admin',
     >
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, paddingRight: 'var(--space-3)', borderRight: '1px solid var(--border-subtle)' }}>
         {markSrc ? <img aria-hidden alt="" src={markSrc} style={{ width: 28, height: 28, display: 'block', flexShrink: 0 }} /> : null}
-        <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15, letterSpacing: '0.02em', color: 'var(--text-primary)' }}>Ателье · Мастер</span>
+        <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15, letterSpacing: '0.02em', color: 'var(--text-primary)' }}>Ателье <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>Мастер</span></span>
       </div>
 
       <nav role="tablist" style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
