@@ -211,26 +211,7 @@ p {
   place-items: center;
   padding: 32px 20px;
   overflow-x: hidden;
-  background:
-    radial-gradient(
-      ellipse 80% 60% at 50% 0%,
-      var(--accent-soft),
-      transparent 70%
-    ),
-    var(--bg-base);
-}
-
-.auth-screen::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(var(--accent-soft) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: 0 0;
-  pointer-events: none;
-  z-index: 0;
-  mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, #000 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, #000 30%, transparent 100%);
+  background: var(--bg-base);
 }
 
 .auth-screen__container {
@@ -273,30 +254,19 @@ p {
 
 .auth-screen__card {
   background: var(--card);
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border-default);
   border-radius: var(--r-xl);
   padding: 32px 32px 28px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 24px 60px -20px rgba(0, 0, 0, 0.7),
-    0 2px 0 0 rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-md);
 }
 
 .auth-screen__title {
-  margin: 0;
+  margin: 0 0 24px;
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text-primary);
-  text-wrap: pretty;
-}
-
-.auth-screen__subtitle {
-  margin: 6px 0 24px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-muted);
   text-wrap: pretty;
 }
 
@@ -311,11 +281,7 @@ p {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -326,7 +292,7 @@ p {
   height: 44px;
   padding: 0 12px;
   background: var(--bg-base);
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border-default);
   border-radius: var(--r-md);
   color: var(--text-primary);
   transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
@@ -336,13 +302,6 @@ p {
   border-color: var(--accent-border);
   background: var(--bg-base);
   box-shadow: 0 0 0 4px var(--accent-soft);
-}
-
-.auth-screen__icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  color: var(--text-muted);
 }
 
 .auth-screen__input input {
@@ -415,7 +374,6 @@ p {
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--warning);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .auth-screen__error {
@@ -473,11 +431,6 @@ p {
 .auth-screen__submit:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.auth-screen__submit-icon {
-  width: 16px;
-  height: 16px;
 }
 
 .auth-screen__foot {
@@ -540,6 +493,12 @@ p {
   font-size: 15px;
   letter-spacing: 0.02em;
   color: var(--text-primary);
+}
+
+.brand__name em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .nav {
@@ -657,9 +616,7 @@ p {
 }
 
 .user-chip__tag {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
 }
 
@@ -741,10 +698,8 @@ p {
 .eyebrow {
   margin-bottom: 6px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
 }
 
 /* Служебный слой: тот же sans, но 500 + трекинг + табличные цифры —
@@ -1036,8 +991,6 @@ button.chip[data-active="true"] .chip__count {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -1182,8 +1135,6 @@ button.chip[data-active="true"] .chip__count {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   color: var(--text-muted);
   margin: 0 0 8px;
 }
@@ -1268,8 +1219,6 @@ button.chip[data-active="true"] .chip__count {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -1304,8 +1253,6 @@ button.chip[data-active="true"] .chip__count {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -1477,12 +1424,10 @@ input[type="checkbox"] {
 
 .daily-code-hero__status-dot {
   background: var(--success);
-  box-shadow: 0 0 0 3px var(--success-soft);
 }
 
 .daily-code-hero__status--inactive .daily-code-hero__status-dot {
   background: var(--text-muted);
-  box-shadow: 0 0 0 3px var(--bg-elevated);
 }
 
 .daily-code-hero__code {
@@ -1769,12 +1714,6 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
-.rails-page__subtitle {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-md);
-}
-
 .rails-page__actions {
   display: flex;
   align-items: center;
@@ -1956,12 +1895,6 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
-.rails-page__subtitle {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-md);
-}
-
 .rails-page__actions {
   display: flex;
   align-items: center;
@@ -2014,8 +1947,6 @@ input[type="checkbox"] {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -2563,10 +2494,8 @@ input[type="checkbox"] {
 .tobaccos-list__chip-filter-label {
   font-family: var(--font-meta);
   font-weight: 500;
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   margin-right: 4px;
 }
 
@@ -2690,8 +2619,6 @@ button.chip .chip__count[hidden] {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   color: var(--text-muted);
   background: transparent;
   border: 0;
@@ -2808,15 +2735,12 @@ button.chip .chip__count[hidden] {
 .mixes-list__profiles-label {
   font-family: var(--font-meta);
   font-weight: 500;
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   margin-right: 4px;
 }
 
 .mixes-list__profiles-reset {
-  border-style: dashed;
   color: var(--text-muted);
 }
 
@@ -2888,8 +2812,6 @@ button.chip .chip__count[hidden] {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   color: var(--text-muted);
   background: transparent;
   border: 0;
@@ -2947,8 +2869,6 @@ button.chip .chip__count[hidden] {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -3704,9 +3624,7 @@ button.chip .chip__count[hidden] {
   margin: 0;
   font-family: var(--font-meta);
   font-weight: 500;
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -4002,8 +3920,6 @@ button.chip .chip__count[hidden] {
 /* --- Empty state placeholder ----------------------------------------- */
 
 .empty {
-  border: 1px dashed var(--border-default);
-  border-radius: var(--r-md);
   padding: 20px;
   text-align: center;
   color: var(--text-muted);
@@ -4053,8 +3969,6 @@ button.chip .chip__count[hidden] {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -4195,7 +4109,6 @@ button.chip .chip__count[hidden] {
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--success);
-  box-shadow: 0 0 0 3px var(--success-soft);
 }
 
 /* --- Drawer chrome (shared head/body/foot) --------------------------- */
@@ -4410,7 +4323,7 @@ button.chip .chip__count[hidden] {
 
 /* Extra filters collapsible block */
 .inventory-extra-filters {
-  border: 1px dashed var(--border-subtle);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-md);
   padding: 8px 12px;
 }
@@ -5024,8 +4937,6 @@ button.chip .chip__count[hidden] {
 }
 
 .mix-builder__empty {
-  border: 1px dashed var(--border);
-  border-radius: var(--r-md);
   padding: 18px;
   text-align: center;
   color: var(--muted-foreground);
@@ -5182,9 +5093,7 @@ button.chip .chip__count[hidden] {
   display: inline-flex;
   padding: 0 6px;
   border-radius: var(--r-xs);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   border: 1px solid color-mix(in oklch, var(--destructive) 40%, transparent);
   color: var(--destructive);
   background: color-mix(in oklch, var(--destructive) 14%, transparent);
@@ -5558,10 +5467,7 @@ button.chip .chip__count[hidden] {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  padding: 32px 24px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
+  padding: 24px 0;
   color: var(--muted-foreground);
 }
 
@@ -5599,8 +5505,6 @@ button.chip .chip__count[hidden] {
   font-family: var(--font-meta);
   font-weight: 500;
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -5934,10 +5838,8 @@ button.chip .chip__count[hidden] {
 .shelf-filters__group h4 {
   margin: 0 0 2px;
   font-family: var(--font-meta);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -6045,8 +5947,6 @@ button.chip .chip__count[hidden] {
 .shelf-name span {
   font-family: var(--font-meta);
   font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -6063,9 +5963,7 @@ button.chip .chip__count[hidden] {
   height: 20px;
   padding: 0 7px;
   font-family: var(--font-meta);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
 }
 
 .shelf-until { display: grid; gap: 1px; }
@@ -6136,9 +6034,7 @@ button.chip .chip__count[hidden] {
 .shelf-menu__label {
   padding: 6px 8px 4px;
   font-family: var(--font-meta);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
 }
 
@@ -6377,9 +6273,7 @@ button.chip .chip__count[hidden] {
   display: grid;
   gap: 12px;
   justify-items: start;
-  padding: 40px 32px;
-  border: 1px dashed var(--border-default);
-  border-radius: var(--r-lg);
+  padding: 24px 0;
 }
 
 .shelf-empty h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 22px; }
@@ -6405,8 +6299,6 @@ button.chip .chip__count[hidden] {
   margin: 0;
   font-family: var(--font-meta);
   font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -6447,9 +6339,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-card__tile span {
   font-family: var(--font-meta);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
 }
 
@@ -6468,10 +6358,8 @@ button.chip .chip__count[hidden] {
 .shelf-card__h3 {
   margin: 0;
   font-family: var(--font-meta);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -6926,9 +6814,7 @@ button.chip .chip__count[hidden] {
 .reorder-copied__eyebrow {
   margin: 0;
   font-family: var(--font-meta);
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -6973,9 +6859,7 @@ button.chip .chip__count[hidden] {
 
 .purchase-budget span {
   font-family: var(--font-meta);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -7116,9 +7000,7 @@ button.chip .chip__count[hidden] {
   display: grid;
   gap: 12px;
   justify-items: start;
-  padding: 40px 32px;
-  border: 1px dashed var(--border-default);
-  border-radius: var(--r-lg);
+  padding: 24px 0;
 }
 
 .purchase-few h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 22px; color: var(--text-primary); }
@@ -7198,10 +7080,8 @@ button.chip .chip__count[hidden] {
 .shelf-dash__eyebrow {
   margin: 0;
   font-family: var(--font-meta);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -7221,10 +7101,8 @@ button.chip .chip__count[hidden] {
 .shelf-dash__subhead {
   margin: 8px 0 0;
   font-family: var(--font-meta);
-  font-size: 10.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -7301,7 +7179,7 @@ button.chip .chip__count[hidden] {
 
 .shelf-dash__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
 .shelf-dash__kv div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
-.shelf-dash__kv span { font-family: var(--font-meta); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+.shelf-dash__kv span { font-family: var(--font-meta); font-size: var(--fs-sm); color: var(--text-faint); }
 .shelf-dash__kv b { font-weight: 500; font-size: 17px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .shelf-dash__kv small { font-size: var(--fs-xs); color: var(--text-muted); }
 
@@ -7377,8 +7255,6 @@ button.chip .chip__count[hidden] {
 
 .catalog-ideas__empty {
   padding: 32px 16px;
-  border: 1px dashed var(--border-default);
-  border-radius: var(--r-lg);
   text-align: center;
 }
 
@@ -7401,8 +7277,6 @@ button.chip .chip__count[hidden] {
 .catalog-idea__brand {
   font-family: var(--font-meta);
   font-size: var(--fs-xs);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -7576,9 +7450,7 @@ button.chip .chip__count[hidden] {
 }
 
 .m-more__user span {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
 }
 
@@ -7790,8 +7662,6 @@ button.chip .chip__count[hidden] {
   margin: 0;
   font-family: var(--font-meta);
   font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--accent-hover);
 }
 
@@ -7813,8 +7683,6 @@ button.chip .chip__count[hidden] {
   font-family: var(--font-meta);
   font-size: var(--fs-xs);
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -7944,7 +7812,7 @@ button.chip .chip__count[hidden] {
   align-items: flex-start;
   margin: 0;
   padding: 10px 12px;
-  border: 1px dashed var(--border-default);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-md);
   font-size: 12px;
   line-height: 1.45;
@@ -8083,7 +7951,6 @@ button.chip .chip__count[hidden] {
   height: 7px;
   border-radius: var(--r-pill);
   background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .m-nav__item { position: relative; }
@@ -8133,11 +8000,7 @@ button.chip .chip__count[hidden] {
 
 .wn-head__title {
   margin: 0;
-  font-family: var(--font-meta);
-  font-size: var(--fs-xs);
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -8189,33 +8052,16 @@ button.chip .chip__count[hidden] {
   display: grid;
   align-content: center;
   margin: 0;
-  padding: 0 56px;
-  list-style: none;
+  padding: 0 56px 0 76px;
+  list-style: disc;
+  color: var(--text-muted);
 }
 
 .wn-list__item {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  gap: 14px;
-  align-items: center;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 0 10px 4px;
   font-size: var(--fs-guest-body);
+  line-height: 1.45;
   color: var(--text-primary);
-}
-
-.wn-list__item:last-child { border-bottom: 0; }
-
-.wn-list__check {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--r-pill);
-  background: var(--success);
-  color: var(--bg-base);
-  font-size: var(--fs-sm);
-  font-weight: 700;
 }
 
 .wn-copy {
@@ -8311,7 +8157,7 @@ button.chip .chip__count[hidden] {
 
 .wn--phone .wn-visual { height: auto; min-height: 0; }
 .wn--phone .wn-visual--contain img { padding: 0; object-position: center top; }
-.wn--phone .wn-list { padding: 0 20px; }
+.wn--phone .wn-list { padding: 0 20px 0 38px; }
 .wn--phone .wn-copy { min-height: 120px; padding: 16px 18px 4px; }
 .wn--phone .wn-copy h2 { font-size: 22px; }
 .wn--phone .wn-foot { padding: 12px 16px calc(12px + var(--safe-bottom)); }

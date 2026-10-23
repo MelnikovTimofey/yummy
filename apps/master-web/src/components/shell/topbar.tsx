@@ -77,7 +77,9 @@ export const MasterTopBar = ({
     <header className="topbar" aria-label="Рабочие разделы Мастера">
       <div className="brand">
         <img className="brand__mark" src="/logo-mark.svg" width="18" height="26" alt="" aria-hidden="true" />
-        <span className="brand__name">Ателье · Мастер</span>
+        <span className="brand__name">
+          Ателье <em>Мастер</em>
+        </span>
       </div>
 
       <nav className="nav" role="tablist" aria-label="Рабочие разделы Мастера">

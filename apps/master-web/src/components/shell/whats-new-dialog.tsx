@@ -50,7 +50,7 @@ export const WhatsNewDialog = ({ release, isPhone, onClose, onAction }: WhatsNew
             {/* Заголовок окна — подпись, а не heading: заголовок слайда — h2 ниже. */}
             <Dialog.Title asChild>
               <p className="wn-head__title">
-                Что нового · <b>{release.label}</b>
+                Что нового, <b>{release.label}</b>
               </p>
             </Dialog.Title>
             <Dialog.Close className="wn-x" aria-label="Закрыть">
@@ -65,8 +65,7 @@ export const WhatsNewDialog = ({ release, isPhone, onClose, onAction }: WhatsNew
               <ul className="wn-list">
                 {slide.list.map((item) => (
                   <li key={item} className="wn-list__item">
-                    <span className="wn-list__check" aria-hidden="true">✓</span>
-                    <span>{item}</span>
+                    {item}
                   </li>
                 ))}
               </ul>
@@ -75,7 +74,7 @@ export const WhatsNewDialog = ({ release, isPhone, onClose, onAction }: WhatsNew
 
           <div className="wn-copy">
             <h2>{slide.title}</h2>
-            <p>{slide.text}</p>
+            {slide.text ? <p>{slide.text}</p> : null}
           </div>
 
           <footer className="wn-foot">

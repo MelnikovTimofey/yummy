@@ -1259,10 +1259,8 @@ export const InventoryView = ({
   return (
     <section className="tobaccos-page">
       <MasterPageHeader
-        eyebrow="КАТАЛОГ · HTREVIEWS"
         title="Каталог"
-        subtitle="Все табаки: карточки htreviews и свои. Остаток и расход — на «Полке»."
-        meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])} · ${formatMetricValue(meta.inMixesCount)} в миксах`}
+        meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])}, ${formatMetricValue(meta.inMixesCount)} в миксах`}
         actions={
           <>
             <span className="shelf-seg" role="group" aria-label="Вид каталога">

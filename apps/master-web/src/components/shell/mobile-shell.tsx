@@ -71,7 +71,6 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
                     <Icon size={18} strokeWidth={1.8} aria-hidden />
                     <span>
                       <b>{tab.label}</b>
-                      <small>{tab.kicker}</small>
                     </span>
                   </button>
                 </li>

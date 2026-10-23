@@ -145,9 +145,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
   return (
     <section className="shelf-page deliv-page">
       <MasterPageHeader
-        eyebrow="ИНВЕНТАРИЗАЦИЯ · ПРИХОД"
         title="Поставки"
-        subtitle="Счета поставщиков. Загрузили счёт — сверили строки — приняли, когда товар пришёл."
         meta={list ? monthMeta(items, now) : undefined}
         actions={
           <>

@@ -231,8 +231,7 @@ export const MixCatalogView = ({
     <section className="mixes-page">
       <MasterPageHeader
         title="Каталог миксов"
-        subtitle="Состав, наличие и видимость на витрине."
-        meta={`${formatCount(meta.totalItems, ['микс', 'микса', 'миксов'])} · ${formatMetricValue(meta.inRailsCount)} в рейлах`}
+        meta={`${formatCount(meta.totalItems, ['микс', 'микса', 'миксов'])}, ${formatMetricValue(meta.inRailsCount)} в рейлах`}
         actions={
           <button
             type="button"

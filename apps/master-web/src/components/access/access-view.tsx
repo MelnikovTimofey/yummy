@@ -89,10 +89,7 @@ export const AccessView = (props: AccessViewProps) => {
 
   return (
     <section className="access-page">
-      <MasterPageHeader
-        title="Доступ и персонал"
-        subtitle="Гостевой код, операторы Telegram-бота и учётки Мастера."
-      />
+      <MasterPageHeader title="Доступ и персонал" />
 
       <DailyCodeBlock
         currentDailyCode={currentDailyCode}

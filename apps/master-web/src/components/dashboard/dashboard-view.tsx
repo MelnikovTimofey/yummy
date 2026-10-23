@@ -7,28 +7,25 @@ import { DashboardSummary, formatMetricValue, formatRating } from '@/contracts';
 
 type DashboardViewProps = {
   summary: DashboardSummary | null;
-  summaryStatus: 'idle' | 'loading' | 'ready' | 'error';
   summaryError: string;
   onNavigate: (tab: 'inventory' | 'mixes' | 'rails' | 'access') => void;
   // Блок «Полка» (#213) — сверху, как в мокапе; остальные блоки без изменений.
   shelfBlock?: ReactNode;
 };
 
-const formatDayMonth = (value: string) => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return '';
-  }
-  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' }).format(parsed);
-};
+const dayMonth = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 
-const formatWindowEyebrow = (startsAt: string, endsAt: string) => {
-  const start = formatDayMonth(startsAt);
-  const end = formatDayMonth(endsAt);
-  if (!start || !end) {
-    return 'Окно смены';
+// «10–23 октября», а через границу месяца — «29 сентября – 5 октября».
+export const formatWindow = (startsAt: string, endsAt: string) => {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return undefined;
   }
-  return `Окно: ${start} — ${end}`;
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${start.getDate()}–${dayMonth.format(end)}`;
+  }
+  return `${dayMonth.format(start)} – ${dayMonth.format(end)}`;
 };
 
 const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => {
@@ -65,29 +62,17 @@ const buildStatsTiles = (summary: DashboardSummary | null): MasterStatTile[] => 
 
 export function DashboardView({
   summary,
-  summaryStatus,
   summaryError,
   onNavigate,
   shelfBlock,
 }: DashboardViewProps) {
   const topMixes = (summary?.topMixes ?? []).slice(0, 6);
   const blockedMixes = summary?.ops.blockedMixes ?? [];
-  const statusText =
-    summaryStatus === 'loading'
-      ? 'Обновляем'
-      : summaryStatus === 'ready'
-        ? 'Актуально'
-        : summaryStatus === 'error'
-          ? 'Ошибка загрузки'
-          : 'Ожидает';
-
   return (
     <section className="dashboard-page">
       <MasterPageHeader
-        eyebrow={formatWindowEyebrow(summary?.window.startsAt ?? '', summary?.window.endsAt ?? '')}
         title="Дашборд смены"
-        subtitle="Что важно знать команде до открытия зала."
-        meta={statusText}
+        meta={summary ? formatWindow(summary.window.startsAt, summary.window.endsAt) : undefined}
       />
 
       {summaryError ? (
