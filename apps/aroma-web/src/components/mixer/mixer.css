@@ -904,7 +904,32 @@ button.mixer-similar:hover {
   pointer-events: none;
 }
 
-/* ─── Карточка для мастера ─── */
+/* ─── Карточка для мастера ───
+   Разметка как у карточки каталога в App.tsx; здесь — то, что карточке Миксера
+   нужно по канону #348 и без правил #360: ровный фон, подпись слева от «Готово»,
+   производитель обычным регистром. */
+
+.aroma-smoke-confirmation.mixer-master-card::before {
+  content: none;
+}
+
+.mixer-master-card .aroma-smoke-confirmation-topbar {
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mixer-master-card .aroma-smoke-confirmation-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.mixer-master-card .aroma-mix-sheet-comp-maker {
+  font-size: 12px;
+  letter-spacing: normal;
+  color: var(--text-muted);
+}
 
 .mixer-master-card-title {
   margin: 0;
