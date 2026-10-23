@@ -71,6 +71,10 @@ test('automation can read, ensure and rotate the current daily code', async () =
     assert.equal(currentBody.item?.active, true);
     assert.ok(currentBody.window.startsAt.endsWith('Z'));
     assert.ok(currentBody.window.endsAt.endsWith('Z'));
+    assert.equal(
+      Date.parse(currentBody.window.endsAt) - Date.parse(currentBody.window.startsAt),
+      24 * 60 * 60_000,
+    );
 
     const ensured = await app.inject({
       method: 'POST',
