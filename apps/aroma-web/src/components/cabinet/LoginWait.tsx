@@ -1,4 +1,4 @@
-import { CTA } from '@/components/aroma';
+import { CTA, SmokeMark } from '@/components/aroma';
 
 // Ожидание входа через бота (#239, #243; мокап cab-tg и cab-tg-expired).
 // «Открыть Telegram ещё раз» — настоящая ссылка: нажатие на t.me надёжнее
@@ -37,8 +37,9 @@ export function LoginWait({
           <p className="cab-wait-text">
             Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить», и кабинет откроется здесь.
           </p>
-          <p className="cab-wait-status" role="status">
-            Ждём подтверждения…
+          <p className="cab-wait-status busy-inline" role="status">
+            <SmokeMark inline />
+            Ждём подтверждения
           </p>
           <div className="cab-anon-form">
             <a className="aroma-mix-sheet-ghost cab-wait-open" href={botUrl}>
