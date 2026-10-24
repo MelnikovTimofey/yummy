@@ -4,6 +4,7 @@ import { ProfileTag } from '@/components/ui/profile-tag';
 import type { CatalogIdea } from '@/contracts';
 import type { CatalogIdeasApi } from '@/hooks/use-catalog-ideas';
 import { formatHtRating, formatRatingsCount, formatViews, ideaSections } from '@/lib/catalog-ideas';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 type CatalogIdeasViewProps = {
   ideas: CatalogIdeasApi;
@@ -61,7 +62,7 @@ export const CatalogIdeasView = ({ ideas, shelfStatuses }: CatalogIdeasViewProps
   }
 
   if (!ideas.ideas) {
-    return <p className="meta-line">Загружаем идеи для закупки…</p>;
+    return <RowsSkeleton label="Загружаем идеи для закупки" />;
   }
 
   const sections = ideaSections(ideas.ideas, shelfStatuses);

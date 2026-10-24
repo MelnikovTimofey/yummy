@@ -27,6 +27,7 @@ import { ShelfActionsSheet } from './shelf-mobile';
 import type { ShelfRowActions } from './shelf-row-menu';
 import { ShelfToggle } from './shelf-toggle';
 import { TrialMark } from './shelf-trial-mark';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 type ShelfCardProps = {
   row: ShelfRow;
@@ -298,7 +299,7 @@ export const ShelfCard = ({
                 <p className="shelf-faint shelf-card__note">Записей ещё не было.</p>
               )
             ) : loadError ? null : (
-              <p className="shelf-faint shelf-card__note">Загружаем историю…</p>
+              <RowsSkeleton label="Загружаем историю" rows={3} />
             )}
             {entryError ? <p className="error-text">{entryError}</p> : null}
           </section>

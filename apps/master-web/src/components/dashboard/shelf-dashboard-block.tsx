@@ -3,6 +3,7 @@ import { untilLabel } from '@/lib/reorder';
 import { formatNumber } from '@/lib/shelf';
 import { bowlCostTile, forecastCaption, moneyCard, spendRows, stockValueTile, weekBars } from '@/lib/shelf-dashboard';
 import { Segments } from '@/components/shelf/shelf-reorder';
+import { SmokeLoading } from '@/components/ui/loading';
 
 type ShelfDashboardBlockProps = {
   data: ShelfDashboard | null;
@@ -23,7 +24,7 @@ const BAR_MAX_PX = 110;
 export function ShelfDashboardBlock({ data, status, error, bowlGrams, leadDays, onOpenTobacco, onSetBudget }: ShelfDashboardBlockProps) {
   if (!data) {
     if (status === 'error') return <div className="dashboard-page__error" role="status">{error}</div>;
-    return <p className="meta-line">Считаем прогноз полки…</p>;
+    return <SmokeLoading label="Считаем прогноз полки" />;
   }
 
   const spend = spendRows(data.spend);

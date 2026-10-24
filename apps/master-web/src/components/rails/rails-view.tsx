@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 const AROMA_WEB_URL =
   import.meta.env.VITE_AROMA_WEB_URL ?? 'http://localhost:5174';
@@ -106,8 +107,8 @@ export const RailsView = ({
       </div>
     </header>
 
-    {railsStatus === 'loading' ? (
-      <p className="rails-page__notice">Загружаем рейлы…</p>
+    {railsStatus === 'loading' && !rails.length ? (
+      <RowsSkeleton label="Загружаем рейлы" rows={4} />
     ) : null}
     {railsError ? <p className="rails-page__notice rails-page__notice--error">{railsError}</p> : null}
 

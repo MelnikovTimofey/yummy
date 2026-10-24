@@ -52,6 +52,7 @@ import { ShelfReorder } from './shelf-reorder';
 import { ShelfRowMenu, type ShelfMenuMode, type ShelfRowActions } from './shelf-row-menu';
 import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 // purchase — «Закупка» (#327–#331), только на десктопе.
 export type ShelfMode = 'shelf' | 'reorder' | 'purchase';
@@ -618,7 +619,7 @@ export const ShelfView = ({
       <section className="shelf-page shelf-page--phone">
         <h1 className="sr-only">Полка</h1>
         {shelf.status === 'error' ? <p className="error-text">{shelf.error}</p> : null}
-        {shelf.status === 'loading' && !view ? <p className="meta-line">Загружаем полку…</p> : null}
+        {shelf.status === 'loading' && !view ? <RowsSkeleton label="Загружаем полку" rows={8} /> : null}
 
         {view && mode === 'reorder' ? (
           <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
@@ -752,7 +753,7 @@ export const ShelfView = ({
       />
 
       {shelf.status === 'error' ? <p className="error-text">{shelf.error}</p> : null}
-      {shelf.status === 'loading' && !view ? <p className="meta-line">Загружаем полку…</p> : null}
+      {shelf.status === 'loading' && !view ? <RowsSkeleton label="Загружаем полку" rows={8} /> : null}
 
       {view ? (
         <>

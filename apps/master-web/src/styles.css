@@ -5556,6 +5556,122 @@ input[type="checkbox"] {
   text-align: left;
 }
 
+/* Ожидания (#397, приёмы #394): скелет строк с дымкой, знак «Дым», знак на
+   занятой кнопке. Прозрачность и размер не меняются — это не пульс. */
+.loading {
+  display: grid;
+  gap: 0;
+}
+
+.loading-smoke {
+  min-height: 96px;
+  place-items: center;
+  align-content: center;
+}
+
+.sk {
+  --sk-base: rgba(232, 230, 224, 0.06);
+  --sk-haze: rgba(232, 230, 224, 0.11);
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--sk-base);
+}
+
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, var(--sk-haze) 50%, transparent 100%);
+  animation: sk-haze 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes sk-haze {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.sk-line {
+  height: 11px;
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sk-row .sk-line:last-child {
+  margin-left: auto;
+}
+
+.loading-smoke-compact {
+  min-height: 56px;
+}
+
+.smoke-mark {
+  display: block;
+  width: auto;
+  height: 40px;
+}
+
+.smoke-mark path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: smoke-draw 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.smoke-mark path:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.smoke-mark path:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes smoke-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  45% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+
+.smoke-mark-inline {
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* Занятая кнопка остаётся disabled (второго нажатия нет), но не сереет:
+   серый читается как «нельзя», а не «идёт». */
+button[aria-busy="true"]:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    display: none;
+  }
+
+  .smoke-mark path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

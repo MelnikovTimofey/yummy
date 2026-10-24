@@ -2,6 +2,7 @@ import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { StaffAccountRecord, StaffUser } from '@/contracts';
 import type { AccessRoleStatus, AccessSaveStatus, StaffAccountEditorState } from './types';
+import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
 
 type StaffBlockProps = {
   staffAccounts: StaffAccountRecord[];
@@ -111,7 +112,7 @@ export const StaffBlock = ({
             </div>
 
             {staffAccountsStatus === 'loading' && !staffAccounts.length ? (
-              <p className="access-card__empty meta-line">Загружаем сотрудников…</p>
+              <RowsSkeleton label="Загружаем сотрудников" rows={3} />
             ) : null}
 
             {staffAccountsStatus === 'ready' && !staffAccounts.length ? (
@@ -352,12 +353,11 @@ export const StaffBlock = ({
                   className="btn"
                   data-variant="primary"
                   disabled={staffAccountSaveStatus === 'loading'}
+                  aria-busy={staffAccountSaveStatus === 'loading' || undefined}
                 >
-                  {staffAccountSaveStatus === 'loading'
-                    ? 'Сохраняем…'
-                    : staffAccountEditor.id
-                      ? 'Сохранить'
-                      : 'Создать'}
+                  <BusyLabel busy={staffAccountSaveStatus === 'loading'}>
+                    {staffAccountEditor.id ? 'Сохранить' : 'Создать'}
+                  </BusyLabel>
                 </button>
               </footer>
             </form>

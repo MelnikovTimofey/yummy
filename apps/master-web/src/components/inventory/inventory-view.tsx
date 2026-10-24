@@ -29,6 +29,7 @@ import {
   INVENTORY_FLAVOR_PROFILE_KEYS,
   INVENTORY_STRENGTH_PRESETS,
 } from '@/contracts';
+import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
 
 // Наличие для гостя считает полка (#211): каталог только ставит табак на полку
 // и убирает с неё, архив — по-прежнему здесь.
@@ -760,12 +761,11 @@ export const InventoryView = ({
                   shelfStatuses.has(activeItem.id) ? onRemoveFromShelf(activeItem) : onAddToShelf(activeItem)
                 }
                 disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
+                aria-busy={pendingRowId === activeItem.id || undefined}
               >
-                {pendingRowId === activeItem.id
-                  ? 'Сохраняем…'
-                  : shelfStatuses.has(activeItem.id)
-                    ? 'Убрать с полки'
-                    : 'На полку'}
+                <BusyLabel busy={pendingRowId === activeItem.id}>
+                  {shelfStatuses.has(activeItem.id) ? 'Убрать с полки' : 'На полку'}
+                </BusyLabel>
               </button>
               <button
                 type="button"
@@ -1216,8 +1216,9 @@ export const InventoryView = ({
               className="btn"
               data-variant="primary"
               disabled={saveStatus === 'loading'}
+              aria-busy={saveStatus === 'loading' || undefined}
             >
-              {saveStatus === 'loading' ? 'Сохраняем…' : editorMode === 'edit' ? 'Сохранить' : 'Создать'}
+              <BusyLabel busy={saveStatus === 'loading'}>{editorMode === 'edit' ? 'Сохранить' : 'Создать'}</BusyLabel>
             </button>
           </div>
         </footer>
@@ -1407,8 +1408,9 @@ export const InventoryView = ({
               size="sm"
               onClick={() => onRunBatchAction('shelf-add')}
               disabled={pendingBatchAction !== ''}
+              aria-busy={pendingBatchAction === 'shelf-add' || undefined}
             >
-              {pendingBatchAction === 'shelf-add' ? 'Обновляем…' : catalogBatchLabels['shelf-add']}
+              <BusyLabel busy={pendingBatchAction === 'shelf-add'}>{catalogBatchLabels['shelf-add']}</BusyLabel>
             </Button>
             <Button
               type="button"
@@ -1416,8 +1418,9 @@ export const InventoryView = ({
               variant="secondary"
               onClick={() => onRunBatchAction('shelf-remove')}
               disabled={pendingBatchAction !== ''}
+              aria-busy={pendingBatchAction === 'shelf-remove' || undefined}
             >
-              {pendingBatchAction === 'shelf-remove' ? 'Обновляем…' : catalogBatchLabels['shelf-remove']}
+              <BusyLabel busy={pendingBatchAction === 'shelf-remove'}>{catalogBatchLabels['shelf-remove']}</BusyLabel>
             </Button>
             {archivedActive ? (
               <Button
@@ -1426,8 +1429,9 @@ export const InventoryView = ({
                 variant="secondary"
                 onClick={() => onRunBatchAction('unarchive')}
                 disabled={pendingBatchAction !== ''}
+                aria-busy={pendingBatchAction === 'unarchive' || undefined}
               >
-                {pendingBatchAction === 'unarchive' ? 'Обновляем…' : catalogBatchLabels.unarchive}
+                <BusyLabel busy={pendingBatchAction === 'unarchive'}>{catalogBatchLabels.unarchive}</BusyLabel>
               </Button>
             ) : (
               <Button
@@ -1436,15 +1440,16 @@ export const InventoryView = ({
                 variant="secondary"
                 onClick={() => onRunBatchAction('archive')}
                 disabled={pendingBatchAction !== ''}
+                aria-busy={pendingBatchAction === 'archive' || undefined}
               >
-                {pendingBatchAction === 'archive' ? 'Обновляем…' : catalogBatchLabels.archive}
+                <BusyLabel busy={pendingBatchAction === 'archive'}>{catalogBatchLabels.archive}</BusyLabel>
               </Button>
             )}
           </div>
         </div>
       ) : null}
 
-      {status === 'loading' ? <p className="meta-line">Загружаем таблицу остатков…</p> : null}
+      {status === 'loading' && !items.length ? <RowsSkeleton label="Загружаем таблицу остатков" rows={8} /> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
       <div className="inventory-table-shell ops-table-shell">
@@ -1600,8 +1605,9 @@ export const InventoryView = ({
                           aria-label={`На полку: ${item.name}`}
                           onClick={() => onAddToShelf(item)}
                           disabled={stockBusy || item.archived}
+                          aria-busy={pendingRowId === item.id || undefined}
                         >
-                          {pendingRowId === item.id ? 'Ставим…' : 'На полку'}
+                          <BusyLabel busy={pendingRowId === item.id}>На полку</BusyLabel>
                         </button>
                       )}
                     </td>

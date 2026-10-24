@@ -10,6 +10,7 @@ import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
 import { formatCodeDay } from './format-date-time';
 import { TelegramBotStatusBlock } from './telegram-bot-status-block';
 import type { AccessLoadStatus, AccessRoleStatus } from './types';
+import { BusyLabel, SmokeLoading } from '@/components/ui/loading';
 
 type DailyCodeBlockProps = {
   currentDailyCode: CurrentDailyCode;
@@ -117,8 +118,9 @@ export const DailyCodeBlock = ({
               void onRotate();
             }}
             disabled={isRotating}
+            aria-busy={isRotating || undefined}
           >
-            {isRotating ? 'Выпускаем…' : 'Выпустить новый код'}
+            <BusyLabel busy={isRotating}>Выпустить новый код</BusyLabel>
           </button>
         </div>
 
@@ -148,7 +150,7 @@ export const DailyCodeBlock = ({
           Код меняется каждый день в полночь по московскому времени, операторы получают его в боте командой /code.
         </p>
 
-        {dailyCodesStatus === 'loading' ? <p className="meta-line daily-code-hero__error">Загружаем код смены…</p> : null}
+        {dailyCodesStatus === 'loading' ? <SmokeLoading label="Загружаем код смены" /> : null}
         {dailyCodesError ? <p className="error-text daily-code-hero__error">{dailyCodesError}</p> : null}
         {rotateError ? <p className="error-text daily-code-hero__error">{rotateError}</p> : null}
       </div>
