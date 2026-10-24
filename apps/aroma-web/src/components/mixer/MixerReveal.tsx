@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 
-import { CTA, RatingPill } from '@/components/aroma';
+import { CTA, RatingPill, SmokeMark } from '@/components/aroma';
 import { hintText, verdictLabel } from '@/lib/mixer/copy';
 import type { Evaluation, PaletteTobacco } from '@/lib/mixer/types';
 import { BowlRing } from './BowlRing';
@@ -98,7 +98,14 @@ export function MixerReveal({
               <span className="mixer-verdict">{verdictLabel(evaluation.verdict)}</span>
             ) : (
               <span className="mixer-reveal-pending">
-                {evaluationFailed ? 'Оценка не загрузилась. Покурить можно и так.' : 'Считаем гармонию…'}
+                {evaluationFailed ? (
+                  'Оценка не загрузилась. Покурить можно и так.'
+                ) : (
+                  <span role="status">
+                    <SmokeMark inline />
+                    <span className="sr-only">Считаем гармонию</span>
+                  </span>
+                )}
               </span>
             )}
           </div>
@@ -165,8 +172,8 @@ export function MixerRevealDock({
 }) {
   return (
     <div className="mixer-dock">
-      <CTA disabled={smoking} onClick={onSmoke}>
-        {smoking ? 'Отмечаем…' : 'Покурить'}
+      <CTA busy={smoking} onClick={onSmoke}>
+        Покурить
       </CTA>
       <button type="button" className="mixer-link" onClick={onRestart}>
         Собрать заново

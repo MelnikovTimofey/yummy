@@ -23,8 +23,8 @@ export function LoginWait({
           <h1 className="cab-anon-title">Ссылка устарела</h1>
           <p className="cab-anon-note">Ссылка для входа живёт 10 минут. Начнём заново?</p>
           <div className="cab-anon-form">
-            <CTA disabled={restarting} onClick={onRestart}>
-              {restarting ? 'Открываем Telegram…' : 'Войти через Telegram'}
+            <CTA busy={restarting} onClick={onRestart}>
+              Войти через Telegram
             </CTA>
             <button type="button" className="aroma-onboarding-skip" onClick={onCancel}>
               Отмена

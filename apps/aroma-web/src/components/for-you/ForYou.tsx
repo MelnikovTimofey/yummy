@@ -95,8 +95,8 @@ function ForYouHero<M extends ForYouMix>({
           ))}
         </div>
       ) : null}
-      <CTA disabled={chooseDisabled} onClick={() => onChoose(mix)}>
-        {choosing ? 'Сохраняем…' : 'Покурить'}
+      <CTA busy={choosing} disabled={chooseDisabled} onClick={() => onChoose(mix)}>
+        Покурить
       </CTA>
     </article>
   );

@@ -1,3 +1,4 @@
+import { BusyLabel } from '@/components/aroma';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 // Подтверждение удаления кабинета (#243, мокап cab-delete). Без шуток.
@@ -48,8 +49,13 @@ export function DeleteCabinetSheet({
           <button type="button" className="aroma-mix-sheet-ghost" onClick={onCancel} disabled={deleting}>
             Отмена
           </button>
-          <button type="button" className="aroma-mix-sheet-ghost cab-danger" onClick={onConfirm} disabled={deleting}>
-            {deleting ? 'Удаляем…' : 'Удалить'}
+          <button
+            type="button"
+            className="aroma-mix-sheet-ghost cab-danger btn-danger-busy busy-inline"
+            onClick={deleting ? undefined : onConfirm}
+            aria-busy={deleting || undefined}
+          >
+            <BusyLabel busy={deleting}>Удалить</BusyLabel>
           </button>
         </div>
       </DialogContent>

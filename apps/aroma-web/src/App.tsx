@@ -4,7 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ChevronRight, ClipboardList } from 'lucide-react';
 
-import { BottomNav, Chip, CTA, MixListRow, ProfileGlyph, RatingPill, SignatureBar, type BottomNavTab } from '@/components/aroma';
+import {
+  BottomNav,
+  BusyLabel,
+  Chip,
+  CTA,
+  HeroSkeleton,
+  Loading,
+  MixListRow,
+  MixRowsSkeleton,
+  ProfileGlyph,
+  RailSkeleton,
+  RatingPill,
+  SignatureBar,
+  Sk,
+  SmokeLoading,
+  type BottomNavTab,
+} from '@/components/aroma';
 import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
 import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
@@ -957,14 +973,11 @@ const MixDetailModal = ({
           </button>
           <CTA
             pulse={canSmoke && !isSelected && chooseStatus !== 'loading'}
-            disabled={!canSmoke || chooseStatus === 'loading' || isSelected}
+            busy={chooseStatus === 'loading'}
+            disabled={!canSmoke || isSelected}
             onClick={onChoose}
           >
-            {chooseStatus === 'loading'
-              ? 'Сохраняем…'
-              : isSelected
-                ? 'Уже в карточке'
-                : 'Покурить'}
+            {isSelected ? 'Уже в карточке' : 'Покурить'}
           </CTA>
         </div>
       </DialogContent>
@@ -1178,6 +1191,8 @@ export const App = () => {
   const [selectedMix, setSelectedMix] = useState<SelectedMix | null>(null);
   const [mixModalState, setMixModalState] = useState<MixModalState | null>(null);
   const [chooseStatus, setChooseStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  // Микс, чей «Покурить» сейчас уходит: selectedMix меняется только после ответа.
+  const [pendingMixId, setPendingMixId] = useState<string | null>(null);
   const [chooseError, setChooseError] = useState('');
   const [ratingValue, setRatingValue] = useState<number | null>(null);
   const [ratingStatus, setRatingStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -2029,6 +2044,7 @@ export const App = () => {
   const onChooseMix = async (mix: MixCard, source: MixSource) => {
     setChooseStatus('loading');
     setChooseError('');
+    setPendingMixId(mix.id);
     const previousMix = selectedMix;
 
     try {
@@ -2053,6 +2069,8 @@ export const App = () => {
       }
       setChooseStatus('error');
       setChooseError(guestErrorText(cause, mixGoneError));
+    } finally {
+      setPendingMixId(null);
     }
   };
 
@@ -2366,8 +2384,8 @@ export const App = () => {
               </span>
             </label>
 
-            <CTA type="submit" disabled={cantSubmit}>
-              {accessStatus === 'loading' ? 'Проверяем код…' : 'Войти в Ателье'}
+            <CTA type="submit" disabled={cantSubmit} busy={accessStatus === 'loading'}>
+              Войти в Ателье
             </CTA>
 
             {accessError ? (
@@ -2386,7 +2404,7 @@ export const App = () => {
 
   const renderIntroView = () => {
     if (introStatus === 'loading') {
-      return <p className="screen-status">Загружаем знакомство…</p>;
+      return <SmokeLoading label="Загружаем знакомство" />;
     }
     if (introError) {
       return <p className="screen-status error">{introError}</p>;
@@ -2436,8 +2454,8 @@ export const App = () => {
               onClick={() => void beginLogin('intro', false)}
             >
               <span>Уже были у нас?</span>
-              <span className="cab-returning-cta">
-                {login.phase === 'starting' ? 'Открываем Telegram…' : 'Войти через Telegram'}
+              <span className="cab-returning-cta busy-inline">
+                <BusyLabel busy={login.phase === 'starting'}>Войти через Telegram</BusyLabel>
               </span>
             </button>
           ) : null}
@@ -2500,19 +2518,12 @@ export const App = () => {
       step === 1
         ? optionsStatus !== 'ready'
         : submitting || optionsStatus !== 'ready' || (likedFlavorsNow.length > 0 && !matchingMixes.length);
-    const ctaLabel =
-      step === 1
-        ? 'Далее'
-        : submitting
-          ? 'Собираем подбор…'
-          : 'Показать подбор';
+    const ctaLabel = step === 1 ? 'Далее' : 'Показать подбор';
     const flavorsHint = 'Можно пропустить. Бледные вкусы не встречаются в миксах с выбранными профилями.';
 
     const profileGrid = (
       <>
-        {optionsStatus === 'loading' ? (
-          <p className="screen-status">Загружаем профили…</p>
-        ) : null}
+        {optionsStatus === 'loading' ? <SmokeLoading label="Загружаем профили" className="loading-smoke-block" /> : null}
         <div className="aroma-onboarding-profile-grid">
           {availableProfileOptions.map((option) => {
             const active = likedProfilesNow.includes(option.value);
@@ -2572,7 +2583,7 @@ export const App = () => {
       </p>
     );
     const cta = (
-      <CTA onClick={goNext} disabled={ctaDisabled}>
+      <CTA onClick={goNext} disabled={ctaDisabled} busy={step === 2 && submitting}>
         {ctaLabel}
       </CTA>
     );
@@ -2651,6 +2662,20 @@ export const App = () => {
 
   const renderRecsTabs = () => <RecsTabs value={recsTab} onChange={changeRecsTab} />;
 
+  // Силуэт Подбора (#394): вкладки известны до ответа и стоят сразу.
+  const renderRecsLoading = (prelude?: ReactNode) => (
+    <section className="aroma-recs">
+      {prelude}
+      <Loading label="Загружаем подбор">
+        <HeroSkeleton />
+        <div className="aroma-recs-section-row">
+          <h2 className="aroma-recs-section-title">Тоже подходят</h2>
+        </div>
+        <MixRowsSkeleton count={2} />
+      </Loading>
+    </section>
+  );
+
   // Подбор: у вошедшего — вкладки «Для вас» (#245) и «Под настроение» этого
   // визита (#388), у анонима — подбор по вкусам устройства, как раньше.
   const renderRecommendationsView = () => {
@@ -2681,14 +2706,14 @@ export const App = () => {
         return forYou.status === 'error' ? (
           <p className="screen-status error">{forYou.error}</p>
         ) : (
-          <p className="screen-status">Собираем подбор…</p>
+          renderRecsLoading(renderRecsTabs())
         );
       }
       if (data.mode === 'personal') {
         return (
           <ForYou
             slots={forYouSlots(data)}
-            choosingId={chooseStatus === 'loading' ? selectedMix?.id ?? null : null}
+            choosingId={pendingMixId}
             chooseDisabled={chooseStatus === 'loading'}
             onOpen={(mix) => openMix(mix, 'recommendations')}
             onChoose={(mix) => void onChooseMix(mix, 'recommendations')}
@@ -2710,7 +2735,7 @@ export const App = () => {
     }
 
     if (recommendationStatus === 'loading') {
-      return <p className="screen-status">Собираем подбор…</p>;
+      return renderRecsLoading();
     }
     if (recommendationError) {
       return <p className="screen-status error">{recommendationError}</p>;
@@ -2812,8 +2837,12 @@ export const App = () => {
               </span>
             ) : null}
           </div>
-          <CTA disabled={chooseStatus === 'loading'} onClick={() => void onChooseMix(hero, source)}>
-            {chooseStatus === 'loading' && selectedMix?.id === hero.id ? 'Сохраняем…' : 'Покурить'}
+          <CTA
+            busy={pendingMixId === hero.id}
+            disabled={chooseStatus === 'loading'}
+            onClick={() => void onChooseMix(hero, source)}
+          >
+            Покурить
           </CTA>
         </article>
 
@@ -2860,7 +2889,16 @@ export const App = () => {
 
   const renderShowcaseView = () => {
     if (showcaseStatus === 'loading') {
-      return <p className="screen-status">Загружаем витрину…</p>;
+      return (
+        <section className="aroma-showcase">
+          <MixerInvite onOpen={() => openMixer('showcase')} />
+          <Loading label="Загружаем витрину">
+            {[210, 160, 180].map((width) => (
+              <RailSkeleton key={width} titleWidth={width} />
+            ))}
+          </Loading>
+        </section>
+      );
     }
     if (showcaseError) {
       return <p className="screen-status error">{showcaseError}</p>;
@@ -3187,9 +3225,11 @@ export const App = () => {
         {isEmpty ? null : (
           <div className="aroma-catalog-meta">
             <p className="aroma-catalog-count">
-              {catalogStatus === 'loading'
-                ? 'Загружаем…'
-                : `${filteredCatalogMixes.length} ${pluralizeMixes(filteredCatalogMixes.length)}`}
+              {catalogStatus === 'loading' ? (
+                <Sk className="sk-line" style={{ width: 64 }} />
+              ) : (
+                `${filteredCatalogMixes.length} ${pluralizeMixes(filteredCatalogMixes.length)}`
+              )}
             </p>
             {hasAnyFilter ? (
               <button
@@ -3243,6 +3283,11 @@ export const App = () => {
         ) : null}
 
         <div className="aroma-catalog-list">
+          {catalogStatus === 'loading' && !filteredCatalogMixes.length ? (
+            <Loading label="Загружаем каталог">
+              <MixRowsSkeleton count={5} />
+            </Loading>
+          ) : null}
           {filteredCatalogMixes.map((mix) => (
             <MixListRow
               key={mix.id}
@@ -3337,7 +3382,7 @@ export const App = () => {
       return <p className="screen-status error reels-status">{reels.error}</p>;
     }
     if (reels.status !== 'ready') {
-      return <p className="screen-status reels-status">Собираем ленту…</p>;
+      return <SmokeLoading label="Собираем ленту" className="reels-status" />;
     }
     if (!reels.items.length && !reels.continues) {
       return <FeedEmpty onRecs={() => setView('recommendations')} />;
