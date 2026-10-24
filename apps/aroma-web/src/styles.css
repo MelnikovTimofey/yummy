@@ -2740,6 +2740,12 @@ select:focus-visible {
   text-align: center;
 }
 
+.reel-end > .aroma-mixer-invite {
+  width: 100%;
+  max-width: 320px;
+  margin-top: 0;
+}
+
 .reel-empty-text {
   margin: 0;
   max-width: 30ch;

@@ -560,7 +560,7 @@ test('Aroma reels feed ends with an invitation to «Намиксуй»', async (
   const feed = page.locator('.reels');
   await feed.evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
   await expect(end).toBeInViewport();
-  await expect(end.getByText('Это все миксы')).toBeVisible();
+  await expect(end.getByText('Это все миксы')).toHaveCount(0);
 
   await end.getByRole('button', { name: 'Собрать свой микс' }).click();
   await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
