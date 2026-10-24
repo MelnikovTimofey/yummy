@@ -118,21 +118,21 @@ export function ForYou<M extends ForYouMix>({
   onChoose: (mix: M) => void;
   tabs: ReactNode;
 }) {
-  const { hint, hero, taste, sidestep, again } = slots;
+  const { hero, taste, sidestep, sidestepFirst, again } = slots;
+  const sidestepSection = sidestep ? (
+    <>
+      <h2 className="aroma-recs-section-title">Шаг в сторону</h2>
+      <div className="fy-sidestep">
+        <ReasonRow row={sidestep} onOpen={onOpen} />
+      </div>
+    </>
+  ) : null;
 
   return (
     <section className="aroma-recs">
       {tabs}
 
-      {hint ? (
-        <button type="button" className="mix-row" onClick={() => onOpen(hint.mix)}>
-          <ProfileGlyph profiles={hint.mix.flavorProfiles} size={44} />
-          <span className="mix-row-text">
-            <span className="mix-row-sub">{hint.text}</span>
-            <span className="mix-row-name">{hint.mix.name}</span>
-          </span>
-        </button>
-      ) : null}
+      {sidestepFirst ? sidestepSection : null}
 
       {hero || taste.length ? <h2 className="aroma-recs-section-title">Новое в вашем вкусе</h2> : null}
       {hero ? (
@@ -152,13 +152,7 @@ export function ForYou<M extends ForYouMix>({
         </div>
       ) : null}
 
-      {/* Подсказка наверху уже ведёт на этот микс. */}
-      {sidestep && !hint ? (
-        <>
-          <h2 className="aroma-recs-section-title">Шаг в сторону</h2>
-          <ReasonRow row={sidestep} onOpen={onOpen} />
-        </>
-      ) : null}
+      {sidestepFirst ? null : sidestepSection}
 
       {again ? (
         <>

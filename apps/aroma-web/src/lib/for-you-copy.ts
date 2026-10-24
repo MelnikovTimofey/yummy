@@ -1,5 +1,5 @@
-// «Для вас» на Подборе (#245): фразы причин, подсказка «Давно на одном вкусе»
-// и режим «Под настроение». Контракт — apps/backend/src/types.ts, GuestForYou*.
+// «Для вас» на Подборе (#245): фразы причин, подсказка против пузыря и режим
+// «Под настроение». Контракт — apps/backend/src/types.ts, GuestForYou*.
 // Образцы фраз — design/design_handoff_guest_cabinet/README.md, п. 9–11.
 
 import { profileLabelMap } from './profile-labels';
@@ -108,8 +108,7 @@ const lastMixes = (count: number, outOf: number) => {
   return `${capitalize(NOMINATIVE[count] ?? String(count))} из ${GENITIVE[outOf] ?? outOf} последних миксов`;
 };
 
-// Подсказка информирует и ничего не запрещает (PRD §6.5 п. 5). Подпись над
-// названием микса «Шаг в сторону», поэтому без призыва и точки.
+// Подсказка информирует и ничего не запрещает (PRD §6.5 п. 5).
 export const hintText = (hint: GuestForYouHint) =>
   hint.kind === 'same-mix'
     ? `${lastMixes(hint.count, hint.outOf)}: «${hint.mixName}»`
@@ -121,23 +120,26 @@ const toRow = <M>(card: GuestForYouCard<M> | undefined): ForYouRow<M> | null =>
   card ? { mix: card.mix, reason: reasonText(card.reason) } : null;
 
 // Раскладка A · по слотам: «Новое в вашем вкусе» (герой + три строки),
-// «Шаг в сторону», «Снова». Подсказка ведёт на микс «Шаг в сторону».
+// «Шаг в сторону», «Снова». Подсказка поднимает «Шаг в сторону» над героем и
+// встаёт в подпись строки перед причиной — иначе микс читается как ещё один
+// «в вашем вкусе» (#402).
 export type ForYouSlots<M> = {
-  hint: { text: string; mix: M } | null;
   hero: ForYouRow<M> | null;
   taste: ForYouRow<M>[];
   sidestep: ForYouRow<M> | null;
+  sidestepFirst: boolean;
   again: ForYouRow<M> | null;
 };
 
 export const forYouSlots = <M>(response: GuestForYouPersonal<M>): ForYouSlots<M> => {
   const [hero, ...taste] = response.fresh;
   const sidestep = toRow(response.sidestep[0]);
+  const hint = sidestep && response.hint;
   return {
-    hint: response.hint && sidestep ? { text: hintText(response.hint), mix: sidestep.mix } : null,
     hero: toRow(hero),
     taste: taste.slice(0, 3).map((card) => toRow(card)!),
-    sidestep,
+    sidestep: hint ? { ...sidestep, reason: `${hintText(hint)}. ${sidestep.reason}` } : sidestep,
+    sidestepFirst: Boolean(hint),
     again: toRow(response.again[0]),
   };
 };

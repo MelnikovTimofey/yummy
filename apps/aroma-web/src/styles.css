@@ -2368,6 +2368,11 @@ select:focus-visible {
   gap: 8px;
 }
 
+/* С подсказкой в подписи факт и причина; на двух строках причина обрезается (#402). */
+.fy-sidestep .mix-row-sub {
+  -webkit-line-clamp: 3;
+}
+
 
 .fy-hero-open {
   width: 100%;

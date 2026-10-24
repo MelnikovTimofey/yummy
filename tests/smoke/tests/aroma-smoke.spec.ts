@@ -422,7 +422,7 @@ test('Aroma anonymous recommendations stay without «Для вас»', async ({ 
   await expect(page.getByRole('button', { name: /Изменить вкусы|Открыть предпочтения/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Для вас', exact: true })).toHaveCount(0);
   await expect(page.getByRole('tab', { name: 'Под настроение' })).toHaveCount(0);
-  await expect(page.getByText('Давно на одном вкусе')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Шаг в сторону' })).toHaveCount(0);
   expect(forYouRequests).toEqual([]);
 });
 
