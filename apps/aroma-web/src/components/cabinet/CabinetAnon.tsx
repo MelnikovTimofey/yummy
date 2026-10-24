@@ -18,7 +18,7 @@ export function CabinetAnon({
   onLogin: () => void;
 }) {
   const [consent, setConsent] = useState(false);
-  const disabled = !consent || starting;
+  const disabled = !consent;
 
   return (
     <section className="cab-anon">
@@ -48,8 +48,8 @@ export function CabinetAnon({
               </a>
             </span>
           </div>
-          <CTA disabled={disabled} onClick={onLogin}>
-            {starting ? 'Открываем Telegram…' : 'Войти через Telegram'}
+          <CTA busy={starting} disabled={disabled} onClick={onLogin}>
+            Войти через Telegram
           </CTA>
           {error ? (
             <p className="cab-error" role="alert">

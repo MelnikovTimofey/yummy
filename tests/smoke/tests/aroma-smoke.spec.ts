@@ -200,6 +200,37 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
 // знакомстве и в онбординге; Миксер из панели открывается на весь экран и
 // В «Намиксуй» видна панель (#350): «Назад» отменяет ход, на основе — на экран,
 // откуда гость пришёл; через панель — в любой раздел.
+// Лоадеры (#394): пока подборки не пришли, Витрина показывает силуэт полок, а не
+// строку «Загружаем витрину…». Ответ задержан, чтобы силуэт успел появиться.
+test('Aroma showcase shows a skeleton instead of loading text', async ({ page }) => {
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/guest/home/rails', async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Витрина', exact: true }).click();
+
+  const loading = page.getByRole('status').filter({ hasText: 'Загружаем витрину' });
+  await expect(loading).toHaveAttribute('aria-busy', 'true');
+  await expect(loading.locator('.sk-poster').first()).toBeVisible();
+  await expect(page.getByText('Загружаем витрину…')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Собрать свой микс' })).toBeVisible();
+
+  release();
+  await expect(loading).toHaveCount(0);
+  await expect(page.locator('.aroma-showcase-card').first()).toBeVisible();
+});
+
 test('Aroma guest navigates with the bottom bar and opens the mixer from it', async ({ page }) => {
   await page.goto('/');
 

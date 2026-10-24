@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Chip, SegmentNav } from '@/components/aroma';
+import { BusyLabel, Chip, Loading, MixRowsSkeleton, SegmentNav, Sk } from '@/components/aroma';
 import { favoriteKey, groupHistory, type GuestCabinetItem, type GuestFavoriteItem, type GuestHistoryItem } from '@/lib/cabinet';
 import type { GuestMe } from '@/lib/guest-session';
 import { getProfileColor } from '@/lib/profile-color';
@@ -60,7 +60,11 @@ export function Cabinet({
 
   const renderHistory = () => {
     if (history.status === 'loading' && !history.items.length) {
-      return <p className="cab-anon-note">Загружаем историю…</p>;
+      return (
+        <Loading label="Загружаем историю">
+          <MixRowsSkeleton count={4} />
+        </Loading>
+      );
     }
     if (history.status === 'error' && !history.items.length) {
       return (
@@ -83,8 +87,13 @@ export function Cabinet({
           </section>
         ))}
         {history.nextBefore ? (
-          <button type="button" className="cab-ghost-sm cab-more" onClick={onMoreHistory} disabled={history.loadingMore}>
-            {history.loadingMore ? 'Загружаем…' : 'Показать раньше'}
+          <button
+            type="button"
+            className="cab-ghost-sm cab-more busy-inline"
+            onClick={history.loadingMore ? undefined : onMoreHistory}
+            aria-busy={history.loadingMore || undefined}
+          >
+            <BusyLabel busy={history.loadingMore}>Показать раньше</BusyLabel>
           </button>
         ) : null}
       </div>
@@ -93,7 +102,11 @@ export function Cabinet({
 
   const renderFavorites = () => {
     if (favorites === null) {
-      return <p className="cab-anon-note">Загружаем избранное…</p>;
+      return (
+        <Loading label="Загружаем избранное">
+          <MixRowsSkeleton count={4} />
+        </Loading>
+      );
     }
     if (!favorites.length) {
       return <CabinetEmpty text="Здесь появятся миксы, отмеченные сердечком." onGoRecs={onGoRecs} />;
@@ -138,7 +151,10 @@ export function Cabinet({
           </button>
         </section>
       ) : loading ? (
-        <p className="cab-anon-note">Загружаем кабинет…</p>
+        <Loading label="Загружаем кабинет">
+          <Sk className="sk-title" style={{ width: '55%' }} />
+          <Sk className="sk-line" style={{ width: '35%' }} />
+        </Loading>
       ) : null}
 
       {error ? (

@@ -139,8 +139,8 @@ export function Reel({
             <button type="button" className="aroma-mix-sheet-ghost" onClick={onOpen}>
               Подробнее
             </button>
-            <CTA disabled={gone || choosing} onClick={onChoose}>
-              {choosing ? 'Сохраняем…' : 'Покурить'}
+            <CTA busy={choosing} disabled={gone} onClick={onChoose}>
+              Покурить
             </CTA>
           </div>
         </div>

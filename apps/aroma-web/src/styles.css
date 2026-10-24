@@ -2904,3 +2904,188 @@ select:focus-visible {
     transition: none;
   }
 }
+
+/* Ожидания (#394, design/design_handoff_loaders). Скелет — блоки на тон светлее
+   карточки, по ним медленно проходит дымка. Прозрачность и размер не меняются:
+   это не пульс, который канон запрещает индикаторам ожидания. */
+.loading {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.loading-smoke {
+  min-height: 60vh;
+  place-items: center;
+  align-content: center;
+}
+
+.sk {
+  --sk-base: rgba(232, 230, 224, 0.06);
+  --sk-haze: rgba(232, 230, 224, 0.11);
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--sk-base);
+}
+
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, var(--sk-haze) 50%, transparent 100%);
+  animation: sk-haze 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes sk-haze {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.sk-line {
+  height: 12px;
+}
+
+.sk-title {
+  height: 18px;
+  border-radius: 7px;
+}
+
+.sk-glyph {
+  border-radius: var(--r-guest-glyph);
+}
+
+.sk-bar {
+  height: 4px;
+  border-radius: 2px;
+}
+
+.sk-chip {
+  height: 30px;
+  border-radius: var(--r-guest-chip);
+}
+
+.sk-cta {
+  height: 52px;
+  border-radius: var(--r-guest-cta);
+}
+
+.sk-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.sk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sk-comp {
+  display: grid;
+  grid-template-columns: 90px 1fr 34px;
+  gap: 10px;
+  align-items: center;
+}
+
+.mix-row-sk {
+  cursor: default;
+}
+
+.mix-row-sk .mix-row-text {
+  display: grid;
+  gap: 7px;
+}
+
+.sk-rail-head {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+.sk-rail {
+  overflow: hidden;
+}
+
+.sk-poster {
+  flex: 0 0 auto;
+  width: 156px;
+  height: 92px;
+  border-radius: var(--r-guest-card);
+}
+
+/* Знак «Дым»: струя прорисовывается снизу вверх и тает сверху, со сдвигом 0,2 с. */
+.smoke-mark {
+  display: block;
+  width: auto;
+  height: 56px;
+}
+
+.smoke-mark path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: smoke-draw 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.smoke-mark path:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.smoke-mark path:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes smoke-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  45% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+
+/* В строке и на контурной кнопке знак бордовый, как в шапке; на бордовой
+   заливке и у «Удалить» — цвета подписи. */
+.smoke-mark-inline {
+  flex: 0 0 auto;
+  height: 16px;
+  color: #b34a57;
+}
+
+.cta-busy .smoke-mark-inline,
+.btn-danger-busy .smoke-mark-inline {
+  color: inherit;
+}
+
+.busy-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    display: none;
+  }
+
+  .smoke-mark path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+.loading-smoke-block {
+  min-height: 200px;
+}
+
+/* Пока собирается лента, знак стоит на фоне сцены рилса (мокап reels). */
+.loading-smoke.reels-status {
+  background: radial-gradient(120% 80% at 50% 30%, #1d1a1c 0%, #121215 62%, #0e0e11 100%);
+}
