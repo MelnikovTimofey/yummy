@@ -2731,6 +2731,8 @@ select:focus-visible {
 
 /* Конец ленты (#298): тот же центрированный регистр, что у пустой ленты. */
 .reel-end {
+  position: relative;
+  overflow: hidden;
   height: 100%;
   display: grid;
   align-content: center;
@@ -2741,9 +2743,15 @@ select:focus-visible {
 }
 
 .reel-end > .aroma-mixer-invite {
+  position: relative;
   width: 100%;
   max-width: 320px;
   margin-top: 0;
+}
+
+.reel-end .aroma-mixer-invite-btn {
+  background: rgba(20, 20, 23, 0.72);
+  backdrop-filter: blur(8px);
 }
 
 .reel-empty-text {

@@ -101,7 +101,7 @@ export function Feed<T extends ReelFeedMix>({
             </div>
           ))}
           <div className="reel-slot">
-            <FeedEnd onMixer={onMixer} />
+            <FeedEnd onMixer={onMixer} playing={atEnd && animated} />
           </div>
         </div>
       </div>
