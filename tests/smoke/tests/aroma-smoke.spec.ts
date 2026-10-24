@@ -371,8 +371,8 @@ test('Aroma anonymous heart offers the cabinet and «Не сейчас» closes 
 });
 
 // «Для вас» (#245) — только у вошедшего гостя. Аноним после онбординга видит
-// Подбор как раньше: без «Для вас», подсказки и «Подобрать под настроение»,
-// и Подбор не ходит в /guest/me/for-you.
+// Подбор как раньше: без вкладок «Для вас» и «Под настроение» (#388), без
+// подсказки, и Подбор не ходит в /guest/me/for-you.
 test('Aroma anonymous recommendations stay without «Для вас»', async ({ page }) => {
   const forYouRequests: string[] = [];
   page.on('request', (request) => {
@@ -390,9 +390,74 @@ test('Aroma anonymous recommendations stay without «Для вас»', async ({ 
 
   await expect(page.getByRole('button', { name: /Изменить вкусы|Открыть предпочтения/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Для вас', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Подобрать под настроение' })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Под настроение' })).toHaveCount(0);
   await expect(page.getByText('Давно на одном вкусе')).toHaveCount(0);
   expect(forYouRequests).toEqual([]);
+});
+
+// Подбор вошедшего (#388): вкладки «Для вас» и «Под настроение» вместо
+// заголовка и ссылки. Кабинет подменён: вход через Telegram в smoke не пройти,
+// а «Для вас» холодный и пустой. Подбор под настроение — настоящий POST
+// /guest/onboarding/recommendations, вкусы в кабинете он не трогает.
+test('Aroma signed-in recommendations switch between «Для вас» and «Под настроение» tabs', async ({ page }) => {
+  const tasteWrites: string[] = [];
+  await page.addInitScript(() => localStorage.setItem('aroma-guest-token', 'smoke-guest'));
+  await page.route(/\/guest\/me(\/|$|\?)/, (route) => {
+    const { pathname } = new URL(route.request().url());
+    if (route.request().method() !== 'GET') tasteWrites.push(pathname);
+    if (pathname.endsWith('/guest/me/for-you')) {
+      return route.fulfill({
+        json: { mode: 'cold', picks: 0, onboarding: { likedProfiles: ['citrus'], likedFlavors: [] }, items: [] },
+      });
+    }
+    if (pathname.endsWith('/guest/me')) {
+      return route.fulfill({
+        json: { id: 'g1', consentAt: '2026-10-01T00:00:00.000Z', historyCount: 0, favoritesCount: 0, likedProfiles: ['citrus'], likedFlavors: [] },
+      });
+    }
+    return route.fulfill({ json: { items: [], nextBefore: null } });
+  });
+  // Фейковый токен backend не знает: подбор уходит без него, как у гостя без входа.
+  await page.route('**/guest/onboarding/recommendations', (route) => {
+    const headers = { ...route.request().headers() };
+    delete headers.authorization;
+    return route.continue({ headers });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  await nav.getByRole('button', { name: 'Подбор' }).click();
+
+  const forYouTab = page.getByRole('tab', { name: 'Для вас' });
+  const moodTab = page.getByRole('tab', { name: 'Под настроение' });
+  await expect(forYouTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Для вас', level: 1 })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Подобрать под настроение' })).toHaveCount(0);
+
+  await moodTab.click();
+  await expect(moodTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('Только на этот визит. Вкусы в кабинете не изменятся.')).toBeVisible();
+  await page.locator('.aroma-onboarding-profile-grid button').first().click();
+  await page.getByRole('button', { name: 'Далее' }).click();
+  await page.getByRole('button', { name: 'Показать подбор' }).click();
+
+  await expect(page.getByRole('button', { name: 'Покурить' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Изменить', exact: true })).toBeVisible();
+
+  // Подбор под настроение ждёт во вкладке до конца визита.
+  await forYouTab.click();
+  await expect(page.getByRole('button', { name: 'Покурить' })).toHaveCount(0);
+  await moodTab.click();
+  await expect(page.getByRole('button', { name: 'Покурить' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Изменить', exact: true }).click();
+  await expect(page.locator('.aroma-onboarding-profile-grid button[aria-pressed="true"]')).toHaveCount(1);
+  expect(tasteWrites).toEqual([]);
 });
 
 // Ошибки backend гостю — только по-русски (#267): служебный `error` ответа на

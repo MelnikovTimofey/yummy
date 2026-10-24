@@ -9,7 +9,7 @@ import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
 import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
 import { DeleteCabinetSheet } from '@/components/cabinet/DeleteCabinetSheet';
-import { BackToForYou, ForYou, MoodLink, MoodNote } from '@/components/for-you/ForYou';
+import { ForYou, RecsTabs } from '@/components/for-you/ForYou';
 import { HeartButton } from '@/components/cabinet/HeartButton';
 import { LoginWait } from '@/components/cabinet/LoginWait';
 import { MixerInvite } from '@/components/mixer/MixerInvite';
@@ -39,10 +39,11 @@ import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst, normalizeSearchTe
 import {
   COLD_NOTE,
   MOOD_DRAFT_NOTE,
-  MOOD_RESULT_NOTE,
   forYouSlots,
   moodTitle,
+  recsScreen,
   submitPlan,
+  type RecsTab,
   type GuestForYouCard,
   type GuestForYouResponse,
 } from '@/lib/for-you-copy';
@@ -103,12 +104,14 @@ type RecommendedMix = MixCard & {
 
 type ForYouData = GuestForYouResponse<MixCard, RecommendedMix>;
 
-// «Подобрать под настроение» (#245): `items: null` — гость ещё на онбординге
-// этого визита, массив — выдача. Живёт в памяти до «Вернуться к «Для вас»».
+// «Под настроение» этого визита (#245, #388): `items: null` — подбора ещё нет,
+// массив — выдача; `step` — шаг выбора, null — показан подбор. Живёт в памяти
+// до конца визита или выхода из кабинета.
 type Mood = {
   profiles: string[];
   flavors: string[];
   items: RecommendedMix[] | null;
+  step: 1 | 2 | null;
 };
 
 type CatalogFilterTag = {
@@ -1221,8 +1224,8 @@ export const App = () => {
   // «Для вас» и «Под настроение» (#245).
   const [forYou, setForYou] = useState<ForYouState>(EMPTY_FOR_YOU);
   const forYouRequestRef = useRef(0);
+  const [recsTab, setRecsTab] = useState<RecsTab>('for-you');
   const [mood, setMood] = useState<Mood | null>(null);
-  const moodDraft = mood && !mood.items ? mood : null;
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   // Лента «Рилсы» (#263). Индекс — здесь, а не в ленте: «Готово» после
@@ -1399,9 +1402,6 @@ export const App = () => {
   useEffect(() => {
     if (view === 'onboarding') {
       setOnboardingStep(1);
-    } else {
-      // Ушёл с онбординга «под настроение», не дойдя до выдачи, — черновик не нужен.
-      setMood((current) => (current && !current.items ? null : current));
     }
   }, [view]);
 
@@ -1515,7 +1515,8 @@ export const App = () => {
     }
   };
 
-  const submitOnboarding = async () => {
+  const submitOnboarding = async (moodMode = false) => {
+    const moodDraft = moodMode ? mood : null;
     const taste = moodDraft
       ? { likedProfiles: moodDraft.profiles, likedFlavors: moodDraft.flavors }
       : { likedProfiles, likedFlavors };
@@ -1536,7 +1537,7 @@ export const App = () => {
       } else {
         const items = await fetchRecommendations(taste);
         if (moodDraft) {
-          setMood({ ...moodDraft, items });
+          setMood({ ...moodDraft, items, step: null });
         } else {
           setRecommendations(items);
           setRecommendationStatus('ready');
@@ -1580,16 +1581,16 @@ export const App = () => {
     }
   };
 
-  const startMood = () => {
-    setMood({ profiles: [], flavors: [], items: null });
+  const changeRecsTab = (tab: RecsTab) => {
+    setRecsTab(tab);
     setSubmitError('');
-    setView('onboarding');
+    if (tab === 'mood') setMood((current) => current ?? { profiles: [], flavors: [], items: null, step: 1 });
   };
 
-  const leaveMood = () => {
-    setMood(null);
+  // «Изменить» — к выбору с теми же профилями; прежний подбор остаётся до «Показать подбор».
+  const editMood = () => {
+    setMood((current) => current && { ...current, step: 1 });
     setSubmitError('');
-    setView('recommendations');
   };
 
   // ── Кабинет гостя (#243) ──
@@ -1661,6 +1662,7 @@ export const App = () => {
   useEffect(() => {
     forYouRequestRef.current += 1;
     setForYou(EMPTY_FOR_YOU);
+    setRecsTab('for-you');
     setMood(null);
     if (signedIn) {
       setRecommendations([]);
@@ -2056,21 +2058,25 @@ export const App = () => {
 
   // Подбор глазами ленты (#349): у вошедшего — «Для вас» (personal) или подбор
   // по вкусам кабинета (cold), у гостя без входа — подбор по онбордингу, в
-  // «Под настроение» — его подбор. null — ещё не загружен.
+  // «Под настроение» — его подбор. null — ещё не загружен или гость выбирает вкусы.
   const forYouRecsPage = (data: ForYouData): RecsPage<MixCard> =>
     data.mode === 'personal' ? forYouPage(data) : recsPage(data.items);
   const hasTaste = onboardingDone && (likedProfiles.length > 0 || likedFlavors.length > 0);
-  const shownRecs: RecsPage<MixCard> | null = mood?.items
-    ? recsPage(mood.items)
-    : signedIn
-      ? forYou.data
-        ? forYouRecsPage(forYou.data)
-        : null
-      : !hasTaste
-        ? recsPage([])
-        : recommendationStatus === 'ready'
-          ? recsPage(recommendations)
-          : null;
+  const recsMode = signedIn ? recsScreen(recsTab, mood) : 'for-you';
+  const shownRecs: RecsPage<MixCard> | null =
+    recsMode === 'pick'
+      ? null
+      : recsMode === 'result' && mood?.items
+        ? recsPage(mood.items)
+        : signedIn
+          ? forYou.data
+            ? forYouRecsPage(forYou.data)
+            : null
+          : !hasTaste
+            ? recsPage([])
+            : recommendationStatus === 'ready'
+              ? recsPage(recommendations)
+              : null;
   // Рилсы после Подбора — для тизера в его конце и кадра при дотягивании.
   const continuation =
     shownRecs?.shown.length && catalogStatus === 'ready' ? reelFeed(shownRecs, catalogSourceMixes) : null;
@@ -2080,7 +2086,7 @@ export const App = () => {
   // Каталог, если уже загружен, не запрашивается заново.
   const openReels = async () => {
     const loadId = reels.loadId + 1;
-    const page = signedIn && !mood?.items && forYou.stale ? null : shownRecs;
+    const page = recsMode === 'for-you' && signedIn && forYou.stale ? null : shownRecs;
     setReelIndex(0);
     setReelSwiped(false);
     setReelChoice(null);
@@ -2299,7 +2305,7 @@ export const App = () => {
           {renderMasterCardButton()}
         </div>
         {view === 'intro' ? renderJourneyNav('intro') : null}
-        {view === 'onboarding' && !moodDraft ? renderOnboardingProgress() : null}
+        {view === 'onboarding' ? renderOnboardingProgress() : null}
       </header>
     );
   };
@@ -2445,12 +2451,16 @@ export const App = () => {
     );
   };
 
-  const renderOnboardingView = () => {
-    // «Под настроение» — тот же онбординг, но выбор живёт в черновике визита и
-    // не трогает сохранённые вкусы (#245).
-    const draft = moodDraft
-      ? { profiles: moodDraft.profiles, flavors: moodDraft.flavors }
-      : { profiles: likedProfiles, flavors: likedFlavors };
+  // Выбор вкусов: онбординг или вкладка «Под настроение» (#388). Во вкладке
+  // выбор живёт в черновике визита и не трогает сохранённые вкусы (#245).
+  const renderTastePicker = (moodMode: boolean) => {
+    const draft =
+      moodMode && mood
+        ? { profiles: mood.profiles, flavors: mood.flavors }
+        : { profiles: likedProfiles, flavors: likedFlavors };
+    const step = moodMode ? mood?.step ?? 1 : onboardingStep;
+    const setStep = (next: 1 | 2) =>
+      moodMode ? setMood((current) => current && { ...current, step: next }) : setOnboardingStep(next);
     const likedProfilesNow = draft.profiles;
     const likedFlavorsNow = draft.flavors;
     // Миксы, попадающие под текущий выбор. Семантика та же, что у фильтров
@@ -2472,43 +2482,134 @@ export const App = () => {
     const toggled = (current: string[], value: string) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
     const toggleProfile = (value: string) =>
-      moodDraft
-        ? setMood({ ...moodDraft, profiles: toggled(moodDraft.profiles, value) })
+      moodMode
+        ? setMood((current) => current && { ...current, profiles: toggled(current.profiles, value) })
         : setLikedProfiles((current) => toggled(current, value));
     const toggleFlavor = (value: string) =>
-      moodDraft
-        ? setMood({ ...moodDraft, flavors: toggled(moodDraft.flavors, value) })
+      moodMode
+        ? setMood((current) => current && { ...current, flavors: toggled(current.flavors, value) })
         : setLikedFlavors((current) => toggled(current, value));
     const goNext = () => {
-      if (onboardingStep === 1) {
-        setOnboardingStep(2);
+      if (step === 1) {
+        setStep(2);
         return;
       }
-      void submitOnboarding();
+      void submitOnboarding(moodMode);
     };
     const ctaDisabled =
-      onboardingStep === 1
+      step === 1
         ? optionsStatus !== 'ready'
         : submitting || optionsStatus !== 'ready' || (likedFlavorsNow.length > 0 && !matchingMixes.length);
     const ctaLabel =
-      onboardingStep === 1
+      step === 1
         ? 'Далее'
         : submitting
           ? 'Собираем подбор…'
           : 'Показать подбор';
+    const flavorsHint = 'Можно пропустить. Бледные вкусы не встречаются в миксах с выбранными профилями.';
+
+    const profileGrid = (
+      <>
+        {optionsStatus === 'loading' ? (
+          <p className="screen-status">Загружаем профили…</p>
+        ) : null}
+        <div className="aroma-onboarding-profile-grid">
+          {availableProfileOptions.map((option) => {
+            const active = likedProfilesNow.includes(option.value);
+            const color = getProfileColor(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={cn('aroma-profile-card', active && 'aroma-profile-card-on')}
+                onClick={() => toggleProfile(option.value)}
+                aria-pressed={active}
+              >
+                <span
+                  className="aroma-profile-card-dot"
+                  style={{ background: color }}
+                  aria-hidden
+                />
+                <span className="aroma-profile-card-label">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+    const flavorChips = (
+      <div className="aroma-onboarding-flavor-wrap">
+        {options.flavors.map((flavor) => {
+          const givesNothing = flavorGivesNothing(flavor);
+
+          return (
+            <Chip
+              key={flavor}
+              active={likedFlavorsNow.includes(flavor)}
+              dimmed={givesNothing}
+              ariaLabel={givesNothing ? `${flavor}, нет миксов с выбранными профилями` : undefined}
+              onClick={() => toggleFlavor(flavor)}
+            >
+              {flavor}
+            </Chip>
+          );
+        })}
+      </div>
+    );
+    const errors = (
+      <>
+        {optionsError ? <p className="screen-status error">{optionsError}</p> : null}
+        {submitError ? <p className="screen-status error">{submitError}</p> : null}
+      </>
+    );
+    const tally = (
+      <p className="aroma-onboarding-tally" aria-live="polite">
+        {catalogueIsEmpty
+          ? 'Картотека миксов пока пуста'
+          : matchingMixes.length
+            ? `${pluralize(matchingMixes.length, ['Подходит', 'Подходят', 'Подходят'])} ${matchingMixes.length} ${pluralizeMixes(matchingMixes.length)}`
+            : 'Под такой набор миксов нет. Снимите один из вкусов.'}
+      </p>
+    );
+    const cta = (
+      <CTA onClick={goNext} disabled={ctaDisabled}>
+        {ctaLabel}
+      </CTA>
+    );
+
+    if (moodMode) {
+      return (
+        <section className="aroma-recs fy-mood-pick">
+          {renderRecsTabs()}
+          {step === 1 ? (
+            <>
+              <p className="aroma-onboarding-hint">{MOOD_DRAFT_NOTE}</p>
+              {profileGrid}
+            </>
+          ) : (
+            <>
+              <div className="fy-mood-step">
+                <button type="button" className="aroma-rail-back" onClick={() => setStep(1)} aria-label="Назад к профилям">
+                  ←
+                </button>
+                <p className="aroma-onboarding-hint">{flavorsHint}</p>
+              </div>
+              {flavorChips}
+            </>
+          )}
+          {errors}
+          <div className="aroma-onboarding-dock fy-mood-dock">
+            {tally}
+            {cta}
+          </div>
+        </section>
+      );
+    }
 
     return (
       <div className="aroma-onboarding">
-        {moodDraft ? (
-          <MoodNote
-            title="Под настроение"
-            text={MOOD_DRAFT_NOTE}
-            onBack={() => (onboardingStep === 2 ? setOnboardingStep(1) : leaveMood())}
-            backLabel={onboardingStep === 2 ? 'Назад к профилям' : undefined}
-          />
-        ) : null}
         <div className="aroma-onboarding-body">
-          {onboardingStep === 1 ? (
+          {step === 1 ? (
             <>
               <h1 className="aroma-onboarding-title">С чего начнём?</h1>
               <p className="aroma-onboarding-hint">
@@ -2516,78 +2617,26 @@ export const App = () => {
                   ? 'Миксов пока нет. Подбор появится, когда мастер их добавит.'
                   : 'Можно выбрать несколько.'}
               </p>
-              {optionsStatus === 'loading' ? (
-                <p className="screen-status">Загружаем профили…</p>
-              ) : null}
-              <div className="aroma-onboarding-profile-grid">
-                {availableProfileOptions.map((option) => {
-                  const active = likedProfilesNow.includes(option.value);
-                  const color = getProfileColor(option.value);
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={cn('aroma-profile-card', active && 'aroma-profile-card-on')}
-                      onClick={() => toggleProfile(option.value)}
-                      aria-pressed={active}
-                    >
-                      <span
-                        className="aroma-profile-card-dot"
-                        style={{ background: color }}
-                        aria-hidden
-                      />
-                      <span className="aroma-profile-card-label">{option.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {profileGrid}
             </>
           ) : (
             <>
               <h1 className="aroma-onboarding-title">Любимые ноты</h1>
-              <p className="aroma-onboarding-hint">
-                Можно пропустить. Бледные вкусы не встречаются в миксах с выбранными профилями.
-              </p>
-              <div className="aroma-onboarding-flavor-wrap">
-                {options.flavors.map((flavor) => {
-                  const givesNothing = flavorGivesNothing(flavor);
-
-                  return (
-                    <Chip
-                      key={flavor}
-                      active={likedFlavorsNow.includes(flavor)}
-                      dimmed={givesNothing}
-                      ariaLabel={givesNothing ? `${flavor}, нет миксов с выбранными профилями` : undefined}
-                      onClick={() => toggleFlavor(flavor)}
-                    >
-                      {flavor}
-                    </Chip>
-                  );
-                })}
-              </div>
+              <p className="aroma-onboarding-hint">{flavorsHint}</p>
+              {flavorChips}
             </>
           )}
-          {optionsError ? <p className="screen-status error">{optionsError}</p> : null}
-          {submitError ? <p className="screen-status error">{submitError}</p> : null}
+          {errors}
         </div>
 
         <div className="aroma-onboarding-dock">
-          <p className="aroma-onboarding-tally" aria-live="polite">
-            {catalogueIsEmpty
-              ? 'Картотека миксов пока пуста'
-              : matchingMixes.length
-                ? `${pluralize(matchingMixes.length, ['Подходит', 'Подходят', 'Подходят'])} ${matchingMixes.length} ${pluralizeMixes(matchingMixes.length)}`
-                : 'Под такой набор миксов нет. Снимите один из вкусов.'}
-          </p>
-          <CTA onClick={goNext} disabled={ctaDisabled}>
-            {ctaLabel}
-          </CTA>
+          {tally}
+          {cta}
           {editingPreferences ? null : (
             <button
               type="button"
               className="aroma-onboarding-skip"
               onClick={() => {
-                setMood(null);
                 setOnboardingDone(true);
                 setView('catalog');
               }}
@@ -2600,17 +2649,27 @@ export const App = () => {
     );
   };
 
-  // Подбор: «Под настроение» этого визита, у вошедшего — «Для вас» (#245), у
-  // анонима — подбор по вкусам устройства, как раньше.
+  const renderRecsTabs = () => <RecsTabs value={recsTab} onChange={changeRecsTab} />;
+
+  // Подбор: у вошедшего — вкладки «Для вас» (#245) и «Под настроение» этого
+  // визита (#388), у анонима — подбор по вкусам устройства, как раньше.
   const renderRecommendationsView = () => {
-    if (mood?.items) {
+    if (recsMode === 'pick') {
+      return renderTastePicker(true);
+    }
+    if (recsMode === 'result' && mood?.items) {
       return renderOnboardingRecs(mood.items, 'ready', {
         source: 'mood',
         editChip: false,
         prelude: (
           <>
-            <MoodNote title={moodTitle(mood)} text={MOOD_RESULT_NOTE} />
-            <BackToForYou onClick={leaveMood} />
+            {renderRecsTabs()}
+            <div className="aroma-recs-section-row">
+              <h2 className="aroma-recs-section-title">{moodTitle(mood)}</h2>
+              <button type="button" className="aroma-text-link" onClick={editMood}>
+                Изменить
+              </button>
+            </div>
           </>
         ),
       });
@@ -2633,7 +2692,7 @@ export const App = () => {
             chooseDisabled={chooseStatus === 'loading'}
             onOpen={(mix) => openMix(mix, 'recommendations')}
             onChoose={(mix) => void onChooseMix(mix, 'recommendations')}
-            onMood={startMood}
+            tabs={renderRecsTabs()}
           />
         );
       }
@@ -2643,8 +2702,8 @@ export const App = () => {
         editChip: true,
         prelude: (
           <>
+            {renderRecsTabs()}
             {data.items.length ? <p className="fy-cold">{COLD_NOTE}</p> : null}
-            <MoodLink onClick={startMood} />
           </>
         ),
       });
@@ -2665,14 +2724,16 @@ export const App = () => {
     { source, editChip, prelude }: { source: MixSource; editChip: boolean; prelude?: ReactNode },
   ) => {
     if (!items.length) {
+      // Над вкладками уже есть h1.
+      const EmptyTitle = prelude ? 'h2' : 'h1';
       return (
-        <section className="aroma-recs-empty">
+        <section className={cn('aroma-recs-empty', prelude && 'aroma-recs-empty-tabs')}>
           {prelude}
-          <h1 className="aroma-recs-empty-title">
+          <EmptyTitle className="aroma-recs-empty-title">
             {status === 'ready' ? 'Ничего не найдено' : 'Сначала выберите вкусы'}
-          </h1>
+          </EmptyTitle>
           <div className="aroma-recs-empty-actions">
-            <CTA onClick={() => (source === 'mood' ? startMood() : openPreferencesEditing())}>
+            <CTA onClick={() => (source === 'mood' ? editMood() : openPreferencesEditing())}>
               {status === 'ready' ? 'Изменить вкусы' : 'Открыть предпочтения'}
             </CTA>
             <button
@@ -3375,11 +3436,15 @@ export const App = () => {
             <div className="pull-host" data-pulling={recsTravel ? '' : undefined}>
               <main
                 ref={mainRef}
-                className={view === 'intro' || view === 'onboarding' ? `content content-${view}` : 'content'}
+                className={cn(
+                  'content',
+                  (view === 'intro' || view === 'onboarding') && `content-${view}`,
+                  view === 'recommendations' && recsMode === 'pick' && 'content-mood-pick',
+                )}
                 style={recsTravel ? { transform: `translateY(${-recsTravel / 2}px)` } : undefined}
               >
                 {view === 'intro' ? renderIntroView() : null}
-                {view === 'onboarding' ? renderOnboardingView() : null}
+                {view === 'onboarding' ? renderTastePicker(false) : null}
                 {view === 'recommendations' && chooseError && !mixModalState ? (
                   <p className="screen-status error">{chooseError}</p>
                 ) : null}
