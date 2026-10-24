@@ -1,18 +1,19 @@
-// Mix list row: optional glyph, name + flavour line, rating on the right.
+// Mix list row: glyph, name, profile bar, flavour line, rating on the right. One row for every guest list.
 import { ProfileGlyph } from './ProfileGlyph.jsx';
+import { SignatureBar } from './SignatureBar.jsx';
 import { RatingPill } from './RatingPill.jsx';
 
-export function MixRow({ name, flavors = [], profiles = [], rating, glyphSize = 44, showGlyph = true, onClick, style }) {
+export function MixRow({ name, flavors = [], profiles = [], rating, onClick, style }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
         display: 'grid',
-        gridTemplateColumns: (showGlyph ? glyphSize + 'px ' : '') + 'minmax(0,1fr) auto',
+        gridTemplateColumns: '44px minmax(0,1fr) auto',
         alignItems: 'center',
         gap: 10,
-        padding: showGlyph ? '8px 12px' : '10px 12px',
+        padding: '8px 12px',
         borderRadius: 'var(--r-guest-row)',
         border: '1px solid var(--border-subtle)',
         background: 'var(--guest-row-bg)',
@@ -23,9 +24,10 @@ export function MixRow({ name, flavors = [], profiles = [], rating, glyphSize = 
         ...style,
       }}
     >
-      {showGlyph ? <ProfileGlyph profiles={profiles} size={glyphSize} /> : null}
+      <ProfileGlyph profiles={profiles} size={44} />
       <span style={{ minWidth: 0, display: 'grid', gap: 4 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 14.5, lineHeight: 1.2, color: 'var(--text-primary)' }}>{name}</span>
+        <SignatureBar profiles={profiles} height={3} />
         {flavors.length ? (
           <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {flavors.slice(0, 3).join(', ')}

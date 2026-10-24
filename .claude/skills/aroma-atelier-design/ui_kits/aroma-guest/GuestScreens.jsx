@@ -111,16 +111,16 @@ function OnboardingScreen({ step, profiles, flavors, toggleProfile, toggleFlavor
   );
 }
 
-// Приглашение в «Намиксуй»: полосой на Витрине, строкой с пояснением в конце Подбора. Без глифа: профилей у него нет.
+// Приглашение в «Намиксуй»: кнопка-контур со значком из нижней панели и подпись под ней, чтобы не читалось строкой микса.
 function MixerInvite({ onOpen, note }) {
   return (
-    <button type="button" className="aroma-mixer-invite" onClick={onOpen}>
-      <span className="aroma-mixer-invite-text">
-        <span className="aroma-mixer-invite-title">Собрать свой микс</span>
-        {note ? <span className="aroma-mixer-invite-note">Из табаков, которые сегодня есть на полках.</span> : null}
-      </span>
-      <Icon name="ChevronRight" size={20} />
-    </button>
+    <div className="aroma-mixer-invite">
+      <button type="button" className="aroma-mixer-invite-btn" onClick={onOpen}>
+        <Icon name="Blend" size={18} />
+        Собрать свой микс
+      </button>
+      {note ? <p className="aroma-mixer-invite-note">Из табаков, которые сегодня есть на полках.</p> : null}
+    </div>
   );
 }
 
@@ -168,7 +168,7 @@ function RecommendationsScreen({ mixes, onOpen, onChoose, onOpenOnboarding, onOp
         <>
           <div className="aroma-list">
             {rest.slice(0, 4).map((mix) => (
-              <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} showGlyph={false} onClick={() => onOpen(mix, 'recommendations')} />
+              <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} onClick={() => onOpen(mix, 'recommendations')} />
             ))}
           </div>
         </>
@@ -267,7 +267,7 @@ function CatalogScreen({ query, setQuery, filters, onRemoveFilter, onOpenFilters
       ) : null}
       <div className="aroma-catalog-list">
         {results.map((mix) => (
-          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={flavorsMatchedFirst(mix.flavors, query, filters)} rating={guestRating(mix)} glyphSize={36} style={{ padding: '7px 12px' }} onClick={() => onOpen(mix, 'catalog')} />
+          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={flavorsMatchedFirst(mix.flavors, query, filters)} rating={guestRating(mix)} onClick={() => onOpen(mix, 'catalog')} />
         ))}
       </div>
     </section>
@@ -343,7 +343,7 @@ function RailScreen({ rail, filters, toggleFilter, onBack, onOpen }) {
       {!visible.length ? <p className="guest-status">По выбранным профилям ничего не найдено.</p> : null}
       <div className="aroma-list">
         {visible.map((mix) => (
-          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} glyphSize={60} onClick={() => onOpen(mix, 'rail')} />
+          <MixRow key={mix.id} name={mix.name} profiles={mix.flavorProfiles} flavors={mix.flavors} rating={guestRating(mix)} onClick={() => onOpen(mix, 'rail')} />
         ))}
       </div>
     </section>
