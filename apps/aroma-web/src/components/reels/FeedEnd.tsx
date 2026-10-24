@@ -1,14 +1,26 @@
-import { CTA } from '@/components/aroma';
+import { lazy, Suspense } from 'react';
+import { MixerInvite } from '@/components/mixer/MixerInvite';
+import { ReelStill, type ReelMix } from './ReelStill';
 
-// Конец ленты (#298, #349): после последнего микса — приглашение в «Намиксуй».
-// Миксер открывается кнопкой, а не жестом: свайп дальше ничего не делает.
-export function FeedEnd({ onMixer }: { onMixer: () => void }) {
+const ReelPlayer = lazy(() => import('./ReelPlayer'));
+
+// Фон конца ленты — сцена «Дым» без микса: лента не обрывается в пустой экран.
+const END_SCENE: ReelMix = { id: 'feed-end', flavors: ['табачный'], flavorProfiles: [] };
+
+// Конец ленты (#298, #349): после последнего микса — та же кнопка в «Намиксуй»,
+// что в конце Подбора. Миксер открывается кнопкой, а не жестом: свайп дальше
+// ничего не делает.
+export function FeedEnd({ onMixer, playing }: { onMixer: () => void; playing: boolean }) {
   return (
     <section className="reel-end" aria-label="Конец ленты">
-      <h2 className="aroma-recs-empty-title">Это все миксы</h2>
-      <CTA onClick={onMixer} style={{ marginTop: 8 }}>
-        Собрать свой микс
-      </CTA>
+      {playing ? (
+        <Suspense fallback={<ReelStill mix={END_SCENE} />}>
+          <ReelPlayer mix={END_SCENE} playing />
+        </Suspense>
+      ) : (
+        <ReelStill mix={END_SCENE} />
+      )}
+      <MixerInvite onOpen={onMixer} />
     </section>
   );
 }
