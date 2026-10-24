@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Лоадеры, мокап</title>
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<style>
+/* Оболочка телефона, шапка и панель — из ../design_handoff_for_you_mood_entry/mockups.html (кит после канона #348) */
+html,body{margin:0}
+body{font-family:var(--font-body);color:var(--text-primary);background:var(--guest-room-bg)}
+.board{display:flex;flex-wrap:wrap;gap:40px 28px;padding:32px;align-items:flex-start}
+.shot{display:grid;gap:10px;width:375px}
+.shot-cap{margin:0;font-size:13px;line-height:1.4;color:var(--text-1)}
+.shot-cap b{color:var(--text-0);font-weight:600}
+.phone{width:375px;height:780px;border:1px solid var(--line);border-radius:var(--r-guest-shell);background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-shell);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.topbar{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 10px 0 20px;border-bottom:1px solid var(--line);background:var(--guest-topbar-bg)}
+.brand-mark{height:22px;width:auto}
+.brand{margin:0;font-family:var(--font-display);font-size:19px;line-height:1;color:var(--text-0)}
+.content{flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 20px;display:grid;gap:12px;align-content:start;grid-template-columns:minmax(0,1fr)}
+.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,1fr);padding:0 4px;border-top:1px solid var(--line);background:var(--guest-topbar-bg)}
+.bottom-nav span{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;color:var(--text-muted)}
+.bottom-nav span[aria-current]{color:var(--text-0)}
+.bottom-nav span[aria-current]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 2px 2px;background:var(--accent)}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.status-now{margin:0;padding:8px 0;color:var(--text-1);font-size:15px}
+.section-title{margin:4px 0 0;font-family:var(--font-display);font-size:19px;font-weight:400;color:var(--text-0)}
+.section-row{display:flex;align-items:baseline;justify-content:space-between;margin-top:4px}
+.text-link{color:var(--text-1);font-size:13px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tab{min-height:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r-guest-control);background:var(--guest-control-bg-soft);color:var(--text-1);font-size:13px;font-weight:600}
+.tab[aria-current]{color:var(--text-0);background:var(--guest-control-bg);box-shadow:inset 0 -2px 0 var(--accent)}
+.search-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin:0 -2px}
+.field{min-height:42px;border:1px solid var(--line);border-radius:var(--r-guest-control);background:var(--guest-control-bg-soft);display:flex;align-items:center;padding:0 14px;color:var(--text-muted);font-size:15px}
+.invite{min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent-border);border-radius:var(--r-guest-control);color:var(--text-0);font-size:14px;font-weight:600}
+.invite .ico{width:18px;height:18px}
+
+/* ── Скелет. Блоки — поверхность карточки на тон светлее; по ним медленно проходит
+   «дымка» — широкая светлая полоса слева направо за 1,8 с. Прозрачность и размер
+   не меняются: это не пульс. Вариант «статично» — без дымки. ── */
+.sk{--sk-base:rgba(232,230,224,.06);--sk-haze:rgba(232,230,224,.11);position:relative;overflow:hidden;border-radius:6px;background:var(--sk-base)}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent 0%,var(--sk-haze) 50%,transparent 100%);animation:sk-haze 1.8s cubic-bezier(.4,0,.2,1) infinite}
+.static .sk::after{display:none}
+@keyframes sk-haze{to{transform:translateX(100%)}}
+.sk-line{height:12px}
+.sk-title{height:18px;border-radius:7px}
+.sk-glyph{border-radius:var(--r-guest-glyph)}
+.sk-bar{height:4px;border-radius:2px}
+.sk-chip{height:30px;border-radius:var(--r-guest-chip)}
+.sk-cta{height:52px;border-radius:var(--r-guest-cta)}
+.card{border:1px solid var(--line);border-radius:var(--r-guest-hero);background:var(--guest-card-bg);padding:18px;display:grid;gap:14px}
+.hero-top{display:grid;grid-template-columns:64px 1fr;gap:14px;align-items:start}
+.stack{display:grid;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.comp{display:grid;grid-template-columns:90px 1fr 34px;gap:10px;align-items:center}
+.row{border:1px solid var(--line);border-radius:var(--r-guest-row);background:var(--guest-row-bg);padding:12px;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center}
+.rail{display:flex;gap:8px;margin-right:-20px;overflow:hidden}
+.rail .sk{flex:0 0 148px;height:86px;border-radius:var(--r-guest-card)}
+.rail-head{display:flex;align-items:center;gap:8px}
+
+/* ── Знак «Дым» в движении. Пути знака без изменений (assets/logo-mark-oxblood.svg).
+   Каждая струя прорисовывается снизу вверх и тает сверху, со сдвигом 0,2 с —
+   как сцена «Дым» у рилсов. Цикл 1,8 с. ── */
+.smoke path{stroke-dasharray:1;stroke-dashoffset:1;animation:smoke-draw 1.8s cubic-bezier(.4,0,.2,1) infinite}
+.smoke path:nth-child(2){animation-delay:.2s}
+.smoke path:nth-child(3){animation-delay:.4s}
+@keyframes smoke-draw{0%{stroke-dashoffset:1}45%{stroke-dashoffset:0}100%{stroke-dashoffset:-1}}
+.static .smoke path{animation:none;stroke-dashoffset:0}
+.smoke-screen{flex:1 1 auto;display:grid;place-items:center}
+.smoke-screen .smoke{height:56px;width:auto}
+.smoke-inline{height:16px;width:auto;flex:0 0 auto}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+/* ── Кнопки в ожидании: подпись на месте, слева маленький знак; кнопка не серая,
+   но не нажимается. На бордовой заливке струи кремовые, на контуре — бордовые. ── */
+.btns{display:grid;gap:12px;align-content:start}
+.cta{width:100%;min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--cta-solid-border);border-radius:var(--r-guest-cta);background:var(--cta-solid);color:var(--cta-solid-ink);box-shadow:var(--cta-solid-shadow);font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
+.cta.busy{cursor:default}
+.cta.busy .smoke path{stroke:var(--cta-solid-ink)}
+.ghost{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--line);border-radius:var(--r-guest-control);background:rgba(40,40,48,.5);color:var(--text-0);font-size:14px;font-weight:500}
+.danger{border-color:var(--danger-border);color:var(--danger)}
+.danger .smoke path{stroke:var(--danger)}
+.btn-pair{display:grid;gap:6px}
+.btn-pair p{margin:0;font-size:12px;color:var(--text-muted)}
+.mixer-card{border:1px solid var(--line);border-radius:var(--r-guest-hero);background:var(--guest-card-bg);padding:18px;display:grid;gap:12px}
+.mixer-head{display:flex;align-items:center;justify-content:space-between}
+.glyph{width:40px;height:40px;border-radius:var(--r-guest-glyph);background:radial-gradient(circle at 40% 40%,var(--g1) 0%,transparent 62%),#111114}
+.harmony{display:flex;align-items:center;gap:10px;min-height:28px;color:var(--text-1);font-size:14px}
+.reel-bg{flex:1 1 auto;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% 30%,#1d1a1c 0%,#121215 62%,#0e0e11 100%)}
+.reel-bg .smoke{height:56px;width:auto}
+
+/* один телефон по #shot=<id> — для скриншотов Playwright */
+body.one .board{padding:0;gap:0}
+body.one .shot{display:none}
+body.one .shot.on{display:block}
+body.one .shot-cap{display:none}
+body.one .phone{border-radius:0;box-shadow:none;border:0}
+</style>
+</head>
+<body>
+<div class="board" id="board"></div>
+<script src="icons.js"></script>
+<script>
+// ── Кирпичи ──
+const ico = (name, cls = 'ico') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+const MARK_PATHS = `<path pathLength="1" d="M42 88C42 72 34 68 34 56C34 44 42 40 42 28" stroke="#8E2F3C"/><path pathLength="1" d="M60 92C60 74 50 70 50 56C50 42 60 38 60 24" stroke="#B34A57" stroke-opacity=".82"/><path pathLength="1" d="M78 88C78 72 70 68 70 56C70 44 78 40 78 28" stroke="#7A2A34"/>`;
+// Знак в шапке — статичный, как в приложении. Струи знака снизу вверх: путь начинается внизу (y 88–92).
+const brandMark = `<svg class="brand-mark" viewBox="29 19 54 78" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-width="5">${MARK_PATHS}</g></svg>`;
+const smoke = (cls = '', label = '') => `<svg class="smoke ${cls}" viewBox="29 19 54 78" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-width="${cls === 'smoke-inline' ? 8 : 5}">${MARK_PATHS}</g></svg>${label ? `<span class="sr" role="status">${label}</span>` : ''}`;
+
+const NAV = ['sparkles', 'clapperboard', 'gallery-horizontal-end', 'search', 'blend', 'circle-user-round'];
+const phone = (active, body, { topbar = true } = {}) => `
+  <div class="phone">
+    ${topbar ? `<div class="topbar">${brandMark}<p class="brand">Арома Ателье</p></div>` : ''}
+    ${body}
+    <nav class="bottom-nav">${NAV.map((n, i) => `<span ${i === active ? 'aria-current="page"' : ''}>${ico(n)}</span>`).join('')}</nav>
+  </div>`;
+
+const sk = (cls, style = '') => `<div class="sk ${cls}" style="${style}"></div>`;
+const heroSkeleton = `
+  <div class="card" aria-hidden="true">
+    <div class="hero-top">
+      ${sk('sk-glyph', 'width:64px;height:64px')}
+      <div class="stack">${sk('sk-title', 'width:82%')}${sk('sk-title', 'width:56%')}${sk('sk-line', 'width:92%;margin-top:6px')}${sk('sk-line', 'width:70%')}</div>
+    </div>
+    ${sk('sk-bar')}
+    <div class="chips">${sk('sk-chip', 'width:84px')}${sk('sk-chip', 'width:104px')}${sk('sk-chip', 'width:62px')}${sk('sk-chip', 'width:88px')}${sk('sk-chip', 'width:54px')}</div>
+    <div class="comp">${sk('sk-line')}${sk('sk-line', 'width:70%')}${sk('sk-line')}</div>
+    <div class="comp">${sk('sk-line')}${sk('sk-line', 'width:55%')}${sk('sk-line')}</div>
+    ${sk('sk-cta')}
+  </div>`;
+const rowSkeleton = (w) => `
+  <div class="row" aria-hidden="true">
+    ${sk('sk-glyph', 'width:40px;height:40px')}
+    <div class="stack" style="gap:7px">${sk('sk-title', `width:${w}%;height:15px`)}${sk('sk-bar', 'height:3px;width:88%')}${sk('sk-line', `width:${w - 10}%;height:10px`)}</div>
+  </div>`;
+const railSkeleton = (titleW) => `
+  <div class="rail-head" aria-hidden="true">${sk('sk-title', `width:${titleW}px;height:20px`)}</div>
+  <div class="rail" aria-hidden="true">${sk('')}${sk('')}${sk('')}</div>`;
+
+// ── Экраны ──
+const SHOTS = [
+  { id: 'now', cap: '<b>Сейчас.</b> Строка текста на пустом экране, через секунду экран резко перестраивается.',
+    html: phone(0, `<div class="content"><p class="status-now">Собираем подбор…</p></div>`) },
+  { id: 'recs', cap: '<b>Подбор.</b> Силуэт героя и строк «Тоже подходят». Заголовок секции и вкладки настоящие: они известны до ответа.',
+    html: phone(0, `<div class="content"><span class="sr" role="status">Загружаем подбор</span>${heroSkeleton}<div class="section-row"><h2 class="section-title">Тоже подходят</h2><span class="text-link">Изменить вкусы</span></div>${rowSkeleton(62)}</div>`) },
+  { id: 'for-you', cap: '<b>«Для вас».</b> То же, вкладки стоят сразу. Тот же скелет у «Под настроение».',
+    html: phone(0, `<div class="content"><span class="sr" role="status">Загружаем подбор</span><div class="tabs"><span class="tab" aria-current="page">Для вас</span><span class="tab">Под настроение</span></div>${heroSkeleton}</div>`) },
+  { id: 'showcase', cap: '<b>Витрина.</b> «Собрать свой микс» настоящая, ниже три рейла: заголовок и карточки силуэтом.',
+    html: phone(2, `<div class="content"><span class="sr" role="status">Загружаем витрину</span><div class="invite">${ico('blend')}Собрать свой микс</div>${railSkeleton(210)}${railSkeleton(160)}${railSkeleton(180)}</div>`) },
+  { id: 'catalog', cap: '<b>Каталог.</b> Поиск и «Фильтры» работают сразу, список силуэтом строк.',
+    html: phone(3, `<div class="content"><span class="sr" role="status">Загружаем каталог</span><div class="search-row"><div class="field">Микс, вкус, табак</div><div class="field" style="color:var(--text-0);gap:8px">${ico('sliders-horizontal')}Фильтры</div></div>${sk('sk-line', 'width:64px;margin:6px 0 2px')}${rowSkeleton(70)}${rowSkeleton(54)}${rowSkeleton(64)}${rowSkeleton(48)}${rowSkeleton(58)}</div>`) },
+  { id: 'cabinet', cap: '<b>Кабинет.</b> История и избранное силуэтом строк. Так же «Показать раньше» в конце истории.',
+    html: phone(5, `<div class="content"><span class="sr" role="status">Загружаем историю</span><h1 class="section-title" style="font-size:28px;margin:6px 0 2px">Кабинет</h1><div class="tabs"><span class="tab" aria-current="page">История</span><span class="tab">Избранное</span></div>${rowSkeleton(66)}${rowSkeleton(52)}${rowSkeleton(60)}${rowSkeleton(46)}</div>`) },
+  { id: 'onboarding', cap: '<b>Знакомство.</b> Формы у экрана до ответа нет: по центру знак «Дым», струи прорисовываются снизу вверх и тают.',
+    html: phone(-1, `<div class="smoke-screen">${smoke('', 'Загружаем знакомство')}</div>`) },
+  { id: 'reels', cap: '<b>Рилсы.</b> Тот же знак на фоне сцены рилса, пока собирается лента.',
+    html: phone(1, `<div class="reel-bg">${smoke('', 'Собираем ленту')}</div>`, { topbar: false }) },
+  { id: 'harmony', cap: '<b>Намиксуй.</b> «Считаем гармонию…» заменяет маленький знак на месте оценки.',
+    html: phone(4, `<div class="content"><div class="mixer-card"><div class="mixer-head"><h2 class="section-title" style="margin:0">Ваш микс</h2></div><div class="row" style="background:transparent"><div class="glyph" style="--g1:var(--profile-berry)"></div><div class="stack" style="gap:4px"><span style="font-family:var(--font-display);font-size:17px;color:var(--text-0)">Black Burn Cherry Shock</span><span style="font-size:13px;color:var(--text-1)">вишня</span></div></div><div class="row" style="background:transparent"><div class="glyph" style="--g1:var(--profile-berry)"></div><div class="stack" style="gap:4px"><span style="font-family:var(--font-display);font-size:17px;color:var(--text-0)">Darkside Wildberry</span><span style="font-size:13px;color:var(--text-1)">лесные ягоды</span></div></div><div class="harmony">${smoke('smoke-inline', 'Считаем гармонию')}</div></div></div>`) },
+  { id: 'buttons', cap: '<b>Кнопки.</b> Подпись на месте, слева знак; кнопка не нажимается и не сереет. Слева покой, справа ожидание.',
+    html: phone(0, `<div class="content btns">
+      <div class="btn-pair"><p>Покурить</p><div class="cta">Покурить</div><div class="cta busy">${smoke('smoke-inline')}Покурить</div></div>
+      <div class="btn-pair"><p>Гейт</p><div class="cta busy">${smoke('smoke-inline')}Войти в Ателье</div></div>
+      <div class="btn-pair"><p>Кабинет</p><div class="ghost">${smoke('smoke-inline')}Войти через Telegram</div><div class="ghost">${smoke('smoke-inline')}Показать раньше</div><div class="ghost danger">${smoke('smoke-inline')}Удалить</div></div>
+    </div>`) },
+  { id: 'recs-static', static: true, cap: '<b>Без движения.</b> Если у гостя выключена анимация, скелет без дымки, знак целиком. Вариант для владельца: скелет без дымки всегда.',
+    html: phone(0, `<div class="content">${heroSkeleton}<div class="section-row"><h2 class="section-title">Тоже подходят</h2><span class="text-link">Изменить вкусы</span></div>${rowSkeleton(62)}</div>`) },
+];
+
+const board = document.getElementById('board');
+board.innerHTML = SHOTS.map((s) => `<section class="shot${s.static ? ' static' : ''}" data-id="${s.id}"><p class="shot-cap">${s.cap} <code>#shot=${s.id}</code></p>${s.html}</section>`).join('');
+const shot = new URLSearchParams(location.hash.slice(1)).get('shot');
+if (shot) {
+  document.body.classList.add('one');
+  board.querySelector(`[data-id="${shot}"]`)?.classList.add('on');
+}
+</script>
+</body>
+</html>
