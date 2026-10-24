@@ -17,6 +17,7 @@ import {
 import { Segments } from './shelf-reorder';
 import { ShelfToggle } from './shelf-toggle';
 import { TrialMark } from './shelf-trial-mark';
+import { SmokeLoading } from '@/components/ui/loading';
 
 type ShelfPurchaseProps = {
   purchase: PurchaseView | null;
@@ -444,7 +445,7 @@ export const ShelfPurchase = ({ purchase, error, onSettings, onKeep, onVerdict, 
   const [busy, setBusy] = useState('');
 
   if (!purchase) {
-    return error ? <p className="error-text">{error}</p> : <p className="meta-line">Считаем закупку…</p>;
+    return error ? <p className="error-text">{error}</p> : <SmokeLoading label="Считаем закупку" />;
   }
 
   const keep = async (tobacco: ShelfTobaccoRef, next: boolean) => {

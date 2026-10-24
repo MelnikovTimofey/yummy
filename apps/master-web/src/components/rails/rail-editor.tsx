@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp, Flame, GripVertical, Plus, Search, Star, X } fr
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatMixStatusLabel, formatRailType, formatRating, resolveMixStatus } from '@/contracts';
+import { BusyLabel } from '@/components/ui/loading';
 
 export type RailEditorState = {
   id: string;
@@ -94,11 +95,7 @@ export const RailEditor = ({
 
   const locked = Boolean(editor.id) && !editor.editable;
   const headerTitle = editor.name || (editor.id ? 'Без названия' : 'Новый рейл');
-  const submitLabel = saveStatus === 'loading'
-    ? 'Сохраняем…'
-    : editor.id
-      ? 'Сохранить'
-      : 'Создать';
+  const submitLabel = editor.id ? 'Сохранить' : 'Создать';
 
   const handleClose = () => {
     onOpenChange(false);
@@ -400,8 +397,9 @@ export const RailEditor = ({
                   className="btn"
                   data-variant="primary"
                   disabled={saveStatus === 'loading'}
+                  aria-busy={saveStatus === 'loading' || undefined}
                 >
-                  {submitLabel}
+                  <BusyLabel busy={saveStatus === 'loading'}>{submitLabel}</BusyLabel>
                 </button>
               ) : null}
             </div>

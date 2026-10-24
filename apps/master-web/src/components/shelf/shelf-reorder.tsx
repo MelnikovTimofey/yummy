@@ -15,6 +15,7 @@ import {
   type TextSegment,
 } from '@/lib/reorder';
 import type { ShelfToastData } from './shelf-toast';
+import { SmokeLoading } from '@/components/ui/loading';
 
 type ShelfReorderProps = {
   reorder: ReorderView | null;
@@ -45,7 +46,7 @@ export const ShelfReorder = ({ reorder, error, notify, onSettings }: ShelfReorde
   const [copiedKey, setCopiedKey] = useState('');
 
   if (!reorder) {
-    return error ? <p className="error-text">{error}</p> : <p className="meta-line">Считаем, что пора заказать…</p>;
+    return error ? <p className="error-text">{error}</p> : <SmokeLoading label="Считаем, что пора заказать" />;
   }
 
   const note = intervalNote(reorder.interval, reorder.horizon, reorder.settings.leadDays);

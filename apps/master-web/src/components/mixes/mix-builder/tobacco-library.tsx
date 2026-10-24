@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Plus, Search } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
+import { SmokeMark } from '@/components/ui/loading';
 
 type TobaccoLibraryProps = {
   // Список по умолчанию (пустой поиск): первые 100 табаков по алфавиту.
@@ -99,7 +100,14 @@ export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }:
           </label>
         </div>
         <p className="mix-builder__library-count">
-          {loading ? 'Ищем…' : `${filtered.length} из ${source.length}`}
+          {loading ? (
+            <span role="status">
+              <SmokeMark inline />
+              <span className="sr-only">Ищем табаки</span>
+            </span>
+          ) : (
+            `${filtered.length} из ${source.length}`
+          )}
         </p>
       </div>
 

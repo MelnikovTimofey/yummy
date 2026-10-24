@@ -45,6 +45,7 @@ import {
   formatRating,
   resolveMixStatus,
 } from '@/contracts';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 export type MixEditorComponentInput = {
   key: string;
@@ -548,7 +549,7 @@ export const MixCatalogView = ({
         )}
       </div>
 
-      {status === 'loading' ? <p className="meta-line">Загружаем каталог миксов…</p> : null}
+      {status === 'loading' && !items.length ? <RowsSkeleton label="Загружаем каталог миксов" rows={8} /> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
       <ListPagination

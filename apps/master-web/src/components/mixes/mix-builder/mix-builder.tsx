@@ -7,6 +7,7 @@ import { ComponentCard } from './component-card';
 import { ProportionBar } from './proportion-bar';
 import { TobaccoLibrary } from './tobacco-library';
 import { componentsTotal, rebalanceTo100 } from './rebalance';
+import { BusyLabel } from '@/components/ui/loading';
 
 type MixBuilderProps = {
   mode: 'create' | 'edit';
@@ -200,8 +201,9 @@ export const MixBuilder = ({
             className="btn"
             data-variant="primary"
             disabled={!isValid || saveStatus === 'loading'}
+            aria-busy={saveStatus === 'loading' || undefined}
           >
-            {saveStatus === 'loading' ? 'Сохраняем…' : mode === 'edit' ? 'Сохранить' : 'Создать микс'}
+            <BusyLabel busy={saveStatus === 'loading'}>{mode === 'edit' ? 'Сохранить' : 'Создать микс'}</BusyLabel>
           </button>
         </div>
       </header>

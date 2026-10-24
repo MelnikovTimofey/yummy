@@ -16,6 +16,7 @@ import {
 } from '@/lib/deliveries';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
 import { ManualDeliveryDialog } from './delivery-dialogs';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -230,7 +231,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
         <span>{uploading ? `Разбираем ${uploading}…` : 'Перетащите PDF счёта сюда'}</span>
       </div>
 
-      {api.status === 'loading' && !list ? <p className="meta-line">Загружаем поставки…</p> : null}
+      {api.status === 'loading' && !list ? <RowsSkeleton label="Загружаем поставки" /> : null}
 
       {list ? (
         <div className="shelf-table-shell">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { InventoryTobacco } from '@/contracts';
+import { SmokeLoading } from '@/components/ui/loading';
 
 const DEBOUNCE_MS = 250;
 const MIN_QUERY = 2;
@@ -60,7 +61,7 @@ type TobaccoSearchResultsProps = {
 
 export const TobaccoSearchResults = ({ query, state, items, selectedId, onPick }: TobaccoSearchResultsProps) => {
   if (query.trim().length < MIN_QUERY) return null;
-  if (state === 'loading' && !items.length) return <p className="deliv-picker__note">Ищем в каталоге…</p>;
+  if (state === 'loading' && !items.length) return <SmokeLoading label="Ищем в каталоге" className="loading-smoke-compact" />;
   if (state === 'error') return <p className="deliv-picker__note">Каталог не ответил. Повторите поиск.</p>;
   if (!items.length) return <p className="deliv-picker__note">В каталоге ничего похожего.</p>;
   return (

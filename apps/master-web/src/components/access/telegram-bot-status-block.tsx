@@ -4,6 +4,7 @@ import type {
 } from '@/contracts';
 import { formatTelegramAutomationHealth } from '@/contracts';
 import type { AccessRoleStatus } from './types';
+import { RowsSkeleton } from '@/components/ui/loading';
 
 type TelegramBotStatusBlockProps = {
   telegramAutomationState: TelegramAutomationStateRecord | null;
@@ -84,8 +85,8 @@ export const TelegramBotStatusBlock = ({
         <span className={badge.className}>{badge.label}</span>
       </header>
 
-      {telegramAutomationStateStatus === 'loading' ? (
-        <p className="meta-line bot-status__notice">Загружаем статус бота…</p>
+      {telegramAutomationStateStatus === 'loading' && !telegramAutomationState ? (
+        <RowsSkeleton label="Загружаем статус бота" rows={2} />
       ) : null}
       {telegramAutomationStateStatus === 'error' ? (
         <p className="error-text bot-status__notice">{telegramAutomationStateError}</p>

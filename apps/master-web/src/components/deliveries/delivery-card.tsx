@@ -25,6 +25,7 @@ import {
 import { describeShelfError } from '@/lib/shelf';
 import { AddLineDialog, CreateTobaccoDialog, DeleteDraftDialog } from './delivery-dialogs';
 import { TobaccoPicker } from './tobacco-picker';
+import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
 
 export type Notify = (toast: { title: string; text: string; error?: boolean; action?: { label: string; onClick: () => void } }) => void;
 
@@ -143,7 +144,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
         <button type="button" className="btn deliv-back" data-variant="ghost" data-size="sm" onClick={onBack}>
           <ArrowLeft size={14} aria-hidden /> Поставки
         </button>
-        {loadError ? <p className="error-text">{loadError}</p> : <p className="meta-line">Загружаем поставку…</p>}
+        {loadError ? <p className="error-text">{loadError}</p> : <RowsSkeleton label="Загружаем поставку" />}
       </section>
     );
   }
@@ -435,8 +436,9 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
             data-variant="primary"
             disabled={card.pendingLines > 0 || accepting || Boolean(busyLine) || !card.lines.length}
             onClick={() => void accept()}
+            aria-busy={accepting || undefined}
           >
-            {accepting ? 'Принимаем…' : acceptLabel(card.pendingLines)}
+            <BusyLabel busy={accepting}>{acceptLabel(card.pendingLines)}</BusyLabel>
           </button>
         </div>
       ) : null}

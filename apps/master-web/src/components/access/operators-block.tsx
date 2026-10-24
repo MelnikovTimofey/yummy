@@ -2,6 +2,7 @@ import { useMemo, useState, type Dispatch, type FormEvent, type SetStateAction }
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { TelegramOperatorRecord } from '@/contracts';
 import type { AccessRoleStatus, AccessSaveStatus, TelegramOperatorEditorState } from './types';
+import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
 
 type OperatorsBlockProps = {
   telegramOperators: TelegramOperatorRecord[];
@@ -197,7 +198,7 @@ export const OperatorsBlock = ({
             </div>
 
             {telegramOperatorsStatus === 'loading' && !telegramOperators.length ? (
-              <p className="access-card__empty meta-line">Загружаем операторов…</p>
+              <RowsSkeleton label="Загружаем операторов" rows={3} />
             ) : null}
 
             {visible.length === 0 && telegramOperatorsStatus !== 'loading' ? (
@@ -419,12 +420,11 @@ export const OperatorsBlock = ({
                   className="btn"
                   data-variant="primary"
                   disabled={telegramOperatorSaveStatus === 'loading'}
+                  aria-busy={telegramOperatorSaveStatus === 'loading' || undefined}
                 >
-                  {telegramOperatorSaveStatus === 'loading'
-                    ? 'Сохраняем…'
-                    : telegramOperatorEditor.id
-                      ? 'Сохранить'
-                      : 'Добавить'}
+                  <BusyLabel busy={telegramOperatorSaveStatus === 'loading'}>
+                    {telegramOperatorEditor.id ? 'Сохранить' : 'Добавить'}
+                  </BusyLabel>
                 </button>
               </footer>
             </form>

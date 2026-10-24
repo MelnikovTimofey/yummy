@@ -1,5 +1,6 @@
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { FormEvent, KeyboardEvent, useState } from 'react';
+import { BusyLabel } from '@/components/ui/loading';
 
 type LoginScreenStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -27,7 +28,6 @@ export const LoginScreen = ({
   const [showPassword, setShowPassword] = useState(false);
   const [capsOn, setCapsOn] = useState(false);
   const loading = status === 'loading';
-  const submitLabel = loading ? 'Проверяем…' : 'Войти';
 
   const onPasswordKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (typeof event.getModifierState === 'function') {
@@ -126,8 +126,9 @@ export const LoginScreen = ({
               type="submit"
               className="auth-screen__submit"
               disabled={loading}
+              aria-busy={loading || undefined}
             >
-              {submitLabel}
+              <BusyLabel busy={loading}>Войти</BusyLabel>
             </button>
           </form>
         </section>
