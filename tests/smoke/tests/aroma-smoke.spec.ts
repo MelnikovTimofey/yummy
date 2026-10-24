@@ -357,7 +357,7 @@ test('Aroma anonymous heart offers the cabinet and «Не сейчас» closes 
   await page.getByRole('button', { name: 'Начать подбор' }).click();
   await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
 
-  await page.locator('.aroma-catalog-row').first().click();
+  await page.locator('.aroma-catalog-list .mix-row').first().click();
   const heart = page.getByRole('button', { name: 'В избранное' });
   await expect(heart).toHaveAttribute('aria-pressed', 'false');
   await heart.click();
@@ -594,7 +594,7 @@ test('Aroma reels continue the recommendations without repeating them', async ({
 
   const teaser = page.getByRole('button', { name: /^Ещё \d+ микс\S* в рилсах$/ });
   await expect(teaser).toBeVisible();
-  const shown = (await page.locator('.aroma-recs-hero-title, .aroma-recs-row-name').allInnerTexts()).map((name) => name.trim());
+  const shown = (await page.locator('.aroma-recs-hero-title, .aroma-recs-list .mix-row-name').allInnerTexts()).map((name) => name.trim());
   expect(shown).toHaveLength(2);
 
   await teaser.click();

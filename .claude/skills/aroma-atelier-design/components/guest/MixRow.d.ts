@@ -1,14 +1,12 @@
 import type { CSSProperties } from 'react';
 
-/** The guest app's workhorse list item — catalog, rail and "тоже подходят" rows. */
+/** The one guest mix row: Подбор, Каталог, подборки, «Для вас», кабинет. */
 export interface MixRowProps {
   name: string;
   /** Flavour notes; only the first three render, joined by commas. */
   flavors?: string[];
   profiles?: string[];
   rating?: number;
-  glyphSize?: number;
-  showGlyph?: boolean;
   onClick?: () => void;
   style?: CSSProperties;
 }

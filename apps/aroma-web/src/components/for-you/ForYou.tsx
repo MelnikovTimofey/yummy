@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CTA, ProfileGlyph, SignatureBar } from '@/components/aroma';
+import { CTA, MixListRow, ProfileGlyph, SignatureBar } from '@/components/aroma';
 import {
   FOR_YOU_TITLE,
   MOOD_TITLE,
@@ -47,14 +47,12 @@ export function RecsTabs({ value, onChange }: { value: RecsTab; onChange: (tab: 
 
 function ReasonRow<M extends ForYouMix>({ row, onOpen }: { row: ForYouRow<M>; onOpen: (mix: M) => void }) {
   return (
-    <button type="button" className="cab-row" onClick={() => onOpen(row.mix)}>
-      <ProfileGlyph profiles={row.mix.flavorProfiles} size={44} />
-      <span className="cab-row-text">
-        <span className="cab-row-name">{row.mix.name}</span>
-        <SignatureBar profiles={row.mix.flavorProfiles} height={3} />
-        <span className="cab-row-reason">{row.reason}</span>
-      </span>
-    </button>
+    <MixListRow
+      profiles={row.mix.flavorProfiles}
+      name={row.mix.name}
+      sub={row.reason}
+      onClick={() => onOpen(row.mix)}
+    />
   );
 }
 
@@ -127,11 +125,11 @@ export function ForYou<M extends ForYouMix>({
       {tabs}
 
       {hint ? (
-        <button type="button" className="cab-row" onClick={() => onOpen(hint.mix)}>
+        <button type="button" className="mix-row" onClick={() => onOpen(hint.mix)}>
           <ProfileGlyph profiles={hint.mix.flavorProfiles} size={44} />
-          <span className="cab-row-text">
-            <span className="cab-row-reason">{hint.text}</span>
-            <span className="cab-row-name">{hint.mix.name}</span>
+          <span className="mix-row-text">
+            <span className="mix-row-sub">{hint.text}</span>
+            <span className="mix-row-name">{hint.mix.name}</span>
           </span>
         </button>
       ) : null}

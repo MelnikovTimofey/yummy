@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"0f99f3b556e5","components/guest/AromaCTA.jsx":"74fa9fb65a2d","components/guest/AromaChip.jsx":"f5cacf379c55","components/guest/CompositionStack.jsx":"014fbbecfbe9","components/guest/GuestCard.jsx":"bc7a355b7168","components/guest/GuestTab.jsx":"324ea1ace990","components/guest/MixRow.jsx":"9076eab731a8","components/guest/OnboardingProgress.jsx":"19b5b3545830","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"7a98b5018446","components/guest/SegmentNav.jsx":"66a42206d513","components/guest/ShowcaseCard.jsx":"1ecc7593de3d","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"62c565135c7f","components/master/FilterChip.jsx":"1c8aea0a3a37","components/master/MasterButton.jsx":"68fc0867cbb9","components/master/MasterCard.jsx":"e86c412054ea","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"c795b42dc299","components/master/MasterSortPill.jsx":"e3cd2defb423","components/master/MasterStatsRow.jsx":"fb6ca7ea16d6","components/master/MasterTag.jsx":"ce360a2c206a","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"40d20e0177fa","components/master/StatusPill.jsx":"4965e9b5d117","ui_kits/aroma-guest/GuestApp.jsx":"b88c06efbcdb","ui_kits/aroma-guest/GuestScreens.jsx":"dfd436d6ddaf","ui_kits/aroma-guest/mock-data.js":"137a193badbc","ui_kits/master/MasterApp.jsx":"bc84ff3c8365","ui_kits/master/MasterScreens.jsx":"2f0991c3e19c","ui_kits/master/mock-data.js":"7bbed34b2303"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"DesignSystem_1aef33","components":[{"name":"AccessCodeInput","sourcePath":"components/guest/AccessCodeInput.jsx"},{"name":"AromaCTA","sourcePath":"components/guest/AromaCTA.jsx"},{"name":"AromaChip","sourcePath":"components/guest/AromaChip.jsx"},{"name":"CompositionStack","sourcePath":"components/guest/CompositionStack.jsx"},{"name":"GuestCard","sourcePath":"components/guest/GuestCard.jsx"},{"name":"GuestTab","sourcePath":"components/guest/GuestTab.jsx"},{"name":"MixRow","sourcePath":"components/guest/MixRow.jsx"},{"name":"OnboardingProgress","sourcePath":"components/guest/OnboardingProgress.jsx"},{"name":"ProfileCard","sourcePath":"components/guest/ProfileCard.jsx"},{"name":"ProfileGlyph","sourcePath":"components/guest/ProfileGlyph.jsx"},{"name":"RatingPill","sourcePath":"components/guest/RatingPill.jsx"},{"name":"SegmentNav","sourcePath":"components/guest/SegmentNav.jsx"},{"name":"ShowcaseCard","sourcePath":"components/guest/ShowcaseCard.jsx"},{"name":"SignatureBar","sourcePath":"components/guest/SignatureBar.jsx"},{"name":"EmptyState","sourcePath":"components/master/EmptyState.jsx"},{"name":"FilterChip","sourcePath":"components/master/FilterChip.jsx"},{"name":"MasterButton","sourcePath":"components/master/MasterButton.jsx"},{"name":"MasterCard","sourcePath":"components/master/MasterCard.jsx"},{"name":"MasterIconButton","sourcePath":"components/master/MasterIconButton.jsx"},{"name":"MasterInput","sourcePath":"components/master/MasterInput.jsx"},{"name":"MasterList","sourcePath":"components/master/MasterList.jsx"},{"name":"MasterPageHeader","sourcePath":"components/master/MasterPageHeader.jsx"},{"name":"MasterSortPill","sourcePath":"components/master/MasterSortPill.jsx"},{"name":"MasterStatsRow","sourcePath":"components/master/MasterStatsRow.jsx"},{"name":"MasterTag","sourcePath":"components/master/MasterTag.jsx"},{"name":"MasterToggle","sourcePath":"components/master/MasterToggle.jsx"},{"name":"MasterTopBar","sourcePath":"components/master/MasterTopBar.jsx"},{"name":"StatusPill","sourcePath":"components/master/StatusPill.jsx"}],"sourceHashes":{"components/guest/AccessCodeInput.jsx":"0f99f3b556e5","components/guest/AromaCTA.jsx":"74fa9fb65a2d","components/guest/AromaChip.jsx":"f5cacf379c55","components/guest/CompositionStack.jsx":"014fbbecfbe9","components/guest/GuestCard.jsx":"bc7a355b7168","components/guest/GuestTab.jsx":"324ea1ace990","components/guest/MixRow.jsx":"07c0ca909f8c","components/guest/OnboardingProgress.jsx":"19b5b3545830","components/guest/ProfileCard.jsx":"5a6af41d8307","components/guest/ProfileGlyph.jsx":"870d1cf28c07","components/guest/RatingPill.jsx":"7a98b5018446","components/guest/SegmentNav.jsx":"66a42206d513","components/guest/ShowcaseCard.jsx":"1ecc7593de3d","components/guest/SignatureBar.jsx":"d565a356e122","components/master/EmptyState.jsx":"62c565135c7f","components/master/FilterChip.jsx":"1c8aea0a3a37","components/master/MasterButton.jsx":"68fc0867cbb9","components/master/MasterCard.jsx":"e86c412054ea","components/master/MasterIconButton.jsx":"acfa08a55647","components/master/MasterInput.jsx":"0735f8fbfc8b","components/master/MasterList.jsx":"85f6989a3f7d","components/master/MasterPageHeader.jsx":"c795b42dc299","components/master/MasterSortPill.jsx":"e3cd2defb423","components/master/MasterStatsRow.jsx":"fb6ca7ea16d6","components/master/MasterTag.jsx":"ce360a2c206a","components/master/MasterToggle.jsx":"916a13724f1a","components/master/MasterTopBar.jsx":"40d20e0177fa","components/master/StatusPill.jsx":"4965e9b5d117","ui_kits/aroma-guest/GuestApp.jsx":"b88c06efbcdb","ui_kits/aroma-guest/GuestScreens.jsx":"8e3eb40367d3","ui_kits/aroma-guest/mock-data.js":"137a193badbc","ui_kits/master/MasterApp.jsx":"bc84ff3c8365","ui_kits/master/MasterScreens.jsx":"2f0991c3e19c","ui_kits/master/mock-data.js":"7bbed34b2303"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -680,15 +680,13 @@ Object.assign(__ds_scope, { SignatureBar });
 
 // components/guest/MixRow.jsx
 try { (() => {
-// Mix list row: optional glyph, name + flavour line, rating on the right.
+// Mix list row: glyph, name, profile bar, flavour line, rating on the right. One row for every guest list.
 
 function MixRow({
   name,
   flavors = [],
   profiles = [],
   rating,
-  glyphSize = 44,
-  showGlyph = true,
   onClick,
   style
 }) {
@@ -697,10 +695,10 @@ function MixRow({
     onClick: onClick,
     style: {
       display: 'grid',
-      gridTemplateColumns: (showGlyph ? glyphSize + 'px ' : '') + 'minmax(0,1fr) auto',
+      gridTemplateColumns: '44px minmax(0,1fr) auto',
       alignItems: 'center',
       gap: 10,
-      padding: showGlyph ? '8px 12px' : '10px 12px',
+      padding: '8px 12px',
       borderRadius: 'var(--r-guest-row)',
       border: '1px solid var(--border-subtle)',
       background: 'var(--guest-row-bg)',
@@ -710,10 +708,10 @@ function MixRow({
       transition: 'border-color var(--dur-fast), background var(--dur-fast)',
       ...style
     }
-  }, showGlyph ? /*#__PURE__*/React.createElement(__ds_scope.ProfileGlyph, {
+  }, /*#__PURE__*/React.createElement(__ds_scope.ProfileGlyph, {
     profiles: profiles,
-    size: glyphSize
-  }) : null, /*#__PURE__*/React.createElement("span", {
+    size: 44
+  }), /*#__PURE__*/React.createElement("span", {
     style: {
       minWidth: 0,
       display: 'grid',
@@ -726,7 +724,10 @@ function MixRow({
       lineHeight: 1.2,
       color: 'var(--text-primary)'
     }
-  }, name), flavors.length ? /*#__PURE__*/React.createElement("span", {
+  }, name), /*#__PURE__*/React.createElement(__ds_scope.SignatureBar, {
+    profiles: profiles,
+    height: 3
+  }), flavors.length ? /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
       color: 'var(--text-secondary)',
@@ -2383,25 +2384,23 @@ function OnboardingScreen({
   }, "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0442\u0430\u043B\u043E\u0433 \u0441\u0440\u0430\u0437\u0443")));
 }
 
-// Приглашение в «Намиксуй»: полосой на Витрине, строкой с пояснением в конце Подбора. Без глифа: профилей у него нет.
+// Приглашение в «Намиксуй»: кнопка-контур со значком из нижней панели и подпись под ней, чтобы не читалось строкой микса.
 function MixerInvite({
   onOpen,
   note
 }) {
-  return /*#__PURE__*/React.createElement("button", {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "aroma-mixer-invite"
+  }, /*#__PURE__*/React.createElement("button", {
     type: "button",
-    className: "aroma-mixer-invite",
+    className: "aroma-mixer-invite-btn",
     onClick: onOpen
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "aroma-mixer-invite-text"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "aroma-mixer-invite-title"
-  }, "\u0421\u043E\u0431\u0440\u0430\u0442\u044C \u0441\u0432\u043E\u0439 \u043C\u0438\u043A\u0441"), note ? /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "Blend",
+    size: 18
+  }), "\u0421\u043E\u0431\u0440\u0430\u0442\u044C \u0441\u0432\u043E\u0439 \u043C\u0438\u043A\u0441"), note ? /*#__PURE__*/React.createElement("p", {
     className: "aroma-mixer-invite-note"
-  }, "\u0418\u0437 \u0442\u0430\u0431\u0430\u043A\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0435\u0441\u0442\u044C \u043D\u0430 \u043F\u043E\u043B\u043A\u0430\u0445.") : null), /*#__PURE__*/React.createElement(Icon, {
-    name: "ChevronRight",
-    size: 20
-  }));
+  }, "\u0418\u0437 \u0442\u0430\u0431\u0430\u043A\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0435\u0441\u0442\u044C \u043D\u0430 \u043F\u043E\u043B\u043A\u0430\u0445.") : null);
 }
 const choices = n => {
   const a = n % 10,
@@ -2482,7 +2481,6 @@ function RecommendationsScreen({
     profiles: mix.flavorProfiles,
     flavors: mix.flavors,
     rating: guestRating(mix),
-    showGlyph: false,
     onClick: () => onOpen(mix, 'recommendations')
   })))) : null, onOpenMixer ? /*#__PURE__*/React.createElement(MixerInvite, {
     onOpen: onOpenMixer,
@@ -2648,10 +2646,6 @@ function CatalogScreen({
     profiles: mix.flavorProfiles,
     flavors: flavorsMatchedFirst(mix.flavors, query, filters),
     rating: guestRating(mix),
-    glyphSize: 36,
-    style: {
-      padding: '7px 12px'
-    },
     onClick: () => onOpen(mix, 'catalog')
   }))));
 }
@@ -2792,7 +2786,6 @@ function RailScreen({
     profiles: mix.flavorProfiles,
     flavors: mix.flavors,
     rating: guestRating(mix),
-    glyphSize: 60,
     onClick: () => onOpen(mix, 'rail')
   }))));
 }

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ChevronRight, ClipboardList } from 'lucide-react';
 
-import { BottomNav, Chip, CTA, ProfileGlyph, RatingPill, SignatureBar, type BottomNavTab } from '@/components/aroma';
+import { BottomNav, Chip, CTA, MixListRow, ProfileGlyph, RatingPill, SignatureBar, type BottomNavTab } from '@/components/aroma';
 import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
 import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
@@ -2830,27 +2830,25 @@ export const App = () => {
         {rest.length ? (
           <div className="aroma-recs-list">
             {rest.slice(0, RECS_ON_SCREEN - 1).map((mix) => (
-              <button
+              <MixListRow
                 key={mix.id}
-                type="button"
-                className="aroma-recs-row"
+                profiles={mix.flavorProfiles}
+                name={mix.name}
+                sub={
+                  mix.flavors.length
+                    ? mix.flavors.slice(0, 3).map((flavor, index) => (
+                        <Fragment key={`${mix.id}-${flavor}`}>
+                          {index ? ', ' : ''}
+                          <span className={cn(mix.matchedFlavors.includes(flavor) && 'aroma-recs-flavor-on')}>
+                            {flavor}
+                          </span>
+                        </Fragment>
+                      ))
+                    : null
+                }
+                aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
                 onClick={() => openMix(mix, source)}
-              >
-                <div className="aroma-recs-row-main">
-                  <h3 className="aroma-recs-row-name">{mix.name}</h3>
-                  <p className="aroma-recs-row-flavors">
-                    {mix.flavors.slice(0, 3).map((flavor, index) => (
-                      <Fragment key={`${mix.id}-${flavor}`}>
-                        {index ? ', ' : ''}
-                        <span className={cn(mix.matchedFlavors.includes(flavor) && 'aroma-recs-row-flavor-on')}>
-                          {flavor}
-                        </span>
-                      </Fragment>
-                    ))}
-                  </p>
-                </div>
-                {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
-              </button>
+              />
             ))}
           </div>
         ) : null}
@@ -3103,23 +3101,14 @@ export const App = () => {
 
         <div className="aroma-rail-list">
           {visibleMixes.map((mix) => (
-            <button
+            <MixListRow
               key={`${rail.id}:${mix.id}`}
-              type="button"
-              className="aroma-rail-row"
+              profiles={mix.flavorProfiles}
+              name={mix.name}
+              sub={mix.flavors.slice(0, 3).join(', ')}
+              aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
               onClick={() => openMix(mix, 'rail')}
-            >
-              <ProfileGlyph profiles={mix.flavorProfiles} size={60} />
-              <div className="aroma-rail-row-main">
-                <h3 className="aroma-rail-row-name">{mix.name}</h3>
-                {mix.flavors.length ? (
-                  <p className="aroma-rail-row-flavors">
-                    {mix.flavors.slice(0, 3).join(', ')}
-                  </p>
-                ) : null}
-              </div>
-              {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
-            </button>
+            />
           ))}
         </div>
       </section>
@@ -3255,23 +3244,14 @@ export const App = () => {
 
         <div className="aroma-catalog-list">
           {filteredCatalogMixes.map((mix) => (
-            <button
+            <MixListRow
               key={mix.id}
-              type="button"
-              className="aroma-catalog-row"
+              profiles={mix.flavorProfiles}
+              name={mix.name}
+              sub={flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(', ')}
+              aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
               onClick={() => openMix(mix, 'catalog')}
-            >
-              <ProfileGlyph profiles={mix.flavorProfiles} size={36} />
-              <div className="aroma-catalog-row-main">
-                <h3 className="aroma-catalog-row-name">{mix.name}</h3>
-                {mix.flavors.length ? (
-                  <p className="aroma-catalog-row-flavors">
-                    {flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(', ')}
-                  </p>
-                ) : null}
-              </div>
-              {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
-            </button>
+            />
           ))}
         </div>
       </section>
