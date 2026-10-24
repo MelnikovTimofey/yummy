@@ -6446,12 +6446,6 @@ button[aria-busy="true"]:disabled {
 .deliv-drop[data-state="hover"] { border-color: var(--accent); background: var(--accent-soft); color: var(--text-primary); }
 .deliv-drop[data-state="busy"] { cursor: progress; border-color: var(--accent-border); }
 
-.deliv-spin { animation: deliv-spin 900ms linear infinite; }
-
-@keyframes deliv-spin {
-  to { transform: rotate(360deg); }
-}
-
 /* --- Список поставок -------------------------------------------------- */
 
 .deliv-table { min-width: 980px; }

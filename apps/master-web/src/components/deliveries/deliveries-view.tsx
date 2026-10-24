@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
-import { Copy, FileUp, FileWarning, LoaderCircle } from 'lucide-react';
+import { Copy, FileUp, FileWarning } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ShelfToast, type ShelfToastData } from '@/components/shelf/shelf-toast';
 import { formatMetricValue, type DeliveryCard } from '@/contracts';
@@ -16,7 +16,7 @@ import {
 } from '@/lib/deliveries';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
 import { ManualDeliveryDialog } from './delivery-dialogs';
-import { RowsSkeleton } from '@/components/ui/loading';
+import { RowsSkeleton, SmokeMark } from '@/components/ui/loading';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -227,8 +227,8 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
       >
-        {uploading ? <LoaderCircle size={20} className="deliv-spin" aria-hidden /> : <FileUp size={20} aria-hidden />}
-        <span>{uploading ? `Разбираем ${uploading}…` : 'Перетащите PDF счёта сюда'}</span>
+        {uploading ? <SmokeMark inline /> : <FileUp size={20} aria-hidden />}
+        <span role={uploading ? 'status' : undefined}>{uploading ? `Разбираем ${uploading}` : 'Перетащите PDF счёта сюда'}</span>
       </div>
 
       {api.status === 'loading' && !list ? <RowsSkeleton label="Загружаем поставки" /> : null}

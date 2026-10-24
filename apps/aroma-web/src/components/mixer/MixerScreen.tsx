@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BottomNav, type BottomNavTab } from '@/components/aroma';
+import { BottomNav, SmokeLoading, type BottomNavTab } from '@/components/aroma';
 
 import { evaluateBowl, fetchMixerPalette, MixerApiError, sendCustomMixSmoke } from '@/lib/mixer/api';
 import {
@@ -558,7 +558,7 @@ export function MixerScreen({
         </header>
         {progress}
 
-        {phase === 'loading' ? <p className="screen-status">Раскладываем табаки…</p> : null}
+        {phase === 'loading' ? <SmokeLoading label="Раскладываем табаки" /> : null}
 
         {phase === 'error' ? (
           <div className="mixer-status">
