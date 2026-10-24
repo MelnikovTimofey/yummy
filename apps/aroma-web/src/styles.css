@@ -995,7 +995,7 @@ select:focus-visible {
   color: var(--text-2);
 }
 
-.aroma-recs-row-flavor-on {
+.aroma-recs-flavor-on {
   color: var(--text-0);
   font-weight: 600;
 }
@@ -1084,59 +1084,121 @@ select:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* Приглашение в «Намиксуй»: строка без глифа и надписи над ней. */
+/* Приглашение в «Намиксуй»: кнопка-контур на всю ширину и подпись под ней,
+   чтобы не читалось ещё одной строкой микса. */
 .aroma-mixer-invite {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.aroma-showcase > .aroma-mixer-invite {
+  margin: 0 20px 6px;
+}
+
+.aroma-mixer-invite-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  min-height: 52px;
-  padding: 10px 10px 10px 14px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line);
-  background: var(--guest-row-bg);
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: var(--r-guest-control);
+  border: 1px solid var(--accent-border);
+  background: transparent;
   color: var(--text-0);
-  text-align: left;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 120ms;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 
-.aroma-mixer-invite:hover {
-  border-color: rgba(142, 47, 60, 0.40);
+.aroma-mixer-invite-btn:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-soft);
 }
 
-.aroma-mixer-invite:focus-visible {
+.aroma-mixer-invite-btn:focus-visible {
   outline: 2px solid var(--accent-hover);
   outline-offset: 2px;
 }
 
-.aroma-showcase > .aroma-mixer-invite {
-  width: auto;
-  margin-inline: 20px;
-}
-
-.aroma-mixer-invite-text {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.aroma-mixer-invite-title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  line-height: 1.2;
-}
-
 .aroma-mixer-invite-note {
+  margin: 0;
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-2);
+  text-align: center;
 }
 
-.aroma-mixer-invite-chevron {
-  flex: 0 0 auto;
-  margin-left: auto;
-  color: var(--text-1);
+/* Строка микса во всех гостевых списках (MixListRow). */
+.mix-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--r-guest-row);
+  border: 1px solid var(--border-subtle);
+  background: var(--guest-row-bg);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast);
+}
+
+.mix-row:hover {
+  border-color: var(--accent-border);
+}
+
+.mix-row:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+/* «Больше не готовим»: приглушена и не нажимается. */
+.mix-row-off {
+  cursor: default;
+  opacity: 0.62;
+}
+
+.mix-row-off:hover {
+  border-color: var(--border-subtle);
+}
+
+.mix-row-text {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.mix-row-name {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  line-height: 1.35;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mix-row-mark {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mix-row-sub {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .aroma-recs-list {
@@ -1144,47 +1206,10 @@ select:focus-visible {
   gap: 8px;
 }
 
-.aroma-recs-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line);
-  background: rgba(28, 28, 33, 0.84);
-  color: var(--text-0);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 120ms, background 120ms;
-}
 
-.aroma-recs-row:hover {
-  border-color: rgba(142, 47, 60, 0.40);
-}
 
-.aroma-recs-row-main {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
 
-.aroma-recs-row-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 14.5px;
-  line-height: 1.15;
-  color: var(--text-0);
-}
 
-.aroma-recs-row-flavors {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .aroma-catalog {
   display: grid;
@@ -1398,47 +1423,10 @@ select:focus-visible {
   gap: 6px;
 }
 
-.aroma-catalog-row {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line);
-  background: rgba(28, 28, 33, 0.84);
-  color: var(--text-0);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 120ms, background 120ms;
-}
 
-.aroma-catalog-row:hover {
-  border-color: rgba(142, 47, 60, 0.40);
-}
 
-.aroma-catalog-row-main {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
 
-.aroma-catalog-row-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 14.5px;
-  line-height: 1.2;
-  color: var(--text-0);
-}
 
-.aroma-catalog-row-flavors {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .aroma-showcase {
   display: grid;
@@ -2026,47 +2014,10 @@ select:focus-visible {
   gap: 8px;
 }
 
-.aroma-rail-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line);
-  background: rgba(28, 28, 33, 0.84);
-  color: var(--text-0);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 120ms;
-}
 
-.aroma-rail-row:hover {
-  border-color: rgba(142, 47, 60, 0.40);
-}
 
-.aroma-rail-row-main {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
 
-.aroma-rail-row-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 16px;
-  line-height: 1.15;
-  color: var(--text-0);
-}
 
-.aroma-rail-row-flavors {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 @media (max-width: 480px) {
   .app-bg {
@@ -2308,67 +2259,14 @@ select:focus-visible {
   gap: 6px;
 }
 
-.cab-row {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--border-subtle);
-  background: var(--guest-row-bg);
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--dur-fast);
-}
 
-.cab-row:hover {
-  border-color: rgba(142, 47, 60, 0.40);
-}
 
-.cab-row:focus-visible {
-  outline: 2px solid var(--accent-hover);
-  outline-offset: 2px;
-}
 
-/* «Больше не готовим»: приглушена и не нажимается. */
-.cab-row-off {
-  cursor: default;
-  opacity: 0.62;
-}
 
-.cab-row-off:hover {
-  border-color: var(--border-subtle);
-}
 
-.cab-row-text {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
 
-.cab-row-name {
-  font-family: var(--font-display);
-  font-size: 14.5px;
-  line-height: 1.35;
-  color: var(--text-primary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
-.cab-row-note {
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--text-muted);
-}
 
-.cab-mark {
-  font-size: 12px;
-  color: var(--text-muted);
-}
 
 .cab-own {
   font-size: 12px;
@@ -2475,11 +2373,6 @@ select:focus-visible {
   gap: 8px;
 }
 
-.cab-row-reason {
-  font-size: 11.5px;
-  line-height: 1.35;
-  color: var(--text-secondary);
-}
 
 .fy-hero-open {
   width: 100%;
