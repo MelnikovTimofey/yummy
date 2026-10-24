@@ -1,11 +1,13 @@
+import type { ReactNode } from 'react';
 import { CTA, MixListRow, ProfileGlyph, SignatureBar } from '@/components/aroma';
 import {
-  BACK_TO_FOR_YOU,
   FOR_YOU_TITLE,
-  MOOD_LINK,
+  MOOD_TITLE,
   type ForYouRow,
   type ForYouSlots,
+  type RecsTab,
 } from '@/lib/for-you-copy';
+import { cn } from '@/lib/utils';
 
 type ForYouMix = {
   id: string;
@@ -14,49 +16,32 @@ type ForYouMix = {
   components: Array<{ id: string; name: string; manufacturer: string; proportion: number }>;
 };
 
-// «Подобрать под настроение» — тихая ссылка, а не кнопка: главное действие на
-// Подборе остаётся одно, «Покурить».
-export function MoodLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" className="fy-mood-link" onClick={onClick}>
-      {MOOD_LINK}
-    </button>
-  );
-}
+const TABS: Array<{ value: RecsTab; label: string }> = [
+  { value: 'for-you', label: FOR_YOU_TITLE },
+  { value: 'mood', label: MOOD_TITLE },
+];
 
-export function BackToForYou({ onClick }: { onClick: () => void }) {
+// Подбор вошедшего — две вкладки вместо заголовка (#388): режим виден всегда, а
+// главное действие на экране остаётся одно, «Покурить». h1 — для скринридера.
+export function RecsTabs({ value, onChange }: { value: RecsTab; onChange: (tab: RecsTab) => void }) {
   return (
-    <button type="button" className="fy-mood-link" onClick={onClick}>
-      {BACK_TO_FOR_YOU}
-    </button>
-  );
-}
-
-// Строка «под настроение»: что выбрано и что из этого следует. `onBack` —
-// стрелка на онбординге этого визита: к первому шагу или к «Для вас».
-export function MoodNote({
-  title,
-  text,
-  onBack,
-  backLabel = BACK_TO_FOR_YOU,
-}: {
-  title: string;
-  text: string;
-  onBack?: () => void;
-  backLabel?: string;
-}) {
-  return (
-    <div className="fy-mood-note">
-      {onBack ? (
-        <button type="button" className="aroma-rail-back" onClick={onBack} aria-label={backLabel}>
-          ←
-        </button>
-      ) : null}
-      <p className="fy-mood-note-text">
-        <span className="fy-mood-note-title">{title}</span>
-        {text}
-      </p>
-    </div>
+    <>
+      <h1 className="sr-only">{value === 'mood' ? MOOD_TITLE : FOR_YOU_TITLE}</h1>
+      <div className="fy-tabs" role="tablist" aria-label="Подбор">
+        {TABS.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            aria-selected={value === tab.value}
+            className={cn('tab', value === tab.value && 'active')}
+            onClick={() => onChange(tab.value)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -124,23 +109,20 @@ export function ForYou<M extends ForYouMix>({
   chooseDisabled,
   onOpen,
   onChoose,
-  onMood,
+  tabs,
 }: {
   slots: ForYouSlots<M>;
   choosingId: string | null;
   chooseDisabled: boolean;
   onOpen: (mix: M) => void;
   onChoose: (mix: M) => void;
-  onMood: () => void;
+  tabs: ReactNode;
 }) {
   const { hint, hero, taste, sidestep, again } = slots;
 
   return (
     <section className="aroma-recs">
-      <header className="fy-head">
-        <h1 className="fy-title">{FOR_YOU_TITLE}</h1>
-        <MoodLink onClick={onMood} />
-      </header>
+      {tabs}
 
       {hint ? (
         <button type="button" className="mix-row" onClick={() => onOpen(hint.mix)}>

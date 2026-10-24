@@ -5,6 +5,7 @@ import {
   hintText,
   moodTitle,
   profileInstrumental,
+  recsScreen,
   profileNeuter,
   reasonText,
   submitPlan,
@@ -119,10 +120,19 @@ test('пустые слоты не показываются', () => {
   assert.equal(slots.hint, null);
 });
 
-test('«Под настроение» — профили этого визита, иначе вкусы', () => {
-  assert.equal(moodTitle({ profiles: ['citrus', 'berry'], flavors: ['мята'] }), 'Под настроение: цитрусовый, ягодный');
-  assert.equal(moodTitle({ profiles: [], flavors: ['мята', 'лайм'] }), 'Под настроение: мята, лайм');
-  assert.equal(moodTitle({ profiles: [], flavors: [] }), 'Под настроение');
+test('заголовок подбора под настроение — профили этого визита, иначе вкусы', () => {
+  assert.equal(moodTitle({ profiles: ['citrus', 'berry'], flavors: ['мята'] }), 'Цитрусовый, ягодный');
+  assert.equal(moodTitle({ profiles: [], flavors: ['мята', 'лайм'] }), 'Мята, лайм');
+  assert.equal(moodTitle({ profiles: [], flavors: [] }), '');
+});
+
+test('вкладка «Под настроение» показывает выбор, пока подбора нет или гость его меняет', () => {
+  assert.equal(recsScreen('for-you', null), 'for-you');
+  assert.equal(recsScreen('for-you', { step: null, items: [1] }), 'for-you', 'подбор под настроение ждёт во вкладке');
+  assert.equal(recsScreen('mood', null), 'pick');
+  assert.equal(recsScreen('mood', { step: 1, items: null }), 'pick');
+  assert.equal(recsScreen('mood', { step: null, items: [1] }), 'result');
+  assert.equal(recsScreen('mood', { step: 2, items: [1] }), 'pick', '«Изменить» возвращает к выбору');
 });
 
 test('«Под настроение» не перезаписывает сохранённые вкусы ни у вошедшего, ни у анонима', () => {

@@ -354,10 +354,11 @@ select:focus-visible {
   flex: 1 1 auto;
 }
 
-/* Знакомство и онбординг — на всю высоту экрана, CTA прижат к низу: их
-   min-height: 100% держится только на растянутой строке грида. */
+/* Знакомство, онбординг и выбор «Под настроение» — на всю высоту экрана, CTA
+   прижат к низу: их min-height: 100% держится только на растянутой строке грида. */
 .content-intro,
-.content-onboarding {
+.content-onboarding,
+.content-mood-pick {
   align-content: stretch;
 }
 
@@ -2352,19 +2353,13 @@ select:focus-visible {
   gap: 10px;
 }
 
-/* ── «Для вас» на Подборе (#245, мокапы fy-a, fy-cold, fy-mood, fy-mood-result) ── */
+/* ── «Для вас» на Подборе (#245, мокапы fy-a, fy-cold) ── */
 
-.fy-head {
+/* Вкладки «Для вас» и «Под настроение» вместо заголовка (#388, мокап a-fy). */
+.fy-tabs {
   display: grid;
-  gap: 4px;
-}
-
-.fy-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-guest-h1);
-  line-height: 1.05;
-  color: var(--text-0);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .fy-list {
@@ -2390,56 +2385,34 @@ select:focus-visible {
   border-radius: var(--r-guest-control);
 }
 
-/* Тихая ссылка без рамки и заливки: главное действие на Подборе одно. */
-.fy-mood-link {
-  justify-self: start;
-  min-height: 36px;
-  margin-top: 2px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-0);
-  font-family: var(--font-body);
-  font-size: 13px;
-  cursor: pointer;
+/* Выбор вкусов во вкладке «Под настроение» (#388, мокап a-pick): док со
+   счётчиком и CTA прилипает к низу Подбора над нижней панелью. */
+.fy-mood-pick {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-bottom: 0;
 }
 
-.fy-mood-link:focus-visible {
-  outline: 2px solid var(--accent-hover);
-  outline-offset: 2px;
-  border-radius: var(--r-guest-control);
-}
-
-.aroma-recs-empty .fy-mood-link {
-  justify-self: center;
-}
-
-.fy-mood-note {
+.fy-mood-step {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--r-guest-row);
-  border: 1px solid var(--line-soft);
 }
 
-.fy-mood-note .aroma-rail-back {
+.fy-mood-step .aroma-rail-back {
   flex: 0 0 auto;
 }
 
-.fy-mood-note-text {
-  margin: 0;
-  display: grid;
-  gap: 2px;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-1);
+.fy-mood-dock {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
 }
 
-.fy-mood-note-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-0);
+.aroma-recs-empty-tabs {
+  align-content: start;
+  min-height: 0;
 }
 
 .fy-cold {

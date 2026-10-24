@@ -35,10 +35,8 @@ export type GuestForYouResponse<M, R> = GuestForYouPersonal<M> | GuestForYouCold
 
 export const FOR_YOU_TITLE = 'Для вас';
 export const COLD_NOTE = 'Пока подбираем по вкусам из онбординга. Личная подборка появится после нескольких выборов.';
-export const MOOD_LINK = 'Подобрать под настроение';
+export const MOOD_TITLE = 'Под настроение';
 export const MOOD_DRAFT_NOTE = 'Только на этот визит. Вкусы в кабинете не изменятся.';
-export const MOOD_RESULT_NOTE = 'Подбор только на этот визит. Ваши вкусы не изменились.';
-export const BACK_TO_FOR_YOU = 'Назад к подбору';
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -144,9 +142,19 @@ export const forYouSlots = <M>(response: GuestForYouPersonal<M>): ForYouSlots<M>
   };
 };
 
+// Заголовок секции над подбором во вкладке «Под настроение»: что выбрано.
 export const moodTitle = ({ profiles, flavors }: { profiles: string[]; flavors: string[] }) => {
   const picked = profiles.length ? profiles.map(plainProfile) : flavors.slice(0, 3);
-  return picked.length ? `Под настроение: ${picked.join(', ')}` : 'Под настроение';
+  return capitalize(picked.join(', '));
+};
+
+// Подбор вошедшего — две вкладки (#388). Подбор под настроение живёт во вкладке
+// до конца визита; `step` — шаг выбора, null — показан подбор.
+export type RecsTab = 'for-you' | 'mood';
+
+export const recsScreen = (tab: RecsTab, mood: { step: 1 | 2 | null; items: unknown[] | null } | null) => {
+  if (tab === 'for-you') return 'for-you' as const;
+  return mood?.items && mood.step === null ? ('result' as const) : ('pick' as const);
 };
 
 // Что делает «Показать подбор» в онбординге. «Под настроение» — подбор на
