@@ -63,7 +63,7 @@ test('нейтральный «Шаг в сторону» не выдумыва�
   assert.equal(reasonText({ kind: 'sidestep-neutral', toProfile: '' }), 'Попробуйте что-то другое');
 });
 
-test('подсказка «Давно на одном вкусе» называет факт и ничего не запрещает', () => {
+test('подсказка против пузыря называет факт и ничего не запрещает', () => {
   assert.equal(
     hintText({ kind: 'same-mix', mixName: 'Морозная ягода', count: 4, outOf: 5 }),
     'Четыре из пяти последних миксов: «Морозная ягода»',
@@ -100,15 +100,25 @@ test('слоты A: герой и три строки, шаг в сторону,
   assert.deepEqual(slots.taste.map((row) => row.mix.id), ['f2', 'f3', 'f4']);
   assert.equal(slots.sidestep?.reason, 'Мастера часто сводят ягодное с цитрусовым');
   assert.equal(slots.again?.reason, 'Ваша оценка ★ 5, выбирали 3 раза');
-  assert.equal(slots.hint, null);
+  assert.equal(slots.sidestepFirst, false);
 });
 
-test('подсказка ведёт на микс «Шаг в сторону» и не убирает «Снова»', () => {
+test('подсказка поднимает «Шаг в сторону» наверх: факт и причина в подписи строки, «Снова» на месте', () => {
   const slots = forYouSlots(personal({ hint: { kind: 'same-mix', mixName: 'Микс a1', count: 4, outOf: 5 } }));
-  assert.equal(slots.hint?.mix.id, 's1');
-  assert.match(slots.hint?.text ?? '', /^Четыре из пяти последних миксов: «Микс a1»/);
-  assert.equal(slots.again?.mix.id, 'a1');
+  assert.equal(slots.sidestepFirst, true);
   assert.equal(slots.sidestep?.mix.id, 's1');
+  assert.equal(slots.sidestep?.reason, 'Четыре из пяти последних миксов: «Микс a1». Мастера часто сводят ягодное с цитрусовым');
+  assert.equal(slots.again?.mix.id, 'a1');
+});
+
+test('без сродства профилей подсказка зовёт попробовать другое', () => {
+  const slots = forYouSlots(
+    personal({
+      sidestep: [{ mix: mix('s1'), reason: { kind: 'sidestep-neutral', toProfile: 'spicy' } }],
+      hint: { kind: 'same-profile', profile: 'fruity', count: 4, outOf: 5 },
+    }),
+  );
+  assert.equal(slots.sidestep?.reason, 'Четыре из пяти последних миксов фруктовые. Попробуйте что-то другое');
 });
 
 test('пустые слоты не показываются', () => {
@@ -117,7 +127,7 @@ test('пустые слоты не показываются', () => {
   assert.deepEqual(slots.taste, []);
   assert.equal(slots.sidestep, null);
   assert.equal(slots.again, null);
-  assert.equal(slots.hint, null);
+  assert.equal(slots.sidestepFirst, false);
 });
 
 test('заголовок подбора под настроение — профили этого визита, иначе вкусы', () => {
