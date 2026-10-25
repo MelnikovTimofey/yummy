@@ -27,8 +27,10 @@ import {
   createStaffToken,
   resolveStaffSession,
   resolveStaffUser,
+  secretsEqual,
   verifyGuestAccessCode,
 } from './auth';
+import { createLoginThrottle } from './login-throttle';
 import {
   createDailyAccessCode,
   createStaffAccount,
@@ -183,6 +185,7 @@ import type { MixView, RailView, StaffRailView } from './state';
 
 export const buildApp = () => {
   const app = Fastify({ logger: true });
+  const loginThrottle = createLoginThrottle();
 
   app.register(cors, {
     origin: true,
@@ -832,10 +835,21 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Login and password are required' } satisfies ApiError);
     }
 
+    const ip = clientIp(request);
+    const retryAfter = loginThrottle.retryAfterSeconds(ip, login);
+    if (retryAfter > 0) {
+      return reply
+        .status(429)
+        .header('retry-after', String(retryAfter))
+        .send({ error: `Слишком много попыток входа. Попробуйте через ${Math.ceil(retryAfter / 60)} мин.` } satisfies ApiError);
+    }
+
     const user = await resolveStaffUser(login, password);
     if (!user) {
+      loginThrottle.recordFailure(ip, login);
       return reply.status(401).send({ error: 'Invalid credentials' } satisfies ApiError);
     }
+    loginThrottle.recordSuccess(login);
 
     const response: StaffAuthResponse = {
       accessToken: createStaffToken(user),
@@ -2556,13 +2570,21 @@ const optionalGuest = async (request: FastifyRequest, reply: FastifyReply) => {
   return (await authenticateGuestRequest(request, reply)) ?? undefined;
 };
 
+// Наружу backend доступен только через Caddy, а он дописывает адрес клиента в конец
+// X-Forwarded-For: последний элемент подделать нельзя, первые — можно.
+const clientIp = (request: FastifyRequest) => {
+  const header = request.headers['x-forwarded-for'];
+  const forwarded = (Array.isArray(header) ? header.join(',') : header)?.split(',').pop()?.trim();
+  return forwarded || request.ip;
+};
+
 const AUTOMATION_HEADER = 'x-atelier-automation-key';
 
 const authenticateAutomationRequest = (request: FastifyRequest, reply: FastifyReply) => {
   const header = request.headers[AUTOMATION_HEADER];
   const key = Array.isArray(header) ? header[0] : header;
 
-  if (key !== config.automationKey) {
+  if (!secretsEqual(key, config.automationKey)) {
     reply.status(401).send({ error: 'Invalid automation key' } satisfies ApiError);
     return false;
   }
