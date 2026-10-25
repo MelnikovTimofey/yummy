@@ -4,6 +4,13 @@ import { PrismaClient } from '@prisma/client';
 import { getDailyCodeWindow } from '../src/daily-code';
 import { startShelfFromStock } from '../src/shelf';
 
+// Seed стирает персонал, коды, миксы и аудит и заводит admin/admin с кодом 1234 —
+// на проде это потеря данных и открытая учётка (#415).
+if (process.env.NODE_ENV === 'production') {
+  console.error('[seed] отказ: NODE_ENV=production. Seed только для локальной и тестовой БД.');
+  process.exit(1);
+}
+
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
 const prisma = new PrismaClient();
