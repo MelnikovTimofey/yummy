@@ -14,10 +14,15 @@ const TELEGRAM_ID = '362000001';
 
 type App = ReturnType<typeof buildApp>;
 
+// Секрет опроса выдаётся только инициатору входа; тесты помнят его по коду.
+const pollSecrets = new Map<string, string>();
+
 const startLogin = async (app: App, payload: object = { consent: true, likedProfiles: ['berry'], likedFlavors: ['мята'] }) => {
   const response = await app.inject({ method: 'POST', url: '/guest/auth/telegram/start', payload });
   assert.equal(response.statusCode, 201);
-  return response.json() as { code: string; botUrl: string; expiresAt: string };
+  const body = response.json() as { code: string; botUrl: string; expiresAt: string; pollSecret: string };
+  pollSecrets.set(body.code, body.pollSecret);
+  return body;
 };
 
 const confirm = (app: App, code: string, telegramId = TELEGRAM_ID, key = config.automationKey) =>
@@ -28,8 +33,8 @@ const confirm = (app: App, code: string, telegramId = TELEGRAM_ID, key = config.
     payload: { code, telegramId },
   });
 
-const status = (app: App, code: string) =>
-  app.inject({ method: 'GET', url: `/guest/auth/telegram/status?code=${encodeURIComponent(code)}` });
+const status = (app: App, code: string, secret = pollSecrets.get(code) ?? '') =>
+  app.inject({ method: 'POST', url: '/guest/auth/telegram/status', payload: { code, secret } });
 
 const loginGuest = async (app: App, payload?: object) => {
   const { code } = await startLogin(app, payload);
@@ -182,6 +187,26 @@ test.describe('guest login through the bot', () => {
     const app = buildApp();
     try {
       assert.equal((await status(app, 'unknown')).statusCode, 404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('only the browser that started the login gets the token: without its secret the code looks unknown', async () => {
+    const app = buildApp();
+    try {
+      const { code, pollSecret } = await startLogin(app);
+      assert.match(pollSecret, /^[A-Za-z0-9_-]{43}$/);
+      assert.equal((await confirm(app, code)).statusCode, 200);
+
+      assert.equal((await status(app, code, '')).statusCode, 404);
+      const tampered = pollSecret.slice(0, -1) + (pollSecret.endsWith('A') ? 'B' : 'A');
+      assert.equal((await status(app, code, tampered)).statusCode, 404);
+      assert.equal((await status(app, code, (await startLogin(app)).pollSecret)).statusCode, 404);
+      const legacy = await app.inject({ method: 'GET', url: `/guest/auth/telegram/status?code=${code}` });
+      assert.equal(legacy.statusCode, 404);
+
+      assert.equal(((await status(app, code)).json() as { status: string }).status, 'ok');
     } finally {
       await app.close();
     }

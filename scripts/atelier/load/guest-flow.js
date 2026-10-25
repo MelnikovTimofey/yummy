@@ -48,7 +48,7 @@ const ENDPOINTS = [
   'POST /guest/mixer/evaluate',
   'POST /guest/events/custom-mix-smoke',
   'POST /guest/auth/telegram/start',
-  'GET /guest/auth/telegram/status',
+  'POST /guest/auth/telegram/status',
   'GET /guest/me',
   'GET /guest/me/favorites',
   'GET /guest/me/history',
@@ -179,14 +179,14 @@ const login = () => {
   }
   const telegramId = `${LOAD_TELEGRAM_PREFIX}${100000 + randInt(1, LOGIN_GUESTS)}`;
   for (let poll = randInt(0, 2); poll > 0; poll -= 1) {
-    send('GET', `/guest/auth/telegram/status?code=${started.code}`);
+    send('POST', '/guest/auth/telegram/status', { code: started.code, secret: started.pollSecret });
     sleep(2);
   }
   http.post(`${BASE_URL}/automation/guest-login/confirm`, JSON.stringify({ code: started.code, telegramId }), {
     headers: { ...JSON_HEADERS, 'x-atelier-automation-key': AUTOMATION_KEY },
     tags: { name: 'bot confirm' },
   });
-  const token = readJson(send('GET', `/guest/auth/telegram/status?code=${started.code}`), 'token');
+  const token = readJson(send('POST', '/guest/auth/telegram/status', { code: started.code, secret: started.pollSecret }), 'token');
   if (!token) {
     return null;
   }

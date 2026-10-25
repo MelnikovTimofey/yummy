@@ -4,7 +4,7 @@ import type { BackendClient } from './backend';
 import type { BotConfig } from './config';
 import { GUEST_LOGIN_TEXTS, GuestLoginBot } from './guest-login-bot';
 import type { TelegramClient, TelegramSendMessageOptions } from './telegram';
-import type { TelegramMessage, TelegramUpdate } from './types';
+import type { TelegramCallbackQuery, TelegramMessage, TelegramUpdate } from './types';
 
 const RETURN_URL = 'https://atelier.example';
 const CODE = 'Zq3xV9bLk2mN8pR4sT6uW1yA5cE7gH0j';
@@ -31,19 +31,34 @@ const guestMessage = (text: string | undefined, extra: Partial<TelegramMessage> 
 });
 
 type Sent = { chatId: number; text: string; options?: TelegramSendMessageOptions };
+type Edited = { chatId: number; messageId: number; text: string; options?: TelegramSendMessageOptions };
 type Confirm = { code: string; telegramId: string };
 
+const QUESTION_MESSAGE_ID = 77;
+
+// Нажатие inline-кнопки под вопросом бота; нажимает не обязательно тот, кто прислал /start.
+const press = (data: string, fromId = 4242): TelegramCallbackQuery => ({
+  id: `cb-${data}`,
+  from: { id: fromId, is_bot: false, first_name: 'Тайный', username: 'secret_guest' },
+  message: { message_id: QUESTION_MESSAGE_ID, chat: { id: 555, type: 'private' } },
+  data,
+});
+
 const runBot = async (
-  messages: TelegramMessage[],
+  inputs: Array<TelegramMessage | TelegramCallbackQuery>,
   confirm: (payload: Confirm) => Promise<number> = async () => 200,
 ) => {
   const sent: Sent[] = [];
+  const edited: Edited[] = [];
+  const answered: string[] = [];
   const confirms: Confirm[] = [];
   const staffCalls: string[] = [];
   let polls = 0;
   let bot: GuestLoginBot;
 
-  const updates: TelegramUpdate[] = messages.map((message, index) => ({ update_id: 100 + index, message }));
+  const updates: TelegramUpdate[] = inputs.map((input, index) =>
+    'chat' in input ? { update_id: 100 + index, message: input } : { update_id: 100 + index, callback_query: input },
+  );
   const telegram = {
     getUpdates: async () => {
       polls += 1;
@@ -56,6 +71,14 @@ const runBot = async (
     sendMessage: async (chatId: number, text: string, options?: TelegramSendMessageOptions) => {
       sent.push({ chatId, text, options });
       return {};
+    },
+    editMessageText: async (chatId: number, messageId: number, text: string, options?: TelegramSendMessageOptions) => {
+      edited.push({ chatId, messageId, text, options });
+      return {};
+    },
+    answerCallbackQuery: async (id: string) => {
+      answered.push(id);
+      return true;
     },
     setMyCommands: async () => {
       staffCalls.push('setMyCommands');
@@ -85,7 +108,7 @@ const runBot = async (
   bot = new GuestLoginBot({ config: buildConfig(), backend, telegram });
   await bot.start();
 
-  return { sent, confirms, staffCalls };
+  return { sent, edited, answered, confirms, staffCalls };
 };
 
 const captureLogs = (t: TestContext) => {
@@ -100,55 +123,91 @@ const captureLogs = (t: TestContext) => {
   return lines;
 };
 
-test('/start <code> confirms the code with the guest telegram id and links back to the Atelier', async (t) => {
+test('/start <code> asks the guest to confirm the login and does not confirm by itself', async (t) => {
   captureLogs(t);
   const { sent, confirms } = await runBot([guestMessage(`/start ${CODE}`)]);
 
-  assert.deepEqual(confirms, [{ code: CODE, telegramId: '4242' }]);
+  assert.deepEqual(confirms, []);
   assert.equal(sent.length, 1);
   assert.equal(sent[0].chatId, 555);
-  assert.equal(sent[0].text, 'Готово — вернитесь в Ателье.');
+  assert.equal(sent[0].text, GUEST_LOGIN_TEXTS.question);
+  assert.match(sent[0].text, /Telegram id, историю выборов и избранное/);
   assert.deepEqual(sent[0].options?.reply_markup, {
-    inline_keyboard: [[{ text: 'Вернуться в Ателье', url: RETURN_URL }]],
+    inline_keyboard: [[
+      { text: 'Войти', callback_data: `login:${CODE}` },
+      { text: 'Отмена', callback_data: 'cancel' },
+    ]],
   });
 });
 
 test('/start@bot <code> is treated as the same deep link', async (t) => {
   captureLogs(t);
-  const { confirms, sent } = await runBot([guestMessage(`/start@aroma_atelier_client_bot ${CODE}`)]);
+  const { sent } = await runBot([guestMessage(`/start@aroma_atelier_client_bot ${CODE}`)]);
 
-  assert.deepEqual(confirms, [{ code: CODE, telegramId: '4242' }]);
-  assert.equal(sent[0].text, GUEST_LOGIN_TEXTS.confirmed);
+  assert.equal(sent[0].text, GUEST_LOGIN_TEXTS.question);
+});
+
+test('«Войти» confirms the code with the telegram id of who pressed it and turns the question into a way back', async (t) => {
+  captureLogs(t);
+  const { confirms, edited, answered, sent } = await runBot([press(`login:${CODE}`, 4243)]);
+
+  assert.deepEqual(confirms, [{ code: CODE, telegramId: '4243' }]);
+  assert.deepEqual(answered, [`cb-login:${CODE}`]);
+  assert.deepEqual(sent, []);
+  assert.deepEqual(edited, [{
+    chatId: 555,
+    messageId: QUESTION_MESSAGE_ID,
+    text: 'Готово — вернитесь в Ателье.',
+    options: { reply_markup: { inline_keyboard: [[{ text: 'Вернуться в Ателье', url: RETURN_URL }]] } },
+  }]);
+});
+
+test('«Отмена» does not confirm and removes the buttons', async (t) => {
+  captureLogs(t);
+  const { confirms, edited, answered } = await runBot([press('cancel')]);
+
+  assert.deepEqual(confirms, []);
+  assert.deepEqual(answered, ['cb-cancel']);
+  assert.deepEqual(edited.map(({ text, options }) => [text, options?.reply_markup]), [['Вход отменён.', undefined]]);
+});
+
+test('an unknown button is only acknowledged', async (t) => {
+  captureLogs(t);
+  const { confirms, edited, answered } = await runBot([press('something-else')]);
+
+  assert.deepEqual(confirms, []);
+  assert.deepEqual(edited, []);
+  assert.deepEqual(answered, ['cb-something-else']);
 });
 
 for (const status of [404, 410]) {
-  test(`/start <code> answers «ссылка устарела» when backend returns ${status}`, async (t) => {
+  test(`«Войти» answers «ссылка устарела» when backend returns ${status}`, async (t) => {
     captureLogs(t);
-    const { sent } = await runBot([guestMessage(`/start ${CODE}`)], async () => status);
+    const { edited } = await runBot([press(`login:${CODE}`)], async () => status);
 
-    assert.equal(sent.length, 1);
-    assert.equal(sent[0].text, 'Ссылка устарела. Нажмите «Войти через Telegram» на сайте ещё раз.');
-    assert.equal(sent[0].options?.reply_markup, undefined);
+    assert.equal(edited.length, 1);
+    assert.equal(edited[0].text, 'Ссылка устарела. Нажмите «Войти через Telegram» на сайте ещё раз.');
+    assert.equal(edited[0].options?.reply_markup, undefined);
   });
 }
 
-test('/start <code> asks to retry later on network error', async (t) => {
+test('«Войти» asks to retry later on network error', async (t) => {
   captureLogs(t);
-  const { sent } = await runBot([guestMessage(`/start ${CODE}`)], async () => {
+  const { edited } = await runBot([press(`login:${CODE}`)], async () => {
     throw new TypeError('fetch failed');
   });
 
-  assert.equal(sent.length, 1);
-  assert.equal(sent[0].text, 'Не получилось подтвердить вход. Попробуйте ещё раз через минуту.');
+  assert.equal(edited.length, 1);
+  assert.equal(edited[0].text, 'Не получилось подтвердить вход. Попробуйте ещё раз через минуту.');
 });
 
 for (const status of [500, 502, 401]) {
-  test(`/start <code> asks to retry later when backend returns ${status}`, async (t) => {
+  test(`«Войти» asks to retry later when backend returns ${status}`, async (t) => {
     captureLogs(t);
-    const { sent } = await runBot([guestMessage(`/start ${CODE}`)], async () => status);
+    const { edited } = await runBot([press(`login:${CODE}`)], async () => status);
 
-    assert.equal(sent.length, 1);
-    assert.equal(sent[0].text, GUEST_LOGIN_TEXTS.failed);
+    assert.equal(edited.length, 1);
+    assert.equal(edited[0].text, GUEST_LOGIN_TEXTS.failed);
   });
 }
 
@@ -223,13 +282,14 @@ test('logs carry only the fact of confirmation and backend HTTP status, no guest
   await runBot(
     [
       guestMessage(`/start ${CODE}`),
-      guestMessage(`/start ${CODE}`),
-      guestMessage(`/start ${CODE}`),
+      press(`login:${CODE}`),
+      press(`login:${CODE}`),
+      press(`login:${CODE}`),
       guestMessage('Меня зовут Тайный Гость, мой телефон +79990001122'),
     ],
     async () => statuses.shift() ?? 200,
   );
-  await runBot([guestMessage(`/start ${CODE}`)], async () => {
+  await runBot([press(`login:${CODE}`)], async () => {
     throw new TypeError('fetch failed');
   });
 
