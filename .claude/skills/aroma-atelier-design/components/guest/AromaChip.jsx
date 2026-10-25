@@ -6,7 +6,7 @@ export function AromaChip({ children, tier = 'sm', active = false, profile, colo
   const isLg = tier === 'lg';
   const dotSize = isLg ? 8 : 6;
   const baseDot = color || (profile ? profileColor(profile) : null);
-  // На активной винной заливке тёмные профили (ягодный, пряный) тонут и мутнеют:
+  // На активной табачной заливке тёмные профили (ягодный, пряный) тонут и мутнеют:
   // подмешиваем кремовый и ставим чёткое кольцо в 1px вместо размытого гало.
   const dotColor = baseDot && active ? 'color-mix(in srgb, ' + baseDot + ' 62%, #F7EFEC)' : baseDot;
   return (

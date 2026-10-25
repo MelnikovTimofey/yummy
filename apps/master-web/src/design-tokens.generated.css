@@ -44,7 +44,7 @@
 }
 /* ── colors.css ── */
 /* Film Noir palette — single source of truth for both surfaces (PRD §12).
-   Smoky charcoal surfaces, warm foggy-grey text, ONE deep bordeaux accent. */
+   Smoky charcoal surfaces, warm foggy-grey text, ONE tobacco-leaf accent. */
 :root {
   /* Surfaces */
   --bg-base: #141417;
@@ -59,16 +59,19 @@
   --text-muted: #8f8d87;
   --text-faint: #6a6863;
 
-  /* Accent (bordeaux) — the only brand colour. До 2026-09-24 — оксблад
-     #b04a3e: на экране читался оранжевым, в заливках — «мультяшно». */
-  --accent: #8e2f3c;
-  --accent-hover: #a33b48;
-  --accent-deep: #5c1c26;
+  /* Accent (tobacco leaf) — the only brand colour. До 2026-10-25 — бордо
+     #8e2f3c: совпадал с типовым «тёмным премиумом» ИИ-дизайна, а метки на угле
+     не дотягивали до 3:1 (#425). До 2026-09-24 — оксблад #b04a3e, читался оранжевым.
+     Hover не светлее акцента: в Мастере он фон кнопки с кремовым текстом, а на
+     светлом табаке надпись падает ниже 4.5:1. */
+  --accent: #8a6427;
+  --accent-hover: #8f6420;
+  --accent-deep: #563d16;
   --accent-fg: #f4efea;
-  --accent-soft: rgba(142, 47, 60, 0.22);
-  --accent-border: rgba(163, 59, 72, 0.5);
-  /* Текст и иконки акцентом не набираются: бордо на угле даёт ~2.3:1, а светлый
-     бордо читается розовым (#139). Акцент — только метки, рамки и заливка CTA. */
+  --accent-soft: rgba(138, 100, 39, 0.22);
+  --accent-border: rgba(143, 100, 32, 0.5);
+  /* Текст и иконки акцентом не набираются: табак на угле даёт 3.4:1, для текста
+     мало. Акцент — только метки (от 3:1), рамки и заливка CTA. */
 
   /* Borders */
   --border-subtle: rgba(150, 148, 142, 0.16);
@@ -279,13 +282,13 @@
 
 @keyframes aroma-ember {
   0% {
-    box-shadow: 0 0 0 0 rgba(163, 59, 72, 0.45), 0 14px 26px rgba(163, 59, 72, 0.32);
+    box-shadow: 0 0 0 0 rgba(143, 100, 32, 0.45), 0 14px 26px rgba(143, 100, 32, 0.32);
   }
   60% {
-    box-shadow: 0 0 0 18px rgba(163, 59, 72, 0), 0 14px 26px rgba(163, 59, 72, 0.32);
+    box-shadow: 0 0 0 18px rgba(143, 100, 32, 0), 0 14px 26px rgba(143, 100, 32, 0.32);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(163, 59, 72, 0), 0 14px 26px rgba(163, 59, 72, 0.32);
+    box-shadow: 0 0 0 0 rgba(143, 100, 32, 0), 0 14px 26px rgba(143, 100, 32, 0.32);
   }
 }
 
@@ -320,40 +323,39 @@
   }
 }
 /* ── guest-surface.css ── */
-/* Guest-surface atmosphere: the wine-warm room the mobile app sits in.
-   Accent rule (PRD §12): ONE brand colour — bordeaux. Solid bordeaux is reserved
+/* Guest-surface atmosphere: the tobacco-warm room the mobile app sits in.
+   Accent rule (PRD §12): ONE brand colour — tobacco leaf. Solid tobacco is reserved
    for the primary CTA; the active navigation segment is quiet (graphite fill,
-   cream ink, 2px bordeaux mark); text and icons are never bordeaux — the rating
-   pill is cream on graphite with a bordeaux hairline. The warm
-   brass gradient and the brighter oxblood were retired on the brand owner's call.
-   The only remaining warm hues are the --composition-* data ramp. */
+   cream ink, 2px tobacco mark); text and icons are never tobacco — the rating
+   pill is cream on graphite with a tobacco hairline. The brass gradient, the
+   oxblood and the bordeaux were retired on the brand owner's call. */
 :root {
   --guest-room-bg: linear-gradient(180deg, #0f0f12 0%, #161619 40%, #141417 100%);
-  --guest-halo-strong: radial-gradient(circle at 50% 0%, rgba(142, 47, 60, 0.2), transparent 34%); /* @kind color */
+  --guest-halo-strong: radial-gradient(circle at 50% 0%, rgba(138, 100, 39, 0.2), transparent 34%); /* @kind color */
   --guest-shell-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.98) 0%, rgba(20, 20, 23, 0.98) 100%);
   --guest-topbar-bg: linear-gradient(180deg, rgba(28, 28, 33, 0.96) 0%, rgba(20, 20, 23, 0.82) 100%);
   --guest-card-bg: linear-gradient(180deg, rgba(34, 34, 41, 0.96) 0%, rgba(24, 24, 28, 0.94) 100%);
-  --guest-sheet-bg: linear-gradient(180deg, rgba(38, 14, 20, 0.98) 0%, rgba(18, 8, 11, 0.98) 100%);
+  --guest-sheet-bg: linear-gradient(180deg, rgba(34, 25, 12, 0.98) 0%, rgba(15, 11, 6, 0.98) 100%);
   --guest-row-bg: rgba(28, 28, 33, 0.84);
   --guest-control-bg: rgba(40, 40, 48, 0.66);
   --guest-control-bg-soft: rgba(40, 40, 48, 0.54);
-  --guest-chip-bg: rgba(38, 20, 24, 0.6);
-  --guest-chip-bg-on: linear-gradient(180deg, rgba(142, 47, 60, 0.7) 0%, rgba(92, 28, 38, 0.62) 100%);
+  --guest-chip-bg: rgba(36, 28, 16, 0.6);
+  --guest-chip-bg-on: linear-gradient(180deg, rgba(138, 100, 39, 0.7) 0%, rgba(86, 61, 22, 0.62) 100%);
   --guest-chip-ink-on: #f7efec;
   --guest-chip-border-on: rgba(244, 239, 234, 0.34);
   --guest-dock-fade: linear-gradient(180deg, rgba(20, 20, 23, 0) 0%, rgba(20, 20, 23, 0.78) 30%, rgba(20, 20, 23, 0.95) 100%); /* @kind color */
 
-  /* Guest primary CTA — solid bordeaux, единственная сплошная заливка акцента.
-     Градиент от --accent к --accent-deep: кремовая надпись 13px/600 — 7.0:1
-     сверху и 11.0:1 снизу (AA с запасом). */
-  --cta-solid: linear-gradient(180deg, #8e2f3c 0%, #5c1c26 100%); /* @kind color */
+  /* Guest primary CTA — solid tobacco, единственная сплошная заливка акцента.
+     Градиент от --accent к --accent-deep: кремовая надпись 13px/600 — 4.7:1
+     сверху и 8.9:1 снизу (AA). */
+  --cta-solid: linear-gradient(180deg, #8a6427 0%, #563d16 100%); /* @kind color */
   --cta-solid-border: rgba(244, 239, 234, 0.22);
   --cta-solid-ink: #f4efea;
-  --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.16), 0 14px 26px rgba(92, 28, 38, 0.45);
-  --cta-solid-disabled-bg: rgba(58, 24, 30, 0.6);
+  --cta-solid-shadow: inset 0 1px 0 rgba(255, 243, 240, 0.16), 0 14px 26px rgba(86, 61, 22, 0.45);
+  --cta-solid-disabled-bg: rgba(54, 40, 20, 0.6);
 
   /* Segment nav (active) — «тихий»: графит, кремовый текст и черта акцента снизу.
-     Сплошной бордо — только у CTA, иначе навигация спорит с главным действием. */
+     Сплошной акцент — только у CTA, иначе навигация спорит с главным действием. */
   --segment-active-bg: var(--bg-overlay);
   --segment-active-ink: var(--text-primary);
   --segment-active-border: var(--border-default);
