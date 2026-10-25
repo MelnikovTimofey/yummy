@@ -903,17 +903,17 @@ export const buildApp = () => {
         .send({ error: `Слишком много попыток входа. Попробуйте через ${Math.ceil(retryAfter / 60)} мин.` } satisfies ApiError);
     }
 
-    const user = await resolveStaffUser(login, password);
-    if (!user) {
+    const resolved = await resolveStaffUser(login, password);
+    if (!resolved) {
       loginThrottle.recordFailure(ip, login);
       return reply.status(401).send({ error: 'Invalid credentials' } satisfies ApiError);
     }
     loginThrottle.recordSuccess(login);
 
     const response: StaffAuthResponse = {
-      accessToken: createStaffToken(user),
+      accessToken: createStaffToken(resolved.user, resolved.session),
       tokenType: 'Bearer',
-      user,
+      user: resolved.user,
     };
 
     return reply.send(response);

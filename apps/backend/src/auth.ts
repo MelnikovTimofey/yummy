@@ -11,10 +11,19 @@ export type StaffUser = {
   role: StaffRole;
 };
 
+// Какую учётку и какую её версию токен представляет: по id, а не по логину —
+// пересозданная учётка с тем же логином чужие токены не принимает (#407).
+export type StaffSession = {
+  accountId: string;
+  tokenVersion: number;
+};
+
 type TokenPayload = {
   login: string;
   name: string;
   role: StaffRole;
+  sub: string;
+  ver: number;
   issuedAt: number;
   expiresAt: number;
 };
@@ -49,13 +58,15 @@ export const secretsEqual = (received: string | undefined, expected: string) => 
 
 export const createSecretHash = (secret: string, salt: string) => hashSecret(secret, salt);
 
-export const createStaffToken = (user: StaffUser) => {
+export const createStaffToken = (user: StaffUser, session: StaffSession) => {
   const issuedAt = Math.floor(Date.now() / 1000);
   const expiresAt = issuedAt + config.tokenTtlHours * 60 * 60;
   const payload: TokenPayload = {
     login: user.login,
     name: user.name,
     role: user.role,
+    sub: session.accountId,
+    ver: session.tokenVersion,
     issuedAt,
     expiresAt,
   };
@@ -64,7 +75,7 @@ export const createStaffToken = (user: StaffUser) => {
   return `${encodedPayload}.${signature}`;
 };
 
-export const verifyStaffToken = (token: string): StaffUser | null => {
+const verifyStaffToken = (token: string): (StaffUser & StaffSession) | null => {
   const [encodedPayload, signature] = token.split('.');
   if (!encodedPayload || !signature) {
     return null;
@@ -80,7 +91,7 @@ export const verifyStaffToken = (token: string): StaffUser | null => {
   try {
     const payload = JSON.parse(base64UrlDecode(encodedPayload)) as TokenPayload;
     const now = Math.floor(Date.now() / 1000);
-    if (!payload.login || !payload.role || payload.expiresAt <= now) {
+    if (!payload.login || !payload.role || !payload.sub || !Number.isInteger(payload.ver) || payload.expiresAt <= now) {
       return null;
     }
 
@@ -88,6 +99,8 @@ export const verifyStaffToken = (token: string): StaffUser | null => {
       login: payload.login,
       name: payload.name,
       role: payload.role,
+      accountId: payload.sub,
+      tokenVersion: payload.ver,
     };
   } catch {
     return null;
@@ -135,10 +148,15 @@ export const verifyGuestToken = (token: string): string | null => {
   }
 };
 
-export const resolveStaffUser = async (login: string, password: string): Promise<StaffUser | null> => {
+export const resolveStaffUser = async (
+  login: string,
+  password: string,
+): Promise<{ user: StaffUser; session: StaffSession } | null> => {
   const account = await prisma.staffAccount.findUnique({
     where: { login },
     select: {
+      id: true,
+      tokenVersion: true,
       login: true,
       passwordHash: true,
       passwordSalt: true,
@@ -157,9 +175,8 @@ export const resolveStaffUser = async (login: string, password: string): Promise
   }
 
   return {
-    login: account.login,
-    name: account.name,
-    role: account.role,
+    user: { login: account.login, name: account.name, role: account.role },
+    session: { accountId: account.id, tokenVersion: account.tokenVersion },
   };
 };
 
@@ -170,16 +187,23 @@ export const resolveStaffSession = async (token: string): Promise<StaffUser | nu
   }
 
   const account = await prisma.staffAccount.findUnique({
-    where: { login: claims.login },
+    where: { id: claims.accountId },
     select: {
       login: true,
       name: true,
       role: true,
       active: true,
+      tokenVersion: true,
     },
   });
 
-  if (!account || !account.active || !isStaffRole(account.role) || account.role !== claims.role) {
+  if (
+    !account ||
+    !account.active ||
+    !isStaffRole(account.role) ||
+    account.role !== claims.role ||
+    account.tokenVersion !== claims.tokenVersion
+  ) {
     return null;
   }
 

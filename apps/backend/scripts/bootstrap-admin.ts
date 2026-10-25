@@ -39,6 +39,7 @@ const main = async () => {
       active: true,
       passwordSalt,
       passwordHash,
+      tokenVersion: { increment: 1 },
     },
     create: {
       id: accountId,
