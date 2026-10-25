@@ -5,6 +5,7 @@ import { BOT_COMMANDS, TelegramBot } from './bot';
 import type { BackendClient } from './backend';
 import type { JsonStateStore } from './storage';
 import type { TelegramClient } from './telegram';
+import type { TelegramMessage } from './types';
 
 const buildConfig = (): BotConfig => ({
   mode: 'staff',
@@ -74,4 +75,72 @@ test('start keeps polling when command menu registration fails', async () => {
   await bot.start();
 
   assert.deepEqual(events, ['setMyCommands', 'getUpdates']);
+});
+
+const shareContact = async (message: TelegramMessage) => {
+  const linked: unknown[] = [];
+  const replies: string[] = [];
+  let bot: TelegramBot;
+  let delivered = false;
+
+  const telegram = {
+    setMyCommands: async () => true,
+    getUpdates: async () => {
+      if (delivered) {
+        bot.stop();
+        return [];
+      }
+      delivered = true;
+      return [{ update_id: 1, message }];
+    },
+    sendMessage: async (_chatId: number, text: string) => {
+      replies.push(text);
+      return {};
+    },
+  } as unknown as TelegramClient;
+
+  const backend = {
+    reportTelegramAutomationState: async () => ({}),
+    ensureDailyCode: async () => ({ state: 'existing', item: {} }),
+    linkTelegramOperator: async (input: unknown) => {
+      linked.push(input);
+      return { item: { name: 'Оператор', phone: '+79990000000' } };
+    },
+  } as unknown as BackendClient;
+
+  bot = new TelegramBot({ config: buildConfig(), backend, telegram, stateStore: {} as JsonStateStore });
+  await bot.start();
+  return { linked, replies };
+};
+
+const contactMessage = (contact: TelegramMessage['contact'], chatType = 'private'): TelegramMessage => ({
+  message_id: 1,
+  chat: { id: 500, type: chatType },
+  from: { id: 42, is_bot: false, first_name: 'Мастер' },
+  contact,
+});
+
+test('own contact in a private chat links the operator', async () => {
+  const { linked } = await shareContact(contactMessage({ phone_number: '+79990000000', user_id: 42 }));
+
+  assert.equal(linked.length, 1);
+});
+
+test('contact without user_id is rejected: it may be someone else\'s phone book card', async () => {
+  const { linked, replies } = await shareContact(contactMessage({ phone_number: '+79990000000' }));
+
+  assert.equal(linked.length, 0);
+  assert.match(replies.at(-1) ?? '', /свой собственный контакт/);
+});
+
+test('contact of another Telegram user is rejected', async () => {
+  const { linked } = await shareContact(contactMessage({ phone_number: '+79990000000', user_id: 7 }));
+
+  assert.equal(linked.length, 0);
+});
+
+test('contact shared in a group chat does not link the group', async () => {
+  const { linked } = await shareContact(contactMessage({ phone_number: '+79990000000', user_id: 42 }, 'group'));
+
+  assert.equal(linked.length, 0);
 });
