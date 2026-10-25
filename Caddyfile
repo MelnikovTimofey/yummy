@@ -14,8 +14,29 @@
 	lb_try_interval 250ms
 }
 
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Via
+	}
+}
+
+# Сборки фронтов без inline-скриптов (#405). style-src с 'unsafe-inline' — под
+# style-атрибуты React и Radix; img-src https: — картинки табаков и миксов.
+# Аргумент — object-src: Мастер открывает PDF счёта из blob:, а такой документ
+# наследует CSP, и с 'none' просмотрщик PDF в Chrome не загрузится.
+(app_csp) {
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://{$API_DOMAIN}; media-src 'self' blob:; worker-src 'self' blob:; object-src {args[0]}; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+}
+
 # Гостевой Арома Ателье
 {$AROMA_DOMAIN} {
+	import security_headers
+	import app_csp 'none'
 	reverse_proxy aroma-web:4174 {
 		import retry_while_restarting
 	}
@@ -23,6 +44,8 @@
 
 # Backoffice Мастер
 {$MASTER_DOMAIN} {
+	import security_headers
+	import app_csp blob:
 	reverse_proxy master-web:4175 {
 		import retry_while_restarting
 	}
@@ -30,6 +53,13 @@
 
 # Backend API
 {$API_DOMAIN} {
+	import security_headers
+	header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+
+	# Боты ходят в /automation по внутренней сети (http://backend:3021) — снаружи он не нужен.
+	@automation path /automation /automation/*
+	respond @automation 404
+
 	reverse_proxy backend:3021 {
 		import retry_while_restarting
 	}
