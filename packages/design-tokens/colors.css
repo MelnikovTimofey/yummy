@@ -1,5 +1,5 @@
 /* Film Noir palette — single source of truth for both surfaces (PRD §12).
-   Smoky charcoal surfaces, warm foggy-grey text, ONE tobacco-leaf accent. */
+   Smoky charcoal surfaces, warm foggy-grey text, ONE deep bordeaux accent. */
 :root {
   /* Surfaces */
   --bg-base: #141417;
@@ -14,19 +14,16 @@
   --text-muted: #8f8d87;
   --text-faint: #6a6863;
 
-  /* Accent (tobacco leaf) — the only brand colour. До 2026-10-25 — бордо
-     #8e2f3c: совпадал с типовым «тёмным премиумом» ИИ-дизайна, а метки на угле
-     не дотягивали до 3:1 (#425). До 2026-09-24 — оксблад #b04a3e, читался оранжевым.
-     Hover не светлее акцента: в Мастере он фон кнопки с кремовым текстом, а на
-     светлом табаке надпись падает ниже 4.5:1. */
-  --accent: #8a6427;
-  --accent-hover: #8f6420;
-  --accent-deep: #563d16;
+  /* Accent (bordeaux) — the only brand colour. До 2026-09-24 — оксблад
+     #b04a3e: на экране читался оранжевым, в заливках — «мультяшно». */
+  --accent: #8e2f3c;
+  --accent-hover: #a33b48;
+  --accent-deep: #5c1c26;
   --accent-fg: #f4efea;
-  --accent-soft: rgba(138, 100, 39, 0.22);
-  --accent-border: rgba(143, 100, 32, 0.5);
-  /* Текст и иконки акцентом не набираются: табак на угле даёт 3.4:1, для текста
-     мало. Акцент — только метки (от 3:1), рамки и заливка CTA. */
+  --accent-soft: rgba(142, 47, 60, 0.22);
+  --accent-border: rgba(163, 59, 72, 0.5);
+  /* Текст и иконки акцентом не набираются: бордо на угле даёт ~2.3:1, а светлый
+     бордо читается розовым (#139). Акцент — только метки, рамки и заливка CTA. */
 
   /* Borders */
   --border-subtle: rgba(150, 148, 142, 0.16);

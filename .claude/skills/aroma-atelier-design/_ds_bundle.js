@@ -72,7 +72,7 @@ Object.assign(__ds_scope, { AccessCodeInput });
 
 // components/guest/AromaCTA.jsx
 try { (() => {
-// Guest primary action — solid tobacco CTA, full width, uppercase tracking, optional ember pulse.
+// Guest primary action — solid bordeaux CTA, full width, uppercase tracking, optional ember pulse.
 function AromaCTA({
   children,
   onClick,
@@ -140,7 +140,7 @@ function AromaChip({
   const isLg = tier === 'lg';
   const dotSize = isLg ? 8 : 6;
   const baseDot = color || (profile ? profileColor(profile) : null);
-  // На активной табачной заливке тёмные профили (ягодный, пряный) тонут и мутнеют:
+  // На активной винной заливке тёмные профили (ягодный, пряный) тонут и мутнеют:
   // подмешиваем кремовый и ставим чёткое кольцо в 1px вместо размытого гало.
   const dotColor = baseDot && active ? 'color-mix(in srgb, ' + baseDot + ' 62%, #F7EFEC)' : baseDot;
   return /*#__PURE__*/React.createElement("button", {
@@ -304,7 +304,7 @@ Object.assign(__ds_scope, { GuestCard });
 // components/guest/GuestTab.jsx
 try { (() => {
 // Tab used in the guest topbar nav rows (.tab / .tab.active upstream). Active is quiet:
-// graphite fill, cream ink and a 2px accent mark — solid accent belongs to the CTA only.
+// graphite fill, cream ink and a 2px bordeaux mark — solid accent belongs to the CTA only.
 function GuestTab({
   children,
   active = false,
@@ -336,7 +336,7 @@ Object.assign(__ds_scope, { GuestTab });
 
 // components/guest/OnboardingProgress.jsx
 try { (() => {
-// Back arrow + accent progress bar + "1 из 2" counter, pinned in the guest topbar.
+// Back arrow + bordeaux progress bar + "1 из 2" counter, pinned in the guest topbar.
 function OnboardingProgress({
   step = 1,
   total = 2,
@@ -588,7 +588,7 @@ Object.assign(__ds_scope, { RatingPill });
 // components/guest/SegmentNav.jsx
 try { (() => {
 // Equal-width segmented control (guest journey / app tabs). Active segment is quiet:
-// graphite, cream ink, 2px accent mark.
+// graphite, cream ink, 2px bordeaux mark.
 function SegmentNav({
   items,
   value,

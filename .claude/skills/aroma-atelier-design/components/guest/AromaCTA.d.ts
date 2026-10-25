@@ -2,14 +2,14 @@ import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * The guest surface's single primary action ("Покурить", "Войти в Ателье").
- * Solid tobacco gradient, full width, uppercase 0.18em tracking, 52px tall.
+ * Solid oxblood gradient, full width, uppercase 0.18em tracking, 52px tall.
  *
  * @startingPoint section="Арома Ателье" subtitle="Guest primitives: CTA, chips, rating pill, signature bar" viewport="700x260"
  */
 export interface AromaCTAProps {
   children: ReactNode;
   onClick?: () => void;
-  /** Dimmed tobacco fill, muted ink, no shadow. */
+  /** Dimmed wine fill, muted ink, no shadow. */
   disabled?: boolean;
   /** Ember ring pulse — only on the one action we want the guest to take next. */
   pulse?: boolean;

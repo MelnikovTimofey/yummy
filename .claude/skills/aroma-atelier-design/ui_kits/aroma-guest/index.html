@@ -5,7 +5,7 @@
 <style>
 html,body,#root{margin:0;height:100%;width:100%}
 body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;background:var(--guest-room-bg)}
-/* Атмосфера — одно табачное гало сверху по центру; halo-кругов по углам нет (#348) */
+/* Атмосфера — одно бордовое гало сверху по центру; halo-кругов по углам нет (#348) */
 .app-bg{min-height:100dvh;width:100%;display:grid;place-items:center;padding:16px;position:relative;overflow:hidden;background:var(--guest-halo-strong),linear-gradient(180deg,rgba(15,15,18,.94) 0%,rgba(20,20,23,1) 100%)}
 .phone-shell{width:min(calc(100vw - 32px),430px);height:calc(100dvh - 32px);border:1px solid var(--line);border-radius:var(--r-guest-shell);background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-shell);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2}
 .topbar{display:grid;gap:8px;padding:6px 10px 6px 20px;border-bottom:1px solid var(--line);background:var(--guest-topbar-bg);position:sticky;top:0;z-index:20;box-shadow:0 12px 28px rgba(0,0,0,.18);backdrop-filter:blur(18px)}
@@ -142,7 +142,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-intro-text{margin:0;color:var(--text-1);font-size:15px;line-height:1.5;max-width:30ch}
 .aroma-intro-dock,.aroma-onboarding-dock{flex:0 0 auto;display:grid;gap:10px;padding:12px 0 22px;border-top:1px solid var(--line-soft);background:var(--guest-dock-fade)}
 .aroma-intro-pips{display:flex;justify-content:center;gap:6px}
-.aroma-intro-pip{width:6px;height:6px;border-radius:999px;background:rgba(138, 100, 39,.3);transition:width var(--dur-slow)}
+.aroma-intro-pip{width:6px;height:6px;border-radius:999px;background:rgba(142, 47, 60,.3);transition:width var(--dur-slow)}
 .aroma-intro-pip.on{width:22px;background:var(--primary)}
 .aroma-onboarding-count{margin:0;text-align:center;font-size:13px;color:var(--text-1);font-variant-numeric:tabular-nums}
 
@@ -237,7 +237,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .aroma-sheet-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
 .aroma-sheet{width:min(calc(100vw - 16px),430px);max-height:92%;overflow-y:auto;display:grid;gap:14px;border:1px solid var(--line);border-radius:var(--r-guest-sheet) var(--r-guest-sheet) 0 0;box-shadow:var(--shadow-guest-sheet);padding:12px 20px 20px;animation:aroma-sheet-up var(--dur-sheet) var(--ease-out)}
 @keyframes aroma-sheet-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-.aroma-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(138, 100, 39,.32);margin:0 auto 6px}
+.aroma-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(142, 47, 60,.32);margin:0 auto 6px}
 .aroma-sheet-head{display:flex;gap:14px;align-items:flex-start}
 .aroma-sheet-head-text{min-width:0;display:grid;gap:6px;flex:1 1 auto}
 .aroma-sheet-title{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.05;color:var(--text-0)}
