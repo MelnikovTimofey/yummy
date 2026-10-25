@@ -12,11 +12,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_AROMA_WEB_URL=$VITE_AROMA_WEB_URL
 RUN npm run build
 
-FROM node:20-alpine AS runtime
-WORKDIR /app
-COPY --from=build /app/package.json /app/package-lock.json ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/vite.config.ts ./
+FROM caddy:2.11.7-alpine AS runtime
+COPY static.Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/dist /srv
 EXPOSE 4175
-CMD ["npm", "run", "preview"]

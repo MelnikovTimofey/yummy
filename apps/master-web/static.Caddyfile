@@ -1,0 +1,19 @@
+# Прод-сборка без vite preview (#410): отдаём dist как есть, маршруты SPA — на index.html.
+{
+	admin off
+	auto_https off
+}
+
+:4175 {
+	root * /srv
+	encode zstd gzip
+
+	# Имена в /assets содержат хеш — кэшируем навсегда; index.html и прочее — всегда свежие.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@other not path /assets/*
+	header @other Cache-Control "no-cache"
+
+	try_files {path} /index.html
+	file_server
+}
