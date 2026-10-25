@@ -11,7 +11,7 @@
 - `apps/backend`: `npm test`
 - `apps/backend`: `npm run build`
 - Проверить `GET /health`
-- Проверить `GET /meta`
+- Проверить `GET /meta` с токеном персонала (без токена — 401)
 
 ## Арома Ателье
 

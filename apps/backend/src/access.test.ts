@@ -167,7 +167,7 @@ test('staff accounts CRUD is admin-only', async () => {
         login: 'bartender',
         name: 'Bartender',
         role: 'master',
-        password: 'bartender',
+        password: 'bartender-secret',
         active: true,
       },
     });

@@ -326,13 +326,27 @@ const dailyCodeWindowFilter = (window = getDailyCodeWindow(), now = new Date()) 
   },
 });
 
-const createAutomationSecret = (value: string) => {
+// Своя случайная соль у каждого пароля и кода: одинаковые значения дают разные хеши.
+const createSaltedSecret = (value: string) => {
   const salt = crypto.randomUUID();
   return {
     salt,
     hash: createSecretHash(value, salt),
   };
 };
+
+const saltedCode = (value: string) => {
+  const secret = createSaltedSecret(value);
+  return { codeHash: secret.hash, codeSalt: secret.salt };
+};
+
+const saltedPassword = (value: string) => {
+  const secret = createSaltedSecret(value);
+  return { passwordHash: secret.hash, passwordSalt: secret.salt };
+};
+
+export const MIN_STAFF_PASSWORD_LENGTH = 10;
+const SHORT_PASSWORD_ERROR = `Пароль должен быть не короче ${MIN_STAFF_PASSWORD_LENGTH} символов.`;
 
 const TELEGRAM_AUTOMATION_STATE_ID = 'telegram-bot-status';
 const HEARTBEAT_STALE_MS = 5 * 60_000;
@@ -492,8 +506,7 @@ export const createDailyAccessCode = async (payload: Partial<DailyAccessCodeInpu
       data: {
         id,
         codeValue,
-        codeHash: createSecretHash(codeValue, `seed:${id}`),
-        codeSalt: `seed:${id}`,
+        ...saltedCode(codeValue),
         codeLabel,
         active,
         startsAt: dateRange.startsAt,
@@ -539,7 +552,7 @@ export const updateDailyAccessCode = async (id: string, payload: DailyAccessCode
       where: { id },
       data: {
         codeValue,
-        codeHash: createSecretHash(codeValue, current.codeSalt),
+        ...saltedCode(codeValue),
         codeLabel,
         active: typeof payload.active === 'boolean' ? payload.active : current.active,
         startsAt: dateRange.startsAt,
@@ -619,7 +632,7 @@ export const ensureCurrentDailyAccessCode = async () => {
   }
 
   const codeValue = createDailyCodeValue(window.startsAt);
-  const secret = createAutomationSecret(codeValue);
+  const secret = createSaltedSecret(codeValue);
   const created = await prisma.dailyAccessCode.create({
     data: {
       id: `daily-code-${codeValue.toLowerCase()}`,
@@ -672,7 +685,7 @@ export const rotateCurrentDailyAccessCode = async () => {
       window.startsAt,
       windowRecords.map((record) => record.codeValue),
     );
-    const secret = createAutomationSecret(codeValue);
+    const secret = createSaltedSecret(codeValue);
     const created = await tx.dailyAccessCode.create({
       data: {
         id: `daily-code-${codeValue.toLowerCase()}`,
@@ -731,6 +744,10 @@ export const createStaffAccount = async (payload: Partial<StaffAccountInput>) =>
     return { error: 'login, name, role and password are required' };
   }
 
+  if (password.length < MIN_STAFF_PASSWORD_LENGTH) {
+    return { error: SHORT_PASSWORD_ERROR };
+  }
+
   // Случайный суффикс, а не счётчик: учётка, пересозданная с тем же логином, получает
   // новый id, и токены удалённой к ней не подходят (#407).
   const id = `staff-${slugify(login)}-${crypto.randomBytes(4).toString('hex')}`;
@@ -743,8 +760,7 @@ export const createStaffAccount = async (payload: Partial<StaffAccountInput>) =>
         name,
         role,
         active,
-        passwordSalt: `seed:${id}`,
-        passwordHash: createSecretHash(password, `seed:${id}`),
+        ...saltedPassword(password),
       },
     });
 
@@ -783,7 +799,9 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
     return { error: 'role must be admin or master' };
   }
 
-  const passwordSalt = password ? `seed:${id}:password:${Date.now()}` : current.passwordSalt;
+  if (password && password.length < MIN_STAFF_PASSWORD_LENGTH) {
+    return { error: SHORT_PASSWORD_ERROR };
+  }
   const active = typeof payload.active === 'boolean' ? payload.active : current.active;
 
   try {
@@ -796,12 +814,7 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
         active,
         // Новый пароль или отключение — выданные токены этой учётки больше не действуют.
         ...(password || !active ? { tokenVersion: { increment: 1 } } : {}),
-        ...(password
-          ? {
-              passwordSalt,
-              passwordHash: createSecretHash(password, passwordSalt),
-            }
-          : {}),
+        ...(password ? saltedPassword(password) : {}),
       },
     });
 

@@ -18,6 +18,9 @@ const main = async () => {
   if (!password) {
     throw new Error('ATELIER_BOOTSTRAP_ADMIN_PASSWORD is required');
   }
+  if (password.length < 10) {
+    throw new Error('ATELIER_BOOTSTRAP_ADMIN_PASSWORD must be at least 10 characters');
+  }
 
   const current = await prisma.staffAccount.findUnique({
     where: { login },
@@ -28,7 +31,7 @@ const main = async () => {
   });
 
   const accountId = current?.id ?? `staff-${login.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-')}-bootstrap`;
-  const passwordSalt = `bootstrap:${accountId}:${Date.now()}`;
+  const passwordSalt = crypto.randomUUID();
   const passwordHash = createSecretHash(password, passwordSalt);
 
   const saved = await prisma.staffAccount.upsert({
