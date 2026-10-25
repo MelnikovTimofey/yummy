@@ -209,7 +209,7 @@ export const buildApp = () => {
   };
 
   app.register(cors, {
-    origin: true,
+    origin: config.corsOrigins ?? true,
   });
 
   app.addHook('onReady', async () => {
