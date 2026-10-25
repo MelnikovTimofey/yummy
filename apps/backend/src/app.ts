@@ -226,7 +226,7 @@ export const buildApp = () => {
       smokeCtaEvent: 'POST /guest/events/smoke-cta',
       guestLoginConfig: 'GET /guest/auth/telegram/config',
       guestLoginStart: 'POST /guest/auth/telegram/start',
-      guestLoginStatus: 'GET /guest/auth/telegram/status',
+      guestLoginStatus: 'POST /guest/auth/telegram/status',
       guestMe: 'GET|DELETE /guest/me',
       guestMeOnboarding: 'PUT /guest/me/onboarding',
       guestMeHistory: 'GET /guest/me/history',
@@ -662,9 +662,10 @@ export const buildApp = () => {
     return reply.status(201).send(started);
   });
 
-  app.get('/guest/auth/telegram/status', async (request, reply) => {
-    const code = (request.query as { code?: unknown }).code;
-    const result = typeof code === 'string' && code ? await getGuestLoginStatus(code) : null;
+  // POST, а не query: код и секрет не должны оседать в access-логах.
+  app.post('/guest/auth/telegram/status', async (request, reply) => {
+    const { code, secret } = (request.body ?? {}) as { code?: unknown; secret?: unknown };
+    const result = typeof code === 'string' && code && typeof secret === 'string' ? await getGuestLoginStatus(code, secret) : null;
     if (!result) {
       return reply.status(404).send({ error: 'Login code not found' } satisfies ApiError);
     }
