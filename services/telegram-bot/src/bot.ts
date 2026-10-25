@@ -278,10 +278,12 @@ export class TelegramBot {
       return;
     }
 
+    // Без user_id контакт — просто карточка из записной книжки: по чужому номеру из allowlist
+    // можно было бы забрать /code. В группе привязался бы чат всей группы.
     if (
-      message.from?.id
-      && message.contact?.user_id
-      && message.from.id !== message.contact.user_id
+      message.chat.type !== 'private'
+      || !message.from?.id
+      || message.contact?.user_id !== message.from.id
     ) {
       await this.promptContactShare(message.chat.id, CONTACT_MISMATCH_TEXT);
       return;
