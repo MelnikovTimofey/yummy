@@ -208,6 +208,15 @@ export const buildApp = () => {
     return false;
   };
 
+  // Текст исключения (Prisma, внутренние ошибки) — только в лог; клиентские 4xx — как есть.
+  app.setErrorHandler((error, request, reply) => {
+    if (error.statusCode && error.statusCode < 500) {
+      return reply.send(error);
+    }
+    request.log.error(error);
+    return reply.status(500).send({ error: 'Internal server error' } satisfies ApiError);
+  });
+
   app.register(cors, {
     origin: config.corsOrigins ?? true,
   });
@@ -399,13 +408,12 @@ export const buildApp = () => {
   });
 
   app.post('/guest/onboarding/recommendations', async (request, reply) => {
-    const body = request.body as
-      | { likedProfiles?: string[]; likedFlavors?: string[]; limit?: number }
-      | undefined;
-
-    const likedProfiles = Array.isArray(body?.likedProfiles) ? body!.likedProfiles : [];
-    const likedFlavors = Array.isArray(body?.likedFlavors) ? body!.likedFlavors : [];
-    const limit = body?.limit;
+    const taste = parseTaste(request.body, { required: false });
+    if ('error' in taste) {
+      return reply.status(400).send(taste satisfies ApiError);
+    }
+    const { likedProfiles, likedFlavors } = taste;
+    const limit = (request.body as { limit?: number } | undefined)?.limit;
 
     if (!likedProfiles.length && !likedFlavors.length) {
       return reply.status(400).send({
