@@ -731,16 +731,9 @@ export const createStaffAccount = async (payload: Partial<StaffAccountInput>) =>
     return { error: 'login, name, role and password are required' };
   }
 
-  const prefix = `staff-${slugify(login)}`;
-  const id = await nextPrefixedId(prefix, () =>
-    prisma.staffAccount.count({
-      where: {
-        id: {
-          startsWith: prefix,
-        },
-      },
-    }),
-  );
+  // Случайный суффикс, а не счётчик: учётка, пересозданная с тем же логином, получает
+  // новый id, и токены удалённой к ней не подходят (#407).
+  const id = `staff-${slugify(login)}-${crypto.randomBytes(4).toString('hex')}`;
 
   try {
     const created = await prisma.staffAccount.create({
@@ -791,6 +784,7 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
   }
 
   const passwordSalt = password ? `seed:${id}:password:${Date.now()}` : current.passwordSalt;
+  const active = typeof payload.active === 'boolean' ? payload.active : current.active;
 
   try {
     const updated = await prisma.staffAccount.update({
@@ -799,7 +793,9 @@ export const updateStaffAccount = async (id: string, payload: StaffAccountPatch)
         login,
         name,
         role,
-        active: typeof payload.active === 'boolean' ? payload.active : current.active,
+        active,
+        // Новый пароль или отключение — выданные токены этой учётки больше не действуют.
+        ...(password || !active ? { tokenVersion: { increment: 1 } } : {}),
         ...(password
           ? {
               passwordSalt,
