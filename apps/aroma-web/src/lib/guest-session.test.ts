@@ -107,6 +107,7 @@ test('ожидание входа переживает перезагрузку,
     code: 'c1',
     botUrl: 'https://t.me/bot?start=c1',
     expiresAt: '2026-10-20T12:10:00.000Z',
+    pollSecret: 's1',
     origin: 'cabinet' as const,
     consent: true,
   };
@@ -123,9 +124,14 @@ test('битое или чужое ожидание входа не читает
   assert.equal(readPendingLogin(memoryStorage({ [GUEST_LOGIN_KEY]: '{"code":1}' }), new Date()), null);
 
   const storage = memoryStorage();
-  savePendingLogin(storage, { code: 'c', botUrl: 'u', expiresAt: '2099-01-01T00:00:00Z', origin: 'intro', consent: false });
+  savePendingLogin(storage, { code: 'c', botUrl: 'u', expiresAt: '2099-01-01T00:00:00Z', pollSecret: 's', origin: 'intro', consent: false });
   clearPendingLogin(storage);
   assert.equal(readPendingLogin(storage, new Date()), null);
+});
+
+test('ожидание без секрета опроса (сохранённое до его появления) не читается: без секрета статус не отдают', () => {
+  const legacy = { code: 'c', botUrl: 'u', expiresAt: '2099-01-01T00:00:00Z', origin: 'intro', consent: true };
+  assert.equal(readPendingLogin(memoryStorage({ [GUEST_LOGIN_KEY]: JSON.stringify(legacy) }), new Date()), null);
 });
 
 test('после входа гость возвращается в кабинет, а со знакомства — сразу на подбор', () => {

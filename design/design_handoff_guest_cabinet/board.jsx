@@ -347,7 +347,7 @@ function LoginWait({ expired: initialExpired = false, onConfirmed, onRestart, on
       ) : (
         <>
           <h1 className="cab-anon-title">Подтвердите вход в Telegram</h1>
-          <p className="cab-wait-text">Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить» — эта страница войдёт сама.</p>
+          <p className="cab-wait-text">Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить», затем «Войти», и кабинет откроется здесь.</p>
           <p className="cab-wait-status" role="status"><span className="cab-wait-dot" aria-hidden />Ждём подтверждения…</p>
           <div className="cab-anon-form">
             <button type="button" className="aroma-ghost" onClick={() => {}}>Открыть Telegram ещё раз</button>

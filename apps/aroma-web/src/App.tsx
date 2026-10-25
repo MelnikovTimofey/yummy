@@ -602,9 +602,12 @@ const startGuestLogin = (body: { consent: boolean; likedProfiles: string[]; like
   requestJson<GuestLoginStart>('/guest/auth/telegram/start', { method: 'POST', body: JSON.stringify(body) });
 
 // Неизвестный код — backend уже почистил его как просроченный.
-const fetchGuestLoginStatus = async (code: string) => {
+const fetchGuestLoginStatus = async ({ code, pollSecret }: { code: string; pollSecret: string }) => {
   try {
-    return await requestJson<GuestLoginStatus>(`/guest/auth/telegram/status?code=${encodeURIComponent(code)}`);
+    return await requestJson<GuestLoginStatus>('/guest/auth/telegram/status', {
+      method: 'POST',
+      body: JSON.stringify({ code, secret: pollSecret }),
+    });
   } catch (cause) {
     if (cause instanceof RequestError && cause.status === 404) return { status: 'expired' } as const;
     throw cause;
@@ -1812,6 +1815,7 @@ export const App = () => {
         code: started.code,
         botUrl: started.botUrl,
         expiresAt: started.expiresAt,
+        pollSecret: started.pollSecret,
         origin,
         consent,
       };
@@ -1866,13 +1870,14 @@ export const App = () => {
   };
 
   const pollingCode = view === 'login' && login.phase === 'waiting' ? login.code : null;
+  const pollSecret = login.phase === 'waiting' ? login.pollSecret : '';
 
   useEffect(() => {
     if (!pollingCode) {
       return;
     }
     const poller = createLoginPoller({
-      check: () => fetchGuestLoginStatus(pollingCode),
+      check: () => fetchGuestLoginStatus({ code: pollingCode, pollSecret }),
       onSettled: (status) => loginHandlersRef.current.onLoginSettled(status),
       onError: () => loginHandlersRef.current.onLoginError(),
       isHidden: () => document.visibilityState === 'hidden',
@@ -1891,7 +1896,7 @@ export const App = () => {
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('pageshow', wake);
     };
-  }, [pollingCode]);
+  }, [pollingCode, pollSecret]);
 
   const logout = () => {
     guestSession.signOut();

@@ -134,7 +134,16 @@ export type TelegramMessage = {
   from?: TelegramFrom;
 };
 
+// Нажатие inline-кнопки (бот входа гостей): from — кто нажал, message — сообщение с кнопкой.
+export type TelegramCallbackQuery = {
+  id: string;
+  from: TelegramFrom;
+  message?: { message_id: number; chat: TelegramChat };
+  data?: string;
+};
+
 export type TelegramUpdate = {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 };

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { createGuestToken, verifyGuestToken } from './auth';
+import { createGuestToken, secretsEqual, verifyGuestToken } from './auth';
 import { config } from './config';
 import { prisma } from './db';
 import type { GuestAuthResponse, GuestLoginStartResponse, GuestLoginStatusResponse, GuestMe, GuestTaste } from './types';
@@ -60,8 +60,13 @@ export const startGuestLogin = async (input: { consent: boolean } & GuestTaste):
   await prisma.guestLoginCode.create({
     data: { code, consent: input.consent, likedProfiles: input.likedProfiles, likedFlavors: input.likedFlavors, expiresAt },
   });
-  return { code, botUrl: `https://t.me/${bot}?start=${code}`, expiresAt: expiresAt.toISOString() };
+  return { code, botUrl: `https://t.me/${bot}?start=${code}`, expiresAt: expiresAt.toISOString(), pollSecret: pollSecretFor(code) };
 };
+
+// Код уходит в ссылку на бота и может утечь (пересланная ссылка, логи), а токен по нему
+// получает только браузер, начавший вход. Секрет выводится из кода — хранить его не нужно.
+const pollSecretFor = (code: string) =>
+  crypto.createHmac('sha256', config.tokenSecret).update(`guest-login-poll:${code}`).digest('base64url');
 
 export type GuestLoginConfirmResult = 'ok' | 'not-found' | 'gone';
 
@@ -79,7 +84,10 @@ export const confirmGuestLogin = async (code: string, telegramId: string): Promi
   return 'ok';
 };
 
-export const getGuestLoginStatus = async (code: string): Promise<GuestLoginStatusResponse | null> => {
+export const getGuestLoginStatus = async (code: string, pollSecret: string): Promise<GuestLoginStatusResponse | null> => {
+  if (!secretsEqual(pollSecret, pollSecretFor(code))) {
+    return null;
+  }
   const login = await prisma.guestLoginCode.findUnique({ where: { code } });
   if (!login) {
     return null;

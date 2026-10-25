@@ -39,7 +39,7 @@ export class TelegramClient {
     const url = new URL(`${this.apiBaseUrl}/bot${this.token}/getUpdates`);
     url.searchParams.set('offset', String(offset));
     url.searchParams.set('timeout', String(timeoutSeconds));
-    url.searchParams.set('allowed_updates', JSON.stringify(['message']));
+    url.searchParams.set('allowed_updates', JSON.stringify(['message', 'callback_query']));
 
     const response = await fetch(url);
     return this.readJson<TelegramUpdate[]>(response);
@@ -72,6 +72,36 @@ export class TelegramClient {
     });
 
     return this.readJson<unknown>(response);
+  }
+
+  async editMessageText(chatId: number, messageId: number, text: string, options: TelegramSendMessageOptions = {}) {
+    const response = await fetch(`${this.apiBaseUrl}/bot${this.token}/editMessageText`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        disable_web_page_preview: options.disable_web_page_preview ?? true,
+        reply_markup: options.reply_markup,
+      }),
+    });
+
+    return this.readJson<unknown>(response);
+  }
+
+  async answerCallbackQuery(callbackQueryId: string) {
+    const response = await fetch(`${this.apiBaseUrl}/bot${this.token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ callback_query_id: callbackQueryId }),
+    });
+
+    return this.readJson<boolean>(response);
   }
 
   async sendMessages(chatIds: number[], text: string) {

@@ -139,8 +139,8 @@ export type GuestMe = GuestTaste & {
 // Вход через бота по ссылке (#239). POST /guest/auth/telegram/start → код и
 // ссылка t.me/<бот>?start=<код>; сайт открывает приложение Telegram, гость жмёт
 // «Запустить», бот подтверждает код (POST /automation/guest-login/confirm), а
-// сайт опрашивает GET /guest/auth/telegram/status?code= и получает токен один
-// раз. `consent` обязателен для нового гостя — иначе статус `consent-required`;
+// сайт опрашивает POST /guest/auth/telegram/status {code, secret} и получает токен
+// один раз. `consent` обязателен для нового гостя — иначе статус `consent-required`;
 // непустые вкусы текущего прохождения переносятся в учётку. Без бота — 503.
 export type GuestLoginStartRequest = Partial<GuestTaste> & {
   consent?: boolean;
@@ -150,6 +150,8 @@ export type GuestLoginStartResponse = {
   code: string;
   botUrl: string;
   expiresAt: string;
+  // Только инициатору: без него POST /guest/auth/telegram/status отвечает 404.
+  pollSecret: string;
 };
 
 export type GuestAuthResponse = {

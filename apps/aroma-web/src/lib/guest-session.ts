@@ -20,6 +20,7 @@ export type GuestLoginStart = {
   code: string;
   botUrl: string;
   expiresAt: string;
+  pollSecret: string;
 };
 
 export type GuestLoginStatus =
@@ -117,6 +118,7 @@ export const readPendingLogin = (storage: StorageLike, now: Date): PendingLogin 
     typeof record.code !== 'string' ||
     typeof record.botUrl !== 'string' ||
     typeof record.expiresAt !== 'string' ||
+    typeof record.pollSecret !== 'string' ||
     (record.origin !== 'cabinet' && record.origin !== 'intro')
   ) {
     return null;
@@ -129,6 +131,7 @@ export const readPendingLogin = (storage: StorageLike, now: Date): PendingLogin 
     code: record.code,
     botUrl: record.botUrl,
     expiresAt: record.expiresAt,
+    pollSecret: record.pollSecret,
     origin: record.origin,
     consent: record.consent === true,
   };
