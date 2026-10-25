@@ -544,7 +544,7 @@
   right: 16px;
   color: var(--guest-chip-ink-on);
   border-color: var(--accent-hover);
-  background: rgba(142, 47, 60, 0.42);
+  background: rgba(138, 100, 39, 0.42);
 }
 
 .mixer-stamp-skip {

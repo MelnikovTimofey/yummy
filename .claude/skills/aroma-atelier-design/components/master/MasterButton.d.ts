@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react';
  */
 export interface MasterButtonProps {
   children?: ReactNode;
-  /** primary = oxblood fill (one per surface); danger = outlined oxblood. */
+  /** primary = accent fill (one per surface); danger = outlined danger. */
   variant?: 'default' | 'primary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;

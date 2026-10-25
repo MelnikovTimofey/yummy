@@ -1,5 +1,5 @@
 // Equal-width segmented control (guest journey / app tabs). Active segment is quiet:
-// graphite, cream ink, 2px bordeaux mark.
+// graphite, cream ink, 2px accent mark.
 export function SegmentNav({ items, value, onChange, style }) {
   return (
     <div
