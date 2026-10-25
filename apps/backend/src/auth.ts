@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import { config } from './config';
 import { prisma } from './db';
 
@@ -32,10 +33,18 @@ const hashSecret = (secret: string, salt: string) => crypto.scryptSync(secret, s
 
 const isStaffRole = (value: string): value is StaffRole => value === 'admin' || value === 'master';
 
-const verifySecret = (secret: string, hash: string, salt: string) => {
+const scrypt = promisify(crypto.scrypt) as (secret: string, salt: string, keylen: number) => Promise<Buffer>;
+
+// Проверка идёт на публичных входах: синхронный scrypt блокировал бы весь API на время перебора.
+const verifySecret = async (secret: string, hash: string, salt: string) => {
   const expected = Buffer.from(hash, 'hex');
-  const received = Buffer.from(hashSecret(secret, salt), 'hex');
+  const received = await scrypt(secret, salt, 64);
   return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+};
+
+export const secretsEqual = (received: string | undefined, expected: string) => {
+  const digest = (value: string) => crypto.createHash('sha256').update(value).digest();
+  return received !== undefined && crypto.timingSafeEqual(digest(received), digest(expected));
 };
 
 export const createSecretHash = (secret: string, salt: string) => hashSecret(secret, salt);
@@ -143,7 +152,7 @@ export const resolveStaffUser = async (login: string, password: string): Promise
     return null;
   }
 
-  if (!verifySecret(password, account.passwordHash, account.passwordSalt)) {
+  if (!(await verifySecret(password, account.passwordHash, account.passwordSalt))) {
     return null;
   }
 
@@ -204,7 +213,13 @@ export const verifyGuestAccessCode = async (code: string) => {
     },
   });
 
-  const matched = codes.find((item) => verifySecret(code, item.codeHash, item.codeSalt));
+  let matched: (typeof codes)[number] | undefined;
+  for (const item of codes) {
+    if (await verifySecret(code, item.codeHash, item.codeSalt)) {
+      matched = item;
+      break;
+    }
+  }
   if (!matched) {
     return null;
   }
