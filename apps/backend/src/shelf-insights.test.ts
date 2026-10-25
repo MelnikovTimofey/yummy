@@ -340,7 +340,9 @@ test.describe('дашборд полки', () => {
   });
 
   test('расход по неделям: отрезок через границу недель, текущая неделя частичная, убранные табаки тоже', async () => {
-    const now = at(8);
+    // Четверг, полдень недели дня 8: иначе в зависимости от дня прогона отрезок в текущей
+    // неделе бывает короче MIN_SEGMENT_MS и не засчитывается (#416).
+    const now = new Date(weekPeriods(at(8), 1)[0].from.getTime() + 3.5 * DAY);
     const weeks = weekPeriods(now, 5);
     await addToShelf(actor, PEACH, 'plan', at(1));
     const peach = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: PEACH } });
