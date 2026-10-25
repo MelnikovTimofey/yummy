@@ -604,6 +604,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
   const firstRating = await app.inject({
     method: 'POST',
     url: '/guest/mixes/mix-citrus-scout/rating',
+    headers: { 'x-atelier-device': 'test-device-0000000001' },
     payload: {
       value: 5,
     },
@@ -612,6 +613,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
   const secondRating = await app.inject({
     method: 'POST',
     url: '/guest/mixes/mix-silk-road/rating',
+    headers: { 'x-atelier-device': 'test-device-0000000001' },
     payload: {
       value: 3,
     },

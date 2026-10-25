@@ -414,7 +414,7 @@ test.describe('evaluate endpoint', () => {
   });
 
   test('similar mix counts guest ratings', async () => {
-    await rateMix('mix-citrus-scout', 5);
+    await rateMix('mix-citrus-scout', 5, { deviceId: 'test-device-0000000001' });
 
     const response = await evaluate({
       components: [

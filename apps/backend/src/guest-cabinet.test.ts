@@ -30,7 +30,9 @@ const smoke = (app: App, mixId: string, headers?: Record<string, string>) =>
 const smokeCustom = (app: App, headers?: Record<string, string>) =>
   app.inject({ method: 'POST', url: '/guest/events/custom-mix-smoke', payload: { components: BOWL, name: 'Своё' }, headers });
 
-const rate = (app: App, mixId: string, value: number, headers?: Record<string, string>) =>
+const device = (name: string) => ({ 'x-atelier-device': `test-device-${name.padEnd(12, '0')}` });
+
+const rate = (app: App, mixId: string, value: number, headers: Record<string, string> = device('anon')) =>
   app.inject({ method: 'POST', url: `/guest/mixes/${mixId}/rating`, payload: { value }, headers });
 
 const history = async (app: App, headers: Record<string, string>, query = '') => {
@@ -130,8 +132,8 @@ test.describe('guest cabinet: history and favorites', () => {
 
     assert.equal(second.rating.ratingsCount, 1);
     assert.equal(second.rating.avgRating, 5);
-    await rate(app, MIX, 3);
-    await rate(app, MIX, 3);
+    await rate(app, MIX, 3, device('first'));
+    await rate(app, MIX, 3, device('second'));
     assert.equal(await prisma.mixRating.count({ where: { mixId: MIX } }), 3);
   });
 

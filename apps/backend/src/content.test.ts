@@ -103,6 +103,7 @@ test('guest catalog filters available mixes and rating updates change averages',
     const rating = await app.inject({
       method: 'POST',
       url: '/guest/mixes/mix-silk-road/rating',
+      headers: { 'x-atelier-device': 'test-device-0000000001' },
       payload: {
         value: 1,
       },
@@ -158,6 +159,7 @@ test('guest home rails include statistical rails for CTA and ratings', async () 
     await app.inject({
       method: 'POST',
       url: '/guest/mixes/mix-citrus-scout/rating',
+      headers: { 'x-atelier-device': 'test-device-0000000001' },
       payload: {
         value: 1,
       },
@@ -166,6 +168,7 @@ test('guest home rails include statistical rails for CTA and ratings', async () 
     await app.inject({
       method: 'POST',
       url: '/guest/mixes/mix-berry-dawn/rating',
+      headers: { 'x-atelier-device': 'test-device-0000000001' },
       payload: {
         value: 5,
       },
@@ -250,6 +253,7 @@ test('most selected rail needs a smoke CTA and top rated rail needs a guest rati
     await app.inject({
       method: 'POST',
       url: '/guest/mixes/mix-berry-dawn/rating',
+      headers: { 'x-atelier-device': 'test-device-0000000001' },
       payload: {
         value: 5,
       },

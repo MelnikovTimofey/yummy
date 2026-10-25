@@ -68,6 +68,7 @@ import {
   canOfferLogin,
   clearPendingLogin,
   createLoginPoller,
+  guestDeviceId,
   loginReturnView,
   readPendingLogin,
   savePendingLogin,
@@ -567,6 +568,7 @@ const sendMixRating = async (mixId: string, value: number) => {
   const payload = await requestJson<unknown>(`/guest/mixes/${mixId}/rating`, {
     method: 'POST',
     body: JSON.stringify({ value }),
+    headers: { 'x-atelier-device': guestDeviceId(localStorage) },
   }, 'optional');
 
   const record = isRecord(payload) ? payload : {};

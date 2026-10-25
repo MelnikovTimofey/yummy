@@ -31,6 +31,7 @@ import {
   verifyGuestAccessCode,
 } from './auth';
 import { createLoginThrottle } from './login-throttle';
+import { createRateLimit } from './rate-limit';
 import {
   createDailyAccessCode,
   createStaffAccount,
@@ -186,6 +187,26 @@ import type { MixView, RailView, StaffRailView } from './state';
 export const buildApp = () => {
   const app = Fastify({ logger: true });
   const loginThrottle = createLoginThrottle();
+  // Гостевой путь открыт без кода, а гости заведения выходят в сеть с одного IP:
+  // пороги — с запасом на зал в час пик, но не на скрипт.
+  const guestWrites = createRateLimit(config.guestWriteLimit, 5 * 60_000);
+  const loginStarts = createRateLimit(20, 5 * 60_000);
+  const wrongAccessCodes = createRateLimit(20, 5 * 60_000);
+  const rejectOverLimit = (limit: ReturnType<typeof createRateLimit>, request: FastifyRequest, reply: FastifyReply, record = true) => {
+    const ip = clientIp(request);
+    const retryAfter = limit.retryAfterSeconds(ip);
+    if (retryAfter > 0) {
+      reply
+        .status(429)
+        .header('retry-after', String(retryAfter))
+        .send({ error: 'Слишком много запросов. Попробуйте через пару минут.' } satisfies ApiError);
+      return true;
+    }
+    if (record) {
+      limit.record(ip);
+    }
+    return false;
+  };
 
   app.register(cors, {
     origin: true,
@@ -319,8 +340,14 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Code is required' } satisfies ApiError);
     }
 
+    // Считаются только неверные коды: зал, вводящий верный код, лимит не тратит.
+    if (rejectOverLimit(wrongAccessCodes, request, reply, false)) {
+      return;
+    }
+
     const dailyCode = await verifyGuestAccessCode(code);
     if (!dailyCode) {
+      wrongAccessCodes.record(clientIp(request));
       return reply.status(401).send({ error: 'Invalid access code' } satisfies ApiError);
     }
 
@@ -421,6 +448,9 @@ export const buildApp = () => {
   });
 
   app.post('/guest/events/custom-mix-smoke', async (request, reply) => {
+    if (rejectOverLimit(guestWrites, request, reply)) {
+      return;
+    }
     const input = parseCustomMixSmokeInput(request.body);
     if ('error' in input) {
       return reply.status(400).send(input satisfies ApiError);
@@ -443,6 +473,9 @@ export const buildApp = () => {
   });
 
   app.post('/guest/events/smoke-cta', async (request, reply) => {
+    if (rejectOverLimit(guestWrites, request, reply)) {
+      return;
+    }
     const body = request.body as { mixId?: string } | undefined;
     const mixId = body?.mixId?.trim();
 
@@ -450,7 +483,8 @@ export const buildApp = () => {
       return reply.status(400).send({ error: 'Mix id is required' } satisfies ApiError);
     }
 
-    const mix = (await getAvailableMixCatalog()).find((item) => item.id === mixId);
+    // getAvailableMixCatalog отдаёт все миксы; выбрать гость может только видимые ему.
+    const mix = (await getAvailableMixCatalog()).find((item) => item.id === mixId && item.guestVisible);
     if (!mix) {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
@@ -648,6 +682,9 @@ export const buildApp = () => {
   app.get('/guest/auth/telegram/config', async () => ({ botUsername: config.guestLoginBotUsername }) satisfies GuestTelegramConfigResponse);
 
   app.post('/guest/auth/telegram/start', async (request, reply) => {
+    if (rejectOverLimit(loginStarts, request, reply)) {
+      return;
+    }
     const taste = parseTaste(request.body, { required: false });
     if ('error' in taste) {
       return reply.status(400).send(taste satisfies ApiError);
@@ -789,6 +826,9 @@ export const buildApp = () => {
   });
 
   app.post('/guest/mixes/:id/rating', async (request, reply) => {
+    if (rejectOverLimit(guestWrites, request, reply)) {
+      return;
+    }
     const mixId = (request.params as { id?: string }).id?.trim();
     const body = request.body as { value?: unknown } | undefined;
     const value = typeof body?.value === 'number' ? body.value : Number.NaN;
@@ -806,7 +846,17 @@ export const buildApp = () => {
       return;
     }
 
-    const rated = await rateMix(mixId, value, guest?.id ?? null);
+    const deviceHeader = request.headers['x-atelier-device'];
+    const deviceId = typeof deviceHeader === 'string' && DEVICE_ID_PATTERN.test(deviceHeader) ? deviceHeader : null;
+    if (!guest && !deviceId) {
+      return reply.status(400).send({ error: 'Device id is required for an anonymous rating' } satisfies ApiError);
+    }
+
+    if (!(await getAvailableMixCatalog()).some((item) => item.id === mixId && item.guestVisible)) {
+      return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
+    }
+
+    const rated = await rateMix(mixId, value, guest ? { guestId: guest.id } : { deviceId: deviceId! });
     if (!rated) {
       return reply.status(404).send({ error: 'Mix not found' } satisfies ApiError);
     }
@@ -2578,6 +2628,8 @@ const clientIp = (request: FastifyRequest) => {
   const forwarded = (Array.isArray(header) ? header.join(',') : header)?.split(',').pop()?.trim();
   return forwarded || request.ip;
 };
+
+const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 
 const AUTOMATION_HEADER = 'x-atelier-automation-key';
 
