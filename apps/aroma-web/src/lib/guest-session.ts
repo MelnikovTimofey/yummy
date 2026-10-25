@@ -30,6 +30,18 @@ export type GuestLoginStatus =
 
 export const GUEST_TOKEN_KEY = 'aroma-guest-token';
 export const GUEST_LOGIN_KEY = 'aroma-guest-login';
+export const GUEST_DEVICE_KEY = 'aroma-device-id';
+
+// Анонимная оценка — одна с устройства: backend заменяет повторную по этому id.
+export const guestDeviceId = (storage: StorageLike) => {
+  const stored = storage.getItem(GUEST_DEVICE_KEY);
+  if (stored && /^[A-Za-z0-9_-]{16,64}$/.test(stored)) {
+    return stored;
+  }
+  const created = crypto.randomUUID();
+  storage.setItem(GUEST_DEVICE_KEY, created);
+  return created;
+};
 
 export const createGuestSession = (storage: StorageLike) => {
   const listeners = new Set<() => void>();

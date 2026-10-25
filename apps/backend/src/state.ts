@@ -2619,7 +2619,7 @@ export const getSmokeCtaEvents = async () => {
   }));
 };
 
-export const rateMix = async (id: string, value: number, guestId: string | null = null) => {
+export const rateMix = async (id: string, value: number, rater: { guestId: string } | { deviceId: string }) => {
   await ensureAppState();
 
   const mix = await prisma.mix.findUnique({
@@ -2635,20 +2635,19 @@ export const rateMix = async (id: string, value: number, guestId: string | null 
     return { error: 'Rating value must be between 1 and 5' };
   }
 
-  // Вошедший гость оценивает микс один раз: повторная оценка заменяет прежнюю.
-  if (guestId) {
+  // Гость оценивает микс один раз — вошедший по учётке, анонимный с устройства:
+  // повторная оценка заменяет прежнюю.
+  if ('guestId' in rater) {
     await prisma.mixRating.upsert({
-      where: { guestId_mixId: { guestId, mixId: id } },
-      create: { mixId: id, guestId, value, source: 'guest' },
+      where: { guestId_mixId: { guestId: rater.guestId, mixId: id } },
+      create: { mixId: id, guestId: rater.guestId, value, source: 'guest' },
       update: { value },
     });
   } else {
-    await prisma.mixRating.create({
-      data: {
-        mixId: id,
-        value,
-        source: 'guest',
-      },
+    await prisma.mixRating.upsert({
+      where: { deviceId_mixId: { deviceId: rater.deviceId, mixId: id } },
+      create: { mixId: id, deviceId: rater.deviceId, value, source: 'guest' },
+      update: { value },
     });
   }
 

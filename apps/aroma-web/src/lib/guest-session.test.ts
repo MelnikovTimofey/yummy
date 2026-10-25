@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   createGuestSession,
   createLoginPoller,
+  GUEST_DEVICE_KEY,
   GUEST_LOGIN_KEY,
   GUEST_TOKEN_KEY,
+  guestDeviceId,
   canOfferLogin,
   clearPendingLogin,
   loginReturnView,
@@ -279,4 +281,17 @@ test('единичный сбой сети не обрывает опрос, т�
   assert.equal(calls.length, 5);
   assert.equal(errors(), 1);
   assert.equal(timers.pending(), 0);
+});
+
+test('id устройства создаётся один раз и дальше читается из хранилища', () => {
+  const storage = memoryStorage();
+  const first = guestDeviceId(storage);
+  assert.match(first, /^[A-Za-z0-9_-]{16,64}$/);
+  assert.equal(guestDeviceId(storage), first);
+  assert.equal(storage.data.get(GUEST_DEVICE_KEY), first);
+});
+
+test('битый id устройства заменяется новым', () => {
+  const storage = memoryStorage({ [GUEST_DEVICE_KEY]: 'x' });
+  assert.match(guestDeviceId(storage), /^[A-Za-z0-9_-]{16,64}$/);
 });

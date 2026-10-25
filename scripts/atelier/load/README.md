@@ -94,6 +94,11 @@ docker run --rm -v "$PWD/scripts/atelier/load:/scripts:ro" -e BASE_URL=http://ho
 бинарником в home. Задержки k6 оттуда включают сеть Франкфурт → Новосибирск, поэтому серверное время
 снимается отдельно из логов backend (`server-latency.mjs`). Команды ниже — для bash, из корня репо.
 
+Вся нагрузка идёт с одного IP и упирается в защиту гостевого пути: на время прогона поднять
+`ATELIER_GUEST_WRITE_LIMIT` в `.env` (например, `100000`), перезапустить backend, после — вернуть `60`.
+Старты входа через бота ограничены отдельно (20 за 5 минут с IP), а `/automation` снаружи закрыт —
+сценарий входа во Франкфурте упрётся в 429/404; его меряют отдельно или с хоста.
+
 ```bash
 # 0. k6 во Франкфурте (один раз)
 ssh atelier-frankfurt 'mkdir -p ~/k6 && cd ~/k6 && curl -fsSL https://github.com/grafana/k6/releases/download/v2.3.0/k6-v2.3.0-linux-amd64.tar.gz | tar xz --strip-components=1 && ./k6 version'

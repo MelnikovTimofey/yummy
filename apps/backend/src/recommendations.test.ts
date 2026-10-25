@@ -124,7 +124,7 @@ test('guest onboarding endpoint returns ranked recommendation list', async () =>
 });
 
 test('recommendations carry the guest ratings count', async () => {
-  await rateMix('mix-silk-road', 4);
+  await rateMix('mix-silk-road', 4, { deviceId: 'test-device-0000000001' });
 
   const recommendations = await getRecommendations({ likedProfiles: ['sweet'], likedFlavors: ['мед'], limit: 12 });
   const rated = recommendations.find((mix) => mix.id === 'mix-silk-road');

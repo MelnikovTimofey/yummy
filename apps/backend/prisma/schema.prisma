@@ -283,6 +283,8 @@ model MixRating {
   id        String        @id @default(uuid())
   mixId     String
   guestId   String?
+  // Анонимная оценка — одна с устройства (id из localStorage гостя).
+  deviceId  String?
   value     Int
   source    String        @default("guest")
   createdAt DateTime      @default(now())
@@ -290,6 +292,7 @@ model MixRating {
   guest     GuestAccount? @relation(fields: [guestId], references: [id], onDelete: SetNull)
 
   @@unique([guestId, mixId])
+  @@unique([deviceId, mixId])
   @@index([mixId])
   @@index([createdAt])
 }
