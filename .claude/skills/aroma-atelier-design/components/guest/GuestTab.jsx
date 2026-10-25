@@ -1,5 +1,5 @@
 // Tab used in the guest topbar nav rows (.tab / .tab.active upstream). Active is quiet:
-// graphite fill, cream ink and a 2px accent mark — solid accent belongs to the CTA only.
+// graphite fill, cream ink and a 2px bordeaux mark — solid accent belongs to the CTA only.
 export function GuestTab({ children, active = false, onClick, style }) {
   return (
     <button

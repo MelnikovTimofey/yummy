@@ -11,4 +11,4 @@ Not the guest app's main navigation: since #168 that is the bottom icon bar (П�
 ```
 
 - Max 3 segments; labels are one word where possible, sentence case.
-- Active segment is quiet — graphite fill, cream ink and a 2px accent mark at the bottom. Solid accent is reserved for `AromaCTA`, so navigation never competes with the primary action.
+- Active segment is quiet — graphite fill, cream ink and a 2px bordeaux mark at the bottom. Solid accent is reserved for `AromaCTA`, so navigation never competes with the primary action.

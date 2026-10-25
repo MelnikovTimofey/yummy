@@ -1,4 +1,4 @@
-One tobacco primary action per guest screen — the only button that ever reads as filled.
+One bordeaux primary action per guest screen — the only button that ever reads as filled.
 
 ```jsx
 <AromaCTA pulse onClick={choose}>Покурить</AromaCTA>

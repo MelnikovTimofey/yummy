@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-/** Two-step onboarding progress row: back, accent bar, "1/2". */
+/** Two-step onboarding progress row: back, oxblood bar, "1/2". */
 export interface OnboardingProgressProps {
   step?: number;
   total?: number;
