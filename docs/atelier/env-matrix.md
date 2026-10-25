@@ -26,6 +26,7 @@
 | `ATELIER_TOKEN_TTL_HOURS` | TTL staff token | `24` |
 | `ATELIER_GUEST_LOGIN_BOT_USERNAME` | username бота входа гостей в кабинет, без `@` (#239); пусто — вход выключен, `GET /guest/auth/telegram/config` отдаёт `null` | `aroma_atelier_client_bot` |
 | `ATELIER_GUEST_TOKEN_TTL_DAYS` | TTL токена гостя кабинета, подписывается `ATELIER_TOKEN_SECRET` с `kind: 'guest'` | `90` |
+| `ATELIER_CORS_ORIGINS` | адреса фронтов через запятую, которым backend отдаёт CORS-заголовки; пусто — любой Origin (локально и в CI). В проде compose собирает из `AROMA_DOMAIN`/`MASTER_DOMAIN` | `https://atelier.example,https://master.atelier.example` |
 | `ATELIER_GUEST_WRITE_LIMIT` | гостевых записей (оценки, «Покурить», «Намиксуй») с одного IP за 5 минут; гости зала идут с одного IP. На нагрузочный прогон k6 — поднять и перезапустить backend | `60` |
 
 ### Bootstrap-only

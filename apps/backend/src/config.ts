@@ -17,6 +17,12 @@ export const requiredSecret = (name: string, localFallback: string, source: Node
   return localFallback;
 };
 
+// Адреса фронтов через запятую; пусто — любой Origin (локальный запуск и CI).
+export const parseOrigins = (value: string | undefined) => {
+  const origins = (value ?? '').split(',').map((item) => item.trim().replace(/\/+$/, '')).filter(Boolean);
+  return origins.length ? origins : null;
+};
+
 export const config = {
   appName: process.env.APP_NAME ?? 'atelier-backend',
   host: process.env.HOST ?? '0.0.0.0',
@@ -29,4 +35,5 @@ export const config = {
   guestTokenTtlDays: parsePort(process.env.ATELIER_GUEST_TOKEN_TTL_DAYS, 90),
   // Гостевая запись (оценки, «Покурить») с одного IP за 5 минут; на нагрузочный прогон — поднять.
   guestWriteLimit: parsePort(process.env.ATELIER_GUEST_WRITE_LIMIT, 60),
+  corsOrigins: parseOrigins(process.env.ATELIER_CORS_ORIGINS),
 };
