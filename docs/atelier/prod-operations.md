@@ -18,7 +18,7 @@
 | Compose-файл | `docker-compose.prod.yml` (всегда с `--env-file .env`) |
 | Сервисы | `db` (Postgres 16), `backend`, `aroma-web`, `master-web`, `telegram-bot` (staff-бот кода смены), `telegram-guest-bot` (бот входа гостей в кабинет), `proxy` (Caddy) |
 | База данных | сервис `db` в том же compose, наружу не публикуется, volume `atelier_pg` |
-| Бэкапы | ежечасный `pg_dump` (:30 UTC) → `/opt/atelier/backups` (часовые 24 ч, дневные 14 дней) + S3 TimeWeb `ru-1`: `hourly/` (48 шт.), `daily/` (дамп 03:30 UTC, 30 шт.); проверка восстановления пн 04:00 UTC; cron `/etc/cron.d/atelier-pg-backup`, лог `/var/log/atelier-backup.log` |
+| Бэкапы | ежечасный `pg_dump`, зашифрованный `age` (:30 UTC) → `/opt/atelier/backups` (часовые 24 ч, дневные 14 дней) + S3 TimeWeb `ru-1` с Object Lock на 30 дней: `hourly/` (2 дня), `daily/` (дамп 03:30 UTC, 30 дней); проверка восстановления пн 04:00 UTC; cron `/etc/cron.d/atelier-pg-backup`, лог `/var/log/atelier-backup.log` |
 | Каталог табаков | синхронизация с htreviews.org: ночью 23:35 UTC вс–пт — бренды того, что есть в точке, сб 23:35 UTC — полный прогон; cron `/etc/cron.d/atelier-htreviews-sync`, лог `/var/log/atelier-htreviews-sync.log` (§6) |
 | Домены | `yummy-aroma-atelier.ru` (гость), `master.` (Мастер), `api.` (backend); DNS в TimeWeb |
 | TLS | Let's Encrypt через Caddy, ACME-уведомления на email владельца |

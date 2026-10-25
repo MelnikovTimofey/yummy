@@ -148,10 +148,10 @@
 | `BACKUP_S3_ENDPOINT` | S3-совместимый endpoint | `https://s3.twcstorage.ru` |
 | `BACKUP_S3_REGION` | регион бакета | `ru-1` |
 | `BACKUP_S3_BUCKET` | бакет под дампы | `atelier-backups` |
-| `BACKUP_S3_ACCESS_KEY` | ключ доступа к бакету | secret |
+| `BACKUP_S3_ACCESS_KEY` | ключ дополнительного пользователя S3 с уровнем «Чтение и запись» (не основной ключ аккаунта) | secret |
 | `BACKUP_S3_SECRET_KEY` | секретный ключ | secret |
-| `BACKUP_S3_KEEP_HOURLY` | сколько часовых дампов хранить в S3 `hourly/` (по умолчанию `48`) | `48` |
-| `BACKUP_S3_KEEP_DAILY` | сколько дневных дампов хранить в S3 `daily/` (по умолчанию `30`) | `30` |
+| `BACKUP_AGE_RECIPIENTS` | публичные ключи `age`, на которые шифруется дамп (по умолчанию `secrets/backup-age.recipients`) | `secrets/backup-age.recipients` |
+| `BACKUP_AGE_IDENTITY` | приватный ключ хоста для проверки восстановления (по умолчанию `secrets/backup-age.key`) | `secrets/backup-age.key` |
 | `BACKUP_DAILY_HOUR` | час UTC, дамп которого становится дневным (по умолчанию `03`) | `03` |
 | `BACKUP_LOCAL_HOURLY_HOURS` | сколько часов хранить часовые дампы на хосте (по умолчанию `24`) | `24` |
 | `BACKUP_LOCAL_DAYS` | сколько дней хранить дневные дампы на хосте (по умолчанию `14`) | `14` |
@@ -195,6 +195,7 @@
 ### Бэкап БД
 
 1. `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`
+2. `secrets/backup-age.key` (ключ хоста; ключ владельца на хосте не хранится)
 
 ### Мониторинг
 

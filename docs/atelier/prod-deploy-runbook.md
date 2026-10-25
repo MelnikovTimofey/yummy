@@ -156,45 +156,89 @@ scripts/atelier/deploy.sh   # git pull + готовые образы из GHCR, 
 
 ## 8. Бэкапы Postgres
 
-`pg_dump` каждый час в :30 UTC пишется на хост в `/opt/atelier/backups` и
-копируется в S3 TimeWeb в **другом регионе** (`ru-1`, Санкт-Петербург):
+`pg_dump` каждый час в :30 UTC шифруется `age` и пишется на хост в
+`/opt/atelier/backups`, оттуда копируется в S3 TimeWeb в **другом регионе**
+(`ru-1`, Санкт-Петербург):
 
 | Где | Что | Сколько хранится |
 |---|---|---|
-| S3 `hourly/atelier-<дата>T<час>.dump` | каждый часовой дамп | 48 последних (двое суток) |
-| S3 `daily/atelier-<дата>.dump` | дамп 03:30 UTC | 30 последних (месяц) |
-| хост `backups/atelier-<дата>T<час>.dump` | часовые | 24 часа |
-| хост `backups/atelier-<дата>.dump` | дневные | 14 дней |
+| S3 `hourly/atelier-<дата>T<час>.dump.age` | каждый часовой дамп | 2 дня видны, версии — 30 дней |
+| S3 `daily/atelier-<дата>.dump.age` | дамп 03:30 UTC | 30 дней |
+| хост `backups/atelier-<дата>T<час>.dump.age` | часовые | 24 часа |
+| хост `backups/atelier-<дата>.dump.age` | дневные | 14 дней |
 
-Сроки задаются переменными `BACKUP_*` в `.env.backup` (`env-matrix.md` §5a). Потеря
-сервера стоит не больше часа данных. По понедельникам в 04:00 UTC
-`pg-restore-check.sh` поднимает последний часовой дамп из S3 во временном `postgres:16`
-и проверяет, что `Tobacco`, `Mix`, `StaffAccount`, `_prisma_migrations` не
-пустые. Лог обоих скриптов — `/var/log/atelier-backup.log`.
+Защита от того, кто захватил хост:
+
+- **Object Lock** бакета в режиме GOVERNANCE на 30 дней: ключ с хоста (уровень
+  «Чтение и запись») может спрятать дамп маркером удаления или записать поверх, но
+  версии остаются и до конца срока не удаляются. Снять блокировку раньше может только
+  основной ключ аккаунта — на хосте его нет.
+- **Жизненный цикл** бакета (`scripts/atelier/s3-backup-lifecycle.json`) убирает
+  старые дампы сам, скрипты в S3 ничего не удаляют.
+- **Шифрование** на два ключа из `secrets/backup-age.recipients`: ключ владельца
+  (приватная часть только у владельца, вне хоста) и ключ хоста
+  `secrets/backup-age.key` — им `pg-restore-check.sh` расшифровывает дамп. Утечка
+  бакета или S3-ключа не раскрывает базу; при потере хоста дамп расшифровывается
+  ключом владельца.
+
+Сроки на хосте — переменные `BACKUP_*` в `.env.backup` (`env-matrix.md` §5a), в S3 —
+Object Lock и жизненный цикл бакета. Потеря сервера стоит не больше часа данных. По
+понедельникам в 04:00 UTC `pg-restore-check.sh` расшифровывает последний часовой
+дамп из S3, поднимает его во временном `postgres:16` и проверяет, что `Tobacco`,
+`Mix`, `StaffAccount`, `_prisma_migrations` не пустые. Лог обоих скриптов —
+`/var/log/atelier-backup.log`.
 
 Установка один раз:
 
-1. В панели TimeWeb создать приватный бакет S3 в `ru-1` и ключи доступа к нему.
-2. На хосте положить `/opt/atelier/.env.backup` с правами 600 — переменные
-   `BACKUP_S3_*` из [`env-matrix.md`](env-matrix.md) §5a.
-3. Поставить cron и проверить вручную:
+1. **Владелец, у себя:** `brew install age && age-keygen -o atelier-backup-owner.key`.
+   Файл ключа — в менеджер паролей, на хост не класть. Публичный ключ (`age1…`,
+   строка `Public key` в выводе) не секрет.
+2. **Панель TimeWeb, бакет в `ru-1`:**
+   - «Настройки» → «Блокировка объектов» → включить, режим GOVERNANCE, 30 дней.
+     Необратимо: отключить блокировку и версионирование потом нельзя.
+   - «Жизненный цикл» — правила из `scripts/atelier/s3-backup-lifecycle.json`:
+     `hourly/` удалить через 2 дня, `daily/` — через 30, нетекущие версии обоих —
+     через 1 день.
+   - «Пользователи» → дополнительный пользователь с уровнем «Чтение и запись» на этот
+     бакет. Его ключи — в `.env.backup` на хост. Основной ключ аккаунта на хосте не
+     хранится.
+3. **Хост:**
 
 ```bash
 cd /opt/atelier
-chmod 600 .env.backup backups/*.dump
+apt-get install -y age
+mkdir -p secrets && chmod 700 secrets
+age-keygen -o secrets/backup-age.key
+{ echo '<публичный ключ владельца age1…>'; age-keygen -y secrets/backup-age.key; } > secrets/backup-age.recipients
+# .env.backup: BACKUP_S3_* из env-matrix.md §5a, ключи — дополнительного пользователя
+chmod 600 .env.backup secrets/* backups/*
 cp scripts/atelier/pg-backup.cron /etc/cron.d/atelier-pg-backup
 scripts/atelier/pg-backup.sh
 scripts/atelier/pg-restore-check.sh
+```
+
+Проверка защиты — удалить свежую версию ключом с хоста должно быть нельзя:
+
+```bash
+. scripts/atelier/backup-lib.sh
+key=hourly/$(s3_list hourly | head -1)
+version=$(aws_cli s3api head-object --bucket "$BACKUP_S3_BUCKET" --key "$key" --query VersionId --output text)
+aws_cli s3api delete-object --bucket "$BACKUP_S3_BUCKET" --key "$key" --version-id "$version"
+# ожидается AccessDenied
 ```
 
 Восстановление целиком (схема + данные), из `/opt/atelier`:
 
 ```bash
 # если дампа на хосте нет — скачать из S3 (список: s3_list hourly / s3_list daily)
-. scripts/atelier/backup-lib.sh && s3 cp s3://$BACKUP_S3_BUCKET/hourly/atelier-<дата>T<час>.dump /backups/
+. scripts/atelier/backup-lib.sh && s3 cp s3://$BACKUP_S3_BUCKET/hourly/atelier-<дата>T<час>.dump.age /backups/
 
 docker compose -f docker-compose.prod.yml --env-file .env stop backend telegram-bot
-docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
-  pg_restore -U atelier -d atelier --clean --if-exists --no-owner < backups/atelier-<дата>T<час>.dump
+age -d -i secrets/backup-age.key backups/atelier-<дата>T<час>.dump.age \
+  | docker compose -f docker-compose.prod.yml --env-file .env exec -T db \
+    pg_restore -U atelier -d atelier --clean --if-exists --no-owner
 docker compose -f docker-compose.prod.yml --env-file .env start backend telegram-bot
 ```
+
+Хост потерян — дамп скачивается из S3 основным ключом аккаунта и расшифровывается
+ключом владельца: `age -d -i atelier-backup-owner.key <файл>.dump.age > <файл>.dump`.

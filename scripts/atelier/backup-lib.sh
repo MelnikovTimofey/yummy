@@ -18,8 +18,10 @@ BACKUP_DIR="${BACKUP_DIR:-$PWD/backups}"
 BACKUP_DAILY_HOUR="${BACKUP_DAILY_HOUR:-03}"
 BACKUP_LOCAL_HOURLY_HOURS="${BACKUP_LOCAL_HOURLY_HOURS:-24}"
 BACKUP_LOCAL_DAYS="${BACKUP_LOCAL_DAYS:-14}"
-BACKUP_S3_KEEP_HOURLY="${BACKUP_S3_KEEP_HOURLY:-48}"
-BACKUP_S3_KEEP_DAILY="${BACKUP_S3_KEEP_DAILY:-30}"
+# Дамп шифруется на всех получателей из файла: ключ владельца (приватная часть только
+# у него) и ключ хоста — им pg-restore-check.sh расшифровывает дамп для проверки.
+BACKUP_AGE_RECIPIENTS="${BACKUP_AGE_RECIPIENTS:-$PWD/secrets/backup-age.recipients}"
+BACKUP_AGE_IDENTITY="${BACKUP_AGE_IDENTITY:-$PWD/secrets/backup-age.key}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
 compose() {
@@ -28,21 +30,21 @@ compose() {
 
 # aws-cli из контейнера: на хосте ничего не ставим. 2.17 — до смены дефолтных
 # checksum'ов в 2.23, которые ломают загрузку в S3-совместимые хранилища.
+# Ключи передаются через окружение, а не значениями в -e: аргументы docker видны в ps.
+aws_cli() {
+  AWS_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY" \
+    AWS_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_KEY" \
+    AWS_DEFAULT_REGION="$BACKUP_S3_REGION" \
+    docker run --rm -v "$BACKUP_DIR:/backups" \
+    -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
+    amazon/aws-cli:2.17.0 --endpoint-url "$BACKUP_S3_ENDPOINT" "$@"
+}
+
 s3() {
-  docker run --rm -v "$BACKUP_DIR:/backups" \
-    -e AWS_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY" \
-    -e AWS_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_KEY" \
-    -e AWS_DEFAULT_REGION="$BACKUP_S3_REGION" \
-    amazon/aws-cli:2.17.0 --endpoint-url "$BACKUP_S3_ENDPOINT" s3 "$@"
+  aws_cli s3 "$@"
 }
 
 # Дампы в папке S3 (hourly/ или daily/), отсортированные от свежего к старому.
 s3_list() {
-  s3 ls "s3://$BACKUP_S3_BUCKET/$1/" | awk '{print $4}' | grep -E '^atelier-[0-9T-]+\.dump$' | sort -r || true
-}
-
-s3_prune() {
-  s3_list "$1" | tail -n +"$(($2 + 1))" | while read -r old; do
-    s3 rm "s3://$BACKUP_S3_BUCKET/$1/$old" --only-show-errors
-  done
+  s3 ls "s3://$BACKUP_S3_BUCKET/$1/" | awk '{print $4}' | grep -E '^atelier-[0-9T-]+\.dump\.age$' | sort -r || true
 }
