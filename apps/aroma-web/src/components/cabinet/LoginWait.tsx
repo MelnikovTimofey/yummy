@@ -35,7 +35,7 @@ export function LoginWait({
         <>
           <h1 className="cab-anon-title">Подтвердите вход в Telegram</h1>
           <p className="cab-wait-text">
-            Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить», затем «Войти» — кабинет откроется здесь.
+            Мы открыли чат с ботом Арома Ателье. Нажмите там «Запустить», затем «Войти», и кабинет откроется здесь.
           </p>
           <p className="cab-wait-status busy-inline" role="status">
             <SmokeMark inline />
