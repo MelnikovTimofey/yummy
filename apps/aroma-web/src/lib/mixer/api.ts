@@ -1,4 +1,4 @@
-import { fetchAsGuest } from '../guest-client';
+import { fetchAsGuest, fetchWithAccess } from '../guest-client';
 import { normalizeEvaluation, normalizePalette } from './normalize';
 import type { BowlComponent, SwipeRecord } from './types';
 
@@ -29,7 +29,7 @@ const request = async (path: string, body?: unknown, { asGuest = false } = {}): 
       signal: AbortSignal.timeout(requestTimeoutMs),
     };
     const url = `${apiBaseUrl}${path}`;
-    response = asGuest ? await fetchAsGuest(url, init, { anonymousRetry: true }) : await fetch(url, init);
+    response = asGuest ? await fetchAsGuest(url, init, { anonymousRetry: true }) : await fetchWithAccess(url, init);
   } catch (cause) {
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
     throw new MixerApiError(
