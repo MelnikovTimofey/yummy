@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { prisma } from './db';
 import {
   createTobacco,

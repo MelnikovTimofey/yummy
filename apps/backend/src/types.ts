@@ -30,6 +30,9 @@ export type GuestAccessSuccess = {
   message: string;
   issuedAt: string;
   nextStep: 'intro' | 'onboarding';
+  // Идёт в заголовке x-atelier-access на всех гостевых запросах (#435).
+  accessToken: string;
+  expiresAt: string;
 };
 
 export type GuestIntroCardsResponse = {

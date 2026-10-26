@@ -24,11 +24,14 @@ import {
   removeFavoriteMix,
 } from './guest-cabinet';
 import {
+  createGuestAccessToken,
   createStaffToken,
+  GUEST_ACCESS_HEADER,
   resolveStaffSession,
   resolveStaffUser,
   secretsEqual,
   verifyGuestAccessCode,
+  verifyGuestAccessToken,
 } from './auth';
 import { createLoginThrottle } from './login-throttle';
 import { createRateLimit } from './rate-limit';
@@ -217,8 +220,23 @@ export const buildApp = () => {
     return reply.status(500).send({ error: 'Internal server error' } satisfies ApiError);
   });
 
+  // max-age: токен доступа идёт заголовком на каждом гостевом запросе, без кэша
+  // браузер слал бы preflight перед каждым GET (Chrome держит не дольше 2 часов).
   app.register(cors, {
     origin: config.corsOrigins ?? true,
+    maxAge: 7200,
+  });
+
+  // Гостевой путь — только по коду дня (#435). 403, а не 401: на 401 клиент
+  // стирает токен кабинета, а истёкший код из кабинета выкидывать не должен.
+  app.addHook('onRequest', async (request, reply) => {
+    if (!request.url.startsWith('/guest/') || request.routeOptions.url === '/guest/access-code/verify') {
+      return;
+    }
+    const header = request.headers[GUEST_ACCESS_HEADER];
+    if (typeof header !== 'string' || !verifyGuestAccessToken(header)) {
+      return reply.status(403).send({ error: 'Access code required' } satisfies ApiError);
+    }
   });
 
   app.addHook('onReady', async () => {
@@ -366,12 +384,15 @@ export const buildApp = () => {
       return reply.status(401).send({ error: 'Invalid access code' } satisfies ApiError);
     }
 
+    const access = createGuestAccessToken();
     const response: GuestAccessSuccess = {
       ok: true,
       accessGranted: true,
       message: 'Доступ подтвержден. Можно переходить к знакомству и онбордингу.',
       issuedAt: new Date().toISOString(),
       nextStep: 'intro',
+      accessToken: access.token,
+      expiresAt: access.expiresAt.toISOString(),
     };
 
     return reply.send(response);

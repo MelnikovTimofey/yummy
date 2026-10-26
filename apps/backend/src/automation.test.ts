@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { config } from './config';
 import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
