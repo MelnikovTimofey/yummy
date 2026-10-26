@@ -147,7 +147,11 @@
 
 ### Guest access
 
-- `POST /guest/access-code/verify`
+- `POST /guest/access-code/verify` — по коду дня выдаёт `accessToken` и `expiresAt` (6 часов от ввода).
+
+Все остальные `/guest/*`, включая кабинет `/guest/me*`, требуют заголовок
+`x-atelier-access: <accessToken>`. Без него или с истёкшим токеном — `403`
+(`401` на гостевых эндпоинтах по-прежнему значит «токен кабинета недействителен»).
 
 ### Guest onboarding / recommendations
 

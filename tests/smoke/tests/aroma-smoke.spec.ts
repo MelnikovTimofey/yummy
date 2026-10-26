@@ -491,6 +491,48 @@ test('Aroma signed-in recommendations switch between «Для вас» and «П�
   expect(tasteWrites).toEqual([]);
 });
 
+const enterAtelier = async (page: Page) => {
+  await page.goto('/');
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+};
+
+// Код дня открывает Ателье на 6 часов (#435): по истечении — снова экран кода,
+// после ввода гость там же, где был, а 18+ и онбординг не спрашиваются.
+test('Aroma asks for the code again when access expires and returns the guest to the same screen', async ({ page }) => {
+  await enterAtelier(page);
+  const nav = page.getByRole('navigation', { name: 'Гостевая навигация' });
+  await nav.getByRole('button', { name: 'Каталог', exact: true }).click();
+  await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
+
+  await page.evaluate(() => {
+    const stored = JSON.parse(localStorage.getItem('aroma-access') ?? '{}');
+    localStorage.setItem('aroma-access', JSON.stringify({ ...stored, expiresAt: Date.now() - 1 }));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+
+  await expect(page.getByText('Код устарел. Новый скажет мастер зала.')).toBeVisible();
+  await expect(page.getByLabel('Код мастера')).toHaveValue('');
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+
+  await expect(page.getByRole('searchbox', { name: 'Поиск по каталогу' })).toBeVisible();
+  await expect(page.getByText('С чего начнём?')).toHaveCount(0);
+});
+
+test('Aroma shows the code screen when the backend refuses access', async ({ page }) => {
+  await enterAtelier(page);
+  await page.route('**/guest/mixer/palette', (route) => route.fulfill({ status: 403, json: { error: 'Access code required' } }));
+
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Миксер', exact: true }).click();
+
+  await expect(page.getByText('Код устарел. Новый скажет мастер зала.')).toBeVisible();
+  await expect(page.getByText('Access code required')).toHaveCount(0);
+});
+
 // Ошибки backend гостю — только по-русски (#267): служебный `error` ответа на
 // экран не попадает, а сбой «Покурить» у героя виден на экране подбора.
 test('Aroma guest sees Russian errors instead of backend messages', async ({ page }) => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { createGuestToken } from './auth';
 import { prisma } from './db';
 import { getAvailableMixCatalog, resetAppState } from './state';

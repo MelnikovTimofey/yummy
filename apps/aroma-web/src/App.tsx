@@ -63,7 +63,7 @@ import {
   type GuestForYouCard,
   type GuestForYouResponse,
 } from '@/lib/for-you-copy';
-import { fetchAsGuest, guestSession } from '@/lib/guest-client';
+import { fetchAsGuest, fetchWithAccess, guestAccess, guestSession } from '@/lib/guest-client';
 import {
   canOfferLogin,
   clearPendingLogin,
@@ -142,6 +142,8 @@ type GuestAccessSuccess = {
   message: string;
   issuedAt: string;
   nextStep: 'intro' | 'onboarding';
+  accessToken: string;
+  expiresAt: string;
 };
 
 type IntroCard = {
@@ -209,7 +211,6 @@ type MixModalState = {
 
 const storageKeys = {
   ageConfirmed: 'aroma-age-confirmed',
-  accessGranted: 'aroma-access-granted',
   introSeen: 'aroma-intro-seen',
   onboardingDone: 'aroma-onboarding-done',
   likedProfiles: 'aroma-liked-profiles',
@@ -454,7 +455,7 @@ const requestJson = async <T,>(path: string, options: RequestInit = {}, auth?: '
     const init = { ...options, headers, signal: AbortSignal.timeout(requestTimeoutMs) };
     response = auth
       ? await fetchAsGuest(url, init, { anonymousRetry: auth === 'optional' })
-      : await fetch(url, init);
+      : await fetchWithAccess(url, init);
   } catch (cause) {
     // Без таймаута недоступный хост держит запрос до системного TCP-таймаута (~75 секунд).
     const timedOut = cause instanceof DOMException && cause.name === 'TimeoutError';
@@ -1128,11 +1129,12 @@ const CatalogFiltersSheet = ({
 
 export const App = () => {
   const [ageConfirmed, setAgeConfirmed] = useState(() => localStorage.getItem(storageKeys.ageConfirmed) === 'true');
-  const [accessGranted, setAccessGranted] = useState(() => localStorage.getItem(storageKeys.accessGranted) === 'true');
+  const access = useSyncExternalStore(guestAccess.subscribe, guestAccess.status);
+  const accessGranted = access === 'active';
   const [introSeen, setIntroSeen] = useState(() => localStorage.getItem(storageKeys.introSeen) === 'true');
   const [onboardingDone, setOnboardingDone] = useState(() => localStorage.getItem(storageKeys.onboardingDone) === 'true');
   const [view, setView] = useState<GuestView>(() => {
-    const granted = localStorage.getItem(storageKeys.accessGranted) === 'true';
+    const granted = guestAccess.status() === 'active';
     const seen = localStorage.getItem(storageKeys.introSeen) === 'true';
     const done = localStorage.getItem(storageKeys.onboardingDone) === 'true';
     if (!granted) {
@@ -1272,13 +1274,26 @@ export const App = () => {
     }
   }, [ageConfirmed]);
 
+  // Срок доступа выходит по часам гостя: экран кода появляется сам, без 403 на
+  // первом запросе. Таймеры в спящей вкладке отстают — сверка и на возврате.
   useEffect(() => {
-    if (accessGranted) {
-      localStorage.setItem(storageKeys.accessGranted, 'true');
-    } else {
-      localStorage.removeItem(storageKeys.accessGranted);
+    if (!accessGranted) {
+      return;
     }
+    const timer = setTimeout(guestAccess.notify, Math.max(0, (guestAccess.expiresAt() ?? 0) - Date.now()));
+    document.addEventListener('visibilitychange', guestAccess.notify);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', guestAccess.notify);
+    };
   }, [accessGranted]);
+
+  useEffect(() => {
+    if (access === 'expired') {
+      setCode('');
+      setAccessStatus('idle');
+    }
+  }, [access]);
 
   useEffect(() => {
     if (introSeen) {
@@ -1313,13 +1328,10 @@ export const App = () => {
     localStorage.setItem(storageKeys.likedFlavors, JSON.stringify(likedFlavors));
   }, [likedFlavors, editingPreferences]);
 
+  // Истёкший доступ view не сбрасывает: экран кода рисуется поверх, и после
+  // нового кода гость остаётся там, где был (PRD §8.2).
   useEffect(() => {
-    if (!accessGranted) {
-      setView('access');
-      return;
-    }
-
-    if (view === 'access') {
+    if (accessGranted && view === 'access') {
       setView(introSeen ? (onboardingDone ? 'recommendations' : 'onboarding') : 'intro');
     }
   }, [accessGranted, introSeen, onboardingDone, view]);
@@ -1507,8 +1519,7 @@ export const App = () => {
 
     try {
       const result = await fetchGuestAccess(code.trim());
-      setAccessGranted(true);
-      setView(introSeen ? (onboardingDone ? 'recommendations' : 'onboarding') : 'intro');
+      guestAccess.grant(result.accessToken, result.expiresAt);
       setAccessStatus('success');
     } catch (cause) {
       setAccessStatus('error');
@@ -2369,7 +2380,9 @@ export const App = () => {
                 }
               />
               <p className="aroma-access-code-hint">
-                Код скажет мастер зала. Он действует до конца суток.
+                {access === 'expired'
+                  ? 'Код устарел. Новый скажет мастер зала.'
+                  : 'Код скажет мастер зала. Он действует до конца суток.'}
               </p>
             </div>
 

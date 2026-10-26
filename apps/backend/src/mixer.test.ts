@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { createMix, createTobacco, rateMix, resetAppState, updateMix, updateTobacco } from './state';
 import {
   affinityKey,
