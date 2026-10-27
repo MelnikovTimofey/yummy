@@ -57,7 +57,7 @@ if [[ -r /proc/meminfo ]]; then
   fi
 fi
 
-if [[ -z "$(find "$BACKUP_DIR" -name 'atelier-*.dump' -mmin -"$BACKUP_MAX_AGE_MIN" 2>/dev/null)" ]]; then
+if [[ -z "$(find "$BACKUP_DIR" -name 'atelier-*.dump*' -mmin -"$BACKUP_MAX_AGE_MIN" 2>/dev/null)" ]]; then
   problems+=("нет свежего дампа БД за последние $BACKUP_MAX_AGE_MIN мин")
 fi
 
