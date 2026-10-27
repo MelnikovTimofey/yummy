@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from './config';
 import { getDailyCodeWindow } from './daily-code';
@@ -212,7 +212,7 @@ export const buildApp = () => {
   };
 
   // Текст исключения (Prisma, внутренние ошибки) — только в лог; клиентские 4xx — как есть.
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler<FastifyError>((error, request, reply) => {
     if (error.statusCode && error.statusCode < 500) {
       return reply.send(error);
     }
@@ -222,8 +222,10 @@ export const buildApp = () => {
 
   // max-age: токен доступа идёт заголовком на каждом гостевом запросе, без кэша
   // браузер слал бы preflight перед каждым GET (Chrome держит не дольше 2 часов).
+  // methods — явно: с @fastify/cors 10 по умолчанию только GET, HEAD, POST.
   app.register(cors, {
     origin: config.corsOrigins ?? true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
     maxAge: 7200,
   });
 
