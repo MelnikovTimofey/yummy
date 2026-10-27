@@ -44,6 +44,20 @@ test.describe('CORS', () => {
     }
   });
 
+  test('preflight allows every method the fronts send cross-origin', async () => {
+    config.corsOrigins = ['https://aroma.example'];
+    const app = buildApp();
+    try {
+      const response = await preflight(app, 'https://aroma.example');
+      const allowed = String(response.headers['access-control-allow-methods']).split(/,\s*/);
+      for (const method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) {
+        assert.ok(allowed.includes(method), `${method} не разрешён: ${allowed}`);
+      }
+    } finally {
+      await app.close();
+    }
+  });
+
   test('origins are parsed from a comma separated list', () => {
     assert.deepEqual(parseOrigins(' https://a.example, https://b.example/ ,'), ['https://a.example', 'https://b.example']);
     assert.equal(parseOrigins(''), null);
