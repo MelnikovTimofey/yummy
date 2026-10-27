@@ -147,7 +147,7 @@
 |---|---|---|
 | `BACKUP_S3_ENDPOINT` | S3-совместимый endpoint | `https://s3.twcstorage.ru` |
 | `BACKUP_S3_REGION` | регион бакета | `ru-1` |
-| `BACKUP_S3_BUCKET` | бакет под дампы | `atelier-backups` |
+| `BACKUP_S3_BUCKET` | бакет под дампы, с Object Lock | `atelier-backups-locked` |
 | `BACKUP_S3_ACCESS_KEY` | ключ дополнительного пользователя S3 с уровнем «Чтение и запись» (не основной ключ аккаунта) | secret |
 | `BACKUP_S3_SECRET_KEY` | секретный ключ | secret |
 | `BACKUP_AGE_RECIPIENTS` | публичные ключи `age`, на которые шифруется дамп (по умолчанию `secrets/backup-age.recipients`) | `secrets/backup-age.recipients` |

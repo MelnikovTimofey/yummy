@@ -193,8 +193,10 @@ Object Lock и жизненный цикл бакета. Потеря серве
 1. **Владелец, у себя:** `brew install age && age-keygen -o atelier-backup-owner.key`.
    Файл ключа — в менеджер паролей, на хост не класть. Публичный ключ (`age1…`,
    строка `Public key` в выводе) не секрет.
-2. **Панель TimeWeb, бакет в `ru-1`:**
-   - «Настройки» → «Блокировка объектов» → включить, режим GOVERNANCE, 30 дней.
+2. **Панель TimeWeb, бакет `atelier-backups-locked` в `ru-1`** (приватный, класс
+   «Стандартный»; прежний `atelier-backups` был без блокировки — удалить его, когда в
+   новом накопятся дневные дампы за 30 дней):
+   - «Блокировка объектов» → включить, режим GOVERNANCE, 30 дней.
      Необратимо: отключить блокировку и версионирование потом нельзя.
    - «Жизненный цикл» — правила из `scripts/atelier/s3-backup-lifecycle.json`:
      `hourly/` удалить через 2 дня, `daily/` — через 30, нетекущие версии обоих —
@@ -210,7 +212,8 @@ apt-get install -y age
 mkdir -p secrets && chmod 700 secrets
 age-keygen -o secrets/backup-age.key
 { echo '<публичный ключ владельца age1…>'; age-keygen -y secrets/backup-age.key; } > secrets/backup-age.recipients
-# .env.backup: BACKUP_S3_* из env-matrix.md §5a, ключи — дополнительного пользователя
+# .env.backup: BACKUP_S3_* из env-matrix.md §5a, BACKUP_S3_BUCKET=atelier-backups-locked,
+# ключи — дополнительного пользователя
 chmod 600 .env.backup secrets/* backups/*
 cp scripts/atelier/pg-backup.cron /etc/cron.d/atelier-pg-backup
 scripts/atelier/pg-backup.sh
