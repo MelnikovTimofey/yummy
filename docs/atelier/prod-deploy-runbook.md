@@ -220,13 +220,18 @@ scripts/atelier/pg-backup.sh
 scripts/atelier/pg-restore-check.sh
 ```
 
-Проверка защиты — удалить свежую версию ключом с хоста должно быть нельзя:
+Проверка защиты — удалить свежую версию ключом с хоста должно быть нельзя даже с обходом
+блокировки. Без `--bypass-governance-retention` отказ получит и основной ключ аккаунта, так
+что такая проверка не отличит его от ключа «Чтение и запись». Ключ с хоста к тому же не
+должен видеть старый бакет `atelier-backups`. Подоболочка и `trap - ERR` — чтобы обработчик
+ошибок `backup-lib.sh` не печатал `FAILED` на ожидаемый отказ:
 
 ```bash
-. scripts/atelier/backup-lib.sh
-key=hourly/$(s3_list hourly | head -1)
-version=$(aws_cli s3api head-object --bucket "$BACKUP_S3_BUCKET" --key "$key" --query VersionId --output text)
-aws_cli s3api delete-object --bucket "$BACKUP_S3_BUCKET" --key "$key" --version-id "$version"
+( . scripts/atelier/backup-lib.sh; trap - ERR
+  key=hourly/$(s3_list hourly | head -1)
+  version=$(aws_cli s3api head-object --bucket "$BACKUP_S3_BUCKET" --key "$key" --query VersionId --output text)
+  aws_cli s3api delete-object --bucket "$BACKUP_S3_BUCKET" --key "$key" --version-id "$version" \
+    --bypass-governance-retention )
 # ожидается AccessDenied
 ```
 
