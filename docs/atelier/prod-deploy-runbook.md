@@ -214,7 +214,7 @@ age-keygen -o secrets/backup-age.key
 { echo '<публичный ключ владельца age1…>'; age-keygen -y secrets/backup-age.key; } > secrets/backup-age.recipients
 # .env.backup: BACKUP_S3_* из env-matrix.md §5a, BACKUP_S3_BUCKET=atelier-backups-locked,
 # ключи — дополнительного пользователя
-chmod 600 .env.backup secrets/* backups/*
+chmod 600 .env.backup secrets/backup-age.* backups/*
 cp scripts/atelier/pg-backup.cron /etc/cron.d/atelier-pg-backup
 scripts/atelier/pg-backup.sh
 scripts/atelier/pg-restore-check.sh
