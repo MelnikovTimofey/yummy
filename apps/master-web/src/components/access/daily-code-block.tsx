@@ -7,7 +7,7 @@ import type {
 } from '@/contracts';
 import { useCountdown, useTimeProgress } from '@/hooks/use-countdown';
 import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
-import { formatCodeDay } from './format-date-time';
+import { formatCodeDeadline } from './format-date-time';
 import { TelegramBotStatusBlock } from './telegram-bot-status-block';
 import type { AccessLoadStatus, AccessRoleStatus } from './types';
 import { BusyLabel, SmokeLoading } from '@/components/ui/loading';
@@ -126,7 +126,7 @@ export const DailyCodeBlock = ({
 
         {currentDailyCode.state === 'expired' ? (
           <p className="daily-code-progress__expires">
-            Код {currentDailyCode.code.codeValue} действовал {formatCodeDay(currentDailyCode.code.endsAt)}.
+            Код {currentDailyCode.code.codeValue} действовал до {formatCodeDeadline(currentDailyCode.code.endsAt)}.
           </p>
         ) : null}
 
@@ -134,7 +134,7 @@ export const DailyCodeBlock = ({
           <div className="daily-code-progress" aria-live="polite">
             <div className="daily-code-progress__labels">
               <span className="daily-code-progress__expires">
-                До конца {formatCodeDay(activeCode.endsAt)}
+                До {formatCodeDeadline(activeCode.endsAt)}
               </span>
               <span className="daily-code-progress__remaining">
                 {countdown.expired ? countdown.remaining : `Осталось ${countdown.remaining}`}
@@ -147,7 +147,7 @@ export const DailyCodeBlock = ({
         ) : null}
 
         <p className="daily-code-rotation">
-          Код меняется каждый день в полночь по московскому времени, операторы получают его в боте командой /code.
+          Гости вводят его при входе, вход длится 6 часов. Код меняется каждый день в 06:00 по Москве, операторы получают его в боте командой /code.
         </p>
 
         {dailyCodesStatus === 'loading' ? <SmokeLoading label="Загружаем код смены" /> : null}

@@ -5,7 +5,7 @@ import {
   buildDailyCodeValue,
   buildDayKey,
   buildMoscowWindow,
-  buildNextBroadcastDelay,
+  buildNextEnsureDelay,
   nextDailyCodeSequence,
 } from './time';
 
@@ -17,9 +17,14 @@ test('buildMoscowWindow returns Moscow day bounds', () => {
   assert.equal(window.endsAt.toISOString(), '2026-03-23T21:00:00.000Z');
 });
 
-test('broadcast delay targets configured Moscow time', () => {
-  const delay = buildNextBroadcastDelay(new Date('2026-03-23T05:30:00.000Z'), 9, 0);
-  assert.equal(delay, 1_800_000);
+test('next ensure fires right after the current code expires', () => {
+  const delay = buildNextEnsureDelay('2026-03-24T03:00:00.000Z', new Date('2026-03-23T21:00:00.000Z'));
+  assert.equal(delay, 6 * 60 * 60_000 + 5_000);
+});
+
+test('next ensure retries in a minute without a code', () => {
+  assert.equal(buildNextEnsureDelay(undefined, new Date('2026-03-23T21:00:00.000Z')), 60_000);
+  assert.equal(buildNextEnsureDelay('2026-03-23T20:00:00.000Z', new Date('2026-03-23T21:00:00.000Z')), 60_000);
 });
 
 test('daily code helpers build stable values and sequences', () => {

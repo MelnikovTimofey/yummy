@@ -18,7 +18,7 @@
 
 1. отвечает на команды staff в Telegram;
 2. связывает chat id с allowlist-номером после `share contact`;
-3. гарантирует наличие актуального ежедневного кода (до конца суток по Москве, смена в полночь) и отдаёт его по `/code`.
+3. гарантирует наличие актуального кода смены (с 06:00 до 06:00 следующего дня по Москве; новый выпускается сразу после истечения прежнего) и отдаёт его по `/code`.
 
 ## Команды
 
@@ -84,8 +84,6 @@ ATELIER_TELEGRAM_API_BASE_URL=https://api.telegram.org
 ATELIER_BACKEND_URL=http://localhost:3021
 ATELIER_BACKEND_AUTOMATION_TOKEN=
 ATELIER_BOT_STATE_PATH=.atelier-telegram-bot-state.json
-ATELIER_DAILY_BROADCAST_HOUR=9
-ATELIER_DAILY_BROADCAST_MINUTE=0
 ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS=25
 # staff (по умолчанию) или guest-login
 ATELIER_BOT_MODE=staff

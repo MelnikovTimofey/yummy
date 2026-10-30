@@ -514,7 +514,7 @@ test('Aroma asks for the code again when access expires and returns the guest to
     document.dispatchEvent(new Event('visibilitychange'));
   });
 
-  await expect(page.getByText('Код устарел. Новый скажет мастер зала.')).toBeVisible();
+  await expect(page.getByText('Время входа вышло. Код скажет мастер зала.')).toBeVisible();
   await expect(page.getByLabel('Код мастера')).toHaveValue('');
   await page.getByLabel('Код мастера').fill(guestAccessCode);
   await page.getByRole('button', { name: 'Войти в Ателье' }).click();
@@ -529,7 +529,7 @@ test('Aroma shows the code screen when the backend refuses access', async ({ pag
 
   await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Миксер', exact: true }).click();
 
-  await expect(page.getByText('Код устарел. Новый скажет мастер зала.')).toBeVisible();
+  await expect(page.getByText('Время входа вышло. Код скажет мастер зала.')).toBeVisible();
   await expect(page.getByText('Access code required')).toHaveCount(0);
 });
 

@@ -17,8 +17,6 @@ const buildConfig = (): BotConfig => ({
   backendAutomationToken: 'automation-token',
   statePath: '.state.json',
   updateTimeoutSeconds: 25,
-  broadcastHour: 9,
-  broadcastMinute: 0,
   guestLoginReturnUrl: RETURN_URL,
 });
 
