@@ -11,6 +11,7 @@ on:
       - tests/smoke/**
       - .claude/**
       - CLAUDE.md
+      - .github/workflows/atelier-smoke.yml
 
 permissions:
   contents: read
@@ -21,7 +22,9 @@ concurrency:
 
 jobs:
   atelier-smoke:
-    runs-on: ubuntu-latest
+    # ubuntu-latest = 26.04 с октября 2026, Playwright 1.58 на ней не ставит
+    # chromium. Вернуть latest вместе с апгрейдом Playwright до версии с 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       CI: true
