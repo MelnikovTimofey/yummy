@@ -123,7 +123,7 @@
 }
 /* ── profile-colors.css ── */
 /* Flavour-profile colours — a DATA layer, not brand palette (PRD §12).
-   Used only to identify the 12 guest flavour profiles: dots, signature bars,
+   Used only to identify the 14 guest flavour profiles: dots, signature bars,
    profile glyphs, mix-composition stacks. Never as UI accent. */
 :root {
   --profile-citrus: #e8b948;
@@ -138,6 +138,8 @@
   --profile-fruity: #dd8a4a;
   --profile-perfume: #c787a8;
   --profile-sour: #bcb04a;
+  --profile-beverage: #5f8db5;
+  --profile-gastro: #8a6f9e;
   --profile-fallback: var(--profile-tobacco);
 
   /* Mix-composition stack palette (aroma-web COMPOSITION_PALETTE) */

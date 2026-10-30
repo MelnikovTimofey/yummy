@@ -1438,11 +1438,13 @@ export const formatRailType = (value: RailType) => {
 
 const flavorProfileLabels: Record<string, string> = {
   berry: 'Ягодные',
+  beverage: 'Напитки',
   citrus: 'Цитрусовые',
   dessert: 'Десертные',
   floral_herbal: 'Цветочно-травяные',
   fresh: 'Свежие',
   fruity: 'Фруктовые',
+  gastro: 'Гастро',
   minty: 'Мятные',
   perfume: 'Парфюмные',
   sour: 'Кислые',
@@ -1478,6 +1480,8 @@ export const INVENTORY_FLAVOR_PROFILE_KEYS = [
   'tobacco',
   'floral_herbal',
   'perfume',
+  'beverage',
+  'gastro',
 ] as const;
 
 // Шкала крепости htreviews (5 градаций, женский род) — совпадает со значениями

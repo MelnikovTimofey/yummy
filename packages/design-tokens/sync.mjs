@@ -41,8 +41,8 @@ function profileModule() {
   const entries = [...css.matchAll(/--profile-([a-z-]+):\s*(#[0-9a-f]{6});/g)]
     .map(([, name, hex]) => [name.replace(/-/g, '_'), hex]);
   const fallback = entries.find(([name]) => name === 'tobacco')?.[1];
-  if (entries.length !== 12 || !fallback) {
-    throw new Error(`profile-colors.css: ожидались 12 профилей и tobacco, найдено ${entries.length}`);
+  if (entries.length !== 14 || !fallback) {
+    throw new Error(`profile-colors.css: ожидались 14 профилей и tobacco, найдено ${entries.length}`);
   }
   return [
     TS_HEADER,

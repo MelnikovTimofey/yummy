@@ -179,7 +179,7 @@ test('parseTobaccoPage derives community strength from description scale when fi
 
 test('buildTaxonomyCandidate separates profiles, flavors and meta tags', () => {
   const candidate = buildTaxonomyCandidate(['Лимон', 'Мята', 'Чай', 'Виски', 'Сыр']);
-  assert.deepEqual(candidate.flavorProfiles, ['citrus', 'floral_herbal', 'minty']);
+  assert.deepEqual(candidate.flavorProfiles, ['beverage', 'citrus', 'floral_herbal', 'gastro', 'minty']);
   assert.deepEqual(candidate.flavorTags, ['напитки', 'охлаждающий', 'редкие']);
   assert.deepEqual(candidate.flavors, ['виски', 'лимон', 'мята', 'сыр', 'чай']);
 });
