@@ -9,7 +9,7 @@ import type {
   TelegramOperatorRecord,
   TelegramUpdate,
 } from './types';
-import { buildNextBroadcastDelay, formatMoscowDateTime } from './time';
+import { buildNextEnsureDelay, formatMoscowDateTime } from './time';
 
 type Dependencies = {
   config: BotConfig;
@@ -113,8 +113,7 @@ export class TelegramBot {
 
     await this.registerCommandMenu();
     await this.safeReportState({ event: 'heartbeat' });
-    await this.runScheduledEnsure('startup');
-    this.scheduleNextEnsure();
+    this.scheduleNextEnsure(await this.runScheduledEnsure('startup'));
     this.startHeartbeatLoop();
     this.poller = this.pollUpdates();
     await this.poller;
@@ -330,28 +329,25 @@ export class TelegramBot {
     if (trigger === 'scheduled' && ensured.state === 'created') {
       await this.safeReportState({ event: 'heartbeat' });
     }
+    return ensured.item.endsAt;
   }
 
-  private scheduleNextEnsure() {
+  private scheduleNextEnsure(endsAt?: string) {
     if (this.stopped) {
       return;
     }
 
-    const delay = Math.max(
-      1_000,
-      buildNextBroadcastDelay(new Date(), this.deps.config.broadcastHour, this.deps.config.broadcastMinute),
-    );
-
     this.scheduler = setTimeout(() => {
       void this.runScheduledEnsure('scheduled')
-        .catch((error) => {
+        .catch(async (error) => {
           console.error('[telegram-bot] scheduled ensure error', error);
-          return this.safeReportError(error);
+          await this.safeReportError(error);
+          return undefined;
         })
-        .finally(() => {
-          this.scheduleNextEnsure();
+        .then((nextEndsAt) => {
+          this.scheduleNextEnsure(nextEndsAt);
         });
-    }, delay);
+    }, buildNextEnsureDelay(endsAt));
   }
 
   private startHeartbeatLoop() {

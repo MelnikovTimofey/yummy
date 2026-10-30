@@ -89,8 +89,6 @@
 | `ATELIER_BACKEND_URL` | base URL backend Арома Ателье |
 | `ATELIER_BACKEND_AUTOMATION_TOKEN` | должен совпадать с backend `ATELIER_AUTOMATION_KEY` |
 | `ATELIER_BOT_STATE_PATH` | локальный state-файл бота |
-| `ATELIER_DAILY_BROADCAST_HOUR` | час ежедневного `ensure` current code |
-| `ATELIER_DAILY_BROADCAST_MINUTE` | минута ежедневного `ensure` current code |
 | `ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS` | long-poll timeout |
 | `ATELIER_BOT_MODE` | режим образа: `staff` (по умолчанию) — бот кода смены; `guest-login` — бот входа гостей. Иное значение — бот не стартует |
 
@@ -98,8 +96,7 @@
 
 Тот же образ в режиме `ATELIER_BOT_MODE=guest-login`: только подтверждение кода
 входа по `/start <код>`. Staff-команд, allowlist, кода смены, рассылок и отчётов
-состояния нет; state-файл не нужен (`ATELIER_BOT_STATE_PATH` и
-`ATELIER_DAILY_BROADCAST_*` не читаются).
+состояния нет; state-файл не нужен (`ATELIER_BOT_STATE_PATH` не читается).
 
 | Переменная | Назначение | В `docker-compose.prod.yml` |
 |---|---|---|
@@ -126,7 +123,7 @@
 
 1. source of truth по Telegram access должен жить в backend allowlist по телефонам;
 2. first-link идёт через `share contact`, после чего backend привязывает `chatId` к allowlist-номеру;
-3. `ATELIER_DAILY_BROADCAST_*` сохраняют старое имя только ради совместимости env, но управляют уже не рассылкой, а ежедневным `ensure` current code;
+3. новый код смены бот выпускает сразу после истечения прежнего (окно 06:00–06:00 по Москве, #456); `ATELIER_DAILY_BROADCAST_*` больше не читаются;
 4. `ATELIER_BACKEND_AUTOMATION_TOKEN` должен ротироваться отдельно от staff credentials.
 
 ## 4a. Версии образов (прод-хост)
