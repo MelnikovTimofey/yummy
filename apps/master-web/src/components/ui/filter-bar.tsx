@@ -34,12 +34,14 @@ const useDismiss = (open: boolean, rootRef: RefObject<HTMLElement | null>, close
 type FilterChipProps = {
   active: boolean;
   count?: number;
+  // Доступное имя вместо текста чипа: smoke «Каталога» и «Миксов» ищет чипы по «Фильтр: …».
+  label?: string;
   onClick: () => void;
   children: ReactNode;
 };
 
-export const FilterChip = ({ active, count, onClick, children }: FilterChipProps) => (
-  <button type="button" className={`filter-chip${active ? ' filter-chip--active' : ''}`} aria-pressed={active} onClick={onClick}>
+export const FilterChip = ({ active, count, label, onClick, children }: FilterChipProps) => (
+  <button type="button" className={`filter-chip${active ? ' filter-chip--active' : ''}`} aria-pressed={active} aria-label={label} onClick={onClick}>
     <span>{children}</span>
     {count === undefined ? null : (
       <span className="filter-chip__count" data-zero={count === 0 || undefined}>
@@ -195,6 +197,8 @@ export const FiltersButton = ({ count, open, onClick }: { count: number; open: b
 
 // Чипы в шторке: на телефоне проще попасть пальцем, чем в галочку списка.
 const FOLDED = 6;
+// Сотни брендов и вкусов «Каталога» не раскрыть «Ещё N» — вместо него поиск.
+const SHEET_SEARCH_FROM = 30;
 
 type SheetChoiceProps = {
   title: string;
@@ -207,9 +211,17 @@ type SheetChoiceProps = {
 
 export const SheetChoice = ({ title, options, selected, formatOption = (value) => value, single = false, onChange }: SheetChoiceProps) => {
   const [unfolded, setUnfolded] = useState(false);
+  const [query, setQuery] = useState('');
+  const searchable = options.length >= SHEET_SEARCH_FROM;
+  const words = lower(query.trim());
   // Выбранное видно и в свёрнутой группе.
-  const shown = unfolded || options.length <= FOLDED + 1 ? options : [...new Set([...options.slice(0, FOLDED), ...selected])];
-  const hidden = options.length - shown.length;
+  const folded = [...new Set([...options.slice(0, FOLDED), ...selected])];
+  const shown = words
+    ? options.filter((option) => lower(formatOption(option)).includes(words))
+    : unfolded || options.length <= FOLDED + 1
+      ? options
+      : folded;
+  const hidden = searchable ? 0 : options.length - shown.length;
   const toggle = (value: string) => {
     if (single) onChange(selected.includes(value) ? [] : [value]);
     else onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
@@ -218,6 +230,12 @@ export const SheetChoice = ({ title, options, selected, formatOption = (value) =
   return (
     <div className="sheet-choice" role="group" aria-label={title}>
       <h3>{title}</h3>
+      {searchable ? (
+        <label className="input sheet-choice__search">
+          <Search size={16} aria-hidden />
+          <input type="search" aria-label={`Найти: ${title}`} placeholder="Найти" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
+      ) : null}
       <div className="sheet-choice__chips">
         {shown.map((option) => (
           <FilterChip key={option} active={selected.includes(option)} onClick={() => toggle(option)}>
@@ -229,6 +247,7 @@ export const SheetChoice = ({ title, options, selected, formatOption = (value) =
             Ещё {formatMetricValue(hidden)}
           </button>
         ) : null}
+        {shown.length ? null : <p className="attr-filter__empty">Ничего не найдено.</p>}
       </div>
     </div>
   );

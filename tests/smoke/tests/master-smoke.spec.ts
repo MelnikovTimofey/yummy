@@ -83,26 +83,46 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
     .toBe(outOfStockBefore);
 
   await applyStockFilter(page, 'Все');
-  // Канон #366: счётчики остаются у чипов наличия, у «Все» и категорий чисел нет.
+  // Единая панель фильтров (#464, #467): число у каждого статуса, кроме «Все»,
+  // у атрибутов чисел нет.
+  const catalogStatuses = page.getByRole('group', { name: 'Статус в каталоге' });
+  await expect(catalogStatuses.locator('.filter-chip__count')).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Фильтр по категории' }).locator('.filter-chip__count')).toHaveCount(0);
+  const catalogAttributes = page.getByRole('group', { name: 'Фильтры каталога' });
+  await expect(catalogAttributes.locator('.filter-chip__count')).toHaveCount(0);
+  await expect(page.getByText('Ещё фильтры', { exact: true })).toHaveCount(0);
+  await catalogAttributes.getByRole('button', { name: 'Бренд', exact: true }).click();
+  await page.getByRole('group', { name: 'Бренд', exact: true }).getByRole('checkbox').first().check();
+  await expect(catalogAttributes.getByRole('button', { name: /^Бренд: / })).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await catalogAttributes.getByRole('button', { name: 'Сбросить', exact: true }).click();
+  await expect(catalogAttributes.getByRole('button', { name: 'Бренд', exact: true })).toBeVisible();
 
-  // Фильтр «Архив» (issue #129): по умолчанию архивные скрыты, чип не нажат.
-  // Переключаем фильтр и убеждаемся, что он становится активным, затем
-  // возвращаем обратно — неразрушающая проверка для прочих assertion'ов.
+  // «Архив» — статус из того же ряда (#467): по умолчанию архивные скрыты,
+  // выбор другого статуса возвращает к действующим табакам.
   const archiveFilter = page.getByRole('button', { name: 'Фильтр: Архив' });
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
+  await expect(archiveFilter.locator('.filter-chip__count')).toHaveCount(1);
   await archiveFilter.click();
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'true');
-  await archiveFilter.click();
+  await applyStockFilter(page, 'Все');
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
 
+  // Пилюля «По …» и заголовок колонки меняют одну сортировку.
+  await expect(page.getByRole('button', { name: 'Сортировка: По наличию' })).toBeVisible();
+  await page.getByRole('columnheader', { name: 'Табак' }).getByRole('button').click();
+  await expect(page.getByRole('button', { name: 'Сортировка: По названию' })).toBeVisible();
+
   await openWorkspace(page, 'Миксы');
-  // Канон #366: из статусов число только у «Виден гостю», у профилей чисел нет.
-  const statusChips = page.getByRole('group', { name: 'Фильтр по статусу' });
-  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(1);
-  await expect(statusChips.getByRole('button', { name: 'Фильтр: Виден гостю' }).locator('.filter-chip__count')).toHaveCount(1);
-  await expect(page.getByRole('group', { name: 'Фильтр по категориям' }).locator('.filter-chip__count')).toHaveCount(0);
+  const statusChips = page.getByRole('group', { name: 'Статус микса' });
+  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(3);
+  await expect(statusChips.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
+  const mixAttributes = page.getByRole('group', { name: 'Фильтры миксов' });
+  await expect(mixAttributes.locator('.filter-chip__count')).toHaveCount(0);
+  await mixAttributes.getByRole('button', { name: 'Рейлы', exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Рейлы', exact: true }).getByRole('checkbox')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Сортировка: По спросу' })).toBeVisible();
   const mixRow = await pinFirstMixRow(page);
   const mixName = await readMixName(mixRow);
   // Row-click открывает редактор (drawer-pattern из mockup'а Master).

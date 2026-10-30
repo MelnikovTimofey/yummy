@@ -1580,12 +1580,6 @@ export const mixStatusFilterOptions: Array<{ value: MixStatusFilter; label: stri
   { value: 'hidden', label: 'Скрыт мастером' },
 ];
 
-export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }> = [
-  { value: 'all', label: 'Любое участие' },
-  { value: 'in-rails', label: 'Только в рейлах' },
-  { value: 'without-rails', label: 'Без рейлов' },
-];
-
 export const formatInventoryBatchAction = (value: InventoryBatchAction) => {
   switch (value) {
     case 'set-out-of-stock':

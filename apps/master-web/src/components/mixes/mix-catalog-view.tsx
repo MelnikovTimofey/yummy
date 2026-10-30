@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  ChevronDown,
   Copy,
   Eye,
   EyeOff,
@@ -20,8 +19,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
-import { FilterSingleSelect } from '@/components/ui/filter-single-select';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { SortableHeader } from '@/components/shell/sortable-header';
@@ -39,13 +38,21 @@ import type {
 import {
   formatFlavorProfileLabel,
   formatMetricValue,
-  mixRailFilterOptions,
   defaultMixListResponse,
   formatCount,
   formatRating,
   resolveMixStatus,
 } from '@/contracts';
 import { RowsSkeleton } from '@/components/ui/loading';
+import { useIsPhone } from '@/hooks/use-is-phone';
+import {
+  MIX_SORTS,
+  MIX_STATUS_CHIPS,
+  applyAttributeChange,
+  mixStatusCount,
+  pickSort,
+  sortPillOptions,
+} from '@/lib/list-filters';
 
 export type MixEditorComponentInput = {
   key: string;
@@ -86,29 +93,12 @@ type MixCatalogViewProps = {
   rowPendingId?: string;
 };
 
-// flavorProfiles вынесены из multi-select-фильтров — отдельная chip-полоса
-// внутри .mixes-list; остальные таксономии — в свёрнутом details «Ещё фильтры».
-const mixFilterGroups: Array<{ key: MixFilterKey; title: string }> = [
-  { key: 'manufacturers', title: 'Производители компонентов' },
-  { key: 'flavors', title: 'Вкусы' },
-  { key: 'flavorTags', title: 'Мета-теги' },
-];
+const filterKeys: MixFilterKey[] = ['flavorProfiles', 'manufacturers', 'flavors', 'flavorTags'];
 
-// Счётчик только у «Виден гостю»: сколько миксов видит гость (#348).
-type MixStatusChip = {
-  value: MixStatusFilter;
-  label: string;
-  ariaLabel: string;
-  count?: number;
-};
+const railLabels: Record<string, string> = { 'in-rails': 'В рейлах', 'without-rails': 'Не в рейлах' };
 
-const formatFilterOptionLabel = (key: MixFilterKey, value: string) => {
-  if (key === 'flavorProfiles') {
-    return formatFlavorProfileLabel(value);
-  }
-
-  return value;
-};
+const byProfileLabel = (left: string, right: string) =>
+  formatFlavorProfileLabel(left).localeCompare(formatFlavorProfileLabel(right), 'ru');
 
 const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => {
   const status = resolveMixStatus(mix);
@@ -183,59 +173,80 @@ export const MixCatalogView = ({
     };
   }, [searchValue, filters.search, onSearchChange]);
 
-  const statusChips: MixStatusChip[] = [
-    { value: 'all', label: 'Все', ariaLabel: 'Фильтр: Все' },
-    { value: 'guest-visible', label: 'Виден гостю', ariaLabel: 'Фильтр: Виден гостю', count: meta.guestVisibleCount },
-    { value: 'hidden', label: 'Скрыт', ariaLabel: 'Фильтр: Скрыт' },
-    { value: 'blocked', label: 'Блокирован', ariaLabel: 'Фильтр: Блокирован' },
+  const isPhone = useIsPhone();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const changeSort = (field: MixListSort['field']) => {
+    const next = pickSort(MIX_SORTS, sort, field);
+    if (next !== sort) onSortChange(next);
+  };
+  // Фильтры серверные: список отдаёт новый набор, сервер принимает toggle или clear.
+  const attribute = (key: MixFilterKey, title: string, options: string[], formatOption?: (value: string) => string) => ({
+    title,
+    options,
+    selected: filters[key],
+    formatOption,
+    onChange: (next: string[]) =>
+      applyAttributeChange(filters[key], next, {
+        toggle: (value) => onToggleFilterValue(key, value),
+        clear: () => onClearFilterGroup(key),
+      }),
+  });
+  // Одни и те же атрибуты — списками на десктопе и чипами в шторке телефона.
+  const attributes = [
+    attribute('flavorProfiles', 'Профиль', [...filters.options.flavorProfiles].sort(byProfileLabel), formatFlavorProfileLabel),
+    {
+      title: 'Рейлы',
+      options: ['in-rails', 'without-rails'],
+      selected: filters.railState === 'all' ? [] : [filters.railState],
+      formatOption: (value: string) => railLabels[value] ?? value,
+      single: true,
+      onChange: ([next]: string[]) => onRailStateChange((next ?? 'all') as MixRailFilter),
+    },
+    attribute('manufacturers', 'Бренды', filters.options.manufacturers),
+    attribute('flavors', 'Вкусы', filters.options.flavors),
+    attribute('flavorTags', 'Мета-теги', filters.options.flavorTags),
   ];
+  const activeAttributes =
+    filterKeys.reduce((acc, key) => acc + filters[key].length, 0) + Number(filters.railState !== 'all');
+  const narrowed = activeAttributes > 0 || filters.status !== 'all';
+  const filtersActive = Boolean(filters.search) || narrowed;
 
-  const filtersActive =
-    Boolean(filters.search) ||
-    filters.status !== 'all' ||
-    filters.railState !== 'all' ||
-    filters.flavorProfiles.length > 0 ||
-    mixFilterGroups.some((group) => filters[group.key].length > 0);
-
+  const clearAttributes = () => {
+    if (filters.railState !== 'all') onRailStateChange('all');
+    filterKeys.forEach((key) => filters[key].length && onClearFilterGroup(key));
+  };
   const resetFilters = () => {
+    if (filters.status !== 'all') onStatusChange('all');
+    clearAttributes();
+  };
+  const resetAll = () => {
     setSearchValue('');
     onSearchChange('');
-    onStatusChange('all');
-    onRailStateChange('all');
-    onClearFilterGroup('flavorProfiles');
-    mixFilterGroups.forEach((group) => onClearFilterGroup(group.key));
+    resetFilters();
   };
 
-  // Порядок чипов — по частоте профиля на текущей странице, чисел на чипах
-  // нет (#348). Options берём из backend-стороны, чтобы чипы не исчезали при
-  // пустой странице.
-  const profileChips = useMemo(() => {
-    const counts = new Map<string, number>();
-    items.forEach((mix) => {
-      mix.flavorProfiles.forEach((profile) => {
-        counts.set(profile, (counts.get(profile) ?? 0) + 1);
-      });
-    });
-
-    const known = new Set<string>(filters.options.flavorProfiles);
-    filters.flavorProfiles.forEach((profile) => known.add(profile));
-    counts.forEach((_, profile) => known.add(profile));
-
-    return Array.from(known)
-      .map((value) => ({ value, count: counts.get(value) ?? 0 }))
-      .sort((a, b) => {
-        if (b.count !== a.count) return b.count - a.count;
-        return formatFlavorProfileLabel(a.value).localeCompare(formatFlavorProfileLabel(b.value), 'ru');
-      })
-      .slice(0, 8);
-  }, [items, filters.options.flavorProfiles, filters.flavorProfiles]);
-
-  const extraFilterGroupsAvailable = mixFilterGroups.some(
-    (group) => filters.options[group.key].length,
+  const statusChip = ([key, label]: [MixStatusFilter, string]) => (
+    <FilterChip
+      key={key}
+      active={filters.status === key}
+      count={mixStatusCount(meta, key)}
+      label={`Фильтр: ${label}`}
+      onClick={() => onStatusChange(key)}
+    >
+      {label}
+    </FilterChip>
   );
-  const extraFilterSelectionCount = mixFilterGroups.reduce(
-    (acc, group) => acc + filters[group.key].length,
-    0,
+  const searchInput = (
+    <input
+      ref={searchInputRef}
+      type="search"
+      enterKeyHint="search"
+      aria-label="Поиск миксов"
+      placeholder="Микс или табак"
+      title="Клавиша /"
+      value={searchValue}
+      onChange={(event) => setSearchValue(event.target.value)}
+    />
   );
 
   const sortHeaderProps = {
@@ -262,121 +273,76 @@ export const MixCatalogView = ({
         }
       />
 
-      <div className="mixes-list">
-        <div className="mixes-list__toolbar">
-          <div className="input mixes-list__search">
-            <Search size={14} aria-hidden />
-            <input
-              ref={searchInputRef}
-              type="search"
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Поиск миксов"
-              title="Клавиша /"
-            />
+      {isPhone ? (
+        <>
+          <div className="m-list-search">
+            <div className="input m-list-search__field">
+              <Search size={16} aria-hidden />
+              {searchInput}
+            </div>
+            <FiltersButton count={activeAttributes} open={filtersOpen} onClick={() => setFiltersOpen(true)} />
           </div>
-
-          <div className="mixes-list__filters" role="group" aria-label="Фильтр по статусу">
-            {statusChips.map((chip) => {
-              const active = filters.status === chip.value;
-              return (
-                <button
-                  key={`status-chip:${chip.value}`}
-                  type="button"
-                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
-                  aria-pressed={active}
-                  aria-label={chip.ariaLabel}
-                  onClick={() => onStatusChange(chip.value)}
-                >
-                  <span>{chip.label}</span>
-                  {chip.count === undefined ? null : (
-                    <span className="filter-chip__count" hidden={chip.count === 0}>
-                      {formatMetricValue(chip.count)}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <div className="m-list-chips" role="group" aria-label="Статус микса">
+            {MIX_STATUS_CHIPS.map(statusChip)}
+          </div>
+        </>
+      ) : (
+        <div className="filter-bar">
+          <div className="filter-bar__row">
+            <div className="input filter-bar__search">
+              <Search size={14} aria-hidden />
+              {searchInput}
+            </div>
+            <div className="filter-bar__chips" role="group" aria-label="Статус микса">
+              {MIX_STATUS_CHIPS.map(statusChip)}
+            </div>
+          </div>
+          <div className="filter-bar__row">
+            <div className="filter-bar__chips" role="group" aria-label="Фильтры миксов">
+              {attributes.map((item) => (
+                <AttributeFilter key={item.title} {...item} />
+              ))}
+              {narrowed ? <FilterReset onClick={resetFilters} /> : null}
+            </div>
+            <SortPill value={sort.field} options={sortPillOptions(MIX_SORTS)} onChange={changeSort} />
           </div>
         </div>
+      )}
 
-        {profileChips.length ? (
-          <div className="mixes-list__profiles" role="group" aria-label="Фильтр по категориям">
-            <span className="mixes-list__profiles-label">Профиль</span>
-            {profileChips.map((chip) => {
-              const active = filters.flavorProfiles.includes(chip.value);
-              return (
-                <button
-                  key={`profile-chip:${chip.value}`}
-                  type="button"
-                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => onToggleFilterValue('flavorProfiles', chip.value)}
-                >
-                  {formatFlavorProfileLabel(chip.value)}
-                </button>
-              );
-            })}
-            {filters.flavorProfiles.length ? (
-              <button
-                type="button"
-                className="filter-chip mixes-list__profiles-reset"
-                onClick={() => onClearFilterGroup('flavorProfiles')}
-              >
+      {isPhone && filtersOpen ? (
+        <BottomSheet label="Фильтры миксов" onClose={() => setFiltersOpen(false)} className="m-filters-sheet">
+          <h2 className="m-filters-sheet__title">Фильтры</h2>
+          <SheetChoice
+            title="Сортировка"
+            options={MIX_SORTS.map((option) => option.field)}
+            selected={[sort.field]}
+            formatOption={(field) => MIX_SORTS.find((option) => option.field === field)?.label ?? field}
+            single
+            onChange={([next]) => next && changeSort(next as MixListSort['field'])}
+          />
+          {attributes.map((item) => (
+            <SheetChoice key={item.title} {...item} />
+          ))}
+          <div className="m-filters-sheet__actions">
+            {activeAttributes ? (
+              <button type="button" className="btn" data-variant="ghost" onClick={clearAttributes}>
                 Сбросить
               </button>
             ) : null}
+            <button type="button" className="btn" data-variant="primary" onClick={() => setFiltersOpen(false)}>
+              Показать {formatMetricValue(meta.filteredItems)}
+            </button>
           </div>
-        ) : null}
+        </BottomSheet>
+      ) : null}
 
-        {extraFilterGroupsAvailable ? (
-          <details className="inventory-extra-filters">
-            <summary className="inventory-extra-filters__trigger">
-              <ChevronDown size={13} aria-hidden className="inventory-extra-filters__chevron" />
-              Ещё фильтры
-              {extraFilterSelectionCount > 0 ? (
-                <span className="inventory-extra-filters__count" aria-hidden="true">
-                  {formatMetricValue(extraFilterSelectionCount)}
-                </span>
-              ) : null}
-            </summary>
-            <div className="inventory-filter-groups ops-filter-groups">
-              <FilterSingleSelect
-                title="Участие в рейлах"
-                options={mixRailFilterOptions}
-                value={filters.railState}
-                onChange={onRailStateChange}
-              />
-
-              {mixFilterGroups.map((group) => {
-                const options = filters.options[group.key];
-
-                if (!options.length) {
-                  return null;
-                }
-
-                return (
-                  <FilterMultiSelect
-                    key={group.key}
-                    title={group.title}
-                    options={options}
-                    selected={filters[group.key]}
-                    formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
-                    onToggleOption={(option) => onToggleFilterValue(group.key, option)}
-                    onClearGroup={() => onClearFilterGroup(group.key)}
-                  />
-                );
-              })}
-            </div>
-          </details>
-        ) : null}
-
+      <div className="mixes-list">
         {!items.length && status !== 'loading' ? (
           <div className="empty list-empty">
             {filtersActive ? (
               <>
-                <p>Ничего не найдено. Уберите один из фильтров.</p>
-                <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetFilters}>
+                <p>Уберите один из фильтров.</p>
+                <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetAll}>
                   Сбросить фильтры
                 </button>
               </>
