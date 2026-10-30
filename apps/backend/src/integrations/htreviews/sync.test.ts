@@ -9,6 +9,7 @@ import {
   decideTobaccoUpsert,
   filterLineUrlsByBrands,
   loadShelfBrandUrls,
+  syncHtReviewsCatalog,
 } from './sync';
 
 // Issue #88: в каталог попадают только выпускаемые табаки, но уже заведённые
@@ -146,4 +147,109 @@ test('известные линейки фильтруются по списку
     ),
     ['https://htreviews.org/tobaccos/blansh/main', 'https://htreviews.org/tobaccos/darkside/core'],
   );
+});
+
+// Issue #458: карточка табака не загрузилась (таймаут, 429) — выдача бренда
+// даёт только статистику, а вкусы, статус и описание остаются прежними.
+const listItem = (dataId: string, slug: string, name: string) => `
+  <div class="tobacco_list_item " data-id="${dataId}">
+    <a class="tobacco_list_item_image" href="https://htreviews.org/tobaccos/darkside/core/${slug}">
+      <img data-src="https://htreviews.org/uploads/${slug}.webp" alt="${name}">
+    </a>
+    <div class="tobacco_list_item_name">
+      <a class="tobacco_list_item_slug" href="https://htreviews.org/tobaccos/darkside/core/${slug}"><span>${name}</span></a>
+      <a class="tobacco_list_item_brand_slug" href="https://htreviews.org/tobaccos/darkside"><span>Darkside</span></a>
+      <a class="tobacco_list_item_line_slug" href="https://htreviews.org/tobaccos/darkside/core"><span>Core</span></a>
+    </div>
+    <div class="list_item_rating"><span>4.7</span></div>
+    <div class="list_item_ratings_count"><span>237</span></div>
+    <div class="list_item_reviews"><span>208</span></div>
+    <div class="list_item_stats"><span>20.7k</span></div>
+  </div>
+`;
+
+test('сбой загрузки карточки не затирает вкусы, статус и описание табака', async (t) => {
+  await resetAppState();
+  await prisma.tobacco.create({
+    data: {
+      id: 'ds-pink-mi',
+      manufacturer: 'Darkside',
+      lineName: 'Core',
+      name: 'Pink Mi',
+      description: 'Розовый грейпфрут.',
+      sourceKind: 'htreviews',
+      sourceUrl: 'https://htreviews.org/tobaccos/darkside/core/pink-mi',
+      sourceExternalId: 'DS-PINK',
+      sourceNumericId: '190397',
+      country: 'Россия',
+      officialStrength: 'Средняя',
+      communityStrength: 'Средняя',
+      productionStatus: 'Выпускается',
+      rawSourceTags: '["Грейпфрут","Цитрусовые"]',
+      flavorProfiles: '["Цитрусовые"]',
+      flavors: '["Грейпфрут"]',
+      flavorTags: '[]',
+      rating: 4.1,
+      viewsCount: 1000,
+    },
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (url === 'https://htreviews.org/tobaccos/darkside') {
+      return new Response(
+        `<div class="tobacco_list_items" data-count="2">
+          ${listItem('190397', 'pink-mi', 'Pink Mi')}
+          ${listItem('190398', 'new-cola', 'New Cola')}
+        </div>`,
+        { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } },
+      );
+    }
+    return new Response('Too Many Requests', { status: 429 });
+  }) as typeof globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const stats = await syncHtReviewsCatalog({
+    brandUrls: ['https://htreviews.org/tobaccos/darkside'],
+    knownLineUrls: [],
+    delayMs: 0,
+    requestTimeoutMs: 100,
+  });
+
+  assert.equal(stats.updated, 1);
+  assert.equal(stats.created, 0);
+  assert.equal(stats.skippedInactive, 1);
+  assert.equal(await prisma.tobacco.count({ where: { name: 'New Cola' } }), 0);
+
+  const tobacco = await prisma.tobacco.findUniqueOrThrow({ where: { id: 'ds-pink-mi' } });
+  assert.deepEqual(
+    {
+      description: tobacco.description,
+      sourceExternalId: tobacco.sourceExternalId,
+      country: tobacco.country,
+      officialStrength: tobacco.officialStrength,
+      communityStrength: tobacco.communityStrength,
+      productionStatus: tobacco.productionStatus,
+      rawSourceTags: tobacco.rawSourceTags,
+      flavorProfiles: tobacco.flavorProfiles,
+      flavors: tobacco.flavors,
+    },
+    {
+      description: 'Розовый грейпфрут.',
+      sourceExternalId: 'DS-PINK',
+      country: 'Россия',
+      officialStrength: 'Средняя',
+      communityStrength: 'Средняя',
+      productionStatus: 'Выпускается',
+      rawSourceTags: '["Грейпфрут","Цитрусовые"]',
+      flavorProfiles: '["Цитрусовые"]',
+      flavors: '["Грейпфрут"]',
+    },
+  );
+  assert.equal(tobacco.rating, 4.7);
+  assert.equal(tobacco.ratingsCount, 237);
+  assert.ok(tobacco.statsSyncedAt);
 });
