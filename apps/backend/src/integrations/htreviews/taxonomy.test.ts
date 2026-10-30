@@ -78,3 +78,44 @@ test('ни один тег не даёт sour, fresh или sweet (issue #182)',
     assert.equal(flavorProfiles.includes(key), false, key);
   }
 });
+
+// Напитки и гастрономия получили свои профили: раньше такие табаки
+// оставались без категории.
+
+test('напиток даёт профиль beverage и оставляет мета-тег «напитки»', () => {
+  const result = buildTaxonomyCandidate(['Кола']);
+  assert.deepEqual(result.flavorProfiles, ['beverage']);
+  assert.deepEqual(result.flavorTags, ['напитки']);
+});
+
+test('напиток со своим характером получает ещё и доп. категорию', () => {
+  assert.deepEqual(buildTaxonomyCandidate(['Мохито']).flavorProfiles, ['beverage', 'minty']);
+  assert.deepEqual(buildTaxonomyCandidate(['Лимончелло']).flavorProfiles, ['beverage', 'citrus']);
+  assert.deepEqual(buildTaxonomyCandidate(['Бейлис']).flavorProfiles, ['beverage', 'dessert']);
+  assert.deepEqual(buildTaxonomyCandidate(['Глинтвейн']).flavorProfiles, ['beverage', 'spicy']);
+  assert.deepEqual(buildTaxonomyCandidate(['Джин']).flavorProfiles, ['beverage', 'floral_herbal']);
+  assert.deepEqual(buildTaxonomyCandidate(['Космополитен']).flavorProfiles, ['berry', 'beverage']);
+  assert.deepEqual(buildTaxonomyCandidate(['Пина колада']).flavorProfiles, ['beverage', 'fruity']);
+});
+
+test('мохито не получает мета-тег «охлаждающий» от мятной категории', () => {
+  assert.deepEqual(buildTaxonomyCandidate(['Мохито']).flavorTags, ['напитки']);
+});
+
+test('чай остаётся цветочно-травяным, а не напитком', () => {
+  assert.deepEqual(buildTaxonomyCandidate(['Чай']).flavorProfiles, ['floral_herbal']);
+});
+
+test('редкий тег даёт профиль gastro и оставляет мета-тег «редкие»', () => {
+  const result = buildTaxonomyCandidate(['Кукуруза']);
+  assert.deepEqual(result.flavorProfiles, ['gastro']);
+  assert.deepEqual(result.flavorTags, ['редкие']);
+});
+
+test('теги, которых раньше не было в словаре, получают категорию', () => {
+  assert.deepEqual(buildTaxonomyCandidate(['Чернослив']).flavorProfiles, ['fruity']);
+  assert.deepEqual(buildTaxonomyCandidate(['Асаи']).flavorProfiles, ['berry']);
+  assert.deepEqual(buildTaxonomyCandidate(['Халва']).flavorProfiles, ['dessert']);
+  assert.deepEqual(buildTaxonomyCandidate(['Лакрица']).flavorProfiles, ['spicy']);
+  assert.deepEqual(buildTaxonomyCandidate(['Ёлка']).flavorProfiles, ['floral_herbal']);
+});

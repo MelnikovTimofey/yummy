@@ -13,3 +13,10 @@ test('профили без источника не предлагаются г�
   }
   assert.equal(profileLabelMap.citrus, 'Цитрусовый');
 });
+
+test('«Напитки» и «Гастро» предлагаются гостю последними', () => {
+  const values = profileOptions.map((option) => option.value);
+  assert.deepEqual(values.slice(-2), ['beverage', 'gastro']);
+  assert.equal(profileLabelMap.beverage, 'Напитки');
+  assert.equal(profileLabelMap.gastro, 'Гастро');
+});

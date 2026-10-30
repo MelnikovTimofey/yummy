@@ -175,6 +175,8 @@ const PROFILE_CHARACTER: Record<string, Partial<Character>> = {
   tobacco: { dense: 1 },
   floral_herbal: { fresh: 0.4, dense: 0.2 },
   perfume: { sweet: 0.3, dense: 0.4 },
+  beverage: { sweet: 0.4, fresh: 0.3 },
+  gastro: { dense: 0.6 },
 };
 
 // Шкала htreviews (parser.ts) плюс словесные формы из карточек производителей.

@@ -569,6 +569,8 @@ const flavorProfileLabels: Record<string, string> = {
   citrus: 'Цитрусовые',
   berry: 'Ягодные',
   perfume: 'Парфюмные',
+  beverage: 'Напитки',
+  gastro: 'Гастро',
 };
 
 const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));

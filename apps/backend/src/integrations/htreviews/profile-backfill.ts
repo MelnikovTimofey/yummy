@@ -34,7 +34,9 @@ export const planTobaccoProfileBackfill = (rows: TobaccoProfilesRow[]) => {
     if (sameSet(row.flavorProfiles, expected)) {
       continue;
     }
-    if (sameSet(row.flavorProfiles, legacyFlavorProfiles(expected))) {
+    // Подмножество, а не равенство: напитки и гастро профили только добавили.
+    const synced = legacyFlavorProfiles(expected);
+    if (row.flavorProfiles.every((profile) => synced.includes(profile))) {
       updates.push({ id: row.id, from: row.flavorProfiles, to: expected });
     } else {
       curated.push({ id: row.id, current: row.flavorProfiles, expected });
