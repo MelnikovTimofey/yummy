@@ -1716,22 +1716,14 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     .map(normalizeToken)
     .filter(Boolean);
 
-  // Выборка по всем фильтрам, кроме наличия: по ней считаются счётчики чипов
-  // наличия, иначе выбранный чип обнулял соседний (#103).
-  const stockScopeItems = items
+  // Выборка по всем фильтрам, кроме наличия и архива: по ней считаются счётчики
+  // чипов статуса, иначе выбранный чип обнулял соседние (#103, #472).
+  const statusScopeItems = items
     .filter((item) => {
       // Явный набор id игнорирует остальные фильтры: нужно вернуть именно эти
       // табаки (в т.ч. архивные/без наличия), чтобы резолвить компоненты микса.
       if (ids.size) {
         return ids.has(item.id);
-      }
-
-      if (archived === 'active' && item.archived) {
-        return false;
-      }
-
-      if (archived === 'archived' && !item.archived) {
-        return false;
       }
 
       if (!matchesInventorySelection([item.manufacturer], manufacturers)) {
@@ -1771,10 +1763,20 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
       return searchTokens.every((token) => haystack.includes(token));
     });
 
-  const filteredItems = stockScopeItems
+  const activeScopeItems = statusScopeItems.filter((item) => !item.archived);
+
+  const filteredItems = statusScopeItems
     .filter((item) => {
       if (ids.size) {
         return true;
+      }
+
+      if (archived === 'active' && item.archived) {
+        return false;
+      }
+
+      if (archived === 'archived' && !item.archived) {
+        return false;
       }
 
       if (stock === 'in-stock') {
@@ -1823,9 +1825,9 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     meta: {
       totalItems: items.length,
       filteredItems: filteredItems.length,
-      inStockCount: stockScopeItems.filter((item) => item.inStock).length,
-      outOfStockCount: stockScopeItems.filter((item) => !item.inStock).length,
-      archivedCount: items.filter((item) => item.archived).length,
+      inStockCount: activeScopeItems.filter((item) => item.inStock).length,
+      outOfStockCount: activeScopeItems.filter((item) => !item.inStock).length,
+      archivedCount: statusScopeItems.filter((item) => item.archived).length,
       inMixesCount: items.filter((item) => item.dependentMixCount > 0).length,
       page,
       pageSize,
@@ -2271,8 +2273,8 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     flavorTags: resolveInventorySelections(options.flavorTags, flavorTags),
   };
 
-  const filteredItems = allItems
-    .filter((mix) => matchesMixStatus(mix, status))
+  // Все фильтры, кроме статуса: по этой выборке считаются чипы статуса (#472).
+  const statusScopeItems = allItems
     .filter((mix) => matchesMixRailState(mix, railState))
     .filter((mix) =>
       !normalizedSearch
@@ -2288,7 +2290,9 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     .filter((mix) => matchesInventorySelection(mix.components.map((component) => component.manufacturer), resolvedFilters.manufacturers))
     .filter((mix) => matchesInventorySelection(mix.flavorProfiles, resolvedFilters.flavorProfiles))
     .filter((mix) => matchesInventorySelection(mix.flavors, resolvedFilters.flavors))
-    .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags))
+    .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags));
+  const filteredItems = statusScopeItems
+    .filter((mix) => matchesMixStatus(mix, status))
     .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
 
   const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
@@ -2317,9 +2321,9 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     meta: {
       totalItems: allItems.length,
       filteredItems: filteredItems.length,
-      guestVisibleCount: filteredItems.filter((item) => item.guestVisible).length,
-      hiddenCount: filteredItems.filter((item) => !item.available).length,
-      blockedCount: filteredItems.filter((item) => item.available && !item.guestVisible).length,
+      guestVisibleCount: statusScopeItems.filter((item) => item.guestVisible).length,
+      hiddenCount: statusScopeItems.filter((item) => !item.available).length,
+      blockedCount: statusScopeItems.filter((item) => item.available && !item.guestVisible).length,
       inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
       withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
       page,

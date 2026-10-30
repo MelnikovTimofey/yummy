@@ -171,6 +171,61 @@ test('staff inventory stock counters ignore the stock filter itself', async () =
   }
 });
 
+// Архив — статус в одном ряду с наличием (#464): счётчики ряда не зависят от
+// того, какой статус выбран, но учитывают поиск и атрибуты (#472).
+test('staff inventory status counters ignore the archived filter and follow search', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const get = async (url: string) => {
+    const response = await app.inject({ method: 'GET', url, headers: { authorization: `Bearer ${token}` } });
+    assert.equal(response.statusCode, 200);
+    const { meta } = response.json() as { meta: { inStockCount: number; outOfStockCount: number; archivedCount: number } };
+    return { inStockCount: meta.inStockCount, outOfStockCount: meta.outOfStockCount, archivedCount: meta.archivedCount };
+  };
+
+  try {
+    await app.inject({
+      method: 'PATCH',
+      url: '/staff/inventory/tobaccos/tobacco-peach-silk',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { archived: true },
+    });
+
+    const active = await get('/staff/inventory/tobaccos');
+    const archived = await get('/staff/inventory/tobaccos?archived=archived');
+    assert.deepEqual(archived, active);
+    assert.equal(active.archivedCount, 1);
+
+    const searched = await get(`/staff/inventory/tobaccos?archived=archived&search=${encodeURIComponent('Mint Veil')}`);
+    assert.equal(searched.archivedCount, 0);
+    assert.equal(searched.inStockCount + searched.outOfStockCount, 1);
+  } finally {
+    await app.close();
+  }
+});
+
+// Счётчики статусов миксов не зависят от выбранного статуса (#472).
+test('staff mix status counters ignore the status filter itself', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const get = async (status: string) => {
+    const response = await app.inject({ method: 'GET', url: `/staff/mixes?status=${status}`, headers: { authorization: `Bearer ${token}` } });
+    assert.equal(response.statusCode, 200);
+    const { meta } = response.json() as { meta: { guestVisibleCount: number; hiddenCount: number; blockedCount: number } };
+    return { guestVisibleCount: meta.guestVisibleCount, hiddenCount: meta.hiddenCount, blockedCount: meta.blockedCount };
+  };
+
+  try {
+    const all = await get('all');
+    assert.ok(all.guestVisibleCount > 0 && all.blockedCount > 0);
+    for (const status of ['guest-visible', 'hidden', 'blocked']) {
+      assert.deepEqual(await get(status), all, `счётчики при status=${status}`);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff inventory list paginates filtered results', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
