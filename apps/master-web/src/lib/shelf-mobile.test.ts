@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeShelfRow, type ShelfRow } from '../contracts';
-import { SHELF_MOBILE_CHIPS, defaultMobileShelfStatus, sheetLine, shelfMobileActions, shelfMobileSummary } from './shelf-mobile';
+import { sheetLine, shelfMobileActions, shelfMobileSummary } from './shelf-mobile';
 
 const row = (patch: Partial<ShelfRow> = {}): ShelfRow => ({
   ...normalizeShelfRow({
@@ -16,24 +16,6 @@ const row = (patch: Partial<ShelfRow> = {}): ShelfRow => ({
     endsAt: '2026-12-09T10:00:00.000Z',
   }),
   ...patch,
-});
-
-test('на телефоне первым идёт «Заканчивается», за ним «Пробы» (#329) и «Проверьте», все статусы на месте', () => {
-  assert.deepEqual(SHELF_MOBILE_CHIPS, [
-    ['ending', 'Заканчивается'],
-    ['trial', 'Пробы'],
-    ['check', 'Проверьте'],
-    ['out', 'Закончились'],
-    ['all', 'Все'],
-    ['ok', 'Есть'],
-    ['stop', 'Стоп'],
-    ['plan', 'В плане'],
-  ]);
-});
-
-test('чип по умолчанию: «Заканчивается», если там что-то есть, иначе «Все»', () => {
-  assert.equal(defaultMobileShelfStatus({ ending: 14 }), 'ending');
-  assert.equal(defaultMobileShelfStatus({ ending: 0 }), 'all');
 });
 
 test('кнопки карточки: «Указать остаток» и «Закончился», у «проверьте» — «Отметить остаток»', () => {

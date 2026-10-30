@@ -2472,6 +2472,147 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
+/* --- Панель фильтров (#464, design/design_handoff_master_filters) ------ */
+
+.filter-chip__count[data-zero] { color: var(--text-faint); }
+.filter-chip__chevron { flex: none; color: var(--text-muted); }
+.filter-chip[data-open] { border-color: var(--border-strong); background: var(--bg-elevated); color: var(--text-primary); }
+
+.filter-bar {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.filter-bar__row { display: flex; align-items: center; gap: 8px; }
+.filter-bar__row + .filter-bar__row { padding-top: 8px; border-top: 1px solid var(--border-subtle); }
+.filter-bar__search { flex: 0 1 260px; min-width: 180px; }
+.filter-bar__chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; flex: 1; }
+
+.filter-reset {
+  height: 20px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.filter-reset:hover { color: var(--text-primary); }
+
+.attr-filter,
+.sort-pill { position: relative; display: inline-flex; }
+
+.attr-filter__panel,
+.sort-pill__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.attr-filter__panel { width: 260px; }
+.attr-filter__search { height: 28px; margin-bottom: 4px; }
+.attr-filter__list { display: grid; gap: 2px; max-height: 264px; overflow-y: auto; }
+
+.attr-filter__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.attr-filter__option:hover { background: var(--bg-overlay); color: var(--text-primary); }
+.attr-filter__option input { margin: 0; accent-color: var(--accent); }
+.attr-filter__option span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attr-filter__empty { margin: 0; padding: 6px 8px; font-size: var(--fs-sm); color: var(--text-faint); }
+
+.attr-filter__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.sort-pill__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sort-pill__trigger:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.sort-pill__list { left: auto; right: 0; min-width: 180px; }
+
+.sort-pill__list button {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sort-pill__list button:hover { background: var(--bg-overlay); color: var(--text-primary); }
+.sort-pill__list button[aria-selected="true"] { background: var(--accent-soft); color: var(--text-primary); }
+
+.filters-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.filters-button[data-active] { border-color: var(--accent-border); background: var(--accent-soft); color: var(--text-primary); }
+.filters-button[data-active] .filter-chip__count { background: var(--accent); color: var(--accent-fg); }
+
+.sheet-choice { display: grid; gap: 8px; }
+.sheet-choice h3 { margin: 0; font-family: var(--font-meta); font-size: var(--fs-sm); font-weight: 500; color: var(--text-muted); }
+.sheet-choice__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sheet-choice__chips .filter-chip { height: 34px; padding: 0 12px; font-size: var(--fs-md); }
+
 /* --- Table inside .tobaccos-list: нейтральная палитра ----------------- */
 
 .tobaccos-list .inventory-table-shell,
@@ -5758,8 +5899,6 @@ button[aria-busy="true"]:disabled {
   background: var(--bg-raised);
 }
 
-.shelf-toolbar__search { flex: 0 1 220px; min-width: 180px; }
-
 .shelf-toolbar__chips {
   display: flex;
   align-items: center;
@@ -5768,58 +5907,6 @@ button[aria-busy="true"]:disabled {
   flex: 1;
 }
 
-.shelf-sort .select-input {
-  height: 26px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  border-color: var(--border-subtle);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-}
-
-/* --- Панель фильтров ------------------------------------------------- */
-
-.shelf-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-  padding: 14px 16px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-}
-
-.shelf-filters__group { display: grid; gap: 6px; align-content: start; }
-
-.shelf-filters__group h4 {
-  margin: 0 0 2px;
-  font-family: var(--font-meta);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.shelf-check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.shelf-check input { accent-color: var(--accent); margin: 0; }
-.shelf-check__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.shelf-check em {
-  margin-left: auto;
-  font-style: normal;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.shelf-filters__more,
 .shelf-link {
   justify-self: start;
   padding: 0;
@@ -5832,10 +5919,7 @@ button[aria-busy="true"]:disabled {
   cursor: pointer;
 }
 
-.shelf-filters__more:hover,
 .shelf-link:hover { color: var(--text-primary); }
-
-.shelf-filters__reset { align-self: flex-start; }
 
 /* --- Таблица полки --------------------------------------------------- */
 
@@ -7413,39 +7497,6 @@ button[aria-busy="true"]:disabled {
   font-size: 16px;
 }
 
-.m-shelf-search__filters {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 42px;
-  height: 42px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.m-shelf-search__filters[data-active="true"] { border-color: var(--accent-border); background: var(--accent-soft); color: var(--text-primary); }
-
-.m-shelf-search__badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  display: grid;
-  place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-}
-
 .m-shelf-chips {
   display: flex;
   gap: 6px;
@@ -7457,7 +7508,7 @@ button[aria-busy="true"]:disabled {
 }
 
 .m-shelf-chips::-webkit-scrollbar { display: none; }
-.m-shelf-chips .filter-chip { flex: 0 0 auto; height: 34px; padding: 0 12px; border-radius: var(--r-pill); }
+.m-shelf-chips .filter-chip { flex: 0 0 auto; height: 34px; padding: 0 12px; }
 
 .m-shelf-summary { margin: 0; font-size: var(--fs-xs); color: var(--text-faint); }
 
@@ -7663,12 +7714,6 @@ button[aria-busy="true"]:disabled {
 }
 
 /* --- Шторка фильтров -------------------------------------------------- */
-
-.m-filters-sheet .shelf-filters { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0; border: 0; background: transparent; }
-.m-filters-sheet .shelf-check { min-height: 36px; font-size: var(--fs-md); }
-
-.m-filters-sheet__sort { display: grid; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
-.m-filters-sheet__sort .select-input { height: 42px; font-size: 16px; }
 
 .m-filters-sheet__actions {
   position: sticky;

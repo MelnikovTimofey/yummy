@@ -188,13 +188,28 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
   await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: 'Все', exact: true })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Остаток по учёту' })).toBeVisible();
 
+  // Единая панель фильтров (#464): статусы с числом, атрибуты списком, сортировка «По …».
+  const statuses = page.getByRole('group', { name: 'Статус на полке' });
+  await expect(statuses.getByRole('button', { name: /^Пробы\s*\d+$/ })).toBeVisible();
+  await expect(statuses.getByRole('button', { name: /^Мало данных\s*\d+$/ })).toBeVisible();
+  const attributes = page.getByRole('group', { name: 'Фильтры полки' });
+  await expect(attributes.locator('.filter-chip__count')).toHaveCount(0);
+  await attributes.getByRole('button', { name: 'Бренд', exact: true }).click();
+  const brands = page.getByRole('group', { name: 'Бренд', exact: true });
+  await brands.getByRole('checkbox').first().check();
+  await expect(attributes.getByRole('button', { name: /^Бренд: / })).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await attributes.getByRole('button', { name: 'Сбросить', exact: true }).click();
+  await expect(attributes.getByRole('button', { name: 'Бренд', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сортировка: По сроку' })).toBeVisible();
+
   const emptyButton = (row: Locator) => row.getByRole('button', { name: 'Закончился', exact: true });
   const first = page
     .locator('table.shelf-table tbody tr[data-tobacco-id]')
     .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
     .first();
   await expect(first).toBeVisible();
-  // Строка адресуется по id: после «Закончился» сортировка «Хватит до»
+  // Строка адресуется по id: после «Закончился» сортировка «По сроку»
   // переставляет закончившийся табак наверх.
   const id = await first.getAttribute('data-tobacco-id');
   const row = page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
@@ -316,8 +331,8 @@ test.describe('Master on a phone', () => {
 
     // Чип «Пробы» (#329) — рядом со статусами, с числом проб.
     await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Пробы\s*\d+$/ })).toBeVisible();
-    // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
-    await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
+    // Порядок и подписи статусов — как на десктопе (#466), старт с «Все».
+    await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button').first()).toHaveText('Все');
     const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончился', exact: true });
     // У «проверьте остаток» вместо «Указать остаток» — «Отметить остаток»: берём обычную карточку.
     const first = page

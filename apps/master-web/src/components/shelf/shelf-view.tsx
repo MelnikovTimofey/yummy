@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Ellipsis, FileUp, Search, SlidersHorizontal } from 'lucide-react';
+import { Ellipsis, FileUp, Search } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import {
   DEFAULT_SHELF_SETTINGS,
   formatCount,
+  formatFlavorProfileLabel,
   formatMetricValue,
   type ShelfRow,
   type ShelfTobaccoRef,
@@ -12,11 +13,13 @@ import {
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { SHELF_MOBILE_CHIPS, defaultMobileShelfStatus, shelfMobileSummary } from '@/lib/shelf-mobile';
+import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
+import { shelfMobileSummary } from '@/lib/shelf-mobile';
 import {
   EMPTY_SHELF_FILTERS,
   SHELF_SORT_OPTIONS,
   SHELF_STATUS_CHIPS,
+  buildShelfFilterOptions,
   countActiveShelfFilters,
   countOverToastText,
   countToastText,
@@ -41,7 +44,6 @@ import {
 import { bulkEmptyToast, bulkKeepToast, bulkStopToast, bulkSummary, headCheck, selectRange, toggleSelected } from '@/lib/shelf-bulk';
 import { ShelfBulkBar, ShelfCheck, ShelfMobileBulk, type ShelfBulkActions } from './shelf-bulk';
 import { ShelfCard } from './shelf-card';
-import { ShelfFilterPanel } from './shelf-filter-panel';
 import { countReorder } from '@/lib/reorder';
 import { ShelfHeadMenu } from './shelf-head-menu';
 import type { CountInput } from './shelf-forms';
@@ -112,13 +114,7 @@ export const ShelfView = ({
 
   const isPhone = useIsPhone();
   const [query, setQuery] = useState('');
-  // На телефоне полку открывают у стойки — сразу то, что заканчивается.
-  const phoneDefaulted = useRef(false);
-  const [status, setStatus] = useState<ShelfStatusKey>(() => {
-    if (!isPhone || !view) return 'all';
-    phoneDefaulted.current = true;
-    return defaultMobileShelfStatus(view.counters);
-  });
+  const [status, setStatus] = useState<ShelfStatusKey>('all');
   const [filters, setFilters] = useState<ShelfFilters>(EMPTY_SHELF_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState<ShelfSortKey>('until');
@@ -155,12 +151,6 @@ export const ShelfView = ({
   );
 
   useEffect(() => {
-    if (!isPhone || !view || phoneDefaulted.current) return;
-    phoneDefaulted.current = true;
-    setStatus(defaultMobileShelfStatus(view.counters));
-  }, [isPhone, view]);
-
-  useEffect(() => {
     if (!openCardId || !rows.some((row) => row.tobacco.id === openCardId)) return;
     onModeChange('shelf');
     setActiveId(openCardId);
@@ -195,6 +185,43 @@ export const ShelfView = ({
   const cardRow = cardId ? rows.find((row) => row.tobacco.id === cardId) ?? null : null;
   const sheetRow = sheetId ? rows.find((row) => row.tobacco.id === sheetId) ?? null : null;
   const activeFilters = countActiveShelfFilters(filters);
+  const filterOptions = useMemo(() => buildShelfFilterOptions(rows), [rows]);
+  // Одни и те же атрибуты — списками на десктопе и чипами в шторке телефона.
+  const attributes = [
+    {
+      title: 'Бренд',
+      options: filterOptions.brands.map((option) => option.value),
+      selected: filters.brands,
+      onChange: (brands: string[]) => setFilters({ ...filters, brands }),
+    },
+    {
+      title: 'Характер',
+      options: filterOptions.profiles.map((option) => option.value),
+      selected: filters.profiles,
+      formatOption: formatFlavorProfileLabel,
+      onChange: (profiles: string[]) => setFilters({ ...filters, profiles }),
+    },
+    {
+      title: 'Крепость',
+      options: filterOptions.strengths.map((option) => option.value),
+      selected: filters.strengths,
+      formatOption: (value: string) => value || 'Не указана',
+      onChange: (strengths: string[]) => setFilters({ ...filters, strengths }),
+    },
+    {
+      title: 'Миксы',
+      options: ['with', 'without'],
+      selected: filters.mixes ? [filters.mixes] : [],
+      formatOption: (value: string) => (value === 'with' ? 'Есть в миксах' : 'Нет в миксах'),
+      single: true,
+      onChange: ([mixes = '']: string[]) => setFilters({ ...filters, mixes: mixes as ShelfFilters['mixes'] }),
+    },
+  ];
+  const narrowed = activeFilters > 0 || status !== 'all';
+  const resetFilters = () => {
+    setStatus('all');
+    setFilters(EMPTY_SHELF_FILTERS);
+  };
 
   const selected = useMemo(() => selection ?? [], [selection]);
   const selecting = selected.length > 0;
@@ -600,16 +627,9 @@ export const ShelfView = ({
   );
   // У «Все» числа нет: сколько всего, сказано в мете шапки (#363).
   const statusChip = ([key, label]: [ShelfStatusKey, string]) => (
-    <button
-      key={key}
-      type="button"
-      className={`filter-chip${status === key ? ' filter-chip--active' : ''}`}
-      aria-pressed={status === key}
-      onClick={() => setStatus(key)}
-    >
-      <span>{label}</span>
-      {key === 'all' ? null : <span className="filter-chip__count">{formatMetricValue(shelfChipCount(view, key))}</span>}
-    </button>
+    <FilterChip key={key} active={status === key} count={key === 'all' ? undefined : shelfChipCount(view, key)} onClick={() => setStatus(key)}>
+      {label}
+    </FilterChip>
   );
 
   // Телефон (#215, #shot=shelf-mobile): карточки вместо таблицы, фильтры и
@@ -640,20 +660,10 @@ export const ShelfView = ({
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </div>
-              <button
-                type="button"
-                className="m-shelf-search__filters"
-                aria-label={activeFilters ? `Фильтры и сортировка, выбрано ${activeFilters}` : 'Фильтры и сортировка'}
-                aria-expanded={filtersOpen}
-                data-active={activeFilters > 0}
-                onClick={() => setFiltersOpen(true)}
-              >
-                <SlidersHorizontal size={18} aria-hidden />
-                {activeFilters ? <span className="m-shelf-search__badge">{activeFilters}</span> : null}
-              </button>
+              <FiltersButton count={activeFilters} open={filtersOpen} onClick={() => setFiltersOpen(true)} />
             </div>
             <div className="m-shelf-chips" role="group" aria-label="Статус на полке">
-              {SHELF_MOBILE_CHIPS.map(statusChip)}
+              {SHELF_STATUS_CHIPS.map(statusChip)}
             </div>
             <p className="m-shelf-summary">{shelfMobileSummary(view)}</p>
             <ShelfMobileList
@@ -675,17 +685,17 @@ export const ShelfView = ({
         {filtersOpen ? (
           <BottomSheet label="Фильтры полки" onClose={() => setFiltersOpen(false)} className="m-filters-sheet">
             <h2 className="m-filters-sheet__title">Фильтры</h2>
-            <label className="m-filters-sheet__sort">
-              <span>Сортировка</span>
-              <select className="select-input" value={sort} onChange={(event) => setSort(event.target.value as ShelfSortKey)}>
-                {SHELF_SORT_OPTIONS.map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <ShelfFilterPanel rows={rows} filters={filters} onChange={setFilters} />
+            <SheetChoice
+              title="Сортировка"
+              options={SHELF_SORT_OPTIONS.map(([key]) => key)}
+              selected={[sort]}
+              formatOption={(key) => SHELF_SORT_OPTIONS.find(([option]) => option === key)?.[1] ?? key}
+              single
+              onChange={([next]) => next && setSort(next as ShelfSortKey)}
+            />
+            {attributes.map((attribute) => (
+              <SheetChoice key={attribute.title} {...attribute} />
+            ))}
             <div className="m-filters-sheet__actions">
               {activeFilters ? (
                 <button type="button" className="btn" data-variant="ghost" onClick={() => setFilters(EMPTY_SHELF_FILTERS)}>
@@ -693,7 +703,7 @@ export const ShelfView = ({
                 </button>
               ) : null}
               <button type="button" className="btn" data-variant="primary" onClick={() => setFiltersOpen(false)}>
-                Показать: {formatMetricValue(shown.length)}
+                Показать {formatMetricValue(shown.length)}
               </button>
             </div>
           </BottomSheet>
@@ -727,7 +737,13 @@ export const ShelfView = ({
     <section className="shelf-page" data-selecting={selecting || undefined}>
       <MasterPageHeader
         title="Полка"
-        meta={view ? `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])}, ${kg.format(totals.kg)} кг` : undefined}
+        meta={
+          !view
+            ? undefined
+            : mode === 'shelf' && shown.length !== rows.length
+              ? `${formatNumber(shown.length)} из ${formatNumber(rows.length)}`
+              : `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])}, ${kg.format(totals.kg)} кг`
+        }
         actions={
           <>
             <span className="shelf-seg" role="group" aria-label="Вид полки">
@@ -774,57 +790,36 @@ export const ShelfView = ({
 
           {mode === 'shelf' ? (
             <>
-              <div className="shelf-toolbar">
-                <div className="input shelf-toolbar__search">
-                  <Search size={14} aria-hidden />
-                  <input
-                    ref={searchRef}
-                    type="search"
-                    aria-label="Поиск по полке"
-                    placeholder="Табак или бренд"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') event.currentTarget.blur();
-                    }}
-                  />
+              <div className="filter-bar">
+                <div className="filter-bar__row">
+                  <div className="input filter-bar__search">
+                    <Search size={14} aria-hidden />
+                    <input
+                      ref={searchRef}
+                      type="search"
+                      aria-label="Поиск по полке"
+                      placeholder="Табак или бренд"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') event.currentTarget.blur();
+                      }}
+                    />
+                  </div>
+                  <div className="filter-bar__chips" role="group" aria-label="Статус на полке">
+                    {SHELF_STATUS_CHIPS.map(statusChip)}
+                  </div>
                 </div>
-                <div className="shelf-toolbar__chips" role="group" aria-label="Статус на полке">
-                  {SHELF_STATUS_CHIPS.map(statusChip)}
-                </div>
-                <button
-                  type="button"
-                  className={`filter-chip${filtersOpen || activeFilters ? ' filter-chip--active' : ''}`}
-                  aria-expanded={filtersOpen}
-                  onClick={() => setFiltersOpen((current) => !current)}
-                >
-                  <span>Фильтры</span>
-                  <span className="filter-chip__count" hidden={!activeFilters}>
-                    {activeFilters}
-                  </span>
-                </button>
-                <label className="shelf-sort">
-                  <span className="sr-only">Сортировка</span>
-                  <select className="select-input" value={sort} onChange={(event) => setSort(event.target.value as ShelfSortKey)}>
-                    {SHELF_SORT_OPTIONS.map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
+                <div className="filter-bar__row">
+                  <div className="filter-bar__chips" role="group" aria-label="Фильтры полки">
+                    {attributes.map((attribute) => (
+                      <AttributeFilter key={attribute.title} {...attribute} />
                     ))}
-                  </select>
-                </label>
+                    {narrowed ? <FilterReset onClick={resetFilters} /> : null}
+                  </div>
+                  <SortPill value={sort} options={SHELF_SORT_OPTIONS} onChange={setSort} />
+                </div>
               </div>
-
-              {filtersOpen ? (
-                <>
-                  <ShelfFilterPanel rows={rows} filters={filters} onChange={setFilters} />
-                  {activeFilters ? (
-                    <button type="button" className="btn shelf-filters__reset" data-size="sm" data-variant="ghost" onClick={() => setFilters(EMPTY_SHELF_FILTERS)}>
-                      Сбросить фильтры
-                    </button>
-                  ) : null}
-                </>
-              ) : null}
 
               <div className="shelf-table-shell">
                 <table className="shelf-table">
