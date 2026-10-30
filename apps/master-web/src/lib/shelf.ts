@@ -4,8 +4,9 @@ import { formatCount, type ShelfCounterKey, type ShelfCounters, type ShelfRow, t
 // небольшая (сотни строк), поэтому всё считается в браузере по загруженным строкам.
 // Остаток — в граммах (design/design_handoff_inventory_grams), банок нет.
 
-// trial — «Пробы» (#329): табак впервые пришёл за 60 дней, это признак, а не статус.
-export type ShelfStatusKey = ShelfCounterKey | 'trial';
+// trial — «Пробы» (#329): табак впервые пришёл за 60 дней; few — «Мало данных»:
+// своего расхода ещё нет (#466). Это признаки, а не статусы backend.
+export type ShelfStatusKey = ShelfCounterKey | 'trial' | 'few';
 
 export const SHELF_STATUS_CHIPS: Array<[ShelfStatusKey, string]> = [
   ['all', 'Все'],
@@ -15,12 +16,14 @@ export const SHELF_STATUS_CHIPS: Array<[ShelfStatusKey, string]> = [
   ['out', 'Закончились'],
   ['stop', 'Стоп'],
   ['plan', 'В плане'],
+  ['trial', 'Пробы'],
+  ['few', 'Мало данных'],
 ];
 
 export type ShelfSortKey = 'until' | 'rate' | 'left' | 'name' | 'arrived';
 
 export const SHELF_SORT_OPTIONS: Array<[ShelfSortKey, string]> = [
-  ['until', 'Хватит до'],
+  ['until', 'По сроку'],
   ['rate', 'По расходу'],
   ['left', 'По остатку'],
   ['name', 'По названию'],
@@ -42,29 +45,29 @@ export type ShelfFilters = {
   profiles: string[];
   // '' — крепость не указана.
   strengths: string[];
-  withMixes: boolean;
-  withoutMixes: boolean;
-  fewData: boolean;
+  mixes: '' | 'with' | 'without';
 };
 
 export const EMPTY_SHELF_FILTERS: ShelfFilters = {
   brands: [],
   profiles: [],
   strengths: [],
-  withMixes: false,
-  withoutMixes: false,
-  fewData: false,
+  mixes: '',
 };
 
 const strengthOf = (row: ShelfRow) =>
   row.tobacco.officialStrength?.trim() || row.tobacco.communityStrength?.trim() || '';
 
-export const matchShelfStatus = (row: ShelfRow, key: ShelfStatusKey) =>
-  key === 'all' || (key === 'trial' ? row.trial : row.status === key);
+export const matchShelfStatus = (row: ShelfRow, key: ShelfStatusKey) => {
+  if (key === 'all') return true;
+  if (key === 'trial') return row.trial;
+  if (key === 'few') return row.rateKind === 'none';
+  return row.status === key;
+};
 
 export const shelfChipCount = (view: Pick<ShelfView, 'rows' | 'counters'> | null, key: ShelfStatusKey) => {
   if (!view) return 0;
-  return key === 'trial' ? view.rows.filter((row) => row.trial).length : view.counters[key];
+  return key === 'trial' || key === 'few' ? view.rows.filter((row) => matchShelfStatus(row, key)).length : view.counters[key];
 };
 
 const lower = (value: string) => value.toLocaleLowerCase('ru-RU');
@@ -83,11 +86,8 @@ export const filterShelfRows = (
     if (filters.brands.length && !filters.brands.includes(row.tobacco.manufacturer)) return false;
     if (filters.profiles.length && !row.tobacco.flavorProfiles.some((profile) => filters.profiles.includes(profile))) return false;
     if (filters.strengths.length && !filters.strengths.includes(strengthOf(row))) return false;
-    if (filters.withMixes !== filters.withoutMixes) {
-      if (filters.withMixes && row.mixCount === 0) return false;
-      if (filters.withoutMixes && row.mixCount > 0) return false;
-    }
-    if (filters.fewData && row.rateKind !== 'none') return false;
+    if (filters.mixes === 'with' && row.mixCount === 0) return false;
+    if (filters.mixes === 'without' && row.mixCount > 0) return false;
     return true;
   });
 };
@@ -106,20 +106,13 @@ export const buildShelfFilterOptions = (rows: ShelfRow[]) => ({
   brands: countOptions(rows.map((row) => row.tobacco.manufacturer)),
   profiles: countOptions(rows.flatMap((row) => row.tobacco.flavorProfiles)),
   strengths: countOptions(rows.map(strengthOf)),
-  extra: {
-    withMixes: rows.filter((row) => row.mixCount > 0).length,
-    withoutMixes: rows.filter((row) => row.mixCount === 0).length,
-    fewData: rows.filter((row) => row.rateKind === 'none').length,
-  },
 });
 
 export const countActiveShelfFilters = (filters: ShelfFilters) =>
   filters.brands.length
   + filters.profiles.length
   + filters.strengths.length
-  + Number(filters.withMixes)
-  + Number(filters.withoutMixes)
-  + Number(filters.fewData);
+  + Number(Boolean(filters.mixes));
 
 const byName = (a: ShelfRow, b: ShelfRow) =>
   a.tobacco.manufacturer.localeCompare(b.tobacco.manufacturer, 'ru')

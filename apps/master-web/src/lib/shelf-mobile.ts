@@ -1,24 +1,8 @@
-import { formatCount, type ShelfCounters, type ShelfRow, type ShelfView } from '../contracts';
-import { afterReceiptLine, formatNumber, type ShelfStatusKey } from './shelf';
+import { formatCount, type ShelfRow, type ShelfView } from '../contracts';
+import { afterReceiptLine, formatNumber } from './shelf';
 
 // «Полка» на телефоне (#215, #306): мастер у стойки жмёт «Закончился» и,
 // когда удобно, отмечает остаток.
-
-// Чипы прокручиваются по горизонтали, поэтому первыми — те, ради которых
-// открывают полку с телефона.
-export const SHELF_MOBILE_CHIPS: Array<[ShelfStatusKey, string]> = [
-  ['ending', 'Заканчивается'],
-  ['trial', 'Пробы'],
-  ['check', 'Проверьте'],
-  ['out', 'Закончились'],
-  ['all', 'Все'],
-  ['ok', 'Есть'],
-  ['stop', 'Стоп'],
-  ['plan', 'В плане'],
-];
-
-export const defaultMobileShelfStatus = (counters: Pick<ShelfCounters, 'ending'>): ShelfStatusKey =>
-  counters.ending > 0 ? 'ending' : 'all';
 
 // Кнопки карточки: слева — шторка «Сколько осталось?», справа — «Закончился»
 // или «Снять стоп». Закончился или в плане — только подпись.

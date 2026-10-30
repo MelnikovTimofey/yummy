@@ -5,6 +5,7 @@ import {
   afterReceiptLine,
   leftEstimateNote,
   EMPTY_SHELF_FILTERS,
+  SHELF_SORT_OPTIONS,
   SHELF_STATUS_CHIPS,
   buildShelfFilterOptions,
   countActiveShelfFilters,
@@ -65,7 +66,7 @@ const row = (patch: Partial<ShelfRow> & { name?: string; brand?: string; profile
   };
 };
 
-test('чипы полки: «Проверьте остаток» вместо «Последней банки»', () => {
+test('чипы полки: один набор на десктопе и телефоне, «Пробы» и «Мало данных» — статусы (#466)', () => {
   assert.deepEqual(SHELF_STATUS_CHIPS, [
     ['all', 'Все'],
     ['ok', 'Есть'],
@@ -74,7 +75,17 @@ test('чипы полки: «Проверьте остаток» вместо «
     ['out', 'Закончились'],
     ['stop', 'Стоп'],
     ['plan', 'В плане'],
+    ['trial', 'Пробы'],
+    ['few', 'Мало данных'],
   ]);
+});
+
+test('matchShelfStatus и shelfChipCount: «Мало данных» — строки без своего расхода (#466)', () => {
+  assert.equal(matchShelfStatus(row({ rateKind: 'none', rate: null }), 'few'), true);
+  assert.equal(matchShelfStatus(row({ rateKind: 'brand' }), 'few'), false);
+  const rows = [row({ rateKind: 'none', rate: null }), row()];
+  const counters = { all: 2, ok: 2, ending: 0, check: 0, out: 0, stop: 0, plan: 0 };
+  assert.equal(shelfChipCount({ rows, counters }, 'few'), 1);
 });
 
 test('matchShelfStatus и shelfChipCount: «Пробы» — по признаку trial, а не по статусу (#329)', () => {
@@ -104,7 +115,7 @@ test('filterShelfRows ищет по табаку и бренду без учёт
   assert.deepEqual(names('  '), ['Cane Mint', 'Blackcurrant', 'Маракуйя']);
 });
 
-test('filterShelfRows: бренд, характер, крепость, миксы и мало данных', () => {
+test('filterShelfRows: бренд, характер, крепость и миксы', () => {
   const rows = [
     row({ name: 'A', brand: 'DARKSIDE', profiles: ['berry'], strength: 'Средняя', mixCount: 2 }),
     row({ name: 'B', brand: 'Сарма', profiles: ['citrus', 'fruity'], strength: null, mixCount: 0, rateKind: 'none', rate: null }),
@@ -116,10 +127,9 @@ test('filterShelfRows: бренд, характер, крепость, микс�
   assert.deepEqual(names({ profiles: ['berry'] }), ['A', 'C']);
   assert.deepEqual(names({ profiles: ['fruity', 'berry'], brands: ['Сарма'] }), ['B', 'C']);
   assert.deepEqual(names({ strengths: [''] }), ['B']);
-  assert.deepEqual(names({ withMixes: true }), ['A', 'C']);
-  assert.deepEqual(names({ withoutMixes: true }), ['B']);
-  assert.deepEqual(names({ withMixes: true, withoutMixes: true }), ['A', 'B', 'C']);
-  assert.deepEqual(names({ fewData: true }), ['B']);
+  assert.deepEqual(names({ mixes: 'with' }), ['A', 'C']);
+  assert.deepEqual(names({ mixes: 'without' }), ['B']);
+  assert.deepEqual(names({ mixes: '' }), ['A', 'B', 'C']);
 });
 
 test('buildShelfFilterOptions считает варианты по всей полке', () => {
@@ -132,12 +142,15 @@ test('buildShelfFilterOptions считает варианты по всей по
   assert.deepEqual(options.brands, [{ value: 'Сарма', count: 2 }, { value: 'DARKSIDE', count: 1 }]);
   assert.deepEqual(options.profiles, [{ value: 'berry', count: 2 }, { value: 'citrus', count: 1 }]);
   assert.deepEqual(options.strengths, [{ value: 'Средняя', count: 2 }, { value: '', count: 1 }]);
-  assert.deepEqual(options.extra, { withMixes: 1, withoutMixes: 2, fewData: 1 });
 });
 
-test('countActiveShelfFilters считает выбранные пункты панели', () => {
+test('countActiveShelfFilters считает выбранные значения атрибутов', () => {
   assert.equal(countActiveShelfFilters(EMPTY_SHELF_FILTERS), 0);
-  assert.equal(countActiveShelfFilters({ ...EMPTY_SHELF_FILTERS, brands: ['A', 'B'], fewData: true }), 3);
+  assert.equal(countActiveShelfFilters({ ...EMPTY_SHELF_FILTERS, brands: ['A', 'B'], mixes: 'with' }), 3);
+});
+
+test('сортировка полки подписана «По …» (#466)', () => {
+  assert.deepEqual(SHELF_SORT_OPTIONS.map(([, label]) => label), ['По сроку', 'По расходу', 'По остатку', 'По названию', 'По приходу']);
 });
 
 test('sortShelfRows «Хватит до»: сначала закончившиеся и «проверьте», потом по дням, в плане — в конце', () => {
