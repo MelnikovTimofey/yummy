@@ -20,7 +20,7 @@ type StaffBlockProps = {
   onDeleteStaffAccount: (account: StaffAccountRecord) => void | Promise<void>;
 };
 
-const STAFF_GRID = '32px minmax(160px, 1fr) minmax(120px, 0.8fr) 110px 140px 56px 80px';
+const STAFF_GRID = '32px minmax(160px, 1fr) minmax(120px, 0.8fr) 110px 56px 80px';
 
 const initialOf = (value: string): string => {
   const trimmed = value?.trim();
@@ -106,7 +106,6 @@ export const StaffBlock = ({
               <div>Имя</div>
               <div>Логин</div>
               <div>Роль</div>
-              <div>Последний вход</div>
               <div style={{ textAlign: 'center' }}>Вкл.</div>
               <div className="sr-only">Действия</div>
             </div>
@@ -148,9 +147,6 @@ export const StaffBlock = ({
                     ) : (
                       <span className="tag">staff</span>
                     )}
-                  </div>
-                  <div className="cell-meta access-cell-last">
-                    <span className="access-cell-last__empty">—</span>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <button
