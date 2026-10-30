@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Фильтры Мастера · мокап</title>
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<style>
+body{margin:0;background:var(--bg-base);font-family:var(--font-sans);font-size:var(--fs-md);color:var(--text-primary)}
+button{font:inherit}
+
+/* ── Доска ── */
+.board{padding:28px 32px 80px;display:grid;gap:36px;background:#0c0c0e}
+.board-head{display:grid;gap:8px;max-width:980px}
+.board-title{margin:0;font-family:var(--font-serif);font-weight:500;font-size:30px}
+.board-text{margin:0;color:var(--text-secondary);line-height:1.55;max-width:100ch}
+.board-text code{font-size:12px;color:var(--text-primary)}
+.board-section{display:grid;gap:14px}
+.board-h2{margin:0;font-family:var(--font-serif);font-weight:500;font-size:20px}
+.board-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.frame{display:grid;gap:8px}
+.frame-name{margin:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.frame-name b{color:var(--text-primary);font-weight:500}
+.frame-note{margin:0;font-size:var(--fs-sm);color:var(--text-faint);max-width:90ch;line-height:1.5}
+.desk{width:1280px;min-height:420px;position:relative;border:1px solid var(--border-default);border-radius:10px;background:var(--bg-base);box-shadow:var(--shadow-lg);overflow:hidden}
+.phone{width:375px;height:780px;overflow:hidden;position:relative;border:1px solid var(--border-default);border-radius:28px;background:var(--bg-base);box-shadow:var(--shadow-lg)}
+body.shot{background:var(--bg-base)}
+body.shot .board{padding:0;background:var(--bg-base);gap:0}
+body.shot .board-head,body.shot .board-h2,body.shot .frame-name,body.shot .frame-note{display:none}
+body.shot .frame{display:none}
+body.shot .frame.is-shot{display:grid}
+body.shot .board-section{display:contents}
+body.shot .desk,body.shot .phone{border:0;border-radius:0;box-shadow:none}
+
+/* ── Оболочка Мастера ── */
+.top{display:flex;align-items:center;gap:18px;height:44px;padding:0 20px;border-bottom:1px solid var(--border-subtle);font-size:var(--fs-sm);color:var(--text-muted)}
+.top b{font-family:var(--font-serif);font-weight:500;font-size:15px;color:var(--text-primary);margin-right:12px}
+.top .on{color:var(--text-primary);box-shadow:inset 0 -2px 0 var(--accent);padding:13px 0}
+.page{padding:18px 40px 24px;display:grid;gap:14px;align-content:start}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.page-head h1{margin:0;font-family:var(--font-serif);font-weight:500;font-size:36px;line-height:1.05}
+.page-meta{font-family:var(--font-meta);font-size:12px;letter-spacing:.06em;color:var(--text-muted);font-variant-numeric:tabular-nums}
+
+/* ── Панель фильтров: одна на все экраны ── */
+.toolbar{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-raised)}
+.tb-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tb-row+.tb-row{padding-top:8px;border-top:1px solid var(--border-subtle)}
+.tb-end{margin-left:auto;display:flex;align-items:center;gap:8px}
+.search{display:flex;align-items:center;gap:8px;height:28px;width:260px;padding:0 10px;border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--bg-base);color:var(--text-faint);font-size:var(--fs-sm);box-sizing:border-box}
+.search svg{width:14px;height:14px;color:var(--text-muted);flex:none}
+.search.has b{color:var(--text-primary);font-weight:400}
+
+/* FilterChip из кита */
+.fc{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:var(--r-sm);background:transparent;border:1px solid var(--border-subtle);color:var(--text-secondary);font-size:var(--fs-sm);cursor:pointer;white-space:nowrap}
+.fc[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-border);color:var(--text-primary)}
+.fc .n{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:var(--r-xs);background:var(--bg-elevated);color:var(--text-muted);font-family:var(--font-meta);font-size:10px;font-weight:600;font-variant-numeric:tabular-nums}
+.fc[aria-pressed="true"] .n{background:var(--accent);color:var(--accent-fg)}
+.fc .n.zero{color:var(--text-faint)}
+.fc .chev{width:12px;height:12px;color:var(--text-muted)}
+.fc[aria-expanded="true"]{border-color:var(--border-strong);background:var(--bg-elevated);color:var(--text-primary)}
+.reset{border:0;background:transparent;color:var(--text-secondary);font-size:var(--fs-sm);padding:0 4px;border-bottom:1px solid var(--border-default);cursor:pointer;height:20px}
+
+/* MasterSortPill из кита */
+.sort{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--r-md);background:var(--bg-raised);border:1px solid var(--border-subtle);color:var(--text-secondary);font-size:var(--fs-sm)}
+.sort .chev{width:12px;height:12px;color:var(--text-muted)}
+
+/* Список значений атрибута */
+.anchor{position:relative;display:inline-flex}
+.pop{position:absolute;top:32px;left:0;z-index:20;width:260px;padding:6px;border:1px solid var(--border-default);border-radius:var(--r-lg);background:var(--bg-elevated);box-shadow:var(--shadow-lg);display:grid;gap:2px}
+.pop .search{width:100%;margin-bottom:4px;background:var(--bg-raised)}
+.opt{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-sm);font-size:var(--fs-sm);color:var(--text-secondary)}
+.opt:hover{background:var(--bg-overlay)}
+.box{width:14px;height:14px;border:1px solid var(--border-strong);border-radius:3px;display:inline-grid;place-items:center;flex:none;box-sizing:border-box}
+.opt.on{color:var(--text-primary)}
+.opt.on .box{background:var(--accent);border-color:var(--accent)}
+.opt.on .box::after{content:'';width:7px;height:4px;border-left:2px solid var(--accent-fg);border-bottom:2px solid var(--accent-fg);transform:rotate(-45deg) translate(1px,-1px)}
+.pop-foot{display:flex;justify-content:space-between;align-items:center;padding:6px 8px 2px;margin-top:2px;border-top:1px solid var(--border-subtle);font-size:var(--fs-xs);color:var(--text-faint)}
+.pop-scroll{max-height:236px;overflow:hidden;display:grid;gap:2px}
+
+/* Таблица */
+.table{border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-raised);overflow:hidden}
+.tr{display:grid;align-items:center;gap:12px;padding:0 16px;min-height:52px;border-top:1px solid var(--border-subtle);font-size:var(--fs-md)}
+.tr.th{min-height:36px;border-top:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.shelf-cols{grid-template-columns:minmax(0,1.6fr) 1fr .8fr .8fr 1fr .5fr}
+.cat-cols{grid-template-columns:minmax(0,1.6fr) 1fr 1.4fr .6fr .6fr .5fr}
+.mix-cols{grid-template-columns:minmax(0,1.8fr) 1.4fr .8fr .6fr .6fr}
+.acc-cols{grid-template-columns:minmax(0,1.4fr) 1fr 1fr .8fr}
+.nm{display:grid;gap:2px;min-width:0}
+.nm b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm span,.mut{font-size:var(--fs-sm);color:var(--text-muted)}
+.num{font-variant-numeric:tabular-nums}
+.th .on{color:var(--text-primary)}
+.empty{padding:48px 16px;display:grid;justify-items:center;gap:10px;color:var(--text-muted);font-size:var(--fs-md)}
+
+/* Телефон */
+.m-head{padding:14px 16px 6px;display:flex;align-items:baseline;justify-content:space-between}
+.m-head h1{margin:0;font-family:var(--font-serif);font-weight:500;font-size:28px}
+.m-tools{display:flex;gap:8px;padding:6px 16px}
+.m-tools .search{flex:1;width:auto;height:36px}
+.m-filters{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--bg-raised);color:var(--text-secondary);font-size:var(--fs-sm)}
+.m-filters[aria-pressed="true"]{border-color:var(--accent-border);background:var(--accent-soft);color:var(--text-primary)}
+.m-filters .n{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:var(--r-xs);background:var(--accent);color:var(--accent-fg);font-family:var(--font-meta);font-size:10px;font-weight:600}
+.m-chips{display:flex;gap:6px;padding:6px 16px 10px;overflow:hidden;white-space:nowrap}
+.m-chips .fc{height:32px}
+.m-row{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--border-subtle)}
+.sheet-dim{position:absolute;inset:0;background:rgba(0,0,0,.72)}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:50;max-height:86%;display:grid;grid-template-rows:auto 1fr auto;border-radius:16px 16px 0 0;border-top:1px solid var(--border-default);background:var(--bg-raised)}
+.sheet-handle{width:40px;height:4px;border-radius:var(--r-pill);background:var(--border-strong);margin:8px auto 0}
+.sheet h2{margin:10px 16px 4px;font-family:var(--font-serif);font-weight:500;font-size:22px}
+.sheet-body{overflow:hidden;padding:4px 16px 8px;display:grid;gap:14px;align-content:start}
+.sheet-group{display:grid;gap:8px}
+.sheet-group h3{margin:0;font-family:var(--font-meta);font-size:12px;font-weight:500;color:var(--text-muted)}
+.sheet-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sheet-chips .fc{height:32px}
+.sheet-foot{display:flex;gap:8px;padding:10px 16px 18px;border-top:1px solid var(--border-subtle)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border-default);background:transparent;color:var(--text-primary);font-size:var(--fs-md)}
+.btn.cta{flex:1;border:0;background:var(--cta-solid, var(--accent));color:#F4EFEA;font-weight:600}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="var(--bg-raised)"/><circle cx="11" cy="8" r="1.6" fill="var(--bg-raised)"/><circle cx="7" cy="12" r="1.6" fill="var(--bg-raised)"/></symbol>
+</svg>
+
+<main class="board">
+  <header class="board-head">
+    <h1 class="board-title">Единые фильтры Мастера (#464)</h1>
+    <p class="board-text">На всех экранах одна панель: поиск, чипы статусов с числом, затем чипы атрибутов со списком значений и «Сбросить». Справа стоит сортировка «По …». На телефоне атрибуты и сортировка уходят в шторку «Фильтры». Компоненты взяты из кита: <code>FilterChip</code>, <code>MasterSortPill</code>, ползунки «Фильтры».</p>
+  </header>
+
+  <!-- ─────────── Полка ─────────── -->
+  <section class="board-section">
+    <h2 class="board-h2">Полка</h2>
+    <div class="board-row">
+      <div class="frame" data-shot="shelf">
+        <p class="frame-name"><b>shelf</b> по умолчанию</p>
+        <div class="desk">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span class="on">Полка</span><span>Поставки</span><span>Каталог</span><span>Миксы</span><span>Рейлы</span><span>Доступ</span></nav>
+          <div class="page">
+            <div class="page-head"><h1>Полка</h1><span class="page-meta">269 позиций, 56,7 кг</span></div>
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search"><svg><use href="#i-search"/></svg>Табак или бренд</span>
+              <button class="fc" aria-pressed="true">Все</button>
+              <button class="fc">Есть <span class="n">269</span></button>
+              <button class="fc">Заканчивается <span class="n zero">0</span></button>
+              <button class="fc">Проверьте остаток <span class="n zero">0</span></button>
+              <button class="fc">Закончились <span class="n zero">0</span></button>
+              <button class="fc">Стоп <span class="n zero">0</span></button>
+              <button class="fc">В плане <span class="n zero">0</span></button>
+              <button class="fc">Мало данных <span class="n">237</span></button></div>
+              <div class="tb-row">
+              <button class="fc">Бренд <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Характер <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Крепость <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Миксы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <span class="tb-end"><span class="sort">По сроку <svg class="chev"><use href="#i-chev"/></svg></span></span></div>
+            </div>
+            <div class="table">
+              <div class="tr th shelf-cols"><span>Табак</span><span>Остаток</span><span>Расход</span><span>Хватит до</span><span>Приход</span><span>Миксы</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Ананасовые кусочки</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="num">2</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Арбузный мармелад</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="mut">нет</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Байкальская клубника</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="num">1</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="frame-note">Статусы стоят первыми, у каждого есть число, у «Все» числа нет. Нулевое число приглушено: «Закончились 0» тоже информация. Атрибуты идут после разделителя, у них шеврон и нет чисел. Нативный select «Хватит до» заменён на <code>MasterSortPill</code> «По сроку». Группа «Ещё» расходится по двум местам. «Мало данных о расходе» — состояние строки с числом, поэтому становится статусом «Мало данных». «Есть в миксах» и «Нет в миксах» уходят в атрибут «Миксы» с одним выбором.</p>
+      </div>
+    </div>
+
+    <div class="board-row">
+      <div class="frame" data-shot="shelf-brand">
+        <p class="frame-name"><b>shelf-brand</b> список «Бренд» открыт</p>
+        <div class="desk" style="min-height:560px">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span class="on">Полка</span><span>Поставки</span><span>Каталог</span><span>Миксы</span><span>Рейлы</span><span>Доступ</span></nav>
+          <div class="page">
+            <div class="page-head"><h1>Полка</h1><span class="page-meta">269 позиций, 56,7 кг</span></div>
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search"><svg><use href="#i-search"/></svg>Табак или бренд</span>
+              <button class="fc" aria-pressed="true">Все</button>
+              <button class="fc">Есть <span class="n">269</span></button>
+              <button class="fc">Заканчивается <span class="n zero">0</span></button>
+              <button class="fc">Проверьте остаток <span class="n zero">0</span></button>
+              <button class="fc">Закончились <span class="n zero">0</span></button>
+              <button class="fc">Стоп <span class="n zero">0</span></button>
+              <button class="fc">В плане <span class="n zero">0</span></button>
+              <button class="fc">Мало данных <span class="n">237</span></button></div>
+              <div class="tb-row">
+              <span class="anchor">
+                <button class="fc" aria-expanded="true">Бренд <svg class="chev"><use href="#i-chev"/></svg></button>
+                <div class="pop" role="listbox" aria-label="Бренд">
+                  <span class="search"><svg><use href="#i-search"/></svg>Найти бренд</span>
+                  <div class="pop-scroll">
+                    <span class="opt on"><i class="box"></i>Black Burn</span>
+                    <span class="opt"><i class="box"></i>DARKSIDE</span>
+                    <span class="opt on"><i class="box"></i>Сарма</span>
+                    <span class="opt"><i class="box"></i>Sebero</span>
+                    <span class="opt"><i class="box"></i>Хулиган</span>
+                    <span class="opt"><i class="box"></i>Starline</span>
+                    <span class="opt"><i class="box"></i>Must Have</span>
+                    <span class="opt"><i class="box"></i>Satyr</span>
+                  </div>
+                  <div class="pop-foot"><span>Выбрано 2</span><button class="reset">Очистить</button></div>
+                </div>
+              </span>
+              <button class="fc">Характер <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Крепость <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Миксы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <span class="tb-end"><span class="sort">По сроку <svg class="chev"><use href="#i-chev"/></svg></span></span></div>
+            </div>
+            <div class="table" style="opacity:.6">
+              <div class="tr th shelf-cols"><span>Табак</span><span>Остаток</span><span>Расход</span><span>Хватит до</span><span>Приход</span><span>Миксы</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Ананасовые кусочки</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="num">2</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Арбузный мармелад</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="mut">нет</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Байкальская клубника</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="num">1</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="frame-note">Один компонент для всех атрибутов: в «Бренде» Полки 13 значений, в «Каталоге» 282, поэтому поиск в списке есть всегда. Выбор применяется сразу, кнопки «Применить» нет. Чисел у значений нет, это атрибут. Сейчас в «Каталоге» и «Миксах» используется <code>FilterMultiSelect</code>, а на «Полке» сетка чекбоксов. Обе заменяются этим списком.</p>
+      </div>
+    </div>
+
+    <div class="board-row">
+      <div class="frame" data-shot="shelf-active">
+        <p class="frame-name"><b>shelf-active</b> выбраны фильтры</p>
+        <div class="desk">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span class="on">Полка</span><span>Поставки</span><span>Каталог</span><span>Миксы</span><span>Рейлы</span><span>Доступ</span></nav>
+          <div class="page">
+            <div class="page-head"><h1>Полка</h1><span class="page-meta">12 из 269</span></div>
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search"><svg><use href="#i-search"/></svg>Табак или бренд</span>
+              <button class="fc">Все</button>
+              <button class="fc" aria-pressed="true">Есть <span class="n">269</span></button>
+              <button class="fc">Заканчивается <span class="n zero">0</span></button>
+              <button class="fc">Проверьте остаток <span class="n zero">0</span></button>
+              <button class="fc">Закончились <span class="n zero">0</span></button>
+              <button class="fc">Стоп <span class="n zero">0</span></button>
+              <button class="fc">В плане <span class="n zero">0</span></button>
+              <button class="fc">Мало данных <span class="n">237</span></button></div>
+              <div class="tb-row">
+              <button class="fc" aria-pressed="true">Бренд: 2 <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc" aria-pressed="true">Ягодные <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Крепость <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Миксы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="reset">Сбросить</button>
+              <span class="tb-end"><span class="sort">По сроку <svg class="chev"><use href="#i-chev"/></svg></span></span></div>
+            </div>
+            <div class="table">
+              <div class="tr th shelf-cols"><span>Табак</span><span>Остаток</span><span>Расход</span><span>Хватит до</span><span>Приход</span><span>Миксы</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Байкальская клубника</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="num">1</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Вишня</b><span>Сарма</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="mut">нет</span></div>
+              <div class="tr shelf-cols"><span class="nm"><b>Blueberry Blast</b><span>Black Burn</span></span><span class="num">200 г</span><span class="num">0 г/мес</span><span class="mut">мало данных</span><span class="num">20 окт, +200 г</span><span class="num">3</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="frame-note">Если выбрано одно значение, на чипе стоит его название («Ягодные»). Если несколько, стоит «Бренд: 2». «Сбросить» появляется в конце ряда, когда выбран хотя бы один фильтр, и снимает всё, кроме поиска. Число в мета-строке страницы меняется на «12 из 269».</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── Каталог и Миксы ─────────── -->
+  <section class="board-section">
+    <h2 class="board-h2">Каталог и Миксы</h2>
+    <div class="board-row">
+      <div class="frame" data-shot="catalog">
+        <p class="frame-name"><b>catalog</b> каталог</p>
+        <div class="desk">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span>Полка</span><span>Поставки</span><span class="on">Каталог</span><span>Миксы</span><span>Рейлы</span><span>Доступ</span></nav>
+          <div class="page">
+            <div class="page-head"><h1>Каталог</h1><span class="page-meta">10 944 позиции, 69 в миксах</span></div>
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search"><svg><use href="#i-search"/></svg>Табак или бренд</span>
+              <button class="fc" aria-pressed="true">Все</button>
+              <button class="fc">В наличии <span class="n">269</span></button>
+              <button class="fc">Нет наличия <span class="n">10 675</span></button>
+              <button class="fc">Архив <span class="n">31</span></button></div>
+              <div class="tb-row">
+              <button class="fc">Категории <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Бренд <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Вкусы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Мета-теги <svg class="chev"><use href="#i-chev"/></svg></button>
+              <span class="tb-end"><span class="sort">По названию <svg class="chev"><use href="#i-chev"/></svg></span></span></div>
+            </div>
+            <div class="table">
+              <div class="tr th cat-cols"><span class="on">Табак ↑</span><span>Бренд</span><span>Вкус и профиль</span><span>htreviews</span><span>Полка</span><span>Миксов</span></div>
+              <div class="tr cat-cols"><span class="nm"><b>Ананасовые кусочки</b></span><span>Сарма</span><span class="mut">ананас, фруктовые</span><span class="num">4,6</span><span class="num">200 г</span><span class="num">2</span></div>
+              <div class="tr cat-cols"><span class="nm"><b>Bergamonstr</b></span><span>DARKSIDE</span><span class="mut">бергамот, цитрусовые</span><span class="num">4,7</span><span class="mut">нет</span><span class="num">0</span></div>
+              <div class="tr cat-cols"><span class="nm"><b>Supernova</b></span><span>DARKSIDE</span><span class="mut">мята, мятные</span><span class="num">4,8</span><span class="mut">нет</span><span class="num">1</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="frame-note">Строка «Категории» с десятью чипами и раскрывашка «Ещё фильтры» с тремя <code>FilterMultiSelect</code> сворачиваются в четыре чипа-атрибута. «Архив» становится статусом с числом. Сортировка «По …» и заголовки колонок используют одно состояние: клик по заголовку меняет пилюлю, и наоборот (вопрос 3).</p>
+      </div>
+    </div>
+
+    <div class="board-row">
+      <div class="frame" data-shot="mixes">
+        <p class="frame-name"><b>mixes</b> миксы</p>
+        <div class="desk">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span>Полка</span><span>Поставки</span><span>Каталог</span><span class="on">Миксы</span><span>Рейлы</span><span>Доступ</span></nav>
+          <div class="page">
+            <div class="page-head"><h1>Миксы</h1><span class="page-meta">33 микса</span></div>
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search"><svg><use href="#i-search"/></svg>Микс или табак</span>
+              <button class="fc" aria-pressed="true">Все</button>
+              <button class="fc">Виден гостю <span class="n">31</span></button>
+              <button class="fc">Скрыт <span class="n">2</span></button>
+              <button class="fc">Блокирован <span class="n zero">0</span></button></div>
+              <div class="tb-row">
+              <button class="fc">Профиль <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Рейлы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Бренды <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Вкусы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Мета-теги <svg class="chev"><use href="#i-chev"/></svg></button>
+              <span class="tb-end"><span class="sort">По спросу <svg class="chev"><use href="#i-chev"/></svg></span></span></div>
+            </div>
+            <div class="table">
+              <div class="tr th mix-cols"><span>Микс</span><span>Состав</span><span class="on">Выборы ↓</span><span>Рейтинг</span><span>Статус</span></div>
+              <div class="tr mix-cols"><span class="nm"><b>Северное сияние</b></span><span class="mut">Supernova, Bergamonstr, Вишня</span><span class="num">48</span><span class="num">4,7</span><span class="mut">виден гостю</span></div>
+              <div class="tr mix-cols"><span class="nm"><b>Ягодный морс</b></span><span class="mut">Байкальская клубника, Blueberry Blast</span><span class="num">35</span><span class="num">4,5</span><span class="mut">виден гостю</span></div>
+              <div class="tr mix-cols"><span class="nm"><b>Тропики</b></span><span class="mut">Ананасовые кусочки, Арбузный мармелад</span><span class="num">22</span><span class="mut">нет</span><span class="mut">скрыт</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="frame-note">Сейчас число стоит только у «Виден гостю», а будет у всех статусов. «Профиль» (строка чипов со своим «Сбросить»), single-select «Участие в рейлах» и три multi-select превращаются в пять чипов-атрибутов. «Рейлы» — список с одним выбором: «В рейлах», «Не в рейлах».</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── Доступ и пусто ─────────── -->
+  <section class="board-section">
+    <h2 class="board-h2">Доступ и пустой результат</h2>
+    <div class="board-row">
+      <div class="frame" data-shot="access">
+        <p class="frame-name"><b>access</b> операторы</p>
+        <div class="desk" style="min-height:330px">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span>Полка</span><span>Поставки</span><span>Каталог</span><span>Миксы</span><span>Рейлы</span><span class="on">Доступ</span></nav>
+          <div class="page">
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search"><svg><use href="#i-search"/></svg>Имя, телефон или @username</span>
+              <button class="fc" aria-pressed="true">Все</button>
+              <button class="fc">Активны</button>
+              <button class="fc">Ждут привязки</button>
+              <button class="fc">Выключены</button>
+              </div>
+            </div>
+            <div class="table">
+              <div class="tr th acc-cols"><span>Оператор</span><span>Телефон</span><span>Telegram</span><span>Статус</span></div>
+              <div class="tr acc-cols"><span class="nm"><b>Анна</b></span><span class="num">+7 999 123-45-67</span><span>@anna_bar</span><span class="mut">активна</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="frame-note">Класс <code>.chip</code> заменяется на <code>FilterChip</code>, поиск на общий. Чисел нет: по канону у фильтров «Доступа» их нет.</p>
+      </div>
+    </div>
+    <div class="board-row">
+      <div class="frame" data-shot="empty">
+        <p class="frame-name"><b>empty</b> ничего не найдено</p>
+        <div class="desk" style="min-height:360px">
+          <nav class="top"><b>Ателье Мастер</b><span>Дашборд</span><span>Полка</span><span>Поставки</span><span class="on">Каталог</span><span>Миксы</span><span>Рейлы</span><span>Доступ</span></nav>
+          <div class="page">
+            <div class="toolbar">
+              <div class="tb-row">
+              <span class="search has"><svg><use href="#i-search"/></svg><b>Сарма вишня</b></span>
+              <button class="fc">Все</button>
+              <button class="fc" aria-pressed="true">Нет наличия <span class="n">10 675</span></button>
+              <button class="fc">В наличии <span class="n">269</span></button>
+              <button class="fc">Архив <span class="n">31</span></button></div>
+              <div class="tb-row">
+              <button class="fc" aria-pressed="true">Мятные <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Бренд <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Вкусы <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="fc">Мета-теги <svg class="chev"><use href="#i-chev"/></svg></button>
+              <button class="reset">Сбросить</button>
+              <span class="tb-end"><span class="sort">По названию <svg class="chev"><use href="#i-chev"/></svg></span></span></div>
+            </div>
+            <div class="table"><div class="empty">Уберите один из фильтров.<button class="reset">Сбросить фильтры</button></div></div>
+          </div>
+        </div>
+        <p class="frame-note">Пустое состояние одно на все экраны. «Сбросить фильтры» снимает и поиск.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── Телефон ─────────── -->
+  <section class="board-section">
+    <h2 class="board-h2">Телефон, 375 px</h2>
+    <div class="board-row">
+      <div class="frame" data-shot="phone">
+        <p class="frame-name"><b>phone</b> полка</p>
+        <div class="phone">
+          <div class="m-head"><h1>Полка</h1><span class="page-meta">12 из 269</span></div>
+          <div class="m-tools">
+            <span class="search"><svg><use href="#i-search"/></svg>Табак или бренд</span>
+            <button class="m-filters" aria-pressed="true"><svg width="16" height="16"><use href="#i-sliders"/></svg>Фильтры <span class="n">2</span></button>
+          </div>
+          <div class="m-chips">
+            <button class="fc">Все</button>
+            <button class="fc" aria-pressed="true">Есть <span class="n">269</span></button>
+            <button class="fc">Заканчивается <span class="n zero">0</span></button>
+            <button class="fc">Проверьте остаток <span class="n zero">0</span></button>
+          </div>
+          <div class="m-row"><span class="nm"><b>Байкальская клубника</b><span>Сарма</span></span><span class="num">200 г</span></div>
+          <div class="m-row"><span class="nm"><b>Вишня</b><span>Сарма</span></span><span class="num">200 г</span></div>
+          <div class="m-row"><span class="nm"><b>Blueberry Blast</b><span>Black Burn</span></span><span class="num">200 г</span></div>
+        </div>
+        <p class="frame-note">Порядок и подписи статусов такие же, как на десктопе. Сейчас там «Проверьте» и «Все» посередине. Кнопка «Фильтры» с ползунками считает выбранные атрибуты, статус в это число не входит. Тот же вид у «Каталога» и «Миксов» на телефоне.</p>
+      </div>
+
+      <div class="frame" data-shot="phone-sheet">
+        <p class="frame-name"><b>phone-sheet</b> шторка фильтров</p>
+        <div class="phone">
+          <div class="m-head"><h1>Полка</h1><span class="page-meta">12 из 269</span></div>
+          <div class="sheet-dim"></div>
+          <div class="sheet" role="dialog" aria-label="Фильтры">
+            <div><div class="sheet-handle"></div><h2>Фильтры</h2></div>
+            <div class="sheet-body">
+              <div class="sheet-group"><h3>Сортировка</h3><div class="sheet-chips"><button class="fc" aria-pressed="true">По сроку</button><button class="fc">По расходу</button><button class="fc">По остатку</button><button class="fc">По названию</button></div></div>
+              <div class="sheet-group"><h3>Бренд</h3><div class="sheet-chips"><button class="fc" aria-pressed="true">Black Burn</button><button class="fc">DARKSIDE</button><button class="fc" aria-pressed="true">Сарма</button><button class="fc">Sebero</button><button class="fc">Хулиган</button><button class="fc">Ещё 8</button></div></div>
+              <div class="sheet-group"><h3>Характер</h3><div class="sheet-chips"><button class="fc">Свежие</button><button class="fc">Сладкие</button><button class="fc" aria-pressed="true">Ягодные</button><button class="fc">Цитрусовые</button><button class="fc">Ещё 7</button></div></div>
+              <div class="sheet-group"><h3>Крепость</h3><div class="sheet-chips"><button class="fc">Лёгкая</button><button class="fc">Средняя</button><button class="fc">Выше средней</button><button class="fc">Крепкая</button></div></div>
+            </div>
+            <div class="sheet-foot"><button class="btn">Сбросить</button><button class="btn cta">Показать 12</button></div>
+          </div>
+        </div>
+        <p class="frame-note">В шторке атрибуты идут чипами, на телефоне так проще попадать пальцем. «Ещё N» раскрывает группу целиком, у «Бренда» в «Каталоге» вместо этого поиск по списку.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const m = location.hash.match(/^#shot=([\w-]+)/);
+  if (m) {
+    document.body.classList.add('shot');
+    document.querySelector(`[data-shot="${m[1]}"]`)?.classList.add('is-shot');
+  }
+</script>
+</body>
+</html>
