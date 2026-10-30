@@ -6147,7 +6147,7 @@ button[aria-busy="true"]:disabled {
 .shelf-table th.shelf-table__check,
 .shelf-table td.shelf-table__check { padding: 0 0 0 16px; }
 
-.shelf-check {
+.shelf-select {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -6165,10 +6165,10 @@ button[aria-busy="true"]:disabled {
 }
 
 /* Попасть пальцем и мышью проще, чем в квадрат 16 px. */
-.shelf-check::before { content: ''; position: absolute; inset: -8px; }
-.shelf-check[aria-checked="true"],
-.shelf-check[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); }
-.shelf-check:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.shelf-select::before { content: ''; position: absolute; inset: -8px; }
+.shelf-select[aria-checked="true"],
+.shelf-select[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); }
+.shelf-select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .shelf-table tbody tr[data-selected] { background: var(--accent-soft); }
 .shelf-page[data-selecting] { padding-bottom: 72px; }

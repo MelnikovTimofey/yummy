@@ -22,7 +22,7 @@ export const ShelfCheck = ({
     aria-label={label}
     // Клавиши — в title, строки подсказок под таблицей нет (#364).
     title="Клавиша X. Shift и клик выделяют диапазон"
-    className="shelf-check"
+    className="shelf-select"
     // Shift + клик не выделяет текст таблицы.
     onMouseDown={(event) => {
       if (event.shiftKey) event.preventDefault();
