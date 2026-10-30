@@ -150,8 +150,8 @@ test('automation can read, ensure and rotate the current daily code', async () =
   }
 });
 
-// Код, выпущенный по прежнему окну (06:00–06:00, #351), пересекается и с новыми
-// сутками. Истёкший код ensure не отдаёт, а выпускает новый (#381).
+// Код, выпущенный по прежнему правилу окна (#351, #381, #456), пересекается с
+// текущим окном. Истёкший код ensure не отдаёт, а выпускает новый.
 test('automation ensure replaces an expired code that still overlaps the window', async () => {
   const app = buildApp();
   const window = getDailyCodeWindow();
