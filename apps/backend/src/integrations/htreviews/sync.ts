@@ -209,12 +209,13 @@ export const syncHtReviewsCatalog = async (
       if (existing.inStock !== defaultInStock) {
         preservedStockCount += 1;
       }
+      // Без карточки таксономия и поля карточки пустые — оставляем сохранённые (#458).
       await prisma.tobacco.update({
         where: {
           id: existing.id,
         },
         data: {
-          ...buildUpsertData(item),
+          ...(item.detailLoaded ? buildUpsertData(item) : {}),
           ...buildStatsData(item, new Date()),
         },
       });

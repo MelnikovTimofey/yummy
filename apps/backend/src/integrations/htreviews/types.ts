@@ -70,6 +70,8 @@ export type HtReviewsImportedTobacco = {
   ratingsCount: number | null;
   reviewsCount: number | null;
   viewsCount: number | null;
+  // false — карточка не загрузилась: всё, кроме статистики выдачи, — пропуск, а не значение.
+  detailLoaded: boolean;
   rawTags: string[];
   taxonomyCandidate: TaxonomyCandidate;
 };

@@ -56,6 +56,7 @@ const mergeSummaryAndDetail = (
     ratingsCount: summary.ratingsCount,
     reviewsCount: summary.reviewsCount ?? detail?.reviewCount ?? null,
     viewsCount: summary.viewsCount,
+    detailLoaded: detail !== null,
     rawTags,
     taxonomyCandidate,
   };
