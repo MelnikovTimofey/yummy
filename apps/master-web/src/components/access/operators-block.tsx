@@ -1,8 +1,10 @@
 import { useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { TelegramOperatorRecord } from '@/contracts';
 import type { AccessRoleStatus, AccessSaveStatus, TelegramOperatorEditorState } from './types';
 import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
+import { FilterChip } from '@/components/ui/filter-bar';
 
 type OperatorsBlockProps = {
   telegramOperators: TelegramOperatorRecord[];
@@ -46,13 +48,6 @@ const relativeFromIso = (iso: string): string => {
   const days = Math.round(hours / 24);
   return `${days} д назад`;
 };
-
-const SearchIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
 
 const EditIcon = () => (
   <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -158,33 +153,30 @@ export const OperatorsBlock = ({
           <>
             <div className="access-toolbar">
               <label className="input access-toolbar__search">
-                <SearchIcon />
+                <Search size={14} aria-hidden />
                 <input
-                  type="text"
+                  type="search"
+                  aria-label="Поиск операторов"
                   placeholder="Имя, телефон или @username"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </label>
-              {(
-                [
-                  ['all', 'Все'],
-                  ['active', 'Активны'],
-                  ['pending', 'Ждут привязки'],
-                  ['inactive', 'Выключены'],
-                ] as Array<[FilterKey, string]>
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className="chip"
-                  data-active={filter === key}
-                  aria-pressed={filter === key}
-                  onClick={() => setFilter(key)}
-                >
-                  {label}
-                </button>
-              ))}
+              {/* По канону у фильтров «Доступа» чисел нет (#464). */}
+              <div className="filter-bar__chips" role="group" aria-label="Статус оператора">
+                {(
+                  [
+                    ['all', 'Все'],
+                    ['active', 'Активны'],
+                    ['pending', 'Ждут привязки'],
+                    ['inactive', 'Выключены'],
+                  ] as Array<[FilterKey, string]>
+                ).map(([key, label]) => (
+                  <FilterChip key={key} active={filter === key} onClick={() => setFilter(key)}>
+                    {label}
+                  </FilterChip>
+                ))}
+              </div>
             </div>
 
             <div className="list__head access-list__head" style={{ gridTemplateColumns: OPERATORS_GRID }}>
