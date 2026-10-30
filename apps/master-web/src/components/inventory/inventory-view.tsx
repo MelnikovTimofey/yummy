@@ -2,13 +2,26 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent,
 import { ChevronDown, ChevronUp, Flame, Plus, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
+import { useIsPhone } from '@/hooks/use-is-phone';
+import {
+  CATALOG_SORTS,
+  CATALOG_STATUS_CHIPS,
+  applyAttributeChange,
+  catalogStatusCount,
+  catalogStatusOf,
+  catalogStatusPatch,
+  pickSort,
+  sortPillOptions,
+  type CatalogStatus,
+} from '@/lib/list-filters';
 import type {
   InventoryArchivedFilter,
   InventoryFilterKey,
@@ -80,15 +93,7 @@ type InventoryViewProps = {
 
 export type CatalogView = 'all' | 'ideas';
 
-// Фильтры в свёрнутом `<details>` блоке «Ещё фильтры». Бренд живёт здесь
-// мультиселектом на весь список брендов (issue #119): чипов-топ-8 не хватало
-// для 279 брендов. Категории, наоборот, вынесены в видимый ряд чипов над
-// таблицей (см. categoryChips).
-const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
-  { key: 'manufacturers', title: 'Бренд' },
-  { key: 'flavors', title: 'Вкусы' },
-  { key: 'flavorTags', title: 'Мета-теги' },
-];
+const filterKeys: InventoryFilterKey[] = ['flavorProfiles', 'manufacturers', 'flavors', 'flavorTags'];
 
 const inventoryPageSizeOptions = [100, 200, 500, 1000];
 
@@ -127,23 +132,12 @@ const formatDetailValue = (value?: string | null, fallback = 'Не указан�
 const formatMixCardStatus = (mix: NonNullable<InventoryTobacco['dependentMixes']>[number]) =>
   formatMixStatusLabel(resolveMixStatus(mix));
 
-const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
-  if (key === 'flavorProfiles') {
-    return formatFlavorProfileLabel(value);
-  }
-
-  return value;
-};
-
 const uniqueStrings = (items: string[]) =>
   Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 
 
-// Чипы категорий для видимого ряда фильтров над таблицей. Категорий немного
-// (≤12 канонических), поэтому показываем все встречающиеся — без top-N среза,
-// который раньше прятал бренды (issue #119). Частота задаёт только порядок:
-// чисел на чипах категорий нет (#348).
-const buildCategoryChips = (catalog: InventoryTobacco[]): string[] => {
+// Категории в списке фильтра — по частоте в каталоге, чисел у них нет (#348).
+const buildCategoryOptions = (catalog: InventoryTobacco[]): string[] => {
   const counts = new Map<string, number>();
   for (const item of catalog) {
     for (const profile of item.flavorProfiles ?? []) {
@@ -595,7 +589,9 @@ export const InventoryView = ({
   const flavorProfileOptions = INVENTORY_FLAVOR_PROFILE_KEYS;
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
-  const categoryChips = buildCategoryChips(catalogOptions);
+  const categoryOptions = Array.from(new Set([...buildCategoryOptions(catalogOptions), ...filters.options.flavorProfiles]));
+  const isPhone = useIsPhone();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Сколько полей блока «Дополнительно» заполнено — показываем бейджем у
   // summary, чтобы свёрнутый блок не читался как пустой (issue #126).
@@ -1233,32 +1229,72 @@ export const InventoryView = ({
     onSortChange,
   };
 
-  const extraFilterGroupsAvailable = extraFilterGroups.some((group) => filters.options[group.key].length);
-  const extraFilterSelectionCount = extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0);
-
-  const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
-    // У «Все» числа нет: сколько всего, сказано в мете шапки (#348).
-    { value: 'all', label: 'Все', count: 0, ariaLabel: 'Фильтр: Все' },
-    { value: 'in-stock', label: 'В наличии', count: meta.inStockCount, ariaLabel: 'Фильтр: В наличии' },
-    { value: 'out-of-stock', label: 'Нет наличия', count: meta.outOfStockCount, ariaLabel: 'Фильтр: Нет наличия' },
+  const catalogStatus = catalogStatusOf(filters);
+  const archivedActive = catalogStatus === 'archived';
+  const setCatalogStatus = (next: CatalogStatus) => {
+    const patch = catalogStatusPatch(filters, next);
+    if (patch.archived) onArchivedChange(patch.archived);
+    if (patch.stock) onStockChange(patch.stock);
+  };
+  const changeSort = (field: InventoryListSort['field']) => {
+    const next = pickSort(CATALOG_SORTS, sort, field);
+    if (next !== sort) onSortChange(next);
+  };
+  // Фильтры серверные: список отдаёт новый набор, сервер принимает toggle или clear.
+  const attribute = (key: InventoryFilterKey, title: string, options: string[], formatOption?: (value: string) => string) => ({
+    title,
+    options,
+    selected: filters[key],
+    formatOption,
+    onChange: (next: string[]) =>
+      applyAttributeChange(filters[key], next, {
+        toggle: (value) => onToggleFilterValue(key, value),
+        clear: () => onClearFilterGroup(key),
+      }),
+  });
+  // Одни и те же атрибуты — списками на десктопе и чипами в шторке телефона.
+  const attributes = [
+    attribute('flavorProfiles', 'Категории', categoryOptions, formatFlavorProfileLabel),
+    attribute('manufacturers', 'Бренд', filters.options.manufacturers),
+    attribute('flavors', 'Вкусы', filters.options.flavors),
+    attribute('flavorTags', 'Мета-теги', filters.options.flavorTags),
   ];
+  const activeAttributes = filterKeys.reduce((acc, key) => acc + filters[key].length, 0);
+  const narrowed = activeAttributes > 0 || catalogStatus !== 'all';
+  const filtersActive = Boolean(filters.search) || narrowed;
 
-  const archivedActive = filters.archived === 'archived';
-  const filtersActive =
-    Boolean(filters.search) ||
-    filters.stock !== 'all' ||
-    filters.archived !== 'active' ||
-    filters.flavorProfiles.length > 0 ||
-    extraFilterGroups.some((group) => filters[group.key].length > 0);
-
+  const clearAttributes = () => filterKeys.forEach((key) => filters[key].length && onClearFilterGroup(key));
   const resetFilters = () => {
+    setCatalogStatus('all');
+    clearAttributes();
+  };
+  const resetAll = () => {
     setSearchValue('');
     onSearchChange('');
-    onStockChange('all');
-    onArchivedChange('active');
-    onClearFilterGroup('flavorProfiles');
-    extraFilterGroups.forEach((group) => onClearFilterGroup(group.key));
+    resetFilters();
   };
+
+  const statusChip = ([key, label]: [CatalogStatus, string]) => (
+    <FilterChip
+      key={key}
+      active={catalogStatus === key}
+      count={catalogStatusCount(meta, key)}
+      label={`Фильтр: ${label}`}
+      onClick={() => setCatalogStatus(key)}
+    >
+      {label}
+    </FilterChip>
+  );
+  const searchInput = (
+    <input
+      type="search"
+      enterKeyHint="search"
+      aria-label="Поиск по каталогу"
+      placeholder="Табак или бренд"
+      value={searchValue}
+      onChange={(event) => setSearchValue(event.target.value)}
+    />
+  );
 
   return (
     <section className="tobaccos-page">
@@ -1292,113 +1328,70 @@ export const InventoryView = ({
 
       {view === 'ideas' ? ideas : (
       <>
-      <div className="tobaccos-list">
-        <div className="tobaccos-list__toolbar">
-          <div className="input tobaccos-list__search">
-            <Search size={14} aria-hidden />
-            <input
-              type="search"
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Поиск по каталогу"
-            />
+      {isPhone ? (
+        <>
+          <div className="m-list-search">
+            <div className="input m-list-search__field">
+              <Search size={16} aria-hidden />
+              {searchInput}
+            </div>
+            <FiltersButton count={activeAttributes} open={filtersOpen} onClick={() => setFiltersOpen(true)} />
           </div>
-
-          <div className="tobaccos-list__filters" role="group" aria-label="Фильтр по наличию">
-            {stockFilterTabs.map((tab) => {
-              const active = filters.stock === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
-                  aria-pressed={active}
-                  aria-label={tab.ariaLabel}
-                  onClick={() => onStockChange(tab.value)}
-                >
-                  <span>{tab.label}</span>
-                  {tab.value === 'all' ? null : (
-                    <span className="filter-chip__count" hidden={tab.count === 0}>
-                      {formatMetricValue(tab.count)}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <div className="m-list-chips" role="group" aria-label="Статус в каталоге">
+            {CATALOG_STATUS_CHIPS.map(statusChip)}
           </div>
-
-          <div className="tobaccos-list__filters" role="group" aria-label="Фильтр по архиву">
-            <button
-              type="button"
-              className={`filter-chip${archivedActive ? ' filter-chip--active' : ''}`}
-              aria-pressed={archivedActive}
-              aria-label="Фильтр: Архив"
-              onClick={() => onArchivedChange(archivedActive ? 'active' : 'archived')}
-            >
-              <span>Архив</span>
-              <span className="filter-chip__count" hidden={meta.archivedCount === 0}>
-                {formatMetricValue(meta.archivedCount)}
-              </span>
-            </button>
+        </>
+      ) : (
+        <div className="filter-bar">
+          <div className="filter-bar__row">
+            <div className="input filter-bar__search">
+              <Search size={14} aria-hidden />
+              {searchInput}
+            </div>
+            <div className="filter-bar__chips" role="group" aria-label="Статус в каталоге">
+              {CATALOG_STATUS_CHIPS.map(statusChip)}
+            </div>
+          </div>
+          <div className="filter-bar__row">
+            <div className="filter-bar__chips" role="group" aria-label="Фильтры каталога">
+              {attributes.map((item) => (
+                <AttributeFilter key={item.title} {...item} />
+              ))}
+              {narrowed ? <FilterReset onClick={resetFilters} /> : null}
+            </div>
+            <SortPill value={sort.field} options={sortPillOptions(CATALOG_SORTS)} onChange={changeSort} />
           </div>
         </div>
+      )}
 
-        {categoryChips.length ? (
-          <div className="tobaccos-list__chip-filter" role="group" aria-label="Фильтр по категории">
-            <span className="tobaccos-list__chip-filter-label">Категории</span>
-            {categoryChips.map((value) => {
-              const active = filters.flavorProfiles.includes(value);
-              return (
-                <button
-                  key={`category-chip:${value}`}
-                  type="button"
-                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => onToggleFilterValue('flavorProfiles', value)}
-                >
-                  {formatFlavorProfileLabel(value)}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-
-      {extraFilterGroupsAvailable ? (
-        <details className="inventory-extra-filters">
-          <summary className="inventory-extra-filters__trigger">
-            <ChevronDown size={13} aria-hidden className="inventory-extra-filters__chevron" />
-            Ещё фильтры
-            {extraFilterSelectionCount > 0 ? (
-              <span className="inventory-extra-filters__count" aria-hidden="true">
-                {formatMetricValue(extraFilterSelectionCount)}
-              </span>
+      {isPhone && filtersOpen ? (
+        <BottomSheet label="Фильтры каталога" onClose={() => setFiltersOpen(false)} className="m-filters-sheet">
+          <h2 className="m-filters-sheet__title">Фильтры</h2>
+          <SheetChoice
+            title="Сортировка"
+            options={CATALOG_SORTS.map((option) => option.field)}
+            selected={[sort.field]}
+            formatOption={(field) => CATALOG_SORTS.find((option) => option.field === field)?.label ?? field}
+            single
+            onChange={([next]) => next && changeSort(next as InventoryListSort['field'])}
+          />
+          {attributes.map((item) => (
+            <SheetChoice key={item.title} {...item} />
+          ))}
+          <div className="m-filters-sheet__actions">
+            {activeAttributes ? (
+              <button type="button" className="btn" data-variant="ghost" onClick={clearAttributes}>
+                Сбросить
+              </button>
             ) : null}
-          </summary>
-          <div className="inventory-filter-groups ops-filter-groups">
-            {extraFilterGroups.map((group) => {
-              const options = filters.options[group.key];
-
-              if (!options.length) {
-                return null;
-              }
-
-              return (
-                <FilterMultiSelect
-                  key={group.key}
-                  title={group.title}
-                  options={options}
-                  selected={filters[group.key]}
-                  formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
-                  onToggleOption={(option) => onToggleFilterValue(group.key, option)}
-                  onClearGroup={() => onClearFilterGroup(group.key)}
-                />
-              );
-            })}
+            <button type="button" className="btn" data-variant="primary" onClick={() => setFiltersOpen(false)}>
+              Показать {formatMetricValue(meta.filteredItems)}
+            </button>
           </div>
-        </details>
+        </BottomSheet>
       ) : null}
 
+      <div className="tobaccos-list">
       {selectedIds.length ? (
         <div className="inventory-batch-bar">
           <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
@@ -1681,8 +1674,8 @@ export const InventoryView = ({
                 <td className="inventory-table__empty" colSpan={10}>
                   {filtersActive ? (
                     <div className="list-empty">
-                      <p>Ничего не найдено. Уберите один из фильтров.</p>
-                      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetFilters}>
+                      <p>Уберите один из фильтров.</p>
+                      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetAll}>
                         Сбросить фильтры
                       </button>
                     </div>

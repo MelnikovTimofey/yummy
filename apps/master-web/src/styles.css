@@ -860,10 +860,6 @@ p {
   position: relative;
 }
 
-.ops-filter-groups {
-  gap: 10px;
-}
-
 .ops-table-shell {
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
 }
@@ -2371,54 +2367,6 @@ input[type="checkbox"] {
   flex-direction: column;
 }
 
-.tobaccos-list__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  flex-wrap: wrap;
-}
-
-.tobaccos-list__search {
-  flex: 1 1 280px;
-  min-width: 220px;
-  background: transparent;
-  border: 0;
-  height: 30px;
-  padding: 0 4px;
-  box-shadow: none;
-}
-
-.tobaccos-list__search:focus-within {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.tobaccos-list__filters {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tobaccos-list__chip-filter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.tobaccos-list__chip-filter-label {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-right: 4px;
-}
-
 /* --- Filter chip (toolbar + brand pills) ----------------------------- */
 
 .filter-chip {
@@ -2612,6 +2560,8 @@ input[type="checkbox"] {
 .sheet-choice h3 { margin: 0; font-family: var(--font-meta); font-size: var(--fs-sm); font-weight: 500; color: var(--text-muted); }
 .sheet-choice__chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet-choice__chips .filter-chip { height: 34px; padding: 0 12px; font-size: var(--fs-md); }
+/* 16 px — иначе iOS увеличивает страницу при фокусе в поле. */
+.input.sheet-choice__search { height: 40px; font-size: 16px; }
 
 /* --- Table inside .tobaccos-list: нейтральная палитра ----------------- */
 
@@ -2666,60 +2616,11 @@ input[type="checkbox"] {
   font-size: var(--fs-sm);
 }
 
-/* --- «Ещё фильтры» — details-кнопка в строке под чипами Каталога и Миксов */
-
-.tobaccos-list .inventory-extra-filters,
-.mixes-list .inventory-extra-filters {
-  border: 0;
-  border-top: 1px solid var(--border-subtle);
-  border-radius: 0;
-  padding: 6px 12px;
-  background: transparent;
-}
-
-.tobaccos-list .inventory-extra-filters__trigger,
-.mixes-list .inventory-extra-filters__trigger {
-  height: 26px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.tobaccos-list .inventory-extra-filters__trigger:hover,
-.mixes-list .inventory-extra-filters__trigger:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.inventory-extra-filters__chevron {
-  flex: none;
-  transition: transform 120ms ease;
-}
-
-.inventory-extra-filters[open] .inventory-extra-filters__chevron {
-  transform: rotate(180deg);
-}
-
-.tobaccos-list .inventory-extra-filters__count,
-.mixes-list .inventory-extra-filters__count {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.mixes-list .inventory-filter-groups,
-.tobaccos-list .inventory-filter-groups {
-  padding: 8px 12px 12px;
-  background: transparent;
-  border: 0;
-}
-
 /* --- Batch bar inside .tobaccos-list -------------------------------- */
 
 .tobaccos-list .inventory-batch-bar {
   background: var(--accent-soft);
-  border-top: 1px solid var(--accent-border);
+  border-bottom: 1px solid var(--accent-border);
   border-radius: 0;
   padding: 10px 12px;
 }
@@ -2746,60 +2647,6 @@ input[type="checkbox"] {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.mixes-list__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  flex-wrap: wrap;
-}
-
-.mixes-list__search {
-  flex: 1 1 280px;
-  min-width: 220px;
-  background: transparent;
-  border: 0;
-  height: 30px;
-  padding: 0 4px;
-  box-shadow: none;
-  position: relative;
-}
-
-.mixes-list__search:focus-within {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.mixes-list__filters {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.mixes-list__profiles {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.mixes-list__profiles-label {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-right: 4px;
-}
-
-.mixes-list__profiles-reset {
-  color: var(--text-muted);
 }
 
 /* --- Table inside .mixes-list: нейтральная палитра ------------------- */
@@ -3266,13 +3113,6 @@ input[type="checkbox"] {
   padding: 9px 11px;
   color: var(--text-muted);
   font-size: 0.84rem;
-}
-
-.inventory-filter-groups {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px;
 }
 
 .inventory-cell__chips,
@@ -4442,27 +4282,6 @@ input[type="checkbox"] {
   gap: 6px;
   flex: 1 1 220px;
   min-width: min(100%, 220px);
-}
-
-.ops-filter-select__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.ops-filter-select__title {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.ops-filter-select__clear {
-  color: var(--text-muted);
-}
-
-.ops-filter-select__clear:hover {
-  color: var(--text-primary);
 }
 
 .ops-filter-select__trigger {
@@ -7485,10 +7304,12 @@ button[aria-busy="true"]:disabled {
 
 .shelf-page.shelf-page--phone { padding: 0; gap: 10px; }
 
-.m-shelf-search { display: flex; gap: 8px; }
+.m-shelf-search,
+.m-list-search { display: flex; gap: 8px; }
 
 /* 16 px — иначе iOS увеличивает страницу при фокусе в поле. */
-.input.m-shelf-search__field {
+.input.m-shelf-search__field,
+.input.m-list-search__field {
   flex: 1;
   height: 42px;
   padding: 0 12px;
@@ -7497,7 +7318,8 @@ button[aria-busy="true"]:disabled {
   font-size: 16px;
 }
 
-.m-shelf-chips {
+.m-shelf-chips,
+.m-list-chips {
   display: flex;
   gap: 6px;
   margin: 0 -12px;
@@ -7507,8 +7329,10 @@ button[aria-busy="true"]:disabled {
   scrollbar-width: none;
 }
 
-.m-shelf-chips::-webkit-scrollbar { display: none; }
-.m-shelf-chips .filter-chip { flex: 0 0 auto; height: 34px; padding: 0 12px; }
+.m-shelf-chips::-webkit-scrollbar,
+.m-list-chips::-webkit-scrollbar { display: none; }
+.m-shelf-chips .filter-chip,
+.m-list-chips .filter-chip { flex: 0 0 auto; height: 34px; padding: 0 12px; }
 
 .m-shelf-summary { margin: 0; font-size: var(--fs-xs); color: var(--text-faint); }
 
