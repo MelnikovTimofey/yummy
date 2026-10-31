@@ -173,6 +173,7 @@
   Кроме Lucide есть одна inline-SVG: «ползунки» на кнопке «Фильтры» в Каталоге (три линии, stroke 1.5, рядом подпись и счётчик выбранного). Всё остальное — типографика и `ProfileGlyph`.
 - Emoji не используются. Unicode-символы — только `★` (рейтинг), `←` (назад), `✓` (18+), `↑ ↓ ×` (порядок в рейле), `⌘K`.
 - Логотип — знак «Дым» (`assets/logo-mark*.svg`, `logo-lockup.svg`, `favicon.svg`), создан в рамках этой дизайн-системы: три струи в бордо разной глубины (`#B34A57` / `#8E2F3C` / `#7A2A34`; до 2026-09-24 — оксблад), stroke 5 при 120×120, round-caps. В источниках вектора не было; upstream-favicon Мастера сохранён как `logo-master-mark.svg`. Не перерисовывайте знак и не меняйте его цвета — есть готовые варианты под тёмный фон, акцентную плитку и мелкий размер.
+- Аватарки Telegram-чатов (`assets/tg-avatar-*.svg` + PNG 640×640 для загрузки): знак на угле `#1C1C21` под круглую обрезку. `client` — «Арома Ателье клиент», чистый знак; `access-code` — «Арома Ателье код доступа», кремовый бейдж с ключом; `alert` — «Арома Ателье алерт», бейдж `--danger` с «!». Бейдж в правом нижнем углу отделён вырезом цвета фона, знак у бейджевых вариантов сдвинут влево-вверх. Различимы на 48 px; новый чат — тот же знак и новый глиф в бейдже, не новый цвет.
 
 ## Components
 
@@ -202,7 +203,8 @@ tokens/                   — реэкспорты канона из packages/de
                             reset и две утилиты для статических прототипов;
                             fonts.css дополнительно грузит гарнитуры с CDN)
 assets/                   — logo-mark.svg, logo-mark-oxblood.svg, logo-mark-light.svg,
-                            logo-lockup.svg, favicon.svg, logo-master-mark.svg
+                            logo-lockup.svg, favicon.svg, logo-master-mark.svg,
+                            tg-avatar-{client,access-code,alert}.{svg,png}
 components/guest/         — 14 гостевых примитивов + guest.card.html
 components/master/        — 14 примитивов консоли + master.card.html
 guidelines/               — 22 specimen-карточки (Colors / Type / Spacing / Brand)
