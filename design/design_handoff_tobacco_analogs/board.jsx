@@ -354,7 +354,7 @@ function GuestNav({ value }) {
   );
 }
 
-// Состав как в CompositionStack, у замены под названием — пометка «замена».
+// Состав как в CompositionStack, у замены после названия — иконка.
 const AN_PALETTE = ['var(--composition-1)', 'var(--composition-2)', 'var(--composition-3)', 'var(--composition-4)', 'var(--composition-5)'];
 function ServedStack({ mix, showBar = true }) {
   const rows = asServed(mix).sort((a, b) => b.proportion - a.proportion);
@@ -372,7 +372,7 @@ function ServedStack({ mix, showBar = true }) {
             <span className="an-stack-brand">{c.manufacturer}</span>
             <span className="an-stack-name">
               {c.name}
-              {c.substitute ? <small className="an-sub-mark">замена</small> : null}
+              {c.substitute ? <span className="an-sub-mark" role="img" aria-label="замена" title="замена"><Ic name="ArrowLeftRight" size={13} /></span> : null}
             </span>
             <span className="an-stack-pct">{c.proportion + '%'}</span>
           </li>
@@ -499,7 +499,7 @@ const AN_SHOTS = [
   { id: 'mixes', group: 'master', name: 'Миксы', note: 'Новый статус «с заменой»: какой табак стоит вместо какого. У блокированного названо, чего нет, имя табака открывает его карточку. «Ежевичный тархун» блокирован: нет двух табаков, а замена допускается одна.', desk: {} },
   { id: 'shelf-analogs', group: 'master', name: 'Карточка табака: аналоги заданы', note: 'Lemonblast закончился. Порядок в списке и есть порядок замены, стрелками меняется. Ниже похожие табаки с полки и миксы, где табак сейчас подменён.', desk: { card: 'lemonblast' } },
   { id: 'shelf-suggest', group: 'master', name: 'Карточка табака: аналогов нет', note: 'Открыта из «Миксов» по ссылке «Нет: Red Rush». Похожие на полке подобраны по flavors, «Сделать аналогом» в одно действие делает микс видимым с заменой.', desk: { card: 'redrush' } },
-  { id: 'sheet-sub', group: 'guest', name: 'Карточка микса с заменой', note: 'Гость видит табак, который стоит на полке. Под названием пометка «замена». Остальное как у любого микса: оценка, «Покурить».', phone: { view: 'catalog', sheet: { mix: 'rootbeer' } } },
+  { id: 'sheet-sub', group: 'guest', name: 'Карточка микса с заменой', note: 'Гость видит табак, который стоит на полке. После названия иконка замены. Остальное как у любого микса: оценка, «Покурить».', phone: { view: 'catalog', sheet: { mix: 'rootbeer' } } },
   { id: 'confirm-sub', group: 'guest', name: 'Покажите мастеру', note: 'Мастер собирает по этому экрану, поэтому замена видна и здесь.', phone: { view: 'confirm' } },
   { id: 'cab-fav', group: 'guest', name: 'Избранное', note: 'Микс с заменой доступен, без пометки в строке. «Сейчас нет» остаётся только у миксов, которые не собрать и с заменой.', phone: { view: 'cabinet' } },
 ];
