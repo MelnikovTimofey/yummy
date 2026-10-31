@@ -217,6 +217,105 @@ function MixesPage({ onMissing }) {
   );
 }
 
+// ── Мастер: экран «Полка» с колонкой «Аналоги» ──
+
+// Аналоги в строке — остальные табаки группы в порядке замены. sub — тот, что сейчас стоит в миксах вместо закончившегося.
+const AN_SHELF_ROWS = [
+  { id: 'lemonblast', manufacturer: 'Darkside', name: 'Lemonblast', left: 0, full: 250, rate: '9 г/день', until: 'закончился 28 окт', status: 'out', arrived: '2 окт', supplier: 'Южный табак', mixes: 1,
+    analogs: [{ name: 'Lemon Shock', on: true, sub: true }, { name: 'Лимонный фреш', on: true }] },
+  { id: 'lemonshock', manufacturer: 'Black Burn', name: 'Lemon Shock', left: 140, full: 200, rate: '6 г/день', until: '24 ноя', days: 23, status: 'ok', arrived: '20 окт', supplier: 'Каспий Опт', mixes: 2,
+    analogs: [{ name: 'Lemonblast', on: false }, { name: 'Лимонный фреш', on: true }] },
+  { id: 'lemonfresh', manufacturer: 'AHF Tobacco', name: 'Лимонный фреш', left: 90, full: 100, rate: 'мало данных', until: '—', status: 'ok', arrived: '27 окт', supplier: 'Каспий Опт', mixes: 0,
+    analogs: [{ name: 'Lemonblast', on: false }, { name: 'Lemon Shock', on: true }] },
+  { id: 'greenbeam', manufacturer: 'Darkside', name: 'Green Beam', left: 0, full: 250, rate: '7 г/день', until: 'закончился 30 окт', status: 'out', arrived: '2 окт', supplier: 'Южный табак', mixes: 1,
+    analogs: [{ name: 'Feijoa', on: true, sub: true }] },
+  { id: 'redrush', manufacturer: 'Darkside', name: 'Red Rush', left: 0, full: 250, rate: 'мало данных', until: 'закончился', status: 'out', arrived: '—', supplier: '', mixes: 1, analogs: [] },
+  { id: 'canemint', manufacturer: 'Black Burn', name: 'Cane Mint', left: 40, full: 400, rate: '21 г/день', until: '3 ноя', days: 2, status: 'ending', arrived: '20 окт', supplier: 'Каспий Опт', mixes: 3,
+    analogs: [{ name: 'Ледяная мята', on: true }, { name: 'Supernova', on: true }, { name: 'Spearmint', on: false }] },
+  { id: 'cola', manufacturer: 'Darkside', name: 'Darkside Cola', left: 180, full: 250, rate: '5 г/день', until: '7 дек', days: 36, status: 'ok', arrived: '20 окт', supplier: 'Южный табак', mixes: 2, analogs: [] },
+];
+
+function ShelfLevel({ row }) {
+  const share = row.full ? row.left / row.full : 0;
+  const tone = row.status === 'ending' ? ' crit' : '';
+  return (
+    <span className="lvl">
+      <span className={'lvl-bar' + tone + (row.left === 0 ? ' none' : '')}><i style={{ width: Math.max(row.left ? 4 : 0, share * 100) + '%' }} /></span>
+      <span className="lvl-copy">
+        <b className={row.left === 0 ? 'inv-danger' : ''}>{row.left === 0 ? '0 г' : '≈ ' + row.left + ' г'}</b>
+        <small>из {row.full} г после прихода</small>
+      </span>
+    </span>
+  );
+}
+
+function ShelfUntil({ row }) {
+  if (row.status === 'out') return <span className="inv-until"><span className="inv-danger">{row.until}</span></span>;
+  if (row.days == null) return <span className="inv-faint">—</span>;
+  return (
+    <span className="inv-until">
+      <span className={'inv-num' + (row.days <= 3 ? ' inv-danger' : '')}>{row.until}</span>
+      {row.status === 'ending' ? <small className="inv-warn">заканчивается</small> : null}
+    </span>
+  );
+}
+
+// Две первые строки группы, остальное — «ещё N». Закончившиеся приглушены, стоящий сейчас в миксах — с иконкой замены.
+function ShelfAnalogs({ row }) {
+  if (!row.analogs.length) return <span className="inv-faint">—</span>;
+  const head = row.analogs.slice(0, 2);
+  const rest = row.analogs.length - head.length;
+  return (
+    <span className="an-shelf-analogs" title={row.analogs.map((a) => a.name).join(', ')}>
+      {head.map((a, i) => (
+        <span key={a.name} className={'an-shelf-analog' + (a.on ? '' : ' off')}>
+          {a.name}
+          {a.sub ? <span className="an-sub-mark" role="img" aria-label="стоит в миксах вместо этого табака" title="стоит в миксах вместо этого табака"><Ic name="ArrowLeftRight" size={12} /></span> : null}
+          {i === 1 && rest ? <span className="inv-faint">ещё {rest}</span> : null}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function ShelfPage() {
+  const columns = [
+    { key: 'name', label: 'Табак', width: 'minmax(0,1fr)', render: (r) => <span className="inv-name"><b>{r.name}</b><span>{r.manufacturer}</span></span> },
+    { key: 'analogs', label: 'Аналоги', width: 'minmax(0,1fr)', render: (r) => <ShelfAnalogs row={r} /> },
+    { key: 'left', label: 'Остаток по учёту', width: '200px', render: (r) => <ShelfLevel row={r} /> },
+    { key: 'rate', label: 'Расход', width: '110px', render: (r) => <span className={r.rate === 'мало данных' ? 'inv-faint' : 'inv-num'}>{r.rate}</span> },
+    { key: 'until', label: 'Хватит до', width: '140px', render: (r) => <ShelfUntil row={r} /> },
+    { key: 'arrived', label: 'Приход', width: '110px', render: (r) => <span className="inv-name"><b style={{ fontWeight: 400 }}>{r.arrived}</b><span>{r.supplier}</span></span> },
+    { key: 'mixes', label: 'Миксы', width: '60px', align: 'right', render: (r) => <span className="inv-num">{r.mixes || <span className="inv-faint">—</span>}</span> },
+    { key: 'actions', label: '', width: '200px', align: 'right', render: (r) => (
+      r.status === 'out'
+        ? <span className="inv-faint">в заказе</span>
+        : <span className="cell-actions"><MasterButton size="sm" variant="ghost">Указать остаток</MasterButton><MasterButton size="sm">Закончился</MasterButton></span>
+    ) },
+  ];
+  return (
+    <div className="page">
+      <MasterPageHeader title="Полка" meta="269 позиций, 78 кг" actions={(
+        <span className="inv-seg">
+          <button aria-pressed="true">Полка</button>
+          <button aria-pressed="false">К заказу</button>
+          <button aria-pressed="false">Закупка</button>
+        </span>
+      )} />
+      <div className="an-toolbar">
+        <div className="an-toolbar-row">
+          <MasterInput placeholder="Табак или бренд" icon={<Ic name="Search" size={14} />} style={{ width: 260 }} />
+          {[['Все', null, true], ['Есть', 233], ['Заканчивается', 14], ['Проверьте остаток', 9], ['Закончились', 6], ['Стоп', 3], ['В плане', 4]].map(([label, count, active]) => (
+            <FilterChip key={label} active={active} count={count == null ? undefined : count}>{label}</FilterChip>
+          ))}
+          <MasterSortPill value="until" options={[{ key: 'until', label: 'Хватит до' }]} style={{ marginLeft: 'auto' }} />
+        </div>
+      </div>
+      <MasterList columns={columns} rows={AN_SHELF_ROWS} />
+    </div>
+  );
+}
+
 // ── Мастер: карточка табака на полке с блоком «Аналоги» ──
 
 function AnalogRow({ item, index, total }) {
@@ -300,7 +399,7 @@ function MasterDesk({ card, page = 'mixes' }) {
       <div className="desk-scroll">
         <main className="shell">
           <MasterTopBar markSrc={AN_MARK} items={AN_TABS} active={page} userName="maxim" userRole="master" onOpenCommandPalette={() => {}} />
-          <section className="stage"><MixesPage /></section>
+          <section className="stage">{page === 'shelf' ? <ShelfPage /> : <MixesPage />}</section>
         </main>
       </div>
       {card ? (
@@ -497,7 +596,8 @@ function GuestPhone({ view, sheet }) {
 
 const AN_SHOTS = [
   { id: 'mixes', group: 'master', name: 'Миксы', note: 'Новый статус «с заменой»: какой табак стоит вместо какого. У блокированного названо, чего нет, имя табака открывает его карточку. «Ежевичный тархун» блокирован: нет двух табаков, а замена допускается одна.', desk: {} },
-  { id: 'shelf-analogs', group: 'master', name: 'Карточка табака: аналоги заданы', note: 'Lemonblast закончился. Порядок в списке и есть порядок замены, стрелками меняется. Ниже похожие табаки с полки и миксы, где табак сейчас подменён.', desk: { card: 'lemonblast' } },
+  { id: 'shelf', group: 'master', name: 'Полка', note: 'Новая колонка «Аналоги»: остальные табаки группы в порядке замены. Закончившиеся приглушены. У закончившегося табака иконкой отмечен тот, что сейчас стоит вместо него в миксах. Если аналогов нет, в ячейке прочерк.', desk: { page: 'shelf' } },
+  { id: 'shelf-analogs', group: 'master', name: 'Карточка табака: аналоги заданы', note: 'Lemonblast закончился. Порядок в списке и есть порядок замены, стрелками меняется. Ниже похожие табаки с полки и миксы, где табак сейчас подменён.', desk: { card: 'lemonblast', page: 'shelf' } },
   { id: 'shelf-suggest', group: 'master', name: 'Карточка табака: аналогов нет', note: 'Открыта из «Миксов» по ссылке «Нет: Red Rush». Похожие на полке подобраны по flavors, «Сделать аналогом» в одно действие делает микс видимым с заменой.', desk: { card: 'redrush' } },
   { id: 'sheet-sub', group: 'guest', name: 'Карточка микса с заменой', note: 'Гость видит табак, который стоит на полке. После названия иконка замены. Остальное как у любого микса: оценка, «Покурить».', phone: { view: 'catalog', sheet: { mix: 'rootbeer' } } },
   { id: 'confirm-sub', group: 'guest', name: 'Покажите мастеру', note: 'Мастер собирает по этому экрану, поэтому замена видна и здесь.', phone: { view: 'confirm' } },
