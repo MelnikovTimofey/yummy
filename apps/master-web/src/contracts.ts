@@ -142,7 +142,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
   },
 };
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -175,6 +175,7 @@ export type MixListMeta = {
   totalItems: number;
   filteredItems: number;
   guestVisibleCount: number;
+  substitutedCount: number;
   hiddenCount: number;
   blockedCount: number;
   inRailsCount: number;
@@ -188,6 +189,20 @@ export type MixListMeta = {
 
 export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
 
+export type TobaccoRef = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+};
+
+// Табак с полки вместо закончившегося компонента (PRD §6.2 п.1); пропорция — у компонента.
+export type MixSubstitute = TobaccoRef & { flavors: string[] };
+
+// onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
+export type MissingTobacco = TobaccoRef & { onShelf: boolean };
+
+export type MixSubstitution = { from: TobaccoRef; to: TobaccoRef };
+
 export type MixComponent = {
   id: string;
   tobaccoId: string;
@@ -196,6 +211,7 @@ export type MixComponent = {
   flavors: string[];
   proportion: number;
   sortOrder: number;
+  substitute: MixSubstitute | null;
 };
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
@@ -221,6 +237,10 @@ export type MixRecord = {
   smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
+  // Пока backend не отдаёт status (#479), он выводится из available и guestVisible.
+  status: MixStatus;
+  substitution: MixSubstitution | null;
+  missing: MissingTobacco[];
   createdAt: string;
   updatedAt: string;
   railMemberships: MixRailMembership[];
@@ -260,6 +280,7 @@ export const defaultMixListResponse: MixListResponse = {
     totalItems: 0,
     filteredItems: 0,
     guestVisibleCount: 0,
+    substitutedCount: 0,
     hiddenCount: 0,
     blockedCount: 0,
     inRailsCount: 0,
@@ -372,6 +393,7 @@ export type DashboardBlockedMix = {
   mixId: string;
   name: string;
   missingComponents: string[];
+  missing: MissingTobacco[];
   railNames: string[];
   smokeCtaCount: number;
 };
@@ -598,7 +620,7 @@ const toInventorySortDirection = (value: unknown): InventorySortDirection => {
 };
 
 const toMixStatusFilter = (value: unknown): MixStatusFilter => {
-  return value === 'guest-visible' || value === 'hidden' || value === 'blocked' || value === 'all'
+  return value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'blocked' || value === 'all'
     ? value
     : 'all';
 };
@@ -679,6 +701,28 @@ export const readEntityPayload = <T>(value: unknown): T | null => {
   return value === null || value === undefined ? null : (value as T);
 };
 
+const normalizeMixTobaccoRef = (value: unknown): TobaccoRef => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    tobaccoId: String(raw.tobaccoId ?? raw.id ?? ''),
+    manufacturer: String(raw.manufacturer ?? ''),
+    name: String(raw.name ?? ''),
+  };
+};
+
+const normalizeMixSubstitute = (value: unknown): MixSubstitute | null =>
+  isRecord(value) ? { ...normalizeMixTobaccoRef(value), flavors: uniqueStrings(toStringList(value.flavors)) } : null;
+
+const normalizeMissingTobacco = (value: unknown): MissingTobacco => ({
+  ...normalizeMixTobaccoRef(value),
+  onShelf: toBoolean(isRecord(value) ? value.onShelf : undefined, true),
+});
+
+const normalizeMixSubstitution = (value: unknown): MixSubstitution | null =>
+  isRecord(value) && isRecord(value.from) && isRecord(value.to)
+    ? { from: normalizeMixTobaccoRef(value.from), to: normalizeMixTobaccoRef(value.to) }
+    : null;
+
 const normalizeMixComponent = (value: unknown): MixComponent => {
   if (!isRecord(value)) {
     return {
@@ -689,6 +733,7 @@ const normalizeMixComponent = (value: unknown): MixComponent => {
       flavors: [],
       proportion: 0,
       sortOrder: 0,
+      substitute: null,
     };
   }
 
@@ -700,6 +745,7 @@ const normalizeMixComponent = (value: unknown): MixComponent => {
     flavors: uniqueStrings(toStringList(value.flavors)),
     proportion: toNumber(value.proportion, 0),
     sortOrder: toNumber(value.sortOrder, 0),
+    substitute: normalizeMixSubstitute(value.substitute),
   };
 };
 
@@ -892,6 +938,8 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     ...toStringList(raw.componentIds),
     ...components.map((component) => component.tobaccoId || component.id),
   ]);
+  const available = toBoolean(raw.available ?? raw.inStock, true);
+  const guestVisible = toBoolean(raw.guestVisible, available);
 
   return {
     id: String(raw.id ?? raw.mixId ?? ''),
@@ -905,8 +953,13 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     avgRating: toNumber(raw.avgRating, 0),
     ratingsCount: toNumber(raw.ratingsCount, 0),
     smokeCtaCount: toNumber(raw.smokeCtaCount, 0),
-    available: toBoolean(raw.available ?? raw.inStock, true),
-    guestVisible: toBoolean(raw.guestVisible, toBoolean(raw.available ?? raw.inStock, true)),
+    available,
+    guestVisible,
+    status: MIX_STATUSES.includes(raw.status as MixStatus)
+      ? (raw.status as MixStatus)
+      : resolveMixStatus({ available, guestVisible }),
+    substitution: normalizeMixSubstitution(raw.substitution),
+    missing: readListPayload<unknown>(raw.missing).map(normalizeMissingTobacco),
     createdAt: toIsoString(raw.createdAt, ''),
     updatedAt: toIsoString(raw.updatedAt, ''),
     railMemberships,
@@ -947,6 +1000,7 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       totalItems: toNumber(meta.totalItems, 0),
       filteredItems: toNumber(meta.filteredItems, 0),
       guestVisibleCount: toNumber(meta.guestVisibleCount, 0),
+      substitutedCount: toNumber(meta.substitutedCount, 0),
       hiddenCount: toNumber(meta.hiddenCount, 0),
       blockedCount: toNumber(meta.blockedCount, 0),
       inRailsCount: toNumber(meta.inRailsCount, 0),
@@ -1030,6 +1084,7 @@ export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
       mixId: String(source.mixId ?? source.id ?? ''),
       name: String(source.name ?? source.mixName ?? ''),
       missingComponents: uniqueStrings(toStringList(source.missingComponents)),
+      missing: readListPayload<unknown>(source.missing).map(normalizeMissingTobacco),
       railNames: uniqueStrings(toStringList(source.railNames)),
       smokeCtaCount: toNumber(source.smokeCtaCount, 0),
     };
@@ -1341,7 +1396,9 @@ export const resolveCurrentDailyCode = (
   return latest ? { state: 'expired', code: latest } : { state: 'none', code: null };
 };
 
-export type MixStatus = 'visible' | 'hidden' | 'blocked';
+export type MixStatus = 'visible' | 'substituted' | 'hidden' | 'blocked';
+
+const MIX_STATUSES: MixStatus[] = ['visible', 'substituted', 'hidden', 'blocked'];
 
 // `available` — ручной переключатель мастера; `guestVisible` backend считает
 // как `available` и наличие всех компонентов.
@@ -1355,6 +1412,7 @@ export const resolveMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisibl
 
 const mixStatusLabels: Record<MixStatus, string> = {
   visible: 'Виден гостю',
+  substituted: 'С заменой',
   hidden: 'Скрыт мастером',
   blocked: 'Блокирован наличием',
 };
@@ -1660,6 +1718,12 @@ export type ShelfTobacco = {
 
 export type ShelfReceipt = { at: string; grams: number; kind: ShelfReceiptKind; number: string | null; label: string };
 
+// Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
+// пока сам табак закончился.
+export type ShelfAnalog = TobaccoRef & { inStock: boolean; substituting: boolean };
+
+export type ShelfSimilar = TobaccoRef & { flavors: string[] };
+
 export type ShelfRow = {
   tobacco: ShelfTobacco;
   shelfStatus: ShelfItemStatus;
@@ -1687,6 +1751,7 @@ export type ShelfRow = {
   trial: boolean;
   trialVerdict: ShelfTrialVerdict | null;
   trialMarkedAt: string | null;
+  analogs: ShelfAnalog[];
 };
 
 export type ShelfCounterKey = 'all' | ShelfStatus;
@@ -1732,9 +1797,15 @@ export type ShelfCard = ShelfRow & {
   weekly: ShelfWeek[];
   gramPriceKop: number | null;
   bowlCostKop: number | null;
-  mixes: Array<{ id: string; name: string }>;
+  mixes: Array<{ id: string; name: string; status: MixStatus | null; substitution: MixSubstitution | null }>;
+  // 2–5 табаков с полки в наличии, похожих по flavors и flavorProfiles (PRD §9.3 п.6).
+  similar: ShelfSimilar[];
   settings: ShelfSettings;
 };
+
+// PUT /staff/shelf/:tobaccoId/analogs. unblockedMixes — миксы, которые из «блокирован»
+// стали «с заменой», для тоста.
+export type ShelfAnalogsResponse = { item: ShelfCard; unblockedMixes: Array<{ id: string; name: string }> };
 
 export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7, budgetKop: null };
 
@@ -1815,6 +1886,11 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     trial: toBoolean(raw.trial, false),
     trialVerdict: raw.trialVerdict === 'yes' || raw.trialVerdict === 'no' ? raw.trialVerdict : null,
     trialMarkedAt: toIsoString(raw.trialMarkedAt, '') || null,
+    analogs: (Array.isArray(raw.analogs) ? raw.analogs : []).filter(isRecord).map((analog) => ({
+      ...normalizeMixTobaccoRef(analog),
+      inStock: toBoolean(analog.inStock, false),
+      substituting: toBoolean(analog.substituting, false),
+    })),
   };
 };
 
@@ -1889,8 +1965,25 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
     mixes: (Array.isArray(record.mixes) ? record.mixes : []).filter(isRecord).map((mix) => ({
       id: String(mix.id ?? ''),
       name: String(mix.name ?? ''),
+      status: MIX_STATUSES.includes(mix.status as MixStatus) ? (mix.status as MixStatus) : null,
+      substitution: normalizeMixSubstitution(mix.substitution),
+    })),
+    similar: (Array.isArray(record.similar) ? record.similar : []).filter(isRecord).map((item) => ({
+      ...normalizeMixTobaccoRef(item),
+      flavors: uniqueStrings(toStringList(item.flavors)),
     })),
     settings: normalizeShelfSettings(record.settings),
+  };
+};
+
+export const normalizeShelfAnalogsResponse = (value: unknown): ShelfAnalogsResponse => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    item: normalizeShelfCard(raw.item),
+    unblockedMixes: (Array.isArray(raw.unblockedMixes) ? raw.unblockedMixes : []).filter(isRecord).map((mix) => ({
+      id: String(mix.id ?? ''),
+      name: String(mix.name ?? ''),
+    })),
   };
 };
 

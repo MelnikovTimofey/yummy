@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import type { AuditAction } from './audit';
 import type { StaffUser } from './auth';
+import type { MixGuestStatus, MixSubstitutionView, TobaccoRef } from './state';
 import { prisma } from './db';
 import {
   bowlCost,
@@ -198,6 +199,12 @@ export type ReceiptView = {
   label: string;
 };
 
+// Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
+// пока сам табак закончился.
+export type ShelfAnalogView = TobaccoRef & { inStock: boolean; substituting: boolean };
+
+export type ShelfSimilarView = TobaccoRef & { flavors: string[] };
+
 export type ShelfRow = {
   tobacco: ShelfTobaccoView;
   shelfStatus: ShelfItemStatus;
@@ -224,6 +231,7 @@ export type ShelfRow = {
   trial: boolean;
   trialVerdict: TrialVerdict | null;
   trialMarkedAt: string | null;
+  analogs?: ShelfAnalogView[];
 };
 
 export type TrialVerdict = (typeof TRIAL_VERDICTS)[number];
@@ -261,7 +269,9 @@ export type ShelfCard = ShelfRow & {
   weekly: Array<{ from: string; to: string; gramsPerDay: number; partial: boolean }>;
   gramPriceKop: number | null;
   bowlCostKop: number | null;
-  mixes: Array<{ id: string; name: string }>;
+  mixes: Array<{ id: string; name: string; status?: MixGuestStatus; substitution?: MixSubstitutionView | null }>;
+  // 2–5 табаков с полки в наличии, похожих по flavors и flavorProfiles (PRD §9.3 п.6).
+  similar?: ShelfSimilarView[];
   settings: ShelfSettings;
 };
 

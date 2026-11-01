@@ -15,6 +15,22 @@ export type IntroCard = {
   bullets: string[];
 };
 
+export type TobaccoRef = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+};
+
+// Табак с полки вместо закончившегося компонента (PRD §6.2 п.1); пропорция — у компонента.
+export type MixSubstituteView = TobaccoRef & { flavors: string[] };
+
+// onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
+export type MissingTobaccoView = TobaccoRef & { onShelf: boolean };
+
+export type MixGuestStatus = 'visible' | 'substituted' | 'hidden' | 'blocked';
+
+export type MixSubstitutionView = { from: TobaccoRef; to: TobaccoRef };
+
 export type MixComponentView = {
   id: string;
   tobaccoId: string;
@@ -23,6 +39,7 @@ export type MixComponentView = {
   flavors: string[];
   proportion: number;
   sortOrder: number;
+  substitute?: MixSubstituteView;
 };
 
 export type MixRailMembershipView = {
@@ -46,6 +63,10 @@ export type MixView = {
   smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
+  // Аналоги (#478): заполняет правило доступности (#479). У микса с заменой guestVisible = true.
+  status?: MixGuestStatus;
+  substitution?: MixSubstitutionView | null;
+  missing?: MissingTobaccoView[];
   createdAt: string;
   updatedAt: string;
   railMemberships: MixRailMembershipView[];
@@ -115,6 +136,7 @@ export type DashboardBlockedMix = {
   mixId: string;
   mixName: string;
   missingComponents: string[];
+  missing?: MissingTobaccoView[];
   railNames: string[];
   smokeCtaCount: number;
 };
@@ -203,7 +225,7 @@ export type TobaccoInput = {
 
 export type TobaccoPatch = Partial<TobaccoInput>;
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -250,6 +272,7 @@ export type MixListResult = {
     totalItems: number;
     filteredItems: number;
     guestVisibleCount: number;
+    substitutedCount?: number;
     hiddenCount: number;
     blockedCount: number;
     inRailsCount: number;
