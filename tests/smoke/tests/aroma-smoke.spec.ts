@@ -209,7 +209,14 @@ test('Aroma showcase shows a skeleton instead of loading text', async ({ page })
   });
   await page.route('**/guest/home/rails', async (route) => {
     await held;
-    await route.continue();
+    // master-smoke идёт параллельно на той же БД и на доли секунды отмечает табаки
+    // закончившимися — тогда рейлы пусты. Ждём, пока он отменит отметку.
+    let response = await route.fetch();
+    for (let attempt = 0; attempt < 10 && !((await response.json()) as { items: unknown[] }).items.length; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      response = await route.fetch();
+    }
+    await route.fulfill({ response });
   });
   await page.goto('/');
 
