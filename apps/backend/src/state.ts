@@ -4,6 +4,7 @@ import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
+import { loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -63,10 +64,10 @@ export type MixView = {
   smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
-  // Аналоги (#478): заполняет правило доступности (#479). У микса с заменой guestVisible = true.
-  status?: MixGuestStatus;
-  substitution?: MixSubstitutionView | null;
-  missing?: MissingTobaccoView[];
+  // Правило доступности с аналогами (analogs.ts). У микса с заменой guestVisible = true.
+  status: MixGuestStatus;
+  substitution: MixSubstitutionView | null;
+  missing: MissingTobaccoView[];
   createdAt: string;
   updatedAt: string;
   railMemberships: MixRailMembershipView[];
@@ -136,7 +137,7 @@ export type DashboardBlockedMix = {
   mixId: string;
   mixName: string;
   missingComponents: string[];
-  missing?: MissingTobaccoView[];
+  missing: MissingTobaccoView[];
   railNames: string[];
   smokeCtaCount: number;
 };
@@ -272,7 +273,7 @@ export type MixListResult = {
     totalItems: number;
     filteredItems: number;
     guestVisibleCount: number;
-    substitutedCount?: number;
+    substitutedCount: number;
     hiddenCount: number;
     blockedCount: number;
     inRailsCount: number;
@@ -845,7 +846,7 @@ const getMixFlavorShape = (components: Array<{ tobacco: { flavorProfiles: string
   flavorTags: unique(components.flatMap((item) => parseList(item.tobacco.flavorTags))),
 });
 
-const mapMixView = (record: {
+const mapMixView = (context: RuleContext) => (record: {
   id: string;
   name: string;
   description: string;
@@ -861,15 +862,9 @@ const mapMixView = (record: {
     tobaccoId: string;
     proportion: number;
     sortOrder: number;
-    tobacco: {
-      id: string;
-      name: string;
-      manufacturer: string;
+    tobacco: RuleTobaccoRecord & {
       flavorProfiles: string;
-      flavors: string;
       flavorTags: string;
-      inStock: boolean;
-      archived: boolean;
     };
   }>;
   railMixes: Array<{
@@ -888,8 +883,11 @@ const mapMixView = (record: {
   const avgRating = ratingsCount
     ? Number((record.ratings.reduce((sum, item) => sum + item.value, 0) / ratingsCount).toFixed(1))
     : Number(record.baseAvgRating.toFixed(1));
-  const guestVisible =
-    record.available && record.components.every((item) => item.tobacco.inStock && !item.tobacco.archived);
+  const availability = resolveMixAvailability(
+    record.available,
+    record.components.map((item) => toRuleComponent(item.tobacco, context)),
+  );
+  const guestVisible = availability.status === 'visible' || availability.status === 'substituted';
   const railMemberships = record.railMixes.map((item) => ({
     id: item.rail.id,
     name: item.rail.name,
@@ -913,12 +911,16 @@ const mapMixView = (record: {
       flavors: parseList(item.tobacco.flavors),
       proportion: item.proportion,
       sortOrder: item.sortOrder,
+      ...(availability.substitute?.tobaccoId === item.tobacco.id ? { substitute: availability.substitute.to } : {}),
     })),
     avgRating,
     ratingsCount,
     smokeCtaCount: record._count.smokeEvents,
     available: record.available,
     guestVisible,
+    status: availability.status,
+    substitution: availability.substitution,
+    missing: availability.missing,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     railMemberships,
@@ -928,44 +930,47 @@ const mapMixView = (record: {
 };
 
 const fetchMixViews = async () => {
-  const records = await prisma.mix.findMany({
-    include: {
-      components: {
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          tobacco: true,
+  const [records, context] = await Promise.all([
+    prisma.mix.findMany({
+      include: {
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            tobacco: true,
+          },
         },
-      },
-      railMixes: {
-        include: {
-          rail: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              active: true,
+        railMixes: {
+          include: {
+            rail: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                active: true,
+              },
             },
           },
         },
-      },
-      ratings: {
-        select: {
-          value: true,
+        ratings: {
+          select: {
+            value: true,
+          },
+        },
+        _count: {
+          select: {
+            smokeEvents: true,
+          },
         },
       },
-      _count: {
-        select: {
-          smokeEvents: true,
-        },
-      },
-    },
-  });
+    }),
+    loadRuleContext(),
+  ]);
 
-  return records.map(mapMixView);
+  return records.map(mapMixView(context));
 };
 
 const normalizeMixStatusFilter = (value: unknown): MixStatusFilter => {
-  if (value === 'guest-visible' || value === 'hidden' || value === 'blocked') {
+  if (value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'blocked') {
     return value;
   }
 
@@ -995,11 +1000,13 @@ const normalizeMixSortDirection = (value: unknown): MixSortDirection => {
 const matchesMixStatus = (mix: MixView, status: MixStatusFilter) => {
   switch (status) {
     case 'guest-visible':
-      return mix.guestVisible;
+      return mix.status === 'visible';
+    case 'substituted':
+      return mix.status === 'substituted';
     case 'hidden':
-      return !mix.available;
+      return mix.status === 'hidden';
     case 'blocked':
-      return mix.available && !mix.guestVisible;
+      return mix.status === 'blocked';
     case 'all':
     default:
       return true;
@@ -2135,9 +2142,7 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
     });
 };
 
-const buildMostSelectedRail = async (): Promise<RailView> => {
-  const mixes = await getAvailableMixCatalog();
-
+const buildMostSelectedRail = (mixes: MixView[]): RailView => {
   const ranked = mixes
     .filter((mix) => mix.guestVisible && mix.smokeCtaCount > 0)
     .sort((left, right) => {
@@ -2165,9 +2170,7 @@ const buildMostSelectedRail = async (): Promise<RailView> => {
   };
 };
 
-const buildTopRatedRail = async (): Promise<RailView> => {
-  const mixes = await getAvailableMixCatalog();
-
+const buildTopRatedRail = (mixes: MixView[]): RailView => {
   const ranked = mixes
     .filter((mix) => mix.guestVisible && mix.ratingsCount > 0)
     .sort((left, right) => {
@@ -2199,7 +2202,7 @@ const buildTopRatedRail = async (): Promise<RailView> => {
   };
 };
 
-const buildStatisticalRails = async (): Promise<RailView[]> => [await buildMostSelectedRail(), await buildTopRatedRail()];
+const buildStatisticalRails = (mixes: MixView[]): RailView[] => [buildMostSelectedRail(mixes), buildTopRatedRail(mixes)];
 
 const statisticalRailReadOnlyReason = 'Статистический рейл формируется автоматически и доступен только для просмотра.';
 
@@ -2209,9 +2212,9 @@ const toStaffRailView = (rail: RailView): StaffRailView => ({
   readOnlyReason: rail.type === 'statistical' ? statisticalRailReadOnlyReason : '',
 });
 
-const buildRailViews = async (guestOnly: boolean) => {
-  await ensureAppState();
-
+// Миксы читаются один раз на запрос и общие для статистических и редакторских рейлов:
+// правило доступности с аналогами (#479) считается на каждую выборку.
+const buildRails = async (guestOnly: boolean) => {
   const [mixes, rails] = await Promise.all([
     getAvailableMixCatalog(),
     prisma.rail.findMany({
@@ -2237,7 +2240,7 @@ const buildRailViews = async (guestOnly: boolean) => {
 
   const mixMap = new Map(mixes.map((mix) => [mix.id, mix]));
 
-  return rails
+  const editorial = rails
     .filter((rail) => !rail.isSystem)
     .map((rail) => {
       const type = isRailType(rail.type) ? rail.type : 'prepared';
@@ -2258,12 +2261,11 @@ const buildRailViews = async (guestOnly: boolean) => {
         isSystem: rail.isSystem,
       } satisfies RailView;
     });
+
+  return [...buildStatisticalRails(mixes), ...editorial];
 };
 
-export const getGuestHomeRails = async () => {
-  const rails = [...(await buildStatisticalRails()), ...(await buildRailViews(true))];
-  return rails.filter((rail) => rail.mixes.length > 0);
-};
+export const getGuestHomeRails = async () => (await buildRails(true)).filter((rail) => rail.mixes.length > 0);
 
 export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
   await ensureAppState();
@@ -2344,9 +2346,10 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     meta: {
       totalItems: allItems.length,
       filteredItems: filteredItems.length,
-      guestVisibleCount: statusScopeItems.filter((item) => item.guestVisible).length,
-      hiddenCount: statusScopeItems.filter((item) => !item.available).length,
-      blockedCount: statusScopeItems.filter((item) => item.available && !item.guestVisible).length,
+      guestVisibleCount: statusScopeItems.filter((item) => item.status === 'visible').length,
+      substitutedCount: statusScopeItems.filter((item) => item.status === 'substituted').length,
+      hiddenCount: statusScopeItems.filter((item) => item.status === 'hidden').length,
+      blockedCount: statusScopeItems.filter((item) => item.status === 'blocked').length,
       inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
       withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
       page,
@@ -2501,7 +2504,7 @@ export const deleteRail = async (id: string) => {
 };
 
 export const getStaffRails = async (): Promise<StaffRailView[]> => {
-  return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
+  return (await buildRails(false)).map(toStaffRailView);
 };
 
 export const createRail = async (payload: Partial<RailInput>) => {
@@ -2607,11 +2610,21 @@ export const updateRail = async (id: string, payload: RailPatch) => {
   return (await getStaffRails()).find((rail) => rail.id === id) ?? null;
 };
 
-export const recordSmokeCtaEvent = async (mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles'>, guestId: string | null = null) => {
+export const recordSmokeCtaEvent = async (
+  mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles' | 'substitution'>,
+  guestId: string | null = null,
+) => {
   await ensureAppState();
 
   const event = await prisma.smokeCtaEvent.create({
-    data: { mixId: mix.id, guestId, mixName: mix.name, mixProfiles: mix.flavorProfiles },
+    data: {
+      mixId: mix.id,
+      guestId,
+      mixName: mix.name,
+      mixProfiles: mix.flavorProfiles,
+      substitutedFromId: mix.substitution?.from.tobaccoId ?? null,
+      substitutedToId: mix.substitution?.to.tobaccoId ?? null,
+    },
   });
 
   return {
@@ -2749,7 +2762,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
   await ensureAppState();
 
   const window = buildDashboardWindow(windowKey);
-  const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents, blockedMixRecords] = await Promise.all([
+  const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents] = await Promise.all([
     prisma.tobacco.findMany({
       orderBy: [{ manufacturer: 'asc' }, { name: 'asc' }],
       select: {
@@ -2786,36 +2799,6 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
         mixId: true,
         value: true,
         createdAt: true,
-      },
-    }),
-    prisma.mix.findMany({
-      where: {
-        available: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        components: {
-          orderBy: { sortOrder: 'asc' },
-          select: {
-            tobacco: {
-              select: {
-                name: true,
-                inStock: true,
-              },
-            },
-          },
-        },
-        railMixes: {
-          select: {
-            rail: {
-              select: {
-                name: true,
-                active: true,
-              },
-            },
-          },
-        },
       },
     }),
   ]);
@@ -2951,25 +2934,19 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
     count: ratingEvents.filter((item) => item.value === value).length,
   }));
 
-  const blockedMixes = blockedMixRecords
-    .map((mix) => {
-      const missingComponents = mix.components
-        .filter((component) => !component.tobacco.inStock)
-        .map((component) => component.tobacco.name);
-
-      return {
-        mixId: mix.id,
-        mixName: mix.name,
-        missingComponents,
-        railNames: unique(
-          mix.railMixes
-            .filter((item) => item.rail.active)
-            .map((item) => item.rail.name),
-        ),
-        smokeCtaCount: smokeCounts[mix.id] ?? 0,
-      } satisfies DashboardBlockedMix;
-    })
-    .filter((mix) => mix.missingComponents.length > 0)
+  const blockedMixes = mixes
+    .filter((mix) => mix.status === 'blocked')
+    .map(
+      (mix) =>
+        ({
+          mixId: mix.id,
+          mixName: mix.name,
+          missingComponents: mix.missing.map((item) => item.name),
+          missing: mix.missing,
+          railNames: unique(mix.railMemberships.filter((item) => item.active).map((item) => item.name)),
+          smokeCtaCount: smokeCounts[mix.id] ?? 0,
+        }) satisfies DashboardBlockedMix,
+    )
     .sort((left, right) => {
       if (right.smokeCtaCount !== left.smokeCtaCount) {
         return right.smokeCtaCount - left.smokeCtaCount;
@@ -3039,7 +3016,7 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
     ops: {
       guestVisibleMixesCount: mixes.filter((mix) => mix.guestVisible).length,
       hiddenMixesCount: mixes.filter((mix) => !mix.available).length,
-      blockedByInventoryCount: mixes.filter((mix) => mix.available && !mix.guestVisible).length,
+      blockedByInventoryCount: mixes.filter((mix) => mix.status === 'blocked').length,
       activeRailsCount: railHealth.filter((rail) => rail.active).length,
       // Статистический рейл пуст, пока гости не выбирают и не оценивают: мастеру тут нечего чинить.
       emptyActiveRailsCount: railHealth.filter(
