@@ -1,3 +1,4 @@
+import { resolveMixAvailability, ruleTobaccoRelations, toRuleComponent } from './analogs';
 import { prisma } from './db';
 import { buildForYou, MIN_FOR_YOU_PICKS, type ForYouHistoryEntry } from './for-you';
 import { loadMixer } from './mixer';
@@ -45,10 +46,21 @@ const loadMixes = async (ids: string[]) => {
       available: true,
       flavorProfiles: true,
       flavors: true,
-      components: { orderBy: { sortOrder: 'asc' }, select: { tobaccoId: true, proportion: true } },
+      components: {
+        orderBy: { sortOrder: 'asc' },
+        select: {
+          tobaccoId: true,
+          proportion: true,
+          tobacco: {
+            select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true, ...ruleTobaccoRelations },
+          },
+        },
+      },
     },
   });
-  return new Map(mixes.map((mix) => [mix.id, mix]));
+  return new Map(
+    mixes.map((mix) => [mix.id, { ...mix, rule: resolveMixAvailability(mix.available, mix.components.map((item) => toRuleComponent(item.tobacco))) }]),
+  );
 };
 
 const missingOf = (tobaccoIds: string[], tobaccos: Map<string, TobaccoState>, snapshot: SnapshotComponent[] = []) => {
@@ -67,14 +79,18 @@ const missingOf = (tobaccoIds: string[], tobaccos: Map<string, TobaccoState>, sn
 
 type Mixes = Awaited<ReturnType<typeof loadMixes>>;
 
-// Удалённый или скрытый мастером микс — «Больше не готовим».
-const catalogStatus = (mixId: string | null, mixes: Mixes, tobaccos: Map<string, TobaccoState>): GuestMixStatus => {
+// Удалённый или скрытый мастером микс — «Больше не готовим». Микс с заменой доступен
+// (PRD §8.9 п.2); «Сейчас нет: X» — первый недостающий табак, когда не выручает и замена.
+const catalogStatus = (mixId: string | null, mixes: Mixes): GuestMixStatus => {
   const mix = mixId ? mixes.get(mixId) : undefined;
-  if (!mix || !mix.available) {
+  if (!mix || mix.rule.status === 'hidden') {
     return { kind: 'deleted' };
   }
-  const missing = missingOf(mix.components.map((item) => item.tobaccoId), tobaccos);
-  return missing ? { kind: 'unavailable', missing } : { kind: 'available' };
+  if (mix.rule.status === 'blocked') {
+    const [first] = mix.rule.missing;
+    return { kind: 'unavailable', missing: `${first.manufacturer} ${first.name}` };
+  }
+  return { kind: 'available' };
 };
 
 const customStatus = (components: SnapshotComponent[], tobaccos: Map<string, TobaccoState>): GuestMixStatus => {
@@ -96,20 +112,20 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
   const mixIds = catalog.flatMap((row) => (row.mixId ? [row.mixId] : []));
   const mixes = await loadMixes(mixIds);
   const customComponents = new Map(custom.map((row) => [row.id, asComponents(row.components)]));
-  const tobaccos = await loadTobaccos([
-    ...[...mixes.values()].flatMap((mix) => mix.components.map((item) => item.tobaccoId)),
-    ...[...customComponents.values()].flat().map((item) => item.tobaccoId),
-  ]);
+  const tobaccos = await loadTobaccos([...customComponents.values()].flat().map((item) => item.tobaccoId));
   const ratings = await prisma.mixRating.findMany({ where: { guestId, mixId: { in: mixIds } }, select: { mixId: true, value: true } });
   const ownRating = new Map(ratings.map((rating) => [rating.mixId, rating.value]));
 
   const catalogCard = (mix: NonNullable<ReturnType<Mixes['get']>>): GuestCabinetCard => ({
     description: mix.description,
     flavors: parseList(mix.flavors),
-    components: mix.components.map((item) => {
-      const tobacco = tobaccos.get(item.tobaccoId);
-      return { tobaccoId: item.tobaccoId, manufacturer: tobacco?.manufacturer ?? '', name: tobacco?.name ?? item.tobaccoId, proportion: item.proportion };
-    }),
+    components: mix.components.map((item) => ({
+      tobaccoId: item.tobaccoId,
+      manufacturer: item.tobacco.manufacturer,
+      name: item.tobacco.name,
+      proportion: item.proportion,
+      ...(mix.rule.substitute?.tobaccoId === item.tobaccoId ? { substitute: mix.rule.substitute.to } : {}),
+    })),
     harmony: null,
     madeAt: null,
   });
@@ -119,7 +135,7 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
       ref: { kind: 'catalog', mixId: row.mixId },
       name: live?.name ?? row.mixName,
       flavorProfiles: asStringList(row.mixProfiles).length ? asStringList(row.mixProfiles) : parseList(live?.flavorProfiles ?? '[]'),
-      status: catalogStatus(row.mixId, mixes, tobaccos),
+      status: catalogStatus(row.mixId, mixes),
       ownRating: row.mixId ? ownRating.get(row.mixId) ?? null : null,
       card: live?.available ? catalogCard(live) : null,
     };
