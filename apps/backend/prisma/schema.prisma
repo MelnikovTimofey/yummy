@@ -120,15 +120,15 @@ model AuditEvent {
 }
 
 model Tobacco {
-  id                String         @id
+  id                String          @id
   manufacturer      String
-  lineName          String         @default("")
+  lineName          String          @default("")
   name              String
   alias             String?
   description       String?
   sourceKind        String?
   sourceUrl         String?
-  sourceExternalId  String?        @unique
+  sourceExternalId  String?         @unique
   sourceNumericId   String?
   country           String?
   officialStrength  String?
@@ -139,19 +139,23 @@ model Tobacco {
   flavorProfiles    String
   flavors           String
   flavorTags        String
-  inStock           Boolean        @default(false)
-  archived          Boolean        @default(false)
+  inStock           Boolean         @default(false)
+  archived          Boolean         @default(false)
   rating            Float?
   ratingsCount      Int?
   reviewsCount      Int?
   viewsCount        Int?
   statsSyncedAt     DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   mixComponents     MixComponent[]
   shelfItem         ShelfItem?
   supplierItems     SupplierItem[]
   deliveryLines     DeliveryLine[]
+  analogs           TobaccoAnalog[] @relation("TobaccoAnalogs")
+  analogOf          TobaccoAnalog[] @relation("TobaccoAnalogOf")
+  substitutedFrom   SmokeCtaEvent[] @relation("SmokeCtaSubstitutedFrom")
+  substitutedTo     SmokeCtaEvent[] @relation("SmokeCtaSubstitutedTo")
 
   @@unique([sourceKind, sourceNumericId])
   @@index([manufacturer, lineName, name])
@@ -219,6 +223,23 @@ model Mix {
   guestFavorites GuestFavorite[]
 }
 
+// Аналог табака (PRD §5.2, §9.3 п.6). Связь взаимная: на пару две строки, по одной
+// на сторону, у каждой свой sortOrder — порядок замены у tobaccoId. Взаимность держит
+// API в одной транзакции; запрет «аналог сам себе» — CHECK в миграции.
+model TobaccoAnalog {
+  id        String   @id @default(uuid())
+  tobaccoId String
+  analogId  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  tobacco   Tobacco  @relation("TobaccoAnalogs", fields: [tobaccoId], references: [id], onDelete: Cascade)
+  analog    Tobacco  @relation("TobaccoAnalogOf", fields: [analogId], references: [id], onDelete: Cascade)
+
+  @@unique([tobaccoId, analogId])
+  @@index([tobaccoId])
+  @@index([analogId])
+}
+
 model MixComponent {
   id         String   @id @default(uuid())
   mixId      String
@@ -266,14 +287,19 @@ model RailMix {
 // Снимок названия и профилей — чтобы история гостя пережила удаление микса
 // мастером (PRD §5.3): mixId тогда становится null, снимок остаётся.
 model SmokeCtaEvent {
-  id          String        @id @default(uuid())
-  mixId       String?
-  guestId     String?
-  mixName     String
-  mixProfiles Json          @default("[]")
-  createdAt   DateTime      @default(now())
-  mix         Mix?          @relation(fields: [mixId], references: [id], onDelete: SetNull)
-  guest       GuestAccount? @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  id                String        @id @default(uuid())
+  mixId             String?
+  guestId           String?
+  mixName           String
+  mixProfiles       Json          @default("[]")
+  // Замена в миксе на момент нажатия (PRD §5.3): исходный табак и табак с полки.
+  substitutedFromId String?
+  substitutedToId   String?
+  createdAt         DateTime      @default(now())
+  mix               Mix?          @relation(fields: [mixId], references: [id], onDelete: SetNull)
+  guest             GuestAccount? @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  substitutedFrom   Tobacco?      @relation("SmokeCtaSubstitutedFrom", fields: [substitutedFromId], references: [id], onDelete: SetNull)
+  substitutedTo     Tobacco?      @relation("SmokeCtaSubstitutedTo", fields: [substitutedToId], references: [id], onDelete: SetNull)
 
   @@index([mixId])
   @@index([guestId, createdAt])

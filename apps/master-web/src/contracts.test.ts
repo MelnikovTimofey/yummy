@@ -18,6 +18,7 @@ import {
   normalizeDashboardSummary,
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
+  normalizeShelfAnalogsResponse,
   normalizeShelfCard,
   normalizeShelfEntryResponse,
   normalizeShelfRow,
@@ -287,7 +288,11 @@ test('normalizeMixRecord accepts inStock alias and component objects', () => {
     flavors: ['мята'],
     proportion: 0,
     sortOrder: 0,
+    substitute: null,
   });
+  assert.equal(mix.status, 'hidden');
+  assert.equal(mix.substitution, null);
+  assert.deepEqual(mix.missing, []);
 });
 
 test('normalizeMixListResponse supports filters, meta and rail memberships', () => {
@@ -605,6 +610,7 @@ test('normalizeDashboardSummary supports nested inventory payload', () => {
           mixId: 'mix-3',
           name: 'Персиковый мираж',
           missingComponents: ['Peach Silk'],
+          missing: [],
           railNames: ['Фруктовые открытия'],
           smokeCtaCount: 2,
         },
@@ -1197,7 +1203,59 @@ test('normalizeShelfCard читает историю остатка, недел�
   assert.deepEqual(card.weekly, [{ from: '2026-11-16T00:00:00.000Z', to: '2026-11-19T12:00:00.000Z', gramsPerDay: 14, partial: true }]);
   assert.equal(card.gramPriceKop, 775);
   assert.equal(card.bowlCostKop, 13950);
-  assert.deepEqual(card.mixes, [{ id: 'm1', name: 'Малиновый тоник' }]);
+  assert.deepEqual(card.mixes, [{ id: 'm1', name: 'Малиновый тоник', status: null, substitution: null }]);
+  assert.deepEqual(card.similar, []);
+  assert.deepEqual(card.analogs, []);
+});
+
+test('аналоги (#478): нормализаторы читают замену, недостающие табаки и аналоги полки', () => {
+  const lemonblast = { tobaccoId: 't-lb', manufacturer: 'Darkside', name: 'Lemonblast' };
+  const lemonShock = { tobaccoId: 't-ls', manufacturer: 'Black Burn', name: 'Lemon Shock' };
+
+  const mix = normalizeMixRecord({
+    id: 'mix-rb',
+    name: 'Рутбир с лимоном',
+    available: true,
+    guestVisible: true,
+    status: 'substituted',
+    components: [{ id: 'c1', ...lemonblast, proportion: 25, substitute: { ...lemonShock, flavors: ['лимон'] } }],
+    substitution: { from: lemonblast, to: lemonShock },
+    missing: [{ ...lemonblast, onShelf: true }],
+  });
+  assert.equal(mix.status, 'substituted');
+  assert.deepEqual(mix.components[0].substitute, { ...lemonShock, flavors: ['лимон'] });
+  assert.deepEqual(mix.substitution, { from: lemonblast, to: lemonShock });
+  assert.deepEqual(mix.missing, [{ ...lemonblast, onShelf: true }]);
+  assert.equal(normalizeMixRecord({ available: true, guestVisible: false, status: 'weird' }).status, 'blocked');
+
+  const list = normalizeMixListResponse({ items: [], filters: { status: 'substituted' }, meta: { substitutedCount: 2 } });
+  assert.equal(list.filters.status, 'substituted');
+  assert.equal(list.meta.substitutedCount, 2);
+  assert.equal(normalizeMixListResponse({}).meta.substitutedCount, 0);
+
+  const row = normalizeShelfRow({ ...rawRow, analogs: [{ ...lemonShock, inStock: true, substituting: true }, { tobaccoId: 't-lf' }] });
+  assert.deepEqual(row.analogs, [
+    { ...lemonShock, inStock: true, substituting: true },
+    { tobaccoId: 't-lf', manufacturer: '', name: '', inStock: false, substituting: false },
+  ]);
+
+  const response = normalizeShelfAnalogsResponse({
+    item: {
+      ...rawRow,
+      similar: [{ tobaccoId: 't-sb', manufacturer: 'Sebero', name: 'Barberry', flavors: ['барбарис'] }],
+      mixes: [{ id: 'mix-rb', name: 'Рутбир с лимоном', status: 'substituted', substitution: { from: lemonblast, to: lemonShock } }],
+    },
+    unblockedMixes: [{ id: 'mix-rb', name: 'Рутбир с лимоном' }],
+  });
+  assert.deepEqual(response.item.similar, [{ tobaccoId: 't-sb', manufacturer: 'Sebero', name: 'Barberry', flavors: ['барбарис'] }]);
+  assert.deepEqual(response.item.mixes[0], {
+    id: 'mix-rb',
+    name: 'Рутбир с лимоном',
+    status: 'substituted',
+    substitution: { from: lemonblast, to: lemonShock },
+  });
+  assert.deepEqual(response.unblockedMixes, [{ id: 'mix-rb', name: 'Рутбир с лимоном' }]);
+  assert.deepEqual(normalizeShelfAnalogsResponse({}).unblockedMixes, []);
 });
 
 test('normalizeShelfEntryResponse отдаёт id записи журнала для отмены', () => {

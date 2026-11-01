@@ -5,6 +5,7 @@ import type {
   InventoryListResult,
   InventoryTobaccoView,
   MixListResult,
+  MixSubstituteView,
   MixView,
   RailType,
   RailView,
@@ -12,6 +13,7 @@ import type {
 } from './state';
 import type { AuditEventView } from './audit';
 import type { CatalogIdeas } from './catalog-ideas';
+import type { ShelfCard } from './shelf';
 import type {
   DailyAccessCodeView,
   StaffAccountView,
@@ -202,6 +204,7 @@ export type GuestCabinetComponent = {
   manufacturer: string;
   name: string;
   proportion: number;
+  substitute?: MixSubstituteView;
 };
 
 // Карточка из строки кабинета: у каталожного — текущий микс (null у удалённого
@@ -281,6 +284,18 @@ export type StaffAuthResponse = {
     name: string;
     role: 'admin' | 'master';
   };
+};
+
+// PUT /staff/shelf/:tobaccoId/analogs — полный порядок аналогов табака, без него самого.
+// Новый аналог получает этот табак в конец своего списка, убранный теряет его.
+export type StaffShelfAnalogsRequest = {
+  analogs: string[];
+};
+
+// unblockedMixes — миксы, которые из «блокирован» стали «с заменой», для тоста.
+export type StaffShelfAnalogsResponse = {
+  item: ShelfCard;
+  unblockedMixes: Array<{ id: string; name: string }>;
 };
 
 export type StaffMixesResponse = {
