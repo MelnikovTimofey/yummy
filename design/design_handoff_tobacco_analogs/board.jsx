@@ -1,6 +1,6 @@
 // Доска мокапа #475: аналоги табаков — микс не блокируется, если недостающий табак закрывает аналог с полки.
 // Миксы — из сверки миксов мастера Nomad с полкой прода (2026-10-31). Состояние полки — как после того,
-// как мастер собрал первые группы аналогов.
+// как мастер задал первые аналоги.
 const DS = window.DesignSystem_1aef33;
 const { AromaCTA, AromaChip, SegmentNav, ProfileGlyph, SignatureBar, MasterTopBar, MasterPageHeader, MasterButton, MasterIconButton, MasterTag, MasterInput, MasterList, MasterSortPill, FilterChip } = DS;
 
@@ -92,7 +92,7 @@ const anMix = (id) => AN_MIXES.find((mix) => mix.id === id);
 // Что гость видит в составе: табак с полки вместо закончившегося.
 const asServed = (mix) => mix.components.map((c) => (c.sub ? { ...c.sub, proportion: c.proportion, substitute: true } : c));
 
-// Карточки полки: группа аналогов в порядке замены и похожие табаки с полки по flavors.
+// Карточки полки: аналоги в порядке замены и похожие табаки с полки по flavors.
 const AN_SHELF = {
   lemonblast: {
     manufacturer: 'Darkside', name: 'Lemonblast', profiles: ['citrus'], left: '0 г', leftNote: 'закончился 28 окт', rate: '9 г/день', rateNote: 'по 4 отметкам за 60 дней',
@@ -219,14 +219,14 @@ function MixesPage({ onMissing }) {
 
 // ── Мастер: экран «Полка» с колонкой «Аналоги» ──
 
-// Аналоги в строке — остальные табаки группы в порядке замены. sub — тот, что сейчас стоит в миксах вместо закончившегося.
+// Аналоги в строке — список этого табака в его порядке замены. sub — тот, что сейчас стоит в миксах вместо закончившегося.
 const AN_SHELF_ROWS = [
   { id: 'lemonblast', manufacturer: 'Darkside', name: 'Lemonblast', left: 0, full: 250, rate: '9 г/день', until: 'закончился 28 окт', status: 'out', arrived: '2 окт', supplier: 'Южный табак', mixes: 1,
     analogs: [{ name: 'Lemon Shock', on: true, sub: true }, { name: 'Лимонный фреш', on: true }] },
   { id: 'lemonshock', manufacturer: 'Black Burn', name: 'Lemon Shock', left: 140, full: 200, rate: '6 г/день', until: '24 ноя', days: 23, status: 'ok', arrived: '20 окт', supplier: 'Каспий Опт', mixes: 2,
-    analogs: [{ name: 'Lemonblast', on: false }, { name: 'Лимонный фреш', on: true }] },
+    analogs: [{ name: 'Lemonblast', on: false }] },
   { id: 'lemonfresh', manufacturer: 'AHF Tobacco', name: 'Лимонный фреш', left: 90, full: 100, rate: 'мало данных', until: '—', status: 'ok', arrived: '27 окт', supplier: 'Каспий Опт', mixes: 0,
-    analogs: [{ name: 'Lemonblast', on: false }, { name: 'Lemon Shock', on: true }] },
+    analogs: [{ name: 'Lemonblast', on: false }] },
   { id: 'greenbeam', manufacturer: 'Darkside', name: 'Green Beam', left: 0, full: 250, rate: '7 г/день', until: 'закончился 30 окт', status: 'out', arrived: '2 окт', supplier: 'Южный табак', mixes: 1,
     analogs: [{ name: 'Feijoa', on: true, sub: true }] },
   { id: 'redrush', manufacturer: 'Darkside', name: 'Red Rush', left: 0, full: 250, rate: 'мало данных', until: 'закончился', status: 'out', arrived: '—', supplier: '', mixes: 1, analogs: [] },
@@ -260,7 +260,7 @@ function ShelfUntil({ row }) {
   );
 }
 
-// Две первые строки группы, остальное — «ещё N». Закончившиеся приглушены, стоящий сейчас в миксах — с иконкой замены.
+// Два первых аналога, остальное — «ещё N». Закончившиеся приглушены, стоящий сейчас в миксах — с иконкой замены.
 function ShelfAnalogs({ row }) {
   if (!row.analogs.length) return <span className="inv-faint">—</span>;
   const head = row.analogs.slice(0, 2);
@@ -596,7 +596,7 @@ function GuestPhone({ view, sheet }) {
 
 const AN_SHOTS = [
   { id: 'mixes', group: 'master', name: 'Миксы', note: 'Новый статус «с заменой»: какой табак стоит вместо какого. У блокированного названо, чего нет, имя табака открывает его карточку. «Ежевичный тархун» блокирован: нет двух табаков, а замена допускается одна.', desk: {} },
-  { id: 'shelf', group: 'master', name: 'Полка', note: 'Новая колонка «Аналоги»: остальные табаки группы в порядке замены. Закончившиеся приглушены. У закончившегося табака иконкой отмечен тот, что сейчас стоит вместо него в миксах. Если аналогов нет, в ячейке прочерк.', desk: { page: 'shelf' } },
+  { id: 'shelf', group: 'master', name: 'Полка', note: 'Новая колонка «Аналоги»: аналоги табака в его порядке замены. Связь взаимная: Lemon Shock аналог Lemonblast, значит, и Lemonblast аналог Lemon Shock. Закончившиеся приглушены. У закончившегося табака иконкой отмечен тот, что сейчас стоит вместо него в миксах. Если аналогов нет, в ячейке прочерк.', desk: { page: 'shelf' } },
   { id: 'shelf-analogs', group: 'master', name: 'Карточка табака: аналоги заданы', note: 'Lemonblast закончился. Порядок в списке и есть порядок замены, стрелками меняется. Ниже похожие табаки с полки и миксы, где табак сейчас подменён.', desk: { card: 'lemonblast', page: 'shelf' } },
   { id: 'shelf-suggest', group: 'master', name: 'Карточка табака: аналогов нет', note: 'Открыта из «Миксов» по ссылке «Нет: Red Rush». Похожие на полке подобраны по flavors, «Сделать аналогом» в одно действие делает микс видимым с заменой.', desk: { card: 'redrush' } },
   { id: 'sheet-sub', group: 'guest', name: 'Карточка микса с заменой', note: 'Гость видит табак, который стоит на полке. После названия иконка замены. Остальное как у любого микса: оценка, «Покурить».', phone: { view: 'catalog', sheet: { mix: 'rootbeer' } } },
