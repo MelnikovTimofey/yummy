@@ -1,4 +1,4 @@
-import { resolveMixAvailability, ruleTobaccoRelations, toRuleComponent } from './analogs';
+import { loadRuleContext, resolveMixAvailability, toRuleComponent } from './analogs';
 import { prisma } from './db';
 import { buildForYou, MIN_FOR_YOU_PICKS, type ForYouHistoryEntry } from './for-you';
 import { loadMixer } from './mixer';
@@ -37,29 +37,35 @@ const loadTobaccos = async (ids: string[]) => {
 };
 
 const loadMixes = async (ids: string[]) => {
-  const mixes = await prisma.mix.findMany({
-    where: { id: { in: Array.from(new Set(ids)) } },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      available: true,
-      flavorProfiles: true,
-      flavors: true,
-      components: {
-        orderBy: { sortOrder: 'asc' },
-        select: {
-          tobaccoId: true,
-          proportion: true,
-          tobacco: {
-            select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true, ...ruleTobaccoRelations },
+  const [mixes, context] = await Promise.all([
+    prisma.mix.findMany({
+      where: { id: { in: Array.from(new Set(ids)) } },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        available: true,
+        flavorProfiles: true,
+        flavors: true,
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            tobaccoId: true,
+            proportion: true,
+            tobacco: {
+              select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true },
+            },
           },
         },
       },
-    },
-  });
+    }),
+    loadRuleContext(),
+  ]);
   return new Map(
-    mixes.map((mix) => [mix.id, { ...mix, rule: resolveMixAvailability(mix.available, mix.components.map((item) => toRuleComponent(item.tobacco))) }]),
+    mixes.map((mix) => [
+      mix.id,
+      { ...mix, rule: resolveMixAvailability(mix.available, mix.components.map((item) => toRuleComponent(item.tobacco, context))) },
+    ]),
   );
 };
 

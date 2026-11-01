@@ -1,3 +1,4 @@
+import { prisma } from './db';
 import type { MissingTobaccoView, MixGuestStatus, MixSubstituteView, MixSubstitutionView, TobaccoRef } from './state';
 
 // Правило доступности микса с заменой (PRD §6.2 п.1, #479). Одно на всех потребителей:
@@ -27,20 +28,31 @@ export type MixAvailability = {
   missing: MissingTobaccoView[];
 };
 
-// Выборка Prisma для правила: табак компонента с карточкой полки и аналоги в его порядке.
-// Аналоги читаются вместе с миксами — отдельного запроса на микс нет, каталог не читается.
-const analogSelect = { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } as const;
+export type RuleTobaccoRecord = { id: string; manufacturer: string; name: string; flavors: string; inStock: boolean; archived: boolean };
 
-export const ruleTobaccoRelations = {
-  shelfItem: { select: { status: true } },
-  analogs: { orderBy: { sortOrder: 'asc' }, select: { analog: { select: analogSelect } } },
-} as const;
+// Аналоги и полка для правила: два запроса параллельно с выборкой миксов, без чтения
+// каталога и без запроса на микс. Связей аналогов сотни, позиций полки — сотни.
+export type RuleContext = {
+  analogsOf: Map<string, RuleTobaccoRecord[]>;
+  shelfStatus: Map<string, string>;
+};
 
-type AnalogRecord = { id: string; manufacturer: string; name: string; flavors: string; inStock: boolean; archived: boolean };
-
-export type RuleTobaccoRecord = AnalogRecord & {
-  shelfItem: { status: string } | null;
-  analogs: Array<{ analog: AnalogRecord }>;
+export const loadRuleContext = async (): Promise<RuleContext> => {
+  const [links, shelf] = await Promise.all([
+    prisma.tobaccoAnalog.findMany({
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        tobaccoId: true,
+        analog: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } },
+      },
+    }),
+    prisma.shelfItem.findMany({ select: { tobaccoId: true, status: true } }),
+  ]);
+  const analogsOf = new Map<string, RuleTobaccoRecord[]>();
+  for (const link of links) {
+    analogsOf.set(link.tobaccoId, [...(analogsOf.get(link.tobaccoId) ?? []), link.analog]);
+  }
+  return { analogsOf, shelfStatus: new Map(shelf.map((item) => [item.tobaccoId, item.status])) };
 };
 
 const parseFlavors = (value: string): string[] => {
@@ -53,19 +65,19 @@ const parseFlavors = (value: string): string[] => {
 };
 
 // onShelf — есть карточка полки, куда ведёт «Нет: X»; иначе — карточка каталога.
-const toRuleTobacco = (tobacco: AnalogRecord, shelfItem: { status: string } | null): RuleTobacco => ({
+const toRuleTobacco = (tobacco: RuleTobaccoRecord, shelfStatus: string | undefined): RuleTobacco => ({
   id: tobacco.id,
   manufacturer: tobacco.manufacturer,
   name: tobacco.name,
   flavors: parseFlavors(tobacco.flavors),
   inStock: tobacco.inStock,
   archived: tobacco.archived,
-  onShelf: shelfItem != null && shelfItem.status !== 'dropped',
+  onShelf: shelfStatus != null && shelfStatus !== 'dropped',
 });
 
-export const toRuleComponent = (tobacco: RuleTobaccoRecord): RuleComponent => ({
-  tobacco: toRuleTobacco(tobacco, tobacco.shelfItem),
-  analogs: tobacco.analogs.map((link) => toRuleTobacco(link.analog, null)),
+export const toRuleComponent = (tobacco: RuleTobaccoRecord, context: RuleContext): RuleComponent => ({
+  tobacco: toRuleTobacco(tobacco, context.shelfStatus.get(tobacco.id)),
+  analogs: (context.analogsOf.get(tobacco.id) ?? []).map((analog) => toRuleTobacco(analog, undefined)),
 });
 
 const ready = (tobacco: RuleTobacco) => tobacco.inStock && !tobacco.archived;

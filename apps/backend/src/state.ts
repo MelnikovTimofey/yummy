@@ -4,7 +4,7 @@ import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
-import { resolveMixAvailability, ruleTobaccoRelations, toRuleComponent, type RuleTobaccoRecord } from './analogs';
+import { loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -846,7 +846,7 @@ const getMixFlavorShape = (components: Array<{ tobacco: { flavorProfiles: string
   flavorTags: unique(components.flatMap((item) => parseList(item.tobacco.flavorTags))),
 });
 
-const mapMixView = (record: {
+const mapMixView = (context: RuleContext) => (record: {
   id: string;
   name: string;
   description: string;
@@ -885,7 +885,7 @@ const mapMixView = (record: {
     : Number(record.baseAvgRating.toFixed(1));
   const availability = resolveMixAvailability(
     record.available,
-    record.components.map((item) => toRuleComponent(item.tobacco)),
+    record.components.map((item) => toRuleComponent(item.tobacco, context)),
   );
   const guestVisible = availability.status === 'visible' || availability.status === 'substituted';
   const railMemberships = record.railMixes.map((item) => ({
@@ -930,40 +930,43 @@ const mapMixView = (record: {
 };
 
 const fetchMixViews = async () => {
-  const records = await prisma.mix.findMany({
-    include: {
-      components: {
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          tobacco: { include: ruleTobaccoRelations },
+  const [records, context] = await Promise.all([
+    prisma.mix.findMany({
+      include: {
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            tobacco: true,
+          },
         },
-      },
-      railMixes: {
-        include: {
-          rail: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              active: true,
+        railMixes: {
+          include: {
+            rail: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                active: true,
+              },
             },
           },
         },
-      },
-      ratings: {
-        select: {
-          value: true,
+        ratings: {
+          select: {
+            value: true,
+          },
+        },
+        _count: {
+          select: {
+            smokeEvents: true,
+          },
         },
       },
-      _count: {
-        select: {
-          smokeEvents: true,
-        },
-      },
-    },
-  });
+    }),
+    loadRuleContext(),
+  ]);
 
-  return records.map(mapMixView);
+  return records.map(mapMixView(context));
 };
 
 const normalizeMixStatusFilter = (value: unknown): MixStatusFilter => {
@@ -2139,9 +2142,7 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
     });
 };
 
-const buildMostSelectedRail = async (): Promise<RailView> => {
-  const mixes = await getAvailableMixCatalog();
-
+const buildMostSelectedRail = (mixes: MixView[]): RailView => {
   const ranked = mixes
     .filter((mix) => mix.guestVisible && mix.smokeCtaCount > 0)
     .sort((left, right) => {
@@ -2169,9 +2170,7 @@ const buildMostSelectedRail = async (): Promise<RailView> => {
   };
 };
 
-const buildTopRatedRail = async (): Promise<RailView> => {
-  const mixes = await getAvailableMixCatalog();
-
+const buildTopRatedRail = (mixes: MixView[]): RailView => {
   const ranked = mixes
     .filter((mix) => mix.guestVisible && mix.ratingsCount > 0)
     .sort((left, right) => {
@@ -2203,7 +2202,7 @@ const buildTopRatedRail = async (): Promise<RailView> => {
   };
 };
 
-const buildStatisticalRails = async (): Promise<RailView[]> => [await buildMostSelectedRail(), await buildTopRatedRail()];
+const buildStatisticalRails = (mixes: MixView[]): RailView[] => [buildMostSelectedRail(mixes), buildTopRatedRail(mixes)];
 
 const statisticalRailReadOnlyReason = 'Статистический рейл формируется автоматически и доступен только для просмотра.';
 
@@ -2213,9 +2212,9 @@ const toStaffRailView = (rail: RailView): StaffRailView => ({
   readOnlyReason: rail.type === 'statistical' ? statisticalRailReadOnlyReason : '',
 });
 
-const buildRailViews = async (guestOnly: boolean) => {
-  await ensureAppState();
-
+// Миксы читаются один раз на запрос и общие для статистических и редакторских рейлов:
+// правило доступности с аналогами (#479) считается на каждую выборку.
+const buildRails = async (guestOnly: boolean) => {
   const [mixes, rails] = await Promise.all([
     getAvailableMixCatalog(),
     prisma.rail.findMany({
@@ -2241,7 +2240,7 @@ const buildRailViews = async (guestOnly: boolean) => {
 
   const mixMap = new Map(mixes.map((mix) => [mix.id, mix]));
 
-  return rails
+  const editorial = rails
     .filter((rail) => !rail.isSystem)
     .map((rail) => {
       const type = isRailType(rail.type) ? rail.type : 'prepared';
@@ -2262,12 +2261,11 @@ const buildRailViews = async (guestOnly: boolean) => {
         isSystem: rail.isSystem,
       } satisfies RailView;
     });
+
+  return [...buildStatisticalRails(mixes), ...editorial];
 };
 
-export const getGuestHomeRails = async () => {
-  const rails = [...(await buildStatisticalRails()), ...(await buildRailViews(true))];
-  return rails.filter((rail) => rail.mixes.length > 0);
-};
+export const getGuestHomeRails = async () => (await buildRails(true)).filter((rail) => rail.mixes.length > 0);
 
 export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
   await ensureAppState();
@@ -2506,7 +2504,7 @@ export const deleteRail = async (id: string) => {
 };
 
 export const getStaffRails = async (): Promise<StaffRailView[]> => {
-  return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
+  return (await buildRails(false)).map(toStaffRailView);
 };
 
 export const createRail = async (payload: Partial<RailInput>) => {
