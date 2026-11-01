@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { AuditAction } from './audit';
 import type { StaffUser } from './auth';
 import type { MixGuestStatus, MixSubstitutionView, TobaccoRef } from './state';
+import { loadRuleContext, rankSimilar, resolveMixAvailability, toRuleComponent } from './analogs';
 import { prisma } from './db';
 import {
   bowlCost,
@@ -97,6 +98,7 @@ const shelfInclude = {
       officialStrength: true,
       communityStrength: true,
       archived: true,
+      inStock: true,
       sourceUrl: true,
     },
   },
@@ -176,6 +178,35 @@ const loadMixes = async (client: Tx, tobaccoIds: string[]) =>
     select: { tobaccoId: true, mix: { select: { id: true, name: true } } },
   });
 
+type AnalogRecord = { id: string; manufacturer: string; name: string; inStock: boolean; archived: boolean };
+
+// Аналоги табаков полки в их порядке замены (#480) — один запрос на все строки.
+const loadAnalogs = async (client: Tx, tobaccoIds: string[]) => {
+  const links = await client.tobaccoAnalog.findMany({
+    where: { tobaccoId: { in: tobaccoIds } },
+    orderBy: { sortOrder: 'asc' },
+    select: { tobaccoId: true, analog: { select: { id: true, manufacturer: true, name: true, inStock: true, archived: true } } },
+  });
+  const byTobacco = new Map<string, AnalogRecord[]>();
+  for (const link of links) byTobacco.set(link.tobaccoId, [...(byTobacco.get(link.tobaccoId) ?? []), link.analog]);
+  return byTobacco;
+};
+
+const readyOf = (tobacco: { inStock: boolean; archived: boolean }) => tobacco.inStock && !tobacco.archived;
+
+// substituting — первый аналог в наличии, пока сам табак закончился: он и встаёт
+// заменой в миксах (PRD §6.2 п.1), если его там ещё нет.
+const analogViews = (self: { inStock: boolean; archived: boolean }, analogs: AnalogRecord[]): ShelfAnalogView[] => {
+  const standIn = readyOf(self) ? undefined : analogs.find(readyOf);
+  return analogs.map((analog) => ({
+    tobaccoId: analog.id,
+    manufacturer: analog.manufacturer,
+    name: analog.name,
+    inStock: readyOf(analog),
+    substituting: analog === standIn,
+  }));
+};
+
 // --- представление -----------------------------------------------------------
 
 export type ShelfTobaccoView = {
@@ -231,7 +262,7 @@ export type ShelfRow = {
   trial: boolean;
   trialVerdict: TrialVerdict | null;
   trialMarkedAt: string | null;
-  analogs?: ShelfAnalogView[];
+  analogs: ShelfAnalogView[];
 };
 
 export type TrialVerdict = (typeof TRIAL_VERDICTS)[number];
@@ -269,9 +300,9 @@ export type ShelfCard = ShelfRow & {
   weekly: Array<{ from: string; to: string; gramsPerDay: number; partial: boolean }>;
   gramPriceKop: number | null;
   bowlCostKop: number | null;
-  mixes: Array<{ id: string; name: string; status?: MixGuestStatus; substitution?: MixSubstitutionView | null }>;
-  // 2–5 табаков с полки в наличии, похожих по flavors и flavorProfiles (PRD §9.3 п.6).
-  similar?: ShelfSimilarView[];
+  mixes: Array<{ id: string; name: string; status: MixGuestStatus; substitution: MixSubstitutionView | null }>;
+  // До пяти табаков с полки в наличии, похожих по flavors и flavorProfiles (PRD §9.3 п.6).
+  similar: ShelfSimilarView[];
   settings: ShelfSettings;
 };
 
@@ -293,7 +324,7 @@ export const trialOf = (record: ShelfRecord, now: Date) => {
   return isTrial(first && first.delivery?.kind !== 'start' ? first.at : null, now);
 };
 
-const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number, now: Date): ShelfRow => {
+const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number, analogs: AnalogRecord[], now: Date): ShelfRow => {
   const receipt = lastOf(record, 'receipt');
   const count = lastOf(record, 'count');
   return {
@@ -330,6 +361,7 @@ const toRow = (record: ShelfRecord, forecast: ShelfForecast, mixCount: number, n
     trial: trialOf(record, now),
     trialVerdict: record.trialVerdict as TrialVerdict | null,
     trialMarkedAt: iso(record.trialMarkedAt),
+    analogs: analogViews(record.tobacco, analogs),
   };
 };
 
@@ -358,8 +390,8 @@ const forecastOf = async (client: Tx, record: ShelfRecord, now: Date) => {
 
 const buildRow = async (client: Tx, record: ShelfRecord, now: Date) => {
   const { forecast, settings } = await forecastOf(client, record, now);
-  const mixes = await loadMixes(client, [record.tobaccoId]);
-  return { row: toRow(record, forecast, mixes.length, now), forecast, settings, mixes };
+  const [mixes, analogs] = await Promise.all([loadMixes(client, [record.tobaccoId]), loadAnalogs(client, [record.tobaccoId])]);
+  return { row: toRow(record, forecast, mixes.length, analogs.get(record.tobaccoId) ?? [], now), forecast, settings };
 };
 
 const rowOf = async (tobaccoId: string, now: Date) => (await buildRow(prisma, await loadItem(prisma, tobaccoId), now)).row;
@@ -382,8 +414,12 @@ export const loadShelfHistory = async () =>
 
 export const getShelf = async (now = new Date()): Promise<ShelfView> => {
   const { records, forecasts, settings, interval, horizon } = await loadShelf(now);
-  const mixCounts = countBy(await loadMixes(prisma, records.map((record) => record.tobaccoId)));
-  const rows = records.map((record, index) => toRow(record, forecasts[index], mixCounts.get(record.tobaccoId) ?? 0, now));
+  const ids = records.map((record) => record.tobaccoId);
+  const [mixLinks, analogs] = await Promise.all([loadMixes(prisma, ids), loadAnalogs(prisma, ids)]);
+  const mixCounts = countBy(mixLinks);
+  const rows = records.map((record, index) =>
+    toRow(record, forecasts[index], mixCounts.get(record.tobaccoId) ?? 0, analogs.get(record.tobaccoId) ?? [], now),
+  );
 
   const withStatus = (status: ShelfStatus) => rows.filter((row) => row.status === status).length;
   return {
@@ -409,7 +445,11 @@ export const getShelf = async (now = new Date()): Promise<ShelfView> => {
 
 export const getShelfItem = async (tobaccoId: string, now = new Date()): Promise<ShelfCard> => {
   const record = await loadItem(prisma, tobaccoId);
-  const { row, settings, mixes } = await buildRow(prisma, record, now);
+  const [{ row, settings }, mixes, candidates] = await Promise.all([
+    buildRow(prisma, record, now),
+    cardMixes(tobaccoId),
+    similarCandidates(),
+  ]);
   const entries = record.entries.map(toStockEntry);
   const closed = new Map(segments(entries).map((segment) => [segment.closedBy, segment]));
   const periods = weekPeriods(now, HISTORY_WEEKS);
@@ -452,9 +492,53 @@ export const getShelfItem = async (tobaccoId: string, now = new Date()): Promise
     })),
     gramPriceKop: price,
     bowlCostKop: bowlCost([price], settings.bowlGrams),
-    mixes: mixes.map((item) => item.mix).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    mixes,
+    similar: rankSimilar(
+      { tobaccoId, flavorProfiles: row.tobacco.flavorProfiles, flavors: row.tobacco.flavors },
+      candidates,
+      new Set(row.analogs.map((analog) => analog.tobaccoId)),
+    ),
     settings,
   };
+};
+
+// Миксы с табаком и их статус по правилу доступности с аналогами (#479).
+const cardMixes = async (tobaccoId: string): Promise<ShelfCard['mixes']> => {
+  const [mixes, context] = await Promise.all([
+    prisma.mix.findMany({
+      where: { available: true, components: { some: { tobaccoId } } },
+      select: {
+        id: true,
+        name: true,
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } } },
+        },
+      },
+    }),
+    loadRuleContext(),
+  ]);
+  return mixes
+    .map((mix) => {
+      const { status, substitution } = resolveMixAvailability(true, mix.components.map((item) => toRuleComponent(item.tobacco, context)));
+      return { id: mix.id, name: mix.name, status, substitution };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+};
+
+// Кандидаты в аналоги — только полка в наличии (около 300 табаков), каталог не читается.
+const similarCandidates = async () => {
+  const shelf = await prisma.shelfItem.findMany({
+    where: { status: 'active', tobacco: { inStock: true, archived: false } },
+    select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavorProfiles: true, flavors: true } } },
+  });
+  return shelf.map(({ tobacco }) => ({
+    tobaccoId: tobacco.id,
+    manufacturer: tobacco.manufacturer,
+    name: tobacco.name,
+    flavorProfiles: parseList(tobacco.flavorProfiles),
+    flavors: parseList(tobacco.flavors),
+  }));
 };
 
 // --- наличие и аудит ---------------------------------------------------------

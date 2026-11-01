@@ -91,6 +91,7 @@ import {
   updateShelfItem,
   writeOff,
 } from './shelf';
+import { setAnalogs } from './analogs-admin';
 import {
   acceptDelivery,
   addLine,
@@ -174,6 +175,7 @@ import type {
   StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
   StaffMixesResponse,
+  StaffShelfAnalogsResponse,
   StaffTelegramOperatorMutationResponse,
   StaffTelegramOperatorsResponse,
   StaffTelegramRecipientMutationResponse,
@@ -308,6 +310,7 @@ export const buildApp = () => {
         shelfAdd: 'POST /staff/shelf',
         shelfUpdate: 'PATCH /staff/shelf/:tobaccoId',
         shelfRemove: 'DELETE /staff/shelf/:tobaccoId',
+        shelfAnalogs: 'PUT /staff/shelf/:tobaccoId/analogs',
         shelfEmpty: 'POST /staff/shelf/:tobaccoId/empty',
         shelfEmptyMany: 'POST /staff/shelf/empty',
         shelfUndoBatch: 'DELETE /staff/shelf/batches/:batchId',
@@ -2288,6 +2291,17 @@ export const buildApp = () => {
         throw new ShelfValidationError('Nothing to update');
       }
       return { item };
+    });
+  });
+
+  app.put('/staff/shelf/:tobaccoId/analogs', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const tobaccoId = tobaccoParam(request);
+    const body = (request.body ?? {}) as { analogs?: unknown };
+    return sendShelf(reply, async () => {
+      const unblockedMixes = await setAnalogs(user, tobaccoId, body.analogs);
+      return { item: await getShelfItem(tobaccoId), unblockedMixes } satisfies StaffShelfAnalogsResponse;
     });
   });
 

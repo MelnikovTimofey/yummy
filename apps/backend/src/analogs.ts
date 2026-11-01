@@ -1,5 +1,7 @@
+import { tasteKeys } from './catalog-ideas';
 import { prisma } from './db';
 import type { MissingTobaccoView, MixGuestStatus, MixSubstituteView, MixSubstitutionView, TobaccoRef } from './state';
+import type { ShelfSimilarView } from './shelf';
 
 // Правило доступности микса с заменой (PRD §6.2 п.1, #479). Одно на всех потребителей:
 // гостевую выдачу, кабинет, «Покурить», оценку, статусы и дашборд Мастера.
@@ -108,4 +110,27 @@ export const resolveMixAvailability = (available: boolean, components: RuleCompo
     substitute: { tobaccoId: gap.tobacco.id, to: { ...refOf(analog), flavors: analog.flavors } },
     missing,
   };
+};
+
+// Подсказки «Похожие на полке» (PRD §9.3 п.6): кандидаты — табаки полки в наличии,
+// ранжируются по числу общих flavors и flavorProfiles; flavorTags не участвуют (§7 п.4).
+export const SIMILAR_LIMIT = 5;
+
+type SimilarSource = { tobaccoId: string; flavorProfiles: string[]; flavors: string[] };
+type SimilarCandidate = SimilarSource & { manufacturer: string; name: string };
+
+export const rankSimilar = (target: SimilarSource, candidates: SimilarCandidate[], exclude: Set<string>): ShelfSimilarView[] => {
+  const keys = tasteKeys(target);
+  return candidates
+    .filter((candidate) => candidate.tobaccoId !== target.tobaccoId && !exclude.has(candidate.tobaccoId))
+    .map((candidate) => ({ candidate, overlap: Array.from(tasteKeys(candidate)).filter((key) => keys.has(key)).length }))
+    .filter((item) => item.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap || a.candidate.name.localeCompare(b.candidate.name, 'ru'))
+    .slice(0, SIMILAR_LIMIT)
+    .map(({ candidate }) => ({
+      tobaccoId: candidate.tobaccoId,
+      manufacturer: candidate.manufacturer,
+      name: candidate.name,
+      flavors: candidate.flavors,
+    }));
 };

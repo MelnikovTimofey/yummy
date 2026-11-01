@@ -74,7 +74,7 @@ const toIdea = (tobacco: IdeaSourceTobacco, why?: string): CatalogIdea => ({
   ...(why ? { why } : {}),
 });
 
-const tasteKeys = (tobacco: IdeaSourceTobacco) =>
+export const tasteKeys = (tobacco: Pick<IdeaSourceTobacco, 'flavorProfiles' | 'flavors'>) =>
   new Set([
     ...tobacco.flavorProfiles.map((item) => `profile:${normalize(item)}`),
     ...tobacco.flavors.map((item) => `flavor:${normalize(item)}`),
