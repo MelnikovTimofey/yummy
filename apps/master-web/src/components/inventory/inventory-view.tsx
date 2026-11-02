@@ -89,6 +89,8 @@ type InventoryViewProps = {
   view: CatalogView;
   onViewChange: (view: CatalogView) => void;
   ideas: ReactNode;
+  openCardId?: string;
+  onCardOpened?: () => void;
 };
 
 export type CatalogView = 'all' | 'ideas';
@@ -566,8 +568,16 @@ export const InventoryView = ({
   view,
   onViewChange,
   ideas,
+  openCardId,
+  onCardOpened,
 }: InventoryViewProps) => {
   const [activeItemId, setActiveItemId] = useState('');
+
+  useEffect(() => {
+    if (!openCardId || !items.some((item) => item.id === openCardId)) return;
+    setActiveItemId(openCardId);
+    onCardOpened?.();
+  }, [openCardId, items, onCardOpened]);
   const [searchValue, setSearchValue] = useState(filters.search);
   const [editorMode, setEditorMode] = useState<InventoryEditorMode>('create');
   const [editorOpen, setEditorOpen] = useState(false);

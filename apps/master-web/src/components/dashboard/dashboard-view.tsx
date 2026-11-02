@@ -3,12 +3,14 @@ import { Flame, Star, TriangleAlert } from 'lucide-react';
 
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { MasterStatsRow, type MasterStatTile } from '@/components/shell/master-stats-row';
-import { DashboardSummary, formatMetricValue, formatRating } from '@/contracts';
+import { MissingTobaccos } from '@/components/mixes/mix-status';
+import { DashboardSummary, formatMetricValue, formatRating, type MissingTobacco } from '@/contracts';
 
 type DashboardViewProps = {
   summary: DashboardSummary | null;
   summaryError: string;
   onNavigate: (tab: 'inventory' | 'mixes' | 'rails' | 'access') => void;
+  onOpenTobacco: (tobacco: MissingTobacco) => void;
   // Блок «Полка» (#213) — сверху, как в мокапе; остальные блоки без изменений.
   shelfBlock?: ReactNode;
 };
@@ -64,6 +66,7 @@ export function DashboardView({
   summary,
   summaryError,
   onNavigate,
+  onOpenTobacco,
   shelfBlock,
 }: DashboardViewProps) {
   const topMixes = (summary?.topMixes ?? []).slice(0, 6);
@@ -131,9 +134,11 @@ export function DashboardView({
                   <div className="dashboard-page__row-copy">
                     <div className="dashboard-page__row-name">{mix.name}</div>
                     <div className="dashboard-page__row-meta cell-truncate">
-                      {mix.missingComponents.length
-                        ? `Нет наличия: ${mix.missingComponents.join(', ')}`
-                        : 'нет в наличии компонента'}
+                      {mix.missing.length ? (
+                        <MissingTobaccos missing={mix.missing} onOpenTobacco={onOpenTobacco} />
+                      ) : (
+                        'нет в наличии компонента'
+                      )}
                     </div>
                   </div>
                   <button

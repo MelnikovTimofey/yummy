@@ -115,7 +115,7 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
 
   await openWorkspace(page, 'Миксы');
   const statusChips = page.getByRole('group', { name: 'Статус микса' });
-  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(3);
+  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(4);
   await expect(statusChips.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
   const mixAttributes = page.getByRole('group', { name: 'Фильтры миксов' });
   await expect(mixAttributes.locator('.filter-chip__count')).toHaveCount(0);
@@ -790,6 +790,30 @@ test('Master mix editor opened from the bottom of the catalog starts at the top'
   const topbarBottom = await page.locator('.topbar').evaluate((el) => el.getBoundingClientRect().bottom);
   const libraryTop = await library.evaluate((el) => el.getBoundingClientRect().top);
   expect(libraryTop).toBeGreaterThanOrEqual(topbarBottom);
+});
+
+// Аналоги (#481): у микса с заменой видна пара, у блокированного — чего нет;
+// имя недостающего табака открывает его карточку. Данные — из seed (#478).
+test('Master mixes show substitution and missing tobaccos linked to their cards', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Дашборд');
+  await page.locator('.dashboard-page__signals').getByRole('button', { name: 'Peach Silk' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Peach Silk' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await openWorkspace(page, 'Миксы');
+  const statusChips = page.getByRole('group', { name: 'Статус микса' });
+  await statusChips.getByRole('button', { name: 'Фильтр: С заменой' }).click();
+  const substituted = page.locator('tr[data-mix-id="mix-lime-tonic"]');
+  await expect(substituted.locator('.mix-status')).toHaveText(/с заменой\s*Citrus Breeze вместо Lime Spark/);
+  await expect(substituted).toContainText('Lime Spark + Mint Veil');
+
+  await statusChips.getByRole('button', { name: 'Фильтр: Блокирован' }).click();
+  const blocked = page.locator('tr[data-mix-id="mix-peach-mirage"]');
+  await expect(blocked.locator('.mix-status')).toHaveText(/блокирован\s*Нет: Peach Silk/);
+  await blocked.getByRole('button', { name: 'Peach Silk' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Peach Silk' })).toBeVisible();
 });
 
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {

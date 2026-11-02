@@ -65,12 +65,14 @@ export const catalogStatusCount = (meta: InventoryListMeta, status: CatalogStatu
 export const MIX_STATUS_CHIPS: Array<[MixStatusFilter, string]> = [
   ['all', 'Все'],
   ['guest-visible', 'Виден гостю'],
+  ['substituted', 'С заменой'],
   ['hidden', 'Скрыт'],
   ['blocked', 'Блокирован'],
 ];
 
 export const mixStatusCount = (meta: MixListMeta, status: MixStatusFilter) => {
   if (status === 'guest-visible') return meta.guestVisibleCount;
+  if (status === 'substituted') return meta.substitutedCount;
   if (status === 'hidden') return meta.hiddenCount;
   if (status === 'blocked') return meta.blockedCount;
   return undefined;

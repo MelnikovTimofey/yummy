@@ -52,6 +52,7 @@ import {
   InventoryListMeta,
   InventoryListSort,
   InventoryTobacco,
+  MissingTobacco,
   MixRecord,
   RailRecord,
   StaffAccountRecord,
@@ -183,6 +184,7 @@ export const App = () => {
   const catalogIdeas = useCatalogIdeas(token, (tobaccoId) => shelf.add(tobaccoId, 'plan'));
   // Табак из «Заканчивается» на дашборде: «Полка» откроет его карточку.
   const [pendingShelfCard, setPendingShelfCard] = useState('');
+  const [pendingCatalogCard, setPendingCatalogCard] = useState('');
   // Счёт, выбранный на «Полке»: его разбирает вкладка «Поставки».
   const [pendingInvoice, setPendingInvoice] = useState<File | null>(null);
   const shelfStatuses = useMemo(
@@ -881,11 +883,32 @@ export const App = () => {
 
 
 
+  // «Нет: X» в «Миксах» и на дашборде: карточка табака с полки, а если на полке его нет — из каталога.
+  const onOpenMissingTobacco = (tobacco: MissingTobacco) => {
+    if (tobacco.onShelf) {
+      setPendingShelfCard(tobacco.tobaccoId);
+      setActiveTab('shelf');
+      return;
+    }
+    const nextFilters: InventoryListFilters = {
+      ...defaultInventoryListResponse.filters,
+      options: inventoryFiltersRef.current.options,
+      search: `${tobacco.manufacturer} ${tobacco.name}`,
+      archived: 'all',
+    };
+    commitInventoryFilters(nextFilters);
+    setPendingCatalogCard(tobacco.tobaccoId);
+    setCatalogView('all');
+    setActiveTab('catalog');
+    void refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
+  };
+
   const renderDashboard = () => (
     <DashboardView
       summary={summary}
       summaryError={summaryError}
       onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
+      onOpenTobacco={onOpenMissingTobacco}
       shelfBlock={
         <>
           <ShelfDashboardBlock
@@ -957,6 +980,8 @@ export const App = () => {
         if (view === 'ideas' && token) void catalogIdeas.reload(token);
       }}
       ideas={<CatalogIdeasView ideas={catalogIdeas} shelfStatuses={shelfStatuses} />}
+      openCardId={pendingCatalogCard}
+      onCardOpened={() => setPendingCatalogCard('')}
     />
   );
 
@@ -1045,6 +1070,7 @@ export const App = () => {
         onCopyMix={onCopyMix}
         onToggleMixAvailable={(mix) => void mixes.onToggleMixAvailable(mix)}
         onDeleteMix={(mix) => void mixes.onDeleteMix(mix)}
+        onOpenTobacco={onOpenMissingTobacco}
         rowPendingId={mixes.mixRowPendingId}
       />
     );
