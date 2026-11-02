@@ -1169,20 +1169,13 @@ const inventoryMixSort = (left: InventoryDependentMixView, right: InventoryDepen
 // Фильтрам, поиску и сортировке каталога хватает этих колонок. Тяжёлые
 // description, rawSourceTags и imageUrl на одиннадцати тысячах табаков съедали
 // большую часть ответа, поэтому они дочитываются только для строк страницы (#502).
-const inventoryScanSelect = {
-  id: true,
-  name: true,
-  manufacturer: true,
-  lineName: true,
-  officialStrength: true,
-  communityStrength: true,
-  flavorProfiles: true,
-  flavors: true,
-  flavorTags: true,
-  inStock: true,
-  archived: true,
-  updatedAt: true,
-} as const;
+// Сырой SQL, а не findMany: на всём каталоге движок Prisma разбирает строки
+// вдвое дольше, чем идёт сам запрос.
+const scanInventoryTobaccos = () => prisma.$queryRaw<InventoryScanRecord[]>`
+  SELECT "id", "name", "manufacturer", "lineName", "officialStrength", "communityStrength",
+         "flavorProfiles", "flavors", "flavorTags", "inStock", "archived", "updatedAt"
+  FROM "Tobacco"
+`;
 
 type InventoryScanRecord = {
   id: string;
@@ -1776,7 +1769,7 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   await ensureAppState();
 
   const [records, mixes] = await Promise.all([
-    prisma.tobacco.findMany({ select: inventoryScanSelect }),
+    scanInventoryTobaccos(),
     fetchMixViews(),
   ]);
 
