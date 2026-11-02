@@ -9,6 +9,7 @@ import {
   type ShelfRow,
   type ShelfTobaccoRef,
   type ShelfTrialVerdict,
+  type TobaccoRef,
 } from '@/contracts';
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
 import { useIsPhone } from '@/hooks/use-is-phone';
@@ -41,6 +42,7 @@ import {
   type ShelfSortKey,
   type ShelfStatusKey,
 } from '@/lib/shelf';
+import { analogToastText } from '@/lib/shelf-analogs';
 import { bulkEmptyToast, bulkKeepToast, bulkStopToast, bulkSummary, headCheck, selectRange, toggleSelected } from '@/lib/shelf-bulk';
 import { ShelfBulkBar, ShelfCheck, ShelfMobileBulk, type ShelfBulkActions } from './shelf-bulk';
 import { ShelfCard } from './shelf-card';
@@ -54,6 +56,7 @@ import { ShelfReorder } from './shelf-reorder';
 import { ShelfRowMenu, type ShelfMenuMode, type ShelfRowActions } from './shelf-row-menu';
 import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
+import { ShelfAnalogsCell } from './shelf-analogs';
 import { RowsSkeleton } from '@/components/ui/loading';
 
 // purchase — «Закупка» (#327–#331), только на десктопе.
@@ -354,6 +357,22 @@ export const ShelfView = ({
       }),
   };
 
+  // Аналоги (#482): тост только когда аналог добавлен — название жирным, ниже что стало видно гостю.
+  const onSetAnalogs = useCallback(
+    (row: ShelfRow, ids: string[], added?: TobaccoRef) =>
+      run(row, async () => {
+        const before = row.analogs.map((item) => item.tobaccoId);
+        const { unblockedMixes } = await shelf.setAnalogs(row.tobacco.id, ids);
+        if (!added) return null;
+        return {
+          title: added.name,
+          text: analogToastText(row.tobacco.name, unblockedMixes),
+          undo: () => shelf.setAnalogs(row.tobacco.id, before),
+        };
+      }),
+    [run, shelf],
+  );
+
   const onUndo = useCallback(async () => {
     if (!toast?.undo) return;
     const { undo, title } = toast;
@@ -588,8 +607,11 @@ export const ShelfView = ({
   const cardSheet = cardRow ? (
     <ShelfCard
       row={cardRow}
+      rows={rows}
       settings={settings}
       loadCard={shelf.loadCard}
+      searchCatalog={shelf.searchCatalog}
+      onSetAnalogs={onSetAnalogs}
       onEmpty={(row) => void onEmpty(row)}
       onCount={(row, input) => void onCount(row, input)}
       onDeleteEntry={onDeleteEntry}
@@ -826,6 +848,7 @@ export const ShelfView = ({
                   <colgroup>
                     <col style={{ width: 44 }} />
                     <col />
+                    <col />
                     <col style={{ width: 228 }} />
                     <col style={{ width: 130 }} />
                     <col style={{ width: 184 }} />
@@ -846,6 +869,7 @@ export const ShelfView = ({
                         />
                       </th>
                       <th scope="col">Табак</th>
+                      <th scope="col">Аналоги</th>
                       <th scope="col">Остаток по учёту</th>
                       <th scope="col">Расход</th>
                       <th scope="col">Хватит до</th>
@@ -947,6 +971,9 @@ export const ShelfView = ({
                               </span>
                               {row.trial ? <span className="tag shelf-trial-tag">проба</span> : null}
                             </span>
+                          </td>
+                          <td>
+                            <ShelfAnalogsCell analogs={row.analogs} />
                           </td>
                           <td>
                             <ShelfLevel row={row} />

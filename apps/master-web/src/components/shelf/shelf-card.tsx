@@ -3,7 +3,7 @@ import { Ellipsis, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HtreviewsLink } from '@/components/ui/htreviews-link';
 import { ProfileTag } from '@/components/ui/profile-tag';
-import { formatCount, type ShelfCard as ShelfCardData, type ShelfRow, type ShelfSettings } from '@/contracts';
+import { formatCount, type InventoryTobacco, type ShelfCard as ShelfCardData, type ShelfRow, type ShelfSettings } from '@/contracts';
 import type { ShelfPatch } from '@/hooks/use-shelf';
 import {
   cardRateHint,
@@ -21,6 +21,7 @@ import {
   trialArrival,
   weekLabel,
 } from '@/lib/shelf';
+import { ShelfAnalogsSections, ShelfCardMixes, type AnalogChange } from './shelf-analogs';
 import { ShelfLeftPanel, type CountInput } from './shelf-forms';
 import { ShelfLevel } from './shelf-level';
 import { ShelfActionsSheet } from './shelf-mobile';
@@ -31,8 +32,12 @@ import { RowsSkeleton } from '@/components/ui/loading';
 
 type ShelfCardProps = {
   row: ShelfRow;
+  // Вся полка — остаток аналогов в граммах.
+  rows: ShelfRow[];
   settings: ShelfSettings;
   loadCard: (tobaccoId: string) => Promise<ShelfCardData>;
+  searchCatalog: (query: string) => Promise<InventoryTobacco[]>;
+  onSetAnalogs: (row: ShelfRow, ...change: Parameters<AnalogChange>) => Promise<void>;
   onEmpty: (row: ShelfRow) => void;
   onCount: (row: ShelfRow, input: CountInput) => void;
   onDeleteEntry: (row: ShelfRow, entryId: string) => Promise<void>;
@@ -60,8 +65,11 @@ const Fact = ({ label, value, hint, faint = false }: { label: string; value: str
 // расход в месяц, история журнала, расход по неделям, настройки.
 export const ShelfCard = ({
   row,
+  rows,
   settings,
   loadCard,
+  searchCatalog,
+  onSetAnalogs,
   onEmpty,
   onCount,
   onDeleteEntry,
@@ -250,6 +258,23 @@ export const ShelfCard = ({
 
           {loadError ? <p className="error-text">{loadError}</p> : null}
 
+          <ShelfAnalogsSections
+            row={row}
+            card={card}
+            rows={rows}
+            searchCatalog={searchCatalog}
+            onChange={(ids, added) => onSetAnalogs(row, ids, added)}
+          />
+
+          <section className="shelf-card__section">
+            <h3 className="shelf-card__h3">В миксах</h3>
+            {card?.mixes.length ? (
+              <ShelfCardMixes mixes={card.mixes} onOpenMix={onOpenMix} />
+            ) : (
+              card ? <p className="shelf-faint shelf-card__note">Пока ни в одном миксе.</p> : null
+            )}
+          </section>
+
           <section className="shelf-card__section">
             <h3 className="shelf-card__h3">История</h3>
             {card ? (
@@ -363,18 +388,6 @@ export const ShelfCard = ({
             {saveError ? <p className="error-text">{saveError}</p> : null}
           </section>
 
-          <section className="shelf-card__section">
-            <h3 className="shelf-card__h3">В миксах</h3>
-            {card?.mixes.length ? (
-              card.mixes.map((mix) => (
-                <button key={mix.id} type="button" className="shelf-link shelf-card__mix" onClick={() => onOpenMix(mix.id)}>
-                  {mix.name}
-                </button>
-              ))
-            ) : (
-              card ? <p className="shelf-faint shelf-card__note">Пока ни в одном миксе.</p> : null
-            )}
-          </section>
         </div>
       </SheetContent>
       {actions && actionsOpen ? <ShelfActionsSheet row={row} actions={actions} onClose={() => setActionsOpen(false)} /> : null}
