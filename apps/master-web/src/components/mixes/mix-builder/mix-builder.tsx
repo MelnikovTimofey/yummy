@@ -4,6 +4,7 @@ import type { InventoryTobacco } from '@/contracts';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
 import { ComponentCard } from './component-card';
+import { builderStockTag } from '@/lib/mix-builder-status';
 import { ProportionBar } from './proportion-bar';
 import { TobaccoLibrary } from './tobacco-library';
 import { componentsTotal, rebalanceTo100 } from './rebalance';
@@ -109,10 +110,12 @@ export const MixBuilder = ({
   }, [editor.components, tobaccoMap]);
 
   const totalPercent = componentsTotal(editor.components);
-  const blockedByStock = editor.components.some((component) => {
-    const tobacco = tobaccoMap.get(component.tobaccoId);
-    return tobacco ? !tobacco.inStock : false;
-  });
+  const stockTag = builderStockTag(
+    editor.components
+      .filter((component) => tobaccoMap.get(component.tobaccoId)?.inStock === false)
+      .map((component) => component.tobaccoId),
+    editor.substitution,
+  );
   const isValid =
     editor.name.trim().length > 0 && editor.components.length >= 1 && totalPercent === 100;
 
@@ -166,9 +169,12 @@ export const MixBuilder = ({
                 : `сумма ${totalPercent}%, не хватает ${100 - totalPercent}%`}
             </span>
           ) : null}
-          {blockedByStock ? (
-            <span className="tag" data-tone="warning">блокируется наличием</span>
+          {stockTag ? (
+            <span className="tag" data-tone={stockTag.tone}>
+              {stockTag.label}
+            </span>
           ) : null}
+          {stockTag?.note ? <span className="mix-builder__breadcrumb-meta">{stockTag.note}</span> : null}
         </div>
         <div className="mix-builder__actions">
           <label

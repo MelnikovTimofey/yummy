@@ -36,6 +36,7 @@ import type {
   MixRailMembership,
   MixRecord,
   MixStatusFilter,
+  MixSubstitution,
 } from '@/contracts';
 import {
   formatFlavorProfileLabel,
@@ -70,6 +71,8 @@ export type MixEditorViewState = {
   railMemberships: MixRailMembership[];
   // Автор существующего микса (#491); у нового и у копии — null.
   author: string | null;
+  // Замена из сохранённого статуса (#494): по ней конструктор отличает «с заменой» от блокировки.
+  substitution: MixSubstitution | null;
 };
 
 export type MixCatalogMode = 'catalog' | 'create' | 'edit';
