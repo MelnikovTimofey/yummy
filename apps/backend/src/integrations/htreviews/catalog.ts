@@ -62,6 +62,20 @@ const mergeSummaryAndDetail = (
   };
 };
 
+const summaryFromDetail = (detail: HtReviewsTobaccoDetail): HtReviewsTobaccoSummary => ({
+  sourceNumericId: detail.sourceNumericId,
+  name: detail.name,
+  alias: detail.alias,
+  url: detail.url,
+  imageUrl: detail.imageUrl,
+  brand: detail.brand,
+  line: detail.line,
+  rating: null,
+  ratingsCount: null,
+  reviewsCount: null,
+  viewsCount: null,
+});
+
 const toBrandRefs = (client: HtReviewsClient, brandUrls?: string[]) => {
   if (!brandUrls?.length) {
     return null;
@@ -398,8 +412,26 @@ export const fetchHtReviewsCatalogSnapshot = async (
     }
   }
 
+  // С 21.10 выдача htreviews не показывает часть линеек DARKSIDE и Starline, и у этих
+  // табаков замирали статус и рейтинг (#498): заведённые, но не найденные, читаем по карточке.
+  const unlistedUrls = options.fetchDetails === false || options.tobaccoLimit
+    ? []
+    : (options.knownTobaccoUrls ?? []).filter((url) => !summaryMap.has(url));
+  let unlistedMissing = 0;
+  logProgress(`phase=unlisted total=${unlistedUrls.length}`);
+  for (const url of unlistedUrls) {
+    const html = await safeFetchText(client, url);
+    const detail = html ? parseTobaccoPage(html, client.baseUrl, url) : null;
+    if (!detail?.htreviewsId) {
+      unlistedMissing += 1;
+      continue;
+    }
+    items.push(mergeSummaryAndDetail(summaryFromDetail(detail), detail));
+  }
+
   logProgress(
-    `phase=snapshot-ready brands=${brands.length} tobaccos=${items.length}`,
+    `phase=snapshot-ready brands=${brands.length} tobaccos=${items.length}` +
+    ` unlisted=${unlistedUrls.length} unlistedMissing=${unlistedMissing}`,
   );
 
   return {
@@ -413,6 +445,8 @@ export const fetchHtReviewsCatalogSnapshot = async (
     ],
     brandCount: brands.length,
     tobaccoCount: items.length,
+    unlistedRefreshed: unlistedUrls.length - unlistedMissing,
+    unlistedMissing,
     items,
   };
 };

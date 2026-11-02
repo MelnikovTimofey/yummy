@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { loadShelfBrandUrls, syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
+import { detailFailureTooHigh, loadShelfBrandUrls, syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
 
 const toInt = (value: string | undefined) => {
   if (!value) {
@@ -60,6 +60,10 @@ async function main() {
   // htreviews недоступен или закрыл доступ, и это сбой, а не пустая синхронизация.
   if (stats.fetched === 0) {
     throw new Error('с htreviews не получено ни одного табака');
+  }
+  // Ошибки карточек обход тоже проглатывает: без карточки новинки не заводятся.
+  if (detailFailureTooHigh(stats)) {
+    throw new Error(`не загрузились карточки htreviews: ${stats.detailFailed} из ${stats.fetched}`);
   }
 }
 

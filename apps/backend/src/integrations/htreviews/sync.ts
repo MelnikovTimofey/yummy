@@ -14,6 +14,9 @@ export type HtReviewsSyncStats = {
   created: number;
   updated: number;
   skippedInactive: number;
+  detailFailed: number;
+  unlistedRefreshed: number;
+  unlistedMissing: number;
   preservedStockCount: number;
   defaultInStock: boolean;
 };
@@ -31,6 +34,10 @@ export const decideTobaccoUpsert = (
   }
   return status?.trim() === PRODUCED_STATUS ? 'create' : 'skip';
 };
+
+// 31.10 все 12 315 карточек ответили 500, а прогон отчитался «ok» (#498).
+export const detailFailureTooHigh = (stats: Pick<HtReviewsSyncStats, 'fetched' | 'detailFailed'>) =>
+  stats.fetched > 0 && stats.detailFailed / stats.fetched > 0.1;
 
 export const collectKnownLineUrls = (sourceUrls: Array<string | null>) => {
   const lineUrls = new Set<string>();
@@ -55,6 +62,19 @@ const loadKnownLineUrls = async (brandUrls?: string[]) => {
   });
   const lineUrls = collectKnownLineUrls(records.map((record) => record.sourceUrl));
   return brandUrls?.length ? filterLineUrlsByBrands(lineUrls, brandUrls) : lineUrls;
+};
+
+const loadKnownTobaccoUrls = async (brandUrls?: string[]) => {
+  const records = await prisma.tobacco.findMany({
+    where: { sourceKind: 'htreviews', sourceUrl: { not: null } },
+    select: { sourceUrl: true },
+  });
+  const urls = records.flatMap((record) => (record.sourceUrl ? [record.sourceUrl] : []));
+  if (!brandUrls?.length) {
+    return urls;
+  }
+  const brands = new Set(brandUrls.map((url) => url.replace(/\/+$/, '')));
+  return urls.filter((url) => brands.has(brandUrlFromTobaccoUrl(url) ?? ''));
 };
 
 export const collectBrandUrls = (sourceUrls: Array<string | null>) => {
@@ -185,12 +205,14 @@ export const syncHtReviewsCatalog = async (
 ): Promise<HtReviewsSyncStats> => {
   const knownLineUrls = options.knownLineUrls ?? await loadKnownLineUrls(options.brandUrls);
   logUpsertProgress(`phase=known-lines total=${knownLineUrls.length}`);
-  const snapshot = await fetchHtReviewsCatalogSnapshot({ ...options, knownLineUrls });
+  const knownTobaccoUrls = options.knownTobaccoUrls ?? await loadKnownTobaccoUrls(options.brandUrls);
+  const snapshot = await fetchHtReviewsCatalogSnapshot({ ...options, knownLineUrls, knownTobaccoUrls });
   const defaultInStock = options.defaultInStock ?? false;
 
   let created = 0;
   let updated = 0;
   let skippedInactive = 0;
+  let detailFailed = 0;
   let preservedStockCount = 0;
 
   logUpsertProgress(
@@ -203,8 +225,15 @@ export const syncHtReviewsCatalog = async (
     const existing = await findExistingRecord(item);
     const decision = decideTobaccoUpsert(item.status, Boolean(existing));
 
+    if (!item.detailLoaded && options.fetchDetails !== false) {
+      detailFailed += 1;
+    }
+
+    // Без карточки статус неизвестен: такая новинка — сбой загрузки, а не неактуальный табак.
     if (decision === 'skip') {
-      skippedInactive += 1;
+      if (item.detailLoaded) {
+        skippedInactive += 1;
+      }
     } else if (existing) {
       if (existing.inStock !== defaultInStock) {
         preservedStockCount += 1;
@@ -241,7 +270,7 @@ export const syncHtReviewsCatalog = async (
     if (processed % 50 === 0 || processed === snapshot.items.length) {
       logUpsertProgress(
         `upsert ${processed}/${snapshot.items.length} created=${created} updated=${updated}` +
-        ` skippedInactive=${skippedInactive} preservedStock=${preservedStockCount}`,
+        ` skippedInactive=${skippedInactive} detailFailed=${detailFailed} preservedStock=${preservedStockCount}`,
       );
     }
   }
@@ -251,6 +280,9 @@ export const syncHtReviewsCatalog = async (
     created,
     updated,
     skippedInactive,
+    detailFailed,
+    unlistedRefreshed: snapshot.unlistedRefreshed,
+    unlistedMissing: snapshot.unlistedMissing,
     preservedStockCount,
     defaultInStock,
   };
