@@ -158,11 +158,13 @@ export type MixListFilters = {
   flavorProfiles: string[];
   flavors: string[];
   flavorTags: string[];
+  authors: string[];
   options: {
     manufacturers: string[];
     flavorProfiles: string[];
     flavors: string[];
     flavorTags: string[];
+    authors: string[];
   };
 };
 
@@ -187,7 +189,10 @@ export type MixListMeta = {
   hasPreviousPage: boolean;
 };
 
-export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
+export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags' | 'authors';
+
+// Сотрудник, который завёл микс (#491); null — автора нет.
+export type MixAuthor = { id: string; name: string };
 
 export type TobaccoRef = {
   tobaccoId: string;
@@ -246,6 +251,7 @@ export type MixRecord = {
   railMemberships: MixRailMembership[];
   railCount: number;
   activeRailCount: number;
+  author: MixAuthor | null;
 };
 
 export type MixListResponse = {
@@ -265,11 +271,13 @@ export const defaultMixListResponse: MixListResponse = {
     flavorProfiles: [],
     flavors: [],
     flavorTags: [],
+    authors: [],
     options: {
       manufacturers: [],
       flavorProfiles: [],
       flavors: [],
       flavorTags: [],
+      authors: [],
     },
   },
   sort: {
@@ -922,6 +930,9 @@ export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
   };
 };
 
+const normalizeMixAuthor = (value: unknown): MixAuthor | null =>
+  isRecord(value) && typeof value.id === 'string' && typeof value.name === 'string' ? { id: value.id, name: value.name } : null;
+
 export const normalizeMixRecord = (value: unknown): MixRecord => {
   const raw = isRecord(value) ? value : {};
   const components = readListPayload<unknown>(raw.components).map(normalizeMixComponent);
@@ -965,6 +976,7 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     railMemberships,
     railCount: toNumber(raw.railCount, railMemberships.length),
     activeRailCount: toNumber(raw.activeRailCount, railMemberships.filter((item) => item.active).length),
+    author: normalizeMixAuthor(raw.author),
   };
 };
 
@@ -985,11 +997,13 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
       flavors: uniqueStrings(toStringList(filters.flavors)),
       flavorTags: uniqueStrings(toStringList(filters.flavorTags)),
+      authors: uniqueStrings(toStringList(filters.authors)),
       options: {
         manufacturers: uniqueStrings(toStringList(options.manufacturers)),
         flavorProfiles: uniqueStrings(toStringList(options.flavorProfiles)),
         flavors: uniqueStrings(toStringList(options.flavors)),
         flavorTags: uniqueStrings(toStringList(options.flavorTags)),
+        authors: uniqueStrings(toStringList(options.authors)),
       },
     },
     sort: {
@@ -1302,6 +1316,10 @@ export const buildMixRequestQuery = (
 
   for (const value of filters.flavorTags) {
     params.append('flavorTags', value);
+  }
+
+  for (const value of filters.authors) {
+    params.append('authors', value);
   }
 
   params.set('sort', sort.field);

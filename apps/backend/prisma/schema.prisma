@@ -29,6 +29,7 @@ model StaffAccount {
   tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  mixes        Mix[]
 
   @@index([active])
 }
@@ -214,6 +215,9 @@ model Mix {
   flavorTags     String
   available      Boolean         @default(true)
   baseAvgRating  Float           @default(4.5)
+  // Сотрудник, который завёл микс (#491). Виден только персоналу; учётку удалили — null.
+  authorId       String?
+  author         StaffAccount?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   components     MixComponent[]
@@ -221,6 +225,8 @@ model Mix {
   ratings        MixRating[]
   smokeEvents    SmokeCtaEvent[]
   guestFavorites GuestFavorite[]
+
+  @@index([authorId])
 }
 
 // Аналог табака (PRD §5.2, §9.3 п.6). Связь взаимная: на пару две строки, по одной

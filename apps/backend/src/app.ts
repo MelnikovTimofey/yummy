@@ -187,6 +187,7 @@ import type {
   StaffRailsResponse,
 } from './types';
 import type { StaffRole } from './auth';
+import { withAuthor } from './mix-author';
 import type { MixView, RailView, StaffRailView } from './state';
 
 export const buildApp = () => {
@@ -1606,6 +1607,7 @@ export const buildApp = () => {
           flavorProfiles?: unknown;
           flavors?: unknown;
           flavorTags?: unknown;
+          authors?: unknown;
           sort?: unknown;
           direction?: unknown;
           page?: unknown;
@@ -1614,6 +1616,7 @@ export const buildApp = () => {
       | undefined;
 
     const response: StaffMixesResponse = await getStaffMixes({
+      authors: readStringList(query?.authors),
       search: typeof query?.search === 'string' ? query.search : undefined,
       status: (typeof query?.status === 'string' ? query.status : undefined) as MixStatusFilter | undefined,
       railState: (typeof query?.railState === 'string' ? query.railState : undefined) as MixRailFilter | undefined,
@@ -1674,14 +1677,14 @@ export const buildApp = () => {
       components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
       baseAvgRating: payload?.baseAvgRating,
-    });
+    }, user.login);
 
     if (isApiError(created)) {
       return reply.status(400).send(created);
     }
 
     const response: StaffMixMutationResponse = {
-      item: created as MixView,
+      item: await withAuthor(created as MixView),
     };
 
     await recordAuditEvent({
@@ -1743,7 +1746,7 @@ export const buildApp = () => {
     }
 
     const response: StaffMixMutationResponse = {
-      item: updated as MixView,
+      item: await withAuthor(updated as MixView),
     };
 
     await recordAuditEvent({

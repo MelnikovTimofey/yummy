@@ -2,6 +2,7 @@ import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import type { Tobacco } from './catalog';
 import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
+import { authorIdOf, loadMixAuthors, type MixAuthor } from './mix-author';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
 import { loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
@@ -242,14 +243,17 @@ export type MixListQuery = {
   flavorProfiles?: string[];
   flavors?: string[];
   flavorTags?: string[];
+  authors?: string[];
   sort?: MixSortField;
   direction?: MixSortDirection;
   page?: number;
   pageSize?: number;
 };
 
+export type StaffMixView = MixView & { author: MixAuthor | null };
+
 export type MixListResult = {
-  items: MixView[];
+  items: StaffMixView[];
   filters: {
     search: string;
     status: MixStatusFilter;
@@ -258,11 +262,13 @@ export type MixListResult = {
     flavorProfiles: string[];
     flavors: string[];
     flavorTags: string[];
+    authors: string[];
     options: {
       manufacturers: string[];
       flavorProfiles: string[];
       flavors: string[];
       flavorTags: string[];
+      authors: string[];
     };
   };
   sort: {
@@ -2278,10 +2284,12 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
   const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
   const flavors = normalizeInventorySelections(query.flavors);
   const flavorTags = normalizeInventorySelections(query.flavorTags);
+  const authors = normalizeInventorySelections(query.authors);
   const sortField = normalizeMixSortField(query.sort);
   const sortDirection = normalizeMixSortDirection(query.direction);
   const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
-  const allItems = await getAvailableMixCatalog();
+  const [catalog, authorById] = await Promise.all([getAvailableMixCatalog(), loadMixAuthors()]);
+  const allItems: StaffMixView[] = catalog.map((mix) => ({ ...mix, author: authorById.get(mix.id) ?? null }));
 
   const options = {
     manufacturers: unique(allItems.flatMap((item) => item.components.map((component) => component.manufacturer))).sort((left, right) =>
@@ -2289,6 +2297,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     flavorProfiles: unique(allItems.flatMap((item) => item.flavorProfiles)).sort((left, right) => left.localeCompare(right, 'ru')),
     flavors: unique(allItems.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru')),
     flavorTags: unique(allItems.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru')),
+    authors: unique(allItems.flatMap((item) => (item.author ? [item.author.name] : []))).sort((left, right) => left.localeCompare(right, 'ru')),
   };
 
   const resolvedFilters = {
@@ -2296,6 +2305,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     flavorProfiles: resolveInventorySelections(options.flavorProfiles, flavorProfiles),
     flavors: resolveInventorySelections(options.flavors, flavors),
     flavorTags: resolveInventorySelections(options.flavorTags, flavorTags),
+    authors: resolveInventorySelections(options.authors, authors),
   };
 
   // Все фильтры, кроме статуса: по этой выборке считаются чипы статуса (#472).
@@ -2315,7 +2325,8 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     .filter((mix) => matchesInventorySelection(mix.components.map((component) => component.manufacturer), resolvedFilters.manufacturers))
     .filter((mix) => matchesInventorySelection(mix.flavorProfiles, resolvedFilters.flavorProfiles))
     .filter((mix) => matchesInventorySelection(mix.flavors, resolvedFilters.flavors))
-    .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags));
+    .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags))
+    .filter((mix) => matchesInventorySelection(mix.author ? [mix.author.name] : [], resolvedFilters.authors));
   const filteredItems = statusScopeItems
     .filter((mix) => matchesMixStatus(mix, status))
     .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
@@ -2337,6 +2348,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
       flavorProfiles: resolvedFilters.flavorProfiles,
       flavors: resolvedFilters.flavors,
       flavorTags: resolvedFilters.flavorTags,
+      authors: resolvedFilters.authors,
       options,
     },
     sort: {
@@ -2361,7 +2373,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
   };
 };
 
-export const createMix = async (payload: Partial<MixInput>) => {
+export const createMix = async (payload: Partial<MixInput>, authorLogin?: string) => {
   await ensureAppState();
 
   const validated = await validateMixInput(payload);
@@ -2370,6 +2382,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
   }
 
   const id = await nextMixId(validated.name);
+  const authorId = authorLogin ? await authorIdOf(authorLogin) : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.mix.create({
@@ -2382,6 +2395,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
         flavorTags: serializeList(validated.flavorTags),
         available: validated.available,
         baseAvgRating: validated.baseAvgRating,
+        authorId,
       },
     });
 

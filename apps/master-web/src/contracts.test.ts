@@ -1264,3 +1264,25 @@ test('normalizeShelfEntryResponse отдаёт id записи журнала д
   assert.equal(response.item.tobacco.id, 't1');
   assert.equal(response.item.leftGrams, 300);
 });
+
+test('автор микса (#491): author из ответа, без него — null; фильтр authors в запросе', () => {
+  assert.deepEqual(normalizeMixRecord({ id: 'm', author: { id: 'staff-admin', name: 'Ателье Admin' } }).author, {
+    id: 'staff-admin',
+    name: 'Ателье Admin',
+  });
+  assert.equal(normalizeMixRecord({ id: 'm' }).author, null);
+  assert.equal(normalizeMixRecord({ id: 'm', author: { name: 'x' } }).author, null);
+
+  const list = normalizeMixListResponse({
+    items: [],
+    filters: { authors: ['Максим (Мастер)'], options: { authors: ['Ателье Admin', 'Максим (Мастер)'] } },
+  });
+  assert.deepEqual(list.filters.authors, ['Максим (Мастер)']);
+  assert.deepEqual(list.filters.options.authors, ['Ателье Admin', 'Максим (Мастер)']);
+  assert.deepEqual(normalizeMixListResponse({}).filters.options.authors, []);
+
+  const query = new URLSearchParams(
+    buildMixRequestQuery({ ...defaultMixListResponse.filters, authors: ['Максим (Мастер)'] }, defaultMixListResponse.sort, 1, 25),
+  );
+  assert.deepEqual(query.getAll('authors'), ['Максим (Мастер)']);
+});
