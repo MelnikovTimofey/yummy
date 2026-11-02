@@ -2,7 +2,7 @@ import { type PointerEvent as ReactPointerEvent, type ReactNode, FormEvent, Frag
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { ChevronRight, ClipboardList } from 'lucide-react';
+import { ArrowLeftRight, ChevronRight, ClipboardList } from 'lucide-react';
 
 import {
   BottomNav,
@@ -86,6 +86,7 @@ import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
 import { forYouPage, recsPage, reelFeed, RECS_ON_SCREEN, type RecsPage } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railOpenLabel } from '@/lib/showcase';
+import { readSubstitute, showSubstitute } from '@/lib/substitute';
 
 type GuestView =
   | 'access'
@@ -172,6 +173,7 @@ type MixCard = {
     manufacturer: string;
     flavors: string[];
     proportion: number;
+    substituted?: boolean;
   }>;
 };
 
@@ -351,7 +353,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
     (component, componentIndex) => {
       const componentRecord = isRecord(component) ? component : {};
 
-      return {
+      return showSubstitute({
         id:
           typeof componentRecord.id === 'string' && componentRecord.id
             ? componentRecord.id
@@ -366,7 +368,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
             : '',
         flavors: toStringList(componentRecord.flavors),
         proportion: toNumber(componentRecord.proportion, Math.round(100 / Math.max(1, extractCollection(record, ['components']).length))),
-      };
+      }, readSubstitute(componentRecord.substitute));
     },
   );
 
@@ -657,13 +659,18 @@ const cabinetItemToMix = (item: GuestCabinetItem, card: GuestCabinetCard): MixCa
   popularity: 0,
   available: item.status.kind === 'available',
   createdAt: '',
-  components: card.components.map((component) => ({
-    id: component.tobaccoId,
-    name: component.name,
-    manufacturer: component.manufacturer,
-    flavors: [],
-    proportion: component.proportion,
-  })),
+  components: card.components.map((component) =>
+    showSubstitute(
+      {
+        id: component.tobaccoId,
+        name: component.name,
+        manufacturer: component.manufacturer,
+        flavors: [],
+        proportion: component.proportion,
+      },
+      component.substitute,
+    ),
+  ),
 });
 
 // Каталожный микс, открытый не из кабинета, в избранном — строка «в наличии».
@@ -714,6 +721,13 @@ type LoginState =
   | ({ phase: 'waiting' | 'expired' } & PendingLogin);
 
 // Ramp состава микса — слой данных, значения в packages/design-tokens/profile-colors.css
+// Без подписи: исходный табак гостю не называем (#475), мастер узнаёт замену по иконке.
+const SubstituteMark = () => (
+  <span className="aroma-sub-mark" role="img" aria-label="замена" title="замена">
+    <ArrowLeftRight size={13} aria-hidden />
+  </span>
+);
+
 const COMPOSITION_PALETTE = [
   'var(--composition-1)',
   'var(--composition-2)',
@@ -924,7 +938,10 @@ const MixDetailModal = ({
                   {component.manufacturer ? (
                     <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
                   ) : null}
-                  <span className="aroma-mix-sheet-comp-name">{component.name}</span>
+                  <span className="aroma-mix-sheet-comp-name">
+                    <span className="aroma-mix-sheet-comp-name-text">{component.name}</span>
+                    {component.substituted ? <SubstituteMark /> : null}
+                  </span>
                   <span className="aroma-mix-sheet-comp-share">
                     {formatPercent(component.proportion)}
                   </span>
@@ -3059,7 +3076,10 @@ export const App = () => {
                   {component.manufacturer ? (
                     <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
                   ) : null}
-                  <span className="aroma-mix-sheet-comp-name">{component.name}</span>
+                  <span className="aroma-mix-sheet-comp-name">
+                    <span className="aroma-mix-sheet-comp-name-text">{component.name}</span>
+                    {component.substituted ? <SubstituteMark /> : null}
+                  </span>
                   <span className="aroma-mix-sheet-comp-share">
                     {formatPercent(component.proportion)}
                   </span>

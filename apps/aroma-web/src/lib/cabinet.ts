@@ -1,5 +1,6 @@
 import { verdictForScore } from './mixer/bowl';
 import { verdictLabel } from './mixer/copy';
+import type { ComponentSubstitute } from './substitute';
 
 // История и избранное гостя (#244). Типы повторяют контракт backend
 // (apps/backend/src/types.ts, раздел кабинета гостя).
@@ -16,6 +17,7 @@ export type GuestCabinetComponent = {
   manufacturer: string;
   name: string;
   proportion: number;
+  substitute?: ComponentSubstitute;
 };
 
 export type GuestCabinetCard = {
