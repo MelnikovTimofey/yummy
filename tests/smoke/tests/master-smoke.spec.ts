@@ -808,6 +808,12 @@ test('Master mixes show substitution and missing tobaccos linked to their cards'
   const substituted = page.locator('tr[data-mix-id="mix-lime-tonic"]');
   await expect(substituted.locator('.mix-status')).toHaveText(/с заменой\s*Citrus Breeze вместо Lime Spark/);
   await expect(substituted).toContainText('Lime Spark + Mint Veil');
+  // Обе стороны замены ведут в карточку табака, как «Нет: …» у блокированного.
+  await substituted.locator('.mix-status').getByRole('button', { name: 'Lime Spark' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Lime Spark' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await openWorkspace(page, 'Миксы');
+  await statusChips.getByRole('button', { name: 'Фильтр: С заменой' }).click();
   // Конструктор показывает тот же статус, что список (#494).
   await substituted.locator('td').first().click();
   const breadcrumb = page.locator('.mix-builder__breadcrumb');
