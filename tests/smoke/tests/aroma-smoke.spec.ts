@@ -711,3 +711,48 @@ test('Aroma anonymous heart on a reel offers the cabinet and «Не сейчас
   await expect(prompt).toHaveCount(0);
   await expect(reel.getByRole('button', { name: 'Покурить' })).toBeVisible();
 });
+
+// Замена (#483): в «Лаймовом тонике» из seed #478 Lime Spark закончился, вместо
+// него стоит Citrus Breeze. В составе — табак с полки и иконка «замена», исходный
+// табак гостю не называем; мастер видит ту же иконку на «Покажите мастеру».
+test('Aroma mix with a substitute shows the shelf tobacco with a mark', async ({ page }) => {
+  const MIX = 'mix-lime-tonic';
+  let seeded = true;
+  await page.route('**/guest/catalog/mixes*', async (route) => {
+    // master-smoke параллельно на доли секунды отмечает табаки закончившимися.
+    let response = await route.fetch();
+    for (let attempt = 0; attempt < 10 && !(await response.text()).includes(MIX); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      response = await route.fetch();
+    }
+    seeded = (await response.text()).includes(MIX);
+    await route.fulfill({ response });
+  });
+  await page.goto('/');
+
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+
+  await page.getByRole('searchbox', { name: 'Поиск по каталогу' }).fill('Лаймовый тоник');
+  const row = page.locator('.aroma-catalog-list .mix-row').first();
+  await expect(row.or(page.getByText('Ничего не найдено. Измените запрос.'))).toBeVisible();
+  test.skip(!seeded, 'в базе нет демо-данных #478 («Лаймовый тоник»)');
+
+  // Строка микса без пометки о замене.
+  await expect(row.getByRole('img', { name: 'замена' })).toHaveCount(0);
+  await row.click();
+  const sheet = page.getByRole('dialog');
+  const substituted = sheet.locator('.aroma-mix-sheet-comp-row').filter({ hasText: 'Citrus Breeze' });
+  await expect(substituted.getByRole('img', { name: 'замена' })).toBeVisible();
+  await expect(sheet.getByText('Lime Spark')).toHaveCount(0);
+  await expect(sheet.getByRole('img', { name: 'замена' })).toHaveCount(1);
+
+  await sheet.getByRole('button', { name: 'Покурить' }).click();
+  await expect(page.getByText('Покажите мастеру', { exact: true })).toBeVisible();
+  const confirmation = page.getByRole('region', { name: 'Состав' });
+  await expect(confirmation.locator('.aroma-mix-sheet-comp-row').filter({ hasText: 'Citrus Breeze' }).getByRole('img', { name: 'замена' })).toBeVisible();
+  await expect(confirmation.getByText('Lime Spark')).toHaveCount(0);
+});

@@ -1766,11 +1766,25 @@ select:focus-visible {
 /* Третья колонка и без производителя: доля остаётся справа. */
 .aroma-mix-sheet-comp-name {
   grid-column: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-size: 13px;
   color: var(--text-0);
+}
+
+.aroma-mix-sheet-comp-name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.aroma-sub-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--text-muted);
 }
 
 .aroma-mix-sheet-comp-share {
