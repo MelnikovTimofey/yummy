@@ -5,7 +5,11 @@ import { defaultReceiptGrams, summarizeShelf } from '@/lib/shelf';
 import { optimisticEmpty } from '@/lib/shelf-bulk';
 import { patchPurchase, type PurchasePatch } from '@/lib/purchase';
 import {
+  buildInventoryRequestQuery,
+  defaultInventoryListResponse,
+  normalizeInventoryListResponse,
   normalizePurchaseView,
+  normalizeShelfAnalogsResponse,
   normalizeReorderView,
   normalizeShelfBatchUndoResponse,
   normalizeShelfCard,
@@ -213,6 +217,28 @@ export const useShelf = (token: string) => {
     [token],
   );
 
+  // Аналоги взаимные (#482): меняются строки и самого табака, и его аналогов, поэтому
+  // после записи полку перечитываем целиком, без скелета.
+  const setAnalogs = useCallback(async (tobaccoId: string, analogs: string[]) => {
+    const response = normalizeShelfAnalogsResponse(
+      await requestJson<unknown>(`${shelfPath(tobaccoId)}/analogs`, json('PUT', { analogs }), token),
+    );
+    putRows([response.item]);
+    try {
+      setView(normalizeShelfView(await requestJson<unknown>('/staff/shelf', {}, token)));
+    } catch {
+      // Строка самого табака уже на месте; соседние обновятся при следующей загрузке.
+    }
+    return response;
+  }, [putRows, token]);
+
+  // «Добавить аналог» ищет по всему каталогу, не только по полке.
+  const searchCatalog = useCallback(async (query: string) => {
+    const filters = { ...defaultInventoryListResponse.filters, search: query };
+    const params = buildInventoryRequestQuery(filters, defaultInventoryListResponse.sort, 1, 8);
+    return normalizeInventoryListResponse(await requestJson<unknown>(`/staff/inventory/tobaccos?${params}`, {}, token)).items;
+  }, [token]);
+
   // Граммовка чаши и срок поставки меняют прогноз всей полки и «К заказу».
   const saveSettings = useCallback(async (settings: ShelfSettings) => {
     const saved = normalizeShelfSettings(await requestJson<unknown>('/staff/shelf/settings', json('PATCH', settings), token));
@@ -257,6 +283,8 @@ export const useShelf = (token: string) => {
     remove,
     add,
     loadCard,
+    setAnalogs,
+    searchCatalog,
     saveSettings,
   };
 };

@@ -816,6 +816,42 @@ test('Master mixes show substitution and missing tobaccos linked to their cards'
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Peach Silk' })).toBeVisible();
 });
 
+// Аналоги на «Полке» (#482): «Сделать аналогом» из похожих — тост с названием,
+// аналог в колонке у обоих табаков (связь взаимная), «Отменить» возвращает как было.
+test('Master shelf card makes a similar tobacco an analog and undo restores it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+  await openWorkspace(page, 'Полка');
+
+  const rowOf = (id: string) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
+  const source = rowOf('tobacco-citrus-breeze');
+  await expect(page.getByRole('columnheader', { name: 'Аналоги' })).toBeVisible();
+  // Lime Spark не на полке и закончился — в колонке приглушён (seed #478).
+  await expect(source.locator('.shelf-analogs__item[data-off]')).toHaveText('Lime Spark');
+
+  await source.locator('td').nth(1).click();
+  const card = page.getByRole('dialog');
+  await expect(card.getByRole('heading', { name: 'Аналоги', level: 3 })).toBeVisible();
+  await expect(card.locator('.shelf-analog')).toHaveCount(1);
+  const makeAnalog = card.getByRole('button', { name: /^Сделать аналогом: / }).first();
+  const analogName = ((await makeAnalog.getAttribute('aria-label')) ?? '').replace('Сделать аналогом: ', '');
+  await makeAnalog.click();
+
+  const toast = page.locator('.shelf-toast');
+  await expect(toast.locator('b')).toHaveText(analogName);
+  await expect(toast).toContainText('Аналог Citrus Breeze.');
+  await expect(card.locator('.shelf-analog')).toHaveCount(2);
+  await expect(card.locator('.shelf-analog').nth(1)).toContainText(analogName);
+  await expect(source.locator('.shelf-analogs__item').nth(1)).toHaveText(analogName);
+  const analogRow = page.locator('table.shelf-table tbody tr').filter({ has: page.locator('td:nth-child(2) .shelf-name b', { hasText: analogName }) });
+  await expect(analogRow.locator('.shelf-analogs')).toContainText('Citrus Breeze');
+
+  // Открытая шторка прячет всё вокруг от дерева доступности (aria-hidden), тост в том числе.
+  await toast.locator('button', { hasText: 'Отменить' }).click();
+  await expect(card.locator('.shelf-analog')).toHaveCount(1);
+  await expect(source.locator('.shelf-analogs__item')).toHaveCount(1);
+  await expect(analogRow.locator('td').nth(2)).not.toContainText('Citrus Breeze');
+});
+
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
   await signIn(operatorCredentials.login, operatorCredentials.password, page);
 

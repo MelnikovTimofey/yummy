@@ -6315,7 +6315,128 @@ button[aria-busy="true"]:disabled {
 .shelf-card__setting small { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
 
 .shelf-card__stop-note { display: flex; gap: 8px; }
-.shelf-card__mix { font-size: var(--fs-sm); }
+
+/* Аналоги (#482) — по design/design_handoff_tobacco_analogs (#shot=shelf, shelf-analogs, shelf-suggest). */
+.shelf-analogs { display: grid; gap: 1px; min-width: 0; line-height: 1.25; }
+.shelf-analogs__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.shelf-analogs__item[data-off] { color: var(--text-faint); }
+.shelf-analogs__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.shelf-sub-mark { display: inline-flex; flex: none; color: var(--text-muted); }
+
+.shelf-analog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+}
+.shelf-analog-list > li { border-bottom: 1px solid var(--border-subtle); }
+.shelf-analog-list > li:last-child { border-bottom: 0; }
+
+.shelf-analog {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px 8px 12px;
+}
+.shelf-analog__n { font-family: var(--font-meta); font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.shelf-analog__name { display: grid; gap: 1px; min-width: 0; text-align: left; }
+.shelf-analog__name small {
+  font-family: var(--font-meta);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.shelf-analog__name b {
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shelf-analog__stock { font-size: var(--fs-sm); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.shelf-analog__stock[data-off] { color: var(--danger); }
+.shelf-analog__actions { display: inline-flex; gap: 2px; }
+
+.shelf-similar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px 8px 12px;
+}
+.shelf-similar__flavors { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-card-mix {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 9px 12px;
+}
+.shelf-card-mix__name { justify-self: start; font-size: var(--fs-sm); text-align: left; }
+.shelf-card-mix .tag { grid-row: span 2; justify-self: end; }
+.shelf-card-mix__note { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-analog-search { display: grid; gap: 6px; }
+.shelf-analog-search__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-base);
+  color: var(--text-muted);
+}
+.shelf-analog-search__field input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  outline: none;
+}
+.shelf-analog-search__field:focus-within { border-color: var(--border-strong); }
+.shelf-analog-search__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  display: grid;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+}
+.shelf-analog-search__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.shelf-analog-search__option:hover,
+.shelf-analog-search__option:focus-visible { background: var(--bg-elevated); }
 
 /* Каталог: колонка «Полка» вместо тумблера наличия (#211). */
 .inventory-shelf-cell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
