@@ -1166,10 +1166,55 @@ const inventoryMixSort = (left: InventoryDependentMixView, right: InventoryDepen
   return left.name.localeCompare(right.name, 'ru');
 };
 
-const buildInventoryTobaccoView = (
-  tobacco: ReturnType<typeof mapTobacco>,
+// Фильтрам, поиску и сортировке каталога хватает этих колонок. Тяжёлые
+// description, rawSourceTags и imageUrl на одиннадцати тысячах табаков съедали
+// большую часть ответа, поэтому они дочитываются только для строк страницы (#502).
+const inventoryScanSelect = {
+  id: true,
+  name: true,
+  manufacturer: true,
+  lineName: true,
+  officialStrength: true,
+  communityStrength: true,
+  flavorProfiles: true,
+  flavors: true,
+  flavorTags: true,
+  inStock: true,
+  archived: true,
+  updatedAt: true,
+} as const;
+
+type InventoryScanRecord = {
+  id: string;
+  name: string;
+  manufacturer: string;
+  lineName: string;
+  officialStrength: string | null;
+  communityStrength: string | null;
+  flavorProfiles: string;
+  flavors: string;
+  flavorTags: string;
+  inStock: boolean;
+  archived: boolean;
+  updatedAt: Date;
+};
+
+const mapInventoryScanRecord = (record: InventoryScanRecord) => ({
+  ...record,
+  flavorProfiles: parseList(record.flavorProfiles),
+  flavors: parseList(record.flavors),
+  flavorTags: parseList(record.flavorTags),
+  updatedAt: record.updatedAt.toISOString(),
+});
+
+// Один коллатор на весь модуль: localeCompare(…, 'ru') на каждое сравнение
+// втрое медленнее при сортировке всего каталога.
+const ruCollator = new Intl.Collator('ru');
+
+const buildInventoryTobaccoView = <T extends { id: string }>(
+  tobacco: T,
   allMixes: MixView[],
-): InventoryTobaccoView => {
+) => {
   const dependentMixes = allMixes
     .filter((mix) => mix.componentIds.includes(tobacco.id))
     .map((mix) => ({
@@ -1190,9 +1235,11 @@ const buildInventoryTobaccoView = (
   };
 };
 
+type InventorySortable = Pick<InventoryTobaccoView, 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixCount' | 'inStock'>;
+
 const inventoryTobaccoSort = (
-  left: InventoryTobaccoView,
-  right: InventoryTobaccoView,
+  left: InventorySortable,
+  right: InventorySortable,
   field: InventorySortField,
   direction: InventorySortDirection,
 ) => {
@@ -1202,14 +1249,14 @@ const inventoryTobaccoSort = (
 
   switch (field) {
     case 'name': {
-      const result = left.name.localeCompare(right.name, 'ru');
+      const result = ruCollator.compare(left.name, right.name);
       if (result !== 0) {
         return result * multiplier;
       }
       break;
     }
     case 'manufacturer': {
-      const manufacturerResult = left.manufacturer.localeCompare(right.manufacturer, 'ru');
+      const manufacturerResult = ruCollator.compare(left.manufacturer, right.manufacturer);
       if (manufacturerResult !== 0) {
         return manufacturerResult * multiplier;
       }
@@ -1237,7 +1284,7 @@ const inventoryTobaccoSort = (
     }
   }
 
-  return left.name.localeCompare(right.name, 'ru');
+  return ruCollator.compare(left.name, right.name);
 };
 
 const validateMixComponents = async (componentIds: string[]) => {
@@ -1729,11 +1776,11 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   await ensureAppState();
 
   const [records, mixes] = await Promise.all([
-    prisma.tobacco.findMany(),
+    prisma.tobacco.findMany({ select: inventoryScanSelect }),
     fetchMixViews(),
   ]);
 
-  const items = records.map((record) => buildInventoryTobaccoView(mapTobacco(record), mixes));
+  const items = records.map((record) => buildInventoryTobaccoView(mapInventoryScanRecord(record), mixes));
   const search = typeof query.search === 'string' ? query.search.trim() : '';
   // Точная выборка по id (редактор микса резолвит табаки своих компонентов с
   // полными данными). Exact-match, без normalizeToken — id чувствителен к регистру.
@@ -1828,14 +1875,19 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
   const page = Math.min(requestedPage, totalPages);
   const start = (page - 1) * pageSize;
-  const paginatedItems = filteredItems.slice(start, start + pageSize);
+  const pageSlice = filteredItems.slice(start, start + pageSize);
+  const pageRecords = await prisma.tobacco.findMany({ where: { id: { in: pageSlice.map((item) => item.id) } } });
+  const pageRecordById = new Map(pageRecords.map((record) => [record.id, record]));
+  // Табак, удалённый между двумя запросами, просто выпадает со страницы.
+  const paginatedItems: InventoryTobaccoView[] = pageSlice.flatMap((item) => {
+    const record = pageRecordById.get(item.id);
+    return record ? [{ ...item, ...mapTobacco(record) }] : [];
+  });
 
-  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort((left, right) => left.localeCompare(right, 'ru'));
-  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort((left, right) =>
-    left.localeCompare(right, 'ru'),
-  );
-  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru'));
-  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru'));
+  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort(ruCollator.compare);
+  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort(ruCollator.compare);
+  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort(ruCollator.compare);
+  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort(ruCollator.compare);
 
   return {
     items: paginatedItems,
