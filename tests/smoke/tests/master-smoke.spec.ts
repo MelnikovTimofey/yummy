@@ -852,6 +852,37 @@ test('Master shelf card makes a similar tobacco an analog and undo restores it',
   await expect(analogRow.locator('td').nth(2)).not.toContainText('Citrus Breeze');
 });
 
+// Автор микса (#491): копию сохраняет admin — он и автор; фильтр «Автор» её находит,
+// в шапке конструктора «автор Admin». В конце копия удаляется.
+test('Master mix copy gets its author and the author filter finds it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+  await openWorkspace(page, 'Миксы');
+
+  await expect(page.getByRole('columnheader', { name: 'Автор' })).toBeVisible();
+  const source = page.locator('tr[data-mix-id="mix-citrus-scout"]');
+  // У миксов из seed автора нет.
+  await expect(source.locator('.mixes-cell__author')).toHaveText('—');
+  await source.getByRole('button', { name: 'Дублировать Цитрусовый караван' }).click();
+  await page.getByRole('button', { name: 'Создать микс' }).click();
+
+  const copy = page.locator('tr[data-mix-id]').filter({ hasText: 'Цитрусовый караван (копия)' });
+  await expect(copy.locator('.mixes-cell__author')).toHaveText('Admin');
+
+  await page.getByRole('group', { name: 'Фильтры миксов' }).getByRole('button', { name: 'Автор', exact: true }).click();
+  await page.getByRole('group', { name: 'Автор', exact: true }).getByRole('checkbox', { name: 'Admin' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('table.mixes-table tbody tr[data-mix-id]')).toHaveCount(1);
+  await expect(copy).toBeVisible();
+
+  await copy.locator('td').first().click();
+  await expect(page.locator('.mix-builder__breadcrumb')).toContainText('автор Admin');
+  await page.getByRole('button', { name: 'Назад к каталогу миксов' }).click();
+
+  await copy.getByRole('button', { name: 'Удалить Цитрусовый караван (копия)' }).click();
+  await page.getByRole('button', { name: 'Удалить микс' }).click();
+  await expect(copy).toHaveCount(0);
+});
+
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
   await signIn(operatorCredentials.login, operatorCredentials.password, page);
 

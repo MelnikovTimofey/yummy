@@ -156,6 +156,9 @@ export const MixBuilder = ({
             {mode === 'edit' ? 'Редактирование микса' : 'Новый микс'}
           </span>
           <span className="mix-builder__breadcrumb-meta">{componentsCountLabel}</span>
+          {mode === 'edit' && editor.author ? (
+            <span className="mix-builder__breadcrumb-meta">автор {editor.author}</span>
+          ) : null}
           {totalPercent !== 100 ? (
             <span className="tag" data-tone="warning">
               {totalPercent > 100
