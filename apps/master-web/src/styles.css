@@ -5292,6 +5292,16 @@ input[type="checkbox"] {
   gap: 4px;
 }
 
+.mixes-cell__author {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .mixes-cell__metric {
   display: inline-flex;
   align-items: center;

@@ -68,6 +68,8 @@ export type MixEditorViewState = {
   components: MixEditorComponentInput[];
   available: boolean;
   railMemberships: MixRailMembership[];
+  // Автор существующего микса (#491); у нового и у копии — null.
+  author: string | null;
 };
 
 export type MixCatalogMode = 'catalog' | 'create' | 'edit';
@@ -95,7 +97,7 @@ type MixCatalogViewProps = {
   rowPendingId?: string;
 };
 
-const filterKeys: MixFilterKey[] = ['flavorProfiles', 'manufacturers', 'flavors', 'flavorTags'];
+const filterKeys: MixFilterKey[] = ['flavorProfiles', 'manufacturers', 'flavors', 'flavorTags', 'authors'];
 
 const railLabels: Record<string, string> = { 'in-rails': 'В рейлах', 'without-rails': 'Не в рейлах' };
 
@@ -190,6 +192,7 @@ export const MixCatalogView = ({
     attribute('manufacturers', 'Бренды', filters.options.manufacturers),
     attribute('flavors', 'Вкусы', filters.options.flavors),
     attribute('flavorTags', 'Мета-теги', filters.options.flavorTags),
+    attribute('authors', 'Автор', filters.options.authors),
   ];
   const activeAttributes =
     filterKeys.reduce((acc, key) => acc + filters[key].length, 0) + Number(filters.railState !== 'all');
@@ -350,6 +353,7 @@ export const MixCatalogView = ({
                   <th scope="col">Состав</th>
                   <th scope="col">Профиль</th>
                   <th scope="col">Статус</th>
+                  <th scope="col">Автор</th>
                   <SortableHeader
                     label="Выборы"
                     field="demand"
@@ -421,6 +425,9 @@ export const MixCatalogView = ({
                       </td>
                       <td>
                         <MixStatusCell mix={mix} onOpenTobacco={onOpenTobacco} />
+                      </td>
+                      <td>
+                        <span className="mixes-cell__author">{mix.author?.name ?? '—'}</span>
                       </td>
                       <td className="mixes-table__metric-col">
                         <span className="mixes-cell__metric" title="Нажатия «Покурить»">

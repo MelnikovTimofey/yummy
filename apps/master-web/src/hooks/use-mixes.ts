@@ -49,6 +49,7 @@ const emptyMixEditor = (): MixEditorState => ({
   components: [],
   available: true,
   railMemberships: [],
+  author: null,
 });
 
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
@@ -60,6 +61,7 @@ const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   ),
   available: mix.available,
   railMemberships: mix.railMemberships,
+  author: mix.author?.name ?? null,
 });
 
 // Состав микса несёт name/manufacturer/flavors, но не inStock/lineName/
@@ -339,6 +341,7 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       ),
       available: mix.available,
       railMemberships: [],
+      author: null,
     };
     setMixEditor(draft);
     setMixComponentTobaccos(mix.components.map(mixComponentToTobacco));
