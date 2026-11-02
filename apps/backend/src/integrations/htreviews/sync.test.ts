@@ -7,6 +7,7 @@ import {
   collectBrandUrls,
   collectKnownLineUrls,
   decideTobaccoUpsert,
+  detailFailureTooHigh,
   filterLineUrlsByBrands,
   loadShelfBrandUrls,
   syncHtReviewsCatalog,
@@ -221,7 +222,8 @@ test('сбой загрузки карточки не затирает вкус�
 
   assert.equal(stats.updated, 1);
   assert.equal(stats.created, 0);
-  assert.equal(stats.skippedInactive, 1);
+  assert.equal(stats.skippedInactive, 0, 'новинка без карточки — сбой загрузки, а не неактуальный табак (#498)');
+  assert.equal(stats.detailFailed, 2);
   assert.equal(await prisma.tobacco.count({ where: { name: 'New Cola' } }), 0);
 
   const tobacco = await prisma.tobacco.findUniqueOrThrow({ where: { id: 'ds-pink-mi' } });
@@ -252,4 +254,72 @@ test('сбой загрузки карточки не затирает вкус�
   assert.equal(tobacco.rating, 4.7);
   assert.equal(tobacco.ratingsCount, 237);
   assert.ok(tobacco.statsSyncedAt);
+});
+
+// #498: 31.10 все карточки ответили 500, а прогон отчитался «ok».
+test('прогон считается сбоем, когда не загрузилось больше 10 % карточек', () => {
+  assert.equal(detailFailureTooHigh({ fetched: 12315, detailFailed: 12315 }), true);
+  assert.equal(detailFailureTooHigh({ fetched: 100, detailFailed: 11 }), true);
+  assert.equal(detailFailureTooHigh({ fetched: 100, detailFailed: 10 }), false);
+  assert.equal(detailFailureTooHigh({ fetched: 0, detailFailed: 0 }), false);
+});
+
+const detailPage = (slug: string, name: string, status: string, htrId: string) => `
+  <div class="object_card_title"><h1>${name}</h1></div>
+  <a class="object_card_tag" href="https://htreviews.org/tobaccos?r=flavor&t=1">Крыжовник</a>
+  <div class="object_info_item"><span>Бренд</span><span></span><span><a href="https://htreviews.org/tobaccos/darkside">Darkside</a></span></div>
+  <div class="object_info_item"><span>Линейка</span><span></span><span><a href="https://htreviews.org/tobaccos/darkside/core">Core</a></span></div>
+  <div class="object_info_item"><span><span>Статус</span></span><span></span><span>${status}</span></div>
+  <div class="object_info_item"><span>HtreviewsID</span><span></span><span>${htrId}</span></div>
+  <script type="application/ld+json">
+    {"@type":"Product","name":"${name}","url":"https://htreviews.org/tobaccos/darkside/core/${slug}","aggregateRating":{"ratingValue":"4.2","reviewCount":"12"}}
+  </script>
+`;
+
+// #498: часть табаков пропала из выдачи htreviews, и их статус с рейтингом замерли.
+test('табак каталога, которого нет в выдаче, обновляется по своей карточке', async (t) => {
+  await resetAppState();
+  const known = (id: string, manufacturer: string, sourceUrl: string) =>
+    prisma.tobacco.create({
+      data: { id, manufacturer, lineName: 'Core', name: id, sourceKind: 'htreviews', sourceUrl, flavorProfiles: '["berry"]', flavors: '["крыжовник"]', flavorTags: '[]' },
+    });
+  await known('red-zeppelin', 'DARKSIDE', 'https://htreviews.org/tobaccos/darkside/core/red-zeppelin');
+  await known('gone', 'DARKSIDE', 'https://htreviews.org/tobaccos/darkside/core/gone');
+  await known('other-brand', 'Sarma', 'https://htreviews.org/tobaccos/sarma/klassicheskaya/zima');
+
+  const fetched: string[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetched.push(url);
+    const html = (body: string) => new Response(body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    if (url === 'https://htreviews.org/tobaccos/darkside') {
+      return html('<div class="tobacco_list_items" data-count="0"></div>');
+    }
+    if (url === 'https://htreviews.org/tobaccos/darkside/core/red-zeppelin') {
+      return html(detailPage('red-zeppelin', 'Red Zeppelin', 'Лимитированный', 'htr200001'));
+    }
+    return new Response('Not Found', { status: 404 });
+  }) as typeof globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const stats = await syncHtReviewsCatalog({
+    brandUrls: ['https://htreviews.org/tobaccos/darkside'],
+    knownLineUrls: [],
+    delayMs: 0,
+    requestTimeoutMs: 100,
+  });
+
+  assert.equal(stats.unlistedRefreshed, 1);
+  assert.equal(stats.unlistedMissing, 1);
+  assert.equal(stats.updated, 1);
+  assert.ok(!fetched.includes('https://htreviews.org/tobaccos/sarma/klassicheskaya/zima'), 'чужой бренд в прогоне по брендам не трогаем');
+
+  const tobacco = await prisma.tobacco.findUniqueOrThrow({ where: { id: 'red-zeppelin' } });
+  assert.equal(tobacco.name, 'Red Zeppelin');
+  assert.equal(tobacco.productionStatus, 'Лимитированный');
+  assert.equal(tobacco.sourceExternalId, 'htr200001');
+  assert.equal(tobacco.rating, 4.2);
 });

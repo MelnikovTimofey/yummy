@@ -84,6 +84,8 @@ export type HtReviewsCatalogSnapshot = {
   brandCount: number;
   tobaccoCount: number;
   items: HtReviewsImportedTobacco[];
+  unlistedRefreshed: number;
+  unlistedMissing: number;
 };
 
 export type HtReviewsImportOptions = {
@@ -97,4 +99,6 @@ export type HtReviewsImportOptions = {
   brandUrls?: string[];
   // Линейки, уже известные по каталогу: обходятся даже без ссылок на discovery-страницах.
   knownLineUrls?: string[];
+  // Табаки каталога: те, которых нет в выдаче, обновляются по своей карточке.
+  knownTobaccoUrls?: string[];
 };
