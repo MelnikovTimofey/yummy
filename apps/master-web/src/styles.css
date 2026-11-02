@@ -5251,6 +5251,32 @@ input[type="checkbox"] {
   line-height: 1.35;
 }
 
+.mix-status {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.mix-status small {
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.inline-link {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  background: none;
+  font: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.inline-link:hover {
+  color: var(--text-primary);
+}
+
 .mixes-cell__components {
   gap: 8px;
 }

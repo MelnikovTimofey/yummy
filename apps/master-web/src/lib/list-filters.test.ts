@@ -71,11 +71,12 @@ test('Каталог: число у каждого статуса, кроме «
 test('Миксы: число у каждого статуса, кроме «Все» (#467)', () => {
   assert.deepEqual(
     MIX_STATUS_CHIPS.map(([, label]) => label),
-    ['Все', 'Виден гостю', 'Скрыт', 'Блокирован'],
+    ['Все', 'Виден гостю', 'С заменой', 'Скрыт', 'Блокирован'],
   );
-  const meta = { ...defaultMixListResponse.meta, guestVisibleCount: 31, hiddenCount: 2, blockedCount: 0 };
+  const meta = { ...defaultMixListResponse.meta, guestVisibleCount: 31, substitutedCount: 3, hiddenCount: 2, blockedCount: 0 };
   assert.equal(mixStatusCount(meta, 'all'), undefined);
   assert.equal(mixStatusCount(meta, 'guest-visible'), 31);
+  assert.equal(mixStatusCount(meta, 'substituted'), 3);
   assert.equal(mixStatusCount(meta, 'hidden'), 2);
   assert.equal(mixStatusCount(meta, 'blocked'), 0);
 });

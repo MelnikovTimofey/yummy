@@ -25,7 +25,9 @@ import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
+import { MixStatusCell } from './mix-status';
 import type {
+  MissingTobacco,
   MixFilterKey,
   MixListFilters,
   MixListMeta,
@@ -41,7 +43,6 @@ import {
   defaultMixListResponse,
   formatCount,
   formatRating,
-  resolveMixStatus,
 } from '@/contracts';
 import { RowsSkeleton } from '@/components/ui/loading';
 import { useIsPhone } from '@/hooks/use-is-phone';
@@ -90,6 +91,7 @@ type MixCatalogViewProps = {
   onCopyMix: (mix: MixRecord) => void;
   onToggleMixAvailable: (mix: MixRecord) => void;
   onDeleteMix: (mix: MixRecord) => void;
+  onOpenTobacco: (tobacco: MissingTobacco) => void;
   rowPendingId?: string;
 };
 
@@ -99,24 +101,6 @@ const railLabels: Record<string, string> = { 'in-rails': 'В рейлах', 'wit
 
 const byProfileLabel = (left: string, right: string) =>
   formatFlavorProfileLabel(left).localeCompare(formatFlavorProfileLabel(right), 'ru');
-
-const renderMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisible'>) => {
-  const status = resolveMixStatus(mix);
-
-  if (status === 'blocked') {
-    return (
-      <span className="tag" data-tone="warning">
-        блокирован
-      </span>
-    );
-  }
-
-  if (status === 'hidden') {
-    return <span className="tag tag--ghost">скрыт</span>;
-  }
-
-  return <span className="tag">виден</span>;
-};
 
 export const MixCatalogView = ({
   items,
@@ -137,6 +121,7 @@ export const MixCatalogView = ({
   onCopyMix,
   onToggleMixAvailable,
   onDeleteMix,
+  onOpenTobacco,
   rowPendingId = '',
 }: MixCatalogViewProps) => {
   const [searchValue, setSearchValue] = useState(filters.search);
@@ -397,8 +382,8 @@ export const MixCatalogView = ({
                   return (
                     <tr
                       key={mix.id}
-                      data-blocked={resolveMixStatus(mix) === 'blocked' || undefined}
-                      data-hidden={resolveMixStatus(mix) === 'hidden' || undefined}
+                      data-blocked={mix.status === 'blocked' || undefined}
+                      data-hidden={mix.status === 'hidden' || undefined}
                       // Якорь для smoke — см. inventory-view (#27).
                       data-mix-id={mix.id}
                       className="mixes-table__row"
@@ -434,7 +419,9 @@ export const MixCatalogView = ({
                           ) : null}
                         </div>
                       </td>
-                      <td>{renderMixStatus(mix)}</td>
+                      <td>
+                        <MixStatusCell mix={mix} onOpenTobacco={onOpenTobacco} />
+                      </td>
                       <td className="mixes-table__metric-col">
                         <span className="mixes-cell__metric" title="Нажатия «Покурить»">
                           {formatMetricValue(mix.smokeCtaCount)}
