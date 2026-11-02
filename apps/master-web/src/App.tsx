@@ -329,6 +329,11 @@ export const App = () => {
     if (activeTab === 'catalog' && catalogView === 'ideas') void catalogIdeas.reload(token);
     if (activeTab === 'shelf') void shelf.reload(token);
     if (activeTab === 'dashboard') void shelfDashboard.reload(token);
+    if (activeTab === 'access' && dailyCode.status === 'idle') {
+      void dailyCode.reload(token);
+      void staff.reload(token, user.role);
+      void telegramOps.reload(token, user.role);
+    }
     // Приёмка поставки тоже меняет наличие для гостя.
     if (previous === 'shelf' || previous === 'deliveries') void refreshInventoryDependents(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -452,18 +457,18 @@ export const App = () => {
         }
 
         setUser(profile.user);
+        // Сервер на двух ядрах: залп из всех запросов разом держал первый экран
+        // полторы секунды (#506). Сначала — дашборд, с которого открывается
+        // Мастер; миксы и рейлы фоном, по ним ищет Cmd+K; каталог и доступ —
+        // при открытии своих вкладок.
         await Promise.all([
-          loadInventory(token),
           shelf.reload(token),
           shelfDashboard.reload(token),
           loadSummary(token, dashboardWindow),
-          mixes.reload(token),
-          rails.reload(token),
-          dailyCode.reload(token),
-          staff.reload(token, profile.user.role),
-          telegramOps.reload(token, profile.user.role),
         ]);
         setStatus('ready');
+        void mixes.reload(token);
+        void rails.reload(token);
       } catch {
         storeToken('');
         setToken('');
@@ -491,28 +496,9 @@ export const App = () => {
         method: 'POST',
         body: JSON.stringify({ login, password }),
       });
-      const response = await requestJson<unknown>('/staff/auth/me', {}, auth.accessToken);
-      const profile = readEntityPayload<{ user: StaffUser }>(response);
-
-      if (!profile?.user) {
-        throw new Error('Не удалось подтвердить профиль');
-      }
-
+      // Профиль и данные загрузит hydrate по новому токену.
       storeToken(auth.accessToken);
       setToken(auth.accessToken);
-      setUser(profile.user);
-      await Promise.all([
-        loadInventory(auth.accessToken),
-        shelf.reload(auth.accessToken),
-        shelfDashboard.reload(auth.accessToken),
-        loadSummary(auth.accessToken, dashboardWindow),
-        mixes.reload(auth.accessToken),
-        rails.reload(auth.accessToken),
-        dailyCode.reload(auth.accessToken),
-        staff.reload(auth.accessToken, profile.user.role),
-        telegramOps.reload(auth.accessToken, profile.user.role),
-      ]);
-      setStatus('ready');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Не удалось войти');
       setStatus('error');
