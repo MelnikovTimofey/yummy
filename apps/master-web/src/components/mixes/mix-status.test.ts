@@ -20,3 +20,13 @@ test('пара замены: «Lemon Shock вместо Lemonblast»', () => {
     'Lemon Shock вместо Lemonblast',
   );
 });
+
+test('одноимённые табаки в паре замены различаются брендом', () => {
+  assert.equal(
+    substitutionNote({
+      from: { tobaccoId: 'a', manufacturer: 'Starline', name: 'Гранатовый сок' },
+      to: { tobaccoId: 'b', manufacturer: 'Сарма', name: 'Гранатовый сок' },
+    }),
+    'Сарма Гранатовый сок вместо Starline Гранатовый сок',
+  );
+});
