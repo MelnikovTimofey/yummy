@@ -264,6 +264,64 @@ test('staff inventory list paginates filtered results', async () => {
   }
 });
 
+// Каталог фильтруется по узкой выборке колонок, а карточки страницы дочитываются
+// отдельно (#502): строки страницы должны прийти целиком и в порядке сортировки.
+test('staff inventory page rows carry full cards in sort order', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const [, second] = [...seedTobaccos].sort((left, right) => left.name.localeCompare(right.name, 'ru'));
+    await prisma.tobacco.update({
+      where: { id: second.id },
+      data: {
+        description: 'Сочный и плотный',
+        country: 'Россия',
+        productionStatus: 'Выпускается',
+        rating: 4.5,
+        ratingsCount: 12,
+        viewsCount: 340,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?page=1&pageSize=3&sort=name&direction=asc',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as {
+      items: Array<{
+        id: string;
+        description: string | null;
+        country: string | null;
+        productionStatus: string | null;
+        rating: number | null;
+        ratingsCount: number | null;
+        viewsCount: number | null;
+      }>;
+    };
+
+    const expectedIds = [...seedTobaccos]
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .slice(0, 3)
+      .map((item) => item.id);
+    assert.deepEqual(body.items.map((item) => item.id), expectedIds);
+    const card = body.items[1];
+    assert.equal(card?.description, 'Сочный и плотный');
+    assert.equal(card?.country, 'Россия');
+    assert.equal(card?.productionStatus, 'Выпускается');
+    assert.equal(card?.rating, 4.5);
+    assert.equal(card?.ratingsCount, 12);
+    assert.equal(card?.viewsCount, 340);
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff inventory list resolves an explicit set of ids regardless of pagination cap', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
