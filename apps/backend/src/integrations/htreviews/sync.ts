@@ -21,7 +21,8 @@ export type HtReviewsSyncStats = {
   defaultInStock: boolean;
 };
 
-const PRODUCED_STATUS = 'Выпускается';
+// Лимитку можно купить и замешать, поэтому она заводится наравне с выпускаемыми.
+const PRODUCED_STATUSES = new Set(['Выпускается', 'Лимитированный']);
 
 // Новые позиции заводим только выпускаемые, а заведённые обновляем всегда:
 // так снятие с производства доходит до productionStatus, а не застывает.
@@ -32,7 +33,7 @@ export const decideTobaccoUpsert = (
   if (exists) {
     return 'update';
   }
-  return status?.trim() === PRODUCED_STATUS ? 'create' : 'skip';
+  return PRODUCED_STATUSES.has(status?.trim() ?? '') ? 'create' : 'skip';
 };
 
 // 31.10 все 12 315 карточек ответили 500, а прогон отчитался «ok» (#498).
