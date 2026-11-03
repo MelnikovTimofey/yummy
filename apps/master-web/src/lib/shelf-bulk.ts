@@ -86,3 +86,8 @@ export const bulkKeepToast = (count: number, keep: boolean) =>
   keep
     ? { title: `Держим постоянно: ${formatNumber(count)}`, text: 'Когда закончатся, попадут в заказ.' }
     : { title: `Не держим постоянно: ${formatNumber(count)}`, text: 'В заказ больше не попадут.' };
+
+export const bulkRemoveToast = (count: number, failed: number) => ({
+  title: `Убраны с полки: ${formatNumber(count)}`,
+  text: ['История осталась.', failed ? `Не убрано ${formatNumber(failed)}, попробуйте ещё раз.` : ''].filter(Boolean).join(' '),
+});

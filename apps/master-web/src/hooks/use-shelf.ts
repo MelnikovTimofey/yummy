@@ -200,6 +200,28 @@ export const useShelf = (token: string) => {
   }, [loadReorder, putRows, token]);
   const remove = useCallback((tobaccoId: string) => send(shelfPath(tobaccoId), json('DELETE')), [send]);
 
+  // «Убрать с полки» для нескольких и его отмена — тоже по запросу на табак.
+  const sendMany = useCallback(async (requests: Array<() => Promise<unknown>>) => {
+    const results = await Promise.allSettled(requests.map(async (request) => normalizeShelfRow(readEntityPayload(await request()))));
+    const items = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    const failed = results.flatMap((result) => (result.status === 'rejected' ? [result.reason as unknown] : []));
+    putRows(items);
+    void loadReorder();
+    return { items, failed };
+  }, [loadReorder, putRows]);
+  const removeMany = useCallback(
+    (tobaccoIds: string[]) => sendMany(tobaccoIds.map((tobaccoId) => () => requestJson<unknown>(shelfPath(tobaccoId), json('DELETE'), token))),
+    [sendMany, token],
+  );
+  // Отмена: строки возвращаются как были, без прихода (как у add с restock = false).
+  const restoreMany = useCallback(
+    (rows: ShelfRow[]) =>
+      sendMany(rows.map((row) => () =>
+        requestJson<unknown>('/staff/shelf', json('POST', { tobaccoId: row.tobacco.id, status: row.shelfStatus === 'plan' ? 'plan' : 'active' }), token),
+      )),
+    [sendMany, token],
+  );
+
   // «На полку» из каталога: табак держим — значит, он есть. Сервис полки при
   // добавлении прихода не пишет, поэтому, если остатка нет, добавляем приход
   // типичной фасовки бренда — как тумблер наличия на backend. Отмена «Убрать
@@ -281,6 +303,8 @@ export const useShelf = (token: string) => {
     undoBatch,
     updateMany,
     remove,
+    removeMany,
+    restoreMany,
     add,
     loadCard,
     setAnalogs,
