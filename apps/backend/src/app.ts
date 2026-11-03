@@ -119,7 +119,6 @@ import {
   createRail,
   deleteRail,
   ensureAppState,
-  getDashboardSummary,
   getInventorySummary,
   getInventoryTobaccos,
   getTobaccoById,
@@ -137,7 +136,6 @@ import {
   type InventorySortDirection,
   type InventorySortField,
   type InventoryStockFilter,
-  normalizeDashboardWindowKey,
   recordSmokeCtaEvent,
   rateMix,
   updateMix,
@@ -183,7 +181,6 @@ import type {
   StaffTelegramRecipientsResponse,
   StaffTelegramAutomationStateResponse,
   StaffAuditEventsResponse,
-  StaffDashboardSummaryResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
@@ -336,7 +333,6 @@ export const buildApp = () => {
         shelfReorder: 'GET /staff/shelf/reorder',
         shelfDashboard: 'GET /staff/shelf/dashboard',
         shelfPurchase: 'GET /staff/shelf/purchase',
-        dashboardSummary: 'GET /staff/dashboard/summary',
         dashboardChoices: 'GET /staff/dashboard/choices',
         dailyCodesList: 'GET /staff/access/daily-codes',
         dailyCodesCreate: 'POST /staff/access/daily-codes',
@@ -2363,18 +2359,6 @@ export const buildApp = () => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
     return sendShelf(reply, async () => ({ item: await deleteEntry(user, entryParam(request)) }));
-  });
-
-  app.get('/staff/dashboard/summary', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) {
-      return;
-    }
-
-    const query = request.query as { window?: unknown } | undefined;
-    const response: StaffDashboardSummaryResponse = await getDashboardSummary(normalizeDashboardWindowKey(query?.window));
-
-    return reply.send(response);
   });
 
   app.get('/staff/dashboard/choices', async (request, reply) => {

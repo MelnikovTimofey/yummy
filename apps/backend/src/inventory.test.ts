@@ -653,83 +653,26 @@ test('batch archive and unarchive toggle archived state', async () => {
   await app.close();
 });
 
-test('empty statistical rails do not count as empty active rails on the dashboard', async () => {
+test('empty statistical rails are not an empty-rail signal on the dashboard', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
 
   const dashboard = await app.inject({
     method: 'GET',
-    url: '/staff/dashboard/summary?window=7d',
+    url: '/staff/dashboard/choices?period=7d',
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
 
   assert.equal(dashboard.statusCode, 200);
-  const dashboardBody = dashboard.json() as {
-    ops: {
-      emptyActiveRailsCount: number;
-      railHealth: Array<{ railId: string; visibleMixCount: number }>;
-    };
-  };
-
-  assert.equal(
-    dashboardBody.ops.railHealth.find((rail) => rail.railId === 'rail-statistical-top')?.visibleMixCount,
-    0,
-  );
-  assert.equal(dashboardBody.ops.emptyActiveRailsCount, 0);
+  const { signals } = dashboard.json() as { signals: { emptyRails: Array<{ railId: string }> } };
+  assert.equal(signals.emptyRails.some((rail) => rail.railId === 'rail-statistical-top'), false);
 
   await app.close();
 });
 
-// Разбивки считает Postgres (#509): порядок при равенстве — по русскому
-// алфавиту, как раньше в Node.
-test('dashboard inventory breakdowns count the whole catalog by brand, profile and flavor', async () => {
-  const app = buildApp();
-  const token = await loginStaff(app);
-
-  const dashboard = await app.inject({
-    method: 'GET',
-    url: '/staff/dashboard/summary?window=7d',
-    headers: { authorization: `Bearer ${token}` },
-  });
-
-  assert.equal(dashboard.statusCode, 200);
-  assert.deepEqual((dashboard.json() as { inventory: unknown }).inventory, {
-    total: 15,
-    inStockCount: 14,
-    outOfStockCount: 1,
-    manufacturers: [
-      { key: 'Ателье Reserve', label: 'Ателье Reserve', total: 6, inStockCount: 5, outOfStockCount: 1 },
-      { key: 'Atlas Smoke', label: 'Atlas Smoke', total: 3, inStockCount: 3, outOfStockCount: 0 },
-      { key: 'Lounge Garden', label: 'Lounge Garden', total: 2, inStockCount: 2, outOfStockCount: 0 },
-      { key: 'North Wind', label: 'North Wind', total: 2, inStockCount: 2, outOfStockCount: 0 },
-      { key: 'Velvet Line', label: 'Velvet Line', total: 2, inStockCount: 2, outOfStockCount: 0 },
-    ],
-    flavorProfiles: [
-      { key: 'fruity', label: 'Фруктовые', total: 6, inStockCount: 5, outOfStockCount: 1 },
-      { key: 'fresh', label: 'Свежие', total: 5, inStockCount: 5, outOfStockCount: 0 },
-      { key: 'sweet', label: 'Сладкие', total: 5, inStockCount: 4, outOfStockCount: 1 },
-      { key: 'floral_herbal', label: 'Цветочно-травяные', total: 3, inStockCount: 3, outOfStockCount: 0 },
-      { key: 'berry', label: 'Ягодные', total: 3, inStockCount: 3, outOfStockCount: 0 },
-      { key: 'dessert', label: 'Десертные', total: 2, inStockCount: 2, outOfStockCount: 0 },
-    ],
-    topFlavors: [
-      { key: 'ваниль', label: 'ваниль', total: 2, inStockCount: 2, outOfStockCount: 0 },
-      { key: 'лайм', label: 'лайм', total: 2, inStockCount: 2, outOfStockCount: 0 },
-      { key: 'лимон', label: 'лимон', total: 2, inStockCount: 2, outOfStockCount: 0 },
-      { key: 'белые цветы', label: 'белые цветы', total: 1, inStockCount: 1, outOfStockCount: 0 },
-      { key: 'виноград', label: 'виноград', total: 1, inStockCount: 1, outOfStockCount: 0 },
-      { key: 'грейпфрут', label: 'грейпфрут', total: 1, inStockCount: 1, outOfStockCount: 0 },
-      { key: 'груша', label: 'груша', total: 1, inStockCount: 1, outOfStockCount: 0 },
-      { key: 'дыня', label: 'дыня', total: 1, inStockCount: 1, outOfStockCount: 0 },
-    ],
-  });
-
-  await app.close();
-});
-
-test('smoke CTA events are recorded in dashboard summary', async () => {
+test('smoke CTA events and guest ratings reach the dashboard', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
 
@@ -784,7 +727,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
 
   const dashboard = await app.inject({
     method: 'GET',
-    url: '/staff/dashboard/summary?window=7d',
+    url: '/staff/dashboard/choices?period=7d',
     headers: {
       authorization: `Bearer ${token}`,
     },
@@ -793,67 +736,22 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
   assert.equal(dashboard.statusCode, 200);
 
   const dashboardBody = dashboard.json() as {
-    window: { key: string; days: number };
-    inventory: {
-      total: number;
-      inStockCount: number;
-      outOfStockCount: number;
-      manufacturers: Array<{ label: string; total: number }>;
-      flavorProfiles: Array<{ key: string; label: string; total: number }>;
-    };
-    product: {
-      smokeCtaTotal: number;
-      ratingsTotal: number;
-      avgGuestRating: number;
-      topMixes: Array<{ mixId: string; mixName: string; smokeCtaCount: number; avgRating: number }>;
-      topRatedMixes: Array<{ mixId: string; mixName: string; avgRating: number; ratingsCount: number }>;
-      ratingDistribution: Array<{ value: number; count: number }>;
-      activity: Array<{ date: string; smokeCtaCount: number; ratingsCount: number }>;
-    };
-    ops: {
-      blockedByInventoryCount: number;
-      blockedMixes: Array<{ mixId: string; mixName: string; missingComponents: string[] }>;
-      railHealth: Array<{ railId: string; totalMixCount: number }>;
-    };
+    period: { key: string; days: number };
+    enough: boolean;
+    kpi: { choices: number; ownMixes: number; mixesChosen: number; avgRating: number | null; ratingsCount: number };
+    signals: { hiddenMixes: Array<{ mixId: string; mixName: string }> };
   };
 
-  assert.equal(dashboardBody.window.key, '7d');
-  assert.equal(dashboardBody.window.days, 7);
-  assert.equal(dashboardBody.inventory.total, seedTobaccos.length);
-  assert.equal(dashboardBody.product.smokeCtaTotal, 3);
-  assert.equal(dashboardBody.product.ratingsTotal, 2);
-  assert.equal(dashboardBody.product.avgGuestRating, 4);
-  assert.deepEqual(dashboardBody.product.topMixes[0], {
-    mixId: 'mix-citrus-scout',
-    mixName: 'Цитрусовый караван',
-    smokeCtaCount: 2,
-    avgRating: 5,
-    ratingsCount: 1,
-  });
-  assert.deepEqual(dashboardBody.product.topRatedMixes[0], {
-    mixId: 'mix-citrus-scout',
-    mixName: 'Цитрусовый караван',
-    smokeCtaCount: 2,
-    avgRating: 5,
-    ratingsCount: 1,
-  });
-  assert.equal(dashboardBody.inventory.manufacturers[0]?.label, 'Ателье Reserve');
-  assert.equal(dashboardBody.inventory.flavorProfiles.some((item) => item.label === 'Свежие'), true);
-  assert.equal(dashboardBody.product.ratingDistribution.find((item) => item.value === 5)?.count, 1);
-  assert.equal(dashboardBody.ops.blockedByInventoryCount, 1);
-  assert.equal(dashboardBody.ops.blockedMixes[0]?.mixId, 'mix-peach-mirage');
-  assert.equal(dashboardBody.ops.blockedMixes[0]?.mixName, 'Персиковый мираж');
-  assert.deepEqual(dashboardBody.ops.blockedMixes[0]?.missingComponents, ['Peach Silk']);
-  assert.equal(dashboardBody.ops.railHealth[0]?.railId, 'rail-statistical-top');
-  assert.equal(dashboardBody.product.activity.length, 7);
-  assert.equal(
-    dashboardBody.product.activity.reduce((sum, item) => sum + item.smokeCtaCount, 0),
-    3,
-  );
-  assert.equal(
-    dashboardBody.product.activity.reduce((sum, item) => sum + item.ratingsCount, 0),
-    2,
-  );
+  assert.equal(dashboardBody.period.key, '7d');
+  assert.equal(dashboardBody.period.days, 7);
+  // Три выбора — меньше 20: графиков нет, плитки и сигналы есть.
+  assert.equal(dashboardBody.enough, false);
+  assert.equal(dashboardBody.kpi.choices, 3);
+  assert.equal(dashboardBody.kpi.ownMixes, 0);
+  assert.equal(dashboardBody.kpi.mixesChosen, 2);
+  assert.equal(dashboardBody.kpi.ratingsCount, 2);
+  assert.equal(dashboardBody.kpi.avgRating, 4);
+  assert.deepEqual(dashboardBody.signals.hiddenMixes, [{ mixId: 'mix-peach-mirage', mixName: 'Персиковый мираж' }]);
 
   await app.close();
 });

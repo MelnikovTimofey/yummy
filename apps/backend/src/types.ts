@@ -1,5 +1,4 @@
 import type {
-  DashboardSummary,
   IntroCard,
   InventoryBatchResult,
   InventoryListResult,
@@ -302,8 +301,6 @@ export type StaffShelfAnalogsResponse = {
 export type StaffMixesResponse = {
   items: MixView[];
 } & MixListResult;
-
-export type StaffDashboardSummaryResponse = DashboardSummary;
 
 export type StaffInventoryResponse = InventoryListResult;
 

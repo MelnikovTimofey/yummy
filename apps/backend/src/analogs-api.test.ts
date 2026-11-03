@@ -103,9 +103,9 @@ test.describe('аналоги в выдаче', () => {
       blocked?.missing.map((item) => item.tobaccoId),
       [GONE, 'tobacco-mint-veil'],
     );
-    const dashboard = await app.inject({ method: 'GET', url: '/staff/dashboard/summary', headers });
-    const blockedMixes = (dashboard.json() as { ops: { blockedMixes: Array<{ mixId: string; missing: unknown[] }> } }).ops.blockedMixes;
-    assert.equal(blockedMixes.find((item) => item.mixId === MIX)?.missing.length, 2);
+    const dashboard = await app.inject({ method: 'GET', url: '/staff/dashboard/choices', headers });
+    const { hiddenMixes } = (dashboard.json() as { signals: { hiddenMixes: Array<{ mixId: string }> } }).signals;
+    assert.ok(hiddenMixes.some((item) => item.mixId === MIX));
   });
 
   test('п.5: в «Миксах» статус «с заменой» с парой, отдельно от «Виден гостю»', async () => {
@@ -127,9 +127,9 @@ test.describe('аналоги в выдаче', () => {
     assert.ok(!(await staffMixes(app, headers, 'guest-visible')).items.some((item) => item.id === MIX));
     assert.ok(!(await staffMixes(app, headers, 'blocked')).items.some((item) => item.id === MIX));
 
-    const dashboard = await app.inject({ method: 'GET', url: '/staff/dashboard/summary', headers });
-    const summary = dashboard.json() as { ops: { blockedMixes: Array<{ mixId: string }> } };
-    assert.ok(!summary.ops.blockedMixes.some((item) => item.mixId === MIX));
+    const dashboard = await app.inject({ method: 'GET', url: '/staff/dashboard/choices', headers });
+    const { hiddenMixes } = (dashboard.json() as { signals: { hiddenMixes: Array<{ mixId: string }> } }).signals;
+    assert.ok(!hiddenMixes.some((item) => item.mixId === MIX));
   });
 
   test('п.6: табак вернулся на полку — исходный состав без замены', async () => {

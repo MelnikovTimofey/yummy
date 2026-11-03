@@ -5,7 +5,6 @@ import { buildGuestApp as buildApp } from './test-app';
 import { prisma } from './db';
 import {
   createTobacco,
-  getDashboardSummary,
   getGuestHomeRails,
   getMixById,
   getSmokeCtaEvents,
@@ -185,16 +184,14 @@ test.describe('custom mix smoke event', () => {
     ]);
   });
 
-  test('does not create smoke CTA events and leaves rails and dashboard unchanged', async () => {
-    const snapshot = async () => {
-      const { window, ...dashboard } = await getDashboardSummary();
-      return {
-        events: await getSmokeCtaEvents(),
-        summary: await getSmokeCtaSummary(),
-        rails: await getGuestHomeRails(),
-        dashboard,
-      };
-    };
+  // Свой микс — выбор на Дашборде (#520, guest-analytics.test.ts), но не событие
+  // «Покурить»: статистика каталожных миксов и рейлы от него не меняются.
+  test('does not create smoke CTA events and leaves rails unchanged', async () => {
+    const snapshot = async () => ({
+      events: await getSmokeCtaEvents(),
+      summary: await getSmokeCtaSummary(),
+      rails: await getGuestHomeRails(),
+    });
 
     // Живое событие каталога — чтобы статистика была непустой и сдвиг был виден.
     const scout = await getMixById('mix-citrus-scout');
