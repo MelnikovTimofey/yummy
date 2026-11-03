@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { CalendarClock } from 'lucide-react';
 import type { ReorderGroup, ReorderView } from '@/contracts';
-import { formatGramPrice, formatNumber } from '@/lib/shelf';
+import { formatNumber } from '@/lib/shelf';
 import {
+  formatGramPrice,
   REORDER_COPY_HINT,
   REORDER_HINT,
   groupCaption,

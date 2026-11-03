@@ -1456,17 +1456,14 @@ export const parseDateTimeLocalInput = (value: string) => {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
 };
 
-// --- Полка (#211, #306): ответы /staff/shelf* ------------------------------
+// --- Полка (#211, #518): ответы /staff/shelf* -------------------------------
 
+// Статус по расчёту в граммах — остался у «К заказу» и блока «Полка» дашборда.
 export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
 export type ShelfRateKind = 'own' | 'brand' | 'none';
-// mark — остаток указал мастер (отметка сегодня или «Закончился»), forecast — прогноз.
-export type ShelfLeftSource = 'mark' | 'forecast';
 export type ShelfTrialVerdict = 'yes' | 'no';
-export type ShelfReceiptKind = 'invoice' | 'start' | 'manual';
-// «Закончился» — отметка (count) с 0 г.
-export type StockEntryKind = 'receipt' | 'count' | 'writeoff';
+export type ShelfArrivalKind = 'invoice' | 'start' | 'manual';
 
 export type ShelfTobacco = {
   id: string;
@@ -1481,7 +1478,15 @@ export type ShelfTobacco = {
   sourceUrl: string | null;
 };
 
-export type ShelfReceipt = { at: string; grams: number; kind: ShelfReceiptKind; number: string | null; label: string };
+// Приход (#518): строка принятого счёта — со штуками, стартовый и ручной — без штук.
+export type ShelfArrival = {
+  at: string;
+  kind: ShelfArrivalKind;
+  supplier: string | null;
+  number: string | null;
+  qty: number | null;
+  deliveryId: string | null;
+};
 
 // Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
 // пока сам табак закончился.
@@ -1492,21 +1497,10 @@ export type ShelfSimilar = TobaccoRef & { flavors: string[] };
 export type ShelfRow = {
   tobacco: ShelfTobacco;
   shelfStatus: ShelfItemStatus;
-  status: ShelfStatus;
   guestAvailable: boolean;
-  // Остаток сейчас по расчёту; null — прихода не было.
-  leftGrams: number | null;
-  // Уровень сразу после последнего прихода — база долей ¾ ½ ⅓ ¼ и полосы.
-  fullGrams: number | null;
-  lastReceipt: ShelfReceipt | null;
-  lastCount: { at: string; grams: number; fraction: number | null } | null;
-  leftSource: ShelfLeftSource | null;
-  rate: number | null;
-  rateKind: ShelfRateKind;
-  // Расход в месяц = г/день × 30.
-  monthGrams: number | null;
-  daysLeft: number | null;
-  endsAt: string | null;
+  // С какого момента «Закончился»; null — «Есть».
+  outAt: string | null;
+  lastArrival: ShelfArrival | null;
   mixCount: number;
   keepStocked: boolean;
   stopped: boolean;
@@ -1519,8 +1513,6 @@ export type ShelfRow = {
   analogs: ShelfAnalog[];
 };
 
-export type ShelfCounterKey = 'all' | ShelfStatus;
-export type ShelfCounters = Record<ShelfCounterKey, number>;
 // budgetKop — бюджет на табак в месяц (#326), null — не указан.
 export type ShelfSettings = { bowlGrams: number; leadDays: number; budgetKop: number | null };
 // Интервал поставок по принятым счетам (#325): days — null, пока поставок меньше трёх.
@@ -1528,44 +1520,20 @@ export type ShelfInterval = { days: number | null; deliveries: number };
 // Горизонт «Заканчивается» и «К заказу»: интервал + срок поставки; until — дата.
 export type ShelfHorizon = { days: number; until: string };
 
+// Настройки, интервал и горизонт нужны только «К заказу» и дашборду, пока они на граммах.
 export type ShelfView = {
   rows: ShelfRow[];
-  counters: ShelfCounters;
-  totals: { kg: number };
-  today: { grams: number; bowls: number };
   settings: ShelfSettings;
   interval: ShelfInterval;
   horizon: ShelfHorizon;
 };
 
-export type StockEntry = {
-  id: string;
-  kind: StockEntryKind;
-  grams: number;
-  fraction: number | null;
-  at: string;
-  priceKop: number | null;
-  reason: string | null;
-  actorLogin: string | null;
-  delivery: { id: string; kind: string; number: string | null; supplier: string | null } | null;
-  // У отметки: расход отрезка, который она закрыла.
-  usage: { from: string; gramsPerDay: number } | null;
-  // У отметки: отрезок отрицательный и в расход не пошёл.
-  excluded: boolean;
-};
-
-export type ShelfWeek = { from: string; to: string; gramsPerDay: number; partial: boolean };
-
 export type ShelfCard = ShelfRow & {
-  // Новые сверху.
-  history: StockEntry[];
-  weekly: ShelfWeek[];
-  gramPriceKop: number | null;
-  bowlCostKop: number | null;
   mixes: Array<{ id: string; name: string; status: MixStatus | null; substitution: MixSubstitution | null }>;
   // 2–5 табаков с полки в наличии, похожих по flavors и flavorProfiles (PRD §9.3 п.6).
   similar: ShelfSimilar[];
-  settings: ShelfSettings;
+  // Новые первыми.
+  arrivals: ShelfArrival[];
 };
 
 // PUT /staff/shelf/:tobaccoId/analogs. unblockedMixes — миксы, которые из «блокирован»
@@ -1601,11 +1569,18 @@ const normalizeShelfHorizon = (value: unknown, settings: ShelfSettings): ShelfHo
   return { days: toNumber(raw.days, settings.leadDays), until: toIsoString(raw.until, '') };
 };
 
+const normalizeShelfArrival = (raw: Record<string, unknown>): ShelfArrival => ({
+  at: toIsoString(raw.at, ''),
+  kind: pickOne(raw.kind, ['invoice', 'start', 'manual'] as const, 'manual'),
+  supplier: toNullableString(raw.supplier),
+  number: toNullableString(raw.number),
+  qty: toNullableNumber(raw.qty),
+  deliveryId: toNullableString(raw.deliveryId),
+});
+
 export const normalizeShelfRow = (value: unknown): ShelfRow => {
   const raw = isRecord(value) ? value : {};
   const tobacco = isRecord(raw.tobacco) ? raw.tobacco : {};
-  const receipt = isRecord(raw.lastReceipt) ? raw.lastReceipt : null;
-  const count = isRecord(raw.lastCount) ? raw.lastCount : null;
 
   return {
     tobacco: {
@@ -1621,28 +1596,9 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
       sourceUrl: typeof tobacco.sourceUrl === 'string' && tobacco.sourceUrl.trim() ? tobacco.sourceUrl : null,
     },
     shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
-    status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
     guestAvailable: toBoolean(raw.guestAvailable, false),
-    leftGrams: toNullableNumber(raw.leftGrams),
-    fullGrams: toNullableNumber(raw.fullGrams),
-    lastReceipt: receipt
-      ? {
-          at: toIsoString(receipt.at, ''),
-          grams: toNumber(receipt.grams, 0),
-          kind: pickOne(receipt.kind, ['invoice', 'start', 'manual'] as const, 'manual'),
-          number: toNullableString(receipt.number),
-          label: String(receipt.label ?? ''),
-        }
-      : null,
-    lastCount: count
-      ? { at: toIsoString(count.at, ''), grams: toNumber(count.grams, 0), fraction: toNullableNumber(count.fraction) }
-      : null,
-    leftSource: raw.leftSource === 'mark' || raw.leftSource === 'forecast' ? raw.leftSource : null,
-    rate: toNullableNumber(raw.rate),
-    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
-    monthGrams: toNullableNumber(raw.monthGrams),
-    daysLeft: toNullableNumber(raw.daysLeft),
-    endsAt: toIsoString(raw.endsAt, '') || null,
+    outAt: toIsoString(raw.outAt, '') || null,
+    lastArrival: isRecord(raw.lastArrival) ? normalizeShelfArrival(raw.lastArrival) : null,
     mixCount: toNumber(raw.mixCount, 0),
     keepStocked: toBoolean(raw.keepStocked, true),
     stopped: toBoolean(raw.stopped, false),
@@ -1661,54 +1617,13 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
 
 export const normalizeShelfView = (value: unknown): ShelfView => {
   const raw = isRecord(value) ? value : {};
-  const counters = isRecord(raw.counters) ? raw.counters : {};
-  const totals = isRecord(raw.totals) ? raw.totals : {};
-  const today = isRecord(raw.today) ? raw.today : {};
   const settings = normalizeShelfSettings(raw.settings);
 
   return {
     rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow),
-    counters: {
-      all: toNumber(counters.all, 0),
-      ok: toNumber(counters.ok, 0),
-      ending: toNumber(counters.ending, 0),
-      check: toNumber(counters.check, 0),
-      out: toNumber(counters.out, 0),
-      stop: toNumber(counters.stop, 0),
-      plan: toNumber(counters.plan, 0),
-    },
-    totals: { kg: toNumber(totals.kg, 0) },
-    today: { grams: toNumber(today.grams, 0), bowls: toNumber(today.bowls, 0) },
     settings,
     interval: normalizeShelfInterval(raw.interval),
     horizon: normalizeShelfHorizon(raw.horizon, settings),
-  };
-};
-
-const normalizeStockEntry = (value: unknown): StockEntry => {
-  const raw = isRecord(value) ? value : {};
-  const delivery = isRecord(raw.delivery) ? raw.delivery : null;
-  const usage = isRecord(raw.usage) ? raw.usage : null;
-
-  return {
-    id: String(raw.id ?? ''),
-    kind: pickOne(raw.kind, ['receipt', 'count', 'writeoff'] as const, 'count'),
-    grams: toNumber(raw.grams, 0),
-    fraction: toNullableNumber(raw.fraction),
-    at: toIsoString(raw.at, ''),
-    priceKop: toNullableNumber(raw.priceKop),
-    reason: toNullableString(raw.reason),
-    actorLogin: toNullableString(raw.actorLogin),
-    delivery: delivery
-      ? {
-          id: String(delivery.id ?? ''),
-          kind: String(delivery.kind ?? 'manual'),
-          number: toNullableString(delivery.number),
-          supplier: toNullableString(delivery.supplier),
-        }
-      : null,
-    usage: usage ? { from: toIsoString(usage.from, ''), gramsPerDay: toNumber(usage.gramsPerDay, 0) } : null,
-    excluded: toBoolean(raw.excluded, false),
   };
 };
 
@@ -1718,15 +1633,6 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
 
   return {
     ...normalizeShelfRow(record),
-    history: (Array.isArray(record.history) ? record.history : []).map(normalizeStockEntry),
-    weekly: (Array.isArray(record.weekly) ? record.weekly : []).filter(isRecord).map((week) => ({
-      from: toIsoString(week.from, ''),
-      to: toIsoString(week.to, ''),
-      gramsPerDay: toNumber(week.gramsPerDay, 0),
-      partial: toBoolean(week.partial, false),
-    })),
-    gramPriceKop: toNullableNumber(record.gramPriceKop),
-    bowlCostKop: toNullableNumber(record.bowlCostKop),
     mixes: (Array.isArray(record.mixes) ? record.mixes : []).filter(isRecord).map((mix) => ({
       id: String(mix.id ?? ''),
       name: String(mix.name ?? ''),
@@ -1737,7 +1643,7 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
       ...normalizeMixTobaccoRef(item),
       flavors: uniqueStrings(toStringList(item.flavors)),
     })),
-    settings: normalizeShelfSettings(record.settings),
+    arrivals: (Array.isArray(record.arrivals) ? record.arrivals : []).filter(isRecord).map(normalizeShelfArrival),
   };
 };
 
@@ -1750,12 +1656,6 @@ export const normalizeShelfAnalogsResponse = (value: unknown): ShelfAnalogsRespo
       name: String(mix.name ?? ''),
     })),
   };
-};
-
-// Ответ «Закончился», отметки и списания: entryId — для отмены в тосте.
-export const normalizeShelfEntryResponse = (value: unknown) => {
-  const raw = isRecord(value) ? value : {};
-  return { entryId: String(raw.entryId ?? ''), item: normalizeShelfRow(raw.item) };
 };
 
 // «Закончились» разом (#333): POST /staff/shelf/empty. batchId — для одной отмены
@@ -1785,10 +1685,34 @@ export const normalizeShelfEmptyManyResponse = (value: unknown): ShelfEmptyManyR
   };
 };
 
-// Отмена пакета: DELETE /staff/shelf/batches/:batchId — строки после отмены.
+// Отмена пакета: DELETE /staff/shelf/batches/:batchId и /staff/shelf/restock-batches/:batchId,
+// «Держать постоянно» пачкой (POST /staff/shelf/keep) — строки после действия.
 export const normalizeShelfBatchUndoResponse = (value: unknown): { items: ShelfRow[] } => ({
   items: shelfRows(isRecord(value) ? value.items : null),
 });
+
+// «Вернуть в наличие» (#518): POST /staff/shelf/:tobaccoId/restock — пакет из одного табака.
+export const normalizeShelfRestockResponse = (value: unknown): { batchId: string; item: ShelfRow } => {
+  const raw = isRecord(value) ? value : {};
+  return { batchId: String(raw.batchId ?? ''), item: normalizeShelfRow(raw.item) };
+};
+
+// Пачкой: POST /staff/shelf/restock. Пропущены «уже есть» (in) и «в плане» (plan).
+export type ShelfRestockSkip = { tobaccoId: string; reason: 'in' | 'plan' };
+export type ShelfRestockManyResponse = { batchId: string; done: string[]; skipped: ShelfRestockSkip[]; items: ShelfRow[] };
+
+export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockManyResponse => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    batchId: String(raw.batchId ?? ''),
+    done: toStringList(raw.done),
+    skipped: (Array.isArray(raw.skipped) ? raw.skipped : []).filter(isRecord).map((skip) => ({
+      tobaccoId: String(skip.tobaccoId ?? ''),
+      reason: skip.reason === 'plan' ? 'plan' : 'in',
+    })),
+    items: shelfRows(raw.items),
+  };
+};
 
 // --- «К заказу» и блок «Полка» дашборда (#213) -------------------------------
 

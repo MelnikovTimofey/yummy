@@ -1,32 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowLeftRight, ArrowUp, Search, X } from 'lucide-react';
-import type { InventoryTobacco, ShelfAnalog, ShelfCard, ShelfRow, TobaccoRef } from '@/contracts';
-import { mixStatusTag, substitutionNote } from '@/components/mixes/mix-status';
-import { describeShelfError } from '@/lib/shelf';
-import { analogCell, analogStock, moveAnalog, withoutAnalog } from '@/lib/shelf-analogs';
-
-const SubMark = ({ label }: { label: string }) => (
-  <span className="shelf-sub-mark" role="img" aria-label={label} title={label}>
-    <ArrowLeftRight size={12} aria-hidden />
-  </span>
-);
-
-// Колонка «Аналоги» (#482): два первых в порядке замены, остальные — «ещё N».
-export const ShelfAnalogsCell = ({ analogs }: { analogs: ShelfAnalog[] }) => {
-  if (!analogs.length) return <span className="shelf-faint">—</span>;
-  const { head, rest, title } = analogCell(analogs);
-  return (
-    <span className="shelf-analogs" title={title}>
-      {head.map((item, index) => (
-        <span key={item.tobaccoId} className="shelf-analogs__item" data-off={!item.inStock || undefined}>
-          <span className="shelf-analogs__name">{item.name}</span>
-          {item.substituting ? <SubMark label="стоит в миксах вместо этого табака" /> : null}
-          {index === 1 && rest ? <span className="shelf-faint">ещё {rest}</span> : null}
-        </span>
-      ))}
-    </span>
-  );
-};
+import { ArrowDown, ArrowUp, Search, X } from 'lucide-react';
+import type { InventoryTobacco, ShelfCard, ShelfRow, TobaccoRef } from '@/contracts';
+import { cardMixState, describeShelfError } from '@/lib/shelf';
+import { analogStock, moveAnalog, withoutAnalog } from '@/lib/shelf-analogs';
 
 export type AnalogChange = (ids: string[], added?: TobaccoRef) => Promise<void>;
 
@@ -115,13 +91,11 @@ const AnalogSearch = ({
 export const ShelfAnalogsSections = ({
   row,
   card,
-  rows,
   searchCatalog,
   onChange,
 }: {
   row: ShelfRow;
   card: ShelfCard | null;
-  rows: ShelfRow[];
   searchCatalog: (query: string) => Promise<InventoryTobacco[]>;
   onChange: AnalogChange;
 }) => {
@@ -156,7 +130,7 @@ export const ShelfAnalogsSections = ({
                     <b>{item.name}</b>
                   </span>
                   <span className="shelf-analog__stock" data-off={!item.inStock || undefined}>
-                    {analogStock(item, rows)}
+                    {analogStock(item)}
                   </span>
                   <span className="shelf-analog__actions">
                     <button
@@ -233,24 +207,17 @@ export const ShelfAnalogsSections = ({
   );
 };
 
-// «В миксах»: статус каждого микса, у микса с заменой — что чем заменено.
+// «В миксах» (#shot=card): у каждого микса — чем он закрыт, пока табака нет.
 export const ShelfCardMixes = ({ mixes, onOpenMix }: { mixes: ShelfCard['mixes']; onOpenMix: (mixId: string) => void }) => (
-  <ul className="shelf-analog-list">
+  <ul className="shelf-card-list">
     {mixes.map((mix) => {
-      const tag = mix.status ? mixStatusTag(mix.status) : null;
+      const state = cardMixState(mix);
       return (
-        <li key={mix.id} className="shelf-card-mix">
+        <li key={mix.id} className="shelf-card-list__item">
           <button type="button" className="shelf-link shelf-card-mix__name" onClick={() => onOpenMix(mix.id)}>
             {mix.name}
           </button>
-          {tag ? (
-            <span className={tag.ghost ? 'tag tag--ghost' : 'tag'} data-tone={tag.tone}>
-              {tag.label}
-            </span>
-          ) : null}
-          {mix.status === 'substituted' && mix.substitution ? (
-            <span className="shelf-card-mix__note">{substitutionNote(mix.substitution)}</span>
-          ) : null}
+          {state ? <span className="shelf-card-list__note" data-tone={state.danger ? 'danger' : undefined}>{state.text}</span> : null}
         </li>
       );
     })}

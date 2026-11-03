@@ -10,8 +10,8 @@ import {
   type ShelfStatus,
   type ShelfTrialVerdict,
 } from '../contracts';
-import type { TextSegment } from './reorder';
-import { formatMonthGrams, formatNumber, formatOneDecimal, formatShelfDate, type ShelfTone } from './shelf';
+import { formatMonthGrams, formatOneDecimal, type ShelfTone, type TextSegment } from './reorder';
+import { formatNumber, formatShelfDate } from './shelf';
 
 // Чистая логика вида «Закупка» на «Полке» (#327–#331,
 // design/design_handoff_purchase_analytics, #shot=purchase-*). Подсказки — только

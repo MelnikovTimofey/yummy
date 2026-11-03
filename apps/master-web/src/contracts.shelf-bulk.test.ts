@@ -1,13 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeShelfBatchUndoResponse, normalizeShelfEmptyManyResponse } from './contracts';
+import {
+  normalizeShelfBatchUndoResponse,
+  normalizeShelfEmptyManyResponse,
+  normalizeShelfRestockManyResponse,
+  normalizeShelfRestockResponse,
+} from './contracts';
 
-const item = (id: string) => ({
+const item = (id: string, outAt: string | null = '2026-11-03T09:00:00.000Z') => ({
   tobacco: { id, manufacturer: 'Black Burn', lineName: '', name: id },
   shelfStatus: 'active',
-  status: 'out',
-  leftGrams: 0,
-  fullGrams: 200,
+  outAt,
   mixCount: 3,
   keepStocked: true,
 });
@@ -35,7 +38,7 @@ test('normalizeShelfEmptyManyResponse: пакет, отмеченные, про�
   assert.equal(response.hiddenMixes, 7);
   assert.equal(response.items.length, 2);
   assert.equal(response.items[0].tobacco.id, 't1');
-  assert.equal(response.items[0].status, 'out');
+  assert.equal(response.items[0].outAt, '2026-11-03T09:00:00.000Z');
   assert.equal(response.items[1].keepStocked, true);
 });
 
@@ -49,9 +52,37 @@ test('normalizeShelfEmptyManyResponse: пустой ответ — пустой 
 });
 
 test('normalizeShelfBatchUndoResponse: строки после отмены пакета', () => {
-  const response = normalizeShelfBatchUndoResponse({ items: [{ ...item('t1'), status: 'ok', leftGrams: 120 }] });
+  const response = normalizeShelfBatchUndoResponse({ items: [item('t1', null)] });
   assert.equal(response.items.length, 1);
-  assert.equal(response.items[0].status, 'ok');
-  assert.equal(response.items[0].leftGrams, 120);
+  assert.equal(response.items[0].outAt, null);
   assert.deepEqual(normalizeShelfBatchUndoResponse(undefined).items, []);
+});
+
+test('normalizeShelfRestockResponse: «Вернуть в наличие» одного табака отдаёт пакет для отмены (#518)', () => {
+  const response = normalizeShelfRestockResponse({ batchId: 'r1', item: item('t1', null) });
+  assert.equal(response.batchId, 'r1');
+  assert.equal(response.item.tobacco.id, 't1');
+  assert.equal(response.item.outAt, null);
+});
+
+test('normalizeShelfRestockManyResponse: вернувшиеся, пропущенные «уже есть» и «в плане»', () => {
+  const response = normalizeShelfRestockManyResponse({
+    batchId: 'r2',
+    done: ['t1'],
+    skipped: [
+      { tobaccoId: 't2', reason: 'in' },
+      { tobaccoId: 't3', reason: 'plan' },
+      { tobaccoId: 't4', reason: 'weird' },
+    ],
+    items: [item('t1', null)],
+  });
+  assert.equal(response.batchId, 'r2');
+  assert.deepEqual(response.done, ['t1']);
+  assert.deepEqual(response.skipped, [
+    { tobaccoId: 't2', reason: 'in' },
+    { tobaccoId: 't3', reason: 'plan' },
+    { tobaccoId: 't4', reason: 'in' },
+  ]);
+  assert.equal(response.items[0].outAt, null);
+  assert.deepEqual(normalizeShelfRestockManyResponse(null), { batchId: '', done: [], skipped: [], items: [] });
 });

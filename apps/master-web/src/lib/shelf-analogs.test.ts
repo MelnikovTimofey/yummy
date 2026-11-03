@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { ShelfAnalog, ShelfRow } from '@/contracts';
-import { analogCell, analogStock, analogToastText, moveAnalog, withoutAnalog } from './shelf-analogs';
+import type { ShelfAnalog } from '@/contracts';
+import { analogStock, analogToastText, moveAnalog, withoutAnalog } from './shelf-analogs';
 
 // Аналоги на «Полке» (#482, мокап analogs @ a74ab4c2, экраны shelf и shelf-analogs).
 
@@ -11,14 +11,6 @@ const analog = (name: string, inStock = true, substituting = false): ShelfAnalog
   name,
   inStock,
   substituting,
-});
-
-test('колонка «Аналоги»: два первых, дальше «ещё N», полный список в подсказке', () => {
-  assert.deepEqual(analogCell([]), { head: [], rest: 0, title: '' });
-  const cell = analogCell([analog('Ледяная мята'), analog('Supernova'), analog('Spearmint', false)]);
-  assert.deepEqual(cell.head.map((item) => item.name), ['Ледяная мята', 'Supernova']);
-  assert.equal(cell.rest, 1);
-  assert.equal(cell.title, 'Ледяная мята, Supernova, Spearmint');
 });
 
 test('порядок замены: ↑ ↓ меняют соседей, за края не выходят; × убирает', () => {
@@ -45,9 +37,7 @@ test('тост «Сделать аналогом»: вторая строка н
   );
 });
 
-test('остаток аналога в карточке: по полке, закончившийся — «закончился»', () => {
-  const rows = [{ tobacco: { id: 'lemon-shock' }, leftGrams: 140, fullGrams: 200, status: 'ok', daysLeft: 23 }] as unknown as ShelfRow[];
-  assert.equal(analogStock(analog('Lemon Shock'), rows), '140 г');
-  assert.equal(analogStock(analog('Lemonblast', false), rows), 'закончился');
-  assert.equal(analogStock(analog('Feijoa'), rows), 'есть');
+test('наличие аналога в карточке: есть или закончился', () => {
+  assert.equal(analogStock(analog('Lemon Shock')), 'есть');
+  assert.equal(analogStock(analog('Lemonblast', false)), 'закончился');
 });

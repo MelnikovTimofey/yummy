@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
 import { createLatestRequestGuard } from '@/lib/latest-request-guard';
-import { defaultReceiptGrams, summarizeShelf } from '@/lib/shelf';
 import { optimisticEmpty } from '@/lib/shelf-bulk';
 import { patchPurchase, type PurchasePatch } from '@/lib/purchase';
 import {
@@ -14,7 +13,8 @@ import {
   normalizeShelfBatchUndoResponse,
   normalizeShelfCard,
   normalizeShelfEmptyManyResponse,
-  normalizeShelfEntryResponse,
+  normalizeShelfRestockManyResponse,
+  normalizeShelfRestockResponse,
   normalizeShelfRow,
   normalizeShelfSettings,
   normalizeShelfView,
@@ -45,10 +45,11 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 const shelfPath = (tobaccoId: string) => `/staff/shelf/${encodeURIComponent(tobaccoId)}`;
 
-// Полка грузится одним запросом; после действия строка приходит с сервера,
-// а счётчики пересчитываются на месте, без перезагрузки всей полки.
-// «К заказу» (#213) считает сервер по всей полке, поэтому его перечитываем
-// вместе с полкой и после каждого действия.
+const itemOf = (value: unknown) => normalizeShelfRow(value && typeof value === 'object' ? (value as { item?: unknown }).item : null);
+
+// Полка грузится одним запросом; после действия строка приходит с сервера и
+// встаёт на место, без перезагрузки всей полки. «К заказу» (#213) считает сервер
+// по всей полке, поэтому его перечитываем вместе с полкой и после каждого действия.
 export const useShelf = (token: string) => {
   const [view, setView] = useState<ShelfView | null>(null);
   const [status, setStatus] = useState<ShelfLoadStatus>('idle');
@@ -105,7 +106,7 @@ export const useShelf = (token: string) => {
     }
   }, [loadReorder, token]);
 
-  // Строки с сервера (или оптимистичные) — на место, счётчики пересчитываются.
+  // Строки с сервера (или оптимистичные) — на место.
   const putRows = useCallback((items: ShelfRow[]) => {
     setView((current) => {
       if (!current) return current;
@@ -118,102 +119,116 @@ export const useShelf = (token: string) => {
             ? rows.map((row) => (row.tobacco.id === item.tobacco.id ? item : row))
             : [...rows, item];
       }
-      return { ...current, rows, ...summarizeShelf(rows) };
+      return { ...current, rows };
     });
   }, []);
 
-  const applyRow = useCallback((item: ShelfRow) => {
-    putRows([item]);
+  const applyRows = useCallback((items: ShelfRow[]) => {
+    putRows(items);
     void loadReorder();
-    return item;
+    return items;
   }, [loadReorder, putRows]);
 
   const send = useCallback(
-    async (path: string, init: RequestInit) => applyRow(normalizeShelfRow(readEntityPayload(await requestJson<unknown>(path, init, token)))),
-    [applyRow, token],
+    async (path: string, init: RequestInit) =>
+      applyRows([normalizeShelfRow(readEntityPayload(await requestJson<unknown>(path, init, token)))])[0],
+    [applyRows, token],
   );
 
-  // «Закончился», отметка и списание возвращают id записи журнала — для отмены в тосте.
-  const sendEntry = useCallback(async (path: string, init: RequestInit) => {
-    const response = normalizeShelfEntryResponse(await requestJson<unknown>(path, init, token));
-    applyRow(response.item);
-    return response;
-  }, [applyRow, token]);
-
-  const markEmpty = useCallback((tobaccoId: string) => sendEntry(`${shelfPath(tobaccoId)}/empty`, json('POST')), [sendEntry]);
-  const count = useCallback(
-    (tobaccoId: string, input: { fraction: number } | { grams: number }) => sendEntry(`${shelfPath(tobaccoId)}/counts`, json('POST', input)),
-    [sendEntry],
-  );
-  const writeOff = useCallback(
-    (tobaccoId: string, input: { grams: number; reason: string }) => sendEntry(`${shelfPath(tobaccoId)}/write-offs`, json('POST', input)),
-    [sendEntry],
-  );
-  const addReceipt = useCallback(
-    (tobaccoId: string, input: { grams: number; priceKop?: number }) => send(`${shelfPath(tobaccoId)}/receipts`, json('POST', input)),
-    [send],
-  );
-  // Отмена в тосте и удаление из истории карточки.
-  const deleteEntry = useCallback((entryId: string) => send(`/staff/shelf/entries/${encodeURIComponent(entryId)}`, json('DELETE')), [send]);
   const update = useCallback((tobaccoId: string, patch: ShelfPatch) => send(shelfPath(tobaccoId), json('PATCH', patch)), [send]);
+
+  // «Закончился»: ответ с id записи журнала — по нему отмена.
+  const markEmpty = useCallback(async (tobaccoId: string) => {
+    const response = await requestJson<unknown>(`${shelfPath(tobaccoId)}/empty`, json('POST'), token);
+    const entryId = String((response as { entryId?: unknown } | null)?.entryId ?? '');
+    return { entryId, item: applyRows([itemOf(response)])[0] };
+  }, [applyRows, token]);
+
+  // «Вернуть в наличие» (#518): пакет из одного табака, отмена — по пакету.
+  const restock = useCallback(async (tobaccoId: string) => {
+    const response = normalizeShelfRestockResponse(await requestJson<unknown>(`${shelfPath(tobaccoId)}/restock`, json('POST'), token));
+    applyRows([response.item]);
+    return response;
+  }, [applyRows, token]);
+
+  // Отмена «Закончился»: убираем отметку из журнала. Если граммов по журналу и до неё
+  // не было (табак возвращали без граммов), строка останется «Закончился» — тогда
+  // возвращаем в наличие явно.
+  const undoEmpty = useCallback(async (tobaccoId: string, entryId: string) => {
+    const item = await send(`/staff/shelf/entries/${encodeURIComponent(entryId)}`, json('DELETE'));
+    return item.outAt ? (await restock(tobaccoId)).item : item;
+  }, [restock, send]);
+
+  const undoRestock = useCallback(async (batchId: string) => {
+    const { items } = normalizeShelfBatchUndoResponse(
+      await requestJson<unknown>(`/staff/shelf/restock-batches/${encodeURIComponent(batchId)}`, json('DELETE'), token),
+    );
+    return applyRows(items);
+  }, [applyRows, token]);
 
   // «Закончились» разом (#333): строки гаснут сразу, ошибка — возвращаем как были.
   const emptyMany = useCallback(async (rows: ShelfRow[]) => {
     const at = new Date().toISOString();
-    putRows(rows.map((row) => (row.status === 'out' || row.status === 'plan' ? row : optimisticEmpty(row, at))));
+    putRows(rows.map((row) => (row.outAt || row.shelfStatus === 'plan' ? row : optimisticEmpty(row, at))));
     try {
       const response = normalizeShelfEmptyManyResponse(
         await requestJson<unknown>('/staff/shelf/empty', json('POST', { tobaccoIds: rows.map((row) => row.tobacco.id) }), token),
       );
-      putRows(response.items);
-      void loadReorder();
+      applyRows(response.items);
       return response;
     } catch (cause) {
       putRows(rows);
       throw cause;
     }
-  }, [loadReorder, putRows, token]);
+  }, [applyRows, putRows, token]);
 
   // Одна отмена на весь пакет «Закончились».
   const undoBatch = useCallback(async (batchId: string) => {
     const { items } = normalizeShelfBatchUndoResponse(
       await requestJson<unknown>(`/staff/shelf/batches/${encodeURIComponent(batchId)}`, json('DELETE'), token),
     );
-    putRows(items);
-    void loadReorder();
-    return items;
-  }, [loadReorder, putRows, token]);
+    return applyRows(items);
+  }, [applyRows, token]);
 
-  // Стоп и «держим постоянно» для нескольких: пакетного эндпоинта нет — по PATCH
-  // на табак, а строки и «К заказу» обновляются один раз в конце.
-  const updateMany = useCallback(async (tobaccoIds: string[], patch: ShelfPatch) => {
-    const results = await Promise.allSettled(
-      tobaccoIds.map(async (tobaccoId) =>
-        normalizeShelfRow(readEntityPayload(await requestJson<unknown>(shelfPath(tobaccoId), json('PATCH', patch), token))),
-      ),
+  const restockMany = useCallback(async (tobaccoIds: string[]) => {
+    const response = normalizeShelfRestockManyResponse(
+      await requestJson<unknown>('/staff/shelf/restock', json('POST', { tobaccoIds }), token),
     );
-    const items = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
-    const failed = results.flatMap((result) => (result.status === 'rejected' ? [result.reason as unknown] : []));
-    putRows(items);
-    void loadReorder();
-    return { items, failed };
-  }, [loadReorder, putRows, token]);
-  const remove = useCallback((tobaccoId: string) => send(shelfPath(tobaccoId), json('DELETE')), [send]);
+    applyRows(response.items);
+    return response;
+  }, [applyRows, token]);
 
-  // «Убрать с полки» для нескольких и его отмена — тоже по запросу на табак.
+  // «Держать постоянно» пачкой одним запросом.
+  const keepMany = useCallback(async (tobaccoIds: string[], keepStocked: boolean) => {
+    const { items } = normalizeShelfBatchUndoResponse(
+      await requestJson<unknown>('/staff/shelf/keep', json('POST', { tobaccoIds, keepStocked }), token),
+    );
+    return applyRows(items);
+  }, [applyRows, token]);
+
+  // Стоп для нескольких: пакетного эндпоинта нет — по PATCH на табак, а строки и
+  // «К заказу» обновляются один раз в конце.
   const sendMany = useCallback(async (requests: Array<() => Promise<unknown>>) => {
     const results = await Promise.allSettled(requests.map(async (request) => normalizeShelfRow(readEntityPayload(await request()))));
     const items = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
     const failed = results.flatMap((result) => (result.status === 'rejected' ? [result.reason as unknown] : []));
-    putRows(items);
-    void loadReorder();
+    applyRows(items);
     return { items, failed };
-  }, [loadReorder, putRows]);
+  }, [applyRows]);
+  const updateMany = useCallback(
+    (tobaccoIds: string[], patch: ShelfPatch) =>
+      sendMany(tobaccoIds.map((tobaccoId) => () => requestJson<unknown>(shelfPath(tobaccoId), json('PATCH', patch), token))),
+    [sendMany, token],
+  );
+
+  const remove = useCallback((tobaccoId: string) => send(shelfPath(tobaccoId), json('DELETE')), [send]);
+
+  // «Убрать с полки» для нескольких (#517) и его отмена — тоже по запросу на табак.
   const removeMany = useCallback(
     (tobaccoIds: string[]) => sendMany(tobaccoIds.map((tobaccoId) => () => requestJson<unknown>(shelfPath(tobaccoId), json('DELETE'), token))),
     [sendMany, token],
   );
-  // Отмена: строки возвращаются как были, без прихода (как у add с restock = false).
+  // Отмена: строки возвращаются как были — наличие убранной строки сервер не трогает.
   const restoreMany = useCallback(
     (rows: ShelfRow[]) =>
       sendMany(rows.map((row) => () =>
@@ -222,17 +237,14 @@ export const useShelf = (token: string) => {
     [sendMany, token],
   );
 
-  // «На полку» из каталога: табак держим — значит, он есть. Сервис полки при
-  // добавлении прихода не пишет, поэтому, если остатка нет, добавляем приход
-  // типичной фасовки бренда — как тумблер наличия на backend. Отмена «Убрать
-  // с полки» возвращает строку как была, без прихода (restock = false).
-  const add = useCallback(async (tobaccoId: string, shelfStatus: 'active' | 'plan' = 'active', restock = true) => {
+  // «На полку» из каталога: табак держим — значит, он есть. Новая строка без прихода
+  // приходит «Закончился» — возвращаем её в наличие. Отмена «Убрать с полки» возвращает
+  // строку как была (restock = false).
+  const add = useCallback(async (tobaccoId: string, shelfStatus: 'active' | 'plan' = 'active', restockNew = true) => {
     const item = await send('/staff/shelf', json('POST', { tobaccoId, status: shelfStatus }));
-    if (restock && shelfStatus === 'active' && item.status === 'out') {
-      return addReceipt(tobaccoId, { grams: defaultReceiptGrams(item.tobacco.manufacturer) });
-    }
+    if (restockNew && shelfStatus === 'active' && item.outAt) return (await restock(tobaccoId)).item;
     return item;
-  }, [addReceipt, send]);
+  }, [restock, send]);
 
   const loadCard = useCallback(
     async (tobaccoId: string) => normalizeShelfCard(await requestJson<unknown>(shelfPath(tobaccoId), {}, token)),
@@ -261,7 +273,7 @@ export const useShelf = (token: string) => {
     return normalizeInventoryListResponse(await requestJson<unknown>(`/staff/inventory/tobaccos?${params}`, {}, token)).items;
   }, [token]);
 
-  // Граммовка чаши и срок поставки меняют прогноз всей полки и «К заказу».
+  // Бюджет на дашборде (#326) и настройки «К заказу» — пока они на граммах.
   const saveSettings = useCallback(async (settings: ShelfSettings) => {
     const saved = normalizeShelfSettings(await requestJson<unknown>('/staff/shelf/settings', json('PATCH', settings), token));
     await reload();
@@ -294,13 +306,14 @@ export const useShelf = (token: string) => {
     loadReorder,
     reset,
     markEmpty,
-    count,
-    writeOff,
-    addReceipt,
-    deleteEntry,
+    undoEmpty,
+    restock,
+    undoRestock,
     update,
     emptyMany,
     undoBatch,
+    restockMany,
+    keepMany,
     updateMany,
     remove,
     removeMany,

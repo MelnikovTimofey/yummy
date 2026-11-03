@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Ellipsis, FileUp, Search } from 'lucide-react';
+import { Check, Ellipsis, FileUp, Search } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import {
   DEFAULT_SHELF_SETTINGS,
@@ -15,48 +15,50 @@ import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
-import { shelfMobileSummary } from '@/lib/shelf-mobile';
 import {
   EMPTY_SHELF_FILTERS,
   SHELF_SORT_OPTIONS,
   SHELF_STATUS_CHIPS,
+  arrivalCell,
   buildShelfFilterOptions,
   countActiveShelfFilters,
-  countOverToastText,
-  countToastText,
   describeShelfError,
-  emptyToastText,
+  emptyToast,
   filterShelfRows,
   formatNumber,
-  formatShelfDate,
-  receiptToastText,
+  keepToast,
   resolveShelfShortcut,
-  shelfChipCount,
-  shelfMonthRate,
+  restockToast,
+  shelfCounts,
+  shelfRowAction,
   shelfRowMenu,
-  shelfStatusLine,
-  shelfUntil,
   sortShelfRows,
-  writeOffToastText,
   type ShelfFilters,
   type ShelfSortKey,
   type ShelfStatusKey,
 } from '@/lib/shelf';
 import { analogToastText } from '@/lib/shelf-analogs';
-import { bulkEmptyToast, bulkKeepToast, bulkRemoveToast, bulkStopToast, bulkSummary, headCheck, selectRange, toggleSelected } from '@/lib/shelf-bulk';
+import {
+  bulkEmptyToast,
+  bulkKeepToast,
+  bulkRemoveToast,
+  bulkRestockToast,
+  bulkStopToast,
+  bulkSummary,
+  headCheck,
+  selectRange,
+  toggleSelected,
+} from '@/lib/shelf-bulk';
 import { ShelfBulkBar, ShelfCheck, ShelfMobileBulk, type ShelfBulkActions } from './shelf-bulk';
 import { ShelfCard } from './shelf-card';
 import { countReorder } from '@/lib/reorder';
-import { ShelfHeadMenu } from './shelf-head-menu';
-import type { CountInput } from './shelf-forms';
-import { ShelfLevel } from './shelf-level';
-import { ShelfMarkSheet, ShelfMobileList } from './shelf-mobile';
+import { ShelfMobileList } from './shelf-mobile';
 import { ShelfPurchase } from './shelf-purchase';
 import { ShelfReorder } from './shelf-reorder';
-import { ShelfRowMenu, type ShelfMenuMode, type ShelfRowActions } from './shelf-row-menu';
+import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
 import { ShelfSettingsDialog } from './shelf-settings-dialog';
+import { ShelfStatusCell } from './shelf-status';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
-import { ShelfAnalogsCell } from './shelf-analogs';
 import { RowsSkeleton } from '@/components/ui/loading';
 
 // purchase — «Закупка» (#327–#331), только на десктопе.
@@ -73,9 +75,6 @@ type ShelfViewProps = {
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
   onUploadInvoice: (file: File) => void;
-  // Настройки полки живут в App: на телефоне их открывают из верхней панели.
-  settingsOpen: boolean;
-  onSettingsOpenChange: (open: boolean) => void;
   // Карточка, которую открыли извне (дашборд → «Заканчивается»).
   openCardId?: string;
   onCardOpened?: () => void;
@@ -86,8 +85,7 @@ type ShelfViewProps = {
 };
 
 type Toast = ShelfToastData;
-
-const kg = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+type ToastInput = Omit<Toast, 'id'>;
 
 const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
 const tobaccoName = (tobacco: ShelfTobaccoRef) => `${tobacco.manufacturer} ${tobacco.name}`;
@@ -104,29 +102,27 @@ export const ShelfView = ({
   onOpenInCatalog,
   onOpenMix,
   onUploadInvoice,
-  settingsOpen,
-  onSettingsOpenChange,
   openCardId,
   onCardOpened,
   selection,
   onSelectionChange,
 }: ShelfViewProps) => {
   const { view } = shelf;
-  const rows = view?.rows ?? [];
-  const settings = view?.settings ?? DEFAULT_SHELF_SETTINGS;
+  const rows = useMemo(() => view?.rows ?? [], [view]);
 
   const isPhone = useIsPhone();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<ShelfStatusKey>('all');
   const [filters, setFilters] = useState<ShelfFilters>(EMPTY_SHELF_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [sort, setSort] = useState<ShelfSortKey>('until');
+  const [sort, setSort] = useState<ShelfSortKey>('status');
   const [activeId, setActiveId] = useState('');
   const [cardId, setCardId] = useState('');
-  const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement; mode: ShelfMenuMode } | null>(null);
+  const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement } | null>(null);
   const [pendingId, setPendingId] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
-  const [sheetId, setSheetId] = useState('');
+  // Настройки (порция, срок поставки, бюджет) нужны только «К заказу» и «Закупке», пока они на граммах.
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const toastSeq = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableSectionElement | null>(null);
@@ -169,24 +165,23 @@ export const ShelfView = ({
   }, [isPhone, loadPurchase, mode, settingsVersion]);
 
   const reorderCount = countReorder(shelf.reorder);
-  const headMenu = <ShelfHeadMenu onSettings={() => onSettingsOpenChange(true)} />;
   const settingsDialog = settingsOpen ? (
     <ShelfSettingsDialog
-      settings={settings}
+      settings={view?.settings ?? DEFAULT_SHELF_SETTINGS}
       interval={view?.interval}
       horizon={view?.horizon}
       onSave={shelf.saveSettings}
-      onClose={() => onSettingsOpenChange(false)}
+      onClose={() => setSettingsOpen(false)}
     />
   ) : null;
 
+  const counts = useMemo(() => shelfCounts(rows), [rows]);
   const shown = useMemo(
     () => filterShelfRows(sortShelfRows(rows, sort), { query, status, filters }),
     [rows, query, status, filters, sort],
   );
   const menuRow = menu ? rows.find((row) => row.tobacco.id === menu.id) ?? null : null;
   const cardRow = cardId ? rows.find((row) => row.tobacco.id === cardId) ?? null : null;
-  const sheetRow = sheetId ? rows.find((row) => row.tobacco.id === sheetId) ?? null : null;
   const activeFilters = countActiveShelfFilters(filters);
   const filterOptions = useMemo(() => buildShelfFilterOptions(rows), [rows]);
   // Одни и те же атрибуты — списками на десктопе и чипами в шторке телефона.
@@ -265,7 +260,7 @@ export const ShelfView = ({
     onSelectionChange(isPhone ? [] : null);
   }, [query, status, filters, isPhone, onSelectionChange]);
 
-  const notify = useCallback((next: Omit<Toast, 'id'>) => {
+  const notify = useCallback((next: ToastInput) => {
     toastSeq.current += 1;
     setToast({ ...next, id: toastSeq.current });
   }, []);
@@ -273,7 +268,7 @@ export const ShelfView = ({
 
   // Общая обёртка действий: одна строка за раз, ошибка — в тост.
   const run = useCallback(
-    async (row: ShelfRow, action: () => Promise<Omit<Toast, 'id'> | null>) => {
+    async (row: ShelfRow, action: () => Promise<ToastInput | null>) => {
       setMenu(null);
       setPendingId(row.tobacco.id);
       try {
@@ -288,31 +283,34 @@ export const ShelfView = ({
     [notify],
   );
 
-  const onEmpty = useCallback(
+  // «Держать постоянно» из тоста «Закончился» (#shot=shelf-out-notkept).
+  const onKeep = useCallback(
     (row: ShelfRow) =>
       run(row, async () => {
-        const { entryId, item } = await shelf.markEmpty(row.tobacco.id);
-        return { title: fullName(row), text: emptyToastText(item), undo: () => shelf.deleteEntry(entryId) };
+        const item = await shelf.update(row.tobacco.id, { keepStocked: true });
+        return { ...keepToast(item), undo: () => shelf.update(row.tobacco.id, { keepStocked: false }) };
       }),
     [run, shelf],
   );
 
-  // Отметка выше расчёта принимается, но отрезок в расход не идёт
-  // (#shot=edge-more): это видно только по записи в истории карточки.
-  const onCount = useCallback(
-    (row: ShelfRow, input: CountInput) =>
+  const onEmpty = useCallback(
+    (row: ShelfRow) =>
       run(row, async () => {
-        const { entryId, item } = await shelf.count(row.tobacco.id, input);
-        const count = item.lastCount ?? { grams: 'grams' in input ? input.grams : 0, fraction: 'fraction' in input ? input.fraction : null };
-        const undo = () => shelf.deleteEntry(entryId);
-        if (row.leftGrams !== null && count.grams > row.leftGrams) {
-          const entry = await shelf.loadCard(row.tobacco.id).then(
-            (card) => card.history.find((item) => item.id === entryId),
-            () => undefined,
-          );
-          if (entry?.excluded) return { title: fullName(row), text: countOverToastText(count, row.leftGrams), warn: true, undo };
-        }
-        return { title: fullName(row), text: countToastText(count), undo };
+        const { entryId, item } = await shelf.markEmpty(row.tobacco.id);
+        return {
+          ...emptyToast(item),
+          undo: () => shelf.undoEmpty(row.tobacco.id, entryId),
+          ...(item.keepStocked ? {} : { action: { label: 'Держать постоянно', onClick: () => void onKeep(item) } }),
+        };
+      }),
+    [onKeep, run, shelf],
+  );
+
+  const onRestock = useCallback(
+    (row: ShelfRow) =>
+      run(row, async () => {
+        const { batchId, item } = await shelf.restock(row.tobacco.id);
+        return { ...restockToast(item), undo: () => shelf.undoRestock(batchId) };
       }),
     [run, shelf],
   );
@@ -332,19 +330,7 @@ export const ShelfView = ({
   );
 
   const rowActions: ShelfRowActions = {
-    onEmpty,
-    onCount,
     onToggleStop,
-    onReceipt: (row, input) =>
-      run(row, async () => {
-        const item = await shelf.addReceipt(row.tobacco.id, input);
-        return { title: fullName(row), text: receiptToastText(input.grams, item) };
-      }),
-    onWriteOff: (row, input) =>
-      run(row, async () => {
-        const { entryId, item } = await shelf.writeOff(row.tobacco.id, input);
-        return { title: fullName(row), text: writeOffToastText(input.grams, input.reason, item), undo: () => shelf.deleteEntry(entryId) };
-      }),
     onRemove: (row) =>
       run(row, async () => {
         await shelf.remove(row.tobacco.id);
@@ -398,7 +384,7 @@ export const ShelfView = ({
     [notify, shelf],
   );
 
-  // Отметка пробы (#329) — в «Закупке» и на телефоне; не сохранилась — тост,
+  // Отметка пробы (#329) — в карточке, на телефоне и в «Закупке»; не сохранилась — тост,
   // «Закупку» перечитываем, чтобы вернуть отметку с сервера.
   const onTrialVerdict = useCallback(
     async (tobacco: ShelfTobaccoRef, trialVerdict: ShelfTrialVerdict | null) => {
@@ -413,108 +399,95 @@ export const ShelfView = ({
     [notify, shelf],
   );
 
-  // «Закончились» для выбранных (#333): одно действие и одна отмена на всех.
-  const onBulkEmpty = useCallback(async () => {
-    if (bulkBusy || !summary.emptyCount) return;
-    const before = selection;
-    clearSelection();
-    setBulkBusy(true);
-    try {
-      const response = await shelf.emptyMany(chosen);
-      const batchId = response.batchId;
-      notify({ ...bulkEmptyToast(response), ...(response.done.length ? { undo: () => shelf.undoBatch(batchId) } : {}) });
-    } catch (cause) {
-      onSelectionChange(before);
-      notify({ title: 'Не отмечено', text: describeShelfError(cause), error: true });
-    } finally {
-      setBulkBusy(false);
-    }
-  }, [bulkBusy, chosen, clearSelection, notify, onSelectionChange, selection, shelf, summary.emptyCount]);
-
-  // Стоп и «держим постоянно» для выбранных: меняются только те, у кого другое значение.
-  const onBulkPatch = useCallback(
-    async (ids: string[], patch: ShelfPatch, back: ShelfPatch, toast: { title: string; text: string }) => {
+  // Действие с выбранными: выделение снимается сразу, ошибка его возвращает.
+  const runBulk = useCallback(
+    async (errorTitle: string, action: () => Promise<ToastInput>) => {
+      if (bulkBusy) return;
       const before = selection;
       clearSelection();
-      if (!ids.length) {
-        notify(toast);
-        return;
-      }
-      const patchMany = async (next: ShelfPatch) => {
-        const { failed } = await shelf.updateMany(ids, next);
-        if (failed.length) throw failed[0];
-      };
       setBulkBusy(true);
       try {
-        await patchMany(patch);
-        notify({ ...toast, undo: () => patchMany(back) });
+        notify(await action());
       } catch (cause) {
         onSelectionChange(before);
-        notify({ title: 'Не сохранилось', text: describeShelfError(cause), error: true });
+        notify({ title: errorTitle, text: describeShelfError(cause), error: true });
       } finally {
         setBulkBusy(false);
       }
     },
-    [clearSelection, notify, onSelectionChange, selection, shelf],
+    [bulkBusy, clearSelection, notify, onSelectionChange, selection],
   );
 
-  // «Убрать с полки» для выбранных: одна отмена возвращает всех убранных.
-  const onBulkRemove = useCallback(async () => {
-    if (bulkBusy || !chosen.length) return;
-    const before = selection;
+  // «Закончились» для выбранных (#333): одно действие и одна отмена на всех.
+  const onBulkEmpty = useCallback(() => {
+    if (!summary.emptyCount) return;
     const rows = chosen;
-    clearSelection();
-    setBulkBusy(true);
-    try {
-      const { items, failed } = await shelf.removeMany(rows.map((row) => row.tobacco.id));
-      if (!items.length) throw failed[0];
-      const removed = rows.filter((row) => items.some((item) => item.tobacco.id === row.tobacco.id));
-      notify({
-        ...bulkRemoveToast(removed.length, failed.length),
-        undo: async () => {
-          const back = await shelf.restoreMany(removed);
-          if (back.failed.length) throw back.failed[0];
-        },
-      });
-    } catch (cause) {
-      onSelectionChange(before);
-      notify({ title: 'Не убрано', text: describeShelfError(cause), error: true });
-    } finally {
-      setBulkBusy(false);
-    }
-  }, [bulkBusy, chosen, clearSelection, notify, onSelectionChange, selection, shelf]);
+    void runBulk('Не отмечено', async () => {
+      const response = await shelf.emptyMany(rows);
+      return { ...bulkEmptyToast(response), ...(response.done.length ? { undo: () => shelf.undoBatch(response.batchId) } : {}) };
+    });
+  }, [chosen, runBulk, shelf, summary.emptyCount]);
 
   const bulkActions: ShelfBulkActions = {
-    onEmpty: () => void onBulkEmpty(),
+    onEmpty: onBulkEmpty,
+    onRestock: () => {
+      const ids = chosen.filter((row) => shelfRowMenu(row).canRestock).map((row) => row.tobacco.id);
+      if (!ids.length) return;
+      void runBulk('Не вернулось', async () => {
+        const response = await shelf.restockMany(ids);
+        return { ...bulkRestockToast(response), ...(response.done.length ? { undo: () => shelf.undoRestock(response.batchId) } : {}) };
+      });
+    },
+    // Меняются только те, у кого другое значение: отмена возвращает ровно их.
+    onKeep: () => {
+      const keep = !summary.allKept;
+      const ids = chosen.filter((row) => row.keepStocked !== keep).map((row) => row.tobacco.id);
+      const count = chosen.length;
+      void runBulk('Не сохранилось', async () => {
+        if (!ids.length) return bulkKeepToast(count, keep);
+        await shelf.keepMany(ids, keep);
+        return { ...bulkKeepToast(count, keep), undo: () => shelf.keepMany(ids, !keep) };
+      });
+    },
     onStop: () => {
       const stopped = !summary.allStopped;
       const ids = chosen.filter((row) => row.stopped !== stopped).map((row) => row.tobacco.id);
-      void onBulkPatch(ids, { stopped }, { stopped: !stopped }, bulkStopToast(chosen.length, stopped));
+      const count = chosen.length;
+      const patchMany = async (patch: ShelfPatch) => {
+        const { failed } = await shelf.updateMany(ids, patch);
+        if (failed.length) throw failed[0];
+      };
+      void runBulk('Не сохранилось', async () => {
+        if (!ids.length) return bulkStopToast(count, stopped);
+        await patchMany({ stopped });
+        return { ...bulkStopToast(count, stopped), undo: () => patchMany({ stopped: !stopped }) };
+      });
     },
-    onKeep: (keepStocked) => {
-      const ids = chosen.filter((row) => row.keepStocked !== keepStocked).map((row) => row.tobacco.id);
-      void onBulkPatch(ids, { keepStocked }, { keepStocked: !keepStocked }, bulkKeepToast(chosen.length, keepStocked));
+    // «Убрать с полки» для выбранных (#517): одна отмена возвращает всех убранных.
+    onRemove: () => {
+      const rows = chosen;
+      if (!rows.length) return;
+      void runBulk('Не убрано', async () => {
+        const { items, failed } = await shelf.removeMany(rows.map((row) => row.tobacco.id));
+        if (!items.length) throw failed[0];
+        const removed = rows.filter((row) => items.some((item) => item.tobacco.id === row.tobacco.id));
+        return {
+          ...bulkRemoveToast(removed.length, failed.length),
+          undo: async () => {
+            const back = await shelf.restoreMany(removed);
+            if (back.failed.length) throw back.failed[0];
+          },
+        };
+      });
     },
-    onRemove: () => void onBulkRemove(),
   };
 
   const onUpdate = useCallback(async (row: ShelfRow, patch: ShelfPatch) => {
     await shelf.update(row.tobacco.id, patch);
   }, [shelf]);
 
-  const onDeleteEntry = useCallback(async (_row: ShelfRow, entryId: string) => {
-    await shelf.deleteEntry(entryId);
-  }, [shelf]);
-
-  // «Сколько осталось?» по клавише O — у кнопки «Указать остаток» строки, иначе у «⋯».
-  const openLeft = useCallback((row: ShelfRow) => {
-    const tr = tableRef.current?.querySelector(`tr[data-tobacco-id="${CSS.escape(row.tobacco.id)}"]`);
-    const anchor = tr?.querySelector<HTMLElement>('[data-left-anchor]') ?? tr?.querySelector<HTMLElement>('[data-menu-anchor]');
-    if (anchor) setMenu({ id: row.tobacco.id, anchor, mode: 'left' });
-  }, []);
-
-  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft, selecting, onBulkEmpty, pick, clearSelection });
-  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onCount, onUndo, openLeft, selecting, onBulkEmpty, pick, clearSelection };
+  const keyboard = useRef({ shown, activeId, cardId, menu, mode, onEmpty, onUndo, selecting, onBulkEmpty, pick, clearSelection });
+  keyboard.current = { shown, activeId, cardId, menu, mode, onEmpty, onUndo, selecting, onBulkEmpty, pick, clearSelection };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -554,7 +527,7 @@ export const ShelfView = ({
           }
           return;
         case 'empty':
-          if (state.selecting) void state.onBulkEmpty();
+          if (state.selecting) state.onBulkEmpty();
           else if (active && shelfRowMenu(active).canEmpty) void state.onEmpty(active);
           return;
         case 'select':
@@ -568,18 +541,6 @@ export const ShelfView = ({
             event.preventDefault();
             state.clearSelection();
           }
-          return;
-        case 'left':
-          // В режиме выбора кнопок строки нет — отметка остатка только по одному.
-          if (state.selecting) return;
-          if (active && shelfRowMenu(active).canMark) {
-            event.preventDefault();
-            state.openLeft(active);
-          }
-          return;
-        case 'mark':
-          if (state.selecting) return;
-          if (active && shelfRowMenu(active).canMark && active.fullGrams !== null) void state.onCount(active, { fraction: shortcut.fraction });
           return;
         case 'undo':
           void state.onUndo();
@@ -613,10 +574,10 @@ export const ShelfView = ({
   if (shelf.status !== 'error' && view && !rows.length) {
     return (
       <section className="shelf-page">
-        <MasterPageHeader title="Полка" actions={headMenu} />
+        <MasterPageHeader title="Полка" />
         <div className="shelf-empty">
           <h2>Полка пуста</h2>
-          <p>Остаток появляется из поставок. Загрузите счёт или добавьте табаки из каталога.</p>
+          <p>Табаки появляются из поставок. Загрузите счёт или добавьте табаки из каталога.</p>
           <div className="shelf-empty__actions">
             {uploadButton}
             <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
@@ -625,7 +586,6 @@ export const ShelfView = ({
           </div>
           {invoiceInput}
         </div>
-        {settingsDialog}
         {toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null}
       </section>
     );
@@ -634,15 +594,13 @@ export const ShelfView = ({
   const cardSheet = cardRow ? (
     <ShelfCard
       row={cardRow}
-      rows={rows}
-      settings={settings}
       loadCard={shelf.loadCard}
       searchCatalog={shelf.searchCatalog}
       onSetAnalogs={onSetAnalogs}
       onEmpty={(row) => void onEmpty(row)}
-      onCount={(row, input) => void onCount(row, input)}
-      onDeleteEntry={onDeleteEntry}
+      onRestock={(row) => void onRestock(row)}
       onUpdate={onUpdate}
+      onTrialVerdict={(row, verdict) => onTrialVerdict(row.tobacco, verdict)}
       onOpenCatalog={(row) => {
         setCardId('');
         onOpenInCatalog(row);
@@ -656,7 +614,16 @@ export const ShelfView = ({
     />
   ) : null;
   const toastNode = toast ? <ShelfToast toast={toast} onUndo={() => void onUndo()} onClose={closeToast} /> : null;
-  const emptyFiltered = (
+  // Только поиск и ничего не нашлось — табака нет на полке (#shot=edge-search-empty).
+  const emptyShown = !narrowed && query.trim() ? (
+    <div className="empty shelf-table__empty">
+      <b>Ничего не нашлось</b>
+      <p>На полке нет такого табака. Добавьте его из каталога.</p>
+      <button type="button" className="btn" data-size="sm" onClick={onGoCatalog}>
+        Добавить из каталога
+      </button>
+    </div>
+  ) : (
     <div className="empty shelf-table__empty">
       <p>Ничего не найдено. Уберите один из фильтров.</p>
       <button
@@ -666,23 +633,21 @@ export const ShelfView = ({
         data-variant="ghost"
         onClick={() => {
           setQuery('');
-          setStatus('all');
-          setFilters(EMPTY_SHELF_FILTERS);
+          resetFilters();
         }}
       >
         Сбросить фильтры
       </button>
     </div>
   );
-  // У «Все» числа нет: сколько всего, сказано в мете шапки (#363).
   const statusChip = ([key, label]: [ShelfStatusKey, string]) => (
-    <FilterChip key={key} active={status === key} count={key === 'all' ? undefined : shelfChipCount(view, key)} onClick={() => setStatus(key)}>
+    <FilterChip key={key} active={status === key} count={counts[key]} onClick={() => setStatus(key)}>
       {label}
     </FilterChip>
   );
 
-  // Телефон (#215, #shot=shelf-mobile): карточки вместо таблицы, фильтры и
-  // отметка остатка — в нижних шторках. Заголовок раздела — в верхней панели.
+  // Телефон (#215, #shot=mobile-shelf): карточки вместо таблицы, фильтры — в нижней
+  // шторке. Заголовок раздела — в верхней панели.
   if (isPhone) {
     return (
       <section className="shelf-page shelf-page--phone">
@@ -691,7 +656,7 @@ export const ShelfView = ({
         {shelf.status === 'loading' && !view ? <RowsSkeleton label="Загружаем полку" rows={8} /> : null}
 
         {view && mode === 'reorder' ? (
-          <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
+          <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => setSettingsOpen(true)} />
         ) : null}
 
         {view && mode !== 'reorder' ? (
@@ -714,20 +679,18 @@ export const ShelfView = ({
             <div className="m-shelf-chips" role="group" aria-label="Статус на полке">
               {SHELF_STATUS_CHIPS.map(statusChip)}
             </div>
-            <p className="m-shelf-summary">{shelfMobileSummary(view)}</p>
             <ShelfMobileList
               rows={shown}
-              leadDays={settings.leadDays}
               pendingId={pendingId}
               picked={picking ? selected : null}
               onPick={(row) => pick(row.tobacco.id, false)}
               onEmpty={(row) => void onEmpty(row)}
+              onRestock={(row) => void onRestock(row)}
               onUnstop={(row) => void onToggleStop(row)}
-              onOpenSheet={(row) => setSheetId(row.tobacco.id)}
               onOpenCard={(row) => setCardId(row.tobacco.id)}
               onTrialVerdict={(row, verdict) => onTrialVerdict(row.tobacco, verdict)}
             />
-            {!shown.length ? emptyFiltered : null}
+            {!shown.length ? emptyShown : null}
           </>
         ) : null}
 
@@ -758,20 +721,6 @@ export const ShelfView = ({
           </BottomSheet>
         ) : null}
 
-        {sheetRow ? (
-          <ShelfMarkSheet
-            row={sheetRow}
-            onCount={(row, input) => {
-              setSheetId('');
-              void onCount(row, input);
-            }}
-            onEmpty={(row) => {
-              setSheetId('');
-              void onEmpty(row);
-            }}
-            onClose={() => setSheetId('')}
-          />
-        ) : null}
         {cardSheet}
         {settingsDialog}
         {picking && view && mode !== 'reorder' ? <ShelfMobileBulk summary={summary} busy={bulkBusy} actions={bulkActions} /> : null}
@@ -779,8 +728,6 @@ export const ShelfView = ({
       </section>
     );
   }
-
-  const totals = view?.totals ?? { kg: 0 };
 
   return (
     <section className="shelf-page" data-selecting={selecting || undefined}>
@@ -791,7 +738,7 @@ export const ShelfView = ({
             ? undefined
             : mode === 'shelf' && shown.length !== rows.length
               ? `${formatNumber(shown.length)} из ${formatNumber(rows.length)}`
-              : `${formatCount(rows.length, ['позиция', 'позиции', 'позиций'])}, ${kg.format(totals.kg)} кг`
+              : formatCount(rows.length, ['табак', 'табака', 'табаков'])
         }
         actions={
           <>
@@ -812,7 +759,6 @@ export const ShelfView = ({
             </button>
             {uploadButton}
             {invoiceInput}
-            {headMenu}
           </>
         }
       />
@@ -823,14 +769,14 @@ export const ShelfView = ({
       {view ? (
         <>
           {mode === 'reorder' ? (
-            <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => onSettingsOpenChange(true)} />
+            <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => setSettingsOpen(true)} />
           ) : null}
 
           {mode === 'purchase' ? (
             <ShelfPurchase
               purchase={shelf.purchase}
               error={shelf.purchaseError}
-              onSettings={() => onSettingsOpenChange(true)}
+              onSettings={() => setSettingsOpen(true)}
               onKeep={onPurchaseKeep}
               onVerdict={onTrialVerdict}
               onIdeas={onOpenIdeas}
@@ -875,13 +821,11 @@ export const ShelfView = ({
                   <colgroup>
                     <col style={{ width: 44 }} />
                     <col />
-                    <col />
-                    <col style={{ width: 228 }} />
-                    <col style={{ width: 130 }} />
-                    <col style={{ width: 184 }} />
-                    <col style={{ width: 132 }} />
-                    <col style={{ width: 60 }} />
-                    <col style={{ width: 228 }} />
+                    <col style={{ width: 210 }} />
+                    <col style={{ width: 180 }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 200 }} />
                   </colgroup>
                   <thead>
                     <tr>
@@ -896,73 +840,19 @@ export const ShelfView = ({
                         />
                       </th>
                       <th scope="col">Табак</th>
-                      <th scope="col">Аналоги</th>
-                      <th scope="col">Остаток по учёту</th>
-                      <th scope="col">Расход</th>
-                      <th scope="col">Хватит до</th>
+                      <th scope="col">Наличие</th>
                       <th scope="col">Приход</th>
                       <th scope="col" className="shelf-table__num">Миксы</th>
+                      <th scope="col">Держим</th>
                       <th scope="col" aria-label="Действия" />
                     </tr>
                   </thead>
                   <tbody ref={tableRef}>
                     {shown.map((row) => {
-                      const until = shelfUntil(row, settings.leadDays);
-                      const line = shelfStatusLine(row);
-                      const month = shelfMonthRate(row);
                       const busy = pendingId === row.tobacco.id;
-                      const menuOpen = menu?.id === row.tobacco.id && menu.mode !== 'left';
-                      const leftOpen = menu?.id === row.tobacco.id && menu.mode === 'left';
-                      const openLeftAt = (anchor: HTMLElement) =>
-                        setMenu(leftOpen ? null : { id: row.tobacco.id, anchor, mode: 'left' });
-                      let primary;
-                      if (row.status === 'out' || row.status === 'plan') {
-                        primary = <span className="shelf-faint shelf-table__note">в заказе</span>;
-                      } else if (row.status === 'stop') {
-                        primary = (
-                          <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
-                            Снять стоп
-                          </button>
-                        );
-                      } else if (row.status === 'check') {
-                        primary = (
-                          <button
-                            type="button"
-                            className="btn"
-                            data-size="sm"
-                            data-variant="primary"
-                            data-left-anchor
-                            aria-expanded={leftOpen}
-                            disabled={busy}
-                            title="Клавиша O"
-                            onClick={(event) => openLeftAt(event.currentTarget)}
-                          >
-                            Отметить остаток
-                          </button>
-                        );
-                      } else {
-                        primary = (
-                          <>
-                            <button
-                              type="button"
-                              className="btn"
-                              data-size="sm"
-                              data-variant="ghost"
-                              data-left-anchor
-                              aria-expanded={leftOpen}
-                              disabled={busy}
-                              title="Клавиша O"
-                              onClick={(event) => openLeftAt(event.currentTarget)}
-                            >
-                              Указать остаток
-                            </button>
-                            <button type="button" className="btn" data-size="sm" disabled={busy} title="Клавиша E" onClick={() => void onEmpty(row)}>
-                              Закончился
-                            </button>
-                          </>
-                        );
-                      }
-
+                      const menuOpen = menu?.id === row.tobacco.id;
+                      const action = shelfRowAction(row);
+                      const arrival = arrivalCell(row.lastArrival);
                       const isSelected = selected.includes(row.tobacco.id);
                       return (
                         <tr
@@ -1000,39 +890,13 @@ export const ShelfView = ({
                             </span>
                           </td>
                           <td>
-                            <ShelfAnalogsCell analogs={row.analogs} />
+                            <ShelfStatusCell row={row} />
                           </td>
                           <td>
-                            <ShelfLevel row={row} />
-                          </td>
-                          <td>
-                            {month.faint ? (
-                              <span className="shelf-faint">{month.value}</span>
-                            ) : month.hint ? (
-                              <span className="shelf-until" title="Своих отметок мало, взята медиана бренда">
-                                <span className="shelf-num">{month.value}</span>
-                                <small data-tone="faint">{month.hint}</small>
-                              </span>
-                            ) : (
-                              <span className="shelf-num">{month.value}</span>
-                            )}
-                          </td>
-                          <td>
-                            <span className="shelf-until">
-                              <span className="shelf-num" data-tone={until.tone}>
-                                {until.text}
-                                {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
-                              </span>
-                              {line && !until.text.startsWith(line.text) ? <small data-tone={line.tone}>{line.text}</small> : null}
-                            </span>
-                          </td>
-                          <td>
-                            {row.lastReceipt ? (
-                              <span className="shelf-name shelf-name--receipt">
-                                <b>
-                                  {formatShelfDate(row.lastReceipt.at)}, +{formatNumber(row.lastReceipt.grams)} г
-                                </b>
-                                <span>{row.lastReceipt.label}</span>
+                            {arrival ? (
+                              <span className="shelf-two">
+                                <span className="shelf-num">{arrival.date}</span>
+                                <small>{arrival.source}</small>
                               </span>
                             ) : (
                               <span className="shelf-faint">—</span>
@@ -1041,19 +905,39 @@ export const ShelfView = ({
                           <td className="shelf-table__num shelf-num">
                             {row.mixCount ? formatMetricValue(row.mixCount) : <span className="shelf-faint">—</span>}
                           </td>
+                          <td className="shelf-table__keep">
+                            {row.keepStocked ? (
+                              <span role="img" aria-label="Держим постоянно" title="Держим постоянно">
+                                <Check size={15} aria-hidden />
+                              </span>
+                            ) : null}
+                          </td>
                           <td onClick={selecting ? undefined : (event) => event.stopPropagation()}>
                             {/* В режиме выбора кнопки строки скрыты (#shot=shelf-bulk). */}
                             {selecting ? null : (
                               <span className="shelf-table__actions">
-                                {primary}
+                                {action === 'empty' ? (
+                                  <button type="button" className="btn" data-size="sm" disabled={busy} title="Клавиша E" onClick={() => void onEmpty(row)}>
+                                    Закончился
+                                  </button>
+                                ) : action === 'restock' ? (
+                                  <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onRestock(row)}>
+                                    Вернуть в наличие
+                                  </button>
+                                ) : action === 'unstop' ? (
+                                  <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
+                                    Снять стоп
+                                  </button>
+                                ) : (
+                                  <span className="shelf-faint shelf-table__note">придёт по счёту</span>
+                                )}
                                 <button
                                   type="button"
                                   className="icon-btn"
-                                  data-menu-anchor
                                   aria-label={`Ещё действия: ${fullName(row)}`}
                                   aria-expanded={menuOpen}
                                   disabled={busy}
-                                  onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget, mode: 'main' })}
+                                  onClick={(event) => setMenu(menuOpen ? null : { id: row.tobacco.id, anchor: event.currentTarget })}
                                 >
                                   <Ellipsis size={15} aria-hidden />
                                 </button>
@@ -1065,7 +949,7 @@ export const ShelfView = ({
                     })}
                   </tbody>
                 </table>
-                {!shown.length ? emptyFiltered : null}
+                {!shown.length ? emptyShown : null}
               </div>
 
               {selecting ? <ShelfBulkBar summary={summary} busy={bulkBusy} actions={bulkActions} onClear={clearSelection} /> : null}
@@ -1076,9 +960,7 @@ export const ShelfView = ({
 
       {settingsDialog}
 
-      {menu && menuRow ? (
-        <ShelfRowMenu row={menuRow} anchor={menu.anchor} mode={menu.mode} actions={rowActions} onClose={() => setMenu(null)} />
-      ) : null}
+      {menu && menuRow ? <ShelfRowMenu row={menuRow} anchor={menu.anchor} actions={rowActions} onClose={() => setMenu(null)} /> : null}
 
       {cardSheet}
 

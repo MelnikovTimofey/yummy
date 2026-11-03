@@ -1,13 +1,6 @@
-import type { ShelfAnalog, ShelfRow } from '@/contracts';
-import { shelfLevel } from './shelf';
+import type { ShelfAnalog } from '@/contracts';
 
 // Аналоги табака на «Полке» (#482, PRD §9.3 п.6): порядок в списке — порядок замены.
-
-export const analogCell = (analogs: ShelfAnalog[]) => ({
-  head: analogs.slice(0, 2),
-  rest: Math.max(0, analogs.length - 2),
-  title: analogs.map((item) => item.name).join(', '),
-});
 
 export const moveAnalog = (ids: string[], index: number, delta: -1 | 1) => {
   const target = index + delta;
@@ -26,9 +19,5 @@ export const analogToastText = (tobaccoName: string, unblocked: Array<{ id: stri
   return `${head} ${names} ${unblocked.length === 1 ? 'виден' : 'видны'} гостю с заменой.`;
 };
 
-// Аналог может быть и не на полке — тогда граммов не знаем, только наличие.
-export const analogStock = (analog: ShelfAnalog, rows: ShelfRow[]) => {
-  if (!analog.inStock) return 'закончился';
-  const row = rows.find((item) => item.tobacco.id === analog.tobaccoId);
-  return row ? shelfLevel(row).value : 'есть';
-};
+// Граммов нет (#518): аналог или есть у гостя, или закончился.
+export const analogStock = (analog: ShelfAnalog) => (analog.inStock ? 'есть' : 'закончился');
