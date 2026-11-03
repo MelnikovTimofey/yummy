@@ -89,6 +89,38 @@ export const collectBrandUrls = (sourceUrls: Array<string | null>) => {
   return Array.from(brandUrls);
 };
 
+// Разовое сужение каталога до списка брендов (#519). Бренды полки остаются при
+// любом статусе: ночной прогон по полке продолжит их обновлять.
+export const archiveOffListTobaccos = async (brandUrls: string[], { apply }: { apply: boolean }) => {
+  const shelf = await prisma.tobacco.findMany({
+    where: { shelfItem: { isNot: null } },
+    select: { sourceUrl: true },
+  });
+  const keep = new Set([
+    ...brandUrls.map((url) => url.replace(/\/+$/, '')),
+    ...collectBrandUrls(shelf.map((record) => record.sourceUrl)),
+  ]);
+  const records = await prisma.tobacco.findMany({
+    where: {
+      archived: false,
+      sourceKind: 'htreviews',
+      sourceUrl: { not: null },
+      shelfItem: { is: null },
+      mixComponents: { none: {} },
+      analogs: { none: {} },
+      analogOf: { none: {} },
+      supplierItems: { none: {} },
+    },
+    select: { id: true, manufacturer: true, sourceUrl: true },
+    orderBy: { id: 'asc' },
+  });
+  const offList = records.filter((record) => !keep.has(brandUrlFromTobaccoUrl(record.sourceUrl ?? '') ?? ''));
+  if (apply && offList.length) {
+    await prisma.tobacco.updateMany({ where: { id: { in: offList.map((record) => record.id) } }, data: { archived: true } });
+  }
+  return offList;
+};
+
 // Бренды того, что есть в точке: inStock — кэш наличия, который ведёт полка.
 export const loadShelfBrandUrls = async () => {
   const records = await prisma.tobacco.findMany({
