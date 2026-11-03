@@ -17,7 +17,7 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeVisible();
 
   await getWorkspaceTab(page, 'Дашборд').press('ArrowRight');
   // #211: вкладка «Табаки» разделилась на «Полку» (что держим) и «Каталог»
@@ -357,7 +357,7 @@ test('Master «What\'s new»: the dot stays until the release is read, then is g
   await expect(unread).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Что нового', exact: true })).toBeVisible();
   await expect(unread).toHaveCount(0);
 });
@@ -370,7 +370,8 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    // На телефоне заголовок раздела — в верхней панели, h1 только для экранного диктора (#520), как у «Полки».
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     // На телефоне вместо вкладок — нижняя навигация.
     await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toHaveCount(0);
@@ -427,7 +428,7 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
 
@@ -486,7 +487,7 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
 
@@ -530,7 +531,7 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
     const more = page.getByRole('dialog', { name: 'Ещё разделы' });
@@ -568,7 +569,7 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     const nav = page.getByRole('navigation', { name: 'Разделы' });
     await scrollDown(page);
@@ -602,7 +603,7 @@ test.describe('Master on a phone in landscape', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toHaveCount(0);
     const nav = page.getByRole('navigation', { name: 'Разделы' });
@@ -613,21 +614,34 @@ test.describe('Master on a phone in landscape', () => {
   });
 });
 
-// Прогноз и «К заказу» (#213, #323, #325, #326): блок «Полка» на дашборде с
-// бюджетом, переключатель «К заказу» и настройки полки. Неразрушающий: в «К заказу»
-// ничего не меняется, настройки закрываются «Отменой».
-test('Master dashboard shows the shelf forecast, shelf opens reorder and settings without saving', async ({ page }) => {
+// Дашборд — выборы гостей (#520): период меняет диапазон дат; на seed выборов
+// мало, поэтому годится и график, и «Мало данных» / «Выборов нет». Блока полки на
+// дашборде больше нет. Дальше «К заказу» и настройки полки (#323, #325, #326).
+// Неразрушающий: в «К заказу» ничего не меняется, настройки закрываются «Отменой».
+test('Master dashboard switches the period, shelf opens reorder and settings without saving', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
-  // Канон #365: карточка — заголовок и содержимое, без надписи над ним и без «≈».
-  const forecast = page.getByRole('article', { name: 'Прогноз на сегодня' });
-  await expect(forecast.getByRole('heading', { name: 'Прогноз на сегодня' })).toBeVisible();
-  await expect(forecast).toContainText(/[\d\s ]+ г/);
-  await expect(page.locator('.dashboard-page')).not.toContainText('≈');
-  // Деньги: бюджет указан — «<Месяц>: бюджет …», нет — «Траты за <месяц>» и «Бюджет на табак не указан».
-  await expect(page.getByRole('article', { name: /^Траты за |: бюджет / })).toContainText(/бюджет/i);
-  // Ряд KPI остаётся только на дашборде.
-  await expect(page.locator('.dashboard-page .stats')).toHaveCount(1);
+  const periods = page.getByRole('group', { name: 'Период' });
+  await expect(periods.getByRole('button')).toHaveText(['Неделя', 'Месяц', 'Квартал', 'Всё время', 'Даты']);
+  const month = periods.getByRole('button', { name: 'Месяц', exact: true });
+  await expect(month).toHaveAttribute('aria-pressed', 'true');
+  const range = page.locator('.dash-range');
+  await expect(range).toHaveText(/^\d{1,2}( [а-я]+( \d{4})?)? – \d{1,2} [а-я]+( \d{4})?$/);
+  const monthRange = await range.textContent();
+
+  const week = periods.getByRole('button', { name: 'Неделя', exact: true });
+  await week.click();
+  await expect(week).toHaveAttribute('aria-pressed', 'true');
+  await expect(range).not.toHaveText(monthRange ?? '');
+  await expect(range).toHaveText(/^\d{1,2}( [а-я]+( \d{4})?)? – \d{1,2} [а-я]+( \d{4})?$/);
+
+  // Плитки есть всегда; графики — с 20 выборов, иначе одна карточка вместо них.
+  await expect(page.locator('.dashboard-page .stats')).toContainText('Выборов');
+  const chart = page.getByRole('heading', { name: 'Выборы по дням', level: 2 });
+  const few = page.locator('.dash-few').filter({ hasText: /^(Мало данных|Выборов нет)/ });
+  await expect(chart.or(few)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Сигналы', level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Прогноз на сегодня' })).toHaveCount(0);
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
@@ -827,10 +841,15 @@ test('Master mix editor opened from the bottom of the catalog starts at the top'
 test('Master mixes show substitution and missing tobaccos linked to their cards', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
+  // Скрытые миксы в «Сигналах» дашборда (#520): в seed скрыт «Персиковый мираж»,
+  // строка ведёт в «Миксы».
   await openWorkspace(page, 'Дашборд');
-  await page.locator('.dashboard-page__signals').getByRole('button', { name: 'Peach Silk' }).click();
-  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Peach Silk' })).toBeVisible();
-  await page.keyboard.press('Escape');
+  const hiddenSignal = page
+    .getByRole('region', { name: 'Сигналы' })
+    .getByRole('listitem')
+    .filter({ hasText: /^Скрыты? у гостя, нет табака: / });
+  await hiddenSignal.getByRole('button', { name: 'Миксы', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
 
   await openWorkspace(page, 'Миксы');
   const statusChips = page.getByRole('group', { name: 'Статус микса' });
