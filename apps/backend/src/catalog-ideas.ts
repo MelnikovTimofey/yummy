@@ -50,6 +50,10 @@ const PRIOR_WEIGHT = 50;
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
+// Один коллатор на модуль: localeCompare(…, 'ru') на каждое сравнение
+// втрое медленнее при сортировке всего каталога.
+const ruCollator = new Intl.Collator('ru');
+
 // Сглаживание к средней по каталогу: 5,0 с тремя оценками не обгоняет 4,7 с тысячей.
 export const bayesianRating = (rating: number | null, ratingsCount: number | null) => {
   const n = rating === null ? 0 : ratingsCount ?? 0;
@@ -58,7 +62,7 @@ export const bayesianRating = (rating: number | null, ratingsCount: number | nul
 
 const byBayesian = (left: IdeaSourceTobacco, right: IdeaSourceTobacco) =>
   bayesianRating(right.rating, right.ratingsCount) - bayesianRating(left.rating, left.ratingsCount)
-  || left.name.localeCompare(right.name, 'ru');
+  || ruCollator.compare(left.name, right.name);
 
 const toIdea = (tobacco: IdeaSourceTobacco, why?: string): CatalogIdea => ({
   id: tobacco.id,
@@ -94,7 +98,7 @@ const pickFastMoving = (shelf: IdeaSourceTobacco[], mixes: IdeaSourceMix[]) => {
   return shelf
     .filter((tobacco) => (usage.get(tobacco.id) ?? 0) > 0)
     .sort((left, right) =>
-      (usage.get(right.id) ?? 0) - (usage.get(left.id) ?? 0) || left.name.localeCompare(right.name, 'ru'),
+      (usage.get(right.id) ?? 0) - (usage.get(left.id) ?? 0) || ruCollator.compare(left.name, right.name),
     )
     .slice(0, FAST_MOVING_LIMIT);
 };
@@ -103,10 +107,10 @@ const buildLikeFastMoving = (candidates: IdeaSourceTobacco[], fastMoving: IdeaSo
   const sources = fastMoving.map((tobacco) => ({ tobacco, keys: tasteKeys(tobacco) }));
 
   const matches = candidates.flatMap((candidate) => {
-    const keys = tasteKeys(candidate);
+    const keys = Array.from(tasteKeys(candidate));
     let best: { source: IdeaSourceTobacco; overlap: number } | null = null;
     for (const source of sources) {
-      const overlap = Array.from(keys).filter((key) => source.keys.has(key)).length;
+      const overlap = keys.filter((key) => source.keys.has(key)).length;
       if (overlap > 0 && (!best || overlap > best.overlap)) {
         best = { source: source.tobacco, overlap };
       }
@@ -153,26 +157,26 @@ const parseList = (value: string) => {
   }
 };
 
+// Сырой SQL, а не findMany со связью полки: на всём каталоге Prisma тянет
+// связь отдельным запросом по одиннадцати тысячам id и разбирает строки
+// дольше, чем идёт сам запрос (#510).
+const scanIdeaTobaccos = () => prisma.$queryRaw<IdeaScanRecord[]>`
+  SELECT t."id", t."manufacturer", t."lineName", t."name", t."flavorProfiles", t."flavors",
+         t."archived", t."sourceUrl", t."rating", t."ratingsCount", t."reviewsCount", t."viewsCount",
+         coalesce(s."status" = 'active', false) AS "onShelf"
+  FROM "Tobacco" t
+  LEFT JOIN "ShelfItem" s ON s."tobaccoId" = t."id"
+  WHERE NOT t."archived"
+`;
+
+type IdeaScanRecord = Omit<IdeaSourceTobacco, 'flavorProfiles' | 'flavors'> & {
+  flavorProfiles: string;
+  flavors: string;
+};
+
 export const getCatalogIdeas = async (): Promise<CatalogIdeas> => {
   const [tobaccos, mixes] = await Promise.all([
-    prisma.tobacco.findMany({
-      where: { archived: false },
-      select: {
-        id: true,
-        manufacturer: true,
-        lineName: true,
-        name: true,
-        flavorProfiles: true,
-        flavors: true,
-        archived: true,
-        sourceUrl: true,
-        shelfItem: { select: { status: true } },
-        rating: true,
-        ratingsCount: true,
-        reviewsCount: true,
-        viewsCount: true,
-      },
-    }),
+    scanIdeaTobaccos(),
     prisma.mix.findMany({
       where: { available: true },
       select: { available: true, components: { select: { tobaccoId: true } } },
@@ -180,9 +184,8 @@ export const getCatalogIdeas = async (): Promise<CatalogIdeas> => {
   ]);
 
   return buildCatalogIdeas(
-    tobaccos.map(({ shelfItem, ...tobacco }) => ({
+    tobaccos.map((tobacco) => ({
       ...tobacco,
-      onShelf: shelfItem?.status === 'active',
       flavorProfiles: parseList(tobacco.flavorProfiles),
       flavors: parseList(tobacco.flavors),
     })),
