@@ -5,10 +5,11 @@ import { CONFIDENT_MATCH, matchLine, normalizeName, type CatalogTobacco, type Su
 import { parseInvoice } from './invoices/parse';
 import { extractTextItems } from './invoices/pdf-text';
 import type { TextPage } from './invoices/types';
-import { ensureOnShelf, syncAvailability, syncOutAt, type ShelfActor, type ShelfItemStatus } from './shelf';
+import { ensureOnShelf, syncAvailability, type ShelfActor, type ShelfItemStatus } from './shelf';
 
 // Поставки (#152, срез 3): счёт поставщика → черновик со строками → приёмка
-// пишет приходы в граммах на полку и запоминает сопоставления строк в SupplierItem.
+// возвращает пришедшие табаки в «Есть» (#518), пишет приходы в граммах, где граммы
+// известны, и запоминает сопоставления строк в SupplierItem.
 
 type Tx = Prisma.TransactionClient;
 
@@ -128,7 +129,8 @@ export const lineGrams = (line: Pick<LineRecord, 'qty' | 'grams' | 'receivedGram
   line.receivedGrams ?? (line.grams === null ? null : line.qty * line.grams);
 const isReceived = (line: LineRecord) => line.kind === 'tobacco' && line.arrived;
 const createsReceipt = (line: LineRecord) => isReceived(line) && line.tobaccoId !== null && lineGrams(line) !== null;
-const isPending = (line: LineRecord) => isReceived(line) && (line.tobaccoId === null || lineGrams(line) === null);
+// Граммы при приёмке не нужны (#518): пришедшая строка ждёт только выбора табака.
+const isPending = (line: LineRecord) => isReceived(line) && line.tobaccoId === null;
 
 const summarize = (lines: LineRecord[]) => ({
   linesSumKop: lines.reduce((total, line) => total + lineSum(line), 0),
@@ -627,7 +629,7 @@ export const acceptDelivery = async (
       const delivery = await loadDraft(tx, id);
       const pending = delivery.lines.filter(isPending).length;
       if (pending) {
-        throw new DeliveryConflictError('pending_lines', `Выберите табак и укажите граммы в строках: ${pending}`, { count: pending });
+        throw new DeliveryConflictError('pending_lines', `Выберите табак в строках: ${pending}`, { count: pending });
       }
       const receivedAt = input.receivedAt ?? delivery.receivedAt ?? new Date();
       // Условное обновление берёт блокировку строки: повторное нажатие «Принять» ждёт
@@ -635,8 +637,9 @@ export const acceptDelivery = async (
       const claimed = await tx.delivery.updateMany({ where: { id, status: 'draft' }, data: { status: 'received', receivedAt } });
       if (!claimed.count) throw new DeliveryConflictError('not_draft', 'Поставка уже принята — менять её нельзя');
 
+      // Пришедший табак — «Есть» (#518); в журнал граммов идут только строки с граммами.
       const accepted = delivery.lines.filter(createsReceipt);
-      const tobaccoIds = [...new Set(accepted.map((line) => line.tobaccoId!))];
+      const tobaccoIds = [...new Set(delivery.lines.filter((line) => isReceived(line) && line.tobaccoId).map((line) => line.tobaccoId!))];
       const shelf = new Map<string, string>();
       for (const tobaccoId of tobaccoIds) shelf.set(tobaccoId, (await ensureOnShelf(tx, tobaccoId, 'active')).id);
 
@@ -675,7 +678,7 @@ export const acceptDelivery = async (
         }
       }
 
-      await syncOutAt(tx, tobaccoIds, receivedAt);
+      await tx.shelfItem.updateMany({ where: { tobaccoId: { in: tobaccoIds } }, data: { outAt: null } });
       await syncAvailability(tx, tobaccoIds);
       await audit(tx, actor, { action: 'accept', entityId: id, entityLabel: labelOf(delivery), details: { grams, sumKop } });
     },

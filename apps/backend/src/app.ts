@@ -82,16 +82,21 @@ import {
   markEmpty,
   markEmptyMany,
   removeFromShelf,
+  restock,
+  restockMany,
+  setKeepStockedMany,
   setStop,
   setTrialVerdict,
   ShelfConflictError,
   ShelfNotFoundError,
   ShelfValidationError,
   undoEmptyBatch,
+  undoRestockBatch,
   updateSettings,
   updateShelfItem,
   writeOff,
 } from './shelf';
+import { getShelfOrder } from './shelf-order';
 import { setAnalogs } from './analogs-admin';
 import {
   acceptDelivery,
@@ -316,6 +321,11 @@ export const buildApp = () => {
         shelfEmpty: 'POST /staff/shelf/:tobaccoId/empty',
         shelfEmptyMany: 'POST /staff/shelf/empty',
         shelfUndoBatch: 'DELETE /staff/shelf/batches/:batchId',
+        shelfRestock: 'POST /staff/shelf/:tobaccoId/restock',
+        shelfRestockMany: 'POST /staff/shelf/restock',
+        shelfUndoRestock: 'DELETE /staff/shelf/restock-batches/:batchId',
+        shelfKeepMany: 'POST /staff/shelf/keep',
+        shelfOrder: 'GET /staff/shelf/order',
         shelfCount: 'POST /staff/shelf/:tobaccoId/counts',
         shelfReceipt: 'POST /staff/shelf/:tobaccoId/receipts',
         shelfWriteOff: 'POST /staff/shelf/:tobaccoId/write-offs',
@@ -2328,6 +2338,39 @@ export const buildApp = () => {
     if (!user) return;
     const batchId = (request.params as { batchId?: string }).batchId?.trim() ?? '';
     return sendShelf(reply, () => undoEmptyBatch(user, batchId));
+  });
+
+  app.post('/staff/shelf/restock', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { tobaccoIds?: unknown };
+    return sendShelf(reply, () => restockMany(user, body.tobaccoIds));
+  });
+
+  app.post('/staff/shelf/:tobaccoId/restock', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => restock(user, tobaccoParam(request)));
+  });
+
+  app.delete('/staff/shelf/restock-batches/:batchId', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const batchId = (request.params as { batchId?: string }).batchId?.trim() ?? '';
+    return sendShelf(reply, () => undoRestockBatch(user, batchId));
+  });
+
+  app.post('/staff/shelf/keep', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { tobaccoIds?: unknown; keepStocked?: unknown };
+    return sendShelf(reply, () => setKeepStockedMany(user, body.tobaccoIds, body.keepStocked));
+  });
+
+  app.get('/staff/shelf/order', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => getShelfOrder());
   });
 
   app.post('/staff/shelf/:tobaccoId/empty', async (request, reply) => {

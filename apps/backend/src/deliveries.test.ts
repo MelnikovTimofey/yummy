@@ -381,16 +381,15 @@ test.describe('ручная поставка', () => {
     await assert.rejects(addLine(draft.id, { rawName: ' ', qty: 1 }), DeliveryValidationError);
     await assert.rejects(addLine(draft.id, { rawName: 'x', qty: 0 }), DeliveryValidationError);
 
-    // В «Что-то своё» граммов нет — строка ждёт, пока мастер их укажет.
+    // В «Что-то своё» граммов нет — приёмку это не держит (#518): табак встаёт «Есть», журнал без записи.
     assert.equal(lineOf(card, 3).receivedGrams, null);
-    assert.equal(card.pendingLines, 1);
-    await assert.rejects(acceptDelivery(actor, draft.id), (error) => error instanceof DeliveryConflictError && error.code === 'pending_lines');
-    await updateLine(draft.id, lineOf(card, 3).id, { receivedGrams: 200 });
+    assert.equal(card.pendingLines, 0);
 
     const accepted = await acceptDelivery(actor, draft.id);
-    assert.equal(accepted.grams, 600);
-    const panama = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'hlg-panama' }, include: { entries: true } });
-    assert.deepEqual(panama.entries.map((entry) => [entry.grams, entry.priceKop]), [[200, null]]);
+    assert.equal(accepted.grams, 400);
+    const panama = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'hlg-panama' }, include: { entries: true, tobacco: true } });
+    assert.deepEqual(panama.entries, []);
+    assert.deepEqual([panama.status, panama.outAt, panama.tobacco.inStock], ['active', null, true]);
   });
 
   test('без поставщика — черновик без поставщика, память не пишется', async () => {
