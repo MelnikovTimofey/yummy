@@ -3,6 +3,7 @@ import test from 'node:test';
 import { prisma } from '../../db';
 import { resetAppState } from '../../state';
 import {
+  archiveOffListTobaccos,
   buildStatsData,
   collectBrandUrls,
   collectKnownLineUrls,
@@ -137,6 +138,60 @@ test('бренды точки — только у табаков htreviews в н
   for (const brand of ['musthave', 'spectrum', 'duft']) {
     assert.ok(!brandUrls.includes(`https://htreviews.org/tobaccos/${brand}`), brand);
   }
+});
+
+// Issue #519: каталог сужается до списка брендов клиента; то, на что опирается
+// точка (полка, миксы, аналоги, счета), и ручные табаки не трогаются.
+test('в архив уходят только табаки htreviews вне списка брендов, на которые точка не опирается', async () => {
+  await resetAppState();
+  const tobacco = (id: string, sourceUrl: string | null, extra: { archived?: boolean; sourceKind?: string } = {}) =>
+    prisma.tobacco.create({
+      data: {
+        id,
+        manufacturer: id,
+        name: id,
+        sourceKind: extra.sourceKind ?? 'htreviews',
+        sourceUrl,
+        flavorProfiles: '[]',
+        flavors: '[]',
+        flavorTags: '[]',
+        archived: extra.archived ?? false,
+      },
+    });
+  await tobacco('listed', 'https://htreviews.org/tobaccos/darkside/core/pink-mi');
+  await tobacco('off', 'https://htreviews.org/tobaccos/spectrum/hard/kiwi');
+  await tobacco('off-arch', 'https://htreviews.org/tobaccos/spectrum/hard/mango', { archived: true });
+  await tobacco('off-manual', null, { sourceKind: 'manual' });
+  await tobacco('off-shelf', 'https://htreviews.org/tobaccos/bliss/main/apelsin');
+  await tobacco('off-shelf-brand', 'https://htreviews.org/tobaccos/bliss/main/arbuz');
+  await tobacco('off-mix', 'https://htreviews.org/tobaccos/element/air/lime');
+  await tobacco('off-analog', 'https://htreviews.org/tobaccos/element/air/mint');
+  await tobacco('off-supplier', 'https://htreviews.org/tobaccos/element/air/cola');
+  await prisma.shelfItem.create({ data: { tobaccoId: 'off-shelf' } });
+  await prisma.mix.create({
+    data: {
+      id: 'mix',
+      name: 'Микс',
+      description: '',
+      flavorProfiles: '[]',
+      flavors: '[]',
+      flavorTags: '[]',
+      components: { create: [{ tobaccoId: 'off-mix' }] },
+    },
+  });
+  await prisma.tobaccoAnalog.create({ data: { tobaccoId: 'listed', analogId: 'off-analog' } });
+  await prisma.supplier.create({
+    data: { name: 'Поставщик', items: { create: [{ normalizedName: 'cola', tobaccoId: 'off-supplier' }] } },
+  });
+
+  const brandUrls = ['https://htreviews.org/tobaccos/darkside/'];
+  const dryRun = await archiveOffListTobaccos(brandUrls, { apply: false });
+  assert.deepEqual(dryRun.map((item) => item.id), ['off']);
+  assert.equal((await prisma.tobacco.findUniqueOrThrow({ where: { id: 'off' } })).archived, false);
+
+  await archiveOffListTobaccos(brandUrls, { apply: true });
+  const archived = await prisma.tobacco.findMany({ where: { archived: true }, select: { id: true }, orderBy: { id: 'asc' } });
+  assert.deepEqual(archived.map((item) => item.id), ['off', 'off-arch']);
 });
 
 // Issue #249: при обходе по брендам известные линейки берутся только этих брендов.

@@ -29,12 +29,14 @@ const toBoolean = (value: string | undefined, fallback: boolean) => {
 
 async function main() {
   const shelfBrands = toBoolean(process.env.HTREVIEWS_SHELF_BRANDS, false);
+  const listedBrands = (process.env.HTREVIEWS_BRAND_URLS ?? '')
+    .split(',')
+    .map((item) => item.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  // С обоими параметрами — список клиента и бренды полки вместе (#519).
   const brandUrls = shelfBrands
-    ? await loadShelfBrandUrls()
-    : process.env.HTREVIEWS_BRAND_URLS
-      ?.split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    ? Array.from(new Set([...listedBrands, ...(await loadShelfBrandUrls())]))
+    : listedBrands;
   // Пустой список брендов syncHtReviewsCatalog читает как «весь каталог»:
   // ночной прогон не должен молча превратиться в многочасовой полный.
   if (shelfBrands && !brandUrls?.length) {
