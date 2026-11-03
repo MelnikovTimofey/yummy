@@ -571,11 +571,12 @@ test.describe('Master on a phone', () => {
     await page.getByRole('button', { name: 'Войти' }).click();
     await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
+    // Дашборд на seed короче экрана (#520: выборов мало, графиков нет), поэтому
+    // прокручиваем «Полку» и уходим с неё в «Миксы».
     const nav = page.getByRole('navigation', { name: 'Разделы' });
-    await scrollDown(page);
     await nav.getByRole('button', { name: 'Полка', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect(page.locator('.m-shelf-card').first()).toBeVisible();
 
     await scrollDown(page);
     await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
