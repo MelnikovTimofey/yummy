@@ -7572,7 +7572,7 @@ button[aria-busy="true"]:disabled {
   cursor: pointer;
 }
 
-.m-shelf-list[data-picking] { padding-bottom: 120px; }
+.m-shelf-list[data-picking] { padding-bottom: 168px; }
 .m-shelf-list[data-picking] .m-shelf-card { cursor: pointer; }
 .m-shelf-card[data-picked] { border-color: var(--accent-border); background: var(--accent-soft); }
 .m-shelf-card__pick { display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 2px; }
@@ -7604,7 +7604,8 @@ button[aria-busy="true"]:disabled {
 
 .m-shelf-bulk__empty:disabled { opacity: 0.45; cursor: not-allowed; }
 .m-shelf-bulk__acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.m-shelf-bulk ~ .shelf-toast { bottom: calc(56px + var(--safe-bottom) + 128px); }
+.m-shelf-bulk__remove { grid-column: 1 / -1; }
+.m-shelf-bulk ~ .shelf-toast { bottom: calc(56px + var(--safe-bottom) + 176px); }
 
 /* --- Шторка «Сколько осталось?» --------------------------------------- */
 

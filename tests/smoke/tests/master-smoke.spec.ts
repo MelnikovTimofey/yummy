@@ -248,6 +248,34 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
   await expect(emptyButton(row)).toBeVisible();
 });
 
+// «Убрать с полки» для выбранных: строки уходят, одна отмена возвращает все.
+test('Master shelf removes several tobaccos at once and undoes it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const tableRows = page.locator('table.shelf-table tbody tr[data-tobacco-id]');
+  await expect(tableRows.nth(1)).toBeVisible();
+  const ids = [await tableRows.nth(0).getAttribute('data-tobacco-id'), await tableRows.nth(1).getAttribute('data-tobacco-id')];
+  const rows = ids.map((id) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`));
+
+  for (const row of rows) await row.getByRole('checkbox', { name: /^Выбрать / }).click();
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+  await expect(bar).toContainText('Выбрано 2');
+
+  await bar.getByRole('button', { name: 'Убрать с полки', exact: true }).click();
+  await expect(bar).toHaveCount(0);
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toContainText('Убраны с полки: 2');
+  await expect(toast).toContainText('История осталась.');
+  for (const row of rows) await expect(row).toHaveCount(0);
+
+  await toast.getByRole('button', { name: /Отменить/ }).click();
+  await expect(toast).toBeHidden();
+  for (const row of rows) await expect(row).toBeVisible();
+});
+
 // Несколько табаков разом (#333, #shot=shelf-bulk, shelf-bulk-done): чекбоксы,
 // панель «Выбрано N», «Закончились» одним действием и одна отмена на всех.
 // Неразрушающий: отмена пакета удаляет отметки 0 г из журнала.
@@ -282,6 +310,7 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   await expect(emptyButton).toHaveCount(0);
   await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
   await expect(bar.getByRole('button', { name: 'Держим постоянно', exact: true })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Убрать с полки', exact: true })).toBeVisible();
   // Строки клавиш под таблицей нет: клавиши — в title (#364).
   await expect(page.locator('.shelf-keys')).toHaveCount(0);
 
@@ -483,6 +512,7 @@ test.describe('Master on a phone', () => {
     await expect(bar.getByRole('button', { name: 'Закончились', exact: true })).toBeEnabled();
     await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
     await expect(bar.getByRole('button', { name: 'Держим постоянно', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Убрать с полки', exact: true })).toBeVisible();
     // Повторное касание снимает выбор.
     await card.tap();
     await expect(title).toHaveText('Выбрано 0');

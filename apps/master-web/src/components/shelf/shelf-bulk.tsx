@@ -40,6 +40,7 @@ export type ShelfBulkActions = {
   onEmpty: () => void;
   onStop: () => void;
   onKeep: (keep: boolean) => void;
+  onRemove: () => void;
 };
 
 const KEEP_OPTIONS: Array<[boolean, string, string]> = [
@@ -130,13 +131,16 @@ export const ShelfBulkBar = ({
       {summary.allStopped ? 'Снять стоп' : 'Стоп для гостей'}
     </button>
     <KeepMenu disabled={busy} onKeep={actions.onKeep} />
+    <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={actions.onRemove}>
+      Убрать с полки
+    </button>
     <button type="button" className="icon-btn" aria-label="Снять выделение" title="Клавиша Esc" onClick={onClear}>
       <X size={14} aria-hidden />
     </button>
   </div>
 );
 
-// Телефон (#shot=mobile-bulk): внизу «Закончились», стоп и «Держим постоянно»; сколько выбрано — в шапке.
+// Телефон (#shot=mobile-bulk): внизу «Закончились», стоп, «Держим постоянно» и «Убрать с полки»; сколько выбрано — в шапке.
 export const ShelfMobileBulk = ({ summary, busy, actions }: { summary: BulkSummary; busy: boolean; actions: ShelfBulkActions }) => {
   const [keepOpen, setKeepOpen] = useState(false);
   return (
@@ -151,6 +155,9 @@ export const ShelfMobileBulk = ({ summary, busy, actions }: { summary: BulkSumma
           </button>
           <button type="button" className="m-shelf-card__left" disabled={busy || !summary.count} onClick={() => setKeepOpen(true)}>
             Держим постоянно
+          </button>
+          <button type="button" className="m-shelf-card__left m-shelf-bulk__remove" disabled={busy || !summary.count} onClick={actions.onRemove}>
+            Убрать с полки
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { normalizeShelfEmptyManyResponse, normalizeShelfRow, type ShelfRow } fro
 import {
   bulkEmptyToast,
   bulkKeepToast,
+  bulkRemoveToast,
   bulkStopToast,
   bulkSummary,
   headCheck,
@@ -141,4 +142,9 @@ test('тосты стопа и «держим постоянно» для нес
   assert.deepEqual(bulkStopToast(2, false), { title: 'Стоп снят: 2', text: 'Гости снова видят те, что есть на полке.' });
   assert.deepEqual(bulkKeepToast(4, true), { title: 'Держим постоянно: 4', text: 'Когда закончатся, попадут в заказ.' });
   assert.deepEqual(bulkKeepToast(1, false), { title: 'Не держим постоянно: 1', text: 'В заказ больше не попадут.' });
+});
+
+test('тост «Убрать с полки» для нескольких: сколько убрано и сколько не вышло', () => {
+  assert.deepEqual(bulkRemoveToast(3, 0), { title: 'Убраны с полки: 3', text: 'История осталась.' });
+  assert.deepEqual(bulkRemoveToast(2, 1), { title: 'Убраны с полки: 2', text: 'История осталась. Не убрано 1, попробуйте ещё раз.' });
 });

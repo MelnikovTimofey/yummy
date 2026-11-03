@@ -43,7 +43,7 @@ import {
   type ShelfStatusKey,
 } from '@/lib/shelf';
 import { analogToastText } from '@/lib/shelf-analogs';
-import { bulkEmptyToast, bulkKeepToast, bulkStopToast, bulkSummary, headCheck, selectRange, toggleSelected } from '@/lib/shelf-bulk';
+import { bulkEmptyToast, bulkKeepToast, bulkRemoveToast, bulkStopToast, bulkSummary, headCheck, selectRange, toggleSelected } from '@/lib/shelf-bulk';
 import { ShelfBulkBar, ShelfCheck, ShelfMobileBulk, type ShelfBulkActions } from './shelf-bulk';
 import { ShelfCard } from './shelf-card';
 import { countReorder } from '@/lib/reorder';
@@ -458,6 +458,32 @@ export const ShelfView = ({
     [clearSelection, notify, onSelectionChange, selection, shelf],
   );
 
+  // «Убрать с полки» для выбранных: одна отмена возвращает всех убранных.
+  const onBulkRemove = useCallback(async () => {
+    if (bulkBusy || !chosen.length) return;
+    const before = selection;
+    const rows = chosen;
+    clearSelection();
+    setBulkBusy(true);
+    try {
+      const { items, failed } = await shelf.removeMany(rows.map((row) => row.tobacco.id));
+      if (!items.length) throw failed[0];
+      const removed = rows.filter((row) => items.some((item) => item.tobacco.id === row.tobacco.id));
+      notify({
+        ...bulkRemoveToast(removed.length, failed.length),
+        undo: async () => {
+          const back = await shelf.restoreMany(removed);
+          if (back.failed.length) throw back.failed[0];
+        },
+      });
+    } catch (cause) {
+      onSelectionChange(before);
+      notify({ title: 'Не убрано', text: describeShelfError(cause), error: true });
+    } finally {
+      setBulkBusy(false);
+    }
+  }, [bulkBusy, chosen, clearSelection, notify, onSelectionChange, selection, shelf]);
+
   const bulkActions: ShelfBulkActions = {
     onEmpty: () => void onBulkEmpty(),
     onStop: () => {
@@ -469,6 +495,7 @@ export const ShelfView = ({
       const ids = chosen.filter((row) => row.keepStocked !== keepStocked).map((row) => row.tobacco.id);
       void onBulkPatch(ids, { keepStocked }, { keepStocked: !keepStocked }, bulkKeepToast(chosen.length, keepStocked));
     },
+    onRemove: () => void onBulkRemove(),
   };
 
   const onUpdate = useCallback(async (row: ShelfRow, patch: ShelfPatch) => {
