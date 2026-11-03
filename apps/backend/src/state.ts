@@ -680,46 +680,56 @@ const buildDashboardWindow = (key: DashboardWindowKey) => {
   };
 };
 
-const buildInventoryBreakdown = (
-  values: Array<{
-    key: string;
-    label: string;
-    inStock: boolean;
-  }>,
-): DashboardBreakdownItem[] => {
-  const stats = new Map<string, DashboardBreakdownItem>();
+// Разбивки дашборда считает Postgres: чтение всего каталога в Node ради них
+// занимало большую часть времени сводки (#509). Списки пишутся только через
+// serializeList, поэтому в колонках всегда JSON-массив строк.
+const scanDashboardInventory = () => prisma.$queryRaw<DashboardInventoryGroup[]>`
+  SELECT 'manufacturer' AS "kind", "manufacturer" AS "key",
+         count(*)::int AS "total", (count(*) FILTER (WHERE "inStock"))::int AS "inStockCount"
+  FROM "Tobacco"
+  GROUP BY "manufacturer"
+  UNION ALL
+  SELECT 'flavorProfile', "key", count(*)::int, (count(*) FILTER (WHERE "inStock"))::int
+  FROM "Tobacco", jsonb_array_elements_text("flavorProfiles"::jsonb) AS "key"
+  GROUP BY "key"
+  UNION ALL
+  SELECT 'flavor', "key", count(*)::int, (count(*) FILTER (WHERE "inStock"))::int
+  FROM "Tobacco", jsonb_array_elements_text("flavors"::jsonb) AS "key"
+  GROUP BY "key"
+`;
 
-  for (const value of values) {
-    const current = stats.get(value.key) ?? {
-      key: value.key,
-      label: value.label,
-      total: 0,
-      inStockCount: 0,
-      outOfStockCount: 0,
-    };
-
-    current.total += 1;
-    if (value.inStock) {
-      current.inStockCount += 1;
-    } else {
-      current.outOfStockCount += 1;
-    }
-
-    stats.set(value.key, current);
-  }
-
-  return [...stats.values()].sort((left, right) => {
-    if (right.total !== left.total) {
-      return right.total - left.total;
-    }
-
-    if (right.inStockCount !== left.inStockCount) {
-      return right.inStockCount - left.inStockCount;
-    }
-
-    return left.label.localeCompare(right.label, 'ru');
-  });
+type DashboardInventoryGroup = {
+  kind: 'manufacturer' | 'flavorProfile' | 'flavor';
+  key: string;
+  total: number;
+  inStockCount: number;
 };
+
+const buildInventoryBreakdown = (
+  groups: DashboardInventoryGroup[],
+  kind: DashboardInventoryGroup['kind'],
+  labelOf: (key: string) => string,
+): DashboardBreakdownItem[] =>
+  groups
+    .filter((group) => group.kind === kind)
+    .map((group) => ({
+      key: group.key,
+      label: labelOf(group.key),
+      total: group.total,
+      inStockCount: group.inStockCount,
+      outOfStockCount: group.total - group.inStockCount,
+    }))
+    .sort((left, right) => {
+      if (right.total !== left.total) {
+        return right.total - left.total;
+      }
+
+      if (right.inStockCount !== left.inStockCount) {
+        return right.inStockCount - left.inStockCount;
+      }
+
+      return left.label.localeCompare(right.label, 'ru');
+    });
 
 const mapIntroCardRecord = (record: {
   id: string;
@@ -2821,18 +2831,8 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
   await ensureAppState();
 
   const window = buildDashboardWindow(windowKey);
-  const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents] = await Promise.all([
-    prisma.tobacco.findMany({
-      orderBy: [{ manufacturer: 'asc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        manufacturer: true,
-        name: true,
-        flavorProfiles: true,
-        flavors: true,
-        inStock: true,
-      },
-    }),
+  const [inventoryGroups, mixes, rails, smokeEvents, ratingEvents] = await Promise.all([
+    scanDashboardInventory(),
     getAvailableMixCatalog(),
     getStaffRails(),
     prisma.smokeCtaEvent.findMany({
@@ -2903,33 +2903,11 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
     }
   }
 
-  const manufacturers = buildInventoryBreakdown(
-    inventoryRecords.map((item) => ({
-      key: item.manufacturer,
-      label: item.manufacturer,
-      inStock: item.inStock,
-    })),
-  );
-
-  const flavorProfiles = buildInventoryBreakdown(
-    inventoryRecords.flatMap((item) =>
-      parseList(item.flavorProfiles).map((profile) => ({
-        key: profile,
-        label: flavorProfileLabels[profile] ?? profile,
-        inStock: item.inStock,
-      })),
-    ),
-  );
-
-  const topFlavors = buildInventoryBreakdown(
-    inventoryRecords.flatMap((item) =>
-      parseList(item.flavors).map((flavor) => ({
-        key: flavor,
-        label: flavor,
-        inStock: item.inStock,
-      })),
-    ),
-  ).slice(0, 8);
+  const manufacturers = buildInventoryBreakdown(inventoryGroups, 'manufacturer', (key) => key);
+  const flavorProfiles = buildInventoryBreakdown(inventoryGroups, 'flavorProfile', (key) => flavorProfileLabels[key] ?? key);
+  const topFlavors = buildInventoryBreakdown(inventoryGroups, 'flavor', (key) => key).slice(0, 8);
+  const inventoryTotal = manufacturers.reduce((sum, item) => sum + item.total, 0);
+  const inventoryInStockCount = manufacturers.reduce((sum, item) => sum + item.inStockCount, 0);
 
   const topMixes = mixes
     .map((mix) => ({
@@ -3056,9 +3034,9 @@ export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d')
       endsAt: window.endsAt,
     },
     inventory: {
-      total: inventoryRecords.length,
-      inStockCount: inventoryRecords.filter((item) => item.inStock).length,
-      outOfStockCount: inventoryRecords.filter((item) => !item.inStock).length,
+      total: inventoryTotal,
+      inStockCount: inventoryInStockCount,
+      outOfStockCount: inventoryTotal - inventoryInStockCount,
       manufacturers: manufacturers.slice(0, 6),
       flavorProfiles: flavorProfiles.slice(0, 6),
       topFlavors,
