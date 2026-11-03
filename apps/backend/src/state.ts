@@ -586,7 +586,7 @@ const dashboardWindowConfig: Record<DashboardWindowKey, { label: string; days: n
   '30d': { label: '30 дней', days: 30 },
 };
 
-const flavorProfileLabels: Record<string, string> = {
+export const flavorProfileLabels: Record<string, string> = {
   sweet: 'Сладкие',
   sour: 'Кислые',
   spicy: 'Пряные',
