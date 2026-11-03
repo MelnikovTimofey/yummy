@@ -294,14 +294,25 @@ export const App = () => {
     }
   };
 
-  const refreshInventoryDependents = async (nextToken: string) => {
-    await Promise.allSettled([
-      loadSummary(nextToken, dashboardWindow),
-      shelf.reload(nextToken),
-      mixes.loadMixes(nextToken),
-      mixes.loadMixTobaccos(nextToken),
-      rails.reloadCatalog(nextToken),
-    ]);
+  // Наличие меняют полка, поставки и каталог. Дашборд, миксы и рейлы
+  // перечитывают его при входе на свою вкладку: залп из пяти запросов при
+  // каждом уходе с полки спорил за два ядра сервера с экраном, на который
+  // пришёл мастер (#511).
+  const staleInventoryTabsRef = useRef(new Set<WorkspaceTab>());
+  const markInventoryChanged = () => {
+    staleInventoryTabsRef.current = new Set<WorkspaceTab>(['dashboard', 'mixes', 'rails']);
+  };
+  const reloadStaleInventory = (nextToken: string, tab: WorkspaceTab) => {
+    if (!staleInventoryTabsRef.current.delete(tab)) return;
+    if (tab === 'dashboard') {
+      void loadSummary(nextToken, dashboardWindow);
+      void shelf.reload(nextToken);
+    }
+    if (tab === 'mixes') {
+      void mixes.loadMixes(nextToken);
+      void mixes.loadMixTobaccos(nextToken);
+    }
+    if (tab === 'rails') void rails.reloadCatalog(nextToken);
   };
 
 
@@ -335,7 +346,8 @@ export const App = () => {
       void telegramOps.reload(token, user.role);
     }
     // Приёмка поставки тоже меняет наличие для гостя.
-    if (previous === 'shelf' || previous === 'deliveries') void refreshInventoryDependents(token);
+    if (previous === 'shelf' || previous === 'deliveries') markInventoryChanged();
+    reloadStaleInventory(token, activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -644,9 +656,9 @@ export const App = () => {
 
     try {
       await action();
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : fallback);
@@ -689,9 +701,9 @@ export const App = () => {
         },
         token,
       );
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить архив');
@@ -728,9 +740,9 @@ export const App = () => {
         setInventoryError(`Часть позиций не обновилась: ${failed.join(', ')}`);
       }
       setSelectedInventoryIds([]);
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryBatchAction('');
       return;
     }
@@ -752,9 +764,9 @@ export const App = () => {
         setInventoryError(`Часть позиций не обновилась: ${batch.skippedIds.join(', ')}`);
       }
       setSelectedInventoryIds([]);
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить массовое действие');
@@ -817,9 +829,9 @@ export const App = () => {
         token,
       );
 
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventorySaveStatus('ready');
     } catch (cause) {
       setInventorySaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить табак');
@@ -1007,9 +1019,7 @@ export const App = () => {
       pendingFile={pendingInvoice}
       onPendingFileTaken={() => setPendingInvoice(null)}
       onOpenShelf={() => setActiveTab('shelf')}
-      onAccepted={() => {
-        if (token) void refreshInventoryDependents(token);
-      }}
+      onAccepted={markInventoryChanged}
     />
   );
 
