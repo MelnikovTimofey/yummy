@@ -308,6 +308,7 @@ model SmokeCtaEvent {
   substitutedTo     Tobacco?      @relation("SmokeCtaSubstitutedTo", fields: [substitutedToId], references: [id], onDelete: SetNull)
 
   @@index([mixId])
+  @@index([createdAt])
   @@index([guestId, createdAt])
 }
 
