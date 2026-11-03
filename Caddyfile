@@ -60,6 +60,10 @@
 	@automation path /automation /automation/*
 	respond @automation 404
 
+	# Backend отдаёт JSON без сжатия, а полка Мастера весит больше 200 КБ (#508).
+	# Сжимает прокси, а не backend: у того всего два ядра на весь контур.
+	encode zstd gzip
+
 	reverse_proxy backend:3021 {
 		import retry_while_restarting
 	}
