@@ -2,11 +2,10 @@ import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } fr
 import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
 import { formatMetricValue } from '@/contracts';
 import { attributeChipLabel } from '@/lib/filters';
+import { rankBySearch } from '@/lib/search-match';
 
 // Панель фильтров Мастера (#464, design/design_handoff_master_filters): одна на
 // все экраны со списками. Число — только у статусов, у атрибутов его нет.
-
-const lower = (value: string) => value.toLocaleLowerCase('ru-RU');
 
 // Список с поиском нужен, когда значений больше, чем видно без прокрутки.
 const SEARCH_FROM = 9;
@@ -72,8 +71,7 @@ export const AttributeFilter = ({ title, options, selected, formatOption = (valu
   };
   useDismiss(open, rootRef, close);
 
-  const words = lower(query.trim());
-  const shown = words ? options.filter((option) => lower(formatOption(option)).includes(words)) : options;
+  const shown = rankBySearch(options, query, (option) => [formatOption(option)]);
   const toggle = (value: string) => {
     if (single) onChange(selected.includes(value) ? [] : [value]);
     else onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
@@ -213,11 +211,10 @@ export const SheetChoice = ({ title, options, selected, formatOption = (value) =
   const [unfolded, setUnfolded] = useState(false);
   const [query, setQuery] = useState('');
   const searchable = options.length >= SHEET_SEARCH_FROM;
-  const words = lower(query.trim());
   // Выбранное видно и в свёрнутой группе.
   const folded = [...new Set([...options.slice(0, FOLDED), ...selected])];
-  const shown = words
-    ? options.filter((option) => lower(formatOption(option)).includes(words))
+  const shown = query.trim()
+    ? rankBySearch(options, query, (option) => [formatOption(option)])
     : unfolded || options.length <= FOLDED + 1
       ? options
       : folded;

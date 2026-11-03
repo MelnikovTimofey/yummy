@@ -115,6 +115,19 @@ test('filterShelfRows ищет по табаку и бренду без учёт
   assert.deepEqual(names('  '), ['Cane Mint', 'Blackcurrant', 'Маракуйя']);
 });
 
+test('filterShelfRows ищет по неточному совпадению, точные — выше похожих (#522)', () => {
+  const rows = [
+    row({ name: 'Mind', brand: 'Sebero' }),
+    row({ name: 'Манго', brand: 'Хулиган' }),
+    row({ name: 'Spearmint', brand: 'Sebero' }),
+    row({ name: 'Cane Mint', brand: 'Tangiers' }),
+  ];
+  const names = (query: string) => filterShelfRows(rows, { query, status: 'all', filters: EMPTY_SHELF_FILTERS }).map((item) => item.tobacco.name);
+  assert.deepEqual(names('hooligan'), ['Манго']);
+  assert.deepEqual(names('Tangers'), ['Cane Mint']);
+  assert.deepEqual(names('mint'), ['Cane Mint', 'Spearmint', 'Mind']);
+});
+
 test('filterShelfRows: бренд, характер, крепость и миксы', () => {
   const rows = [
     row({ name: 'A', brand: 'DARKSIDE', profiles: ['berry'], strength: 'Средняя', mixCount: 2 }),

@@ -10,6 +10,7 @@ import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
+import { rankBySearch } from '@/lib/search-match';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import {
   CATALOG_SORTS,
@@ -256,9 +257,7 @@ const InventoryTokenEditor = ({
   }, [open]);
 
   const normalizedDraft = draftValue.trim().toLocaleLowerCase('ru-RU');
-  const filteredSuggestions = suggestions.filter(
-    (item) => !normalizedDraft || item.toLocaleLowerCase('ru-RU').includes(normalizedDraft),
-  );
+  const filteredSuggestions = rankBySearch(suggestions, draftValue, (item) => [item]);
   const canAddCustom =
     normalizedDraft.length > 0 && !suggestions.some((item) => item.toLocaleLowerCase('ru-RU') === normalizedDraft);
 
@@ -409,9 +408,7 @@ const InventorySuggestionInput = ({
   }, [open]);
 
   const normalized = value.trim().toLocaleLowerCase('ru-RU');
-  const filtered = suggestions
-    .filter((option) => !normalized || option.toLocaleLowerCase('ru-RU').includes(normalized))
-    .slice(0, 8);
+  const filtered = rankBySearch(suggestions, value, (option) => [option]).slice(0, 8);
 
   return (
     <div className="field combo-suggest" ref={rootRef}>
