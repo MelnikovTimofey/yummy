@@ -70,6 +70,7 @@ import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput
 import { listAuditEvents, recordAuditEvent } from './audit';
 import { getCatalogIdeas } from './catalog-ideas';
 import { registerShelfInsightsRoutes } from './shelf-insights';
+import { getGuestChoices, parseChoicesPeriod } from './guest-analytics';
 import {
   addCount,
   addReceipt,
@@ -336,6 +337,7 @@ export const buildApp = () => {
         shelfDashboard: 'GET /staff/shelf/dashboard',
         shelfPurchase: 'GET /staff/shelf/purchase',
         dashboardSummary: 'GET /staff/dashboard/summary',
+        dashboardChoices: 'GET /staff/dashboard/choices',
         dailyCodesList: 'GET /staff/access/daily-codes',
         dailyCodesCreate: 'POST /staff/access/daily-codes',
         dailyCodesUpdate: 'PATCH /staff/access/daily-codes/:id',
@@ -2373,6 +2375,20 @@ export const buildApp = () => {
     const response: StaffDashboardSummaryResponse = await getDashboardSummary(normalizeDashboardWindowKey(query?.window));
 
     return reply.send(response);
+  });
+
+  app.get('/staff/dashboard/choices', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) {
+      return;
+    }
+
+    const period = parseChoicesPeriod((request.query ?? {}) as { period?: unknown; from?: unknown; to?: unknown });
+    if ('error' in period) {
+      return reply.status(400).send(period satisfies ApiError);
+    }
+
+    return reply.send(await getGuestChoices(period));
   });
 
   app.get('/staff/auth/me', async (request, reply) => {
