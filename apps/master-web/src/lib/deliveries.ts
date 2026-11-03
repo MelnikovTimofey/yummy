@@ -226,36 +226,23 @@ const linesPrepositional = (count: number) => {
   return `${count} ${mod10 === 1 && mod100 !== 11 ? 'строке' : 'строках'}`;
 };
 
-// Строка без табака или без граммов не даёт принять поставку (pendingLines backend).
+// Строка без табака не даёт принять поставку (pendingLines backend); граммы не нужны (#518).
 export const acceptLabel = (pending: number) =>
-  pending ? `Выберите табак или граммы в ${linesPrepositional(pending)}` : 'Принять поставку';
+  pending ? `Выберите табак в ${linesPrepositional(pending)}` : 'Принять поставку';
 
-export const acceptedToastTitle = (grams: number) => `Принято: ${formatWeight(grams)} на полке`;
+// Принятый счёт возвращает пришедшие табаки в «Есть» (#518): считаем разные табаки.
+export const tobaccosToReceive = (lines: Array<Pick<DeliveryLine, 'kind' | 'arrived' | 'tobacco'>>) =>
+  new Set(lines.filter((line) => line.kind === 'tobacco' && line.arrived && line.tobacco).map((line) => line.tobacco!.id)).size;
 
-// --- граммы прихода --------------------------------------------------------------
+const tobaccos = (count: number) => formatCount(count, ['табак', 'табака', 'табаков']);
 
-const kilograms = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+export const acceptedToastTitle = (count: number) => (count ? `Принято: ${tobaccos(count)} в наличии` : 'Поставка принята');
 
-export const formatWeight = (grams: number) =>
-  grams < 1000 ? `${Math.round(grams)} г` : `${kilograms.format(Math.round(grams / 100) / 10)} кг`;
 
-// Подсказка под полем «Приход»: что написано в счёте.
-export const lineGramsHint = (line: Pick<DeliveryLine, 'qty' | 'grams' | 'receivedGrams'>) => {
-  if (line.grams === null) return line.receivedGrams === null ? 'укажите граммы' : 'указано вручную';
-  return line.qty > 1 ? `${line.qty} × ${line.grams} г по счёту` : `${line.grams} г по счёту`;
-};
+// --- приход строки -------------------------------------------------------------
 
-// Границы — как в apps/backend/src/deliveries.ts (MAX_QTY × MAX_GRAMS).
-const MAX_RECEIVED_GRAMS = 50 * 5000;
-
-// Пусто — null (сброс к «кол-во × граммы по счёту»); мусор — undefined.
-export const parseReceivedGrams = (value: string): number | null | undefined => {
-  const text = value.replace(/[\s\u00a0\u202f]/g, '');
-  if (!text) return null;
-  if (!/^\d+$/.test(text)) return undefined;
-  const grams = Number(text);
-  return grams >= 1 && grams <= MAX_RECEIVED_GRAMS ? grams : undefined;
-};
+// Колонка «Приход»: штуки по счёту, граммов нет (#518).
+export const lineQty = (line: Pick<DeliveryLine, 'qty'>) => `${line.qty} шт.`;
 
 // --- ошибки загрузки -----------------------------------------------------------
 

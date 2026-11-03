@@ -12,7 +12,6 @@ const rawLine = {
   priceKop: 155000,
   sumKop: 310000,
   grams: 200,
-  receivedGrams: 350,
   kind: 'tobacco',
   arrived: true,
   tobacco: { id: 't1', manufacturer: 'Black Burn', lineName: '', name: 'Original Popcorn', shelfStatus: null },
@@ -38,8 +37,6 @@ const rawCard = {
   linesSumKop: 310000,
   sumMatches: false,
   pendingLines: 0,
-  gramsToReceive: 350,
-  grams: 0,
 };
 
 test('normalizeDeliveryCard читает карточку поставки и строки разбора', () => {
@@ -54,8 +51,7 @@ test('normalizeDeliveryCard читает карточку поставки и с
   assert.equal(card.totalKop, 2227000);
   assert.equal(card.hasFile, true);
   assert.equal(card.sumMatches, false);
-  assert.equal(card.gramsToReceive, 350);
-  assert.equal(card.grams, 0);
+  assert.equal('gramsToReceive' in card, false);
   assert.equal(card.lines.length, 1);
 
   const [line] = card.lines;
@@ -63,8 +59,6 @@ test('normalizeDeliveryCard читает карточку поставки и с
   assert.equal(line.article, 'BB-001');
   assert.equal(line.qty, 2);
   assert.equal(line.grams, 200);
-  // Мастер поправил приход: пришло не всё.
-  assert.equal(line.receivedGrams, 350);
   assert.equal(line.priceKop, 155000);
   assert.equal(line.kind, 'tobacco');
   assert.equal(line.arrived, true);
@@ -97,7 +91,6 @@ test('normalizeDeliveryCard не доверяет неизвестным зна�
   assert.equal(line.matchReason, null);
   assert.equal(line.priceKop, null);
   assert.equal(line.grams, null);
-  assert.equal(line.receivedGrams, null);
   assert.equal(line.qty, 1);
   assert.equal(line.arrived, true);
   assert.deepEqual(line.candidates, []);
@@ -124,19 +117,18 @@ test('normalizeDeliveryList читает список и итоги месяца
     totals: { monthKop: 6607600, monthGrams: 9000, drafts: 1, suppliers: 2, memoryItems: 61 },
   });
   assert.equal(list.items.length, 2);
-  assert.equal(list.items[0].grams, 2800);
-  assert.equal(list.items[1].grams, 53800);
+  assert.equal('grams' in list.items[0], false);
   assert.equal(list.items[0].supplier, 'Каспий Опт');
   assert.equal(list.items[0].receivedAt, '2026-11-12T08:00:00.000Z');
   assert.equal(list.items[1].kind, 'start');
   assert.equal(list.items[1].supplier, null);
   assert.equal(list.items[1].invoiceDate, null);
   assert.equal(list.items[1].totalKop, null);
-  assert.deepEqual(list.totals, { monthKop: 6607600, monthGrams: 9000, drafts: 1, suppliers: 2, memoryItems: 61 });
+  assert.deepEqual(list.totals, { monthKop: 6607600, drafts: 1, suppliers: 2, memoryItems: 61 });
 });
 
 test('normalizeDeliveryList на пустом ответе — пустой список и нули', () => {
   const list = normalizeDeliveryList(null);
   assert.deepEqual(list.items, []);
-  assert.deepEqual(list.totals, { monthKop: 0, monthGrams: 0, drafts: 0, suppliers: 0, memoryItems: 0 });
+  assert.deepEqual(list.totals, { monthKop: 0, drafts: 0, suppliers: 0, memoryItems: 0 });
 });

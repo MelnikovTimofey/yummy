@@ -718,9 +718,8 @@ test('Master catalog shows purchase ideas from htreviews without planning anythi
   await expect(page.locator('tbody tr[data-tobacco-id]').first()).toBeVisible();
 });
 
-// Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
-// Табак берётся с полки, поэтому приёмка лишь добавила бы ему граммы:
-// гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
+// Поставка вручную (#212, #518): черновик → строка с табаком из каталога → приёмка.
+// Граммы не вводятся: приёмка только вернула бы табак в «Есть». Принятую поставку удалить нельзя — в базе
 // осталась бы поставка с уникальным номером «SMOKE-…» и приход.
 // Неразрушающий, как весь прогон (README smoke): черновик доводится до готовности
 // к приёмке и удаляется — принятая поставка оставила бы приход и поставку в базе.
@@ -761,15 +760,18 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
     .first()
     .click();
   await addLine.getByLabel('Цена за штуку, ₽').fill('1 550');
-  // Без граммов в названии строка ждала бы их и блокировала приёмку.
-  await addLine.getByLabel('Граммов в штуке').fill('200');
+  // Вес в Мастер не вносится (#518): поля граммов нет.
+  await expect(addLine.getByLabel('Граммов в штуке')).toHaveCount(0);
   await addLine.getByRole('button', { name: 'Добавить строку' }).click();
   await expect(addLine).toBeHidden();
 
   const line = page.locator('tr[data-line-id]');
   await expect(line).toHaveCount(1);
   await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
-  await expect(page.locator('.deliv-footbar')).toContainText('На полку 200 г');
+  // Подвал: сколько табаков вернётся в наличие, без граммов.
+  await expect(page.locator('.deliv-footbar')).toContainText('Вернутся в наличие: 1 табак');
+  await expect(page.getByRole('columnheader', { name: 'Приход' })).toBeVisible();
+  await expect(line).toContainText('1 шт.');
 
   await expect(page.getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
 

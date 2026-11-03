@@ -9,9 +9,9 @@ import {
   deliveryStatusTag,
   formatDay,
   formatMoney,
-  formatWeight,
   monthMeta,
   readUploadError,
+  tobaccosToReceive,
   type UploadError,
 } from '@/lib/deliveries';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
@@ -109,7 +109,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           onAccepted={(card) => {
             backToList();
             onAccepted();
-            notify({ title: acceptedToastTitle(card.grams), text: '', action: { label: 'Открыть полку', onClick: onOpenShelf } });
+            notify({ title: acceptedToastTitle(tobaccosToReceive(card.lines)), text: '', action: { label: 'Открыть полку', onClick: onOpenShelf } });
           }}
           onDeleted={() => {
             backToList();
@@ -241,7 +241,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
               <col />
               <col style={{ width: 150 }} />
               <col style={{ width: 80 }} />
-              <col style={{ width: 96 }} />
               <col style={{ width: 130 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 200 }} />
@@ -252,7 +251,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                 <th scope="col">Поставщик</th>
                 <th scope="col">Счёт</th>
                 <th scope="col" className="shelf-table__num">Строк</th>
-                <th scope="col" className="shelf-table__num">Приход</th>
                 <th scope="col" className="shelf-table__num">Сумма</th>
                 <th scope="col">Пришло</th>
                 <th scope="col">Статус</th>
@@ -277,7 +275,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                     <td>{item.supplier ?? <span className="shelf-faint">{item.kind === 'start' ? 'без поставщика' : '—'}</span>}</td>
                     <td className="shelf-num">{item.number ? `№ ${item.number}` : <span className="shelf-faint">—</span>}</td>
                     <td className="shelf-table__num shelf-num">{formatMetricValue(item.lines)}</td>
-                    <td className="shelf-table__num shelf-num">{item.grams ? formatWeight(item.grams) : <span className="shelf-faint">—</span>}</td>
                     <td className="shelf-table__num shelf-num">{formatMoney(item.totalKop)}</td>
                     <td className="shelf-num">{item.receivedAt ? formatDay(item.receivedAt) : <span className="shelf-faint">—</span>}</td>
                     <td>
