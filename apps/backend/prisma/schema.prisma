@@ -414,6 +414,8 @@ model ShelfItem {
   keepStocked   Boolean      @default(true)
   stopped       Boolean      @default(false)
   stopNote      String?
+  // С какого момента «Закончился» (#518); null — «Есть». По нему — наличие для гостя.
+  outAt         DateTime?
   note          String?
   // Отметка мастера по пробе (#329): yes — зашло, no — не зашло.
   trialVerdict  String?

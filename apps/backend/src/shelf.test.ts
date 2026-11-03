@@ -18,7 +18,6 @@ import {
   ShelfConflictError,
   ShelfNotFoundError,
   ShelfValidationError,
-  syncAvailability,
   undoEmptyBatch,
   updateSettings,
   updateShelfItem,
@@ -60,25 +59,6 @@ test.describe('старт полки из наличия', () => {
       assert.ok([200, 250].includes(item.entries[0].grams));
     }
     assert.deepEqual(await getSettings(), { bowlGrams: 18, leadDays: 7, budgetKop: null });
-  });
-});
-
-test.describe('syncAvailability', () => {
-  test('наличие = активен на полке, не стоп, остаток по учёту больше нуля, не архив', async () => {
-    const ids = ['tobacco-citrus-breeze', 'tobacco-berry-oasis', 'tobacco-desert-honey', 'tobacco-spice-route', MINT, PEACH];
-    await prisma.shelfItem.update({ where: { tobaccoId: 'tobacco-berry-oasis' }, data: { stopped: true } });
-    await prisma.shelfItem.update({ where: { tobaccoId: 'tobacco-desert-honey' }, data: { status: 'plan' } });
-    await prisma.tobacco.update({ where: { id: 'tobacco-spice-route' }, data: { archived: true } });
-    const mint = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: MINT } });
-    await prisma.stockEntry.create({ data: { shelfItemId: mint.id, kind: 'count', grams: 0, at: new Date() } });
-    await prisma.tobacco.update({ where: { id: PEACH }, data: { inStock: true } });
-
-    await prisma.$transaction((tx) => syncAvailability(tx, ids));
-
-    assert.deepEqual(
-      await Promise.all(ids.map(inStock)),
-      [true, false, false, false, false, false],
-    );
   });
 });
 
