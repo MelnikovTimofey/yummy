@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
@@ -893,11 +892,6 @@ export const App = () => {
       mode={shelfMode}
       onModeChange={setShelfMode}
       onGoCatalog={() => setActiveTab('catalog')}
-      onOpenIdeas={() => {
-        // Смена вкладки сама перечитает идеи.
-        setCatalogView('ideas');
-        setActiveTab('catalog');
-      }}
       onOpenInCatalog={(row) => {
         setCatalogView('all');
         setActiveTab('catalog');
@@ -1096,8 +1090,8 @@ export const App = () => {
     };
     const openWhatsNewAction = (action: WhatsNewAction) => {
       closeWhatsNew();
-      // «Закупка» — только на десктопе: на телефоне — полка.
-      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : action.view === 'purchase' && !isPhone ? 'purchase' : 'shelf');
+      // «Закупки» больше нет (#518): старые выпуски с ней открывают полку.
+      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'order' : 'shelf');
       if (action.tab === 'catalog') {
         setCatalogView(action.view === 'ideas' ? 'ideas' : 'all');
         // Смена вкладки сама перечитает идеи; уже в каталоге — перечитываем здесь.
@@ -1170,29 +1164,16 @@ export const App = () => {
 
         {isPhone ? (
           <MobileTopBar
-            title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab, shelfMode)}
+            title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab)}
             action={
               shelfPicking ? (
                 <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection(null)}>
                   Готово
                 </button>
-              ) : activeTab === 'shelf' ? (
-                <>
-                  {shelfMode === 'shelf' ? (
-                    <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
-                      Выбрать
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="icon-btn m-topbar__action"
-                    aria-label="К заказу"
-                    aria-pressed={shelfMode === 'reorder'}
-                    onClick={() => setShelfMode(shelfMode === 'reorder' ? 'shelf' : 'reorder')}
-                  >
-                    <ShoppingCart size={18} strokeWidth={1.8} aria-hidden />
-                  </button>
-                </>
+              ) : activeTab === 'shelf' && shelfMode === 'shelf' ? (
+                <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
+                  Выбрать
+                </button>
               ) : null
             }
           />

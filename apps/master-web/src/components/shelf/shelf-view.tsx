@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Ellipsis, FileUp, Search } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import {
-  DEFAULT_SHELF_SETTINGS,
   formatCount,
   formatFlavorProfileLabel,
   formatMetricValue,
@@ -51,27 +50,23 @@ import {
 } from '@/lib/shelf-bulk';
 import { ShelfBulkBar, ShelfCheck, ShelfMobileBulk, type ShelfBulkActions } from './shelf-bulk';
 import { ShelfCard } from './shelf-card';
-import { countReorder } from '@/lib/reorder';
+import { orderCount } from '@/lib/order';
 import { ShelfMobileList } from './shelf-mobile';
-import { ShelfPurchase } from './shelf-purchase';
-import { ShelfReorder } from './shelf-reorder';
+import { ShelfOrderView } from './shelf-order';
 import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
-import { ShelfSettingsDialog } from './shelf-settings-dialog';
 import { ShelfStatusCell } from './shelf-status';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 import { RowsSkeleton } from '@/components/ui/loading';
 
-// purchase — «Закупка» (#327–#331), только на десктопе.
-export type ShelfMode = 'shelf' | 'reorder' | 'purchase';
+// order — «К заказу» (#518): закончились и держим постоянно.
+export type ShelfMode = 'shelf' | 'order';
 
 type ShelfViewProps = {
   shelf: ShelfApi;
-  // Режим живёт в App: на телефоне «К заказу» включается из верхней панели.
+  // Режим живёт в App: смена раздела возвращает на полку.
   mode: ShelfMode;
   onModeChange: (mode: ShelfMode) => void;
   onGoCatalog: () => void;
-  // «Идеи: <направление>» во «Вкусах» — «Идеи для закупки» каталога.
-  onOpenIdeas: () => void;
   onOpenInCatalog: (row: ShelfRow) => void;
   onOpenMix: (mixId: string) => void;
   onUploadInvoice: (file: File) => void;
@@ -98,7 +93,6 @@ export const ShelfView = ({
   mode,
   onModeChange,
   onGoCatalog,
-  onOpenIdeas,
   onOpenInCatalog,
   onOpenMix,
   onUploadInvoice,
@@ -121,8 +115,6 @@ export const ShelfView = ({
   const [menu, setMenu] = useState<{ id: string; anchor: HTMLElement } | null>(null);
   const [pendingId, setPendingId] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
-  // Настройки (порция, срок поставки, бюджет) нужны только «К заказу» и «Закупке», пока они на граммах.
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const toastSeq = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableSectionElement | null>(null);
@@ -157,23 +149,26 @@ export const ShelfView = ({
     onCardOpened?.();
   }, [openCardId, rows, onCardOpened, onModeChange]);
 
-  // «Закупку» перечитываем при входе в вид и после смены настроек (бюджет).
-  const { loadPurchase } = shelf;
-  const settingsVersion = view?.settings;
-  useEffect(() => {
-    if (mode === 'purchase' && !isPhone) void loadPurchase();
-  }, [isPhone, loadPurchase, mode, settingsVersion]);
-
-  const reorderCount = countReorder(shelf.reorder);
-  const settingsDialog = settingsOpen ? (
-    <ShelfSettingsDialog
-      settings={view?.settings ?? DEFAULT_SHELF_SETTINGS}
-      interval={view?.interval}
-      horizon={view?.horizon}
-      onSave={shelf.saveSettings}
-      onClose={() => setSettingsOpen(false)}
-    />
-  ) : null;
+  const toOrder = orderCount(shelf.order);
+  // «Показать на полке» под заявкой: закончившиеся, которые не держим, — чипом «Закончились».
+  const showOut = () => {
+    onModeChange('shelf');
+    setQuery('');
+    setFilters(EMPTY_SHELF_FILTERS);
+    setStatus('out');
+  };
+  const segment = (
+    <span className={isPhone ? 'shelf-seg shelf-seg--phone' : 'shelf-seg'} role="group" aria-label="Вид полки">
+      <button type="button" aria-pressed={mode === 'shelf'} onClick={() => onModeChange('shelf')}>
+        Полка
+      </button>
+      <button type="button" aria-pressed={mode === 'order'} onClick={() => onModeChange('order')}>
+        К заказу
+        {toOrder ? <span className="shelf-seg__count">{formatMetricValue(toOrder)}</span> : null}
+      </button>
+    </span>
+  );
+  const orderView = <ShelfOrderView order={shelf.order} error={shelf.orderError} phone={isPhone} onShowNotKept={showOut} />;
 
   const counts = useMemo(() => shelfCounts(rows), [rows]);
   const shown = useMemo(
@@ -370,30 +365,13 @@ export const ShelfView = ({
     }
   }, [notify, toast]);
 
-  // «Держим» в «Закупке»: видно сразу; подсказки базы и бюджет пересчитывает сервер.
-  const onPurchaseKeep = useCallback(
-    async (tobacco: ShelfTobaccoRef, keepStocked: boolean) => {
-      shelf.patchPurchaseItem(tobacco.id, { keepStocked });
-      try {
-        await shelf.update(tobacco.id, { keepStocked });
-      } catch (cause) {
-        notify({ title: tobaccoName(tobacco), text: describeShelfError(cause), error: true });
-      }
-      void shelf.loadPurchase();
-    },
-    [notify, shelf],
-  );
-
-  // Отметка пробы (#329) — в карточке, на телефоне и в «Закупке»; не сохранилась — тост,
-  // «Закупку» перечитываем, чтобы вернуть отметку с сервера.
+  // Отметка пробы (#329) — в карточке и на телефоне; не сохранилась — тост.
   const onTrialVerdict = useCallback(
     async (tobacco: ShelfTobaccoRef, trialVerdict: ShelfTrialVerdict | null) => {
-      shelf.patchPurchaseItem(tobacco.id, { trialVerdict });
       try {
         await shelf.update(tobacco.id, { trialVerdict });
       } catch (cause) {
         notify({ title: tobaccoName(tobacco), text: describeShelfError(cause), error: true });
-        if (shelf.purchase) void shelf.loadPurchase();
       }
     },
     [notify, shelf],
@@ -655,11 +633,10 @@ export const ShelfView = ({
         {shelf.status === 'error' ? <p className="error-text">{shelf.error}</p> : null}
         {shelf.status === 'loading' && !view ? <RowsSkeleton label="Загружаем полку" rows={8} /> : null}
 
-        {view && mode === 'reorder' ? (
-          <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => setSettingsOpen(true)} />
-        ) : null}
+        {view ? segment : null}
+        {view && mode === 'order' ? orderView : null}
 
-        {view && mode !== 'reorder' ? (
+        {view && mode === 'shelf' ? (
           <>
             <div className="m-shelf-search">
               <div className="input m-shelf-search__field">
@@ -722,8 +699,7 @@ export const ShelfView = ({
         ) : null}
 
         {cardSheet}
-        {settingsDialog}
-        {picking && view && mode !== 'reorder' ? <ShelfMobileBulk summary={summary} busy={bulkBusy} actions={bulkActions} /> : null}
+        {picking && view && mode === 'shelf' ? <ShelfMobileBulk summary={summary} busy={bulkBusy} actions={bulkActions} /> : null}
         {toastNode}
       </section>
     );
@@ -742,18 +718,7 @@ export const ShelfView = ({
         }
         actions={
           <>
-            <span className="shelf-seg" role="group" aria-label="Вид полки">
-              <button type="button" aria-pressed={mode === 'shelf'} onClick={() => onModeChange('shelf')}>
-                Полка
-              </button>
-              <button type="button" aria-pressed={mode === 'reorder'} onClick={() => onModeChange('reorder')}>
-                К заказу
-                {reorderCount ? <span className="shelf-seg__count">{formatMetricValue(reorderCount)}</span> : null}
-              </button>
-              <button type="button" aria-pressed={mode === 'purchase'} onClick={() => onModeChange('purchase')}>
-                Закупка
-              </button>
-            </span>
+            {segment}
             <button type="button" className="btn" data-variant="ghost" onClick={onGoCatalog}>
               Добавить из каталога
             </button>
@@ -768,20 +733,7 @@ export const ShelfView = ({
 
       {view ? (
         <>
-          {mode === 'reorder' ? (
-            <ShelfReorder reorder={shelf.reorder} error={shelf.reorderError} notify={notify} onSettings={() => setSettingsOpen(true)} />
-          ) : null}
-
-          {mode === 'purchase' ? (
-            <ShelfPurchase
-              purchase={shelf.purchase}
-              error={shelf.purchaseError}
-              onSettings={() => setSettingsOpen(true)}
-              onKeep={onPurchaseKeep}
-              onVerdict={onTrialVerdict}
-              onIdeas={onOpenIdeas}
-            />
-          ) : null}
+          {mode === 'order' ? orderView : null}
 
           {mode === 'shelf' ? (
             <>
@@ -957,8 +909,6 @@ export const ShelfView = ({
           ) : null}
         </>
       ) : null}
-
-      {settingsDialog}
 
       {menu && menuRow ? <ShelfRowMenu row={menuRow} anchor={menu.anchor} actions={rowActions} onClose={() => setMenu(null)} /> : null}
 

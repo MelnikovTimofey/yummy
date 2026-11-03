@@ -16,6 +16,7 @@ import {
   formatShelfDate,
   keepToast,
   matchShelfStatus,
+  nextTrialVerdict,
   resolveShelfShortcut,
   restockToast,
   shelfCounts,
@@ -259,4 +260,10 @@ test('resolveShelfShortcut: клавиши полки по коду клавиш
 test('describeShelfError: ответ сервера как есть, обрыв сети — понятным текстом', () => {
   assert.equal(describeShelfError(Object.assign(new Error('Табак уже закончился'), { status: 409 })), 'Табак уже закончился');
   assert.equal(describeShelfError(new TypeError('Failed to fetch')), 'Нет связи с сервером, изменение не сохранено. Попробуйте ещё раз.');
+});
+
+test('nextTrialVerdict: повторный клик по выбранному снимает отметку', () => {
+  assert.equal(nextTrialVerdict(null, 'yes'), 'yes');
+  assert.equal(nextTrialVerdict('yes', 'no'), 'no');
+  assert.equal(nextTrialVerdict('yes', 'yes'), null);
 });

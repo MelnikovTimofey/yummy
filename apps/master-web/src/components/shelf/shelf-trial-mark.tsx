@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { ShelfTrialVerdict } from '@/contracts';
-import { nextTrialVerdict } from '@/lib/purchase';
+import { nextTrialVerdict } from '@/lib/shelf';
 
 type TrialMarkProps = {
   value: ShelfTrialVerdict | null;
@@ -10,7 +10,7 @@ type TrialMarkProps = {
   size?: 'md' | 'lg';
 };
 
-// «Зашло / Не зашло» (#329, #shot=card-trial, purchase-trials, mobile-trial): отметка
+// «Зашло / Не зашло» (#329, #shot=card-trial, mobile-trial): отметка
 // видна сразу, запрос — следом; не сохранилось — возвращается то, что пришло с сервера.
 // Повторный клик по выбранному снимает отметку.
 export const TrialMark = ({ value, onChange, label, size = 'md' }: TrialMarkProps) => {

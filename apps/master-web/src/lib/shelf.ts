@@ -1,4 +1,4 @@
-import type { MixStatus, MixSubstitution, ShelfArrival, ShelfRow } from '../contracts';
+import type { MixStatus, MixSubstitution, ShelfArrival, ShelfRow, ShelfTrialVerdict } from '../contracts';
 import { rankBySearch } from './search-match';
 
 // Чистая логика экрана «Полка» (#211, #518): фильтры, сортировка, подписи. Полка
@@ -176,6 +176,10 @@ export const trialArrival = (arrivals: ShelfArrival[]) => {
   const first = arrivals[arrivals.length - 1];
   return first ? `пришёл впервые ${formatShelfDate(first.at)}` : null;
 };
+
+// «Зашло / Не зашло» пробы (#329): повторный клик по выбранному снимает отметку.
+export const nextTrialVerdict = (current: ShelfTrialVerdict | null, clicked: ShelfTrialVerdict) =>
+  current === clicked ? null : clicked;
 
 // Одна кнопка строки: «Закончился», «Вернуть в наличие» или «Снять стоп»; у плана — подпись.
 export type ShelfRowAction = 'empty' | 'restock' | 'unstop' | null;
