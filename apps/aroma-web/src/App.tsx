@@ -51,7 +51,8 @@ import {
   type GuestHistoryResponse,
   type GuestMixRef,
 } from '@/lib/cabinet';
-import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst, normalizeSearchText } from '@/lib/catalog';
+import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst } from '@/lib/catalog';
+import { rankBySearch } from '@/lib/search-match';
 import {
   COLD_NOTE,
   MOOD_DRAFT_NOTE,
@@ -1034,9 +1035,9 @@ const CatalogFiltersSheet = ({
 
   const isSelected = (kind: CatalogFilterTag['kind'], value: string) =>
     selected.some((tag) => tag.kind === kind && tag.value === value);
-  const normalizedFlavorQuery = normalizeSearchText(flavorQuery);
+  const normalizedFlavorQuery = flavorQuery.trim();
   const visibleFlavors = normalizedFlavorQuery
-    ? flavors.filter((flavor) => normalizeSearchText(flavor).includes(normalizedFlavorQuery))
+    ? rankBySearch(flavors, flavorQuery, (flavor) => [flavor])
     : showAllFlavors
       ? flavors
       : flavors.slice(0, CATALOG_SHEET_FLAVOR_LIMIT);
