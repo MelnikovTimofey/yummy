@@ -1,4 +1,5 @@
 import { formatCount, type ShelfCounterKey, type ShelfCounters, type ShelfRow, type ShelfView, type ShelfWeek, type StockEntry } from '../contracts';
+import { rankBySearch } from './search-match';
 
 // Чистая логика экрана «Полка» (#211, #306): фильтры, сортировка, подписи. Полка
 // небольшая (сотни строк), поэтому всё считается в браузере по загруженным строкам.
@@ -70,19 +71,14 @@ export const shelfChipCount = (view: Pick<ShelfView, 'rows' | 'counters'> | null
   return key === 'trial' || key === 'few' ? view.rows.filter((row) => matchShelfStatus(row, key)).length : view.counters[key];
 };
 
-const lower = (value: string) => value.toLocaleLowerCase('ru-RU');
-
+// Поиск — по неточному совпадению (#522): точные выше похожих, внутри групп —
+// порядок rows, поэтому сортировать строки нужно до отбора.
 export const filterShelfRows = (
   rows: ShelfRow[],
   { query, status, filters }: { query: string; status: ShelfStatusKey; filters: ShelfFilters },
 ) => {
-  const words = lower(query).split(/\s+/).filter(Boolean);
-  return rows.filter((row) => {
+  const narrowed = rows.filter((row) => {
     if (!matchShelfStatus(row, status)) return false;
-    if (words.length) {
-      const haystack = lower(`${row.tobacco.manufacturer} ${row.tobacco.lineName} ${row.tobacco.name}`);
-      if (!words.every((word) => haystack.includes(word))) return false;
-    }
     if (filters.brands.length && !filters.brands.includes(row.tobacco.manufacturer)) return false;
     if (filters.profiles.length && !row.tobacco.flavorProfiles.some((profile) => filters.profiles.includes(profile))) return false;
     if (filters.strengths.length && !filters.strengths.includes(strengthOf(row))) return false;
@@ -90,6 +86,7 @@ export const filterShelfRows = (
     if (filters.mixes === 'without' && row.mixCount > 0) return false;
     return true;
   });
+  return rankBySearch(narrowed, query, (row) => [row.tobacco.manufacturer, row.tobacco.lineName, row.tobacco.name]);
 };
 
 type Option = { value: string; count: number };

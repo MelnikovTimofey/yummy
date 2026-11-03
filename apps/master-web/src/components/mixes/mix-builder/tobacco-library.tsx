@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Plus, Search } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
 import { SmokeMark } from '@/components/ui/loading';
+import { prepareSearchQuery, prepareSearchTarget, searchRank } from '@/lib/search-match';
 
 type TobaccoLibraryProps = {
   // Список по умолчанию (пустой поиск): первые 100 табаков по алфавиту.
@@ -60,8 +61,17 @@ export const TobaccoLibrary = ({ defaultTobaccos, currentIds, onAdd, onSearch }:
           a.name.localeCompare(b.name, 'ru'),
       );
     }
+    // Сервер ставит точные совпадения выше похожих (#522): пересортировка по
+    // названию или бренду не должна их перемешивать.
+    const query = results ? prepareSearchQuery(search) : null;
+    if (query) {
+      const rankOf = (t: InventoryTobacco) =>
+        searchRank(query, prepareSearchTarget([t.name, t.manufacturer, t.lineName ?? '', ...(t.flavorProfiles ?? []), ...(t.flavors ?? []), ...(t.flavorTags ?? [])])) ?? 2;
+      const ranks = new Map(list.map((t) => [t.id, rankOf(t)]));
+      list = [...list].sort((a, b) => (ranks.get(a.id) ?? 2) - (ranks.get(b.id) ?? 2));
+    }
     return list;
-  }, [source, inStockOnly, sort]);
+  }, [source, inStockOnly, sort, results, search]);
 
   return (
     <aside className="mix-builder__library" aria-label="Библиотека табаков">

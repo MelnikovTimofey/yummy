@@ -181,7 +181,7 @@ export const ShelfView = ({
   ) : null;
 
   const shown = useMemo(
-    () => sortShelfRows(filterShelfRows(rows, { query, status, filters }), sort),
+    () => filterShelfRows(sortShelfRows(rows, sort), { query, status, filters }),
     [rows, query, status, filters, sort],
   );
   const menuRow = menu ? rows.find((row) => row.tobacco.id === menu.id) ?? null : null;

@@ -6,6 +6,7 @@ import { authorIdOf, loadMixAuthors, type MixAuthor } from './mix-author';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
 import { loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
+import { matchSearch, prepareSearchQuery, prepareSearchTarget, searchRank, type SearchTarget } from './search-match';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -586,7 +587,7 @@ const dashboardWindowConfig: Record<DashboardWindowKey, { label: string; days: n
   '30d': { label: '30 дней', days: 30 },
 };
 
-const flavorProfileLabels: Record<string, string> = {
+export const flavorProfileLabels: Record<string, string> = {
   sweet: 'Сладкие',
   sour: 'Кислые',
   spicy: 'Пряные',
@@ -1147,6 +1148,18 @@ const resolveInventorySelections = (options: string[], selected: string[]) => {
   return options.filter((item) => selected.includes(normalizeToken(item)));
 };
 
+// Значение не из списка вариантов (набрано руками или пришло ссылкой) раскрывается
+// в похожие варианты (#522). Если похожих нет — остаётся как есть и ничего не находит.
+const expandInventorySelections = (options: string[], selected: string[]) =>
+  unique(selected.flatMap((value) => {
+    if (options.some((option) => normalizeToken(option) === value)) {
+      return [value];
+    }
+
+    const similar = options.filter((option) => matchSearch(value, [option]) !== null).map(normalizeToken);
+    return similar.length ? similar : [value];
+  }));
+
 const matchesInventorySelection = (values: string[], selected: string[]) => {
   if (!selected.length) {
     return true;
@@ -1200,6 +1213,39 @@ type InventoryScanRecord = {
   inStock: boolean;
   archived: boolean;
   updatedAt: Date;
+};
+
+// Нормализованные ключи поиска считаются один раз на табак, пока его поля не
+// изменились: каталог читается целиком на каждый запрос, а транслит и слова на
+// одиннадцати тысячах табаков дороже самого сравнения (#522).
+const inventorySearchTargets = new Map<string, { key: string; target: SearchTarget }>();
+
+type InventorySearchable = Pick<
+  InventoryTobaccoView,
+  'id' | 'name' | 'manufacturer' | 'lineName' | 'officialStrength' | 'communityStrength' | 'flavorProfiles' | 'flavors' | 'flavorTags'
+> & { dependentMixes: Array<{ name: string }> };
+
+const inventorySearchTarget = (item: InventorySearchable) => {
+  const fields = [
+    item.name,
+    item.manufacturer,
+    item.lineName,
+    item.officialStrength ?? '',
+    item.communityStrength ?? '',
+    ...item.flavorProfiles,
+    ...item.flavors,
+    ...item.flavorTags,
+    ...item.dependentMixes.map((mix) => mix.name),
+  ];
+  const key = fields.join('\u0001');
+  const cached = inventorySearchTargets.get(item.id);
+  if (cached?.key === key) {
+    return cached.target;
+  }
+
+  const target = prepareSearchTarget(fields);
+  inventorySearchTargets.set(item.id, { key, target });
+  return target;
 };
 
 const mapInventoryScanRecord = (record: InventoryScanRecord) => ({
@@ -1790,17 +1836,19 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   const ids = new Set((query.ids ?? []).map((id) => id.trim()).filter(Boolean));
   const stock = normalizeInventoryStockFilter(query.stock);
   const archived = normalizeInventoryArchivedFilter(query.archived);
-  const manufacturers = normalizeInventorySelections(query.manufacturers);
-  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
-  const flavors = normalizeInventorySelections(query.flavors);
-  const flavorTags = normalizeInventorySelections(query.flavorTags);
+  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort(ruCollator.compare);
+  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort(ruCollator.compare);
+  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort(ruCollator.compare);
+  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort(ruCollator.compare);
+  const manufacturers = expandInventorySelections(manufacturerOptions, normalizeInventorySelections(query.manufacturers));
+  const flavorProfiles = expandInventorySelections(flavorProfileOptions, normalizeInventorySelections(query.flavorProfiles));
+  const flavors = expandInventorySelections(flavorOptions, normalizeInventorySelections(query.flavors));
+  const flavorTags = expandInventorySelections(flavorTagOptions, normalizeInventorySelections(query.flavorTags));
   const sort = normalizeInventorySortField(query.sort);
   const direction = normalizeInventorySortDirection(query.direction);
   const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
-  const searchTokens = search
-    .split(/\s+/)
-    .map(normalizeToken)
-    .filter(Boolean);
+  const searchQuery = prepareSearchQuery(search);
+  const searchRanks = new Map<string, number>();
 
   // Выборка по всем фильтрам, кроме наличия и архива: по ней считаются счётчики
   // чипов статуса, иначе выбранный чип обнулял соседние (#103, #472).
@@ -1828,25 +1876,17 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
         return false;
       }
 
-      if (!searchTokens.length) {
+      if (!searchQuery) {
         return true;
       }
 
-      const haystack = [
-        item.name,
-        item.manufacturer,
-        item.lineName,
-        item.officialStrength ?? '',
-        item.communityStrength ?? '',
-        ...item.flavorProfiles,
-        ...item.flavors,
-        ...item.flavorTags,
-        ...item.dependentMixes.map((mix) => mix.name),
-      ]
-        .map(normalizeToken)
-        .join(' ');
+      const rank = searchRank(searchQuery, inventorySearchTarget(item));
+      if (rank === null) {
+        return false;
+      }
 
-      return searchTokens.every((token) => haystack.includes(token));
+      searchRanks.set(item.id, rank);
+      return true;
     });
 
   const activeScopeItems = statusScopeItems.filter((item) => !item.archived);
@@ -1871,7 +1911,10 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 
       return stock === 'out-of-stock' ? !item.inStock : true;
     })
-    .sort((left, right) => inventoryTobaccoSort(left, right, sort, direction));
+    // При поиске точные совпадения выше похожих, внутри групп — выбранная сортировка.
+    .sort((left, right) =>
+      (searchRanks.get(left.id) ?? 0) - (searchRanks.get(right.id) ?? 0)
+      || inventoryTobaccoSort(left, right, sort, direction));
 
   const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
   const requestedPage = paginationEnabled ? normalizeStaffPage(query.page) : 1;
@@ -1886,11 +1929,6 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     const record = pageRecordById.get(item.id);
     return record ? [{ ...item, ...mapTobacco(record) }] : [];
   });
-
-  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort(ruCollator.compare);
-  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort(ruCollator.compare);
-  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort(ruCollator.compare);
-  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort(ruCollator.compare);
 
   return {
     items: paginatedItems,
@@ -2332,14 +2370,10 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
   await ensureAppState();
 
   const search = typeof query.search === 'string' ? query.search.trim() : '';
-  const normalizedSearch = normalizeToken(search);
+  const searchQuery = prepareSearchQuery(search);
+  const searchRanks = new Map<string, number>();
   const status = normalizeMixStatusFilter(query.status);
   const railState = normalizeMixRailFilter(query.railState);
-  const manufacturers = normalizeInventorySelections(query.manufacturers);
-  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
-  const flavors = normalizeInventorySelections(query.flavors);
-  const flavorTags = normalizeInventorySelections(query.flavorTags);
-  const authors = normalizeInventorySelections(query.authors);
   const sortField = normalizeMixSortField(query.sort);
   const sortDirection = normalizeMixSortDirection(query.direction);
   const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
@@ -2355,28 +2389,40 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     authors: unique(allItems.flatMap((item) => (item.author ? [item.author.name] : []))).sort((left, right) => left.localeCompare(right, 'ru')),
   };
 
+  const selections = (key: keyof typeof options, values: string[] | undefined) =>
+    resolveInventorySelections(options[key], expandInventorySelections(options[key], normalizeInventorySelections(values)));
   const resolvedFilters = {
-    manufacturers: resolveInventorySelections(options.manufacturers, manufacturers),
-    flavorProfiles: resolveInventorySelections(options.flavorProfiles, flavorProfiles),
-    flavors: resolveInventorySelections(options.flavors, flavors),
-    flavorTags: resolveInventorySelections(options.flavorTags, flavorTags),
-    authors: resolveInventorySelections(options.authors, authors),
+    manufacturers: selections('manufacturers', query.manufacturers),
+    flavorProfiles: selections('flavorProfiles', query.flavorProfiles),
+    flavors: selections('flavors', query.flavors),
+    flavorTags: selections('flavorTags', query.flavorTags),
+    authors: selections('authors', query.authors),
   };
 
   // Все фильтры, кроме статуса: по этой выборке считаются чипы статуса (#472).
   const statusScopeItems = allItems
     .filter((mix) => matchesMixRailState(mix, railState))
-    .filter((mix) =>
-      !normalizedSearch
-      || [
+    .filter((mix) => {
+      if (!searchQuery) {
+        return true;
+      }
+
+      // Описание — только точной подстрокой: опечатки в длинном тексте дают шум.
+      const rank = searchRank(searchQuery, prepareSearchTarget([
         mix.name,
-        mix.description,
         ...mix.flavorProfiles,
         ...mix.flavors,
         ...mix.flavorTags,
         ...mix.components.flatMap((component) => [component.name, component.manufacturer, ...component.flavors]),
         ...mix.railMemberships.map((membership) => membership.name),
-      ].some((value) => normalizeToken(value).includes(normalizedSearch)))
+      ], [mix.description]));
+      if (rank === null) {
+        return false;
+      }
+
+      searchRanks.set(mix.id, rank);
+      return true;
+    })
     .filter((mix) => matchesInventorySelection(mix.components.map((component) => component.manufacturer), resolvedFilters.manufacturers))
     .filter((mix) => matchesInventorySelection(mix.flavorProfiles, resolvedFilters.flavorProfiles))
     .filter((mix) => matchesInventorySelection(mix.flavors, resolvedFilters.flavors))
@@ -2384,7 +2430,9 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     .filter((mix) => matchesInventorySelection(mix.author ? [mix.author.name] : [], resolvedFilters.authors));
   const filteredItems = statusScopeItems
     .filter((mix) => matchesMixStatus(mix, status))
-    .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
+    .sort((left, right) =>
+      (searchRanks.get(left.id) ?? 0) - (searchRanks.get(right.id) ?? 0)
+      || mixViewSortBy(left, right, sortField, sortDirection));
 
   const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
   const requestedPage = paginationEnabled ? normalizeStaffPage(query.page) : 1;
