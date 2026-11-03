@@ -188,7 +188,7 @@
 - `DELETE /staff/access/telegram-operators/:id`
 - `GET /staff/inventory/tobaccos`
 - `PATCH /staff/inventory/tobaccos/:id`
-- `GET /staff/dashboard/summary`
+- `GET /staff/dashboard/choices`
 - `GET /staff/mixes`
 - `POST /staff/mixes`
 - `PATCH /staff/mixes/:id`
