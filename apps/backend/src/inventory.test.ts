@@ -682,6 +682,53 @@ test('empty statistical rails do not count as empty active rails on the dashboar
   await app.close();
 });
 
+// Разбивки считает Postgres (#509): порядок при равенстве — по русскому
+// алфавиту, как раньше в Node.
+test('dashboard inventory breakdowns count the whole catalog by brand, profile and flavor', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  const dashboard = await app.inject({
+    method: 'GET',
+    url: '/staff/dashboard/summary?window=7d',
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  assert.equal(dashboard.statusCode, 200);
+  assert.deepEqual((dashboard.json() as { inventory: unknown }).inventory, {
+    total: 15,
+    inStockCount: 14,
+    outOfStockCount: 1,
+    manufacturers: [
+      { key: 'Ателье Reserve', label: 'Ателье Reserve', total: 6, inStockCount: 5, outOfStockCount: 1 },
+      { key: 'Atlas Smoke', label: 'Atlas Smoke', total: 3, inStockCount: 3, outOfStockCount: 0 },
+      { key: 'Lounge Garden', label: 'Lounge Garden', total: 2, inStockCount: 2, outOfStockCount: 0 },
+      { key: 'North Wind', label: 'North Wind', total: 2, inStockCount: 2, outOfStockCount: 0 },
+      { key: 'Velvet Line', label: 'Velvet Line', total: 2, inStockCount: 2, outOfStockCount: 0 },
+    ],
+    flavorProfiles: [
+      { key: 'fruity', label: 'Фруктовые', total: 6, inStockCount: 5, outOfStockCount: 1 },
+      { key: 'fresh', label: 'Свежие', total: 5, inStockCount: 5, outOfStockCount: 0 },
+      { key: 'sweet', label: 'Сладкие', total: 5, inStockCount: 4, outOfStockCount: 1 },
+      { key: 'floral_herbal', label: 'Цветочно-травяные', total: 3, inStockCount: 3, outOfStockCount: 0 },
+      { key: 'berry', label: 'Ягодные', total: 3, inStockCount: 3, outOfStockCount: 0 },
+      { key: 'dessert', label: 'Десертные', total: 2, inStockCount: 2, outOfStockCount: 0 },
+    ],
+    topFlavors: [
+      { key: 'ваниль', label: 'ваниль', total: 2, inStockCount: 2, outOfStockCount: 0 },
+      { key: 'лайм', label: 'лайм', total: 2, inStockCount: 2, outOfStockCount: 0 },
+      { key: 'лимон', label: 'лимон', total: 2, inStockCount: 2, outOfStockCount: 0 },
+      { key: 'белые цветы', label: 'белые цветы', total: 1, inStockCount: 1, outOfStockCount: 0 },
+      { key: 'виноград', label: 'виноград', total: 1, inStockCount: 1, outOfStockCount: 0 },
+      { key: 'грейпфрут', label: 'грейпфрут', total: 1, inStockCount: 1, outOfStockCount: 0 },
+      { key: 'груша', label: 'груша', total: 1, inStockCount: 1, outOfStockCount: 0 },
+      { key: 'дыня', label: 'дыня', total: 1, inStockCount: 1, outOfStockCount: 0 },
+    ],
+  });
+
+  await app.close();
+});
+
 test('smoke CTA events are recorded in dashboard summary', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
