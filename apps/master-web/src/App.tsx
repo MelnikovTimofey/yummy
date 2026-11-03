@@ -962,6 +962,7 @@ export const App = () => {
       onPageChange={onInventoryPageChange}
       onPageSizeChange={(pageSize) => void onInventoryPageSizeChange(pageSize)}
       onToggleSelection={onToggleInventorySelection}
+      onSetSelection={setSelectedInventoryIds}
       onToggleSelectAll={onToggleSelectAllInventory}
       onAddToShelf={(item) => void onAddToShelf(item)}
       onRemoveFromShelf={(item) => void onRemoveFromShelf(item)}
