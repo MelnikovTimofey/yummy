@@ -165,7 +165,7 @@ test.describe('пишущие пути ставят и снимают outAt', ()
 
 // Данные миграции — всё, кроме ALTER TABLE: колонку в тестовой схеме уже создал db push.
 const migrationData = () => {
-  const file = path.join(__dirname, '..', 'prisma', 'migrations', '20261104000000_shelf_out_at', 'migration.sql');
+  const file = path.join(__dirname, '..', 'prisma', 'migrations', '20261104000100_shelf_out_at', 'migration.sql');
   return readFileSync(file, 'utf8')
     .split(/;\s*\n/)
     .map((statement) => statement.replace(/^\s*--.*$/gm, '').trim())
