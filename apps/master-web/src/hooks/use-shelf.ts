@@ -110,11 +110,11 @@ export const useShelf = (token: string) => {
 
   const update = useCallback((tobaccoId: string, patch: ShelfPatch) => send(shelfPath(tobaccoId), json('PATCH', patch)), [send]);
 
-  // «Закончился»: ответ с id записи журнала — по нему отмена.
+  // «Закончился»: пакет из одного табака, отмена — по пакету (undoBatch).
   const markEmpty = useCallback(async (tobaccoId: string) => {
     const response = await requestJson<unknown>(`${shelfPath(tobaccoId)}/empty`, json('POST'), token);
-    const entryId = String((response as { entryId?: unknown } | null)?.entryId ?? '');
-    return { entryId, item: applyRows([itemOf(response)])[0] };
+    const batchId = String((response as { batchId?: unknown } | null)?.batchId ?? '');
+    return { batchId, item: applyRows([itemOf(response)])[0] };
   }, [applyRows, token]);
 
   // «Вернуть в наличие» (#518): пакет из одного табака, отмена — по пакету.
@@ -123,14 +123,6 @@ export const useShelf = (token: string) => {
     applyRows([response.item]);
     return response;
   }, [applyRows, token]);
-
-  // Отмена «Закончился»: убираем отметку из журнала. Если граммов по журналу и до неё
-  // не было (табак возвращали без граммов), строка останется «Закончился» — тогда
-  // возвращаем в наличие явно.
-  const undoEmpty = useCallback(async (tobaccoId: string, entryId: string) => {
-    const item = await send(`/staff/shelf/entries/${encodeURIComponent(entryId)}`, json('DELETE'));
-    return item.outAt ? (await restock(tobaccoId)).item : item;
-  }, [restock, send]);
 
   const undoRestock = useCallback(async (batchId: string) => {
     const { items } = normalizeShelfBatchUndoResponse(
@@ -265,7 +257,6 @@ export const useShelf = (token: string) => {
     loadOrder,
     reset,
     markEmpty,
-    undoEmpty,
     restock,
     undoRestock,
     update,

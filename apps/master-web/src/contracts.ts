@@ -1458,8 +1458,6 @@ export const parseDateTimeLocalInput = (value: string) => {
 
 // --- Полка (#211, #518): ответы /staff/shelf* -------------------------------
 
-// Статус по расчёту в граммах — остался у блока «Полка» дашборда.
-export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
 export type ShelfTrialVerdict = 'yes' | 'no';
 export type ShelfArrivalKind = 'invoice' | 'start' | 'manual';
@@ -1477,7 +1475,7 @@ export type ShelfTobacco = {
   sourceUrl: string | null;
 };
 
-// Приход (#518): строка принятого счёта — со штуками, стартовый и ручной — без штук.
+// Приход (#518) — строка принятой поставки: счёта, ручной или стартовой.
 export type ShelfArrival = {
   at: string;
   kind: ShelfArrivalKind;
@@ -1512,20 +1510,7 @@ export type ShelfRow = {
   analogs: ShelfAnalog[];
 };
 
-// budgetKop — бюджет на табак в месяц (#326), null — не указан.
-export type ShelfSettings = { bowlGrams: number; leadDays: number; budgetKop: number | null };
-// Интервал поставок по принятым счетам (#325): days — null, пока поставок меньше трёх.
-export type ShelfInterval = { days: number | null; deliveries: number };
-// Горизонт «Заканчивается» и «К заказу»: интервал + срок поставки; until — дата.
-export type ShelfHorizon = { days: number; until: string };
-
-// Настройки, интервал и горизонт нужны только бюджету на дашборде, пока он на граммах.
-export type ShelfView = {
-  rows: ShelfRow[];
-  settings: ShelfSettings;
-  interval: ShelfInterval;
-  horizon: ShelfHorizon;
-};
+export type ShelfView = { rows: ShelfRow[] };
 
 export type ShelfCard = ShelfRow & {
   mixes: Array<{ id: string; name: string; status: MixStatus | null; substitution: MixSubstitution | null }>;
@@ -1539,34 +1524,10 @@ export type ShelfCard = ShelfRow & {
 // стали «с заменой», для тоста.
 export type ShelfAnalogsResponse = { item: ShelfCard; unblockedMixes: Array<{ id: string; name: string }> };
 
-export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7, budgetKop: null };
-
-const SHELF_STATUSES: ShelfStatus[] = ['ok', 'ending', 'check', 'stop', 'out', 'plan'];
-
 const toNullableString = (value: unknown) => (value == null ? null : String(value));
 
 const pickOne = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback;
-
-export const normalizeShelfSettings = (value: unknown): ShelfSettings => {
-  const raw = isRecord(value) ? value : {};
-  return {
-    bowlGrams: toNumber(raw.bowlGrams, DEFAULT_SHELF_SETTINGS.bowlGrams),
-    leadDays: toNumber(raw.leadDays, DEFAULT_SHELF_SETTINGS.leadDays),
-    budgetKop: toNullableNumber(raw.budgetKop),
-  };
-};
-
-const normalizeShelfInterval = (value: unknown): ShelfInterval => {
-  const raw = isRecord(value) ? value : {};
-  return { days: toNullableNumber(raw.days), deliveries: toNumber(raw.deliveries, 0) };
-};
-
-// Без ответа горизонт — срок поставки по умолчанию: интервал неизвестен.
-const normalizeShelfHorizon = (value: unknown, settings: ShelfSettings): ShelfHorizon => {
-  const raw = isRecord(value) ? value : {};
-  return { days: toNumber(raw.days, settings.leadDays), until: toIsoString(raw.until, '') };
-};
 
 const normalizeShelfArrival = (raw: Record<string, unknown>): ShelfArrival => ({
   at: toIsoString(raw.at, ''),
@@ -1616,14 +1577,7 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
 
 export const normalizeShelfView = (value: unknown): ShelfView => {
   const raw = isRecord(value) ? value : {};
-  const settings = normalizeShelfSettings(raw.settings);
-
-  return {
-    rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow),
-    settings,
-    interval: normalizeShelfInterval(raw.interval),
-    horizon: normalizeShelfHorizon(raw.horizon, settings),
-  };
+  return { rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow) };
 };
 
 export const normalizeShelfCard = (value: unknown): ShelfCard => {
@@ -1713,7 +1667,7 @@ export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockM
   };
 };
 
-// --- «К заказу» (#518) и блок «Полка» дашборда (#213) -------------------------
+// --- «К заказу» (#518) ---------------------------------------------------------
 
 export type ShelfTobaccoRef = { id: string; manufacturer: string; lineName: string; name: string };
 export type ShelfSupplierRef = { id: string; name: string };
