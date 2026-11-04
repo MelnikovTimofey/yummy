@@ -1157,12 +1157,15 @@ export const App = () => {
 
     // Режим выбора на телефоне (#shot=mobile-bulk): «Выбрано N» и «Готово» в верхней панели.
     const shelfPicking = isPhone && activeTab === 'shelf' && shelfSelection !== null;
+    // Конструктор микса на телефоне (#540) — свой экран: назад в шапке, сохранение
+    // в нижней панели вместо меню разделов.
+    const mixEditing = isPhone && activeTab === 'mixes' && mixes.mixesScreen !== 'catalog';
 
     return (
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
-        {isPhone ? (
+        {mixEditing ? null : isPhone ? (
           <MobileTopBar
             title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab)}
             action={
@@ -1173,6 +1176,10 @@ export const App = () => {
               ) : activeTab === 'shelf' && shelfMode === 'shelf' ? (
                 <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
                   Выбрать
+                </button>
+              ) : activeTab === 'mixes' ? (
+                <button type="button" className="m-topbar__text-btn" onClick={mixes.onStartCreate}>
+                  Новый микс
                 </button>
               ) : null
             }
@@ -1200,7 +1207,7 @@ export const App = () => {
           </div>
         </section>
 
-        {isPhone ? (
+        {isPhone && !mixEditing ? (
           <MobileNav
             activeTab={activeTab}
             onTabChange={(tab) => {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { builderStockTag } from './mix-builder-status';
+import { builderStockTag, builderSumLabel, componentStockNote } from './mix-builder-status';
 
 // #494: метка наличия в конструкторе совпадает со статусом микса из API (#479).
 
@@ -26,4 +26,33 @@ test('не хватает другого табака или двух — «бл
   assert.deepEqual(builderStockTag(['mint-veil'], substitution), blocked);
   assert.deepEqual(builderStockTag(['lime-spark', 'mint-veil'], substitution), blocked);
   assert.deepEqual(builderStockTag(['lime-spark'], null), blocked);
+});
+
+// #540: нижняя панель конструктора на телефоне — сумма и что с ней не так.
+test('сумма 100 % — подсказка «сумма пропорций», без предупреждения', () => {
+  assert.deepEqual(builderSumLabel(100), { value: '100 %', note: 'сумма пропорций', warn: false });
+});
+
+test('сумма больше или меньше 100 % — сколько лишних или не хватает', () => {
+  assert.deepEqual(builderSumLabel(110), { value: '110 %', note: 'лишние 10 %', warn: true });
+  assert.deepEqual(builderSumLabel(0), { value: '0 %', note: 'не хватает 100 %', warn: true });
+});
+
+// #540: у табака в составе на телефоне — что увидит гость, если табак закончился.
+test('табак в наличии — пометки нет', () => {
+  assert.equal(componentStockNote('lime-spark', true, ['lime-spark'], substitution), null);
+});
+
+test('закончился, и его закрывает замена — гостю заменит', () => {
+  assert.deepEqual(componentStockNote('lime-spark', false, ['lime-spark'], substitution), {
+    tone: 'warning',
+    text: 'Закончился, гостю заменит Citrus Breeze',
+  });
+});
+
+test('закончился без замены или не хватает двух — микс скрыт у гостя', () => {
+  const hidden = { tone: 'danger', text: 'Закончился, микс скрыт у гостя' };
+  assert.deepEqual(componentStockNote('mint-veil', false, ['mint-veil'], substitution), hidden);
+  assert.deepEqual(componentStockNote('lime-spark', false, ['lime-spark', 'mint-veil'], substitution), hidden);
+  assert.deepEqual(componentStockNote('lime-spark', false, ['lime-spark'], null), hidden);
 });

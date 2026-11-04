@@ -1,10 +1,12 @@
-import { useLayoutEffect, useMemo, type FormEventHandler } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useLayoutEffect, useMemo, useState, type FormEventHandler } from 'react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
-import { ComponentCard } from './component-card';
-import { builderStockTag } from '@/lib/mix-builder-status';
+import { ComponentCard, PhoneComponentCard } from './component-card';
+import { builderStockTag, builderSumLabel } from '@/lib/mix-builder-status';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { useIsPhone } from '@/hooks/use-is-phone';
 import { ProportionBar } from './proportion-bar';
 import { TobaccoLibrary } from './tobacco-library';
 import { componentsTotal, rebalanceTo100 } from './rebalance';
@@ -110,12 +112,12 @@ export const MixBuilder = ({
   }, [editor.components, tobaccoMap]);
 
   const totalPercent = componentsTotal(editor.components);
-  const stockTag = builderStockTag(
-    editor.components
-      .filter((component) => tobaccoMap.get(component.tobaccoId)?.inStock === false)
-      .map((component) => component.tobaccoId),
-    editor.substitution,
-  );
+  const missingIds = editor.components
+    .filter((component) => tobaccoMap.get(component.tobaccoId)?.inStock === false)
+    .map((component) => component.tobaccoId);
+  const stockTag = builderStockTag(missingIds, editor.substitution);
+  const phone = useIsPhone();
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const isValid =
     editor.name.trim().length > 0 && editor.components.length >= 1 && totalPercent === 100;
 
@@ -142,6 +144,185 @@ export const MixBuilder = ({
     if (!editor.components.length) return;
     onReplaceComponents(rebalanceTo100(editor.components));
   };
+
+  const visibilityToggle = (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={editor.available}
+      className={`toggle ${editor.available ? 'toggle--on' : 'toggle--off'}`}
+      onClick={() => onAvailabilityChange(!editor.available)}
+      disabled={saveStatus === 'loading'}
+    >
+      <span className="toggle__track" aria-hidden="true">
+        <span className="toggle__thumb" />
+      </span>
+    </button>
+  );
+  const submitLabel = mode === 'edit' ? 'Сохранить' : 'Создать микс';
+
+  // Телефон (#540, #shot=mix-edit, mix-library): одна колонка, назад вместо
+  // «Отмены», сумма и сохранение в нижней панели, библиотека — шторкой снизу.
+  if (phone) {
+    const sum = builderSumLabel(totalPercent);
+    return (
+      <form className="mix-builder mix-builder--phone" onSubmit={onSubmit}>
+        <header className="m-topbar mix-builder__phone-top">
+          <button type="button" className="icon-btn m-topbar__action" onClick={onCancel} aria-label="Назад к каталогу миксов">
+            <ArrowLeft size={20} aria-hidden="true" />
+          </button>
+          <span className="m-topbar__title">{mode === 'edit' ? 'Микс' : 'Новый микс'}</span>
+        </header>
+
+        <section className="mix-builder__phone-card" aria-label="Карточка микса">
+          <input
+            type="text"
+            className="mix-builder__title-input"
+            value={editor.name}
+            onChange={(event) => onFieldChange('name', event.target.value)}
+            placeholder={mode === 'create' ? 'Название микса' : 'Без названия'}
+            aria-label="Название микса"
+          />
+          <h2 className="sr-only">{editor.name || 'Без названия'}</h2>
+          <textarea
+            className="mix-builder__description-input"
+            value={editor.description}
+            onChange={(event) => onFieldChange('description', event.target.value)}
+            placeholder="Что почувствует гость, 1–2 строки"
+            rows={2}
+            aria-label="Описание для гостя"
+          />
+          <label className="mix-builder__phone-visibility">
+            <span>
+              Виден гостю
+              {stockTag ? (
+                <span className="tag" data-tone={stockTag.tone}>
+                  {stockTag.label}
+                </span>
+              ) : null}
+            </span>
+            {visibilityToggle}
+          </label>
+          {mode === 'edit' && editor.author ? <p className="mix-builder__phone-meta">автор {editor.author}</p> : null}
+        </section>
+
+        <section className="mix-builder__phone-composition" aria-label="Состав микса">
+          <header className="mix-builder__phone-head">
+            <span className="mix-builder__section-title">
+              Состав{editor.components.length ? ` (${editor.components.length})` : ''}
+            </span>
+            {editor.components.length ? (
+              <button type="button" className="btn" data-variant="ghost" data-size="sm" onClick={distributeEvenly}>
+                Поровну
+              </button>
+            ) : null}
+          </header>
+          {editor.components.length ? (
+            <>
+              <ProportionBar components={editor.components} onResize={onReplaceComponents} />
+              {presetsForCurrent.length ? (
+                <div className="mix-builder__presets" role="group" aria-label="Быстрые пресеты пропорций">
+                  {presetsForCurrent.map((preset) => {
+                    const active = presetMatchesComponents(preset, editor.components);
+                    const label = formatPresetLabel(preset);
+                    return (
+                      <button
+                        key={`preset:${label}`}
+                        type="button"
+                        className={`mix-builder__preset${active ? ' mix-builder__preset--active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => applyPreset(preset)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {editor.components.map((component, index) => (
+                <PhoneComponentCard
+                  key={component.key}
+                  component={component}
+                  index={index}
+                  tobacco={tobaccoMap.get(component.tobaccoId) ?? null}
+                  missingIds={missingIds}
+                  substitution={editor.substitution}
+                  onPercentChange={(nextPercent) => onUpdateComponent(component.key, { proportion: String(nextPercent) })}
+                  onRemove={() => onRemoveComponent(component.key)}
+                />
+              ))}
+            </>
+          ) : (
+            <div className="mix-builder__empty">
+              <strong>Состав пуст</strong>
+              <p>Добавьте табаки, пропорции настроятся здесь.</p>
+            </div>
+          )}
+          <button type="button" className="mix-builder__phone-add" onClick={() => setLibraryOpen(true)}>
+            <Plus size={18} aria-hidden="true" />
+            Добавить табак
+          </button>
+        </section>
+
+        {aggregatedProfiles.length ? (
+          <section className="mix-builder__profile" aria-label="Вкусовой профиль">
+            <span className="mix-builder__section-title">Профиль</span>
+            <div className="mix-builder__profile-chips">
+              {aggregatedProfiles.map((profile) => (
+                <ProfileTag key={profile} profile={profile} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {editor.railMemberships.length > 0 ? (
+          <div className="mix-builder__memberships">
+            <span className="mix-builder__section-title">В рейлах</span>
+            <ul>
+              {editor.railMemberships.map((membership) => (
+                <li key={membership.id}>{membership.name}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {saveError ? <p className="error-text">{saveError}</p> : null}
+
+        <footer className="mix-builder__phone-bar">
+          <p className="mix-builder__phone-sum" data-warn={sum.warn || undefined}>
+            <b>{sum.value}</b>
+            <span>{sum.note}</span>
+          </p>
+          <button
+            type="submit"
+            className="btn"
+            data-variant="primary"
+            disabled={!isValid || saveStatus === 'loading'}
+            aria-busy={saveStatus === 'loading' || undefined}
+          >
+            <BusyLabel busy={saveStatus === 'loading'}>{submitLabel}</BusyLabel>
+          </button>
+        </footer>
+
+        {libraryOpen ? (
+          <BottomSheet label="Добавить табак" onClose={() => setLibraryOpen(false)} className="mix-builder__library-sheet">
+            <header className="mix-builder__library-sheet-head">
+              <h2>Добавить табак</h2>
+              <button type="button" className="btn" data-variant="ghost" data-size="sm" onClick={() => setLibraryOpen(false)}>
+                Готово
+              </button>
+            </header>
+            <TobaccoLibrary
+              defaultTobaccos={tobaccos}
+              currentIds={currentIds}
+              onAdd={onAddComponent}
+              onSearch={onSearchTobaccos}
+            />
+          </BottomSheet>
+        ) : null}
+      </form>
+    );
+  }
 
   return (
     <form className="mix-builder mix-builder--mock" onSubmit={onSubmit}>
@@ -183,18 +364,7 @@ export const MixBuilder = ({
             }`}
             title={editor.available ? 'Виден гостю' : 'Скрыт от гостя'}
           >
-            <button
-              type="button"
-              role="switch"
-              aria-checked={editor.available}
-              className={`toggle ${editor.available ? 'toggle--on' : 'toggle--off'}`}
-              onClick={() => onAvailabilityChange(!editor.available)}
-              disabled={saveStatus === 'loading'}
-            >
-              <span className="toggle__track" aria-hidden="true">
-                <span className="toggle__thumb" />
-              </span>
-            </button>
+            {visibilityToggle}
             <span>Виден гостю</span>
           </label>
           <button
@@ -212,7 +382,7 @@ export const MixBuilder = ({
             disabled={!isValid || saveStatus === 'loading'}
             aria-busy={saveStatus === 'loading' || undefined}
           >
-            <BusyLabel busy={saveStatus === 'loading'}>{mode === 'edit' ? 'Сохранить' : 'Создать микс'}</BusyLabel>
+            <BusyLabel busy={saveStatus === 'loading'}>{submitLabel}</BusyLabel>
           </button>
         </div>
       </header>
