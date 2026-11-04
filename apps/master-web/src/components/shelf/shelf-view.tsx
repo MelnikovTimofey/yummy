@@ -291,10 +291,10 @@ export const ShelfView = ({
   const onEmpty = useCallback(
     (row: ShelfRow) =>
       run(row, async () => {
-        const { entryId, item } = await shelf.markEmpty(row.tobacco.id);
+        const { batchId, item } = await shelf.markEmpty(row.tobacco.id);
         return {
           ...emptyToast(item),
-          undo: () => shelf.undoEmpty(row.tobacco.id, entryId),
+          undo: () => shelf.undoBatch(batchId),
           ...(item.keepStocked ? {} : { action: { label: 'Держать постоянно', onClick: () => void onKeep(item) } }),
         };
       }),

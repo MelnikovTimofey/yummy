@@ -19,7 +19,7 @@ import {
 } from './shelf';
 import { resetAppState } from './state';
 
-// #518 S2: «Вернуть в наличие» без граммов, «Держать постоянно» пачкой, приходы из счетов.
+// #518 S2: «Вернуть в наличие», «Держать постоянно» пачкой, приходы из счетов.
 
 const DAY = 86_400_000;
 const actor = { login: 'admin', name: 'Админ', role: 'admin' as const };
@@ -41,22 +41,18 @@ const rowOf = async (tobaccoId: string, when: Date) => (await getShelf(when)).ro
 
 test.beforeEach(async () => {
   await resetAppState();
-  start = (await prisma.stockEntry.findFirstOrThrow({ orderBy: { at: 'asc' } })).at;
+  start = (await prisma.delivery.findFirstOrThrow({ where: { kind: 'start' } })).receivedAt!;
 });
 
 test.describe('«Вернуть в наличие»', () => {
-  test('по одному: без граммов, табак снова у гостя; отмена возвращает дату «Закончился»', async () => {
+  test('по одному: табак снова у гостя; отмена возвращает дату «Закончился»', async () => {
     await markEmpty(actor, MINT, at(1));
-    const entries = await prisma.stockEntry.count();
 
     const { batchId, item } = await restock(actor, MINT, at(2));
     assert.equal(item.outAt, null);
     assert.equal(item.guestAvailable, true);
-    assert.equal(item.status, 'ok');
     assert.equal(await inStock(MINT), true);
-    assert.equal(await prisma.stockEntry.count(), entries, 'журнал граммов не пишется');
-    assert.equal((await rowOf(MINT, at(2))).status, 'ok');
-    assert.equal((await getShelf(at(2))).counters.out, 0);
+    assert.equal((await rowOf(MINT, at(2))).outAt, null);
 
     const undone = await undoRestockBatch(actor, batchId, at(3));
     assert.deepEqual(undone.items.map((row) => [row.tobacco.id, row.outAt, row.guestAvailable]), [[MINT, at(1).toISOString(), false]]);
@@ -93,7 +89,7 @@ test.describe('«Вернуть в наличие»', () => {
     await assert.rejects(restockMany(actor, [MINT, 'tobacco-nope'], at(2)), ShelfNotFoundError);
   });
 
-  test('после возврата без граммов «Закончился» снова ставится, добавление с каталога наличие не трогает', async () => {
+  test('после возврата «Закончился» снова ставится, добавление с каталога наличие не трогает', async () => {
     await markEmpty(actor, MINT, at(1));
     await restock(actor, MINT, at(2));
     await addToShelf(actor, MINT, 'active', at(3));
@@ -101,7 +97,6 @@ test.describe('«Вернуть в наличие»', () => {
 
     const { item } = await markEmpty(actor, MINT, at(4));
     assert.equal(item.outAt, at(4).toISOString());
-    assert.equal(item.status, 'out');
     assert.equal(await inStock(MINT), false);
   });
 });
@@ -120,7 +115,7 @@ test.describe('«Держать постоянно» пачкой', () => {
 });
 
 test.describe('приходы из счетов', () => {
-  test('приёмка без граммов: табак «Есть», строка и карточка показывают приход по счёту', async () => {
+  test('приёмка: табак «Есть», строка и карточка показывают приход по счёту', async () => {
     await markEmpty(actor, MINT, at(1));
     const draft = await createManualDraft(actor, { supplierName: 'Каспий Опт', number: '1184' });
     await addLine(draft.id, { rawName: 'Mint Veil', qty: 2, tobaccoId: MINT });
@@ -129,27 +124,25 @@ test.describe('приходы из счетов', () => {
 
     assert.equal(await outAt(MINT), null);
     assert.equal(await inStock(MINT), true);
-    assert.equal(await prisma.stockEntry.count({ where: { deliveryId: draft.id } }), 0, 'граммов нет — в журнал не пишется');
 
     const arrival = { at: at(3).toISOString(), kind: 'manual', supplier: 'Каспий Опт', number: '1184', qty: 2, deliveryId: draft.id };
     assert.deepEqual((await rowOf(MINT, at(4))).lastArrival, arrival);
     const card = await getShelfItem(MINT, at(4));
     assert.deepEqual(card.arrivals.map((item) => [item.at, item.kind, item.supplier, item.qty]), [
       [at(3).toISOString(), 'manual', 'Каспий Опт', 2],
-      [start.toISOString(), 'start', null, null],
+      [start.toISOString(), 'start', null, 1],
     ]);
   });
 
-  test('приёмка с граммами: приход по строке счёта один, журнал пишется как раньше', async () => {
+  test('граммы в штуке — данные счёта: приход по строке один', async () => {
     const draft = await createManualDraft(actor, { supplierName: 'Южный табак' });
     await addLine(draft.id, { rawName: 'Berry Oasis 200 г', qty: 1, grams: 200, tobaccoId: BERRY });
     await acceptDelivery(actor, draft.id, { receivedAt: at(2) });
 
-    assert.equal(await prisma.stockEntry.count({ where: { deliveryId: draft.id } }), 1);
     const card = await getShelfItem(BERRY, at(3));
     assert.deepEqual(card.arrivals.map((item) => [item.kind, item.supplier, item.qty]), [
       ['manual', 'Южный табак', 1],
-      ['start', null, null],
+      ['start', null, 1],
     ]);
   });
 });

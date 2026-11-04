@@ -69,14 +69,9 @@ import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput, recordCustomMixSmoke } from './mixer';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import { getCatalogIdeas } from './catalog-ideas';
-import { registerShelfInsightsRoutes } from './shelf-insights';
 import { getGuestChoices, parseChoicesPeriod } from './guest-analytics';
 import {
-  addCount,
-  addReceipt,
   addToShelf,
-  deleteEntry,
-  getSettings,
   getShelf,
   getShelfItem,
   markEmpty,
@@ -92,9 +87,7 @@ import {
   ShelfValidationError,
   undoEmptyBatch,
   undoRestockBatch,
-  updateSettings,
   updateShelfItem,
-  writeOff,
 } from './shelf';
 import { getShelfOrder } from './shelf-order';
 import { setAnalogs } from './analogs-admin';
@@ -323,12 +316,6 @@ export const buildApp = () => {
         shelfUndoRestock: 'DELETE /staff/shelf/restock-batches/:batchId',
         shelfKeepMany: 'POST /staff/shelf/keep',
         shelfOrder: 'GET /staff/shelf/order',
-        shelfCount: 'POST /staff/shelf/:tobaccoId/counts',
-        shelfReceipt: 'POST /staff/shelf/:tobaccoId/receipts',
-        shelfWriteOff: 'POST /staff/shelf/:tobaccoId/write-offs',
-        shelfDeleteEntry: 'DELETE /staff/shelf/entries/:entryId',
-        shelfSettings: 'GET /staff/shelf/settings',
-        shelfSettingsUpdate: 'PATCH /staff/shelf/settings',
         deliveriesList: 'GET /staff/deliveries',
         deliveriesUpload: 'POST /staff/deliveries',
         deliveriesManual: 'POST /staff/deliveries/manual',
@@ -340,9 +327,6 @@ export const buildApp = () => {
         deliveryLinesCreate: 'POST /staff/deliveries/:id/lines',
         deliveryLinesUpdate: 'PATCH /staff/deliveries/:id/lines/:lineId',
         deliveryLinesDelete: 'DELETE /staff/deliveries/:id/lines/:lineId',
-        shelfReorder: 'GET /staff/shelf/reorder',
-        shelfDashboard: 'GET /staff/shelf/dashboard',
-        shelfPurchase: 'GET /staff/shelf/purchase',
         dashboardChoices: 'GET /staff/dashboard/choices',
         dailyCodesList: 'GET /staff/access/daily-codes',
         dailyCodesCreate: 'POST /staff/access/daily-codes',
@@ -2212,7 +2196,7 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
-  // Ошибки домена полки → HTTP: не найдено 404, конфликт состояния остатка 409, неверный ввод 400.
+  // Ошибки домена полки → HTTP: не найдено 404, конфликт наличия 409, неверный ввод 400.
   const sendShelf = async <T>(reply: FastifyReply, run: () => Promise<T>) => {
     try {
       return reply.send(await run());
@@ -2230,29 +2214,11 @@ export const buildApp = () => {
     }
   };
   const tobaccoParam = (request: FastifyRequest) => (request.params as { tobaccoId?: string }).tobaccoId?.trim() ?? '';
-  const entryParam = (request: FastifyRequest) => (request.params as { entryId?: string }).entryId?.trim() ?? '';
 
   app.get('/staff/shelf', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
     return sendShelf(reply, () => getShelf());
-  });
-
-  app.get('/staff/shelf/settings', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    return sendShelf(reply, () => getSettings());
-  });
-
-  app.patch('/staff/shelf/settings', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { bowlGrams?: unknown; leadDays?: unknown; budgetKop?: unknown };
-    return sendShelf(reply, () => updateSettings(user, {
-      bowlGrams: typeof body.bowlGrams === 'number' ? body.bowlGrams : undefined,
-      leadDays: typeof body.leadDays === 'number' ? body.leadDays : undefined,
-      budgetKop: body.budgetKop,
-    }));
   });
 
   app.post('/staff/shelf', async (request, reply) => {
@@ -2375,35 +2341,6 @@ export const buildApp = () => {
     return sendShelf(reply, () => markEmpty(user, tobaccoParam(request)));
   });
 
-  app.post('/staff/shelf/:tobaccoId/counts', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { fraction?: unknown; grams?: unknown };
-    return sendShelf(reply, () => addCount(user, tobaccoParam(request), { fraction: body.fraction, grams: body.grams }));
-  });
-
-  app.post('/staff/shelf/:tobaccoId/receipts', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { grams?: unknown; priceKop?: unknown };
-    return sendShelf(reply, async () => ({
-      item: (await addReceipt(user, tobaccoParam(request), { grams: body.grams, priceKop: body.priceKop })).item,
-    }));
-  });
-
-  app.post('/staff/shelf/:tobaccoId/write-offs', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { grams?: unknown; reason?: unknown };
-    return sendShelf(reply, () => writeOff(user, tobaccoParam(request), { grams: body.grams, reason: body.reason }));
-  });
-
-  app.delete('/staff/shelf/entries/:entryId', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    return sendShelf(reply, async () => ({ item: await deleteEntry(user, entryParam(request)) }));
-  });
-
   app.get('/staff/dashboard/choices', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) {
@@ -2434,7 +2371,6 @@ export const buildApp = () => {
   });
 
   registerDeliveryRoutes(app);
-  registerShelfInsightsRoutes(app, authenticateStaffRequest);
 
   return app;
 };
@@ -2617,7 +2553,6 @@ const registerDeliveryRoutes = (app: FastifyInstance) => {
         tobaccoId: readText(body?.tobaccoId, 'Табак'),
         qty: readNumber(body?.qty, 'Количество') ?? undefined,
         grams: readNumber(body?.grams, 'Граммы в штуке', true),
-        receivedGrams: readNumber(body?.receivedGrams, 'Приход', true),
         priceKop: readNumber(body?.priceKop, 'Цена', true),
         arrived: readBoolean(body?.arrived, 'Пришло'),
         kind: readKind(body?.kind),

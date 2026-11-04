@@ -409,11 +409,11 @@ model GuestFavorite {
 // Полка точки (#152): что точка держит. Каталог (Tobacco) о наличии не знает —
 // Tobacco.inStock только кэш, который пишет сервис полки (src/shelf.ts).
 model ShelfItem {
-  id            String       @id @default(uuid())
-  tobaccoId     String       @unique
-  status        String       @default("active")
-  keepStocked   Boolean      @default(true)
-  stopped       Boolean      @default(false)
+  id            String    @id @default(uuid())
+  tobaccoId     String    @unique
+  status        String    @default("active")
+  keepStocked   Boolean   @default(true)
+  stopped       Boolean   @default(false)
   stopNote      String?
   // С какого момента «Закончился» (#518); null — «Есть». По нему — наличие для гостя.
   outAt         DateTime?
@@ -421,47 +421,11 @@ model ShelfItem {
   // Отметка мастера по пробе (#329): yes — зашло, no — не зашло.
   trialVerdict  String?
   trialMarkedAt DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  tobacco       Tobacco      @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
-  entries       StockEntry[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tobacco       Tobacco   @relation(fields: [tobaccoId], references: [id], onDelete: Restrict)
 
   @@index([status])
-}
-
-// Журнал остатка табака в граммах (#306): receipt — пришло, count — стало
-// («Закончился» — 0 г), writeoff — списано. Расход и прогноз — src/stock.ts.
-model StockEntry {
-  id             String        @id @default(uuid())
-  shelfItemId    String
-  kind           String
-  grams          Int
-  // Отметка долей ¾ ½ ⅓ ¼ от уровня после последнего прихода; grams — во что она превратилась.
-  fraction       Float?
-  at             DateTime
-  // У прихода — цена всего прихода.
-  priceKop       Int?
-  reason         String?
-  deliveryId     String?
-  deliveryLineId String?
-  actorLogin     String?
-  createdAt      DateTime      @default(now())
-  shelfItem      ShelfItem     @relation(fields: [shelfItemId], references: [id], onDelete: Restrict)
-  delivery       Delivery?     @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
-  deliveryLine   DeliveryLine? @relation(fields: [deliveryLineId], references: [id], onDelete: SetNull)
-
-  @@index([shelfItemId, at])
-  @@index([deliveryId])
-  @@index([deliveryLineId])
-}
-
-model ShelfSettings {
-  id        Int      @id @default(1)
-  bowlGrams Int      @default(18)
-  leadDays  Int      @default(7)
-  // Бюджет на табак в месяц (#326), необязательный.
-  budgetKop Int?
-  updatedAt DateTime @updatedAt
 }
 
 model Supplier {
@@ -508,32 +472,28 @@ model Delivery {
   updatedAt   DateTime       @updatedAt
   supplier    Supplier?      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   lines       DeliveryLine[]
-  entries     StockEntry[]
 
   @@index([supplierId])
   @@index([status])
 }
 
 model DeliveryLine {
-  id            String       @id @default(uuid())
-  deliveryId    String
-  n             Int
-  rawName       String
-  article       String?
-  qty           Int
-  unit          String?
-  priceKop      Int?
-  sumKop        Int?
-  grams         Int?
-  tobaccoId     String?
-  kind          String       @default("tobacco")
-  arrived       Boolean      @default(true)
-  // Сколько граммов пришло, если мастер поправил; иначе qty × grams.
-  receivedGrams Int?
-  matchReason   String?
-  delivery      Delivery     @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  tobacco       Tobacco?     @relation(fields: [tobaccoId], references: [id], onDelete: SetNull)
-  entries       StockEntry[]
+  id          String   @id @default(uuid())
+  deliveryId  String
+  n           Int
+  rawName     String
+  article     String?
+  qty         Int
+  unit        String?
+  priceKop    Int?
+  sumKop      Int?
+  grams       Int?
+  tobaccoId   String?
+  kind        String   @default("tobacco")
+  arrived     Boolean  @default(true)
+  matchReason String?
+  delivery    Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  tobacco     Tobacco? @relation(fields: [tobaccoId], references: [id], onDelete: SetNull)
 
   @@index([deliveryId])
   @@index([tobaccoId])

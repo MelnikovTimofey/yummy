@@ -219,7 +219,7 @@ rm /etc/cron.d/atelier-htreviews-sync
 ```
 
 ### Снэпшот только продуктовых данных / restore
-Снэпшот лежит в репо: `snapshots/atelier-product-data.dump` (data-only, 5 таблиц).
+Снэпшот лежит в репо: `snapshots/atelier-product-data.dump` (каталог, миксы, рейлы и полка, 8 таблиц).
 Грузится в БД, где схему уже создал `migrate deploy`:
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env exec -T db \

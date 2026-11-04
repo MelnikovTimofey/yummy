@@ -8,8 +8,8 @@ import type { TextPage } from './invoices/types';
 import { ensureOnShelf, syncAvailability, type ShelfActor, type ShelfItemStatus } from './shelf';
 
 // Поставки (#152, срез 3): счёт поставщика → черновик со строками → приёмка
-// возвращает пришедшие табаки в «Есть» (#518), пишет приходы в граммах, где граммы
-// известны, и запоминает сопоставления строк в SupplierItem.
+// возвращает пришедшие табаки в «Есть» (#518) и запоминает сопоставления строк
+// в SupplierItem. Строки принятых поставок — приходы табака на полку.
 
 type Tx = Prisma.TransactionClient;
 
@@ -60,9 +60,8 @@ export type DeliveryLineView = {
   unit: string | null;
   priceKop: number | null;
   sumKop: number | null;
+  // Граммы в штуке по счёту — данные счёта, приёмке не нужны (#518).
   grams: number | null;
-  // Сколько граммов придёт: поправка мастера или qty × grams; null — граммы неизвестны.
-  receivedGrams: number | null;
   kind: LineKind;
   arrived: boolean;
   tobacco: { id: string; manufacturer: string; lineName: string; name: string; shelfStatus: ShelfItemStatus | null } | null;
@@ -88,10 +87,8 @@ export type DeliveryCard = {
   linesSumKop: number;
   // null — сверять не с чем: у ручной поставки нет итога счёта.
   sumMatches: boolean | null;
+  // Строки без табака: без них поставку не принять.
   pendingLines: number;
-  gramsToReceive: number;
-  // Сколько граммов пришло по приёмке; у черновика 0.
-  grams: number;
 };
 
 export type DeliveryListItem = {
@@ -103,20 +100,18 @@ export type DeliveryListItem = {
   invoiceDate: string | null;
   receivedAt: string | null;
   lines: number;
-  grams: number;
   totalKop: number | null;
   createdAt: string;
 };
 
 export type DeliveryList = {
   items: DeliveryListItem[];
-  totals: { monthKop: number; monthGrams: number; drafts: number; suppliers: number; memoryItems: number };
+  // monthKop — сумма пришедших строк табака по принятым в этом месяце поставкам.
+  totals: { monthKop: number; drafts: number; suppliers: number; memoryItems: number };
 };
 
 type LineRecord = {
   qty: number;
-  grams: number | null;
-  receivedGrams: number | null;
   priceKop: number | null;
   sumKop: number | null;
   kind: string;
@@ -125,17 +120,13 @@ type LineRecord = {
 };
 
 const lineSum = (line: LineRecord) => line.sumKop ?? (line.priceKop !== null ? line.priceKop * line.qty : 0);
-export const lineGrams = (line: Pick<LineRecord, 'qty' | 'grams' | 'receivedGrams'>) =>
-  line.receivedGrams ?? (line.grams === null ? null : line.qty * line.grams);
 const isReceived = (line: LineRecord) => line.kind === 'tobacco' && line.arrived;
-const createsReceipt = (line: LineRecord) => isReceived(line) && line.tobaccoId !== null && lineGrams(line) !== null;
 // Граммы при приёмке не нужны (#518): пришедшая строка ждёт только выбора табака.
 const isPending = (line: LineRecord) => isReceived(line) && line.tobaccoId === null;
 
 const summarize = (lines: LineRecord[]) => ({
   linesSumKop: lines.reduce((total, line) => total + lineSum(line), 0),
   pendingLines: lines.filter(isPending).length,
-  gramsToReceive: lines.filter(createsReceipt).reduce((total, line) => total + lineGrams(line)!, 0),
 });
 
 const iso = (value: Date | null) => (value ? value.toISOString() : null);
@@ -170,7 +161,6 @@ const cardSelect = {
   createdAt: true,
   supplier: { select: { id: true, name: true, inn: true } },
   lines: { orderBy: { n: 'asc' } },
-  entries: { select: { grams: true } },
 } satisfies Prisma.DeliverySelect;
 
 const loadDelivery = async (client: Tx, id: string) => {
@@ -220,7 +210,6 @@ export const getDelivery = async (id: string): Promise<DeliveryCard> => {
       priceKop: line.priceKop,
       sumKop: line.sumKop,
       grams: line.grams,
-      receivedGrams: lineGrams(line),
       kind: line.kind as LineKind,
       arrived: line.arrived,
       tobacco: tobacco
@@ -254,7 +243,6 @@ export const getDelivery = async (id: string): Promise<DeliveryCard> => {
     lines,
     ...summary,
     sumMatches: record.totalKop === null ? null : summary.linesSumKop === record.totalKop,
-    grams: record.entries.reduce((total, entry) => total + entry.grams, 0),
   };
 };
 
@@ -278,19 +266,15 @@ export const listDeliveries = async (now = new Date()): Promise<DeliveryList> =>
       totalKop: true,
       createdAt: true,
       supplier: { select: { name: true } },
-      lines: {
-        select: { qty: true, grams: true, receivedGrams: true, priceKop: true, sumKop: true, kind: true, arrived: true, tobaccoId: true },
-      },
-      entries: { select: { grams: true } },
+      lines: { select: { qty: true, priceKop: true, sumKop: true, kind: true, arrived: true, tobaccoId: true } },
     },
     orderBy: [{ createdAt: 'desc' }],
   });
 
   const from = monthStart(now);
-  const monthReceipts = await prisma.stockEntry.findMany({
-    where: { kind: 'receipt', delivery: { status: 'received', kind: { not: 'start' }, receivedAt: { gte: from, lte: now } } },
-    select: { grams: true, priceKop: true },
-  });
+  const inMonth = records.filter(
+    (record) => record.status === 'received' && record.kind !== 'start' && record.receivedAt && record.receivedAt >= from && record.receivedAt <= now,
+  );
 
   return {
     items: records.map((record) => {
@@ -304,15 +288,12 @@ export const listDeliveries = async (now = new Date()): Promise<DeliveryList> =>
         invoiceDate: isoDate(record.invoiceDate),
         receivedAt: iso(record.receivedAt),
         lines: record.lines.length,
-        // У черновика — сколько граммов даст приёмка сейчас.
-        grams: record.status === 'draft' ? summary.gramsToReceive : record.entries.reduce((total, entry) => total + entry.grams, 0),
         totalKop: record.totalKop ?? (record.lines.length ? summary.linesSumKop : null),
         createdAt: record.createdAt.toISOString(),
       };
     }),
     totals: {
-      monthKop: monthReceipts.reduce((total, receipt) => total + (receipt.priceKop ?? 0), 0),
-      monthGrams: monthReceipts.reduce((total, receipt) => total + receipt.grams, 0),
+      monthKop: inMonth.reduce((total, record) => total + record.lines.filter(isReceived).reduce((sum, line) => sum + lineSum(line), 0), 0),
       drafts: records.filter((record) => record.status === 'draft').length,
       suppliers: await prisma.supplier.count(),
       memoryItems: await prisma.supplierItem.count(),
@@ -493,10 +474,9 @@ const checkInt = (value: number | null | undefined, min: number, max: number, me
   }
 };
 
-const checkLineFields = (input: { qty?: number; grams?: number | null; receivedGrams?: number | null; priceKop?: number | null }) => {
+const checkLineFields = (input: { qty?: number; grams?: number | null; priceKop?: number | null }) => {
   checkInt(input.qty, 1, MAX_QTY, `Количество по счёту — целое число от 1 до ${MAX_QTY}`);
   checkInt(input.grams, 1, MAX_GRAMS, `Граммы в штуке — целое число от 1 до ${MAX_GRAMS}`);
-  checkInt(input.receivedGrams, 1, MAX_QTY * MAX_GRAMS, 'Приход — целое число граммов больше нуля');
   checkInt(input.priceKop, 0, Number.MAX_SAFE_INTEGER, 'Цена — целое число копеек, не меньше нуля');
 };
 
@@ -510,7 +490,6 @@ export type LinePatch = {
   tobaccoId?: string | null;
   qty?: number;
   grams?: number | null;
-  receivedGrams?: number | null;
   priceKop?: number | null;
   arrived?: boolean;
   kind?: LineKind;
@@ -530,7 +509,6 @@ export const updateLine = async (deliveryId: string, lineId: string, patch: Line
           : {}),
         ...(patch.qty !== undefined ? { qty: patch.qty } : {}),
         ...(patch.grams !== undefined ? { grams: patch.grams } : {}),
-        ...(patch.receivedGrams !== undefined ? { receivedGrams: patch.receivedGrams } : {}),
         ...(patch.priceKop !== undefined ? { priceKop: patch.priceKop } : {}),
         ...(patch.arrived !== undefined ? { arrived: patch.arrived } : {}),
         ...(patch.kind !== undefined ? { kind: patch.kind } : {}),
@@ -637,35 +615,10 @@ export const acceptDelivery = async (
       const claimed = await tx.delivery.updateMany({ where: { id, status: 'draft' }, data: { status: 'received', receivedAt } });
       if (!claimed.count) throw new DeliveryConflictError('not_draft', 'Поставка уже принята — менять её нельзя');
 
-      // Пришедший табак — «Есть» (#518); в журнал граммов идут только строки с граммами.
-      const accepted = delivery.lines.filter(createsReceipt);
-      const tobaccoIds = [...new Set(delivery.lines.filter((line) => isReceived(line) && line.tobaccoId).map((line) => line.tobaccoId!))];
-      const shelf = new Map<string, string>();
-      for (const tobaccoId of tobaccoIds) shelf.set(tobaccoId, (await ensureOnShelf(tx, tobaccoId, 'active')).id);
-
-      // Пришло меньше, чем по счёту, — цена прихода пропорциональна граммам.
-      let grams = 0;
-      let sumKop = 0;
-      for (const line of accepted) {
-        const received = lineGrams(line)!;
-        const billed = line.grams === null ? received : line.qty * line.grams;
-        const lineKop = line.sumKop ?? (line.priceKop === null ? null : line.priceKop * line.qty);
-        const priceKop = lineKop === null ? null : Math.round((lineKop * received) / billed);
-        await tx.stockEntry.create({
-          data: {
-            shelfItemId: shelf.get(line.tobaccoId!)!,
-            kind: 'receipt',
-            grams: received,
-            at: receivedAt,
-            priceKop,
-            deliveryId: id,
-            deliveryLineId: line.id,
-            actorLogin: actor.login,
-          },
-        });
-        grams += received;
-        sumKop += priceKop ?? 0;
-      }
+      // Пришедший табак — на полку в работу и «Есть» (#518).
+      const received = delivery.lines.filter(isReceived);
+      const tobaccoIds = [...new Set(received.map((line) => line.tobaccoId!))];
+      for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active');
 
       if (delivery.supplierId) {
         for (const line of delivery.lines.filter((item) => item.kind === 'tobacco' && item.tobaccoId)) {
@@ -680,7 +633,12 @@ export const acceptDelivery = async (
 
       await tx.shelfItem.updateMany({ where: { tobaccoId: { in: tobaccoIds } }, data: { outAt: null } });
       await syncAvailability(tx, tobaccoIds);
-      await audit(tx, actor, { action: 'accept', entityId: id, entityLabel: labelOf(delivery), details: { grams, sumKop } });
+      await audit(tx, actor, {
+        action: 'accept',
+        entityId: id,
+        entityLabel: labelOf(delivery),
+        details: { tobaccos: tobaccoIds.length, sumKop: received.reduce((total, line) => total + lineSum(line), 0) },
+      });
     },
     { timeout: 30_000 },
   );

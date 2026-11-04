@@ -110,8 +110,15 @@ test.describe('guest choices analytics', () => {
     });
     await prisma.shelfItem.update({ where: { tobaccoId: 'tobacco-rose-nocturne' }, data: { status: 'dropped' } });
     await prisma.tobacco.update({ where: { id: 'tobacco-rose-nocturne' }, data: { inStock: false } });
-    const peach = await prisma.shelfItem.create({ data: { tobaccoId: 'tobacco-peach-silk', status: 'active' } });
-    await prisma.stockEntry.create({ data: { shelfItemId: peach.id, kind: 'receipt', grams: 200, at: ago(7) } });
+    await prisma.shelfItem.create({ data: { tobaccoId: 'tobacco-peach-silk', status: 'active' } });
+    await prisma.delivery.create({
+      data: {
+        kind: 'invoice',
+        status: 'received',
+        receivedAt: ago(7),
+        lines: { create: { n: 1, rawName: 'Peach Silk', qty: 1, tobaccoId: 'tobacco-peach-silk' } },
+      },
+    });
     await prisma.tobacco.update({ where: { id: 'tobacco-peach-silk' }, data: { inStock: true } });
     await prisma.rail.create({
       data: { id: 'rail-empty', name: 'Новинки', description: '', type: 'curated', active: true, mixes: { create: [{ mixId: 'mix-rose-afterglow' }] } },

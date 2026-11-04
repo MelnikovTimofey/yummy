@@ -914,25 +914,14 @@ test('normalizeShelfRow: «Закончился» — дата outAt; прихо
   assert.equal(normalizeShelfRow({ lastArrival: { at: '2026-08-20T10:00:00.000Z', kind: 'weird' } }).lastArrival?.kind, 'manual');
 });
 
-test('normalizeShelfView собирает строки и настройки', () => {
-  const view = normalizeShelfView({
-    rows: [rawRow],
-    settings: { bowlGrams: 18, leadDays: 7, budgetKop: 15000000 },
-    interval: { days: 10, deliveries: 6 },
-    horizon: { days: 17, until: '2026-12-06T10:00:00.000Z' },
-  });
+test('normalizeShelfView собирает строки', () => {
+  const view = normalizeShelfView({ rows: [rawRow], settings: { bowlGrams: 18 } });
+  assert.deepEqual(Object.keys(view), ['rows']);
   assert.equal(view.rows.length, 1);
-  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7, budgetKop: 15000000 });
-  assert.deepEqual(view.interval, { days: 10, deliveries: 6 });
-  assert.deepEqual(view.horizon, { days: 17, until: '2026-12-06T10:00:00.000Z' });
 });
 
-test('normalizeShelfView без данных — пустая полка с настройками по умолчанию', () => {
-  const view = normalizeShelfView(null);
-  assert.deepEqual(view.rows, []);
-  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7, budgetKop: null });
-  assert.deepEqual(view.interval, { days: null, deliveries: 0 });
-  assert.deepEqual(view.horizon, { days: 7, until: '' });
+test('normalizeShelfView без данных — пустая полка', () => {
+  assert.deepEqual(normalizeShelfView(null), { rows: [] });
 });
 
 test('normalizeShelfCard читает приходы и миксы', () => {

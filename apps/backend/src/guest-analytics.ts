@@ -1,8 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './db';
-import { APP_MIN_EVENTS } from './purchase';
+import { isTrial } from './shelf';
 import { flavorProfileLabels, getAvailableMixCatalog } from './state';
-import { isTrial } from './stock';
 
 // Аналитика выборов гостей для Мастера (#520). Выбор — «Покурить» у микса каталога
 // (SmokeCtaEvent) или свой микс «Намиксуй» (CustomMixSmokeEvent). Считает Postgres,
@@ -45,6 +44,8 @@ export type GuestChoices = {
 const PRESET_DAYS: Record<Exclude<ChoicesPresetKey, 'all'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 const WEEKLY_AFTER_DAYS = 31;
 const TOP = 10;
+// Меньше выборов за период — графики и топы случайны, их не показываем.
+const APP_MIN_EVENTS = 20;
 
 // Сутки — по часовому поясу процесса, как у остального кода; база считает в нём же.
 const processTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -115,8 +116,8 @@ type TobaccoRow = {
   choices: number;
   inStock: boolean;
   shelfStatus: string | null;
-  firstReceiptAt: Date | null;
-  firstReceiptKind: string | null;
+  firstArrivalAt: Date | null;
+  firstArrivalKind: string | null;
 };
 
 // «Закончился» — табак на полке (в плане или в работе), но сейчас не в наличии;
@@ -124,7 +125,7 @@ type TobaccoRow = {
 const tobaccoMark = (row: TobaccoRow, now: Date): GuestChoices['topTobaccos'][number]['mark'] => {
   if (row.shelfStatus === null || row.shelfStatus === 'dropped') return 'off-shelf';
   if (!row.inStock) return 'out';
-  return isTrial(row.firstReceiptKind === 'start' ? null : row.firstReceiptAt, now) ? 'trial' : null;
+  return isTrial(row.firstArrivalKind === 'start' ? null : row.firstArrivalAt, now) ? 'trial' : null;
 };
 
 // JIT выключен: jsonb_array_elements Postgres оценивает в 100 строк на вызов, стоимость
@@ -187,14 +188,14 @@ export const getGuestChoices = async (query: ChoicesPeriodQuery, now = new Date(
         LIMIT ${TOP}
       )
       SELECT top.id AS "tobaccoId", top.manufacturer, top.name, top.choices, top."inStock",
-             si.status AS "shelfStatus", receipt.at AS "firstReceiptAt", receipt.kind AS "firstReceiptKind"
+             si.status AS "shelfStatus", arrival.at AS "firstArrivalAt", arrival.kind AS "firstArrivalKind"
       FROM top
       LEFT JOIN "ShelfItem" si ON si."tobaccoId" = top.id
       LEFT JOIN LATERAL (
-        SELECT se.at, d.kind FROM "StockEntry" se LEFT JOIN "Delivery" d ON d.id = se."deliveryId"
-        WHERE se."shelfItemId" = si.id AND se.kind = 'receipt'
-        ORDER BY se.at, se."createdAt", se.id LIMIT 1
-      ) receipt ON true
+        SELECT d."receivedAt" AS at, d.kind FROM "DeliveryLine" l JOIN "Delivery" d ON d.id = l."deliveryId"
+        WHERE l."tobaccoId" = top.id AND l.kind = 'tobacco' AND l.arrived AND d.status = 'received'
+        ORDER BY d."receivedAt", d."createdAt", d.id LIMIT 1
+      ) arrival ON true
       ORDER BY top.choices DESC, top.manufacturer, top.name`),
     // Удалённый микс (mixId = null) — под сохранённым названием; живой — под текущим.
     withoutJit(prisma.$queryRaw<Array<{ mixId: string | null; mixName: string; choices: number; avgRating: number | null }>>`

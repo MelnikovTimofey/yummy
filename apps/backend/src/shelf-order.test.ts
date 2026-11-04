@@ -29,7 +29,7 @@ const deliver = async (supplierName: string, day: number, lines: Array<[string, 
 
 test.beforeEach(async () => {
   await resetAppState();
-  start = (await prisma.stockEntry.findFirstOrThrow({ orderBy: { at: 'asc' } })).at;
+  start = (await prisma.delivery.findFirstOrThrow({ where: { kind: 'start' } })).receivedAt!;
 });
 
 test('пусто, пока всё в наличии', async () => {
