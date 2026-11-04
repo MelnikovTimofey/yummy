@@ -644,6 +644,64 @@ test.describe('Master on a phone in landscape', () => {
   });
 });
 
+// #337 (#540, #shot=more, #shot=access): код смены сверху листа «Ещё», разделы
+// плиткой; «Доступ» на телефоне без обрезки, операторы и сотрудники карточками.
+// Неразрушающий: «Создать сотрудника» закрывается без сохранения.
+test.describe('Master access on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master on a phone: shift code in «Ещё», «Доступ» is not clipped', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    const more = page.getByRole('dialog', { name: 'Ещё разделы' });
+    const code = more.getByRole('region', { name: 'Код смены' });
+    await expect(code.locator('.m-code__value')).toHaveText(/^\d{4}$/);
+    await expect(code.getByRole('button', { name: 'Копировать' })).toBeVisible();
+    await expect(code.getByRole('button', { name: 'Выпустить новый код' })).toHaveCount(0);
+    for (const name of [/^Каталог/, /^Миксы/, /^Рейлы/, /^Доступ/, /^Выйти/]) {
+      await expect(more.getByRole('button', { name })).toBeVisible();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    await more.getByRole('button', { name: /^Доступ/ }).click();
+    await expect(page.getByRole('heading', { name: 'Доступ и персонал', level: 1 })).toBeAttached();
+    const rotate = page.getByRole('button', { name: 'Выпустить новый код' });
+    await expect(rotate).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Статус Telegram-бота' })).toBeVisible();
+    const operatorActions = page.getByRole('button', { name: /^Действия: / });
+    await expect(operatorActions.first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    const inViewportX = async (locator: Locator) => {
+      const box = await locator.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+    };
+    await inViewportX(rotate);
+    await inViewportX(page.getByRole('button', { name: 'Добавить оператора' }));
+    for (const button of await operatorActions.all()) await inViewportX(button);
+
+    // Плейсхолдер пароля нового сотрудника — не из режима правки.
+    const create = page.getByRole('button', { name: 'Создать сотрудника' });
+    await inViewportX(create);
+    await create.click();
+    const dialog = page.getByRole('dialog', { name: 'Создать сотрудника' });
+    await expect(dialog).toBeVisible();
+    const password = dialog.locator('input[type="password"]');
+    await expect(password).not.toHaveAttribute('placeholder', 'Пусто — пароль не меняется');
+    await expect(password).not.toHaveAttribute('placeholder', /не менять/);
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(dialog).toBeHidden();
+  });
+});
+
 // Дашборд — выборы гостей (#520): период меняет диапазон дат; на seed выборов
 // мало, поэтому годится и график, и «Мало данных» / «Выборов нет». Блока полки на
 // дашборде больше нет. Дальше «К заказу» на полке (#518, #shot=order,
