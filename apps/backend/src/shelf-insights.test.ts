@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { prisma } from './db';
-import { addCount, addReceipt, addToShelf, getShelf, getShelfItem, markEmpty, removeFromShelf, updateSettings, writeOff } from './shelf';
+import { addCount, addReceipt, addToShelf, getShelf, getShelfItem, markEmpty, removeFromShelf, syncAvailability, syncOutAt, updateSettings, writeOff } from './shelf';
 import { getPurchase, getReorder, getShelfDashboard, orderText, weekPeriods } from './shelf-insights';
 import { resetAppState } from './state';
 
@@ -57,6 +57,11 @@ const receive = async (
       at: input.entryAt ?? input.at,
       deliveryId: delivery.id,
     },
+  });
+  // Как при приёмке: приход снимает «Закончился».
+  await prisma.$transaction(async (tx) => {
+    await syncOutAt(tx, [tobaccoId], input.at);
+    await syncAvailability(tx, [tobaccoId]);
   });
   return delivery;
 };

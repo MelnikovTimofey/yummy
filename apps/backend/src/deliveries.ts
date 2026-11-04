@@ -5,7 +5,7 @@ import { CONFIDENT_MATCH, matchLine, normalizeName, type CatalogTobacco, type Su
 import { parseInvoice } from './invoices/parse';
 import { extractTextItems } from './invoices/pdf-text';
 import type { TextPage } from './invoices/types';
-import { ensureOnShelf, syncAvailability, type ShelfActor, type ShelfItemStatus } from './shelf';
+import { ensureOnShelf, syncAvailability, syncOutAt, type ShelfActor, type ShelfItemStatus } from './shelf';
 
 // Поставки (#152, срез 3): счёт поставщика → черновик со строками → приёмка
 // пишет приходы в граммах на полку и запоминает сопоставления строк в SupplierItem.
@@ -675,6 +675,7 @@ export const acceptDelivery = async (
         }
       }
 
+      await syncOutAt(tx, tobaccoIds, receivedAt);
       await syncAvailability(tx, tobaccoIds);
       await audit(tx, actor, { action: 'accept', entityId: id, entityLabel: labelOf(delivery), details: { grams, sumKop } });
     },
