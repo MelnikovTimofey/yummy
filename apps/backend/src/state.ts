@@ -1408,9 +1408,7 @@ const wipeStorage = async (tx: StorageTx) => {
   await tx.mixComponent.deleteMany();
   await tx.rail.deleteMany();
   await tx.mix.deleteMany();
-  await tx.stockEntry.deleteMany();
   await tx.shelfItem.deleteMany();
-  await tx.shelfSettings.deleteMany();
   await tx.deliveryLine.deleteMany();
   await tx.delivery.deleteMany();
   await tx.supplierItem.deleteMany();
