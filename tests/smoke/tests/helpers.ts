@@ -27,12 +27,12 @@ export const signIn = async (login: string, password: string, page: Page) => {
   await page.getByLabel('Пароль', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Войти' }).click();
   // h1 после логина = title из MasterPageHeader (default `dashboard` →
-  // «Дашборд смены»). Route-шапка `.master-stage__header` удалена в
+  // «Дашборд»). Route-шапка `.master-stage__header` удалена в
   // chore/master-stage-header-cleanup — единственный h1 живёт внутри
   // MasterPageHeader каждого workspace-view (см. CLAUDE.md §3, smoke gate
   // после правок фронта).
   await expect(
-    page.getByRole('heading', { name: 'Дашборд смены', level: 1 }),
+    page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
 };
