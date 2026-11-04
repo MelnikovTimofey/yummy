@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeShelfEmptyManyResponse, normalizeShelfRow, type ShelfRow } from '../contracts';
+import { normalizeShelfEmptyManyResponse, normalizeShelfRestockManyResponse, normalizeShelfRow, type ShelfRow } from '../contracts';
 import {
   bulkEmptyToast,
   bulkKeepToast,
   bulkRemoveToast,
+  bulkRestockToast,
   bulkStopToast,
   bulkSummary,
   headCheck,
@@ -16,15 +17,6 @@ import {
 const row = (name: string, patch: Partial<ShelfRow> = {}): ShelfRow => ({
   ...normalizeShelfRow({
     tobacco: { id: name, manufacturer: 'Black Burn', name },
-    status: 'ok',
-    leftGrams: 300,
-    fullGrams: 400,
-    leftSource: 'forecast',
-    rate: 10,
-    rateKind: 'own',
-    monthGrams: 300,
-    daysLeft: 30,
-    endsAt: '2026-12-19T10:00:00.000Z',
     mixCount: 2,
     guestAvailable: true,
   }),
@@ -53,27 +45,30 @@ test('headCheck: «выбрать все» — пусто, частично (mix
   assert.equal(headCheck([], []), false);
 });
 
-test('bulkSummary: первые три названия, «и ещё», сколько закончатся и все ли на стопе', () => {
+test('bulkSummary: первые три названия, «и ещё», сколько закончатся и вернутся, стоп и «держим»', () => {
   const rows = [
     row('Cane Mint'),
     row('Blackcurrant'),
-    row('Pear lemonade'),
-    row('Virgin Peach 2.0', { status: 'plan' }),
-    row('Лимонная шипучка', { status: 'out', leftGrams: 0 }),
+    row('Pear lemonade', { stopped: true }),
+    row('Virgin Peach 2.0', { shelfStatus: 'plan' }),
+    row('Лимонная шипучка', { outAt: '2026-10-30T10:00:00.000Z' }),
   ];
   const summary = bulkSummary(rows);
   assert.equal(summary.count, 5);
   assert.equal(summary.names, 'Cane Mint, Blackcurrant, Pear lemonade и ещё 2');
   assert.equal(summary.emptyCount, 3);
-  assert.equal(summary.skipCount, 2);
+  assert.equal(summary.restockCount, 1);
   assert.equal(summary.allStopped, false);
+  assert.equal(summary.allKept, true);
 
   assert.equal(bulkSummary([row('Cane Mint'), row('Panama')]).names, 'Cane Mint, Panama');
-  assert.equal(bulkSummary([row('a', { stopped: true, status: 'stop' }), row('b', { stopped: true, status: 'out' })]).allStopped, true);
+  assert.equal(bulkSummary([row('a', { stopped: true }), row('b', { stopped: true, outAt: '2026-10-30T10:00:00.000Z' })]).allStopped, true);
+  assert.equal(bulkSummary([row('a'), row('b', { keepStocked: false })]).allKept, false);
   assert.equal(bulkSummary([]).allStopped, false);
+  assert.equal(bulkSummary([]).allKept, false);
 });
 
-test('bulkEmptyToast: число, скрытые миксы, сколько добавлено в заказ и пропущенные', () => {
+test('bulkEmptyToast: число, скрытые миксы, сколько добавлено в заявку и пропущенные', () => {
   const toast = bulkEmptyToast(
     normalizeShelfEmptyManyResponse({
       batchId: 'b1',
@@ -86,7 +81,7 @@ test('bulkEmptyToast: число, скрытые миксы, сколько до
   assert.equal(toast.title, 'Закончились: 4');
   assert.equal(
     toast.text,
-    'Гости их не видят. Скрыто миксов: 7, в заказ добавлено: 1. Пропущено 1: уже закончились.',
+    'Гости их не видят. Скрыто миксов: 7, в заявку добавлено: 1. Пропущено 1: уже закончились.',
   );
 });
 
@@ -95,7 +90,7 @@ test('bulkEmptyToast: без миксов и «держим» — короче; 
   assert.equal(bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [] })).text, 'Гости их не видят.');
   assert.equal(
     bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [], items: [{ tobacco: { id: 'a' }, keepStocked: true }] })).text,
-    'Гости их не видят. В заказ добавлено: 1.',
+    'Гости их не видят. В заявку добавлено: 1.',
   );
   assert.equal(
     bulkEmptyToast(normalizeShelfEmptyManyResponse({ ...base, skipped: [{ tobaccoId: 'p', reason: 'plan' }] })).text,
@@ -123,25 +118,34 @@ test('bulkEmptyToast: ничего не отмечено — так и гово�
   assert.equal(toast.text, 'Пропущено 1: уже закончились.');
 });
 
-test('optimisticEmpty: строка сразу «закончился» с отметкой 0 г', () => {
+test('optimisticEmpty: строка сразу «закончился» с датой и не видна гостю', () => {
   const at = '2026-11-19T15:00:00.000Z';
   const next = optimisticEmpty(row('Cane Mint', { stopped: false }), at);
-  assert.equal(next.status, 'out');
-  assert.equal(next.leftGrams, 0);
-  assert.equal(next.leftSource, 'mark');
+  assert.equal(next.outAt, at);
   assert.equal(next.guestAvailable, false);
-  assert.equal(next.daysLeft, null);
-  assert.equal(next.endsAt, null);
-  assert.deepEqual(next.lastCount, { at, grams: 0, fraction: null });
-  // «Закончился» важнее стопа в статусе строки, как в stock.ts на сервере.
-  assert.equal(optimisticEmpty(row('Panama', { stopped: true, status: 'stop' }), at).status, 'out');
+});
+
+test('bulkRestockToast: сколько вернулось, пропущенные «уже есть» и «в плане»', () => {
+  const base = { batchId: 'r1', done: ['a', 'b'], items: [] };
+  assert.deepEqual(bulkRestockToast(normalizeShelfRestockManyResponse({ ...base, skipped: [] })), {
+    title: 'Снова есть: 2',
+    text: 'Вернулись на витрину.',
+  });
+  assert.deepEqual(
+    bulkRestockToast(normalizeShelfRestockManyResponse({ ...base, skipped: [{ tobaccoId: 'c', reason: 'in' }, { tobaccoId: 'd', reason: 'plan' }] })),
+    { title: 'Снова есть: 2', text: 'Вернулись на витрину. Пропущено 2: уже есть или в плане.' },
+  );
+  assert.deepEqual(
+    bulkRestockToast(normalizeShelfRestockManyResponse({ batchId: 'r2', done: [], skipped: [{ tobaccoId: 'c', reason: 'in' }], items: [] })),
+    { title: 'Снова есть: 0', text: 'Пропущено 1: уже есть.' },
+  );
 });
 
 test('тосты стопа и «держим постоянно» для нескольких: текст предложением с заглавной', () => {
   assert.deepEqual(bulkStopToast(3, true), { title: 'Стоп для гостей: 3', text: 'Гости их не видят.' });
   assert.deepEqual(bulkStopToast(2, false), { title: 'Стоп снят: 2', text: 'Гости снова видят те, что есть на полке.' });
-  assert.deepEqual(bulkKeepToast(4, true), { title: 'Держим постоянно: 4', text: 'Когда закончатся, попадут в заказ.' });
-  assert.deepEqual(bulkKeepToast(1, false), { title: 'Не держим постоянно: 1', text: 'В заказ больше не попадут.' });
+  assert.deepEqual(bulkKeepToast(4, true), { title: 'Держим постоянно: 4', text: 'Когда закончатся, попадут в заявку.' });
+  assert.deepEqual(bulkKeepToast(1, false), { title: 'Не держим постоянно: 1', text: 'В заявку больше не попадут.' });
 });
 
 test('тост «Убрать с полки» для нескольких: сколько убрано и сколько не вышло', () => {

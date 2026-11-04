@@ -11,7 +11,16 @@ import {
   type ShelfTobaccoRef,
 } from '../contracts';
 import { formatDay } from './deliveries';
-import { formatMonthGrams, formatNumber, formatShelfDate, type ShelfTone } from './shelf';
+import { formatNumber, formatShelfDate } from './shelf';
+
+// Граммовые подписи «К заказу» и «Закупки» — до их удаления (#518, S4).
+export type ShelfTone = 'default' | 'muted' | 'faint' | 'warning' | 'danger';
+const decimal = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+export const formatOneDecimal = (value: number) => decimal.format(value);
+// Расход в месяц — до десятков граммов, малый — до грамма.
+export const formatMonthGrams = (grams: number) => formatNumber(grams < 10 ? grams : Math.round(grams / 10) * 10);
+const rubles = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const formatGramPrice = (kop: number | null) => (kop === null ? '—' : `${rubles.format(kop / 100)} ₽`);
 
 // Чистая логика «К заказу» (#213, #323, #325): сколько заказать, решает мастер —
 // здесь только когда закончится, расход в месяц и текст заявки с названиями.

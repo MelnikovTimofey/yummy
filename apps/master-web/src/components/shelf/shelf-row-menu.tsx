@@ -1,25 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ShelfRow } from '@/contracts';
-import { afterReceiptLine, shelfRowMenu } from '@/lib/shelf';
-import { ShelfLeftPanel, ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
+import { shelfRowMenu } from '@/lib/shelf';
 
 export type ShelfRowActions = {
-  onEmpty: (row: ShelfRow) => void;
-  onCount: (row: ShelfRow, input: CountInput) => void;
-  onReceipt: (row: ShelfRow, input: { grams: number; priceKop?: number }) => void;
-  onWriteOff: (row: ShelfRow, input: { grams: number; reason: string }) => void;
   onToggleStop: (row: ShelfRow) => void;
   onRemove: (row: ShelfRow) => void;
 };
 
-// left — «Сколько осталось?», main — меню «⋯», дальше — формы из меню.
-export type ShelfMenuMode = 'left' | 'main' | 'receipt' | 'writeoff';
-
 type ShelfRowMenuProps = {
   row: ShelfRow;
   anchor: HTMLElement;
-  mode: ShelfMenuMode;
   actions: ShelfRowActions;
   onClose: () => void;
 };
@@ -27,17 +18,13 @@ type ShelfRowMenuProps = {
 const GAP = 4;
 const EDGE = 8;
 
-// Всплывашка строки полки. Живёт в портале поверх страницы: таблица обрезает
-// переполнение по горизонтали, а у нижних строк всплывашка открывается вверх.
-export const ShelfRowMenu = ({ row, anchor, mode: initialMode, actions, onClose }: ShelfRowMenuProps) => {
+// Меню «⋯» строки полки. Живёт в портале поверх страницы: таблица обрезает
+// переполнение по горизонтали, а у нижних строк меню открывается вверх.
+export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [mode, setMode] = useState<ShelfMenuMode>(initialMode);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
-
   const items = shelfRowMenu(row);
   const name = `${row.tobacco.manufacturer} ${row.tobacco.name}`;
-
-  useEffect(() => setMode(initialMode), [initialMode]);
 
   useLayoutEffect(() => {
     const place = () => {
@@ -57,7 +44,7 @@ export const ShelfRowMenu = ({ row, anchor, mode: initialMode, actions, onClose 
       window.removeEventListener('scroll', place, true);
       window.removeEventListener('resize', place);
     };
-  }, [anchor, mode]);
+  }, [anchor]);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -79,57 +66,25 @@ export const ShelfRowMenu = ({ row, anchor, mode: initialMode, actions, onClose 
   }, [anchor, onClose]);
 
   useEffect(() => {
-    if (mode === 'main') ref.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
-  }, [mode]);
-
-  const label = mode === 'left' ? 'Сколько осталось?' : mode === 'receipt' ? 'Приход без счёта' : mode === 'writeoff' ? 'Списать' : null;
-  const sublabel = mode === 'left' ? afterReceiptLine(row) : null;
+    ref.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
+  }, []);
 
   return createPortal(
     <div
       ref={ref}
-      className={`shelf-menu${mode === 'main' ? '' : ' shelf-menu--wide'}`}
+      className="shelf-menu"
       role="dialog"
-      aria-label={label ? `${label}: ${name}` : `Действия: ${name}`}
+      aria-label={`Действия: ${name}`}
       style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }}
       onClick={(event) => event.stopPropagation()}
     >
-      {label ? (
-        <span className="shelf-menu__label">
-          {label}
-          {sublabel ? <small>{sublabel}</small> : null}
-        </span>
-      ) : null}
-
-      {mode === 'left' ? (
-        <ShelfLeftPanel
-          row={row}
-          autoFocus
-          onCount={(input) => actions.onCount(row, input)}
-          onEmpty={items.canEmpty ? () => actions.onEmpty(row) : undefined}
-        />
-      ) : null}
-
-      {mode === 'main' ? (
-        <>
-          <button type="button" className="shelf-menu__item" onClick={() => setMode('receipt')}>
-            Приход без счёта
-          </button>
-          <button type="button" className="shelf-menu__item" disabled={!items.canWriteOff} onClick={() => setMode('writeoff')}>
-            Списать
-          </button>
-          <button type="button" className="shelf-menu__item" onClick={() => actions.onToggleStop(row)}>
-            {items.stopLabel}
-          </button>
-          <div className="shelf-menu__sep" />
-          <button type="button" className="shelf-menu__item" onClick={() => actions.onRemove(row)}>
-            Убрать с полки <span className="shelf-faint">история останется</span>
-          </button>
-        </>
-      ) : null}
-
-      {mode === 'receipt' ? <ShelfReceiptForm row={row} onSubmit={(input) => actions.onReceipt(row, input)} onCancel={onClose} /> : null}
-      {mode === 'writeoff' ? <ShelfWriteOffForm row={row} onSubmit={(input) => actions.onWriteOff(row, input)} onCancel={onClose} /> : null}
+      <button type="button" className="shelf-menu__item" onClick={() => actions.onToggleStop(row)}>
+        {items.stopLabel}
+      </button>
+      <div className="shelf-menu__sep" />
+      <button type="button" className="shelf-menu__item" onClick={() => actions.onRemove(row)}>
+        Убрать с полки <span className="shelf-faint">история останется</span>
+      </button>
     </div>,
     document.body,
   );

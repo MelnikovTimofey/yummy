@@ -10,7 +10,6 @@ import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
 import { useGuestChoices } from '@/hooks/use-guest-choices';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
-import { ShelfMobileHeadMenu } from '@/components/shelf/shelf-mobile';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
@@ -129,7 +128,6 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
-  const [shelfSettingsOpen, setShelfSettingsOpen] = useState(false);
   // Выбранные табаки на полке (#333); на телефоне [] — режим выбора без отметок.
   const [shelfSelection, setShelfSelection] = useState<string[] | null>(null);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
@@ -137,7 +135,6 @@ export const App = () => {
   useEffect(() => {
     if (activeTab === 'shelf') return;
     setShelfMode('shelf');
-    setShelfSettingsOpen(false);
   }, [activeTab]);
   // Сменили вид или раздел — выделение на полке сбрасывается.
   useEffect(() => setShelfSelection(null), [activeTab, shelfMode]);
@@ -911,8 +908,6 @@ export const App = () => {
         setPendingInvoice(file);
         setActiveTab('deliveries');
       }}
-      settingsOpen={shelfSettingsOpen}
-      onSettingsOpenChange={setShelfSettingsOpen}
       openCardId={pendingShelfCard}
       onCardOpened={() => setPendingShelfCard('')}
       selection={shelfSelection}
@@ -1197,7 +1192,6 @@ export const App = () => {
                   >
                     <ShoppingCart size={18} strokeWidth={1.8} aria-hidden />
                   </button>
-                  <ShelfMobileHeadMenu onSettings={() => setShelfSettingsOpen(true)} />
                 </>
               ) : null
             }

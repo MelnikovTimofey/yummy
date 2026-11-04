@@ -1,51 +1,43 @@
-import { useId, useState } from 'react';
-import { Ellipsis } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
-import { MARK_OPTIONS, formatNumber, fractionGrams, leftEstimateNote, parseGrams, shelfMonthRate, shelfRowMenu, shelfStatusLine, shelfUntil } from '@/lib/shelf';
-import { sheetLine, shelfMobileActions } from '@/lib/shelf-mobile';
+import { shelfRowAction, shelfRowMenu } from '@/lib/shelf';
 import { ShelfCheck } from './shelf-bulk';
-import { ShelfReceiptForm, ShelfWriteOffForm, type CountInput } from './shelf-forms';
-import { ShelfLevel } from './shelf-level';
 import type { ShelfRowActions } from './shelf-row-menu';
+import { ShelfStatusCell } from './shelf-status';
 import { TrialMark } from './shelf-trial-mark';
 
-// «Полка» на телефоне (#215, #306, #shot=shelf-mobile, shelf-mobile-sheet).
+// «Полка» на телефоне (#215, #518, #shot=mobile-shelf): мастер у стойки жмёт
+// «Закончился» или «Вернуть» одним касанием.
 
 const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
 
 type ShelfMobileListProps = {
   rows: ShelfRow[];
-  leadDays: number;
   pendingId: string;
   // Режим выбора (#333, #shot=mobile-bulk): null — обычная полка.
   picked: string[] | null;
   onPick: (row: ShelfRow) => void;
   onEmpty: (row: ShelfRow) => void;
+  onRestock: (row: ShelfRow) => void;
   onUnstop: (row: ShelfRow) => void;
-  onOpenSheet: (row: ShelfRow) => void;
   onOpenCard: (row: ShelfRow) => void;
   onTrialVerdict: (row: ShelfRow, verdict: ShelfTrialVerdict | null) => Promise<void>;
 };
 
 export const ShelfMobileList = ({
   rows,
-  leadDays,
   pendingId,
   picked,
   onPick,
   onEmpty,
+  onRestock,
   onUnstop,
-  onOpenSheet,
   onOpenCard,
   onTrialVerdict,
 }: ShelfMobileListProps) => (
   <ul className="m-shelf-list" aria-label="Табаки на полке" data-picking={picked ? true : undefined}>
     {rows.map((row) => {
-      const actions = shelfMobileActions(row);
-      const until = shelfUntil(row, leadDays);
-      const line = shelfStatusLine(row);
-      const month = shelfMonthRate(row);
+      const action = picked ? null : shelfRowAction(row);
       const busy = pendingId === row.tobacco.id;
       const isPicked = picked?.includes(row.tobacco.id) ?? false;
       return (
@@ -71,23 +63,24 @@ export const ShelfMobileList = ({
               <span>{row.tobacco.manufacturer}</span>
             </button>
           )}
-          <span className="shelf-until m-shelf-card__until">
-            {/* Прогноза нет — на телефоне без прочерка, хватает статус-строки. */}
-            {until.text !== '—' ? (
-              <span className="shelf-num" data-tone={until.tone}>
-                {until.text}
-                {until.days ? <span className="shelf-faint">, {until.days}</span> : null}
-              </span>
-            ) : null}
-            {line && !until.text.startsWith(line.text) ? <small data-tone={line.tone}>{line.text}</small> : null}
-          </span>
+          {action === 'empty' ? (
+            <button type="button" className="m-shelf-card__btn" disabled={busy} onClick={() => onEmpty(row)}>
+              Закончился
+            </button>
+          ) : action === 'restock' ? (
+            <button type="button" className="m-shelf-card__btn" aria-label={`Вернуть в наличие ${fullName(row)}`} disabled={busy} onClick={() => onRestock(row)}>
+              Вернуть
+            </button>
+          ) : action === 'unstop' ? (
+            <button type="button" className="m-shelf-card__btn" disabled={busy} onClick={() => onUnstop(row)}>
+              Снять стоп
+            </button>
+          ) : (
+            <span />
+          )}
           <div className="m-shelf-card__meta">
-            <ShelfLevel row={row} />
-            {/* Расход в г/мес — как на десктопе (#shot=mobile-trial); закончился — подпись вместо кнопок. */}
-            <span className="m-shelf-card__rate">
-              <span className={month.faint ? 'shelf-faint' : 'shelf-num'}>{month.value}</span>
-              {actions.note ? <small className="shelf-faint">{actions.note}</small> : null}
-            </span>
+            <ShelfStatusCell row={row} />
+            {row.trial ? <span className="tag shelf-trial-tag">проба</span> : null}
           </div>
           {/* Проба (#329, #shot=mobile-trial): отметка у стойки, одно касание. */}
           {row.trial && !picked ? (
@@ -101,194 +94,32 @@ export const ShelfMobileList = ({
               />
             </div>
           ) : null}
-          {actions.left && !picked ? (
-            <div className="m-shelf-card__acts">
-              <button type="button" className="m-shelf-card__left" disabled={busy} onClick={() => onOpenSheet(row)}>
-                {actions.left}
-              </button>
-              <button
-                type="button"
-                className="m-shelf-card__primary"
-                disabled={busy}
-                onClick={() => (actions.right === 'unstop' ? onUnstop(row) : onEmpty(row))}
-              >
-                {actions.right === 'unstop' ? 'Снять стоп' : 'Закончился'}
-              </button>
-            </div>
-          ) : null}
         </li>
       );
     })}
   </ul>
 );
 
-type ShelfMarkSheetProps = {
-  row: ShelfRow;
-  onCount: (row: ShelfRow, input: CountInput) => void;
-  onEmpty: (row: ShelfRow) => void;
-  onClose: () => void;
-};
-
-// Шторка «Сколько осталось?»: доля или граммы — и «Сохранить»; «Закончился» — крупно.
-export const ShelfMarkSheet = ({ row, onCount, onEmpty, onClose }: ShelfMarkSheetProps) => {
-  const [fraction, setFraction] = useState<number | null>(null);
-  const [value, setValue] = useState('');
-  const inputId = useId();
-  const grams = parseGrams(value);
-  const full = row.fullGrams;
-  const items = shelfRowMenu(row);
-  const input: CountInput | null = grams !== null ? { grams } : fraction !== null ? { fraction } : null;
-  const note = leftEstimateNote(row);
-
-  return (
-    <BottomSheet label={`Сколько осталось: ${fullName(row)}`} onClose={onClose} className="m-mark-sheet">
-      <div className="m-mark-sheet__head">
-        <h2 className="m-mark-sheet__title">{row.tobacco.name}</h2>
-        <p className="m-mark-sheet__brand">{row.tobacco.manufacturer}</p>
-        <p className="m-mark-sheet__line">{sheetLine(row)}</p>
-      </div>
-      <form
-        className="m-mark-sheet__marks"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (input) onCount(row, input);
-        }}
-      >
-        <h3 className="m-mark-sheet__h3">Сколько осталось?</h3>
-        <div className="m-mark-sheet__fracs" role="group" aria-label="Сколько осталось">
-          {MARK_OPTIONS.map((option) => {
-            const optionGrams = full === null ? null : fractionGrams(full, option.value);
-            return (
-              <button
-                key={option.label}
-                type="button"
-                className="m-mark-sheet__frac"
-                aria-pressed={fraction === option.value}
-                disabled={full === null || !items.canMark}
-                aria-label={optionGrams === null ? `Осталось ${option.label}` : `Осталось ${option.label}, ${optionGrams} г`}
-                onClick={() => {
-                  setFraction(option.value);
-                  setValue('');
-                }}
-              >
-                {option.label}
-                {optionGrams === null ? null : <small>{formatNumber(optionGrams)} г</small>}
-              </button>
-            );
-          })}
-        </div>
-        <label className="m-mark-sheet__h3" htmlFor={inputId}>
-          Или точно, если взвесили
-        </label>
-        <div className="m-mark-sheet__exact">
-          <span className="shelf-grams" data-on={value ? true : undefined}>
-            <input
-              id={inputId}
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="граммы"
-              value={value}
-              onChange={(event) => {
-                setValue(event.target.value);
-                setFraction(null);
-              }}
-            />
-            <span>г</span>
-          </span>
-          <button type="submit" className="m-mark-sheet__save" disabled={!input || !items.canMark}>
-            Сохранить
-          </button>
-        </div>
-        {note ? <p className="m-mark-sheet__hint">{note}</p> : null}
-      </form>
-      {items.canEmpty ? (
-        <button type="button" className="m-mark-sheet__empty" onClick={() => onEmpty(row)}>
-          Закончился
-        </button>
-      ) : null}
-    </BottomSheet>
-  );
-};
-
-type ShelfActionsSheetProps = {
-  row: ShelfRow;
-  actions: ShelfRowActions;
-  onClose: () => void;
-};
-
-type ActionsMode = 'main' | 'receipt' | 'writeoff';
-
-// Действия карточки на телефоне (#228): те же пункты, что в меню «⋯» строки
-// на десктопе (#shot=shelf-menu), формы — в этой же шторке.
-export const ShelfActionsSheet = ({ row, actions, onClose }: ShelfActionsSheetProps) => {
-  const [mode, setMode] = useState<ActionsMode>('main');
-  const items = shelfRowMenu(row);
-
+// Действия карточки на телефоне (#228): те же пункты, что в меню «⋯» строки на десктопе.
+export const ShelfActionsSheet = ({ row, actions, onClose }: { row: ShelfRow; actions: ShelfRowActions; onClose: () => void }) => {
   const act = (run: () => void) => {
     onClose();
     run();
   };
-
-  const label = mode === 'receipt' ? 'Приход без счёта' : mode === 'writeoff' ? 'Списать' : `Действия: ${fullName(row)}`;
-
   return (
-    <BottomSheet label={label} onClose={onClose} className="m-actions">
+    <BottomSheet label={`Действия: ${fullName(row)}`} onClose={onClose} className="m-actions">
       <div className="m-mark-sheet__head">
-        <h2 className="m-mark-sheet__title">{mode === 'main' ? row.tobacco.name : label}</h2>
-        <p className="m-mark-sheet__brand">{mode === 'main' ? row.tobacco.manufacturer : fullName(row)}</p>
+        <h2 className="m-mark-sheet__title">{row.tobacco.name}</h2>
+        <p className="m-mark-sheet__brand">{row.tobacco.manufacturer}</p>
       </div>
-
-      {mode === 'main' ? (
-        <div className="m-actions__list">
-          <button type="button" className="m-actions__item" onClick={() => setMode('receipt')}>
-            Приход без счёта
-          </button>
-          <button type="button" className="m-actions__item" disabled={!items.canWriteOff} onClick={() => setMode('writeoff')}>
-            Списать
-          </button>
-          <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
-            {items.stopLabel}
-          </button>
-          <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
-            Убрать с полки <span className="shelf-faint">история останется</span>
-          </button>
-        </div>
-      ) : null}
-
-      {mode === 'receipt' ? (
-        <ShelfReceiptForm row={row} onSubmit={(input) => act(() => actions.onReceipt(row, input))} onCancel={() => setMode('main')} autoFocus={false} />
-      ) : null}
-      {mode === 'writeoff' ? (
-        <ShelfWriteOffForm row={row} onSubmit={(input) => act(() => actions.onWriteOff(row, input))} onCancel={() => setMode('main')} autoFocus={false} />
-      ) : null}
+      <div className="m-actions__list">
+        <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
+          {shelfRowMenu(row).stopLabel}
+        </button>
+        <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
+          Убрать с полки <span className="shelf-faint">история останется</span>
+        </button>
+      </div>
     </BottomSheet>
-  );
-};
-
-// «⋯» в верхней панели «Полки» на телефоне (#228): как меню в шапке на десктопе.
-export const ShelfMobileHeadMenu = ({ onSettings }: { onSettings: () => void }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button type="button" className="icon-btn m-topbar__action" aria-label="Меню полки" aria-expanded={open} onClick={() => setOpen(true)}>
-        <Ellipsis size={18} strokeWidth={1.8} aria-hidden />
-      </button>
-      {open ? (
-        <BottomSheet label="Меню полки" onClose={() => setOpen(false)} className="m-actions">
-          <div className="m-actions__list">
-            <button
-              type="button"
-              className="m-actions__item"
-              onClick={() => {
-                setOpen(false);
-                onSettings();
-              }}
-            >
-              Настройки полки
-            </button>
-          </div>
-        </BottomSheet>
-      ) : null}
-    </>
   );
 };

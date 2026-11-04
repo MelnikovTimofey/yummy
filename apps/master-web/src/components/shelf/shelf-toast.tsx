@@ -6,8 +6,6 @@ export type ShelfToastData = {
   title: string;
   text: string;
   error?: boolean;
-  // Пояснение, а не ошибка: отметка выше расчёта (#shot=edge-more).
-  warn?: boolean;
   undo?: () => Promise<unknown>;
   action?: { label: string; onClick: () => void };
 };
@@ -32,17 +30,20 @@ export const ShelfToast = ({ toast, onUndo, onClose }: { toast: ShelfToastData; 
   }, [left, onClose]);
 
   return (
-    <div className="shelf-toast" role="status" data-tone={toast.error ? 'danger' : toast.warn ? 'warning' : undefined}>
+    <div className="shelf-toast" role="status" data-tone={toast.error ? 'danger' : undefined}>
       {toast.error ? <TriangleAlert size={16} aria-hidden /> : null}
       <p>
         <b>{toast.title}</b>
         {toast.text ? <span>{toast.text}</span> : null}
       </p>
+      {toast.undo ? <span className="shelf-toast__timer">{left} с</span> : null}
       {toast.action ? (
         <button
           type="button"
           className="btn"
           data-size="sm"
+          // Рядом с «Отменить» — второстепенная кнопка (#shot=shelf-out-notkept).
+          data-variant={toast.undo ? 'ghost' : undefined}
           onClick={() => {
             onClose();
             toast.action?.onClick();
@@ -52,12 +53,9 @@ export const ShelfToast = ({ toast, onUndo, onClose }: { toast: ShelfToastData; 
         </button>
       ) : null}
       {toast.undo ? (
-        <>
-          <span className="shelf-toast__timer">{left} с</span>
-          <button type="button" className="btn" data-size="sm" title="Клавиша Z" onClick={onUndo}>
-            Отменить
-          </button>
-        </>
+        <button type="button" className="btn" data-size="sm" title="Клавиша Z" onClick={onUndo}>
+          Отменить
+        </button>
       ) : (
         <button type="button" className="icon-btn" aria-label="Закрыть уведомление" onClick={onClose}>
           ×
