@@ -558,18 +558,9 @@ test.describe('Master on a phone', () => {
     await page.getByRole('button', { name: 'Войти' }).click();
     await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
-    // Дашборд на seed короче экрана (#520: выборов мало, графиков нет), поэтому
-    // прокручиваем «Полку» и уходим с неё в «Миксы».
+    // На seed Дашборд (#520) и Полка (#518) короче экрана; длинный только
+    // конструктор микса: прокручиваем его и уходим на «Полку».
     const nav = page.getByRole('navigation', { name: 'Разделы' });
-    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
-    await expect(page.locator('.m-shelf-card').first()).toBeVisible();
-
-    // Полка без граммов (#518) на seed короче экрана и не прокручивается:
-    // вторую прокрутку делаем на дашборде.
-    await nav.getByRole('button', { name: 'Дашборд', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
-    await scrollDown(page);
     await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
     await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
     await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
@@ -582,6 +573,12 @@ test.describe('Master on a phone', () => {
     expect(box).toMatchObject({ x: 0, width: 375 });
     expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(812);
     await expect(nav.getByRole('button', { name: 'Ещё', exact: true })).toBeInViewport({ ratio: 1 });
+
+    await scrollDown(page);
+    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
+    await expect(page.locator('.m-shelf-card').first()).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
 });
 
