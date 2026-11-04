@@ -565,6 +565,10 @@ test.describe('Master on a phone', () => {
     await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
     await expect(page.locator('.m-shelf-card').first()).toBeVisible();
 
+    // Полка без граммов (#518) на seed короче экрана и не прокручивается:
+    // вторую прокрутку делаем на дашборде.
+    await nav.getByRole('button', { name: 'Дашборд', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
     await scrollDown(page);
     await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
     await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
