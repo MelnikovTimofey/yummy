@@ -927,6 +927,73 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await expect(page.locator('tr[data-delivery-id]').filter({ hasText: `№ ${number}` })).toHaveCount(0);
 });
 
+// «Поставки» на телефоне (#540, #shot=deliveries, delivery): счета и строки
+// счёта карточками, назад стрелкой в шапке, «Принять» в панели над меню.
+// Созданный черновик удаляется в конце.
+test.describe('Master deliveries on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master deliveries on a phone: invoice cards, line cards, back to the list', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
+    const tobaccoName = ((await page.locator('.m-shelf-card__name b').first().textContent()) ?? '').trim();
+    expect(tobaccoName).not.toBe('');
+
+    await nav.getByRole('button', { name: 'Поставки', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeAttached();
+    await expect(page.locator('.m-deliv-card').first()).toBeVisible();
+    await expect(page.locator('table.deliv-table')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Загрузить PDF счёта' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Загрузить счёт' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    const number = `SMOKE-M-${Date.now()}`;
+    await page.getByRole('button', { name: 'Вручную', exact: true }).click();
+    const manual = page.getByRole('dialog');
+    await manual.getByLabel('Номер счёта').fill(number);
+    await manual.getByRole('button', { name: 'Создать черновик' }).click();
+    await expect(page.getByRole('heading', { name: `Счёт ${number}`, level: 1 })).toBeVisible();
+    await expect(page.getByLabel('Пришло', { exact: true })).toHaveAttribute('type', 'date');
+
+    await page.getByRole('button', { name: 'Добавить строку', exact: true }).click();
+    const addLine = page.getByRole('dialog');
+    await addLine.getByLabel('Табак из каталога').fill(tobaccoName);
+    await addLine.getByRole('group', { name: 'Табаки каталога' }).getByRole('button').filter({ hasText: tobaccoName }).first().click();
+    await addLine.getByRole('button', { name: 'Добавить строку' }).click();
+    await expect(addLine).toBeHidden();
+
+    const line = page.locator('.m-deliv-line');
+    await expect(line).toHaveCount(1);
+    await expect(line).toContainText(tobaccoName);
+    await expect(line).toContainText('1 шт.');
+    await expect(line.getByRole('switch', { name: 'Пришло: строка 1' })).toBeChecked();
+    await expect(page.locator('tr[data-line-id]')).toHaveCount(0);
+    await expect(page.locator('.m-deliv-bar')).toContainText('Вернутся в наличие: 1 табак');
+    await expect(page.locator('.m-deliv-bar').getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
+    await expect(nav).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // Назад — то же, что «Сохранить черновик»: счёт остаётся в списке.
+    await page.getByRole('button', { name: 'Назад к поставкам' }).click();
+    const card = page.locator('.m-deliv-card').filter({ hasText: `счёт ${number}` });
+    await expect(card).toContainText('1 строка');
+    await card.click();
+    await expect(page.getByRole('heading', { name: `Счёт ${number}`, level: 1 })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Действия со счётом' }).click();
+    await page.getByRole('dialog', { name: `Счёт ${number}` }).getByRole('button', { name: 'Удалить черновик' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Удалить черновик' }).click();
+    await expect(page.locator('.m-deliv-card').first()).toBeVisible();
+    await expect(page.locator('.m-deliv-card').filter({ hasText: `счёт ${number}` })).toHaveCount(0);
+  });
+});
+
 // Каталог длиннее экрана: редактор микса из конца списка должен открываться
 // с начала страницы, а не на прокрутке, унаследованной от каталога.
 test('Master mix editor opened from the bottom of the catalog starts at the top', async ({ page }) => {
