@@ -1014,6 +1014,64 @@ test('Master mix copy gets its author and the author filter finds it', async ({ 
   await expect(copy).toHaveCount(0);
 });
 
+// «Рейлы» на телефоне (#338, #341, #shot=rails, rail-stat, rail-new): карточки
+// вместо таблицы, в редакторе метки под названием. Неразрушающий: редакторы
+// закрываются без сохранения.
+test.describe('Master rails on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master rails on a phone: cards, the statistical rail opens read-only with badges under the title', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Рейлы/ }).click();
+    await expect(page.getByRole('heading', { name: 'Рейлы', level: 1 })).toBeAttached();
+
+    const cards = page.getByRole('list', { name: 'Рейлы' }).locator('.m-rail-card');
+    await expect(cards.first()).toBeVisible();
+    await expect(page.locator('table.rails-table')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // «Больше всего выбирают» синтезирует backend (`buildTopRail`), от seed не зависит.
+    const statistical = cards.filter({ has: page.getByText('Больше всего выбирают', { exact: true }) });
+    await expect(statistical).toContainText('Статистический');
+    // Статистический рейл не удаляется: «⋯» только у рейлов мастера.
+    await expect(statistical.getByRole('button', { name: /^Действия: / })).toHaveCount(0);
+    await statistical.getByRole('button').first().click();
+
+    const editor = page.locator('.rails-surface__sheet');
+    const title = editor.getByRole('heading', { name: 'Больше всего выбирают' });
+    const badge = editor.locator('.rail-drawer__head').getByText('только просмотр');
+    await expect(title).toBeVisible();
+    await expect(badge).toBeVisible();
+    const titleBox = await title.boundingBox();
+    const badgeBox = await badge.boundingBox();
+    expect(badgeBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    await expect(editor.getByRole('button', { name: 'Сохранить' })).toHaveCount(0);
+    await expect(editor.getByRole('button', { name: 'Добавить микс' })).toHaveCount(0);
+    await editor.getByRole('button', { name: 'Закрыть' }).last().click();
+    await expect(editor).toBeHidden();
+
+    // «Новый» в верхней панели: миксы добавляются кнопкой, без «из списка слева».
+    await page.locator('.m-topbar').getByRole('button', { name: 'Новый' }).click();
+    await expect(editor.getByText('Рейл пуст')).toBeVisible();
+    await expect(editor.getByText(/слева/)).toHaveCount(0);
+    await editor.getByRole('button', { name: 'Добавить микс' }).click();
+    const picker = page.getByRole('dialog', { name: 'Добавить микс' });
+    await expect(picker.getByPlaceholder('Поиск миксов')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
+    await expect(editor.getByRole('button', { name: 'Создать' })).toBeInViewport({ ratio: 1 });
+    await editor.getByRole('button', { name: 'Отмена' }).click();
+    await expect(editor).toBeHidden();
+  });
+});
+
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {
   await signIn(operatorCredentials.login, operatorCredentials.password, page);
 
