@@ -7,7 +7,6 @@ import { localDateInput, parseRubles } from '@/lib/deliveries';
 import { TobaccoOptionLabel, TobaccoSearchResults, useTobaccoSearch, type TobaccoOption } from './tobacco-search';
 
 const MAX_QTY = 50;
-const MAX_GRAMS = 5000;
 
 type ShellProps = {
   open: boolean;
@@ -160,7 +159,6 @@ export const AddLineDialog = ({
   const [rawName, setRawName] = useState('');
   const [qty, setQty] = useState('1');
   const [price, setPrice] = useState('');
-  const [grams, setGrams] = useState('');
   const [query, setQuery] = useState('');
   const [tobacco, setTobacco] = useState<TobaccoOption | null>(null);
   const found = useTobaccoSearch(query, search);
@@ -170,17 +168,14 @@ export const AddLineDialog = ({
     const name = rawName.trim() || (tobacco ? `${tobacco.manufacturer} ${tobacco.name}` : '');
     const count = readInt(qty, 1, MAX_QTY);
     const priceKop = parseRubles(price);
-    const weight = readInt(grams, 1, MAX_GRAMS);
     if (!name) return submit.setError('Укажите название строки или выберите табак.');
     if (!count) return submit.setError(`Неверное число штук. Укажите целое число от 1 до ${MAX_QTY}.`);
     if (priceKop === undefined) return submit.setError('Неверная цена. Укажите рубли, например 1 550 или 1 550,50.');
-    if (weight === undefined) return submit.setError(`Неверные граммы в штуке. Укажите целое число от 1 до ${MAX_GRAMS}.`);
     void submit.run(() =>
       onAdd({
         rawName: name,
         qty: count,
         ...(priceKop !== null ? { priceKop } : {}),
-        ...(weight !== null ? { grams: weight } : {}),
         ...(tobacco ? { tobaccoId: tobacco.id } : {}),
       }),
     );
@@ -238,7 +233,7 @@ export const AddLineDialog = ({
           />
         </span>
       </Field>
-      <div className="deliv-form-row deliv-form-row--three">
+      <div className="deliv-form-row">
         <Field label="Штук">
           <span className="input">
             <input inputMode="numeric" value={qty} onChange={(event) => setQty(event.target.value)} />
@@ -247,11 +242,6 @@ export const AddLineDialog = ({
         <Field label="Цена за штуку, ₽">
           <span className="input">
             <input inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="1 550" />
-          </span>
-        </Field>
-        <Field label="Граммов в штуке">
-          <span className="input">
-            <input inputMode="numeric" value={grams} onChange={(event) => setGrams(event.target.value)} placeholder="из названия" />
           </span>
         </Field>
       </div>
@@ -266,22 +256,19 @@ export const CreateTobaccoDialog = ({
   onClose,
   onCreate,
 }: {
-  initial: NewTobaccoInput & { grams: number | null; rawName: string };
+  initial: NewTobaccoInput & { rawName: string };
   onClose: () => void;
-  onCreate: (input: NewTobaccoInput, grams: number | null) => Promise<unknown>;
+  onCreate: (input: NewTobaccoInput) => Promise<unknown>;
 }) => {
   const [manufacturer, setManufacturer] = useState(initial.manufacturer);
   const [lineName, setLineName] = useState(initial.lineName);
   const [name, setName] = useState(initial.name);
-  const [grams, setGrams] = useState(initial.grams ? String(initial.grams) : '');
   const submit = useSubmit();
 
   const onSubmit = () => {
-    const weight = readInt(grams, 1, MAX_GRAMS);
     if (!manufacturer.trim()) return submit.setError('Нужен бренд.');
     if (!name.trim()) return submit.setError('Нужно название табака.');
-    if (weight === undefined) return submit.setError(`Неверные граммы в штуке. Укажите целое число от 1 до ${MAX_GRAMS}.`);
-    void submit.run(() => onCreate({ manufacturer: manufacturer.trim(), lineName: lineName.trim(), name: name.trim() }, weight));
+    void submit.run(() => onCreate({ manufacturer: manufacturer.trim(), lineName: lineName.trim(), name: name.trim() }));
   };
 
   return (
@@ -310,11 +297,6 @@ export const CreateTobaccoDialog = ({
       <Field label="Название">
         <span className="input">
           <input value={name} onChange={(event) => setName(event.target.value)} />
-        </span>
-      </Field>
-      <Field label="Граммов в штуке">
-        <span className="input deliv-form-narrow">
-          <input inputMode="numeric" value={grams} onChange={(event) => setGrams(event.target.value)} placeholder="200" />
         </span>
       </Field>
     </FormDialog>

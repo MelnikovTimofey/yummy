@@ -6675,28 +6675,6 @@ button[aria-busy="true"]:disabled {
 .deliv-link { font-size: inherit; color: var(--text-secondary); }
 .deliv-link:disabled { opacity: 0.5; cursor: progress; }
 
-.deliv-grams { display: inline-flex; align-items: center; gap: 4px; }
-.deliv-grams[data-state="off"] { opacity: 0.45; }
-
-.deliv-grams__input {
-  width: 72px;
-  height: 28px;
-  padding: 0 6px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--fs-md);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.deliv-grams__input:hover { border-color: var(--border-default); }
-.deliv-grams__input:focus { outline: none; border-color: var(--accent); }
-.deliv-grams__input[data-tone="warn"] { border-color: var(--warning); }
-.deliv-match small.deliv-warn { color: var(--warning); }
-
 /* --- Нижняя панель приёмки -------------------------------------------- */
 
 .deliv-footbar {
@@ -6778,8 +6756,7 @@ button[aria-busy="true"]:disabled {
 /* --- Короткие формы ----------------------------------------------------- */
 
 .deliv-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.deliv-form-row--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.deliv-form-narrow { max-width: 140px; }
+
 .deliv-form-results { display: grid; gap: 1px; max-height: 220px; overflow-y: auto; margin-top: -8px; padding: 4px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); background: var(--bg-raised); }
 
 .deliv-chosen {

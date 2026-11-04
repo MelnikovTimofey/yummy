@@ -11,16 +11,15 @@ import {
   deliveryTitle,
   formatMoney,
   formatPrice,
-  formatWeight,
   guessTobaccoFromLine,
-  lineGramsHint,
   lineMatch,
   lineMatchHint,
+  lineQty,
   localDateInput,
-  parseReceivedGrams,
   parseSummary,
   receivedAtFromInput,
   sumCheck,
+  tobaccosToReceive,
 } from '@/lib/deliveries';
 import { describeShelfError } from '@/lib/shelf';
 import { AddLineDialog, CreateTobaccoDialog, DeleteDraftDialog } from './delivery-dialogs';
@@ -54,41 +53,6 @@ const Toggle = ({ checked, label, disabled, onChange }: { checked: boolean; labe
     </span>
   </button>
 );
-
-// Приход правится на месте, если пришло не всё: сохраняем по уходу из поля или
-// Enter. Пустое поле — вернуть «кол-во × граммы по счёту».
-const ReceivedInput = ({ line, disabled, onSave }: { line: DeliveryLine; disabled: boolean; onSave: (grams: number | null) => void }) => {
-  const shown = line.receivedGrams === null ? '' : String(line.receivedGrams);
-  const [value, setValue] = useState(shown);
-  useEffect(() => setValue(shown), [shown]);
-  const commit = () => {
-    const grams = parseReceivedGrams(value);
-    if (grams === undefined || grams === line.receivedGrams) {
-      setValue(shown);
-      return;
-    }
-    onSave(grams);
-  };
-  return (
-    <span className="deliv-grams" data-state={line.arrived ? undefined : 'off'}>
-      <input
-        className="deliv-grams__input"
-        data-tone={line.receivedGrams === null ? 'warn' : undefined}
-        inputMode="numeric"
-        aria-label={`Приход строки ${line.n}, граммов`}
-        value={value}
-        disabled={disabled}
-        placeholder="—"
-        onChange={(event) => setValue(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') event.currentTarget.blur();
-        }}
-      />
-      <span className="shelf-faint">г</span>
-    </span>
-  );
-};
 
 const lineSumKop = (line: DeliveryLine) => line.sumKop ?? (line.priceKop === null ? null : line.priceKop * line.qty);
 
@@ -265,7 +229,6 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
               const hint = isCreated ? (line.newOnShelf ? 'новый на полке' : '') : lineMatchHint(line);
               const skip = match === 'skip';
               const selectTone = match === 'none' ? 'danger' : match === 'suggest' || match === 'weak' ? 'warn' : undefined;
-              const gramsHint = lineGramsHint(line);
               return (
                 <tr key={line.id} data-line-id={line.id} data-match={match}>
                   <td className="shelf-faint shelf-num">{line.n}</td>
@@ -349,18 +312,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                     )}
                   </td>
                   <td>
-                    {skip ? (
-                      <span className="shelf-faint">—</span>
-                    ) : (
-                      <span className="deliv-match">
-                        {draft ? (
-                          <ReceivedInput line={line} disabled={busy} onSave={(receivedGrams) => void patchLine(line, { receivedGrams })} />
-                        ) : (
-                          <span className="shelf-num">{line.receivedGrams === null ? '—' : `${line.receivedGrams} г`}</span>
-                        )}
-                        <small className={line.receivedGrams === null ? 'deliv-warn' : undefined}>{gramsHint}</small>
-                      </span>
-                    )}
+                    {skip ? <span className="shelf-faint">—</span> : <span className="shelf-num">{lineQty(line)}</span>}
                   </td>
                   <td className="shelf-table__num shelf-num">{formatPrice(lineSumKop(line))}</td>
                   <td className="deliv-center">
@@ -411,10 +363,10 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
           <p className="deliv-footbar__summary">
             <span className={sum.tone === 'ok' ? 'deliv-ok' : sum.tone === 'warn' ? 'deliv-warn' : undefined}>{sum.short}</span>
             <span>
-              На полку <b>{formatWeight(card.gramsToReceive)}</b>
+              Вернутся в наличие: <b>{formatCount(tobaccosToReceive(card.lines), ['табак', 'табака', 'табаков'])}</b>
             </span>
             {card.pendingLines ? (
-              <span className="deliv-warn">Без табака или граммов: {formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}</span>
+              <span className="deliv-warn">Без табака: {formatCount(card.pendingLines, ['строка', 'строки', 'строк'])}</span>
             ) : null}
           </p>
           <label className="deliv-date">
@@ -461,12 +413,11 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
 
       {creatingFor ? (
         <CreateTobaccoDialog
-          initial={{ ...guessTobaccoFromLine(creatingFor.rawName), lineName: '', grams: creatingFor.grams, rawName: creatingFor.rawName }}
+          initial={{ ...guessTobaccoFromLine(creatingFor.rawName), lineName: '', rawName: creatingFor.rawName }}
           onClose={() => setCreatingFor(null)}
-          onCreate={async (input, grams) => {
+          onCreate={async (input) => {
             const tobacco = await api.createTobacco(input);
-            const line = creatingFor;
-            setCard(await api.updateLine(id, line.id, { tobaccoId: tobacco.id, ...(grams !== line.grams ? { grams } : {}) }));
+            setCard(await api.updateLine(id, creatingFor.id, { tobaccoId: tobacco.id }));
             setCreated((current) => new Set(current).add(tobacco.id));
             setCreatingFor(null);
           }}

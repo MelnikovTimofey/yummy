@@ -1861,13 +1861,11 @@ export type DeliveryListItem = {
   invoiceDate: string | null;
   receivedAt: string | null;
   lines: number;
-  // У черновика — сколько граммов даст приёмка, у принятой — сколько пришло.
-  grams: number;
   totalKop: number | null;
   createdAt: string;
 };
 
-export type DeliveryTotals = { monthKop: number; monthGrams: number; drafts: number; suppliers: number; memoryItems: number };
+export type DeliveryTotals = { monthKop: number; drafts: number; suppliers: number; memoryItems: number };
 
 export type DeliveryList = { items: DeliveryListItem[]; totals: DeliveryTotals };
 
@@ -1889,10 +1887,8 @@ export type DeliveryLine = {
   unit: string | null;
   priceKop: number | null;
   sumKop: number | null;
-  // Граммы в штуке по счёту.
+  // Граммы в штуке по счёту — данные счёта, приёмке не нужны (#518).
   grams: number | null;
-  // Сколько граммов придёт: поправка мастера или qty × grams; null — граммы неизвестны.
-  receivedGrams: number | null;
   kind: DeliveryLineKind;
   arrived: boolean;
   tobacco: { id: string; manufacturer: string; lineName: string; name: string; shelfStatus: ShelfItemStatus | null } | null;
@@ -1917,9 +1913,8 @@ export type DeliveryCard = {
   lines: DeliveryLine[];
   linesSumKop: number;
   sumMatches: boolean | null;
+  // Строки без табака: без них поставку не принять.
   pendingLines: number;
-  gramsToReceive: number;
-  grams: number;
 };
 
 const DELIVERY_KINDS = ['invoice', 'manual', 'start'] as const;
@@ -1944,7 +1939,6 @@ const normalizeDeliveryLine = (value: unknown): DeliveryLine => {
     priceKop: toNullableNumber(raw.priceKop),
     sumKop: toNullableNumber(raw.sumKop),
     grams: toNullableNumber(raw.grams),
-    receivedGrams: toNullableNumber(raw.receivedGrams),
     kind: pickOne(raw.kind, ['tobacco', 'skip'] as const, 'tobacco'),
     arrived: toBoolean(raw.arrived, true),
     tobacco: tobacco
@@ -1992,8 +1986,6 @@ export const normalizeDeliveryCard = (value: unknown): DeliveryCard => {
     linesSumKop: toNumber(raw.linesSumKop, 0),
     sumMatches: typeof raw.sumMatches === 'boolean' ? raw.sumMatches : null,
     pendingLines: toNumber(raw.pendingLines, 0),
-    gramsToReceive: toNumber(raw.gramsToReceive, 0),
-    grams: toNumber(raw.grams, 0),
   };
 };
 
@@ -2011,13 +2003,11 @@ export const normalizeDeliveryList = (value: unknown): DeliveryList => {
       invoiceDate: toDateOnly(item.invoiceDate),
       receivedAt: toIsoString(item.receivedAt, '') || null,
       lines: toNumber(item.lines, 0),
-      grams: toNumber(item.grams, 0),
       totalKop: toNullableNumber(item.totalKop),
       createdAt: toIsoString(item.createdAt, ''),
     })),
     totals: {
       monthKop: toNumber(totals.monthKop, 0),
-      monthGrams: toNumber(totals.monthGrams, 0),
       drafts: toNumber(totals.drafts, 0),
       suppliers: toNumber(totals.suppliers, 0),
       memoryItems: toNumber(totals.memoryItems, 0),
