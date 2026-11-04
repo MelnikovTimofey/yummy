@@ -836,7 +836,7 @@ export const App = () => {
       error={guestChoices.error}
       onPeriodChange={(period) => void guestChoices.load(period)}
       onSignal={(kind) => {
-        if (kind === 'out') setShelfMode('reorder');
+        if (kind === 'out') setShelfMode('order');
         setActiveTab(kind === 'out' ? 'shelf' : kind === 'hidden' ? 'mixes' : 'rails');
       }}
     />
