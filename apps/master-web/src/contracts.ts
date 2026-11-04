@@ -1736,21 +1736,6 @@ export type ShelfOrderNotKept = { tobaccoId: string; manufacturer: string; lineN
 // GET /staff/shelf/order: закончились и держим постоянно; notKept — закончились, но не держим.
 export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[] };
 
-export type ShelfDashboardWeek = { from: string; to: string; grams: number; partial: boolean };
-
-export type ShelfDashboard = {
-  // weekday: 1 — понедельник … 7 — воскресенье.
-  today: { grams: number; bowls: number; weekdayFactor: number | null; weekday: number };
-  ending: Array<{ tobacco: ShelfTobaccoRef; status: ShelfStatus; daysLeft: number | null; endsAt: string | null }>;
-  spend: { month: string; bySupplier: Array<{ supplier: ShelfSupplierRef | null; sumKop: number }>; totalKop: number };
-  // База — Σ расход в месяц × цена грамма по «держим постоянно»; unknownCount —
-  // без цены или расхода, в базу не вошли; leftKop — бюджет − база.
-  budget: { budgetKop: number | null; baseKop: number; baseCount: number; unknownCount: number; leftKop: number | null };
-  bowlCostKop: number | null;
-  stockValueKop: number;
-  weekly: ShelfDashboardWeek[];
-};
-
 const normalizeTobaccoRef = (value: unknown): ShelfTobaccoRef => {
   const raw = isRecord(value) ? value : {};
   return {
@@ -1793,54 +1778,6 @@ export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
       lineName: String(item.lineName ?? ''),
       name: String(item.name ?? ''),
       outAt: toIsoString(item.outAt, ''),
-    })),
-  };
-};
-
-const normalizeBudget = (value: unknown): ShelfDashboard['budget'] => {
-  const budget = recordOf(value);
-  return {
-    budgetKop: toNullableNumber(budget.budgetKop),
-    baseKop: toNumber(budget.baseKop, 0),
-    baseCount: toNumber(budget.baseCount, 0),
-    unknownCount: toNumber(budget.unknownCount, 0),
-    leftKop: toNullableNumber(budget.leftKop),
-  };
-};
-
-export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
-  const raw = isRecord(value) ? value : {};
-  const today = isRecord(raw.today) ? raw.today : {};
-  const spend = isRecord(raw.spend) ? raw.spend : {};
-  return {
-    today: {
-      grams: toNumber(today.grams, 0),
-      bowls: toNumber(today.bowls, 0),
-      weekdayFactor: toNullableNumber(today.weekdayFactor),
-      weekday: toNumber(today.weekday, 1),
-    },
-    ending: listOf(raw.ending).filter(isRecord).map((entry) => ({
-      tobacco: normalizeTobaccoRef(entry.tobacco),
-      status: pickOne(entry.status, SHELF_STATUSES, 'ending'),
-      daysLeft: toNullableNumber(entry.daysLeft),
-      endsAt: toIsoString(entry.endsAt, '') || null,
-    })),
-    spend: {
-      month: typeof spend.month === 'string' && /^\d{4}-\d{2}$/.test(spend.month) ? spend.month : '',
-      bySupplier: listOf(spend.bySupplier).filter(isRecord).map((entry) => ({
-        supplier: normalizeSupplierRef(entry.supplier),
-        sumKop: toNumber(entry.sumKop, 0),
-      })),
-      totalKop: toNumber(spend.totalKop, 0),
-    },
-    budget: normalizeBudget(raw.budget),
-    bowlCostKop: toNullableNumber(raw.bowlCostKop),
-    stockValueKop: toNumber(raw.stockValueKop, 0),
-    weekly: listOf(raw.weekly).filter(isRecord).map((week) => ({
-      from: toDay(week.from),
-      to: toDay(week.to),
-      grams: toNumber(week.grams, 0),
-      partial: toBoolean(week.partial, false),
     })),
   };
 };

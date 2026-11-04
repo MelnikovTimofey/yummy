@@ -14,12 +14,10 @@ import {
   normalizeShelfRestockResponse,
   normalizeShelfOrder,
   normalizeShelfRow,
-  normalizeShelfSettings,
   normalizeShelfView,
   readEntityPayload,
   type ShelfOrder,
   type ShelfRow,
-  type ShelfSettings,
   type ShelfTrialVerdict,
   type ShelfView,
 } from '@/contracts';
@@ -248,13 +246,6 @@ export const useShelf = (token: string) => {
     return normalizeInventoryListResponse(await requestJson<unknown>(`/staff/inventory/tobaccos?${params}`, {}, token)).items;
   }, [token]);
 
-  // Бюджет на дашборде (#326) — пока он на граммах.
-  const saveSettings = useCallback(async (settings: ShelfSettings) => {
-    const saved = normalizeShelfSettings(await requestJson<unknown>('/staff/shelf/settings', json('PATCH', settings), token));
-    await reload();
-    return saved;
-  }, [reload, token]);
-
   const reset = useCallback(() => {
     orderGuard.start();
     setView(null);
@@ -290,7 +281,6 @@ export const useShelf = (token: string) => {
     loadCard,
     setAnalogs,
     searchCatalog,
-    saveSettings,
   };
 };
 
