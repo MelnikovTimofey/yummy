@@ -69,7 +69,7 @@ docker compose down -v                    # стоп + сброс данных (
 [`snapshots/atelier-product-data.dump`](snapshots/atelier-product-data.dump)
 (custom-format `pg_restore`, ~1.4 МБ): весь каталог табаков (~11 500) + 15 миксов +
 5 prepared-рейлов + полка точки: в наличии ровно 269 табаков Nomad (лист «Категории
-табаков», как на проде), у каждого запись полки и «Стартовый приход» в граммах. Разворачивается за секунды,
+табаков», как на проде), у каждого запись полки «Есть» и строка стартовой поставки. Разворачивается за секунды,
 сеть и краулинг htreviews не нужны:
 
 ```bash
@@ -78,7 +78,7 @@ docker compose up -d db
 cd apps/backend && npx prisma db push && npm run prisma:seed && cd -
 # 2) заменить демо-контент продуктовыми данными из снэпшота
 docker compose exec -T db psql -U atelier -d atelier \
-  -c 'TRUNCATE "Tobacco","Mix","MixComponent","Rail","RailMix","Delivery","ShelfItem","StockEntry" CASCADE;'
+  -c 'TRUNCATE "Tobacco","Mix","MixComponent","Rail","RailMix","Delivery","DeliveryLine","ShelfItem" CASCADE;'
 docker compose exec -T db pg_restore -U atelier -d atelier --no-owner --data-only --disable-triggers \
   < snapshots/atelier-product-data.dump
 docker compose up -d backend aroma-web master-web
@@ -87,8 +87,7 @@ docker compose up -d backend aroma-web master-web
 > ⚠️ Порядок важен. `prisma:seed` стартует с `deleteMany()` по всем таблицам и
 > заливает **демо**-каталог/миксы — поэтому снэпшот накатывается **после** seed
 > и перезаписывает контентные таблицы (шаг 2). Снэпшот содержит только
-> продуктовые таблицы и полку (без staff/auth и настроек полки), а seed даёт логин,
-> онбординг и настройки полки.
+> продуктовые таблицы и полку (без staff/auth), а seed даёт логин и онбординг.
 > `--disable-triggers` нужен, чтобы `--data-only` restore не упирался в FK
 > (порядок загрузки таблиц в архиве). Как пересобрать снэпшот — в
 > [`docs/data/README.md`](docs/data/README.md).
