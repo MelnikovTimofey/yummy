@@ -7505,12 +7505,17 @@ button[aria-busy="true"]:disabled {
 .input.m-shelf-search__field,
 .input.m-list-search__field {
   flex: 1;
+  min-width: 0;
   height: 42px;
   padding: 0 12px;
   border-radius: var(--r-md);
   background: var(--bg-raised);
   font-size: 16px;
 }
+
+/* Поле сжимается, а не выдавливает «Фильтры» за экран при широком шрифте. */
+.m-shelf-search__field input,
+.m-list-search__field input { min-width: 0; width: 100%; }
 
 .m-shelf-chips,
 .m-list-chips {
