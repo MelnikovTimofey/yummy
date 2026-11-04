@@ -3147,6 +3147,135 @@ input[type="checkbox"] {
   font-size: var(--fs-sm);
 }
 
+/* «Доступ» и код смены на телефоне (#337, #shot=access, #shot=more): всё в столбик,
+   операторы и сотрудники карточками. */
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .access-page { gap: 10px; padding: 0 0 24px; }
+  /* h1 скрыт для диктора (#342), пустая шапка не отодвигает код смены. */
+  .access-page > .master-page-header { padding: 0; margin-bottom: -10px; }
+
+  .m-code {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r-lg);
+    background: var(--accent-soft);
+  }
+
+  .m-code__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+  .m-code__caps {
+    font-family: var(--font-meta);
+    font-size: var(--caps-size);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .m-code__status,
+  .m-access-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    font-size: var(--fs-base);
+    color: var(--text-secondary);
+  }
+
+  .m-code__status i,
+  .m-access-status i { width: 7px; height: 7px; border-radius: var(--r-pill); background: var(--success); flex: 0 0 auto; }
+  .m-code__status[data-active="false"] i { background: var(--text-muted); }
+  .m-access-status[data-tone="warn"] i { background: var(--warning); }
+  .m-access-status[data-tone="err"] { color: var(--danger); }
+  .m-access-status[data-tone="err"] i { background: var(--danger); }
+  .m-access-status[data-tone="unknown"] i { background: var(--text-muted); }
+
+  .m-code__value {
+    font-size: 44px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  .m-code__value[data-empty] { font-size: var(--fs-xl); letter-spacing: 0; color: var(--text-muted); }
+
+  .m-code .m-code__copy { height: 40px; padding: 0 14px; background: transparent; border-color: var(--border-default); font-weight: 400; }
+
+  .m-code__bar { height: 4px; border-radius: var(--r-pill); background: var(--border-subtle); overflow: hidden; }
+  .m-code__bar i { display: block; height: 100%; background: var(--accent); transition: width var(--dur-slow) var(--ease-standard); }
+  .m-code__bar i[data-urgency="soon"] { background: var(--warning); }
+  .m-code__bar i[data-urgency="expired"] { background: var(--danger); }
+
+  .m-code__line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-code__error { margin: 0; }
+
+  .m-code .m-code__rotate { justify-self: start; height: 40px; padding: 0; background: transparent; border-color: transparent; color: var(--text-secondary); font-weight: 400; }
+
+  .m-access-section { display: grid; gap: 10px; }
+
+  .m-access-section__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+
+  .m-access-section__title {
+    margin: 0 2px;
+    font-family: var(--font-serif);
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .m-access-section .m-access-section__add { height: 40px; padding: 0 14px; background: transparent; border-color: var(--border-default); font-weight: 400; }
+
+  .m-access-section__note { margin: 0 2px; color: var(--text-muted); }
+
+  .m-access-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+  .m-access-card {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .m-access-card[data-off] .m-access-card__main,
+  .m-access-card[data-off] .m-access-card__foot > span { opacity: 0.62; }
+
+  .m-access-card__head { display: flex; align-items: flex-start; gap: 10px; }
+  .m-access-card__main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .m-access-card__title { font-size: var(--fs-lg); font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+  .m-access-card__sub { font-size: var(--fs-base); line-height: 1.4; color: var(--text-muted); overflow-wrap: anywhere; }
+
+  .m-access-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 20px;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+  }
+
+  .m-access-card .m-access-card__more { width: 40px; height: 40px; margin: -8px -8px 0 0; }
+  .m-access-card .m-access-card__edit { height: 40px; margin: -8px -10px -8px auto; color: var(--text-secondary); font-weight: 400; }
+
+  /* Переключатель мелкий, а цель касания — 40 px. */
+  .m-access-card .toggle { margin-top: 2px; }
+  .m-access-card .toggle::after { content: ''; position: absolute; inset: -11px -6px; }
+}
+
 .operator-dialog__role-switch {
   display: flex;
   gap: 6px;
@@ -7642,6 +7771,7 @@ button[aria-busy="true"]:disabled {
 .m-more__user {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 8px;
   margin: 0;
   font-size: var(--fs-sm);
@@ -7653,28 +7783,32 @@ button[aria-busy="true"]:disabled {
   color: var(--text-faint);
 }
 
-.m-more__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+/* Разделы плиткой в две колонки под кодом смены (#337, #shot=more). */
+.m-more__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .m-more__item {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
-  min-height: 52px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-md);
-  background: transparent;
-  color: var(--text-secondary);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
 
-.m-more__item > span { display: grid; gap: 1px; }
-.m-more__item b { font-weight: 500; font-size: var(--fs-md); color: var(--text-primary); }
-.m-more__item small { font-size: var(--fs-xs); color: var(--text-muted); }
-.m-more__item[aria-current="page"] { border-color: var(--border-default); background: var(--bg-raised); box-shadow: inset 2px 0 0 var(--accent); }
-.m-more__item--exit { border-top: 1px solid var(--border-subtle); border-radius: 0; padding-top: 12px; }
+.m-more__item svg { flex: 0 0 auto; color: var(--text-secondary); }
+.m-more__item[aria-current="page"] { border-color: var(--accent-border); background: var(--bg-raised); }
+
+/* Повёрнутый телефон: лист низкий, разделы в три колонки. */
+@media (max-height: 500px) and (pointer: coarse) {
+  .m-more__grid { grid-template-columns: repeat(3, 1fr); }
+}
 
 /* --- Полка: поиск, чипы, карточки ------------------------------------- */
 

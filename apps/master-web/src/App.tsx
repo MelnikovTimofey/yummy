@@ -282,8 +282,9 @@ export const App = () => {
     if (activeTab === 'catalog' && catalogView === 'ideas') void catalogIdeas.reload(token);
     if (activeTab === 'shelf') void shelf.reload(token);
     if (activeTab === 'dashboard') void guestChoices.reload(token);
-    if (activeTab === 'access' && dailyCode.status === 'idle') {
-      void dailyCode.reload(token);
+    // Код смены мог загрузить лист «Ещё» (#337) — сотрудники и операторы грузятся сами по себе.
+    if (activeTab === 'access' && dailyCode.status === 'idle') void dailyCode.reload(token);
+    if (activeTab === 'access' && staff.status === 'idle') {
       void staff.reload(token, user.role);
       void telegramOps.reload(token, user.role);
     }
@@ -1226,6 +1227,12 @@ export const App = () => {
             userRoleLabel={formatRoleLabel(user.role)}
             onSignOut={onSignOut}
             whatsNew={whatsNew}
+            shiftCode={{
+              dailyCodes: dailyCode.dailyCodes,
+              status: dailyCode.status,
+              error: dailyCode.error,
+              onLoad: () => void dailyCode.reload(token),
+            }}
           />
         ) : null}
 

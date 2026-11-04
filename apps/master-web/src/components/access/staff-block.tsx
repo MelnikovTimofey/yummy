@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import type { StaffAccountRecord, StaffUser } from '@/contracts';
 import type { AccessRoleStatus, AccessSaveStatus, StaffAccountEditorState } from './types';
 import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
+import { Plus } from 'lucide-react';
+import { useIsPhone } from '@/hooks/use-is-phone';
 
 type StaffBlockProps = {
   staffAccounts: StaffAccountRecord[];
@@ -59,6 +61,7 @@ export const StaffBlock = ({
   onDeleteStaffAccount,
 }: StaffBlockProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const isPhone = useIsPhone();
 
   useEffect(() => {
     if (staffAccountSaveStatus === 'ready' && dialogOpen) {
@@ -76,8 +79,84 @@ export const StaffBlock = ({
     setDialogOpen(true);
   };
 
+  const toggle = (account: StaffAccountRecord) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={account.active}
+      aria-label={account.active ? 'Активен' : 'Выключен'}
+      title={account.active ? 'Активен' : 'Выключен'}
+      className={`toggle ${account.active ? 'toggle--on' : 'toggle--off'}`}
+      onClick={() => void onToggleStaffAccountActive(account)}
+      disabled={staffAccountToggleId === account.id}
+    >
+      <span className="toggle__track" aria-hidden="true">
+        <span className="toggle__thumb" />
+      </span>
+    </button>
+  );
+
+  // Телефон (#337, #shot=access): сотрудники карточками; удалить — в «Изменить».
+  const phoneList = (
+    <section className="m-access-section" aria-label="Учётки Мастера">
+      <div className="m-access-section__head">
+        <h2 className="m-access-section__title">Доступ к Мастеру</h2>
+        {staffAccountsStatus !== 'forbidden' ? (
+          <button type="button" className="btn m-access-section__add" aria-label="Создать сотрудника" onClick={openNewDialog}>
+            <Plus size={15} aria-hidden />
+            Сотрудник
+          </button>
+        ) : null}
+      </div>
+
+      {staffAccountsStatus === 'forbidden' ? (
+        <p className="meta-line m-access-section__note">
+          {staffAccountsError || 'Раздел сотрудников доступен только администратору.'}
+        </p>
+      ) : (
+        <>
+          {staffAccountsStatus === 'loading' && !staffAccounts.length ? (
+            <RowsSkeleton label="Загружаем сотрудников" rows={3} />
+          ) : null}
+          {staffAccountsStatus === 'ready' && !staffAccounts.length ? (
+            <p className="meta-line m-access-section__note">Сотрудников пока нет.</p>
+          ) : null}
+          {staffAccounts.length ? (
+            <ul className="m-access-list" aria-label="Сотрудники">
+              {staffAccounts.map((account) => (
+                <li key={account.id} className="m-access-card" data-off={!account.active || undefined}>
+                  <div className="m-access-card__head">
+                    <span className="m-access-card__main">
+                      <span className="m-access-card__title">{account.name || account.login || '—'}</span>
+                      <span className="m-access-card__sub">
+                        {account.login}, {account.role === 'admin' ? 'admin' : 'staff'}
+                      </span>
+                    </span>
+                    {toggle(account)}
+                  </div>
+                  <div className="m-access-card__foot">
+                    <button
+                      type="button"
+                      className="btn m-access-card__edit"
+                      data-variant="ghost"
+                      aria-label={`Изменить: ${account.name || account.login}`}
+                      onClick={() => openEditDialog(account)}
+                    >
+                      Изменить
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+
   return (
     <>
+      {isPhone ? phoneList : (
       <section className="card access-card" aria-label="Учётки Мастера">
         <header className="access-card__head">
           <div>
@@ -148,22 +227,7 @@ export const StaffBlock = ({
                       <span className="tag">staff</span>
                     )}
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={account.active}
-                      aria-label={account.active ? 'Активен' : 'Выключен'}
-                      title={account.active ? 'Активен' : 'Выключен'}
-                      className={`toggle ${account.active ? 'toggle--on' : 'toggle--off'}`}
-                      onClick={() => void onToggleStaffAccountActive(account)}
-                      disabled={busy}
-                    >
-                      <span className="toggle__track" aria-hidden="true">
-                        <span className="toggle__thumb" />
-                      </span>
-                    </button>
-                  </div>
+                  <div style={{ textAlign: 'center' }}>{toggle(account)}</div>
                   <div className="row-actions">
                     <button
                       type="button"
@@ -191,6 +255,7 @@ export const StaffBlock = ({
           </>
         )}
       </section>
+      )}
 
       <Dialog
         open={dialogOpen}

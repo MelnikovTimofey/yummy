@@ -8,7 +8,9 @@ import type {
 import { useCountdown, useTimeProgress } from '@/hooks/use-countdown';
 import type { DailyCodeRotateStatus } from '@/hooks/use-daily-code';
 import { formatCodeDeadline } from './format-date-time';
-import { TelegramBotStatusBlock } from './telegram-bot-status-block';
+import { TelegramBotCard, TelegramBotStatusBlock } from './telegram-bot-status-block';
+import { ShiftCode } from './shift-code';
+import { useIsPhone } from '@/hooks/use-is-phone';
 import type { AccessLoadStatus, AccessRoleStatus } from './types';
 import { BusyLabel, SmokeLoading } from '@/components/ui/loading';
 
@@ -52,6 +54,7 @@ export const DailyCodeBlock = ({
   const countdown = useCountdown(activeCode?.endsAt ?? '');
   const progress = useTimeProgress(activeCode?.startsAt ?? '', activeCode?.endsAt ?? '');
   const [copied, setCopied] = useState(false);
+  const isPhone = useIsPhone();
 
   const code = activeCode?.codeValue ?? '';
   const statusActive = currentDailyCode.state === 'active';
@@ -73,6 +76,24 @@ export const DailyCodeBlock = ({
       // visible code is the fallback
     }
   };
+
+  if (isPhone) {
+    return (
+      <>
+        <ShiftCode
+          currentDailyCode={currentDailyCode}
+          status={dailyCodesStatus}
+          error={dailyCodesError}
+          rotate={{ status: rotateStatus, error: rotateError, onRotate }}
+        />
+        <TelegramBotCard
+          telegramAutomationState={telegramAutomationState}
+          telegramAutomationStateStatus={telegramAutomationStateStatus}
+          telegramAutomationStateError={telegramAutomationStateError}
+        />
+      </>
+    );
+  }
 
   return (
     <article className="card daily-code-card" aria-label="Код смены и статус Telegram-бота">
