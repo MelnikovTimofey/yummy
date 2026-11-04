@@ -185,7 +185,7 @@ const formatLongDay = (value: string | null | undefined, now: Date) => {
   return date.getFullYear() === now.getFullYear() ? day : `${day} ${date.getFullYear()}`;
 };
 
-export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => {
+const headlineParts = (card: DeliveryCard, now: Date) => {
   const parts: string[] = [];
   if (card.invoiceDate) parts.push(`Счёт от ${formatLongDay(card.invoiceDate, now)}`);
   else if (card.kind === 'invoice') parts.push(`Загружен ${formatLongDay(card.createdAt, now)}`);
@@ -193,8 +193,37 @@ export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => 
   if (card.status === 'received' && card.receivedAt) {
     parts.push(`${card.kind === 'start' ? 'Принят' : 'принята'} ${formatLongDay(card.receivedAt, now)}`);
   }
+  return parts;
+};
+
+export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => {
+  const parts = headlineParts(card, now);
   const head = parts.length ? `${parts.join(', ')}.` : '';
   return card.status === 'draft' ? `${head} Принимайте поставку, когда товар придёт.`.trim() : head;
+};
+
+// --- телефон (#540, #shot=deliveries, delivery) ---------------------------------
+
+const supplierName = (kind: DeliveryListItem['kind'], name: string | null | undefined) =>
+  name ?? (kind === 'start' ? 'Стартовый приход' : 'Без поставщика');
+
+const lineCount = (count: number) => formatCount(count, ['строка', 'строки', 'строк']);
+
+export const deliveryListCard = (item: DeliveryListItem) => ({
+  title: supplierName(item.kind, item.supplier),
+  sub: [formatDay(item.invoiceDate ?? item.createdAt), item.number ? `счёт ${item.number}` : ''].filter(Boolean).join(', '),
+  lines: lineCount(item.lines),
+  sum: formatMoney(item.totalKop),
+});
+
+// Шапка телефона — «Счёт 1201», поставщик и даты — в теле карточки.
+export const deliveryPhoneHead = (card: DeliveryCard, now: Date = new Date()) => {
+  const sub = headlineParts(card, now).join(', ');
+  return {
+    title: card.kind === 'start' ? 'Стартовый приход' : card.number ? `Счёт ${card.number}` : 'Поставка без номера',
+    name: supplierName(card.kind, card.supplier?.name),
+    sub: sub ? `${sub[0].toLowerCase()}${sub.slice(1)}` : '',
+  };
 };
 
 export const deliveryStatusTag = (item: Pick<DeliveryListItem, 'kind' | 'status'>): { tone: TagTone; text: string } => {
@@ -235,6 +264,14 @@ export const tobaccosToReceive = (lines: Array<Pick<DeliveryLine, 'kind' | 'arri
   new Set(lines.filter((line) => line.kind === 'tobacco' && line.arrived && line.tobacco).map((line) => line.tobacco!.id)).size;
 
 const tobaccos = (count: number) => formatCount(count, ['табак', 'табака', 'табаков']);
+
+// Главная строка нижней панели телефона: что мешает принять или что вернётся.
+export const acceptBarSummary = (card: Pick<DeliveryCard, 'pendingLines' | 'lines'>) => {
+  const back = tobaccos(tobaccosToReceive(card.lines));
+  return card.pendingLines
+    ? { warn: true, main: `Без табака: ${lineCount(card.pendingLines)}`, sub: `вернутся в наличие ${back}` }
+    : { warn: false, main: `Вернутся в наличие: ${back}`, sub: '' };
+};
 
 export const acceptedToastTitle = (count: number) => (count ? `Принято: ${tobaccos(count)} в наличии` : 'Поставка принята');
 

@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { normalizeDeliveryCard, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
 import {
   CONFIDENT_MATCH,
+  acceptBarSummary,
   acceptLabel,
   acceptedToastTitle,
   deliveryHeadline,
+  deliveryListCard,
+  deliveryPhoneHead,
   deliveryStatusTag,
   deliveryTitle,
   formatDay,
@@ -335,4 +338,65 @@ test('guessTobaccoFromLine предзаполняет карточку ката�
   assert.deepEqual(guessTobaccoFromLine('"Дарк Сайд" Кор (Блэккерент), 250 г'), { manufacturer: 'Дарк Сайд', name: 'Кор (Блэккерент)' });
   assert.deepEqual(guessTobaccoFromLine('Sebero Клубника'), { manufacturer: 'Sebero', name: 'Клубника' });
   assert.deepEqual(guessTobaccoFromLine('ОБЛАКО'), { manufacturer: 'ОБЛАКО', name: '' });
+});
+
+// Телефон (#540, #shot=deliveries, delivery).
+test('deliveryListCard: поставщик, дата счёта с номером, строки и сумма', () => {
+  const item: DeliveryListItem = {
+    id: 'd',
+    kind: 'invoice',
+    status: 'draft',
+    supplier: 'Каспий Опт',
+    number: '1201',
+    invoiceDate: '2026-11-03',
+    receivedAt: null,
+    lines: 14,
+    totalKop: 3842000,
+    createdAt: '2026-11-04T09:00:00.000Z',
+  };
+  assert.deepEqual(plain(deliveryListCard(item)), { title: 'Каспий Опт', sub: '3 ноя, счёт 1201', lines: '14 строк', sum: '38 420 ₽' });
+  // Без даты счёта — дата загрузки; без номера — только дата.
+  assert.deepEqual(plain(deliveryListCard({ ...item, invoiceDate: null, number: null, lines: 1, totalKop: null })), {
+    title: 'Каспий Опт',
+    sub: '4 ноя',
+    lines: '1 строка',
+    sum: '—',
+  });
+  assert.equal(deliveryListCard({ ...item, kind: 'start', supplier: null }).title, 'Стартовый приход');
+  assert.equal(deliveryListCard({ ...item, kind: 'manual', supplier: null }).title, 'Без поставщика');
+});
+
+test('deliveryPhoneHead: короткий заголовок шапки, поставщик и дата строчными', () => {
+  const now = new Date(2026, 10, 20, 12);
+  const supplier = { id: 's', name: 'Каспий Опт', inn: null };
+  assert.deepEqual(deliveryPhoneHead(card({ number: '1201', invoiceDate: '2026-11-03', supplier }), now), {
+    title: 'Счёт 1201',
+    name: 'Каспий Опт',
+    sub: 'счёт от 3 ноября',
+  });
+  assert.deepEqual(deliveryPhoneHead(card({ kind: 'manual' }), now), {
+    title: 'Поставка без номера',
+    name: 'Без поставщика',
+    sub: 'заполнена вручную 18 ноября',
+  });
+  assert.deepEqual(
+    deliveryPhoneHead(card({ status: 'received', number: '7', supplier, invoiceDate: '2026-11-18', receivedAt: '2026-11-19T12:00:00.000Z' }), now),
+    { title: 'Счёт 7', name: 'Каспий Опт', sub: 'счёт от 18 ноября, принята 19 ноября' },
+  );
+  assert.equal(deliveryPhoneHead(card({ kind: 'start' }), now).title, 'Стартовый приход');
+});
+
+test('acceptBarSummary: главная строка нижней панели телефона', () => {
+  const t2 = { id: 't2', manufacturer: 'Darkside', lineName: '', name: 'Blackcurrant', shelfStatus: 'active' as const };
+  const lines = [line(), line({ id: 'l2', tobacco: t2 }), line({ id: 'l3', tobacco: null, matchReason: null })];
+  assert.deepEqual(acceptBarSummary(card({ lines, pendingLines: 1 })), {
+    warn: true,
+    main: 'Без табака: 1 строка',
+    sub: 'вернутся в наличие 2 табака',
+  });
+  assert.deepEqual(acceptBarSummary(card({ lines: lines.slice(0, 2), pendingLines: 0 })), {
+    warn: false,
+    main: 'Вернутся в наличие: 2 табака',
+    sub: '',
+  });
 });
