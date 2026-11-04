@@ -2807,6 +2807,118 @@ input[type="checkbox"] {
   padding: 10px 12px;
 }
 
+/* --- Каталог на телефоне (#540, #shot=catalog, catalog-select): карточки
+       вместо таблицы, выбор как на «Полке». ----------------------------- */
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .tobaccos-page.tobaccos-page--phone { padding: 0; gap: 10px; }
+
+  .m-catalog-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  /* Последняя карточка не прячется под панелью выбранных. */
+  .m-catalog-list[data-picking] { padding-bottom: 72px; }
+
+  .m-catalog-card {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+    cursor: pointer;
+  }
+
+  .m-catalog-card[data-picked] { border-color: var(--accent-border); background: var(--accent-soft); }
+
+  .m-catalog-card__head { display: flex; align-items: flex-start; gap: 12px; }
+  .m-catalog-card__head .shelf-select { flex: 0 0 auto; width: 22px; height: 22px; margin-top: 1px; border-radius: 6px; }
+
+  .m-catalog-card__copy { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 2px; overflow-wrap: anywhere; }
+
+  .m-catalog-card__name {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .m-catalog-card__archived { margin: 2px 0; }
+
+  .m-catalog-card__brand {
+    font-family: var(--font-meta);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .m-catalog-card__flavors { font-size: var(--fs-base); line-height: 1.4; color: var(--text-muted); }
+
+  .m-catalog-card__btn,
+  .m-catalog-bulk__main {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-md);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .m-catalog-card__btn:disabled,
+  .m-catalog-bulk__main:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .icon-btn.m-catalog-card__menu { flex: 0 0 auto; width: 40px; height: 40px; margin: -8px -10px -8px 0; }
+
+  .m-catalog-card__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+  }
+
+  .m-catalog-card__foot .shelf-status[data-tone="in"] { color: var(--text-secondary); }
+  .m-catalog-card__foot .shelf-status[data-tone="none"] i { box-sizing: border-box; border: 1px solid var(--text-muted); background: transparent; }
+
+  .m-catalog-empty { display: grid; justify-items: center; padding: 24px 0; }
+
+  .m-catalog-bulk {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(56px + var(--safe-bottom) + 8px);
+    z-index: 44;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 14px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r-lg);
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--fs-md);
+  }
+
+  .m-catalog-bulk b { flex: 1; min-width: 0; font-weight: 500; }
+  .m-catalog-bulk__main { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+  .icon-btn.m-catalog-bulk__more { width: 40px; height: 40px; }
+
+  /* «Готово» в режиме выбора — тихая кнопка без рамки, как в мокапе. */
+  .m-topbar__text-btn[data-variant="ghost"] { border-color: transparent; color: var(--text-secondary); }
+}
+
 /* Mixes page — обёртка без .card, padding/header/stats как у tobaccos. */
 .mixes-page {
   display: flex;

@@ -13,6 +13,8 @@ import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
 import { rankBySearch } from '@/lib/search-match';
 import { dragModeFor, dragSelection, type DragMode } from '@/lib/drag-select';
 import { useIsPhone } from '@/hooks/use-is-phone';
+import type { ShelfState } from '@/lib/shelf';
+import { CatalogActionsSheet, CatalogMobileBulk, CatalogMobileList } from './catalog-mobile';
 import {
   CATALOG_SORTS,
   CATALOG_STATUS_CHIPS,
@@ -69,6 +71,12 @@ type InventoryViewProps = {
   pendingRowId: string;
   pendingBatchAction: '' | CatalogBatchAction;
   shelfStatuses: Map<string, 'active' | 'plan'>;
+  // Состояние на полке для карточек телефона: «закончился», «стоп».
+  shelfStates: ReadonlyMap<string, ShelfState>;
+  // Телефон (#540, #shot=catalog-select): «Выбрать» и «+» живут в верхней панели App.
+  picking: boolean;
+  createRequested: boolean;
+  onCreateOpened: () => void;
   onSearchChange: (value: string) => void;
   onStockChange: (value: InventoryStockFilter) => void;
   onArchivedChange: (value: InventoryArchivedFilter) => void;
@@ -545,6 +553,10 @@ export const InventoryView = ({
   pendingRowId,
   pendingBatchAction,
   shelfStatuses,
+  shelfStates,
+  picking,
+  createRequested,
+  onCreateOpened,
   onSearchChange,
   onStockChange,
   onArchivedChange,
@@ -572,6 +584,8 @@ export const InventoryView = ({
   onCardOpened,
 }: InventoryViewProps) => {
   const [activeItemId, setActiveItemId] = useState('');
+  // Меню «⋯» карточки на телефоне.
+  const [menuItemId, setMenuItemId] = useState('');
 
   useEffect(() => {
     if (!openCardId || !items.some((item) => item.id === openCardId)) return;
@@ -716,6 +730,14 @@ export const InventoryView = ({
     setEditorDraft(emptyInventoryEditorDraft());
     setEditorOpen(true);
   };
+
+  useEffect(() => {
+    if (!createRequested) return;
+    openCreateEditor();
+    onCreateOpened();
+    // openCreateEditor пересоздаётся каждый рендер; запрос — только флаг.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createRequested, onCreateOpened]);
 
   const openEditEditor = (item: InventoryTobacco) => {
     onResetSaveFeedback();
@@ -1347,33 +1369,56 @@ export const InventoryView = ({
     />
   );
 
+  const viewSeg = (
+    <span className={isPhone ? 'shelf-seg shelf-seg--phone' : 'shelf-seg'} role="group" aria-label="Вид каталога">
+      <button type="button" aria-pressed={view === 'all'} onClick={() => onViewChange('all')}>
+        Все табаки
+      </button>
+      <button type="button" aria-pressed={view === 'ideas'} onClick={() => onViewChange('ideas')}>
+        Идеи для закупки
+      </button>
+    </span>
+  );
+  const emptyList = filtersActive ? (
+    <div className="list-empty">
+      <p>Уберите один из фильтров.</p>
+      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetAll}>
+        Сбросить фильтры
+      </button>
+    </div>
+  ) : (
+    'Каталог пуст.'
+  );
+  const menuItem = items.find((item) => item.id === menuItemId) ?? null;
+
   return (
-    <section className="tobaccos-page">
-      <MasterPageHeader
-        title="Каталог"
-        meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])}, ${formatMetricValue(meta.inMixesCount)} в миксах`}
-        actions={
-          <>
-            <span className="shelf-seg" role="group" aria-label="Вид каталога">
-              <button type="button" aria-pressed={view === 'all'} onClick={() => onViewChange('all')}>
-                Все табаки
+    <section className={isPhone ? 'tobaccos-page tobaccos-page--phone' : 'tobaccos-page'}>
+      {/* Телефон (#540, #shot=catalog): раздел назван в верхней панели, «Новый табак» — «+» там же. */}
+      {isPhone ? (
+        <>
+          <h1 className="sr-only">Каталог</h1>
+          {viewSeg}
+        </>
+      ) : (
+        <MasterPageHeader
+          title="Каталог"
+          meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])}, ${formatMetricValue(meta.inMixesCount)} в миксах`}
+          actions={
+            <>
+              {viewSeg}
+              <button
+                type="button"
+                className="btn"
+                data-variant="primary"
+                onClick={openCreateEditor}
+              >
+                <Plus size={14} aria-hidden />
+                Новый табак
               </button>
-              <button type="button" aria-pressed={view === 'ideas'} onClick={() => onViewChange('ideas')}>
-                Идеи для закупки
-              </button>
-            </span>
-            <button
-              type="button"
-              className="btn"
-              data-variant="primary"
-              onClick={openCreateEditor}
-            >
-              <Plus size={14} aria-hidden />
-              Новый табак
-            </button>
-          </>
-        }
-      />
+            </>
+          }
+        />
+      )}
 
       {editorSheet}
 
@@ -1442,6 +1487,41 @@ export const InventoryView = ({
         </BottomSheet>
       ) : null}
 
+      {isPhone ? (
+        <>
+          {error ? <p className="error-text">{error}</p> : null}
+          {status === 'loading' && !items.length ? <RowsSkeleton label="Загружаем каталог" rows={8} /> : null}
+          <CatalogMobileList
+            items={items}
+            shelfStates={shelfStates}
+            picked={picking ? selectedIds : null}
+            pendingRowId={pendingRowId}
+            batchBusy={pendingBatchAction !== ''}
+            onOpen={openEditEditor}
+            onPick={(item) => onToggleSelection(item.id)}
+            onAddToShelf={onAddToShelf}
+            onMenu={(item) => setMenuItemId(item.id)}
+          />
+          {!items.length && status !== 'loading' ? <div className="empty m-catalog-empty">{emptyList}</div> : null}
+          {menuItem ? (
+            <CatalogActionsSheet
+              item={menuItem}
+              onProfile={() => setActiveItemId(menuItem.id)}
+              onRemoveFromShelf={() => onRemoveFromShelf(menuItem)}
+              onClose={() => setMenuItemId('')}
+            />
+          ) : null}
+          {picking ? (
+            <CatalogMobileBulk
+              count={selectedIds.length}
+              pending={pendingBatchAction}
+              archivedActive={archivedActive}
+              labels={catalogBatchLabels}
+              onRun={onRunBatchAction}
+            />
+          ) : null}
+        </>
+      ) : (
       <div className="tobaccos-list">
       {selectedIds.length ? (
         <div className="inventory-batch-bar">
@@ -1729,16 +1809,7 @@ export const InventoryView = ({
             ) : (
               <tr>
                 <td className="inventory-table__empty" colSpan={10}>
-                  {filtersActive ? (
-                    <div className="list-empty">
-                      <p>Уберите один из фильтров.</p>
-                      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetAll}>
-                        Сбросить фильтры
-                      </button>
-                    </div>
-                  ) : (
-                    'Каталог пуст.'
-                  )}
+                  {emptyList}
                 </td>
               </tr>
             )}
@@ -1746,6 +1817,7 @@ export const InventoryView = ({
         </table>
       </div>
       </div>
+      )}
 
       <ListPagination
         page={meta.page}

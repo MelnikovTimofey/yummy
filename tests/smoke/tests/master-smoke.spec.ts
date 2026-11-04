@@ -814,6 +814,56 @@ test('Master catalog shows purchase ideas from htreviews without planning anythi
   await expect(page.locator('tbody tr[data-tobacco-id]').first()).toBeVisible();
 });
 
+// #540 (#shot=catalog, catalog-select): на телефоне «Каталог» — карточки вместо таблицы,
+// «Выбрать» как на «Полке». Неразрушающий: карточка табака закрывается без сохранения,
+// отметка снимается «Готово» без массовых действий.
+test.describe('Master catalog on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master catalog on a phone: tobacco cards, the card opens, «Выбрать» and «Готово»', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Каталог/ }).click();
+    await expect(page.getByRole('heading', { name: 'Каталог', exact: true, level: 1 })).toBeAttached();
+
+    const cards = page.getByRole('list', { name: 'Табаки каталога' }).locator('.m-catalog-card');
+    await expect(cards.first()).toBeVisible();
+    await expect(page.locator('table.inventory-table')).toHaveCount(0);
+    // Подвал карточки: место на полке и миксы.
+    await expect(cards.first()).toContainText(/(на полке|закончился|стоп для гостей|в плане|не на полке)/);
+    await expect(cards.first()).toContainText(/(в \d+ микс(е|ах)|нет в миксах)/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // Касание открывает карточку табака, как строка таблицы на десктопе.
+    const name = ((await cards.first().locator('.m-catalog-card__name').textContent()) ?? '').trim();
+    await cards.first().locator('.m-catalog-card__name').click();
+    const drawer = page.locator('[data-slot="sheet-content"]');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('textbox', { name: 'Название', exact: true })).toHaveValue(name);
+    await drawer.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(drawer).toBeHidden();
+
+    // «Выбрать» → отметить одну карточку → панель выбранных → «Готово» без изменений.
+    const topbar = page.locator('.m-topbar');
+    await topbar.getByRole('button', { name: 'Выбрать', exact: true }).click();
+    const id = await cards.first().getAttribute('data-tobacco-id');
+    await page.locator(`.m-catalog-card[data-tobacco-id="${id}"]`).getByRole('checkbox').click();
+    const bulk = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+    await expect(bulk).toContainText('Выбрано 1');
+    await expect(bulk.getByRole('button', { name: 'На полку', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    await topbar.getByRole('button', { name: 'Готово', exact: true }).click();
+    await expect(bulk).toBeHidden();
+    await expect(page.locator('.m-catalog-card [role="checkbox"]')).toHaveCount(0);
+    await expect(topbar.getByRole('button', { name: 'Выбрать', exact: true })).toBeVisible();
+  });
+});
+
 // Поставка вручную (#212, #518): черновик → строка с табаком из каталога → приёмка.
 // Граммы не вводятся: приёмка только вернула бы табак в «Есть». Принятую поставку удалить нельзя — в базе
 // осталась бы поставка с уникальным номером «SMOKE-…» и приход.
