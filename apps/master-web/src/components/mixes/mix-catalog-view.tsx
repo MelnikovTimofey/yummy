@@ -26,6 +26,7 @@ import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { MixStatusCell } from './mix-status';
+import { MixPhoneCard } from './mix-phone-card';
 import type {
   MissingTobacco,
   MixFilterKey,
@@ -252,15 +253,18 @@ export const MixCatalogView = ({
         title="Каталог миксов"
         meta={`${formatCount(meta.totalItems, ['микс', 'микса', 'миксов'])}, ${formatMetricValue(meta.inRailsCount)} в рейлах`}
         actions={
-          <button
-            type="button"
-            className="btn"
-            data-variant="primary"
-            onClick={onStartCreate}
-          >
-            <Plus size={14} aria-hidden />
-            Новый микс
-          </button>
+          // На телефоне «Новый микс» — в верхней панели (#540).
+          isPhone ? undefined : (
+            <button
+              type="button"
+              className="btn"
+              data-variant="primary"
+              onClick={onStartCreate}
+            >
+              <Plus size={14} aria-hidden />
+              Новый микс
+            </button>
+          )
         }
       />
 
@@ -341,6 +345,22 @@ export const MixCatalogView = ({
               <p>Миксов пока нет.</p>
             )}
           </div>
+        ) : isPhone ? (
+          <ul className="m-mix-list" aria-label="Миксы">
+            {items.map((mix) => (
+              <li key={mix.id}>
+                <MixPhoneCard
+                  mix={mix}
+                  busy={rowPendingId === mix.id}
+                  onOpen={() => onSelectMix(mix)}
+                  onCopy={() => onCopyMix(mix)}
+                  onToggleAvailable={() => onToggleMixAvailable(mix)}
+                  onDelete={() => setMixPendingDelete(mix)}
+                  onOpenTobacco={onOpenTobacco}
+                />
+              </li>
+            ))}
+          </ul>
         ) : (
           <div className="mixes-table-shell ops-table-shell">
             <table className="mixes-table">

@@ -561,17 +561,17 @@ test.describe('Master on a phone', () => {
     await page.getByRole('button', { name: 'Войти' }).click();
     await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
-    // На seed Дашборд (#520) и Полка (#518) короче экрана; длинный только
-    // конструктор микса: прокручиваем его и уходим на «Полку».
+    // На seed Дашборд (#520) и Полка (#518) короче экрана; длинный — список
+    // миксов карточками (#540): прокручиваем его и уходим на «Полку».
     const nav = page.getByRole('navigation', { name: 'Разделы' });
     await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
     await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
-    await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeAttached();
+    await expect(page.locator('.m-mix-card').first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
-    await page.locator('table.mixes-table tbody tr[data-mix-id]').first().click();
-    await expect(page.getByRole('button', { name: 'Назад к каталогу миксов' })).toBeVisible();
     await page.mouse.wheel(0, 3000);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     const box = await nav.boundingBox();
     expect(box).toMatchObject({ x: 0, width: 375 });
     expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(812);
@@ -883,6 +883,61 @@ test('Master mixes show substitution and missing tobaccos linked to their cards'
   await expect(blocked.locator('.mix-status')).toHaveText(/блокирован\s*Нет: Peach Silk/);
   await blocked.getByRole('button', { name: 'Peach Silk' }).click();
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Peach Silk' })).toBeVisible();
+});
+
+// Миксы на телефоне (#540, #shot=mixes, mix-edit, mix-library): карточки вместо
+// таблицы; конструктор в одну колонку, назад в шапке, сумма и сохранение внизу
+// вместо меню разделов, библиотека шторкой. Неразрушающий: правка не сохраняется.
+test.describe('Master mixes on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master mixes on a phone: cards, one-column builder, library sheet, back without saving', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
+    const card = page.locator('.m-mix-card').first();
+    await expect(card).toBeVisible();
+    await expect(page.locator('table.mixes-table')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // «⋯» — те же действия, что у строки таблицы; закрываем без изменений.
+    await card.getByRole('button', { name: /^Действия: / }).click();
+    const actions = page.getByRole('dialog', { name: /^Действия: / });
+    await expect(actions.getByRole('button', { name: 'Дублировать' })).toBeVisible();
+    await expect(actions.getByRole('button', { name: 'Удалить микс' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(actions).toBeHidden();
+
+    await card.locator('.m-mix-card__open').click();
+    const back = page.getByRole('button', { name: 'Назад к каталогу миксов' });
+    await expect(back).toBeVisible();
+    await expect(nav).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    const sum = page.locator('.mix-builder__phone-sum');
+    const save = page.locator('.mix-builder__phone-bar').getByRole('button', { name: 'Сохранить', exact: true });
+    await expect(sum).toContainText('100 %');
+    await expect(save).toBeEnabled();
+    await page.locator('.mix-builder__phone-component').first().getByRole('button', { name: /больше на 5 %/ }).click();
+    await expect(sum).toContainText('лишние 5 %');
+    await expect(save).toBeDisabled();
+
+    await page.getByRole('button', { name: 'Добавить табак' }).click();
+    const library = page.getByRole('dialog', { name: 'Добавить табак' });
+    await expect(library.getByRole('searchbox', { name: 'Поиск по библиотеке табаков' })).toBeVisible();
+    await library.getByRole('button', { name: 'Готово' }).click();
+    await expect(library).toBeHidden();
+
+    await back.click();
+    await expect(page.locator('.m-mix-card').first()).toBeVisible();
+    await expect(nav).toBeVisible();
+  });
 });
 
 // Аналоги на «Полке» (#482): «Сделать аналогом» из похожих — тост с названием,
