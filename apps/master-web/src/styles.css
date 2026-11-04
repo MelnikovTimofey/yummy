@@ -2238,6 +2238,188 @@ input[type="checkbox"] {
   }
 }
 
+/* «Рейлы» на телефоне (#338, #341, #shot=rails, rail-stat, rail-new):
+   карточки вместо таблицы, в редакторе метки под названием, миксы
+   добавляются из шторки. */
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  /* Раздел уже назван в верхней панели: h1 только для экранного диктора. */
+  .rails-page__header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rails-page { gap: 12px; padding: 0 0 24px; }
+
+  .m-topbar__text-btn.m-rails-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+  }
+
+  .m-rail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+  .m-rail-card {
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .m-rail-card[data-inactive] { opacity: 0.62; }
+
+  .m-rail-card__open {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .m-rail-card__name {
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+
+  .m-rail-card:has(.m-rail-card__more) .m-rail-card__name { padding-right: 32px; }
+
+  .m-rail-card__desc,
+  .m-rail-card__mixes {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: var(--fs-base);
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+
+  .m-rail-card__desc { margin-top: -4px; }
+  .m-rail-card__mixes { color: var(--text-faint); }
+  .m-rail-card__mixes [data-state='hidden'] { text-decoration: line-through; }
+
+  .m-rail-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+  }
+
+  .m-rail-card__tags { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+  .m-rail-card__count { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .m-rail-card__more {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  /* Шапка редактора: название на всю ширину, метки и пояснение под ним. */
+  .drawer__head.rail-drawer__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+
+  .rail-drawer__head-copy { display: contents; }
+  .rail-drawer__title { grid-column: 1; grid-row: 1; align-self: center; overflow-wrap: anywhere; }
+  .rail-drawer__head-meta { grid-column: 1 / -1; grid-row: 2; }
+  .rail-drawer__lock { grid-column: 1 / -1; grid-row: 3; margin: 0; line-height: 1.4; }
+
+  .rail-drawer__close {
+    grid-column: 2;
+    grid-row: 1;
+    width: 40px;
+    height: 40px;
+    margin: -4px -8px 0 0;
+  }
+
+  .rail-drawer__body { grid-template-columns: minmax(0, 1fr); }
+
+  /* Статистический рейл: название и пояснение уже в шапке. */
+  .rail-drawer[data-locked] .rail-drawer__field--text { display: none; }
+
+  /* Перетаскивание пальцем не работает: порядок — стрелками. */
+  .rail-drawer__mix-grip { display: none; }
+  .rail-drawer__mix-row { grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; cursor: default; }
+  /* Метка «блокирован» уходит строкой над стрелками, а не сжимает название. */
+  .rail-drawer__mix-actions { flex-wrap: wrap; justify-content: flex-end; gap: 4px 0; max-width: 108px; }
+  .rail-drawer__mix-actions .icon-btn { width: 36px; height: 36px; }
+  .rail-drawer[data-locked] .rail-drawer__mix-actions .icon-btn { display: none; }
+
+  .empty.rail-drawer__empty {
+    display: grid;
+    gap: 6px;
+    padding: 22px 16px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--r-lg);
+    font-size: var(--fs-md);
+  }
+
+  .rail-drawer__empty b {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .rail-drawer__add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 48px;
+    margin-top: 8px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-lg);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .drawer__foot.rail-drawer__foot { flex-wrap: wrap; padding-bottom: calc(12px + var(--safe-bottom)); }
+  .rail-drawer__foot-actions .btn { height: 40px; }
+
+  .rail-picker-sheet__title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-xl);
+    font-weight: 500;
+  }
+
+  .rail-picker-sheet .input { height: 44px; }
+  .rail-picker-sheet .rail-drawer__picker { max-height: none; overflow: visible; }
+  .rail-picker-sheet .rail-drawer__picker-row { min-height: 56px; }
+}
+
 @media (max-width: 1100px) {
   .shell--master-workspace {
     grid-template-columns: 1fr;

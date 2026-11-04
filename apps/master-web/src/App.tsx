@@ -10,6 +10,7 @@ import { useShelf } from '@/hooks/use-shelf';
 import { useGuestChoices } from '@/hooks/use-guest-choices';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
+import { Plus } from 'lucide-react';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
 import { DeliveriesView } from '@/components/deliveries/deliveries-view';
@@ -968,6 +969,11 @@ export const App = () => {
     );
   };
 
+  const onCreateRail = () => {
+    rails.onResetRailEditor();
+    rails.setRailEditorSheetOpen(true);
+  };
+
   const renderRails = () => (
     <>
       <RailsView
@@ -976,10 +982,7 @@ export const App = () => {
         railsStatus={rails.railsStatus}
         railsError={rails.railsError}
         activeEditorId={rails.railEditor.id}
-        onCreateRail={() => {
-          rails.onResetRailEditor();
-          rails.setRailEditorSheetOpen(true);
-        }}
+        onCreateRail={onCreateRail}
         onOpenRail={(rail) => {
           rails.onSelectRail(rail);
           rails.setRailEditorSheetOpen(true);
@@ -1180,6 +1183,11 @@ export const App = () => {
               ) : activeTab === 'mixes' ? (
                 <button type="button" className="m-topbar__text-btn" onClick={mixes.onStartCreate}>
                   Новый микс
+                </button>
+              ) : activeTab === 'rails' ? (
+                <button type="button" className="m-topbar__text-btn m-rails-new" onClick={onCreateRail}>
+                  <Plus size={15} aria-hidden />
+                  Новый
                 </button>
               ) : null
             }

@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Ellipsis, Plus, Trash2 } from 'lucide-react';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatRailType } from '@/contracts';
+import { useIsPhone } from '@/hooks/use-is-phone';
+import { formatRailMixCount, pluralizeMixCount } from '@/lib/rails';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,15 +22,6 @@ const AROMA_WEB_URL =
 
 const openGuestShowcase = () => {
   window.open(AROMA_WEB_URL, '_blank', 'noopener,noreferrer');
-};
-
-const pluralizeMixCount = (count: number) => {
-  const lastTwo = count % 100;
-  if (lastTwo >= 11 && lastTwo <= 14) return 'миксов';
-  const last = count % 10;
-  if (last === 1) return 'микс';
-  if (last >= 2 && last <= 4) return 'микса';
-  return 'миксов';
 };
 
 type RailMixToken = {
@@ -58,6 +52,98 @@ const resolveRailMixTokens = (rail: RailRecord, mixes: MixRecord[]): RailMixToke
   });
 };
 
+const RailMixNames = ({ tokens, className }: { tokens: RailMixToken[]; className: string }) => (
+  <span className={className}>
+    {tokens.map((token, index) => (
+      <span key={token.id}>
+        {index > 0 ? ', ' : ''}
+        <span data-state={token.state}>{token.name}</span>
+      </span>
+    ))}
+  </span>
+);
+
+// «Рейлы» на телефоне (#338, #shot=rails): карточки вместо таблицы, касание
+// открывает рейл, удаление — в «⋯».
+const RailsMobileList = ({
+  rails,
+  railMixCatalog,
+  onOpenRail,
+  onAskDelete,
+}: {
+  rails: RailRecord[];
+  railMixCatalog: MixRecord[];
+  onOpenRail: (rail: RailRecord) => void;
+  onAskDelete: (rail: RailRecord) => void;
+}) => {
+  const [menuRail, setMenuRail] = useState<RailRecord | null>(null);
+
+  return (
+    <>
+      <ul className="m-rail-list" aria-label="Рейлы">
+        {rails.map((rail) => {
+          const tokens = resolveRailMixTokens(rail, railMixCatalog);
+          return (
+            <li key={rail.id} className="m-rail-card" data-rail-id={rail.id} data-inactive={!rail.active || undefined}>
+              <button type="button" className="m-rail-card__open" onClick={() => onOpenRail(rail)}>
+                <b className="m-rail-card__name">{rail.name}</b>
+                {rail.description ? <span className="m-rail-card__desc">{rail.description}</span> : null}
+                <span className="m-rail-card__foot">
+                  <span className="m-rail-card__tags">
+                    <span className="tag tag--ghost">{formatRailType(rail.type)}</span>
+                    {!rail.active ? <span className="tag tag--ghost">выключен</span> : null}
+                  </span>
+                  <span className="m-rail-card__count">{formatRailMixCount(rail.mixIds.length)}</span>
+                </span>
+                {tokens.length ? <RailMixNames tokens={tokens} className="m-rail-card__mixes" /> : null}
+              </button>
+              {rail.editable ? (
+                <button
+                  type="button"
+                  className="m-rail-card__more"
+                  aria-label={`Действия: ${rail.name}`}
+                  onClick={() => setMenuRail(rail)}
+                >
+                  <Ellipsis size={18} aria-hidden />
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {menuRail ? (
+        <BottomSheet label={`Действия: ${menuRail.name}`} onClose={() => setMenuRail(null)} className="m-actions">
+          <div className="m-mark-sheet__head">
+            <h2 className="m-mark-sheet__title">{menuRail.name}</h2>
+          </div>
+          <div className="m-actions__list">
+            <button
+              type="button"
+              className="m-actions__item"
+              onClick={() => {
+                setMenuRail(null);
+                onOpenRail(menuRail);
+              }}
+            >
+              Редактировать
+            </button>
+            <button
+              type="button"
+              className="m-actions__item m-actions__item--sep"
+              onClick={() => {
+                setMenuRail(null);
+                onAskDelete(menuRail);
+              }}
+            >
+              Удалить рейл
+            </button>
+          </div>
+        </BottomSheet>
+      ) : null}
+    </>
+  );
+};
+
 type RailsViewProps = {
   rails: RailRecord[];
   railMixCatalog: MixRecord[];
@@ -79,6 +165,7 @@ export const RailsView = ({
   onDeleteRail,
 }: RailsViewProps) => {
   const [railPendingDelete, setRailPendingDelete] = useState<RailRecord | null>(null);
+  const isPhone = useIsPhone();
 
   return (
   <section className="rails-page">
@@ -86,7 +173,8 @@ export const RailsView = ({
       <div className="rails-page__copy">
         <h1 className="rails-page__title">Рейлы</h1>
       </div>
-      <div className="rails-page__actions">
+      {/* На телефоне «Новый» — в верхней панели (#shot=rails). */}
+      {isPhone ? null : <div className="rails-page__actions">
         <button
           type="button"
           className="btn"
@@ -104,7 +192,7 @@ export const RailsView = ({
           <Plus size={14} aria-hidden />
           Новый рейл
         </button>
-      </div>
+      </div>}
     </header>
 
     {railsStatus === 'loading' && !rails.length ? (
@@ -112,7 +200,14 @@ export const RailsView = ({
     ) : null}
     {railsError ? <p className="rails-page__notice rails-page__notice--error">{railsError}</p> : null}
 
-    {rails.length ? (
+    {rails.length && isPhone ? (
+      <RailsMobileList
+        rails={rails}
+        railMixCatalog={railMixCatalog}
+        onOpenRail={onOpenRail}
+        onAskDelete={setRailPendingDelete}
+      />
+    ) : rails.length ? (
       <div className="rails-table-shell">
         <table className="rails-table">
           <thead>
@@ -155,16 +250,7 @@ export const RailsView = ({
                       <span className="rails-table__count">
                         {rail.mixIds.length} {pluralizeMixCount(rail.mixIds.length)}
                       </span>
-                      {tokens.length ? (
-                        <span className="rails-table__mix-names">
-                          {tokens.map((token, index) => (
-                            <span key={token.id}>
-                              {index > 0 ? ', ' : ''}
-                              <span data-state={token.state}>{token.name}</span>
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
+                      {tokens.length ? <RailMixNames tokens={tokens} className="rails-table__mix-names" /> : null}
                     </div>
                   </td>
                   <td className="rails-table__actions" onClick={(event) => event.stopPropagation()}>
