@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
@@ -7,10 +8,10 @@ import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
+import { shelfState } from '@/lib/shelf';
 import { useGuestChoices } from '@/hooks/use-guest-choices';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
-import { Plus } from 'lucide-react';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
 import { DeliveriesView } from '@/components/deliveries/deliveries-view';
@@ -158,6 +159,11 @@ export const App = () => {
     () => new Map((shelf.view?.rows ?? []).map((row) => [row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active'] as const)),
     [shelf.view],
   );
+  const shelfStates = useMemo(() => new Map((shelf.view?.rows ?? []).map((row) => [row.tobacco.id, shelfState(row)])), [shelf.view]);
+  // «Каталог» на телефоне (#540, #shot=catalog-select): режим выбора и «+» из верхней панели.
+  const [catalogPickMode, setCatalogPickMode] = useState(false);
+  const [catalogCreateRequested, setCatalogCreateRequested] = useState(false);
+  useEffect(() => setCatalogPickMode(false), [activeTab, catalogView]);
   const mixes = useMixes({
     token,
     onAfterSubmit: () => setActiveTab('mixes'),
@@ -844,6 +850,10 @@ export const App = () => {
     />
   );
 
+  // Отметка из профиля табака («Добавить в выбор») тоже включает режим выбора.
+  const catalogPicking =
+    isPhone && activeTab === 'catalog' && catalogView === 'all' && (catalogPickMode || selectedInventoryIds.length > 0);
+
   const renderInventory = () => (
     <InventoryView
       items={inventory}
@@ -857,6 +867,10 @@ export const App = () => {
       pendingRowId={toggleId}
       pendingBatchAction={inventoryBatchAction}
       shelfStatuses={shelfStatuses}
+      shelfStates={shelfStates}
+      picking={catalogPicking}
+      createRequested={catalogCreateRequested}
+      onCreateOpened={() => setCatalogCreateRequested(false)}
       onSearchChange={onInventorySearchChange}
       onStockChange={(value) => void onInventoryStockChange(value)}
       onArchivedChange={(value) => void onInventoryArchivedChange(value)}
@@ -1190,6 +1204,34 @@ export const App = () => {
                   <Plus size={15} aria-hidden />
                   Новый
                 </button>
+              ) : catalogPicking ? (
+                <button
+                  type="button"
+                  className="m-topbar__text-btn"
+                  data-variant="ghost"
+                  onClick={() => {
+                    setCatalogPickMode(false);
+                    setSelectedInventoryIds([]);
+                  }}
+                >
+                  Готово
+                </button>
+              ) : activeTab === 'catalog' ? (
+                <>
+                  <button
+                    type="button"
+                    className="icon-btn m-topbar__action"
+                    aria-label="Новый табак"
+                    onClick={() => setCatalogCreateRequested(true)}
+                  >
+                    <Plus size={20} aria-hidden />
+                  </button>
+                  {catalogView === 'all' ? (
+                    <button type="button" className="m-topbar__text-btn" onClick={() => setCatalogPickMode(true)}>
+                      Выбрать
+                    </button>
+                  ) : null}
+                </>
               ) : null
             }
           />
