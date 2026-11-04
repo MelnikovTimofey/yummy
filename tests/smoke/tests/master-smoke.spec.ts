@@ -583,6 +583,44 @@ test.describe('Master on a phone', () => {
     await expect(page.locator('.m-shelf-card').first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
+
+  // #339, #341, #342 (#540): поле мельче 16 px iOS увеличивает при фокусе;
+  // панель уже экрана оставляет полоску слева; заголовок раздела — один, в шапке.
+  // Неразрушающий: «Новый табак» закрывается без сохранения.
+  test('Master on a phone: fields are 16 px, drawers are screen-wide, one section title', async ({ page }) => {
+    const smallFields = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('input, select, textarea')]
+          .filter((el) => (el as HTMLElement).offsetParent && !['checkbox', 'radio', 'range', 'file'].includes((el as HTMLInputElement).type))
+          .filter((el) => parseFloat(getComputedStyle(el).fontSize) < 16)
+          .map((el) => el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? el.className),
+      );
+
+    await page.goto('/');
+    await expect(page.getByLabel('Логин', { exact: true })).toBeVisible();
+    expect(await smallFields()).toEqual([]);
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Каталог/ }).click();
+    const title = page.getByRole('heading', { name: 'Каталог', exact: true, level: 1 });
+    await expect(title).toBeAttached();
+    expect(await title.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(1);
+    expect(await smallFields()).toEqual([]);
+
+    await page.getByRole('button', { name: /Новый табак/ }).click();
+    const drawer = page.locator('[data-slot="sheet-content"]');
+    await expect(drawer).toBeVisible();
+    await expect.poll(async () => (await drawer.boundingBox())?.x).toBe(0);
+    expect((await drawer.boundingBox())?.width).toBe(375);
+    expect(await smallFields()).toEqual([]);
+    await drawer.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(drawer).toBeHidden();
+  });
 });
 
 // #334: повёрнутый телефон получает телефонную навигацию, а не десктопную

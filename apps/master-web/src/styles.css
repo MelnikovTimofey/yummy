@@ -7532,6 +7532,31 @@ button[aria-busy="true"]:disabled {
 
   /* Панель приёмки поставки прилипает над нижней навигацией, а не под ней. */
   .deliv-footbar { bottom: calc(56px + var(--safe-bottom) + 8px); }
+
+  /* Раздел уже назван в шапке телефона (#342): крупный h1 и подзаголовок
+     остаются только для экранного диктора, мета и действия видны. */
+  .master-page-header__title,
+  .master-page-header__subtitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Поле мельче 16 px iOS увеличивает при фокусе и не возвращает (#339).
+     Специфичность выше классов полей; крупное поле названия микса не трогаем. */
+  :root :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], .mix-builder__title-input), select, textarea) {
+    font-size: 16px;
+  }
+
+  /* Боковые панели на всю ширину (#341): иначе слева полоска фона. */
+  [data-slot='sheet-content'][data-side='right'] {
+    width: 100% !important;
+    max-width: 100vw !important;
+    border-left: 0;
+  }
 }
 
 /* =====================================================================
