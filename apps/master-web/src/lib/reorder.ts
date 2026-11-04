@@ -1,51 +1,13 @@
-import {
-  formatCount,
-  type ReorderGroup,
-  type ReorderItem,
-  type ReorderView,
-  type ShelfHorizon,
-  type ShelfInterval,
-  type ShelfRateKind,
-  type ShelfSettings,
-  type ShelfStatus,
-  type ShelfTobaccoRef,
-} from '../contracts';
-import { formatDay } from './deliveries';
+import { formatCount, type ShelfHorizon, type ShelfInterval, type ShelfSettings, type ShelfStatus } from '../contracts';
 import { formatNumber, formatShelfDate } from './shelf';
 
-// Граммовые подписи «К заказу» и «Закупки» — до их удаления (#518, S4).
+// Остаток граммовой логики «К заказу» (#213, #325, #326): настройки полки и бюджет
+// на дашборде. Вид «К заказу» теперь на статусе «Закончился» (#518, lib/order.ts);
+// этот файл уйдёт вместе с блоком «Полка» дашборда (#520).
+
 export type ShelfTone = 'default' | 'muted' | 'faint' | 'warning' | 'danger';
-const decimal = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
-export const formatOneDecimal = (value: number) => decimal.format(value);
-// Расход в месяц — до десятков граммов, малый — до грамма.
-export const formatMonthGrams = (grams: number) => formatNumber(grams < 10 ? grams : Math.round(grams / 10) * 10);
-const rubles = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-export const formatGramPrice = (kop: number | null) => (kop === null ? '—' : `${rubles.format(kop / 100)} ₽`);
 
-// Чистая логика «К заказу» (#213, #323, #325): сколько заказать, решает мастер —
-// здесь только когда закончится, расход в месяц и текст заявки с названиями.
-
-export const reorderItemName = (item: { tobacco: Pick<ShelfTobaccoRef, 'manufacturer' | 'lineName' | 'name'> }) =>
-  [item.tobacco.manufacturer, item.tobacco.lineName, item.tobacco.name].filter(Boolean).join(' ');
-
-// Зеркало orderText в apps/backend/src/shelf-insights.ts.
-export const orderText = (items: Array<Pick<ReorderItem, 'tobacco'>>) =>
-  ['Добрый день! Заказ:', ...items.map(reorderItemName), 'Спасибо!'].join('\n');
-
-export const groupOrderText = (group: ReorderGroup, texts: ReorderView['text']) =>
-  texts.find((entry) => entry.supplierId === (group.supplier?.id ?? null))?.text ?? orderText(group.items);
-
-export const reorderMonth = (item: Pick<ReorderItem, 'monthGrams' | 'rateKind'>) => {
-  if (item.rateKind === 'none' || item.monthGrams === null) return { value: 'мало данных', brand: false, few: true };
-  const grams = `${formatMonthGrams(item.monthGrams)} г`;
-  return { value: grams, brand: item.rateKind === 'brand', few: false };
-};
-
-export const REORDER_HINT = 'Сколько заказать, решает мастер. Расход в месяц средний за 60 дней. Если своих отметок мало, взята медиана бренда.';
-
-export const REORDER_COPY_HINT = 'Объём впишите перед отправкой.';
-
-// Кусок подписи; strong — выделить жирным, tone — цветом (остаток бюджета в «Закупке»).
+// Кусок подписи; strong — выделить жирным, tone — цветом.
 export type TextSegment = { text: string; strong?: boolean; tone?: 'success' | 'danger' };
 
 // Зеркало INTERVAL_MIN_DAYS в apps/backend/src/stock.ts: меньше — интервал неизвестен.
@@ -53,32 +15,6 @@ const INTERVAL_MIN_DELIVERIES = 3;
 
 const inDays = (value: number) => formatCount(value, ['день', 'дня', 'дней']);
 const invoices = (value: number) => formatCount(value, ['счёт', 'счёта', 'счетов']);
-
-// Плашка над «К заказу» (#325, #shot=reorder, edge-interval).
-export const intervalNote = (interval: ShelfInterval, horizon: ShelfHorizon, leadDays: number): { known: boolean; segments: TextSegment[] } => {
-  if (interval.days === null) {
-    return {
-      known: false,
-      segments: [
-        { text: 'Интервал поставок пока неизвестен: принято ' },
-        { text: invoices(interval.deliveries), strong: true },
-        { text: ` из ${INTERVAL_MIN_DELIVERIES} нужных. В списке то, что закончится за срок поставки, ` },
-        { text: inDays(leadDays), strong: true },
-        { text: '.' },
-      ],
-    };
-  }
-  return {
-    known: true,
-    segments: [
-      { text: 'Поставки примерно ' },
-      { text: `раз в ${inDays(interval.days)}`, strong: true },
-      { text: `, по ${formatCount(interval.deliveries, ['счёту', 'счетам', 'счетам'])} за 90 дней. В списке то, что закончится до следующей поставки с запасом на срок поставки, ` },
-      { text: `до ${formatShelfDate(horizon.until)}`, strong: true },
-      { text: '.' },
-    ],
-  };
-};
 
 // «Считается само» в настройках полки (#326, #shot=settings).
 export const settingsCalcNote = (interval: ShelfInterval, horizon: ShelfHorizon, leadDays: number): TextSegment[] => {
@@ -89,23 +25,9 @@ export const settingsCalcNote = (interval: ShelfInterval, horizon: ShelfHorizon,
   return [{ text: 'Считается само:', strong: true }, { text: rest }];
 };
 
-export const countReorder = (view: Pick<ReorderView, 'groups'> | null) =>
-  view ? view.groups.reduce((total, group) => total + group.items.length, 0) : null;
+type UntilInput = { status: ShelfStatus; daysLeft: number | null; endsAt: string | null };
 
-export const groupKey = (group: Pick<ReorderGroup, 'supplier'>) => group.supplier?.id ?? 'none';
-
-export const groupCaption = (group: ReorderGroup) => {
-  if (group.lastInvoice) {
-    return `последний счёт ${formatDay(group.lastInvoice.date)}, ${group.lastInvoice.status === 'draft' ? 'черновик' : 'принят'}`;
-  }
-  if (group.supplier) return '';
-  return group.items.every((item) => item.status === 'plan') ? 'в плане из каталога' : 'приход без счёта поставщика';
-};
-
-type UntilInput = { status: ShelfStatus; daysLeft: number | null; endsAt: string | null; rateKind?: ShelfRateKind };
-
-// «Хватит до» для «К заказу» и дашборда; тон — как на полке (shelfUntil). Оценка по
-// бренду без «~»: «по бренду» подписан расход рядом.
+// «Хватит до» на дашборде. Оценка по бренду без «~».
 export const untilLabel = (item: UntilInput, leadDays: number): { text: string; days: string | null; tone: ShelfTone } => {
   if (item.status === 'out') return { text: 'закончился', days: null, tone: 'danger' };
   if (item.status === 'plan') return { text: 'в плане', days: null, tone: 'faint' };

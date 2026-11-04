@@ -26,7 +26,4 @@ export const openSection = (
   scrollToTop();
 };
 
-export const mobileTitleFor = (tab: WorkspaceTab, shelfMode: 'shelf' | 'reorder' | 'purchase') => {
-  if (tab === 'shelf' && shelfMode === 'reorder') return 'К заказу';
-  return workspaceTabs.find((item) => item.id === tab)?.label ?? '';
-};
+export const mobileTitleFor = (tab: WorkspaceTab) => workspaceTabs.find((item) => item.id === tab)?.label ?? '';

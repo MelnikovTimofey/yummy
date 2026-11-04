@@ -1458,10 +1458,9 @@ export const parseDateTimeLocalInput = (value: string) => {
 
 // --- Полка (#211, #518): ответы /staff/shelf* -------------------------------
 
-// Статус по расчёту в граммах — остался у «К заказу» и блока «Полка» дашборда.
+// Статус по расчёту в граммах — остался у блока «Полка» дашборда.
 export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
-export type ShelfRateKind = 'own' | 'brand' | 'none';
 export type ShelfTrialVerdict = 'yes' | 'no';
 export type ShelfArrivalKind = 'invoice' | 'start' | 'manual';
 
@@ -1520,7 +1519,7 @@ export type ShelfInterval = { days: number | null; deliveries: number };
 // Горизонт «Заканчивается» и «К заказу»: интервал + срок поставки; until — дата.
 export type ShelfHorizon = { days: number; until: string };
 
-// Настройки, интервал и горизонт нужны только «К заказу» и дашборду, пока они на граммах.
+// Настройки, интервал и горизонт нужны только бюджету на дашборде, пока он на граммах.
 export type ShelfView = {
   rows: ShelfRow[];
   settings: ShelfSettings;
@@ -1714,40 +1713,28 @@ export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockM
   };
 };
 
-// --- «К заказу» и блок «Полка» дашборда (#213) -------------------------------
+// --- «К заказу» (#518) и блок «Полка» дашборда (#213) -------------------------
 
 export type ShelfTobaccoRef = { id: string; manufacturer: string; lineName: string; name: string };
 export type ShelfSupplierRef = { id: string; name: string };
 
-export type ReorderItem = {
+// hidden — микс не виден гостю, substituted — закрыт аналогом с полки.
+export type ShelfOrderMixes = { total: number; hidden: number; substituted: number };
+
+export type ShelfOrderLine = {
   tobacco: ShelfTobaccoRef;
-  status: ShelfStatus;
-  daysLeft: number | null;
-  endsAt: string | null;
-  rate: number | null;
-  rateKind: ShelfRateKind;
-  monthGrams: number | null;
-  leftGrams: number | null;
-  gramPriceKop: number | null;
-  // Закончится не за срок поставки, а до следующей поставки по интервалу.
-  byInterval: boolean;
+  outAt: string;
+  mixes: ShelfOrderMixes;
+  lastArrival: ShelfArrival | null;
 };
 
-// Сколько заказать, решает мастер (#323): ни граммов, ни суммы в ответе нет.
-export type ReorderGroup = {
-  supplier: ShelfSupplierRef | null;
-  lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
-  items: ReorderItem[];
-};
+// Группа — поставщик последнего принятого счёта с табаком; без счёта — supplier: null.
+export type ShelfOrderGroup = { supplier: ShelfSupplierRef | null; lastDeliveryAt: string | null; lines: ShelfOrderLine[] };
 
-export type ReorderView = {
-  groups: ReorderGroup[];
-  settings: ShelfSettings;
-  interval: ShelfInterval;
-  horizon: ShelfHorizon;
-  // Текст заявки — только названия.
-  text: Array<{ supplierId: string | null; text: string }>;
-};
+export type ShelfOrderNotKept = { tobaccoId: string; manufacturer: string; lineName: string; name: string; outAt: string };
+
+// GET /staff/shelf/order: закончились и держим постоянно; notKept — закончились, но не держим.
+export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[] };
 
 export type ShelfDashboardWeek = { from: string; to: string; grams: number; partial: boolean };
 
@@ -1782,51 +1769,42 @@ const listOf = (value: unknown) => (Array.isArray(value) ? value : []);
 // Даты «2026-11-18» — календарные дни (см. toDateOnly ниже).
 const toDay = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
 
-const normalizeReorderItem = (value: unknown): ReorderItem => {
-  const raw = isRecord(value) ? value : {};
-  return {
-    tobacco: normalizeTobaccoRef(raw.tobacco),
-    status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
-    daysLeft: toNullableNumber(raw.daysLeft),
-    endsAt: toIsoString(raw.endsAt, '') || null,
-    rate: toNullableNumber(raw.rate),
-    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
-    monthGrams: toNullableNumber(raw.monthGrams),
-    leftGrams: toNullableNumber(raw.leftGrams),
-    gramPriceKop: toNullableNumber(raw.gramPriceKop),
-    byInterval: toBoolean(raw.byInterval, false),
-  };
-};
+const recordOf = (value: unknown): UnknownRecord => (isRecord(value) ? value : {});
 
-const normalizeReorderGroup = (value: unknown): ReorderGroup => {
-  const raw = isRecord(value) ? value : {};
-  const invoice = isRecord(raw.lastInvoice) ? raw.lastInvoice : null;
-  const invoiceDate = invoice ? toDay(invoice.date) : '';
+export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
+  const raw = recordOf(value);
   return {
-    supplier: normalizeSupplierRef(raw.supplier),
-    lastInvoice: invoice && invoiceDate
-      ? {
-          number: toNullableString(invoice.number),
-          date: invoiceDate,
-          status: pickOne(invoice.status, ['draft', 'received'] as const, 'received'),
-        }
-      : null,
-    items: listOf(raw.items).map(normalizeReorderItem),
-  };
-};
-
-export const normalizeReorderView = (value: unknown): ReorderView => {
-  const raw = isRecord(value) ? value : {};
-  const settings = normalizeShelfSettings(raw.settings);
-  return {
-    groups: listOf(raw.groups).map(normalizeReorderGroup),
-    settings,
-    interval: normalizeShelfInterval(raw.interval),
-    horizon: normalizeShelfHorizon(raw.horizon, settings),
-    text: listOf(raw.text).filter(isRecord).map((entry) => ({
-      supplierId: toNullableString(entry.supplierId),
-      text: String(entry.text ?? ''),
+    groups: listOf(raw.groups).filter(isRecord).map((group) => ({
+      supplier: normalizeSupplierRef(group.supplier),
+      lastDeliveryAt: toIsoString(group.lastDeliveryAt, '') || null,
+      lines: listOf(group.lines).filter(isRecord).map((line) => {
+        const mixes = recordOf(line.mixes);
+        return {
+          tobacco: normalizeTobaccoRef(line.tobacco),
+          outAt: toIsoString(line.outAt, ''),
+          mixes: { total: toNumber(mixes.total, 0), hidden: toNumber(mixes.hidden, 0), substituted: toNumber(mixes.substituted, 0) },
+          lastArrival: isRecord(line.lastArrival) ? normalizeShelfArrival(line.lastArrival) : null,
+        };
+      }),
     })),
+    notKept: listOf(raw.notKept).filter(isRecord).map((item) => ({
+      tobaccoId: String(item.tobaccoId ?? ''),
+      manufacturer: String(item.manufacturer ?? ''),
+      lineName: String(item.lineName ?? ''),
+      name: String(item.name ?? ''),
+      outAt: toIsoString(item.outAt, ''),
+    })),
+  };
+};
+
+const normalizeBudget = (value: unknown): ShelfDashboard['budget'] => {
+  const budget = recordOf(value);
+  return {
+    budgetKop: toNullableNumber(budget.budgetKop),
+    baseKop: toNumber(budget.baseKop, 0),
+    baseCount: toNumber(budget.baseCount, 0),
+    unknownCount: toNumber(budget.unknownCount, 0),
+    leftKop: toNullableNumber(budget.leftKop),
   };
 };
 
@@ -1864,198 +1842,6 @@ export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
       grams: toNumber(week.grams, 0),
       partial: toBoolean(week.partial, false),
     })),
-  };
-};
-
-// --- «Закупка» (#327–#331): ответ /staff/shelf/purchase ----------------------
-// Решения — по расходу точки; app («Покурить» и оценки гостей) — справочно.
-// Деньги — в копейках, доли — 0…1, дни — дробные: округляет интерфейс.
-
-export type PurchaseAppStats = { smokes: number; rating: number | null; ratings: number };
-export type PurchaseBaseFlag = 'notBase' | 'idleBase';
-export type PurchaseProfileFlag = 'more' | 'less';
-
-export type PurchaseBaseRow = {
-  tobacco: ShelfTobaccoRef;
-  monthGrams: number | null;
-  rateKind: ShelfRateKind;
-  // Доля в расходе своих табаков; у «бренда» и «мало данных» — null.
-  share: number | null;
-  rubKop: number | null;
-  gramPriceKop: number | null;
-  app: PurchaseAppStats;
-  keepStocked: boolean;
-  flag: PurchaseBaseFlag | null;
-};
-
-export type PurchaseFastRow = {
-  tobacco: ShelfTobaccoRef;
-  receiptGrams: number;
-  receivedAt: string;
-  goneDays: number;
-  emptyAt: string;
-  emptyDays: number;
-  // Без табака до сих пор: следующего прихода ещё не было.
-  ongoing: boolean;
-  next: { grams: number; at: string } | null;
-  // Сколько раз за 60 дней приход уходил за 3 дня.
-  times: number;
-  status: ShelfStatus;
-};
-
-export type PurchaseTrialRow = {
-  tobacco: ShelfTobaccoRef;
-  receiptGrams: number;
-  receivedAt: string;
-  rate: number | null;
-  // Расход к медиане полки; null — отметок остатка ещё не было.
-  speed: number | null;
-  goneDays: number | null;
-  app: PurchaseAppStats;
-  mixCount: number;
-  trialVerdict: ShelfTrialVerdict | null;
-  trialMarkedAt: string | null;
-};
-
-export type PurchaseIdleRow = {
-  tobacco: ShelfTobaccoRef;
-  leftGrams: number;
-  rate21: number;
-  rubKop: number | null;
-  receivedAt: string;
-  days: number;
-  keepStocked: boolean;
-};
-
-export type PurchaseProfileRow = { key: string; spend: number; shelf: number; app: number; flag: PurchaseProfileFlag | null };
-
-export type PurchaseView = {
-  // Первая запись журнала остатка: с неё идёт учёт в граммах.
-  since: string | null;
-  budget: ShelfDashboard['budget'];
-  spend: { month: string; totalKop: number };
-  base: { enough: boolean; medianMonthGrams: number | null; counts: Record<PurchaseBaseFlag, number>; rows: PurchaseBaseRow[] };
-  fast: { enough: boolean; rows: PurchaseFastRow[] };
-  trials: { enough: boolean; medianRate: number | null; rows: PurchaseTrialRow[] };
-  idle: { enough: boolean; totalKop: number; unknownPriceCount: number; unmarkedCount: number; rows: PurchaseIdleRow[] };
-  // appEnough — «Покурить» за 30 дней хватает, чтобы показывать долю приложения.
-  profiles: { enough: boolean; appEvents: number; appEnough: boolean; rows: PurchaseProfileRow[] };
-};
-
-const recordOf = (value: unknown): UnknownRecord => (isRecord(value) ? value : {});
-const toMonth = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}$/.test(value) ? value : '');
-
-const normalizeBudget = (value: unknown): ShelfDashboard['budget'] => {
-  const budget = recordOf(value);
-  return {
-    budgetKop: toNullableNumber(budget.budgetKop),
-    baseKop: toNumber(budget.baseKop, 0),
-    baseCount: toNumber(budget.baseCount, 0),
-    unknownCount: toNumber(budget.unknownCount, 0),
-    leftKop: toNullableNumber(budget.leftKop),
-  };
-};
-
-const normalizeAppStats = (value: unknown): PurchaseAppStats => {
-  const raw = recordOf(value);
-  return { smokes: toNumber(raw.smokes, 0), rating: toNullableNumber(raw.rating), ratings: toNumber(raw.ratings, 0) };
-};
-
-const toVerdict = (value: unknown): ShelfTrialVerdict | null => (value === 'yes' || value === 'no' ? value : null);
-const RATE_KINDS = ['own', 'brand', 'none'] as const;
-
-export const normalizePurchaseView = (value: unknown): PurchaseView => {
-  const raw = recordOf(value);
-  const base = recordOf(raw.base);
-  const counts = recordOf(base.counts);
-  const fast = recordOf(raw.fast);
-  const trials = recordOf(raw.trials);
-  const idle = recordOf(raw.idle);
-  const profiles = recordOf(raw.profiles);
-  const spend = recordOf(raw.spend);
-  const rows = (section: UnknownRecord) => listOf(section.rows).filter(isRecord);
-
-  return {
-    since: toIsoString(raw.since, '') || null,
-    budget: normalizeBudget(raw.budget),
-    spend: { month: toMonth(spend.month), totalKop: toNumber(spend.totalKop, 0) },
-    base: {
-      enough: toBoolean(base.enough, false),
-      medianMonthGrams: toNullableNumber(base.medianMonthGrams),
-      counts: { notBase: toNumber(counts.notBase, 0), idleBase: toNumber(counts.idleBase, 0) },
-      rows: rows(base).map((row) => ({
-        tobacco: normalizeTobaccoRef(row.tobacco),
-        monthGrams: toNullableNumber(row.monthGrams),
-        rateKind: pickOne(row.rateKind, RATE_KINDS, 'none'),
-        share: toNullableNumber(row.share),
-        rubKop: toNullableNumber(row.rubKop),
-        gramPriceKop: toNullableNumber(row.gramPriceKop),
-        app: normalizeAppStats(row.app),
-        keepStocked: toBoolean(row.keepStocked, false),
-        flag: row.flag === 'notBase' || row.flag === 'idleBase' ? row.flag : null,
-      })),
-    },
-    fast: {
-      enough: toBoolean(fast.enough, false),
-      rows: rows(fast).map((row) => {
-        const next = isRecord(row.next) ? row.next : null;
-        return {
-          tobacco: normalizeTobaccoRef(row.tobacco),
-          receiptGrams: toNumber(row.receiptGrams, 0),
-          receivedAt: toIsoString(row.receivedAt, ''),
-          goneDays: toNumber(row.goneDays, 0),
-          emptyAt: toIsoString(row.emptyAt, ''),
-          emptyDays: toNumber(row.emptyDays, 0),
-          ongoing: toBoolean(row.ongoing, false),
-          next: next ? { grams: toNumber(next.grams, 0), at: toIsoString(next.at, '') } : null,
-          times: toNumber(row.times, 1),
-          status: pickOne(row.status, SHELF_STATUSES, 'ok'),
-        };
-      }),
-    },
-    trials: {
-      enough: toBoolean(trials.enough, false),
-      medianRate: toNullableNumber(trials.medianRate),
-      rows: rows(trials).map((row) => ({
-        tobacco: normalizeTobaccoRef(row.tobacco),
-        receiptGrams: toNumber(row.receiptGrams, 0),
-        receivedAt: toIsoString(row.receivedAt, ''),
-        rate: toNullableNumber(row.rate),
-        speed: toNullableNumber(row.speed),
-        goneDays: toNullableNumber(row.goneDays),
-        app: normalizeAppStats(row.app),
-        mixCount: toNumber(row.mixCount, 0),
-        trialVerdict: toVerdict(row.trialVerdict),
-        trialMarkedAt: toIsoString(row.trialMarkedAt, '') || null,
-      })),
-    },
-    idle: {
-      enough: toBoolean(idle.enough, false),
-      totalKop: toNumber(idle.totalKop, 0),
-      unknownPriceCount: toNumber(idle.unknownPriceCount, 0),
-      unmarkedCount: toNumber(idle.unmarkedCount, 0),
-      rows: rows(idle).map((row) => ({
-        tobacco: normalizeTobaccoRef(row.tobacco),
-        leftGrams: toNumber(row.leftGrams, 0),
-        rate21: toNumber(row.rate21, 0),
-        rubKop: toNullableNumber(row.rubKop),
-        receivedAt: toIsoString(row.receivedAt, ''),
-        days: toNumber(row.days, 0),
-        keepStocked: toBoolean(row.keepStocked, false),
-      })),
-    },
-    profiles: {
-      enough: toBoolean(profiles.enough, false),
-      appEvents: toNumber(profiles.appEvents, 0),
-      appEnough: toBoolean(profiles.appEnough, false),
-      rows: rows(profiles).map((row) => ({
-        key: String(row.key ?? ''),
-        spend: toNumber(row.spend, 0),
-        shelf: toNumber(row.shelf, 0),
-        app: toNumber(row.app, 0),
-        flag: row.flag === 'more' || row.flag === 'less' ? row.flag : null,
-      })),
-    },
   };
 };
 

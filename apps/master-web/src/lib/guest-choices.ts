@@ -1,12 +1,30 @@
 import {
   flavorProfileColor,
   formatCount,
+  formatFlavorProfileLabel,
   type GuestChoices,
   type GuestChoicesBucket,
   type GuestChoicesTimelineRow,
   type GuestTopTobacco,
 } from '../contracts';
-import { profileDirection } from './purchase';
+
+// Вкус в единственном числе, как в мокапе: «Ягодный», а не «Ягодные».
+const DIRECTIONS: Record<string, string> = {
+  berry: 'Ягодный',
+  citrus: 'Цитрусовый',
+  dessert: 'Десертный',
+  floral_herbal: 'Травяной',
+  fresh: 'Свежий',
+  fruity: 'Фруктовый',
+  minty: 'Мятный',
+  perfume: 'Парфюмный',
+  sour: 'Кислый',
+  spicy: 'Пряный',
+  sweet: 'Сладкий',
+  tobacco: 'Табачный',
+};
+
+export const profileDirection = (key: string) => DIRECTIONS[key] ?? formatFlavorProfileLabel(key);
 
 // Дашборд «Выборы гостей» (#520, design/design_handoff_guest_analytics): подписи
 // периода, столбцы динамики, вкусы, сигналы и календарь «Даты». Дни — ключи

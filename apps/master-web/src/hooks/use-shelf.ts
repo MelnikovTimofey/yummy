@@ -2,25 +2,22 @@ import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
 import { createLatestRequestGuard } from '@/lib/latest-request-guard';
 import { optimisticEmpty } from '@/lib/shelf-bulk';
-import { patchPurchase, type PurchasePatch } from '@/lib/purchase';
 import {
   buildInventoryRequestQuery,
   defaultInventoryListResponse,
   normalizeInventoryListResponse,
-  normalizePurchaseView,
   normalizeShelfAnalogsResponse,
-  normalizeReorderView,
   normalizeShelfBatchUndoResponse,
   normalizeShelfCard,
   normalizeShelfEmptyManyResponse,
   normalizeShelfRestockManyResponse,
   normalizeShelfRestockResponse,
+  normalizeShelfOrder,
   normalizeShelfRow,
   normalizeShelfSettings,
   normalizeShelfView,
   readEntityPayload,
-  type PurchaseView,
-  type ReorderView,
+  type ShelfOrder,
   type ShelfRow,
   type ShelfSettings,
   type ShelfTrialVerdict,
@@ -48,55 +45,33 @@ const shelfPath = (tobaccoId: string) => `/staff/shelf/${encodeURIComponent(toba
 const itemOf = (value: unknown) => normalizeShelfRow(value && typeof value === 'object' ? (value as { item?: unknown }).item : null);
 
 // Полка грузится одним запросом; после действия строка приходит с сервера и
-// встаёт на место, без перезагрузки всей полки. «К заказу» (#213) считает сервер
+// встаёт на место, без перезагрузки всей полки. «К заказу» (#518) считает сервер
 // по всей полке, поэтому его перечитываем вместе с полкой и после каждого действия.
 export const useShelf = (token: string) => {
   const [view, setView] = useState<ShelfView | null>(null);
   const [status, setStatus] = useState<ShelfLoadStatus>('idle');
   const [error, setError] = useState('');
-  const [reorder, setReorder] = useState<ReorderView | null>(null);
-  const [reorderError, setReorderError] = useState('');
-  const reorderGuard = useRef(createLatestRequestGuard()).current;
-  // «Закупка» (#327–#331) — по запросу: считается по журналу за 30–90 дней.
-  const [purchase, setPurchase] = useState<PurchaseView | null>(null);
-  const [purchaseError, setPurchaseError] = useState('');
-  const purchaseGuard = useRef(createLatestRequestGuard()).current;
+  const [order, setOrder] = useState<ShelfOrder | null>(null);
+  const [orderError, setOrderError] = useState('');
+  const orderGuard = useRef(createLatestRequestGuard()).current;
 
-  const loadPurchase = useCallback(async () => {
-    const ticket = purchaseGuard.start();
+  const loadOrder = useCallback(async (nextToken: string = token) => {
+    const ticket = orderGuard.start();
     try {
-      const next = normalizePurchaseView(await requestJson<unknown>('/staff/shelf/purchase', {}, token));
-      if (purchaseGuard.isStale(ticket)) return;
-      setPurchase(next);
-      setPurchaseError('');
+      const next = normalizeShelfOrder(await requestJson<unknown>('/staff/shelf/order', {}, nextToken));
+      if (orderGuard.isStale(ticket)) return;
+      setOrder(next);
+      setOrderError('');
     } catch (cause) {
-      if (purchaseGuard.isStale(ticket)) return;
-      setPurchaseError(cause instanceof Error ? cause.message : 'Не удалось загрузить «Закупку»');
+      if (orderGuard.isStale(ticket)) return;
+      setOrderError(cause instanceof Error ? cause.message : 'Не удалось загрузить «К заказу»');
     }
-  }, [purchaseGuard, token]);
-
-  // «Держим» и отметка пробы видны в «Закупке» сразу, до перечитывания.
-  const patchPurchaseItem = useCallback((tobaccoId: string, patch: PurchasePatch) => {
-    setPurchase((current) => (current ? patchPurchase(current, tobaccoId, patch) : current));
-  }, []);
-
-  const loadReorder = useCallback(async (nextToken: string = token) => {
-    const ticket = reorderGuard.start();
-    try {
-      const next = normalizeReorderView(await requestJson<unknown>('/staff/shelf/reorder', {}, nextToken));
-      if (reorderGuard.isStale(ticket)) return;
-      setReorder(next);
-      setReorderError('');
-    } catch (cause) {
-      if (reorderGuard.isStale(ticket)) return;
-      setReorderError(cause instanceof Error ? cause.message : 'Не удалось загрузить «К заказу»');
-    }
-  }, [reorderGuard, token]);
+  }, [orderGuard, token]);
 
   const reload = useCallback(async (nextToken: string = token) => {
     setStatus('loading');
     setError('');
-    void loadReorder(nextToken);
+    void loadOrder(nextToken);
     try {
       setView(normalizeShelfView(await requestJson<unknown>('/staff/shelf', {}, nextToken)));
       setStatus('ready');
@@ -104,7 +79,7 @@ export const useShelf = (token: string) => {
       setStatus('error');
       setError(cause instanceof Error ? cause.message : 'Не удалось загрузить полку');
     }
-  }, [loadReorder, token]);
+  }, [loadOrder, token]);
 
   // Строки с сервера (или оптимистичные) — на место.
   const putRows = useCallback((items: ShelfRow[]) => {
@@ -125,9 +100,9 @@ export const useShelf = (token: string) => {
 
   const applyRows = useCallback((items: ShelfRow[]) => {
     putRows(items);
-    void loadReorder();
+    void loadOrder();
     return items;
-  }, [loadReorder, putRows]);
+  }, [loadOrder, putRows]);
 
   const send = useCallback(
     async (path: string, init: RequestInit) =>
@@ -273,7 +248,7 @@ export const useShelf = (token: string) => {
     return normalizeInventoryListResponse(await requestJson<unknown>(`/staff/inventory/tobaccos?${params}`, {}, token)).items;
   }, [token]);
 
-  // Бюджет на дашборде (#326) и настройки «К заказу» — пока они на граммах.
+  // Бюджет на дашборде (#326) — пока он на граммах.
   const saveSettings = useCallback(async (settings: ShelfSettings) => {
     const saved = normalizeShelfSettings(await requestJson<unknown>('/staff/shelf/settings', json('PATCH', settings), token));
     await reload();
@@ -281,29 +256,22 @@ export const useShelf = (token: string) => {
   }, [reload, token]);
 
   const reset = useCallback(() => {
-    reorderGuard.start();
-    purchaseGuard.start();
-    setPurchase(null);
-    setPurchaseError('');
+    orderGuard.start();
     setView(null);
     setStatus('idle');
     setError('');
-    setReorder(null);
-    setReorderError('');
-  }, [purchaseGuard, reorderGuard]);
+    setOrder(null);
+    setOrderError('');
+  }, [orderGuard]);
 
   return {
     view,
     status,
     error,
-    reorder,
-    reorderError,
-    purchase,
-    purchaseError,
-    loadPurchase,
-    patchPurchaseItem,
+    order,
+    orderError,
     reload,
-    loadReorder,
+    loadOrder,
     reset,
     markEmpty,
     undoEmpty,
