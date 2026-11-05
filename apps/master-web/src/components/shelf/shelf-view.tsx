@@ -54,6 +54,7 @@ import { orderCount } from '@/lib/order';
 import { ShelfMobileList } from './shelf-mobile';
 import { ShelfOrderView } from './shelf-order';
 import { ShelfRowMenu, type ShelfRowActions } from './shelf-row-menu';
+import { ShelfAnalogsCell } from './shelf-analogs';
 import { ShelfStatusCell } from './shelf-status';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 import { RowsSkeleton } from '@/components/ui/loading';
@@ -773,6 +774,7 @@ export const ShelfView = ({
                   <colgroup>
                     <col style={{ width: 44 }} />
                     <col />
+                    <col style={{ width: 200 }} />
                     <col style={{ width: 210 }} />
                     <col style={{ width: 180 }} />
                     <col style={{ width: 80 }} />
@@ -792,6 +794,7 @@ export const ShelfView = ({
                         />
                       </th>
                       <th scope="col">Табак</th>
+                      <th scope="col">Аналоги</th>
                       <th scope="col">Наличие</th>
                       <th scope="col">Приход</th>
                       <th scope="col" className="shelf-table__num">Миксы</th>
@@ -840,6 +843,9 @@ export const ShelfView = ({
                               </span>
                               {row.trial ? <span className="tag shelf-trial-tag">проба</span> : null}
                             </span>
+                          </td>
+                          <td>
+                            <ShelfAnalogsCell analogs={row.analogs} />
                           </td>
                           <td>
                             <ShelfStatusCell row={row} />

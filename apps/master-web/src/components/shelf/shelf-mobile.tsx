@@ -2,6 +2,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
 import { shelfRowAction, shelfRowMenu } from '@/lib/shelf';
 import { ShelfCheck } from './shelf-bulk';
+import { ShelfAnalogsCell } from './shelf-analogs';
 import type { ShelfRowActions } from './shelf-row-menu';
 import { ShelfStatusCell } from './shelf-status';
 import { TrialMark } from './shelf-trial-mark';
@@ -82,6 +83,12 @@ export const ShelfMobileList = ({
             <ShelfStatusCell row={row} />
             {row.trial ? <span className="tag shelf-trial-tag">проба</span> : null}
           </div>
+          {row.analogs.length > 0 && !picked ? (
+            <div className="m-shelf-card__analogs">
+              <span>Аналоги</span>
+              <ShelfAnalogsCell analogs={row.analogs} />
+            </div>
+          ) : null}
           {/* Проба (#329, #shot=mobile-trial): отметка у стойки, одно касание. */}
           {row.trial && !picked ? (
             <div className="m-shelf-card__trial">
