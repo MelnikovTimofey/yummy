@@ -333,6 +333,44 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   for (const row of rows) await expect(row.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
 });
 
+// Протягивание по чекбоксам, как в «Каталоге» (#521): строки от первой до
+// текущей выбираются, обратным протягиванием выбор снимается. Неразрушающий.
+test('Master shelf selects a range by dragging across checkboxes', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  const checks = page.locator('table.shelf-table tbody tr[data-tobacco-id]').getByRole('checkbox', { name: /^Выбрать / });
+  await expect(checks.nth(2)).toBeVisible();
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+
+  const center = async (index: number) => {
+    const box = await checks.nth(index).boundingBox();
+    if (!box) throw new Error('Чекбокс строки не виден');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const drag = async (from: number, to: number) => {
+    const start = await center(from);
+    const end = await center(to);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 10 });
+    await page.mouse.up();
+  };
+
+  await drag(0, 2);
+  await expect(bar).toContainText('Выбрано 3');
+  for (const index of [0, 1, 2]) await expect(checks.nth(index)).toHaveAttribute('aria-checked', 'true');
+  // Клик после протягивания не открыл карточку табака.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await drag(2, 1);
+  await expect(bar).toContainText('Выбрано 1');
+  await expect(checks.nth(0)).toHaveAttribute('aria-checked', 'true');
+
+  await page.keyboard.press('Escape');
+  await expect(bar).toHaveCount(0);
+});
+
 // «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
 // окна отмечает его просмотренным для логина. Неразрушающий: отметка живёт в
 // localStorage, а он у Playwright свежий на каждый тест.

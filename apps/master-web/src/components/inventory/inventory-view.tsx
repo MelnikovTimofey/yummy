@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Flame, Plus, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
 import { rankBySearch } from '@/lib/search-match';
-import { dragModeFor, dragSelection, type DragMode } from '@/lib/drag-select';
+import { useDragSelect } from '@/hooks/use-drag-select';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import type { ShelfState } from '@/lib/shelf';
 import { CatalogActionsSheet, CatalogMobileBulk, CatalogMobileList } from './catalog-mobile';
@@ -597,46 +597,11 @@ export const InventoryView = ({
   const [editorOpen, setEditorOpen] = useState(false);
   const [extraEditorOpen, setExtraEditorOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
-  // Протягивание по чекбоксам (#521) — только мышью: на телефоне этот жест — прокрутка.
-  const dragRef = useRef<{ anchor: string; mode: DragMode; base: string[]; moved: boolean } | null>(null);
-
-  useEffect(() => {
-    const endDrag = () => {
-      const drag = dragRef.current;
-      dragRef.current = null;
-      if (!drag?.moved) return;
-      // Клик после протягивания не должен ещё раз переключить чекбокс или открыть карточку.
-      const swallowClick = (event: MouseEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-      };
-      window.addEventListener('click', swallowClick, { capture: true, once: true });
-      window.setTimeout(() => window.removeEventListener('click', swallowClick, { capture: true }), 0);
-    };
-    window.addEventListener('pointerup', endDrag);
-    window.addEventListener('pointercancel', endDrag);
-    return () => {
-      window.removeEventListener('pointerup', endDrag);
-      window.removeEventListener('pointercancel', endDrag);
-    };
-  }, []);
-
-  const startDrag = (event: ReactPointerEvent<HTMLInputElement>, id: string) => {
-    if (event.pointerType !== 'mouse' || event.button !== 0) return;
-    dragRef.current = { anchor: id, mode: dragModeFor(selectedIds, id), base: selectedIds, moved: false };
-  };
-
-  const dragOver = (event: ReactPointerEvent<HTMLTableRowElement>, id: string) => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    if ((event.buttons & 1) === 0) {
-      dragRef.current = null;
-      return;
-    }
-    if (!drag.moved && id === drag.anchor) return;
-    drag.moved = true;
-    onSetSelection(dragSelection(items.map((item) => item.id), drag.base, drag.anchor, id, drag.mode));
-  };
+  const drag = useDragSelect({
+    order: items.map((item) => item.id),
+    selected: selectedIds,
+    onChange: (next) => onSetSelection(next),
+  });
 
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
@@ -1648,7 +1613,7 @@ export const InventoryView = ({
                     data-tobacco-id={item.id}
                     className="inventory-table__row"
                     onClick={() => openEditEditor(item)}
-                    onPointerEnter={(event) => dragOver(event, item.id)}
+                    onPointerEnter={(event) => drag.dragOver(event, item.id)}
                   >
                     <td className="inventory-table__brand" onClick={(event) => event.stopPropagation()}>
                       <label
@@ -1660,10 +1625,10 @@ export const InventoryView = ({
                           className="inventory-brand-cell__check"
                           checked={selectedIds.includes(item.id)}
                           onChange={() => onToggleSelection(item.id)}
-                          onPointerDown={(event) => startDrag(event, item.id)}
+                          onPointerDown={(event) => drag.startDrag(event, item.id)}
                           // Без этого протягивание выделяет текст строк.
                           onMouseDown={(event) => {
-                            if (dragRef.current) event.preventDefault();
+                            if (drag.isDragging()) event.preventDefault();
                           }}
                           aria-label={`Выбрать ${item.name}`}
                         />
