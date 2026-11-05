@@ -11,6 +11,7 @@ import {
   type TobaccoRef,
 } from '@/contracts';
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
+import { useDragSelect } from '@/hooks/use-drag-select';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
@@ -237,6 +238,14 @@ export const ShelfView = ({
     anchorId.current = null;
     onSelectionChange(null);
   }, [onSelectionChange]);
+  const drag = useDragSelect({
+    order: shownIds,
+    selected,
+    onChange: (next, target) => {
+      setSelected(next);
+      anchorId.current = target;
+    },
+  });
   const pick = useCallback(
     (id: string, range: boolean) => {
       setSelected(range ? selectRange(shownIds, anchorId.current, id, selected) : toggleSelected(selected, id));
@@ -812,6 +821,7 @@ export const ShelfView = ({
                           data-tobacco-id={row.tobacco.id}
                           data-active={row.tobacco.id === activeId}
                           data-selected={isSelected || undefined}
+                          onPointerEnter={(event) => drag.dragOver(event, row.tobacco.id)}
                           onMouseDown={(event) => {
                             if (event.shiftKey) event.preventDefault();
                           }}
@@ -830,6 +840,8 @@ export const ShelfView = ({
                                 setActiveId(row.tobacco.id);
                                 pick(row.tobacco.id, range);
                               }}
+                              onDragStart={(event) => drag.startDrag(event, row.tobacco.id)}
+                              dragging={drag.isDragging}
                             />
                           </td>
                           <td>

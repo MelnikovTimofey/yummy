@@ -608,11 +608,18 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(activeName).not.toHaveText(firstName);
   await expect(page.getByText('Листайте вверх')).toHaveCount(0);
 
+  // master-smoke идёт параллельно на той же БД и на доли секунды отмечает
+  // табаки Полки закончившимися: тогда «Покурить» получает 404 и CTA рилса
+  // гаснет. Листаем к следующему миксу и пробуем снова.
   const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
-  const mixName = (await reel.locator('.reel-name').innerText()).trim();
-  await reel.getByRole('button', { name: 'Покурить' }).click();
-
-  await expect(page.getByText('Покажите мастеру')).toBeVisible();
+  const choose = reel.getByRole('button', { name: 'Покурить' });
+  let mixName = '';
+  await expect(async () => {
+    if (await choose.isDisabled({ timeout: 1_000 })) await page.mouse.wheel(0, box.height);
+    mixName = (await reel.locator('.reel-name').innerText({ timeout: 1_000 })).trim();
+    await choose.click({ timeout: 1_000 });
+    await expect(page.getByText('Покажите мастеру')).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [250], timeout: 20_000 });
   await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
 
