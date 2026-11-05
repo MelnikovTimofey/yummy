@@ -10,6 +10,13 @@ export const moveAnalog = (ids: string[], index: number, delta: -1 | 1) => {
   return next;
 };
 
+// Столбец «Аналоги» (#482): два первых в порядке замены, остальные — «ещё N».
+export const analogCell = (analogs: ShelfAnalog[]) => ({
+  head: analogs.slice(0, 2),
+  rest: Math.max(0, analogs.length - 2),
+  title: analogs.map((item) => `${item.manufacturer} ${item.name}`).join(', '),
+});
+
 export const withoutAnalog = (ids: string[], id: string) => ids.filter((item) => item !== id);
 
 export const analogToastText = (tobaccoName: string, unblocked: Array<{ id: string; name: string }>) => {
