@@ -8,6 +8,7 @@ import { FilterChip } from '@/components/ui/filter-bar';
 import { SmokeLoading } from '@/components/ui/loading';
 import { ChartContainer, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { RangeCalendar } from '@/components/dashboard/range-calendar';
+import { mixStatusTag } from '@/components/mixes/mix-status';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import {
   formatCount,
@@ -15,6 +16,7 @@ import {
   formatRating,
   type GuestChoices,
   type GuestChoicesPeriod,
+  type GuestTobaccoStock,
   type GuestTopMix,
   type GuestTopTobacco,
 } from '@/contracts';
@@ -147,18 +149,16 @@ function Timeline({ data, phone }: { data: GuestChoices; phone: boolean }) {
   );
 }
 
-const TOBACCO_MARKS = {
-  out: { text: 'закончился', tone: 'danger' },
-  trial: { text: 'проба', tone: 'faint' },
-  'off-shelf': { text: 'нет на полке', tone: 'faint' },
-} as const;
+type BarTag = { label: string; tone?: 'success' | 'danger' | 'info' | 'warning'; ghost?: true };
 
-const MIX_MARKS = {
-  hidden: { text: 'скрыт у гостя', tone: 'danger' },
-  analog: { text: 'с аналогом', tone: 'faint' },
-} as const;
+// Наличие — как на «Полке»: «есть» или «закончился»; табак не с полки — призрачной меткой.
+const STOCK_TAGS: Record<GuestTobaccoStock, BarTag> = {
+  in: { label: 'есть', tone: 'success' },
+  out: { label: 'закончился', tone: 'danger' },
+  'off-shelf': { label: 'нет на полке', ghost: true },
+};
 
-type BarRow = { key: string; name: string; brand?: string; choices: number; mark?: { text: string; tone: 'danger' | 'faint' }; rating?: number | null };
+type BarRow = { key: string; name: string; brand?: string; choices: number; tags: BarTag[]; rating?: number | null };
 
 // Топы — горизонтальные столбцы с подписью внутри (shadcn Bar Chart layout="vertical",
 // custom label). Столбцы нейтральные: акцент только у динамики.
@@ -178,11 +178,11 @@ function TopBars({ rows, phone }: { rows: BarRow[]; phone: boolean }) {
                   {row.name}
                 </span>
                 {row.brand ? <small>{row.brand}</small> : null}
-                {row.mark ? (
-                  <span className="dash-mark" data-tone={row.mark.tone}>
-                    {row.mark.text}
+                {row.tags.map((tag) => (
+                  <span key={tag.label} className={tag.ghost ? 'tag tag--ghost' : 'tag'} data-tone={tag.tone}>
+                    {tag.label}
                   </span>
-                ) : null}
+                ))}
                 {row.rating ? <span className="dash-bar__rating">★ {formatRating(row.rating)}</span> : null}
               </span>
             </div>
@@ -199,21 +199,22 @@ function TopBars({ rows, phone }: { rows: BarRow[]; phone: boolean }) {
   );
 }
 
-const tobaccoRows = (rows: GuestTopTobacco[]): BarRow[] =>
+export const tobaccoRows = (rows: GuestTopTobacco[]): BarRow[] =>
   rows.map((row) => ({
     key: row.tobaccoId,
     name: row.name,
     brand: row.manufacturer,
     choices: row.choices,
-    mark: row.mark ? TOBACCO_MARKS[row.mark] : undefined,
+    tags: [...(row.stock ? [STOCK_TAGS[row.stock]] : []), ...(row.trial ? [{ label: 'проба' }] : [])],
   }));
 
-const mixRows = (rows: GuestTopMix[]): BarRow[] =>
+// Статус микса — тот же тег, что в «Миксах».
+export const mixRows = (rows: GuestTopMix[]): BarRow[] =>
   rows.map((row) => ({
     key: row.mixId ?? `deleted:${row.mixName}`,
     name: row.mixName,
     choices: row.choices,
-    mark: row.mark ? MIX_MARKS[row.mark] : undefined,
+    tags: row.status ? [mixStatusTag(row.status)] : [],
     rating: row.avgRating,
   }));
 

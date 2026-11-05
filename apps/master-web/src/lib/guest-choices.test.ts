@@ -101,8 +101,8 @@ test('сигналы: закончились популярные с бренд�
       emptyRails: [{ railId: 'r1', name: 'Новинки' }],
     }),
     [
-      { tobaccoId: 't1', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 81, mark: 'out' },
-      { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Supernova', choices: 47, mark: 'out' },
+      { tobaccoId: 't1', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 81, stock: 'out', trial: false },
+      { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Supernova', choices: 47, stock: 'out', trial: false },
     ],
   );
   assert.deepEqual(rows, [

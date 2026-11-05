@@ -1962,10 +1962,17 @@ export type GuestChoicesPreset = '7d' | '30d' | '90d' | 'all';
 export type GuestChoicesPeriod = { key: GuestChoicesPreset } | { key: 'custom'; from: string; to: string };
 export type GuestChoicesBucket = 'day' | 'week';
 export type GuestChoicesTimelineRow = { date: string; catalog: number; own: number };
-export type GuestTobaccoMark = 'out' | 'trial' | 'off-shelf';
-export type GuestMixMark = 'hidden' | 'analog';
-export type GuestTopTobacco = { tobaccoId: string; manufacturer: string; name: string; choices: number; mark: GuestTobaccoMark | null };
-export type GuestTopMix = { mixId: string | null; mixName: string; choices: number; avgRating: number | null; mark: GuestMixMark | null };
+export type GuestTobaccoStock = 'in' | 'out' | 'off-shelf';
+export type GuestTopTobacco = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+  choices: number;
+  stock: GuestTobaccoStock | null;
+  trial: boolean;
+};
+// status = null у удалённого микса.
+export type GuestTopMix = { mixId: string | null; mixName: string; choices: number; avgRating: number | null; status: MixStatus | null };
 export type GuestProfileShare = { key: string; label: string; share: number };
 
 export type GuestChoices = {
@@ -2018,14 +2025,15 @@ export const normalizeGuestChoices = (value: unknown): GuestChoices => {
       manufacturer: String(row.manufacturer ?? ''),
       name: String(row.name ?? ''),
       choices: toNumber(row.choices, 0),
-      mark: markOf(row.mark, ['out', 'trial', 'off-shelf'] as const),
+      stock: markOf(row.stock, ['in', 'out', 'off-shelf'] as const),
+      trial: row.trial === true,
     })),
     topMixes: recordsOf(raw.topMixes).map((row) => ({
       mixId: toNullableString(row.mixId),
       mixName: String(row.mixName ?? ''),
       choices: toNumber(row.choices, 0),
       avgRating: toNullableNumber(row.avgRating),
-      mark: markOf(row.mark, ['hidden', 'analog'] as const),
+      status: markOf(row.status, ['visible', 'substituted', 'hidden', 'blocked'] as const),
     })),
     profiles: recordsOf(raw.profiles).map((row) => ({
       key: String(row.key ?? ''),

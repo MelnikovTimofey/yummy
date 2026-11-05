@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { GuestChoices } from '@/contracts';
-import { buildKpiTiles, noDataText, periodPressed } from './dashboard-view';
+import { buildKpiTiles, mixRows, noDataText, periodPressed, tobaccoRows } from './dashboard-view';
 
 const kpi: GuestChoices['kpi'] = { choices: 621, ownMixes: 121, mixesChosen: 58, mixesOnShowcase: 64, avgRating: 4.6, ratingsCount: 87 };
 const plain = (value: unknown) => (value === undefined ? null : String(value).replace(/ | /g, ' '));
@@ -51,4 +51,26 @@ test('сегмент периода: пока открыт календарь, �
   assert.equal(periodPressed('custom', { key: '30d' }, true), true);
   assert.equal(periodPressed('30d', { key: '30d' }, true), false);
   assert.equal(periodPressed('custom', { key: 'custom', from: '2026-10-13', to: '2026-10-26' }, false), true);
+});
+
+test('топ табаков: у каждого статус наличия, проба отдельной меткой', () => {
+  const tags = tobaccoRows([
+    { tobaccoId: 't1', manufacturer: 'Darkside', name: 'Red Tea', choices: 7, stock: 'in', trial: false },
+    { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Mintslide', choices: 2, stock: 'in', trial: true },
+    { tobaccoId: 't3', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 4, stock: 'out', trial: false },
+    { tobaccoId: 't4', manufacturer: 'Deus', name: 'Catmint', choices: 2, stock: 'off-shelf', trial: false },
+    { tobaccoId: 't5', manufacturer: 'Deus', name: 'Black JI', choices: 2, stock: null, trial: false },
+  ]).map((row) => row.tags.map((tag) => tag.label));
+  assert.deepEqual(tags, [['есть'], ['есть', 'проба'], ['закончился'], ['нет на полке'], []]);
+});
+
+test('топ миксов: статус как в «Миксах», у удалённого статуса нет', () => {
+  const tags = mixRows([
+    { mixId: 'm1', mixName: 'Персиковый чай', choices: 6, avgRating: null, status: 'visible' },
+    { mixId: 'm2', mixName: 'Арбузный джин-тоник', choices: 2, avgRating: null, status: 'substituted' },
+    { mixId: 'm3', mixName: 'Пина колада', choices: 1, avgRating: null, status: 'blocked' },
+    { mixId: 'm4', mixName: 'Зимний глинтвейн', choices: 1, avgRating: null, status: 'hidden' },
+    { mixId: null, mixName: 'Старый микс', choices: 1, avgRating: null, status: null },
+  ]).map((row) => row.tags.map((tag) => tag.label));
+  assert.deepEqual(tags, [['виден'], ['с заменой'], ['блокирован'], ['скрыт'], []]);
 });

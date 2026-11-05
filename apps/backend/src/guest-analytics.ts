@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './db';
 import { isTrial } from './shelf';
-import { flavorProfileLabels, getAvailableMixCatalog } from './state';
+import { flavorProfileLabels, getAvailableMixCatalog, type MixGuestStatus } from './state';
 
 // Аналитика выборов гостей для Мастера (#520). Выбор — «Покурить» у микса каталога
 // (SmokeCtaEvent) или свой микс «Намиксуй» (CustomMixSmokeEvent). Считает Postgres,
@@ -30,9 +30,11 @@ export type GuestChoices = {
     manufacturer: string;
     name: string;
     choices: number;
-    mark: 'out' | 'trial' | 'off-shelf' | null;
+    stock: 'in' | 'out' | 'off-shelf';
+    trial: boolean;
   }>;
-  topMixes: Array<{ mixId: string | null; mixName: string; choices: number; avgRating: number | null; mark: 'hidden' | 'analog' | null }>;
+  // status = null у удалённого микса.
+  topMixes: Array<{ mixId: string | null; mixName: string; choices: number; avgRating: number | null; status: MixGuestStatus | null }>;
   profiles: Array<{ key: string; label: string; share: number }>;
   signals: {
     outPopular: Array<{ tobaccoId: string; name: string }>;
@@ -120,13 +122,15 @@ type TobaccoRow = {
   firstArrivalKind: string | null;
 };
 
-// «Закончился» — табак на полке (в плане или в работе), но сейчас не в наличии;
-// проба — первый приход недавно и не стартовый (как trialOf в shelf.ts).
-const tobaccoMark = (row: TobaccoRow, now: Date): GuestChoices['topTobaccos'][number]['mark'] => {
+// «Закончился» — табак на полке (в плане или в работе), но сейчас не в наличии.
+const tobaccoStock = (row: TobaccoRow): GuestChoices['topTobaccos'][number]['stock'] => {
   if (row.shelfStatus === null || row.shelfStatus === 'dropped') return 'off-shelf';
-  if (!row.inStock) return 'out';
-  return isTrial(row.firstArrivalKind === 'start' ? null : row.firstArrivalAt, now) ? 'trial' : null;
+  return row.inStock ? 'in' : 'out';
 };
+
+// Проба — первый приход недавно и не стартовый (как trialOf в shelf.ts).
+const tobaccoTrial = (row: TobaccoRow, now: Date) =>
+  tobaccoStock(row) === 'in' && isTrial(row.firstArrivalKind === 'start' ? null : row.firstArrivalAt, now);
 
 // JIT выключен: jsonb_array_elements Postgres оценивает в 100 строк на вызов, стоимость
 // раздувается, и компиляция (~200 мс на снапшоте) в разы дольше самого запроса (~30 мс).
@@ -260,19 +264,17 @@ export const getGuestChoices = async (query: ChoicesPeriodQuery, now = new Date(
     manufacturer: row.manufacturer,
     name: row.name,
     choices: row.choices,
-    mark: tobaccoMark(row, now),
+    stock: tobaccoStock(row),
+    trial: tobaccoTrial(row, now),
   }));
 
-  const topMixes = mixRows.map((row) => {
-    const status = row.mixId ? mixById.get(row.mixId)?.status : undefined;
-    return {
-      mixId: row.mixId,
-      mixName: row.mixName,
-      choices: row.choices,
-      avgRating: row.avgRating,
-      mark: status === 'blocked' ? ('hidden' as const) : status === 'substituted' ? ('analog' as const) : null,
-    };
-  });
+  const topMixes = mixRows.map((row) => ({
+    mixId: row.mixId,
+    mixName: row.mixName,
+    choices: row.choices,
+    avgRating: row.avgRating,
+    status: (row.mixId && mixById.get(row.mixId)?.status) || null,
+  }));
 
   const shares = roundShares(profileRows.map((row) => row.hits));
   const profiles = profileRows.map((row, index) => ({ key: row.key, label: flavorProfileLabels[row.key] ?? row.key, share: shares[index] }));
@@ -296,7 +298,7 @@ export const getGuestChoices = async (query: ChoicesPeriodQuery, now = new Date(
     topMixes: enough ? topMixes : [],
     profiles: enough ? profiles : [],
     signals: {
-      outPopular: topTobaccos.filter((row) => row.mark === 'out').map((row) => ({ tobaccoId: row.tobaccoId, name: row.name })),
+      outPopular: topTobaccos.filter((row) => row.stock === 'out').map((row) => ({ tobaccoId: row.tobaccoId, name: row.name })),
       hiddenMixes: mixes
         .filter((mix) => mix.status === 'blocked')
         .map((mix) => ({ mixId: mix.id, mixName: mix.name }))
