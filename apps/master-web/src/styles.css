@@ -6296,18 +6296,7 @@ input[type="checkbox"] {
   font-variant-numeric: tabular-nums;
 }
 
-.dash-mark {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 6px;
-  border: 1px solid var(--danger-border);
-  border-radius: 4px;
-  font-size: 11px;
-  color: var(--danger);
-}
-
-.dash-mark[data-tone="faint"] { border-color: var(--border-default); color: var(--text-secondary); }
+.dash-bar__label .tag { flex-shrink: 0; height: 20px; padding: 0 7px; }
 
 .dash-bars__all { justify-self: start; }
 

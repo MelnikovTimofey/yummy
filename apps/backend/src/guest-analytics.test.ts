@@ -193,22 +193,23 @@ test.describe('guest choices analytics', () => {
       manufacturer: 'Ателье Reserve',
       name: 'Citrus Breeze',
       choices: 3,
-      mark: 'out',
+      stock: 'out',
+      trial: false,
     });
-    assert.equal(byId.get('tobacco-rose-nocturne')?.mark, 'off-shelf');
-    assert.equal(byId.get('tobacco-peach-silk')?.mark, 'trial');
-    assert.equal(byId.get('tobacco-mint-veil')?.mark, null);
+    assert.equal(byId.get('tobacco-rose-nocturne')?.stock, 'off-shelf');
+    assert.deepEqual([byId.get('tobacco-peach-silk')?.stock, byId.get('tobacco-peach-silk')?.trial], ['in', true]);
+    assert.deepEqual([byId.get('tobacco-mint-veil')?.stock, byId.get('tobacco-mint-veil')?.trial], ['in', false]);
   });
 
-  test('top mixes keep deleted mixes under their name and mark hidden and analog ones', async () => {
+  test('top mixes keep deleted mixes under their name and carry the guest status of live ones', async () => {
     await stage();
     const { topMixes } = await choices();
 
-    assert.deepEqual(topMixes[0], { mixId: 'mix-dark-market', mixName: 'Тёмный рынок', choices: 15, avgRating: 4.5, mark: null });
-    assert.deepEqual(topMixes[1], { mixId: 'mix-citrus-scout', mixName: 'Цитрусовый караван', choices: 2, avgRating: null, mark: 'analog' });
+    assert.deepEqual(topMixes[0], { mixId: 'mix-dark-market', mixName: 'Тёмный рынок', choices: 15, avgRating: 4.5, status: 'visible' });
+    assert.deepEqual(topMixes[1], { mixId: 'mix-citrus-scout', mixName: 'Цитрусовый караван', choices: 2, avgRating: null, status: 'substituted' });
     const byName = new Map(topMixes.map((row) => [row.mixName, row]));
-    assert.deepEqual(byName.get('Старый микс'), { mixId: null, mixName: 'Старый микс', choices: 1, avgRating: null, mark: null });
-    assert.equal(byName.get('Розовый сумрак')?.mark, 'hidden');
+    assert.deepEqual(byName.get('Старый микс'), { mixId: null, mixName: 'Старый микс', choices: 1, avgRating: null, status: null });
+    assert.equal(byName.get('Розовый сумрак')?.status, 'blocked');
     assert.equal(topMixes.length, 6);
   });
 

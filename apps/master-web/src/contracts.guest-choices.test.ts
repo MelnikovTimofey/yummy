@@ -9,12 +9,12 @@ test('normalizeGuestChoices: ответ /staff/dashboard/choices целиком'
     kpi: { choices: 621, ownMixes: 121, mixesChosen: 58, mixesOnShowcase: 64, avgRating: 4.6, ratingsCount: 87 },
     timeline: [{ date: '2026-10-06', catalog: 12, own: 2 }],
     topTobaccos: [
-      { tobaccoId: 't1', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 81, mark: 'out' },
-      { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Red Tea', choices: 96, mark: 'strange' },
+      { tobaccoId: 't1', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 81, stock: 'out', trial: false },
+      { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Red Tea', choices: 96, stock: 'strange', trial: 'yes' },
     ],
     topMixes: [
-      { mixId: 'm1', mixName: 'Melon Cola', choices: 33, avgRating: 4.2, mark: 'hidden' },
-      { mixId: null, mixName: 'Удалённый', choices: 3, avgRating: null, mark: null },
+      { mixId: 'm1', mixName: 'Melon Cola', choices: 33, avgRating: 4.2, status: 'blocked' },
+      { mixId: null, mixName: 'Удалённый', choices: 3, avgRating: null, status: null },
     ],
     profiles: [{ key: 'berry', label: 'Ягодные', share: 24 }],
     signals: {
@@ -28,9 +28,10 @@ test('normalizeGuestChoices: ответ /staff/dashboard/choices целиком'
   assert.equal(choices.enough, true);
   assert.deepEqual(choices.kpi, { choices: 621, ownMixes: 121, mixesChosen: 58, mixesOnShowcase: 64, avgRating: 4.6, ratingsCount: 87 });
   assert.deepEqual(choices.timeline, [{ date: '2026-10-06', catalog: 12, own: 2 }]);
-  assert.equal(choices.topTobaccos[0].mark, 'out');
-  assert.equal(choices.topTobaccos[1].mark, null);
-  assert.deepEqual(choices.topMixes[1], { mixId: null, mixName: 'Удалённый', choices: 3, avgRating: null, mark: null });
+  assert.deepEqual([choices.topTobaccos[0].stock, choices.topTobaccos[0].trial], ['out', false]);
+  assert.deepEqual([choices.topTobaccos[1].stock, choices.topTobaccos[1].trial], [null, false]);
+  assert.equal(choices.topMixes[0].status, 'blocked');
+  assert.deepEqual(choices.topMixes[1], { mixId: null, mixName: 'Удалённый', choices: 3, avgRating: null, status: null });
   assert.deepEqual(choices.profiles, [{ key: 'berry', label: 'Ягодные', share: 24 }]);
   assert.deepEqual(choices.signals.emptyRails, [{ railId: 'r1', name: 'Новинки' }]);
 });
