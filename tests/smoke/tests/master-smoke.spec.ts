@@ -741,7 +741,7 @@ test.describe('Master access on a phone', () => {
 });
 
 // Дашборд — выборы гостей (#520): период меняет диапазон дат; на seed выборов
-// мало, поэтому годится и график, и «Мало данных» / «Выборов нет». Блока полки на
+// может не быть, поэтому годится и график, и «Выборов нет». Блока полки на
 // дашборде больше нет. Дальше «К заказу» на полке (#518, #shot=order,
 // edge-order-empty); настроек полки больше нет.
 // Неразрушающий: в «К заказу» ничего не меняется.
@@ -762,10 +762,10 @@ test('Master dashboard switches the period, shelf opens «К заказу» with
   await expect(range).not.toHaveText(monthRange ?? '');
   await expect(range).toHaveText(/^\d{1,2}( [а-я]+( \d{4})?)? – \d{1,2} [а-я]+( \d{4})?$/);
 
-  // Плитки есть всегда; графики — с 20 выборов, иначе одна карточка вместо них.
+  // Плитки есть всегда; графики — с первого выбора, иначе одна карточка вместо них.
   await expect(page.locator('.dashboard-page .stats')).toContainText('Выборов');
   const chart = page.getByRole('heading', { name: 'Выборы по дням', level: 2 });
-  const few = page.locator('.dash-few').filter({ hasText: /^(Мало данных|Выборов нет)/ });
+  const few = page.locator('.dash-few').filter({ hasText: /^Выборов нет/ });
   await expect(chart.or(few)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Сигналы', level: 2 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Прогноз на сегодня' })).toHaveCount(0);

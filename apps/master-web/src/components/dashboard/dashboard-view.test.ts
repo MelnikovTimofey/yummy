@@ -32,18 +32,10 @@ test('плитки на телефоне короче: под числом то�
   ]);
 });
 
-test('мало данных и пустой период: что случилось и что сделать', () => {
-  const period = { key: 'custom' as const, from: '2026-11-04', to: '2026-11-04', days: 1, bucket: 'day' as const };
-  assert.deepEqual(noDataText(period, 9), {
-    title: 'Мало данных',
-    text: '4 ноября: 9 выборов. Графики появятся с 20 выборов, выберите период длиннее.',
-  });
-  assert.deepEqual(noDataText({ ...period, from: '2026-10-01', to: '2026-10-05' }, 0), {
-    title: 'Выборов нет',
-    text: 'За 1 – 5 октября гости ничего не выбирали.',
-  });
-  assert.deepEqual(noDataText({ ...period, key: 'all' }, 0), { title: 'Выборов нет', text: 'Гости пока ничего не выбирали.' });
-  assert.equal(noDataText({ ...period, key: 'all', from: '2026-10-06' }, 1).text, 'С 6 октября: 1 выбор. Графики появятся с 20 выборов, выберите период длиннее.');
+test('пустой период: что случилось', () => {
+  const period = { key: 'custom' as const, from: '2026-10-01', to: '2026-10-05', days: 5, bucket: 'day' as const };
+  assert.deepEqual(noDataText(period), { title: 'Выборов нет', text: 'За 1 – 5 октября гости ничего не выбирали.' });
+  assert.deepEqual(noDataText({ ...period, key: 'all' }), { title: 'Выборов нет', text: 'Гости пока ничего не выбирали.' });
 });
 
 test('сегмент периода: пока открыт календарь, нажаты «Даты»', () => {

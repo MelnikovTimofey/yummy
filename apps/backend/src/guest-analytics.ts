@@ -15,7 +15,6 @@ export type ChoicesPeriodQuery = { key: ChoicesPeriodKey; from: string | null; t
 
 export type GuestChoices = {
   period: { key: ChoicesPeriodKey; from: string; to: string; days: number; bucket: 'day' | 'week' };
-  enough: boolean;
   kpi: {
     choices: number;
     ownMixes: number;
@@ -46,8 +45,6 @@ export type GuestChoices = {
 const PRESET_DAYS: Record<Exclude<ChoicesPresetKey, 'all'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 const WEEKLY_AFTER_DAYS = 31;
 const TOP = 10;
-// Меньше выборов за период — графики и топы случайны, их не показываем.
-const APP_MIN_EVENTS = 20;
 
 // Сутки — по часовому поясу процесса, как у остального кода; база считает в нём же.
 const processTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -257,7 +254,6 @@ export const getGuestChoices = async (query: ChoicesPeriodQuery, now = new Date(
 
   const ownMixes = buckets.reduce((sum, row) => sum + row.own, 0);
   const choices = ownMixes + buckets.reduce((sum, row) => sum + row.catalog, 0);
-  const enough = choices >= APP_MIN_EVENTS;
 
   const topTobaccos = tobaccoRows.map((row) => ({
     tobaccoId: row.tobaccoId,
@@ -284,7 +280,6 @@ export const getGuestChoices = async (query: ChoicesPeriodQuery, now = new Date(
 
   return {
     period: { key: query.key, from, to: query.to, days, bucket },
-    enough,
     kpi: {
       choices,
       ownMixes,
@@ -293,10 +288,10 @@ export const getGuestChoices = async (query: ChoicesPeriodQuery, now = new Date(
       avgRating: totals.avgRating,
       ratingsCount: totals.ratingsCount,
     },
-    timeline: enough ? timeline : [],
-    topTobaccos: enough ? topTobaccos : [],
-    topMixes: enough ? topMixes : [],
-    profiles: enough ? profiles : [],
+    timeline,
+    topTobaccos,
+    topMixes,
+    profiles,
     signals: {
       outPopular: topTobaccos.filter((row) => row.stock === 'out').map((row) => ({ tobaccoId: row.tobaccoId, name: row.name })),
       hiddenMixes: mixes

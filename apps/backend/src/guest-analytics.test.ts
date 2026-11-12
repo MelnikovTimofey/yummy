@@ -149,7 +149,6 @@ test.describe('guest choices analytics', () => {
     await stage();
     const result = await choices();
 
-    assert.equal(result.enough, true);
     assert.deepEqual(result.kpi, {
       choices: 22,
       ownMixes: 1,
@@ -246,22 +245,24 @@ test.describe('guest choices analytics', () => {
     assert.equal(profiles.reduce((sum, row) => sum + row.share, 0), 100);
   });
 
-  test('few choices: no charts, but tiles and signals stay', async () => {
+  test('a couple of choices already fill the charts', async () => {
     await smoke('mix-citrus-scout', ago(1));
     await own(['tobacco-mint-veil'], ago(1));
     const result = await choices();
 
-    assert.equal(result.enough, false);
     assert.equal(result.kpi.choices, 2);
     assert.equal(result.kpi.ownMixes, 1);
-    assert.deepEqual([result.timeline, result.topTobaccos, result.topMixes, result.profiles], [[], [], [], []]);
+    assert.equal(result.timeline.reduce((sum, point) => sum + point.catalog + point.own, 0), 2);
+    assert.deepEqual(result.topMixes.map((row) => [row.mixId, row.choices]), [['mix-citrus-scout', 1]]);
+    assert.ok(result.topTobaccos.some((row) => row.tobaccoId === 'tobacco-mint-veil'));
+    assert.equal(result.profiles.reduce((sum, row) => sum + row.share, 0), 100);
     assert.deepEqual(result.signals.hiddenMixes, [{ mixId: 'mix-peach-mirage', mixName: 'Персиковый мираж' }]);
   });
 
   test('empty period: zeros and no average rating', async () => {
     const result = await choices({ period: '7d' });
     assert.deepEqual(result.kpi, { choices: 0, ownMixes: 0, mixesChosen: 0, mixesOnShowcase: 10, avgRating: null, ratingsCount: 0 });
-    assert.equal(result.enough, false);
+    assert.deepEqual([result.topTobaccos, result.topMixes, result.profiles], [[], [], []]);
   });
 
   test('longer than 31 days goes by weeks starting on Monday', async () => {
@@ -332,7 +333,7 @@ test.describe('GET /staff/dashboard/choices', () => {
 
     assert.equal(response.statusCode, 200);
     const body = response.json() as GuestChoices;
-    assert.deepEqual(Object.keys(body).sort(), ['enough', 'kpi', 'period', 'profiles', 'signals', 'timeline', 'topMixes', 'topTobaccos']);
+    assert.deepEqual(Object.keys(body).sort(), ['kpi', 'period', 'profiles', 'signals', 'timeline', 'topMixes', 'topTobaccos']);
     assert.equal(body.kpi.choices, 1);
     assert.equal(response.body.includes(guest.id), false);
   });

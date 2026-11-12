@@ -1956,7 +1956,7 @@ export const normalizeCatalogIdeas = (value: unknown): CatalogIdeas => {
 
 // --- Дашборд (#520): выборы гостей, ответ /staff/dashboard/choices ------------
 // Выбор — «Покурить» у микса каталога или свой микс «Намиксуй». Даты — дни
-// «2026-11-04» по поясу backend; при enough = false графиков в ответе нет.
+// «2026-11-04» по поясу backend.
 
 export type GuestChoicesPreset = '7d' | '30d' | '90d' | 'all';
 export type GuestChoicesPeriod = { key: GuestChoicesPreset } | { key: 'custom'; from: string; to: string };
@@ -1977,7 +1977,6 @@ export type GuestProfileShare = { key: string; label: string; share: number };
 
 export type GuestChoices = {
   period: { key: GuestChoicesPreset | 'custom'; from: string; to: string; days: number; bucket: GuestChoicesBucket };
-  enough: boolean;
   kpi: { choices: number; ownMixes: number; mixesChosen: number; mixesOnShowcase: number; avgRating: number | null; ratingsCount: number };
   timeline: GuestChoicesTimelineRow[];
   topTobaccos: GuestTopTobacco[];
@@ -2006,7 +2005,6 @@ export const normalizeGuestChoices = (value: unknown): GuestChoices => {
       days: toNumber(period.days, 0),
       bucket: pickOne(period.bucket, ['day', 'week'] as const, 'day'),
     },
-    enough: toBoolean(raw.enough, false),
     kpi: {
       choices: toNumber(kpi.choices, 0),
       ownMixes: toNumber(kpi.ownMixes, 0),

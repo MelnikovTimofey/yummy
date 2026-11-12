@@ -5,7 +5,6 @@ import { guestChoicesQuery, normalizeGuestChoices } from './contracts';
 test('normalizeGuestChoices: ответ /staff/dashboard/choices целиком', () => {
   const choices = normalizeGuestChoices({
     period: { key: '30d', from: '2026-10-06', to: '2026-11-04', days: 30, bucket: 'day' },
-    enough: true,
     kpi: { choices: 621, ownMixes: 121, mixesChosen: 58, mixesOnShowcase: 64, avgRating: 4.6, ratingsCount: 87 },
     timeline: [{ date: '2026-10-06', catalog: 12, own: 2 }],
     topTobaccos: [
@@ -25,7 +24,6 @@ test('normalizeGuestChoices: ответ /staff/dashboard/choices целиком'
   });
 
   assert.deepEqual(choices.period, { key: '30d', from: '2026-10-06', to: '2026-11-04', days: 30, bucket: 'day' });
-  assert.equal(choices.enough, true);
   assert.deepEqual(choices.kpi, { choices: 621, ownMixes: 121, mixesChosen: 58, mixesOnShowcase: 64, avgRating: 4.6, ratingsCount: 87 });
   assert.deepEqual(choices.timeline, [{ date: '2026-10-06', catalog: 12, own: 2 }]);
   assert.deepEqual([choices.topTobaccos[0].stock, choices.topTobaccos[0].trial], ['out', false]);
@@ -38,7 +36,6 @@ test('normalizeGuestChoices: ответ /staff/dashboard/choices целиком'
 
 test('normalizeGuestChoices: пустой ответ не роняет экран', () => {
   const choices = normalizeGuestChoices(null);
-  assert.equal(choices.enough, false);
   assert.equal(choices.period.bucket, 'day');
   assert.equal(choices.kpi.avgRating, null);
   assert.deepEqual(choices.timeline, []);
