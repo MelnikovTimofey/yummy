@@ -649,7 +649,7 @@ export const acceptDelivery = async (
       const tobaccoIds = [...new Set(received.map((line) => line.tobaccoId!))];
       const fromPlan = await tx.shelfItem.count({ where: { tobaccoId: { in: tobaccoIds }, status: 'plan' } });
       const before = await mixStatuses(tx, tobaccoIds);
-      for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active');
+      for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active', receivedAt);
 
       if (delivery.supplierId) {
         for (const line of delivery.lines.filter((item) => item.kind === 'tobacco' && item.tobaccoId)) {
