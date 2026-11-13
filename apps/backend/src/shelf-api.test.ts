@@ -236,3 +236,17 @@ test('«В план» for a tobacco already in work sets no plannedAt', async ()
   const { item } = response.json() as { item: Row };
   assert.deepEqual([item.shelfStatus, item.plannedAt], ['active', null]);
 });
+
+test('«На полку» after the plan was removed clears plannedAt', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const headers = { authorization: `Bearer ${token}` };
+  const offShelf = await prisma.tobacco.findFirstOrThrow({ where: { shelfItem: null, archived: false } });
+
+  await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'plan' } });
+  await app.inject({ method: 'DELETE', url: `/staff/shelf/${offShelf.id}`, headers });
+  const back = await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'active' } });
+  assert.equal(back.statusCode, 200);
+  const { item } = back.json() as { item: Row };
+  assert.deepEqual([item.shelfStatus, item.plannedAt], ['active', null]);
+});
