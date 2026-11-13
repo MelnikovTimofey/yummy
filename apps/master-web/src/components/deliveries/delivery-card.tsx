@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, ChevronDown, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { formatCount, type DeliveryCard, type DeliveryLine } from '@/contracts';
+import { formatCount, type DeliveryAccepted, type DeliveryCard, type DeliveryLine } from '@/contracts';
 import type { DeliveriesApi, DeliveryLinePatch } from '@/hooks/use-deliveries';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import {
@@ -17,6 +17,7 @@ import {
   formatPrice,
   guessTobaccoFromLine,
   lineMatch,
+  fromPlan,
   lineMatchHint,
   lineQty,
   localDateInput,
@@ -39,7 +40,7 @@ type DeliveryCardScreenProps = {
   initial: DeliveryCard | null;
   notify: Notify;
   onBack: () => void;
-  onAccepted: (card: DeliveryCard) => void;
+  onAccepted: (accepted: DeliveryAccepted) => void;
   onDeleted: () => void;
 };
 
@@ -373,6 +374,7 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                   const tag = isCreated ? { tone: 'info' as const, label: 'создана' } : LINE_MATCH_TAG[match];
                   const hint = isCreated ? (line.newOnShelf ? 'новый на полке' : '') : lineMatchHint(line);
                   const skip = match === 'skip';
+                  const planned = fromPlan(line, draft);
                   const selectTone = match === 'none' ? 'danger' : match === 'suggest' || match === 'weak' ? 'warn' : undefined;
                   return (
                     <tr key={line.id} data-line-id={line.id} data-match={match}>
@@ -426,8 +428,13 @@ export const DeliveryCardScreen = ({ api, id, initial, notify, onBack, onAccepte
                                 )}
                               </span>
                             )}
-                            {hint || (draft && (match === 'weak' || match === 'none')) ? (
+                            {hint || planned || (draft && (match === 'weak' || match === 'none')) ? (
                               <small>
+                                {planned ? (
+                                  <span className="tag" data-tone="info">
+                                    из плана
+                                  </span>
+                                ) : null}
                                 {hint}
                                 {draft && match === 'weak' ? (
                                   <button

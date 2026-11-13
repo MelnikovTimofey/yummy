@@ -5,7 +5,7 @@ import {
   CONFIDENT_MATCH,
   acceptBarSummary,
   acceptLabel,
-  acceptedToastTitle,
+  acceptedToast,
   deliveryHeadline,
   deliveryListCard,
   deliveryPhoneHead,
@@ -15,6 +15,7 @@ import {
   formatFullDate,
   formatMoney,
   formatPrice,
+  fromPlan,
   guessTobaccoFromLine,
   lineMatch,
   lineQty,
@@ -104,6 +105,19 @@ test('lineMatchHint: только то, чего не видно в селект
     'похоже на Black Burn Ananas Shock, 64 %',
   );
   assert.equal(lineMatchHint(line({ kind: 'skip', tobacco: null, matchReason: null })), 'не табак');
+});
+
+test('fromPlan: строка черновика с табаком в плане помечается «из плана»', () => {
+  const planned = line({ tobacco: { id: 't1', manufacturer: 'Bonche', lineName: '', name: 'Caramel', shelfStatus: 'plan' } });
+  assert.equal(fromPlan(planned, true), true);
+  // Пришло ли по счёту — неважно: строка всё равно закрывает план.
+  assert.equal(fromPlan(line({ ...planned, arrived: false }), true), true);
+  // У принятой поставки метки нет: табак уже в работе.
+  assert.equal(fromPlan(planned, false), false);
+  assert.equal(fromPlan(line(), true), false);
+  assert.equal(fromPlan(line({ tobacco: { id: 't1', manufacturer: 'A', lineName: '', name: 'B', shelfStatus: null } }), true), false);
+  assert.equal(fromPlan(line({ tobacco: null, matchReason: null }), true), false);
+  assert.equal(fromPlan(line({ ...planned, kind: 'skip' }), true), false);
 });
 
 test('summarizeLines считает сводные метки разбора', () => {
@@ -271,10 +285,16 @@ test('tobaccosToReceive: сколько разных табаков вернёт
   assert.equal(tobaccosToReceive([]), 0);
 });
 
-test('тост приёмки: сколько табаков снова в наличии', () => {
-  assert.equal(acceptedToastTitle(1), 'Принято: 1 табак в наличии');
-  assert.equal(acceptedToastTitle(3), 'Принято: 3 табака в наличии');
-  assert.equal(acceptedToastTitle(0), 'Поставка принята');
+test('тост приёмки: сколько пришло из плана и сколько миксов открылось', () => {
+  const lines = [line(), line({ id: 'l2', tobacco: { id: 't2', manufacturer: 'Bonche', lineName: '', name: 'Caramel', shelfStatus: 'active' } })];
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 2, openedMixes: 2 }), { title: 'Поставка принята', text: 'Из плана пришли: 2. Открылись миксы: 2.' });
+  // Часть с нулём не показывается.
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 1, openedMixes: 0 }), { title: 'Поставка принята', text: 'Из плана пришли: 1.' });
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 0, openedMixes: 3 }), { title: 'Поставка принята', text: 'Открылись миксы: 3.' });
+  // Обе нулевые — тост как раньше: сколько табаков снова в наличии.
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 0, openedMixes: 0 }), { title: 'Принято: 2 табака в наличии', text: '' });
+  assert.deepEqual(acceptedToast({ lines: [line()], fromPlan: 0, openedMixes: 0 }), { title: 'Принято: 1 табак в наличии', text: '' });
+  assert.deepEqual(acceptedToast({ lines: [], fromPlan: 0, openedMixes: 0 }), { title: 'Поставка принята', text: '' });
 });
 
 test('lineQty: «Приход» строки — штуки по счёту, без граммов', () => {

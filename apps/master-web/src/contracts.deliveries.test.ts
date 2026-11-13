@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeDeliveryCard, normalizeDeliveryList } from './contracts';
+import { normalizeDeliveryAccepted, normalizeDeliveryCard, normalizeDeliveryList } from './contracts';
 
 const rawLine = {
   id: 'l1',
@@ -131,4 +131,16 @@ test('normalizeDeliveryList на пустом ответе — пустой сп
   const list = normalizeDeliveryList(null);
   assert.deepEqual(list.items, []);
   assert.deepEqual(list.totals, { monthKop: 0, drafts: 0, suppliers: 0, memoryItems: 0 });
+});
+
+test('normalizeDeliveryAccepted: карточка и счётчики приёмки, без поля — ноль', () => {
+  const accepted = normalizeDeliveryAccepted({ id: 'd1', kind: 'invoice', status: 'received', lines: [rawLine], fromPlan: 2, openedMixes: 3 });
+  assert.equal(accepted.id, 'd1');
+  assert.equal(accepted.status, 'received');
+  assert.equal(accepted.lines.length, 1);
+  assert.equal(accepted.fromPlan, 2);
+  assert.equal(accepted.openedMixes, 3);
+  const bare = normalizeDeliveryAccepted({ id: 'd1', status: 'received', fromPlan: 'много' });
+  assert.equal(bare.fromPlan, 0);
+  assert.equal(bare.openedMixes, 0);
 });
