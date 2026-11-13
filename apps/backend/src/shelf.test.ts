@@ -112,6 +112,13 @@ test.describe('стоп, настройки строки, полка и план
     assert.equal((await addToShelf(actor, BERRY, 'active', at(4))).plannedAt, null);
   });
 
+  test('в работу мимо плана — даты нет: план, «Убрать с полки», «На полку»', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+    await removeFromShelf(actor, PEACH, at(2));
+    const back = await addToShelf(actor, PEACH, 'active', at(3));
+    assert.deepEqual([back.shelfStatus, back.plannedAt], ['active', null]);
+  });
+
   test('табак в плане к гостю не попадает', async () => {
     const row = await addToShelf(actor, PEACH, 'plan', at(1));
     assert.deepEqual([row.shelfStatus, row.outAt, row.guestAvailable], ['plan', null, false]);

@@ -608,19 +608,23 @@ export const setTrialVerdict = async (actor: ShelfActor, tobaccoId: string, verd
 };
 
 // Повторное добавление убранного табака возвращает его на полку; то, что уже
-// держим, в план не понижается.
+// держим, в план не понижается. plannedAt (#561): в план — с этого момента; в работу
+// из плана — дата остаётся (по ней видно, что пришёл из плана); мимо плана — даты нет.
 export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan', now: Date) => {
   const tobacco = await tx.tobacco.findUnique({
     where: { id: tobaccoId },
     select: { shelfItem: { select: { id: true, status: true } } },
   });
   if (!tobacco) throw new ShelfNotFoundError(`Табак ${tobaccoId} не найден в каталоге`);
-  const plannedAt = status === 'plan' ? { plannedAt: now } : {};
-  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status, ...plannedAt } });
-  const next = tobacco.shelfItem.status === 'active' ? 'active' : status;
-  return tobacco.shelfItem.status === next
-    ? tx.shelfItem.findUniqueOrThrow({ where: { id: tobacco.shelfItem.id } })
-    : tx.shelfItem.update({ where: { id: tobacco.shelfItem.id }, data: { status: next, ...plannedAt } });
+  const plannedAt = status === 'plan' ? now : null;
+  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status, plannedAt } });
+  const current = tobacco.shelfItem.status;
+  const next = current === 'active' ? 'active' : status;
+  if (current === next) return tx.shelfItem.findUniqueOrThrow({ where: { id: tobacco.shelfItem.id } });
+  return tx.shelfItem.update({
+    where: { id: tobacco.shelfItem.id },
+    data: { status: next, ...(current === 'plan' ? {} : { plannedAt }) },
+  });
 };
 
 // Наличие стоящей или убранной строки не меняется. Новая строка и строка из плана
