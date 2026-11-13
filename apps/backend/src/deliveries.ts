@@ -618,7 +618,7 @@ export const acceptDelivery = async (
       // Пришедший табак — на полку в работу и «Есть» (#518).
       const received = delivery.lines.filter(isReceived);
       const tobaccoIds = [...new Set(received.map((line) => line.tobaccoId!))];
-      for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active');
+      for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active', receivedAt);
 
       if (delivery.supplierId) {
         for (const line of delivery.lines.filter((item) => item.kind === 'tobacco' && item.tobaccoId)) {
