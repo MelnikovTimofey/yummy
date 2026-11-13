@@ -4,7 +4,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { BusyLabel } from '@/components/ui/loading';
 import { ShelfCheck } from '@/components/shelf/shelf-bulk';
 import { formatMetricValue, type InventoryTobacco } from '@/contracts';
-import { catalogBrandLine, catalogCardShelf, formatInMixes } from '@/lib/catalog-mobile';
+import { catalogBrandLine, catalogCardShelf, catalogRemoveLabel, formatInMixes } from '@/lib/catalog-mobile';
 import type { ShelfState } from '@/lib/shelf';
 import type { CatalogBatchAction } from './inventory-view';
 
@@ -17,10 +17,13 @@ type CatalogMobileListProps = {
   // Режим выбора: null — обычный список.
   picked: string[] | null;
   pendingRowId: string;
+  // Табак, для которого ждём ответа «В план», а не «На полку».
+  planningId: string;
   batchBusy: boolean;
   onOpen: (item: InventoryTobacco) => void;
   onPick: (item: InventoryTobacco) => void;
   onAddToShelf: (item: InventoryTobacco) => void;
+  onAddToPlan: (item: InventoryTobacco) => void;
   onMenu: (item: InventoryTobacco) => void;
 };
 
@@ -29,10 +32,12 @@ export const CatalogMobileList = ({
   shelfStates,
   picked,
   pendingRowId,
+  planningId,
   batchBusy,
   onOpen,
   onPick,
   onAddToShelf,
+  onAddToPlan,
   onMenu,
 }: CatalogMobileListProps) => (
   <ul className="m-catalog-list" aria-label="Табаки каталога" data-picking={picked ? true : undefined}>
@@ -41,6 +46,8 @@ export const CatalogMobileList = ({
       const shelf = catalogCardShelf(state);
       const isPicked = picked?.includes(item.id) ?? false;
       const flavors = (item.flavors ?? []).slice(0, 3).join(', ');
+      const pending = pendingRowId === item.id;
+      const addDisabled = pending || batchBusy || item.archived;
       return (
         <li
           key={item.id}
@@ -77,19 +84,35 @@ export const CatalogMobileList = ({
                 <Ellipsis size={18} aria-hidden />
               </button>
             ) : (
-              <button
-                type="button"
-                className="m-catalog-card__btn"
-                aria-label={`На полку: ${item.name}`}
-                disabled={pendingRowId === item.id || batchBusy || item.archived}
-                aria-busy={pendingRowId === item.id || undefined}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onAddToShelf(item);
-                }}
-              >
-                <BusyLabel busy={pendingRowId === item.id}>На полку</BusyLabel>
-              </button>
+              <span className="m-catalog-card__actions">
+                <button
+                  type="button"
+                  className="m-catalog-card__btn"
+                  aria-label={`На полку: ${item.name}`}
+                  disabled={addDisabled}
+                  aria-busy={(pending && planningId !== item.id) || undefined}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAddToShelf(item);
+                  }}
+                >
+                  <BusyLabel busy={pending && planningId !== item.id}>На полку</BusyLabel>
+                </button>
+                <button
+                  type="button"
+                  className="m-catalog-card__btn"
+                  data-variant="ghost"
+                  aria-label={`В план: ${item.name}`}
+                  disabled={addDisabled}
+                  aria-busy={(pending && planningId === item.id) || undefined}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAddToPlan(item);
+                  }}
+                >
+                  <BusyLabel busy={pending && planningId === item.id}>В план</BusyLabel>
+                </button>
+              </span>
             )}
           </div>
           <div className="m-catalog-card__foot">
@@ -105,14 +128,17 @@ export const CatalogMobileList = ({
   </ul>
 );
 
-// Меню «⋯» карточки: «Профиль», как в меню строки на десктопе, и «Убрать с полки» из профиля.
+// Меню «⋯» карточки: «Профиль», как в меню строки на десктопе, и «Убрать с полки»
+// или «Убрать из плана» из профиля.
 export const CatalogActionsSheet = ({
   item,
+  state,
   onProfile,
   onRemoveFromShelf,
   onClose,
 }: {
   item: InventoryTobacco;
+  state: ShelfState;
   onProfile: () => void;
   onRemoveFromShelf: () => void;
   onClose: () => void;
@@ -132,7 +158,7 @@ export const CatalogActionsSheet = ({
           Профиль
         </button>
         <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(onRemoveFromShelf)}>
-          Убрать с полки
+          {catalogRemoveLabel(state)}
         </button>
       </div>
     </BottomSheet>

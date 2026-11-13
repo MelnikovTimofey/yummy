@@ -606,6 +606,9 @@ export const App = () => {
   const onAddToShelf = (item: InventoryTobacco) =>
     runCatalogShelfAction(item, () => shelf.add(item.id), 'Не удалось поставить табак на полку');
 
+  const onAddToPlan = (item: InventoryTobacco) =>
+    runCatalogShelfAction(item, () => shelf.add(item.id, 'plan'), 'Не удалось добавить табак в план');
+
   const onRemoveFromShelf = (item: InventoryTobacco) =>
     runCatalogShelfAction(item, () => shelf.remove(item.id), 'Не удалось убрать табак с полки');
 
@@ -883,6 +886,7 @@ export const App = () => {
       onSetSelection={setSelectedInventoryIds}
       onToggleSelectAll={onToggleSelectAllInventory}
       onAddToShelf={(item) => void onAddToShelf(item)}
+      onAddToPlan={(item) => void onAddToPlan(item)}
       onRemoveFromShelf={(item) => void onRemoveFromShelf(item)}
       onArchiveTobacco={(item, archived) => void onArchiveTobacco(item, archived)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
