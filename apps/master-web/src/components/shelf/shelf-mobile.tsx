@@ -1,6 +1,6 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
-import { shelfRowAction, shelfRowMenu } from '@/lib/shelf';
+import { restockLabel, shelfRowAction, shelfRowMenu } from '@/lib/shelf';
 import { ShelfCheck } from './shelf-bulk';
 import type { ShelfRowActions } from './shelf-row-menu';
 import { ShelfStatusCell } from './shelf-status';
@@ -68,8 +68,8 @@ export const ShelfMobileList = ({
               Закончился
             </button>
           ) : action === 'restock' ? (
-            <button type="button" className="m-shelf-card__btn" aria-label={`Вернуть в наличие ${fullName(row)}`} disabled={busy} onClick={() => onRestock(row)}>
-              Вернуть
+            <button type="button" className="m-shelf-card__btn" aria-label={`${restockLabel(row)} ${fullName(row)}`} disabled={busy} onClick={() => onRestock(row)}>
+              {row.shelfStatus === 'plan' ? 'В наличие' : 'Вернуть'}
             </button>
           ) : action === 'unstop' ? (
             <button type="button" className="m-shelf-card__btn" disabled={busy} onClick={() => onUnstop(row)}>

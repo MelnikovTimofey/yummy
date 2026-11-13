@@ -6758,7 +6758,6 @@ button[aria-busy="true"]:disabled {
 .shelf-table tbody tr:hover { background: var(--bg-elevated); }
 .shelf-table tbody tr[data-active="true"] { background: var(--accent-soft); }
 .shelf-table .shelf-table__num { text-align: right; }
-.shelf-table__note { font-size: var(--fs-xs); }
 
 .shelf-table__empty { display: grid; justify-items: center; gap: 10px; margin: 12px; }
 .shelf-table__empty p { margin: 0; }
