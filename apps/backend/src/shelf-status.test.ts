@@ -70,8 +70,11 @@ test.describe('«Вернуть в наличие»', () => {
     assert.deepEqual([item.shelfStatus, item.outAt, item.guestAvailable], ['active', null, true]);
     assert.equal(await inStock(PEACH), true);
 
+    assert.equal(item.plannedAt, at(1).toISOString());
+
     const undone = await undoRestockBatch(actor, batchId, at(3));
     assert.deepEqual(undone.items.map((row) => [row.tobacco.id, row.shelfStatus, row.outAt, row.guestAvailable]), [[PEACH, 'plan', null, false]]);
+    assert.equal(undone.items[0].plannedAt, at(1).toISOString());
     assert.equal(await inStock(PEACH), false);
   });
 
@@ -152,6 +155,16 @@ test.describe('приходы из счетов', () => {
       [at(3).toISOString(), 'manual', 'Каспий Опт', 2],
       [start.toISOString(), 'start', null, 1],
     ]);
+  });
+
+  test('приёмка табака из плана сохраняет дату постановки в план (#561)', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+    const draft = await createManualDraft(actor, { supplierName: 'Каспий Опт' });
+    await addLine(draft.id, { rawName: 'Peach Silk', qty: 1, tobaccoId: PEACH });
+    await acceptDelivery(actor, draft.id, { receivedAt: at(3) });
+
+    const row = await rowOf(PEACH, at(4));
+    assert.deepEqual([row.shelfStatus, row.outAt, row.plannedAt], ['active', null, at(1).toISOString()]);
   });
 
   test('граммы в штуке — данные счёта: приход по строке один', async () => {

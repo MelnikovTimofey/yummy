@@ -103,6 +103,15 @@ test.describe('стоп, настройки строки, полка и план
     assert.equal(row.shelfStatus, 'active');
   });
 
+  test('дата постановки в план (#561): новая строка и возврат после «Убрать с полки»', async () => {
+    assert.equal((await addToShelf(actor, PEACH, 'plan', at(1))).plannedAt, at(1).toISOString());
+    assert.equal((await addToShelf(actor, PEACH, 'plan', at(2))).plannedAt, at(1).toISOString());
+    assert.equal((await removeFromShelf(actor, PEACH, at(3))).plannedAt, at(1).toISOString());
+    assert.equal((await addToShelf(actor, PEACH, 'plan', at(4))).plannedAt, at(4).toISOString());
+    assert.equal((await addToShelf(actor, MINT, 'plan', at(4))).plannedAt, null);
+    assert.equal((await addToShelf(actor, BERRY, 'active', at(4))).plannedAt, null);
+  });
+
   test('табак в плане к гостю не попадает', async () => {
     const row = await addToShelf(actor, PEACH, 'plan', at(1));
     assert.deepEqual([row.shelfStatus, row.outAt, row.guestAvailable], ['plan', null, false]);
@@ -227,6 +236,7 @@ test.describe('экран «Полка»', () => {
       'mixCount',
       'note',
       'outAt',
+      'plannedAt',
       'shelfStatus',
       'stopNote',
       'stopped',

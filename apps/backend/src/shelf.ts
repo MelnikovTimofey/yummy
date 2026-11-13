@@ -196,6 +196,8 @@ export type ShelfRow = {
   guestAvailable: boolean;
   // С какого момента «Закончился»; null — «Есть».
   outAt: string | null;
+  // С какого момента в плане (#561); null — в план не ставили.
+  plannedAt: string | null;
   lastArrival: ArrivalView | null;
   mixCount: number;
   keepStocked: boolean;
@@ -243,6 +245,7 @@ const toRow = (record: ShelfRecord, mixCount: number, analogs: AnalogRecord[], a
   shelfStatus: record.status as ShelfItemStatus,
   guestAvailable: !record.outAt && !record.stopped && record.status === 'active' && !record.tobacco.archived,
   outAt: iso(record.outAt),
+  plannedAt: iso(record.plannedAt),
   lastArrival: arrivals.length ? arrivalView(arrivals[0]) : null,
   mixCount,
   keepStocked: record.keepStocked,
@@ -606,17 +609,18 @@ export const setTrialVerdict = async (actor: ShelfActor, tobaccoId: string, verd
 
 // Повторное добавление убранного табака возвращает его на полку; то, что уже
 // держим, в план не понижается.
-export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan') => {
+export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan', now: Date) => {
   const tobacco = await tx.tobacco.findUnique({
     where: { id: tobaccoId },
     select: { shelfItem: { select: { id: true, status: true } } },
   });
   if (!tobacco) throw new ShelfNotFoundError(`Табак ${tobaccoId} не найден в каталоге`);
-  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status } });
+  const plannedAt = status === 'plan' ? { plannedAt: now } : {};
+  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status, ...plannedAt } });
   const next = tobacco.shelfItem.status === 'active' ? 'active' : status;
   return tobacco.shelfItem.status === next
     ? tx.shelfItem.findUniqueOrThrow({ where: { id: tobacco.shelfItem.id } })
-    : tx.shelfItem.update({ where: { id: tobacco.shelfItem.id }, data: { status: next } });
+    : tx.shelfItem.update({ where: { id: tobacco.shelfItem.id }, data: { status: next, ...plannedAt } });
 };
 
 // Наличие стоящей или убранной строки не меняется. Новая строка и строка из плана
@@ -624,7 +628,7 @@ export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' 
 export const addToShelf = async (actor: ShelfActor, tobaccoId: string, status: 'active' | 'plan', now = new Date()) => {
   await prisma.$transaction(async (tx) => {
     const before = await tx.shelfItem.findUnique({ where: { tobaccoId }, select: { status: true } });
-    const item = await ensureOnShelf(tx, tobaccoId, status);
+    const item = await ensureOnShelf(tx, tobaccoId, status, now);
     if (!before || before.status === 'plan') {
       await tx.shelfItem.update({ where: { id: item.id }, data: { outAt: item.status === 'plan' ? null : now } });
     }
@@ -680,7 +684,7 @@ export const startShelfFromStock = async (tx: Tx, now: Date) => {
 export const setStockedLegacy = async (tx: Tx, tobaccoIds: string[], inStock: boolean, now: Date) => {
   for (const tobaccoId of tobaccoIds) {
     if (inStock) {
-      const item = await ensureOnShelf(tx, tobaccoId, 'active');
+      const item = await ensureOnShelf(tx, tobaccoId, 'active', now);
       await tx.shelfItem.update({ where: { id: item.id }, data: { stopped: false, stopNote: null, outAt: null } });
     } else {
       await tx.shelfItem.updateMany({ where: { tobaccoId, status: { not: 'plan' }, outAt: null }, data: { outAt: now } });
