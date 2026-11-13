@@ -6727,7 +6727,7 @@ button[aria-busy="true"]:disabled {
 
 .shelf-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1180px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -7125,6 +7125,20 @@ button[aria-busy="true"]:disabled {
 .shelf-card__stop-note { display: flex; gap: 8px; }
 
 /* Аналоги (#482) — по design/design_handoff_tobacco_analogs (#shot=shelf, shelf-analogs, shelf-suggest). */
+
+.shelf-analogs { display: grid; gap: 1px; min-width: 0; line-height: 1.25; }
+.shelf-analogs__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.shelf-analogs__item[data-off] { color: var(--text-faint); }
+.shelf-analogs__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.shelf-sub-mark { display: inline-flex; flex: none; color: var(--text-muted); }
 
 .shelf-analog-list {
   list-style: none;
@@ -7794,6 +7808,18 @@ button[aria-busy="true"]:disabled {
   font-size: 13px;
   color: var(--text-primary);
 }
+
+/* Аналоги в карточке телефона: в строку, подпись слева. */
+.m-shelf-card__analogs {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.m-shelf-card__analogs .shelf-analogs { display: flex; flex-wrap: wrap; gap: 2px 10px; }
 
 /* =====================================================================
    Каталог → «Идеи для закупки» и колонки htreviews (#214) — по

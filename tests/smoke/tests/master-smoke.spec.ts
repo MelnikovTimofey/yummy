@@ -443,6 +443,11 @@ test.describe('Master on a phone', () => {
     // Страница не уезжает вбок: карточки вместо широкой таблицы.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+    // Аналоги (#482) — строкой в карточке; Lime Spark закончился и приглушён (seed #478).
+    const analogs = page.locator('.m-shelf-card[data-tobacco-id="tobacco-citrus-breeze"] .m-shelf-card__analogs');
+    await expect(analogs).toContainText('Аналоги');
+    await expect(analogs.locator('.shelf-analogs__item[data-off]').filter({ hasText: 'Lime Spark' })).toHaveCount(1);
+
     // Граммов и отметок остатка нет (#518): в карточке только статус.
     await expect(card).toContainText('Есть');
     await expect(card.getByRole('button', { name: 'Указать остаток' })).toHaveCount(0);
@@ -1155,14 +1160,17 @@ test.describe('Master mixes on a phone', () => {
 
 // Аналоги на «Полке» (#482): «Сделать аналогом» из похожих — тост с названием,
 // аналог в карточках обоих табаков (связь взаимная), «Отменить» возвращает как было.
-// Колонки «Аналоги» в таблице нет (#518, #shot=shelf): аналоги живут в карточке.
+// В таблице — столбец «Аналоги»: закончившийся приглушён.
 test('Master shelf card makes a similar tobacco an analog and undo restores it', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
   await openWorkspace(page, 'Полка');
 
   const rowOf = (id: string) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
   const source = rowOf('tobacco-citrus-breeze');
-  await expect(page.getByRole('columnheader', { name: 'Аналоги' })).toHaveCount(0);
+  await expect(page.getByRole('columnheader', { name: 'Аналоги' })).toBeVisible();
+  const analogsCell = source.locator('.shelf-analogs__item');
+  await expect(analogsCell).toHaveCount(1);
+  await expect(analogsCell.and(page.locator('[data-off]'))).toHaveText('Lime Spark');
 
   await source.locator('td').nth(1).click();
   const card = page.getByRole('dialog');
@@ -1180,6 +1188,8 @@ test('Master shelf card makes a similar tobacco an analog and undo restores it',
   await expect(toast).toContainText('Аналог Citrus Breeze.');
   await expect(card.locator('.shelf-analog')).toHaveCount(2);
   await expect(card.locator('.shelf-analog').nth(1)).toContainText(analogName);
+  await expect(analogsCell).toHaveCount(2);
+  await expect(analogsCell.nth(1)).toContainText(analogName);
 
   // Связь взаимная: у аналога в карточке — Citrus Breeze. Тост с отменой живёт 10 с.
   await page.keyboard.press('Escape');
@@ -1192,6 +1202,7 @@ test('Master shelf card makes a similar tobacco an analog and undo restores it',
 
   await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
   await expect(toast).toBeHidden();
+  await expect(analogsCell).toHaveCount(1);
   await source.locator('td').nth(1).click();
   await expect(card.locator('.shelf-analog')).toHaveCount(1);
 });
