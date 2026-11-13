@@ -736,15 +736,12 @@ test('smoke CTA events and guest ratings reach the dashboard', async () => {
 
   const dashboardBody = dashboard.json() as {
     period: { key: string; days: number };
-    enough: boolean;
     kpi: { choices: number; ownMixes: number; mixesChosen: number; avgRating: number | null; ratingsCount: number };
     signals: { hiddenMixes: Array<{ mixId: string; mixName: string }> };
   };
 
   assert.equal(dashboardBody.period.key, '7d');
   assert.equal(dashboardBody.period.days, 7);
-  // Три выбора — меньше 20: графиков нет, плитки и сигналы есть.
-  assert.equal(dashboardBody.enough, false);
   assert.equal(dashboardBody.kpi.choices, 3);
   assert.equal(dashboardBody.kpi.ownMixes, 0);
   assert.equal(dashboardBody.kpi.mixesChosen, 2);

@@ -51,8 +51,6 @@ const PERIODS: Array<{ key: PeriodKey; label: string }> = [
   { key: 'custom', label: 'Даты' },
 ];
 
-// Порог как APP_MIN_EVENTS на backend: меньше — графики не строим.
-const MIN_CHOICES = 20;
 const PHONE_TOP = 5;
 
 const timelineConfig = {
@@ -81,17 +79,10 @@ export const buildKpiTiles = (kpi: GuestChoices['kpi'], phone: boolean): MasterS
   ];
 };
 
-export const noDataText = (period: GuestChoices['period'], choices: number) => {
-  const range = rangeLabel(period);
-  if (!choices) {
-    return { title: 'Выборов нет', text: period.key === 'all' ? 'Гости пока ничего не выбирали.' : `За ${range} гости ничего не выбирали.` };
-  }
-  const head = range.charAt(0).toLocaleUpperCase('ru-RU') + range.slice(1);
-  return {
-    title: 'Мало данных',
-    text: `${head}: ${formatCount(choices, ['выбор', 'выбора', 'выборов'])}. Графики появятся с ${MIN_CHOICES} выборов, выберите период длиннее.`,
-  };
-};
+export const noDataText = (period: GuestChoices['period']) => ({
+  title: 'Выборов нет',
+  text: period.key === 'all' ? 'Гости пока ничего не выбирали.' : `За ${rangeLabel(period)} гости ничего не выбирали.`,
+});
 
 export const periodPressed = (key: PeriodKey, period: GuestChoicesPeriod, calendarOpen: boolean) =>
   calendarOpen ? key === 'custom' : period.key === key;
@@ -289,7 +280,7 @@ function Signals({ data, onSignal }: { data: GuestChoices; onSignal: (kind: Sign
 }
 
 // Дашборд (#520, design/design_handoff_guest_analytics): выборы гостей за период.
-// Меньше 20 выборов — одна карточка «Мало данных» вместо графиков, плитки и сигналы остаются.
+// Без выборов за период — одна карточка «Выборов нет» вместо графиков, плитки и сигналы остаются.
 export function DashboardView({ data, period, status, error, onPeriodChange, onSignal }: DashboardViewProps) {
   const phone = useIsPhone();
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -345,7 +336,7 @@ export function DashboardView({ data, period, status, error, onPeriodChange, onS
     </div>
   );
 
-  const nothing = data && !data.enough ? noDataText(data.period, data.kpi.choices) : null;
+  const nothing = data && !data.kpi.choices ? noDataText(data.period) : null;
   const signals = data ? (
     <Card id="dash-signals" title="Сигналы">
       <Signals data={data} onSignal={onSignal} />

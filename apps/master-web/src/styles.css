@@ -6154,7 +6154,7 @@ input[type="checkbox"] {
 
 .dash-card .empty { padding: 0; text-align: left; }
 
-/* Мало данных и пусто — одна карточка вместо графиков. */
+/* Выборов нет — одна карточка вместо графиков. */
 .dash-few {
   justify-items: center;
   gap: 4px;
