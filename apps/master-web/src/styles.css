@@ -7295,7 +7295,7 @@ button[aria-busy="true"]:disabled {
 .deliv-raw--skip { opacity: 0.5; }
 
 .deliv-match { display: grid; gap: 3px; min-width: 0; }
-.deliv-match small { display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--fs-xs); color: var(--text-faint); }
+.deliv-match small { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-faint); }
 .deliv-match b { font-weight: 500; }
 
 .deliv-select {

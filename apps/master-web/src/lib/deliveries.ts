@@ -60,6 +60,11 @@ export const lineMatchHint = (line: DeliveryLine) => {
   }
 };
 
+// «из плана» (#565): строка черновика закрывает табак, который ждёт в плане.
+// После приёмки табак уже «Есть», поэтому у принятой поставки метки нет.
+export const fromPlan = (line: Pick<DeliveryLine, 'kind' | 'tobacco'>, draft: boolean) =>
+  draft && line.kind === 'tobacco' && line.tobacco?.shelfStatus === 'plan';
+
 export const summarizeLines = (lines: DeliveryLine[]) => {
   const summary = { memory: 0, catalog: 0, suggest: 0, none: 0, skip: 0, manual: 0 };
   for (const item of lines) {

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ArrowLeft, Ellipsis } from 'lucide-react';
 import type { DeliveryLine, DeliveryListItem } from '@/contracts';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { LINE_MATCH_TAG, deliveryListCard, deliveryStatusTag, formatMoney, lineMatch, lineMatchHint, lineQty, type TagTone } from '@/lib/deliveries';
+import { LINE_MATCH_TAG, deliveryListCard, deliveryStatusTag, formatMoney, fromPlan, lineMatch, lineMatchHint, lineQty, type TagTone } from '@/lib/deliveries';
 
 // «Поставки» на телефоне (#540, #shot=deliveries, delivery): счета и строки
 // счёта карточками вместо таблиц, действия — те же, что у таблиц.
@@ -98,6 +98,7 @@ export const DeliveryLineCard = ({ line, draft, busy, created, pickerOpen, toggl
   const needsTobacco = match === 'none' || match === 'weak';
   // Подсказка нужна, только когда за ней действие: «похоже на …» у слабого совпадения.
   const hint = match === 'weak' ? lineMatchHint(line) : '';
+  const planned = fromPlan(line, draft);
   const tobaccoName = line.tobacco ? (
     <>
       <b>{line.tobacco.name}</b> <span className="shelf-faint">{line.tobacco.manufacturer}</span>
@@ -126,8 +127,9 @@ export const DeliveryLineCard = ({ line, draft, busy, created, pickerOpen, toggl
               <span className="m-deliv-line__tobacco">{tobaccoName}</span>
             )
           ) : null}
-          {draft && hint ? (
+          {(draft && hint) || planned ? (
             <small className="m-deliv-line__hint">
+              {planned ? <ToneTag tone="info">из плана</ToneTag> : null}
               {hint}
               {match === 'weak' ? (
                 <button type="button" className="shelf-link deliv-link" disabled={busy} onClick={onPickCandidate}>

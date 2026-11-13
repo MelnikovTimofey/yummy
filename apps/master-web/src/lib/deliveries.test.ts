@@ -15,6 +15,7 @@ import {
   formatFullDate,
   formatMoney,
   formatPrice,
+  fromPlan,
   guessTobaccoFromLine,
   lineMatch,
   lineQty,
@@ -104,6 +105,19 @@ test('lineMatchHint: только то, чего не видно в селект
     'похоже на Black Burn Ananas Shock, 64 %',
   );
   assert.equal(lineMatchHint(line({ kind: 'skip', tobacco: null, matchReason: null })), 'не табак');
+});
+
+test('fromPlan: строка черновика с табаком в плане помечается «из плана»', () => {
+  const planned = line({ tobacco: { id: 't1', manufacturer: 'Bonche', lineName: '', name: 'Caramel', shelfStatus: 'plan' } });
+  assert.equal(fromPlan(planned, true), true);
+  // Пришло ли по счёту — неважно: строка всё равно закрывает план.
+  assert.equal(fromPlan(line({ ...planned, arrived: false }), true), true);
+  // У принятой поставки метки нет: табак уже в работе.
+  assert.equal(fromPlan(planned, false), false);
+  assert.equal(fromPlan(line(), true), false);
+  assert.equal(fromPlan(line({ tobacco: { id: 't1', manufacturer: 'A', lineName: '', name: 'B', shelfStatus: null } }), true), false);
+  assert.equal(fromPlan(line({ tobacco: null, matchReason: null }), true), false);
+  assert.equal(fromPlan(line({ ...planned, kind: 'skip' }), true), false);
 });
 
 test('summarizeLines считает сводные метки разбора', () => {
