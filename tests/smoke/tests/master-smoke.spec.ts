@@ -75,6 +75,9 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   // видна независимо от размера каталога.
   await applyStockFilter(page, 'Нет наличия');
   await expect(tobaccoRow).toBeVisible();
+  // У табака не на полке рядом с «На полку» — «В план» (#564, #shot=catalog). Не жмём.
+  await expect(tobaccoRow.getByRole('button', { name: /^На полку: / })).toBeVisible();
+  await expect(tobaccoRow.getByRole('button', { name: /^В план: / })).toBeVisible();
   await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
   await page.getByRole('button', { name: 'На полку', exact: true }).click();

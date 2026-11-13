@@ -14,6 +14,7 @@ import { rankBySearch } from '@/lib/search-match';
 import { useDragSelect } from '@/hooks/use-drag-select';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import type { ShelfState } from '@/lib/shelf';
+import { catalogRemoveLabel } from '@/lib/catalog-mobile';
 import { CatalogActionsSheet, CatalogMobileBulk, CatalogMobileList } from './catalog-mobile';
 import {
   CATALOG_SORTS,
@@ -87,6 +88,8 @@ type InventoryViewProps = {
   onSetSelection: (ids: string[]) => void;
   onToggleSelectAll: () => void;
   onAddToShelf: (item: InventoryTobacco) => void;
+  // «В план» (#564): тот же запрос, что в «Идеях для закупки».
+  onAddToPlan: (item: InventoryTobacco) => void;
   onRemoveFromShelf: (item: InventoryTobacco) => void;
   onArchiveTobacco: (item: InventoryTobacco, archived: boolean) => void;
   onRunBatchAction: (action: CatalogBatchAction) => void;
@@ -567,6 +570,7 @@ export const InventoryView = ({
   onSetSelection,
   onToggleSelectAll,
   onAddToShelf,
+  onAddToPlan,
   onRemoveFromShelf,
   onArchiveTobacco,
   onRunBatchAction,
@@ -586,6 +590,16 @@ export const InventoryView = ({
   const [activeItemId, setActiveItemId] = useState('');
   // Меню «⋯» карточки на телефоне.
   const [menuItemId, setMenuItemId] = useState('');
+  // Ожидание у табака одно на обе кнопки: помним, что нажали — «В план» или «На полку».
+  const [planningId, setPlanningId] = useState('');
+  const addToShelf = (item: InventoryTobacco) => {
+    setPlanningId('');
+    onAddToShelf(item);
+  };
+  const addToPlan = (item: InventoryTobacco) => {
+    setPlanningId(item.id);
+    onAddToPlan(item);
+  };
 
   useEffect(() => {
     if (!openCardId || !items.some((item) => item.id === openCardId)) return;
@@ -605,6 +619,8 @@ export const InventoryView = ({
 
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
+  const activeShelfStatus = activeItem ? shelfStatuses.get(activeItem.id) : undefined;
+  const drawerBusy = (activeItem !== null && pendingRowId === activeItem.id) || pendingBatchAction !== '';
   const editingItem = editorMode === 'edit'
     ? items.find((item) => item.id === editorDraft.id) ?? null
     : null;
@@ -786,21 +802,45 @@ export const InventoryView = ({
           <section className="tobacco-detail-drawer__section">
             <p className="tobacco-detail-drawer__label">Действия</p>
             <div className="tobacco-detail-drawer__actions">
-              <button
-                type="button"
-                className="btn"
-                data-size="sm"
-                data-variant={shelfStatuses.has(activeItem.id) ? 'ghost' : 'primary'}
-                onClick={() =>
-                  shelfStatuses.has(activeItem.id) ? onRemoveFromShelf(activeItem) : onAddToShelf(activeItem)
-                }
-                disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
-                aria-busy={pendingRowId === activeItem.id || undefined}
-              >
-                <BusyLabel busy={pendingRowId === activeItem.id}>
-                  {shelfStatuses.has(activeItem.id) ? 'Убрать с полки' : 'На полку'}
-                </BusyLabel>
-              </button>
+              {activeShelfStatus ? (
+                <button
+                  type="button"
+                  className="btn"
+                  data-size="sm"
+                  data-variant="ghost"
+                  onClick={() => onRemoveFromShelf(activeItem)}
+                  disabled={drawerBusy}
+                  aria-busy={pendingRowId === activeItem.id || undefined}
+                >
+                  <BusyLabel busy={pendingRowId === activeItem.id}>{catalogRemoveLabel(activeShelfStatus)}</BusyLabel>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn"
+                    data-size="sm"
+                    data-variant="primary"
+                    onClick={() => addToShelf(activeItem)}
+                    disabled={drawerBusy}
+                    aria-busy={(pendingRowId === activeItem.id && planningId !== activeItem.id) || undefined}
+                  >
+                    <BusyLabel busy={pendingRowId === activeItem.id && planningId !== activeItem.id}>На полку</BusyLabel>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    data-size="sm"
+                    data-variant="ghost"
+                    aria-label={`В план: ${activeItem.name}`}
+                    onClick={() => addToPlan(activeItem)}
+                    disabled={drawerBusy}
+                    aria-busy={(pendingRowId === activeItem.id && planningId === activeItem.id) || undefined}
+                  >
+                    <BusyLabel busy={pendingRowId === activeItem.id && planningId === activeItem.id}>В план</BusyLabel>
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="btn"
@@ -1355,6 +1395,8 @@ export const InventoryView = ({
     'Каталог пуст.'
   );
   const menuItem = items.find((item) => item.id === menuItemId) ?? null;
+  // «⋯» есть только у табака на полке или в плане.
+  const menuShelfState = (menuItem && shelfStates.get(menuItem.id)) || 'in';
 
   return (
     <section className={isPhone ? 'tobaccos-page tobaccos-page--phone' : 'tobaccos-page'}>
@@ -1461,16 +1503,19 @@ export const InventoryView = ({
             shelfStates={shelfStates}
             picked={picking ? selectedIds : null}
             pendingRowId={pendingRowId}
+            planningId={planningId}
             batchBusy={pendingBatchAction !== ''}
             onOpen={openEditEditor}
             onPick={(item) => onToggleSelection(item.id)}
-            onAddToShelf={onAddToShelf}
+            onAddToShelf={addToShelf}
+            onAddToPlan={addToPlan}
             onMenu={(item) => setMenuItemId(item.id)}
           />
           {!items.length && status !== 'loading' ? <div className="empty m-catalog-empty">{emptyList}</div> : null}
           {menuItem ? (
             <CatalogActionsSheet
               item={menuItem}
+              state={menuShelfState}
               onProfile={() => setActiveItemId(menuItem.id)}
               onRemoveFromShelf={() => onRemoveFromShelf(menuItem)}
               onClose={() => setMenuItemId('')}
@@ -1693,17 +1738,31 @@ export const InventoryView = ({
                       ) : shelfStatus === 'plan' ? (
                         <span className="tag" data-tone="info">в плане</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="btn"
-                          data-size="sm"
-                          aria-label={`На полку: ${item.name}`}
-                          onClick={() => onAddToShelf(item)}
-                          disabled={stockBusy || item.archived}
-                          aria-busy={pendingRowId === item.id || undefined}
-                        >
-                          <BusyLabel busy={pendingRowId === item.id}>На полку</BusyLabel>
-                        </button>
+                        <span className="inventory-shelf-actions">
+                          <button
+                            type="button"
+                            className="btn"
+                            data-size="sm"
+                            aria-label={`На полку: ${item.name}`}
+                            onClick={() => addToShelf(item)}
+                            disabled={stockBusy || item.archived}
+                            aria-busy={(pendingRowId === item.id && planningId !== item.id) || undefined}
+                          >
+                            <BusyLabel busy={pendingRowId === item.id && planningId !== item.id}>На полку</BusyLabel>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn"
+                            data-size="sm"
+                            data-variant="ghost"
+                            aria-label={`В план: ${item.name}`}
+                            onClick={() => addToPlan(item)}
+                            disabled={stockBusy || item.archived}
+                            aria-busy={(pendingRowId === item.id && planningId === item.id) || undefined}
+                          >
+                            <BusyLabel busy={pendingRowId === item.id && planningId === item.id}>В план</BusyLabel>
+                          </button>
+                        </span>
                       )}
                     </td>
                     <td className="inventory-table__mixes">

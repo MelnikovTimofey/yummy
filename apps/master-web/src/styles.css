@@ -2877,6 +2877,9 @@ input[type="checkbox"] {
   .m-catalog-card__btn:disabled,
   .m-catalog-bulk__main:disabled { opacity: 0.45; cursor: not-allowed; }
 
+  .m-catalog-card__actions { flex: 0 0 auto; display: flex; gap: 4px; }
+  .m-catalog-card__btn[data-variant="ghost"] { border-color: transparent; color: var(--text-secondary); }
+
   .icon-btn.m-catalog-card__menu { flex: 0 0 auto; width: 40px; height: 40px; margin: -8px -10px -8px 0; }
 
   .m-catalog-card__foot {
@@ -3623,7 +3626,7 @@ input[type="checkbox"] {
 }
 
 .inventory-table--redesign .inventory-table__stock {
-  width: 132px;
+  width: 188px;
 }
 
 .inventory-table--redesign .inventory-table__mixes {
@@ -7223,6 +7226,7 @@ button[aria-busy="true"]:disabled {
 
 /* Каталог: колонка «Полка» вместо тумблера наличия (#211). */
 .inventory-shelf-cell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.inventory-shelf-actions { display: inline-flex; gap: 4px; white-space: nowrap; }
 
 /* =====================================================================
    Поставки (#212) — по design/design_handoff_inventory (#shot=deliveries,
