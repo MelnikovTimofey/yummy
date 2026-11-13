@@ -141,8 +141,7 @@ export const ShelfCard = ({
             <div className="shelf-state" role="group" aria-label="Наличие">
               <button
                 type="button"
-                aria-pressed={state !== 'out'}
-                disabled={state === 'plan'}
+                aria-pressed={state === 'in' || state === 'stop'}
                 onClick={() => (items.canRestock ? onRestock(row) : undefined)}
               >
                 <i aria-hidden />
@@ -160,7 +159,7 @@ export const ShelfCard = ({
               </button>
             </div>
             {state === 'out' ? <p className="shelf-card__note shelf-faint">Вернётся в наличие сам, когда примете счёт с этим табаком.</p> : null}
-            {state === 'plan' ? <p className="shelf-card__note shelf-faint">Появится в наличии с приходом по счёту.</p> : null}
+            {state === 'plan' ? <p className="shelf-card__note shelf-faint">В плане. Встанет «Есть» сам, когда примете счёт с этим табаком.</p> : null}
           </section>
 
           {row.trial ? (

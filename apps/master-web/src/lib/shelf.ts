@@ -181,7 +181,7 @@ export const trialArrival = (arrivals: ShelfArrival[]) => {
 export const nextTrialVerdict = (current: ShelfTrialVerdict | null, clicked: ShelfTrialVerdict) =>
   current === clicked ? null : clicked;
 
-// Одна кнопка строки: «Закончился», «Вернуть в наличие» или «Снять стоп»; у плана — подпись.
+// Одна кнопка строки: «Закончился», «Вернуть в наличие» (у плана — «В наличие», #558) или «Снять стоп».
 export type ShelfRowAction = 'empty' | 'restock' | 'unstop' | null;
 
 export const shelfRowAction = (row: ShelfRow): ShelfRowAction => {
@@ -189,6 +189,7 @@ export const shelfRowAction = (row: ShelfRow): ShelfRowAction => {
     case 'in':
       return 'empty';
     case 'out':
+    case 'plan':
       return 'restock';
     case 'stop':
       return 'unstop';
@@ -197,6 +198,8 @@ export const shelfRowAction = (row: ShelfRow): ShelfRowAction => {
   }
 };
 
+export const restockLabel = (row: Pick<ShelfRow, 'shelfStatus'>) => (row.shelfStatus === 'plan' ? 'В наличие' : 'Вернуть в наличие');
+
 // Действия строки — одни и те же на десктопе, в карточке и на телефоне.
 export type ShelfRowMenu = { canEmpty: boolean; canRestock: boolean; stopLabel: string };
 
@@ -204,7 +207,7 @@ export const shelfRowMenu = (row: ShelfRow): ShelfRowMenu => {
   const state = shelfState(row);
   return {
     canEmpty: state === 'in' || state === 'stop',
-    canRestock: state === 'out',
+    canRestock: state === 'out' || state === 'plan',
     stopLabel: row.stopped ? 'Снять стоп для гостей' : 'Стоп для гостей',
   };
 };
@@ -220,9 +223,10 @@ export const emptyToast = (row: ShelfRow) => ({
       : 'Добавлен в заявку.',
 });
 
-export const restockToast = (row: ShelfRow) => ({
-  title: `${row.tobacco.name} снова есть`,
-  text: row.stopped ? 'Стоп для гостей остался.' : 'Вернулся на витрину.',
+// fromPlan — табак был в плане: «снова» к нему не подходит.
+export const restockToast = (row: ShelfRow, fromPlan = false) => ({
+  title: fromPlan ? `${row.tobacco.name} есть` : `${row.tobacco.name} снова есть`,
+  text: row.stopped ? 'Стоп для гостей остался.' : fromPlan ? 'Появился на витрине.' : 'Вернулся на витрину.',
 });
 
 export const keepToast = (row: ShelfRow) => ({

@@ -421,10 +421,10 @@ const loadBatchEvents = async (tx: Tx, batchId: string, action: AuditAction, und
     tx.auditEvent.count({ where: { ...where, action: undoAction } }),
   ]);
   if (!events.length || undone) throw new ShelfNotFoundError(`Пакет ${batchId} не найден`);
-  return events.map((event) => ({
-    tobaccoId: event.entityId,
-    outAt: (JSON.parse(event.details ?? '{}') as { outAt?: string | null }).outAt ?? null,
-  }));
+  return events.map((event) => {
+    const details = JSON.parse(event.details ?? '{}') as { outAt?: string | null; fromPlan?: boolean };
+    return { tobaccoId: event.entityId, outAt: details.outAt ?? null, fromPlan: details.fromPlan === true };
+  });
 };
 
 export type EmptySkip = { tobaccoId: string; reason: 'out' | 'plan' };
@@ -480,10 +480,11 @@ export const undoEmptyBatch = async (actor: ShelfActor, batchId: string, now = n
   return { items: await rowsOf(tobaccoIds, now) };
 };
 
-export type RestockSkip = { tobaccoId: string; reason: 'in' | 'plan' };
+export type RestockSkip = { tobaccoId: string; reason: 'in' };
 
 // «Вернуть в наличие» (#518): снимает «Закончился». Прежняя дата — в аудите пакета:
-// отмена возвращает её тем, кого с тех пор не отметили снова.
+// отмена возвращает её тем, кого с тех пор не отметили снова. Табак из плана (#558)
+// встаёт в работу «Есть» без поставки: принесли без счёта или поставку не заводят.
 export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = new Date()) => {
   const ids = batchIds(tobaccoIds);
   const batchId = randomUUID();
@@ -493,12 +494,18 @@ export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = 
     const skipped: RestockSkip[] = [];
     for (const id of ids) {
       const record = records.get(id)!;
-      if (record.status === 'plan' || !record.outAt) {
-        skipped.push({ tobaccoId: id, reason: record.status === 'plan' ? 'plan' : 'in' });
+      const fromPlan = record.status === 'plan';
+      if (!fromPlan && !record.outAt) {
+        skipped.push({ tobaccoId: id, reason: 'in' });
         continue;
       }
-      await tx.shelfItem.update({ where: { id: record.id }, data: { outAt: null } });
-      await audit(tx, actor, { action: 'restock', entityId: id, entityLabel: label(record), details: { batchId, outAt: iso(record.outAt) } });
+      await tx.shelfItem.update({ where: { id: record.id }, data: { status: 'active', outAt: null } });
+      await audit(tx, actor, {
+        action: 'restock',
+        entityId: id,
+        entityLabel: label(record),
+        details: fromPlan ? { batchId, outAt: null, fromPlan } : { batchId, outAt: iso(record.outAt) },
+      });
       done.push(id);
     }
     await syncAvailability(tx, done);
@@ -509,11 +516,7 @@ export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = 
 
 export const restock = async (actor: ShelfActor, tobaccoId: string, now = new Date()) => {
   const { batchId, skipped, items } = await restockMany(actor, [tobaccoId], now);
-  if (skipped.length) {
-    throw skipped[0].reason === 'plan'
-      ? new ShelfConflictError('plan', 'Табак в плане: вернётся с приходом')
-      : new ShelfConflictError('in_stock', 'Табак и так в наличии');
-  }
+  if (skipped.length) throw new ShelfConflictError('in_stock', 'Табак и так в наличии');
   return { batchId, item: items[0] };
 };
 
@@ -524,6 +527,13 @@ export const undoRestockBatch = async (actor: ShelfActor, batchId: string, now =
     const records = await loadBatch(tx, ids);
     for (const event of events) {
       const record = records.get(event.tobaccoId)!;
+      if (event.fromPlan) {
+        // В план — только то, что с тех пор не трогали: в работе и «Есть».
+        const replanned = record.status === 'active' && !record.outAt;
+        if (replanned) await tx.shelfItem.update({ where: { id: record.id }, data: { status: 'plan' } });
+        await audit(tx, actor, { action: 'undo-restock', entityId: event.tobaccoId, entityLabel: label(record), details: { batchId, replanned } });
+        continue;
+      }
       const restored = !record.outAt && event.outAt ? new Date(event.outAt) : null;
       if (restored) await tx.shelfItem.update({ where: { id: record.id }, data: { outAt: restored } });
       await audit(tx, actor, { action: 'undo-restock', entityId: event.tobaccoId, entityLabel: label(record), details: { batchId, outAt: iso(restored) } });

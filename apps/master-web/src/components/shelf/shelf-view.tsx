@@ -28,6 +28,7 @@ import {
   formatNumber,
   keepToast,
   resolveShelfShortcut,
+  restockLabel,
   restockToast,
   shelfCounts,
   shelfRowAction,
@@ -314,7 +315,7 @@ export const ShelfView = ({
     (row: ShelfRow) =>
       run(row, async () => {
         const { batchId, item } = await shelf.restock(row.tobacco.id);
-        return { ...restockToast(item), undo: () => shelf.undoRestock(batchId) };
+        return { ...restockToast(item, row.shelfStatus === 'plan'), undo: () => shelf.undoRestock(batchId) };
       }),
     [run, shelf],
   );
@@ -886,15 +887,13 @@ export const ShelfView = ({
                                   </button>
                                 ) : action === 'restock' ? (
                                   <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onRestock(row)}>
-                                    Вернуть в наличие
+                                    {restockLabel(row)}
                                   </button>
                                 ) : action === 'unstop' ? (
                                   <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
                                     Снять стоп
                                   </button>
-                                ) : (
-                                  <span className="shelf-faint shelf-table__note">придёт по счёту</span>
-                                )}
+                                ) : null}
                                 <button
                                   type="button"
                                   className="icon-btn"

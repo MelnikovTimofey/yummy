@@ -18,6 +18,7 @@ import {
   matchShelfStatus,
   nextTrialVerdict,
   resolveShelfShortcut,
+  restockLabel,
   restockToast,
   shelfCounts,
   shelfRowAction,
@@ -208,14 +209,19 @@ test('shelfRowAction: одна кнопка строки по статусу', (
   assert.equal(shelfRowAction(row()), 'empty');
   assert.equal(shelfRowAction(row({ outAt: OUT })), 'restock');
   assert.equal(shelfRowAction(row({ stopped: true })), 'unstop');
-  assert.equal(shelfRowAction(row({ shelfStatus: 'plan' })), null);
+  assert.equal(shelfRowAction(row({ shelfStatus: 'plan' })), 'restock');
+});
+
+test('restockLabel: из плана — «В наличие», закончившийся — «Вернуть в наличие» (#558)', () => {
+  assert.equal(restockLabel(row({ shelfStatus: 'plan' })), 'В наличие');
+  assert.equal(restockLabel(row({ outAt: OUT })), 'Вернуть в наличие');
 });
 
 test('shelfRowMenu: что можно сделать со строкой', () => {
   assert.deepEqual(shelfRowMenu(row()), { canEmpty: true, canRestock: false, stopLabel: 'Стоп для гостей' });
   assert.deepEqual(shelfRowMenu(row({ stopped: true })), { canEmpty: true, canRestock: false, stopLabel: 'Снять стоп для гостей' });
   assert.deepEqual(shelfRowMenu(row({ outAt: OUT })), { canEmpty: false, canRestock: true, stopLabel: 'Стоп для гостей' });
-  assert.deepEqual(shelfRowMenu(row({ shelfStatus: 'plan' })), { canEmpty: false, canRestock: false, stopLabel: 'Стоп для гостей' });
+  assert.deepEqual(shelfRowMenu(row({ shelfStatus: 'plan' })), { canEmpty: false, canRestock: true, stopLabel: 'Стоп для гостей' });
 });
 
 test('тост «Закончился»: держим — в заявке, не держим — не попадёт (#shot=shelf-out, shelf-out-notkept)', () => {
@@ -227,6 +233,8 @@ test('тост «Закончился»: держим — в заявке, не 
 test('тост «Вернуть в наличие» и «Держать постоянно»', () => {
   assert.deepEqual(restockToast(row()), { title: 'Raspberries снова есть', text: 'Вернулся на витрину.' });
   assert.deepEqual(restockToast(row({ stopped: true })), { title: 'Raspberries снова есть', text: 'Стоп для гостей остался.' });
+  assert.deepEqual(restockToast(row(), true), { title: 'Raspberries есть', text: 'Появился на витрине.' });
+  assert.deepEqual(restockToast(row({ stopped: true }), true), { title: 'Raspberries есть', text: 'Стоп для гостей остался.' });
   assert.deepEqual(keepToast(row({ outAt: OUT })), { title: 'Raspberries', text: 'Держим постоянно. Добавлен в заявку.' });
   assert.deepEqual(keepToast(row()), { title: 'Raspberries', text: 'Держим постоянно. Закончится, попадёт в заявку.' });
 });

@@ -63,27 +63,47 @@ test.describe('«Вернуть в наличие»', () => {
     await assert.rejects(restock(actor, 'tobacco-nope', at(3)), ShelfNotFoundError);
   });
 
-  test('пачкой: пропуск тех, что есть, и плана; одна отмена на всех', async () => {
+  test('из плана (#558): табак сразу «Есть» в работе; отмена возвращает в план', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+
+    const { batchId, item } = await restock(actor, PEACH, at(2));
+    assert.deepEqual([item.shelfStatus, item.outAt, item.guestAvailable], ['active', null, true]);
+    assert.equal(await inStock(PEACH), true);
+
+    const undone = await undoRestockBatch(actor, batchId, at(3));
+    assert.deepEqual(undone.items.map((row) => [row.tobacco.id, row.shelfStatus, row.outAt, row.guestAvailable]), [[PEACH, 'plan', null, false]]);
+    assert.equal(await inStock(PEACH), false);
+  });
+
+  test('из плана: отмена не трогает табак, который с тех пор отметили «Закончился»', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+    const { batchId } = await restock(actor, PEACH, at(2));
+    await markEmpty(actor, PEACH, at(3));
+
+    const undone = await undoRestockBatch(actor, batchId, at(4));
+    assert.deepEqual(undone.items.map((row) => [row.shelfStatus, row.outAt]), [['active', at(3).toISOString()]]);
+  });
+
+  test('пачкой: пропуск тех, что есть; план — в наличие; одна отмена на всех', async () => {
     await markEmptyMany(actor, [MINT, BERRY], at(1));
     await addToShelf(actor, PEACH, 'plan', at(1));
 
     const result = await restockMany(actor, [MINT, BERRY, CITRUS, PEACH, MINT], at(2));
-    assert.deepEqual(result.done, [MINT, BERRY]);
-    assert.deepEqual(result.skipped, [
-      { tobaccoId: CITRUS, reason: 'in' },
-      { tobaccoId: PEACH, reason: 'plan' },
-    ]);
+    assert.deepEqual(result.done, [MINT, BERRY, PEACH]);
+    assert.deepEqual(result.skipped, [{ tobaccoId: CITRUS, reason: 'in' }]);
     assert.deepEqual(result.items.map((row) => [row.tobacco.id, row.outAt, row.guestAvailable]), [
       [MINT, null, true],
       [BERRY, null, true],
+      [PEACH, null, true],
     ]);
     const events = await prisma.auditEvent.findMany({ where: { action: 'restock' } });
-    assert.equal(events.length, 2);
+    assert.equal(events.length, 3);
 
     // BERRY успели снова отметить — отмена его не трогает.
     await markEmpty(actor, BERRY, at(3));
     await undoRestockBatch(actor, result.batchId, at(4));
-    assert.deepEqual(await Promise.all([outAt(MINT), outAt(BERRY)]), [at(1), at(3)]);
+    assert.deepEqual(await Promise.all([outAt(MINT), outAt(BERRY), outAt(PEACH)]), [at(1), at(3), null]);
+    assert.equal((await rowOf(PEACH, at(4))).shelfStatus, 'plan');
 
     await assert.rejects(restockMany(actor, [], at(2)), ShelfValidationError);
     await assert.rejects(restockMany(actor, [MINT, 'tobacco-nope'], at(2)), ShelfNotFoundError);

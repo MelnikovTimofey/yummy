@@ -1650,8 +1650,8 @@ export const normalizeShelfRestockResponse = (value: unknown): { batchId: string
   return { batchId: String(raw.batchId ?? ''), item: normalizeShelfRow(raw.item) };
 };
 
-// Пачкой: POST /staff/shelf/restock. Пропущены «уже есть» (in) и «в плане» (plan).
-export type ShelfRestockSkip = { tobaccoId: string; reason: 'in' | 'plan' };
+// Пачкой: POST /staff/shelf/restock. Пропущены «уже есть» (in); план встаёт «Есть» (#558).
+export type ShelfRestockSkip = { tobaccoId: string; reason: 'in' };
 export type ShelfRestockManyResponse = { batchId: string; done: string[]; skipped: ShelfRestockSkip[]; items: ShelfRow[] };
 
 export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockManyResponse => {
@@ -1661,7 +1661,7 @@ export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockM
     done: toStringList(raw.done),
     skipped: (Array.isArray(raw.skipped) ? raw.skipped : []).filter(isRecord).map((skip) => ({
       tobaccoId: String(skip.tobaccoId ?? ''),
-      reason: skip.reason === 'plan' ? 'plan' : 'in',
+      reason: 'in' as const,
     })),
     items: shelfRows(raw.items),
   };
