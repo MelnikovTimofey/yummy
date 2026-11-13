@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { tasteKeys } from './catalog-ideas';
 import { prisma } from './db';
 import type { MissingTobaccoView, MixGuestStatus, MixSubstituteView, MixSubstitutionView, TobaccoRef } from './state';
@@ -39,16 +40,19 @@ export type RuleContext = {
   shelfStatus: Map<string, string>;
 };
 
-export const loadRuleContext = async (): Promise<RuleContext> => {
+// client — транзакция, когда правило должно видеть её незакоммиченные правки.
+export const loadRuleContext = async (
+  client: Pick<Prisma.TransactionClient, 'tobaccoAnalog' | 'shelfItem'> = prisma,
+): Promise<RuleContext> => {
   const [links, shelf] = await Promise.all([
-    prisma.tobaccoAnalog.findMany({
+    client.tobaccoAnalog.findMany({
       orderBy: { sortOrder: 'asc' },
       select: {
         tobaccoId: true,
         analog: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } },
       },
     }),
-    prisma.shelfItem.findMany({ select: { tobaccoId: true, status: true } }),
+    client.shelfItem.findMany({ select: { tobaccoId: true, status: true } }),
   ]);
   const analogsOf = new Map<string, RuleTobaccoRecord[]>();
   for (const link of links) {
