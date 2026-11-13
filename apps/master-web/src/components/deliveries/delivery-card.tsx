@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, ChevronDown, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
-import { formatCount, type DeliveryCard, type DeliveryLine } from '@/contracts';
+import { formatCount, type DeliveryAccepted, type DeliveryCard, type DeliveryLine } from '@/contracts';
 import type { DeliveriesApi, DeliveryLinePatch } from '@/hooks/use-deliveries';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import {
@@ -40,7 +40,7 @@ type DeliveryCardScreenProps = {
   initial: DeliveryCard | null;
   notify: Notify;
   onBack: () => void;
-  onAccepted: (card: DeliveryCard) => void;
+  onAccepted: (accepted: DeliveryAccepted) => void;
   onDeleted: () => void;
 };
 

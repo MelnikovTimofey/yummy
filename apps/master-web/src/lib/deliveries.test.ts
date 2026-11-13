@@ -5,7 +5,7 @@ import {
   CONFIDENT_MATCH,
   acceptBarSummary,
   acceptLabel,
-  acceptedToastTitle,
+  acceptedToast,
   deliveryHeadline,
   deliveryListCard,
   deliveryPhoneHead,
@@ -285,10 +285,16 @@ test('tobaccosToReceive: сколько разных табаков вернёт
   assert.equal(tobaccosToReceive([]), 0);
 });
 
-test('тост приёмки: сколько табаков снова в наличии', () => {
-  assert.equal(acceptedToastTitle(1), 'Принято: 1 табак в наличии');
-  assert.equal(acceptedToastTitle(3), 'Принято: 3 табака в наличии');
-  assert.equal(acceptedToastTitle(0), 'Поставка принята');
+test('тост приёмки: сколько пришло из плана и сколько миксов открылось', () => {
+  const lines = [line(), line({ id: 'l2', tobacco: { id: 't2', manufacturer: 'Bonche', lineName: '', name: 'Caramel', shelfStatus: 'active' } })];
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 2, openedMixes: 2 }), { title: 'Поставка принята', text: 'Из плана пришли: 2. Открылись миксы: 2.' });
+  // Часть с нулём не показывается.
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 1, openedMixes: 0 }), { title: 'Поставка принята', text: 'Из плана пришли: 1.' });
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 0, openedMixes: 3 }), { title: 'Поставка принята', text: 'Открылись миксы: 3.' });
+  // Обе нулевые — тост как раньше: сколько табаков снова в наличии.
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 0, openedMixes: 0 }), { title: 'Принято: 2 табака в наличии', text: '' });
+  assert.deepEqual(acceptedToast({ lines: [line()], fromPlan: 0, openedMixes: 0 }), { title: 'Принято: 1 табак в наличии', text: '' });
+  assert.deepEqual(acceptedToast({ lines: [], fromPlan: 0, openedMixes: 0 }), { title: 'Поставка принята', text: '' });
 });
 
 test('lineQty: «Приход» строки — штуки по счёту, без граммов', () => {

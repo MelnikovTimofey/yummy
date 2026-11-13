@@ -1,4 +1,4 @@
-import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
+import { formatCount, type DeliveryAccepted, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
 
 // Чистая логика экрана «Поставки» (#212): подписи разбора, сверка суммы,
 // деньги и даты. Решения о сопоставлении принимает backend, здесь — только
@@ -278,7 +278,17 @@ export const acceptBarSummary = (card: Pick<DeliveryCard, 'pendingLines' | 'line
     : { warn: false, main: `Вернутся в наличие: ${back}`, sub: '' };
 };
 
-export const acceptedToastTitle = (count: number) => (count ? `Принято: ${tobaccos(count)} в наличии` : 'Поставка принята');
+// Тост приёмки (#565): «Из плана пришли: 2. Открылись миксы: 2.»; часть с нулём
+// не показываем, а без плана и открытых миксов — сколько табаков снова в наличии.
+export const acceptedToast = (accepted: Pick<DeliveryAccepted, 'lines' | 'fromPlan' | 'openedMixes'>) => {
+  const parts = [
+    accepted.fromPlan ? `Из плана пришли: ${accepted.fromPlan}.` : '',
+    accepted.openedMixes ? `Открылись миксы: ${accepted.openedMixes}.` : '',
+  ].filter(Boolean);
+  if (parts.length) return { title: 'Поставка принята', text: parts.join(' ') };
+  const count = tobaccosToReceive(accepted.lines);
+  return { title: count ? `Принято: ${tobaccos(count)} в наличии` : 'Поставка принята', text: '' };
+};
 
 
 // --- приход строки -------------------------------------------------------------
