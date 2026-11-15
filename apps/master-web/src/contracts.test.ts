@@ -958,18 +958,22 @@ test('аналоги (#478): нормализаторы читают замен�
     status: 'substituted',
     components: [{ id: 'c1', ...lemonblast, proportion: 25, substitute: { ...lemonShock, flavors: ['лимон'] } }],
     substitution: { from: lemonblast, to: lemonShock },
-    missing: [{ ...lemonblast, onShelf: true }],
+    missing: [{ ...lemonblast, onShelf: true, planned: true }],
   });
   assert.equal(mix.status, 'substituted');
   assert.deepEqual(mix.components[0].substitute, { ...lemonShock, flavors: ['лимон'] });
   assert.deepEqual(mix.substitution, { from: lemonblast, to: lemonShock });
-  assert.deepEqual(mix.missing, [{ ...lemonblast, onShelf: true }]);
+  assert.deepEqual(mix.missing, [{ ...lemonblast, onShelf: true, planned: true }]);
+  assert.deepEqual(normalizeMixRecord({ missing: [lemonblast] }).missing, [{ ...lemonblast, onShelf: true, planned: false }]);
   assert.equal(normalizeMixRecord({ available: true, guestVisible: false, status: 'weird' }).status, 'blocked');
 
   const list = normalizeMixListResponse({ items: [], filters: { status: 'substituted' }, meta: { substitutedCount: 2 } });
   assert.equal(list.filters.status, 'substituted');
   assert.equal(list.meta.substitutedCount, 2);
   assert.equal(normalizeMixListResponse({}).meta.substitutedCount, 0);
+  const awaiting = normalizeMixListResponse({ filters: { status: 'awaiting-plan' }, meta: { awaitingPlanCount: 3 } });
+  assert.equal(awaiting.filters.status, 'awaiting-plan');
+  assert.equal(awaiting.meta.awaitingPlanCount, 3);
 
   const row = normalizeShelfRow({ ...rawRow, analogs: [{ ...lemonShock, inStock: true, substituting: true }, { tobaccoId: 't-lf' }] });
   assert.deepEqual(row.analogs, [

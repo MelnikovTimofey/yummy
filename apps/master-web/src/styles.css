@@ -5118,6 +5118,26 @@ input[type="checkbox"] {
   gap: 8px;
 }
 
+/* Полка у табака в составе (#566, #shot=mix-edit). */
+.mix-builder__component-shelf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+
+.mix-builder__shelf-none {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.mix-builder__plan-hint {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
 .mix-builder__prop-input {
   display: inline-flex;
   align-items: center;
@@ -5920,6 +5940,7 @@ input[type="checkbox"] {
   .mix-builder__phone-note { grid-column: 1 / -1; margin: 0; font-size: var(--fs-sm); line-height: 1.35; }
   .mix-builder__phone-note[data-tone='warning'] { color: var(--warning); }
   .mix-builder__phone-note[data-tone='danger'] { color: var(--danger); }
+  .mix-builder__phone-shelf { display: flex; align-items: center; gap: 8px; }
 
   .mix-builder__phone-add {
     display: flex;

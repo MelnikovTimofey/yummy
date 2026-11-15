@@ -67,6 +67,7 @@ export const MIX_STATUS_CHIPS: Array<[MixStatusFilter, string]> = [
   ['guest-visible', 'Виден гостю'],
   ['substituted', 'С заменой'],
   ['hidden', 'Скрыт'],
+  ['awaiting-plan', 'Ждут план'],
   ['blocked', 'Блокирован'],
 ];
 
@@ -74,6 +75,7 @@ export const mixStatusCount = (meta: MixListMeta, status: MixStatusFilter) => {
   if (status === 'guest-visible') return meta.guestVisibleCount;
   if (status === 'substituted') return meta.substitutedCount;
   if (status === 'hidden') return meta.hiddenCount;
+  if (status === 'awaiting-plan') return meta.awaitingPlanCount;
   if (status === 'blocked') return meta.blockedCount;
   return undefined;
 };

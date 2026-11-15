@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { builderStockTag, builderSumLabel, componentStockNote } from './mix-builder-status';
+import { builderStockTag, builderSumLabel, componentShelfState, componentStockNote } from './mix-builder-status';
 
 // #494: метка наличия в конструкторе совпадает со статусом микса из API (#479).
 
@@ -55,4 +55,23 @@ test('закончился без замены или не хватает дву
   assert.deepEqual(componentStockNote('mint-veil', false, ['mint-veil'], substitution), hidden);
   assert.deepEqual(componentStockNote('lime-spark', false, ['lime-spark', 'mint-veil'], substitution), hidden);
   assert.deepEqual(componentStockNote('lime-spark', false, ['lime-spark'], null), hidden);
+});
+
+// #566 (#shot=mix-edit, mix-edit-planned): табаки из плана и «В план» из состава.
+test('все недостающие в плане — «Ждёт табак из плана» вместо блокировки', () => {
+  const awaits = { tone: 'plan', label: 'Ждёт табак из плана' };
+  assert.deepEqual(builderStockTag(['clover-club'], null, ['clover-club']), awaits);
+  assert.deepEqual(builderStockTag(['clover-club', 'tarhun'], null, ['clover-club', 'tarhun']), awaits);
+});
+
+test('один недостающий не в плане — блокируется наличием; замена важнее плана', () => {
+  assert.deepEqual(builderStockTag(['clover-club', 'tarhun'], null, ['clover-club']), { tone: 'warning', label: 'блокируется наличием' });
+  assert.equal(builderStockTag(['lime-spark'], substitution, ['lime-spark'])?.label, 'с заменой');
+});
+
+test('табак в составе: на полке, в плане, нет на полке, закончился', () => {
+  assert.equal(componentShelfState(true, 'active'), 'in');
+  assert.equal(componentShelfState(false, 'plan'), 'plan');
+  assert.equal(componentShelfState(false, undefined), 'none');
+  assert.equal(componentShelfState(false, 'active'), 'out');
 });

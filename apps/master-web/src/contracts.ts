@@ -142,7 +142,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
   },
 };
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'awaiting-plan' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -179,6 +179,7 @@ export type MixListMeta = {
   guestVisibleCount: number;
   substitutedCount: number;
   hiddenCount: number;
+  awaitingPlanCount: number;
   blockedCount: number;
   inRailsCount: number;
   withoutRailsCount: number;
@@ -204,7 +205,8 @@ export type TobaccoRef = {
 export type MixSubstitute = TobaccoRef & { flavors: string[] };
 
 // onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
-export type MissingTobacco = TobaccoRef & { onShelf: boolean };
+// planned — табак в плане (#566).
+export type MissingTobacco = TobaccoRef & { onShelf: boolean; planned: boolean };
 
 export type MixSubstitution = { from: TobaccoRef; to: TobaccoRef };
 
@@ -290,6 +292,7 @@ export const defaultMixListResponse: MixListResponse = {
     guestVisibleCount: 0,
     substitutedCount: 0,
     hiddenCount: 0,
+    awaitingPlanCount: 0,
     blockedCount: 0,
     inRailsCount: 0,
     withoutRailsCount: 0,
@@ -493,7 +496,7 @@ const toInventorySortDirection = (value: unknown): InventorySortDirection => {
 };
 
 const toMixStatusFilter = (value: unknown): MixStatusFilter => {
-  return value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'blocked' || value === 'all'
+  return value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'awaiting-plan' || value === 'blocked' || value === 'all'
     ? value
     : 'all';
 };
@@ -589,6 +592,7 @@ const normalizeMixSubstitute = (value: unknown): MixSubstitute | null =>
 const normalizeMissingTobacco = (value: unknown): MissingTobacco => ({
   ...normalizeMixTobaccoRef(value),
   onShelf: toBoolean(isRecord(value) ? value.onShelf : undefined, true),
+  planned: toBoolean(isRecord(value) ? value.planned : undefined, false),
 });
 
 const normalizeMixSubstitution = (value: unknown): MixSubstitution | null =>
@@ -881,6 +885,7 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       guestVisibleCount: toNumber(meta.guestVisibleCount, 0),
       substitutedCount: toNumber(meta.substitutedCount, 0),
       hiddenCount: toNumber(meta.hiddenCount, 0),
+      awaitingPlanCount: toNumber(meta.awaitingPlanCount, 0),
       blockedCount: toNumber(meta.blockedCount, 0),
       inRailsCount: toNumber(meta.inRailsCount, 0),
       withoutRailsCount: toNumber(meta.withoutRailsCount, 0),

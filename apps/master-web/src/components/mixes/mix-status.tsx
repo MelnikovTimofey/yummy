@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { MissingTobacco, MixRecord, MixStatus, MixSubstitution, TobaccoRef } from '@/contracts';
+import type { MissingTobacco, MixRecord, MixStatus, MixSubstitution } from '@/contracts';
 
 type StatusTag = { label: string; tone?: 'info' | 'warning'; ghost?: true };
 
@@ -11,6 +11,13 @@ const statusTags: Record<MixStatus, StatusTag> = {
 };
 
 export const mixStatusTag = (status: MixStatus) => statusTags[status];
+
+// «Ждёт табак из плана» (#566): blocked, но все недостающие табаки в плане — микс
+// откроется гостю сам с приходом. Отдельный статус только у Мастера.
+export const awaitsPlan = (mix: Pick<MixRecord, 'status' | 'missing'>) =>
+  mix.status === 'blocked' && mix.missing.length > 0 && mix.missing.every((tobacco) => tobacco.planned);
+
+export const AWAITS_PLAN_LABEL = 'Ждёт табак из плана';
 
 // Одноимённые табаки разных брендов («Гранатовый сок вместо Гранатовый сок») различаем брендом.
 export const substitutionNames = ({ from, to }: MixSubstitution) =>
@@ -39,15 +46,20 @@ const TobaccoLink = ({ tobacco, label, onOpen }: { tobacco: MissingTobacco; labe
   </button>
 );
 
-export const MissingTobaccos = ({ missing, onOpenTobacco }: { missing: MissingTobacco[]; onOpenTobacco: OpenTobacco }) => (
+const TobaccoLinks = ({ tobaccos, onOpenTobacco }: { tobaccos: MissingTobacco[]; onOpenTobacco: OpenTobacco }) => (
   <>
-    Нет:{' '}
-    {missing.map((tobacco, index) => (
+    {tobaccos.map((tobacco, index) => (
       <Fragment key={tobacco.tobaccoId}>
         {index ? ', ' : null}
         <TobaccoLink tobacco={tobacco} label={tobacco.name} onOpen={onOpenTobacco} />
       </Fragment>
     ))}
+  </>
+);
+
+export const MissingTobaccos = ({ missing, onOpenTobacco }: { missing: MissingTobacco[]; onOpenTobacco: OpenTobacco }) => (
+  <>
+    Нет: <TobaccoLinks tobaccos={missing} onOpenTobacco={onOpenTobacco} />
   </>
 );
 
@@ -62,11 +74,11 @@ const SubstitutionLinks = ({
   onOpenTobacco: OpenTobacco;
 }) => {
   const names = substitutionNames(substitution);
-  const onShelf = (ref: TobaccoRef) => missing.find((item) => item.tobaccoId === ref.tobaccoId)?.onShelf ?? false;
+  const from = missing.find((item) => item.tobaccoId === substitution.from.tobaccoId) ?? { ...substitution.from, onShelf: false, planned: false };
   return (
     <>
-      <TobaccoLink tobacco={{ ...substitution.to, onShelf: true }} label={names.to} onOpen={onOpenTobacco} /> вместо{' '}
-      <TobaccoLink tobacco={{ ...substitution.from, onShelf: onShelf(substitution.from) }} label={names.from} onOpen={onOpenTobacco} />
+      <TobaccoLink tobacco={{ ...substitution.to, onShelf: true, planned: false }} label={names.to} onOpen={onOpenTobacco} /> вместо{' '}
+      <TobaccoLink tobacco={from} label={names.from} onOpen={onOpenTobacco} />
     </>
   );
 };
@@ -78,6 +90,19 @@ export const MixStatusCell = ({
   mix: Pick<MixRecord, 'status' | 'substitution' | 'missing'>;
   onOpenTobacco: OpenTobacco;
 }) => {
+  if (awaitsPlan(mix)) {
+    return (
+      <span className="mix-status">
+        <span className="shelf-status" data-tone="plan">
+          <i aria-hidden />
+          {AWAITS_PLAN_LABEL}
+        </span>
+        <small>
+          <TobaccoLinks tobaccos={mix.missing} onOpenTobacco={onOpenTobacco} />
+        </small>
+      </span>
+    );
+  }
   const tag = mixStatusTag(mix.status);
   const note =
     mix.status === 'substituted' && mix.substitution ? (
