@@ -644,10 +644,14 @@ export const acceptDelivery = async (
       const claimed = await tx.delivery.updateMany({ where: { id, status: 'draft' }, data: { status: 'received', receivedAt } });
       if (!claimed.count) throw new DeliveryConflictError('not_draft', 'Поставка уже принята — менять её нельзя');
 
-      // Пришедший табак — на полку в работу и «Есть» (#518).
+      // Пришедший табак — на полку в работу и «Есть» (#518). Из плана приходит пробой:
+      // держать ли постоянно, мастер решает после пробы (#567).
       const received = delivery.lines.filter(isReceived);
       const tobaccoIds = [...new Set(received.map((line) => line.tobaccoId!))];
-      const fromPlan = await tx.shelfItem.count({ where: { tobaccoId: { in: tobaccoIds }, status: 'plan' } });
+      const { count: fromPlan } = await tx.shelfItem.updateMany({
+        where: { tobaccoId: { in: tobaccoIds }, status: 'plan' },
+        data: { keepStocked: false },
+      });
       const before = await mixStatuses(tx, tobaccoIds);
       for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active', receivedAt);
 

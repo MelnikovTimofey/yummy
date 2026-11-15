@@ -488,6 +488,7 @@ export type RestockSkip = { tobaccoId: string; reason: 'in' };
 // «Вернуть в наличие» (#518): снимает «Закончился». Прежняя дата — в аудите пакета:
 // отмена возвращает её тем, кого с тех пор не отметили снова. Табак из плана (#558)
 // встаёт в работу «Есть» без поставки: принесли без счёта или поставку не заводят.
+// Держать ли его постоянно, решает мастер (#567): отмена тоже не включает.
 export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = new Date()) => {
   const ids = batchIds(tobaccoIds);
   const batchId = randomUUID();
@@ -502,7 +503,10 @@ export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = 
         skipped.push({ tobaccoId: id, reason: 'in' });
         continue;
       }
-      await tx.shelfItem.update({ where: { id: record.id }, data: { status: 'active', outAt: null } });
+      await tx.shelfItem.update({
+        where: { id: record.id },
+        data: { status: 'active', outAt: null, ...(fromPlan ? { keepStocked: false } : {}) },
+      });
       await audit(tx, actor, {
         action: 'restock',
         entityId: id,

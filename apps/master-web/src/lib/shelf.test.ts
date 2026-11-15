@@ -29,6 +29,7 @@ import {
   shelfState,
   shelfStatusCell,
   sortShelfRows,
+  suggestKeepStocked,
   trialArrival,
 } from './shelf';
 
@@ -225,6 +226,22 @@ test('arrivalLine: «Приходы» в карточке — дата и пос
 test('trialArrival: первый приход пробы — последний в списке (новые первыми)', () => {
   assert.equal(trialArrival([arrival({ at: '2026-11-01T10:00:00' }), arrival({ at: '2026-10-20T10:00:00' })]), 'пришёл впервые 20 окт');
   assert.equal(trialArrival([]), null);
+});
+
+test('trialArrival: «из плана», если первый приход не раньше дня постановки в план (#567)', () => {
+  const first = arrival({ at: '2026-11-12T12:00:00' });
+  assert.equal(trialArrival([first], '2026-11-11T09:00:00'), 'пришёл впервые 12 ноя, из плана');
+  assert.equal(trialArrival([first], '2026-11-12T15:00:00'), 'пришёл впервые 12 ноя, из плана');
+  assert.equal(trialArrival([arrival({ at: '2026-11-14T10:00:00' }), first], '2026-11-13T09:00:00'), 'пришёл впервые 12 ноя');
+  assert.equal(trialArrival([first], null), 'пришёл впервые 12 ноя');
+});
+
+test('suggestKeepStocked: после «Зашло» предлагаем держать, если ещё не держим (#567)', () => {
+  assert.equal(suggestKeepStocked(row({ trial: true, trialVerdict: 'yes', keepStocked: false })), true);
+  assert.equal(suggestKeepStocked(row({ trial: true, trialVerdict: 'yes', keepStocked: true })), false);
+  assert.equal(suggestKeepStocked(row({ trial: true, trialVerdict: 'no', keepStocked: false })), false);
+  assert.equal(suggestKeepStocked(row({ trial: true, trialVerdict: null, keepStocked: false })), false);
+  assert.equal(suggestKeepStocked(row({ trial: false, trialVerdict: 'yes', keepStocked: false })), false);
 });
 
 test('shelfRowAction: одна кнопка строки по статусу', () => {
