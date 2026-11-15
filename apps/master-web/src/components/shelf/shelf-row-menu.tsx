@@ -6,6 +6,7 @@ import { shelfRowMenu } from '@/lib/shelf';
 export type ShelfRowActions = {
   onToggleStop: (row: ShelfRow) => void;
   onRemove: (row: ShelfRow) => void;
+  onOpenCatalog: (row: ShelfRow) => void;
 };
 
 type ShelfRowMenuProps = {
@@ -78,13 +79,27 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
       style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }}
       onClick={(event) => event.stopPropagation()}
     >
-      <button type="button" className="shelf-menu__item" onClick={() => actions.onToggleStop(row)}>
-        {items.stopLabel}
-      </button>
-      <div className="shelf-menu__sep" />
-      <button type="button" className="shelf-menu__item" onClick={() => actions.onRemove(row)}>
-        Убрать с полки <span className="shelf-faint">история останется</span>
-      </button>
+      {/* У плана стопа нет: табака ещё нет на полке (#562, #shot=shelf-plan-menu). */}
+      {row.shelfStatus === 'plan' ? (
+        <>
+          <button type="button" className="shelf-menu__item" onClick={() => actions.onOpenCatalog(row)}>
+            Карточка в каталоге
+          </button>
+          <button type="button" className="shelf-menu__item shelf-menu__item--danger" onClick={() => actions.onRemove(row)}>
+            Убрать из плана
+          </button>
+        </>
+      ) : (
+        <>
+          <button type="button" className="shelf-menu__item" onClick={() => actions.onToggleStop(row)}>
+            {items.stopLabel}
+          </button>
+          <div className="shelf-menu__sep" />
+          <button type="button" className="shelf-menu__item" onClick={() => actions.onRemove(row)}>
+            Убрать с полки <span className="shelf-faint">история останется</span>
+          </button>
+        </>
+      )}
     </div>,
     document.body,
   );

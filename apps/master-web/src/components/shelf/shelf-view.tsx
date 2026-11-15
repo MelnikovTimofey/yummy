@@ -27,6 +27,7 @@ import {
   filterShelfRows,
   formatNumber,
   keepToast,
+  removeToast,
   resolveShelfShortcut,
   restockLabel,
   restockToast,
@@ -334,18 +335,22 @@ export const ShelfView = ({
     [run, shelf],
   );
 
+  const openInCatalog = (row: ShelfRow) => {
+    setMenu(null);
+    setCardId('');
+    onOpenInCatalog(row);
+  };
+
+  // «Убрать с полки», у плана — «Убрать из плана» (#562).
   const rowActions: ShelfRowActions = {
     onToggleStop,
     onRemove: (row) =>
       run(row, async () => {
         await shelf.remove(row.tobacco.id);
         if (cardId === row.tobacco.id) setCardId('');
-        return {
-          title: fullName(row),
-          text: 'Убран с полки, история осталась.',
-          undo: () => shelf.add(row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active', false),
-        };
+        return { ...removeToast(row), undo: () => shelf.restore(row) };
       }),
+    onOpenCatalog: openInCatalog,
   };
 
   // Аналоги (#482): тост только когда аналог добавлен — название жирным, ниже что стало видно гостю.
@@ -587,12 +592,10 @@ export const ShelfView = ({
       onSetAnalogs={onSetAnalogs}
       onEmpty={(row) => void onEmpty(row)}
       onRestock={(row) => void onRestock(row)}
+      onRemove={rowActions.onRemove}
       onUpdate={onUpdate}
       onTrialVerdict={(row, verdict) => onTrialVerdict(row.tobacco, verdict)}
-      onOpenCatalog={(row) => {
-        setCardId('');
-        onOpenInCatalog(row);
-      }}
+      onOpenCatalog={openInCatalog}
       onOpenMix={(mixId) => {
         setCardId('');
         onOpenMix(mixId);
@@ -814,7 +817,9 @@ export const ShelfView = ({
                       const busy = pendingId === row.tobacco.id;
                       const menuOpen = menu?.id === row.tobacco.id;
                       const action = shelfRowAction(row);
-                      const arrival = arrivalCell(row.lastArrival);
+                      // У плана прихода и «держим» ещё нет (#562, #shot=shelf-plan).
+                      const plan = row.shelfStatus === 'plan';
+                      const arrival = plan ? null : arrivalCell(row.lastArrival);
                       const isSelected = selected.includes(row.tobacco.id);
                       return (
                         <tr
@@ -871,7 +876,7 @@ export const ShelfView = ({
                             {row.mixCount ? formatMetricValue(row.mixCount) : <span className="shelf-faint">—</span>}
                           </td>
                           <td className="shelf-table__keep">
-                            {row.keepStocked ? (
+                            {row.keepStocked && !plan ? (
                               <span role="img" aria-label="Держим постоянно" title="Держим постоянно">
                                 <Check size={15} aria-hidden />
                               </span>

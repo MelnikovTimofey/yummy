@@ -17,7 +17,10 @@ import {
   keepToast,
   matchShelfStatus,
   nextTrialVerdict,
+  planStateLabel,
+  removeToast,
   resolveShelfShortcut,
+  restoreShelfBody,
   restockLabel,
   restockToast,
   shelfCounts,
@@ -30,6 +33,7 @@ import {
 } from './shelf';
 
 const OUT = '2026-11-03T09:00:00';
+const PLANNED = '2026-11-11T09:00:00.000Z';
 
 const arrival = (patch: Partial<ShelfArrival> = {}): ShelfArrival => ({
   at: '2026-10-12T10:00:00',
@@ -183,7 +187,25 @@ test('shelfStatusCell: «Наличие» с датой и строкой ниж
   assert.deepEqual(shelfStatusCell(row({ outAt: OUT, keepStocked: false })), { tone: 'out', label: 'Закончился 3 ноя', note: 'не держим' });
   assert.deepEqual(shelfStatusCell(row({ stopped: true, stopNote: 'пересушен' })), { tone: 'stop', label: 'Стоп для гостей', note: 'пересушен' });
   assert.deepEqual(shelfStatusCell(row({ stopped: true })), { tone: 'stop', label: 'Стоп для гостей', note: null });
-  assert.deepEqual(shelfStatusCell(row({ shelfStatus: 'plan' })), { tone: 'plan', label: 'В плане', note: 'ждёт прихода' });
+  assert.deepEqual(shelfStatusCell(row({ shelfStatus: 'plan', plannedAt: PLANNED })), { tone: 'plan', label: 'В плане', note: 'с 11 ноя' });
+  assert.deepEqual(shelfStatusCell(row({ shelfStatus: 'plan' })), { tone: 'plan', label: 'В плане', note: null });
+});
+
+test('planStateLabel: наличие в карточке плана с датой постановки (#562, #shot=card-plan)', () => {
+  assert.equal(planStateLabel(row({ shelfStatus: 'plan', plannedAt: PLANNED })), 'В плане с 11 ноя');
+  assert.equal(planStateLabel(row({ shelfStatus: 'plan' })), 'В плане');
+});
+
+test('«Убрать из плана» и «Убрать с полки»: тост и отмена с прежней датой плана (#562)', () => {
+  assert.deepEqual(removeToast(row({ shelfStatus: 'plan', plannedAt: PLANNED })), { title: 'Black Burn Raspberries', text: 'Убран из плана.' });
+  assert.deepEqual(removeToast(row()), { title: 'Black Burn Raspberries', text: 'Убран с полки, история осталась.' });
+  assert.deepEqual(restoreShelfBody(row({ shelfStatus: 'plan', plannedAt: PLANNED })), {
+    tobaccoId: 'Black Burn-Raspberries',
+    status: 'plan',
+    plannedAt: PLANNED,
+  });
+  assert.deepEqual(restoreShelfBody(row({ shelfStatus: 'plan' })), { tobaccoId: 'Black Burn-Raspberries', status: 'plan' });
+  assert.deepEqual(restoreShelfBody(row({ plannedAt: PLANNED })), { tobaccoId: 'Black Burn-Raspberries', status: 'active' });
 });
 
 test('arrivalCell: «Приход» — дата и откуда', () => {
@@ -247,6 +269,11 @@ test('cardMixState: «В миксах» карточки — аналог, ск�
   assert.deepEqual(cardMixState({ status: 'hidden', substitution: null }), { text: 'скрыт', danger: true });
   assert.deepEqual(cardMixState({ status: 'visible', substitution: null }), { text: 'на витрине', danger: false });
   assert.equal(cardMixState({ status: null, substitution: null }), null);
+});
+
+test('cardMixState в плане (#562): без этого табака микс не виден гостю — «ждёт этот табак»', () => {
+  assert.deepEqual(cardMixState({ status: 'blocked', substitution: null }, true), { text: 'ждёт этот табак', danger: false });
+  assert.deepEqual(cardMixState({ status: 'hidden', substitution: null }, true), { text: 'скрыт', danger: true });
 });
 
 test('resolveShelfShortcut: клавиши полки по коду клавиши, мимо полей ввода', () => {

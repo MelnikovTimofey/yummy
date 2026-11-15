@@ -113,12 +113,25 @@ export const ShelfActionsSheet = ({ row, actions, onClose }: { row: ShelfRow; ac
         <p className="m-mark-sheet__brand">{row.tobacco.manufacturer}</p>
       </div>
       <div className="m-actions__list">
-        <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
-          {shelfRowMenu(row).stopLabel}
-        </button>
-        <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
-          Убрать с полки <span className="shelf-faint">история останется</span>
-        </button>
+        {row.shelfStatus === 'plan' ? (
+          <>
+            <button type="button" className="m-actions__item" onClick={() => act(() => actions.onOpenCatalog(row))}>
+              Карточка в каталоге
+            </button>
+            <button type="button" className="m-actions__item m-actions__item--danger" onClick={() => act(() => actions.onRemove(row))}>
+              Убрать из плана
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
+              {shelfRowMenu(row).stopLabel}
+            </button>
+            <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
+              Убрать с полки <span className="shelf-faint">история останется</span>
+            </button>
+          </>
+        )}
       </div>
     </BottomSheet>
   );

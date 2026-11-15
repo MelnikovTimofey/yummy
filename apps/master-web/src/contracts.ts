@@ -1497,6 +1497,8 @@ export type ShelfRow = {
   guestAvailable: boolean;
   // С какого момента «Закончился»; null — «Есть».
   outAt: string | null;
+  // Когда поставлен в план (#561); после прихода из плана дата остаётся.
+  plannedAt: string | null;
   lastArrival: ShelfArrival | null;
   mixCount: number;
   keepStocked: boolean;
@@ -1558,6 +1560,7 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
     guestAvailable: toBoolean(raw.guestAvailable, false),
     outAt: toIsoString(raw.outAt, '') || null,
+    plannedAt: toIsoString(raw.plannedAt, '') || null,
     lastArrival: isRecord(raw.lastArrival) ? normalizeShelfArrival(raw.lastArrival) : null,
     mixCount: toNumber(raw.mixCount, 0),
     keepStocked: toBoolean(raw.keepStocked, true),
