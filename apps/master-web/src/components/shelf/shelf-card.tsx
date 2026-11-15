@@ -5,7 +5,16 @@ import { HtreviewsLink } from '@/components/ui/htreviews-link';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type { InventoryTobacco, ShelfCard as ShelfCardData, ShelfRow, ShelfTrialVerdict } from '@/contracts';
 import type { ShelfPatch } from '@/hooks/use-shelf';
-import { arrivalLine, describeShelfError, formatShelfDate, planStateLabel, shelfRowMenu, shelfState, trialArrival } from '@/lib/shelf';
+import {
+  arrivalLine,
+  describeShelfError,
+  formatShelfDate,
+  planStateLabel,
+  shelfRowMenu,
+  shelfState,
+  suggestKeepStocked,
+  trialArrival,
+} from '@/lib/shelf';
 import { ShelfAnalogsSections, ShelfCardMixes, type AnalogChange } from './shelf-analogs';
 import { ShelfActionsSheet } from './shelf-mobile';
 import type { ShelfRowActions } from './shelf-row-menu';
@@ -33,7 +42,8 @@ type ShelfCardProps = {
 // Карточка табака на полке (#518, #shot=card, card-in): наличие одной кнопкой,
 // «держим постоянно» и стоп, в каких миксах табак закрыт аналогом, приходы по счетам.
 // Проба (#329) и аналоги (#482) — как раньше. У плана (#562, #shot=card-plan) «держим» и
-// стопа нет до прихода, внизу «Убрать из плана».
+// стопа нет до прихода, внизу «Убрать из плана». Пришедший из плана — проба с выключенным
+// «держим», после «Зашло» подсказка «Держать постоянно?» (#567, #shot=card-trial-yes).
 export const ShelfCard = ({
   row,
   loadCard,
@@ -89,7 +99,7 @@ export const ShelfCard = ({
 
   const state = shelfState(row);
   const items = shelfRowMenu(row);
-  const arrival = card ? trialArrival(card.arrivals) : null;
+  const arrival = card ? trialArrival(card.arrivals, row.plannedAt) : null;
 
   return (
     <Sheet open onOpenChange={(open) => (open ? null : onClose())}>
@@ -175,6 +185,17 @@ export const ShelfCard = ({
                 <span className="shelf-trial__muted">Как зашёл гостям в зале?</span>
                 <TrialMark value={row.trialVerdict} label="Как зашёл гостям в зале" onChange={(next) => onTrialVerdict(row, next)} />
               </div>
+              {suggestKeepStocked(row) ? (
+                <div className="shelf-card__setting shelf-trial__suggest">
+                  <span>
+                    Держать постоянно?
+                    <small>Закончится, попадёт в заявку</small>
+                  </span>
+                  <button type="button" className="btn" data-size="sm" disabled={saving} onClick={() => void save({ keepStocked: true })}>
+                    Держать постоянно
+                  </button>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

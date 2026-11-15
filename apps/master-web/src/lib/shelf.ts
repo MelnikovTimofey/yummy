@@ -175,11 +175,25 @@ export const arrivalLine = (arrival: ShelfArrival) => {
   };
 };
 
-// Блок «Проба» в карточке (#329): приходы новые первыми, первый — последний в списке.
-export const trialArrival = (arrivals: ShelfArrival[]) => {
-  const first = arrivals[arrivals.length - 1];
-  return first ? `пришёл впервые ${formatShelfDate(first.at)}` : null;
+const startOfDay = (iso: string) => {
+  const date = new Date(iso);
+  date.setHours(0, 0, 0, 0);
+  return date;
 };
+
+// Блок «Проба» в карточке (#329): приходы новые первыми, первый — последний в списке.
+// «из плана» (#567) сравнивается по дню: счёт за прошлый день принимается на его полдень,
+// а план могли поставить в тот же день позже.
+export const trialArrival = (arrivals: ShelfArrival[], plannedAt: string | null = null) => {
+  const first = arrivals[arrivals.length - 1];
+  if (!first) return null;
+  const fromPlan = plannedAt !== null && new Date(first.at) >= startOfDay(plannedAt);
+  return `пришёл впервые ${formatShelfDate(first.at)}${fromPlan ? ', из плана' : ''}`;
+};
+
+// После «Зашло» (#567) система предлагает держать постоянно; галочку ставит мастер.
+export const suggestKeepStocked = (row: Pick<ShelfRow, 'trial' | 'trialVerdict' | 'keepStocked'>) =>
+  row.trial && row.trialVerdict === 'yes' && !row.keepStocked;
 
 // «Зашло / Не зашло» пробы (#329): повторный клик по выбранному снимает отметку.
 export const nextTrialVerdict = (current: ShelfTrialVerdict | null, clicked: ShelfTrialVerdict) =>

@@ -7805,6 +7805,9 @@ button[aria-busy="true"]:disabled {
 .shelf-trial__row--head { justify-content: flex-start; }
 .shelf-trial__muted { color: var(--text-muted); }
 
+/* Подсказка после «Зашло» (#shot=card-trial-yes): строка настройки в рамке акцента. */
+.shelf-trial__suggest { padding: 10px 12px; border: 1px solid var(--accent-border); border-radius: var(--r-md); }
+
 /* Полоса «Проба · как зашла?» на телефоне (#shot=mobile-trial). */
 .m-shelf-card__trial {
   grid-column: 1 / -1;
