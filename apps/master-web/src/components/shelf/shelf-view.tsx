@@ -61,7 +61,7 @@ import { ShelfStatusCell } from './shelf-status';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 import { RowsSkeleton } from '@/components/ui/loading';
 
-// order — «К заказу» (#518): закончились и держим постоянно.
+// order — «К заказу» (#518): закончились и держим постоянно, ниже план (#563).
 export type ShelfMode = 'shelf' | 'order';
 
 type ShelfViewProps = {
@@ -171,7 +171,17 @@ export const ShelfView = ({
       </button>
     </span>
   );
-  const orderView = <ShelfOrderView order={shelf.order} error={shelf.orderError} phone={isPhone} onShowNotKept={showOut} />;
+  const orderView = (
+    <ShelfOrderView
+      order={shelf.order}
+      error={shelf.orderError}
+      phone={isPhone}
+      onShowNotKept={showOut}
+      menuId={menu?.id ?? null}
+      pendingId={pendingId}
+      onOpenMenu={(id, anchor) => setMenu(menu?.id === id ? null : { id, anchor })}
+    />
+  );
 
   const counts = useMemo(() => shelfCounts(rows), [rows]);
   const shown = useMemo(

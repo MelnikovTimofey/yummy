@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeShelfOrder } from '../contracts';
-import { groupMeta, groupTitle, notKeptText, orderCopyText, orderCount, orderMixes } from './order';
+import { groupMeta, groupTitle, isStalePlan, notKeptText, orderCopyText, orderCount, orderMixes, planCopyText, planMixes } from './order';
 
 const line = (manufacturer: string, name: string, mixes = { total: 0, hidden: 0, substituted: 0 }) => ({
   tobacco: { id: `${manufacturer}-${name}`, manufacturer, lineName: '', name },
@@ -19,10 +19,15 @@ const order = normalizeShelfOrder({
     { tobaccoId: 'a', manufacturer: 'Хулиган', name: 'POOL', outAt: '2026-10-28T09:00:00' },
     { tobaccoId: 'b', manufacturer: 'Сарма', name: 'Ромашковое варенье', outAt: '2026-10-20T09:00:00' },
   ],
+  plan: [
+    { tobacco: { id: 'p1', manufacturer: 'Musthave', lineName: '', name: 'Pineapple Rings' }, plannedAt: '2026-09-12T09:00:00', mixes: { total: 1, hidden: 1, substituted: 0 } },
+    { tobacco: { id: 'p2', manufacturer: 'Bonche', lineName: '', name: 'Clover Club' }, plannedAt: '2026-11-11T09:00:00', mixes: { total: 2, hidden: 2, substituted: 0 } },
+  ],
 });
 
-test('orderCount: сколько табаков в заявке, для переключателя «К заказу N»', () => {
-  assert.equal(orderCount(order), 3);
+test('orderCount: закончившиеся вместе с планом, для переключателя «К заказу N» (#563)', () => {
+  assert.equal(orderCount(order), 5);
+  assert.equal(orderCount({ ...order, groups: [] }), 2);
   assert.equal(orderCount(null), 0);
 });
 
@@ -54,4 +59,26 @@ test('notKeptText: закончились, но не держим, — одно�
   );
   const many = Array.from({ length: 7 }, (_, index) => ({ ...order.notKept[0], tobaccoId: `t${index}`, name: `T${index}` }));
   assert.equal(notKeptText(many), 'Ещё 7 закончились, их не держим постоянно: Хулиган T0, Хулиган T1, Хулиган T2, Хулиган T3, Хулиган T4 и ещё 2.');
+});
+
+test('planMixes: сколько миксов ждут табак из плана (#shot=order-plan)', () => {
+  assert.deepEqual(planMixes({ total: 1, hidden: 1, substituted: 0 }), { text: 'ждёт 1 микс', tone: 'default' });
+  assert.deepEqual(planMixes({ total: 2, hidden: 2, substituted: 0 }), { text: 'ждут 2 микса', tone: 'default' });
+  assert.deepEqual(planMixes({ total: 6, hidden: 5, substituted: 1 }), { text: 'ждут 5 миксов', tone: 'default' });
+  assert.deepEqual(planMixes({ total: 21, hidden: 21, substituted: 0 }), { text: 'ждёт 21 микс', tone: 'default' });
+  assert.deepEqual(planMixes({ total: 2, hidden: 0, substituted: 2 }), { text: 'закрыт аналогом', tone: 'muted' });
+  assert.deepEqual(planMixes({ total: 0, hidden: 0, substituted: 0 }), { text: 'нет в миксах', tone: 'faint' });
+});
+
+test('planCopyText: список плана — только названия построчно', () => {
+  assert.equal(planCopyText(order.plan), 'Musthave Pineapple Rings\nBonche Clover Club');
+});
+
+test('isStalePlan: в плане больше 30 дней', () => {
+  const now = new Date('2026-11-13T12:00:00');
+  assert.equal(isStalePlan('2026-09-12T09:00:00', now), true);
+  assert.equal(isStalePlan('2026-10-14T13:00:00', now), false);
+  assert.equal(isStalePlan('2026-10-13T11:00:00', now), true);
+  assert.equal(isStalePlan('2026-11-11T09:00:00', now), false);
+  assert.equal(isStalePlan(null, now), false);
 });

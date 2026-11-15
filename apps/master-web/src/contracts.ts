@@ -1695,8 +1695,11 @@ export type ShelfOrderGroup = { supplier: ShelfSupplierRef | null; lastDeliveryA
 
 export type ShelfOrderNotKept = { tobaccoId: string; manufacturer: string; lineName: string; name: string; outAt: string };
 
+// В плане (#563): без поставщика, старый план первым.
+export type ShelfOrderPlanLine = { tobacco: ShelfTobaccoRef; plannedAt: string | null; mixes: ShelfOrderMixes };
+
 // GET /staff/shelf/order: закончились и держим постоянно; notKept — закончились, но не держим.
-export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[] };
+export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[]; plan: ShelfOrderPlanLine[] };
 
 const normalizeTobaccoRef = (value: unknown): ShelfTobaccoRef => {
   const raw = isRecord(value) ? value : {};
@@ -1718,21 +1721,23 @@ const toDay = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}-\d
 
 const recordOf = (value: unknown): UnknownRecord => (isRecord(value) ? value : {});
 
+const normalizeOrderMixes = (value: unknown): ShelfOrderMixes => {
+  const mixes = recordOf(value);
+  return { total: toNumber(mixes.total, 0), hidden: toNumber(mixes.hidden, 0), substituted: toNumber(mixes.substituted, 0) };
+};
+
 export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
   const raw = recordOf(value);
   return {
     groups: listOf(raw.groups).filter(isRecord).map((group) => ({
       supplier: normalizeSupplierRef(group.supplier),
       lastDeliveryAt: toIsoString(group.lastDeliveryAt, '') || null,
-      lines: listOf(group.lines).filter(isRecord).map((line) => {
-        const mixes = recordOf(line.mixes);
-        return {
-          tobacco: normalizeTobaccoRef(line.tobacco),
-          outAt: toIsoString(line.outAt, ''),
-          mixes: { total: toNumber(mixes.total, 0), hidden: toNumber(mixes.hidden, 0), substituted: toNumber(mixes.substituted, 0) },
-          lastArrival: isRecord(line.lastArrival) ? normalizeShelfArrival(line.lastArrival) : null,
-        };
-      }),
+      lines: listOf(group.lines).filter(isRecord).map((line) => ({
+        tobacco: normalizeTobaccoRef(line.tobacco),
+        outAt: toIsoString(line.outAt, ''),
+        mixes: normalizeOrderMixes(line.mixes),
+        lastArrival: isRecord(line.lastArrival) ? normalizeShelfArrival(line.lastArrival) : null,
+      })),
     })),
     notKept: listOf(raw.notKept).filter(isRecord).map((item) => ({
       tobaccoId: String(item.tobaccoId ?? ''),
@@ -1740,6 +1745,11 @@ export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
       lineName: String(item.lineName ?? ''),
       name: String(item.name ?? ''),
       outAt: toIsoString(item.outAt, ''),
+    })),
+    plan: listOf(raw.plan).filter(isRecord).map((line) => ({
+      tobacco: normalizeTobaccoRef(line.tobacco),
+      plannedAt: toIsoString(line.plannedAt, '') || null,
+      mixes: normalizeOrderMixes(line.mixes),
     })),
   };
 };
