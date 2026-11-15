@@ -1880,6 +1880,15 @@ export const normalizeDeliveryCard = (value: unknown): DeliveryCard => {
   };
 };
 
+// Ответ приёмки (#565): карточка и что приёмка изменила — сколько пришедших
+// табаков стояли в плане и сколько миксов открылось гостю.
+export type DeliveryAccepted = DeliveryCard & { fromPlan: number; openedMixes: number };
+
+export const normalizeDeliveryAccepted = (value: unknown): DeliveryAccepted => {
+  const raw = isRecord(value) ? value : {};
+  return { ...normalizeDeliveryCard(raw), fromPlan: toNumber(raw.fromPlan, 0), openedMixes: toNumber(raw.openedMixes, 0) };
+};
+
 export const normalizeDeliveryList = (value: unknown): DeliveryList => {
   const raw = isRecord(value) ? value : {};
   const totals = isRecord(raw.totals) ? raw.totals : {};

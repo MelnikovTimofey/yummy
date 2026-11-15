@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { loadRuleContext, resolveMixAvailability, toRuleComponent } from './analogs';
 import { prisma } from './db';
 import { describeLine } from './invoices/brands';
 import { CONFIDENT_MATCH, matchLine, normalizeName, type CatalogTobacco, type SupplierMemoryItem } from './invoices/match';
@@ -597,12 +598,40 @@ export const deleteDelivery = async (actor: ShelfActor, id: string) => {
 
 // --- приёмка -----------------------------------------------------------------
 
+// fromPlan — пришедшие табаки, что до приёмки стояли в плане; openedMixes — миксы,
+// которые до приёмки гостю не показывались (blocked), а после видны (#565).
+export type AcceptedDelivery = DeliveryCard & { fromPlan: number; openedMixes: number };
+
+// Статус по правилу доступности (#479) у миксов, где пришедший табак — компонент
+// или аналог компонента. Скрытые мастером миксы приёмка не открывает.
+const mixStatuses = async (tx: Tx, tobaccoIds: string[]) => {
+  const mixes = await tx.mix.findMany({
+    where: {
+      available: true,
+      components: {
+        some: { tobacco: { OR: [{ id: { in: tobaccoIds } }, { analogs: { some: { analogId: { in: tobaccoIds } } } }] } },
+      },
+    },
+    select: {
+      id: true,
+      components: {
+        orderBy: { sortOrder: 'asc' },
+        select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } } },
+      },
+    },
+  });
+  const context = await loadRuleContext(tx);
+  return new Map(
+    mixes.map((mix) => [mix.id, resolveMixAvailability(true, mix.components.map((item) => toRuleComponent(item.tobacco, context))).status]),
+  );
+};
+
 export const acceptDelivery = async (
   actor: ShelfActor,
   id: string,
   input: { receivedAt?: Date } = {},
-): Promise<DeliveryCard> => {
-  await prisma.$transaction(
+): Promise<AcceptedDelivery> => {
+  const counts = await prisma.$transaction(
     async (tx) => {
       const delivery = await loadDraft(tx, id);
       const pending = delivery.lines.filter(isPending).length;
@@ -618,6 +647,8 @@ export const acceptDelivery = async (
       // Пришедший табак — на полку в работу и «Есть» (#518).
       const received = delivery.lines.filter(isReceived);
       const tobaccoIds = [...new Set(received.map((line) => line.tobaccoId!))];
+      const fromPlan = await tx.shelfItem.count({ where: { tobaccoId: { in: tobaccoIds }, status: 'plan' } });
+      const before = await mixStatuses(tx, tobaccoIds);
       for (const tobaccoId of tobaccoIds) await ensureOnShelf(tx, tobaccoId, 'active');
 
       if (delivery.supplierId) {
@@ -633,14 +664,19 @@ export const acceptDelivery = async (
 
       await tx.shelfItem.updateMany({ where: { tobaccoId: { in: tobaccoIds } }, data: { outAt: null } });
       await syncAvailability(tx, tobaccoIds);
+      const after = await mixStatuses(tx, tobaccoIds);
+      const openedMixes = [...before].filter(
+        ([mixId, status]) => status === 'blocked' && ['visible', 'substituted'].includes(after.get(mixId)!),
+      ).length;
       await audit(tx, actor, {
         action: 'accept',
         entityId: id,
         entityLabel: labelOf(delivery),
         details: { tobaccos: tobaccoIds.length, sumKop: received.reduce((total, line) => total + lineSum(line), 0) },
       });
+      return { fromPlan, openedMixes };
     },
     { timeout: 30_000 },
   );
-  return getDelivery(id);
+  return { ...(await getDelivery(id)), ...counts };
 };

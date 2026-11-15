@@ -5,13 +5,12 @@ import { ShelfToast, type ShelfToastData } from '@/components/shelf/shelf-toast'
 import { formatMetricValue, type DeliveryCard } from '@/contracts';
 import type { DeliveriesApi } from '@/hooks/use-deliveries';
 import {
-  acceptedToastTitle,
+  acceptedToast,
   deliveryStatusTag,
   formatDay,
   formatMoney,
   monthMeta,
   readUploadError,
-  tobaccosToReceive,
   type UploadError,
 } from '@/lib/deliveries';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
@@ -109,10 +108,10 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           initial={open.card}
           notify={notify}
           onBack={backToList}
-          onAccepted={(card) => {
+          onAccepted={(accepted) => {
             backToList();
             onAccepted();
-            notify({ title: acceptedToastTitle(tobaccosToReceive(card.lines)), text: '', action: { label: 'Открыть полку', onClick: onOpenShelf } });
+            notify({ ...acceptedToast(accepted), action: { label: 'Открыть полку', onClick: onOpenShelf } });
           }}
           onDeleted={() => {
             backToList();
