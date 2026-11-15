@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mixStatusTag, substitutionNote } from './mix-status';
+import { awaitsPlan, mixStatusTag, substitutionNote } from './mix-status';
 
 // Статус микса в «Миксах» (#481, мокап analogs @ a74ab4c2, экран mixes).
 
@@ -29,4 +29,19 @@ test('одноимённые табаки в паре замены различ�
     }),
     'Сарма Гранатовый сок вместо Starline Гранатовый сок',
   );
+});
+
+// #566 (#shot=mixes): «Ждёт табак из плана» — blocked, когда все недостающие табаки в плане.
+const missing = (tobaccoId: string, planned: boolean) => ({ tobaccoId, manufacturer: 'Bonche', name: tobaccoId, onShelf: true, planned });
+
+test('ждёт план: заблокирован, и все недостающие табаки в плане', () => {
+  assert.equal(awaitsPlan({ status: 'blocked', missing: [missing('clover-club', true)] }), true);
+  assert.equal(awaitsPlan({ status: 'blocked', missing: [missing('clover-club', true), missing('tarhun', true)] }), true);
+});
+
+test('не ждёт план: один из недостающих не в плане, замена или скрыт', () => {
+  assert.equal(awaitsPlan({ status: 'blocked', missing: [missing('clover-club', true), missing('cane-mint', false)] }), false);
+  assert.equal(awaitsPlan({ status: 'substituted', missing: [missing('clover-club', true)] }), false);
+  assert.equal(awaitsPlan({ status: 'hidden', missing: [missing('clover-club', true)] }), false);
+  assert.equal(awaitsPlan({ status: 'blocked', missing: [] }), false);
 });

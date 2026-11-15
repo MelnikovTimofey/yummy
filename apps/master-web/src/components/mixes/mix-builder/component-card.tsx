@@ -3,17 +3,49 @@ import { compositionColor } from './composition-color';
 import { componentPercent } from './rebalance';
 import type { MixEditorComponentInput } from '@/components/mixes/mix-catalog-view';
 import type { InventoryTobacco, MixSubstitution } from '@/contracts';
-import { componentStockNote } from '@/lib/mix-builder-status';
+import { componentShelfState, componentStockNote, type ComponentShelfState } from '@/lib/mix-builder-status';
 
 type ComponentCardProps = {
   component: MixEditorComponentInput;
   index: number;
   tobacco: InventoryTobacco | null;
+  shelfStatus: 'active' | 'plan' | undefined;
+  onAddToPlan: (tobacco: InventoryTobacco) => void;
   onPercentChange: (nextPercent: number) => void;
   onRemove: () => void;
 };
 
-export const ComponentCard = ({ component, index, tobacco, onPercentChange, onRemove }: ComponentCardProps) => {
+// Полка у табака в составе (#566, #shot=mix-edit): закончившийся подписан отдельно, как раньше.
+const ComponentShelf = ({ state, name, onAddToPlan }: { state: ComponentShelfState; name: string; onAddToPlan: () => void }) => {
+  if (state === 'in') {
+    return (
+      <span className="shelf-status">
+        <i aria-hidden />
+        на полке
+      </span>
+    );
+  }
+  if (state === 'plan') {
+    return (
+      <span className="tag" data-tone="info">
+        в плане
+      </span>
+    );
+  }
+  if (state === 'none') {
+    return (
+      <>
+        <span className="mix-builder__shelf-none">нет на полке</span>
+        <button type="button" className="btn" data-variant="ghost" data-size="sm" aria-label={`В план: ${name}`} onClick={onAddToPlan}>
+          В план
+        </button>
+      </>
+    );
+  }
+  return null;
+};
+
+export const ComponentCard = ({ component, index, tobacco, shelfStatus, onAddToPlan, onPercentChange, onRemove }: ComponentCardProps) => {
   const percent = componentPercent(component);
   const swatch = (
     <span
@@ -61,13 +93,14 @@ export const ComponentCard = ({ component, index, tobacco, onPercentChange, onRe
     );
   }
 
+  const shelf = componentShelfState(tobacco.inStock, shelfStatus);
   return (
     <div className="mix-builder__component">
       {swatch}
       <div className="mix-builder__component-main">
         <div className="mix-builder__component-name">
           {tobacco.name}
-          {!tobacco.inStock ? (
+          {shelf === 'out' ? (
             <span className="mix-builder__component-badge mix-builder__component-badge--warning">нет в наличии</span>
           ) : null}
         </div>
@@ -79,6 +112,9 @@ export const ComponentCard = ({ component, index, tobacco, onPercentChange, onRe
         </div>
       </div>
       <div className="mix-builder__component-prop">
+        <span className="mix-builder__component-shelf">
+          <ComponentShelf state={shelf} name={tobacco.name} onAddToPlan={() => onAddToPlan(tobacco)} />
+        </span>
         <div className="mix-builder__prop-input">
           <button type="button" className="mix-builder__prop-step" onClick={() => step(-5)} aria-label="−5%">
             <Minus size={12} aria-hidden="true" />
@@ -117,6 +153,8 @@ export const PhoneComponentCard = ({
   component,
   index,
   tobacco,
+  shelfStatus,
+  onAddToPlan,
   missingIds,
   substitution,
   onPercentChange,
@@ -125,7 +163,8 @@ export const PhoneComponentCard = ({
   const percent = componentPercent(component);
   const step = (delta: number) => onPercentChange(Math.max(1, Math.min(99, percent + delta)));
   const name = tobacco?.name ?? 'Табак не найден';
-  const note = tobacco ? componentStockNote(tobacco.id, tobacco.inStock, missingIds, substitution) : null;
+  const shelf = tobacco ? componentShelfState(tobacco.inStock, shelfStatus) : null;
+  const note = tobacco && shelf === 'out' ? componentStockNote(tobacco.id, tobacco.inStock, missingIds, substitution) : null;
   return (
     <div className="mix-builder__phone-component" data-missing={!tobacco || undefined}>
       <div className="mix-builder__phone-component-who">
@@ -161,6 +200,11 @@ export const PhoneComponentCard = ({
       {note ? (
         <p className="mix-builder__phone-note" data-tone={note.tone}>
           {note.text}
+        </p>
+      ) : null}
+      {tobacco && (shelf === 'plan' || shelf === 'none') ? (
+        <p className="mix-builder__phone-note mix-builder__phone-shelf">
+          <ComponentShelf state={shelf} name={name} onAddToPlan={() => onAddToPlan(tobacco)} />
         </p>
       ) : null}
     </div>

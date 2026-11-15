@@ -15,6 +15,7 @@ export type RuleTobacco = {
   inStock: boolean;
   archived: boolean;
   onShelf: boolean;
+  planned: boolean;
 };
 
 // analogs — аналоги табака компонента в его порядке замены.
@@ -79,6 +80,7 @@ const toRuleTobacco = (tobacco: RuleTobaccoRecord, shelfStatus: string | undefin
   inStock: tobacco.inStock,
   archived: tobacco.archived,
   onShelf: shelfStatus != null && shelfStatus !== 'dropped',
+  planned: shelfStatus === 'plan',
 });
 
 export const toRuleComponent = (tobacco: RuleTobaccoRecord, context: RuleContext): RuleComponent => ({
@@ -96,7 +98,11 @@ const refOf = (tobacco: RuleTobacco): TobaccoRef => ({
 
 export const resolveMixAvailability = (available: boolean, components: RuleComponent[]): MixAvailability => {
   const lacking = components.filter((component) => !ready(component.tobacco));
-  const missing = lacking.map((component) => ({ ...refOf(component.tobacco), onShelf: component.tobacco.onShelf }));
+  const missing = lacking.map((component) => ({
+    ...refOf(component.tobacco),
+    onShelf: component.tobacco.onShelf,
+    planned: component.tobacco.planned,
+  }));
   const none = { substitution: null, substitute: null, missing };
 
   if (!available) return { status: 'hidden', ...none };
@@ -115,6 +121,11 @@ export const resolveMixAvailability = (available: boolean, components: RuleCompo
     missing,
   };
 };
+
+// «Ждёт табак из плана» (#566) — разновидность blocked только для Мастера: микс откроется
+// гостю сам, когда придут табаки из плана. Для гостя, дашборда и «К заказу» он blocked.
+export const awaitsPlan = (mix: Pick<MixAvailability, 'status' | 'missing'>) =>
+  mix.status === 'blocked' && mix.missing.every((item) => item.planned);
 
 // Подсказки «Похожие на полке» (PRD §9.3 п.6): кандидаты — табаки полки в наличии,
 // ранжируются по числу общих flavors и flavorProfiles; flavorTags не участвуют (§7 п.4).

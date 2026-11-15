@@ -1,10 +1,11 @@
-import { useLayoutEffect, useMemo, useState, type FormEventHandler } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type FormEventHandler } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import type { InventoryTobacco } from '@/contracts';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type { MixEditorComponentInput, MixEditorViewState } from '@/components/mixes/mix-catalog-view';
 import { ComponentCard, PhoneComponentCard } from './component-card';
-import { builderStockTag, builderSumLabel } from '@/lib/mix-builder-status';
+import { AWAITS_PLAN_HINT, builderStockTag, builderSumLabel } from '@/lib/mix-builder-status';
+import { ShelfToast, type ShelfToastData } from '@/components/shelf/shelf-toast';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { ProportionBar } from './proportion-bar';
@@ -17,6 +18,10 @@ type MixBuilderProps = {
   editor: MixEditorViewState;
   tobaccos: InventoryTobacco[];
   componentTobaccos: InventoryTobacco[];
+  // Табаки на полке: «на полке» или «в плане»; кого нет, того нет на полке (#566).
+  shelfStatuses: Map<string, 'active' | 'plan'>;
+  onAddToPlan: (tobacco: InventoryTobacco) => Promise<unknown>;
+  onUndoPlan: (tobacco: InventoryTobacco) => Promise<unknown>;
   onSearchTobaccos: (query: string) => Promise<InventoryTobacco[]>;
   saveStatus: 'idle' | 'loading' | 'ready' | 'error';
   saveError: string;
@@ -70,6 +75,9 @@ export const MixBuilder = ({
   editor,
   tobaccos,
   componentTobaccos,
+  shelfStatuses,
+  onAddToPlan,
+  onUndoPlan,
   onSearchTobaccos,
   saveStatus,
   saveError,
@@ -115,7 +123,44 @@ export const MixBuilder = ({
   const missingIds = editor.components
     .filter((component) => tobaccoMap.get(component.tobaccoId)?.inStock === false)
     .map((component) => component.tobaccoId);
-  const stockTag = builderStockTag(missingIds, editor.substitution);
+  const plannedIds = missingIds.filter((id) => shelfStatuses.get(id) === 'plan');
+  const stockTag = builderStockTag(missingIds, editor.substitution, plannedIds);
+  const stockTagNode = stockTag ? (
+    stockTag.tone === 'plan' ? (
+      <span className="shelf-status" data-tone="plan">
+        <i aria-hidden />
+        {stockTag.label}
+      </span>
+    ) : (
+      <span className="tag" data-tone={stockTag.tone}>
+        {stockTag.label}
+      </span>
+    )
+  ) : null;
+  const planHint = stockTag?.tone === 'plan' ? <p className="mix-builder__plan-hint">{AWAITS_PLAN_HINT}</p> : null;
+
+  const [toast, setToast] = useState<ShelfToastData | null>(null);
+  const toastSeq = useRef(0);
+  const notify = (next: Omit<ShelfToastData, 'id'>) => {
+    toastSeq.current += 1;
+    setToast({ ...next, id: toastSeq.current });
+  };
+  const failed = (cause: unknown, title: string) =>
+    notify({ title, text: cause instanceof Error ? cause.message : 'Попробуйте ещё раз.', error: true });
+  const addToPlan = async (tobacco: InventoryTobacco) => {
+    try {
+      await onAddToPlan(tobacco);
+      notify({ title: `${tobacco.name} в плане`, text: 'Попадёт в «К заказу».', undo: () => onUndoPlan(tobacco) });
+    } catch (cause) {
+      failed(cause, 'Не удалось добавить в план');
+    }
+  };
+  const undoToast = () => {
+    const undo = toast?.undo;
+    setToast(null);
+    undo?.().catch((cause: unknown) => failed(cause, 'Не удалось отменить'));
+  };
+  const toastNode = toast ? <ShelfToast toast={toast} onUndo={undoToast} onClose={() => setToast(null)} /> : null;
   const phone = useIsPhone();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const isValid =
@@ -195,11 +240,7 @@ export const MixBuilder = ({
           <label className="mix-builder__phone-visibility">
             <span>
               Виден гостю
-              {stockTag ? (
-                <span className="tag" data-tone={stockTag.tone}>
-                  {stockTag.label}
-                </span>
-              ) : null}
+              {stockTagNode}
             </span>
             {visibilityToggle}
           </label>
@@ -245,6 +286,8 @@ export const MixBuilder = ({
                   component={component}
                   index={index}
                   tobacco={tobaccoMap.get(component.tobaccoId) ?? null}
+                  shelfStatus={shelfStatuses.get(component.tobaccoId)}
+                  onAddToPlan={(tobacco) => void addToPlan(tobacco)}
                   missingIds={missingIds}
                   substitution={editor.substitution}
                   onPercentChange={(nextPercent) => onUpdateComponent(component.key, { proportion: String(nextPercent) })}
@@ -258,6 +301,7 @@ export const MixBuilder = ({
               <p>Добавьте табаки, пропорции настроятся здесь.</p>
             </div>
           )}
+          {planHint}
           <button type="button" className="mix-builder__phone-add" onClick={() => setLibraryOpen(true)}>
             <Plus size={18} aria-hidden="true" />
             Добавить табак
@@ -303,6 +347,8 @@ export const MixBuilder = ({
             <BusyLabel busy={saveStatus === 'loading'}>{submitLabel}</BusyLabel>
           </button>
         </footer>
+
+        {toastNode}
 
         {libraryOpen ? (
           <BottomSheet label="Добавить табак" onClose={() => setLibraryOpen(false)} className="mix-builder__library-sheet">
@@ -350,11 +396,7 @@ export const MixBuilder = ({
                 : `сумма ${totalPercent}%, не хватает ${100 - totalPercent}%`}
             </span>
           ) : null}
-          {stockTag ? (
-            <span className="tag" data-tone={stockTag.tone}>
-              {stockTag.label}
-            </span>
-          ) : null}
+          {stockTagNode}
           {stockTag?.note ? <span className="mix-builder__breadcrumb-meta">{stockTag.note}</span> : null}
         </div>
         <div className="mix-builder__actions">
@@ -473,6 +515,8 @@ export const MixBuilder = ({
                     component={component}
                     index={index}
                     tobacco={tobaccoMap.get(component.tobaccoId) ?? null}
+                    shelfStatus={shelfStatuses.get(component.tobaccoId)}
+                    onAddToPlan={(tobacco) => void addToPlan(tobacco)}
                     onPercentChange={(nextPercent) =>
                       onUpdateComponent(component.key, { proportion: String(nextPercent) })
                     }
@@ -481,6 +525,7 @@ export const MixBuilder = ({
                 ))
               )}
             </div>
+            {planHint}
           </section>
 
           {aggregatedProfiles.length ? (
@@ -508,6 +553,7 @@ export const MixBuilder = ({
           {saveError ? <p className="error-text">{saveError}</p> : null}
         </section>
       </div>
+      {toastNode}
     </form>
   );
 };

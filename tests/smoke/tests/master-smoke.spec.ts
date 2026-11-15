@@ -118,7 +118,9 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
 
   await openWorkspace(page, 'Миксы');
   const statusChips = page.getByRole('group', { name: 'Статус микса' });
-  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(4);
+  // Число у каждого статуса, кроме «Все»; «Ждут план» (#566) отдельно от «Блокирован».
+  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(5);
+  await expect(statusChips.getByRole('button', { name: 'Фильтр: Ждут план' })).toBeVisible();
   await expect(statusChips.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
   const mixAttributes = page.getByRole('group', { name: 'Фильтры миксов' });
   await expect(mixAttributes.locator('.filter-chip__count')).toHaveCount(0);
