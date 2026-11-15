@@ -748,7 +748,7 @@ test.describe('Master access on a phone', () => {
 // Дашборд — выборы гостей (#520): период меняет диапазон дат; на seed выборов
 // может не быть, поэтому годится и график, и «Выборов нет». Блока полки на
 // дашборде больше нет. Дальше «К заказу» на полке (#518, #shot=order,
-// edge-order-empty); настроек полки больше нет.
+// edge-order-empty, #563 #shot=order-plan); настроек полки больше нет.
 // Неразрушающий: в «К заказу» ничего не меняется.
 test('Master dashboard switches the period, shelf opens «К заказу» without changes', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
@@ -784,16 +784,27 @@ test('Master dashboard switches the period, shelf opens «К заказу» with
   const orderToggle = views.filter({ hasText: /^К заказу/ });
   await orderToggle.click();
   await expect(orderToggle).toHaveAttribute('aria-pressed', 'true');
-  // Группы поставщиков или «Всё в наличии» — зависит от полки в базе.
+  // Группы поставщиков, план (#563) или «Всё в наличии» — зависит от полки в базе.
   await expect(page.locator('section.shelf-order, .shelf-order-empty').first()).toBeVisible();
-  const groups = page.locator('section.shelf-order');
+  const plan = page.getByRole('region', { name: 'В плане', exact: true });
+  const groups = page.locator('section.shelf-order').filter({ hasNot: page.getByRole('heading', { name: 'В плане', level: 2, exact: true }) });
   if (await groups.count()) {
     for (const name of ['Табак', 'Закончился', 'Миксы', 'Последний приход']) {
       await expect(groups.first().getByRole('columnheader', { name, exact: true })).toBeVisible();
     }
     await expect(groups.first().getByRole('button', { name: 'Скопировать заявку' })).toBeVisible();
+  } else if (await plan.count()) {
+    await expect(page.getByText('Закончившихся нет, всё, что держим, в наличии.')).toBeVisible();
   } else {
     await expect(page.getByRole('heading', { name: 'Всё в наличии', level: 2 })).toBeVisible();
+  }
+  if (await plan.count()) {
+    for (const name of ['Табак', 'В плане с', 'Миксы']) {
+      await expect(plan.getByRole('columnheader', { name, exact: true })).toBeVisible();
+    }
+    await expect(plan.getByRole('button', { name: 'Скопировать список' })).toBeVisible();
+    // «В наличие» отмечают на «Полке», в «К заказу» его нет.
+    await expect(plan.getByRole('button', { name: 'В наличие' })).toHaveCount(0);
   }
   // Сколько заказать, решает мастер: ни расхода, ни суммы, ни настроек полки.
   await expect(page.getByRole('columnheader', { name: 'Расход в месяц' })).toHaveCount(0);

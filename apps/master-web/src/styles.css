@@ -7713,6 +7713,13 @@ button[aria-busy="true"]:disabled {
 .shelf-order__table td[data-tone="faint"] { color: var(--text-faint); }
 .shelf-order__out,
 .shelf-order__table td.shelf-order__out { color: var(--danger); }
+.shelf-order__planned,
+.shelf-order__table td.shelf-order__planned { color: var(--text-muted); }
+/* План старше месяца (#563). */
+.shelf-order__planned[data-stale],
+.shelf-order__table td.shelf-order__planned[data-stale] { color: var(--warning); }
+.shelf-order__table td.shelf-order__actions { padding-top: 4px; padding-bottom: 4px; }
+.shelf-order__actions .icon-btn { margin-left: auto; }
 
 .shelf-order__copy {
   margin: 0 16px 14px;
@@ -7762,7 +7769,8 @@ button[aria-busy="true"]:disabled {
 .shelf-page--phone .shelf-order__copy { margin: 8px 0 0; }
 .shelf-order__cards { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .shelf-order__cards .shelf-name b { white-space: normal; }
-.shelf-order__cards .shelf-order__out { font-size: 13px; }
+.shelf-order__cards .shelf-order__out,
+.shelf-order__cards .shelf-order__planned { font-size: 13px; }
 .shelf-order__mixes { color: var(--text-muted); }
 
 /* «Зашло / Не зашло» (#329): в карточке и на телефоне. */
