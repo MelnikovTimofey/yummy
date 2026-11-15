@@ -250,3 +250,31 @@ test('«На полку» after the plan was removed clears plannedAt', async ()
   const { item } = back.json() as { item: Row };
   assert.deepEqual([item.shelfStatus, item.plannedAt], ['active', null]);
 });
+
+// #562: отмена «Убрать из плана» возвращает табак в план с прежней датой.
+test('«В план» with plannedAt restores the earlier date, a future date is rejected', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const headers = { authorization: `Bearer ${token}` };
+  const offShelf = await prisma.tobacco.findFirstOrThrow({ where: { shelfItem: null, archived: false } });
+
+  await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'plan' } });
+  await prisma.shelfItem.update({ where: { tobaccoId: offShelf.id }, data: { plannedAt: new Date('2026-09-12T10:00:00.000Z') } });
+  await app.inject({ method: 'DELETE', url: `/staff/shelf/${offShelf.id}`, headers });
+
+  const future = new Date(Date.now() + 86_400_000).toISOString();
+  for (const plannedAt of [future, 'вчера', 42]) {
+    const rejected = await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'plan', plannedAt } });
+    assert.equal(rejected.statusCode, 400, String(plannedAt));
+  }
+
+  const back = await app.inject({
+    method: 'POST',
+    url: '/staff/shelf',
+    headers,
+    payload: { tobaccoId: offShelf.id, status: 'plan', plannedAt: '2026-09-12T10:00:00.000Z' },
+  });
+  assert.equal(back.statusCode, 200);
+  const { item } = back.json() as { item: Row };
+  assert.deepEqual([item.shelfStatus, item.plannedAt], ['plan', '2026-09-12T10:00:00.000Z']);
+});

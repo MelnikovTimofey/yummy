@@ -112,6 +112,12 @@ test.describe('стоп, настройки строки, полка и план
     assert.equal((await addToShelf(actor, BERRY, 'active', at(4))).plannedAt, null);
   });
 
+  test('отмена «Убрать из плана» (#562) возвращает прежнюю дату', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+    await removeFromShelf(actor, PEACH, at(2));
+    assert.equal((await addToShelf(actor, PEACH, 'plan', at(3), at(1))).plannedAt, at(1).toISOString());
+  });
+
   test('в работу мимо плана — даты нет: план, «Убрать с полки», «На полку»', async () => {
     await addToShelf(actor, PEACH, 'plan', at(1));
     await removeFromShelf(actor, PEACH, at(2));

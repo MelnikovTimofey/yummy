@@ -610,13 +610,14 @@ export const setTrialVerdict = async (actor: ShelfActor, tobaccoId: string, verd
 // Повторное добавление убранного табака возвращает его на полку; то, что уже
 // держим, в план не понижается. plannedAt (#561): в план — с этого момента; в работу
 // из плана — дата остаётся (по ней видно, что пришёл из плана); мимо плана — даты нет.
-export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan', now: Date) => {
+// plannedSince — прежняя дата, когда отменяют «Убрать из плана» (#562).
+export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan', now: Date, plannedSince = now) => {
   const tobacco = await tx.tobacco.findUnique({
     where: { id: tobaccoId },
     select: { shelfItem: { select: { id: true, status: true } } },
   });
   if (!tobacco) throw new ShelfNotFoundError(`Табак ${tobaccoId} не найден в каталоге`);
-  const plannedAt = status === 'plan' ? now : null;
+  const plannedAt = status === 'plan' ? plannedSince : null;
   if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status, plannedAt } });
   const current = tobacco.shelfItem.status;
   const next = current === 'active' ? 'active' : status;
@@ -629,10 +630,16 @@ export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' 
 
 // Наличие стоящей или убранной строки не меняется. Новая строка и строка из плана
 // в работе ещё не приходили — «Закончился» до прихода; в плане даты нет.
-export const addToShelf = async (actor: ShelfActor, tobaccoId: string, status: 'active' | 'plan', now = new Date()) => {
+export const addToShelf = async (
+  actor: ShelfActor,
+  tobaccoId: string,
+  status: 'active' | 'plan',
+  now = new Date(),
+  plannedSince = now,
+) => {
   await prisma.$transaction(async (tx) => {
     const before = await tx.shelfItem.findUnique({ where: { tobaccoId }, select: { status: true } });
-    const item = await ensureOnShelf(tx, tobaccoId, status, now);
+    const item = await ensureOnShelf(tx, tobaccoId, status, now, plannedSince);
     if (!before || before.status === 'plan') {
       await tx.shelfItem.update({ where: { id: item.id }, data: { outAt: item.status === 'plan' ? null : now } });
     }
