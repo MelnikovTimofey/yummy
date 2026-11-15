@@ -147,11 +147,15 @@ export const shelfStatusCell = (row: ShelfRow): { tone: ShelfState; label: strin
     case 'stop':
       return { tone: state, label: 'Стоп для гостей', note: row.stopNote || null };
     case 'plan':
-      return { tone: state, label: 'В плане', note: 'ждёт прихода' };
+      return { tone: state, label: 'В плане', note: row.plannedAt ? `с ${formatShelfDate(row.plannedAt)}` : null };
     default:
       return { tone: state, label: 'Есть', note: null };
   }
 };
+
+// Наличие в карточке плана (#562, #shot=card-plan).
+export const planStateLabel = (row: Pick<ShelfRow, 'plannedAt'>) =>
+  row.plannedAt ? `В плане с ${formatShelfDate(row.plannedAt)}` : 'В плане';
 
 const arrivalSource = (arrival: ShelfArrival) => {
   if (arrival.kind === 'start') return 'Стартовый приход';
@@ -229,17 +233,30 @@ export const restockToast = (row: ShelfRow, fromPlan = false) => ({
   text: row.stopped ? 'Стоп для гостей остался.' : fromPlan ? 'Появился на витрине.' : 'Вернулся на витрину.',
 });
 
+export const removeToast = (row: ShelfRow) => ({
+  title: `${row.tobacco.manufacturer} ${row.tobacco.name}`,
+  text: row.shelfStatus === 'plan' ? 'Убран из плана.' : 'Убран с полки, история осталась.',
+});
+
+// Отмена «Убрать»: строка встаёт как была, план — с прежней датой (#562).
+export const restoreShelfBody = (row: ShelfRow) =>
+  row.shelfStatus === 'plan'
+    ? { tobaccoId: row.tobacco.id, status: 'plan' as const, ...(row.plannedAt ? { plannedAt: row.plannedAt } : {}) }
+    : { tobaccoId: row.tobacco.id, status: 'active' as const };
+
 export const keepToast = (row: ShelfRow) => ({
   title: row.tobacco.name,
   text: row.outAt ? 'Держим постоянно. Добавлен в заявку.' : 'Держим постоянно. Закончится, попадёт в заявку.',
 });
 
-// «В миксах» карточки (#shot=card): чем закрыт микс, пока табака нет.
-export const cardMixState = (mix: { status: MixStatus | null; substitution: MixSubstitution | null }) => {
+// «В миксах» карточки (#shot=card): чем закрыт микс, пока табака нет. У плана
+// микс, закрытый наличием, ждёт этот табак (#562, #shot=card-plan).
+export const cardMixState = (mix: { status: MixStatus | null; substitution: MixSubstitution | null }, plan = false) => {
   switch (mix.status) {
     case 'substituted':
       return { text: mix.substitution ? `аналог ${mix.substitution.to.manufacturer} ${mix.substitution.to.name}` : 'с заменой', danger: false };
     case 'blocked':
+      return plan ? { text: 'ждёт этот табак', danger: false } : { text: 'скрыт', danger: true };
     case 'hidden':
       return { text: 'скрыт', danger: true };
     case 'visible':

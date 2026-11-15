@@ -7074,6 +7074,7 @@ button[aria-busy="true"]:disabled {
 .shelf-state button:disabled { opacity: 0.55; cursor: not-allowed; }
 .shelf-state i { width: 7px; height: 7px; border-radius: 999px; background: var(--success); }
 .shelf-state button[data-tone="out"] i { background: var(--danger); }
+.shelf-state button[data-tone="plan"] i { box-sizing: border-box; border: 1px solid var(--text-muted); background: transparent; }
 
 /* «В миксах» и «Приходы»: строка «слева что, справа подпись». */
 .shelf-card-list {
@@ -8260,6 +8261,7 @@ button[aria-busy="true"]:disabled {
 .m-actions__item:disabled { opacity: 0.45; cursor: not-allowed; }
 .m-actions__item .shelf-faint { font-size: var(--fs-xs); }
 .m-actions__item--sep { margin-top: 4px; border-top: 1px solid var(--border-subtle); border-radius: 0; }
+.m-actions__item.m-actions__item--danger { color: var(--danger); }
 
 .shelf-card__head-actions { display: flex; gap: 4px; margin-right: -10px; }
 .shelf-card__head-actions .icon-btn { width: 44px; height: 44px; }

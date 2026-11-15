@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Ellipsis, X } from 'lucide-react';
+import { CircleMinus, Ellipsis, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { HtreviewsLink } from '@/components/ui/htreviews-link';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import type { InventoryTobacco, ShelfCard as ShelfCardData, ShelfRow, ShelfTrialVerdict } from '@/contracts';
 import type { ShelfPatch } from '@/hooks/use-shelf';
-import { arrivalLine, describeShelfError, formatShelfDate, shelfRowMenu, shelfState, trialArrival } from '@/lib/shelf';
+import { arrivalLine, describeShelfError, formatShelfDate, planStateLabel, shelfRowMenu, shelfState, trialArrival } from '@/lib/shelf';
 import { ShelfAnalogsSections, ShelfCardMixes, type AnalogChange } from './shelf-analogs';
 import { ShelfActionsSheet } from './shelf-mobile';
 import type { ShelfRowActions } from './shelf-row-menu';
@@ -20,6 +20,7 @@ type ShelfCardProps = {
   onSetAnalogs: (row: ShelfRow, ...change: Parameters<AnalogChange>) => Promise<void>;
   onEmpty: (row: ShelfRow) => void;
   onRestock: (row: ShelfRow) => void;
+  onRemove: (row: ShelfRow) => void;
   onUpdate: (row: ShelfRow, patch: ShelfPatch) => Promise<void>;
   onTrialVerdict: (row: ShelfRow, verdict: ShelfTrialVerdict | null) => Promise<void>;
   onOpenCatalog: (row: ShelfRow) => void;
@@ -31,7 +32,8 @@ type ShelfCardProps = {
 
 // Карточка табака на полке (#518, #shot=card, card-in): наличие одной кнопкой,
 // «держим постоянно» и стоп, в каких миксах табак закрыт аналогом, приходы по счетам.
-// Проба (#329) и аналоги (#482) — как раньше.
+// Проба (#329) и аналоги (#482) — как раньше. У плана (#562, #shot=card-plan) «держим» и
+// стопа нет до прихода, внизу «Убрать из плана».
 export const ShelfCard = ({
   row,
   loadCard,
@@ -39,6 +41,7 @@ export const ShelfCard = ({
   onSetAnalogs,
   onEmpty,
   onRestock,
+  onRemove,
   onUpdate,
   onTrialVerdict,
   onOpenCatalog,
@@ -125,7 +128,6 @@ export const ShelfCard = ({
           </div>
           <SheetDescription className="shelf-card__brand">{row.tobacco.manufacturer}</SheetDescription>
           <div className="shelf-card__links">
-            {row.shelfStatus === 'plan' ? <span className="tag">в плане</span> : null}
             {row.tobacco.flavorProfiles.map((profile) => (
               <ProfileTag key={profile} profile={profile} />
             ))}
@@ -147,19 +149,20 @@ export const ShelfCard = ({
                 <i aria-hidden />
                 Есть
               </button>
-              <button
-                type="button"
-                data-tone="out"
-                aria-pressed={state === 'out'}
-                disabled={state === 'plan'}
-                onClick={() => (items.canEmpty ? onEmpty(row) : undefined)}
-              >
-                <i aria-hidden />
-                {state === 'out' ? `Закончился ${formatShelfDate(row.outAt)}` : 'Закончился'}
-              </button>
+              {state === 'plan' ? (
+                <button type="button" data-tone="plan" aria-pressed>
+                  <i aria-hidden />
+                  {planStateLabel(row)}
+                </button>
+              ) : (
+                <button type="button" data-tone="out" aria-pressed={state === 'out'} onClick={() => (items.canEmpty ? onEmpty(row) : undefined)}>
+                  <i aria-hidden />
+                  {state === 'out' ? `Закончился ${formatShelfDate(row.outAt)}` : 'Закончился'}
+                </button>
+              )}
             </div>
             {state === 'out' ? <p className="shelf-card__note shelf-faint">Вернётся в наличие сам, когда примете счёт с этим табаком.</p> : null}
-            {state === 'plan' ? <p className="shelf-card__note shelf-faint">В плане. Встанет «Есть» сам, когда примете счёт с этим табаком.</p> : null}
+            {state === 'plan' ? <p className="shelf-card__note shelf-faint">Встанет «Есть» сам, когда примете счёт с этим табаком.</p> : null}
           </section>
 
           {row.trial ? (
@@ -175,55 +178,57 @@ export const ShelfCard = ({
             </section>
           ) : null}
 
-          <section className="shelf-card__section">
-            <div className="shelf-card__setting">
-              <span>
-                Держим постоянно
-                <small>Закончится, попадёт в заявку</small>
-              </span>
-              <ShelfToggle checked={row.keepStocked} label="Держим постоянно" disabled={saving} onChange={(next) => void save({ keepStocked: next })} />
-            </div>
-            <div className="shelf-card__setting">
-              <span>
-                Стоп для гостей
-                <small>Есть на полке, но гостю не предлагаем</small>
-              </span>
-              <ShelfToggle
-                checked={row.stopped}
-                label="Стоп для гостей"
-                disabled={saving}
-                onChange={(next) => void save({ stopped: next, ...(next && stopNote.trim() ? { stopNote: stopNote.trim() } : {}) })}
-              />
-            </div>
-            {row.stopped ? (
-              <form
-                className="shelf-card__stop-note"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void save({ stopped: true, stopNote: stopNote.trim() });
-                }}
-              >
-                <input
-                  className="text-input"
-                  aria-label="Заметка к стопу"
-                  placeholder="Например, до декабря"
-                  value={stopNote}
-                  onChange={(event) => setStopNote(event.target.value)}
+          {state === 'plan' ? null : (
+            <section className="shelf-card__section">
+              <div className="shelf-card__setting">
+                <span>
+                  Держим постоянно
+                  <small>Закончится, попадёт в заявку</small>
+                </span>
+                <ShelfToggle checked={row.keepStocked} label="Держим постоянно" disabled={saving} onChange={(next) => void save({ keepStocked: next })} />
+              </div>
+              <div className="shelf-card__setting">
+                <span>
+                  Стоп для гостей
+                  <small>Есть на полке, но гостю не предлагаем</small>
+                </span>
+                <ShelfToggle
+                  checked={row.stopped}
+                  label="Стоп для гостей"
+                  disabled={saving}
+                  onChange={(next) => void save({ stopped: next, ...(next && stopNote.trim() ? { stopNote: stopNote.trim() } : {}) })}
                 />
-                <button type="submit" className="btn" data-size="sm" disabled={saving || stopNote.trim() === (row.stopNote ?? '')}>
-                  Сохранить
-                </button>
-              </form>
-            ) : null}
-            {saveError ? <p className="error-text">{saveError}</p> : null}
-          </section>
+              </div>
+              {row.stopped ? (
+                <form
+                  className="shelf-card__stop-note"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void save({ stopped: true, stopNote: stopNote.trim() });
+                  }}
+                >
+                  <input
+                    className="text-input"
+                    aria-label="Заметка к стопу"
+                    placeholder="Например, до декабря"
+                    value={stopNote}
+                    onChange={(event) => setStopNote(event.target.value)}
+                  />
+                  <button type="submit" className="btn" data-size="sm" disabled={saving || stopNote.trim() === (row.stopNote ?? '')}>
+                    Сохранить
+                  </button>
+                </form>
+              ) : null}
+              {saveError ? <p className="error-text">{saveError}</p> : null}
+            </section>
+          )}
 
           {loadError ? <p className="error-text">{loadError}</p> : null}
 
           <section className="shelf-card__section">
             <h3 className="shelf-card__h3">В миксах</h3>
             {card?.mixes.length ? (
-              <ShelfCardMixes mixes={card.mixes} onOpenMix={onOpenMix} />
+              <ShelfCardMixes mixes={card.mixes} plan={state === 'plan'} onOpenMix={onOpenMix} />
             ) : card ? (
               <p className="shelf-faint shelf-card__note">Ни в одном миксе.</p>
             ) : loadError ? null : (
@@ -253,6 +258,15 @@ export const ShelfCard = ({
               )
             ) : null}
           </section>
+
+          {state === 'plan' ? (
+            <div>
+              <button type="button" className="btn" data-variant="ghost" onClick={() => onRemove(row)}>
+                <CircleMinus size={14} aria-hidden />
+                Убрать из плана
+              </button>
+            </div>
+          ) : null}
         </div>
       </SheetContent>
       {actions && actionsOpen ? <ShelfActionsSheet row={row} actions={actions} onClose={() => setActionsOpen(false)} /> : null}
