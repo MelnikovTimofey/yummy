@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { prisma } from './db';
 import { acceptDelivery, addLine, createManualDraft } from './deliveries';
+import { getShelfItem } from './shelf';
 import { resetAppState } from './state';
 
 // Ответ приёмки (#565): сколько пришло из плана и сколько миксов открылось гостям.
+// Пришедший из плана — проба, «держим постоянно» решает мастер (#567).
 
 const actor = { login: 'admin', name: 'Админ', role: 'admin' as const };
 
@@ -13,7 +15,11 @@ const tobacco = (id: string, inStock = false) =>
     data: { id, manufacturer: 'S5', name: id, flavorProfiles: '[]', flavors: '[]', flavorTags: '[]', inStock },
   });
 
-const onShelf = (tobaccoId: string, status: 'active' | 'plan') => prisma.shelfItem.create({ data: { tobaccoId, status } });
+const onShelf = (tobaccoId: string, status: 'active' | 'plan', keepStocked = true) =>
+  prisma.shelfItem.create({ data: { tobaccoId, status, keepStocked } });
+
+const keepStocked = async (tobaccoId: string) =>
+  (await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId }, select: { keepStocked: true } })).keepStocked;
 
 const mix = (id: string, tobaccoIds: string[]) =>
   prisma.mix.create({
@@ -81,4 +87,23 @@ test('уже видимый микс не считается, открытый �
   const accepted = await accept(['s5-new', 's5-ready']);
 
   assert.deepEqual([accepted.fromPlan, accepted.openedMixes], [0, 1]);
+});
+
+test('табак из плана приходит пробой с выключенным «держим постоянно»', async () => {
+  await tobacco('s7-plan');
+  await onShelf('s7-plan', 'plan');
+
+  await accept(['s7-plan']);
+
+  const card = await getShelfItem('s7-plan');
+  assert.deepEqual([card.shelfStatus, card.keepStocked, card.trial], ['active', false, true]);
+});
+
+test('приход табака в работе «держим постоянно» не меняет', async () => {
+  await tobacco('s7-off');
+  await onShelf('s7-off', 'active', false);
+
+  await accept(['s5-ready', 's7-off']);
+
+  assert.deepEqual([await keepStocked('s5-ready'), await keepStocked('s7-off')], [true, false]);
 });

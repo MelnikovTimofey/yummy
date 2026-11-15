@@ -78,6 +78,17 @@ test.describe('«Вернуть в наличие»', () => {
     assert.equal(await inStock(PEACH), false);
   });
 
+  test('из плана (#567): «держим постоянно» выключено, отмена его не возвращает', async () => {
+    await addToShelf(actor, PEACH, 'plan', at(1));
+    await markEmpty(actor, MINT, at(1));
+
+    const { batchId, items } = await restockMany(actor, [PEACH, MINT], at(2));
+    assert.deepEqual(items.map((row) => [row.tobacco.id, row.keepStocked]), [[PEACH, false], [MINT, true]]);
+
+    const undone = await undoRestockBatch(actor, batchId, at(3));
+    assert.deepEqual(undone.items.map((row) => [row.tobacco.id, row.keepStocked]), [[PEACH, false], [MINT, true]]);
+  });
+
   test('из плана: отмена не трогает табак, который с тех пор отметили «Закончился»', async () => {
     await addToShelf(actor, PEACH, 'plan', at(1));
     const { batchId } = await restock(actor, PEACH, at(2));
