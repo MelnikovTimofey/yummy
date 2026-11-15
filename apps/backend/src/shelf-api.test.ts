@@ -21,6 +21,7 @@ test.beforeEach(async () => {
 type Row = {
   tobacco: { id: string };
   outAt: string | null;
+  plannedAt: string | null;
   stopped: boolean;
   guestAvailable: boolean;
   shelfStatus: string;
@@ -187,4 +188,65 @@ test('«Закончились» for several tobaccos at once and one undo for a
     (await app.inject({ method: 'POST', url: '/staff/shelf/empty', headers, payload: { tobaccoIds: ['no-such-tobacco'] } })).statusCode,
     404,
   );
+});
+
+// #561: дата постановки в план — поле строки полки, приход и «Убрать с полки» её не трогают.
+test('plannedAt is set when the tobacco enters the plan and survives the arrival', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const headers = { authorization: `Bearer ${token}` };
+  const offShelf = await prisma.tobacco.findFirstOrThrow({ where: { shelfItem: null, archived: false } });
+
+  const before = Date.now();
+  const planned = await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'plan' } });
+  const firstPlannedAt = (planned.json() as { item: Row }).item.plannedAt;
+  assert.ok(firstPlannedAt && Date.parse(firstPlannedAt) >= before, 'новая строка в плане получает дату');
+  const listed = (await app.inject({ method: 'GET', url: '/staff/shelf', headers })).json() as { rows: Row[] };
+  assert.equal(listed.rows.find((row) => row.tobacco.id === offShelf.id)!.plannedAt, firstPlannedAt);
+
+  // «Убрать с полки» дату не трогает; повторная постановка — новая дата.
+  await prisma.shelfItem.update({ where: { tobaccoId: offShelf.id }, data: { plannedAt: new Date('2026-09-01T10:00:00.000Z') } });
+  const removed = await app.inject({ method: 'DELETE', url: `/staff/shelf/${offShelf.id}`, headers });
+  assert.equal((removed.json() as { item: Row }).item.plannedAt, '2026-09-01T10:00:00.000Z');
+  const replanned = await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'plan' } });
+  const replannedAt = (replanned.json() as { item: Row }).item.plannedAt;
+  assert.ok(replannedAt && Date.parse(replannedAt) >= before, 'после «Убрать с полки» дата новая');
+
+  // Приход из плана: табак в работе, дата постановки сохраняется.
+  const draft = await app.inject({ method: 'POST', url: '/staff/deliveries/manual', headers, payload: { supplierName: 'Каспий Опт', number: '561' } });
+  const deliveryId = (draft.json() as { id: string }).id;
+  assert.equal(
+    (await app.inject({ method: 'POST', url: `/staff/deliveries/${deliveryId}/lines`, headers, payload: { rawName: offShelf.name, qty: 1, tobaccoId: offShelf.id } })).statusCode,
+    201,
+  );
+  assert.equal((await app.inject({ method: 'POST', url: `/staff/deliveries/${deliveryId}/accept`, headers, payload: {} })).statusCode, 200);
+  const card = await app.inject({ method: 'GET', url: `/staff/shelf/${offShelf.id}`, headers });
+  const { item } = card.json() as { item: Row };
+  assert.deepEqual([item.shelfStatus, item.plannedAt], ['active', replannedAt]);
+});
+
+test('«В план» for a tobacco already in work sets no plannedAt', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const headers = { authorization: `Bearer ${token}` };
+  const tobaccoId = await firstShelfTobacco();
+
+  const response = await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId, status: 'plan' } });
+  assert.equal(response.statusCode, 200);
+  const { item } = response.json() as { item: Row };
+  assert.deepEqual([item.shelfStatus, item.plannedAt], ['active', null]);
+});
+
+test('«На полку» after the plan was removed clears plannedAt', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const headers = { authorization: `Bearer ${token}` };
+  const offShelf = await prisma.tobacco.findFirstOrThrow({ where: { shelfItem: null, archived: false } });
+
+  await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'plan' } });
+  await app.inject({ method: 'DELETE', url: `/staff/shelf/${offShelf.id}`, headers });
+  const back = await app.inject({ method: 'POST', url: '/staff/shelf', headers, payload: { tobaccoId: offShelf.id, status: 'active' } });
+  assert.equal(back.statusCode, 200);
+  const { item } = back.json() as { item: Row };
+  assert.deepEqual([item.shelfStatus, item.plannedAt], ['active', null]);
 });
