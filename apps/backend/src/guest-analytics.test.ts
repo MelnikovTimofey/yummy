@@ -200,6 +200,16 @@ test.describe('guest choices analytics', () => {
     assert.deepEqual([byId.get('tobacco-mint-veil')?.stock, byId.get('tobacco-mint-veil')?.trial], ['in', false]);
   });
 
+  test('проба остаётся пробой, когда закончилась (#578)', async () => {
+    await stage();
+    await prisma.shelfItem.update({ where: { tobaccoId: 'tobacco-peach-silk' }, data: { outAt: ago(1) } });
+    await prisma.tobacco.update({ where: { id: 'tobacco-peach-silk' }, data: { inStock: false } });
+    const { topTobaccos } = await choices();
+    const peach = topTobaccos.find((row) => row.tobaccoId === 'tobacco-peach-silk');
+
+    assert.deepEqual([peach?.stock, peach?.trial], ['out', true]);
+  });
+
   test('top mixes keep deleted mixes under their name and carry the guest status of live ones', async () => {
     await stage();
     const { topMixes } = await choices();

@@ -125,9 +125,10 @@ const tobaccoStock = (row: TobaccoRow): GuestChoices['topTobaccos'][number]['sto
   return row.inStock ? 'in' : 'out';
 };
 
-// Проба — первый приход недавно и не стартовый (как trialOf в shelf.ts).
+// Проба — первый приход недавно и не стартовый (как trialOf в shelf.ts). Наличие не влияет
+// (#578): закончившаяся новинка — главный сигнал пробы. Снятый с полки — уже не проба.
 const tobaccoTrial = (row: TobaccoRow, now: Date) =>
-  tobaccoStock(row) === 'in' && isTrial(row.firstArrivalKind === 'start' ? null : row.firstArrivalAt, now);
+  tobaccoStock(row) !== 'off-shelf' && isTrial(row.firstArrivalKind === 'start' ? null : row.firstArrivalAt, now);
 
 // JIT выключен: jsonb_array_elements Postgres оценивает в 100 строк на вызов, стоимость
 // раздувается, и компиляция (~200 мс на снапшоте) в разы дольше самого запроса (~30 мс).
