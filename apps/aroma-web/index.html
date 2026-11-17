@@ -2,12 +2,18 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: с иконки экрана «Домой» приложение идёт до краёв,
+         отступы под полоску жестов дают --safe-top и --safe-bottom (#586). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Цвет панелей мобильного браузера. Значение — верх --guest-room-bg
          (packages/design-tokens/guest-surface.css): meta не понимает var(),
          поэтому при правке канона поправить и здесь. -->
     <meta name="theme-color" content="#0f0f12" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Иконка и название на экране «Домой»; PNG собирает npm run icons. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Арома Ателье" />
     <title>Арома Ателье</title>
   </head>
   <body>

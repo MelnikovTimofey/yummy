@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0 --port 5174",
     "build": "tsc --noEmit && vite build",
     "test": "tsx --test $(find src -type f \\( -name '*.test.ts' -o -name '*.test.tsx' \\) | sort)",
-    "preview": "vite preview --host 0.0.0.0 --port 4174"
+    "preview": "vite preview --host 0.0.0.0 --port 4174",
+    "icons": "node scripts/app-icons.mjs"
   },
   "dependencies": {
     "@fontsource-variable/literata": "^5.3.0",
@@ -25,6 +26,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.1.11",
