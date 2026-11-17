@@ -161,9 +161,8 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .install-plate-x{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
 
 /* Строка в «Кабинете» */
-.install-row{grid-template-columns:44px minmax(0,1fr) auto}
-.install-row .app-icon{width:44px;height:44px;border-radius:10px}
-.install-row-name{font-family:var(--font-display);font-size:15px;color:var(--text-0)}
+.install-btn{justify-self:start;margin-top:8px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 12px 0 6px;border:1px solid var(--line);border-radius:var(--r-guest-control);background:rgba(40,40,48,.54);color:var(--text-0);font-family:var(--font-body);font-size:13px;cursor:pointer}
+.install-btn .app-icon{width:24px;height:24px;border-radius:6px}
 
 /* Шторка с шагами */
 .install-steps{margin:0;padding:0;list-style:none;display:grid;gap:12px}
@@ -262,11 +261,7 @@ const plate = () => `
     <button type="button" class="install-plate-x" aria-label="Закрыть">${icon('x', 18)}</button>
   </div>`;
 
-const installRow = () => `
-  <button type="button" class="cab-row install-row">${appIcon()}
-    <span class="install-row-name">На экран «Домой»</span>
-    <span class="chev">${icon('chevron-right', 20)}</span>
-  </button>`;
+const installRow = () => `<button type="button" class="install-btn">${appIcon()}На экран «Домой»</button>`;
 
 const sheet = (inner) => `<div class="aroma-sheet-overlay"><div class="aroma-sheet" role="dialog" aria-label="На экран Домой" style="background:var(--guest-sheet-bg)"><div class="aroma-sheet-handle"></div>${inner}</div></div>`;
 const sheetHead = () => `<div class="install-sheet-head">${appIcon()}<h2 class="aroma-sheet-title">На экран «Домой»</h2></div>`;
@@ -339,8 +334,8 @@ const FRAMES = {
   ],
   'row-hint': [
     ['plate', 'Плашка после первого «Покурить»', 'Появляется после «Готово» на карточке для мастера, над нижней панелью. Крестик или добавление, и она больше не показывается.', app(recs(), 'Подбор', plate())],
-    ['cab-anon', 'Кабинет без входа', 'Строка под формой входа. Есть всегда, пока приложение открыто в браузере.', app(cabAnon(), 'Кабинет')],
-    ['cab-in', 'Кабинет после входа', 'Строка над «Выйти».', app(cabIn(), 'Кабинет')],
+    ['cab-anon', 'Кабинет без входа', 'Кнопка под формой входа. Есть всегда, пока приложение открыто в браузере.', app(cabAnon(), 'Кабинет')],
+    ['cab-in', 'Кабинет после входа', 'Кнопка над «Выйти», после истории.', app(cabIn(), 'Кабинет')],
   ],
   'row-sheet': [
     ['sheet-ios', 'iPhone, Safari', 'Программной установки на iPhone нет, только шаги. Значки повторяют кнопки Safari.', app(recs(), 'Подбор', sheet(SHEETS.ios))],
