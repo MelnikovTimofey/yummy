@@ -161,8 +161,7 @@ body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;ba
 .install-plate-x{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
 
 /* Строка в «Кабинете» */
-.install-btn{justify-self:start;margin-top:8px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 12px 0 6px;border:1px solid var(--line);border-radius:var(--r-guest-control);background:rgba(40,40,48,.54);color:var(--text-0);font-family:var(--font-body);font-size:13px;cursor:pointer}
-.install-btn .app-icon{width:24px;height:24px;border-radius:6px}
+.install-link{justify-self:start;margin-top:4px;padding:4px 0;border:0;background:transparent;color:var(--text-1);font-family:var(--font-body);font-size:13px;cursor:pointer}
 
 /* Шторка с шагами */
 .install-steps{margin:0;padding:0;list-style:none;display:grid;gap:12px}
@@ -261,7 +260,7 @@ const plate = () => `
     <button type="button" class="install-plate-x" aria-label="Закрыть">${icon('x', 18)}</button>
   </div>`;
 
-const installRow = () => `<button type="button" class="install-btn">${appIcon()}На экран «Домой»</button>`;
+const installRow = () => `<button type="button" class="install-link">На экран «Домой»</button>`;
 
 const sheet = (inner) => `<div class="aroma-sheet-overlay"><div class="aroma-sheet" role="dialog" aria-label="На экран Домой" style="background:var(--guest-sheet-bg)"><div class="aroma-sheet-handle"></div>${inner}</div></div>`;
 const sheetHead = () => `<div class="install-sheet-head">${appIcon()}<h2 class="aroma-sheet-title">На экран «Домой»</h2></div>`;
@@ -292,7 +291,6 @@ const cabAnon = () => `<section class="cab-anon" style="padding:8px 0 0">
       <button type="button" class="cta" style="background:var(--cta-solid-disabled-bg);color:var(--text-2);box-shadow:none;border-color:var(--line)">Войти через Telegram</button>
     </div>
   </section>
-  <div style="height:8px"></div>
   ${installRow()}`;
 
 const cabIn = () => `<section class="cab" style="display:grid;gap:14px">
@@ -334,8 +332,8 @@ const FRAMES = {
   ],
   'row-hint': [
     ['plate', 'Плашка после первого «Покурить»', 'Появляется после «Готово» на карточке для мастера, над нижней панелью. Крестик или добавление, и она больше не показывается.', app(recs(), 'Подбор', plate())],
-    ['cab-anon', 'Кабинет без входа', 'Кнопка под формой входа. Есть всегда, пока приложение открыто в браузере.', app(cabAnon(), 'Кабинет')],
-    ['cab-in', 'Кабинет после входа', 'Кнопка над «Выйти», после истории.', app(cabIn(), 'Кабинет')],
+    ['cab-anon', 'Кабинет без входа', 'Ссылка под формой входа. Есть всегда, пока приложение открыто в браузере.', app(cabAnon(), 'Кабинет')],
+    ['cab-in', 'Кабинет после входа', 'Тихая ссылка над «Выйти», как «Изменить вкусы».', app(cabIn(), 'Кабинет')],
   ],
   'row-sheet': [
     ['sheet-ios', 'iPhone, Safari', 'Программной установки на iPhone нет, только шаги. Значки повторяют кнопки Safari.', app(recs(), 'Подбор', sheet(SHEETS.ios))],
