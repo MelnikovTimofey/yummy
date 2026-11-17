@@ -1,0 +1,44 @@
+# Handoff: Арома Ателье на экране «Домой» (#582)
+
+Мокап по скиллу `atelier-feature-design`. Гость добавляет Арома Ателье на экран телефона и открывает его иконкой со знаком «Дым», без QR и адресной строки. Бриф и критерии приёмки в [issue #582](https://github.com/MelnikovTimofey/yummy/issues/582).
+
+Статус: **на согласовании владельцем.**
+
+Решения владельца (2026-11-17): подсказка в «Кабинете» и разово после первого «Покурить»; подпись под иконкой «Арома Ателье»; иконка: знак «Дым» в бордо на угле.
+
+## Как открыть
+
+```bash
+python3 -m http.server 8765 --bind 127.0.0.1
+```
+
+`http://localhost:8765/design/design_handoff_pwa_install/mockups.html` — доска.
+`mockups.html#shot=<id>` — один телефон 375×780: `home`, `standalone`, `plate`, `cab-anon`, `cab-in`, `sheet-ios`, `android-prompt`, `sheet-android`, `sheet-inapp`.
+Снимки в `screens/<id>.png`, вся доска в `screens/board.png`.
+
+Мокап статический, без React: экранные классы скопированы из `design_handoff_guest_cabinet`, новые (`.app-icon`, `.install-*`) в конце `<style>`. Миксы настоящие (`docs/data/mixes.md`), иконки соседних приложений и обои на `#home` условные, окно Chrome на `#android-prompt` системное и нарисовано условно.
+
+## Что реализовать
+
+1. **Манифест и иконки** (`apps/aroma-web/public/`):
+   - `manifest.webmanifest`: `name` и `short_name` «Арома Ателье», `start_url` `/`, `display` `standalone`, `background_color` и `theme_color` `#0f0f12`, `lang` `ru`;
+   - иконки PNG из `logo-mark-oxblood.svg` на `#0f0f12`: 192 и 512 (`purpose: any`), 512 maskable (знак в безопасной зоне, высота рисунка 44 % холста), `apple-touch-icon.png` 180 без прозрачности (высота рисунка 62 %); цвета знака не менять;
+   - `index.html`: `<link rel="manifest">`, `<link rel="apple-touch-icon">`, `apple-mobile-web-app-title` «Арома Ателье», `viewport-fit=cover`.
+2. **Открыто с иконки** (`#standalone`): нижняя панель над полоской жестов (`--safe-bottom`, уже есть), верх не уходит под статус-бар. Проверить на iPhone.
+3. **Определение среды** (`lib/install-hint.ts`, без DOM, с тестами):
+   - уже установлено: `matchMedia('(display-mode: standalone)')` или `navigator.standalone`; тогда строки и плашки нет;
+   - десктоп: подсказки нет;
+   - Android с `beforeinstallprompt`: событие сохранить, «Добавить» вызывает `prompt()`, своей шторки нет (`#android-prompt`);
+   - iPhone в Safari: шторка `#sheet-ios`;
+   - iPhone не в Safari (встроенный браузер Telegram, Instagram): шторка `#sheet-inapp`;
+   - остальное (Android без события): шторка `#sheet-android`.
+4. **Плашка** (`#plate`): один раз после первого «Покурить», когда гость нажал «Готово» на карточке для мастера. Стоит над нижней панелью на том экране, куда он вернулся. Иконка 36, «Держите Арома Ателье на экране телефона.», «Добавить», крестик. Крестик, «Добавить» или событие `appinstalled` пишут `localStorage['aroma-install-hint'] = 'done'`, после этого плашки нет. Хранилище недоступно, и плашки нет.
+5. **Строка в «Кабинете»** (`#cab-anon`, `#cab-in`): строка в стиле строки кабинета, иконка 44, «На экран «Домой»», шеврон. У анонима под формой входа, у вошедшего над «Выйти». Действие то же, что у «Добавить».
+6. **Шторка** (`#sheet-ios`, `#sheet-android`, `#sheet-inapp`): иконка 52 и заголовок «На экран «Домой»», шаги с номерами, «Понятно» закрывает. Названия кнопок браузера жирным, значки Lucide `share`, `square-plus`, `ellipsis-vertical`.
+
+## Что не реализовывать
+
+- Service worker, офлайн, push.
+- Аналитику установок.
+- Перенос входа и кода дня из Safari в приложение на экране «Домой»: iOS хранит их раздельно.
+- Подсказку в «Мастере».

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>На экран «Домой» · мокап</title>
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<style>
+/* ── Экранные классы гостевого UI-кита (копия из design_handoff_guest_cabinet) ── */
+html,body,#root{margin:0;height:100%;width:100%}
+body{font-family:var(--font-body);color:var(--text-primary);overflow-x:hidden;background:var(--guest-room-bg)}
+.app-bg{min-height:100dvh;width:100%;display:grid;place-items:center;padding:16px;position:relative;overflow:hidden;background:var(--guest-halo-strong),var(--guest-halo-soft),linear-gradient(180deg,rgba(15,15,18,.94) 0%,rgba(20,20,23,1) 100%)}
+.halo-top{position:absolute;top:-100px;right:-48px;width:260px;height:260px;border-radius:999px;background:radial-gradient(circle,rgba(142, 47, 60,.55) 0%,rgba(142, 47, 60,0) 70%);filter:blur(10px);opacity:.72}
+.halo-bottom{position:absolute;bottom:-180px;left:-90px;width:320px;height:320px;border-radius:999px;background:radial-gradient(circle,rgba(142, 47, 60,.16) 0%,rgba(142, 47, 60,0) 72%);filter:blur(14px);opacity:.8}
+.phone-shell{width:min(calc(100vw - 32px),430px);height:calc(100dvh - 32px);border:1px solid var(--line);border-radius:var(--r-guest-shell);background:var(--guest-shell-bg);box-shadow:var(--shadow-guest-shell);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2}
+.topbar{display:grid;gap:8px;padding:6px 10px 6px 20px;border-bottom:1px solid var(--line);background:var(--guest-topbar-bg);position:sticky;top:0;z-index:20;box-shadow:0 12px 28px rgba(0,0,0,.18);backdrop-filter:blur(18px)}
+.topbar-main-row{display:flex;align-items:center;gap:12px;width:100%}
+.brand-home-btn{border:0;background:transparent;padding:0;min-height:40px;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px}
+.brand-mark{width:auto;height:22px;flex:0 0 auto}
+.brand{margin:0;font-family:var(--font-display);font-size:19px;line-height:1;letter-spacing:.01em;color:var(--text-0);white-space:nowrap}
+.guest-stage-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.content{padding:12px 20px;overflow-y:auto;overflow-x:hidden;display:grid;gap:12px;min-height:0;flex:1 1 auto;align-content:start;scrollbar-width:thin;scrollbar-color:#3A3A40 #1A1A1D}
+.content-intro{padding:0;gap:0}
+.guest-status{margin:0;color:var(--text-1);font-size:15px}
+.guest-error{margin:0;color:var(--danger);font-size:12px;text-align:center}
+.guest-ok{margin:0;color:var(--text-primary);font-size:12px}
+.aroma-skip{background:transparent;border:0;color:var(--text-2);font-size:11px;padding:4px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.aroma-ghost{border:1px solid var(--line);background:rgba(40,40,48,.5);color:var(--text-0);border-radius:14px;min-height:48px;padding:0 18px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;cursor:pointer}
+.aroma-ghost-sm{border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);border-radius:12px;min-height:44px;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:0 14px}
+
+/* Тонкая шапка и нижняя панель (#168) */
+.topbar-icon-btn{margin-left:auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
+.topbar-icon-btn:hover,.topbar-icon-btn:focus-visible{color:var(--text-0);background:var(--guest-control-bg-soft)}
+.bottom-nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0 8px var(--safe-bottom,0px);border-top:1px solid var(--line);background:var(--guest-topbar-bg);backdrop-filter:blur(18px);position:relative;z-index:20}
+.bottom-nav-item{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;border:0;background:transparent;color:var(--text-muted);cursor:pointer}
+.bottom-nav-item[aria-current="page"]{color:var(--text-0)}
+.bottom-nav-item[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 2px 2px;background:var(--accent)}
+/* Mix sheet */
+.aroma-sheet-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
+.aroma-sheet{width:min(calc(100vw - 16px),430px);max-height:92%;overflow-y:auto;display:grid;gap:14px;border:1px solid var(--line);border-radius:var(--r-guest-sheet) var(--r-guest-sheet) 0 0;box-shadow:var(--shadow-guest-sheet);padding:12px 20px 20px;animation:aroma-sheet-up var(--dur-sheet) var(--ease-out)}
+@keyframes aroma-sheet-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.aroma-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(142, 47, 60,.32);margin:0 auto 6px}
+.aroma-sheet-head{display:flex;gap:14px;align-items:flex-start}
+.aroma-sheet-head-text{min-width:0;display:grid;gap:6px;flex:1 1 auto}
+.aroma-sheet-title{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.05;color:var(--text-0)}
+.aroma-sheet-desc{margin:0;color:var(--text-1);font-size:13.5px;line-height:1.5}
+.board-head{display:grid;gap:8px;max-width:72ch}
+.board-title{margin:0;font-family:var(--font-display);font-size:34px;line-height:1.05;color:var(--text-0)}
+.board-text{margin:0;color:var(--text-1);font-size:14px;line-height:1.55}
+.board-section{display:grid;gap:16px}
+.board-h2{margin:0;font-family:var(--font-display);font-size:22px;color:var(--text-0)}
+.board-row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.frame{display:grid;gap:10px;width:375px;margin:0}
+.frame-label{display:grid;gap:3px;align-content:start;min-height:54px}
+.frame-name{margin:0;font-size:13px;font-weight:600;color:var(--text-0)}
+.frame-note{margin:0;font-size:12px;line-height:1.45;color:var(--text-2)}
+.frame .phone-shell,.shot .phone-shell{width:375px;height:780px}
+.shot .phone-shell{border-radius:0;border:0}
+.frame .aroma-sheet-overlay,.shot .aroma-sheet-overlay{position:absolute}
+.frame .aroma-sheet,.shot .aroma-sheet{width:100%;box-sizing:border-box}
+.tweaks{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.tweak{display:flex;gap:6px;align-items:center}
+.tweak .aroma-caps{margin-right:4px}
+.tweak button{min-height:32px;padding:0 12px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:var(--guest-control-bg-soft);color:var(--text-1);font-size:12px;cursor:pointer}
+.tweak button.on{border-color:var(--guest-chip-border-on);background:var(--guest-chip-bg-on);color:var(--guest-chip-ink-on);font-weight:600}
+
+/* ── Новое (#151): личный кабинет ── */
+.content,.aroma-recs,.cab,.cab-list,.cab-group,.aroma-list{grid-template-columns:minmax(0,1fr)}
+.cab-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-guest-row);border:1px solid var(--border-subtle);background:var(--guest-row-bg);color:var(--text-primary);text-align:left;cursor:pointer;transition:border-color var(--dur-fast)}
+.cab-row:hover{border-color:rgba(142,47,60,.40)}
+.cab-row:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.cab-row-off{cursor:default;opacity:.62}
+.cab-row-off:hover{border-color:var(--border-subtle)}
+.cab-row-text{min-width:0;display:grid;gap:4px}
+.cab-row-name{font-family:var(--font-display);font-size:14.5px;line-height:1.2;color:var(--text-primary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cab-row-reason{font-size:11.5px;line-height:1.35;color:var(--text-secondary)}
+.cab-row-note{font-size:11px;line-height:1.35;color:var(--text-muted)}
+.cab-mark{font-size:10px;color:var(--text-muted)}
+.cab-own{font-size:12px;color:var(--text-primary);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cab-tastes{display:grid;gap:8px}
+.cab-tastes-row{display:flex;flex-wrap:wrap;gap:6px}
+.cab-tastes-edit{justify-self:start;padding:4px 0}
+.cab-list{display:grid;gap:14px}
+.cab-group{display:grid;gap:6px}
+.cab-empty{display:grid;gap:12px;justify-items:start;padding:8px 0}
+.cab-foot{display:flex;justify-content:space-between;gap:12px;padding-top:6px;border-top:1px solid var(--line-soft)}
+.cab-danger-link{color:var(--danger)}
+.cab-toast{margin:0;padding:10px 12px;border-radius:var(--r-guest-row);border:1px solid var(--line);background:var(--guest-card-bg);font-size:12.5px;color:var(--text-primary)}
+.cab-anon{display:grid;gap:14px;justify-items:start;padding-top:8px}
+.cab-anon-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h1);line-height:1.05;color:var(--text-0)}
+.cab-benefits{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.cab-benefits li{display:flex;gap:10px;align-items:baseline;font-size:14px;line-height:1.45;color:var(--text-1)}
+.cab-dot{flex:0 0 auto;width:6px;height:6px;border-radius:999px;background:var(--accent);transform:translateY(-2px)}
+.cab-anon-note{margin:0;font-size:12.5px;line-height:1.45;color:var(--text-2)}
+.cab-anon-form{display:grid;gap:14px;width:100%;margin-top:8px}
+.cab-link{color:var(--text-0)}
+.cab-sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── Доска мокапа ── */
+.board{padding:32px 32px 64px;display:grid;gap:36px}
+.board-head{display:grid;gap:8px;max-width:72ch}
+.board-title{margin:0;font-family:var(--font-display);font-size:34px;line-height:1.05;color:var(--text-0)}
+.board-text{margin:0;color:var(--text-1);font-size:14px;line-height:1.55}
+.board-section{display:grid;gap:16px}
+.board-h2{margin:0;font-family:var(--font-display);font-size:22px;color:var(--text-0)}
+.board-row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.frame{display:grid;gap:10px;width:375px;margin:0}
+.frame-label{display:grid;gap:3px;align-content:start;min-height:54px}
+.frame-name{margin:0;font-size:13px;font-weight:600;color:var(--text-0)}
+.frame-note{margin:0;font-size:12px;line-height:1.45;color:var(--text-2)}
+.frame .phone-shell,.shot .phone-shell{width:375px;height:780px}
+.shot .phone-shell{border-radius:0;border:0}
+.frame .aroma-sheet-overlay,.shot .aroma-sheet-overlay{position:absolute}
+.frame .aroma-sheet,.shot .aroma-sheet{width:100%;box-sizing:border-box}
+/* ── Новое (#582): Арома Ателье на экране «Домой» ── */
+.frame-label{min-height:64px}
+.cab-title{margin:0;font-family:var(--font-display);font-size:var(--fs-guest-h1);line-height:1.05;color:var(--text-0)}
+.cab-label{margin:0;font-family:var(--font-body);font-size:13px;font-weight:600;line-height:1.3;color:var(--text-1)}
+.glyph{position:relative;width:44px;height:44px;flex:0 0 auto}
+.glyph i{position:absolute;width:26px;height:26px;border-radius:999px;filter:blur(5px);mix-blend-mode:screen;opacity:.9}
+.glyph i:nth-child(1){left:2px;top:6px}
+.glyph i:nth-child(2){right:2px;top:4px}
+.glyph i:nth-child(3){left:9px;bottom:1px}
+.sig{display:flex;height:3px;border-radius:2px;overflow:hidden;width:72px}
+.sig span{display:block;height:100%}
+.cab-row .chev{color:var(--text-1);display:inline-flex}
+
+/* Иконка приложения: знак «Дым» в бордо на угле */
+.app-icon{position:relative;overflow:hidden;flex:0 0 auto;display:inline-block;background:#0f0f12;border-radius:22.5%;box-shadow:inset 0 0 0 1px rgba(232,230,224,.06)}
+.app-icon img{position:absolute;left:50%;top:50%;height:62%;width:auto;transform:translate(-50%,-50%)}
+.icon-specimens{display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap}
+.icon-spec{display:grid;gap:8px;justify-items:center}
+.icon-spec-note{margin:0;font-size:12px;color:var(--text-2);text-align:center;max-width:150px;line-height:1.4}
+.icon-mask{display:grid;place-items:center;width:132px;height:132px;background:#0f0f12;position:relative}
+.icon-mask img{height:44%;width:auto}
+.icon-mask.circle{border-radius:999px}
+.icon-safe{position:absolute;inset:10%;border-radius:999px;border:1px dashed rgba(232,230,224,.25)}
+
+/* Экран «Домой» телефона (обои и чужие иконки условные) */
+.home{flex:1 1 auto;display:flex;flex-direction:column;padding:56px 22px 26px;background:radial-gradient(120% 70% at 30% 10%,#3a3f52 0%,#1c1e27 55%,#121318 100%)}
+.home-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 14px}
+.home-app{display:grid;gap:6px;justify-items:center}
+.home-app .tile{width:62px;height:62px;border-radius:14px;background:rgba(255,255,255,.14)}
+.home-app .app-icon{width:62px;height:62px;border-radius:14px}
+.home-app span{font-family:-apple-system,system-ui,sans-serif;font-size:11.5px;color:#fff;white-space:nowrap}
+.home-dock{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px;border-radius:30px;background:rgba(255,255,255,.12)}
+.home-dock .tile{width:62px;height:62px;border-radius:14px;background:rgba(255,255,255,.18);justify-self:center}
+
+/* Установленное приложение: статус-бар телефона и полоска жестов */
+.os-status{flex:0 0 auto;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:600;color:#fff;background:#0f0f12}
+.os-status-r{display:flex;gap:6px;align-items:center}
+.os-home{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:999px;background:rgba(255,255,255,.85);z-index:30}
+.bottom-nav.safe{padding-bottom:22px;grid-template-columns:repeat(6,minmax(0,1fr))}
+.bottom-nav.nav-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+
+/* Плашка после первого «Покурить» */
+.install-plate{flex:0 0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;margin:0 12px 10px;padding:10px 6px 10px 10px;border-radius:var(--r-guest-card);border:1px solid var(--line);background:var(--guest-card-bg);box-shadow:var(--shadow-guest-card);animation:aroma-sheet-up var(--dur-sheet) var(--ease-out)}
+.install-plate .app-icon{width:36px;height:36px;border-radius:9px}
+.install-plate-text{margin:0;font-size:13px;line-height:1.35;color:var(--text-0)}
+.install-plate-add{min-height:36px;padding:0 12px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);font-family:var(--font-body);font-size:13px;cursor:pointer}
+.install-plate-x{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:var(--r-guest-control);background:transparent;color:var(--text-muted);cursor:pointer}
+
+/* Строка в «Кабинете» */
+.install-row{grid-template-columns:44px minmax(0,1fr) auto}
+.install-row .app-icon{width:44px;height:44px;border-radius:10px}
+.install-row-name{font-family:var(--font-display);font-size:15px;color:var(--text-0)}
+
+/* Шторка с шагами */
+.install-steps{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.install-steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:center;font-size:14px;line-height:1.45;color:var(--text-1)}
+.install-steps b{color:var(--text-0);font-weight:600}
+.install-step-n{width:28px;height:28px;border-radius:999px;border:1px solid var(--line);display:grid;place-items:center;font-size:12.5px;color:var(--text-0);font-variant-numeric:tabular-nums}
+.install-glyph{display:inline-flex;vertical-align:-3px;color:var(--text-0)}
+.install-sheet-head{display:flex;gap:14px;align-items:center}
+.install-sheet-head .app-icon{width:52px;height:52px;border-radius:12px}
+.install-sheet-note{margin:0;font-size:12.5px;line-height:1.45;color:var(--text-2)}
+.cta{width:100%;display:flex;align-items:center;justify-content:center;border:1px solid var(--cta-solid-border);background:var(--cta-solid);color:var(--cta-solid-ink);border-radius:var(--r-guest-cta);min-height:52px;padding:0 18px;font-family:var(--font-body);font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;box-shadow:var(--cta-solid-shadow);cursor:pointer}
+.ghost-wide{width:100%;min-height:48px;border-radius:var(--r-guest-control);border:1px solid var(--line);background:rgba(40,40,48,.54);color:var(--text-0);font-family:var(--font-body);font-size:14px;cursor:pointer}
+
+/* Системное окно Chrome на Android (не наш интерфейс, условно) */
+.sys-overlay{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-end}
+.sys-sheet{width:100%;box-sizing:border-box;padding:22px 22px 26px;border-radius:24px 24px 0 0;background:#f3f1f6;color:#1d1b20;font-family:Roboto,system-ui,sans-serif;display:grid;gap:18px}
+.sys-title{margin:0;font-size:20px;font-weight:500}
+.sys-app{display:flex;gap:14px;align-items:center}
+.sys-app .app-icon{width:48px;height:48px;border-radius:999px}
+.sys-app-name{margin:0;font-size:15px;font-weight:500}
+.sys-app-url{margin:2px 0 0;font-size:13px;color:#49454f}
+.sys-actions{display:flex;justify-content:flex-end;gap:8px}
+.sys-btn{border:0;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:500;background:transparent;color:#6750a4}
+.sys-btn.fill{background:#6750a4;color:#fff}
+.sys-tag{position:absolute;top:10px;left:10px;z-index:60;padding:4px 8px;border-radius:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px}
+
+/* Режим #shot=<id>: один телефон без доски */
+body.shot-mode .board-head,body.shot-mode .board-h2,body.shot-mode .frame-label,body.shot-mode .icon-specimens{display:none}
+body.shot-mode .board{padding:0;gap:0}
+body.shot-mode .frame:not(.shot-on),body.shot-mode .board-section:not(:has(.shot-on)){display:none}
+body.shot-mode .phone-shell{border-radius:0;border:0}
+body.shot-mode *{animation:none!important}
+</style>
+<script src="https://unpkg.com/lucide@0.470.0/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="board" id="board">
+  <header class="board-head">
+    <h1 class="board-title">Арома Ателье на экране «Домой»</h1>
+    <p class="board-text">Мокап к <a href="https://github.com/MelnikovTimofey/yummy/issues/582" style="color:var(--text-0)">#582</a>. Иконка знака «Дым» в бордо на угле, плашка один раз после первого «Покурить», строка в «Кабинете» и шторка с шагами для iPhone. На Android с Chrome «Добавить» сразу открывает системное окно установки.</p>
+  </header>
+
+  <section class="board-section">
+    <h2 class="board-h2">Иконка</h2>
+    <div class="icon-specimens">
+      <div class="icon-spec"><span class="app-icon" style="width:120px;height:120px;border-radius:27px"><img src="../../.claude/skills/aroma-atelier-design/assets/logo-mark-oxblood.svg" alt=""></span><p class="icon-spec-note">apple-touch-icon 180, iPhone скругляет сам</p></div>
+      <div class="icon-spec"><span class="icon-mask circle"><img src="../../.claude/skills/aroma-atelier-design/assets/logo-mark-oxblood.svg" alt=""><span class="icon-safe"></span></span><p class="icon-spec-note">maskable 512, круглая маска Android, знак внутри безопасной зоны</p></div>
+      <div class="icon-spec"><span class="app-icon" style="width:48px;height:48px;border-radius:11px"><img src="../../.claude/skills/aroma-atelier-design/assets/logo-mark-oxblood.svg" alt=""></span><p class="icon-spec-note">48 px, мельче знак не уходит</p></div>
+    </div>
+    <div class="board-row" id="row-icon"></div>
+  </section>
+
+  <section class="board-section">
+    <h2 class="board-h2">Подсказка</h2>
+    <div class="board-row" id="row-hint"></div>
+  </section>
+
+  <section class="board-section">
+    <h2 class="board-h2">Как добавить</h2>
+    <div class="board-row" id="row-sheet"></div>
+  </section>
+</div>
+
+<script>
+const MARK = '../../.claude/skills/aroma-atelier-design/assets/logo-mark-oxblood.svg';
+const icon = (name, size = 24, sw = 1.8) => `<i data-lucide="${name}" width="${size}" height="${size}" stroke-width="${sw}"></i>`;
+const appIcon = () => `<span class="app-icon"><img src="${MARK}" alt=""></span>`;
+
+const P = { berry: 'var(--profile-berry)', fresh: 'var(--profile-fresh)', citrus: 'var(--profile-citrus)', beverage: 'var(--profile-beverage)', dessert: 'var(--profile-dessert)', fruity: 'var(--profile-fruity)', minty: 'var(--profile-minty)' };
+const glyph = (cs) => `<span class="glyph" aria-hidden>${cs.map((c) => `<i style="background:${c}"></i>`).join('')}</span>`;
+const sig = (cs) => `<span class="sig">${cs.map((c, i) => `<span style="flex:${[5, 3, 2][i] || 1};background:${c}"></span>`).join('')}</span>`;
+const mixRow = (name, note, cs, rating) => `
+  <button type="button" class="cab-row">${glyph(cs)}
+    <span class="cab-row-text"><span class="cab-row-name">${name}</span>${sig(cs)}<span class="cab-row-reason">${note}</span></span>
+    ${rating ? `<span class="cab-own">★ ${rating}</span>` : '<span></span>'}
+  </button>`;
+
+const NAV = [['sparkles', 'Подбор'], ['clapperboard', 'Рилсы'], ['gallery-horizontal-end', 'Витрина'], ['search', 'Каталог'], ['blend', 'Миксер'], ['circle-user-round', 'Кабинет']];
+const nav = (active, extra = '') => `<nav class="bottom-nav nav-6 ${extra}" aria-label="Гостевая навигация">${NAV.map(([i, l]) => `<button type="button" class="bottom-nav-item" aria-label="${l}" ${l === active ? 'aria-current="page"' : ''}>${icon(i, 24, l === active ? 2.1 : 1.8)}</button>`).join('')}</nav>`;
+const topbar = () => `<header class="topbar"><div class="topbar-main-row"><button type="button" class="brand-home-btn"><img class="brand-mark" src="${MARK}" alt=""><span class="brand">Арома Ателье</span></button>
+  <button type="button" class="topbar-icon-btn" aria-label="Карточка для мастера">${icon('clipboard-list', 20)}</button></div></header>`;
+
+const recs = () => `
+  <h1 class="cab-title" style="font-size:28px">Подбор</h1>
+  ${mixRow('Морозная ягода', 'лесные ягоды, холодный чай, лёд', [P.berry, P.beverage, P.fresh], '4,8')}
+  ${mixRow('Mr. Pink', 'грейпфрут, клубника, киви', [P.citrus, P.berry, P.fresh], '4,6')}
+  ${mixRow('Малина и персиковый чай', 'малина, персик, чай', [P.berry, P.fruity, P.beverage], '')}
+  ${mixRow('Лимон с хвоей', 'лимон, хвоя, мороз', [P.citrus, P.fresh, P.minty], '4,5')}
+  ${mixRow('Вишнёвый чизкейк', 'чизкейк, вишня', [P.dessert, P.berry], '')}`;
+
+const plate = () => `
+  <div class="install-plate" role="region" aria-label="На экран Домой">
+    ${appIcon()}
+    <p class="install-plate-text">Держите Арома Ателье на экране телефона.</p>
+    <button type="button" class="install-plate-add">Добавить</button>
+    <button type="button" class="install-plate-x" aria-label="Закрыть">${icon('x', 18)}</button>
+  </div>`;
+
+const installRow = () => `
+  <button type="button" class="cab-row install-row">${appIcon()}
+    <span class="install-row-name">На экран «Домой»</span>
+    <span class="chev">${icon('chevron-right', 20)}</span>
+  </button>`;
+
+const sheet = (inner) => `<div class="aroma-sheet-overlay"><div class="aroma-sheet" role="dialog" aria-label="На экран Домой" style="background:var(--guest-sheet-bg)"><div class="aroma-sheet-handle"></div>${inner}</div></div>`;
+const sheetHead = () => `<div class="install-sheet-head">${appIcon()}<h2 class="aroma-sheet-title">На экран «Домой»</h2></div>`;
+const step = (n, html) => `<li><span class="install-step-n">${n}</span><span>${html}</span></li>`;
+
+const SHEETS = {
+  ios: sheetHead() + `<ol class="install-steps">
+      ${step(1, `Нажмите <span class="install-glyph">${icon('share', 17)}</span> <b>Поделиться</b> внизу экрана. Если её не видно, сначала <b>•••</b>.`)}
+      ${step(2, `Выберите <span class="install-glyph">${icon('square-plus', 17)}</span> <b>На экран «Домой»</b>.`)}
+    </ol><button type="button" class="ghost-wide">Понятно</button>`,
+  android: sheetHead() + `<ol class="install-steps">
+      ${step(1, `Откройте меню браузера <span class="install-glyph">${icon('ellipsis-vertical', 17)}</span>.`)}
+      ${step(2, `Выберите <b>Добавить на главный экран</b>.`)}
+    </ol><button type="button" class="ghost-wide">Понятно</button>`,
+  inapp: sheetHead() + `<p class="aroma-sheet-desc">Добавить можно только из Safari. Откройте эту страницу в Safari и нажмите <b style="color:var(--text-0)">Поделиться</b>.</p>
+    <button type="button" class="ghost-wide">Понятно</button>`,
+};
+
+const phone = (inner) => `<div class="phone-shell">${inner}</div>`;
+const app = (content, navActive, extra = '') => phone(`${topbar()}<main class="content">${content}</main>${extra}${nav(navActive)}`);
+
+const cabAnon = () => `<section class="cab-anon" style="padding:8px 0 0">
+    <h1 class="cab-anon-title">Кабинет</h1>
+    <p class="cab-anon-text" style="margin:0;font-size:14px;line-height:1.5;color:var(--text-1)">Сохраним историю выборов и избранное. Подбор будет их учитывать.</p>
+    <p class="cab-anon-note">Кабинет работает только в этом заведении.</p>
+    <div class="cab-anon-form">
+      <label style="display:flex;gap:12px;align-items:center;font-size:13px;color:var(--text-1)"><span style="width:20px;height:20px;border-radius:999px;border:1px solid var(--line);flex:0 0 auto"></span>Согласен на обработку Telegram id для истории и избранного. <u style="color:var(--text-0)">Политика</u></label>
+      <button type="button" class="cta" style="background:var(--cta-solid-disabled-bg);color:var(--text-2);box-shadow:none;border-color:var(--line)">Войти через Telegram</button>
+    </div>
+  </section>
+  <div style="height:8px"></div>
+  ${installRow()}`;
+
+const cabIn = () => `<section class="cab" style="display:grid;gap:14px">
+    <h1 class="cab-title">Кабинет</h1>
+    <section class="cab-tastes"><h2 class="cab-label">Ваши вкусы</h2>
+      <div class="cab-tastes-row"><span class="chip" style="padding:6px 10px;border-radius:8px;border:1px solid var(--guest-chip-border-on);background:var(--guest-chip-bg-on);color:var(--guest-chip-ink-on);font-size:12.5px;font-weight:600">Ягодный</span><span class="chip" style="padding:6px 10px;border-radius:8px;border:1px solid var(--guest-chip-border-on);background:var(--guest-chip-bg-on);color:var(--guest-chip-ink-on);font-size:12.5px;font-weight:600">Свежий</span><span style="padding:6px 10px;border-radius:8px;border:1px solid var(--line);font-size:12.5px;color:var(--text-1)">лесные ягоды</span></div>
+    </section>
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-radius:10px;border:1px solid var(--line);overflow:hidden;font-size:13px"><span style="padding:10px;text-align:center;background:var(--bg-overlay);color:var(--text-0);box-shadow:inset 0 -2px 0 var(--accent)">История</span><span style="padding:10px;text-align:center;color:var(--text-1)">Избранное</span></div>
+    <h2 class="cab-label">Сегодня</h2>
+    ${mixRow('Морозная ягода', 'лесные ягоды, холодный чай, лёд', [P.berry, P.beverage, P.fresh], '5')}
+    <h2 class="cab-label">14 ноября</h2>
+    ${mixRow('Космокола', 'кола, черника, лёд', [P.beverage, P.berry, P.fresh], '')}
+    ${installRow()}
+    <footer class="cab-foot"><button type="button" class="aroma-onboarding-skip" style="background:transparent;border:0;color:var(--text-2);font-size:13px;padding:4px">Выйти</button><button type="button" class="aroma-onboarding-skip cab-danger-link" style="background:transparent;border:0;font-size:13px;padding:4px">Удалить кабинет</button></footer>
+  </section>`;
+
+const homeScreen = () => {
+  const names = ['Камера', 'Фото', 'Карты', 'Погода', 'Заметки', 'Часы', 'Почта', 'Музыка', 'Telegram', 'Банк', 'Такси'];
+  const apps = names.map((n) => `<span class="home-app"><span class="tile"></span><span>${n}</span></span>`);
+  apps.splice(9, 0, `<span class="home-app">${appIcon()}<span>Арома Ателье</span></span>`);
+  return phone(`<div class="home"><div class="home-grid">${apps.join('')}</div><div class="home-dock"><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span></div></div>`);
+};
+
+const standalone = () => phone(`<div class="os-status"><span>21:40</span><span class="os-status-r">${icon('signal', 15, 2.4)}${icon('wifi', 15, 2.4)}${icon('battery-full', 20, 2)}</span></div>
+  ${topbar()}<main class="content">${recs()}</main>${nav('Подбор', 'safe')}<span class="os-home"></span>`);
+
+const androidPrompt = () => phone(`${topbar()}<main class="content">${recs()}</main>${nav('Подбор')}
+  <span class="sys-tag">Системное окно Chrome</span>
+  <div class="sys-overlay"><div class="sys-sheet">
+    <p class="sys-title">Установить приложение?</p>
+    <div class="sys-app">${appIcon()}<p class="sys-app-name">Арома Ателье</p></div>
+    <div class="sys-actions"><span class="sys-btn">Отмена</span><span class="sys-btn fill">Установить</span></div>
+  </div></div>`);
+
+const FRAMES = {
+  'row-icon': [
+    ['home', 'Экран «Домой»', 'Подпись «Арома Ателье» целиком. Обои и соседние иконки условные.', homeScreen()],
+    ['standalone', 'Открыто с иконки', 'Без адресной строки. Нижняя панель над полоской жестов, верх в цвет --guest-room-bg.', standalone()],
+  ],
+  'row-hint': [
+    ['plate', 'Плашка после первого «Покурить»', 'Появляется после «Готово» на карточке для мастера, над нижней панелью. Крестик или добавление, и она больше не показывается.', app(recs(), 'Подбор', plate())],
+    ['cab-anon', 'Кабинет без входа', 'Строка под формой входа. Есть всегда, пока приложение открыто в браузере.', app(cabAnon(), 'Кабинет')],
+    ['cab-in', 'Кабинет после входа', 'Строка над «Выйти».', app(cabIn(), 'Кабинет')],
+  ],
+  'row-sheet': [
+    ['sheet-ios', 'iPhone, Safari', 'Программной установки на iPhone нет, только шаги. Значки повторяют кнопки Safari.', app(recs(), 'Подбор', sheet(SHEETS.ios))],
+    ['android-prompt', 'Android, Chrome', '«Добавить» сразу открывает системное окно, нашей шторки нет.', androidPrompt()],
+    ['sheet-android', 'Android без системного окна', 'Firefox, старый Samsung Internet: шаги через меню браузера.', app(recs(), 'Подбор', sheet(SHEETS.android))],
+    ['sheet-inapp', 'Браузер внутри Telegram или Instagram', 'Добавить оттуда нельзя, просим открыть в Safari.', app(recs(), 'Подбор', sheet(SHEETS.inapp))],
+  ],
+};
+
+for (const [rowId, frames] of Object.entries(FRAMES)) {
+  document.getElementById(rowId).innerHTML = frames
+    .map(([id, name, note, html]) => `<figure class="frame" data-shot="${id}"><figcaption class="frame-label"><p class="frame-name">${name} <span style="color:var(--text-2);font-weight:400">#${id}</span></p><p class="frame-note">${note}</p></figcaption><div style="position:relative">${html}</div></figure>`)
+    .join('');
+}
+lucide.createIcons();
+
+const shot = new URLSearchParams(location.hash.slice(1)).get('shot');
+if (shot) {
+  document.body.classList.add('shot-mode');
+  document.querySelector(`[data-shot="${shot}"]`)?.classList.add('shot-on');
+}
+</script>
+</body>
+</html>
