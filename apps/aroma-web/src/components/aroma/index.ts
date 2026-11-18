@@ -8,4 +8,6 @@ export { RatingPill } from "./RatingPill";
 export { BottomNav } from "./BottomNav";
 export type { BottomNavTab } from "./BottomNav";
 export { MixListRow } from "./MixListRow";
+export { MixPhoto } from "./MixPhoto";
+export { ShowcaseCard } from "./ShowcaseCard";
 export { BusyLabel, HeroSkeleton, Loading, MixRowsSkeleton, RailSkeleton, Sk, SmokeLoading, SmokeMark } from "./Loading";

@@ -1171,6 +1171,16 @@ select:focus-visible {
   border-color: var(--border-subtle);
 }
 
+/* Фото вкуса вместо глифа (#592): та же рамка и радиус, что у ProfileGlyph. */
+.mix-photo {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: var(--r-guest-glyph);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-base);
+}
+
 .mix-row-text {
   min-width: 0;
   display: grid;
@@ -1553,6 +1563,31 @@ select:focus-visible {
 .aroma-showcase-card > * {
   position: relative;
   z-index: 1;
+}
+
+/* С фото вкуса: фото на всю карточку, затемнение угля под название (≥ 4,5:1
+   для кремового текста на самом светлом фото), подкраски профилями нет. */
+.aroma-showcase-card-photo {
+  background: var(--guest-card-bg);
+}
+
+.aroma-showcase-card-photo::after {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 15, 18, 0.15) 0%,
+    rgba(15, 15, 18, 0.5) 35%,
+    rgba(15, 15, 18, 0.85) 70%,
+    rgba(15, 15, 18, 0.92) 100%
+  );
+}
+
+.aroma-showcase-card > .aroma-showcase-card-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .aroma-showcase-card:hover {
