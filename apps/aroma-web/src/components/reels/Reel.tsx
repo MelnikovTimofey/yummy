@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { ChevronUp, Play } from 'lucide-react';
 import { CTA, RatingPill } from '@/components/aroma';
 import { HeartButton } from '@/components/cabinet/HeartButton';
+import { ReelPhoto, useReelPhoto } from './ReelPhoto';
 import { ReelStill } from './ReelStill';
 
 // Remotion — отдельным чанком при первом активном рилсе; пока он едет — статичный кадр.
@@ -59,15 +60,18 @@ export function Reel({
 }: ReelProps) {
   const components = [...mix.components].sort((left, right) => right.proportion - left.proportion);
   const playing = active && animated;
+  const photo = useReelPhoto(mix);
+  const onPhoto = photo !== null;
 
   return (
-    <section className="reel" aria-label={mix.name}>
+    <section className={onPhoto ? 'reel reel-on-photo' : 'reel'} aria-label={mix.name}>
+      {photo ? <ReelPhoto photo={photo} eager={active} /> : null}
       {playing ? (
-        <Suspense fallback={<ReelStill mix={mix} />}>
-          <ReelPlayer mix={mix} playing={!paused} />
+        <Suspense fallback={<ReelStill mix={mix} onPhoto={onPhoto} />}>
+          <ReelPlayer mix={mix} playing={!paused} onPhoto={onPhoto} />
         </Suspense>
       ) : (
-        <ReelStill mix={mix} />
+        <ReelStill mix={mix} onPhoto={onPhoto} />
       )}
       {playing ? (
         <button type="button" className="reel-tap" aria-label={paused ? 'Продолжить' : 'Пауза'} onClick={onTogglePause} />
