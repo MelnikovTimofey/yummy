@@ -861,3 +861,15 @@ test('Aroma rows fall back to the glyph when a flavour photo does not load', asy
   await expect(page.locator('.aroma-catalog-list button.mix-row').first()).toBeVisible();
   await expect(page.locator('.aroma-catalog-list img.mix-photo')).toHaveCount(0);
 });
+
+test('Aroma mix sheet opens with a flavour photo header', async ({ page }) => {
+  await enterCatalog(page);
+  await page.locator('.aroma-catalog-list button.mix-row').first().click();
+  const sheet = page.getByRole('dialog');
+  const header = sheet.locator('img.aroma-mix-sheet-photo');
+  await expect(header).toBeVisible();
+  await expect(header).toHaveAttribute('src', /^\/photos\/.+-sheet\.webp$/);
+  await expectLoaded(header);
+  await expect(sheet.locator('.aroma-mix-sheet-title')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Покурить' })).toBeVisible();
+});
