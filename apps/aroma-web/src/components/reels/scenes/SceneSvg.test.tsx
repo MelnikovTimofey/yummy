@@ -28,6 +28,19 @@ test('SceneSvg: цвет сцены — из профиля, неизвестн�
   assert.match(unknown, /#7a5236/);
 });
 
+// Фото вкуса под сценой (#597): своей заливки у сцены нет, подкраска цветом
+// профиля ложится на фото слоем soft-light; мотивы и частицы те же.
+test('SceneSvg: на фото без заливки фона, подкраска — soft-light', () => {
+  const fills = (markup: string) => markup.split('fill="url(#').length - 1;
+  for (const motif of MOTIFS) {
+    const plain = renderToStaticMarkup(<SceneSvg spec={spec(motif)} seed="m" frame={30} />);
+    const onPhoto = renderToStaticMarkup(<SceneSvg spec={spec(motif)} seed="m" frame={30} onPhoto />);
+    assert.equal(fills(onPhoto), fills(plain) - 1, motif);
+    assert.match(onPhoto, /mix-blend-mode:soft-light/);
+    assert.doesNotMatch(plain, /soft-light/);
+  }
+});
+
 test('SceneSvg: без текста — сцена только фон', () => {
   for (const motif of MOTIFS) assert.doesNotMatch(render(motif, 90), /<text|<foreignObject/);
 });

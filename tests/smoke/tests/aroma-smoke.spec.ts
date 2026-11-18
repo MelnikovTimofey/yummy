@@ -873,3 +873,15 @@ test('Aroma mix sheet opens with a flavour photo header', async ({ page }) => {
   await expect(sheet.locator('.aroma-mix-sheet-title')).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Покурить' })).toBeVisible();
 });
+
+test('Aroma reel plays its scene over a flavour photo', async ({ page }) => {
+  await enterCatalog(page);
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Рилсы', exact: true }).click();
+  const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
+  const photo = reel.locator('img.reel-photo');
+  await expect(photo).toBeVisible();
+  await expect(photo).toHaveAttribute('src', /^\/photos\/.+-reel\.webp$/);
+  await expectLoaded(photo);
+  await expect(reel.locator('svg').first()).toBeAttached();
+  await expect(reel.locator('.reel-name')).toBeVisible();
+});
