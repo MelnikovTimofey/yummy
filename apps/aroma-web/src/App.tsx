@@ -25,6 +25,8 @@ import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
 import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
 import { DeleteCabinetSheet } from '@/components/cabinet/DeleteCabinetSheet';
+import { InstallPlate, InstallSheet, type InstallSheetWay } from '@/components/install/InstallHint';
+import { openInstallPrompt, useInstallWay } from '@/components/install/install-prompt';
 import { ForYou, RecsTabs } from '@/components/for-you/ForYou';
 import { HeartButton } from '@/components/cabinet/HeartButton';
 import { LoginWait } from '@/components/cabinet/LoginWait';
@@ -53,6 +55,7 @@ import {
 } from '@/lib/cabinet';
 import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst } from '@/lib/catalog';
 import { rankBySearch } from '@/lib/search-match';
+import { claimInstallPlate } from '@/lib/install-hint';
 import {
   COLD_NOTE,
   MOOD_DRAFT_NOTE,
@@ -105,6 +108,8 @@ type GuestView =
   | 'login';
 type AppTab = 'recommendations' | 'showcase' | 'reels' | 'catalog' | 'cabinet';
 type MixerReturnView = AppTab | 'rail';
+// Экраны с нижней панелью: на них встаёт плашка «На экран «Домой»» (#587).
+const PLATE_VIEWS = new Set<GuestView>(['recommendations', 'showcase', 'reels', 'catalog', 'rail', 'cabinet']);
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
 type MixSource = 'recommendations' | 'mood' | 'showcase' | 'reels' | 'catalog' | 'rail' | CabinetListSource;
@@ -1171,6 +1176,34 @@ export const App = () => {
       || readStoredStringArray(storageKeys.likedFlavors).length > 0;
     return hasPreferences ? 'recommendations' : 'catalog';
   });
+
+  // «На экран «Домой»» (#587). Плашку взводит карточка для мастера, показывается
+  // она на экране с нижней панелью, куда гость вернулся по «Готово», и уходит с него.
+  const installWay = useInstallWay();
+  const [installSheet, setInstallSheet] = useState<{ open: boolean; way: InstallSheetWay }>({ open: false, way: 'android' });
+  const [plateView, setPlateView] = useState<GuestView | null>(null);
+  const installArmedRef = useRef(false);
+
+  useEffect(() => {
+    if (view === 'smoke-confirmation' || view === 'custom-confirmation') {
+      installArmedRef.current = true;
+    } else if (installArmedRef.current && PLATE_VIEWS.has(view)) {
+      installArmedRef.current = false;
+      if (installWay && claimInstallPlate(localStorage)) {
+        setPlateView(view);
+        return;
+      }
+    }
+    setPlateView((current) => (current === view ? current : null));
+  }, [view, installWay]);
+
+  const startInstall = () => {
+    if (installWay === 'prompt') {
+      openInstallPrompt();
+    } else if (installWay) {
+      setInstallSheet({ open: true, way: installWay });
+    }
+  };
 
   const [code, setCode] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -3364,6 +3397,7 @@ export const App = () => {
           setDeleteStatus('idle');
           setDeleteOpen(true);
         }}
+        onInstall={installWay ? startInstall : null}
       />
     ) : (
       <CabinetAnon
@@ -3371,6 +3405,7 @@ export const App = () => {
         starting={login.phase === 'starting'}
         error={loginError}
         onLogin={() => void beginLogin('cabinet', true)}
+        onInstall={installWay ? startInstall : null}
       />
     );
 
@@ -3408,6 +3443,17 @@ export const App = () => {
       setView(tab);
     }
   };
+
+  const renderInstallPlate = () =>
+    plateView === view && installWay ? (
+      <InstallPlate
+        onAdd={() => {
+          setPlateView(null);
+          startInstall();
+        }}
+        onHide={() => setPlateView(null)}
+      />
+    ) : null;
 
   const renderBottomNav = () =>
     navReturnView ? (
@@ -3472,12 +3518,14 @@ export const App = () => {
         ) : view === 'reels' ? (
           <>
             {renderReelsView()}
+            {renderInstallPlate()}
             {renderBottomNav()}
           </>
         ) : view === 'mixer' ? (
           <MixerScreen
             likedProfiles={likedProfiles}
             onSmoked={(card) => {
+              installArmedRef.current = true;
               setCustomSmoke(card);
               setSelectedMix(null);
             }}
@@ -3529,6 +3577,7 @@ export const App = () => {
               </main>
               <PullPeek edge="bottom" travel={recsTravel} mix={continuation?.[0] ?? null} />
             </div>
+            {renderInstallPlate()}
             {renderBottomNav()}
           </>
         )}
@@ -3590,6 +3639,12 @@ export const App = () => {
       />
 
       <AnonFavoriteSheet open={anonHeartOpen && !signedIn} onClose={() => setAnonHeartOpen(false)} onLogin={loginFromHeart} />
+
+      <InstallSheet
+        open={installSheet.open}
+        way={installSheet.way}
+        onClose={() => setInstallSheet((current) => ({ ...current, open: false }))}
+      />
     </div>
   );
 };

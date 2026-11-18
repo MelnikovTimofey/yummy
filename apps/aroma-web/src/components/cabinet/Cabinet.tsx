@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { BusyLabel, Chip, Loading, MixRowsSkeleton, SegmentNav, Sk } from '@/components/aroma';
 import { favoriteKey, groupHistory, type GuestCabinetItem, type GuestFavoriteItem, type GuestHistoryItem } from '@/lib/cabinet';
 import type { GuestMe } from '@/lib/guest-session';
+import { InstallLink } from '@/components/install/InstallHint';
 import { getProfileColor } from '@/lib/profile-color';
 import { profileLabelMap } from '@/lib/profile-labels';
 
@@ -42,6 +43,7 @@ export function Cabinet({
   onEditTastes,
   onLogout,
   onDelete,
+  onInstall,
 }: {
   me: GuestMe | null;
   loading: boolean;
@@ -55,6 +57,7 @@ export function Cabinet({
   onEditTastes: () => void;
   onLogout: () => void;
   onDelete: () => void;
+  onInstall: (() => void) | null;
 }) {
   const [tab, setTab] = useState<CabinetListSource>('history');
 
@@ -172,6 +175,8 @@ export function Cabinet({
         onChange={(id) => setTab(id as CabinetListSource)}
       />
       {tab === 'history' ? renderHistory() : renderFavorites()}
+
+      {onInstall ? <InstallLink onClick={onInstall} /> : null}
 
       <footer className="cab-foot">
         <button type="button" className="aroma-onboarding-skip" onClick={onLogout}>
