@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { CTA } from '@/components/aroma';
+import { InstallLink } from '@/components/install/InstallHint';
 import { cn } from '@/lib/utils';
 
 const POLICY_URL = 'https://nomadlounge.ru/agreement/';
@@ -11,11 +12,13 @@ export function CabinetAnon({
   starting,
   error,
   onLogin,
+  onInstall,
 }: {
   canLogin: boolean;
   starting: boolean;
   error: string;
   onLogin: () => void;
+  onInstall: (() => void) | null;
 }) {
   const [consent, setConsent] = useState(false);
   const disabled = !consent;
@@ -58,6 +61,7 @@ export function CabinetAnon({
           ) : null}
         </div>
       ) : null}
+      {onInstall ? <InstallLink onClick={onInstall} /> : null}
     </section>
   );
 }

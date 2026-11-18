@@ -1,6 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { guestAccessCode } from './helpers';
 
+// Chrome может прислать beforeinstallprompt (#587): тогда «Добавить» открывает
+// системное окно, которое smoke не закрыть. Глушим, и гость Pixel 5 идёт по шторке Android.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    window.addEventListener('beforeinstallprompt', (event) => event.stopImmediatePropagation(), { capture: true }),
+  );
+});
+
 test('Aroma guest flow opens after daily code and exposes showcase/catalog without login', async ({ page }) => {
   await page.goto('/');
 
@@ -762,4 +770,68 @@ test('Aroma mix with a substitute shows the shelf tobacco with a mark', async ({
   const confirmation = page.getByRole('region', { name: 'Состав' });
   await expect(confirmation.locator('.aroma-mix-sheet-comp-row').filter({ hasText: 'Citrus Breeze' }).getByRole('img', { name: 'замена' })).toBeVisible();
   await expect(confirmation.getByText('Lime Spark')).toHaveCount(0);
+});
+
+// «На экран «Домой»» (#587): плашка один раз после «Готово» на карточке для мастера,
+// тихая ссылка в «Кабинете» и шторка с шагами. Событие «Покурить» подменено:
+// master-smoke параллельно отмечает табаки закончившимися, и запрос может получить 404.
+const enterCatalog = async (page: Page) => {
+  await page.goto('/');
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+};
+
+const smokeFirstCatalogMix = async (page: Page) => {
+  await page.locator('.aroma-catalog-list .mix-row').first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Покурить' }).click();
+  await expect(page.getByText('Покажите мастеру', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Готово' }).click();
+};
+
+test('Aroma offers «На экран «Домой»» once after the first «Готово»', async ({ page }) => {
+  await page.route('**/guest/events/smoke-cta', (route) => route.fulfill({ json: { ok: true } }));
+  await enterCatalog(page);
+
+  const plate = page.getByRole('region', { name: 'На экран «Домой»' });
+  await expect(plate).toHaveCount(0);
+  await smokeFirstCatalogMix(page);
+  await expect(plate).toBeVisible();
+  await expect(plate.getByText('Держите Арома Ателье на экране телефона.')).toBeVisible();
+  // Плашка вне панели: в панели по-прежнему шесть значков.
+  await expect(page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button')).toHaveCount(6);
+  await plate.getByRole('button', { name: 'Скрыть подсказку' }).click();
+  await expect(plate).toHaveCount(0);
+
+  await page.reload();
+  await smokeFirstCatalogMix(page);
+  await expect(page.getByRole('navigation', { name: 'Гостевая навигация' })).toBeVisible();
+  // Плашка встаёт эффектом после отрисовки экрана — ждём пару кадров.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(plate).toHaveCount(0);
+});
+
+test('Aroma cabinet link opens the Android steps and «Понятно» closes them', async ({ page }) => {
+  await openCabinet(page, null);
+
+  await page.getByRole('button', { name: 'На экран «Домой»' }).click();
+  const sheet = page.getByRole('dialog', { name: 'На экран «Домой»' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('Добавить на главный экран')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Понятно' }).click();
+  await expect(sheet).toHaveCount(0);
+});
+
+test('Aroma opened from the home screen has no «На экран «Домой»» link', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query: string) =>
+      query === '(display-mode: standalone)' ? ({ ...original(query), matches: true } as MediaQueryList) : original(query);
+  });
+  await openCabinet(page, null);
+
+  await expect(page.getByText('Кабинет работает только в этом заведении.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'На экран «Домой»' })).toHaveCount(0);
 });
