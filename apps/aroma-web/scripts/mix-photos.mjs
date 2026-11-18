@@ -32,10 +32,10 @@ async function original({ unsplash }) {
 }
 
 // Кроп вокруг точки focus (доли ширины и высоты), чтобы ягода не уехала из кадра
-// на вертикальном рилсе и узком постере.
-async function cut(file, [width, height], focus) {
+// на вертикальном рилсе и узком постере; zoom > 1 приближает мелкий предмет на тёмном фоне.
+async function cut(file, [width, height], focus, zoom) {
   const meta = await sharp(file).metadata();
-  const scale = Math.max(width / meta.width, height / meta.height);
+  const scale = Math.max(width / meta.width, height / meta.height) * zoom;
   const scaledWidth = Math.round(meta.width * scale);
   const scaledHeight = Math.round(meta.height * scale);
   const clamp = (value, max) => Math.min(Math.max(Math.round(value), 0), max);
@@ -57,7 +57,7 @@ for (const source of sources) {
   const file = await original(source);
   for (const [size, dimensions] of Object.entries(SIZES)) {
     const name = `${source.ingredient}-${source.variant}-${size}.webp`;
-    const data = await cut(file, dimensions, source.focus ?? { x: 0.5, y: 0.5 });
+    const data = await cut(file, dimensions, source.focus ?? { x: 0.5, y: 0.5 }, source.zoom ?? 1);
     writeFileSync(join(outDir, name), data);
     expected.add(name);
     total += data.length;

@@ -63,7 +63,7 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'rum', words: ['ром', 'коньяк', 'виски', 'джин'], variants: 1, base: true },
 ];
 
-const normalize = (flavor: string) => flavor.toLowerCase().replaceAll('ё', 'е');
+const normalize = (flavor: string) => flavor.toLowerCase().replace(/ё/g, 'е');
 
 const matchIn = (flavor: string, pool: Ingredient[]) => pool.find((item) => item.words.some((word) => flavor.includes(word)));
 
