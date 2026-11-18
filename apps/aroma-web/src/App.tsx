@@ -12,10 +12,12 @@ import {
   HeroSkeleton,
   Loading,
   MixListRow,
+  MixPhoto,
   MixRowsSkeleton,
   ProfileGlyph,
   RailSkeleton,
   RatingPill,
+  ShowcaseCard,
   SignatureBar,
   Sk,
   SmokeLoading,
@@ -2863,7 +2865,7 @@ export const App = () => {
         )}
         <article className="aroma-recs-hero">
           <div className="aroma-recs-hero-head">
-            <ProfileGlyph profiles={hero.flavorProfiles} size={64} />
+            <MixPhoto mix={hero} profiles={hero.flavorProfiles} size={64} eager />
             <div className="aroma-recs-hero-head-text">
               <h2 className="aroma-recs-hero-title">{hero.name}</h2>
               <p className="aroma-recs-hero-desc">{hero.description}</p>
@@ -2933,6 +2935,7 @@ export const App = () => {
               <MixListRow
                 key={mix.id}
                 profiles={mix.flavorProfiles}
+                photo={mix}
                 name={mix.name}
                 sub={
                   mix.flavors.length
@@ -3014,31 +3017,9 @@ export const App = () => {
               </h2>
 
               <div className="aroma-showcase-scroller">
-                {mixes.map((mix) => {
-                  const [firstProfile, secondProfile = firstProfile] = mix.flavorProfiles;
-                  return (
-                    <button
-                      key={`${rail.id}:${mix.id}`}
-                      type="button"
-                      className="aroma-showcase-card"
-                      onClick={() => openMix(mix, 'showcase')}
-                      style={{
-                        background: `radial-gradient(circle at 88% 0%, ${getProfileColor(firstProfile)}8c 0%, transparent 62%), radial-gradient(circle at 0% 100%, ${getProfileColor(secondProfile)}4d 0%, transparent 58%), var(--guest-card-bg)`,
-                      }}
-                    >
-                      <span className="aroma-showcase-card-top">
-                        <ProfileGlyph profiles={mix.flavorProfiles} size={28} />
-                        {mix.ratingsCount > 0 ? (
-                          <RatingPill rating={mix.avgRating} style={{ padding: '2px 7px', fontSize: 10.5 }} />
-                        ) : null}
-                      </span>
-                      <span className="aroma-showcase-card-name">{mix.name}</span>
-                      <span className="aroma-showcase-card-signature">
-                        <SignatureBar profiles={mix.flavorProfiles} height={2} />
-                      </span>
-                    </button>
-                  );
-                })}
+                {mixes.map((mix) => (
+                  <ShowcaseCard key={`${rail.id}:${mix.id}`} mix={mix} onClick={() => openMix(mix, 'showcase')} />
+                ))}
               </div>
             </section>
           );
@@ -3216,6 +3197,7 @@ export const App = () => {
             <MixListRow
               key={`${rail.id}:${mix.id}`}
               profiles={mix.flavorProfiles}
+              photo={mix}
               name={mix.name}
               sub={mix.flavors.slice(0, 3).join(', ')}
               aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
@@ -3366,6 +3348,7 @@ export const App = () => {
             <MixListRow
               key={mix.id}
               profiles={mix.flavorProfiles}
+              photo={mix}
               name={mix.name}
               sub={flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(', ')}
               aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}

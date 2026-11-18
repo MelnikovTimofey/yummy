@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { guestAccessCode } from './helpers';
 
 // Chrome может прислать beforeinstallprompt (#587): тогда «Добавить» открывает
@@ -785,7 +785,7 @@ const enterCatalog = async (page: Page) => {
 };
 
 const smokeFirstCatalogMix = async (page: Page) => {
-  await page.locator('.aroma-catalog-list .mix-row').first().click();
+  await page.locator('.aroma-catalog-list button.mix-row').first().click();
   await page.getByRole('dialog').getByRole('button', { name: 'Покурить' }).click();
   await expect(page.getByText('Покажите мастеру', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
@@ -834,4 +834,30 @@ test('Aroma opened from the home screen has no «На экран «Домой»�
 
   await expect(page.getByText('Кабинет работает только в этом заведении.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'На экран «Домой»' })).toHaveCount(0);
+});
+
+// Фото вкусов (#592, #595): миниатюра в строке и фото на постере Витрины грузятся
+// из статики; не загрузились — на месте фото прежний глиф, строка не пропадает.
+const expectLoaded = (image: Locator) =>
+  expect.poll(() => image.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0)).toBe(true);
+
+test('Aroma lists show flavour photos in rows and on showcase posters', async ({ page }) => {
+  await enterCatalog(page);
+  const rowPhoto = page.locator('.aroma-catalog-list .mix-row img.mix-photo').first();
+  await expect(rowPhoto).toBeVisible();
+  await expect(rowPhoto).toHaveAttribute('src', /^\/photos\/.+-132\.webp$/);
+  await expectLoaded(rowPhoto);
+
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Витрина', exact: true }).click();
+  const posterPhoto = page.locator('.aroma-showcase-card-img').first();
+  await expect(posterPhoto).toBeVisible();
+  await expect(posterPhoto).toHaveAttribute('src', /^\/photos\/.+-poster\.webp$/);
+  await expectLoaded(posterPhoto);
+});
+
+test('Aroma rows fall back to the glyph when a flavour photo does not load', async ({ page }) => {
+  await page.route('**/photos/**', (route) => route.abort());
+  await enterCatalog(page);
+  await expect(page.locator('.aroma-catalog-list button.mix-row').first()).toBeVisible();
+  await expect(page.locator('.aroma-catalog-list img.mix-photo')).toHaveCount(0);
 });

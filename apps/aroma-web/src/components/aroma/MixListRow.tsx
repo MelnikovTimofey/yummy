@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { ProfileGlyph } from "./ProfileGlyph";
+import { MixPhoto } from "./MixPhoto";
 import { SignatureBar } from "./SignatureBar";
 
 type MixListRowProps = {
   profiles: string[];
+  // id и flavors микса для фото вкуса (#592); null — глиф (микс собран гостем).
+  photo: { id: string; flavors: string[] } | null;
   name: string;
   // Вторая строка по экрану: вкусы, причина подбора, заметка кабинета.
   sub?: ReactNode;
@@ -19,7 +21,7 @@ type MixListRowProps = {
 
 // Одна строка микса для всех гостевых списков: Подбор, Витрина, Каталог,
 // «Для вас», Кабинет. Вид у них больше не расходится.
-export function MixListRow({ profiles, name, sub, mark, aside, off = false, onClick }: MixListRowProps) {
+export function MixListRow({ profiles, photo, name, sub, mark, aside, off = false, onClick }: MixListRowProps) {
   return (
     <button
       type="button"
@@ -27,7 +29,7 @@ export function MixListRow({ profiles, name, sub, mark, aside, off = false, onCl
       onClick={off ? undefined : onClick}
       aria-disabled={off ? true : undefined}
     >
-      <ProfileGlyph profiles={profiles} size={44} />
+      <MixPhoto mix={photo} profiles={profiles} size={44} />
       <span className="mix-row-text">
         {mark ? <span className="mix-row-mark">{mark}</span> : null}
         <span className="mix-row-name">{name}</span>
