@@ -87,6 +87,7 @@ import {
 import { MixerApiError, sendCustomMixSmoke } from '@/lib/mixer/api';
 import { RequestError, guestErrorText } from '@/lib/request-error';
 import { getProfileColor } from '@/lib/profile-color';
+import { mixPhotoSrc, pickMixPhoto } from '@/lib/mix-photo';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
@@ -809,6 +810,64 @@ const useSwipeDownToClose = (onDismiss: () => void) => {
   return { offset, dragging, onPointerDown, onPointerMove, onPointerEnd, onPointerCancel: reset };
 };
 
+// Шапка листа микса. С фото вкуса (#592, «Лист A») фото на всю ширину под ручкой,
+// название и полоска профилей поверх затемнения, глифа нет. Собранный гостем микс,
+// неузнанный вкус или незагрузившийся файл — прежняя шапка с глифом 72.
+const MixSheetHead = ({
+  mix,
+  custom,
+  favorite,
+  onFavorite,
+}: {
+  mix: { id: string; name: string; flavors: string[]; flavorProfiles: string[] };
+  custom: boolean;
+  favorite: boolean;
+  onFavorite: () => void;
+}) => {
+  const photo = custom ? null : pickMixPhoto(mix);
+  const src = photo ? mixPhotoSrc(photo, 'sheet') : null;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (src && failedSrc !== src) {
+    return (
+      <div className="aroma-mix-sheet-photo-head">
+        <img
+          className="aroma-mix-sheet-photo"
+          src={src}
+          alt=""
+          width={780}
+          height={480}
+          decoding="async"
+          onError={() => setFailedSrc(src)}
+        />
+        <span className="aroma-mix-sheet-handle" aria-hidden />
+        <span className="aroma-mix-sheet-photo-heart">
+          <HeartButton on={favorite} onClick={onFavorite} />
+        </span>
+        <div className="aroma-mix-sheet-photo-text">
+          <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
+          <SignatureBar profiles={mix.flavorProfiles} height={4} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <span className="aroma-mix-sheet-handle" aria-hidden />
+      <div className="aroma-mix-sheet-head">
+        <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
+        <div className="aroma-mix-sheet-head-text">
+          <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
+          <SignatureBar profiles={mix.flavorProfiles} height={4} />
+          {custom ? <p className="aroma-mix-sheet-note">Собран вами</p> : null}
+        </div>
+        <HeartButton on={favorite} onClick={onFavorite} />
+      </div>
+    </>
+  );
+};
+
 const MixDetailModal = ({
   state,
   selectedMixId,
@@ -885,20 +944,11 @@ const MixDetailModal = ({
           background: 'var(--guest-sheet-bg)',
         }}
       >
-        <span className="aroma-mix-sheet-handle" aria-hidden />
         <DialogDescription className="sr-only">
           Карточка микса
         </DialogDescription>
 
-        <div className="aroma-mix-sheet-head">
-          <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
-          <div className="aroma-mix-sheet-head-text">
-            <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
-            <SignatureBar profiles={mix.flavorProfiles} height={4} />
-            {custom ? <p className="aroma-mix-sheet-note">Собран вами</p> : null}
-          </div>
-          <HeartButton on={favorite} onClick={onFavorite} />
-        </div>
+        <MixSheetHead mix={mix} custom={custom} favorite={favorite} onFavorite={onFavorite} />
 
         {mix.description ? (
           <p className="aroma-mix-sheet-desc">{mix.description}</p>
