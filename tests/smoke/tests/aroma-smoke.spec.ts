@@ -874,6 +874,21 @@ test('Aroma mix sheet opens with a flavour photo header', async ({ page }) => {
   await expect(sheet.getByRole('button', { name: 'Покурить' })).toBeVisible();
 });
 
+// Фото вкуса и на карточке для мастера (#592). Событие «Покурить» подменено:
+// master-smoke параллельно отмечает табаки закончившимися, и запрос может получить 404.
+test('Aroma master card opens with a flavour photo header', async ({ page }) => {
+  await page.route('**/guest/events/smoke-cta', (route) => route.fulfill({ json: { ok: true } }));
+  await enterCatalog(page);
+  await page.locator('.aroma-catalog-list button.mix-row').first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Покурить' }).click();
+  await expect(page.getByText('Покажите мастеру', { exact: true })).toBeVisible();
+  const photo = page.locator('img.aroma-smoke-confirmation-photo');
+  await expect(photo).toBeVisible();
+  await expect(photo).toHaveAttribute('src', /^\/photos\/.+-sheet\.webp$/);
+  await expectLoaded(photo);
+  await expect(page.locator('.aroma-smoke-confirmation-title')).toBeVisible();
+});
+
 test('Aroma reel plays its scene over a flavour photo', async ({ page }) => {
   await enterCatalog(page);
   await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Рилсы', exact: true }).click();

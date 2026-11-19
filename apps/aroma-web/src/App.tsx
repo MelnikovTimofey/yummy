@@ -813,6 +813,73 @@ const useSwipeDownToClose = (onDismiss: () => void) => {
 // Шапка листа микса. С фото вкуса (#592, «Лист A») фото на всю ширину под ручкой,
 // название и полоска профилей поверх затемнения, глифа нет. Собранный гостем микс,
 // неузнанный вкус или незагрузившийся файл — прежняя шапка с глифом 72.
+// Шапка карточки для мастера. С фото вкуса (#592, «Мастер A») фото на всю ширину
+// от верхнего края, «Покажите мастеру» и «Готово» на нём, название и профили поверх
+// затемнения. Вкус не узнан или файл не загрузился — прежняя шапка с глифом 96.
+const SmokeConfirmationHead = ({
+  mix,
+  profileLabels,
+  onDone,
+}: {
+  mix: { id: string; name: string; flavors: string[]; flavorProfiles: string[] };
+  profileLabels: string;
+  onDone: () => void;
+}) => {
+  const photo = pickMixPhoto(mix);
+  const src = photo ? mixPhotoSrc(photo, 'sheet') : null;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const withPhoto = Boolean(src) && failedSrc !== src;
+
+  const topbar = (
+    <div className="aroma-smoke-confirmation-topbar">
+      <p className="aroma-smoke-confirmation-note">Покажите мастеру</p>
+      <button type="button" className="aroma-smoke-confirmation-done" onClick={onDone}>
+        Готово
+      </button>
+    </div>
+  );
+  const title = <h1 className="aroma-smoke-confirmation-title">{mix.name}</h1>;
+  const profiles = profileLabels ? (
+    <p className="aroma-smoke-confirmation-profiles">{profileLabels}</p>
+  ) : null;
+
+  if (src && withPhoto) {
+    return (
+      <>
+        <div className="aroma-smoke-confirmation-photo-head">
+          <img
+            className="aroma-smoke-confirmation-photo"
+            src={src}
+            alt=""
+            width={780}
+            height={480}
+            decoding="async"
+            onError={() => setFailedSrc(src)}
+          />
+          {topbar}
+          <div className="aroma-smoke-confirmation-photo-text">
+            {title}
+            {profiles}
+          </div>
+        </div>
+        <SignatureBar profiles={mix.flavorProfiles} height={3} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {topbar}
+      <div className="aroma-smoke-confirmation-stack">
+        <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
+        {title}
+        {profiles}
+        <SignatureBar profiles={mix.flavorProfiles} height={3} />
+      </div>
+    </>
+  );
+};
+
 const MixSheetHead = ({
   mix,
   custom,
@@ -3106,25 +3173,11 @@ export const App = () => {
 
     return (
       <section className="aroma-smoke-confirmation">
-        <div className="aroma-smoke-confirmation-topbar">
-          <p className="aroma-smoke-confirmation-note">Покажите мастеру</p>
-          <button
-            type="button"
-            className="aroma-smoke-confirmation-done"
-            onClick={() => setView(doneView)}
-          >
-            Готово
-          </button>
-        </div>
-
-        <div className="aroma-smoke-confirmation-stack">
-          <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
-          <h1 className="aroma-smoke-confirmation-title">{mix.name}</h1>
-          {profileLabels ? (
-            <p className="aroma-smoke-confirmation-profiles">{profileLabels}</p>
-          ) : null}
-          <SignatureBar profiles={mix.flavorProfiles} height={3} />
-        </div>
+        <SmokeConfirmationHead
+          mix={mix}
+          profileLabels={profileLabels}
+          onDone={() => setView(doneView)}
+        />
 
         {components.length ? (
           <section className="aroma-smoke-confirmation-composition" aria-label="Состав">

@@ -193,12 +193,11 @@
   {
     "ingredient": "raspberry",
     "variant": 1,
-    "unsplash": "photo-1761991766193-6295578152bf",
+    "unsplash": "photo-1577003833619-76bbd7f82948",
     "focus": {
       "x": 0.5,
-      "y": 0.6
-    },
-    "zoom": 2.2
+      "y": 0.5
+    }
   },
   {
     "ingredient": "cherry",
