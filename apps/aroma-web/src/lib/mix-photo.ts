@@ -5,8 +5,8 @@
 //
 // Правило: первый яркий вкус (фрукт, ягода, десерт, специя, кола, конфеты, мята) в
 // названии (#610), затем первый по порядку flavors; нет ярких — первая база во flavors
-// (сливки, чай, лёд, табак, ром, травы, цветы, хвоя); ничего не узнано — null, на месте
-// фото остаётся ProfileGlyph.
+// (сливки, чай, лёд, табак, ром, травы, цветы, хвоя); flavors пустые — первая рисуемая
+// категория (#615); ничего не узнано — null, на месте фото остаётся ProfileGlyph.
 
 export type MixPhotoSize = '132' | 'poster' | 'sheet' | 'reel';
 export type MixPhoto = { ingredient: string; variant: number };
@@ -14,15 +14,18 @@ export type MixPhoto = { ingredient: string; variant: number };
 type Ingredient = { id: string; words: string[]; variants: number; base?: true };
 
 // Совпадение по подстроке в нижнем регистре, «ё» читается как «е». Порядок важен,
-// когда во вкусе узнаётся больше одного слова: «шоколад» содержит «кола», «лимонный
+// когда во вкусе узнаётся больше одного слова: «шоколад» содержит «кола» и «колад»,
+// «пина колада» — «кола», «лимонный
 // пирог» — и лимон, и выпечку, «медовая дыня» — и мёд, и дыню; побеждает строка выше.
 // variants — сколько фото у ингредиента в public/photos; список источников —
 // photos/sources.json.
 export const INGREDIENTS: Ingredient[] = [
   { id: 'chocolate', words: ['шоколад', 'какао'], variants: 1 },
-  { id: 'cola', words: ['кола', 'газиров', 'лимонад', 'энергетик'], variants: 1 },
-  { id: 'mint', words: ['мят', 'ментол'], variants: 3 },
-  { id: 'lemon', words: ['лимон'], variants: 2 },
+  // Ананас выше колы: «Пина колада» и в названии, и во flavors — ананас.
+  { id: 'pineapple', words: ['ананас', 'колад'], variants: 1 },
+  { id: 'cola', words: ['кола', 'газиров', 'лимонад', 'энергетик', 'байкал', 'рутбир'], variants: 1 },
+  { id: 'mint', words: ['мят', 'ментол', 'мохито', 'эвкалипт'], variants: 3 },
+  { id: 'lemon', words: ['лимон', 'юдзу'], variants: 2 },
   { id: 'lime', words: ['лайм'], variants: 1 },
   { id: 'grapefruit', words: ['грейпфрут', 'помело'], variants: 1 },
   { id: 'orange', words: ['апельсин', 'мандарин', 'цитрус', 'клементин'], variants: 1 },
@@ -32,10 +35,8 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'cherry', words: ['вишн', 'черешн'], variants: 2 },
   { id: 'grape', words: ['виноград'], variants: 2 },
   { id: 'currant', words: ['смородин'], variants: 1 },
-  { id: 'forest-berries', words: ['ягод', 'ежевик', 'клюкв', 'барбарис', 'крыжовник'], variants: 1 },
+  { id: 'forest-berries', words: ['ягод', 'ежевик', 'клюкв', 'барбарис', 'крыжовник', 'брусник', 'облепих', 'ирг', 'княженик', 'черемух', 'асаи'], variants: 1 },
   { id: 'mango', words: ['манго'], variants: 2 },
-  // «колад» — для названий: «Пина колада» — ананас, а не кола (см. nameMatch).
-  { id: 'pineapple', words: ['ананас', 'колад'], variants: 1 },
   { id: 'passionfruit', words: ['маракуй', 'гуав', 'папай'], variants: 1 },
   { id: 'peach', words: ['персик', 'абрикос', 'нектарин'], variants: 1 },
   { id: 'melon', words: ['дын'], variants: 1 },
@@ -50,17 +51,17 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'vanilla', words: ['ванил'], variants: 1 },
   { id: 'caramel', words: ['карамел', 'ирис'], variants: 1 },
   { id: 'coffee', words: ['кофе'], variants: 1 },
-  { id: 'nuts', words: ['орех', 'фисташ', 'миндал', 'фундук'], variants: 1 },
-  { id: 'honey', words: ['мед'], variants: 1 },
-  { id: 'cinnamon', words: ['кориц', 'специ', 'кардамон', 'имбир', 'бадьян', 'гвоздик'], variants: 1 },
+  { id: 'nuts', words: ['орех', 'фисташ', 'миндал', 'фундук', 'арахис', 'халв'], variants: 1 },
+  { id: 'honey', words: ['мед', 'кленов'], variants: 1 },
+  { id: 'cinnamon', words: ['кориц', 'специ', 'кардамон', 'имбир', 'бадьян', 'гвоздик', 'анис'], variants: 1 },
   { id: 'candy', words: ['жвачк', 'бабл', 'леденц', 'мармелад', 'конфет'], variants: 1 },
-  { id: 'pastry', words: ['печень', 'пирог', 'кекс', 'вафл', 'чизкейк', 'булочк', 'торт', 'круассан'], variants: 1 },
-  { id: 'cream', words: ['сливоч', 'сливк', 'молок', 'молоч', 'морожен', 'йогурт', 'бейлис'], variants: 2, base: true },
-  { id: 'tea', words: ['чай'], variants: 1, base: true },
-  { id: 'ice', words: ['холод', 'лед', 'ледян', 'морозн'], variants: 1, base: true },
+  { id: 'pastry', words: ['печень', 'пирог', 'кекс', 'вафл', 'чизкейк', 'булочк', 'торт', 'круассан', 'тирамису'], variants: 1 },
+  { id: 'cream', words: ['сливоч', 'сливк', 'молок', 'молоч', 'морожен', 'йогурт', 'бейлис', 'сгущ'], variants: 2, base: true },
+  { id: 'tea', words: ['чай', 'бергамот'], variants: 1, base: true },
+  { id: 'ice', words: ['холод', 'лед', 'ледян', 'морозн', 'бустер'], variants: 1, base: true },
   { id: 'tobacco', words: ['табак', 'табачн', 'сигар'], variants: 1, base: true },
   { id: 'flowers', words: ['цветоч', 'роза', 'розов', 'жасмин', 'лаванд', 'бузин', 'фиалк', 'ромашк'], variants: 1, base: true },
-  { id: 'herbs', words: ['базилик', 'тархун', 'травян', 'чабрец', 'розмарин', 'шалфей'], variants: 1, base: true },
+  { id: 'herbs', words: ['базилик', 'тархун', 'травян', 'чабрец', 'розмарин', 'шалфей', 'лемонграсс'], variants: 1, base: true },
   { id: 'pine', words: ['хвой', 'можжевел', 'сосн', 'кедр'], variants: 1, base: true },
   // Ром последним: «ром» сидит внутри «ромашки».
   { id: 'rum', words: ['ром', 'коньяк', 'виски', 'джин'], variants: 1, base: true },
@@ -84,11 +85,12 @@ const firstMatch = (flavors: string[], pool: Ingredient[]) => {
 // подходящих основ побеждает самая длинная: «колада» — «колад», а не «кола».
 // База в названии не берётся: «Морозная ягода» — ягоды, «Холодный чай» — по flavors.
 // Сначала существительные, потом прилагательные: «Медовая дыня» — дыня, «Вишнёвая
-// кола» — кола. «Лимонад» в названии — напиток со вкусом, а не фото газировки.
+// кола» — кола. «Лимонад» в названии — напиток со вкусом, а не фото газировки;
+// «Байкальский» — про озеро, а не про газировку «Байкал».
 const ADJECTIVE = /(ая|яя|ый|ий|ой|ое|ее|ые|ие|ую|юю)$/;
 
 const tokenMatch = (token: string) => {
-  if (token.startsWith('лимонад')) return null;
+  if (token.startsWith('лимонад') || token.startsWith('байкальск')) return null;
   let best: { item: Ingredient; length: number } | null = null;
   for (const item of INGREDIENTS) {
     for (const word of item.words) {
@@ -108,6 +110,24 @@ const nameMatch = (name: string) => {
   return null;
 };
 
+// Категория — последний шанс, только когда flavors пустые (английские названия вроде
+// Wildberry): неузнанный вкус вроде кактуса фото чужой категории не получает.
+// «Фруктовый», «Напитки», «Гастро» и «Парфюмный» одним фото не рисуются.
+const PROFILE_PHOTO: Record<string, string> = {
+  berry: 'forest-berries',
+  citrus: 'orange',
+  dessert: 'pastry',
+  minty: 'mint',
+  spicy: 'cinnamon',
+  tobacco: 'tobacco',
+  floral_herbal: 'flowers',
+};
+
+const profileMatch = (profiles: string[]) => {
+  const id = profiles.map((profile) => PROFILE_PHOTO[profile]).find(Boolean);
+  return id ? INGREDIENTS.find((item) => item.id === id)! : null;
+};
+
 const VIVID = INGREDIENTS.filter((item) => !item.base);
 const BASE = INGREDIENTS.filter((item) => item.base);
 
@@ -122,9 +142,13 @@ const hash = (value: string) => {
   return result;
 };
 
-export function pickMixPhoto(mix: { id: string; name?: string; flavors: string[] }): MixPhoto | null {
+export function pickMixPhoto(mix: { id: string; name?: string; flavors: string[]; flavorProfiles?: string[] }): MixPhoto | null {
   const flavors = mix.flavors.map(normalize);
-  const ingredient = (mix.name ? nameMatch(mix.name) : null) ?? firstMatch(flavors, VIVID) ?? firstMatch(flavors, BASE);
+  const ingredient =
+    (mix.name ? nameMatch(mix.name) : null) ??
+    firstMatch(flavors, VIVID) ??
+    firstMatch(flavors, BASE) ??
+    (flavors.length ? null : profileMatch(mix.flavorProfiles ?? []));
   if (!ingredient) return null;
   return { ingredient: ingredient.id, variant: (hash(mix.id) % ingredient.variants) + 1 };
 }
