@@ -1,8 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Search, X } from 'lucide-react';
-import type { InventoryTobacco, ShelfCard, ShelfRow, TobaccoRef } from '@/contracts';
+import { ArrowDown, ArrowLeftRight, ArrowUp, Search, X } from 'lucide-react';
+import type { InventoryTobacco, ShelfAnalog, ShelfCard, ShelfRow, TobaccoRef } from '@/contracts';
 import { cardMixState, describeShelfError } from '@/lib/shelf';
-import { analogStock, moveAnalog, withoutAnalog } from '@/lib/shelf-analogs';
+import { analogCell, analogStock, moveAnalog, withoutAnalog } from '@/lib/shelf-analogs';
+
+// Столбец «Аналоги» на полке и строка в карточке телефона: закончившиеся приглушены,
+// у аналога, который сейчас стоит в миксах вместо табака, значок замены.
+export const ShelfAnalogsCell = ({ analogs }: { analogs: ShelfAnalog[] }) => {
+  if (!analogs.length) return <span className="shelf-faint">—</span>;
+  const { head, rest, title } = analogCell(analogs);
+  return (
+    <span className="shelf-analogs" title={title}>
+      {head.map((item, index) => (
+        <span key={item.tobaccoId} className="shelf-analogs__item" data-off={!item.inStock || undefined}>
+          <span className="shelf-analogs__name">{item.name}</span>
+          {item.substituting ? (
+            <span className="shelf-sub-mark" role="img" aria-label="стоит в миксах вместо этого табака" title="стоит в миксах вместо этого табака">
+              <ArrowLeftRight size={12} aria-hidden />
+            </span>
+          ) : null}
+          {index === 1 && rest ? <span className="shelf-faint">ещё {rest}</span> : null}
+        </span>
+      ))}
+    </span>
+  );
+};
 
 export type AnalogChange = (ids: string[], added?: TobaccoRef) => Promise<void>;
 

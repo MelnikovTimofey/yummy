@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ShelfAnalog } from '@/contracts';
-import { analogStock, analogToastText, moveAnalog, withoutAnalog } from './shelf-analogs';
+import { analogCell, analogStock, analogToastText, moveAnalog, withoutAnalog } from './shelf-analogs';
 
 // Аналоги на «Полке» (#482, мокап analogs @ a74ab4c2, экраны shelf и shelf-analogs).
 
@@ -11,6 +11,14 @@ const analog = (name: string, inStock = true, substituting = false): ShelfAnalog
   name,
   inStock,
   substituting,
+});
+
+test('столбец «Аналоги»: два первых в порядке замены, дальше «ещё N», в подсказке все с брендом', () => {
+  assert.deepEqual(analogCell([]), { head: [], rest: 0, title: '' });
+  const cell = analogCell([analog('Ледяная мята'), analog('Supernova'), analog('Spearmint', false)]);
+  assert.deepEqual(cell.head.map((item) => item.name), ['Ледяная мята', 'Supernova']);
+  assert.equal(cell.rest, 1);
+  assert.equal(cell.title, 'Darkside Ледяная мята, Darkside Supernova, Darkside Spearmint');
 });
 
 test('порядок замены: ↑ ↓ меняют соседей, за края не выходят; × убирает', () => {
