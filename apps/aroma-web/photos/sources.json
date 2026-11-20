@@ -471,5 +471,287 @@
       "x": 0.5,
       "y": 0.5
     }
+  },
+  {
+    "ingredient": "wine",
+    "variant": 1,
+    "unsplash": "photo-1794171770242-f2ced3f1cc4b",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "wine",
+    "variant": 2,
+    "unsplash": "photo-1722307036188-57649793ddcf",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "wine",
+    "variant": 3,
+    "unsplash": "photo-1734084959344-d0228c84da82",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "wine",
+    "variant": 4,
+    "unsplash": "photo-1682423228633-809aeeea2ef3",
+    "focus": {
+      "x": 0.62,
+      "y": 0.6
+    }
+  },
+  {
+    "ingredient": "wine",
+    "variant": 5,
+    "unsplash": "photo-1607955868623-e135a7e50b0d",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "cocktail",
+    "variant": 1,
+    "unsplash": "photo-1621873495884-845a939892d1",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "cocktail",
+    "variant": 2,
+    "unsplash": "photo-1615553186013-06b13fe822e1",
+    "focus": {
+      "x": 0.62,
+      "y": 0.6
+    }
+  },
+  {
+    "ingredient": "cocktail",
+    "variant": 3,
+    "unsplash": "photo-1556855810-ac404aa91e85",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "cactus",
+    "variant": 1,
+    "unsplash": "photo-1791826152377-e1380cad9597",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "cactus",
+    "variant": 2,
+    "unsplash": "photo-1610382047603-488cdbff08bb",
+    "focus": {
+      "x": 0.5,
+      "y": 0.8
+    },
+    "zoom": 1.3
+  },
+  {
+    "ingredient": "dragonfruit",
+    "variant": 1,
+    "unsplash": "photo-1698546690393-45482eb06942",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "plum",
+    "variant": 1,
+    "unsplash": "photo-1564750497011-ead0ce4b9448",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "plum",
+    "variant": 2,
+    "unsplash": "photo-1690233319569-0ca9a8538fee",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "popcorn",
+    "variant": 1,
+    "unsplash": "photo-1512149177596-f817c7ef5d4c",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "corn",
+    "variant": 1,
+    "unsplash": "photo-1578652903016-b78571b87410",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "chili",
+    "variant": 1,
+    "unsplash": "photo-1615375557967-227168b41ae2",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "zoom": 1.5
+  },
+  {
+    "ingredient": "chili",
+    "variant": 2,
+    "unsplash": "photo-1622993361024-ae1c39cda16c",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "tomato",
+    "variant": 1,
+    "unsplash": "photo-1558818498-28c1e002b655",
+    "focus": {
+      "x": 0.66,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "tomato",
+    "variant": 2,
+    "unsplash": "photo-1592924357228-91a4daadcfea",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "cucumber",
+    "variant": 1,
+    "unsplash": "photo-1568584711271-6c929fb49b60",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "fig",
+    "variant": 1,
+    "unsplash": "photo-1790293840932-a568128dbb1f",
+    "focus": {
+      "x": 0.6,
+      "y": 0.72
+    },
+    "zoom": 1.3
+  },
+  {
+    "ingredient": "fig",
+    "variant": 2,
+    "unsplash": "photo-1790293840947-e26d5764a7d6",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "bubblegum",
+    "variant": 1,
+    "unsplash": "photo-1766997245402-e28a6021ff91",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "cola",
+    "variant": 2,
+    "unsplash": "photo-1629654613528-5d0a2e4166de",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "forest-berries",
+    "variant": 2,
+    "unsplash": "photo-1562845029-d1b530d4cfd3",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "forest-berries",
+    "variant": 3,
+    "unsplash": "photo-1597715293892-3adab9fcb33d",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "orange",
+    "variant": 2,
+    "unsplash": "photo-1612823426673-68ec0a97a2bc",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "peach",
+    "variant": 2,
+    "unsplash": "photo-1632751163367-01ff55bbc6b2",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "pineapple",
+    "variant": 2,
+    "unsplash": "photo-1683412383550-09f3b48cb297",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "tobacco",
+    "variant": 2,
+    "unsplash": "photo-1578590584465-4ddad6674644",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "watermelon",
+    "variant": 2,
+    "unsplash": "photo-1787836865955-009bbab5aee2",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
   }
 ]
