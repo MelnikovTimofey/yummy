@@ -502,6 +502,60 @@
   white-space: nowrap;
 }
 
+/* Фото вкуса на всю карту (#611): затемнение сверху под строку профилей и снизу
+   под название; текст поверх фото светлее, цветами профилей фото не подкрашиваем. */
+.mixer-card-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.mixer-card-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 14, 17, 0.55) 0%,
+    rgba(14, 14, 17, 0) 22%,
+    rgba(20, 20, 23, 0.35) 45%,
+    rgba(20, 20, 23, 0.92) 78%,
+    rgba(20, 20, 23, 0.97) 100%
+  );
+}
+
+.mixer-card[data-photo] > :not(.mixer-card-photo, .mixer-card-scrim, .mixer-stamp) {
+  position: relative;
+  z-index: 1;
+}
+
+.mixer-card[data-photo] .mixer-card-profile,
+.mixer-card[data-photo] .mixer-card-flavors {
+  color: #e3ddd6;
+}
+
+.mixer-card[data-photo] .mixer-card-brand {
+  color: #d4cec6;
+}
+
+.mixer-card[data-photo] .mixer-card-name,
+.mixer-card[data-photo] .mixer-card-match b {
+  color: #f4efea;
+}
+
+.mixer-card[data-photo] .mixer-card-match span,
+.mixer-card[data-photo] .mixer-card-caption {
+  color: #c9c3bb;
+}
+
+.mixer-card[data-photo] .mixer-card-foot {
+  border-top-color: rgba(244, 239, 234, 0.2);
+}
+
 /* Низкая колода (360×640 с репликой мастера): карта плотнее. */
 @container (max-height: 250px) {
   .mixer-card {
@@ -524,6 +578,17 @@
 
   .mixer-card-match b {
     font-size: 20px;
+  }
+
+  /* Текст занимает почти всю низкую карту: затемнение плотнее, без светлой полосы. */
+  .mixer-card-scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(14, 14, 17, 0.6) 0%,
+      rgba(20, 20, 23, 0.62) 30%,
+      rgba(20, 20, 23, 0.9) 65%,
+      rgba(20, 20, 23, 0.96) 100%
+    );
   }
 }
 
