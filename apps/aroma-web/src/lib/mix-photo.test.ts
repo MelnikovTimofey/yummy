@@ -28,7 +28,49 @@ test('pickMixPhoto: нет ярких — первая база', () => {
 
 test('pickMixPhoto: ничего не узнано или flavors пустые — null', () => {
   assert.equal(pickMixPhoto({ id: 'm', flavors: [] }), null);
-  assert.equal(pickMixPhoto({ id: 'm', flavors: ['кактус', 'юдзу', 'бергамот'] }), null);
+  assert.equal(pickMixPhoto({ id: 'm', flavors: ['кактус', 'грибы'] }), null);
+});
+
+// Пробелы на полке и в каталоге (аудит 2026-11-20): вкусы, которые узнаются
+// фото уже существующего ингредиента.
+test('pickMixPhoto: редкие вкусы на фото близкого ингредиента', () => {
+  for (const flavor of ['брусника', 'облепиха', 'ирга', 'княженика', 'черёмуха', 'асаи']) assert.equal(ingredientOf([flavor]), 'forest-berries', flavor);
+  for (const flavor of ['байкал', 'рутбир']) assert.equal(ingredientOf([flavor]), 'cola', flavor);
+  for (const flavor of ['арахис', 'халва']) assert.equal(ingredientOf([flavor]), 'nuts', flavor);
+  for (const flavor of ['мохито', 'эвкалипт']) assert.equal(ingredientOf([flavor]), 'mint', flavor);
+  assert.equal(ingredientOf(['тирамису']), 'pastry');
+  assert.equal(ingredientOf(['сгущёнка']), 'cream');
+  assert.equal(ingredientOf(['лемонграсс']), 'herbs');
+  assert.equal(ingredientOf(['анис']), 'cinnamon');
+  assert.equal(ingredientOf(['кленовый']), 'honey');
+  assert.equal(ingredientOf(['юдзу']), 'lemon');
+  assert.equal(ingredientOf(['бергамот']), 'tea');
+  assert.equal(ingredientOf(['бустер']), 'ice');
+});
+
+test('pickMixPhoto: «пина колада» во flavors — ананас, а не кола', () => {
+  assert.equal(ingredientOf(['пина колада']), 'pineapple');
+  assert.equal(ingredientOf(['кола']), 'cola');
+  assert.equal(ingredientOf(['шоколад']), 'chocolate');
+});
+
+// flavors пустые у табаков с английскими названиями (Wildberry, Forest Mix):
+// фото по категории, если она однозначно рисуется.
+const byProfiles = (flavorProfiles: string[], flavors: string[] = [], name?: string) =>
+  pickMixPhoto({ id: 'mix-1', name, flavors, flavorProfiles })?.ingredient ?? null;
+
+test('pickMixPhoto: flavors пустые — фото по первой рисуемой категории', () => {
+  assert.equal(byProfiles(['fruity', 'berry']), 'forest-berries');
+  assert.equal(byProfiles(['citrus']), 'orange');
+  assert.equal(byProfiles(['dessert']), 'pastry');
+  assert.equal(byProfiles(['minty']), 'mint');
+  assert.equal(byProfiles(['fruity', 'gastro', 'perfume', 'beverage']), null);
+});
+
+test('pickMixPhoto: категория не перебивает flavors и название', () => {
+  assert.equal(byProfiles(['berry'], ['кактус']), null);
+  assert.equal(byProfiles(['berry'], ['лимон']), 'lemon');
+  assert.equal(byProfiles(['berry'], [], 'Арбузный рай'), 'watermelon');
 });
 
 test('pickMixPhoto: синонимы и регистр', () => {
@@ -119,6 +161,11 @@ test('pickMixPhoto: в названии существительное рань�
 test('pickMixPhoto: «лимонад» в названии не делает фото колой', () => {
   assert.equal(byName('Лавандовый лимонад', ['лимон', 'лаванда']), 'lemon');
   assert.equal(byName('Инжирный лимонад с персиком', ['персик', 'инжир', 'лимон']), 'peach');
+});
+
+test('pickMixPhoto: «Байкальский» в названии — не газировка «Байкал»', () => {
+  assert.equal(byName('Чабрец Байкальский', ['чабрец']), 'herbs');
+  assert.equal(byName('Байкал с лимоном', ['байкал', 'лимон']), 'cola');
 });
 
 test('mixPhotoSrc: путь к нарезанному файлу', () => {

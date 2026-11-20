@@ -14,7 +14,7 @@ type MixPhotoProps = {
 // Фото вкуса вместо глифа (#592, канон «Фото вкусов»): вкус не узнан или файл
 // не загрузился — тот же ProfileGlyph того же размера, вёрстка не двигается.
 export function MixPhoto({ mix, profiles, size, eager = false }: MixPhotoProps) {
-  const photo = mix ? pickMixPhoto(mix) : null;
+  const photo = mix ? pickMixPhoto({ ...mix, flavorProfiles: profiles }) : null;
   const src = photo ? mixPhotoSrc(photo, "132") : null;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
