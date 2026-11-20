@@ -145,7 +145,7 @@ export function RailSkeleton({ titleWidth }: { titleWidth: number }) {
   return (
     <div className="aroma-showcase-rail">
       <span className="aroma-showcase-rail-head sk-rail-head">
-        <Sk className="sk-title" style={{ width: titleWidth, height: 20 }} />
+        <Sk className="sk-title" style={{ width: titleWidth, height: 18 }} />
       </span>
       <div className="aroma-showcase-scroller sk-rail">
         {[0, 1, 2].map((index) => (

@@ -851,7 +851,7 @@ test('Aroma lists show flavour photos in rows and on showcase posters', async ({
   await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Витрина', exact: true }).click();
   const posterPhoto = page.locator('.aroma-showcase-card-img').first();
   await expect(posterPhoto).toBeVisible();
-  await expect(posterPhoto).toHaveAttribute('src', /^\/photos\/.+-poster\.webp$/);
+  await expect(posterPhoto).toHaveAttribute('src', /^\/photos\/.+-sheet\.webp$/);
   await expectLoaded(posterPhoto);
 });
 

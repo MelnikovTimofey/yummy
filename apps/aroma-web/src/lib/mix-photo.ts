@@ -8,7 +8,7 @@
 // (сливки, чай, лёд, табак, ром, травы, цветы, хвоя); flavors пустые — первая рисуемая
 // категория (#615); ничего не узнано — null, на месте фото остаётся ProfileGlyph.
 
-export type MixPhotoSize = '132' | 'poster' | 'sheet' | 'reel';
+export type MixPhotoSize = '132' | 'sheet' | 'reel';
 export type MixPhoto = { ingredient: string; variant: number };
 
 type Ingredient = { id: string; words: string[]; variants: number; base?: true };
