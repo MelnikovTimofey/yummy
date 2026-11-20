@@ -1881,6 +1881,11 @@ select:focus-visible {
   white-space: nowrap;
 }
 
+/* Линейка после бренда в карточке для мастера (#627): светлее бренда. */
+.aroma-mix-sheet-comp-line {
+  color: var(--text-1);
+}
+
 /* Третья колонка и без производителя: доля остаётся справа. */
 .aroma-mix-sheet-comp-name {
   grid-column: 3;

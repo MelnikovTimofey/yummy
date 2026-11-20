@@ -10,6 +10,7 @@ import {
   Chip,
   CTA,
   HeroSkeleton,
+  MakerLine,
   Loading,
   MixListRow,
   MixPhoto,
@@ -180,6 +181,7 @@ type MixCard = {
     id: string;
     name: string;
     manufacturer: string;
+    lineName: string;
     flavors: string[];
     proportion: number;
     substituted?: boolean;
@@ -375,6 +377,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
           typeof componentRecord.manufacturer === 'string' && componentRecord.manufacturer
             ? componentRecord.manufacturer
             : '',
+        lineName: typeof componentRecord.lineName === 'string' ? componentRecord.lineName : '',
         flavors: toStringList(componentRecord.flavors),
         proportion: toNumber(componentRecord.proportion, Math.round(100 / Math.max(1, extractCollection(record, ['components']).length))),
       }, readSubstitute(componentRecord.substitute));
@@ -674,6 +677,7 @@ const cabinetItemToMix = (item: GuestCabinetItem, card: GuestCabinetCard): MixCa
         id: component.tobaccoId,
         name: component.name,
         manufacturer: component.manufacturer,
+        lineName: component.lineName ?? '',
         flavors: [],
         proportion: component.proportion,
       },
@@ -695,6 +699,7 @@ const mixToCabinetItem = (mix: MixCard): GuestCabinetItem => ({
     components: mix.components.map((component) => ({
       tobaccoId: component.id,
       manufacturer: component.manufacturer,
+      lineName: component.lineName,
       name: component.name,
       proportion: component.proportion,
     })),
@@ -2210,6 +2215,7 @@ export const App = () => {
       components: card.components.map((component) => ({
         id: component.tobaccoId,
         manufacturer: component.manufacturer,
+        lineName: component.lineName ?? '',
         name: component.name,
         proportion: component.proportion,
       })),
@@ -3192,7 +3198,7 @@ export const App = () => {
                     aria-hidden
                   />
                   {component.manufacturer ? (
-                    <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
+                    <MakerLine manufacturer={component.manufacturer} lineName={component.lineName} />
                   ) : null}
                   <span className="aroma-mix-sheet-comp-name">
                     <span className="aroma-mix-sheet-comp-name-text">{component.name}</span>

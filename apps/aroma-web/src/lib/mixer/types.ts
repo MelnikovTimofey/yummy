@@ -3,6 +3,7 @@
 export type PaletteTobacco = {
   id: string;
   manufacturer: string;
+  lineName: string;
   name: string;
   flavorProfiles: string[];
   flavors: string[];
