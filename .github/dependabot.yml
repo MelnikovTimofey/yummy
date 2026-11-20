@@ -15,11 +15,26 @@ updates:
       day: monday
     cooldown:
       default-days: 7
+    # Одно обновление — один PR на все каталоги (#641): по одному на каталог они
+    # конфликтовали по lockfile и копились.
     groups:
       minor-and-patch:
         update-types:
           - minor
           - patch
+      majors:
+        update-types:
+          - major
+        group-by: dependency-name
+      security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+    # TypeScript 7 удалил moduleResolution node10 — без миграции tsconfig сборка падает.
+    ignore:
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
