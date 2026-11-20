@@ -4,7 +4,7 @@ import { ProfileGlyph } from "./ProfileGlyph";
 
 type MixPhotoProps = {
   // id и flavors микса; null — фото не положено (микс собран гостем).
-  mix: { id: string; flavors: string[] } | null;
+  mix: { id: string; name?: string; flavors: string[] } | null;
   profiles: string[];
   size: number;
   // Над сгибом (герой Подбора): грузить сразу, без lazy.
