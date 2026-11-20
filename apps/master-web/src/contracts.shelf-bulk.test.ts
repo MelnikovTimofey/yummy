@@ -65,13 +65,12 @@ test('normalizeShelfRestockResponse: «Вернуть в наличие» одн
   assert.equal(response.item.outAt, null);
 });
 
-test('normalizeShelfRestockManyResponse: вернувшиеся, пропущенные «уже есть» и «в плане»', () => {
+test('normalizeShelfRestockManyResponse: вернувшиеся и пропущенные «уже есть»', () => {
   const response = normalizeShelfRestockManyResponse({
     batchId: 'r2',
     done: ['t1'],
     skipped: [
       { tobaccoId: 't2', reason: 'in' },
-      { tobaccoId: 't3', reason: 'plan' },
       { tobaccoId: 't4', reason: 'weird' },
     ],
     items: [item('t1', null)],
@@ -80,7 +79,6 @@ test('normalizeShelfRestockManyResponse: вернувшиеся, пропуще�
   assert.deepEqual(response.done, ['t1']);
   assert.deepEqual(response.skipped, [
     { tobaccoId: 't2', reason: 'in' },
-    { tobaccoId: 't3', reason: 'plan' },
     { tobaccoId: 't4', reason: 'in' },
   ]);
   assert.equal(response.items[0].outAt, null);

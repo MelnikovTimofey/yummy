@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Check, Minus, X } from 'lucide-react';
 import { formatNumber } from '@/lib/shelf';
 import type { BulkSummary } from '@/lib/shelf-bulk';
@@ -8,10 +9,15 @@ export const ShelfCheck = ({
   checked,
   label,
   onToggle,
+  onDragStart,
+  dragging,
 }: {
   checked: boolean | 'mixed';
   label: string;
   onToggle: (range: boolean) => void;
+  // Протягивание по чекбоксам строк (#521), как в «Каталоге».
+  onDragStart?: (event: ReactPointerEvent) => void;
+  dragging?: () => boolean;
 }) => (
   <button
     type="button"
@@ -19,11 +25,12 @@ export const ShelfCheck = ({
     aria-checked={checked}
     aria-label={label}
     // Клавиши — в title, строки подсказок под таблицей нет (#364).
-    title="Клавиша X. Shift и клик выделяют диапазон"
+    title="Клавиша X. Shift и клик или протягивание выделяют диапазон"
     className="shelf-select"
-    // Shift + клик не выделяет текст таблицы.
+    onPointerDown={onDragStart}
+    // Shift + клик и протягивание не выделяют текст таблицы.
     onMouseDown={(event) => {
-      if (event.shiftKey) event.preventDefault();
+      if (event.shiftKey || dragging?.()) event.preventDefault();
     }}
     onClick={(event) => {
       event.stopPropagation();

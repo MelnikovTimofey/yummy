@@ -147,11 +147,15 @@ export const shelfStatusCell = (row: ShelfRow): { tone: ShelfState; label: strin
     case 'stop':
       return { tone: state, label: 'Стоп для гостей', note: row.stopNote || null };
     case 'plan':
-      return { tone: state, label: 'В плане', note: 'ждёт прихода' };
+      return { tone: state, label: 'В плане', note: row.plannedAt ? `с ${formatShelfDate(row.plannedAt)}` : null };
     default:
       return { tone: state, label: 'Есть', note: null };
   }
 };
+
+// Наличие в карточке плана (#562, #shot=card-plan).
+export const planStateLabel = (row: Pick<ShelfRow, 'plannedAt'>) =>
+  row.plannedAt ? `В плане с ${formatShelfDate(row.plannedAt)}` : 'В плане';
 
 const arrivalSource = (arrival: ShelfArrival) => {
   if (arrival.kind === 'start') return 'Стартовый приход';
@@ -171,17 +175,31 @@ export const arrivalLine = (arrival: ShelfArrival) => {
   };
 };
 
-// Блок «Проба» в карточке (#329): приходы новые первыми, первый — последний в списке.
-export const trialArrival = (arrivals: ShelfArrival[]) => {
-  const first = arrivals[arrivals.length - 1];
-  return first ? `пришёл впервые ${formatShelfDate(first.at)}` : null;
+const startOfDay = (iso: string) => {
+  const date = new Date(iso);
+  date.setHours(0, 0, 0, 0);
+  return date;
 };
+
+// Блок «Проба» в карточке (#329): приходы новые первыми, первый — последний в списке.
+// «из плана» (#567) сравнивается по дню: счёт за прошлый день принимается на его полдень,
+// а план могли поставить в тот же день позже.
+export const trialArrival = (arrivals: ShelfArrival[], plannedAt: string | null = null) => {
+  const first = arrivals[arrivals.length - 1];
+  if (!first) return null;
+  const fromPlan = plannedAt !== null && new Date(first.at) >= startOfDay(plannedAt);
+  return `пришёл впервые ${formatShelfDate(first.at)}${fromPlan ? ', из плана' : ''}`;
+};
+
+// После «Зашло» (#567) система предлагает держать постоянно; галочку ставит мастер.
+export const suggestKeepStocked = (row: Pick<ShelfRow, 'trial' | 'trialVerdict' | 'keepStocked'>) =>
+  row.trial && row.trialVerdict === 'yes' && !row.keepStocked;
 
 // «Зашло / Не зашло» пробы (#329): повторный клик по выбранному снимает отметку.
 export const nextTrialVerdict = (current: ShelfTrialVerdict | null, clicked: ShelfTrialVerdict) =>
   current === clicked ? null : clicked;
 
-// Одна кнопка строки: «Закончился», «Вернуть в наличие» или «Снять стоп»; у плана — подпись.
+// Одна кнопка строки: «Закончился», «Вернуть в наличие» (у плана — «В наличие», #558) или «Снять стоп».
 export type ShelfRowAction = 'empty' | 'restock' | 'unstop' | null;
 
 export const shelfRowAction = (row: ShelfRow): ShelfRowAction => {
@@ -189,6 +207,7 @@ export const shelfRowAction = (row: ShelfRow): ShelfRowAction => {
     case 'in':
       return 'empty';
     case 'out':
+    case 'plan':
       return 'restock';
     case 'stop':
       return 'unstop';
@@ -197,6 +216,8 @@ export const shelfRowAction = (row: ShelfRow): ShelfRowAction => {
   }
 };
 
+export const restockLabel = (row: Pick<ShelfRow, 'shelfStatus'>) => (row.shelfStatus === 'plan' ? 'В наличие' : 'Вернуть в наличие');
+
 // Действия строки — одни и те же на десктопе, в карточке и на телефоне.
 export type ShelfRowMenu = { canEmpty: boolean; canRestock: boolean; stopLabel: string };
 
@@ -204,7 +225,7 @@ export const shelfRowMenu = (row: ShelfRow): ShelfRowMenu => {
   const state = shelfState(row);
   return {
     canEmpty: state === 'in' || state === 'stop',
-    canRestock: state === 'out',
+    canRestock: state === 'out' || state === 'plan',
     stopLabel: row.stopped ? 'Снять стоп для гостей' : 'Стоп для гостей',
   };
 };
@@ -220,22 +241,36 @@ export const emptyToast = (row: ShelfRow) => ({
       : 'Добавлен в заявку.',
 });
 
-export const restockToast = (row: ShelfRow) => ({
-  title: `${row.tobacco.name} снова есть`,
-  text: row.stopped ? 'Стоп для гостей остался.' : 'Вернулся на витрину.',
+// fromPlan — табак был в плане: «снова» к нему не подходит.
+export const restockToast = (row: ShelfRow, fromPlan = false) => ({
+  title: fromPlan ? `${row.tobacco.name} есть` : `${row.tobacco.name} снова есть`,
+  text: row.stopped ? 'Стоп для гостей остался.' : fromPlan ? 'Появился на витрине.' : 'Вернулся на витрину.',
 });
+
+export const removeToast = (row: ShelfRow) => ({
+  title: `${row.tobacco.manufacturer} ${row.tobacco.name}`,
+  text: row.shelfStatus === 'plan' ? 'Убран из плана.' : 'Убран с полки, история осталась.',
+});
+
+// Отмена «Убрать»: строка встаёт как была, план — с прежней датой (#562).
+export const restoreShelfBody = (row: ShelfRow) =>
+  row.shelfStatus === 'plan'
+    ? { tobaccoId: row.tobacco.id, status: 'plan' as const, ...(row.plannedAt ? { plannedAt: row.plannedAt } : {}) }
+    : { tobaccoId: row.tobacco.id, status: 'active' as const };
 
 export const keepToast = (row: ShelfRow) => ({
   title: row.tobacco.name,
   text: row.outAt ? 'Держим постоянно. Добавлен в заявку.' : 'Держим постоянно. Закончится, попадёт в заявку.',
 });
 
-// «В миксах» карточки (#shot=card): чем закрыт микс, пока табака нет.
-export const cardMixState = (mix: { status: MixStatus | null; substitution: MixSubstitution | null }) => {
+// «В миксах» карточки (#shot=card): чем закрыт микс, пока табака нет. У плана
+// микс, закрытый наличием, ждёт этот табак (#562, #shot=card-plan).
+export const cardMixState = (mix: { status: MixStatus | null; substitution: MixSubstitution | null }, plan = false) => {
   switch (mix.status) {
     case 'substituted':
       return { text: mix.substitution ? `аналог ${mix.substitution.to.manufacturer} ${mix.substitution.to.name}` : 'с заменой', danger: false };
     case 'blocked':
+      return plan ? { text: 'ждёт этот табак', danger: false } : { text: 'скрыт', danger: true };
     case 'hidden':
       return { text: 'скрыт', danger: true };
     case 'visible':

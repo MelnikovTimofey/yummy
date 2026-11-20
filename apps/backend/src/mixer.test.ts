@@ -18,6 +18,7 @@ import type { GuestMixerEvaluateResponse } from './types';
 
 const tobacco = (overrides: Partial<MixerTobacco> & { id: string }): MixerTobacco => ({
   manufacturer: 'Тест',
+  lineName: '',
   name: overrides.id,
   flavorProfiles: [],
   flavors: [],
@@ -137,6 +138,7 @@ test.describe('palette', () => {
       'flavorTags',
       'flavors',
       'id',
+      'lineName',
       'manufacturer',
       'mixCount',
       'name',

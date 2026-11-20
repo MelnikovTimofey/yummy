@@ -57,7 +57,7 @@ test('bulkSummary: первые три названия, «и ещё», скол
   assert.equal(summary.count, 5);
   assert.equal(summary.names, 'Cane Mint, Blackcurrant, Pear lemonade и ещё 2');
   assert.equal(summary.emptyCount, 3);
-  assert.equal(summary.restockCount, 1);
+  assert.equal(summary.restockCount, 2);
   assert.equal(summary.allStopped, false);
   assert.equal(summary.allKept, true);
 
@@ -125,15 +125,15 @@ test('optimisticEmpty: строка сразу «закончился» с да�
   assert.equal(next.guestAvailable, false);
 });
 
-test('bulkRestockToast: сколько вернулось, пропущенные «уже есть» и «в плане»', () => {
+test('bulkRestockToast: сколько вернулось, пропущенные «уже есть»', () => {
   const base = { batchId: 'r1', done: ['a', 'b'], items: [] };
   assert.deepEqual(bulkRestockToast(normalizeShelfRestockManyResponse({ ...base, skipped: [] })), {
     title: 'Снова есть: 2',
     text: 'Вернулись на витрину.',
   });
   assert.deepEqual(
-    bulkRestockToast(normalizeShelfRestockManyResponse({ ...base, skipped: [{ tobaccoId: 'c', reason: 'in' }, { tobaccoId: 'd', reason: 'plan' }] })),
-    { title: 'Снова есть: 2', text: 'Вернулись на витрину. Пропущено 2: уже есть или в плане.' },
+    bulkRestockToast(normalizeShelfRestockManyResponse({ ...base, skipped: [{ tobaccoId: 'c', reason: 'in' }, { tobaccoId: 'd', reason: 'in' }] })),
+    { title: 'Снова есть: 2', text: 'Вернулись на витрину. Пропущено 2: уже есть.' },
   );
   assert.deepEqual(
     bulkRestockToast(normalizeShelfRestockManyResponse({ batchId: 'r2', done: [], skipped: [{ tobaccoId: 'c', reason: 'in' }], items: [] })),

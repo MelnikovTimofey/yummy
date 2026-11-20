@@ -5,7 +5,7 @@ import { prisma } from './db';
 import { authorIdOf, loadMixAuthors, type MixAuthor } from './mix-author';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
-import { loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
+import { awaitsPlan, loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
 import { matchSearch, prepareSearchQuery, prepareSearchTarget, searchRank, type SearchTarget } from './search-match';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
@@ -25,10 +25,11 @@ export type TobaccoRef = {
 };
 
 // Табак с полки вместо закончившегося компонента (PRD §6.2 п.1); пропорция — у компонента.
-export type MixSubstituteView = TobaccoRef & { flavors: string[] };
+export type MixSubstituteView = TobaccoRef & { lineName: string; flavors: string[] };
 
 // onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
-export type MissingTobaccoView = TobaccoRef & { onShelf: boolean };
+// planned — табак в плане (#566).
+export type MissingTobaccoView = TobaccoRef & { onShelf: boolean; planned: boolean };
 
 export type MixGuestStatus = 'visible' | 'substituted' | 'hidden' | 'blocked';
 
@@ -39,6 +40,7 @@ export type MixComponentView = {
   tobaccoId: string;
   name: string;
   manufacturer: string;
+  lineName: string;
   flavors: string[];
   proportion: number;
   sortOrder: number;
@@ -172,7 +174,7 @@ export type TobaccoInput = {
 
 export type TobaccoPatch = Partial<TobaccoInput>;
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'awaiting-plan' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -226,6 +228,7 @@ export type MixListResult = {
     guestVisibleCount: number;
     substitutedCount: number;
     hiddenCount: number;
+    awaitingPlanCount: number;
     blockedCount: number;
     inRailsCount: number;
     withoutRailsCount: number;
@@ -734,6 +737,7 @@ const mapMixView = (context: RuleContext) => (record: {
       tobaccoId: item.tobacco.id,
       name: item.tobacco.name,
       manufacturer: item.tobacco.manufacturer,
+      lineName: item.tobacco.lineName,
       flavors: parseList(item.tobacco.flavors),
       proportion: item.proportion,
       sortOrder: item.sortOrder,
@@ -796,7 +800,7 @@ const fetchMixViews = async () => {
 };
 
 const normalizeMixStatusFilter = (value: unknown): MixStatusFilter => {
-  if (value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'blocked') {
+  if (value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'awaiting-plan' || value === 'blocked') {
     return value;
   }
 
@@ -831,8 +835,10 @@ const matchesMixStatus = (mix: MixView, status: MixStatusFilter) => {
       return mix.status === 'substituted';
     case 'hidden':
       return mix.status === 'hidden';
+    case 'awaiting-plan':
+      return awaitsPlan(mix);
     case 'blocked':
-      return mix.status === 'blocked';
+      return mix.status === 'blocked' && !awaitsPlan(mix);
     case 'all':
     default:
       return true;
@@ -2271,7 +2277,8 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
       guestVisibleCount: statusScopeItems.filter((item) => item.status === 'visible').length,
       substitutedCount: statusScopeItems.filter((item) => item.status === 'substituted').length,
       hiddenCount: statusScopeItems.filter((item) => item.status === 'hidden').length,
-      blockedCount: statusScopeItems.filter((item) => item.status === 'blocked').length,
+      awaitingPlanCount: statusScopeItems.filter((item) => awaitsPlan(item)).length,
+      blockedCount: statusScopeItems.filter((item) => matchesMixStatus(item, 'blocked')).length,
       inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
       withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
       page,

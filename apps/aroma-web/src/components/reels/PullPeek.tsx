@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ReelPhoto, useReelPhoto } from './ReelPhoto';
 import { ReelStill, type ReelMix } from './ReelStill';
 import { PULL_THRESHOLD } from './usePullPast';
 
@@ -7,12 +8,14 @@ import { PULL_THRESHOLD } from './usePullPast';
 // сцена первого рилса, сверху ленты — пустой фон. Кольцо показывает ход до
 // порога и заливается на пороге; подписей нет.
 export function PullPeek({ edge, travel, mix }: { edge: 'top' | 'bottom'; travel: number; mix: ReelMix | null }) {
+  const photo = useReelPhoto(mix);
   if (!travel) return null;
   const progress = Math.min(1, travel / PULL_THRESHOLD);
   const Chevron = edge === 'bottom' ? ChevronUp : ChevronDown;
   return (
     <div className={`pull-peek pull-peek-${edge}`} style={{ height: travel / 2 }} aria-hidden>
-      {mix ? <ReelStill mix={mix} /> : null}
+      {photo ? <ReelPhoto photo={photo} eager /> : null}
+      {mix ? <ReelStill mix={mix} onPhoto={photo !== null} /> : null}
       <span className={cn('pull-ring', progress >= 1 && 'pull-ring-ready')}>
         {progress < 1 ? (
           <svg className="pull-ring-progress" viewBox="0 0 40 40">

@@ -229,11 +229,19 @@ export const ShelfAnalogsSections = ({
   );
 };
 
-// «В миксах» (#shot=card): у каждого микса — чем он закрыт, пока табака нет.
-export const ShelfCardMixes = ({ mixes, onOpenMix }: { mixes: ShelfCard['mixes']; onOpenMix: (mixId: string) => void }) => (
+// «В миксах» (#shot=card, card-plan): у каждого микса — чем он закрыт, пока табака нет.
+export const ShelfCardMixes = ({
+  mixes,
+  plan,
+  onOpenMix,
+}: {
+  mixes: ShelfCard['mixes'];
+  plan: boolean;
+  onOpenMix: (mixId: string) => void;
+}) => (
   <ul className="shelf-card-list">
     {mixes.map((mix) => {
-      const state = cardMixState(mix);
+      const state = cardMixState(mix, plan);
       return (
         <li key={mix.id} className="shelf-card-list__item">
           <button type="button" className="shelf-link shelf-card-mix__name" onClick={() => onOpenMix(mix.id)}>

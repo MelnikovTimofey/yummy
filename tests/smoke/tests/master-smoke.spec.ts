@@ -75,6 +75,9 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   // видна независимо от размера каталога.
   await applyStockFilter(page, 'Нет наличия');
   await expect(tobaccoRow).toBeVisible();
+  // У табака не на полке рядом с «На полку» — «В план» (#564, #shot=catalog). Не жмём.
+  await expect(tobaccoRow.getByRole('button', { name: /^На полку: / })).toBeVisible();
+  await expect(tobaccoRow.getByRole('button', { name: /^В план: / })).toBeVisible();
   await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
   await page.getByRole('button', { name: 'На полку', exact: true }).click();
@@ -115,7 +118,9 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
 
   await openWorkspace(page, 'Миксы');
   const statusChips = page.getByRole('group', { name: 'Статус микса' });
-  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(4);
+  // Число у каждого статуса, кроме «Все»; «Ждут план» (#566) отдельно от «Блокирован».
+  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(5);
+  await expect(statusChips.getByRole('button', { name: 'Фильтр: Ждут план' })).toBeVisible();
   await expect(statusChips.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
   const mixAttributes = page.getByRole('group', { name: 'Фильтры миксов' });
   await expect(mixAttributes.locator('.filter-chip__count')).toHaveCount(0);
@@ -331,6 +336,44 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   await toast.getByRole('button', { name: /Отменить/ }).click();
   await expect(toast).toBeHidden();
   for (const row of rows) await expect(row.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
+});
+
+// Протягивание по чекбоксам, как в «Каталоге» (#521): строки от первой до
+// текущей выбираются, обратным протягиванием выбор снимается. Неразрушающий.
+test('Master shelf selects a range by dragging across checkboxes', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  const checks = page.locator('table.shelf-table tbody tr[data-tobacco-id]').getByRole('checkbox', { name: /^Выбрать / });
+  await expect(checks.nth(2)).toBeVisible();
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+
+  const center = async (index: number) => {
+    const box = await checks.nth(index).boundingBox();
+    if (!box) throw new Error('Чекбокс строки не виден');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const drag = async (from: number, to: number) => {
+    const start = await center(from);
+    const end = await center(to);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 10 });
+    await page.mouse.up();
+  };
+
+  await drag(0, 2);
+  await expect(bar).toContainText('Выбрано 3');
+  for (const index of [0, 1, 2]) await expect(checks.nth(index)).toHaveAttribute('aria-checked', 'true');
+  // Клик после протягивания не открыл карточку табака.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await drag(2, 1);
+  await expect(bar).toContainText('Выбрано 1');
+  await expect(checks.nth(0)).toHaveAttribute('aria-checked', 'true');
+
+  await page.keyboard.press('Escape');
+  await expect(bar).toHaveCount(0);
 });
 
 // «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
@@ -708,9 +751,9 @@ test.describe('Master access on a phone', () => {
 });
 
 // Дашборд — выборы гостей (#520): период меняет диапазон дат; на seed выборов
-// мало, поэтому годится и график, и «Мало данных» / «Выборов нет». Блока полки на
+// может не быть, поэтому годится и график, и «Выборов нет». Блока полки на
 // дашборде больше нет. Дальше «К заказу» на полке (#518, #shot=order,
-// edge-order-empty); настроек полки больше нет.
+// edge-order-empty, #563 #shot=order-plan); настроек полки больше нет.
 // Неразрушающий: в «К заказу» ничего не меняется.
 test('Master dashboard switches the period, shelf opens «К заказу» without changes', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
@@ -729,10 +772,10 @@ test('Master dashboard switches the period, shelf opens «К заказу» with
   await expect(range).not.toHaveText(monthRange ?? '');
   await expect(range).toHaveText(/^\d{1,2}( [а-я]+( \d{4})?)? – \d{1,2} [а-я]+( \d{4})?$/);
 
-  // Плитки есть всегда; графики — с 20 выборов, иначе одна карточка вместо них.
+  // Плитки есть всегда; графики — с первого выбора, иначе одна карточка вместо них.
   await expect(page.locator('.dashboard-page .stats')).toContainText('Выборов');
   const chart = page.getByRole('heading', { name: 'Выборы по дням', level: 2 });
-  const few = page.locator('.dash-few').filter({ hasText: /^(Мало данных|Выборов нет)/ });
+  const few = page.locator('.dash-few').filter({ hasText: /^Выборов нет/ });
   await expect(chart.or(few)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Сигналы', level: 2 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Прогноз на сегодня' })).toHaveCount(0);
@@ -746,16 +789,27 @@ test('Master dashboard switches the period, shelf opens «К заказу» with
   const orderToggle = views.filter({ hasText: /^К заказу/ });
   await orderToggle.click();
   await expect(orderToggle).toHaveAttribute('aria-pressed', 'true');
-  // Группы поставщиков или «Всё в наличии» — зависит от полки в базе.
+  // Группы поставщиков, план (#563) или «Всё в наличии» — зависит от полки в базе.
   await expect(page.locator('section.shelf-order, .shelf-order-empty').first()).toBeVisible();
-  const groups = page.locator('section.shelf-order');
+  const plan = page.getByRole('region', { name: 'В плане', exact: true });
+  const groups = page.locator('section.shelf-order').filter({ hasNot: page.getByRole('heading', { name: 'В плане', level: 2, exact: true }) });
   if (await groups.count()) {
     for (const name of ['Табак', 'Закончился', 'Миксы', 'Последний приход']) {
       await expect(groups.first().getByRole('columnheader', { name, exact: true })).toBeVisible();
     }
     await expect(groups.first().getByRole('button', { name: 'Скопировать заявку' })).toBeVisible();
+  } else if (await plan.count()) {
+    await expect(page.getByText('Закончившихся нет, всё, что держим, в наличии.')).toBeVisible();
   } else {
     await expect(page.getByRole('heading', { name: 'Всё в наличии', level: 2 })).toBeVisible();
+  }
+  if (await plan.count()) {
+    for (const name of ['Табак', 'В плане с', 'Миксы']) {
+      await expect(plan.getByRole('columnheader', { name, exact: true })).toBeVisible();
+    }
+    await expect(plan.getByRole('button', { name: 'Скопировать список' })).toBeVisible();
+    // «В наличие» отмечают на «Полке», в «К заказу» его нет.
+    await expect(plan.getByRole('button', { name: 'В наличие' })).toHaveCount(0);
   }
   // Сколько заказать, решает мастер: ни расхода, ни суммы, ни настроек полки.
   await expect(page.getByRole('columnheader', { name: 'Расход в месяц' })).toHaveCount(0);

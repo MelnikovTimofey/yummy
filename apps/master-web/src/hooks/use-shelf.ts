@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { requestJson } from '@/lib/api-client';
 import { createLatestRequestGuard } from '@/lib/latest-request-guard';
+import { restoreShelfBody } from '@/lib/shelf';
 import { optimisticEmpty } from '@/lib/shelf-bulk';
 import {
   buildInventoryRequestQuery,
@@ -193,21 +194,19 @@ export const useShelf = (token: string) => {
     (tobaccoIds: string[]) => sendMany(tobaccoIds.map((tobaccoId) => () => requestJson<unknown>(shelfPath(tobaccoId), json('DELETE'), token))),
     [sendMany, token],
   );
-  // Отмена: строки возвращаются как были — наличие убранной строки сервер не трогает.
+  // Отмена: строки возвращаются как были — наличие убранной строки сервер не трогает,
+  // план встаёт с прежней датой (#562).
+  const restore = useCallback((row: ShelfRow) => send('/staff/shelf', json('POST', restoreShelfBody(row))), [send]);
   const restoreMany = useCallback(
-    (rows: ShelfRow[]) =>
-      sendMany(rows.map((row) => () =>
-        requestJson<unknown>('/staff/shelf', json('POST', { tobaccoId: row.tobacco.id, status: row.shelfStatus === 'plan' ? 'plan' : 'active' }), token),
-      )),
+    (rows: ShelfRow[]) => sendMany(rows.map((row) => () => requestJson<unknown>('/staff/shelf', json('POST', restoreShelfBody(row)), token))),
     [sendMany, token],
   );
 
   // «На полку» из каталога: табак держим — значит, он есть. Новая строка без прихода
-  // приходит «Закончился» — возвращаем её в наличие. Отмена «Убрать с полки» возвращает
-  // строку как была (restock = false).
-  const add = useCallback(async (tobaccoId: string, shelfStatus: 'active' | 'plan' = 'active', restockNew = true) => {
+  // приходит «Закончился» — возвращаем её в наличие.
+  const add = useCallback(async (tobaccoId: string, shelfStatus: 'active' | 'plan' = 'active') => {
     const item = await send('/staff/shelf', json('POST', { tobaccoId, status: shelfStatus }));
-    if (restockNew && shelfStatus === 'active' && item.outAt) return (await restock(tobaccoId)).item;
+    if (shelfStatus === 'active' && item.outAt) return (await restock(tobaccoId)).item;
     return item;
   }, [restock, send]);
 
@@ -267,6 +266,7 @@ export const useShelf = (token: string) => {
     updateMany,
     remove,
     removeMany,
+    restore,
     restoreMany,
     add,
     loadCard,

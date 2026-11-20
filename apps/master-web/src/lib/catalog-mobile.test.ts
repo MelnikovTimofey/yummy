@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { catalogBrandLine, catalogCardShelf, formatInMixes } from './catalog-mobile';
+import { catalogBrandLine, catalogCardShelf, catalogRemoveLabel, formatInMixes } from './catalog-mobile';
 
 test('catalogCardShelf names the shelf place like the shelf statuses', () => {
   assert.deepEqual(catalogCardShelf('in'), { tone: 'in', label: 'на полке' });
@@ -25,4 +25,12 @@ test('catalogBrandLine joins brand and line, skipping an empty line', () => {
   assert.equal(catalogBrandLine({ manufacturer: 'Black Burn', lineName: '' }), 'Black Burn');
   assert.equal(catalogBrandLine({ manufacturer: 'Black Burn', lineName: '  ' }), 'Black Burn');
   assert.equal(catalogBrandLine({ manufacturer: 'Black Burn' }), 'Black Burn');
+});
+
+test('catalogRemoveLabel takes a planned tobacco out of the plan, others off the shelf', () => {
+  assert.equal(catalogRemoveLabel('plan'), 'Убрать из плана');
+  assert.equal(catalogRemoveLabel('active'), 'Убрать с полки');
+  assert.equal(catalogRemoveLabel('in'), 'Убрать с полки');
+  assert.equal(catalogRemoveLabel('out'), 'Убрать с полки');
+  assert.equal(catalogRemoveLabel('stop'), 'Убрать с полки');
 });

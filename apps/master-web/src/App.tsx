@@ -606,6 +606,21 @@ export const App = () => {
   const onAddToShelf = (item: InventoryTobacco) =>
     runCatalogShelfAction(item, () => shelf.add(item.id), 'Не удалось поставить табак на полку');
 
+  const onAddToPlan = (item: InventoryTobacco) =>
+    runCatalogShelfAction(item, () => shelf.add(item.id, 'plan'), 'Не удалось добавить табак в план');
+
+  // «В план» из редактора микса (#566): статус гостя не меняется, а у Мастера микс
+  // может перейти из «Блокирован» в «Ждут план», поэтому список миксов перечитывается.
+  const onPlanMixTobacco = async (item: InventoryTobacco) => {
+    await shelf.add(item.id, 'plan');
+    if (token) void mixes.loadMixes(token);
+  };
+
+  const onUndoMixPlan = async (item: InventoryTobacco) => {
+    await shelf.remove(item.id);
+    if (token) void mixes.loadMixes(token);
+  };
+
   const onRemoveFromShelf = (item: InventoryTobacco) =>
     runCatalogShelfAction(item, () => shelf.remove(item.id), 'Не удалось убрать табак с полки');
 
@@ -883,6 +898,7 @@ export const App = () => {
       onSetSelection={setSelectedInventoryIds}
       onToggleSelectAll={onToggleSelectAllInventory}
       onAddToShelf={(item) => void onAddToShelf(item)}
+      onAddToPlan={(item) => void onAddToPlan(item)}
       onRemoveFromShelf={(item) => void onRemoveFromShelf(item)}
       onArchiveTobacco={(item, archived) => void onArchiveTobacco(item, archived)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
@@ -943,6 +959,9 @@ export const App = () => {
           editor={mixes.mixEditor}
           tobaccos={mixes.mixTobaccos}
           componentTobaccos={mixes.mixComponentTobaccos}
+          shelfStatuses={shelfStatuses}
+          onAddToPlan={onPlanMixTobacco}
+          onUndoPlan={onUndoMixPlan}
           onSearchTobaccos={mixes.searchMixTobaccos}
           saveStatus={mixes.mixSaveStatus}
           saveError={mixes.mixSaveError}

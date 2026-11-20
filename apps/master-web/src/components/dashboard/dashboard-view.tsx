@@ -8,6 +8,7 @@ import { FilterChip } from '@/components/ui/filter-bar';
 import { SmokeLoading } from '@/components/ui/loading';
 import { ChartContainer, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { RangeCalendar } from '@/components/dashboard/range-calendar';
+import { mixStatusTag } from '@/components/mixes/mix-status';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import {
   formatCount,
@@ -15,6 +16,7 @@ import {
   formatRating,
   type GuestChoices,
   type GuestChoicesPeriod,
+  type GuestTobaccoStock,
   type GuestTopMix,
   type GuestTopTobacco,
 } from '@/contracts';
@@ -49,8 +51,6 @@ const PERIODS: Array<{ key: PeriodKey; label: string }> = [
   { key: 'custom', label: 'Даты' },
 ];
 
-// Порог как APP_MIN_EVENTS на backend: меньше — графики не строим.
-const MIN_CHOICES = 20;
 const PHONE_TOP = 5;
 
 const timelineConfig = {
@@ -79,17 +79,10 @@ export const buildKpiTiles = (kpi: GuestChoices['kpi'], phone: boolean): MasterS
   ];
 };
 
-export const noDataText = (period: GuestChoices['period'], choices: number) => {
-  const range = rangeLabel(period);
-  if (!choices) {
-    return { title: 'Выборов нет', text: period.key === 'all' ? 'Гости пока ничего не выбирали.' : `За ${range} гости ничего не выбирали.` };
-  }
-  const head = range.charAt(0).toLocaleUpperCase('ru-RU') + range.slice(1);
-  return {
-    title: 'Мало данных',
-    text: `${head}: ${formatCount(choices, ['выбор', 'выбора', 'выборов'])}. Графики появятся с ${MIN_CHOICES} выборов, выберите период длиннее.`,
-  };
-};
+export const noDataText = (period: GuestChoices['period']) => ({
+  title: 'Выборов нет',
+  text: period.key === 'all' ? 'Гости пока ничего не выбирали.' : `За ${rangeLabel(period)} гости ничего не выбирали.`,
+});
 
 export const periodPressed = (key: PeriodKey, period: GuestChoicesPeriod, calendarOpen: boolean) =>
   calendarOpen ? key === 'custom' : period.key === key;
@@ -147,18 +140,16 @@ function Timeline({ data, phone }: { data: GuestChoices; phone: boolean }) {
   );
 }
 
-const TOBACCO_MARKS = {
-  out: { text: 'закончился', tone: 'danger' },
-  trial: { text: 'проба', tone: 'faint' },
-  'off-shelf': { text: 'нет на полке', tone: 'faint' },
-} as const;
+type BarTag = { label: string; tone?: 'success' | 'danger' | 'info' | 'warning'; ghost?: true };
 
-const MIX_MARKS = {
-  hidden: { text: 'скрыт у гостя', tone: 'danger' },
-  analog: { text: 'с аналогом', tone: 'faint' },
-} as const;
+// Наличие — как на «Полке»: «есть» или «закончился»; табак не с полки — призрачной меткой.
+const STOCK_TAGS: Record<GuestTobaccoStock, BarTag> = {
+  in: { label: 'есть', tone: 'success' },
+  out: { label: 'закончился', tone: 'danger' },
+  'off-shelf': { label: 'нет на полке', ghost: true },
+};
 
-type BarRow = { key: string; name: string; brand?: string; choices: number; mark?: { text: string; tone: 'danger' | 'faint' }; rating?: number | null };
+type BarRow = { key: string; name: string; brand?: string; choices: number; tags: BarTag[]; rating?: number | null };
 
 // Топы — горизонтальные столбцы с подписью внутри (shadcn Bar Chart layout="vertical",
 // custom label). Столбцы нейтральные: акцент только у динамики.
@@ -178,11 +169,11 @@ function TopBars({ rows, phone }: { rows: BarRow[]; phone: boolean }) {
                   {row.name}
                 </span>
                 {row.brand ? <small>{row.brand}</small> : null}
-                {row.mark ? (
-                  <span className="dash-mark" data-tone={row.mark.tone}>
-                    {row.mark.text}
+                {row.tags.map((tag) => (
+                  <span key={tag.label} className={tag.ghost ? 'tag tag--ghost' : 'tag'} data-tone={tag.tone}>
+                    {tag.label}
                   </span>
-                ) : null}
+                ))}
                 {row.rating ? <span className="dash-bar__rating">★ {formatRating(row.rating)}</span> : null}
               </span>
             </div>
@@ -199,21 +190,22 @@ function TopBars({ rows, phone }: { rows: BarRow[]; phone: boolean }) {
   );
 }
 
-const tobaccoRows = (rows: GuestTopTobacco[]): BarRow[] =>
+export const tobaccoRows = (rows: GuestTopTobacco[]): BarRow[] =>
   rows.map((row) => ({
     key: row.tobaccoId,
     name: row.name,
     brand: row.manufacturer,
     choices: row.choices,
-    mark: row.mark ? TOBACCO_MARKS[row.mark] : undefined,
+    tags: [...(row.stock ? [STOCK_TAGS[row.stock]] : []), ...(row.trial ? [{ label: 'проба' }] : [])],
   }));
 
-const mixRows = (rows: GuestTopMix[]): BarRow[] =>
+// Статус микса — тот же тег, что в «Миксах».
+export const mixRows = (rows: GuestTopMix[]): BarRow[] =>
   rows.map((row) => ({
     key: row.mixId ?? `deleted:${row.mixName}`,
     name: row.mixName,
     choices: row.choices,
-    mark: row.mark ? MIX_MARKS[row.mark] : undefined,
+    tags: row.status ? [mixStatusTag(row.status)] : [],
     rating: row.avgRating,
   }));
 
@@ -288,7 +280,7 @@ function Signals({ data, onSignal }: { data: GuestChoices; onSignal: (kind: Sign
 }
 
 // Дашборд (#520, design/design_handoff_guest_analytics): выборы гостей за период.
-// Меньше 20 выборов — одна карточка «Мало данных» вместо графиков, плитки и сигналы остаются.
+// Без выборов за период — одна карточка «Выборов нет» вместо графиков, плитки и сигналы остаются.
 export function DashboardView({ data, period, status, error, onPeriodChange, onSignal }: DashboardViewProps) {
   const phone = useIsPhone();
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -344,7 +336,7 @@ export function DashboardView({ data, period, status, error, onPeriodChange, onS
     </div>
   );
 
-  const nothing = data && !data.enough ? noDataText(data.period, data.kpi.choices) : null;
+  const nothing = data && !data.kpi.choices ? noDataText(data.period) : null;
   const signals = data ? (
     <Card id="dash-signals" title="Сигналы">
       <Signals data={data} onSignal={onSignal} />

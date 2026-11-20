@@ -8,6 +8,7 @@ test('normalizePalette принимает контракт #125 как есть'
       {
         id: 't1',
         manufacturer: 'Darkside',
+        lineName: 'Core',
         name: 'Supernova',
         flavorProfiles: ['minty'],
         flavors: ['ледяная мята'],
@@ -23,6 +24,7 @@ test('normalizePalette принимает контракт #125 как есть'
   assert.equal(palette.tobaccos.length, 1);
   assert.equal(palette.tobaccos[0].cooling, true);
   assert.equal(palette.tobaccos[0].mixCount, 3);
+  assert.equal(palette.tobaccos[0].lineName, 'Core');
   assert.deepEqual(palette.affinity, { 'berry|minty': 0.8 });
 });
 
@@ -31,6 +33,7 @@ test('normalizePalette не падает на неполном ответе', ()
   assert.equal(palette.tobaccos.length, 1);
   assert.deepEqual(palette.tobaccos[0].flavorProfiles, []);
   assert.equal(palette.tobaccos[0].twist, false);
+  assert.equal(palette.tobaccos[0].lineName, '', 'backend до #626 линейку не отдаёт');
   assert.deepEqual(palette.affinity, {});
   assert.deepEqual(normalizePalette(null), { tobaccos: [], affinity: {} });
 });

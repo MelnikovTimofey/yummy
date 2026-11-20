@@ -10,12 +10,15 @@ import {
   Chip,
   CTA,
   HeroSkeleton,
+  MakerLine,
   Loading,
   MixListRow,
+  MixPhoto,
   MixRowsSkeleton,
   ProfileGlyph,
   RailSkeleton,
   RatingPill,
+  ShowcaseCard,
   SignatureBar,
   Sk,
   SmokeLoading,
@@ -25,6 +28,8 @@ import { AnonFavoriteSheet } from '@/components/cabinet/AnonFavoriteSheet';
 import { Cabinet, type CabinetHistory, type CabinetListSource } from '@/components/cabinet/Cabinet';
 import { CabinetAnon } from '@/components/cabinet/CabinetAnon';
 import { DeleteCabinetSheet } from '@/components/cabinet/DeleteCabinetSheet';
+import { InstallPlate, InstallSheet, type InstallSheetWay } from '@/components/install/InstallHint';
+import { openInstallPrompt, useInstallWay } from '@/components/install/install-prompt';
 import { ForYou, RecsTabs } from '@/components/for-you/ForYou';
 import { HeartButton } from '@/components/cabinet/HeartButton';
 import { LoginWait } from '@/components/cabinet/LoginWait';
@@ -53,6 +58,7 @@ import {
 } from '@/lib/cabinet';
 import { byCountDesc, filterCatalogMixes, flavorsMatchedFirst } from '@/lib/catalog';
 import { rankBySearch } from '@/lib/search-match';
+import { claimInstallPlate } from '@/lib/install-hint';
 import {
   COLD_NOTE,
   MOOD_DRAFT_NOTE,
@@ -82,10 +88,11 @@ import {
 import { MixerApiError, sendCustomMixSmoke } from '@/lib/mixer/api';
 import { RequestError, guestErrorText } from '@/lib/request-error';
 import { getProfileColor } from '@/lib/profile-color';
+import { mixPhotoSrc, pickMixPhoto } from '@/lib/mix-photo';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
-import { forYouPage, recsPage, reelFeed, RECS_ON_SCREEN, type RecsPage } from '@/lib/reel-feed';
+import { forYouPage, newReelSeed, recsPage, reelFeed, RECS_ON_SCREEN, type RecsPage } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railOpenLabel } from '@/lib/showcase';
 import { readSubstitute, showSubstitute } from '@/lib/substitute';
 
@@ -105,6 +112,8 @@ type GuestView =
   | 'login';
 type AppTab = 'recommendations' | 'showcase' | 'reels' | 'catalog' | 'cabinet';
 type MixerReturnView = AppTab | 'rail';
+// Экраны с нижней панелью: на них встаёт плашка «На экран «Домой»» (#587).
+const PLATE_VIEWS = new Set<GuestView>(['recommendations', 'showcase', 'reels', 'catalog', 'rail', 'cabinet']);
 type JourneyTab = 'intro' | 'onboarding';
 type RailType = 'statistical' | 'prepared' | 'curated';
 type MixSource = 'recommendations' | 'mood' | 'showcase' | 'reels' | 'catalog' | 'rail' | CabinetListSource;
@@ -172,6 +181,7 @@ type MixCard = {
     id: string;
     name: string;
     manufacturer: string;
+    lineName: string;
     flavors: string[];
     proportion: number;
     substituted?: boolean;
@@ -367,6 +377,7 @@ const normalizeMix = (item: unknown, index: number): MixCard => {
           typeof componentRecord.manufacturer === 'string' && componentRecord.manufacturer
             ? componentRecord.manufacturer
             : '',
+        lineName: typeof componentRecord.lineName === 'string' ? componentRecord.lineName : '',
         flavors: toStringList(componentRecord.flavors),
         proportion: toNumber(componentRecord.proportion, Math.round(100 / Math.max(1, extractCollection(record, ['components']).length))),
       }, readSubstitute(componentRecord.substitute));
@@ -666,6 +677,7 @@ const cabinetItemToMix = (item: GuestCabinetItem, card: GuestCabinetCard): MixCa
         id: component.tobaccoId,
         name: component.name,
         manufacturer: component.manufacturer,
+        lineName: component.lineName ?? '',
         flavors: [],
         proportion: component.proportion,
       },
@@ -687,6 +699,7 @@ const mixToCabinetItem = (mix: MixCard): GuestCabinetItem => ({
     components: mix.components.map((component) => ({
       tobaccoId: component.id,
       manufacturer: component.manufacturer,
+      lineName: component.lineName,
       name: component.name,
       proportion: component.proportion,
     })),
@@ -802,6 +815,131 @@ const useSwipeDownToClose = (onDismiss: () => void) => {
   return { offset, dragging, onPointerDown, onPointerMove, onPointerEnd, onPointerCancel: reset };
 };
 
+// Шапка листа микса. С фото вкуса (#592, «Лист A») фото на всю ширину под ручкой,
+// название и полоска профилей поверх затемнения, глифа нет. Собранный гостем микс,
+// неузнанный вкус или незагрузившийся файл — прежняя шапка с глифом 72.
+// Шапка карточки для мастера. С фото вкуса (#592, «Мастер A») фото на всю ширину
+// от верхнего края, «Покажите мастеру» и «Готово» на нём, название и профили поверх
+// затемнения. Вкус не узнан или файл не загрузился — прежняя шапка с глифом 96.
+const SmokeConfirmationHead = ({
+  mix,
+  profileLabels,
+  onDone,
+}: {
+  mix: { id: string; name: string; flavors: string[]; flavorProfiles: string[] };
+  profileLabels: string;
+  onDone: () => void;
+}) => {
+  const photo = pickMixPhoto(mix);
+  const src = photo ? mixPhotoSrc(photo, 'sheet') : null;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const withPhoto = Boolean(src) && failedSrc !== src;
+
+  const topbar = (
+    <div className="aroma-smoke-confirmation-topbar">
+      <p className="aroma-smoke-confirmation-note">Покажите мастеру</p>
+      <button type="button" className="aroma-smoke-confirmation-done" onClick={onDone}>
+        Готово
+      </button>
+    </div>
+  );
+  const title = <h1 className="aroma-smoke-confirmation-title">{mix.name}</h1>;
+  const profiles = profileLabels ? (
+    <p className="aroma-smoke-confirmation-profiles">{profileLabels}</p>
+  ) : null;
+
+  if (src && withPhoto) {
+    return (
+      <>
+        <div className="aroma-smoke-confirmation-photo-head">
+          <img
+            className="aroma-smoke-confirmation-photo"
+            src={src}
+            alt=""
+            width={780}
+            height={480}
+            decoding="async"
+            onError={() => setFailedSrc(src)}
+          />
+          {topbar}
+          <div className="aroma-smoke-confirmation-photo-text">
+            {title}
+            {profiles}
+          </div>
+        </div>
+        <SignatureBar profiles={mix.flavorProfiles} height={3} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {topbar}
+      <div className="aroma-smoke-confirmation-stack">
+        <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
+        {title}
+        {profiles}
+        <SignatureBar profiles={mix.flavorProfiles} height={3} />
+      </div>
+    </>
+  );
+};
+
+const MixSheetHead = ({
+  mix,
+  custom,
+  favorite,
+  onFavorite,
+}: {
+  mix: { id: string; name: string; flavors: string[]; flavorProfiles: string[] };
+  custom: boolean;
+  favorite: boolean;
+  onFavorite: () => void;
+}) => {
+  const photo = custom ? null : pickMixPhoto(mix);
+  const src = photo ? mixPhotoSrc(photo, 'sheet') : null;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (src && failedSrc !== src) {
+    return (
+      <div className="aroma-mix-sheet-photo-head">
+        <img
+          className="aroma-mix-sheet-photo"
+          src={src}
+          alt=""
+          width={780}
+          height={480}
+          decoding="async"
+          onError={() => setFailedSrc(src)}
+        />
+        <span className="aroma-mix-sheet-handle" aria-hidden />
+        <span className="aroma-mix-sheet-photo-heart">
+          <HeartButton on={favorite} onClick={onFavorite} />
+        </span>
+        <div className="aroma-mix-sheet-photo-text">
+          <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
+          <SignatureBar profiles={mix.flavorProfiles} height={4} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <span className="aroma-mix-sheet-handle" aria-hidden />
+      <div className="aroma-mix-sheet-head">
+        <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
+        <div className="aroma-mix-sheet-head-text">
+          <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
+          <SignatureBar profiles={mix.flavorProfiles} height={4} />
+          {custom ? <p className="aroma-mix-sheet-note">Собран вами</p> : null}
+        </div>
+        <HeartButton on={favorite} onClick={onFavorite} />
+      </div>
+    </>
+  );
+};
+
 const MixDetailModal = ({
   state,
   selectedMixId,
@@ -878,20 +1016,11 @@ const MixDetailModal = ({
           background: 'var(--guest-sheet-bg)',
         }}
       >
-        <span className="aroma-mix-sheet-handle" aria-hidden />
         <DialogDescription className="sr-only">
           Карточка микса
         </DialogDescription>
 
-        <div className="aroma-mix-sheet-head">
-          <ProfileGlyph profiles={mix.flavorProfiles} size={72} />
-          <div className="aroma-mix-sheet-head-text">
-            <DialogTitle className="aroma-mix-sheet-title">{mix.name}</DialogTitle>
-            <SignatureBar profiles={mix.flavorProfiles} height={4} />
-            {custom ? <p className="aroma-mix-sheet-note">Собран вами</p> : null}
-          </div>
-          <HeartButton on={favorite} onClick={onFavorite} />
-        </div>
+        <MixSheetHead mix={mix} custom={custom} favorite={favorite} onFavorite={onFavorite} />
 
         {mix.description ? (
           <p className="aroma-mix-sheet-desc">{mix.description}</p>
@@ -1172,6 +1301,34 @@ export const App = () => {
     return hasPreferences ? 'recommendations' : 'catalog';
   });
 
+  // «На экран «Домой»» (#587). Плашку взводит карточка для мастера, показывается
+  // она на экране с нижней панелью, куда гость вернулся по «Готово», и уходит с него.
+  const installWay = useInstallWay();
+  const [installSheet, setInstallSheet] = useState<{ open: boolean; way: InstallSheetWay }>({ open: false, way: 'android' });
+  const [plateView, setPlateView] = useState<GuestView | null>(null);
+  const installArmedRef = useRef(false);
+
+  useEffect(() => {
+    if (view === 'smoke-confirmation' || view === 'custom-confirmation') {
+      installArmedRef.current = true;
+    } else if (installArmedRef.current && PLATE_VIEWS.has(view)) {
+      installArmedRef.current = false;
+      if (installWay && claimInstallPlate(localStorage)) {
+        setPlateView(view);
+        return;
+      }
+    }
+    setPlateView((current) => (current === view ? current : null));
+  }, [view, installWay]);
+
+  const startInstall = () => {
+    if (installWay === 'prompt') {
+      openInstallPrompt();
+    } else if (installWay) {
+      setInstallSheet({ open: true, way: installWay });
+    }
+  };
+
   const [code, setCode] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [accessError, setAccessError] = useState('');
@@ -1279,6 +1436,8 @@ export const App = () => {
     loadId: number;
   }>({ status: 'idle', items: [], continues: false, error: '', loadId: 0 });
   const [reelIndex, setReelIndex] = useState(0);
+  // Каталог в ленте перемешивается при каждом открытии: зерно ближайшего открытия.
+  const [reelSeed, setReelSeed] = useState(newReelSeed);
   const [reelSwiped, setReelSwiped] = useState(false);
   // Миксы, на которые smoke-cta ответил 404: табак кончился, пока гость листал.
   const [goneReels, setGoneReels] = useState<string[]>([]);
@@ -2058,6 +2217,7 @@ export const App = () => {
       components: card.components.map((component) => ({
         id: component.tobaccoId,
         manufacturer: component.manufacturer,
+        lineName: component.lineName ?? '',
         name: component.name,
         proportion: component.proportion,
       })),
@@ -2133,7 +2293,7 @@ export const App = () => {
               : null;
   // Рилсы после Подбора — для тизера в его конце и кадра при дотягивании.
   const continuation =
-    shownRecs?.shown.length && catalogStatus === 'ready' ? reelFeed(shownRecs, catalogSourceMixes) : null;
+    shownRecs?.shown.length && catalogStatus === 'ready' ? reelFeed(shownRecs, catalogSourceMixes, reelSeed) : null;
 
   // Лента продолжает Подбор (#349) — из тизера и из панели одна и та же.
   // Устаревший «Для вас» пересобирается тем же запросом, что сделал бы Подбор.
@@ -2141,6 +2301,8 @@ export const App = () => {
   const openReels = async () => {
     const loadId = reels.loadId + 1;
     const page = recsMode === 'for-you' && signedIn && forYou.stale ? null : shownRecs;
+    const seed = reelSeed;
+    setReelSeed(newReelSeed());
     setReelIndex(0);
     setReelSwiped(false);
     setReelChoice(null);
@@ -2153,7 +2315,7 @@ export const App = () => {
         page ?? fetchPage(),
         catalogStatus === 'ready' ? catalogSourceMixes : fetchCatalogMixes(),
       ]);
-      const items = reelFeed(shown, catalog);
+      const items = reelFeed(shown, catalog, seed);
       setReels((current) =>
         current.loadId === loadId
           ? { status: 'ready', items, continues: shown.shown.length > 0, error: '', loadId }
@@ -2830,7 +2992,7 @@ export const App = () => {
         )}
         <article className="aroma-recs-hero">
           <div className="aroma-recs-hero-head">
-            <ProfileGlyph profiles={hero.flavorProfiles} size={64} />
+            <MixPhoto mix={hero} profiles={hero.flavorProfiles} size={64} eager />
             <div className="aroma-recs-hero-head-text">
               <h2 className="aroma-recs-hero-title">{hero.name}</h2>
               <p className="aroma-recs-hero-desc">{hero.description}</p>
@@ -2900,6 +3062,7 @@ export const App = () => {
               <MixListRow
                 key={mix.id}
                 profiles={mix.flavorProfiles}
+                photo={mix}
                 name={mix.name}
                 sub={
                   mix.flavors.length
@@ -2951,7 +3114,7 @@ export const App = () => {
     }
 
     // Полки по образцу Okko (#175): заголовок с шевроном открывает подборку,
-    // под ним лента постеров, около двух на ширину экрана.
+    // под ним лента крупных постеров со вкусами, около полутора на экран (#614).
     return (
       <section className="aroma-showcase">
         <MixerInvite onOpen={() => openMixer('showcase')} />
@@ -2974,38 +3137,16 @@ export const App = () => {
                   onClick={openRail}
                   aria-label={railOpenLabel(rail)}
                 >
-                  <KindIcon className="aroma-showcase-rail-icon" size={16} strokeWidth={1.8} aria-hidden />
+                  <KindIcon className="aroma-showcase-rail-icon" size={15} strokeWidth={1.8} aria-hidden />
                   <span className="aroma-showcase-rail-title">{rail.name}</span>
-                  <ChevronRight className="aroma-showcase-rail-chevron" size={22} strokeWidth={1.8} aria-hidden />
+                  <ChevronRight className="aroma-showcase-rail-chevron" size={20} strokeWidth={1.8} aria-hidden />
                 </button>
               </h2>
 
               <div className="aroma-showcase-scroller">
-                {mixes.map((mix) => {
-                  const [firstProfile, secondProfile = firstProfile] = mix.flavorProfiles;
-                  return (
-                    <button
-                      key={`${rail.id}:${mix.id}`}
-                      type="button"
-                      className="aroma-showcase-card"
-                      onClick={() => openMix(mix, 'showcase')}
-                      style={{
-                        background: `radial-gradient(circle at 88% 0%, ${getProfileColor(firstProfile)}8c 0%, transparent 62%), radial-gradient(circle at 0% 100%, ${getProfileColor(secondProfile)}4d 0%, transparent 58%), var(--guest-card-bg)`,
-                      }}
-                    >
-                      <span className="aroma-showcase-card-top">
-                        <ProfileGlyph profiles={mix.flavorProfiles} size={28} />
-                        {mix.ratingsCount > 0 ? (
-                          <RatingPill rating={mix.avgRating} style={{ padding: '2px 7px', fontSize: 10.5 }} />
-                        ) : null}
-                      </span>
-                      <span className="aroma-showcase-card-name">{mix.name}</span>
-                      <span className="aroma-showcase-card-signature">
-                        <SignatureBar profiles={mix.flavorProfiles} height={2} />
-                      </span>
-                    </button>
-                  );
-                })}
+                {mixes.map((mix) => (
+                  <ShowcaseCard key={`${rail.id}:${mix.id}`} mix={mix} onClick={() => openMix(mix, 'showcase')} />
+                ))}
               </div>
             </section>
           );
@@ -3042,25 +3183,11 @@ export const App = () => {
 
     return (
       <section className="aroma-smoke-confirmation">
-        <div className="aroma-smoke-confirmation-topbar">
-          <p className="aroma-smoke-confirmation-note">Покажите мастеру</p>
-          <button
-            type="button"
-            className="aroma-smoke-confirmation-done"
-            onClick={() => setView(doneView)}
-          >
-            Готово
-          </button>
-        </div>
-
-        <div className="aroma-smoke-confirmation-stack">
-          <ProfileGlyph profiles={mix.flavorProfiles} size={96} />
-          <h1 className="aroma-smoke-confirmation-title">{mix.name}</h1>
-          {profileLabels ? (
-            <p className="aroma-smoke-confirmation-profiles">{profileLabels}</p>
-          ) : null}
-          <SignatureBar profiles={mix.flavorProfiles} height={3} />
-        </div>
+        <SmokeConfirmationHead
+          mix={mix}
+          profileLabels={profileLabels}
+          onDone={() => setView(doneView)}
+        />
 
         {components.length ? (
           <section className="aroma-smoke-confirmation-composition" aria-label="Состав">
@@ -3075,7 +3202,7 @@ export const App = () => {
                     aria-hidden
                   />
                   {component.manufacturer ? (
-                    <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
+                    <MakerLine manufacturer={component.manufacturer} lineName={component.lineName} />
                   ) : null}
                   <span className="aroma-mix-sheet-comp-name">
                     <span className="aroma-mix-sheet-comp-name-text">{component.name}</span>
@@ -3183,6 +3310,7 @@ export const App = () => {
             <MixListRow
               key={`${rail.id}:${mix.id}`}
               profiles={mix.flavorProfiles}
+              photo={mix}
               name={mix.name}
               sub={mix.flavors.slice(0, 3).join(', ')}
               aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
@@ -3333,6 +3461,7 @@ export const App = () => {
             <MixListRow
               key={mix.id}
               profiles={mix.flavorProfiles}
+              photo={mix}
               name={mix.name}
               sub={flavorsMatchedFirst(mix.flavors, query, catalogFlavors).slice(0, 3).join(', ')}
               aside={mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} /> : null}
@@ -3364,6 +3493,7 @@ export const App = () => {
           setDeleteStatus('idle');
           setDeleteOpen(true);
         }}
+        onInstall={installWay ? startInstall : null}
       />
     ) : (
       <CabinetAnon
@@ -3371,6 +3501,7 @@ export const App = () => {
         starting={login.phase === 'starting'}
         error={loginError}
         onLogin={() => void beginLogin('cabinet', true)}
+        onInstall={installWay ? startInstall : null}
       />
     );
 
@@ -3408,6 +3539,17 @@ export const App = () => {
       setView(tab);
     }
   };
+
+  const renderInstallPlate = () =>
+    plateView === view && installWay ? (
+      <InstallPlate
+        onAdd={() => {
+          setPlateView(null);
+          startInstall();
+        }}
+        onHide={() => setPlateView(null)}
+      />
+    ) : null;
 
   const renderBottomNav = () =>
     navReturnView ? (
@@ -3472,12 +3614,14 @@ export const App = () => {
         ) : view === 'reels' ? (
           <>
             {renderReelsView()}
+            {renderInstallPlate()}
             {renderBottomNav()}
           </>
         ) : view === 'mixer' ? (
           <MixerScreen
             likedProfiles={likedProfiles}
             onSmoked={(card) => {
+              installArmedRef.current = true;
               setCustomSmoke(card);
               setSelectedMix(null);
             }}
@@ -3529,6 +3673,7 @@ export const App = () => {
               </main>
               <PullPeek edge="bottom" travel={recsTravel} mix={continuation?.[0] ?? null} />
             </div>
+            {renderInstallPlate()}
             {renderBottomNav()}
           </>
         )}
@@ -3590,6 +3735,12 @@ export const App = () => {
       />
 
       <AnonFavoriteSheet open={anonHeartOpen && !signedIn} onClose={() => setAnonHeartOpen(false)} onLogin={loginFromHeart} />
+
+      <InstallSheet
+        open={installSheet.open}
+        way={installSheet.way}
+        onClose={() => setInstallSheet((current) => ({ ...current, open: false }))}
+      />
     </div>
   );
 };

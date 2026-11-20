@@ -1,8 +1,10 @@
 # Общее для pg-backup.sh и pg-restore-check.sh. Запускать из корня репо.
 
-# Единая строка FAILED в /var/log/atelier-backup.log — по ней будет алертить мониторинг (#155).
+# Единая строка FAILED в /var/log/atelier-backup.log — по ней алертит host-check.sh (#155).
+# Место сбоя — по BASH_SOURCE: внутри функций отсюда $LINENO считается по этому файлу, а $0 —
+# запущенный скрипт, и «pg-backup.sh: line 35» указывало на строку, которой там нет.
 set -E
-trap 'echo "$(date -u +%FT%TZ) $(basename "$0") FAILED: line $LINENO" >&2' ERR
+trap 'echo "$(date -u +%FT%TZ) $(basename "$0") FAILED: ${BASH_SOURCE[0]##*/}:$LINENO" >&2' ERR
 
 set -a
 . ./.env.backup

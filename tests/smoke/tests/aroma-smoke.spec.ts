@@ -1,5 +1,13 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { guestAccessCode } from './helpers';
+
+// Chrome может прислать beforeinstallprompt (#587): тогда «Добавить» открывает
+// системное окно, которое smoke не закрыть. Глушим, и гость Pixel 5 идёт по шторке Android.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    window.addEventListener('beforeinstallprompt', (event) => event.stopImmediatePropagation(), { capture: true }),
+  );
+});
 
 test('Aroma guest flow opens after daily code and exposes showcase/catalog without login', async ({ page }) => {
   await page.goto('/');
@@ -608,11 +616,18 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(activeName).not.toHaveText(firstName);
   await expect(page.getByText('Листайте вверх')).toHaveCount(0);
 
+  // master-smoke идёт параллельно на той же БД и на доли секунды отмечает
+  // табаки Полки закончившимися: тогда «Покурить» получает 404 и CTA рилса
+  // гаснет. Листаем к следующему миксу и пробуем снова.
   const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
-  const mixName = (await reel.locator('.reel-name').innerText()).trim();
-  await reel.getByRole('button', { name: 'Покурить' }).click();
-
-  await expect(page.getByText('Покажите мастеру')).toBeVisible();
+  const choose = reel.getByRole('button', { name: 'Покурить' });
+  let mixName = '';
+  await expect(async () => {
+    if (await choose.isDisabled({ timeout: 1_000 })) await page.mouse.wheel(0, box.height);
+    mixName = (await reel.locator('.reel-name').innerText({ timeout: 1_000 })).trim();
+    await choose.click({ timeout: 1_000 });
+    await expect(page.getByText('Покажите мастеру')).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [250], timeout: 20_000 });
   await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
 
@@ -755,4 +770,162 @@ test('Aroma mix with a substitute shows the shelf tobacco with a mark', async ({
   const confirmation = page.getByRole('region', { name: 'Состав' });
   await expect(confirmation.locator('.aroma-mix-sheet-comp-row').filter({ hasText: 'Citrus Breeze' }).getByRole('img', { name: 'замена' })).toBeVisible();
   await expect(confirmation.getByText('Lime Spark')).toHaveCount(0);
+});
+
+// «На экран «Домой»» (#587): плашка один раз после «Готово» на карточке для мастера,
+// тихая ссылка в «Кабинете» и шторка с шагами. Событие «Покурить» подменено:
+// master-smoke параллельно отмечает табаки закончившимися, и запрос может получить 404.
+const enterCatalog = async (page: Page) => {
+  await page.goto('/');
+  await page.getByLabel('Код мастера').fill(guestAccessCode);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await page.getByRole('button', { name: 'Начать подбор' }).click();
+  await page.getByRole('button', { name: 'Открыть каталог сразу' }).click();
+};
+
+const smokeFirstCatalogMix = async (page: Page) => {
+  await page.locator('.aroma-catalog-list button.mix-row').first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Покурить' }).click();
+  await expect(page.getByText('Покажите мастеру', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Готово' }).click();
+};
+
+test('Aroma offers «На экран «Домой»» once after the first «Готово»', async ({ page }) => {
+  await page.route('**/guest/events/smoke-cta', (route) => route.fulfill({ json: { ok: true } }));
+  await enterCatalog(page);
+
+  const plate = page.getByRole('region', { name: 'На экран «Домой»' });
+  await expect(plate).toHaveCount(0);
+  await smokeFirstCatalogMix(page);
+  await expect(plate).toBeVisible();
+  await expect(plate.getByText('Держите Арома Ателье на экране телефона.')).toBeVisible();
+  // Плашка вне панели: в панели по-прежнему шесть значков.
+  await expect(page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button')).toHaveCount(6);
+  await plate.getByRole('button', { name: 'Скрыть подсказку' }).click();
+  await expect(plate).toHaveCount(0);
+
+  await page.reload();
+  await smokeFirstCatalogMix(page);
+  await expect(page.getByRole('navigation', { name: 'Гостевая навигация' })).toBeVisible();
+  // Плашка встаёт эффектом после отрисовки экрана — ждём пару кадров.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(plate).toHaveCount(0);
+});
+
+test('Aroma cabinet link opens the Android steps and «Понятно» closes them', async ({ page }) => {
+  await openCabinet(page, null);
+
+  await page.getByRole('button', { name: 'На экран «Домой»' }).click();
+  const sheet = page.getByRole('dialog', { name: 'На экран «Домой»' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('Добавить на главный экран')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Понятно' }).click();
+  await expect(sheet).toHaveCount(0);
+});
+
+test('Aroma opened from the home screen has no «На экран «Домой»» link', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query: string) =>
+      query === '(display-mode: standalone)' ? ({ ...original(query), matches: true } as MediaQueryList) : original(query);
+  });
+  await openCabinet(page, null);
+
+  await expect(page.getByText('Кабинет работает только в этом заведении.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'На экран «Домой»' })).toHaveCount(0);
+});
+
+// Фото вкусов (#592, #595): миниатюра в строке и фото на постере Витрины грузятся
+// из статики; не загрузились — на месте фото прежний глиф, строка не пропадает.
+const expectLoaded = (image: Locator) =>
+  expect.poll(() => image.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0)).toBe(true);
+
+test('Aroma lists show flavour photos in rows and on showcase posters', async ({ page }) => {
+  await enterCatalog(page);
+  const rowPhoto = page.locator('.aroma-catalog-list .mix-row img.mix-photo').first();
+  await expect(rowPhoto).toBeVisible();
+  await expect(rowPhoto).toHaveAttribute('src', /^\/photos\/.+-132\.webp$/);
+  await expectLoaded(rowPhoto);
+
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Витрина', exact: true }).click();
+  const posterPhoto = page.locator('.aroma-showcase-card-img').first();
+  await expect(posterPhoto).toBeVisible();
+  await expect(posterPhoto).toHaveAttribute('src', /^\/photos\/.+-sheet\.webp$/);
+  await expectLoaded(posterPhoto);
+});
+
+test('Aroma rows fall back to the glyph when a flavour photo does not load', async ({ page }) => {
+  await page.route('**/photos/**', (route) => route.abort());
+  await enterCatalog(page);
+  await expect(page.locator('.aroma-catalog-list button.mix-row').first()).toBeVisible();
+  await expect(page.locator('.aroma-catalog-list img.mix-photo')).toHaveCount(0);
+});
+
+test('Aroma mix sheet opens with a flavour photo header', async ({ page }) => {
+  await enterCatalog(page);
+  await page.locator('.aroma-catalog-list button.mix-row').first().click();
+  const sheet = page.getByRole('dialog');
+  const header = sheet.locator('img.aroma-mix-sheet-photo');
+  await expect(header).toBeVisible();
+  await expect(header).toHaveAttribute('src', /^\/photos\/.+-sheet\.webp$/);
+  await expectLoaded(header);
+  await expect(sheet.locator('.aroma-mix-sheet-title')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Покурить' })).toBeVisible();
+});
+
+// Фото вкуса и на карточке для мастера (#592). Событие «Покурить» подменено:
+// master-smoke параллельно отмечает табаки закончившимися, и запрос может получить 404.
+test('Aroma master card opens with a flavour photo header', async ({ page }) => {
+  await page.route('**/guest/events/smoke-cta', (route) => route.fulfill({ json: { ok: true } }));
+  await enterCatalog(page);
+  await page.locator('.aroma-catalog-list button.mix-row').first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Покурить' }).click();
+  await expect(page.getByText('Покажите мастеру', { exact: true })).toBeVisible();
+  const photo = page.locator('img.aroma-smoke-confirmation-photo');
+  await expect(photo).toBeVisible();
+  await expect(photo).toHaveAttribute('src', /^\/photos\/.+-sheet\.webp$/);
+  await expectLoaded(photo);
+  await expect(page.locator('.aroma-smoke-confirmation-title')).toBeVisible();
+});
+
+// Фото вкуса на карте табака в Миксере (#611). Колода не обязана начинаться
+// с узнанного вкуса, поэтому карты без фото пропускаются кнопкой «Дальше».
+const openMixer = async (page: Page) => {
+  await enterCatalog(page);
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Миксер', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
+  await expect(page.locator('.mixer-card[data-pos="0"]')).toBeVisible();
+};
+
+test('Aroma mixer tobacco card shows a flavour photo', async ({ page }) => {
+  await openMixer(page);
+  const top = page.locator('.mixer-card[data-pos="0"]');
+  const photo = top.locator('img.mixer-card-photo');
+  await expect(async () => {
+    if (!(await photo.count())) await page.getByRole('button', { name: 'Дальше', exact: true }).click({ timeout: 1_000 });
+    await expect(photo).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [250], timeout: 15_000 });
+  await expect(photo).toHaveAttribute('src', /^\/photos\/.+-reel\.webp$/);
+  await expectLoaded(photo);
+  await expect(top.locator('.mixer-card-name')).toBeVisible();
+});
+
+test('Aroma mixer cards fall back to the plain card when a photo does not load', async ({ page }) => {
+  await page.route('**/photos/**', (route) => route.abort());
+  await openMixer(page);
+  await expect(page.locator('.mixer-card[data-pos="0"] .mixer-card-name')).toBeVisible();
+  await expect(page.locator('.mixer-card img.mixer-card-photo')).toHaveCount(0);
+});
+
+test('Aroma reel plays its scene over a flavour photo', async ({ page }) => {
+  await enterCatalog(page);
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Рилсы', exact: true }).click();
+  const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
+  const photo = reel.locator('img.reel-photo');
+  await expect(photo).toBeVisible();
+  await expect(photo).toHaveAttribute('src', /^\/photos\/.+-reel\.webp$/);
+  await expectLoaded(photo);
+  await expect(reel.locator('svg').first()).toBeAttached();
+  await expect(reel.locator('.reel-name')).toBeVisible();
 });

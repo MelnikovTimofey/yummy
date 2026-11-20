@@ -149,7 +149,6 @@ test.describe('guest choices analytics', () => {
     await stage();
     const result = await choices();
 
-    assert.equal(result.enough, true);
     assert.deepEqual(result.kpi, {
       choices: 22,
       ownMixes: 1,
@@ -193,22 +192,33 @@ test.describe('guest choices analytics', () => {
       manufacturer: 'Ателье Reserve',
       name: 'Citrus Breeze',
       choices: 3,
-      mark: 'out',
+      stock: 'out',
+      trial: false,
     });
-    assert.equal(byId.get('tobacco-rose-nocturne')?.mark, 'off-shelf');
-    assert.equal(byId.get('tobacco-peach-silk')?.mark, 'trial');
-    assert.equal(byId.get('tobacco-mint-veil')?.mark, null);
+    assert.equal(byId.get('tobacco-rose-nocturne')?.stock, 'off-shelf');
+    assert.deepEqual([byId.get('tobacco-peach-silk')?.stock, byId.get('tobacco-peach-silk')?.trial], ['in', true]);
+    assert.deepEqual([byId.get('tobacco-mint-veil')?.stock, byId.get('tobacco-mint-veil')?.trial], ['in', false]);
   });
 
-  test('top mixes keep deleted mixes under their name and mark hidden and analog ones', async () => {
+  test('проба остаётся пробой, когда закончилась (#578)', async () => {
+    await stage();
+    await prisma.shelfItem.update({ where: { tobaccoId: 'tobacco-peach-silk' }, data: { outAt: ago(1) } });
+    await prisma.tobacco.update({ where: { id: 'tobacco-peach-silk' }, data: { inStock: false } });
+    const { topTobaccos } = await choices();
+    const peach = topTobaccos.find((row) => row.tobaccoId === 'tobacco-peach-silk');
+
+    assert.deepEqual([peach?.stock, peach?.trial], ['out', true]);
+  });
+
+  test('top mixes keep deleted mixes under their name and carry the guest status of live ones', async () => {
     await stage();
     const { topMixes } = await choices();
 
-    assert.deepEqual(topMixes[0], { mixId: 'mix-dark-market', mixName: 'Тёмный рынок', choices: 15, avgRating: 4.5, mark: null });
-    assert.deepEqual(topMixes[1], { mixId: 'mix-citrus-scout', mixName: 'Цитрусовый караван', choices: 2, avgRating: null, mark: 'analog' });
+    assert.deepEqual(topMixes[0], { mixId: 'mix-dark-market', mixName: 'Тёмный рынок', choices: 15, avgRating: 4.5, status: 'visible' });
+    assert.deepEqual(topMixes[1], { mixId: 'mix-citrus-scout', mixName: 'Цитрусовый караван', choices: 2, avgRating: null, status: 'substituted' });
     const byName = new Map(topMixes.map((row) => [row.mixName, row]));
-    assert.deepEqual(byName.get('Старый микс'), { mixId: null, mixName: 'Старый микс', choices: 1, avgRating: null, mark: null });
-    assert.equal(byName.get('Розовый сумрак')?.mark, 'hidden');
+    assert.deepEqual(byName.get('Старый микс'), { mixId: null, mixName: 'Старый микс', choices: 1, avgRating: null, status: null });
+    assert.equal(byName.get('Розовый сумрак')?.status, 'blocked');
     assert.equal(topMixes.length, 6);
   });
 
@@ -245,22 +255,24 @@ test.describe('guest choices analytics', () => {
     assert.equal(profiles.reduce((sum, row) => sum + row.share, 0), 100);
   });
 
-  test('few choices: no charts, but tiles and signals stay', async () => {
+  test('a couple of choices already fill the charts', async () => {
     await smoke('mix-citrus-scout', ago(1));
     await own(['tobacco-mint-veil'], ago(1));
     const result = await choices();
 
-    assert.equal(result.enough, false);
     assert.equal(result.kpi.choices, 2);
     assert.equal(result.kpi.ownMixes, 1);
-    assert.deepEqual([result.timeline, result.topTobaccos, result.topMixes, result.profiles], [[], [], [], []]);
+    assert.equal(result.timeline.reduce((sum, point) => sum + point.catalog + point.own, 0), 2);
+    assert.deepEqual(result.topMixes.map((row) => [row.mixId, row.choices]), [['mix-citrus-scout', 1]]);
+    assert.ok(result.topTobaccos.some((row) => row.tobaccoId === 'tobacco-mint-veil'));
+    assert.equal(result.profiles.reduce((sum, row) => sum + row.share, 0), 100);
     assert.deepEqual(result.signals.hiddenMixes, [{ mixId: 'mix-peach-mirage', mixName: 'Персиковый мираж' }]);
   });
 
   test('empty period: zeros and no average rating', async () => {
     const result = await choices({ period: '7d' });
     assert.deepEqual(result.kpi, { choices: 0, ownMixes: 0, mixesChosen: 0, mixesOnShowcase: 10, avgRating: null, ratingsCount: 0 });
-    assert.equal(result.enough, false);
+    assert.deepEqual([result.topTobaccos, result.topMixes, result.profiles], [[], [], []]);
   });
 
   test('longer than 31 days goes by weeks starting on Monday', async () => {
@@ -331,7 +343,7 @@ test.describe('GET /staff/dashboard/choices', () => {
 
     assert.equal(response.statusCode, 200);
     const body = response.json() as GuestChoices;
-    assert.deepEqual(Object.keys(body).sort(), ['enough', 'kpi', 'period', 'profiles', 'signals', 'timeline', 'topMixes', 'topTobaccos']);
+    assert.deepEqual(Object.keys(body).sort(), ['kpi', 'period', 'profiles', 'signals', 'timeline', 'topMixes', 'topTobaccos']);
     assert.equal(body.kpi.choices, 1);
     assert.equal(response.body.includes(guest.id), false);
   });

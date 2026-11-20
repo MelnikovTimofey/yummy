@@ -68,3 +68,8 @@
 		import retry_while_restarting
 	}
 }
+
+# Сторонние сайты на этом же хосте подключаются файлами в volume caddy_config
+# (/config/sites/*.caddy), мимо репозитория. Пустая маска — только предупреждение
+# в логе Caddy, не ошибка.
+import /config/sites/*.caddy

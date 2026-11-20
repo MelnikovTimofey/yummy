@@ -89,14 +89,14 @@ const loadMixes = async (client: Tx, tobaccoIds: string[]) =>
     select: { tobaccoId: true, mix: { select: { id: true, name: true } } },
   });
 
-type AnalogRecord = { id: string; manufacturer: string; name: string; inStock: boolean; archived: boolean };
+type AnalogRecord = { id: string; manufacturer: string; lineName: string; name: string; inStock: boolean; archived: boolean };
 
 // Аналоги табаков полки в их порядке замены (#480) — один запрос на все строки.
 const loadAnalogs = async (client: Tx, tobaccoIds: string[]) => {
   const links = await client.tobaccoAnalog.findMany({
     where: { tobaccoId: { in: tobaccoIds } },
     orderBy: { sortOrder: 'asc' },
-    select: { tobaccoId: true, analog: { select: { id: true, manufacturer: true, name: true, inStock: true, archived: true } } },
+    select: { tobaccoId: true, analog: { select: { id: true, manufacturer: true, lineName: true, name: true, inStock: true, archived: true } } },
   });
   const byTobacco = new Map<string, AnalogRecord[]>();
   for (const link of links) byTobacco.set(link.tobaccoId, [...(byTobacco.get(link.tobaccoId) ?? []), link.analog]);
@@ -112,6 +112,7 @@ const analogViews = (self: { inStock: boolean; archived: boolean }, analogs: Ana
   return analogs.map((analog) => ({
     tobaccoId: analog.id,
     manufacturer: analog.manufacturer,
+    lineName: analog.lineName,
     name: analog.name,
     inStock: readyOf(analog),
     substituting: analog === standIn,
@@ -186,9 +187,9 @@ export type ShelfTobaccoView = {
 
 // Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
 // пока сам табак закончился.
-export type ShelfAnalogView = TobaccoRef & { inStock: boolean; substituting: boolean };
+export type ShelfAnalogView = TobaccoRef & { lineName: string; inStock: boolean; substituting: boolean };
 
-export type ShelfSimilarView = TobaccoRef & { flavors: string[] };
+export type ShelfSimilarView = TobaccoRef & { lineName: string; flavors: string[] };
 
 export type ShelfRow = {
   tobacco: ShelfTobaccoView;
@@ -196,6 +197,8 @@ export type ShelfRow = {
   guestAvailable: boolean;
   // С какого момента «Закончился»; null — «Есть».
   outAt: string | null;
+  // С какого момента в плане (#561); null — в план не ставили.
+  plannedAt: string | null;
   lastArrival: ArrivalView | null;
   mixCount: number;
   keepStocked: boolean;
@@ -243,6 +246,7 @@ const toRow = (record: ShelfRecord, mixCount: number, analogs: AnalogRecord[], a
   shelfStatus: record.status as ShelfItemStatus,
   guestAvailable: !record.outAt && !record.stopped && record.status === 'active' && !record.tobacco.archived,
   outAt: iso(record.outAt),
+  plannedAt: iso(record.plannedAt),
   lastArrival: arrivals.length ? arrivalView(arrivals[0]) : null,
   mixCount,
   keepStocked: record.keepStocked,
@@ -326,7 +330,7 @@ const cardMixes = async (tobaccoId: string): Promise<ShelfCard['mixes']> => {
         name: true,
         components: {
           orderBy: { sortOrder: 'asc' },
-          select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } } },
+          select: { tobacco: { select: { id: true, manufacturer: true, lineName: true, name: true, flavors: true, inStock: true, archived: true } } },
         },
       },
     }),
@@ -344,11 +348,12 @@ const cardMixes = async (tobaccoId: string): Promise<ShelfCard['mixes']> => {
 const similarCandidates = async () => {
   const shelf = await prisma.shelfItem.findMany({
     where: { status: 'active', tobacco: { inStock: true, archived: false } },
-    select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavorProfiles: true, flavors: true } } },
+    select: { tobacco: { select: { id: true, manufacturer: true, lineName: true, name: true, flavorProfiles: true, flavors: true } } },
   });
   return shelf.map(({ tobacco }) => ({
     tobaccoId: tobacco.id,
     manufacturer: tobacco.manufacturer,
+    lineName: tobacco.lineName,
     name: tobacco.name,
     flavorProfiles: parseList(tobacco.flavorProfiles),
     flavors: parseList(tobacco.flavors),
@@ -421,10 +426,10 @@ const loadBatchEvents = async (tx: Tx, batchId: string, action: AuditAction, und
     tx.auditEvent.count({ where: { ...where, action: undoAction } }),
   ]);
   if (!events.length || undone) throw new ShelfNotFoundError(`Пакет ${batchId} не найден`);
-  return events.map((event) => ({
-    tobaccoId: event.entityId,
-    outAt: (JSON.parse(event.details ?? '{}') as { outAt?: string | null }).outAt ?? null,
-  }));
+  return events.map((event) => {
+    const details = JSON.parse(event.details ?? '{}') as { outAt?: string | null; fromPlan?: boolean };
+    return { tobaccoId: event.entityId, outAt: details.outAt ?? null, fromPlan: details.fromPlan === true };
+  });
 };
 
 export type EmptySkip = { tobaccoId: string; reason: 'out' | 'plan' };
@@ -480,10 +485,12 @@ export const undoEmptyBatch = async (actor: ShelfActor, batchId: string, now = n
   return { items: await rowsOf(tobaccoIds, now) };
 };
 
-export type RestockSkip = { tobaccoId: string; reason: 'in' | 'plan' };
+export type RestockSkip = { tobaccoId: string; reason: 'in' };
 
 // «Вернуть в наличие» (#518): снимает «Закончился». Прежняя дата — в аудите пакета:
-// отмена возвращает её тем, кого с тех пор не отметили снова.
+// отмена возвращает её тем, кого с тех пор не отметили снова. Табак из плана (#558)
+// встаёт в работу «Есть» без поставки: принесли без счёта или поставку не заводят.
+// Держать ли его постоянно, решает мастер (#567): отмена тоже не включает.
 export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = new Date()) => {
   const ids = batchIds(tobaccoIds);
   const batchId = randomUUID();
@@ -493,12 +500,21 @@ export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = 
     const skipped: RestockSkip[] = [];
     for (const id of ids) {
       const record = records.get(id)!;
-      if (record.status === 'plan' || !record.outAt) {
-        skipped.push({ tobaccoId: id, reason: record.status === 'plan' ? 'plan' : 'in' });
+      const fromPlan = record.status === 'plan';
+      if (!fromPlan && !record.outAt) {
+        skipped.push({ tobaccoId: id, reason: 'in' });
         continue;
       }
-      await tx.shelfItem.update({ where: { id: record.id }, data: { outAt: null } });
-      await audit(tx, actor, { action: 'restock', entityId: id, entityLabel: label(record), details: { batchId, outAt: iso(record.outAt) } });
+      await tx.shelfItem.update({
+        where: { id: record.id },
+        data: { status: 'active', outAt: null, ...(fromPlan ? { keepStocked: false } : {}) },
+      });
+      await audit(tx, actor, {
+        action: 'restock',
+        entityId: id,
+        entityLabel: label(record),
+        details: fromPlan ? { batchId, outAt: null, fromPlan } : { batchId, outAt: iso(record.outAt) },
+      });
       done.push(id);
     }
     await syncAvailability(tx, done);
@@ -509,11 +525,7 @@ export const restockMany = async (actor: ShelfActor, tobaccoIds: unknown, now = 
 
 export const restock = async (actor: ShelfActor, tobaccoId: string, now = new Date()) => {
   const { batchId, skipped, items } = await restockMany(actor, [tobaccoId], now);
-  if (skipped.length) {
-    throw skipped[0].reason === 'plan'
-      ? new ShelfConflictError('plan', 'Табак в плане: вернётся с приходом')
-      : new ShelfConflictError('in_stock', 'Табак и так в наличии');
-  }
+  if (skipped.length) throw new ShelfConflictError('in_stock', 'Табак и так в наличии');
   return { batchId, item: items[0] };
 };
 
@@ -524,6 +536,13 @@ export const undoRestockBatch = async (actor: ShelfActor, batchId: string, now =
     const records = await loadBatch(tx, ids);
     for (const event of events) {
       const record = records.get(event.tobaccoId)!;
+      if (event.fromPlan) {
+        // В план — только то, что с тех пор не трогали: в работе и «Есть».
+        const replanned = record.status === 'active' && !record.outAt;
+        if (replanned) await tx.shelfItem.update({ where: { id: record.id }, data: { status: 'plan' } });
+        await audit(tx, actor, { action: 'undo-restock', entityId: event.tobaccoId, entityLabel: label(record), details: { batchId, replanned } });
+        continue;
+      }
       const restored = !record.outAt && event.outAt ? new Date(event.outAt) : null;
       if (restored) await tx.shelfItem.update({ where: { id: record.id }, data: { outAt: restored } });
       await audit(tx, actor, { action: 'undo-restock', entityId: event.tobaccoId, entityLabel: label(record), details: { batchId, outAt: iso(restored) } });
@@ -595,26 +614,38 @@ export const setTrialVerdict = async (actor: ShelfActor, tobaccoId: string, verd
 };
 
 // Повторное добавление убранного табака возвращает его на полку; то, что уже
-// держим, в план не понижается.
-export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan') => {
+// держим, в план не понижается. plannedAt (#561): в план — с этого момента; в работу
+// из плана — дата остаётся (по ней видно, что пришёл из плана); мимо плана — даты нет.
+// plannedSince — прежняя дата, когда отменяют «Убрать из плана» (#562).
+export const ensureOnShelf = async (tx: Tx, tobaccoId: string, status: 'active' | 'plan', now: Date, plannedSince = now) => {
   const tobacco = await tx.tobacco.findUnique({
     where: { id: tobaccoId },
     select: { shelfItem: { select: { id: true, status: true } } },
   });
   if (!tobacco) throw new ShelfNotFoundError(`Табак ${tobaccoId} не найден в каталоге`);
-  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status } });
-  const next = tobacco.shelfItem.status === 'active' ? 'active' : status;
-  return tobacco.shelfItem.status === next
-    ? tx.shelfItem.findUniqueOrThrow({ where: { id: tobacco.shelfItem.id } })
-    : tx.shelfItem.update({ where: { id: tobacco.shelfItem.id }, data: { status: next } });
+  const plannedAt = status === 'plan' ? plannedSince : null;
+  if (!tobacco.shelfItem) return tx.shelfItem.create({ data: { tobaccoId, status, plannedAt } });
+  const current = tobacco.shelfItem.status;
+  const next = current === 'active' ? 'active' : status;
+  if (current === next) return tx.shelfItem.findUniqueOrThrow({ where: { id: tobacco.shelfItem.id } });
+  return tx.shelfItem.update({
+    where: { id: tobacco.shelfItem.id },
+    data: { status: next, ...(current === 'plan' ? {} : { plannedAt }) },
+  });
 };
 
 // Наличие стоящей или убранной строки не меняется. Новая строка и строка из плана
 // в работе ещё не приходили — «Закончился» до прихода; в плане даты нет.
-export const addToShelf = async (actor: ShelfActor, tobaccoId: string, status: 'active' | 'plan', now = new Date()) => {
+export const addToShelf = async (
+  actor: ShelfActor,
+  tobaccoId: string,
+  status: 'active' | 'plan',
+  now = new Date(),
+  plannedSince = now,
+) => {
   await prisma.$transaction(async (tx) => {
     const before = await tx.shelfItem.findUnique({ where: { tobaccoId }, select: { status: true } });
-    const item = await ensureOnShelf(tx, tobaccoId, status);
+    const item = await ensureOnShelf(tx, tobaccoId, status, now, plannedSince);
     if (!before || before.status === 'plan') {
       await tx.shelfItem.update({ where: { id: item.id }, data: { outAt: item.status === 'plan' ? null : now } });
     }
@@ -670,7 +701,7 @@ export const startShelfFromStock = async (tx: Tx, now: Date) => {
 export const setStockedLegacy = async (tx: Tx, tobaccoIds: string[], inStock: boolean, now: Date) => {
   for (const tobaccoId of tobaccoIds) {
     if (inStock) {
-      const item = await ensureOnShelf(tx, tobaccoId, 'active');
+      const item = await ensureOnShelf(tx, tobaccoId, 'active', now);
       await tx.shelfItem.update({ where: { id: item.id }, data: { stopped: false, stopNote: null, outAt: null } });
     } else {
       await tx.shelfItem.updateMany({ where: { tobaccoId, status: { not: 'plan' }, outAt: null }, data: { outAt: now } });

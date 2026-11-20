@@ -3,7 +3,7 @@ import test from 'node:test';
 import { buildApp } from './app';
 import { prisma } from './db';
 import { acceptDelivery, addLine, createManualDraft } from './deliveries';
-import { markEmpty, updateShelfItem } from './shelf';
+import { addToShelf, markEmpty, removeFromShelf, updateShelfItem } from './shelf';
 import { getShelfOrder } from './shelf-order';
 import { resetAppState } from './state';
 
@@ -17,6 +17,8 @@ const BERRY = 'tobacco-berry-oasis';
 const HONEY = 'tobacco-desert-honey';
 const SPICE = 'tobacco-spice-route';
 const ROSE = 'tobacco-rose-nocturne';
+// Единственный табак без миксов.
+const MELON = 'tobacco-melon-solo';
 
 let start: Date;
 const at = (days: number) => new Date(start.getTime() + days * DAY);
@@ -33,7 +35,7 @@ test.beforeEach(async () => {
 });
 
 test('пусто, пока всё в наличии', async () => {
-  assert.deepEqual(await getShelfOrder(), { groups: [], notKept: [] });
+  assert.deepEqual(await getShelfOrder(), { groups: [], notKept: [], plan: [] });
 });
 
 test('группы по поставщику последнего прихода, миксы скрыты или закрыты аналогом, не держим — отдельно', async () => {
@@ -76,6 +78,37 @@ test('группы по поставщику последнего прихода
   assert.deepEqual(order.notKept.map((item) => [item.tobaccoId, item.outAt]), [[SPICE, at(5).toISOString()]]);
 });
 
+// #563: план — отдельным списком после поставщиков, старый первым, на стопе тоже.
+test('план: дата постановки и миксы, старый первым; группы и notKept не меняются', async () => {
+  await removeFromShelf(actor, MELON, at(0));
+  await addToShelf(actor, MELON, 'plan', at(4));
+  await removeFromShelf(actor, HONEY, at(0));
+  await addToShelf(actor, HONEY, 'plan', at(1));
+  await prisma.shelfItem.update({ where: { tobaccoId: HONEY }, data: { stopped: true } });
+  await markEmpty(actor, MINT, at(2));
+
+  const order = await getShelfOrder();
+  const ref = async (id: string) => {
+    const { manufacturer, lineName, name } = await prisma.tobacco.findUniqueOrThrow({ where: { id } });
+    return { id, manufacturer, lineName, name };
+  };
+
+  assert.deepEqual(order.plan, [
+    {
+      tobacco: await ref(HONEY),
+      plannedAt: at(1).toISOString(),
+      mixes: { total: 2, hidden: 2, substituted: 0 },
+    },
+    {
+      tobacco: await ref(MELON),
+      plannedAt: at(4).toISOString(),
+      mixes: { total: 0, hidden: 0, substituted: 0 },
+    },
+  ]);
+  assert.deepEqual(order.groups.map((group) => group.lines.map((line) => line.tobacco.id)), [[MINT]]);
+  assert.deepEqual(order.notKept, []);
+});
+
 test('GET /staff/shelf/order', async () => {
   const app = buildApp();
   assert.equal((await app.inject({ method: 'GET', url: '/staff/shelf/order' })).statusCode, 401);
@@ -83,9 +116,18 @@ test('GET /staff/shelf/order', async () => {
   const headers = { authorization: `Bearer ${(login.json() as { accessToken: string }).accessToken}` };
 
   await markEmpty(actor, MINT, at(1));
+  await removeFromShelf(actor, MELON, at(0));
+  await addToShelf(actor, MELON, 'plan', at(2));
   const response = await app.inject({ method: 'GET', url: '/staff/shelf/order', headers });
   assert.equal(response.statusCode, 200);
-  const body = response.json() as { groups: Array<{ supplier: unknown; lines: Array<{ tobacco: { id: string; manufacturer: string } }> }>; notKept: unknown[] };
+  const body = response.json() as {
+    groups: Array<{ supplier: unknown; lines: Array<{ tobacco: { id: string; manufacturer: string } }> }>;
+    notKept: unknown[];
+    plan: Array<{ tobacco: { id: string }; plannedAt: string; mixes: unknown }>;
+  };
   assert.deepEqual(body.groups.map((group) => [group.supplier, group.lines.map((item) => item.tobacco.id)]), [[null, [MINT]]]);
   assert.equal(body.groups[0].lines[0].tobacco.manufacturer, 'Ателье Reserve');
+  assert.deepEqual(body.plan.map((item) => [item.tobacco.id, item.plannedAt, item.mixes]), [
+    [MELON, at(2).toISOString(), { total: 0, hidden: 0, substituted: 0 }],
+  ]);
 });

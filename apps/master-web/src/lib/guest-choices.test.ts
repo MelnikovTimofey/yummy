@@ -101,8 +101,8 @@ test('сигналы: закончились популярные с бренд�
       emptyRails: [{ railId: 'r1', name: 'Новинки' }],
     }),
     [
-      { tobaccoId: 't1', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 81, mark: 'out' },
-      { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Supernova', choices: 47, mark: 'out' },
+      { tobaccoId: 't1', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 81, stock: 'out', trial: false },
+      { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Supernova', choices: 47, stock: 'out', trial: false },
     ],
   );
   assert.deepEqual(rows, [
@@ -112,7 +112,7 @@ test('сигналы: закончились популярные с бренд�
   ]);
 });
 
-test('сигналы в единственном числе и без топа (мало данных)', () => {
+test('сигналы в единственном числе и без топа', () => {
   const rows = signalRows(
     signals({
       outPopular: [{ tobaccoId: 't1', name: 'Cane Mint' }],

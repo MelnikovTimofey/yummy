@@ -142,7 +142,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
   },
 };
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'awaiting-plan' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -179,6 +179,7 @@ export type MixListMeta = {
   guestVisibleCount: number;
   substitutedCount: number;
   hiddenCount: number;
+  awaitingPlanCount: number;
   blockedCount: number;
   inRailsCount: number;
   withoutRailsCount: number;
@@ -204,7 +205,8 @@ export type TobaccoRef = {
 export type MixSubstitute = TobaccoRef & { flavors: string[] };
 
 // onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
-export type MissingTobacco = TobaccoRef & { onShelf: boolean };
+// planned — табак в плане (#566).
+export type MissingTobacco = TobaccoRef & { onShelf: boolean; planned: boolean };
 
 export type MixSubstitution = { from: TobaccoRef; to: TobaccoRef };
 
@@ -290,6 +292,7 @@ export const defaultMixListResponse: MixListResponse = {
     guestVisibleCount: 0,
     substitutedCount: 0,
     hiddenCount: 0,
+    awaitingPlanCount: 0,
     blockedCount: 0,
     inRailsCount: 0,
     withoutRailsCount: 0,
@@ -493,7 +496,7 @@ const toInventorySortDirection = (value: unknown): InventorySortDirection => {
 };
 
 const toMixStatusFilter = (value: unknown): MixStatusFilter => {
-  return value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'blocked' || value === 'all'
+  return value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'awaiting-plan' || value === 'blocked' || value === 'all'
     ? value
     : 'all';
 };
@@ -589,6 +592,7 @@ const normalizeMixSubstitute = (value: unknown): MixSubstitute | null =>
 const normalizeMissingTobacco = (value: unknown): MissingTobacco => ({
   ...normalizeMixTobaccoRef(value),
   onShelf: toBoolean(isRecord(value) ? value.onShelf : undefined, true),
+  planned: toBoolean(isRecord(value) ? value.planned : undefined, false),
 });
 
 const normalizeMixSubstitution = (value: unknown): MixSubstitution | null =>
@@ -881,6 +885,7 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       guestVisibleCount: toNumber(meta.guestVisibleCount, 0),
       substitutedCount: toNumber(meta.substitutedCount, 0),
       hiddenCount: toNumber(meta.hiddenCount, 0),
+      awaitingPlanCount: toNumber(meta.awaitingPlanCount, 0),
       blockedCount: toNumber(meta.blockedCount, 0),
       inRailsCount: toNumber(meta.inRailsCount, 0),
       withoutRailsCount: toNumber(meta.withoutRailsCount, 0),
@@ -1497,6 +1502,8 @@ export type ShelfRow = {
   guestAvailable: boolean;
   // С какого момента «Закончился»; null — «Есть».
   outAt: string | null;
+  // Когда поставлен в план (#561); после прихода из плана дата остаётся.
+  plannedAt: string | null;
   lastArrival: ShelfArrival | null;
   mixCount: number;
   keepStocked: boolean;
@@ -1558,6 +1565,7 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
     guestAvailable: toBoolean(raw.guestAvailable, false),
     outAt: toIsoString(raw.outAt, '') || null,
+    plannedAt: toIsoString(raw.plannedAt, '') || null,
     lastArrival: isRecord(raw.lastArrival) ? normalizeShelfArrival(raw.lastArrival) : null,
     mixCount: toNumber(raw.mixCount, 0),
     keepStocked: toBoolean(raw.keepStocked, true),
@@ -1650,8 +1658,8 @@ export const normalizeShelfRestockResponse = (value: unknown): { batchId: string
   return { batchId: String(raw.batchId ?? ''), item: normalizeShelfRow(raw.item) };
 };
 
-// Пачкой: POST /staff/shelf/restock. Пропущены «уже есть» (in) и «в плане» (plan).
-export type ShelfRestockSkip = { tobaccoId: string; reason: 'in' | 'plan' };
+// Пачкой: POST /staff/shelf/restock. Пропущены «уже есть» (in); план встаёт «Есть» (#558).
+export type ShelfRestockSkip = { tobaccoId: string; reason: 'in' };
 export type ShelfRestockManyResponse = { batchId: string; done: string[]; skipped: ShelfRestockSkip[]; items: ShelfRow[] };
 
 export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockManyResponse => {
@@ -1661,7 +1669,7 @@ export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockM
     done: toStringList(raw.done),
     skipped: (Array.isArray(raw.skipped) ? raw.skipped : []).filter(isRecord).map((skip) => ({
       tobaccoId: String(skip.tobaccoId ?? ''),
-      reason: skip.reason === 'plan' ? 'plan' : 'in',
+      reason: 'in' as const,
     })),
     items: shelfRows(raw.items),
   };
@@ -1687,8 +1695,11 @@ export type ShelfOrderGroup = { supplier: ShelfSupplierRef | null; lastDeliveryA
 
 export type ShelfOrderNotKept = { tobaccoId: string; manufacturer: string; lineName: string; name: string; outAt: string };
 
+// В плане (#563): без поставщика, старый план первым.
+export type ShelfOrderPlanLine = { tobacco: ShelfTobaccoRef; plannedAt: string | null; mixes: ShelfOrderMixes };
+
 // GET /staff/shelf/order: закончились и держим постоянно; notKept — закончились, но не держим.
-export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[] };
+export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[]; plan: ShelfOrderPlanLine[] };
 
 const normalizeTobaccoRef = (value: unknown): ShelfTobaccoRef => {
   const raw = isRecord(value) ? value : {};
@@ -1710,21 +1721,23 @@ const toDay = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}-\d
 
 const recordOf = (value: unknown): UnknownRecord => (isRecord(value) ? value : {});
 
+const normalizeOrderMixes = (value: unknown): ShelfOrderMixes => {
+  const mixes = recordOf(value);
+  return { total: toNumber(mixes.total, 0), hidden: toNumber(mixes.hidden, 0), substituted: toNumber(mixes.substituted, 0) };
+};
+
 export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
   const raw = recordOf(value);
   return {
     groups: listOf(raw.groups).filter(isRecord).map((group) => ({
       supplier: normalizeSupplierRef(group.supplier),
       lastDeliveryAt: toIsoString(group.lastDeliveryAt, '') || null,
-      lines: listOf(group.lines).filter(isRecord).map((line) => {
-        const mixes = recordOf(line.mixes);
-        return {
-          tobacco: normalizeTobaccoRef(line.tobacco),
-          outAt: toIsoString(line.outAt, ''),
-          mixes: { total: toNumber(mixes.total, 0), hidden: toNumber(mixes.hidden, 0), substituted: toNumber(mixes.substituted, 0) },
-          lastArrival: isRecord(line.lastArrival) ? normalizeShelfArrival(line.lastArrival) : null,
-        };
-      }),
+      lines: listOf(group.lines).filter(isRecord).map((line) => ({
+        tobacco: normalizeTobaccoRef(line.tobacco),
+        outAt: toIsoString(line.outAt, ''),
+        mixes: normalizeOrderMixes(line.mixes),
+        lastArrival: isRecord(line.lastArrival) ? normalizeShelfArrival(line.lastArrival) : null,
+      })),
     })),
     notKept: listOf(raw.notKept).filter(isRecord).map((item) => ({
       tobaccoId: String(item.tobaccoId ?? ''),
@@ -1732,6 +1745,11 @@ export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
       lineName: String(item.lineName ?? ''),
       name: String(item.name ?? ''),
       outAt: toIsoString(item.outAt, ''),
+    })),
+    plan: listOf(raw.plan).filter(isRecord).map((line) => ({
+      tobacco: normalizeTobaccoRef(line.tobacco),
+      plannedAt: toIsoString(line.plannedAt, '') || null,
+      mixes: normalizeOrderMixes(line.mixes),
     })),
   };
 };
@@ -1880,6 +1898,15 @@ export const normalizeDeliveryCard = (value: unknown): DeliveryCard => {
   };
 };
 
+// Ответ приёмки (#565): карточка и что приёмка изменила — сколько пришедших
+// табаков стояли в плане и сколько миксов открылось гостю.
+export type DeliveryAccepted = DeliveryCard & { fromPlan: number; openedMixes: number };
+
+export const normalizeDeliveryAccepted = (value: unknown): DeliveryAccepted => {
+  const raw = isRecord(value) ? value : {};
+  return { ...normalizeDeliveryCard(raw), fromPlan: toNumber(raw.fromPlan, 0), openedMixes: toNumber(raw.openedMixes, 0) };
+};
+
 export const normalizeDeliveryList = (value: unknown): DeliveryList => {
   const raw = isRecord(value) ? value : {};
   const totals = isRecord(raw.totals) ? raw.totals : {};
@@ -1956,21 +1983,27 @@ export const normalizeCatalogIdeas = (value: unknown): CatalogIdeas => {
 
 // --- Дашборд (#520): выборы гостей, ответ /staff/dashboard/choices ------------
 // Выбор — «Покурить» у микса каталога или свой микс «Намиксуй». Даты — дни
-// «2026-11-04» по поясу backend; при enough = false графиков в ответе нет.
+// «2026-11-04» по поясу backend.
 
 export type GuestChoicesPreset = '7d' | '30d' | '90d' | 'all';
 export type GuestChoicesPeriod = { key: GuestChoicesPreset } | { key: 'custom'; from: string; to: string };
 export type GuestChoicesBucket = 'day' | 'week';
 export type GuestChoicesTimelineRow = { date: string; catalog: number; own: number };
-export type GuestTobaccoMark = 'out' | 'trial' | 'off-shelf';
-export type GuestMixMark = 'hidden' | 'analog';
-export type GuestTopTobacco = { tobaccoId: string; manufacturer: string; name: string; choices: number; mark: GuestTobaccoMark | null };
-export type GuestTopMix = { mixId: string | null; mixName: string; choices: number; avgRating: number | null; mark: GuestMixMark | null };
+export type GuestTobaccoStock = 'in' | 'out' | 'off-shelf';
+export type GuestTopTobacco = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+  choices: number;
+  stock: GuestTobaccoStock | null;
+  trial: boolean;
+};
+// status = null у удалённого микса.
+export type GuestTopMix = { mixId: string | null; mixName: string; choices: number; avgRating: number | null; status: MixStatus | null };
 export type GuestProfileShare = { key: string; label: string; share: number };
 
 export type GuestChoices = {
   period: { key: GuestChoicesPreset | 'custom'; from: string; to: string; days: number; bucket: GuestChoicesBucket };
-  enough: boolean;
   kpi: { choices: number; ownMixes: number; mixesChosen: number; mixesOnShowcase: number; avgRating: number | null; ratingsCount: number };
   timeline: GuestChoicesTimelineRow[];
   topTobaccos: GuestTopTobacco[];
@@ -1999,7 +2032,6 @@ export const normalizeGuestChoices = (value: unknown): GuestChoices => {
       days: toNumber(period.days, 0),
       bucket: pickOne(period.bucket, ['day', 'week'] as const, 'day'),
     },
-    enough: toBoolean(raw.enough, false),
     kpi: {
       choices: toNumber(kpi.choices, 0),
       ownMixes: toNumber(kpi.ownMixes, 0),
@@ -2018,14 +2050,15 @@ export const normalizeGuestChoices = (value: unknown): GuestChoices => {
       manufacturer: String(row.manufacturer ?? ''),
       name: String(row.name ?? ''),
       choices: toNumber(row.choices, 0),
-      mark: markOf(row.mark, ['out', 'trial', 'off-shelf'] as const),
+      stock: markOf(row.stock, ['in', 'out', 'off-shelf'] as const),
+      trial: row.trial === true,
     })),
     topMixes: recordsOf(raw.topMixes).map((row) => ({
       mixId: toNullableString(row.mixId),
       mixName: String(row.mixName ?? ''),
       choices: toNumber(row.choices, 0),
       avgRating: toNullableNumber(row.avgRating),
-      mark: markOf(row.mark, ['hidden', 'analog'] as const),
+      status: markOf(row.status, ['visible', 'substituted', 'hidden', 'blocked'] as const),
     })),
     profiles: recordsOf(raw.profiles).map((row) => ({
       key: String(row.key ?? ''),

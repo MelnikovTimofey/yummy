@@ -11,6 +11,7 @@ import {
   type TobaccoRef,
 } from '@/contracts';
 import type { ShelfApi, ShelfPatch } from '@/hooks/use-shelf';
+import { useDragSelect } from '@/hooks/use-drag-select';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
@@ -26,7 +27,9 @@ import {
   filterShelfRows,
   formatNumber,
   keepToast,
+  removeToast,
   resolveShelfShortcut,
+  restockLabel,
   restockToast,
   shelfCounts,
   shelfRowAction,
@@ -59,7 +62,7 @@ import { ShelfStatusCell } from './shelf-status';
 import { ShelfToast, type ShelfToastData } from './shelf-toast';
 import { RowsSkeleton } from '@/components/ui/loading';
 
-// order — «К заказу» (#518): закончились и держим постоянно.
+// order — «К заказу» (#518): закончились и держим постоянно, ниже план (#563).
 export type ShelfMode = 'shelf' | 'order';
 
 type ShelfViewProps = {
@@ -169,7 +172,17 @@ export const ShelfView = ({
       </button>
     </span>
   );
-  const orderView = <ShelfOrderView order={shelf.order} error={shelf.orderError} phone={isPhone} onShowNotKept={showOut} />;
+  const orderView = (
+    <ShelfOrderView
+      order={shelf.order}
+      error={shelf.orderError}
+      phone={isPhone}
+      onShowNotKept={showOut}
+      menuId={menu?.id ?? null}
+      pendingId={pendingId}
+      onOpenMenu={(id, anchor) => setMenu(menu?.id === id ? null : { id, anchor })}
+    />
+  );
 
   const counts = useMemo(() => shelfCounts(rows), [rows]);
   const shown = useMemo(
@@ -238,6 +251,14 @@ export const ShelfView = ({
     anchorId.current = null;
     onSelectionChange(null);
   }, [onSelectionChange]);
+  const drag = useDragSelect({
+    order: shownIds,
+    selected,
+    onChange: (next, target) => {
+      setSelected(next);
+      anchorId.current = target;
+    },
+  });
   const pick = useCallback(
     (id: string, range: boolean) => {
       setSelected(range ? selectRange(shownIds, anchorId.current, id, selected) : toggleSelected(selected, id));
@@ -306,7 +327,7 @@ export const ShelfView = ({
     (row: ShelfRow) =>
       run(row, async () => {
         const { batchId, item } = await shelf.restock(row.tobacco.id);
-        return { ...restockToast(item), undo: () => shelf.undoRestock(batchId) };
+        return { ...restockToast(item, row.shelfStatus === 'plan'), undo: () => shelf.undoRestock(batchId) };
       }),
     [run, shelf],
   );
@@ -325,18 +346,22 @@ export const ShelfView = ({
     [run, shelf],
   );
 
+  const openInCatalog = (row: ShelfRow) => {
+    setMenu(null);
+    setCardId('');
+    onOpenInCatalog(row);
+  };
+
+  // «Убрать с полки», у плана — «Убрать из плана» (#562).
   const rowActions: ShelfRowActions = {
     onToggleStop,
     onRemove: (row) =>
       run(row, async () => {
         await shelf.remove(row.tobacco.id);
         if (cardId === row.tobacco.id) setCardId('');
-        return {
-          title: fullName(row),
-          text: 'Убран с полки, история осталась.',
-          undo: () => shelf.add(row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active', false),
-        };
+        return { ...removeToast(row), undo: () => shelf.restore(row) };
       }),
+    onOpenCatalog: openInCatalog,
   };
 
   // Аналоги (#482): тост только когда аналог добавлен — название жирным, ниже что стало видно гостю.
@@ -578,12 +603,10 @@ export const ShelfView = ({
       onSetAnalogs={onSetAnalogs}
       onEmpty={(row) => void onEmpty(row)}
       onRestock={(row) => void onRestock(row)}
+      onRemove={rowActions.onRemove}
       onUpdate={onUpdate}
       onTrialVerdict={(row, verdict) => onTrialVerdict(row.tobacco, verdict)}
-      onOpenCatalog={(row) => {
-        setCardId('');
-        onOpenInCatalog(row);
-      }}
+      onOpenCatalog={openInCatalog}
       onOpenMix={(mixId) => {
         setCardId('');
         onOpenMix(mixId);
@@ -807,7 +830,9 @@ export const ShelfView = ({
                       const busy = pendingId === row.tobacco.id;
                       const menuOpen = menu?.id === row.tobacco.id;
                       const action = shelfRowAction(row);
-                      const arrival = arrivalCell(row.lastArrival);
+                      // У плана прихода и «держим» ещё нет (#562, #shot=shelf-plan).
+                      const plan = row.shelfStatus === 'plan';
+                      const arrival = plan ? null : arrivalCell(row.lastArrival);
                       const isSelected = selected.includes(row.tobacco.id);
                       return (
                         <tr
@@ -815,6 +840,7 @@ export const ShelfView = ({
                           data-tobacco-id={row.tobacco.id}
                           data-active={row.tobacco.id === activeId}
                           data-selected={isSelected || undefined}
+                          onPointerEnter={(event) => drag.dragOver(event, row.tobacco.id)}
                           onMouseDown={(event) => {
                             if (event.shiftKey) event.preventDefault();
                           }}
@@ -833,6 +859,8 @@ export const ShelfView = ({
                                 setActiveId(row.tobacco.id);
                                 pick(row.tobacco.id, range);
                               }}
+                              onDragStart={(event) => drag.startDrag(event, row.tobacco.id)}
+                              dragging={drag.isDragging}
                             />
                           </td>
                           <td>
@@ -864,7 +892,7 @@ export const ShelfView = ({
                             {row.mixCount ? formatMetricValue(row.mixCount) : <span className="shelf-faint">—</span>}
                           </td>
                           <td className="shelf-table__keep">
-                            {row.keepStocked ? (
+                            {row.keepStocked && !plan ? (
                               <span role="img" aria-label="Держим постоянно" title="Держим постоянно">
                                 <Check size={15} aria-hidden />
                               </span>
@@ -880,15 +908,13 @@ export const ShelfView = ({
                                   </button>
                                 ) : action === 'restock' ? (
                                   <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onRestock(row)}>
-                                    Вернуть в наличие
+                                    {restockLabel(row)}
                                   </button>
                                 ) : action === 'unstop' ? (
                                   <button type="button" className="btn" data-size="sm" data-variant="ghost" disabled={busy} onClick={() => void onToggleStop(row)}>
                                     Снять стоп
                                   </button>
-                                ) : (
-                                  <span className="shelf-faint shelf-table__note">придёт по счёту</span>
-                                )}
+                                ) : null}
                                 <button
                                   type="button"
                                   className="icon-btn"

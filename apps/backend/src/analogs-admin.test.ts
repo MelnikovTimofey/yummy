@@ -19,7 +19,7 @@ type Analog = { tobaccoId: string; name: string; inStock: boolean; substituting:
 type Card = {
   tobacco: { id: string };
   analogs: Analog[];
-  similar: Array<{ tobaccoId: string; flavors: string[] }>;
+  similar: Array<{ tobaccoId: string; lineName: string; flavors: string[] }>;
   mixes: Array<{ id: string; status: string; substitution: { from: { tobaccoId: string }; to: { tobaccoId: string } } | null }>;
 };
 
@@ -114,6 +114,7 @@ test.describe('аналоги в «Мастере»', () => {
 
   test('unblockedMixes: микс из «блокирован» стал «с заменой»; строка и карточка показывают замену', async () => {
     await prisma.tobacco.update({ where: { id: A }, data: { inStock: false } });
+    await prisma.tobacco.update({ where: { id: B }, data: { lineName: 'Classic' } });
 
     const response = await put(A, [B]);
     const body = response.json() as { item: Card; unblockedMixes: Array<{ id: string; name: string }> };
@@ -121,6 +122,7 @@ test.describe('аналоги в «Мастере»', () => {
     assert.deepEqual(body.item.analogs[0], {
       tobaccoId: B,
       manufacturer: 'North Wind',
+      lineName: 'Classic',
       name: 'Apple Fizz',
       inStock: true,
       substituting: true,
@@ -138,9 +140,11 @@ test.describe('аналоги в «Мастере»', () => {
   });
 
   test('похожие на полке: в наличии, не сам табак и не его аналоги, по пересечению вкусов и категорий', async () => {
+    await prisma.tobacco.update({ where: { id: B }, data: { lineName: 'Classic' } });
     const before = await card(A);
     assert.ok(before.similar.length > 0 && before.similar.length <= 5);
     assert.equal(before.similar[0].tobaccoId, B, 'больше всего общих вкусов и категорий — Apple Fizz');
+    assert.equal(before.similar[0].lineName, 'Classic', 'мастер выбирает аналог по линейке');
     assert.ok(!before.similar.some((item) => item.tobaccoId === A || item.tobaccoId === OFF_SHELF));
 
     await put(A, [B]);
@@ -154,10 +158,10 @@ test.describe('аналоги в «Мастере»', () => {
 test('rankSimilar: по flavors и flavorProfiles, flavorTags не участвуют', () => {
   const target = { tobaccoId: 't', flavorProfiles: ['citrus'], flavors: ['лимон'] };
   const candidates = [
-    { tobaccoId: 'tag-only', manufacturer: 'X', name: 'Tag', flavorProfiles: ['berry'], flavors: ['малина'], flavorTags: ['citrus'] },
-    { tobaccoId: 'one', manufacturer: 'X', name: 'One', flavorProfiles: ['citrus'], flavors: ['апельсин'], flavorTags: [] },
-    { tobaccoId: 'two', manufacturer: 'X', name: 'Two', flavorProfiles: ['citrus'], flavors: ['лимон'], flavorTags: [] },
-    { tobaccoId: 't', manufacturer: 'X', name: 'Self', flavorProfiles: ['citrus'], flavors: ['лимон'], flavorTags: [] },
+    { tobaccoId: 'tag-only', manufacturer: 'X', lineName: '', name: 'Tag', flavorProfiles: ['berry'], flavors: ['малина'], flavorTags: ['citrus'] },
+    { tobaccoId: 'one', manufacturer: 'X', lineName: '', name: 'One', flavorProfiles: ['citrus'], flavors: ['апельсин'], flavorTags: [] },
+    { tobaccoId: 'two', manufacturer: 'X', lineName: '', name: 'Two', flavorProfiles: ['citrus'], flavors: ['лимон'], flavorTags: [] },
+    { tobaccoId: 't', manufacturer: 'X', lineName: '', name: 'Self', flavorProfiles: ['citrus'], flavors: ['лимон'], flavorTags: [] },
   ];
   assert.deepEqual(
     rankSimilar(target, candidates, new Set()).map((item) => item.tobaccoId),

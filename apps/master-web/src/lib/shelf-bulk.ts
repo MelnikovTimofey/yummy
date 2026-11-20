@@ -28,7 +28,7 @@ export type BulkSummary = {
   names: string;
   // Сколько отметятся «Закончились»: уже закончившиеся и «в плане» пропускаются.
   emptyCount: number;
-  // Сколько вернутся в наличие: только закончившиеся.
+  // Сколько встанут «Есть»: закончившиеся и «в плане» (#558).
   restockCount: number;
   // Все выбранные на стопе — на панели «Снять стоп»; все держим — «Не держать постоянно».
   allStopped: boolean;
@@ -71,8 +71,7 @@ export const bulkEmptyToast = (response: ShelfEmptyManyResponse) => {
 
 export const bulkRestockToast = (response: ShelfRestockManyResponse) => {
   const skipped = skippedText(response.skipped.length, [
-    response.skipped.some((skip) => skip.reason === 'in') ? 'уже есть' : null,
-    response.skipped.some((skip) => skip.reason === 'plan') ? 'в плане' : null,
+    response.skipped.length ? 'уже есть' : null,
   ]);
   return {
     title: `Снова есть: ${formatNumber(response.done.length)}`,

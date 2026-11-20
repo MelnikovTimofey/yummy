@@ -10,6 +10,7 @@ import {
   rowMark,
   rowNote,
   rowOpens,
+  rowPhotoMix,
   smokeBlockReason,
   withFavorite,
   withOwnRating,
@@ -114,6 +115,13 @@ test('строка: подпись по статусу', () => {
     rowNote(catalogItem('m1', { status: { kind: 'unavailable', missing: 'Oven Black Currant' } })),
     'Сейчас нет: Oven Black Currant',
   );
+});
+
+test('строка: фото вкуса только у микса из каталога с карточкой', () => {
+  assert.deepEqual(rowPhotoMix(catalogItem('m1')), { id: 'm1', flavors: ['черника'] });
+  assert.equal(rowPhotoMix(customItem('e1')), null);
+  assert.equal(rowPhotoMix(catalogItem('m1', { status: { kind: 'deleted' }, card: null })), null);
+  assert.equal(rowPhotoMix(catalogItem('m1', { ref: { kind: 'catalog', mixId: null } })), null);
 });
 
 test('строка удалённого или скрытого микса не открывается, остальные открываются', () => {

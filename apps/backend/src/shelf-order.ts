@@ -3,7 +3,8 @@ import { prisma } from './db';
 import { arrivalView, loadArrivals, type Arrival, type ArrivalView } from './shelf';
 
 // «К заказу» (#518): закончились и держим постоянно. Группа — поставщик последнего
-// принятого счёта с этим табаком; сколько заказать, пишет мастер.
+// принятого счёта с этим табаком; сколько заказать, пишет мастер. Ниже групп — план
+// (#563): без поставщика и количества.
 
 export type OrderTobacco = { id: string; manufacturer: string; lineName: string; name: string };
 
@@ -19,10 +20,14 @@ export type OrderGroup = {
   lines: OrderLine[];
 };
 
+export type PlanLine = { tobacco: OrderTobacco; plannedAt: string | null; mixes: OrderMixes };
+
 export type ShelfOrderView = {
   groups: OrderGroup[];
   // Закончились, но не держим постоянно: в заявку не идут.
   notKept: Array<{ tobaccoId: string; manufacturer: string; lineName: string; name: string; outAt: string }>;
+  // Старый план первым.
+  plan: PlanLine[];
 };
 
 // Статус миксов табаков по правилу доступности с аналогами (#479) — один проход на все строки.
@@ -33,7 +38,7 @@ const mixesOf = async (tobaccoIds: string[]) => {
       select: {
         components: {
           orderBy: { sortOrder: 'asc' },
-          select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } } },
+          select: { tobacco: { select: { id: true, manufacturer: true, lineName: true, name: true, flavors: true, inStock: true, archived: true } } },
         },
       },
     }),
@@ -54,12 +59,21 @@ const mixesOf = async (tobaccoIds: string[]) => {
   return counts;
 };
 
+const TOBACCO = { select: { id: true, manufacturer: true, lineName: true, name: true } } as const;
+
 export const getShelfOrder = async (): Promise<ShelfOrderView> => {
-  const out = await prisma.shelfItem.findMany({
-    where: { status: 'active', outAt: { not: null } },
-    select: { keepStocked: true, outAt: true, tobacco: { select: { id: true, manufacturer: true, lineName: true, name: true } } },
-    orderBy: [{ outAt: 'desc' }, { tobaccoId: 'asc' }],
-  });
+  const [out, planned] = await Promise.all([
+    prisma.shelfItem.findMany({
+      where: { status: 'active', outAt: { not: null } },
+      select: { keepStocked: true, outAt: true, tobacco: TOBACCO },
+      orderBy: [{ outAt: 'desc' }, { tobaccoId: 'asc' }],
+    }),
+    prisma.shelfItem.findMany({
+      where: { status: 'plan' },
+      select: { plannedAt: true, tobacco: TOBACCO },
+      orderBy: [{ plannedAt: { sort: 'asc', nulls: 'first' } }, { tobaccoId: 'asc' }],
+    }),
+  ]);
   const kept = out.filter((item) => item.keepStocked);
   const notKept = out
     .filter((item) => !item.keepStocked)
@@ -70,10 +84,19 @@ export const getShelfOrder = async (): Promise<ShelfOrderView> => {
       name: tobacco.name,
       outAt: outAt!.toISOString(),
     }));
-  if (!kept.length) return { groups: [], notKept };
+  if (!kept.length && !planned.length) return { groups: [], notKept, plan: [] };
 
   const ids = kept.map((item) => item.tobacco.id);
-  const [arrivals, mixes] = await Promise.all([loadArrivals(prisma, ids), mixesOf(ids)]);
+  const [arrivals, mixes] = await Promise.all([
+    loadArrivals(prisma, ids),
+    mixesOf([...ids, ...planned.map((item) => item.tobacco.id)]),
+  ]);
+  const plan = planned.map((item) => ({
+    tobacco: item.tobacco,
+    plannedAt: item.plannedAt?.toISOString() ?? null,
+    mixes: mixes.get(item.tobacco.id)!,
+  }));
+
   const lastInvoice = (id: string): Arrival | undefined => arrivals.get(id)?.find((arrival) => arrival.fromInvoice);
 
   const groups = new Map<string, OrderGroup>();
@@ -110,5 +133,6 @@ export const getShelfOrder = async (): Promise<ShelfOrderView> => {
         || (a.supplier?.name ?? '').localeCompare(b.supplier?.name ?? '', 'ru'),
     ),
     notKept,
+    plan,
   };
 };

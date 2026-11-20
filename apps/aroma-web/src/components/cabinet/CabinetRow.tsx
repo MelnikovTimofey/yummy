@@ -1,5 +1,5 @@
 import { MixListRow } from '@/components/aroma';
-import { rowMark, rowNote, rowOpens, type GuestCabinetItem } from '@/lib/cabinet';
+import { rowMark, rowNote, rowOpens, rowPhotoMix, type GuestCabinetItem } from '@/lib/cabinet';
 
 // Строка истории и избранного (#244, мокап cab-history / cab-favorites).
 // Удалённый или скрытый мастером микс приглушён и не открывается.
@@ -7,6 +7,7 @@ export function CabinetRow({ item, onOpen }: { item: GuestCabinetItem; onOpen: (
   return (
     <MixListRow
       profiles={item.flavorProfiles}
+      photo={rowPhotoMix(item)}
       name={item.name}
       mark={rowMark(item)}
       sub={rowNote(item)}

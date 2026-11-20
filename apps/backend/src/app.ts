@@ -2224,12 +2224,18 @@ export const buildApp = () => {
   app.post('/staff/shelf', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    const body = (request.body ?? {}) as { tobaccoId?: unknown; status?: unknown };
+    const body = (request.body ?? {}) as { tobaccoId?: unknown; status?: unknown; plannedAt?: unknown };
     if (typeof body.tobaccoId !== 'string' || !body.tobaccoId.trim()) {
       return reply.status(400).send({ error: 'tobaccoId is required' } satisfies ApiError);
     }
     const status = body.status === 'plan' ? 'plan' : 'active';
-    return sendShelf(reply, async () => ({ item: await addToShelf(user, body.tobaccoId as string, status) }));
+    const now = new Date();
+    // Прежняя дата плана — для отмены «Убрать из плана» (#562).
+    const plannedAt = body.plannedAt === undefined ? now : new Date(typeof body.plannedAt === 'string' ? body.plannedAt : Number.NaN);
+    if (Number.isNaN(plannedAt.getTime()) || plannedAt > now) {
+      return reply.status(400).send({ error: 'plannedAt: дата в ISO, не в будущем' } satisfies ApiError);
+    }
+    return sendShelf(reply, async () => ({ item: await addToShelf(user, body.tobaccoId as string, status, now, plannedAt) }));
   });
 
   app.get('/staff/shelf/:tobaccoId', async (request, reply) => {

@@ -26,3 +26,7 @@ export const formatInMixes = (count: number) => {
 
 export const catalogBrandLine = (item: Pick<InventoryTobacco, 'manufacturer' | 'lineName'>) =>
   [item.manufacturer, item.lineName?.trim()].filter(Boolean).join(', ');
+
+// Табак в плане ещё не на полке (#564): из карточки его убирают из плана.
+export const catalogRemoveLabel = (state: ShelfState | 'active') =>
+  state === 'plan' ? 'Убрать из плана' : 'Убрать с полки';

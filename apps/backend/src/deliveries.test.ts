@@ -19,6 +19,7 @@ import {
   listDeliveries,
   updateDelivery,
   updateLine,
+  type AcceptedDelivery,
   type DeliveryCard,
 } from './deliveries';
 import type { TextPage } from './invoices/types';
@@ -551,9 +552,11 @@ test.describe('HTTP', () => {
 
     const accepted = await app.inject({ method: 'POST', url: `/staff/deliveries/${card.id}/accept`, headers, payload: {} });
     assert.equal(accepted.statusCode, 200);
-    const acceptedBody = accepted.json() as DeliveryCard;
+    const acceptedBody = accepted.json() as AcceptedDelivery;
     assert.equal(acceptedBody.status, 'received');
     assert.equal(acceptedBody.receivedAt, '2026-10-16T09:00:00.000Z');
+    assert.equal(acceptedBody.lines.length, 15);
+    assert.deepEqual([acceptedBody.fromPlan, acceptedBody.openedMixes], [0, 0]);
 
     const removed = await app.inject({ method: 'DELETE', url: `/staff/deliveries/${card.id}`, headers });
     assert.equal(removed.statusCode, 409);

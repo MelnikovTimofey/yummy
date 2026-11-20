@@ -1,17 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveMixAvailability, type RuleComponent, type RuleTobacco } from './analogs';
+import { awaitsPlan, resolveMixAvailability, type RuleComponent, type RuleTobacco } from './analogs';
 
 // Issue #479: правило доступности с заменой (PRD §6.2 п.1) — чистая функция.
 
 const tobacco = (id: string, overrides: Partial<RuleTobacco> = {}): RuleTobacco => ({
   id,
   manufacturer: 'Darkside',
+  lineName: '',
   name: id,
   flavors: [],
   inStock: true,
   archived: false,
   onShelf: true,
+  planned: false,
   ...overrides,
 });
 
@@ -38,8 +40,8 @@ test('не хватает одного, аналог в наличии — ми�
   const result = resolveMixAvailability(true, [component(cola), component(lemonblast, [lemonShock, lemonFresh])]);
   assert.equal(result.status, 'substituted');
   assert.deepEqual(result.substitution, { from: ref(lemonblast), to: ref(lemonShock) });
-  assert.deepEqual(result.substitute, { tobaccoId: 'lemonblast', to: { ...ref(lemonShock), flavors: ['лимон'] } });
-  assert.deepEqual(result.missing, [{ ...ref(lemonblast), onShelf: true }]);
+  assert.deepEqual(result.substitute, { tobaccoId: 'lemonblast', to: { ...ref(lemonShock), lineName: '', flavors: ['лимон'] } });
+  assert.deepEqual(result.missing, [{ ...ref(lemonblast), onShelf: true, planned: false }]);
 });
 
 test('первый аналог закончился — заменой встаёт следующий', () => {
@@ -68,7 +70,7 @@ test('аналоги не в наличии, в архиве или их нет 
     const result = resolveMixAvailability(true, [component(cola), component(lemonblast, analogs)]);
     assert.equal(result.status, 'blocked');
     assert.equal(result.substitution, null);
-    assert.deepEqual(result.missing, [{ ...ref(lemonblast), onShelf: true }]);
+    assert.deepEqual(result.missing, [{ ...ref(lemonblast), onShelf: true, planned: false }]);
   }
 });
 
@@ -104,12 +106,44 @@ test('микс скрыт мастером — hidden без замены, не�
     status: 'hidden',
     substitution: null,
     substitute: null,
-    missing: [{ ...ref(lemonblast), onShelf: true }],
+    missing: [{ ...ref(lemonblast), onShelf: true, planned: false }],
   });
 });
 
 test('onShelf недостающего табака передаётся как есть', () => {
   const offShelf = tobacco('lime-spark', { inStock: false, onShelf: false });
   const result = resolveMixAvailability(true, [component(offShelf), component(redRush)]);
-  assert.deepEqual(result.missing[0], { ...ref(offShelf), onShelf: false });
+  assert.deepEqual(result.missing[0], { ...ref(offShelf), onShelf: false, planned: false });
+});
+
+// #566: «ждёт табак из плана» — разновидность blocked, когда все недостающие табаки в плане.
+const planned = (id: string) => tobacco(id, { inStock: false, planned: true });
+
+test('один недостающий табак в плане — микс ждёт план', () => {
+  const result = resolveMixAvailability(true, [component(cola), component(planned('clover-club'))]);
+  assert.equal(result.status, 'blocked');
+  assert.deepEqual(result.missing, [{ ...ref(planned('clover-club')), onShelf: true, planned: true }]);
+  assert.equal(awaitsPlan(result), true);
+});
+
+test('два недостающих, оба в плане — микс ждёт план', () => {
+  const result = resolveMixAvailability(true, [component(planned('clover-club')), component(planned('tarhun'))]);
+  assert.equal(result.status, 'blocked');
+  assert.equal(awaitsPlan(result), true);
+});
+
+test('один недостающий в плане, другой закончился — микс блокирован', () => {
+  const result = resolveMixAvailability(true, [component(planned('clover-club')), component(redRush)]);
+  assert.equal(result.status, 'blocked');
+  assert.equal(awaitsPlan(result), false);
+});
+
+test('недостающий в плане закрыт аналогом — микс с заменой, план не ждёт', () => {
+  const result = resolveMixAvailability(true, [component(cola), component(planned('clover-club'), [lemonShock])]);
+  assert.equal(result.status, 'substituted');
+  assert.equal(awaitsPlan(result), false);
+});
+
+test('скрытый мастером микс план не ждёт, даже если недостающие в плане', () => {
+  assert.equal(awaitsPlan(resolveMixAvailability(false, [component(planned('clover-club'))])), false);
 });

@@ -1,6 +1,6 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
-import { shelfRowAction, shelfRowMenu } from '@/lib/shelf';
+import { restockLabel, shelfRowAction, shelfRowMenu } from '@/lib/shelf';
 import { ShelfCheck } from './shelf-bulk';
 import { ShelfAnalogsCell } from './shelf-analogs';
 import type { ShelfRowActions } from './shelf-row-menu';
@@ -69,8 +69,8 @@ export const ShelfMobileList = ({
               Закончился
             </button>
           ) : action === 'restock' ? (
-            <button type="button" className="m-shelf-card__btn" aria-label={`Вернуть в наличие ${fullName(row)}`} disabled={busy} onClick={() => onRestock(row)}>
-              Вернуть
+            <button type="button" className="m-shelf-card__btn" aria-label={`${restockLabel(row)} ${fullName(row)}`} disabled={busy} onClick={() => onRestock(row)}>
+              {row.shelfStatus === 'plan' ? 'В наличие' : 'Вернуть'}
             </button>
           ) : action === 'unstop' ? (
             <button type="button" className="m-shelf-card__btn" disabled={busy} onClick={() => onUnstop(row)}>
@@ -120,12 +120,25 @@ export const ShelfActionsSheet = ({ row, actions, onClose }: { row: ShelfRow; ac
         <p className="m-mark-sheet__brand">{row.tobacco.manufacturer}</p>
       </div>
       <div className="m-actions__list">
-        <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
-          {shelfRowMenu(row).stopLabel}
-        </button>
-        <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
-          Убрать с полки <span className="shelf-faint">история останется</span>
-        </button>
+        {row.shelfStatus === 'plan' ? (
+          <>
+            <button type="button" className="m-actions__item" onClick={() => act(() => actions.onOpenCatalog(row))}>
+              Карточка в каталоге
+            </button>
+            <button type="button" className="m-actions__item m-actions__item--danger" onClick={() => act(() => actions.onRemove(row))}>
+              Убрать из плана
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" className="m-actions__item" onClick={() => act(() => actions.onToggleStop(row))}>
+              {shelfRowMenu(row).stopLabel}
+            </button>
+            <button type="button" className="m-actions__item m-actions__item--sep" onClick={() => act(() => actions.onRemove(row))}>
+              Убрать с полки <span className="shelf-faint">история останется</span>
+            </button>
+          </>
+        )}
       </div>
     </BottomSheet>
   );

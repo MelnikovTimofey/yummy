@@ -6,17 +6,17 @@ import { pickScene, type ReelSceneSpec } from '@/lib/reel-scene';
 import type { ReelMix } from './ReelStill';
 import { SCENE_FPS, SCENE_FRAMES, SceneSvg } from './scenes/SceneSvg';
 
-function SceneComposition({ spec, seed }: { spec: ReelSceneSpec; seed: string }) {
-  return <SceneSvg spec={spec} seed={seed} frame={useCurrentFrame()} />;
+function SceneComposition({ spec, seed, onPhoto }: { spec: ReelSceneSpec; seed: string; onPhoto: boolean }) {
+  return <SceneSvg spec={spec} seed={seed} frame={useCurrentFrame()} onPhoto={onPhoto} />;
 }
 
 /** Анимированная сцена рилса: бесшовный цикл, без контролов и без паузы по клику —
  *  паузой управляет `playing`. Заполняет ближайший позиционированный контейнер. */
-export default function ReelPlayer({ mix, playing }: { mix: ReelMix; playing: boolean }) {
+export default function ReelPlayer({ mix, playing, onPhoto = false }: { mix: ReelMix; playing: boolean; onPhoto?: boolean }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<PlayerRef>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-  const inputProps = useMemo(() => ({ spec: pickScene(mix), seed: mix.id }), [mix]);
+  const inputProps = useMemo(() => ({ spec: pickScene(mix), seed: mix.id, onPhoto }), [mix, onPhoto]);
 
   // Player вписывает композицию с полями; размер композиции = размер контейнера,
   // чтобы сцена легла на весь экран без полей и без растяжения.
@@ -52,7 +52,7 @@ export default function ReelPlayer({ mix, playing }: { mix: ReelMix; playing: bo
           fps={SCENE_FPS}
           compositionWidth={size.width}
           compositionHeight={size.height}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', background: 'transparent' }}
           autoPlay={playing}
           loop
           controls={false}

@@ -406,6 +406,7 @@ export function MixerScreen({
   const bowlComponents: MasterCardComponent[] = chosenTobaccos.map((tobacco, index) => ({
     id: tobacco.id,
     manufacturer: tobacco.manufacturer,
+    lineName: tobacco.lineName,
     name: tobacco.name,
     proportion: shares[index],
   }));

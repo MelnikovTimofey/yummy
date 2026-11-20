@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { tasteKeys } from './catalog-ideas';
 import { prisma } from './db';
 import type { MissingTobaccoView, MixGuestStatus, MixSubstituteView, MixSubstitutionView, TobaccoRef } from './state';
@@ -9,11 +10,13 @@ import type { ShelfSimilarView } from './shelf';
 export type RuleTobacco = {
   id: string;
   manufacturer: string;
+  lineName: string;
   name: string;
   flavors: string[];
   inStock: boolean;
   archived: boolean;
   onShelf: boolean;
+  planned: boolean;
 };
 
 // analogs — аналоги табака компонента в его порядке замены.
@@ -30,7 +33,7 @@ export type MixAvailability = {
   missing: MissingTobaccoView[];
 };
 
-export type RuleTobaccoRecord = { id: string; manufacturer: string; name: string; flavors: string; inStock: boolean; archived: boolean };
+export type RuleTobaccoRecord = { id: string; manufacturer: string; lineName: string; name: string; flavors: string; inStock: boolean; archived: boolean };
 
 // Аналоги и полка для правила: два запроса параллельно с выборкой миксов, без чтения
 // каталога и без запроса на микс. Связей аналогов сотни, позиций полки — сотни.
@@ -39,16 +42,19 @@ export type RuleContext = {
   shelfStatus: Map<string, string>;
 };
 
-export const loadRuleContext = async (): Promise<RuleContext> => {
+// client — транзакция, когда правило должно видеть её незакоммиченные правки.
+export const loadRuleContext = async (
+  client: Pick<Prisma.TransactionClient, 'tobaccoAnalog' | 'shelfItem'> = prisma,
+): Promise<RuleContext> => {
   const [links, shelf] = await Promise.all([
-    prisma.tobaccoAnalog.findMany({
+    client.tobaccoAnalog.findMany({
       orderBy: { sortOrder: 'asc' },
       select: {
         tobaccoId: true,
-        analog: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } },
+        analog: { select: { id: true, manufacturer: true, lineName: true, name: true, flavors: true, inStock: true, archived: true } },
       },
     }),
-    prisma.shelfItem.findMany({ select: { tobaccoId: true, status: true } }),
+    client.shelfItem.findMany({ select: { tobaccoId: true, status: true } }),
   ]);
   const analogsOf = new Map<string, RuleTobaccoRecord[]>();
   for (const link of links) {
@@ -70,11 +76,13 @@ const parseFlavors = (value: string): string[] => {
 const toRuleTobacco = (tobacco: RuleTobaccoRecord, shelfStatus: string | undefined): RuleTobacco => ({
   id: tobacco.id,
   manufacturer: tobacco.manufacturer,
+  lineName: tobacco.lineName,
   name: tobacco.name,
   flavors: parseFlavors(tobacco.flavors),
   inStock: tobacco.inStock,
   archived: tobacco.archived,
   onShelf: shelfStatus != null && shelfStatus !== 'dropped',
+  planned: shelfStatus === 'plan',
 });
 
 export const toRuleComponent = (tobacco: RuleTobaccoRecord, context: RuleContext): RuleComponent => ({
@@ -92,7 +100,11 @@ const refOf = (tobacco: RuleTobacco): TobaccoRef => ({
 
 export const resolveMixAvailability = (available: boolean, components: RuleComponent[]): MixAvailability => {
   const lacking = components.filter((component) => !ready(component.tobacco));
-  const missing = lacking.map((component) => ({ ...refOf(component.tobacco), onShelf: component.tobacco.onShelf }));
+  const missing = lacking.map((component) => ({
+    ...refOf(component.tobacco),
+    onShelf: component.tobacco.onShelf,
+    planned: component.tobacco.planned,
+  }));
   const none = { substitution: null, substitute: null, missing };
 
   if (!available) return { status: 'hidden', ...none };
@@ -107,17 +119,22 @@ export const resolveMixAvailability = (available: boolean, components: RuleCompo
   return {
     status: 'substituted',
     substitution: { from: refOf(gap.tobacco), to: refOf(analog) },
-    substitute: { tobaccoId: gap.tobacco.id, to: { ...refOf(analog), flavors: analog.flavors } },
+    substitute: { tobaccoId: gap.tobacco.id, to: { ...refOf(analog), lineName: analog.lineName, flavors: analog.flavors } },
     missing,
   };
 };
+
+// «Ждёт табак из плана» (#566) — разновидность blocked только для Мастера: микс откроется
+// гостю сам, когда придут табаки из плана. Для гостя, дашборда и «К заказу» он blocked.
+export const awaitsPlan = (mix: Pick<MixAvailability, 'status' | 'missing'>) =>
+  mix.status === 'blocked' && mix.missing.every((item) => item.planned);
 
 // Подсказки «Похожие на полке» (PRD §9.3 п.6): кандидаты — табаки полки в наличии,
 // ранжируются по числу общих flavors и flavorProfiles; flavorTags не участвуют (§7 п.4).
 export const SIMILAR_LIMIT = 5;
 
 type SimilarSource = { tobaccoId: string; flavorProfiles: string[]; flavors: string[] };
-type SimilarCandidate = SimilarSource & { manufacturer: string; name: string };
+type SimilarCandidate = SimilarSource & { manufacturer: string; lineName: string; name: string };
 
 export const rankSimilar = (target: SimilarSource, candidates: SimilarCandidate[], exclude: Set<string>): ShelfSimilarView[] => {
   const keys = tasteKeys(target);
@@ -130,6 +147,7 @@ export const rankSimilar = (target: SimilarSource, candidates: SimilarCandidate[
     .map(({ candidate }) => ({
       tobaccoId: candidate.tobaccoId,
       manufacturer: candidate.manufacturer,
+      lineName: candidate.lineName,
       name: candidate.name,
       flavors: candidate.flavors,
     }));
