@@ -1,7 +1,7 @@
 import { pickScene } from '@/lib/reel-scene';
 import { SceneSvg } from './scenes/SceneSvg';
 
-export type ReelMix = { id: string; flavors: string[]; flavorProfiles: string[] };
+export type ReelMix = { id: string; name?: string; flavors: string[]; flavorProfiles: string[] };
 
 // Середина цикла: цветок раскрыт, струи дыма прорисованы.
 const STILL_FRAME = 90;

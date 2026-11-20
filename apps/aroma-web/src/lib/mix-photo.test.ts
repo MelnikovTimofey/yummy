@@ -84,6 +84,43 @@ for (const [name, flavors, expected] of SNAPSHOT) {
   test(`pickMixPhoto: снапшот — «${name}»`, () => assert.equal(ingredientOf(flavors, name), expected));
 }
 
+// Название (#610): гость читает «Кола с чёрной ванилью» и ждёт колу, даже если
+// первым во flavors стоит грейпфрут из табака «Имперская кола».
+const byName = (name: string, flavors: string[]) => pickMixPhoto({ id: 'mix-1', name, flavors })?.ingredient ?? null;
+
+test('pickMixPhoto: яркий вкус из названия раньше flavors', () => {
+  assert.equal(byName('Кола с чёрной ванилью', ['грейпфрут', 'кола', 'сандал', 'ваниль']), 'cola');
+  assert.equal(byName('Морозная ягода', ['черника', 'мята']), 'forest-berries');
+  assert.equal(byName('Кола-ваниль', ['кола', 'ваниль']), 'cola');
+  assert.equal(byName('Шоколадный бриз', ['мята']), 'chocolate');
+});
+
+test('pickMixPhoto: в названии нет яркого вкуса — выбор по flavors, как раньше', () => {
+  assert.equal(byName('Летний вечер', ['манго', 'лайм']), 'mango');
+  assert.equal(byName('Холодный чай', ['лимон']), 'lemon');
+  assert.equal(byName('Сигарный клуб', []), null);
+});
+
+test('pickMixPhoto: в названии вкус узнаётся только с начала слова', () => {
+  assert.equal(byName('Отличный выбор', ['манго']), 'mango');
+  assert.equal(byName('Пина колада', ['ананас', 'кокос']), 'pineapple');
+  assert.equal(byName('Wildberry', ['черника']), 'blueberry');
+});
+
+// Случаи из выгрузки прода 2026-11-20: главное слово названия — существительное,
+// прилагательное только уточняет; «лимонад» в названии — напиток, а не кола.
+test('pickMixPhoto: в названии существительное раньше прилагательного', () => {
+  assert.equal(byName('Медовая дыня', ['дыня']), 'melon');
+  assert.equal(byName('Вишнёвая кола', ['кола', 'вишня']), 'cola');
+  assert.equal(byName('Банановый сникерс', ['карамель', 'банан']), 'banana');
+  assert.equal(byName('Тропический фреш с яркой ягодой', ['черная смородина', 'ананас']), 'forest-berries');
+});
+
+test('pickMixPhoto: «лимонад» в названии не делает фото колой', () => {
+  assert.equal(byName('Лавандовый лимонад', ['лимон', 'лаванда']), 'lemon');
+  assert.equal(byName('Инжирный лимонад с персиком', ['персик', 'инжир', 'лимон']), 'peach');
+});
+
 test('mixPhotoSrc: путь к нарезанному файлу', () => {
   assert.equal(mixPhotoSrc({ ingredient: 'mango', variant: 2 }, '132'), '/photos/mango-2-132.webp');
   assert.equal(mixPhotoSrc({ ingredient: 'ice', variant: 1 }, 'reel'), '/photos/ice-1-reel.webp');

@@ -1,11 +1,12 @@
 // Фото вкуса микса (#592): одно на все места — строка, герой Подбора, постер Витрины,
 // шапка листа, фон рилса; тем же правилом — фото табака на карте Миксера (#611).
-// Выбор по flavors, как сцена рилса (reel-scene.ts), но независимо от неё:
+// Выбор по названию и flavors, как сцена рилса (reel-scene.ts), но независимо от неё:
 // у Pineapple Mint фото ананаса, а мяту передают снежинки сцены.
 //
-// Правило: первый по порядку flavors яркий вкус (фрукт, ягода, десерт, специя, кола,
-// конфеты, мята); нет ярких — первая база (сливки, чай, лёд, табак, ром, травы, цветы,
-// хвоя); ничего не узнано — null, на месте фото остаётся ProfileGlyph.
+// Правило: первый яркий вкус (фрукт, ягода, десерт, специя, кола, конфеты, мята) в
+// названии (#610), затем первый по порядку flavors; нет ярких — первая база во flavors
+// (сливки, чай, лёд, табак, ром, травы, цветы, хвоя); ничего не узнано — null, на месте
+// фото остаётся ProfileGlyph.
 
 export type MixPhotoSize = '132' | 'poster' | 'sheet' | 'reel';
 export type MixPhoto = { ingredient: string; variant: number };
@@ -33,7 +34,8 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'currant', words: ['смородин'], variants: 1 },
   { id: 'forest-berries', words: ['ягод', 'ежевик', 'клюкв', 'барбарис', 'крыжовник'], variants: 1 },
   { id: 'mango', words: ['манго'], variants: 2 },
-  { id: 'pineapple', words: ['ананас'], variants: 1 },
+  // «колад» — для названий: «Пина колада» — ананас, а не кола (см. nameMatch).
+  { id: 'pineapple', words: ['ананас', 'колад'], variants: 1 },
   { id: 'passionfruit', words: ['маракуй', 'гуав', 'папай'], variants: 1 },
   { id: 'peach', words: ['персик', 'абрикос', 'нектарин'], variants: 1 },
   { id: 'melon', words: ['дын'], variants: 1 },
@@ -78,6 +80,34 @@ const firstMatch = (flavors: string[], pool: Ingredient[]) => {
   return null;
 };
 
+// В названии слово узнаётся только с начала: «Отличный» не личи. Из нескольких
+// подходящих основ побеждает самая длинная: «колада» — «колад», а не «кола».
+// База в названии не берётся: «Морозная ягода» — ягоды, «Холодный чай» — по flavors.
+// Сначала существительные, потом прилагательные: «Медовая дыня» — дыня, «Вишнёвая
+// кола» — кола. «Лимонад» в названии — напиток со вкусом, а не фото газировки.
+const ADJECTIVE = /(ая|яя|ый|ий|ой|ое|ее|ые|ие|ую|юю)$/;
+
+const tokenMatch = (token: string) => {
+  if (token.startsWith('лимонад')) return null;
+  let best: { item: Ingredient; length: number } | null = null;
+  for (const item of INGREDIENTS) {
+    for (const word of item.words) {
+      if (token.startsWith(word) && word.length > (best?.length ?? 0)) best = { item, length: word.length };
+    }
+  }
+  return best && !best.item.base ? best.item : null;
+};
+
+const nameMatch = (name: string) => {
+  const tokens = normalize(name).split(/[^a-zа-я0-9]+/).filter(Boolean);
+  const ordered = [...tokens.filter((token) => !ADJECTIVE.test(token)), ...tokens.filter((token) => ADJECTIVE.test(token))];
+  for (const token of ordered) {
+    const own = tokenMatch(token);
+    if (own) return own;
+  }
+  return null;
+};
+
 const VIVID = INGREDIENTS.filter((item) => !item.base);
 const BASE = INGREDIENTS.filter((item) => item.base);
 
@@ -92,9 +122,9 @@ const hash = (value: string) => {
   return result;
 };
 
-export function pickMixPhoto(mix: { id: string; flavors: string[] }): MixPhoto | null {
+export function pickMixPhoto(mix: { id: string; name?: string; flavors: string[] }): MixPhoto | null {
   const flavors = mix.flavors.map(normalize);
-  const ingredient = firstMatch(flavors, VIVID) ?? firstMatch(flavors, BASE);
+  const ingredient = (mix.name ? nameMatch(mix.name) : null) ?? firstMatch(flavors, VIVID) ?? firstMatch(flavors, BASE);
   if (!ingredient) return null;
   return { ingredient: ingredient.id, variant: (hash(mix.id) % ingredient.variants) + 1 };
 }
