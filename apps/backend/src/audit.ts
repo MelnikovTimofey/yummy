@@ -35,6 +35,9 @@ const AUDIT_ACTIONS = [
   'add',
   'remove',
   'settings',
+  // «Вернуть в наличие» без граммов и его отмена (#518).
+  'restock',
+  'undo-restock',
   // Поставки (src/deliveries.ts).
   'accept',
 ] as const;

@@ -49,6 +49,8 @@ const emptyMixEditor = (): MixEditorState => ({
   components: [],
   available: true,
   railMemberships: [],
+  author: null,
+  substitution: null,
 });
 
 const toMixEditorState = (mix: MixRecord): MixEditorState => ({
@@ -60,6 +62,8 @@ const toMixEditorState = (mix: MixRecord): MixEditorState => ({
   ),
   available: mix.available,
   railMemberships: mix.railMemberships,
+  author: mix.author?.name ?? null,
+  substitution: mix.status === 'substituted' ? mix.substitution : null,
 });
 
 // Состав микса несёт name/manufacturer/flavors, но не inStock/lineName/
@@ -339,6 +343,9 @@ export const useMixes = ({ token, onAfterSubmit, onRefreshSiblings }: UseMixesOp
       ),
       available: mix.available,
       railMemberships: [],
+      author: null,
+      // Аналоги заданы у табака, поэтому копия получит ту же замену.
+      substitution: mix.status === 'substituted' ? mix.substitution : null,
     };
     setMixEditor(draft);
     setMixComponentTobaccos(mix.components.map(mixComponentToTobacco));

@@ -1,4 +1,4 @@
-import type { MixView } from './state';
+import type { MixSubstituteView, MixView } from './state';
 import { getGuestCatalogMixes } from './state';
 
 export type OnboardingInput = {
@@ -32,6 +32,7 @@ export type RecommendationMix = {
     manufacturer: string;
     flavors: string[];
     proportion: number;
+    substitute?: MixSubstituteView;
   }>;
 };
 
@@ -130,8 +131,10 @@ export const getRecommendations = async (input: OnboardingInput): Promise<Recomm
           id: item.id,
           name: item.name,
           manufacturer: item.manufacturer,
+          lineName: item.lineName,
           flavors: [...item.flavors],
           proportion: item.proportion,
+          ...(item.substitute ? { substitute: item.substitute } : {}),
         })),
       };
     })

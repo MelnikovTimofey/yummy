@@ -3,28 +3,31 @@ import assert from 'node:assert/strict';
 import { normalizeDeliveryCard, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
 import {
   CONFIDENT_MATCH,
+  acceptBarSummary,
   acceptLabel,
-  acceptedToastTitle,
+  acceptedToast,
   deliveryHeadline,
+  deliveryListCard,
+  deliveryPhoneHead,
   deliveryStatusTag,
   deliveryTitle,
   formatDay,
   formatFullDate,
-  formatWeight,
   formatMoney,
   formatPrice,
+  fromPlan,
   guessTobaccoFromLine,
   lineMatch,
-  lineGramsHint,
+  lineQty,
   lineMatchHint,
   localDateInput,
   monthMeta,
-  parseReceivedGrams,
   parseRubles,
   readUploadError,
   receivedAtFromInput,
   parseSummary,
   summarizeLines,
+  tobaccosToReceive,
   sumCheck,
 } from './deliveries';
 
@@ -41,7 +44,6 @@ const line = (patch: Partial<DeliveryLine> = {}): DeliveryLine => ({
   priceKop: 155000,
   sumKop: 155000,
   grams: 200,
-  receivedGrams: 200,
   kind: 'tobacco',
   arrived: true,
   tobacco: { id: 't1', manufacturer: 'Black Burn', lineName: '', name: 'Raspberries', shelfStatus: 'active' },
@@ -103,6 +105,19 @@ test('lineMatchHint: только то, чего не видно в селект
     'похоже на Black Burn Ananas Shock, 64 %',
   );
   assert.equal(lineMatchHint(line({ kind: 'skip', tobacco: null, matchReason: null })), 'не табак');
+});
+
+test('fromPlan: строка черновика с табаком в плане помечается «из плана»', () => {
+  const planned = line({ tobacco: { id: 't1', manufacturer: 'Bonche', lineName: '', name: 'Caramel', shelfStatus: 'plan' } });
+  assert.equal(fromPlan(planned, true), true);
+  // Пришло ли по счёту — неважно: строка всё равно закрывает план.
+  assert.equal(fromPlan(line({ ...planned, arrived: false }), true), true);
+  // У принятой поставки метки нет: табак уже в работе.
+  assert.equal(fromPlan(planned, false), false);
+  assert.equal(fromPlan(line(), true), false);
+  assert.equal(fromPlan(line({ tobacco: { id: 't1', manufacturer: 'A', lineName: '', name: 'B', shelfStatus: null } }), true), false);
+  assert.equal(fromPlan(line({ tobacco: null, matchReason: null }), true), false);
+  assert.equal(fromPlan(line({ ...planned, kind: 'skip' }), true), false);
 });
 
 test('summarizeLines считает сводные метки разбора', () => {
@@ -219,7 +234,6 @@ test('deliveryStatusTag: черновик, принята, стартовый п
     invoiceDate: null,
     receivedAt: null,
     lines: 0,
-    grams: 0,
     totalKop: null,
     createdAt: '',
     ...patch,
@@ -251,47 +265,42 @@ test('sumCheck сверяет сумму строк с итогом счёта �
   });
 });
 
-test('acceptLabel: строки без табака или граммов блокируют приёмку', () => {
+test('acceptLabel: приёмку блокируют только строки без табака (#518)', () => {
   assert.equal(acceptLabel(0), 'Принять поставку');
-  assert.equal(acceptLabel(1), 'Выберите табак или граммы в 1 строке');
-  assert.equal(acceptLabel(4), 'Выберите табак или граммы в 4 строках');
-  assert.equal(acceptLabel(21), 'Выберите табак или граммы в 21 строке');
+  assert.equal(acceptLabel(1), 'Выберите табак в 1 строке');
+  assert.equal(acceptLabel(4), 'Выберите табак в 4 строках');
+  assert.equal(acceptLabel(21), 'Выберите табак в 21 строке');
 });
 
-test('formatWeight: до килограмма — граммы, дальше — кг с одной цифрой после запятой', () => {
-  assert.equal(formatWeight(0), '0 г');
-  assert.equal(formatWeight(450), '450 г');
-  assert.equal(formatWeight(1000), '1 кг');
-  assert.equal(formatWeight(2600), '2,6 кг');
-  assert.equal(formatWeight(2649), '2,6 кг');
-  assert.equal(formatWeight(2650), '2,7 кг');
-  assert.equal(plain(formatWeight(12400)), '12,4 кг');
+test('tobaccosToReceive: сколько разных табаков вернётся в наличие', () => {
+  const lines = [
+    line(),
+    line({ id: 'l2', n: 2, qty: 2 }),
+    line({ id: 'l3', n: 3, tobacco: { id: 't2', manufacturer: 'Darkside', lineName: '', name: 'Wildberry', shelfStatus: null } }),
+    line({ id: 'l4', n: 4, arrived: false, tobacco: { id: 't3', manufacturer: 'Sebero', lineName: '', name: 'Mint', shelfStatus: 'active' } }),
+    line({ id: 'l5', n: 5, tobacco: null }),
+    line({ id: 'l6', n: 6, kind: 'skip', tobacco: null }),
+  ];
+  assert.equal(tobaccosToReceive(lines), 2);
+  assert.equal(tobaccosToReceive([]), 0);
 });
 
-test('тост приёмки — в граммах и килограммах на полке', () => {
-  assert.equal(acceptedToastTitle(2600), 'Принято: 2,6 кг на полке');
-  assert.equal(acceptedToastTitle(400), 'Принято: 400 г на полке');
+test('тост приёмки: сколько пришло из плана и сколько миксов открылось', () => {
+  const lines = [line(), line({ id: 'l2', tobacco: { id: 't2', manufacturer: 'Bonche', lineName: '', name: 'Caramel', shelfStatus: 'active' } })];
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 2, openedMixes: 2 }), { title: 'Поставка принята', text: 'Из плана пришли: 2. Открылись миксы: 2.' });
+  // Часть с нулём не показывается.
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 1, openedMixes: 0 }), { title: 'Поставка принята', text: 'Из плана пришли: 1.' });
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 0, openedMixes: 3 }), { title: 'Поставка принята', text: 'Открылись миксы: 3.' });
+  // Обе нулевые — тост как раньше: сколько табаков снова в наличии.
+  assert.deepEqual(acceptedToast({ lines, fromPlan: 0, openedMixes: 0 }), { title: 'Принято: 2 табака в наличии', text: '' });
+  assert.deepEqual(acceptedToast({ lines: [line()], fromPlan: 0, openedMixes: 0 }), { title: 'Принято: 1 табак в наличии', text: '' });
+  assert.deepEqual(acceptedToast({ lines: [], fromPlan: 0, openedMixes: 0 }), { title: 'Поставка принята', text: '' });
 });
 
-test('lineGramsHint: «2 × 200 г по счёту», «200 г по счёту», без граммов — «укажите граммы»', () => {
-  assert.equal(lineGramsHint(line()), '200 г по счёту');
-  assert.equal(lineGramsHint(line({ qty: 2, receivedGrams: 400 })), '2 × 200 г по счёту');
-  assert.equal(lineGramsHint(line({ grams: null, receivedGrams: null })), 'укажите граммы');
-  // Мастер вписал граммы руками, фасовки в счёте нет.
-  assert.equal(lineGramsHint(line({ grams: null, receivedGrams: 250 })), 'указано вручную');
+test('lineQty: «Приход» строки — штуки по счёту, без граммов', () => {
+  assert.equal(lineQty(line()), '1 шт.');
+  assert.equal(lineQty(line({ qty: 12 })), '12 шт.');
 });
-
-test('parseReceivedGrams: пусто — сброс к счёту, целое > 0 — граммы, иначе — ошибка', () => {
-  assert.equal(parseReceivedGrams(''), null);
-  assert.equal(parseReceivedGrams('  '), null);
-  assert.equal(parseReceivedGrams('400'), 400);
-  assert.equal(parseReceivedGrams(' 1 200 '), 1200);
-  assert.equal(parseReceivedGrams('0'), undefined);
-  assert.equal(parseReceivedGrams('12,5'), undefined);
-  assert.equal(parseReceivedGrams('много'), undefined);
-  assert.equal(parseReceivedGrams('250001'), undefined);
-});
-
 test('readUploadError различает нечитаемый PDF, дубликат и прочие ошибки', () => {
   const error = (status: number, payload: unknown) => Object.assign(new Error(String((payload as { error?: string }).error)), { status, payload });
   assert.deepEqual(readUploadError(error(422, { error: 'В файле нет текста', code: 'no_text' })), {
@@ -315,12 +324,12 @@ test('мета месяца: «Октябрь: 2 счёта, 28 500 ₽» по �
   const now = new Date(2026, 9, 20, 12);
   const items: DeliveryListItem[] = [
     // Черновик не считается: денег за него ещё не отдали, как и в «Тратах» Дашборда.
-    { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, grams: 200, totalKop: 2480000, createdAt: '2026-10-18T09:00:00.000Z' },
-    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: '2026-10-02T09:00:00.000Z', lines: 1, grams: 200, totalKop: 1860000, createdAt: '2026-10-02T09:00:00.000Z' },
+    { id: '1', kind: 'invoice', status: 'draft', supplier: null, number: null, invoiceDate: '2026-10-18', receivedAt: null, lines: 1, totalKop: 2480000, createdAt: '2026-10-18T09:00:00.000Z' },
+    { id: '2', kind: 'manual', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: '2026-10-02T09:00:00.000Z', lines: 1, totalKop: 1860000, createdAt: '2026-10-02T09:00:00.000Z' },
     // Месяц — по дате прихода, а не счёта: так же считает Дашборд.
-    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: '2026-10-01T09:00:00.000Z', lines: 1, grams: 200, totalKop: 990000, createdAt: '2026-09-30T09:00:00.000Z' },
-    { id: '4', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-28', receivedAt: '2026-09-29T09:00:00.000Z', lines: 1, grams: 200, totalKop: 500000, createdAt: '2026-09-28T09:00:00.000Z' },
-    { id: '5', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: '2026-10-19T09:00:00.000Z', lines: 0, grams: 1800, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
+    { id: '3', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-30', receivedAt: '2026-10-01T09:00:00.000Z', lines: 1, totalKop: 990000, createdAt: '2026-09-30T09:00:00.000Z' },
+    { id: '4', kind: 'invoice', status: 'received', supplier: null, number: null, invoiceDate: '2026-09-28', receivedAt: '2026-09-29T09:00:00.000Z', lines: 1, totalKop: 500000, createdAt: '2026-09-28T09:00:00.000Z' },
+    { id: '5', kind: 'start', status: 'received', supplier: null, number: null, invoiceDate: null, receivedAt: '2026-10-19T09:00:00.000Z', lines: 0, totalKop: null, createdAt: '2026-10-19T09:00:00.000Z' },
   ];
   assert.equal(plain(monthMeta(items, now)), 'Октябрь: 2 счёта, 28 500 ₽');
   // Счёт без суммы не мешает: сумма только по тем, где она есть; без сумм — только число.
@@ -349,4 +358,65 @@ test('guessTobaccoFromLine предзаполняет карточку ката�
   assert.deepEqual(guessTobaccoFromLine('"Дарк Сайд" Кор (Блэккерент), 250 г'), { manufacturer: 'Дарк Сайд', name: 'Кор (Блэккерент)' });
   assert.deepEqual(guessTobaccoFromLine('Sebero Клубника'), { manufacturer: 'Sebero', name: 'Клубника' });
   assert.deepEqual(guessTobaccoFromLine('ОБЛАКО'), { manufacturer: 'ОБЛАКО', name: '' });
+});
+
+// Телефон (#540, #shot=deliveries, delivery).
+test('deliveryListCard: поставщик, дата счёта с номером, строки и сумма', () => {
+  const item: DeliveryListItem = {
+    id: 'd',
+    kind: 'invoice',
+    status: 'draft',
+    supplier: 'Каспий Опт',
+    number: '1201',
+    invoiceDate: '2026-11-03',
+    receivedAt: null,
+    lines: 14,
+    totalKop: 3842000,
+    createdAt: '2026-11-04T09:00:00.000Z',
+  };
+  assert.deepEqual(plain(deliveryListCard(item)), { title: 'Каспий Опт', sub: '3 ноя, счёт 1201', lines: '14 строк', sum: '38 420 ₽' });
+  // Без даты счёта — дата загрузки; без номера — только дата.
+  assert.deepEqual(plain(deliveryListCard({ ...item, invoiceDate: null, number: null, lines: 1, totalKop: null })), {
+    title: 'Каспий Опт',
+    sub: '4 ноя',
+    lines: '1 строка',
+    sum: '—',
+  });
+  assert.equal(deliveryListCard({ ...item, kind: 'start', supplier: null }).title, 'Стартовый приход');
+  assert.equal(deliveryListCard({ ...item, kind: 'manual', supplier: null }).title, 'Без поставщика');
+});
+
+test('deliveryPhoneHead: короткий заголовок шапки, поставщик и дата строчными', () => {
+  const now = new Date(2026, 10, 20, 12);
+  const supplier = { id: 's', name: 'Каспий Опт', inn: null };
+  assert.deepEqual(deliveryPhoneHead(card({ number: '1201', invoiceDate: '2026-11-03', supplier }), now), {
+    title: 'Счёт 1201',
+    name: 'Каспий Опт',
+    sub: 'счёт от 3 ноября',
+  });
+  assert.deepEqual(deliveryPhoneHead(card({ kind: 'manual' }), now), {
+    title: 'Поставка без номера',
+    name: 'Без поставщика',
+    sub: 'заполнена вручную 18 ноября',
+  });
+  assert.deepEqual(
+    deliveryPhoneHead(card({ status: 'received', number: '7', supplier, invoiceDate: '2026-11-18', receivedAt: '2026-11-19T12:00:00.000Z' }), now),
+    { title: 'Счёт 7', name: 'Каспий Опт', sub: 'счёт от 18 ноября, принята 19 ноября' },
+  );
+  assert.equal(deliveryPhoneHead(card({ kind: 'start' }), now).title, 'Стартовый приход');
+});
+
+test('acceptBarSummary: главная строка нижней панели телефона', () => {
+  const t2 = { id: 't2', manufacturer: 'Darkside', lineName: '', name: 'Blackcurrant', shelfStatus: 'active' as const };
+  const lines = [line(), line({ id: 'l2', tobacco: t2 }), line({ id: 'l3', tobacco: null, matchReason: null })];
+  assert.deepEqual(acceptBarSummary(card({ lines, pendingLines: 1 })), {
+    warn: true,
+    main: 'Без табака: 1 строка',
+    sub: 'вернутся в наличие 2 табака',
+  });
+  assert.deepEqual(acceptBarSummary(card({ lines: lines.slice(0, 2), pendingLines: 0 })), {
+    warn: false,
+    main: 'Вернутся в наличие: 2 табака',
+    sub: '',
+  });
 });

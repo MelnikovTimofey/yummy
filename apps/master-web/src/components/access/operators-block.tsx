@@ -1,8 +1,12 @@
 import { useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { Ellipsis, Plus, Search } from 'lucide-react';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { useIsPhone } from '@/hooks/use-is-phone';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { TelegramOperatorRecord } from '@/contracts';
 import type { AccessRoleStatus, AccessSaveStatus, TelegramOperatorEditorState } from './types';
 import { BusyLabel, RowsSkeleton } from '@/components/ui/loading';
+import { FilterChip } from '@/components/ui/filter-bar';
 
 type OperatorsBlockProps = {
   telegramOperators: TelegramOperatorRecord[];
@@ -25,6 +29,16 @@ type OperatorsBlockProps = {
 
 type FilterKey = 'all' | 'active' | 'pending' | 'inactive';
 
+const FILTERS: Array<[FilterKey, string]> = [
+  ['all', 'Все'],
+  ['active', 'Активны'],
+  ['pending', 'Ждут привязки'],
+  ['inactive', 'Выключены'],
+];
+
+const telegramHandle = (operator: TelegramOperatorRecord) =>
+  operator.linkedUsername ? `@${operator.linkedUsername.replace(/^@/, '')}` : 'привязан';
+
 const OPERATORS_GRID = '32px minmax(180px, 1.2fr) 160px minmax(180px, 1fr) 120px 56px 110px';
 
 const initialOf = (value: string): string => {
@@ -46,13 +60,6 @@ const relativeFromIso = (iso: string): string => {
   const days = Math.round(hours / 24);
   return `${days} д назад`;
 };
-
-const SearchIcon = () => (
-  <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
 
 const EditIcon = () => (
   <svg className="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -110,6 +117,9 @@ export const OperatorsBlock = ({
 }: OperatorsBlockProps) => {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [query, setQuery] = useState('');
+  const isPhone = useIsPhone();
+  const [menuId, setMenuId] = useState('');
+  const menuOperator = telegramOperators.find((item) => item.id === menuId) ?? null;
 
   const linkedCount = telegramOperators.filter((item) => filterPredicate(item, 'active')).length;
 
@@ -131,8 +141,123 @@ export const OperatorsBlock = ({
     setTelegramOperatorDialogOpen(true);
   };
 
+  const openEditDialog = (operator: TelegramOperatorRecord) => {
+    onSelectTelegramOperator(operator);
+    setTelegramOperatorDialogOpen(true);
+  };
+
+  const emptyText =
+    visible.length === 0 && telegramOperatorsStatus !== 'loading'
+      ? telegramOperators.length === 0
+        ? 'Операторов пока нет.'
+        : 'Ничего не найдено. Измените поиск или фильтр.'
+      : '';
+
+  // Телефон (#337, #shot=access): операторы карточками, действия в «⋯».
+  const phoneList = (
+    <section className="m-access-section" aria-label="Telegram-операторы">
+      <div className="m-access-section__head">
+        <h2 className="m-access-section__title">Операторы бота</h2>
+        {telegramOperatorsStatus !== 'forbidden' ? (
+          <button type="button" className="btn m-access-section__add" aria-label="Добавить оператора" onClick={openNewDialog}>
+            <Plus size={15} aria-hidden />
+            Добавить
+          </button>
+        ) : null}
+      </div>
+
+      {telegramOperatorsStatus === 'forbidden' ? (
+        <p className="meta-line m-access-section__note">
+          {telegramOperatorsError || 'Список операторов доступен только администратору.'}
+        </p>
+      ) : (
+        <>
+          <div className="m-list-search">
+            <label className="input m-list-search__field">
+              <Search size={14} aria-hidden />
+              <input
+                type="search"
+                aria-label="Поиск операторов"
+                placeholder="Имя, телефон или @username"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="m-list-chips" role="group" aria-label="Статус оператора">
+            {FILTERS.map(([key, label]) => (
+              <FilterChip key={key} active={filter === key} onClick={() => setFilter(key)}>
+                {label}
+              </FilterChip>
+            ))}
+          </div>
+
+          {telegramOperatorsStatus === 'loading' && !telegramOperators.length ? (
+            <RowsSkeleton label="Загружаем операторов" rows={3} />
+          ) : null}
+          {emptyText ? <p className="meta-line m-access-section__note">{emptyText}</p> : null}
+
+          {visible.length ? (
+            <ul className="m-access-list" aria-label="Операторы бота">
+              {visible.map((operator) => (
+                <li key={operator.id} className="m-access-card" data-off={!operator.active || undefined}>
+                  <div className="m-access-card__head">
+                    <span className="m-access-card__main">
+                      <span className="m-access-card__title">{operator.name || '—'}</span>
+                      <span className="m-access-card__sub">
+                        {[operator.phone, operator.linkedChatId ? telegramHandle(operator) : 'ждёт /start']
+                          .filter(Boolean)
+                          .join(', ')}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="icon-btn m-access-card__more"
+                      aria-label={`Действия: ${operator.name || 'оператор'}`}
+                      aria-expanded={menuId === operator.id}
+                      onClick={() => setMenuId(operator.id)}
+                    >
+                      <Ellipsis size={18} aria-hidden />
+                    </button>
+                  </div>
+                  <div className="m-access-card__foot">
+                    <span>
+                      {operator.lastCodeRequestedAt
+                        ? `последний код ${relativeFromIso(operator.lastCodeRequestedAt)}`
+                        : 'код ещё не запрашивал'}
+                    </span>
+                    {operator.active ? null : <span>выключен</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {linkedCount === 0 ? (
+            <p className="meta-line m-access-section__note">
+              Оператор пишет боту и отправляет контакт. После привязки он получает код командой /code.
+            </p>
+          ) : null}
+        </>
+      )}
+
+      {menuOperator ? (
+        <OperatorActionsSheet
+          operator={menuOperator}
+          busy={telegramOperatorToggleId === menuOperator.id}
+          onClose={() => setMenuId('')}
+          onEdit={() => openEditDialog(menuOperator)}
+          onToggle={() => void onToggleTelegramOperatorActive(menuOperator)}
+          onClearLink={() => void onClearTelegramOperatorLink(menuOperator)}
+          onDelete={() => void onDeleteTelegramOperator(menuOperator)}
+        />
+      ) : null}
+    </section>
+  );
+
   return (
     <>
+      {isPhone ? phoneList : (
       <section className="card access-card" aria-label="Telegram-операторы">
         <header className="access-card__head">
           <div>
@@ -158,33 +283,23 @@ export const OperatorsBlock = ({
           <>
             <div className="access-toolbar">
               <label className="input access-toolbar__search">
-                <SearchIcon />
+                <Search size={14} aria-hidden />
                 <input
-                  type="text"
+                  type="search"
+                  aria-label="Поиск операторов"
                   placeholder="Имя, телефон или @username"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </label>
-              {(
-                [
-                  ['all', 'Все'],
-                  ['active', 'Активны'],
-                  ['pending', 'Ждут привязки'],
-                  ['inactive', 'Выключены'],
-                ] as Array<[FilterKey, string]>
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className="chip"
-                  data-active={filter === key}
-                  aria-pressed={filter === key}
-                  onClick={() => setFilter(key)}
-                >
-                  {label}
-                </button>
-              ))}
+              {/* По канону у фильтров «Доступа» чисел нет (#464). */}
+              <div className="filter-bar__chips" role="group" aria-label="Статус оператора">
+                {FILTERS.map(([key, label]) => (
+                  <FilterChip key={key} active={filter === key} onClick={() => setFilter(key)}>
+                    {label}
+                  </FilterChip>
+                ))}
+              </div>
             </div>
 
             <div className="list__head access-list__head" style={{ gridTemplateColumns: OPERATORS_GRID }}>
@@ -323,6 +438,7 @@ export const OperatorsBlock = ({
           </>
         )}
       </section>
+      )}
 
       <Dialog
         open={telegramOperatorDialogOpen}
@@ -432,5 +548,47 @@ export const OperatorsBlock = ({
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+type OperatorActionsSheetProps = {
+  operator: TelegramOperatorRecord;
+  busy: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onToggle: () => void;
+  onClearLink: () => void;
+  onDelete: () => void;
+};
+
+// Те же действия, что у строки таблицы на десктопе.
+const OperatorActionsSheet = ({ operator, busy, onClose, onEdit, onToggle, onClearLink, onDelete }: OperatorActionsSheetProps) => {
+  const act = (run: () => void) => {
+    onClose();
+    run();
+  };
+  return (
+    <BottomSheet label={`Действия: ${operator.name || 'оператор'}`} onClose={onClose} className="m-actions">
+      <div className="m-mark-sheet__head">
+        <h2 className="m-mark-sheet__title">{operator.name || 'Без имени'}</h2>
+        {operator.phone ? <p className="m-mark-sheet__brand">{operator.phone}</p> : null}
+      </div>
+      <div className="m-actions__list">
+        <button type="button" className="m-actions__item" onClick={() => act(onEdit)}>
+          Изменить
+        </button>
+        <button type="button" className="m-actions__item" disabled={busy} onClick={() => act(onToggle)}>
+          {operator.active ? 'Выключить' : 'Включить'}
+        </button>
+        {operator.linkedChatId ? (
+          <button type="button" className="m-actions__item" disabled={busy} onClick={() => act(onClearLink)}>
+            Сбросить привязку
+          </button>
+        ) : null}
+        <button type="button" className="m-actions__item m-actions__item--sep" disabled={busy} onClick={() => act(onDelete)}>
+          Удалить
+        </button>
+      </div>
+    </BottomSheet>
   );
 };

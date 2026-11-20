@@ -29,7 +29,8 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-docker exec -i "$container" pg_restore -U atelier -d atelier --no-owner --exit-on-error < "$workdir/$latest"
+age -d -i "$BACKUP_AGE_IDENTITY" "$workdir/$latest" \
+  | docker exec -i "$container" pg_restore -U atelier -d atelier --no-owner --exit-on-error
 
 count() { "$@" psql -U atelier -d atelier -Atc "select count(*) from \"$table\""; }
 

@@ -15,6 +15,8 @@ export const flavorProfiles = [
   'citrus',
   'berry',
   'perfume',
+  'beverage',
+  'gastro',
 ] as const;
 
 export type FlavorProfile = (typeof flavorProfiles)[number];

@@ -17,7 +17,7 @@ test('Master workspace tabs support keyboard navigation for critical admin secti
 
   await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toBeVisible();
   await expect(getWorkspaceTab(page, 'Дашборд')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeVisible();
 
   await getWorkspaceTab(page, 'Дашборд').press('ArrowRight');
   // #211: вкладка «Табаки» разделилась на «Полку» (что держим) и «Каталог»
@@ -75,6 +75,9 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   // видна независимо от размера каталога.
   await applyStockFilter(page, 'Нет наличия');
   await expect(tobaccoRow).toBeVisible();
+  // У табака не на полке рядом с «На полку» — «В план» (#564, #shot=catalog). Не жмём.
+  await expect(tobaccoRow.getByRole('button', { name: /^На полку: / })).toBeVisible();
+  await expect(tobaccoRow.getByRole('button', { name: /^В план: / })).toBeVisible();
   await tobaccoRow.getByRole('checkbox').check();
   await expect(page.getByText('Выбрано позиций: 1')).toBeVisible();
   await page.getByRole('button', { name: 'На полку', exact: true }).click();
@@ -83,26 +86,48 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
     .toBe(outOfStockBefore);
 
   await applyStockFilter(page, 'Все');
-  // Канон #366: счётчики остаются у чипов наличия, у «Все» и категорий чисел нет.
+  // Единая панель фильтров (#464, #467): число у каждого статуса, кроме «Все»,
+  // у атрибутов чисел нет.
+  const catalogStatuses = page.getByRole('group', { name: 'Статус в каталоге' });
+  await expect(catalogStatuses.locator('.filter-chip__count')).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Фильтр по категории' }).locator('.filter-chip__count')).toHaveCount(0);
+  const catalogAttributes = page.getByRole('group', { name: 'Фильтры каталога' });
+  await expect(catalogAttributes.locator('.filter-chip__count')).toHaveCount(0);
+  await expect(page.getByText('Ещё фильтры', { exact: true })).toHaveCount(0);
+  await catalogAttributes.getByRole('button', { name: 'Бренд', exact: true }).click();
+  await page.getByRole('group', { name: 'Бренд', exact: true }).getByRole('checkbox').first().check();
+  await expect(catalogAttributes.getByRole('button', { name: /^Бренд: / })).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await catalogAttributes.getByRole('button', { name: 'Сбросить', exact: true }).click();
+  await expect(catalogAttributes.getByRole('button', { name: 'Бренд', exact: true })).toBeVisible();
 
-  // Фильтр «Архив» (issue #129): по умолчанию архивные скрыты, чип не нажат.
-  // Переключаем фильтр и убеждаемся, что он становится активным, затем
-  // возвращаем обратно — неразрушающая проверка для прочих assertion'ов.
+  // «Архив» — статус из того же ряда (#467): по умолчанию архивные скрыты,
+  // выбор другого статуса возвращает к действующим табакам.
   const archiveFilter = page.getByRole('button', { name: 'Фильтр: Архив' });
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
+  await expect(archiveFilter.locator('.filter-chip__count')).toHaveCount(1);
   await archiveFilter.click();
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'true');
-  await archiveFilter.click();
+  await applyStockFilter(page, 'Все');
   await expect(archiveFilter).toHaveAttribute('aria-pressed', 'false');
 
+  // Пилюля «По …» и заголовок колонки меняют одну сортировку.
+  await expect(page.getByRole('button', { name: 'Сортировка: По наличию' })).toBeVisible();
+  await page.getByRole('columnheader', { name: 'Табак' }).getByRole('button').click();
+  await expect(page.getByRole('button', { name: 'Сортировка: По названию' })).toBeVisible();
+
   await openWorkspace(page, 'Миксы');
-  // Канон #366: из статусов число только у «Виден гостю», у профилей чисел нет.
-  const statusChips = page.getByRole('group', { name: 'Фильтр по статусу' });
-  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(1);
-  await expect(statusChips.getByRole('button', { name: 'Фильтр: Виден гостю' }).locator('.filter-chip__count')).toHaveCount(1);
-  await expect(page.getByRole('group', { name: 'Фильтр по категориям' }).locator('.filter-chip__count')).toHaveCount(0);
+  const statusChips = page.getByRole('group', { name: 'Статус микса' });
+  // Число у каждого статуса, кроме «Все»; «Ждут план» (#566) отдельно от «Блокирован».
+  await expect(statusChips.locator('.filter-chip__count')).toHaveCount(5);
+  await expect(statusChips.getByRole('button', { name: 'Фильтр: Ждут план' })).toBeVisible();
+  await expect(statusChips.getByRole('button', { name: 'Фильтр: Все' }).locator('.filter-chip__count')).toHaveCount(0);
+  const mixAttributes = page.getByRole('group', { name: 'Фильтры миксов' });
+  await expect(mixAttributes.locator('.filter-chip__count')).toHaveCount(0);
+  await mixAttributes.getByRole('button', { name: 'Рейлы', exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Рейлы', exact: true }).getByRole('checkbox')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Сортировка: По спросу' })).toBeVisible();
   const mixRow = await pinFirstMixRow(page);
   const mixName = await readMixName(mixRow);
   // Row-click открывает редактор (drawer-pattern из mockup'а Master).
@@ -167,26 +192,45 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   await expect(page.getByRole('button', { name: 'Добавить оператора' })).toBeVisible();
   // Канон #366: код смены меняется ежедневно, подсказка одной строкой без иконки;
   // фильтры операторов без счётчиков.
-  await expect(page.locator('.daily-code-rotation')).toHaveText(/^Код меняется каждый день в полночь/);
+  await expect(page.locator('.daily-code-rotation')).toHaveText(/Код меняется каждый день в 06:00/);
   await expect(page.locator('.daily-code-rotation svg')).toHaveCount(0);
-  await expect(page.locator('.access-toolbar .chip__count')).toHaveCount(0);
+  const operatorFilters = page.getByRole('group', { name: 'Статус оператора' });
+  await expect(operatorFilters.getByRole('button', { name: 'Ждут привязки', exact: true })).toBeVisible();
+  await expect(operatorFilters.locator('.filter-chip__count')).toHaveCount(0);
   // AuditBlock убран со страницы целиком (mockup-trim) — журнал теперь
   // только за пределами Master, через /staff/audit/events API.
   await expect(page.getByText('Что происходило в системе')).toHaveCount(0);
 });
 
-// «Закончился» — главное действие полки (#211, #309): одно нажатие, тост
-// с отменой. Сценарий неразрушающий: отмена удаляет отметку 0 г из журнала.
+// «Закончился» — главное действие полки (#211, #518): одно нажатие, тост
+// с отменой. Сценарий неразрушающий: отмена возвращает табак в наличие.
 test('Master shelf marks a tobacco out and undoes it from the toast', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
-  // Канон #363: без KPI-ряда и строки клавиш, у «Все» числа нет, расчётность — в шапке колонки.
+  // Без KPI-ряда и строки клавиш; граммов нет (#518): колонки «Наличие», «Приход», «Держим».
   await expect(page.locator('.shelf-page .stats')).toHaveCount(0);
   await expect(page.locator('.shelf-keys')).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: 'Все', exact: true })).toBeVisible();
-  await expect(page.getByRole('columnheader', { name: 'Остаток по учёту' })).toBeVisible();
+  for (const name of ['Наличие', 'Приход', 'Миксы', 'Держим']) {
+    await expect(page.getByRole('columnheader', { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole('columnheader', { name: 'Остаток по учёту' })).toHaveCount(0);
+
+  // Единая панель фильтров (#464): статусы с числом, атрибуты списком, сортировка «По …».
+  const statuses = page.getByRole('group', { name: 'Статус на полке' });
+  await expect(statuses.getByRole('button')).toHaveText([/^Все/, /^Есть/, /^Закончились/, /^Стоп/, /^В плане/, /^Проба/]);
+  await expect(statuses.getByRole('button', { name: /^Проба\s*\d+$/ })).toBeVisible();
+  const attributes = page.getByRole('group', { name: 'Фильтры полки' });
+  await expect(attributes.locator('.filter-chip__count')).toHaveCount(0);
+  await attributes.getByRole('button', { name: 'Бренд', exact: true }).click();
+  const brands = page.getByRole('group', { name: 'Бренд', exact: true });
+  await brands.getByRole('checkbox').first().check();
+  await expect(attributes.getByRole('button', { name: /^Бренд: / })).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await attributes.getByRole('button', { name: 'Сбросить', exact: true }).click();
+  await expect(attributes.getByRole('button', { name: 'Бренд', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сортировка: По наличию' })).toBeVisible();
 
   const emptyButton = (row: Locator) => row.getByRole('button', { name: 'Закончился', exact: true });
   const first = page
@@ -194,7 +238,7 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
     .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
     .first();
   await expect(first).toBeVisible();
-  // Строка адресуется по id: после «Закончился» сортировка «Хватит до»
+  // Строка адресуется по id: после «Закончился» сортировка «По наличию»
   // переставляет закончившийся табак наверх.
   const id = await first.getAttribute('data-tobacco-id');
   const row = page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
@@ -202,18 +246,48 @@ test('Master shelf marks a tobacco out and undoes it from the toast', async ({ p
   await emptyButton(row).click();
   const toast = page.locator('.shelf-toast');
   await expect(toast).toBeVisible();
-  // Название жирной строкой, ниже отдельное предложение; иконки у успешного тоста нет (#363).
-  await expect(toast.locator('b')).not.toBeEmpty();
-  await expect(toast).toContainText('Закончился, гости его не видят.');
+  // Название жирной строкой, ниже отдельное предложение про заявку; иконки у успешного тоста нет (#363).
+  await expect(toast.locator('b')).toHaveText(/ закончился$/);
+  await expect(toast).toContainText(/Добавлен в заявку\.|В заявку не попадёт: не держим постоянно\./);
   await expect(toast.locator('svg')).toHaveCount(0);
+  await expect(row).toContainText('Закончился');
+  await expect(row.getByRole('button', { name: 'Вернуть в наличие', exact: true })).toBeVisible();
   await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
   await expect(toast).toBeHidden();
   await expect(emptyButton(row)).toBeVisible();
 });
 
-// Несколько табаков разом (#333, #shot=shelf-bulk, shelf-bulk-done): чекбоксы,
+// «Убрать с полки» для выбранных: строки уходят, одна отмена возвращает все.
+test('Master shelf removes several tobaccos at once and undoes it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  const tableRows = page.locator('table.shelf-table tbody tr[data-tobacco-id]');
+  await expect(tableRows.nth(1)).toBeVisible();
+  const ids = [await tableRows.nth(0).getAttribute('data-tobacco-id'), await tableRows.nth(1).getAttribute('data-tobacco-id')];
+  const rows = ids.map((id) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`));
+
+  for (const row of rows) await row.getByRole('checkbox', { name: /^Выбрать / }).click();
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+  await expect(bar).toContainText('Выбрано 2');
+
+  await bar.getByRole('button', { name: 'Убрать с полки', exact: true }).click();
+  await expect(bar).toHaveCount(0);
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toContainText('Убраны с полки: 2');
+  await expect(toast).toContainText('История осталась.');
+  for (const row of rows) await expect(row).toHaveCount(0);
+
+  await toast.getByRole('button', { name: /Отменить/ }).click();
+  await expect(toast).toBeHidden();
+  for (const row of rows) await expect(row).toBeVisible();
+});
+
+// Несколько табаков разом (#333, #518, #shot=shelf-bulk): чекбоксы,
 // панель «Выбрано N», «Закончились» одним действием и одна отмена на всех.
-// Неразрушающий: отмена пакета удаляет отметки 0 г из журнала.
+// Неразрушающий: отмена пакета возвращает табаки в наличие.
 test('Master shelf selects several tobaccos, marks them out at once and undoes it', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
 
@@ -244,7 +318,10 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   // В режиме выбора кнопок строки нет.
   await expect(emptyButton).toHaveCount(0);
   await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
-  await expect(bar.getByRole('button', { name: 'Держим постоянно', exact: true })).toBeVisible();
+  await expect(bar.getByRole('button', { name: /^(Не держать|Держать) постоянно$/ })).toBeVisible();
+  // Оба выбранных в наличии: возвращать нечего.
+  await expect(bar.getByRole('button', { name: 'Вернуть в наличие', exact: true })).toBeDisabled();
+  await expect(bar.getByRole('button', { name: 'Убрать с полки', exact: true })).toBeVisible();
   // Строки клавиш под таблицей нет: клавиши — в title (#364).
   await expect(page.locator('.shelf-keys')).toHaveCount(0);
 
@@ -254,11 +331,49 @@ test('Master shelf selects several tobaccos, marks them out at once and undoes i
   await expect(toast).toBeVisible();
   await expect(toast).toContainText('Закончились: 2');
   await expect(toast).toContainText('Гости их не видят.');
-  for (const row of rows) await expect(row).toContainText('в заказе');
+  for (const row of rows) await expect(row.getByRole('button', { name: 'Вернуть в наличие', exact: true })).toBeVisible();
 
   await toast.getByRole('button', { name: /Отменить/ }).click();
   await expect(toast).toBeHidden();
   for (const row of rows) await expect(row.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
+});
+
+// Протягивание по чекбоксам, как в «Каталоге» (#521): строки от первой до
+// текущей выбираются, обратным протягиванием выбор снимается. Неразрушающий.
+test('Master shelf selects a range by dragging across checkboxes', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  await openWorkspace(page, 'Полка');
+  const checks = page.locator('table.shelf-table tbody tr[data-tobacco-id]').getByRole('checkbox', { name: /^Выбрать / });
+  await expect(checks.nth(2)).toBeVisible();
+  const bar = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+
+  const center = async (index: number) => {
+    const box = await checks.nth(index).boundingBox();
+    if (!box) throw new Error('Чекбокс строки не виден');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const drag = async (from: number, to: number) => {
+    const start = await center(from);
+    const end = await center(to);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 10 });
+    await page.mouse.up();
+  };
+
+  await drag(0, 2);
+  await expect(bar).toContainText('Выбрано 3');
+  for (const index of [0, 1, 2]) await expect(checks.nth(index)).toHaveAttribute('aria-checked', 'true');
+  // Клик после протягивания не открыл карточку табака.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await drag(2, 1);
+  await expect(bar).toContainText('Выбрано 1');
+  await expect(checks.nth(0)).toHaveAttribute('aria-checked', 'true');
+
+  await page.keyboard.press('Escape');
+  await expect(bar).toHaveCount(0);
 });
 
 // «Что нового» (#226): точка горит, пока выпуск не просмотрен; любое закрытие
@@ -291,7 +406,7 @@ test('Master «What\'s new»: the dot stays until the release is read, then is g
   await expect(unread).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Что нового', exact: true })).toBeVisible();
   await expect(unread).toHaveCount(0);
 });
@@ -299,12 +414,13 @@ test('Master «What\'s new»: the dot stays until the release is read, then is g
 test.describe('Master on a phone', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test('Master shelf on a phone: bottom navigation, «Закончился» with undo, remaining sheet closes without a mark', async ({ page }) => {
+  test('Master shelf on a phone: bottom navigation, «Закончился» with undo', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    // На телефоне заголовок раздела — в верхней панели, h1 только для экранного диктора (#520), как у «Полки».
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     // На телефоне вместо вкладок — нижняя навигация.
     await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toHaveCount(0);
@@ -313,17 +429,18 @@ test.describe('Master on a phone', () => {
     await shelfTab.click();
     await expect(shelfTab).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
+    // «Полка, К заказу» — переключатель над списком (#shot=mobile-order), в верхней панели только «Выбрать».
+    await expect(page.getByRole('group', { name: 'Вид полки' }).getByRole('button')).toHaveText([/^Полка$/, /^К заказу/]);
+    await expect(page.locator('.m-topbar').getByRole('button', { name: 'К заказу' })).toHaveCount(0);
 
-    // Чип «Пробы» (#329) — рядом со статусами, с числом проб.
-    await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Пробы\s*\d+$/ })).toBeVisible();
-    // По умолчанию открыт чип «Заканчивается», если там что-то есть, — берём все.
-    await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
+    // Чип «Проба» (#329) — рядом со статусами, с числом проб.
+    await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Проба\s*\d+$/ })).toBeVisible();
+    // Порядок и подписи статусов — как на десктопе (#466), старт с «Все».
+    await expect(page.getByRole('group', { name: 'Статус на полке' }).getByRole('button').first()).toHaveText(/^Все/);
     const emptyButton = (card: Locator) => card.getByRole('button', { name: 'Закончился', exact: true });
-    // У «проверьте остаток» вместо «Указать остаток» — «Отметить остаток»: берём обычную карточку.
     const first = page
       .locator('.m-shelf-card')
       .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
-      .filter({ has: page.getByRole('button', { name: 'Указать остаток', exact: true }) })
       .first();
     await expect(first).toBeVisible();
     const id = await first.getAttribute('data-tobacco-id');
@@ -331,41 +448,37 @@ test.describe('Master on a phone', () => {
     // Страница не уезжает вбок: карточки вместо широкой таблицы.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+    // Аналоги (#482) — строкой в карточке; Lime Spark закончился и приглушён (seed #478).
+    const analogs = page.locator('.m-shelf-card[data-tobacco-id="tobacco-citrus-breeze"] .m-shelf-card__analogs');
+    await expect(analogs).toContainText('Аналоги');
+    await expect(analogs.locator('.shelf-analogs__item[data-off]').filter({ hasText: 'Lime Spark' })).toHaveCount(1);
+
+    // Граммов и отметок остатка нет (#518): в карточке только статус.
+    await expect(card).toContainText('Есть');
+    await expect(card.getByRole('button', { name: 'Указать остаток' })).toHaveCount(0);
+
     await emptyButton(card).click();
     const toast = page.locator('.shelf-toast');
     await expect(toast).toBeVisible();
-    await expect(toast).toContainText('Закончился, гости его не видят.');
+    await expect(toast.locator('b')).toHaveText(/ закончился$/);
+    await expect(card.getByRole('button', { name: /^Вернуть в наличие / })).toBeVisible();
     await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
     await expect(toast).toBeHidden();
     await expect(emptyButton(card)).toBeVisible();
-
-    await card.getByRole('button', { name: 'Указать остаток', exact: true }).click();
-    const sheet = page.getByRole('dialog', { name: /^Сколько осталось/ });
-    await expect(sheet).toBeVisible();
-    // Доли от уровня после прихода — с граммами на кнопке.
-    const shares = sheet.getByRole('group', { name: 'Сколько осталось' }).getByRole('button');
-    await expect(shares).toHaveCount(4);
-    await expect(shares.first()).toContainText(/\d+ г/);
-    await expect(sheet).toContainText(/По расчёту сейчас [\d\s ]+ г\./);
-    await expect(sheet.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
-    // Тап по затемнению над шторкой закрывает её без отметки.
-    await page.mouse.click(187, 40);
-    await expect(sheet).toBeHidden();
-    await expect(toast).toBeHidden();
   });
 
-  // Редкие действия и настройки полки на телефоне (#228). Неразрушающий:
-  // списание и настройки открываются и закрываются без подтверждения.
-  test('Master shelf card on a phone: actions sheet, write-off form and shelf settings close without changes', async ({ page }) => {
+  // Карточка и редкие действия на телефоне (#228, #518). Неразрушающий:
+  // шторка действий закрывается без выбора.
+  test('Master shelf card on a phone: availability segment and actions sheet close without changes', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
 
-    // Берём табак с остатком — у него доступно и списание.
+    // Берём табак в наличии.
     const first = page
       .locator('.m-shelf-card')
       .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
@@ -374,42 +487,33 @@ test.describe('Master on a phone', () => {
     await first.locator('.m-shelf-card__name').click();
     const card = page.locator('.shelf-card');
     await expect(card).toBeVisible();
-    // Бренд строкой под названием, без надзаголовка; кнопка без многоточия (#364).
+    // Бренд строкой под названием, без надзаголовка (#364).
     await expect(card.locator('.shelf-card__brand')).toBeVisible();
-    await expect(card.getByRole('button', { name: 'Указать остаток', exact: true })).toBeVisible();
+    // Наличие одной кнопкой, граммов и отметок нет (#518, #shot=card-in).
+    const availability = card.getByRole('group', { name: 'Наличие' });
+    await expect(availability.getByRole('button', { name: 'Есть', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(availability.getByRole('button', { name: 'Закончился', exact: true })).toHaveAttribute('aria-pressed', 'false');
+    await expect(card.getByRole('switch', { name: 'Держим постоянно' })).toBeVisible();
+    await expect(card.getByRole('heading', { name: 'Приходы', level: 3 })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Указать остаток' })).toHaveCount(0);
 
     await card.getByRole('button', { name: /^Действия:/ }).click();
     const actions = page.getByRole('dialog', { name: /^Действия:/ });
     await expect(actions).toBeVisible();
-    for (const name of ['Приход без счёта', 'Списать']) {
-      await expect(actions.getByRole('button', { name, exact: true })).toBeVisible();
-    }
     await expect(actions.getByRole('button', { name: /стоп для гостей$/i })).toBeVisible();
     await expect(actions.getByRole('button', { name: /^Убрать с полки/ })).toBeVisible();
-
-    await actions.getByRole('button', { name: 'Списать', exact: true }).click();
-    const writeOff = page.getByRole('dialog', { name: 'Списать', exact: true });
-    await expect(writeOff.getByLabel('Причина')).toBeVisible();
-    await expect(writeOff.getByRole('button', { name: /^Списать/ })).toBeDisabled();
+    for (const name of ['Приход без счёта', 'Списать']) {
+      await expect(actions.getByRole('button', { name, exact: true })).toHaveCount(0);
+    }
     // Тап по затемнению закрывает шторку, карточка остаётся.
     await page.mouse.click(187, 40);
-    await expect(writeOff).toBeHidden();
+    await expect(actions).toBeHidden();
     await expect(card).toBeVisible();
     await expect(page.locator('.shelf-toast')).toBeHidden();
     await card.getByRole('button', { name: 'Закрыть' }).click();
     await expect(card).toBeHidden();
-
-    await page.getByRole('button', { name: 'Меню полки' }).click();
-    const menu = page.getByRole('dialog', { name: 'Меню полки' });
-    await menu.getByRole('button', { name: /^Настройки полки/ }).click();
-    await expect(menu).toBeHidden();
-    const settings = page.getByRole('dialog', { name: 'Настройки полки' });
-    await expect(settings.getByLabel('Граммовка чаши, г')).toHaveValue(/^\d+$/);
-    await expect(settings.getByLabel('Срок поставки, дней')).toHaveValue(/^\d+$/);
-    // На телефоне — нижней шторкой на всю ширину.
-    await expect.poll(async () => (await settings.boundingBox())?.width).toBe(375);
-    await settings.getByRole('button', { name: 'Отмена' }).click();
-    await expect(settings).toBeHidden();
+    // Настроек полки (порция, срок поставки) больше нет.
+    await expect(page.getByRole('button', { name: 'Меню полки' })).toHaveCount(0);
   });
 
   // Выбор нескольких на телефоне (#333, #shot=mobile-bulk): «Выбрать» в шапке,
@@ -420,7 +524,7 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Полка', exact: true }).click();
     await page.getByRole('group', { name: 'Статус на полке' }).getByRole('button', { name: /^Все/ }).click();
 
@@ -445,7 +549,9 @@ test.describe('Master on a phone', () => {
     await expect(card.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
     await expect(bar.getByRole('button', { name: 'Закончились', exact: true })).toBeEnabled();
     await expect(bar.getByRole('button', { name: 'Стоп для гостей' })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'Держим постоянно', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: /^(Не держать|Держать) постоянно$/ })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Вернуть в наличие', exact: true })).toBeDisabled();
+    await expect(bar.getByRole('button', { name: 'Убрать с полки', exact: true })).toBeVisible();
     // Повторное касание снимает выбор.
     await card.tap();
     await expect(title).toHaveText('Выбрано 0');
@@ -463,7 +569,7 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
     const more = page.getByRole('dialog', { name: 'Ещё разделы' });
@@ -501,27 +607,67 @@ test.describe('Master on a phone', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
+    // На seed Дашборд (#520) и Полка (#518) короче экрана; длинный — список
+    // миксов карточками (#540): прокручиваем его и уходим на «Полку».
     const nav = page.getByRole('navigation', { name: 'Разделы' });
-    await scrollDown(page);
-    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-
-    await scrollDown(page);
     await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
     await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
-    await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeAttached();
+    await expect(page.locator('.m-mix-card').first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
-    await page.locator('table.mixes-table tbody tr[data-mix-id]').first().click();
-    await expect(page.getByRole('button', { name: 'Назад к каталогу миксов' })).toBeVisible();
     await page.mouse.wheel(0, 3000);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     const box = await nav.boundingBox();
     expect(box).toMatchObject({ x: 0, width: 375 });
     expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(812);
     await expect(nav.getByRole('button', { name: 'Ещё', exact: true })).toBeInViewport({ ratio: 1 });
+
+    await scrollDown(page);
+    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeAttached();
+    await expect(page.locator('.m-shelf-card').first()).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
+  // #339, #341, #342 (#540): поле мельче 16 px iOS увеличивает при фокусе;
+  // панель уже экрана оставляет полоску слева; заголовок раздела — один, в шапке.
+  // Неразрушающий: «Новый табак» закрывается без сохранения.
+  test('Master on a phone: fields are 16 px, drawers are screen-wide, one section title', async ({ page }) => {
+    const smallFields = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('input, select, textarea')]
+          .filter((el) => (el as HTMLElement).offsetParent && !['checkbox', 'radio', 'range', 'file'].includes((el as HTMLInputElement).type))
+          .filter((el) => parseFloat(getComputedStyle(el).fontSize) < 16)
+          .map((el) => el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? el.className),
+      );
+
+    await page.goto('/');
+    await expect(page.getByLabel('Логин', { exact: true })).toBeVisible();
+    expect(await smallFields()).toEqual([]);
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Каталог/ }).click();
+    const title = page.getByRole('heading', { name: 'Каталог', exact: true, level: 1 });
+    await expect(title).toBeAttached();
+    expect(await title.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(1);
+    expect(await smallFields()).toEqual([]);
+
+    await page.getByRole('button', { name: /Новый табак/ }).click();
+    const drawer = page.locator('[data-slot="sheet-content"]');
+    await expect(drawer).toBeVisible();
+    await expect.poll(async () => (await drawer.boundingBox())?.x).toBe(0);
+    expect((await drawer.boundingBox())?.width).toBe(375);
+    expect(await smallFields()).toEqual([]);
+    await drawer.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(drawer).toBeHidden();
   });
 });
 
@@ -535,7 +681,7 @@ test.describe('Master on a phone in landscape', () => {
     await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
     await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
     await page.getByRole('button', { name: 'Войти' }).click();
-    await expect(page.getByRole('heading', { name: 'Дашборд смены', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
     await expect(page.getByRole('tablist', { name: 'Рабочие разделы Мастера' })).toHaveCount(0);
     const nav = page.getByRole('navigation', { name: 'Разделы' });
@@ -546,103 +692,161 @@ test.describe('Master on a phone in landscape', () => {
   });
 });
 
-// Прогноз и «К заказу» (#213, #323, #325, #326): блок «Полка» на дашборде с
-// бюджетом, переключатель «К заказу» и настройки полки. Неразрушающий: в «К заказу»
-// ничего не меняется, настройки закрываются «Отменой».
-test('Master dashboard shows the shelf forecast, shelf opens reorder and settings without saving', async ({ page }) => {
-  await signIn(adminCredentials.login, adminCredentials.password, page);
+// #337 (#540, #shot=more, #shot=access): код смены сверху листа «Ещё», разделы
+// плиткой; «Доступ» на телефоне без обрезки, операторы и сотрудники карточками.
+// Неразрушающий: «Создать сотрудника» закрывается без сохранения.
+test.describe('Master access on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  // Канон #365: карточка — заголовок и содержимое, без надписи над ним и без «≈».
-  const forecast = page.getByRole('article', { name: 'Прогноз на сегодня' });
-  await expect(forecast.getByRole('heading', { name: 'Прогноз на сегодня' })).toBeVisible();
-  await expect(forecast).toContainText(/[\d\s ]+ г/);
-  await expect(page.locator('.dashboard-page')).not.toContainText('≈');
-  // Деньги: бюджет указан — «<Месяц>: бюджет …», нет — «Траты за <месяц>» и «Бюджет на табак не указан».
-  await expect(page.getByRole('article', { name: /^Траты за |: бюджет / })).toContainText(/бюджет/i);
-  // Ряд KPI остаётся только на дашборде.
-  await expect(page.locator('.dashboard-page .stats')).toHaveCount(1);
+  test('Master on a phone: shift code in «Ещё», «Доступ» is not clipped', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
 
-  await openWorkspace(page, 'Полка');
-  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    const more = page.getByRole('dialog', { name: 'Ещё разделы' });
+    const code = more.getByRole('region', { name: 'Код смены' });
+    await expect(code.locator('.m-code__value')).toHaveText(/^\d{4}$/);
+    await expect(code.getByRole('button', { name: 'Копировать' })).toBeVisible();
+    await expect(code.getByRole('button', { name: 'Выпустить новый код' })).toHaveCount(0);
+    for (const name of [/^Каталог/, /^Миксы/, /^Рейлы/, /^Доступ/, /^Выйти/]) {
+      await expect(more.getByRole('button', { name })).toBeVisible();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
 
-  const reorderToggle = page.getByRole('group', { name: 'Вид полки' }).getByRole('button', { name: /^К заказу/ });
-  await reorderToggle.click();
-  await expect(reorderToggle).toHaveAttribute('aria-pressed', 'true');
-  // Плашка интервала поставок: известен по счетам или пока нет.
-  await expect(page.locator('.reorder-interval')).toContainText(/Поставки примерно раз в|Интервал поставок пока неизвестен/);
-  // Группы поставщиков или пустое состояние — зависит от полки в базе.
-  await expect(page.locator('.reorder-group, .reorder__empty').first()).toBeVisible();
-  const groups = page.locator('.reorder-group');
-  if (await groups.count()) {
-    await expect(groups.first().getByRole('columnheader', { name: 'Расход в месяц' })).toBeVisible();
-    await expect(groups.first().getByRole('button', { name: 'Скопировать заявку' })).toBeVisible();
-  }
-  // Сколько заказать, решает мастер: ни степпера, ни суммы.
-  await expect(page.getByRole('group', { name: /^Заказать:/ })).toHaveCount(0);
-  await expect(page.locator('.reorder__hint')).toContainText('Сколько заказать, решает мастер.');
+    await more.getByRole('button', { name: /^Доступ/ }).click();
+    await expect(page.getByRole('heading', { name: 'Доступ и персонал', level: 1 })).toBeAttached();
+    const rotate = page.getByRole('button', { name: 'Выпустить новый код' });
+    await expect(rotate).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Статус Telegram-бота' })).toBeVisible();
+    const operatorActions = page.getByRole('button', { name: /^Действия: / });
+    await expect(operatorActions.first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
 
-  await page.getByRole('button', { name: 'Меню полки' }).click();
-  await page.getByRole('menuitem', { name: /Настройки полки/ }).click();
-  const settings = page.getByRole('dialog');
-  await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
-  await expect(settings.getByLabel('Граммовка чаши, г')).toHaveValue(/^\d+$/);
-  await expect(settings.getByLabel('Срок поставки, дней')).toHaveValue(/^\d+$/);
-  // Бюджет необязателен: пусто или рубли с пробелами между разрядами.
-  await expect(settings.getByLabel('Бюджет на табак, ₽ в месяц')).toHaveValue(/^[\d\s ]*$/);
-  await expect(settings).toContainText('Сколько табака уходит на одну чашу.');
-  await expect(settings).toContainText('Считается само:');
-  await settings.getByRole('button', { name: 'Отмена' }).click();
-  await expect(settings).toBeHidden();
+    const inViewportX = async (locator: Locator) => {
+      const box = await locator.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+    };
+    await inViewportX(rotate);
+    await inViewportX(page.getByRole('button', { name: 'Добавить оператора' }));
+    for (const button of await operatorActions.all()) await inViewportX(button);
+
+    // Плейсхолдер пароля нового сотрудника — не из режима правки.
+    const create = page.getByRole('button', { name: 'Создать сотрудника' });
+    await inViewportX(create);
+    await create.click();
+    const dialog = page.getByRole('dialog', { name: 'Создать сотрудника' });
+    await expect(dialog).toBeVisible();
+    const password = dialog.locator('input[type="password"]');
+    await expect(password).not.toHaveAttribute('placeholder', 'Пусто — пароль не меняется');
+    await expect(password).not.toHaveAttribute('placeholder', /не менять/);
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(dialog).toBeHidden();
+  });
 });
 
-// «Закупка» (#327–#331): третий вид «Полки» — полоса бюджета, чипы разделов и
-// по каждому разделу либо данные, либо «Данных пока мало» (на seed расхода ещё
-// нет). Неразрушающий: «Держим» и отметки пробы не трогаем, настройки — «Отмена».
-test('Master shelf opens «Закупка»: budget strip, section chips and few-data state', async ({ page }) => {
+// Дашборд — выборы гостей (#520): период меняет диапазон дат; на seed выборов
+// может не быть, поэтому годится и график, и «Выборов нет». Блока полки на
+// дашборде больше нет. Дальше «К заказу» на полке (#518, #shot=order,
+// edge-order-empty, #563 #shot=order-plan); настроек полки больше нет.
+// Неразрушающий: в «К заказу» ничего не меняется.
+test('Master dashboard switches the period, shelf opens «К заказу» without changes', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  const periods = page.getByRole('group', { name: 'Период' });
+  await expect(periods.getByRole('button')).toHaveText(['Неделя', 'Месяц', 'Квартал', 'Всё время', 'Даты']);
+  const month = periods.getByRole('button', { name: 'Месяц', exact: true });
+  await expect(month).toHaveAttribute('aria-pressed', 'true');
+  const range = page.locator('.dash-range');
+  await expect(range).toHaveText(/^\d{1,2}( [а-я]+( \d{4})?)? – \d{1,2} [а-я]+( \d{4})?$/);
+  const monthRange = await range.textContent();
+
+  const week = periods.getByRole('button', { name: 'Неделя', exact: true });
+  await week.click();
+  await expect(week).toHaveAttribute('aria-pressed', 'true');
+  await expect(range).not.toHaveText(monthRange ?? '');
+  await expect(range).toHaveText(/^\d{1,2}( [а-я]+( \d{4})?)? – \d{1,2} [а-я]+( \d{4})?$/);
+
+  // Плитки есть всегда; графики — с первого выбора, иначе одна карточка вместо них.
+  await expect(page.locator('.dashboard-page .stats')).toContainText('Выборов');
+  const chart = page.getByRole('heading', { name: 'Выборы по дням', level: 2 });
+  const few = page.locator('.dash-few').filter({ hasText: /^Выборов нет/ });
+  await expect(chart.or(few)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Сигналы', level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Прогноз на сегодня' })).toHaveCount(0);
+
+  await openWorkspace(page, 'Полка');
+  await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
+
+  // Вида «Закупка» больше нет: только «Полка» и «К заказу» (#518).
+  const views = page.getByRole('group', { name: 'Вид полки' }).getByRole('button');
+  await expect(views).toHaveText([/^Полка$/, /^К заказу/]);
+  const orderToggle = views.filter({ hasText: /^К заказу/ });
+  await orderToggle.click();
+  await expect(orderToggle).toHaveAttribute('aria-pressed', 'true');
+  // Группы поставщиков, план (#563) или «Всё в наличии» — зависит от полки в базе.
+  await expect(page.locator('section.shelf-order, .shelf-order-empty').first()).toBeVisible();
+  const plan = page.getByRole('region', { name: 'В плане', exact: true });
+  const groups = page.locator('section.shelf-order').filter({ hasNot: page.getByRole('heading', { name: 'В плане', level: 2, exact: true }) });
+  if (await groups.count()) {
+    for (const name of ['Табак', 'Закончился', 'Миксы', 'Последний приход']) {
+      await expect(groups.first().getByRole('columnheader', { name, exact: true })).toBeVisible();
+    }
+    await expect(groups.first().getByRole('button', { name: 'Скопировать заявку' })).toBeVisible();
+  } else if (await plan.count()) {
+    await expect(page.getByText('Закончившихся нет, всё, что держим, в наличии.')).toBeVisible();
+  } else {
+    await expect(page.getByRole('heading', { name: 'Всё в наличии', level: 2 })).toBeVisible();
+  }
+  if (await plan.count()) {
+    for (const name of ['Табак', 'В плане с', 'Миксы']) {
+      await expect(plan.getByRole('columnheader', { name, exact: true })).toBeVisible();
+    }
+    await expect(plan.getByRole('button', { name: 'Скопировать список' })).toBeVisible();
+    // «В наличие» отмечают на «Полке», в «К заказу» его нет.
+    await expect(plan.getByRole('button', { name: 'В наличие' })).toHaveCount(0);
+  }
+  // Сколько заказать, решает мастер: ни расхода, ни суммы, ни настроек полки.
+  await expect(page.getByRole('columnheader', { name: 'Расход в месяц' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Меню полки' })).toHaveCount(0);
+});
+
+// «Закончился» у табака, который держим постоянно, кладёт его в «К заказу» (#518).
+// Неразрушающий: «Отменить» в тосте возвращает табак в наличие и убирает из заявки.
+test('Master shelf: a kept tobacco marked out appears in «К заказу», undo removes it', async ({ page }) => {
   await signIn(adminCredentials.login, adminCredentials.password, page);
   await openWorkspace(page, 'Полка');
   await expect(page.getByRole('heading', { name: 'Полка', level: 1 })).toBeVisible();
 
-  const views = page.getByRole('group', { name: 'Вид полки' }).getByRole('button');
-  await expect(views).toHaveText([/^Полка$/, /^К заказу/, /^Закупка$/]);
-  const purchase = page.getByRole('group', { name: 'Вид полки' }).getByRole('button', { name: 'Закупка', exact: true });
-  await purchase.click();
-  await expect(purchase).toHaveAttribute('aria-pressed', 'true');
+  const kept = page
+    .locator('table.shelf-table tbody tr[data-tobacco-id]')
+    .filter({ has: page.getByRole('img', { name: 'Держим постоянно' }) })
+    .filter({ has: page.getByRole('button', { name: 'Закончился', exact: true }) })
+    .first();
+  await expect(kept).toBeVisible();
+  const id = await kept.getAttribute('data-tobacco-id');
+  const row = page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
 
-  // Полоса бюджета — одна строка (#364): бюджет указан — бюджет, база и потрачено,
-  // нет — стоимость базы и «Указать бюджет».
-  const budget = page.getByRole('note', { name: 'Бюджет на табак' });
-  await expect(budget).toBeVisible();
-  const invite = budget.getByRole('button', { name: 'Указать бюджет' });
-  if (await invite.isVisible()) {
-    await expect(budget).toContainText('Бюджет на табак не указан.');
-    await invite.click();
-    const settings = page.getByRole('dialog');
-    await expect(settings.getByRole('heading', { name: 'Настройки полки' })).toBeVisible();
-    await expect(settings).toContainText('В закупке видно, сколько уходит на базу');
-    await settings.getByRole('button', { name: 'Отмена' }).click();
-    await expect(settings).toBeHidden();
-  } else {
-    await expect(budget).toContainText(/^Бюджет на \S+ /);
-    await expect(budget).toContainText('По принятым счетам потрачено');
-  }
+  await row.getByRole('button', { name: 'Закончился', exact: true }).click();
+  const toast = page.locator('.shelf-toast');
+  await expect(toast).toContainText('Добавлен в заявку.');
+  await expect(row).toContainText('в заявке');
 
-  const sections = page.getByRole('group', { name: 'Разделы закупки' }).getByRole('button');
-  await expect(sections).toHaveText([/^База/, /^Закончились быстро/, /^Пробы/, /^Лежит/, /^Вкусы/]);
-  await expect(sections.first()).toHaveAttribute('aria-pressed', 'true');
-  // Разделы — навигация, а не фильтры-статусы: без счётчиков (#364).
-  await expect(page.getByRole('group', { name: 'Разделы закупки' }).locator('.filter-chip__count')).toHaveCount(0);
+  const views = page.getByRole('group', { name: 'Вид полки' });
+  await views.getByRole('button', { name: /^К заказу/ }).click();
+  const line = page.locator(`section.shelf-order tr[data-tobacco-id="${id}"]`);
+  await expect(line).toBeVisible();
 
-  const few = page.getByRole('heading', { name: 'Данных пока мало' });
-  const titles = ['Что держать в базе', 'Закончились быстро', 'Как зашли пробы', 'Что лежит', 'Вкусы: расход против полки'];
-  for (const [index, title] of titles.entries()) {
-    await sections.nth(index).click();
-    await expect(sections.nth(index)).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('heading', { name: title, level: 2 }).or(few)).toBeVisible();
-    if (await few.isVisible()) await expect(page.locator('.purchase-few')).toContainText(/Учёт в граммах/);
-  }
-  // Сколько заказать, решает мастер: ни количества, ни суммы заказа.
-  await expect(page.getByRole('group', { name: /^Заказать:/ })).toHaveCount(0);
+  await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
+  await expect(toast).toBeHidden();
+  await expect(line).toHaveCount(0);
+  await views.getByRole('button', { name: 'Полка', exact: true }).click();
+  await expect(row.getByRole('button', { name: 'Закончился', exact: true })).toBeVisible();
 });
 
 // «Идеи для закупки» (#214): подборки htreviews или пустое состояние — на seed
@@ -669,9 +873,58 @@ test('Master catalog shows purchase ideas from htreviews without planning anythi
   await expect(page.locator('tbody tr[data-tobacco-id]').first()).toBeVisible();
 });
 
-// Поставка вручную (#212): черновик → строка с табаком из каталога → приёмка.
-// Табак берётся с полки, поэтому приёмка лишь добавила бы ему граммы:
-// гостевое наличие не меняется. Принятую поставку удалить нельзя — в базе
+// #540 (#shot=catalog, catalog-select): на телефоне «Каталог» — карточки вместо таблицы,
+// «Выбрать» как на «Полке». Неразрушающий: карточка табака закрывается без сохранения,
+// отметка снимается «Готово» без массовых действий.
+test.describe('Master catalog on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master catalog on a phone: tobacco cards, the card opens, «Выбрать» and «Готово»', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Каталог/ }).click();
+    await expect(page.getByRole('heading', { name: 'Каталог', exact: true, level: 1 })).toBeAttached();
+
+    const cards = page.getByRole('list', { name: 'Табаки каталога' }).locator('.m-catalog-card');
+    await expect(cards.first()).toBeVisible();
+    await expect(page.locator('table.inventory-table')).toHaveCount(0);
+    // Подвал карточки: место на полке и миксы.
+    await expect(cards.first()).toContainText(/(на полке|закончился|стоп для гостей|в плане|не на полке)/);
+    await expect(cards.first()).toContainText(/(в \d+ микс(е|ах)|нет в миксах)/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // Касание открывает карточку табака, как строка таблицы на десктопе.
+    const name = ((await cards.first().locator('.m-catalog-card__name').textContent()) ?? '').trim();
+    await cards.first().locator('.m-catalog-card__name').click();
+    const drawer = page.locator('[data-slot="sheet-content"]');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('textbox', { name: 'Название', exact: true })).toHaveValue(name);
+    await drawer.getByRole('button', { name: 'Отмена', exact: true }).click();
+    await expect(drawer).toBeHidden();
+
+    // «Выбрать» → отметить одну карточку → панель выбранных → «Готово» без изменений.
+    const topbar = page.locator('.m-topbar');
+    await topbar.getByRole('button', { name: 'Выбрать', exact: true }).click();
+    const id = await cards.first().getAttribute('data-tobacco-id');
+    await page.locator(`.m-catalog-card[data-tobacco-id="${id}"]`).getByRole('checkbox').click();
+    const bulk = page.getByRole('toolbar', { name: 'Выбранные табаки' });
+    await expect(bulk).toContainText('Выбрано 1');
+    await expect(bulk.getByRole('button', { name: 'На полку', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    await topbar.getByRole('button', { name: 'Готово', exact: true }).click();
+    await expect(bulk).toBeHidden();
+    await expect(page.locator('.m-catalog-card [role="checkbox"]')).toHaveCount(0);
+    await expect(topbar.getByRole('button', { name: 'Выбрать', exact: true })).toBeVisible();
+  });
+});
+
+// Поставка вручную (#212, #518): черновик → строка с табаком из каталога → приёмка.
+// Граммы не вводятся: приёмка только вернула бы табак в «Есть». Принятую поставку удалить нельзя — в базе
 // осталась бы поставка с уникальным номером «SMOKE-…» и приход.
 // Неразрушающий, как весь прогон (README smoke): черновик доводится до готовности
 // к приёмке и удаляется — принятая поставка оставила бы приход и поставку в базе.
@@ -681,8 +934,7 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await openWorkspace(page, 'Полка');
   const shelfRow = page.locator('table.shelf-table tbody tr[data-tobacco-id]').first();
   await expect(shelfRow).toBeVisible();
-  // Вторая ячейка — табак: первая — чекбокс выбора (#333), а в колонке
-  // «Приход» тоже есть .shelf-name.
+  // Вторая ячейка — табак: первая — чекбокс выбора (#333).
   const nameCell = shelfRow.locator('td').nth(1);
   const tobaccoName = ((await nameCell.locator('.shelf-name b').textContent()) ?? '').trim();
   const manufacturer = ((await nameCell.locator('.shelf-name span').textContent()) ?? '').trim();
@@ -713,15 +965,18 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
     .first()
     .click();
   await addLine.getByLabel('Цена за штуку, ₽').fill('1 550');
-  // Без граммов в названии строка ждала бы их и блокировала приёмку.
-  await addLine.getByLabel('Граммов в штуке').fill('200');
+  // Вес в Мастер не вносится (#518): поля граммов нет.
+  await expect(addLine.getByLabel('Граммов в штуке')).toHaveCount(0);
   await addLine.getByRole('button', { name: 'Добавить строку' }).click();
   await expect(addLine).toBeHidden();
 
   const line = page.locator('tr[data-line-id]');
   await expect(line).toHaveCount(1);
   await expect(line.getByRole('button', { name: /^Табак для строки 1:/ })).toContainText(tobaccoName);
-  await expect(page.locator('.deliv-footbar')).toContainText('На полку 200 г');
+  // Подвал: сколько табаков вернётся в наличие, без граммов.
+  await expect(page.locator('.deliv-footbar')).toContainText('Вернутся в наличие: 1 табак');
+  await expect(page.getByRole('columnheader', { name: 'Приход' })).toBeVisible();
+  await expect(line).toContainText('1 шт.');
 
   await expect(page.getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
 
@@ -729,6 +984,73 @@ test('Master deliveries prepare a manual draft with a catalog tobacco and discar
   await page.getByRole('dialog').getByRole('button', { name: 'Удалить черновик' }).click();
   await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeVisible();
   await expect(page.locator('tr[data-delivery-id]').filter({ hasText: `№ ${number}` })).toHaveCount(0);
+});
+
+// «Поставки» на телефоне (#540, #shot=deliveries, delivery): счета и строки
+// счёта карточками, назад стрелкой в шапке, «Принять» в панели над меню.
+// Созданный черновик удаляется в конце.
+test.describe('Master deliveries on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master deliveries on a phone: invoice cards, line cards, back to the list', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Полка', exact: true }).click();
+    const tobaccoName = ((await page.locator('.m-shelf-card__name b').first().textContent()) ?? '').trim();
+    expect(tobaccoName).not.toBe('');
+
+    await nav.getByRole('button', { name: 'Поставки', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Поставки', level: 1 })).toBeAttached();
+    await expect(page.locator('.m-deliv-card').first()).toBeVisible();
+    await expect(page.locator('table.deliv-table')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Загрузить PDF счёта' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Загрузить счёт' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    const number = `SMOKE-M-${Date.now()}`;
+    await page.getByRole('button', { name: 'Вручную', exact: true }).click();
+    const manual = page.getByRole('dialog');
+    await manual.getByLabel('Номер счёта').fill(number);
+    await manual.getByRole('button', { name: 'Создать черновик' }).click();
+    await expect(page.getByRole('heading', { name: `Счёт ${number}`, level: 1 })).toBeVisible();
+    await expect(page.getByLabel('Пришло', { exact: true })).toHaveAttribute('type', 'date');
+
+    await page.getByRole('button', { name: 'Добавить строку', exact: true }).click();
+    const addLine = page.getByRole('dialog');
+    await addLine.getByLabel('Табак из каталога').fill(tobaccoName);
+    await addLine.getByRole('group', { name: 'Табаки каталога' }).getByRole('button').filter({ hasText: tobaccoName }).first().click();
+    await addLine.getByRole('button', { name: 'Добавить строку' }).click();
+    await expect(addLine).toBeHidden();
+
+    const line = page.locator('.m-deliv-line');
+    await expect(line).toHaveCount(1);
+    await expect(line).toContainText(tobaccoName);
+    await expect(line).toContainText('1 шт.');
+    await expect(line.getByRole('switch', { name: 'Пришло: строка 1' })).toBeChecked();
+    await expect(page.locator('tr[data-line-id]')).toHaveCount(0);
+    await expect(page.locator('.m-deliv-bar')).toContainText('Вернутся в наличие: 1 табак');
+    await expect(page.locator('.m-deliv-bar').getByRole('button', { name: 'Принять поставку' })).toBeEnabled();
+    await expect(nav).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // Назад — то же, что «Сохранить черновик»: счёт остаётся в списке.
+    await page.getByRole('button', { name: 'Назад к поставкам' }).click();
+    const card = page.locator('.m-deliv-card').filter({ hasText: `счёт ${number}` });
+    await expect(card).toContainText('1 строка');
+    await card.click();
+    await expect(page.getByRole('heading', { name: `Счёт ${number}`, level: 1 })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Действия со счётом' }).click();
+    await page.getByRole('dialog', { name: `Счёт ${number}` }).getByRole('button', { name: 'Удалить черновик' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Удалить черновик' }).click();
+    await expect(page.locator('.m-deliv-card').first()).toBeVisible();
+    await expect(page.locator('.m-deliv-card').filter({ hasText: `счёт ${number}` })).toHaveCount(0);
+  });
 });
 
 // Каталог длиннее экрана: редактор микса из конца списка должен открываться
@@ -753,6 +1075,241 @@ test('Master mix editor opened from the bottom of the catalog starts at the top'
   const topbarBottom = await page.locator('.topbar').evaluate((el) => el.getBoundingClientRect().bottom);
   const libraryTop = await library.evaluate((el) => el.getBoundingClientRect().top);
   expect(libraryTop).toBeGreaterThanOrEqual(topbarBottom);
+});
+
+// Аналоги (#481): у микса с заменой видна пара, у блокированного — чего нет;
+// имя недостающего табака открывает его карточку. Данные — из seed (#478).
+test('Master mixes show substitution and missing tobaccos linked to their cards', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+
+  // Скрытые миксы в «Сигналах» дашборда (#520): в seed скрыт «Персиковый мираж»,
+  // строка ведёт в «Миксы».
+  await openWorkspace(page, 'Дашборд');
+  const hiddenSignal = page
+    .getByRole('region', { name: 'Сигналы' })
+    .getByRole('listitem')
+    .filter({ hasText: /^Скрыты? у гостя, нет табака: / });
+  await hiddenSignal.getByRole('button', { name: 'Миксы', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Каталог миксов', level: 1 })).toBeVisible();
+
+  await openWorkspace(page, 'Миксы');
+  const statusChips = page.getByRole('group', { name: 'Статус микса' });
+  await statusChips.getByRole('button', { name: 'Фильтр: С заменой' }).click();
+  const substituted = page.locator('tr[data-mix-id="mix-lime-tonic"]');
+  await expect(substituted.locator('.mix-status')).toHaveText(/с заменой\s*Citrus Breeze вместо Lime Spark/);
+  await expect(substituted).toContainText('Lime Spark + Mint Veil');
+  // Обе стороны замены ведут в карточку табака, как «Нет: …» у блокированного.
+  await substituted.locator('.mix-status').getByRole('button', { name: 'Lime Spark' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Lime Spark' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await openWorkspace(page, 'Миксы');
+  await statusChips.getByRole('button', { name: 'Фильтр: С заменой' }).click();
+  // Конструктор показывает тот же статус, что список (#494).
+  await substituted.locator('td').first().click();
+  const breadcrumb = page.locator('.mix-builder__breadcrumb');
+  await expect(breadcrumb).toContainText('с заменой');
+  await expect(breadcrumb).toContainText('Citrus Breeze вместо Lime Spark');
+  await expect(breadcrumb).not.toContainText('блокируется наличием');
+  await page.getByRole('button', { name: 'Назад к каталогу миксов' }).click();
+
+  await statusChips.getByRole('button', { name: 'Фильтр: Блокирован' }).click();
+  const blocked = page.locator('tr[data-mix-id="mix-peach-mirage"]');
+  await expect(blocked.locator('.mix-status')).toHaveText(/блокирован\s*Нет: Peach Silk/);
+  await blocked.getByRole('button', { name: 'Peach Silk' }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Peach Silk' })).toBeVisible();
+});
+
+// Миксы на телефоне (#540, #shot=mixes, mix-edit, mix-library): карточки вместо
+// таблицы; конструктор в одну колонку, назад в шапке, сумма и сохранение внизу
+// вместо меню разделов, библиотека шторкой. Неразрушающий: правка не сохраняется.
+test.describe('Master mixes on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master mixes on a phone: cards, one-column builder, library sheet, back without saving', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    const nav = page.getByRole('navigation', { name: 'Разделы' });
+    await nav.getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Миксы/ }).click();
+    const card = page.locator('.m-mix-card').first();
+    await expect(card).toBeVisible();
+    await expect(page.locator('table.mixes-table')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // «⋯» — те же действия, что у строки таблицы; закрываем без изменений.
+    await card.getByRole('button', { name: /^Действия: / }).click();
+    const actions = page.getByRole('dialog', { name: /^Действия: / });
+    await expect(actions.getByRole('button', { name: 'Дублировать' })).toBeVisible();
+    await expect(actions.getByRole('button', { name: 'Удалить микс' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(actions).toBeHidden();
+
+    await card.locator('.m-mix-card__open').click();
+    const back = page.getByRole('button', { name: 'Назад к каталогу миксов' });
+    await expect(back).toBeVisible();
+    await expect(nav).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    const sum = page.locator('.mix-builder__phone-sum');
+    const save = page.locator('.mix-builder__phone-bar').getByRole('button', { name: 'Сохранить', exact: true });
+    await expect(sum).toContainText('100 %');
+    await expect(save).toBeEnabled();
+    await page.locator('.mix-builder__phone-component').first().getByRole('button', { name: /больше на 5 %/ }).click();
+    await expect(sum).toContainText('лишние 5 %');
+    await expect(save).toBeDisabled();
+
+    await page.getByRole('button', { name: 'Добавить табак' }).click();
+    const library = page.getByRole('dialog', { name: 'Добавить табак' });
+    await expect(library.getByRole('searchbox', { name: 'Поиск по библиотеке табаков' })).toBeVisible();
+    await library.getByRole('button', { name: 'Готово' }).click();
+    await expect(library).toBeHidden();
+
+    await back.click();
+    await expect(page.locator('.m-mix-card').first()).toBeVisible();
+    await expect(nav).toBeVisible();
+  });
+});
+
+// Аналоги на «Полке» (#482): «Сделать аналогом» из похожих — тост с названием,
+// аналог в карточках обоих табаков (связь взаимная), «Отменить» возвращает как было.
+// В таблице — столбец «Аналоги»: закончившийся приглушён.
+test('Master shelf card makes a similar tobacco an analog and undo restores it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+  await openWorkspace(page, 'Полка');
+
+  const rowOf = (id: string) => page.locator(`table.shelf-table tbody tr[data-tobacco-id="${id}"]`);
+  const source = rowOf('tobacco-citrus-breeze');
+  await expect(page.getByRole('columnheader', { name: 'Аналоги' })).toBeVisible();
+  const analogsCell = source.locator('.shelf-analogs__item');
+  await expect(analogsCell).toHaveCount(1);
+  await expect(analogsCell.and(page.locator('[data-off]'))).toHaveText('Lime Spark');
+
+  await source.locator('td').nth(1).click();
+  const card = page.getByRole('dialog');
+  await expect(card.getByRole('heading', { name: 'Аналоги', level: 3 })).toBeVisible();
+  await expect(card.locator('.shelf-analog')).toHaveCount(1);
+  // Lime Spark не на полке и закончился (seed #478).
+  await expect(card.locator('.shelf-analog')).toContainText('Lime Spark');
+  await expect(card.locator('.shelf-analog__stock[data-off]')).toHaveText('закончился');
+  const makeAnalog = card.getByRole('button', { name: /^Сделать аналогом: / }).first();
+  const analogName = ((await makeAnalog.getAttribute('aria-label')) ?? '').replace('Сделать аналогом: ', '');
+  await makeAnalog.click();
+
+  const toast = page.locator('.shelf-toast');
+  await expect(toast.locator('b')).toHaveText(analogName);
+  await expect(toast).toContainText('Аналог Citrus Breeze.');
+  await expect(card.locator('.shelf-analog')).toHaveCount(2);
+  await expect(card.locator('.shelf-analog').nth(1)).toContainText(analogName);
+  await expect(analogsCell).toHaveCount(2);
+  await expect(analogsCell.nth(1)).toContainText(analogName);
+
+  // Связь взаимная: у аналога в карточке — Citrus Breeze. Тост с отменой живёт 10 с.
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+  const analogRow = page.locator('table.shelf-table tbody tr').filter({ has: page.locator('td:nth-child(2) .shelf-name b', { hasText: analogName }) }).first();
+  await analogRow.locator('td').nth(1).click();
+  await expect(card.locator('.shelf-analog').filter({ hasText: 'Citrus Breeze' })).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+
+  await toast.getByRole('button', { name: 'Отменить', exact: true }).click();
+  await expect(toast).toBeHidden();
+  await expect(analogsCell).toHaveCount(1);
+  await source.locator('td').nth(1).click();
+  await expect(card.locator('.shelf-analog')).toHaveCount(1);
+});
+
+// Автор микса (#491): копию сохраняет admin — он и автор; фильтр «Автор» её находит,
+// в шапке конструктора «автор Admin». В конце копия удаляется.
+test('Master mix copy gets its author and the author filter finds it', async ({ page }) => {
+  await signIn(adminCredentials.login, adminCredentials.password, page);
+  await openWorkspace(page, 'Миксы');
+
+  await expect(page.getByRole('columnheader', { name: 'Автор' })).toBeVisible();
+  const source = page.locator('tr[data-mix-id="mix-citrus-scout"]');
+  // У миксов из seed автора нет.
+  await expect(source.locator('.mixes-cell__author')).toHaveText('—');
+  await source.getByRole('button', { name: 'Дублировать Цитрусовый караван' }).click();
+  await page.getByRole('button', { name: 'Создать микс' }).click();
+
+  const copy = page.locator('tr[data-mix-id]').filter({ hasText: 'Цитрусовый караван (копия)' });
+  await expect(copy.locator('.mixes-cell__author')).toHaveText('Admin');
+
+  await page.getByRole('group', { name: 'Фильтры миксов' }).getByRole('button', { name: 'Автор', exact: true }).click();
+  await page.getByRole('group', { name: 'Автор', exact: true }).getByRole('checkbox', { name: 'Admin' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('table.mixes-table tbody tr[data-mix-id]')).toHaveCount(1);
+  await expect(copy).toBeVisible();
+
+  await copy.locator('td').first().click();
+  await expect(page.locator('.mix-builder__breadcrumb')).toContainText('автор Admin');
+  await page.getByRole('button', { name: 'Назад к каталогу миксов' }).click();
+
+  await copy.getByRole('button', { name: 'Удалить Цитрусовый караван (копия)' }).click();
+  await page.getByRole('button', { name: 'Удалить микс' }).click();
+  await expect(copy).toHaveCount(0);
+});
+
+// «Рейлы» на телефоне (#338, #341, #shot=rails, rail-stat, rail-new): карточки
+// вместо таблицы, в редакторе метки под названием. Неразрушающий: редакторы
+// закрываются без сохранения.
+test.describe('Master rails on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test('Master rails on a phone: cards, the statistical rail opens read-only with badges under the title', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Логин', { exact: true }).fill(adminCredentials.login);
+    await page.getByLabel('Пароль', { exact: true }).fill(adminCredentials.password);
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('heading', { name: 'Дашборд', exact: true, level: 1 })).toBeAttached();
+
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Ещё', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Ещё разделы' }).getByRole('button', { name: /^Рейлы/ }).click();
+    await expect(page.getByRole('heading', { name: 'Рейлы', level: 1 })).toBeAttached();
+
+    const cards = page.getByRole('list', { name: 'Рейлы' }).locator('.m-rail-card');
+    await expect(cards.first()).toBeVisible();
+    await expect(page.locator('table.rails-table')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+
+    // «Больше всего выбирают» синтезирует backend (`buildTopRail`), от seed не зависит.
+    const statistical = cards.filter({ has: page.getByText('Больше всего выбирают', { exact: true }) });
+    await expect(statistical).toContainText('Статистический');
+    // Статистический рейл не удаляется: «⋯» только у рейлов мастера.
+    await expect(statistical.getByRole('button', { name: /^Действия: / })).toHaveCount(0);
+    await statistical.getByRole('button').first().click();
+
+    const editor = page.locator('.rails-surface__sheet');
+    const title = editor.getByRole('heading', { name: 'Больше всего выбирают' });
+    const badge = editor.locator('.rail-drawer__head').getByText('только просмотр');
+    await expect(title).toBeVisible();
+    await expect(badge).toBeVisible();
+    const titleBox = await title.boundingBox();
+    const badgeBox = await badge.boundingBox();
+    expect(badgeBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    await expect(editor.getByRole('button', { name: 'Сохранить' })).toHaveCount(0);
+    await expect(editor.getByRole('button', { name: 'Добавить микс' })).toHaveCount(0);
+    await editor.getByRole('button', { name: 'Закрыть' }).last().click();
+    await expect(editor).toBeHidden();
+
+    // «Новый» в верхней панели: миксы добавляются кнопкой, без «из списка слева».
+    await page.locator('.m-topbar').getByRole('button', { name: 'Новый' }).click();
+    await expect(editor.getByText('Рейл пуст')).toBeVisible();
+    await expect(editor.getByText(/слева/)).toHaveCount(0);
+    await editor.getByRole('button', { name: 'Добавить микс' }).click();
+    const picker = page.getByRole('dialog', { name: 'Добавить микс' });
+    await expect(picker.getByPlaceholder('Поиск миксов')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
+    await expect(editor.getByRole('button', { name: 'Создать' })).toBeInViewport({ ratio: 1 });
+    await editor.getByRole('button', { name: 'Отмена' }).click();
+    await expect(editor).toBeHidden();
+  });
 });
 
 test('Master non-admin role keeps admin-only surfaces restricted while preserving access context', async ({ page }) => {

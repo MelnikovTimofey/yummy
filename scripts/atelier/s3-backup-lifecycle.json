@@ -1,0 +1,18 @@
+{
+  "Rules": [
+    {
+      "ID": "hourly",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "hourly/" },
+      "Expiration": { "Days": 2 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
+    },
+    {
+      "ID": "daily",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "daily/" },
+      "Expiration": { "Days": 30 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 }
+    }
+  ]
+}

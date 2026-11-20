@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { loadShelfBrandUrls, syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
+import { detailFailureTooHigh, loadShelfBrandUrls, syncHtReviewsCatalog } from '../src/integrations/htreviews/sync';
 
 const toInt = (value: string | undefined) => {
   if (!value) {
@@ -29,12 +29,14 @@ const toBoolean = (value: string | undefined, fallback: boolean) => {
 
 async function main() {
   const shelfBrands = toBoolean(process.env.HTREVIEWS_SHELF_BRANDS, false);
+  const listedBrands = (process.env.HTREVIEWS_BRAND_URLS ?? '')
+    .split(',')
+    .map((item) => item.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  // С обоими параметрами — список клиента и бренды полки вместе (#519).
   const brandUrls = shelfBrands
-    ? await loadShelfBrandUrls()
-    : process.env.HTREVIEWS_BRAND_URLS
-      ?.split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    ? Array.from(new Set([...listedBrands, ...(await loadShelfBrandUrls())]))
+    : listedBrands;
   // Пустой список брендов syncHtReviewsCatalog читает как «весь каталог»:
   // ночной прогон не должен молча превратиться в многочасовой полный.
   if (shelfBrands && !brandUrls?.length) {
@@ -60,6 +62,10 @@ async function main() {
   // htreviews недоступен или закрыл доступ, и это сбой, а не пустая синхронизация.
   if (stats.fetched === 0) {
     throw new Error('с htreviews не получено ни одного табака');
+  }
+  // Ошибки карточек обход тоже проглатывает: без карточки новинки не заводятся.
+  if (detailFailureTooHigh(stats)) {
+    throw new Error(`не загрузились карточки htreviews: ${stats.detailFailed} из ${stats.fetched}`);
   }
 }
 

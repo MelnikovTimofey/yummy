@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { MixRecord, RailRecord } from '@/contracts';
 import { formatMixStatusLabel, formatRailType, formatRating, resolveMixStatus } from '@/contracts';
 import { BusyLabel } from '@/components/ui/loading';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { useIsPhone } from '@/hooks/use-is-phone';
 
 export type RailEditorState = {
   id: string;
@@ -61,6 +63,9 @@ export const RailEditor = ({
 }: RailEditorProps) => {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [pickerQuery, setPickerQuery] = useState('');
+  // На телефоне колонки идут друг под другом: список миксов — в шторке по кнопке «Добавить микс» (#341, #shot=rail-new).
+  const isPhone = useIsPhone();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // useMemo до условных return — следуем предупреждению handoff (баг RailEditor с hooks-order).
   const selectedRailMixEntries = useMemo(
@@ -101,7 +106,63 @@ export const RailEditor = ({
     onOpenChange(false);
     onReset();
     setPickerQuery('');
+    setPickerOpen(false);
   };
+
+  const picker = (
+    <>
+      <div className="input">
+        <Search size={14} aria-hidden />
+        <input
+          value={pickerQuery}
+          onChange={(event) => setPickerQuery(event.target.value)}
+          placeholder="Поиск миксов"
+          disabled={locked}
+        />
+      </div>
+
+      <div className="rail-drawer__picker">
+        {availableRailMixOptions.length === 0 ? (
+          <div className="empty">
+            {pickerQuery ? 'Ничего не найдено.' : 'Все миксы уже в рейле.'}
+          </div>
+        ) : (
+          availableRailMixOptions.map((mix) => (
+            <button
+              key={mix.id}
+              type="button"
+              className="rail-drawer__picker-row"
+              onClick={() => !locked && onAddMix(mix.id)}
+              disabled={locked}
+            >
+              <div className="rail-drawer__picker-body">
+                <div className="rail-drawer__mix-name">{mix.name}</div>
+                <div className="rail-drawer__mix-meta">
+                  {mix.description || (
+                    <span className="cell-meta">
+                      <span className="metric-inline" title="Популярность микса">
+                        <Flame size={11} aria-hidden="true" />
+                        <span className="sr-only">Выборов</span>
+                        {mix.smokeCtaCount}
+                      </span>
+                      <span className="metric-inline" title="Средний рейтинг гостей">
+                        <Star size={11} aria-hidden="true" />
+                        <span className="sr-only">Рейтинг</span>
+                        {formatRating(mix.avgRating)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="rail-drawer__picker-action" aria-hidden>
+                <Plus size={14} />
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </>
+  );
 
   return (
     <Sheet
@@ -111,6 +172,7 @@ export const RailEditor = ({
         if (!next) {
           onReset();
           setPickerQuery('');
+          setPickerOpen(false);
         }
       }}
     >
@@ -118,6 +180,7 @@ export const RailEditor = ({
         side="right"
         className="rails-surface__sheet rail-drawer"
         showCloseButton={false}
+        data-locked={locked || undefined}
       >
         <header className="drawer__head rail-drawer__head">
           <div className="rail-drawer__head-copy">
@@ -145,63 +208,16 @@ export const RailEditor = ({
         <form className="rail-drawer__form" onSubmit={onSubmit}>
           <div className="drawer__body rail-drawer__body">
             {/* Column 1 — поиск + добавление */}
-            <section className="rail-drawer__col">
-              <h3 className="rail-drawer__section-title">Добавить миксы</h3>
-              <div className="input">
-                <Search size={14} aria-hidden />
-                <input
-                  value={pickerQuery}
-                  onChange={(event) => setPickerQuery(event.target.value)}
-                  placeholder="Поиск миксов"
-                  disabled={locked}
-                />
-              </div>
-
-              <div className="rail-drawer__picker">
-                {availableRailMixOptions.length === 0 ? (
-                  <div className="empty">
-                    {pickerQuery ? 'Ничего не найдено.' : 'Все миксы уже в рейле.'}
-                  </div>
-                ) : (
-                  availableRailMixOptions.map((mix) => (
-                    <button
-                      key={mix.id}
-                      type="button"
-                      className="rail-drawer__picker-row"
-                      onClick={() => !locked && onAddMix(mix.id)}
-                      disabled={locked}
-                    >
-                      <div className="rail-drawer__picker-body">
-                        <div className="rail-drawer__mix-name">{mix.name}</div>
-                        <div className="rail-drawer__mix-meta">
-                          {mix.description || (
-                            <span className="cell-meta">
-                              <span className="metric-inline" title="Популярность микса">
-                                <Flame size={11} aria-hidden="true" />
-                                <span className="sr-only">Выборов</span>
-                                {mix.smokeCtaCount}
-                              </span>
-                              <span className="metric-inline" title="Средний рейтинг гостей">
-                                <Star size={11} aria-hidden="true" />
-                                <span className="sr-only">Рейтинг</span>
-                                {formatRating(mix.avgRating)}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <span className="rail-drawer__picker-action" aria-hidden>
-                        <Plus size={14} />
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </section>
+            {isPhone ? null : (
+              <section className="rail-drawer__col">
+                <h3 className="rail-drawer__section-title">Добавить миксы</h3>
+                {picker}
+              </section>
+            )}
 
             {/* Column 2 — название, подзаголовок, состав */}
             <section className="rail-drawer__col">
-              <label className="rail-drawer__field">
+              <label className="rail-drawer__field rail-drawer__field--text">
                 <span className="rail-drawer__label">Название рейла</span>
                 <div className="input input--lg">
                   <input
@@ -213,7 +229,7 @@ export const RailEditor = ({
                 </div>
               </label>
 
-              <label className="rail-drawer__field">
+              <label className="rail-drawer__field rail-drawer__field--text">
                 <span className="rail-drawer__label">Подзаголовок для гостя</span>
                 <div className="input">
                   <input
@@ -232,13 +248,18 @@ export const RailEditor = ({
                   <h3 className="rail-drawer__section-title">
                     Состав рейла <span className="rail-drawer__section-count">({editor.mixIds.length})</span>
                   </h3>
-                  {!locked && selectedRailMixEntries.length > 1 ? (
+                  {!locked && !isPhone && selectedRailMixEntries.length > 1 ? (
                     <span className="rail-drawer__hint">Порядок меняется перетаскиванием</span>
                   ) : null}
                 </div>
 
                 <div className="rail-drawer__mix-list">
-                  {selectedRailMixEntries.length === 0 ? (
+                  {selectedRailMixEntries.length === 0 && isPhone ? (
+                    <div className="empty rail-drawer__empty">
+                      <b>Рейл пуст</b>
+                      {locked ? null : 'Добавьте миксы кнопкой ниже.'}
+                    </div>
+                  ) : selectedRailMixEntries.length === 0 ? (
                     <div className="empty">
                       В рейле пока нет миксов.
                     </div>
@@ -321,11 +342,17 @@ export const RailEditor = ({
                     ))
                   )}
                 </div>
+                {isPhone && !locked ? (
+                  <button type="button" className="rail-drawer__add" onClick={() => setPickerOpen(true)}>
+                    <Plus size={18} aria-hidden />
+                    Добавить микс
+                  </button>
+                ) : null}
               </div>
             </section>
 
-            {/* Column 3 — preview гостя */}
-            <aside className="rail-drawer__col rail-drawer__col--preview">
+            {/* Column 3 — preview гостя; мастер на телефоне и так видит витрину телефона (#shot=rail-new). */}
+            {isPhone ? null : <aside className="rail-drawer__col rail-drawer__col--preview">
               <h3 className="rail-drawer__section-title">Как увидит гость</h3>
               <div className="rail-drawer__preview">
                 <div className="rail-drawer__phone">
@@ -356,7 +383,7 @@ export const RailEditor = ({
                   </div>
                 </div>
               </div>
-            </aside>
+            </aside>}
           </div>
 
           {saveError ? <p className="rail-drawer__error">{saveError}</p> : null}
@@ -405,6 +432,12 @@ export const RailEditor = ({
             </div>
           </footer>
         </form>
+        {pickerOpen ? (
+          <BottomSheet label="Добавить микс" onClose={() => setPickerOpen(false)} className="rail-picker-sheet">
+            <h2 className="rail-picker-sheet__title">Добавить микс</h2>
+            {picker}
+          </BottomSheet>
+        ) : null}
       </SheetContent>
     </Sheet>
   );

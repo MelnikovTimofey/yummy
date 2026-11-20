@@ -31,7 +31,8 @@
 
 Одна сессия повторяет запросы клиента `apps/aroma-web`:
 
-1. `POST /guest/access-code/verify`;
+1. `POST /guest/access-code/verify` — токен доступа из ответа идёт заголовком `x-atelier-access` во всех
+   остальных запросах сессии (#435);
 2. параллельно, как `App.tsx` после ввода кода: `GET /guest/intro/cards`, `GET /guest/onboarding/options`,
    `GET /guest/catalog/mixes` (дважды: онбординг и каталог), `GET /guest/home/rails`;
 3. у доли `LOGIN_SHARE` сессий — вход до подбора, как «Уже были у нас?»: старт входа, подтверждение с ключом

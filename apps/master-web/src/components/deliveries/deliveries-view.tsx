@@ -5,18 +5,19 @@ import { ShelfToast, type ShelfToastData } from '@/components/shelf/shelf-toast'
 import { formatMetricValue, type DeliveryCard } from '@/contracts';
 import type { DeliveriesApi } from '@/hooks/use-deliveries';
 import {
-  acceptedToastTitle,
+  acceptedToast,
   deliveryStatusTag,
   formatDay,
   formatMoney,
-  formatWeight,
   monthMeta,
   readUploadError,
   type UploadError,
 } from '@/lib/deliveries';
 import { DeliveryCardScreen, type Notify } from './delivery-card';
 import { ManualDeliveryDialog } from './delivery-dialogs';
-import { RowsSkeleton, SmokeMark } from '@/components/ui/loading';
+import { DeliveryMobileList } from './delivery-mobile';
+import { BusyLabel, RowsSkeleton, SmokeMark } from '@/components/ui/loading';
+import { useIsPhone } from '@/hooks/use-is-phone';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -41,6 +42,7 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
   const [toast, setToast] = useState<ShelfToastData | null>(null);
   const toastSeq = useRef(0);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const isPhone = useIsPhone();
   const { reload } = api;
 
   const notify: Notify = useCallback((next) => {
@@ -106,10 +108,10 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           initial={open.card}
           notify={notify}
           onBack={backToList}
-          onAccepted={(card) => {
+          onAccepted={(accepted) => {
             backToList();
             onAccepted();
-            notify({ title: acceptedToastTitle(card.grams), text: '', action: { label: 'Открыть полку', onClick: onOpenShelf } });
+            notify({ ...acceptedToast(accepted), action: { label: 'Открыть полку', onClick: onOpenShelf } });
           }}
           onDeleted={() => {
             backToList();
@@ -134,22 +136,27 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
   const pickFile = () => fileRef.current?.click();
 
   return (
-    <section className="shelf-page deliv-page">
-      <MasterPageHeader
-        title="Поставки"
-        meta={list ? monthMeta(items, new Date()) : undefined}
-        actions={
-          <>
-            <button type="button" className="btn" data-variant="ghost" onClick={() => setManualOpen(true)}>
-              Заполнить вручную
-            </button>
-            <button type="button" className="btn" data-variant="primary" disabled={Boolean(uploading)} onClick={pickFile}>
-              <FileUp size={14} aria-hidden />
-              Загрузить счёт
-            </button>
-          </>
-        }
-      />
+    <section className={`shelf-page deliv-page${isPhone ? ' deliv-page--phone' : ''}`}>
+      {isPhone ? (
+        // Раздел уже назван в шапке телефона, как на «Полке».
+        <h1 className="sr-only">Поставки</h1>
+      ) : (
+        <MasterPageHeader
+          title="Поставки"
+          meta={list ? monthMeta(items, new Date()) : undefined}
+          actions={
+            <>
+              <button type="button" className="btn" data-variant="ghost" onClick={() => setManualOpen(true)}>
+                Заполнить вручную
+              </button>
+              <button type="button" className="btn" data-variant="primary" disabled={Boolean(uploading)} onClick={pickFile}>
+                <FileUp size={14} aria-hidden />
+                Загрузить счёт
+              </button>
+            </>
+          }
+        />
+      )}
       <input
         ref={fileRef}
         type="file"
@@ -162,6 +169,30 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
           if (file) void upload(file);
         }}
       />
+
+      {/* Телефон (#540, #shot=deliveries): кнопки сверху, без зоны перетаскивания. */}
+      {isPhone ? (
+        <>
+          <div className="m-deliv-actions">
+            <button type="button" className="btn" data-variant="primary" disabled={Boolean(uploading)} aria-busy={Boolean(uploading) || undefined} onClick={pickFile}>
+              <BusyLabel busy={Boolean(uploading)}>
+                {uploading ? null : <FileUp size={17} aria-hidden />}
+                Загрузить счёт
+              </BusyLabel>
+            </button>
+            <button type="button" className="btn" onClick={() => setManualOpen(true)}>
+              Вручную
+            </button>
+          </div>
+          {uploading ? (
+            <p className="m-deliv-meta" role="status">
+              Разбираем {uploading}
+            </p>
+          ) : list ? (
+            <p className="m-deliv-meta">{monthMeta(items, new Date())}</p>
+          ) : null}
+        </>
+      ) : null}
 
       {api.status === 'error' ? <p className="error-text">{api.error}</p> : null}
 
@@ -206,34 +237,42 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
         )
       ) : null}
 
-      <div
-        className="deliv-drop"
-        data-state={uploading ? 'busy' : dragOver ? 'hover' : undefined}
-        role="button"
-        tabIndex={0}
-        aria-busy={Boolean(uploading)}
-        aria-label="Загрузить PDF счёта"
-        onClick={() => !uploading && pickFile()}
-        onKeyDown={(event) => {
-          if ((event.key === 'Enter' || event.key === ' ') && !uploading) {
+      {isPhone ? null : (
+        <div
+          className="deliv-drop"
+          data-state={uploading ? 'busy' : dragOver ? 'hover' : undefined}
+          role="button"
+          tabIndex={0}
+          aria-busy={Boolean(uploading)}
+          aria-label="Загрузить PDF счёта"
+          onClick={() => !uploading && pickFile()}
+          onKeyDown={(event) => {
+            if ((event.key === 'Enter' || event.key === ' ') && !uploading) {
+              event.preventDefault();
+              pickFile();
+            }
+          }}
+          onDragOver={(event) => {
             event.preventDefault();
-            pickFile();
-          }
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-      >
-        {uploading ? <SmokeMark inline /> : <FileUp size={20} aria-hidden />}
-        <span role={uploading ? 'status' : undefined}>{uploading ? `Разбираем ${uploading}` : 'Перетащите PDF счёта сюда'}</span>
-      </div>
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+        >
+          {uploading ? <SmokeMark inline /> : <FileUp size={20} aria-hidden />}
+          <span role={uploading ? 'status' : undefined}>{uploading ? `Разбираем ${uploading}` : 'Перетащите PDF счёта сюда'}</span>
+        </div>
+      )}
 
       {api.status === 'loading' && !list ? <RowsSkeleton label="Загружаем поставки" /> : null}
 
-      {list ? (
+      {list && isPhone ? (
+        items.length ? (
+          <DeliveryMobileList items={items} onOpen={(item) => setOpen({ id: item.id, card: null })} />
+        ) : (
+          <p className="empty shelf-table__empty">Поставок пока нет. Загрузите счёт поставщика или заполните поставку вручную.</p>
+        )
+      ) : list ? (
         <div className="shelf-table-shell">
           <table className="shelf-table deliv-table">
             <colgroup>
@@ -241,7 +280,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
               <col />
               <col style={{ width: 150 }} />
               <col style={{ width: 80 }} />
-              <col style={{ width: 96 }} />
               <col style={{ width: 130 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 200 }} />
@@ -252,7 +290,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                 <th scope="col">Поставщик</th>
                 <th scope="col">Счёт</th>
                 <th scope="col" className="shelf-table__num">Строк</th>
-                <th scope="col" className="shelf-table__num">Приход</th>
                 <th scope="col" className="shelf-table__num">Сумма</th>
                 <th scope="col">Пришло</th>
                 <th scope="col">Статус</th>
@@ -277,7 +314,6 @@ export const DeliveriesView = ({ api, pendingFile, onPendingFileTaken, onOpenShe
                     <td>{item.supplier ?? <span className="shelf-faint">{item.kind === 'start' ? 'без поставщика' : '—'}</span>}</td>
                     <td className="shelf-num">{item.number ? `№ ${item.number}` : <span className="shelf-faint">—</span>}</td>
                     <td className="shelf-table__num shelf-num">{formatMetricValue(item.lines)}</td>
-                    <td className="shelf-table__num shelf-num">{item.grams ? formatWeight(item.grams) : <span className="shelf-faint">—</span>}</td>
                     <td className="shelf-table__num shelf-num">{formatMoney(item.totalKop)}</td>
                     <td className="shelf-num">{item.receivedAt ? formatDay(item.receivedAt) : <span className="shelf-faint">—</span>}</td>
                     <td>

@@ -2,13 +2,31 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent,
 import { ChevronDown, ChevronUp, Flame, Plus, Search, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FilterMultiSelect } from '@/components/ui/filter-multi-select';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, SortPill } from '@/components/ui/filter-bar';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
 import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
+import { rankBySearch } from '@/lib/search-match';
+import { useDragSelect } from '@/hooks/use-drag-select';
+import { useIsPhone } from '@/hooks/use-is-phone';
+import type { ShelfState } from '@/lib/shelf';
+import { catalogRemoveLabel } from '@/lib/catalog-mobile';
+import { CatalogActionsSheet, CatalogMobileBulk, CatalogMobileList } from './catalog-mobile';
+import {
+  CATALOG_SORTS,
+  CATALOG_STATUS_CHIPS,
+  applyAttributeChange,
+  catalogStatusCount,
+  catalogStatusOf,
+  catalogStatusPatch,
+  pickSort,
+  sortPillOptions,
+  type CatalogStatus,
+} from '@/lib/list-filters';
 import type {
   InventoryArchivedFilter,
   InventoryFilterKey,
@@ -54,6 +72,12 @@ type InventoryViewProps = {
   pendingRowId: string;
   pendingBatchAction: '' | CatalogBatchAction;
   shelfStatuses: Map<string, 'active' | 'plan'>;
+  // Состояние на полке для карточек телефона: «закончился», «стоп».
+  shelfStates: ReadonlyMap<string, ShelfState>;
+  // Телефон (#540, #shot=catalog-select): «Выбрать» и «+» живут в верхней панели App.
+  picking: boolean;
+  createRequested: boolean;
+  onCreateOpened: () => void;
   onSearchChange: (value: string) => void;
   onStockChange: (value: InventoryStockFilter) => void;
   onArchivedChange: (value: InventoryArchivedFilter) => void;
@@ -61,8 +85,11 @@ type InventoryViewProps = {
   onToggleFilterValue: (key: InventoryFilterKey, value: string) => void;
   onClearFilterGroup: (key: InventoryFilterKey) => void;
   onToggleSelection: (id: string) => void;
+  onSetSelection: (ids: string[]) => void;
   onToggleSelectAll: () => void;
   onAddToShelf: (item: InventoryTobacco) => void;
+  // «В план» (#564): тот же запрос, что в «Идеях для закупки».
+  onAddToPlan: (item: InventoryTobacco) => void;
   onRemoveFromShelf: (item: InventoryTobacco) => void;
   onArchiveTobacco: (item: InventoryTobacco, archived: boolean) => void;
   onRunBatchAction: (action: CatalogBatchAction) => void;
@@ -76,19 +103,13 @@ type InventoryViewProps = {
   view: CatalogView;
   onViewChange: (view: CatalogView) => void;
   ideas: ReactNode;
+  openCardId?: string;
+  onCardOpened?: () => void;
 };
 
 export type CatalogView = 'all' | 'ideas';
 
-// Фильтры в свёрнутом `<details>` блоке «Ещё фильтры». Бренд живёт здесь
-// мультиселектом на весь список брендов (issue #119): чипов-топ-8 не хватало
-// для 279 брендов. Категории, наоборот, вынесены в видимый ряд чипов над
-// таблицей (см. categoryChips).
-const extraFilterGroups: Array<{ key: InventoryFilterKey; title: string }> = [
-  { key: 'manufacturers', title: 'Бренд' },
-  { key: 'flavors', title: 'Вкусы' },
-  { key: 'flavorTags', title: 'Мета-теги' },
-];
+const filterKeys: InventoryFilterKey[] = ['flavorProfiles', 'manufacturers', 'flavors', 'flavorTags'];
 
 const inventoryPageSizeOptions = [100, 200, 500, 1000];
 
@@ -127,23 +148,12 @@ const formatDetailValue = (value?: string | null, fallback = 'Не указан�
 const formatMixCardStatus = (mix: NonNullable<InventoryTobacco['dependentMixes']>[number]) =>
   formatMixStatusLabel(resolveMixStatus(mix));
 
-const formatFilterOptionLabel = (key: InventoryFilterKey, value: string) => {
-  if (key === 'flavorProfiles') {
-    return formatFlavorProfileLabel(value);
-  }
-
-  return value;
-};
-
 const uniqueStrings = (items: string[]) =>
   Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
 
 
-// Чипы категорий для видимого ряда фильтров над таблицей. Категорий немного
-// (≤12 канонических), поэтому показываем все встречающиеся — без top-N среза,
-// который раньше прятал бренды (issue #119). Частота задаёт только порядок:
-// чисел на чипах категорий нет (#348).
-const buildCategoryChips = (catalog: InventoryTobacco[]): string[] => {
+// Категории в списке фильтра — по частоте в каталоге, чисел у них нет (#348).
+const buildCategoryOptions = (catalog: InventoryTobacco[]): string[] => {
   const counts = new Map<string, number>();
   for (const item of catalog) {
     for (const profile of item.flavorProfiles ?? []) {
@@ -260,9 +270,7 @@ const InventoryTokenEditor = ({
   }, [open]);
 
   const normalizedDraft = draftValue.trim().toLocaleLowerCase('ru-RU');
-  const filteredSuggestions = suggestions.filter(
-    (item) => !normalizedDraft || item.toLocaleLowerCase('ru-RU').includes(normalizedDraft),
-  );
+  const filteredSuggestions = rankBySearch(suggestions, draftValue, (item) => [item]);
   const canAddCustom =
     normalizedDraft.length > 0 && !suggestions.some((item) => item.toLocaleLowerCase('ru-RU') === normalizedDraft);
 
@@ -413,9 +421,7 @@ const InventorySuggestionInput = ({
   }, [open]);
 
   const normalized = value.trim().toLocaleLowerCase('ru-RU');
-  const filtered = suggestions
-    .filter((option) => !normalized || option.toLocaleLowerCase('ru-RU').includes(normalized))
-    .slice(0, 8);
+  const filtered = rankBySearch(suggestions, value, (option) => [option]).slice(0, 8);
 
   return (
     <div className="field combo-suggest" ref={rootRef}>
@@ -550,6 +556,10 @@ export const InventoryView = ({
   pendingRowId,
   pendingBatchAction,
   shelfStatuses,
+  shelfStates,
+  picking,
+  createRequested,
+  onCreateOpened,
   onSearchChange,
   onStockChange,
   onArchivedChange,
@@ -557,8 +567,10 @@ export const InventoryView = ({
   onToggleFilterValue,
   onClearFilterGroup,
   onToggleSelection,
+  onSetSelection,
   onToggleSelectAll,
   onAddToShelf,
+  onAddToPlan,
   onRemoveFromShelf,
   onArchiveTobacco,
   onRunBatchAction,
@@ -572,15 +584,43 @@ export const InventoryView = ({
   view,
   onViewChange,
   ideas,
+  openCardId,
+  onCardOpened,
 }: InventoryViewProps) => {
   const [activeItemId, setActiveItemId] = useState('');
+  // Меню «⋯» карточки на телефоне.
+  const [menuItemId, setMenuItemId] = useState('');
+  // Ожидание у табака одно на обе кнопки: помним, что нажали — «В план» или «На полку».
+  const [planningId, setPlanningId] = useState('');
+  const addToShelf = (item: InventoryTobacco) => {
+    setPlanningId('');
+    onAddToShelf(item);
+  };
+  const addToPlan = (item: InventoryTobacco) => {
+    setPlanningId(item.id);
+    onAddToPlan(item);
+  };
+
+  useEffect(() => {
+    if (!openCardId || !items.some((item) => item.id === openCardId)) return;
+    setActiveItemId(openCardId);
+    onCardOpened?.();
+  }, [openCardId, items, onCardOpened]);
   const [searchValue, setSearchValue] = useState(filters.search);
   const [editorMode, setEditorMode] = useState<InventoryEditorMode>('create');
   const [editorOpen, setEditorOpen] = useState(false);
   const [extraEditorOpen, setExtraEditorOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<InventoryEditorDraft>(emptyInventoryEditorDraft());
+  const drag = useDragSelect({
+    order: items.map((item) => item.id),
+    selected: selectedIds,
+    onChange: (next) => onSetSelection(next),
+  });
+
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
   const activeItem = items.find((item) => item.id === activeItemId) ?? null;
+  const activeShelfStatus = activeItem ? shelfStatuses.get(activeItem.id) : undefined;
+  const drawerBusy = (activeItem !== null && pendingRowId === activeItem.id) || pendingBatchAction !== '';
   const editingItem = editorMode === 'edit'
     ? items.find((item) => item.id === editorDraft.id) ?? null
     : null;
@@ -595,7 +635,9 @@ export const InventoryView = ({
   const flavorProfileOptions = INVENTORY_FLAVOR_PROFILE_KEYS;
   const flavorOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavors ?? []));
   const flavorTagOptions = buildSuggestionOptions(catalogOptions.flatMap((item) => item.flavorTags ?? []));
-  const categoryChips = buildCategoryChips(catalogOptions);
+  const categoryOptions = Array.from(new Set([...buildCategoryOptions(catalogOptions), ...filters.options.flavorProfiles]));
+  const isPhone = useIsPhone();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Сколько полей блока «Дополнительно» заполнено — показываем бейджем у
   // summary, чтобы свёрнутый блок не читался как пустой (issue #126).
@@ -669,6 +711,14 @@ export const InventoryView = ({
     setEditorDraft(emptyInventoryEditorDraft());
     setEditorOpen(true);
   };
+
+  useEffect(() => {
+    if (!createRequested) return;
+    openCreateEditor();
+    onCreateOpened();
+    // openCreateEditor пересоздаётся каждый рендер; запрос — только флаг.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createRequested, onCreateOpened]);
 
   const openEditEditor = (item: InventoryTobacco) => {
     onResetSaveFeedback();
@@ -752,21 +802,45 @@ export const InventoryView = ({
           <section className="tobacco-detail-drawer__section">
             <p className="tobacco-detail-drawer__label">Действия</p>
             <div className="tobacco-detail-drawer__actions">
-              <button
-                type="button"
-                className="btn"
-                data-size="sm"
-                data-variant={shelfStatuses.has(activeItem.id) ? 'ghost' : 'primary'}
-                onClick={() =>
-                  shelfStatuses.has(activeItem.id) ? onRemoveFromShelf(activeItem) : onAddToShelf(activeItem)
-                }
-                disabled={pendingRowId === activeItem.id || pendingBatchAction !== ''}
-                aria-busy={pendingRowId === activeItem.id || undefined}
-              >
-                <BusyLabel busy={pendingRowId === activeItem.id}>
-                  {shelfStatuses.has(activeItem.id) ? 'Убрать с полки' : 'На полку'}
-                </BusyLabel>
-              </button>
+              {activeShelfStatus ? (
+                <button
+                  type="button"
+                  className="btn"
+                  data-size="sm"
+                  data-variant="ghost"
+                  onClick={() => onRemoveFromShelf(activeItem)}
+                  disabled={drawerBusy}
+                  aria-busy={pendingRowId === activeItem.id || undefined}
+                >
+                  <BusyLabel busy={pendingRowId === activeItem.id}>{catalogRemoveLabel(activeShelfStatus)}</BusyLabel>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn"
+                    data-size="sm"
+                    data-variant="primary"
+                    onClick={() => addToShelf(activeItem)}
+                    disabled={drawerBusy}
+                    aria-busy={(pendingRowId === activeItem.id && planningId !== activeItem.id) || undefined}
+                  >
+                    <BusyLabel busy={pendingRowId === activeItem.id && planningId !== activeItem.id}>На полку</BusyLabel>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    data-size="sm"
+                    data-variant="ghost"
+                    aria-label={`В план: ${activeItem.name}`}
+                    onClick={() => addToPlan(activeItem)}
+                    disabled={drawerBusy}
+                    aria-busy={(pendingRowId === activeItem.id && planningId === activeItem.id) || undefined}
+                  >
+                    <BusyLabel busy={pendingRowId === activeItem.id && planningId === activeItem.id}>В план</BusyLabel>
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="btn"
@@ -1233,172 +1307,232 @@ export const InventoryView = ({
     onSortChange,
   };
 
-  const extraFilterGroupsAvailable = extraFilterGroups.some((group) => filters.options[group.key].length);
-  const extraFilterSelectionCount = extraFilterGroups.reduce((acc, group) => acc + filters[group.key].length, 0);
-
-  const stockFilterTabs: Array<{ value: InventoryStockFilter; label: string; count: number; ariaLabel: string }> = [
-    // У «Все» числа нет: сколько всего, сказано в мете шапки (#348).
-    { value: 'all', label: 'Все', count: 0, ariaLabel: 'Фильтр: Все' },
-    { value: 'in-stock', label: 'В наличии', count: meta.inStockCount, ariaLabel: 'Фильтр: В наличии' },
-    { value: 'out-of-stock', label: 'Нет наличия', count: meta.outOfStockCount, ariaLabel: 'Фильтр: Нет наличия' },
+  const catalogStatus = catalogStatusOf(filters);
+  const archivedActive = catalogStatus === 'archived';
+  const setCatalogStatus = (next: CatalogStatus) => {
+    const patch = catalogStatusPatch(filters, next);
+    if (patch.archived) onArchivedChange(patch.archived);
+    if (patch.stock) onStockChange(patch.stock);
+  };
+  const changeSort = (field: InventoryListSort['field']) => {
+    const next = pickSort(CATALOG_SORTS, sort, field);
+    if (next !== sort) onSortChange(next);
+  };
+  // Фильтры серверные: список отдаёт новый набор, сервер принимает toggle или clear.
+  const attribute = (key: InventoryFilterKey, title: string, options: string[], formatOption?: (value: string) => string) => ({
+    title,
+    options,
+    selected: filters[key],
+    formatOption,
+    onChange: (next: string[]) =>
+      applyAttributeChange(filters[key], next, {
+        toggle: (value) => onToggleFilterValue(key, value),
+        clear: () => onClearFilterGroup(key),
+      }),
+  });
+  // Одни и те же атрибуты — списками на десктопе и чипами в шторке телефона.
+  const attributes = [
+    attribute('flavorProfiles', 'Категории', categoryOptions, formatFlavorProfileLabel),
+    attribute('manufacturers', 'Бренд', filters.options.manufacturers),
+    attribute('flavors', 'Вкусы', filters.options.flavors),
+    attribute('flavorTags', 'Мета-теги', filters.options.flavorTags),
   ];
+  const activeAttributes = filterKeys.reduce((acc, key) => acc + filters[key].length, 0);
+  const narrowed = activeAttributes > 0 || catalogStatus !== 'all';
+  const filtersActive = Boolean(filters.search) || narrowed;
 
-  const archivedActive = filters.archived === 'archived';
-  const filtersActive =
-    Boolean(filters.search) ||
-    filters.stock !== 'all' ||
-    filters.archived !== 'active' ||
-    filters.flavorProfiles.length > 0 ||
-    extraFilterGroups.some((group) => filters[group.key].length > 0);
-
+  const clearAttributes = () => filterKeys.forEach((key) => filters[key].length && onClearFilterGroup(key));
   const resetFilters = () => {
+    setCatalogStatus('all');
+    clearAttributes();
+  };
+  const resetAll = () => {
     setSearchValue('');
     onSearchChange('');
-    onStockChange('all');
-    onArchivedChange('active');
-    onClearFilterGroup('flavorProfiles');
-    extraFilterGroups.forEach((group) => onClearFilterGroup(group.key));
+    resetFilters();
   };
 
+  const statusChip = ([key, label]: [CatalogStatus, string]) => (
+    <FilterChip
+      key={key}
+      active={catalogStatus === key}
+      count={catalogStatusCount(meta, key)}
+      label={`Фильтр: ${label}`}
+      onClick={() => setCatalogStatus(key)}
+    >
+      {label}
+    </FilterChip>
+  );
+  const searchInput = (
+    <input
+      type="search"
+      enterKeyHint="search"
+      aria-label="Поиск по каталогу"
+      placeholder="Табак или бренд"
+      value={searchValue}
+      onChange={(event) => setSearchValue(event.target.value)}
+    />
+  );
+
+  const viewSeg = (
+    <span className={isPhone ? 'shelf-seg shelf-seg--phone' : 'shelf-seg'} role="group" aria-label="Вид каталога">
+      <button type="button" aria-pressed={view === 'all'} onClick={() => onViewChange('all')}>
+        Все табаки
+      </button>
+      <button type="button" aria-pressed={view === 'ideas'} onClick={() => onViewChange('ideas')}>
+        Идеи для закупки
+      </button>
+    </span>
+  );
+  const emptyList = filtersActive ? (
+    <div className="list-empty">
+      <p>Уберите один из фильтров.</p>
+      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetAll}>
+        Сбросить фильтры
+      </button>
+    </div>
+  ) : (
+    'Каталог пуст.'
+  );
+  const menuItem = items.find((item) => item.id === menuItemId) ?? null;
+  // «⋯» есть только у табака на полке или в плане.
+  const menuShelfState = (menuItem && shelfStates.get(menuItem.id)) || 'in';
+
   return (
-    <section className="tobaccos-page">
-      <MasterPageHeader
-        title="Каталог"
-        meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])}, ${formatMetricValue(meta.inMixesCount)} в миксах`}
-        actions={
-          <>
-            <span className="shelf-seg" role="group" aria-label="Вид каталога">
-              <button type="button" aria-pressed={view === 'all'} onClick={() => onViewChange('all')}>
-                Все табаки
+    <section className={isPhone ? 'tobaccos-page tobaccos-page--phone' : 'tobaccos-page'}>
+      {/* Телефон (#540, #shot=catalog): раздел назван в верхней панели, «Новый табак» — «+» там же. */}
+      {isPhone ? (
+        <>
+          <h1 className="sr-only">Каталог</h1>
+          {viewSeg}
+        </>
+      ) : (
+        <MasterPageHeader
+          title="Каталог"
+          meta={`${formatCount(meta.totalItems, ['позиция', 'позиции', 'позиций'])}, ${formatMetricValue(meta.inMixesCount)} в миксах`}
+          actions={
+            <>
+              {viewSeg}
+              <button
+                type="button"
+                className="btn"
+                data-variant="primary"
+                onClick={openCreateEditor}
+              >
+                <Plus size={14} aria-hidden />
+                Новый табак
               </button>
-              <button type="button" aria-pressed={view === 'ideas'} onClick={() => onViewChange('ideas')}>
-                Идеи для закупки
-              </button>
-            </span>
-            <button
-              type="button"
-              className="btn"
-              data-variant="primary"
-              onClick={openCreateEditor}
-            >
-              <Plus size={14} aria-hidden />
-              Новый табак
-            </button>
-          </>
-        }
-      />
+            </>
+          }
+        />
+      )}
 
       {editorSheet}
 
       {view === 'ideas' ? ideas : (
       <>
-      <div className="tobaccos-list">
-        <div className="tobaccos-list__toolbar">
-          <div className="input tobaccos-list__search">
-            <Search size={14} aria-hidden />
-            <input
-              type="search"
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Поиск по каталогу"
-            />
+      {isPhone ? (
+        <>
+          <div className="m-list-search">
+            <div className="input m-list-search__field">
+              <Search size={16} aria-hidden />
+              {searchInput}
+            </div>
+            <FiltersButton count={activeAttributes} open={filtersOpen} onClick={() => setFiltersOpen(true)} />
           </div>
-
-          <div className="tobaccos-list__filters" role="group" aria-label="Фильтр по наличию">
-            {stockFilterTabs.map((tab) => {
-              const active = filters.stock === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
-                  aria-pressed={active}
-                  aria-label={tab.ariaLabel}
-                  onClick={() => onStockChange(tab.value)}
-                >
-                  <span>{tab.label}</span>
-                  {tab.value === 'all' ? null : (
-                    <span className="filter-chip__count" hidden={tab.count === 0}>
-                      {formatMetricValue(tab.count)}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <div className="m-list-chips" role="group" aria-label="Статус в каталоге">
+            {CATALOG_STATUS_CHIPS.map(statusChip)}
           </div>
-
-          <div className="tobaccos-list__filters" role="group" aria-label="Фильтр по архиву">
-            <button
-              type="button"
-              className={`filter-chip${archivedActive ? ' filter-chip--active' : ''}`}
-              aria-pressed={archivedActive}
-              aria-label="Фильтр: Архив"
-              onClick={() => onArchivedChange(archivedActive ? 'active' : 'archived')}
-            >
-              <span>Архив</span>
-              <span className="filter-chip__count" hidden={meta.archivedCount === 0}>
-                {formatMetricValue(meta.archivedCount)}
-              </span>
-            </button>
+        </>
+      ) : (
+        <div className="filter-bar">
+          <div className="filter-bar__row">
+            <div className="input filter-bar__search">
+              <Search size={14} aria-hidden />
+              {searchInput}
+            </div>
+            <div className="filter-bar__chips" role="group" aria-label="Статус в каталоге">
+              {CATALOG_STATUS_CHIPS.map(statusChip)}
+            </div>
+          </div>
+          <div className="filter-bar__row">
+            <div className="filter-bar__chips" role="group" aria-label="Фильтры каталога">
+              {attributes.map((item) => (
+                <AttributeFilter key={item.title} {...item} />
+              ))}
+              {narrowed ? <FilterReset onClick={resetFilters} /> : null}
+            </div>
+            <SortPill value={sort.field} options={sortPillOptions(CATALOG_SORTS)} onChange={changeSort} />
           </div>
         </div>
+      )}
 
-        {categoryChips.length ? (
-          <div className="tobaccos-list__chip-filter" role="group" aria-label="Фильтр по категории">
-            <span className="tobaccos-list__chip-filter-label">Категории</span>
-            {categoryChips.map((value) => {
-              const active = filters.flavorProfiles.includes(value);
-              return (
-                <button
-                  key={`category-chip:${value}`}
-                  type="button"
-                  className={`filter-chip${active ? ' filter-chip--active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => onToggleFilterValue('flavorProfiles', value)}
-                >
-                  {formatFlavorProfileLabel(value)}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-
-      {extraFilterGroupsAvailable ? (
-        <details className="inventory-extra-filters">
-          <summary className="inventory-extra-filters__trigger">
-            <ChevronDown size={13} aria-hidden className="inventory-extra-filters__chevron" />
-            Ещё фильтры
-            {extraFilterSelectionCount > 0 ? (
-              <span className="inventory-extra-filters__count" aria-hidden="true">
-                {formatMetricValue(extraFilterSelectionCount)}
-              </span>
+      {isPhone && filtersOpen ? (
+        <BottomSheet label="Фильтры каталога" onClose={() => setFiltersOpen(false)} className="m-filters-sheet">
+          <h2 className="m-filters-sheet__title">Фильтры</h2>
+          <SheetChoice
+            title="Сортировка"
+            options={CATALOG_SORTS.map((option) => option.field)}
+            selected={[sort.field]}
+            formatOption={(field) => CATALOG_SORTS.find((option) => option.field === field)?.label ?? field}
+            single
+            onChange={([next]) => next && changeSort(next as InventoryListSort['field'])}
+          />
+          {attributes.map((item) => (
+            <SheetChoice key={item.title} {...item} />
+          ))}
+          <div className="m-filters-sheet__actions">
+            {activeAttributes ? (
+              <button type="button" className="btn" data-variant="ghost" onClick={clearAttributes}>
+                Сбросить
+              </button>
             ) : null}
-          </summary>
-          <div className="inventory-filter-groups ops-filter-groups">
-            {extraFilterGroups.map((group) => {
-              const options = filters.options[group.key];
-
-              if (!options.length) {
-                return null;
-              }
-
-              return (
-                <FilterMultiSelect
-                  key={group.key}
-                  title={group.title}
-                  options={options}
-                  selected={filters[group.key]}
-                  formatOptionLabel={(option) => formatFilterOptionLabel(group.key, option)}
-                  onToggleOption={(option) => onToggleFilterValue(group.key, option)}
-                  onClearGroup={() => onClearFilterGroup(group.key)}
-                />
-              );
-            })}
+            <button type="button" className="btn" data-variant="primary" onClick={() => setFiltersOpen(false)}>
+              Показать {formatMetricValue(meta.filteredItems)}
+            </button>
           </div>
-        </details>
+        </BottomSheet>
       ) : null}
 
+      {isPhone ? (
+        <>
+          {error ? <p className="error-text">{error}</p> : null}
+          {status === 'loading' && !items.length ? <RowsSkeleton label="Загружаем каталог" rows={8} /> : null}
+          <CatalogMobileList
+            items={items}
+            shelfStates={shelfStates}
+            picked={picking ? selectedIds : null}
+            pendingRowId={pendingRowId}
+            planningId={planningId}
+            batchBusy={pendingBatchAction !== ''}
+            onOpen={openEditEditor}
+            onPick={(item) => onToggleSelection(item.id)}
+            onAddToShelf={addToShelf}
+            onAddToPlan={addToPlan}
+            onMenu={(item) => setMenuItemId(item.id)}
+          />
+          {!items.length && status !== 'loading' ? <div className="empty m-catalog-empty">{emptyList}</div> : null}
+          {menuItem ? (
+            <CatalogActionsSheet
+              item={menuItem}
+              state={menuShelfState}
+              onProfile={() => setActiveItemId(menuItem.id)}
+              onRemoveFromShelf={() => onRemoveFromShelf(menuItem)}
+              onClose={() => setMenuItemId('')}
+            />
+          ) : null}
+          {picking ? (
+            <CatalogMobileBulk
+              count={selectedIds.length}
+              pending={pendingBatchAction}
+              archivedActive={archivedActive}
+              labels={catalogBatchLabels}
+              onRun={onRunBatchAction}
+            />
+          ) : null}
+        </>
+      ) : (
+      <div className="tobaccos-list">
       {selectedIds.length ? (
         <div className="inventory-batch-bar">
           <p className="inventory-batch-bar__title">Выбрано позиций: {formatMetricValue(selectedIds.length)}</p>
@@ -1524,6 +1658,7 @@ export const InventoryView = ({
                     data-tobacco-id={item.id}
                     className="inventory-table__row"
                     onClick={() => openEditEditor(item)}
+                    onPointerEnter={(event) => drag.dragOver(event, item.id)}
                   >
                     <td className="inventory-table__brand" onClick={(event) => event.stopPropagation()}>
                       <label
@@ -1535,6 +1670,11 @@ export const InventoryView = ({
                           className="inventory-brand-cell__check"
                           checked={selectedIds.includes(item.id)}
                           onChange={() => onToggleSelection(item.id)}
+                          onPointerDown={(event) => drag.startDrag(event, item.id)}
+                          // Без этого протягивание выделяет текст строк.
+                          onMouseDown={(event) => {
+                            if (drag.isDragging()) event.preventDefault();
+                          }}
                           aria-label={`Выбрать ${item.name}`}
                         />
                       </label>
@@ -1598,17 +1738,31 @@ export const InventoryView = ({
                       ) : shelfStatus === 'plan' ? (
                         <span className="tag" data-tone="info">в плане</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="btn"
-                          data-size="sm"
-                          aria-label={`На полку: ${item.name}`}
-                          onClick={() => onAddToShelf(item)}
-                          disabled={stockBusy || item.archived}
-                          aria-busy={pendingRowId === item.id || undefined}
-                        >
-                          <BusyLabel busy={pendingRowId === item.id}>На полку</BusyLabel>
-                        </button>
+                        <span className="inventory-shelf-actions">
+                          <button
+                            type="button"
+                            className="btn"
+                            data-size="sm"
+                            aria-label={`На полку: ${item.name}`}
+                            onClick={() => addToShelf(item)}
+                            disabled={stockBusy || item.archived}
+                            aria-busy={(pendingRowId === item.id && planningId !== item.id) || undefined}
+                          >
+                            <BusyLabel busy={pendingRowId === item.id && planningId !== item.id}>На полку</BusyLabel>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn"
+                            data-size="sm"
+                            data-variant="ghost"
+                            aria-label={`В план: ${item.name}`}
+                            onClick={() => addToPlan(item)}
+                            disabled={stockBusy || item.archived}
+                            aria-busy={(pendingRowId === item.id && planningId === item.id) || undefined}
+                          >
+                            <BusyLabel busy={pendingRowId === item.id && planningId === item.id}>В план</BusyLabel>
+                          </button>
+                        </span>
                       )}
                     </td>
                     <td className="inventory-table__mixes">
@@ -1679,16 +1833,7 @@ export const InventoryView = ({
             ) : (
               <tr>
                 <td className="inventory-table__empty" colSpan={10}>
-                  {filtersActive ? (
-                    <div className="list-empty">
-                      <p>Ничего не найдено. Уберите один из фильтров.</p>
-                      <button type="button" className="btn" data-size="sm" data-variant="ghost" onClick={resetFilters}>
-                        Сбросить фильтры
-                      </button>
-                    </div>
-                  ) : (
-                    'Каталог пуст.'
-                  )}
+                  {emptyList}
                 </td>
               </tr>
             )}
@@ -1696,6 +1841,7 @@ export const InventoryView = ({
         </table>
       </div>
       </div>
+      )}
 
       <ListPagination
         page={meta.page}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CTA, MixListRow, ProfileGlyph, SignatureBar } from '@/components/aroma';
+import { CTA, MixListRow, MixPhoto, SignatureBar } from '@/components/aroma';
 import {
   FOR_YOU_TITLE,
   MOOD_TITLE,
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 type ForYouMix = {
   id: string;
   name: string;
+  flavors: string[];
   flavorProfiles: string[];
   components: Array<{ id: string; name: string; manufacturer: string; proportion: number }>;
 };
@@ -49,6 +50,7 @@ function ReasonRow<M extends ForYouMix>({ row, onOpen }: { row: ForYouRow<M>; on
   return (
     <MixListRow
       profiles={row.mix.flavorProfiles}
+      photo={row.mix}
       name={row.mix.name}
       sub={row.reason}
       onClick={() => onOpen(row.mix)}
@@ -75,7 +77,7 @@ function ForYouHero<M extends ForYouMix>({
   return (
     <article className="aroma-recs-hero">
       <button type="button" className="aroma-recs-hero-head fy-hero-open" onClick={() => onOpen(mix)}>
-        <ProfileGlyph profiles={mix.flavorProfiles} size={64} />
+        <MixPhoto mix={mix} profiles={mix.flavorProfiles} size={64} eager />
         <span className="aroma-recs-hero-head-text">
           <span className="aroma-recs-hero-title">{mix.name}</span>
           <span className="aroma-recs-hero-desc">{row.reason}</span>

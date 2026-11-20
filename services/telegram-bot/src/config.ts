@@ -27,8 +27,6 @@ export type BotConfig = {
   backendAutomationToken: string;
   statePath: string;
   updateTimeoutSeconds: number;
-  broadcastHour: number;
-  broadcastMinute: number;
   guestLoginReturnUrl: string;
 };
 
@@ -43,7 +41,5 @@ export const loadConfig = (): BotConfig => ({
     path.join(process.cwd(), '.atelier-telegram-bot-state.json'),
   ),
   updateTimeoutSeconds: parseNumber(process.env.ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS, 25),
-  broadcastHour: parseNumber(process.env.ATELIER_DAILY_BROADCAST_HOUR, 9),
-  broadcastMinute: parseNumber(process.env.ATELIER_DAILY_BROADCAST_MINUTE, 0),
   guestLoginReturnUrl: env(process.env.ATELIER_GUEST_LOGIN_RETURN_URL),
 });

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { deleteMix, rateMix, resetAppState } from './state';
 import { mixes as mixFixtures } from './catalog';
 import { getInStockMixes, getOnboardingOptions, getRecommendations } from './recommendations';

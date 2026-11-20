@@ -15,6 +15,8 @@ export const PROFILE_COLORS: Record<string, string> = {
   fruity: '#dd8a4a',
   perfume: '#c787a8',
   sour: '#bcb04a',
+  beverage: '#5f8db5',
+  gastro: '#8a6f9e',
 };
 
 export const PROFILE_FALLBACK = '#7a5236';

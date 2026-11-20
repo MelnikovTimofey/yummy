@@ -1,28 +1,68 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { DashboardSummary } from '@/contracts';
-import { buildStatsTiles, formatWindow } from './dashboard-view';
+import type { GuestChoices } from '@/contracts';
+import { buildKpiTiles, mixRows, noDataText, periodPressed, tobaccoRows } from './dashboard-view';
 
-test('период дашборда: внутри месяца «10–23 октября», через границу — оба месяца', () => {
-  assert.equal(formatWindow('2026-10-10T00:00:00', '2026-10-23T23:59:59'), '10–23 октября');
-  assert.equal(formatWindow('2026-09-29T00:00:00', '2026-10-05T23:59:59'), '29 сентября – 5 октября');
-  assert.equal(formatWindow('', '2026-10-05T23:59:59'), undefined);
+const kpi: GuestChoices['kpi'] = { choices: 621, ownMixes: 121, mixesChosen: 58, mixesOnShowcase: 64, avgRating: 4.6, ratingsCount: 87 };
+const plain = (value: unknown) => (value === undefined ? null : String(value).replace(/ | /g, ' '));
+const rows = (tiles: ReturnType<typeof buildKpiTiles>) => tiles.map((tile) => [tile.label, plain(tile.value), plain(tile.hint)]);
+
+test('плитки дашборда: выборы, свои миксы, миксы с витрины, оценка гостей', () => {
+  assert.deepEqual(rows(buildKpiTiles(kpi, false)), [
+    ['Выборов', '621', '«Покурить» и свои миксы'],
+    ['Свои миксы', '121', 'собраны в «Намиксуй»'],
+    ['Миксов выбирали', '58', 'из 64 на витрине'],
+    ['Оценка гостей', '4,6', 'по 87 оценкам'],
+  ]);
+  assert.deepEqual(rows(buildKpiTiles({ ...kpi, choices: 1250, avgRating: null, ratingsCount: 0 }, false)).map((row) => row.slice(1)), [
+    ['1 250', '«Покурить» и свои миксы'],
+    ['121', 'собраны в «Намиксуй»'],
+    ['58', 'из 64 на витрине'],
+    ['—', 'оценок нет'],
+  ]);
+  assert.equal(plain(buildKpiTiles({ ...kpi, ratingsCount: 1 }, false)[3].hint), 'по 1 оценке');
 });
 
-test('KPI дашборда: подписи sentence case, хвосты сокращены до одного факта', () => {
-  const tiles = buildStatsTiles({
-    totalTobaccos: 11528,
-    inStockCount: 290,
-    ops: { guestVisibleMixesCount: 15, blockedByInventoryCount: 0, activeRailsCount: 7, blockedMixes: [] },
-  } as unknown as DashboardSummary);
-  const plain = (value: unknown) => (value === undefined ? null : String(value).replace(/\u00a0|\u202f/g, ' '));
-  assert.deepEqual(
-    tiles.map((tile) => [tile.label, plain(tile.value), plain(tile.hint)]),
-    [
-      ['В наличии', '290', 'из 11 528 табаков'],
-      ['Видно гостю', '15', 'миксов'],
-      ['Заблокировано', '0', null],
-      ['Активных рейлов', '7', null],
-    ],
-  );
+test('плитки на телефоне короче: под числом только витрина', () => {
+  assert.deepEqual(rows(buildKpiTiles(kpi, true)), [
+    ['Выборов', '621', null],
+    ['Свои миксы', '121', null],
+    ['Миксов', '58', 'из 64'],
+    ['Оценка', '4,6', null],
+  ]);
+});
+
+test('пустой период: что случилось', () => {
+  const period = { key: 'custom' as const, from: '2026-10-01', to: '2026-10-05', days: 5, bucket: 'day' as const };
+  assert.deepEqual(noDataText(period), { title: 'Выборов нет', text: 'За 1 – 5 октября гости ничего не выбирали.' });
+  assert.deepEqual(noDataText({ ...period, key: 'all' }), { title: 'Выборов нет', text: 'Гости пока ничего не выбирали.' });
+});
+
+test('сегмент периода: пока открыт календарь, нажаты «Даты»', () => {
+  assert.equal(periodPressed('30d', { key: '30d' }, false), true);
+  assert.equal(periodPressed('custom', { key: '30d' }, true), true);
+  assert.equal(periodPressed('30d', { key: '30d' }, true), false);
+  assert.equal(periodPressed('custom', { key: 'custom', from: '2026-10-13', to: '2026-10-26' }, false), true);
+});
+
+test('топ табаков: у каждого статус наличия, проба отдельной меткой', () => {
+  const tags = tobaccoRows([
+    { tobaccoId: 't1', manufacturer: 'Darkside', name: 'Red Tea', choices: 7, stock: 'in', trial: false },
+    { tobaccoId: 't2', manufacturer: 'Darkside', name: 'Mintslide', choices: 2, stock: 'in', trial: true },
+    { tobaccoId: 't3', manufacturer: 'Black Burn', name: 'Cane Mint', choices: 4, stock: 'out', trial: false },
+    { tobaccoId: 't4', manufacturer: 'Deus', name: 'Catmint', choices: 2, stock: 'off-shelf', trial: false },
+    { tobaccoId: 't5', manufacturer: 'Deus', name: 'Black JI', choices: 2, stock: null, trial: false },
+  ]).map((row) => row.tags.map((tag) => tag.label));
+  assert.deepEqual(tags, [['есть'], ['есть', 'проба'], ['закончился'], ['нет на полке'], []]);
+});
+
+test('топ миксов: статус как в «Миксах», у удалённого статуса нет', () => {
+  const tags = mixRows([
+    { mixId: 'm1', mixName: 'Персиковый чай', choices: 6, avgRating: null, status: 'visible' },
+    { mixId: 'm2', mixName: 'Арбузный джин-тоник', choices: 2, avgRating: null, status: 'substituted' },
+    { mixId: 'm3', mixName: 'Пина колада', choices: 1, avgRating: null, status: 'blocked' },
+    { mixId: 'm4', mixName: 'Зимний глинтвейн', choices: 1, avgRating: null, status: 'hidden' },
+    { mixId: null, mixName: 'Старый микс', choices: 1, avgRating: null, status: null },
+  ]).map((row) => row.tags.map((tag) => tag.label));
+  assert.deepEqual(tags, [['виден'], ['с заменой'], ['блокирован'], ['скрыт'], []]);
 });

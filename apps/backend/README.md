@@ -147,7 +147,11 @@
 
 ### Guest access
 
-- `POST /guest/access-code/verify`
+- `POST /guest/access-code/verify` — по коду дня выдаёт `accessToken` и `expiresAt` (6 часов от ввода).
+
+Все остальные `/guest/*`, включая кабинет `/guest/me*`, требуют заголовок
+`x-atelier-access: <accessToken>`. Без него или с истёкшим токеном — `403`
+(`401` на гостевых эндпоинтах по-прежнему значит «токен кабинета недействителен»).
 
 ### Guest onboarding / recommendations
 
@@ -184,7 +188,7 @@
 - `DELETE /staff/access/telegram-operators/:id`
 - `GET /staff/inventory/tobaccos`
 - `PATCH /staff/inventory/tobaccos/:id`
-- `GET /staff/dashboard/summary`
+- `GET /staff/dashboard/choices`
 - `GET /staff/mixes`
 - `POST /staff/mixes`
 - `PATCH /staff/mixes/:id`
@@ -225,21 +229,39 @@ npm run dev
 
 ## Полка и наличие
 
-Полка точки (#152, #306): `ShelfItem` — табак, который точка держит; `StockEntry` —
-журнал остатка в граммах (приход, отметка «осталось», списание; «Закончился» —
-отметка 0 г); `ShelfSettings` — граммовка чаши и срок поставки; `Supplier`,
-`SupplierItem`, `Delivery`, `DeliveryLine` — поставки по счетам.
+Полка точки (#152, #518): `ShelfItem` — табак, который точка держит, с датой
+«Закончился» (`outAt`, пусто — «Есть»); `Supplier`, `SupplierItem`, `Delivery`,
+`DeliveryLine` — поставки по счетам. Граммы не учитываются: строки принятых
+поставок — приходы табака (`DeliveryLine.grams` — только данные счёта).
 
-- `src/stock.ts` — чистая математика: отрезки между отметками, расход, остаток,
-  уровень после прихода, прогноз, «К заказу» в граммах.
-- `src/shelf.ts` — сервис полки: экран и карточка с историей, «Закончился»,
-  отметки долей и граммов, приход без счёта, списание, удаление записи (отмена),
-  стоп, настройки. Все мутации — в одной транзакции с пересчётом
+- `src/shelf.ts` — сервис полки: экран и карточка с приходами, «Закончился» и
+  «Вернуть в наличие» по одному и пачкой с отменой пакета (пакет — события аудита),
+  «Держать постоянно», стоп, проба. Все мутации — в одной транзакции с пересчётом
   `Tobacco.inStock` и записью аудита.
-- `Tobacco.inStock` — кэш правила «на полке (active) и не стоп и остаток по
-  учёту больше нуля и не архив». Пишет его только `syncAvailability` из
-  `src/shelf.ts`. Тумблер наличия «Каталога» переводится в журнал: «есть» — на
-  полку и приход типичной фасовки бренда, если остатка нет; «нет» — «Закончился».
+- `src/shelf-order.ts` — «К заказу»: закончились и держим постоянно, группы по
+  поставщику последнего принятого счёта.
+- `src/deliveries.ts` — счета: разбор PDF, сопоставление строк, приёмка ставит
+  пришедшие табаки на полку «Есть».
+- `Tobacco.inStock` — кэш правила «на полке (active), не стоп, не «Закончился»,
+  не архив». Пишет его только `syncAvailability` из `src/shelf.ts`. Тумблер
+  наличия «Каталога»: «есть» — на полку и «Есть», «нет» — «Закончился».
+
+Эндпоинты полки (сессия сотрудника):
+
+| Эндпоинт | Что делает |
+|---|---|
+| `GET /staff/shelf` | строки полки в работе и в плане |
+| `GET /staff/shelf/:tobaccoId` | карточка: миксы, приходы, похожие |
+| `POST /staff/shelf` | добавить на полку или в план |
+| `PATCH /staff/shelf/:tobaccoId` | стоп, «держим постоянно», заметка, отметка пробы |
+| `DELETE /staff/shelf/:tobaccoId` | убрать с полки |
+| `PUT /staff/shelf/:tobaccoId/analogs` | аналоги в порядке замены |
+| `POST /staff/shelf/:tobaccoId/empty`, `POST /staff/shelf/empty` | «Закончился» по одному и пачкой → `batchId` |
+| `DELETE /staff/shelf/batches/:batchId` | отменить «Закончился» |
+| `POST /staff/shelf/:tobaccoId/restock`, `POST /staff/shelf/restock` | «Вернуть в наличие» → `batchId` |
+| `DELETE /staff/shelf/restock-batches/:batchId` | отменить «Вернуть в наличие» |
+| `POST /staff/shelf/keep` | «Держать постоянно» пачкой |
+| `GET /staff/shelf/order` | «К заказу» |
 
 ## HTReviews preview import
 

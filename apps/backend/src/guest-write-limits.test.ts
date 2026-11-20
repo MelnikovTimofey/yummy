@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { createRateLimit } from './rate-limit';
 import { resetAppState } from './state';
 

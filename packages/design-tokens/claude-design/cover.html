@@ -1,0 +1,36 @@
+<!-- @dsCard height=320 -->
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<style>
+  body{margin:0;background:var(--bg-base)}
+  .cover{position:relative;width:960px;height:320px;background:var(--bg-base);overflow:hidden}
+  .band{position:absolute;left:0;top:0}
+  .b-accent{fill:var(--accent)} .b-deep{fill:var(--accent-deep)} .b-hover{fill:var(--accent-hover)}
+  .b-grey{fill:var(--text-secondary)} .b-raised{fill:var(--bg-overlay)}
+  .smoke{fill:none;stroke-width:5;stroke-linecap:round}
+  .s1{stroke:var(--accent-hover)} .s2{stroke:var(--accent-deep)} .s3{stroke:var(--text-secondary)}
+  .text{position:absolute;left:40px;bottom:32px;max-width:880px}
+  .name{margin:0;font-family:var(--font-display);font-size:64px;line-height:.95;color:var(--text-primary);font-weight:400}
+  .tag{margin:12px 0 0;font-family:var(--font-body);font-size:14px;color:var(--text-muted)}
+</style></head>
+<body><div class="cover">
+  <svg class="band" width="960" height="112" viewBox="0 0 960 112" aria-hidden="true">
+    <!-- blocks: accent 400×112, accent-deep 240×112, accent-hover 96×112, text-secondary 64×112, bg-overlay 160×112
+         arrangement: strip of unequal bands across the top (top-band skeleton: the name is wider than 440px at 64px)
+         pattern: literal motif, three smoke strands of the «Дым» mark, stroke 5 round caps, in block colours
+         scales: band 112 = space-10 + space-10 + space-8; strands step space-6; corners square, as the guest cards cut by r-guest-card sit below -->
+    <rect class="b-accent" x="0" y="0" width="400" height="112"/>
+    <rect class="b-deep" x="400" y="0" width="240" height="112"/>
+    <rect class="b-hover" x="640" y="0" width="96" height="112"/>
+    <rect class="b-grey" x="736" y="0" width="64" height="112"/>
+    <rect class="b-raised" x="800" y="0" width="160" height="112"/>
+    <path class="smoke s2" d="M120 104 C 96 80, 144 64, 120 40 S 144 8, 120 -8"/>
+    <path class="smoke s2" d="M168 104 C 144 76, 192 60, 168 32 S 192 0, 168 -16"/>
+    <path class="smoke s1" d="M496 104 C 472 80, 520 64, 496 40 S 520 8, 496 -8"/>
+    <path class="smoke s3" d="M880 104 C 856 76, 904 60, 880 32 S 904 0, 880 -16"/>
+  </svg>
+  <div class="text">
+    <p class="name">Арома Ателье,<br>Film Noir</p>
+    <p class="tag">Дымчатый уголь, тёплый серый текст и один акцент бордо.</p>
+  </div>
+</div></body></html>

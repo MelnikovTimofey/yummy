@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from './config';
 import { getDailyCodeWindow } from './daily-code';
@@ -24,11 +24,14 @@ import {
   removeFavoriteMix,
 } from './guest-cabinet';
 import {
+  createGuestAccessToken,
   createStaffToken,
+  GUEST_ACCESS_HEADER,
   resolveStaffSession,
   resolveStaffUser,
   secretsEqual,
   verifyGuestAccessCode,
+  verifyGuestAccessToken,
 } from './auth';
 import { createLoginThrottle } from './login-throttle';
 import { createRateLimit } from './rate-limit';
@@ -66,28 +69,28 @@ import { getOnboardingOptions, getRecommendations } from './recommendations';
 import { evaluateBowl, getMixerPalette, parseBowlInput, parseCustomMixSmokeInput, recordCustomMixSmoke } from './mixer';
 import { listAuditEvents, recordAuditEvent } from './audit';
 import { getCatalogIdeas } from './catalog-ideas';
-import { registerShelfInsightsRoutes } from './shelf-insights';
+import { getGuestChoices, parseChoicesPeriod } from './guest-analytics';
 import {
-  addCount,
-  addReceipt,
   addToShelf,
-  deleteEntry,
-  getSettings,
   getShelf,
   getShelfItem,
   markEmpty,
   markEmptyMany,
   removeFromShelf,
+  restock,
+  restockMany,
+  setKeepStockedMany,
   setStop,
   setTrialVerdict,
   ShelfConflictError,
   ShelfNotFoundError,
   ShelfValidationError,
   undoEmptyBatch,
-  updateSettings,
+  undoRestockBatch,
   updateShelfItem,
-  writeOff,
 } from './shelf';
+import { getShelfOrder } from './shelf-order';
+import { setAnalogs } from './analogs-admin';
 import {
   acceptDelivery,
   addLine,
@@ -114,7 +117,6 @@ import {
   createRail,
   deleteRail,
   ensureAppState,
-  getDashboardSummary,
   getInventorySummary,
   getInventoryTobaccos,
   getTobaccoById,
@@ -132,7 +134,6 @@ import {
   type InventorySortDirection,
   type InventorySortField,
   type InventoryStockFilter,
-  normalizeDashboardWindowKey,
   recordSmokeCtaEvent,
   rateMix,
   updateMix,
@@ -171,17 +172,18 @@ import type {
   StaffDailyAccessCodesResponse,
   StaffMixMutationResponse,
   StaffMixesResponse,
+  StaffShelfAnalogsResponse,
   StaffTelegramOperatorMutationResponse,
   StaffTelegramOperatorsResponse,
   StaffTelegramRecipientMutationResponse,
   StaffTelegramRecipientsResponse,
   StaffTelegramAutomationStateResponse,
   StaffAuditEventsResponse,
-  StaffDashboardSummaryResponse,
   StaffRailMutationResponse,
   StaffRailsResponse,
 } from './types';
 import type { StaffRole } from './auth';
+import { withAuthor } from './mix-author';
 import type { MixView, RailView, StaffRailView } from './state';
 
 export const buildApp = () => {
@@ -209,7 +211,7 @@ export const buildApp = () => {
   };
 
   // Текст исключения (Prisma, внутренние ошибки) — только в лог; клиентские 4xx — как есть.
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler<FastifyError>((error, request, reply) => {
     if (error.statusCode && error.statusCode < 500) {
       return reply.send(error);
     }
@@ -217,8 +219,25 @@ export const buildApp = () => {
     return reply.status(500).send({ error: 'Internal server error' } satisfies ApiError);
   });
 
+  // max-age: токен доступа идёт заголовком на каждом гостевом запросе, без кэша
+  // браузер слал бы preflight перед каждым GET (Chrome держит не дольше 2 часов).
+  // methods — явно: с @fastify/cors 10 по умолчанию только GET, HEAD, POST.
   app.register(cors, {
     origin: config.corsOrigins ?? true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    maxAge: 7200,
+  });
+
+  // Гостевой путь — только по коду дня (#435). 403, а не 401: на 401 клиент
+  // стирает токен кабинета, а истёкший код из кабинета выкидывать не должен.
+  app.addHook('onRequest', async (request, reply) => {
+    if (!request.url.startsWith('/guest/') || request.routeOptions.url === '/guest/access-code/verify') {
+      return;
+    }
+    const header = request.headers[GUEST_ACCESS_HEADER];
+    if (typeof header !== 'string' || !verifyGuestAccessToken(header)) {
+      return reply.status(403).send({ error: 'Access code required' } satisfies ApiError);
+    }
   });
 
   app.addHook('onReady', async () => {
@@ -288,15 +307,15 @@ export const buildApp = () => {
         shelfAdd: 'POST /staff/shelf',
         shelfUpdate: 'PATCH /staff/shelf/:tobaccoId',
         shelfRemove: 'DELETE /staff/shelf/:tobaccoId',
+        shelfAnalogs: 'PUT /staff/shelf/:tobaccoId/analogs',
         shelfEmpty: 'POST /staff/shelf/:tobaccoId/empty',
         shelfEmptyMany: 'POST /staff/shelf/empty',
         shelfUndoBatch: 'DELETE /staff/shelf/batches/:batchId',
-        shelfCount: 'POST /staff/shelf/:tobaccoId/counts',
-        shelfReceipt: 'POST /staff/shelf/:tobaccoId/receipts',
-        shelfWriteOff: 'POST /staff/shelf/:tobaccoId/write-offs',
-        shelfDeleteEntry: 'DELETE /staff/shelf/entries/:entryId',
-        shelfSettings: 'GET /staff/shelf/settings',
-        shelfSettingsUpdate: 'PATCH /staff/shelf/settings',
+        shelfRestock: 'POST /staff/shelf/:tobaccoId/restock',
+        shelfRestockMany: 'POST /staff/shelf/restock',
+        shelfUndoRestock: 'DELETE /staff/shelf/restock-batches/:batchId',
+        shelfKeepMany: 'POST /staff/shelf/keep',
+        shelfOrder: 'GET /staff/shelf/order',
         deliveriesList: 'GET /staff/deliveries',
         deliveriesUpload: 'POST /staff/deliveries',
         deliveriesManual: 'POST /staff/deliveries/manual',
@@ -308,10 +327,7 @@ export const buildApp = () => {
         deliveryLinesCreate: 'POST /staff/deliveries/:id/lines',
         deliveryLinesUpdate: 'PATCH /staff/deliveries/:id/lines/:lineId',
         deliveryLinesDelete: 'DELETE /staff/deliveries/:id/lines/:lineId',
-        shelfReorder: 'GET /staff/shelf/reorder',
-        shelfDashboard: 'GET /staff/shelf/dashboard',
-        shelfPurchase: 'GET /staff/shelf/purchase',
-        dashboardSummary: 'GET /staff/dashboard/summary',
+        dashboardChoices: 'GET /staff/dashboard/choices',
         dailyCodesList: 'GET /staff/access/daily-codes',
         dailyCodesCreate: 'POST /staff/access/daily-codes',
         dailyCodesUpdate: 'PATCH /staff/access/daily-codes/:id',
@@ -366,12 +382,15 @@ export const buildApp = () => {
       return reply.status(401).send({ error: 'Invalid access code' } satisfies ApiError);
     }
 
+    const access = createGuestAccessToken();
     const response: GuestAccessSuccess = {
       ok: true,
       accessGranted: true,
       message: 'Доступ подтвержден. Можно переходить к знакомству и онбордингу.',
       issuedAt: new Date().toISOString(),
       nextStep: 'intro',
+      accessToken: access.token,
+      expiresAt: access.expiresAt.toISOString(),
     };
 
     return reply.send(response);
@@ -1580,6 +1599,7 @@ export const buildApp = () => {
           flavorProfiles?: unknown;
           flavors?: unknown;
           flavorTags?: unknown;
+          authors?: unknown;
           sort?: unknown;
           direction?: unknown;
           page?: unknown;
@@ -1588,6 +1608,7 @@ export const buildApp = () => {
       | undefined;
 
     const response: StaffMixesResponse = await getStaffMixes({
+      authors: readStringList(query?.authors),
       search: typeof query?.search === 'string' ? query.search : undefined,
       status: (typeof query?.status === 'string' ? query.status : undefined) as MixStatusFilter | undefined,
       railState: (typeof query?.railState === 'string' ? query.railState : undefined) as MixRailFilter | undefined,
@@ -1648,14 +1669,14 @@ export const buildApp = () => {
       components: Array.isArray(payload?.components) ? payload.components : undefined,
       available: payload?.available,
       baseAvgRating: payload?.baseAvgRating,
-    });
+    }, user.login);
 
     if (isApiError(created)) {
       return reply.status(400).send(created);
     }
 
     const response: StaffMixMutationResponse = {
-      item: created as MixView,
+      item: await withAuthor(created as MixView),
     };
 
     await recordAuditEvent({
@@ -1717,7 +1738,7 @@ export const buildApp = () => {
     }
 
     const response: StaffMixMutationResponse = {
-      item: updated as MixView,
+      item: await withAuthor(updated as MixView),
     };
 
     await recordAuditEvent({
@@ -2175,7 +2196,7 @@ export const buildApp = () => {
     return reply.send(response);
   });
 
-  // Ошибки домена полки → HTTP: не найдено 404, конфликт состояния остатка 409, неверный ввод 400.
+  // Ошибки домена полки → HTTP: не найдено 404, конфликт наличия 409, неверный ввод 400.
   const sendShelf = async <T>(reply: FastifyReply, run: () => Promise<T>) => {
     try {
       return reply.send(await run());
@@ -2193,7 +2214,6 @@ export const buildApp = () => {
     }
   };
   const tobaccoParam = (request: FastifyRequest) => (request.params as { tobaccoId?: string }).tobaccoId?.trim() ?? '';
-  const entryParam = (request: FastifyRequest) => (request.params as { entryId?: string }).entryId?.trim() ?? '';
 
   app.get('/staff/shelf', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
@@ -2201,32 +2221,21 @@ export const buildApp = () => {
     return sendShelf(reply, () => getShelf());
   });
 
-  app.get('/staff/shelf/settings', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    return sendShelf(reply, () => getSettings());
-  });
-
-  app.patch('/staff/shelf/settings', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { bowlGrams?: unknown; leadDays?: unknown; budgetKop?: unknown };
-    return sendShelf(reply, () => updateSettings(user, {
-      bowlGrams: typeof body.bowlGrams === 'number' ? body.bowlGrams : undefined,
-      leadDays: typeof body.leadDays === 'number' ? body.leadDays : undefined,
-      budgetKop: body.budgetKop,
-    }));
-  });
-
   app.post('/staff/shelf', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
-    const body = (request.body ?? {}) as { tobaccoId?: unknown; status?: unknown };
+    const body = (request.body ?? {}) as { tobaccoId?: unknown; status?: unknown; plannedAt?: unknown };
     if (typeof body.tobaccoId !== 'string' || !body.tobaccoId.trim()) {
       return reply.status(400).send({ error: 'tobaccoId is required' } satisfies ApiError);
     }
     const status = body.status === 'plan' ? 'plan' : 'active';
-    return sendShelf(reply, async () => ({ item: await addToShelf(user, body.tobaccoId as string, status) }));
+    const now = new Date();
+    // Прежняя дата плана — для отмены «Убрать из плана» (#562).
+    const plannedAt = body.plannedAt === undefined ? now : new Date(typeof body.plannedAt === 'string' ? body.plannedAt : Number.NaN);
+    if (Number.isNaN(plannedAt.getTime()) || plannedAt > now) {
+      return reply.status(400).send({ error: 'plannedAt: дата в ISO, не в будущем' } satisfies ApiError);
+    }
+    return sendShelf(reply, async () => ({ item: await addToShelf(user, body.tobaccoId as string, status, now, plannedAt) }));
   });
 
   app.get('/staff/shelf/:tobaccoId', async (request, reply) => {
@@ -2268,6 +2277,17 @@ export const buildApp = () => {
     });
   });
 
+  app.put('/staff/shelf/:tobaccoId/analogs', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const tobaccoId = tobaccoParam(request);
+    const body = (request.body ?? {}) as { analogs?: unknown };
+    return sendShelf(reply, async () => {
+      const unblockedMixes = await setAnalogs(user, tobaccoId, body.analogs);
+      return { item: await getShelfItem(tobaccoId), unblockedMixes } satisfies StaffShelfAnalogsResponse;
+    });
+  });
+
   app.delete('/staff/shelf/:tobaccoId', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
@@ -2288,51 +2308,57 @@ export const buildApp = () => {
     return sendShelf(reply, () => undoEmptyBatch(user, batchId));
   });
 
+  app.post('/staff/shelf/restock', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { tobaccoIds?: unknown };
+    return sendShelf(reply, () => restockMany(user, body.tobaccoIds));
+  });
+
+  app.post('/staff/shelf/:tobaccoId/restock', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => restock(user, tobaccoParam(request)));
+  });
+
+  app.delete('/staff/shelf/restock-batches/:batchId', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const batchId = (request.params as { batchId?: string }).batchId?.trim() ?? '';
+    return sendShelf(reply, () => undoRestockBatch(user, batchId));
+  });
+
+  app.post('/staff/shelf/keep', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    const body = (request.body ?? {}) as { tobaccoIds?: unknown; keepStocked?: unknown };
+    return sendShelf(reply, () => setKeepStockedMany(user, body.tobaccoIds, body.keepStocked));
+  });
+
+  app.get('/staff/shelf/order', async (request, reply) => {
+    const user = await authenticateStaffRequest(request, reply);
+    if (!user) return;
+    return sendShelf(reply, () => getShelfOrder());
+  });
+
   app.post('/staff/shelf/:tobaccoId/empty', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) return;
     return sendShelf(reply, () => markEmpty(user, tobaccoParam(request)));
   });
 
-  app.post('/staff/shelf/:tobaccoId/counts', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { fraction?: unknown; grams?: unknown };
-    return sendShelf(reply, () => addCount(user, tobaccoParam(request), { fraction: body.fraction, grams: body.grams }));
-  });
-
-  app.post('/staff/shelf/:tobaccoId/receipts', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { grams?: unknown; priceKop?: unknown };
-    return sendShelf(reply, async () => ({
-      item: (await addReceipt(user, tobaccoParam(request), { grams: body.grams, priceKop: body.priceKop })).item,
-    }));
-  });
-
-  app.post('/staff/shelf/:tobaccoId/write-offs', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    const body = (request.body ?? {}) as { grams?: unknown; reason?: unknown };
-    return sendShelf(reply, () => writeOff(user, tobaccoParam(request), { grams: body.grams, reason: body.reason }));
-  });
-
-  app.delete('/staff/shelf/entries/:entryId', async (request, reply) => {
-    const user = await authenticateStaffRequest(request, reply);
-    if (!user) return;
-    return sendShelf(reply, async () => ({ item: await deleteEntry(user, entryParam(request)) }));
-  });
-
-  app.get('/staff/dashboard/summary', async (request, reply) => {
+  app.get('/staff/dashboard/choices', async (request, reply) => {
     const user = await authenticateStaffRequest(request, reply);
     if (!user) {
       return;
     }
 
-    const query = request.query as { window?: unknown } | undefined;
-    const response: StaffDashboardSummaryResponse = await getDashboardSummary(normalizeDashboardWindowKey(query?.window));
+    const period = parseChoicesPeriod((request.query ?? {}) as { period?: unknown; from?: unknown; to?: unknown });
+    if ('error' in period) {
+      return reply.status(400).send(period satisfies ApiError);
+    }
 
-    return reply.send(response);
+    return reply.send(await getGuestChoices(period));
   });
 
   app.get('/staff/auth/me', async (request, reply) => {
@@ -2351,7 +2377,6 @@ export const buildApp = () => {
   });
 
   registerDeliveryRoutes(app);
-  registerShelfInsightsRoutes(app, authenticateStaffRequest);
 
   return app;
 };
@@ -2534,7 +2559,6 @@ const registerDeliveryRoutes = (app: FastifyInstance) => {
         tobaccoId: readText(body?.tobaccoId, 'Табак'),
         qty: readNumber(body?.qty, 'Количество') ?? undefined,
         grams: readNumber(body?.grams, 'Граммы в штуке', true),
-        receivedGrams: readNumber(body?.receivedGrams, 'Приход', true),
         priceKop: readNumber(body?.priceKop, 'Цена', true),
         arrived: readBoolean(body?.arrived, 'Пришло'),
         kind: readKind(body?.kind),

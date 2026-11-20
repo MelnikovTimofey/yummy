@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Аналитика выборов</title>
+<link rel="stylesheet" href="../../.claude/skills/aroma-atelier-design/styles.css" />
+<style>
+/* ── Оболочка «Мастера» (как в ui_kits/master/index.html) ── */
+body{margin:0;background:var(--bg-base);font-family:var(--font-sans);font-size:var(--fs-md);color:var(--text-primary)}
+.shell{min-height:100%;width:min(100%,var(--master-max-w));margin:0 auto;padding:12px 20px 40px;display:grid;gap:14px;align-content:start;box-sizing:border-box}
+.stage{display:grid;gap:12px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-raised)}
+.toolbar-filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1}
+.cell-actions{display:inline-flex;align-items:center;gap:6px}
+
+/* ── Доска ── */
+.board{padding:28px 32px 80px;display:grid;gap:36px;background:#0c0c0e}
+.board-head{display:grid;gap:8px;max-width:980px}
+.board-caps{margin:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
+.board-title{margin:0;font-family:var(--font-serif);font-weight:500;font-size:30px}
+.board-text{margin:0;color:var(--text-secondary);line-height:1.55;max-width:96ch}
+.board-section{display:grid;gap:14px}
+.board-h2{margin:0;font-family:var(--font-serif);font-weight:500;font-size:20px}
+.board-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.frame{display:grid;gap:8px}
+.frame-name{margin:0;font-family:var(--font-meta);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.frame-name b{color:var(--text-primary);font-weight:500}
+.frame-note{margin:0;font-size:var(--fs-sm);color:var(--text-faint);max-width:80ch}
+.desk{width:1280px;height:800px;overflow:hidden;position:relative;border:1px solid var(--border-default);border-radius:10px;background:var(--bg-base);box-shadow:var(--shadow-lg)}
+.desk-scroll{position:absolute;inset:0;overflow-y:auto}
+.phone{width:375px;height:780px;overflow:hidden;position:relative;border:1px solid var(--border-default);border-radius:28px;background:var(--bg-base);box-shadow:var(--shadow-lg)}
+.shot{min-height:100vh;display:grid;place-items:start center;background:var(--bg-base)}
+.shot .desk,.shot .phone{border:0;border-radius:0;box-shadow:none}
+
+/* ── Шапка ── */
+.ga-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:18px 12px 6px}
+.ga-head h1{margin:0;font-family:var(--font-serif);font-weight:500;font-size:36px;line-height:1.05}
+.ga-head-side{display:flex;align-items:center;gap:12px;position:relative}
+.ga-range{font-size:var(--fs-sm);color:var(--text-muted);font-variant-numeric:tabular-nums}
+.ga-seg{display:inline-flex;border:1px solid var(--border-default);border-radius:var(--r-md);overflow:hidden}
+.ga-seg button{border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:var(--fs-sm);padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.ga-seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--text-primary)}
+.ga-seg button+button{border-left:1px solid var(--border-default)}
+
+/* ── Плитки (только на Дашборде) ── */
+.ga-kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-raised);overflow:hidden}
+.ga-kpi>div{display:grid;gap:3px;padding:14px 16px;border-right:1px solid var(--border-subtle)}
+.ga-kpi>div:last-child{border-right:0}
+.ga-kpi span{font-family:var(--font-meta);font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.ga-kpi b{font-family:var(--font-serif);font-weight:500;font-size:28px;font-variant-numeric:tabular-nums}
+.ga-kpi small{font-size:var(--fs-xs);color:var(--text-faint)}
+
+/* ── Карточки графиков (shadcn Card + ChartContainer) ── */
+.ga-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.ga-card{display:grid;gap:14px;padding:18px;border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:linear-gradient(180deg,var(--bg-raised),var(--bg-base));position:relative}
+.ga-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ga-card h2{margin:0;font-family:var(--font-serif);font-weight:500;font-size:20px}
+.ga-legend{display:flex;gap:14px;font-size:var(--fs-xs);color:var(--text-muted)}
+.ga-legend span{display:inline-flex;align-items:center;gap:6px}
+.ga-legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.ga-axis{font-family:var(--font-meta);font-size:10.5px;fill:var(--text-faint);font-variant-numeric:tabular-nums}
+.ga-tip{position:absolute;z-index:5;display:grid;gap:6px;min-width:150px;padding:8px 10px;border:1px solid var(--border-default);border-radius:var(--r-md);background:var(--bg-elevated);box-shadow:var(--shadow-lg);font-size:12px}
+.ga-tip b{font-weight:500}
+.ga-tip-row{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;color:var(--text-muted)}
+.ga-tip-row i{width:10px;height:10px;border-radius:2px}
+.ga-tip-row em{font-style:normal;color:var(--text-primary);font-variant-numeric:tabular-nums}
+
+/* Горизонтальные столбцы (shadcn Bar Chart, layout="vertical") */
+.ga-hbars{display:grid;gap:7px}
+.ga-hbar{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:center}
+.ga-hbar-track{position:relative;height:28px}
+.ga-hbar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:rgba(232,230,224,.10);border:1px solid rgba(232,230,224,.06)}
+.ga-hbar-label{position:absolute;left:10px;top:0;bottom:0;right:8px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-primary);white-space:nowrap;overflow:hidden}
+.ga-hbar-label small{color:var(--text-secondary);font-size:11px;font-family:var(--font-meta);letter-spacing:.06em;text-transform:uppercase}
+.ga-hbar>em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;font-size:13px;color:var(--text-secondary)}
+.ga-mark{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--danger);border:1px solid var(--danger-border);padding:0 6px;border-radius:4px}
+.ga-mark.faint{color:var(--text-secondary);border-color:var(--border-default)}
+.ga-rate{font-size:12px;color:var(--text-secondary)}
+
+/* Доли вкусов (shadcn Pie Chart, donut с текстом) */
+.ga-donut-wrap{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center}
+.ga-donut-center{font-family:var(--font-serif);font-size:26px;fill:var(--text-primary)}
+.ga-donut-sub{font-size:11px;fill:var(--text-muted)}
+.ga-shares{display:grid;gap:6px}
+.ga-share{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;font-size:13px}
+.ga-share i{width:10px;height:10px;border-radius:999px}
+.ga-share em{font-style:normal;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+
+/* Сигналы */
+.ga-signals{display:grid;border:1px solid var(--border-subtle);border-radius:var(--r-md)}
+.ga-signal{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border-subtle);font-size:13px;color:var(--text-secondary)}
+.ga-signal:last-child{border-bottom:0}
+.ga-signal .grow{flex:1;line-height:1.4}
+.ga-signal svg{flex:0 0 auto;color:var(--text-muted)}
+.ga-signal.out svg{color:var(--danger)}
+
+/* Пусто и мало данных */
+.ga-few{display:grid;gap:4px;justify-items:center;padding:36px 16px;text-align:center;font-size:13px;color:var(--text-muted)}
+.ga-few b{font-family:var(--font-serif);font-weight:500;font-size:18px;color:var(--text-primary)}
+
+/* Календарь «Даты» (shadcn Calendar mode="range") */
+.ga-pop{position:absolute;top:44px;right:0;z-index:20;display:grid;gap:12px;padding:14px;border:1px solid var(--border-default);border-radius:var(--r-lg);background:var(--bg-elevated);box-shadow:var(--shadow-lg)}
+.ga-months{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.ga-month{display:grid;gap:8px}
+.ga-month h3{margin:0;text-align:center;font-weight:500;font-size:13px}
+.ga-cal{display:grid;grid-template-columns:repeat(7,32px);gap:2px 0;font-size:12px;text-align:center}
+.ga-cal span{height:30px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;color:var(--text-secondary)}
+.ga-cal span.h{color:var(--text-faint);font-size:11px}
+.ga-cal span.in{background:var(--accent-soft);color:var(--text-primary)}
+.ga-cal span.edge{background:var(--accent);color:var(--accent-fg);border-radius:6px}
+.ga-cal span.off{color:var(--text-faint);opacity:.5}
+.ga-pop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--text-muted)}
+
+/* Телефон */
+.m-top{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--border-subtle);background:var(--glass)}
+.m-top img{height:20px}
+.m-top h1{margin:0;font-family:var(--font-serif);font-weight:500;font-size:20px;flex:1}
+.m-body{position:absolute;top:54px;left:0;right:0;bottom:56px;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.m-body>*{flex-shrink:0}
+.m-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.m-chips>*{flex:0 0 auto}
+.m-kpi{grid-template-columns:1fr 1fr}
+.m-kpi>div:nth-child(2){border-right:0}
+.m-kpi>div:nth-child(-n+2){border-bottom:1px solid var(--border-subtle)}
+.m-kpi b{font-size:24px}
+.m-nav{position:absolute;left:0;right:0;bottom:0;height:56px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border-subtle);background:var(--glass)}
+.m-nav span{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-muted)}
+.m-nav span.on{color:var(--text-primary);box-shadow:inset 0 2px 0 var(--accent)}
+.phone .ga-card{padding:14px}
+.phone .ga-donut-wrap{grid-template-columns:120px 1fr;gap:12px}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.470.0/dist/umd/lucide.js"></script>
+<script src="../../.claude/skills/aroma-atelier-design/_ds_bundle.js"></script>
+<script src="data.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="board.jsx"></script>
+</body>
+</html>

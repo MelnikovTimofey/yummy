@@ -3,23 +3,31 @@ import test from 'node:test';
 import { prisma } from '../../db';
 import { resetAppState } from '../../state';
 import {
+  archiveOffListTobaccos,
   buildStatsData,
   collectBrandUrls,
   collectKnownLineUrls,
   decideTobaccoUpsert,
+  detailFailureTooHigh,
   filterLineUrlsByBrands,
   loadShelfBrandUrls,
+  syncHtReviewsCatalog,
 } from './sync';
 
 // Issue #88: в каталог попадают только выпускаемые табаки, но уже заведённые
 // обновляются всегда — иначе снятие с производства не дойдёт до productionStatus.
+// Лимитку можно купить и замешать, поэтому она заводится наравне с выпускаемыми.
 
 test('новый выпускаемый табак создаётся', () => {
   assert.equal(decideTobaccoUpsert('Выпускается', false), 'create');
 });
 
+test('новая лимитка создаётся', () => {
+  assert.equal(decideTobaccoUpsert('Лимитированный', false), 'create');
+});
+
 test('новый неактуальный табак пропускается', () => {
-  for (const status of ['Снят с производства', 'Лимитированный', 'Не известен', 'Шуточный 🙃', null]) {
+  for (const status of ['Снят с производства', 'Не известен', 'Шуточный 🙃', null]) {
     assert.equal(decideTobaccoUpsert(status, false), 'skip', String(status));
   }
 });
@@ -132,6 +140,60 @@ test('бренды точки — только у табаков htreviews в н
   }
 });
 
+// Issue #519: каталог сужается до списка брендов клиента; то, на что опирается
+// точка (полка, миксы, аналоги, счета), и ручные табаки не трогаются.
+test('в архив уходят только табаки htreviews вне списка брендов, на которые точка не опирается', async () => {
+  await resetAppState();
+  const tobacco = (id: string, sourceUrl: string | null, extra: { archived?: boolean; sourceKind?: string } = {}) =>
+    prisma.tobacco.create({
+      data: {
+        id,
+        manufacturer: id,
+        name: id,
+        sourceKind: extra.sourceKind ?? 'htreviews',
+        sourceUrl,
+        flavorProfiles: '[]',
+        flavors: '[]',
+        flavorTags: '[]',
+        archived: extra.archived ?? false,
+      },
+    });
+  await tobacco('listed', 'https://htreviews.org/tobaccos/darkside/core/pink-mi');
+  await tobacco('off', 'https://htreviews.org/tobaccos/spectrum/hard/kiwi');
+  await tobacco('off-arch', 'https://htreviews.org/tobaccos/spectrum/hard/mango', { archived: true });
+  await tobacco('off-manual', null, { sourceKind: 'manual' });
+  await tobacco('off-shelf', 'https://htreviews.org/tobaccos/bliss/main/apelsin');
+  await tobacco('off-shelf-brand', 'https://htreviews.org/tobaccos/bliss/main/arbuz');
+  await tobacco('off-mix', 'https://htreviews.org/tobaccos/element/air/lime');
+  await tobacco('off-analog', 'https://htreviews.org/tobaccos/element/air/mint');
+  await tobacco('off-supplier', 'https://htreviews.org/tobaccos/element/air/cola');
+  await prisma.shelfItem.create({ data: { tobaccoId: 'off-shelf' } });
+  await prisma.mix.create({
+    data: {
+      id: 'mix',
+      name: 'Микс',
+      description: '',
+      flavorProfiles: '[]',
+      flavors: '[]',
+      flavorTags: '[]',
+      components: { create: [{ tobaccoId: 'off-mix' }] },
+    },
+  });
+  await prisma.tobaccoAnalog.create({ data: { tobaccoId: 'listed', analogId: 'off-analog' } });
+  await prisma.supplier.create({
+    data: { name: 'Поставщик', items: { create: [{ normalizedName: 'cola', tobaccoId: 'off-supplier' }] } },
+  });
+
+  const brandUrls = ['https://htreviews.org/tobaccos/darkside/'];
+  const dryRun = await archiveOffListTobaccos(brandUrls, { apply: false });
+  assert.deepEqual(dryRun.map((item) => item.id), ['off']);
+  assert.equal((await prisma.tobacco.findUniqueOrThrow({ where: { id: 'off' } })).archived, false);
+
+  await archiveOffListTobaccos(brandUrls, { apply: true });
+  const archived = await prisma.tobacco.findMany({ where: { archived: true }, select: { id: true }, orderBy: { id: 'asc' } });
+  assert.deepEqual(archived.map((item) => item.id), ['off', 'off-arch']);
+});
+
 // Issue #249: при обходе по брендам известные линейки берутся только этих брендов.
 test('известные линейки фильтруются по списку брендов', () => {
   assert.deepEqual(
@@ -146,4 +208,178 @@ test('известные линейки фильтруются по списку
     ),
     ['https://htreviews.org/tobaccos/blansh/main', 'https://htreviews.org/tobaccos/darkside/core'],
   );
+});
+
+// Issue #458: карточка табака не загрузилась (таймаут, 429) — выдача бренда
+// даёт только статистику, а вкусы, статус и описание остаются прежними.
+const listItem = (dataId: string, slug: string, name: string) => `
+  <div class="tobacco_list_item " data-id="${dataId}">
+    <a class="tobacco_list_item_image" href="https://htreviews.org/tobaccos/darkside/core/${slug}">
+      <img data-src="https://htreviews.org/uploads/${slug}.webp" alt="${name}">
+    </a>
+    <div class="tobacco_list_item_name">
+      <a class="tobacco_list_item_slug" href="https://htreviews.org/tobaccos/darkside/core/${slug}"><span>${name}</span></a>
+      <a class="tobacco_list_item_brand_slug" href="https://htreviews.org/tobaccos/darkside"><span>Darkside</span></a>
+      <a class="tobacco_list_item_line_slug" href="https://htreviews.org/tobaccos/darkside/core"><span>Core</span></a>
+    </div>
+    <div class="list_item_rating"><span>4.7</span></div>
+    <div class="list_item_ratings_count"><span>237</span></div>
+    <div class="list_item_reviews"><span>208</span></div>
+    <div class="list_item_stats"><span>20.7k</span></div>
+  </div>
+`;
+
+test('сбой загрузки карточки не затирает вкусы, статус и описание табака', async (t) => {
+  await resetAppState();
+  await prisma.tobacco.create({
+    data: {
+      id: 'ds-pink-mi',
+      manufacturer: 'Darkside',
+      lineName: 'Core',
+      name: 'Pink Mi',
+      description: 'Розовый грейпфрут.',
+      sourceKind: 'htreviews',
+      sourceUrl: 'https://htreviews.org/tobaccos/darkside/core/pink-mi',
+      sourceExternalId: 'DS-PINK',
+      sourceNumericId: '190397',
+      country: 'Россия',
+      officialStrength: 'Средняя',
+      communityStrength: 'Средняя',
+      productionStatus: 'Выпускается',
+      rawSourceTags: '["Грейпфрут","Цитрусовые"]',
+      flavorProfiles: '["Цитрусовые"]',
+      flavors: '["Грейпфрут"]',
+      flavorTags: '[]',
+      rating: 4.1,
+      viewsCount: 1000,
+    },
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (url === 'https://htreviews.org/tobaccos/darkside') {
+      return new Response(
+        `<div class="tobacco_list_items" data-count="2">
+          ${listItem('190397', 'pink-mi', 'Pink Mi')}
+          ${listItem('190398', 'new-cola', 'New Cola')}
+        </div>`,
+        { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } },
+      );
+    }
+    return new Response('Too Many Requests', { status: 429 });
+  }) as typeof globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const stats = await syncHtReviewsCatalog({
+    brandUrls: ['https://htreviews.org/tobaccos/darkside'],
+    knownLineUrls: [],
+    delayMs: 0,
+    requestTimeoutMs: 100,
+  });
+
+  assert.equal(stats.updated, 1);
+  assert.equal(stats.created, 0);
+  assert.equal(stats.skippedInactive, 0, 'новинка без карточки — сбой загрузки, а не неактуальный табак (#498)');
+  assert.equal(stats.detailFailed, 2);
+  assert.equal(await prisma.tobacco.count({ where: { name: 'New Cola' } }), 0);
+
+  const tobacco = await prisma.tobacco.findUniqueOrThrow({ where: { id: 'ds-pink-mi' } });
+  assert.deepEqual(
+    {
+      description: tobacco.description,
+      sourceExternalId: tobacco.sourceExternalId,
+      country: tobacco.country,
+      officialStrength: tobacco.officialStrength,
+      communityStrength: tobacco.communityStrength,
+      productionStatus: tobacco.productionStatus,
+      rawSourceTags: tobacco.rawSourceTags,
+      flavorProfiles: tobacco.flavorProfiles,
+      flavors: tobacco.flavors,
+    },
+    {
+      description: 'Розовый грейпфрут.',
+      sourceExternalId: 'DS-PINK',
+      country: 'Россия',
+      officialStrength: 'Средняя',
+      communityStrength: 'Средняя',
+      productionStatus: 'Выпускается',
+      rawSourceTags: '["Грейпфрут","Цитрусовые"]',
+      flavorProfiles: '["Цитрусовые"]',
+      flavors: '["Грейпфрут"]',
+    },
+  );
+  assert.equal(tobacco.rating, 4.7);
+  assert.equal(tobacco.ratingsCount, 237);
+  assert.ok(tobacco.statsSyncedAt);
+});
+
+// #498: 31.10 все карточки ответили 500, а прогон отчитался «ok».
+test('прогон считается сбоем, когда не загрузилось больше 10 % карточек', () => {
+  assert.equal(detailFailureTooHigh({ fetched: 12315, detailFailed: 12315 }), true);
+  assert.equal(detailFailureTooHigh({ fetched: 100, detailFailed: 11 }), true);
+  assert.equal(detailFailureTooHigh({ fetched: 100, detailFailed: 10 }), false);
+  assert.equal(detailFailureTooHigh({ fetched: 0, detailFailed: 0 }), false);
+});
+
+const detailPage = (slug: string, name: string, status: string, htrId: string) => `
+  <div class="object_card_title"><h1>${name}</h1></div>
+  <a class="object_card_tag" href="https://htreviews.org/tobaccos?r=flavor&t=1">Крыжовник</a>
+  <div class="object_info_item"><span>Бренд</span><span></span><span><a href="https://htreviews.org/tobaccos/darkside">Darkside</a></span></div>
+  <div class="object_info_item"><span>Линейка</span><span></span><span><a href="https://htreviews.org/tobaccos/darkside/core">Core</a></span></div>
+  <div class="object_info_item"><span><span>Статус</span></span><span></span><span>${status}</span></div>
+  <div class="object_info_item"><span>HtreviewsID</span><span></span><span>${htrId}</span></div>
+  <script type="application/ld+json">
+    {"@type":"Product","name":"${name}","url":"https://htreviews.org/tobaccos/darkside/core/${slug}","aggregateRating":{"ratingValue":"4.2","reviewCount":"12"}}
+  </script>
+`;
+
+// #498: часть табаков пропала из выдачи htreviews, и их статус с рейтингом замерли.
+test('табак каталога, которого нет в выдаче, обновляется по своей карточке', async (t) => {
+  await resetAppState();
+  const known = (id: string, manufacturer: string, sourceUrl: string) =>
+    prisma.tobacco.create({
+      data: { id, manufacturer, lineName: 'Core', name: id, sourceKind: 'htreviews', sourceUrl, flavorProfiles: '["berry"]', flavors: '["крыжовник"]', flavorTags: '[]' },
+    });
+  await known('red-zeppelin', 'DARKSIDE', 'https://htreviews.org/tobaccos/darkside/core/red-zeppelin');
+  await known('gone', 'DARKSIDE', 'https://htreviews.org/tobaccos/darkside/core/gone');
+  await known('other-brand', 'Sarma', 'https://htreviews.org/tobaccos/sarma/klassicheskaya/zima');
+
+  const fetched: string[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetched.push(url);
+    const html = (body: string) => new Response(body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    if (url === 'https://htreviews.org/tobaccos/darkside') {
+      return html('<div class="tobacco_list_items" data-count="0"></div>');
+    }
+    if (url === 'https://htreviews.org/tobaccos/darkside/core/red-zeppelin') {
+      return html(detailPage('red-zeppelin', 'Red Zeppelin', 'Лимитированный', 'htr200001'));
+    }
+    return new Response('Not Found', { status: 404 });
+  }) as typeof globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const stats = await syncHtReviewsCatalog({
+    brandUrls: ['https://htreviews.org/tobaccos/darkside'],
+    knownLineUrls: [],
+    delayMs: 0,
+    requestTimeoutMs: 100,
+  });
+
+  assert.equal(stats.unlistedRefreshed, 1);
+  assert.equal(stats.unlistedMissing, 1);
+  assert.equal(stats.updated, 1);
+  assert.ok(!fetched.includes('https://htreviews.org/tobaccos/sarma/klassicheskaya/zima'), 'чужой бренд в прогоне по брендам не трогаем');
+
+  const tobacco = await prisma.tobacco.findUniqueOrThrow({ where: { id: 'red-zeppelin' } });
+  assert.equal(tobacco.name, 'Red Zeppelin');
+  assert.equal(tobacco.productionStatus, 'Лимитированный');
+  assert.equal(tobacco.sourceExternalId, 'htr200001');
+  assert.equal(tobacco.rating, 4.2);
 });

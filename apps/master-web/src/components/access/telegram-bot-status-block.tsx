@@ -115,3 +115,38 @@ export const TelegramBotStatusBlock = ({
     </section>
   );
 };
+
+const PHONE_BADGE: Record<string, string> = { норма: 'работает' };
+
+// Бот на телефоне (#337, #shot=access): отдельная карточка без истории кодов.
+export const TelegramBotCard = ({
+  telegramAutomationState,
+  telegramAutomationStateStatus,
+  telegramAutomationStateError,
+}: Omit<TelegramBotStatusBlockProps, 'dailyCodes'>) => {
+  const heartbeatIso = telegramAutomationState?.lastHeartbeatAt ?? '';
+  const badge = healthBadgeClass(telegramAutomationState?.health, heartbeatIso);
+
+  return (
+    <section className="m-access-card" aria-label="Статус Telegram-бота">
+      <div className="m-access-card__head">
+        <span className="m-access-card__main">
+          <span className="m-access-card__title">Telegram-бот</span>
+          <span className="m-access-card__sub">
+            {telegramAutomationStateStatus === 'forbidden' || telegramAutomationStateStatus === 'error'
+              ? telegramAutomationStateError
+              : heartbeatIso
+                ? `на связи ${relativeFromNow(heartbeatIso)}`
+                : 'ещё не выходил на связь'}
+          </span>
+        </span>
+        {telegramAutomationStateStatus === 'ready' ? (
+          <span className="m-access-status" data-tone={badge.className.split('--')[1]}>
+            <i aria-hidden="true" />
+            {PHONE_BADGE[badge.label] ?? badge.label.toLocaleLowerCase('ru-RU')}
+          </span>
+        ) : null}
+      </div>
+    </section>
+  );
+};

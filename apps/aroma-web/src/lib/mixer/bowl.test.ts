@@ -21,6 +21,7 @@ import type { PaletteTobacco } from './types';
 const tobacco = (id: string, overrides: Partial<PaletteTobacco> = {}): PaletteTobacco => ({
   id,
   manufacturer: 'Darkside',
+  lineName: '',
   name: id,
   flavorProfiles: ['berry'],
   flavors: [id],

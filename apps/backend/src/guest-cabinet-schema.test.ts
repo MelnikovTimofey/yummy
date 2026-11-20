@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { prisma } from './db';
+import { getGuestChoices, parseChoicesPeriod } from './guest-analytics';
 import {
   deleteMix,
-  getDashboardSummary,
   getMixById,
   getSmokeCtaSummary,
   recordSmokeCtaEvent,
@@ -62,8 +62,10 @@ test.describe('guest cabinet schema', () => {
     assert.equal(summary.smokeCtaTotal, 2);
     assert.deepEqual(summary.topMixes.map((item) => item.mixId), ['mix-apple-wave']);
 
-    const dashboard = await getDashboardSummary();
-    assert.equal(dashboard.product.smokeCtaTotal, 2);
+    // Дашборд (#520) считает выбор и у удалённого микса.
+    const week = parseChoicesPeriod({ period: '7d' });
+    assert.ok(!('error' in week));
+    assert.equal((await getGuestChoices(week)).kpi.choices, 2);
   });
 
   test('deleting a guest account removes favorites and unlinks events and ratings', async () => {

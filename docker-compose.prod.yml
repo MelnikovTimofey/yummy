@@ -76,12 +76,9 @@ services:
       context: ./apps/aroma-web
       args:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
-    environment:
-      # vite preview блокирует чужой Host — разрешаем прод-домен (за ним Caddy).
-      ATELIER_ALLOWED_HOSTS: ${AROMA_DOMAIN:?AROMA_DOMAIN is required}
     restart: unless-stopped
     # Без healthcheck `up --wait` (deploy.sh) считал фронт готовым сразу после
-    # старта контейнера, и Caddy пару секунд отдавал 502, пока поднимался vite (#162).
+    # старта контейнера, и Caddy пару секунд отдавал 502, пока поднимался сервер (#162).
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4174/"]
       interval: 10s
@@ -101,8 +98,6 @@ services:
         VITE_API_BASE_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
         # Кнопка «Витрина гостя» на экране рейлов.
         VITE_AROMA_WEB_URL: https://${AROMA_DOMAIN:?AROMA_DOMAIN is required}
-    environment:
-      ATELIER_ALLOWED_HOSTS: ${MASTER_DOMAIN:?MASTER_DOMAIN is required}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4175/"]

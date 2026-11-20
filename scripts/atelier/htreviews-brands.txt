@@ -1,0 +1,28 @@
+# Бренды каталога, которые обновляются с htreviews (#519): список клиента, 2026-11-04.
+# Бренды полки обновляются и без этого списка. Правка — по запросу клиента, PR.
+# Nuar (AHF Tobacco) на htreviews нет — заводится вручную.
+https://htreviews.org/tobaccos/afzal
+https://htreviews.org/tobaccos/duft
+https://htreviews.org/tobaccos/starline
+https://htreviews.org/tobaccos/black-burn
+https://htreviews.org/tobaccos/sebero
+https://htreviews.org/tobaccos/musthave
+https://htreviews.org/tobaccos/darkside
+https://htreviews.org/tobaccos/overdose
+https://htreviews.org/tobaccos/chabacco
+https://htreviews.org/tobaccos/khuligan
+https://htreviews.org/tobaccos/take
+https://htreviews.org/tobaccos/jent
+https://htreviews.org/tobaccos/sarma
+https://htreviews.org/tobaccos/snobless
+https://htreviews.org/tobaccos/morpheus
+https://htreviews.org/tobaccos/palitra
+https://htreviews.org/tobaccos/deus
+https://htreviews.org/tobaccos/blansh
+https://htreviews.org/tobaccos/tangiers
+https://htreviews.org/tobaccos/trofimoffs
+https://htreviews.org/tobaccos/bonche
+https://htreviews.org/tobaccos/kraken
+https://htreviews.org/tobaccos/dogma
+https://htreviews.org/tobaccos/baza
+https://htreviews.org/tobaccos/antagonist

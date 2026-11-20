@@ -89,8 +89,6 @@
 | `ATELIER_BACKEND_URL` | base URL backend Арома Ателье |
 | `ATELIER_BACKEND_AUTOMATION_TOKEN` | должен совпадать с backend `ATELIER_AUTOMATION_KEY` |
 | `ATELIER_BOT_STATE_PATH` | локальный state-файл бота |
-| `ATELIER_DAILY_BROADCAST_HOUR` | час ежедневного `ensure` current code |
-| `ATELIER_DAILY_BROADCAST_MINUTE` | минута ежедневного `ensure` current code |
 | `ATELIER_TELEGRAM_UPDATE_TIMEOUT_SECONDS` | long-poll timeout |
 | `ATELIER_BOT_MODE` | режим образа: `staff` (по умолчанию) — бот кода смены; `guest-login` — бот входа гостей. Иное значение — бот не стартует |
 
@@ -98,8 +96,7 @@
 
 Тот же образ в режиме `ATELIER_BOT_MODE=guest-login`: только подтверждение кода
 входа по `/start <код>`. Staff-команд, allowlist, кода смены, рассылок и отчётов
-состояния нет; state-файл не нужен (`ATELIER_BOT_STATE_PATH` и
-`ATELIER_DAILY_BROADCAST_*` не читаются).
+состояния нет; state-файл не нужен (`ATELIER_BOT_STATE_PATH` не читается).
 
 | Переменная | Назначение | В `docker-compose.prod.yml` |
 |---|---|---|
@@ -126,7 +123,7 @@
 
 1. source of truth по Telegram access должен жить в backend allowlist по телефонам;
 2. first-link идёт через `share contact`, после чего backend привязывает `chatId` к allowlist-номеру;
-3. `ATELIER_DAILY_BROADCAST_*` сохраняют старое имя только ради совместимости env, но управляют уже не рассылкой, а ежедневным `ensure` current code;
+3. новый код смены бот выпускает сразу после истечения прежнего (окно 06:00–06:00 по Москве, #456); `ATELIER_DAILY_BROADCAST_*` больше не читаются;
 4. `ATELIER_BACKEND_AUTOMATION_TOKEN` должен ротироваться отдельно от staff credentials.
 
 ## 4a. Версии образов (прод-хост)
@@ -147,11 +144,11 @@
 |---|---|---|
 | `BACKUP_S3_ENDPOINT` | S3-совместимый endpoint | `https://s3.twcstorage.ru` |
 | `BACKUP_S3_REGION` | регион бакета | `ru-1` |
-| `BACKUP_S3_BUCKET` | бакет под дампы | `atelier-backups` |
-| `BACKUP_S3_ACCESS_KEY` | ключ доступа к бакету | secret |
+| `BACKUP_S3_BUCKET` | бакет под дампы, с Object Lock | `atelier-backups-locked` |
+| `BACKUP_S3_ACCESS_KEY` | ключ дополнительного пользователя S3 с уровнем «Чтение и запись» (не основной ключ аккаунта) | secret |
 | `BACKUP_S3_SECRET_KEY` | секретный ключ | secret |
-| `BACKUP_S3_KEEP_HOURLY` | сколько часовых дампов хранить в S3 `hourly/` (по умолчанию `48`) | `48` |
-| `BACKUP_S3_KEEP_DAILY` | сколько дневных дампов хранить в S3 `daily/` (по умолчанию `30`) | `30` |
+| `BACKUP_AGE_RECIPIENTS` | публичные ключи `age`, на которые шифруется дамп (по умолчанию `secrets/backup-age.recipients`) | `secrets/backup-age.recipients` |
+| `BACKUP_AGE_IDENTITY` | приватный ключ хоста для проверки восстановления (по умолчанию `secrets/backup-age.key`) | `secrets/backup-age.key` |
 | `BACKUP_DAILY_HOUR` | час UTC, дамп которого становится дневным (по умолчанию `03`) | `03` |
 | `BACKUP_LOCAL_HOURLY_HOURS` | сколько часов хранить часовые дампы на хосте (по умолчанию `24`) | `24` |
 | `BACKUP_LOCAL_DAYS` | сколько дней хранить дневные дампы на хосте (по умолчанию `14`) | `14` |
@@ -195,6 +192,7 @@
 ### Бэкап БД
 
 1. `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`
+2. `secrets/backup-age.key` (ключ хоста; ключ владельца на хосте не хранится)
 
 ### Мониторинг
 

@@ -12,14 +12,12 @@ import {
   buildInventorySummary,
   defaultInventoryListResponse,
   defaultMixListResponse,
-  dashboardWindowOptions,
   formatInventoryBatchAction,
   formatDateTimeLocalInput,
-  normalizeDashboardSummary,
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
+  normalizeShelfAnalogsResponse,
   normalizeShelfCard,
-  normalizeShelfEntryResponse,
   normalizeShelfRow,
   normalizeShelfView,
   normalizeMixListResponse,
@@ -287,7 +285,11 @@ test('normalizeMixRecord accepts inStock alias and component objects', () => {
     flavors: ['мята'],
     proportion: 0,
     sortOrder: 0,
+    substitute: null,
   });
+  assert.equal(mix.status, 'hidden');
+  assert.equal(mix.substitution, null);
+  assert.deepEqual(mix.missing, []);
 });
 
 test('normalizeMixListResponse supports filters, meta and rail memberships', () => {
@@ -454,178 +456,6 @@ test('normalizeRailRecord falls back to read-only semantics for statistical rail
 
   assert.equal(rail.editable, false);
   assert.equal(rail.readOnlyReason, 'Статистический рейл формируется автоматически и доступен только для просмотра.');
-});
-
-test('normalizeDashboardSummary supports nested inventory payload', () => {
-  const summary = normalizeDashboardSummary({
-    window: {
-      key: '7d',
-      label: '7 дней',
-      days: 7,
-      startsAt: '2026-03-22T00:00:00.000Z',
-      endsAt: '2026-03-28T23:59:59.000Z',
-    },
-    inventory: {
-      total: 6,
-      inStockCount: 5,
-      outOfStockCount: 1,
-      manufacturers: [
-        {
-          key: 'Ателье Reserve',
-          label: 'Ателье Reserve',
-          total: 4,
-          inStockCount: 3,
-          outOfStockCount: 1,
-        },
-      ],
-    },
-    product: {
-      smokeCtaTotal: 7,
-      ratingsTotal: 2,
-      avgGuestRating: 4,
-      topMixes: [
-        {
-          mixId: 'mix-1',
-          mixName: 'Цитрусовый караван',
-          count: 3,
-          avgRating: 4.8,
-          ratingsCount: 2,
-          smokeCtaCount: 12,
-        },
-      ],
-      topRatedMixes: [
-        {
-          mixId: 'mix-2',
-          mixName: 'Ягодный рассвет',
-          avgRating: 5,
-          ratingsCount: 1,
-          smokeCtaCount: 10,
-        },
-      ],
-      ratingDistribution: [
-        { value: 5, count: 1 },
-        { value: 4, count: 1 },
-      ],
-      activity: [
-        { date: '2026-03-28T00:00:00.000Z', smokeCtaCount: 7, ratingsCount: 2 },
-      ],
-    },
-    ops: {
-      guestVisibleMixesCount: 8,
-      hiddenMixesCount: 1,
-      blockedByInventoryCount: 1,
-      activeRailsCount: 4,
-      emptyActiveRailsCount: 0,
-      blockedMixes: [
-        {
-          mixId: 'mix-3',
-          mixName: 'Персиковый мираж',
-          missingComponents: ['Peach Silk'],
-          railNames: ['Фруктовые открытия'],
-          smokeCtaCount: 2,
-        },
-      ],
-      railHealth: [
-        {
-          railId: 'rail-1',
-          name: 'Больше всего выбирают',
-          type: 'statistical',
-          active: true,
-          totalMixCount: 3,
-          visibleMixCount: 3,
-          hiddenMixCount: 0,
-        },
-      ],
-    },
-  });
-
-  assert.deepEqual(summary, {
-    window: {
-      key: '7d',
-      label: '7 дней',
-      days: 7,
-      startsAt: '2026-03-22T00:00:00.000Z',
-      endsAt: '2026-03-28T23:59:59.000Z',
-    },
-    totalTobaccos: 6,
-    inStockCount: 5,
-    outOfStockCount: 1,
-    smokeCtaTotal: 7,
-    ratingsTotal: 2,
-    avgGuestRating: 4,
-    topMixes: [
-      {
-        mixId: 'mix-1',
-        name: 'Цитрусовый караван',
-        smokeCtaCount: 12,
-        avgRating: 4.8,
-        ratingsCount: 2,
-      },
-    ],
-    topRatedMixes: [
-      {
-        mixId: 'mix-2',
-        name: 'Ягодный рассвет',
-        smokeCtaCount: 10,
-        avgRating: 5,
-        ratingsCount: 1,
-      },
-    ],
-    ratingDistribution: [
-      { value: 5, count: 1 },
-      { value: 4, count: 1 },
-    ],
-    activity: [
-      { date: '2026-03-28T00:00:00.000Z', smokeCtaCount: 7, ratingsCount: 2 },
-    ],
-    inventory: {
-      totalTobaccos: 6,
-      inStockCount: 5,
-      outOfStockCount: 1,
-      manufacturers: [
-        {
-          key: 'Ателье Reserve',
-          label: 'Ателье Reserve',
-          total: 4,
-          inStockCount: 3,
-          outOfStockCount: 1,
-        },
-      ],
-      flavorProfiles: [],
-      topFlavors: [],
-    },
-    ops: {
-      guestVisibleMixesCount: 8,
-      hiddenMixesCount: 1,
-      blockedByInventoryCount: 1,
-      activeRailsCount: 4,
-      emptyActiveRailsCount: 0,
-      blockedMixes: [
-        {
-          mixId: 'mix-3',
-          name: 'Персиковый мираж',
-          missingComponents: ['Peach Silk'],
-          railNames: ['Фруктовые открытия'],
-          smokeCtaCount: 2,
-        },
-      ],
-      railHealth: [
-        {
-          railId: 'rail-1',
-          name: 'Больше всего выбирают',
-          type: 'statistical',
-          active: true,
-          totalMixCount: 3,
-          visibleMixCount: 3,
-          hiddenMixCount: 0,
-        },
-      ],
-    },
-  });
-});
-
-test('dashboardWindowOptions keep supported dashboard windows in order', () => {
-  assert.deepEqual(dashboardWindowOptions.map((item) => item.key), ['7d', '14d', '30d']);
 });
 
 test('sortRails keeps active statistical rails first', () => {
@@ -953,18 +783,6 @@ test('date helpers roundtrip local input', () => {
   assert.equal(formatDateTimeLocalInput(iso), input);
 });
 
-// Дубликат ключа (#65) перебивал фолбэк, и метрика по payload'у с `count`
-// молча становилась нулём.
-test('normalizeDashboardSummary falls back to count when smokeCtaCount is absent', () => {
-  const summary = normalizeDashboardSummary({
-    product: {
-      topMixes: [{ mixId: 'mix-1', mixName: 'Цитрусовый караван', count: 7 }],
-    },
-  });
-
-  assert.equal(summary.topMixes[0]?.smokeCtaCount, 7);
-});
-
 // Флаг `active` у кода — «не отозван», а не «действует сейчас»: без проверки
 // окна консоль называла активным код, истёкший месяц назад (#96).
 test('resolveCurrentDailyCode отличает действующий код от истёкшего', () => {
@@ -1044,16 +862,9 @@ const rawRow = {
   shelfStatus: 'active',
   status: 'ok',
   guestAvailable: true,
+  outAt: null,
   leftGrams: 300,
-  fullGrams: 400,
-  lastReceipt: { at: '2026-11-12T10:00:00.000Z', grams: 400, kind: 'invoice', number: '03944', label: 'Каспий Опт' },
-  lastCount: { at: '2026-11-17T10:00:00.000Z', grams: 330, fraction: null },
-  leftSource: 'forecast',
-  rate: 14.7,
-  rateKind: 'own',
-  monthGrams: 441,
-  daysLeft: 20.4,
-  endsAt: '2026-12-09T10:00:00.000Z',
+  lastArrival: { at: '2026-10-12T10:00:00.000Z', kind: 'invoice', supplier: 'Каспий Опт', number: '1184', qty: 2, deliveryId: 'd1' },
   mixCount: 2,
   keepStocked: true,
   stopped: false,
@@ -1064,7 +875,7 @@ const rawRow = {
   trialMarkedAt: '2026-11-18T10:00:00.000Z',
 };
 
-test('normalizeShelfRow читает строку полки в граммах', () => {
+test('normalizeShelfRow читает строку полки без граммов (#518)', () => {
   const row = normalizeShelfRow(rawRow);
   assert.equal(row.tobacco.id, 't1');
   assert.equal(row.tobacco.manufacturer, 'Black Burn');
@@ -1072,137 +883,141 @@ test('normalizeShelfRow читает строку полки в граммах',
   assert.equal(row.tobacco.officialStrength, 'Средняя');
   assert.equal(row.tobacco.communityStrength, null);
   assert.equal(row.shelfStatus, 'active');
-  assert.equal(row.status, 'ok');
-  assert.equal(row.leftGrams, 300);
-  assert.equal(row.fullGrams, 400);
-  assert.deepEqual(row.lastReceipt, { at: '2026-11-12T10:00:00.000Z', grams: 400, kind: 'invoice', number: '03944', label: 'Каспий Опт' });
-  assert.deepEqual(row.lastCount, { at: '2026-11-17T10:00:00.000Z', grams: 330, fraction: null });
-  assert.equal(row.rate, 14.7);
-  assert.equal(row.rateKind, 'own');
-  assert.equal(row.daysLeft, 20.4);
+  assert.equal(row.outAt, null);
+  assert.deepEqual(row.lastArrival, {
+    at: '2026-10-12T10:00:00.000Z',
+    kind: 'invoice',
+    supplier: 'Каспий Опт',
+    number: '1184',
+    qty: 2,
+    deliveryId: 'd1',
+  });
   assert.equal(row.mixCount, 2);
-  assert.equal(row.leftSource, 'forecast');
-  assert.equal(row.monthGrams, 441);
+  assert.equal(row.keepStocked, true);
   assert.equal(row.trial, true);
   assert.equal(row.trialVerdict, 'yes');
   assert.equal(row.trialMarkedAt, '2026-11-18T10:00:00.000Z');
+  assert.equal('leftGrams' in row, false);
 });
 
-test('normalizeShelfRow не доверяет неизвестным значениям; прихода не было — остатка нет', () => {
-  const row = normalizeShelfRow({ tobacco: { id: 't2' }, status: 'weird', rateKind: 'x', rate: null, daysLeft: null });
-  assert.equal(row.status, 'ok');
+test('normalizeShelfRow: «Закончился» — дата outAt; прихода не было — lastArrival пуст', () => {
+  const row = normalizeShelfRow({ tobacco: { id: 't2' }, shelfStatus: 'weird', outAt: '2026-11-03T09:00:00.000Z', lastArrival: null });
   assert.equal(row.shelfStatus, 'active');
-  assert.equal(row.rateKind, 'none');
-  assert.equal(row.rate, null);
-  assert.equal(row.daysLeft, null);
-  assert.equal(row.endsAt, null);
-  assert.equal(row.leftGrams, null);
-  assert.equal(row.fullGrams, null);
-  assert.equal(row.lastReceipt, null);
-  assert.equal(row.lastCount, null);
+  assert.equal(row.outAt, '2026-11-03T09:00:00.000Z');
+  assert.equal(row.lastArrival, null);
   assert.equal(row.tobacco.name, '');
-  assert.equal(row.leftSource, null);
-  assert.equal(row.monthGrams, null);
   assert.equal(row.trial, false);
   assert.equal(row.trialVerdict, null);
   assert.equal(row.trialMarkedAt, null);
-  assert.equal(normalizeShelfRow({ leftSource: 'guess', trialVerdict: 'maybe' }).leftSource, null);
-  assert.equal(normalizeShelfRow({ leftSource: 'mark', trialVerdict: 'maybe' }).trialVerdict, null);
-  assert.equal(normalizeShelfRow({ leftSource: 'mark' }).leftSource, 'mark');
+  assert.equal(normalizeShelfRow({ outAt: '' }).outAt, null);
+  assert.equal(normalizeShelfRow({ trialVerdict: 'maybe' }).trialVerdict, null);
+  assert.equal(normalizeShelfRow({ lastArrival: { at: '2026-08-20T10:00:00.000Z', kind: 'weird' } }).lastArrival?.kind, 'manual');
 });
 
-test('normalizeShelfView собирает строки, счётчики с «проверьте остаток», килограммы и настройки', () => {
-  const view = normalizeShelfView({
-    rows: [rawRow],
-    counters: { all: 1, ok: 1, ending: 0, check: 0, out: 0, stop: 0, plan: 0 },
-    totals: { kg: 0.3 },
-    today: { grams: 15, bowls: 0.8 },
-    settings: { bowlGrams: 18, leadDays: 7, budgetKop: 15000000 },
-    interval: { days: 10, deliveries: 6 },
-    horizon: { days: 17, until: '2026-12-06T10:00:00.000Z' },
-  });
+test('normalizeShelfView собирает строки', () => {
+  const view = normalizeShelfView({ rows: [rawRow], settings: { bowlGrams: 18 } });
+  assert.deepEqual(Object.keys(view), ['rows']);
   assert.equal(view.rows.length, 1);
-  assert.deepEqual(view.counters, { all: 1, ok: 1, ending: 0, check: 0, out: 0, stop: 0, plan: 0 });
-  assert.deepEqual(view.totals, { kg: 0.3 });
-  assert.equal(view.today.grams, 15);
-  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7, budgetKop: 15000000 });
-  assert.deepEqual(view.interval, { days: 10, deliveries: 6 });
-  assert.deepEqual(view.horizon, { days: 17, until: '2026-12-06T10:00:00.000Z' });
 });
 
-test('normalizeShelfView без данных — пустая полка с настройками по умолчанию', () => {
-  const view = normalizeShelfView(null);
-  assert.deepEqual(view.rows, []);
-  assert.equal(view.counters.all, 0);
-  assert.equal(view.counters.check, 0);
-  assert.deepEqual(view.settings, { bowlGrams: 18, leadDays: 7, budgetKop: null });
-  assert.deepEqual(view.interval, { days: null, deliveries: 0 });
-  assert.deepEqual(view.horizon, { days: 7, until: '' });
+test('normalizeShelfView без данных — пустая полка', () => {
+  assert.deepEqual(normalizeShelfView(null), { rows: [] });
 });
 
-test('normalizeShelfCard читает историю остатка, недели, цену и миксы', () => {
+test('normalizeShelfCard читает приходы и миксы', () => {
   const card = normalizeShelfCard({
     item: {
       ...rawRow,
-      history: [
-        {
-          id: 'e2',
-          kind: 'count',
-          grams: 200,
-          fraction: 0.5,
-          at: '2026-10-29T10:00:00.000Z',
-          priceKop: null,
-          reason: null,
-          actorLogin: 'aleksei',
-          delivery: null,
-          usage: { from: '2026-10-15T10:00:00.000Z', gramsPerDay: 14.29 },
-          excluded: false,
-        },
-        {
-          id: 'e1',
-          kind: 'receipt',
-          grams: 400,
-          at: '2026-10-15T10:00:00.000Z',
-          priceKop: 300000,
-          delivery: { id: 'd1', kind: 'invoice', number: 'ЮТ-5120', supplier: 'Южный табак' },
-        },
-        { id: 'e0', kind: 'weird' },
+      arrivals: [
+        { at: '2026-10-12T10:00:00.000Z', kind: 'invoice', supplier: 'Каспий Опт', number: '1184', qty: 2, deliveryId: 'd1' },
+        { at: '2026-08-20T10:00:00.000Z', kind: 'start', supplier: null, number: null, qty: null, deliveryId: 'd0' },
+        'мусор',
       ],
-      weekly: [{ from: '2026-11-16T00:00:00.000Z', to: '2026-11-19T12:00:00.000Z', gramsPerDay: 14, partial: true }],
-      gramPriceKop: 775,
-      bowlCostKop: 13950,
       mixes: [{ id: 'm1', name: 'Малиновый тоник' }],
-      settings: { bowlGrams: 18, leadDays: 7 },
     },
   });
   assert.equal(card.tobacco.name, 'Raspberries');
-  assert.equal(card.history.length, 3);
-  assert.deepEqual(card.history[0], {
-    id: 'e2',
-    kind: 'count',
-    grams: 200,
-    fraction: 0.5,
-    at: '2026-10-29T10:00:00.000Z',
-    priceKop: null,
-    reason: null,
-    actorLogin: 'aleksei',
-    delivery: null,
-    usage: { from: '2026-10-15T10:00:00.000Z', gramsPerDay: 14.29 },
-    excluded: false,
+  assert.deepEqual(card.arrivals, [
+    { at: '2026-10-12T10:00:00.000Z', kind: 'invoice', supplier: 'Каспий Опт', number: '1184', qty: 2, deliveryId: 'd1' },
+    { at: '2026-08-20T10:00:00.000Z', kind: 'start', supplier: null, number: null, qty: null, deliveryId: 'd0' },
+  ]);
+  assert.deepEqual(card.mixes, [{ id: 'm1', name: 'Малиновый тоник', status: null, substitution: null }]);
+  assert.deepEqual(card.similar, []);
+  assert.deepEqual(card.analogs, []);
+  assert.deepEqual(normalizeShelfCard({ item: rawRow }).arrivals, []);
+});
+test('аналоги (#478): нормализаторы читают замену, недостающие табаки и аналоги полки', () => {
+  const lemonblast = { tobaccoId: 't-lb', manufacturer: 'Darkside', name: 'Lemonblast' };
+  const lemonShock = { tobaccoId: 't-ls', manufacturer: 'Black Burn', name: 'Lemon Shock' };
+
+  const mix = normalizeMixRecord({
+    id: 'mix-rb',
+    name: 'Рутбир с лимоном',
+    available: true,
+    guestVisible: true,
+    status: 'substituted',
+    components: [{ id: 'c1', ...lemonblast, proportion: 25, substitute: { ...lemonShock, flavors: ['лимон'] } }],
+    substitution: { from: lemonblast, to: lemonShock },
+    missing: [{ ...lemonblast, onShelf: true, planned: true }],
   });
-  assert.equal(card.history[1].priceKop, 300000);
-  assert.deepEqual(card.history[1].delivery, { id: 'd1', kind: 'invoice', number: 'ЮТ-5120', supplier: 'Южный табак' });
-  assert.equal(card.history[1].usage, null);
-  assert.equal(card.history[2].kind, 'count');
-  assert.deepEqual(card.weekly, [{ from: '2026-11-16T00:00:00.000Z', to: '2026-11-19T12:00:00.000Z', gramsPerDay: 14, partial: true }]);
-  assert.equal(card.gramPriceKop, 775);
-  assert.equal(card.bowlCostKop, 13950);
-  assert.deepEqual(card.mixes, [{ id: 'm1', name: 'Малиновый тоник' }]);
+  assert.equal(mix.status, 'substituted');
+  assert.deepEqual(mix.components[0].substitute, { ...lemonShock, flavors: ['лимон'] });
+  assert.deepEqual(mix.substitution, { from: lemonblast, to: lemonShock });
+  assert.deepEqual(mix.missing, [{ ...lemonblast, onShelf: true, planned: true }]);
+  assert.deepEqual(normalizeMixRecord({ missing: [lemonblast] }).missing, [{ ...lemonblast, onShelf: true, planned: false }]);
+  assert.equal(normalizeMixRecord({ available: true, guestVisible: false, status: 'weird' }).status, 'blocked');
+
+  const list = normalizeMixListResponse({ items: [], filters: { status: 'substituted' }, meta: { substitutedCount: 2 } });
+  assert.equal(list.filters.status, 'substituted');
+  assert.equal(list.meta.substitutedCount, 2);
+  assert.equal(normalizeMixListResponse({}).meta.substitutedCount, 0);
+  const awaiting = normalizeMixListResponse({ filters: { status: 'awaiting-plan' }, meta: { awaitingPlanCount: 3 } });
+  assert.equal(awaiting.filters.status, 'awaiting-plan');
+  assert.equal(awaiting.meta.awaitingPlanCount, 3);
+
+  const row = normalizeShelfRow({ ...rawRow, analogs: [{ ...lemonShock, lineName: 'Black Burn', inStock: true, substituting: true }, { tobaccoId: 't-lf' }] });
+  assert.deepEqual(row.analogs, [
+    { ...lemonShock, lineName: 'Black Burn', inStock: true, substituting: true },
+    { tobaccoId: 't-lf', manufacturer: '', lineName: '', name: '', inStock: false, substituting: false },
+  ]);
+
+  const response = normalizeShelfAnalogsResponse({
+    item: {
+      ...rawRow,
+      similar: [{ tobaccoId: 't-sb', manufacturer: 'Sebero', lineName: 'Sebero Classic', name: 'Barberry', flavors: ['барбарис'] }],
+      mixes: [{ id: 'mix-rb', name: 'Рутбир с лимоном', status: 'substituted', substitution: { from: lemonblast, to: lemonShock } }],
+    },
+    unblockedMixes: [{ id: 'mix-rb', name: 'Рутбир с лимоном' }],
+  });
+  assert.deepEqual(response.item.similar, [{ tobaccoId: 't-sb', manufacturer: 'Sebero', lineName: 'Sebero Classic', name: 'Barberry', flavors: ['барбарис'] }]);
+  assert.deepEqual(response.item.mixes[0], {
+    id: 'mix-rb',
+    name: 'Рутбир с лимоном',
+    status: 'substituted',
+    substitution: { from: lemonblast, to: lemonShock },
+  });
+  assert.deepEqual(response.unblockedMixes, [{ id: 'mix-rb', name: 'Рутбир с лимоном' }]);
+  assert.deepEqual(normalizeShelfAnalogsResponse({}).unblockedMixes, []);
 });
 
-test('normalizeShelfEntryResponse отдаёт id записи журнала для отмены', () => {
-  const response = normalizeShelfEntryResponse({ entryId: 'e9', item: rawRow });
-  assert.equal(response.entryId, 'e9');
-  assert.equal(response.item.tobacco.id, 't1');
-  assert.equal(response.item.leftGrams, 300);
+test('автор микса (#491): author из ответа, без него — null; фильтр authors в запросе', () => {
+  assert.deepEqual(normalizeMixRecord({ id: 'm', author: { id: 'staff-admin', name: 'Ателье Admin' } }).author, {
+    id: 'staff-admin',
+    name: 'Ателье Admin',
+  });
+  assert.equal(normalizeMixRecord({ id: 'm' }).author, null);
+  assert.equal(normalizeMixRecord({ id: 'm', author: { name: 'x' } }).author, null);
+
+  const list = normalizeMixListResponse({
+    items: [],
+    filters: { authors: ['Максим (Мастер)'], options: { authors: ['Ателье Admin', 'Максим (Мастер)'] } },
+  });
+  assert.deepEqual(list.filters.authors, ['Максим (Мастер)']);
+  assert.deepEqual(list.filters.options.authors, ['Ателье Admin', 'Максим (Мастер)']);
+  assert.deepEqual(normalizeMixListResponse({}).filters.options.authors, []);
+
+  const query = new URLSearchParams(
+    buildMixRequestQuery({ ...defaultMixListResponse.filters, authors: ['Максим (Мастер)'] }, defaultMixListResponse.sort, 1, 25),
+  );
+  assert.deepEqual(query.getAll('authors'), ['Максим (Мастер)']);
 });

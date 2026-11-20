@@ -15,7 +15,7 @@ function AccessCodeInput({
   value,
   onChange,
   label = 'Код мастера',
-  hint = 'Код скажет мастер зала. Он действует до конца суток.',
+  hint = 'Код скажет мастер зала. Вход открыт на 6 часов.',
   maxLength = 4,
   id = 'guest-access-code'
 }) {

@@ -33,7 +33,7 @@ function AccessScreen({ code, setCode, ageOk, setAgeOk, error, onSubmit, markSrc
           <p className="aroma-access-tagline">Подбор кальянных миксов</p>
         </div>
         <form className="aroma-access-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-          <AccessCodeInput value={code} onChange={setCode} hint="Код скажет мастер зала. Он действует до конца суток." />
+          <AccessCodeInput value={code} onChange={setCode} hint="Код скажет мастер зала. Вход открыт на 6 часов." />
           <label className="aroma-access-age">
             <button type="button" role="checkbox" aria-checked={ageOk} className={'aroma-access-age-dot' + (ageOk ? ' on' : '')} onClick={() => setAgeOk(!ageOk)}>{ageOk ? <span aria-hidden>✓</span> : null}</button>
             <span className="aroma-access-age-text">Мне есть 18. Понимаю, что курение вредит здоровью.</span>

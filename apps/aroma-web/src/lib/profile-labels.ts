@@ -14,6 +14,8 @@ export const profileOptions: ProfileOption[] = [
   { value: 'citrus', label: 'Цитрусовый' },
   { value: 'berry', label: 'Ягодный' },
   { value: 'perfume', label: 'Парфюмный' },
+  { value: 'beverage', label: 'Напитки' },
+  { value: 'gastro', label: 'Гастро' },
 ];
 
 // «Сладкий», «Кислый» и «Свежий» сняты с выбора (#182): своего источника в

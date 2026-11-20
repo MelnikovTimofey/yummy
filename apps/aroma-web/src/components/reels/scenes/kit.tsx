@@ -10,7 +10,8 @@ export const SCENE_FPS = 30;
 /** Бесшовный цикл 6 с: кадр 180 совпадает с кадром 0. */
 export const SCENE_FRAMES = 180;
 
-export type SceneProps = { spec: ReelSceneSpec; seed: string; frame: number };
+/** onPhoto — под сценой фото вкуса (#597): своей заливки нет, ореол ложится на фото soft-light. */
+export type SceneProps = { spec: ReelSceneSpec; seed: string; frame: number; onPhoto?: boolean };
 
 /** Детерминированный шум: один и тот же микс всегда выглядит одинаково. */
 export function seeded(text: string) {
@@ -197,7 +198,7 @@ function ParticleLayer({ motif, particles, color, frame }: { motif: SceneMotif; 
 }
 
 /** Каркас сцены: тёмный фон с ореолом цвета профиля, слой мотива и фигуры. */
-export function SceneFrame({ spec, seed, frame, children }: SceneProps & { children?: ReactNode }) {
+export function SceneFrame({ spec, seed, frame, onPhoto = false, children }: SceneProps & { children?: ReactNode }) {
   const uid = useId();
   const { c1, c2 } = sceneColors(spec);
   const rand = seeded(seed);
@@ -212,12 +213,18 @@ export function SceneFrame({ spec, seed, frame, children }: SceneProps & { child
           <stop offset={1} stopColor="#0e0e11" />
         </radialGradient>
         <radialGradient id={`${uid}halo`} cx={0.5} cy={0.38} r={1} gradientTransform="translate(0.5 0.38) scale(0.7 0.5) translate(-0.5 -0.38)">
-          <stop offset={0} stopColor={c1} stopOpacity={0.2} />
+          <stop offset={0} stopColor={c1} stopOpacity={onPhoto ? 0.4 : 0.2} />
           <stop offset={0.7} stopColor={c1} stopOpacity={0} />
         </radialGradient>
       </defs>
-      <rect width="100%" height="100%" fill={`url(#${uid}bg)`} />
-      <rect width="100%" height="100%" fill={`url(#${uid}halo)`} opacity={0.7 + 0.3 * breathe(loopPhase(frame))} />
+      {onPhoto ? null : <rect width="100%" height="100%" fill={`url(#${uid}bg)`} />}
+      <rect
+        width="100%"
+        height="100%"
+        fill={`url(#${uid}halo)`}
+        opacity={0.7 + 0.3 * breathe(loopPhase(frame))}
+        style={onPhoto ? { mixBlendMode: 'soft-light' } : undefined}
+      />
       {children}
       <ParticleLayer motif={spec.primary} particles={primary} color={c1} frame={frame} />
       {spec.secondary ? <ParticleLayer motif={spec.secondary} particles={secondary} color={c2} frame={frame} /> : null}

@@ -1,11 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { prisma } from './db';
 import {
   createTobacco,
-  getDashboardSummary,
   getGuestHomeRails,
   getMixById,
   getSmokeCtaEvents,
@@ -48,8 +47,8 @@ test.describe('custom mix smoke event', () => {
 
     const stored = await storedEvent(body.id);
     assert.deepEqual(stored.components, [
-      { tobaccoId: 'tobacco-citrus-breeze', manufacturer: 'Ателье Reserve', name: 'Citrus Breeze', proportion: 60 },
-      { tobaccoId: 'tobacco-mint-veil', manufacturer: 'Ателье Reserve', name: 'Mint Veil', proportion: 40 },
+      { tobaccoId: 'tobacco-citrus-breeze', manufacturer: 'Ателье Reserve', lineName: '', name: 'Citrus Breeze', proportion: 60 },
+      { tobaccoId: 'tobacco-mint-veil', manufacturer: 'Ателье Reserve', lineName: '', name: 'Mint Veil', proportion: 40 },
     ]);
     assert.equal(stored.signature, body.signature);
     assert.equal(stored.harmony, body.harmony);
@@ -174,27 +173,24 @@ test.describe('custom mix smoke event', () => {
     assert.ok(created && !('error' in created));
 
     const body = (await smoke({ components: [{ tobaccoId: created.id, proportion: 100 }] })).json() as Created;
-    // Полка не даёт удалить табак (Restrict) — убираем её журнал и запись вместе с ним.
-    await prisma.stockEntry.deleteMany({ where: { shelfItem: { tobaccoId: created.id } } });
+    // Полка не даёт удалить табак (Restrict) — убираем запись вместе с ним.
     await prisma.shelfItem.delete({ where: { tobaccoId: created.id } });
     await prisma.tobacco.delete({ where: { id: created.id } });
 
     const stored = await storedEvent(body.id);
     assert.deepEqual(stored.components, [
-      { tobaccoId: created.id, manufacturer: 'Тест', name: 'Разовый', proportion: 100 },
+      { tobaccoId: created.id, manufacturer: 'Тест', lineName: '', name: 'Разовый', proportion: 100 },
     ]);
   });
 
-  test('does not create smoke CTA events and leaves rails and dashboard unchanged', async () => {
-    const snapshot = async () => {
-      const { window, ...dashboard } = await getDashboardSummary();
-      return {
-        events: await getSmokeCtaEvents(),
-        summary: await getSmokeCtaSummary(),
-        rails: await getGuestHomeRails(),
-        dashboard,
-      };
-    };
+  // Свой микс — выбор на Дашборде (#520, guest-analytics.test.ts), но не событие
+  // «Покурить»: статистика каталожных миксов и рейлы от него не меняются.
+  test('does not create smoke CTA events and leaves rails unchanged', async () => {
+    const snapshot = async () => ({
+      events: await getSmokeCtaEvents(),
+      summary: await getSmokeCtaSummary(),
+      rails: await getGuestHomeRails(),
+    });
 
     // Живое событие каталога — чтобы статистика была непустой и сдвиг был виден.
     const scout = await getMixById('mix-citrus-scout');

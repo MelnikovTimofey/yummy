@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Синхронизация каталога табаков с htreviews.org (scripts/atelier/htreviews-sync.cron):
-#   shelf — только бренды того, что есть в точке (ночью, минуты);
-#   full  — весь каталог (раз в неделю, часы).
+#   shelf  — только бренды того, что есть в точке (ночью, минуты);
+#   brands — бренды из htreviews-brands.txt и бренды точки (раз в неделю);
+#   full   — весь каталог htreviews (только вручную, часы).
 # Одноразовый контейнер из выкаченного образа backend с DATABASE_URL прода.
 # Синхронизация идемпотентна и не трогает inStock и полку. При сбое — алерт
 # ботом мониторинга (.env.monitor). Порядок: docs/atelier/prod-operations.md §6.
@@ -12,10 +13,15 @@ umask 077
 cd "$(dirname "$0")/../.."
 
 mode="${1:-shelf}"
+brand_urls=""
 case "$mode" in
   shelf) shelf_brands=1 ;;
+  brands)
+    shelf_brands=1
+    brand_urls="$(grep -v -E '^\s*(#|$)' scripts/atelier/htreviews-brands.txt | paste -sd, -)"
+    ;;
   full) shelf_brands=0 ;;
-  *) echo "usage: $0 [shelf|full]" >&2; exit 2 ;;
+  *) echo "usage: $0 [shelf|brands|full]" >&2; exit 2 ;;
 esac
 
 set -a
@@ -56,6 +62,7 @@ trap 'rm -f "$output"' EXIT
 log "htreviews sync start: mode=$mode delayMs=$HTREVIEWS_DELAY_MS"
 docker compose -f "$COMPOSE_FILE" --env-file .env run --rm --no-deps -T \
   -e HTREVIEWS_SHELF_BRANDS="$shelf_brands" \
+  -e HTREVIEWS_BRAND_URLS="$brand_urls" \
   -e HTREVIEWS_DELAY_MS="$HTREVIEWS_DELAY_MS" \
   backend npx tsx scripts/sync-htreviews.ts 2>&1 | tee "$output"
 status="${PIPESTATUS[0]}"

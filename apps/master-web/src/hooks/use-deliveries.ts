@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { apiBaseUrl, requestJson } from '@/lib/api-client';
 import {
+  normalizeDeliveryAccepted,
   normalizeDeliveryCard,
   normalizeDeliveryList,
   normalizeInventoryListResponse,
@@ -19,9 +20,6 @@ export type DeliveryPatch = { receivedAt?: string | null; number?: string | null
 export type DeliveryLinePatch = {
   tobaccoId?: string | null;
   qty?: number;
-  grams?: number | null;
-  // Поправка прихода в граммах; null — сброс к «кол-во × граммы по счёту».
-  receivedGrams?: number | null;
   priceKop?: number | null;
   arrived?: boolean;
   kind?: DeliveryLineKind;
@@ -31,7 +29,6 @@ export type DeliveryLineInput = {
   rawName: string;
   qty: number;
   priceKop?: number | null;
-  grams?: number | null;
   tobaccoId?: string | null;
 };
 
@@ -88,7 +85,11 @@ export const useDeliveries = (token: string) => {
   const createManual = useCallback((input: ManualDeliveryInput) => card('/staff/deliveries/manual', json('POST', input)), [card]);
   const load = useCallback((id: string) => card(deliveryPath(id)), [card]);
   const update = useCallback((id: string, patch: DeliveryPatch) => card(deliveryPath(id), json('PATCH', patch)), [card]);
-  const accept = useCallback((id: string, receivedAt: string) => card(`${deliveryPath(id)}/accept`, json('POST', { receivedAt })), [card]);
+  const accept = useCallback(
+    async (id: string, receivedAt: string) =>
+      normalizeDeliveryAccepted(await requestJson<unknown>(`${deliveryPath(id)}/accept`, json('POST', { receivedAt }), token)),
+    [token],
+  );
   const addLine = useCallback((id: string, input: DeliveryLineInput) => card(`${deliveryPath(id)}/lines`, json('POST', input)), [card]);
   const updateLine = useCallback(
     (id: string, lineId: string, patch: DeliveryLinePatch) => card(linePath(id, lineId), json('PATCH', patch)),

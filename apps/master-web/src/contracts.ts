@@ -142,7 +142,7 @@ export const defaultInventoryListResponse: InventoryListResponse = {
   },
 };
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'awaiting-plan' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -158,11 +158,13 @@ export type MixListFilters = {
   flavorProfiles: string[];
   flavors: string[];
   flavorTags: string[];
+  authors: string[];
   options: {
     manufacturers: string[];
     flavorProfiles: string[];
     flavors: string[];
     flavorTags: string[];
+    authors: string[];
   };
 };
 
@@ -175,7 +177,9 @@ export type MixListMeta = {
   totalItems: number;
   filteredItems: number;
   guestVisibleCount: number;
+  substitutedCount: number;
   hiddenCount: number;
+  awaitingPlanCount: number;
   blockedCount: number;
   inRailsCount: number;
   withoutRailsCount: number;
@@ -186,7 +190,25 @@ export type MixListMeta = {
   hasPreviousPage: boolean;
 };
 
-export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags';
+export type MixFilterKey = 'manufacturers' | 'flavorProfiles' | 'flavors' | 'flavorTags' | 'authors';
+
+// Сотрудник, который завёл микс (#491); null — автора нет.
+export type MixAuthor = { id: string; name: string };
+
+export type TobaccoRef = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+};
+
+// Табак с полки вместо закончившегося компонента (PRD §6.2 п.1); пропорция — у компонента.
+export type MixSubstitute = TobaccoRef & { flavors: string[] };
+
+// onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
+// planned — табак в плане (#566).
+export type MissingTobacco = TobaccoRef & { onShelf: boolean; planned: boolean };
+
+export type MixSubstitution = { from: TobaccoRef; to: TobaccoRef };
 
 export type MixComponent = {
   id: string;
@@ -196,6 +218,7 @@ export type MixComponent = {
   flavors: string[];
   proportion: number;
   sortOrder: number;
+  substitute: MixSubstitute | null;
 };
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
@@ -221,11 +244,16 @@ export type MixRecord = {
   smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
+  // Пока backend не отдаёт status (#479), он выводится из available и guestVisible.
+  status: MixStatus;
+  substitution: MixSubstitution | null;
+  missing: MissingTobacco[];
   createdAt: string;
   updatedAt: string;
   railMemberships: MixRailMembership[];
   railCount: number;
   activeRailCount: number;
+  author: MixAuthor | null;
 };
 
 export type MixListResponse = {
@@ -245,11 +273,13 @@ export const defaultMixListResponse: MixListResponse = {
     flavorProfiles: [],
     flavors: [],
     flavorTags: [],
+    authors: [],
     options: {
       manufacturers: [],
       flavorProfiles: [],
       flavors: [],
       flavorTags: [],
+      authors: [],
     },
   },
   sort: {
@@ -260,7 +290,9 @@ export const defaultMixListResponse: MixListResponse = {
     totalItems: 0,
     filteredItems: 0,
     guestVisibleCount: 0,
+    substitutedCount: 0,
     hiddenCount: 0,
+    awaitingPlanCount: 0,
     blockedCount: 0,
     inRailsCount: 0,
     withoutRailsCount: 0,
@@ -348,136 +380,6 @@ export type AuditEventRecord = {
   entityLabel: string;
   details: Record<string, unknown>;
   createdAt: string;
-};
-
-export type DashboardWindowKey = '7d' | '14d' | '30d';
-
-export type DashboardBreakdownItem = {
-  key: string;
-  label: string;
-  total: number;
-  inStockCount: number;
-  outOfStockCount: number;
-};
-
-export type DashboardMixMetric = {
-  mixId: string;
-  name: string;
-  smokeCtaCount: number;
-  avgRating: number;
-  ratingsCount: number;
-};
-
-export type DashboardBlockedMix = {
-  mixId: string;
-  name: string;
-  missingComponents: string[];
-  railNames: string[];
-  smokeCtaCount: number;
-};
-
-export type DashboardRailHealthItem = {
-  railId: string;
-  name: string;
-  type: RailType;
-  active: boolean;
-  totalMixCount: number;
-  visibleMixCount: number;
-  hiddenMixCount: number;
-};
-
-export type DashboardSummary = {
-  window: {
-    key: DashboardWindowKey;
-    label: string;
-    days: number;
-    startsAt: string;
-    endsAt: string;
-  };
-  totalTobaccos: number;
-  inStockCount: number;
-  outOfStockCount: number;
-  smokeCtaTotal: number;
-  ratingsTotal: number;
-  avgGuestRating: number;
-  topMixes: DashboardMixMetric[];
-  topRatedMixes: DashboardMixMetric[];
-  ratingDistribution: Array<{
-    value: number;
-    count: number;
-  }>;
-  activity: Array<{
-    date: string;
-    smokeCtaCount: number;
-    ratingsCount: number;
-  }>;
-  inventory: {
-    totalTobaccos: number;
-    inStockCount: number;
-    outOfStockCount: number;
-    manufacturers: DashboardBreakdownItem[];
-    flavorProfiles: DashboardBreakdownItem[];
-    topFlavors: DashboardBreakdownItem[];
-  };
-  ops: {
-    guestVisibleMixesCount: number;
-    hiddenMixesCount: number;
-    blockedByInventoryCount: number;
-    activeRailsCount: number;
-    emptyActiveRailsCount: number;
-    blockedMixes: DashboardBlockedMix[];
-    railHealth: DashboardRailHealthItem[];
-  };
-};
-
-export const dashboardWindowOptions: Array<{ key: DashboardWindowKey; label: string }> = [
-  { key: '7d', label: '7 дней' },
-  { key: '14d', label: '14 дней' },
-  { key: '30d', label: '30 дней' },
-];
-
-type DashboardSummaryPayload = {
-  window?: {
-    key?: unknown;
-    label?: unknown;
-    days?: unknown;
-    startsAt?: unknown;
-    endsAt?: unknown;
-  };
-  inventory?: {
-    totalTobaccos?: number;
-    total?: number;
-    inStockCount?: number;
-    outOfStockCount?: number;
-    manufacturers?: unknown[];
-    flavorProfiles?: unknown[];
-    topFlavors?: unknown[];
-  };
-  product?: {
-    smokeCtaTotal?: unknown;
-    ratingsTotal?: unknown;
-    avgGuestRating?: unknown;
-    topMixes?: unknown[];
-    topRatedMixes?: unknown[];
-    ratingDistribution?: unknown[];
-    activity?: unknown[];
-  };
-  ops?: {
-    guestVisibleMixesCount?: unknown;
-    hiddenMixesCount?: unknown;
-    blockedByInventoryCount?: unknown;
-    activeRailsCount?: unknown;
-    emptyActiveRailsCount?: unknown;
-    blockedMixes?: unknown[];
-    railHealth?: unknown[];
-  };
-  totalTobaccos?: number;
-  inStockCount?: number;
-  outOfStockCount?: number;
-  smokeCtaTotal?: number;
-  ratingsTotal?: number;
-  avgGuestRating?: number;
-  topMixes?: unknown[];
 };
 
 export type RailMixReference = {
@@ -571,10 +473,6 @@ const toTelegramAutomationHealth = (value: unknown): TelegramAutomationHealth =>
     : 'unknown';
 };
 
-const toDashboardWindowKey = (value: unknown): DashboardWindowKey => {
-  return value === '7d' || value === '14d' || value === '30d' ? value : '14d';
-};
-
 const toInventoryStockFilter = (value: unknown): InventoryStockFilter => {
   return value === 'in-stock' || value === 'out-of-stock' || value === 'all' ? value : 'all';
 };
@@ -598,7 +496,7 @@ const toInventorySortDirection = (value: unknown): InventorySortDirection => {
 };
 
 const toMixStatusFilter = (value: unknown): MixStatusFilter => {
-  return value === 'guest-visible' || value === 'hidden' || value === 'blocked' || value === 'all'
+  return value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'awaiting-plan' || value === 'blocked' || value === 'all'
     ? value
     : 'all';
 };
@@ -679,6 +577,29 @@ export const readEntityPayload = <T>(value: unknown): T | null => {
   return value === null || value === undefined ? null : (value as T);
 };
 
+const normalizeMixTobaccoRef = (value: unknown): TobaccoRef => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    tobaccoId: String(raw.tobaccoId ?? raw.id ?? ''),
+    manufacturer: String(raw.manufacturer ?? ''),
+    name: String(raw.name ?? ''),
+  };
+};
+
+const normalizeMixSubstitute = (value: unknown): MixSubstitute | null =>
+  isRecord(value) ? { ...normalizeMixTobaccoRef(value), flavors: uniqueStrings(toStringList(value.flavors)) } : null;
+
+const normalizeMissingTobacco = (value: unknown): MissingTobacco => ({
+  ...normalizeMixTobaccoRef(value),
+  onShelf: toBoolean(isRecord(value) ? value.onShelf : undefined, true),
+  planned: toBoolean(isRecord(value) ? value.planned : undefined, false),
+});
+
+const normalizeMixSubstitution = (value: unknown): MixSubstitution | null =>
+  isRecord(value) && isRecord(value.from) && isRecord(value.to)
+    ? { from: normalizeMixTobaccoRef(value.from), to: normalizeMixTobaccoRef(value.to) }
+    : null;
+
 const normalizeMixComponent = (value: unknown): MixComponent => {
   if (!isRecord(value)) {
     return {
@@ -689,6 +610,7 @@ const normalizeMixComponent = (value: unknown): MixComponent => {
       flavors: [],
       proportion: 0,
       sortOrder: 0,
+      substitute: null,
     };
   }
 
@@ -700,6 +622,7 @@ const normalizeMixComponent = (value: unknown): MixComponent => {
     flavors: uniqueStrings(toStringList(value.flavors)),
     proportion: toNumber(value.proportion, 0),
     sortOrder: toNumber(value.sortOrder, 0),
+    substitute: normalizeMixSubstitute(value.substitute),
   };
 };
 
@@ -876,6 +799,9 @@ export const normalizeInventoryTobacco = (value: unknown): InventoryTobacco => {
   };
 };
 
+const normalizeMixAuthor = (value: unknown): MixAuthor | null =>
+  isRecord(value) && typeof value.id === 'string' && typeof value.name === 'string' ? { id: value.id, name: value.name } : null;
+
 export const normalizeMixRecord = (value: unknown): MixRecord => {
   const raw = isRecord(value) ? value : {};
   const components = readListPayload<unknown>(raw.components).map(normalizeMixComponent);
@@ -892,6 +818,8 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     ...toStringList(raw.componentIds),
     ...components.map((component) => component.tobaccoId || component.id),
   ]);
+  const available = toBoolean(raw.available ?? raw.inStock, true);
+  const guestVisible = toBoolean(raw.guestVisible, available);
 
   return {
     id: String(raw.id ?? raw.mixId ?? ''),
@@ -905,13 +833,19 @@ export const normalizeMixRecord = (value: unknown): MixRecord => {
     avgRating: toNumber(raw.avgRating, 0),
     ratingsCount: toNumber(raw.ratingsCount, 0),
     smokeCtaCount: toNumber(raw.smokeCtaCount, 0),
-    available: toBoolean(raw.available ?? raw.inStock, true),
-    guestVisible: toBoolean(raw.guestVisible, toBoolean(raw.available ?? raw.inStock, true)),
+    available,
+    guestVisible,
+    status: MIX_STATUSES.includes(raw.status as MixStatus)
+      ? (raw.status as MixStatus)
+      : resolveMixStatus({ available, guestVisible }),
+    substitution: normalizeMixSubstitution(raw.substitution),
+    missing: readListPayload<unknown>(raw.missing).map(normalizeMissingTobacco),
     createdAt: toIsoString(raw.createdAt, ''),
     updatedAt: toIsoString(raw.updatedAt, ''),
     railMemberships,
     railCount: toNumber(raw.railCount, railMemberships.length),
     activeRailCount: toNumber(raw.activeRailCount, railMemberships.filter((item) => item.active).length),
+    author: normalizeMixAuthor(raw.author),
   };
 };
 
@@ -932,11 +866,13 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       flavorProfiles: uniqueStrings(toStringList(filters.flavorProfiles)),
       flavors: uniqueStrings(toStringList(filters.flavors)),
       flavorTags: uniqueStrings(toStringList(filters.flavorTags)),
+      authors: uniqueStrings(toStringList(filters.authors)),
       options: {
         manufacturers: uniqueStrings(toStringList(options.manufacturers)),
         flavorProfiles: uniqueStrings(toStringList(options.flavorProfiles)),
         flavors: uniqueStrings(toStringList(options.flavors)),
         flavorTags: uniqueStrings(toStringList(options.flavorTags)),
+        authors: uniqueStrings(toStringList(options.authors)),
       },
     },
     sort: {
@@ -947,7 +883,9 @@ export const normalizeMixListResponse = (value: unknown): MixListResponse => {
       totalItems: toNumber(meta.totalItems, 0),
       filteredItems: toNumber(meta.filteredItems, 0),
       guestVisibleCount: toNumber(meta.guestVisibleCount, 0),
+      substitutedCount: toNumber(meta.substitutedCount, 0),
       hiddenCount: toNumber(meta.hiddenCount, 0),
+      awaitingPlanCount: toNumber(meta.awaitingPlanCount, 0),
       blockedCount: toNumber(meta.blockedCount, 0),
       inRailsCount: toNumber(meta.inRailsCount, 0),
       withoutRailsCount: toNumber(meta.withoutRailsCount, 0),
@@ -980,123 +918,6 @@ export const normalizeRailRecord = (value: unknown): RailRecord => {
     active: toBoolean(raw.active, true),
     editable,
     readOnlyReason,
-  };
-};
-
-export const normalizeDashboardSummary = (value: unknown): DashboardSummary => {
-  const raw = isRecord(value) ? (value as DashboardSummaryPayload) : {};
-  const inventory = isRecord(raw.inventory) ? raw.inventory : {};
-  const product = isRecord(raw.product) ? raw.product : {};
-  const ops = isRecord(raw.ops) ? raw.ops : {};
-  const window = isRecord(raw.window) ? raw.window : {};
-
-  const normalizeMixMetric = (item: unknown): DashboardMixMetric => {
-    if (!isRecord(item)) {
-      const stringValue = String(item ?? '');
-      return {
-        mixId: stringValue,
-        name: stringValue,
-        smokeCtaCount: 0,
-        avgRating: 0,
-        ratingsCount: 0,
-      };
-    }
-
-    return {
-      mixId: String(item.mixId ?? item.id ?? ''),
-      name: String(item.name ?? item.mixName ?? ''),
-      smokeCtaCount: toNumber(item.smokeCtaCount ?? item.count, 0),
-      avgRating: toNumber(item.avgRating, 0),
-      ratingsCount: toNumber(item.ratingsCount, 0),
-    };
-  };
-
-  const normalizeBreakdownItem = (item: unknown): DashboardBreakdownItem => {
-    const source = isRecord(item) ? item : {};
-
-    return {
-      key: String(source.key ?? source.id ?? source.label ?? ''),
-      label: String(source.label ?? source.name ?? source.key ?? ''),
-      total: toNumber(source.total, 0),
-      inStockCount: toNumber(source.inStockCount, 0),
-      outOfStockCount: toNumber(source.outOfStockCount, 0),
-    };
-  };
-
-  const normalizeBlockedMix = (item: unknown): DashboardBlockedMix => {
-    const source = isRecord(item) ? item : {};
-
-    return {
-      mixId: String(source.mixId ?? source.id ?? ''),
-      name: String(source.name ?? source.mixName ?? ''),
-      missingComponents: uniqueStrings(toStringList(source.missingComponents)),
-      railNames: uniqueStrings(toStringList(source.railNames)),
-      smokeCtaCount: toNumber(source.smokeCtaCount, 0),
-    };
-  };
-
-  const normalizeRailHealthItem = (item: unknown): DashboardRailHealthItem => {
-    const source = isRecord(item) ? item : {};
-
-    return {
-      railId: String(source.railId ?? source.id ?? ''),
-      name: String(source.name ?? 'Без названия'),
-      type: toRailType(source.type),
-      active: toBoolean(source.active, true),
-      totalMixCount: toNumber(source.totalMixCount, 0),
-      visibleMixCount: toNumber(source.visibleMixCount, 0),
-      hiddenMixCount: toNumber(source.hiddenMixCount, 0),
-    };
-  };
-
-  return {
-    window: {
-      key: toDashboardWindowKey(window.key),
-      label: String(window.label ?? dashboardWindowOptions.find((item) => item.key === toDashboardWindowKey(window.key))?.label ?? '14 дней'),
-      days: toNumber(window.days, 14),
-      startsAt: toIsoString(window.startsAt, ''),
-      endsAt: toIsoString(window.endsAt, ''),
-    },
-    totalTobaccos: toNumber(raw.totalTobaccos ?? inventory.totalTobaccos ?? inventory.total, 0),
-    inStockCount: toNumber(raw.inStockCount ?? inventory.inStockCount, 0),
-    outOfStockCount: toNumber(raw.outOfStockCount ?? inventory.outOfStockCount, 0),
-    smokeCtaTotal: toNumber(raw.smokeCtaTotal ?? product.smokeCtaTotal, 0),
-    ratingsTotal: toNumber(raw.ratingsTotal ?? product.ratingsTotal, 0),
-    avgGuestRating: toNumber(raw.avgGuestRating ?? product.avgGuestRating, 0),
-    topMixes: readListPayload<unknown>(raw.topMixes ?? product.topMixes).map(normalizeMixMetric),
-    topRatedMixes: readListPayload<unknown>(product.topRatedMixes).map(normalizeMixMetric),
-    ratingDistribution: readListPayload<unknown>(product.ratingDistribution).map((item) => {
-      const source = isRecord(item) ? item : {};
-      return {
-        value: toNumber(source.value, 0),
-        count: toNumber(source.count, 0),
-      };
-    }),
-    activity: readListPayload<unknown>(product.activity).map((item) => {
-      const source = isRecord(item) ? item : {};
-      return {
-        date: toIsoString(source.date, ''),
-        smokeCtaCount: toNumber(source.smokeCtaCount, 0),
-        ratingsCount: toNumber(source.ratingsCount, 0),
-      };
-    }),
-    inventory: {
-      totalTobaccos: toNumber(raw.totalTobaccos ?? inventory.totalTobaccos ?? inventory.total, 0),
-      inStockCount: toNumber(raw.inStockCount ?? inventory.inStockCount, 0),
-      outOfStockCount: toNumber(raw.outOfStockCount ?? inventory.outOfStockCount, 0),
-      manufacturers: readListPayload<unknown>(inventory.manufacturers).map(normalizeBreakdownItem),
-      flavorProfiles: readListPayload<unknown>(inventory.flavorProfiles).map(normalizeBreakdownItem),
-      topFlavors: readListPayload<unknown>(inventory.topFlavors).map(normalizeBreakdownItem),
-    },
-    ops: {
-      guestVisibleMixesCount: toNumber(ops.guestVisibleMixesCount, 0),
-      hiddenMixesCount: toNumber(ops.hiddenMixesCount, 0),
-      blockedByInventoryCount: toNumber(ops.blockedByInventoryCount, 0),
-      activeRailsCount: toNumber(ops.activeRailsCount, 0),
-      emptyActiveRailsCount: toNumber(ops.emptyActiveRailsCount, 0),
-      blockedMixes: readListPayload<unknown>(ops.blockedMixes).map(normalizeBlockedMix),
-      railHealth: readListPayload<unknown>(ops.railHealth).map(normalizeRailHealthItem),
-    },
   };
 };
 
@@ -1249,6 +1070,10 @@ export const buildMixRequestQuery = (
     params.append('flavorTags', value);
   }
 
+  for (const value of filters.authors) {
+    params.append('authors', value);
+  }
+
   params.set('sort', sort.field);
   params.set('direction', sort.direction);
   params.set('page', String(Math.max(1, Math.trunc(page))));
@@ -1341,7 +1166,9 @@ export const resolveCurrentDailyCode = (
   return latest ? { state: 'expired', code: latest } : { state: 'none', code: null };
 };
 
-export type MixStatus = 'visible' | 'hidden' | 'blocked';
+export type MixStatus = 'visible' | 'substituted' | 'hidden' | 'blocked';
+
+const MIX_STATUSES: MixStatus[] = ['visible', 'substituted', 'hidden', 'blocked'];
 
 // `available` — ручной переключатель мастера; `guestVisible` backend считает
 // как `available` и наличие всех компонентов.
@@ -1355,6 +1182,7 @@ export const resolveMixStatus = (mix: Pick<MixRecord, 'available' | 'guestVisibl
 
 const mixStatusLabels: Record<MixStatus, string> = {
   visible: 'Виден гостю',
+  substituted: 'С заменой',
   hidden: 'Скрыт мастером',
   blocked: 'Блокирован наличием',
 };
@@ -1438,11 +1266,13 @@ export const formatRailType = (value: RailType) => {
 
 const flavorProfileLabels: Record<string, string> = {
   berry: 'Ягодные',
+  beverage: 'Напитки',
   citrus: 'Цитрусовые',
   dessert: 'Десертные',
   floral_herbal: 'Цветочно-травяные',
   fresh: 'Свежие',
   fruity: 'Фруктовые',
+  gastro: 'Гастро',
   minty: 'Мятные',
   perfume: 'Парфюмные',
   sour: 'Кислые',
@@ -1478,6 +1308,8 @@ export const INVENTORY_FLAVOR_PROFILE_KEYS = [
   'tobacco',
   'floral_herbal',
   'perfume',
+  'beverage',
+  'gastro',
 ] as const;
 
 // Шкала крепости htreviews (5 градаций, женский род) — совпадает со значениями
@@ -1576,12 +1408,6 @@ export const mixStatusFilterOptions: Array<{ value: MixStatusFilter; label: stri
   { value: 'hidden', label: 'Скрыт мастером' },
 ];
 
-export const mixRailFilterOptions: Array<{ value: MixRailFilter; label: string }> = [
-  { value: 'all', label: 'Любое участие' },
-  { value: 'in-rails', label: 'Только в рейлах' },
-  { value: 'without-rails', label: 'Без рейлов' },
-];
-
 export const formatInventoryBatchAction = (value: InventoryBatchAction) => {
   switch (value) {
     case 'set-out-of-stock':
@@ -1635,17 +1461,11 @@ export const parseDateTimeLocalInput = (value: string) => {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
 };
 
-// --- Полка (#211, #306): ответы /staff/shelf* ------------------------------
+// --- Полка (#211, #518): ответы /staff/shelf* -------------------------------
 
-export type ShelfStatus = 'ok' | 'ending' | 'check' | 'stop' | 'out' | 'plan';
 export type ShelfItemStatus = 'active' | 'plan' | 'dropped';
-export type ShelfRateKind = 'own' | 'brand' | 'none';
-// mark — остаток указал мастер (отметка сегодня или «Закончился»), forecast — прогноз.
-export type ShelfLeftSource = 'mark' | 'forecast';
 export type ShelfTrialVerdict = 'yes' | 'no';
-export type ShelfReceiptKind = 'invoice' | 'start' | 'manual';
-// «Закончился» — отметка (count) с 0 г.
-export type StockEntryKind = 'receipt' | 'count' | 'writeoff';
+export type ShelfArrivalKind = 'invoice' | 'start' | 'manual';
 
 export type ShelfTobacco = {
   id: string;
@@ -1660,26 +1480,31 @@ export type ShelfTobacco = {
   sourceUrl: string | null;
 };
 
-export type ShelfReceipt = { at: string; grams: number; kind: ShelfReceiptKind; number: string | null; label: string };
+// Приход (#518) — строка принятой поставки: счёта, ручной или стартовой.
+export type ShelfArrival = {
+  at: string;
+  kind: ShelfArrivalKind;
+  supplier: string | null;
+  number: string | null;
+  qty: number | null;
+  deliveryId: string | null;
+};
+
+// Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
+// пока сам табак закончился.
+export type ShelfAnalog = TobaccoRef & { lineName: string; inStock: boolean; substituting: boolean };
+
+export type ShelfSimilar = TobaccoRef & { lineName: string; flavors: string[] };
 
 export type ShelfRow = {
   tobacco: ShelfTobacco;
   shelfStatus: ShelfItemStatus;
-  status: ShelfStatus;
   guestAvailable: boolean;
-  // Остаток сейчас по расчёту; null — прихода не было.
-  leftGrams: number | null;
-  // Уровень сразу после последнего прихода — база долей ¾ ½ ⅓ ¼ и полосы.
-  fullGrams: number | null;
-  lastReceipt: ShelfReceipt | null;
-  lastCount: { at: string; grams: number; fraction: number | null } | null;
-  leftSource: ShelfLeftSource | null;
-  rate: number | null;
-  rateKind: ShelfRateKind;
-  // Расход в месяц = г/день × 30.
-  monthGrams: number | null;
-  daysLeft: number | null;
-  endsAt: string | null;
+  // С какого момента «Закончился»; null — «Есть».
+  outAt: string | null;
+  // Когда поставлен в план (#561); после прихода из плана дата остаётся.
+  plannedAt: string | null;
+  lastArrival: ShelfArrival | null;
   mixCount: number;
   keepStocked: boolean;
   stopped: boolean;
@@ -1689,89 +1514,40 @@ export type ShelfRow = {
   trial: boolean;
   trialVerdict: ShelfTrialVerdict | null;
   trialMarkedAt: string | null;
+  analogs: ShelfAnalog[];
 };
 
-export type ShelfCounterKey = 'all' | ShelfStatus;
-export type ShelfCounters = Record<ShelfCounterKey, number>;
-// budgetKop — бюджет на табак в месяц (#326), null — не указан.
-export type ShelfSettings = { bowlGrams: number; leadDays: number; budgetKop: number | null };
-// Интервал поставок по принятым счетам (#325): days — null, пока поставок меньше трёх.
-export type ShelfInterval = { days: number | null; deliveries: number };
-// Горизонт «Заканчивается» и «К заказу»: интервал + срок поставки; until — дата.
-export type ShelfHorizon = { days: number; until: string };
-
-export type ShelfView = {
-  rows: ShelfRow[];
-  counters: ShelfCounters;
-  totals: { kg: number };
-  today: { grams: number; bowls: number };
-  settings: ShelfSettings;
-  interval: ShelfInterval;
-  horizon: ShelfHorizon;
-};
-
-export type StockEntry = {
-  id: string;
-  kind: StockEntryKind;
-  grams: number;
-  fraction: number | null;
-  at: string;
-  priceKop: number | null;
-  reason: string | null;
-  actorLogin: string | null;
-  delivery: { id: string; kind: string; number: string | null; supplier: string | null } | null;
-  // У отметки: расход отрезка, который она закрыла.
-  usage: { from: string; gramsPerDay: number } | null;
-  // У отметки: отрезок отрицательный и в расход не пошёл.
-  excluded: boolean;
-};
-
-export type ShelfWeek = { from: string; to: string; gramsPerDay: number; partial: boolean };
+export type ShelfView = { rows: ShelfRow[] };
 
 export type ShelfCard = ShelfRow & {
-  // Новые сверху.
-  history: StockEntry[];
-  weekly: ShelfWeek[];
-  gramPriceKop: number | null;
-  bowlCostKop: number | null;
-  mixes: Array<{ id: string; name: string }>;
-  settings: ShelfSettings;
+  mixes: Array<{ id: string; name: string; status: MixStatus | null; substitution: MixSubstitution | null }>;
+  // 2–5 табаков с полки в наличии, похожих по flavors и flavorProfiles (PRD §9.3 п.6).
+  similar: ShelfSimilar[];
+  // Новые первыми.
+  arrivals: ShelfArrival[];
 };
 
-export const DEFAULT_SHELF_SETTINGS: ShelfSettings = { bowlGrams: 18, leadDays: 7, budgetKop: null };
-
-const SHELF_STATUSES: ShelfStatus[] = ['ok', 'ending', 'check', 'stop', 'out', 'plan'];
+// PUT /staff/shelf/:tobaccoId/analogs. unblockedMixes — миксы, которые из «блокирован»
+// стали «с заменой», для тоста.
+export type ShelfAnalogsResponse = { item: ShelfCard; unblockedMixes: Array<{ id: string; name: string }> };
 
 const toNullableString = (value: unknown) => (value == null ? null : String(value));
 
 const pickOne = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback;
 
-export const normalizeShelfSettings = (value: unknown): ShelfSettings => {
-  const raw = isRecord(value) ? value : {};
-  return {
-    bowlGrams: toNumber(raw.bowlGrams, DEFAULT_SHELF_SETTINGS.bowlGrams),
-    leadDays: toNumber(raw.leadDays, DEFAULT_SHELF_SETTINGS.leadDays),
-    budgetKop: toNullableNumber(raw.budgetKop),
-  };
-};
-
-const normalizeShelfInterval = (value: unknown): ShelfInterval => {
-  const raw = isRecord(value) ? value : {};
-  return { days: toNullableNumber(raw.days), deliveries: toNumber(raw.deliveries, 0) };
-};
-
-// Без ответа горизонт — срок поставки по умолчанию: интервал неизвестен.
-const normalizeShelfHorizon = (value: unknown, settings: ShelfSettings): ShelfHorizon => {
-  const raw = isRecord(value) ? value : {};
-  return { days: toNumber(raw.days, settings.leadDays), until: toIsoString(raw.until, '') };
-};
+const normalizeShelfArrival = (raw: Record<string, unknown>): ShelfArrival => ({
+  at: toIsoString(raw.at, ''),
+  kind: pickOne(raw.kind, ['invoice', 'start', 'manual'] as const, 'manual'),
+  supplier: toNullableString(raw.supplier),
+  number: toNullableString(raw.number),
+  qty: toNullableNumber(raw.qty),
+  deliveryId: toNullableString(raw.deliveryId),
+});
 
 export const normalizeShelfRow = (value: unknown): ShelfRow => {
   const raw = isRecord(value) ? value : {};
   const tobacco = isRecord(raw.tobacco) ? raw.tobacco : {};
-  const receipt = isRecord(raw.lastReceipt) ? raw.lastReceipt : null;
-  const count = isRecord(raw.lastCount) ? raw.lastCount : null;
 
   return {
     tobacco: {
@@ -1787,28 +1563,10 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
       sourceUrl: typeof tobacco.sourceUrl === 'string' && tobacco.sourceUrl.trim() ? tobacco.sourceUrl : null,
     },
     shelfStatus: pickOne(raw.shelfStatus, ['active', 'plan', 'dropped'] as const, 'active'),
-    status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
     guestAvailable: toBoolean(raw.guestAvailable, false),
-    leftGrams: toNullableNumber(raw.leftGrams),
-    fullGrams: toNullableNumber(raw.fullGrams),
-    lastReceipt: receipt
-      ? {
-          at: toIsoString(receipt.at, ''),
-          grams: toNumber(receipt.grams, 0),
-          kind: pickOne(receipt.kind, ['invoice', 'start', 'manual'] as const, 'manual'),
-          number: toNullableString(receipt.number),
-          label: String(receipt.label ?? ''),
-        }
-      : null,
-    lastCount: count
-      ? { at: toIsoString(count.at, ''), grams: toNumber(count.grams, 0), fraction: toNullableNumber(count.fraction) }
-      : null,
-    leftSource: raw.leftSource === 'mark' || raw.leftSource === 'forecast' ? raw.leftSource : null,
-    rate: toNullableNumber(raw.rate),
-    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
-    monthGrams: toNullableNumber(raw.monthGrams),
-    daysLeft: toNullableNumber(raw.daysLeft),
-    endsAt: toIsoString(raw.endsAt, '') || null,
+    outAt: toIsoString(raw.outAt, '') || null,
+    plannedAt: toIsoString(raw.plannedAt, '') || null,
+    lastArrival: isRecord(raw.lastArrival) ? normalizeShelfArrival(raw.lastArrival) : null,
     mixCount: toNumber(raw.mixCount, 0),
     keepStocked: toBoolean(raw.keepStocked, true),
     stopped: toBoolean(raw.stopped, false),
@@ -1817,60 +1575,18 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     trial: toBoolean(raw.trial, false),
     trialVerdict: raw.trialVerdict === 'yes' || raw.trialVerdict === 'no' ? raw.trialVerdict : null,
     trialMarkedAt: toIsoString(raw.trialMarkedAt, '') || null,
+    analogs: (Array.isArray(raw.analogs) ? raw.analogs : []).filter(isRecord).map((analog) => ({
+      ...normalizeMixTobaccoRef(analog),
+      lineName: String(analog.lineName ?? ''),
+      inStock: toBoolean(analog.inStock, false),
+      substituting: toBoolean(analog.substituting, false),
+    })),
   };
 };
 
 export const normalizeShelfView = (value: unknown): ShelfView => {
   const raw = isRecord(value) ? value : {};
-  const counters = isRecord(raw.counters) ? raw.counters : {};
-  const totals = isRecord(raw.totals) ? raw.totals : {};
-  const today = isRecord(raw.today) ? raw.today : {};
-  const settings = normalizeShelfSettings(raw.settings);
-
-  return {
-    rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow),
-    counters: {
-      all: toNumber(counters.all, 0),
-      ok: toNumber(counters.ok, 0),
-      ending: toNumber(counters.ending, 0),
-      check: toNumber(counters.check, 0),
-      out: toNumber(counters.out, 0),
-      stop: toNumber(counters.stop, 0),
-      plan: toNumber(counters.plan, 0),
-    },
-    totals: { kg: toNumber(totals.kg, 0) },
-    today: { grams: toNumber(today.grams, 0), bowls: toNumber(today.bowls, 0) },
-    settings,
-    interval: normalizeShelfInterval(raw.interval),
-    horizon: normalizeShelfHorizon(raw.horizon, settings),
-  };
-};
-
-const normalizeStockEntry = (value: unknown): StockEntry => {
-  const raw = isRecord(value) ? value : {};
-  const delivery = isRecord(raw.delivery) ? raw.delivery : null;
-  const usage = isRecord(raw.usage) ? raw.usage : null;
-
-  return {
-    id: String(raw.id ?? ''),
-    kind: pickOne(raw.kind, ['receipt', 'count', 'writeoff'] as const, 'count'),
-    grams: toNumber(raw.grams, 0),
-    fraction: toNullableNumber(raw.fraction),
-    at: toIsoString(raw.at, ''),
-    priceKop: toNullableNumber(raw.priceKop),
-    reason: toNullableString(raw.reason),
-    actorLogin: toNullableString(raw.actorLogin),
-    delivery: delivery
-      ? {
-          id: String(delivery.id ?? ''),
-          kind: String(delivery.kind ?? 'manual'),
-          number: toNullableString(delivery.number),
-          supplier: toNullableString(delivery.supplier),
-        }
-      : null,
-    usage: usage ? { from: toIsoString(usage.from, ''), gramsPerDay: toNumber(usage.gramsPerDay, 0) } : null,
-    excluded: toBoolean(raw.excluded, false),
-  };
+  return { rows: (Array.isArray(raw.rows) ? raw.rows : []).map(normalizeShelfRow) };
 };
 
 export const normalizeShelfCard = (value: unknown): ShelfCard => {
@@ -1879,27 +1595,30 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
 
   return {
     ...normalizeShelfRow(record),
-    history: (Array.isArray(record.history) ? record.history : []).map(normalizeStockEntry),
-    weekly: (Array.isArray(record.weekly) ? record.weekly : []).filter(isRecord).map((week) => ({
-      from: toIsoString(week.from, ''),
-      to: toIsoString(week.to, ''),
-      gramsPerDay: toNumber(week.gramsPerDay, 0),
-      partial: toBoolean(week.partial, false),
-    })),
-    gramPriceKop: toNullableNumber(record.gramPriceKop),
-    bowlCostKop: toNullableNumber(record.bowlCostKop),
     mixes: (Array.isArray(record.mixes) ? record.mixes : []).filter(isRecord).map((mix) => ({
       id: String(mix.id ?? ''),
       name: String(mix.name ?? ''),
+      status: MIX_STATUSES.includes(mix.status as MixStatus) ? (mix.status as MixStatus) : null,
+      substitution: normalizeMixSubstitution(mix.substitution),
     })),
-    settings: normalizeShelfSettings(record.settings),
+    similar: (Array.isArray(record.similar) ? record.similar : []).filter(isRecord).map((item) => ({
+      ...normalizeMixTobaccoRef(item),
+      lineName: String(item.lineName ?? ''),
+      flavors: uniqueStrings(toStringList(item.flavors)),
+    })),
+    arrivals: (Array.isArray(record.arrivals) ? record.arrivals : []).filter(isRecord).map(normalizeShelfArrival),
   };
 };
 
-// Ответ «Закончился», отметки и списания: entryId — для отмены в тосте.
-export const normalizeShelfEntryResponse = (value: unknown) => {
+export const normalizeShelfAnalogsResponse = (value: unknown): ShelfAnalogsResponse => {
   const raw = isRecord(value) ? value : {};
-  return { entryId: String(raw.entryId ?? ''), item: normalizeShelfRow(raw.item) };
+  return {
+    item: normalizeShelfCard(raw.item),
+    unblockedMixes: (Array.isArray(raw.unblockedMixes) ? raw.unblockedMixes : []).filter(isRecord).map((mix) => ({
+      id: String(mix.id ?? ''),
+      name: String(mix.name ?? ''),
+    })),
+  };
 };
 
 // «Закончились» разом (#333): POST /staff/shelf/empty. batchId — для одной отмены
@@ -1929,60 +1648,60 @@ export const normalizeShelfEmptyManyResponse = (value: unknown): ShelfEmptyManyR
   };
 };
 
-// Отмена пакета: DELETE /staff/shelf/batches/:batchId — строки после отмены.
+// Отмена пакета: DELETE /staff/shelf/batches/:batchId и /staff/shelf/restock-batches/:batchId,
+// «Держать постоянно» пачкой (POST /staff/shelf/keep) — строки после действия.
 export const normalizeShelfBatchUndoResponse = (value: unknown): { items: ShelfRow[] } => ({
   items: shelfRows(isRecord(value) ? value.items : null),
 });
 
-// --- «К заказу» и блок «Полка» дашборда (#213) -------------------------------
+// «Вернуть в наличие» (#518): POST /staff/shelf/:tobaccoId/restock — пакет из одного табака.
+export const normalizeShelfRestockResponse = (value: unknown): { batchId: string; item: ShelfRow } => {
+  const raw = isRecord(value) ? value : {};
+  return { batchId: String(raw.batchId ?? ''), item: normalizeShelfRow(raw.item) };
+};
+
+// Пачкой: POST /staff/shelf/restock. Пропущены «уже есть» (in); план встаёт «Есть» (#558).
+export type ShelfRestockSkip = { tobaccoId: string; reason: 'in' };
+export type ShelfRestockManyResponse = { batchId: string; done: string[]; skipped: ShelfRestockSkip[]; items: ShelfRow[] };
+
+export const normalizeShelfRestockManyResponse = (value: unknown): ShelfRestockManyResponse => {
+  const raw = isRecord(value) ? value : {};
+  return {
+    batchId: String(raw.batchId ?? ''),
+    done: toStringList(raw.done),
+    skipped: (Array.isArray(raw.skipped) ? raw.skipped : []).filter(isRecord).map((skip) => ({
+      tobaccoId: String(skip.tobaccoId ?? ''),
+      reason: 'in' as const,
+    })),
+    items: shelfRows(raw.items),
+  };
+};
+
+// --- «К заказу» (#518) ---------------------------------------------------------
 
 export type ShelfTobaccoRef = { id: string; manufacturer: string; lineName: string; name: string };
 export type ShelfSupplierRef = { id: string; name: string };
 
-export type ReorderItem = {
+// hidden — микс не виден гостю, substituted — закрыт аналогом с полки.
+export type ShelfOrderMixes = { total: number; hidden: number; substituted: number };
+
+export type ShelfOrderLine = {
   tobacco: ShelfTobaccoRef;
-  status: ShelfStatus;
-  daysLeft: number | null;
-  endsAt: string | null;
-  rate: number | null;
-  rateKind: ShelfRateKind;
-  monthGrams: number | null;
-  leftGrams: number | null;
-  gramPriceKop: number | null;
-  // Закончится не за срок поставки, а до следующей поставки по интервалу.
-  byInterval: boolean;
+  outAt: string;
+  mixes: ShelfOrderMixes;
+  lastArrival: ShelfArrival | null;
 };
 
-// Сколько заказать, решает мастер (#323): ни граммов, ни суммы в ответе нет.
-export type ReorderGroup = {
-  supplier: ShelfSupplierRef | null;
-  lastInvoice: { number: string | null; date: string; status: DeliveryStatus } | null;
-  items: ReorderItem[];
-};
+// Группа — поставщик последнего принятого счёта с табаком; без счёта — supplier: null.
+export type ShelfOrderGroup = { supplier: ShelfSupplierRef | null; lastDeliveryAt: string | null; lines: ShelfOrderLine[] };
 
-export type ReorderView = {
-  groups: ReorderGroup[];
-  settings: ShelfSettings;
-  interval: ShelfInterval;
-  horizon: ShelfHorizon;
-  // Текст заявки — только названия.
-  text: Array<{ supplierId: string | null; text: string }>;
-};
+export type ShelfOrderNotKept = { tobaccoId: string; manufacturer: string; lineName: string; name: string; outAt: string };
 
-export type ShelfDashboardWeek = { from: string; to: string; grams: number; partial: boolean };
+// В плане (#563): без поставщика, старый план первым.
+export type ShelfOrderPlanLine = { tobacco: ShelfTobaccoRef; plannedAt: string | null; mixes: ShelfOrderMixes };
 
-export type ShelfDashboard = {
-  // weekday: 1 — понедельник … 7 — воскресенье.
-  today: { grams: number; bowls: number; weekdayFactor: number | null; weekday: number };
-  ending: Array<{ tobacco: ShelfTobaccoRef; status: ShelfStatus; daysLeft: number | null; endsAt: string | null }>;
-  spend: { month: string; bySupplier: Array<{ supplier: ShelfSupplierRef | null; sumKop: number }>; totalKop: number };
-  // База — Σ расход в месяц × цена грамма по «держим постоянно»; unknownCount —
-  // без цены или расхода, в базу не вошли; leftKop — бюджет − база.
-  budget: { budgetKop: number | null; baseKop: number; baseCount: number; unknownCount: number; leftKop: number | null };
-  bowlCostKop: number | null;
-  stockValueKop: number;
-  weekly: ShelfDashboardWeek[];
-};
+// GET /staff/shelf/order: закончились и держим постоянно; notKept — закончились, но не держим.
+export type ShelfOrder = { groups: ShelfOrderGroup[]; notKept: ShelfOrderNotKept[]; plan: ShelfOrderPlanLine[] };
 
 const normalizeTobaccoRef = (value: unknown): ShelfTobaccoRef => {
   const raw = isRecord(value) ? value : {};
@@ -2002,280 +1721,38 @@ const listOf = (value: unknown) => (Array.isArray(value) ? value : []);
 // Даты «2026-11-18» — календарные дни (см. toDateOnly ниже).
 const toDay = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
 
-const normalizeReorderItem = (value: unknown): ReorderItem => {
-  const raw = isRecord(value) ? value : {};
-  return {
-    tobacco: normalizeTobaccoRef(raw.tobacco),
-    status: pickOne(raw.status, SHELF_STATUSES, 'ok'),
-    daysLeft: toNullableNumber(raw.daysLeft),
-    endsAt: toIsoString(raw.endsAt, '') || null,
-    rate: toNullableNumber(raw.rate),
-    rateKind: pickOne(raw.rateKind, ['own', 'brand', 'none'] as const, 'none'),
-    monthGrams: toNullableNumber(raw.monthGrams),
-    leftGrams: toNullableNumber(raw.leftGrams),
-    gramPriceKop: toNullableNumber(raw.gramPriceKop),
-    byInterval: toBoolean(raw.byInterval, false),
-  };
-};
-
-const normalizeReorderGroup = (value: unknown): ReorderGroup => {
-  const raw = isRecord(value) ? value : {};
-  const invoice = isRecord(raw.lastInvoice) ? raw.lastInvoice : null;
-  const invoiceDate = invoice ? toDay(invoice.date) : '';
-  return {
-    supplier: normalizeSupplierRef(raw.supplier),
-    lastInvoice: invoice && invoiceDate
-      ? {
-          number: toNullableString(invoice.number),
-          date: invoiceDate,
-          status: pickOne(invoice.status, ['draft', 'received'] as const, 'received'),
-        }
-      : null,
-    items: listOf(raw.items).map(normalizeReorderItem),
-  };
-};
-
-export const normalizeReorderView = (value: unknown): ReorderView => {
-  const raw = isRecord(value) ? value : {};
-  const settings = normalizeShelfSettings(raw.settings);
-  return {
-    groups: listOf(raw.groups).map(normalizeReorderGroup),
-    settings,
-    interval: normalizeShelfInterval(raw.interval),
-    horizon: normalizeShelfHorizon(raw.horizon, settings),
-    text: listOf(raw.text).filter(isRecord).map((entry) => ({
-      supplierId: toNullableString(entry.supplierId),
-      text: String(entry.text ?? ''),
-    })),
-  };
-};
-
-export const normalizeShelfDashboard = (value: unknown): ShelfDashboard => {
-  const raw = isRecord(value) ? value : {};
-  const today = isRecord(raw.today) ? raw.today : {};
-  const spend = isRecord(raw.spend) ? raw.spend : {};
-  return {
-    today: {
-      grams: toNumber(today.grams, 0),
-      bowls: toNumber(today.bowls, 0),
-      weekdayFactor: toNullableNumber(today.weekdayFactor),
-      weekday: toNumber(today.weekday, 1),
-    },
-    ending: listOf(raw.ending).filter(isRecord).map((entry) => ({
-      tobacco: normalizeTobaccoRef(entry.tobacco),
-      status: pickOne(entry.status, SHELF_STATUSES, 'ending'),
-      daysLeft: toNullableNumber(entry.daysLeft),
-      endsAt: toIsoString(entry.endsAt, '') || null,
-    })),
-    spend: {
-      month: typeof spend.month === 'string' && /^\d{4}-\d{2}$/.test(spend.month) ? spend.month : '',
-      bySupplier: listOf(spend.bySupplier).filter(isRecord).map((entry) => ({
-        supplier: normalizeSupplierRef(entry.supplier),
-        sumKop: toNumber(entry.sumKop, 0),
-      })),
-      totalKop: toNumber(spend.totalKop, 0),
-    },
-    budget: normalizeBudget(raw.budget),
-    bowlCostKop: toNullableNumber(raw.bowlCostKop),
-    stockValueKop: toNumber(raw.stockValueKop, 0),
-    weekly: listOf(raw.weekly).filter(isRecord).map((week) => ({
-      from: toDay(week.from),
-      to: toDay(week.to),
-      grams: toNumber(week.grams, 0),
-      partial: toBoolean(week.partial, false),
-    })),
-  };
-};
-
-// --- «Закупка» (#327–#331): ответ /staff/shelf/purchase ----------------------
-// Решения — по расходу точки; app («Покурить» и оценки гостей) — справочно.
-// Деньги — в копейках, доли — 0…1, дни — дробные: округляет интерфейс.
-
-export type PurchaseAppStats = { smokes: number; rating: number | null; ratings: number };
-export type PurchaseBaseFlag = 'notBase' | 'idleBase';
-export type PurchaseProfileFlag = 'more' | 'less';
-
-export type PurchaseBaseRow = {
-  tobacco: ShelfTobaccoRef;
-  monthGrams: number | null;
-  rateKind: ShelfRateKind;
-  // Доля в расходе своих табаков; у «бренда» и «мало данных» — null.
-  share: number | null;
-  rubKop: number | null;
-  gramPriceKop: number | null;
-  app: PurchaseAppStats;
-  keepStocked: boolean;
-  flag: PurchaseBaseFlag | null;
-};
-
-export type PurchaseFastRow = {
-  tobacco: ShelfTobaccoRef;
-  receiptGrams: number;
-  receivedAt: string;
-  goneDays: number;
-  emptyAt: string;
-  emptyDays: number;
-  // Без табака до сих пор: следующего прихода ещё не было.
-  ongoing: boolean;
-  next: { grams: number; at: string } | null;
-  // Сколько раз за 60 дней приход уходил за 3 дня.
-  times: number;
-  status: ShelfStatus;
-};
-
-export type PurchaseTrialRow = {
-  tobacco: ShelfTobaccoRef;
-  receiptGrams: number;
-  receivedAt: string;
-  rate: number | null;
-  // Расход к медиане полки; null — отметок остатка ещё не было.
-  speed: number | null;
-  goneDays: number | null;
-  app: PurchaseAppStats;
-  mixCount: number;
-  trialVerdict: ShelfTrialVerdict | null;
-  trialMarkedAt: string | null;
-};
-
-export type PurchaseIdleRow = {
-  tobacco: ShelfTobaccoRef;
-  leftGrams: number;
-  rate21: number;
-  rubKop: number | null;
-  receivedAt: string;
-  days: number;
-  keepStocked: boolean;
-};
-
-export type PurchaseProfileRow = { key: string; spend: number; shelf: number; app: number; flag: PurchaseProfileFlag | null };
-
-export type PurchaseView = {
-  // Первая запись журнала остатка: с неё идёт учёт в граммах.
-  since: string | null;
-  budget: ShelfDashboard['budget'];
-  spend: { month: string; totalKop: number };
-  base: { enough: boolean; medianMonthGrams: number | null; counts: Record<PurchaseBaseFlag, number>; rows: PurchaseBaseRow[] };
-  fast: { enough: boolean; rows: PurchaseFastRow[] };
-  trials: { enough: boolean; medianRate: number | null; rows: PurchaseTrialRow[] };
-  idle: { enough: boolean; totalKop: number; unknownPriceCount: number; unmarkedCount: number; rows: PurchaseIdleRow[] };
-  // appEnough — «Покурить» за 30 дней хватает, чтобы показывать долю приложения.
-  profiles: { enough: boolean; appEvents: number; appEnough: boolean; rows: PurchaseProfileRow[] };
-};
-
 const recordOf = (value: unknown): UnknownRecord => (isRecord(value) ? value : {});
-const toMonth = (value: unknown) => (typeof value === 'string' && /^\d{4}-\d{2}$/.test(value) ? value : '');
 
-const normalizeBudget = (value: unknown): ShelfDashboard['budget'] => {
-  const budget = recordOf(value);
-  return {
-    budgetKop: toNullableNumber(budget.budgetKop),
-    baseKop: toNumber(budget.baseKop, 0),
-    baseCount: toNumber(budget.baseCount, 0),
-    unknownCount: toNumber(budget.unknownCount, 0),
-    leftKop: toNullableNumber(budget.leftKop),
-  };
+const normalizeOrderMixes = (value: unknown): ShelfOrderMixes => {
+  const mixes = recordOf(value);
+  return { total: toNumber(mixes.total, 0), hidden: toNumber(mixes.hidden, 0), substituted: toNumber(mixes.substituted, 0) };
 };
 
-const normalizeAppStats = (value: unknown): PurchaseAppStats => {
+export const normalizeShelfOrder = (value: unknown): ShelfOrder => {
   const raw = recordOf(value);
-  return { smokes: toNumber(raw.smokes, 0), rating: toNullableNumber(raw.rating), ratings: toNumber(raw.ratings, 0) };
-};
-
-const toVerdict = (value: unknown): ShelfTrialVerdict | null => (value === 'yes' || value === 'no' ? value : null);
-const RATE_KINDS = ['own', 'brand', 'none'] as const;
-
-export const normalizePurchaseView = (value: unknown): PurchaseView => {
-  const raw = recordOf(value);
-  const base = recordOf(raw.base);
-  const counts = recordOf(base.counts);
-  const fast = recordOf(raw.fast);
-  const trials = recordOf(raw.trials);
-  const idle = recordOf(raw.idle);
-  const profiles = recordOf(raw.profiles);
-  const spend = recordOf(raw.spend);
-  const rows = (section: UnknownRecord) => listOf(section.rows).filter(isRecord);
-
   return {
-    since: toIsoString(raw.since, '') || null,
-    budget: normalizeBudget(raw.budget),
-    spend: { month: toMonth(spend.month), totalKop: toNumber(spend.totalKop, 0) },
-    base: {
-      enough: toBoolean(base.enough, false),
-      medianMonthGrams: toNullableNumber(base.medianMonthGrams),
-      counts: { notBase: toNumber(counts.notBase, 0), idleBase: toNumber(counts.idleBase, 0) },
-      rows: rows(base).map((row) => ({
-        tobacco: normalizeTobaccoRef(row.tobacco),
-        monthGrams: toNullableNumber(row.monthGrams),
-        rateKind: pickOne(row.rateKind, RATE_KINDS, 'none'),
-        share: toNullableNumber(row.share),
-        rubKop: toNullableNumber(row.rubKop),
-        gramPriceKop: toNullableNumber(row.gramPriceKop),
-        app: normalizeAppStats(row.app),
-        keepStocked: toBoolean(row.keepStocked, false),
-        flag: row.flag === 'notBase' || row.flag === 'idleBase' ? row.flag : null,
+    groups: listOf(raw.groups).filter(isRecord).map((group) => ({
+      supplier: normalizeSupplierRef(group.supplier),
+      lastDeliveryAt: toIsoString(group.lastDeliveryAt, '') || null,
+      lines: listOf(group.lines).filter(isRecord).map((line) => ({
+        tobacco: normalizeTobaccoRef(line.tobacco),
+        outAt: toIsoString(line.outAt, ''),
+        mixes: normalizeOrderMixes(line.mixes),
+        lastArrival: isRecord(line.lastArrival) ? normalizeShelfArrival(line.lastArrival) : null,
       })),
-    },
-    fast: {
-      enough: toBoolean(fast.enough, false),
-      rows: rows(fast).map((row) => {
-        const next = isRecord(row.next) ? row.next : null;
-        return {
-          tobacco: normalizeTobaccoRef(row.tobacco),
-          receiptGrams: toNumber(row.receiptGrams, 0),
-          receivedAt: toIsoString(row.receivedAt, ''),
-          goneDays: toNumber(row.goneDays, 0),
-          emptyAt: toIsoString(row.emptyAt, ''),
-          emptyDays: toNumber(row.emptyDays, 0),
-          ongoing: toBoolean(row.ongoing, false),
-          next: next ? { grams: toNumber(next.grams, 0), at: toIsoString(next.at, '') } : null,
-          times: toNumber(row.times, 1),
-          status: pickOne(row.status, SHELF_STATUSES, 'ok'),
-        };
-      }),
-    },
-    trials: {
-      enough: toBoolean(trials.enough, false),
-      medianRate: toNullableNumber(trials.medianRate),
-      rows: rows(trials).map((row) => ({
-        tobacco: normalizeTobaccoRef(row.tobacco),
-        receiptGrams: toNumber(row.receiptGrams, 0),
-        receivedAt: toIsoString(row.receivedAt, ''),
-        rate: toNullableNumber(row.rate),
-        speed: toNullableNumber(row.speed),
-        goneDays: toNullableNumber(row.goneDays),
-        app: normalizeAppStats(row.app),
-        mixCount: toNumber(row.mixCount, 0),
-        trialVerdict: toVerdict(row.trialVerdict),
-        trialMarkedAt: toIsoString(row.trialMarkedAt, '') || null,
-      })),
-    },
-    idle: {
-      enough: toBoolean(idle.enough, false),
-      totalKop: toNumber(idle.totalKop, 0),
-      unknownPriceCount: toNumber(idle.unknownPriceCount, 0),
-      unmarkedCount: toNumber(idle.unmarkedCount, 0),
-      rows: rows(idle).map((row) => ({
-        tobacco: normalizeTobaccoRef(row.tobacco),
-        leftGrams: toNumber(row.leftGrams, 0),
-        rate21: toNumber(row.rate21, 0),
-        rubKop: toNullableNumber(row.rubKop),
-        receivedAt: toIsoString(row.receivedAt, ''),
-        days: toNumber(row.days, 0),
-        keepStocked: toBoolean(row.keepStocked, false),
-      })),
-    },
-    profiles: {
-      enough: toBoolean(profiles.enough, false),
-      appEvents: toNumber(profiles.appEvents, 0),
-      appEnough: toBoolean(profiles.appEnough, false),
-      rows: rows(profiles).map((row) => ({
-        key: String(row.key ?? ''),
-        spend: toNumber(row.spend, 0),
-        shelf: toNumber(row.shelf, 0),
-        app: toNumber(row.app, 0),
-        flag: row.flag === 'more' || row.flag === 'less' ? row.flag : null,
-      })),
-    },
+    })),
+    notKept: listOf(raw.notKept).filter(isRecord).map((item) => ({
+      tobaccoId: String(item.tobaccoId ?? ''),
+      manufacturer: String(item.manufacturer ?? ''),
+      lineName: String(item.lineName ?? ''),
+      name: String(item.name ?? ''),
+      outAt: toIsoString(item.outAt, ''),
+    })),
+    plan: listOf(raw.plan).filter(isRecord).map((line) => ({
+      tobacco: normalizeTobaccoRef(line.tobacco),
+      plannedAt: toIsoString(line.plannedAt, '') || null,
+      mixes: normalizeOrderMixes(line.mixes),
+    })),
   };
 };
 
@@ -2295,13 +1772,11 @@ export type DeliveryListItem = {
   invoiceDate: string | null;
   receivedAt: string | null;
   lines: number;
-  // У черновика — сколько граммов даст приёмка, у принятой — сколько пришло.
-  grams: number;
   totalKop: number | null;
   createdAt: string;
 };
 
-export type DeliveryTotals = { monthKop: number; monthGrams: number; drafts: number; suppliers: number; memoryItems: number };
+export type DeliveryTotals = { monthKop: number; drafts: number; suppliers: number; memoryItems: number };
 
 export type DeliveryList = { items: DeliveryListItem[]; totals: DeliveryTotals };
 
@@ -2323,10 +1798,8 @@ export type DeliveryLine = {
   unit: string | null;
   priceKop: number | null;
   sumKop: number | null;
-  // Граммы в штуке по счёту.
+  // Граммы в штуке по счёту — данные счёта, приёмке не нужны (#518).
   grams: number | null;
-  // Сколько граммов придёт: поправка мастера или qty × grams; null — граммы неизвестны.
-  receivedGrams: number | null;
   kind: DeliveryLineKind;
   arrived: boolean;
   tobacco: { id: string; manufacturer: string; lineName: string; name: string; shelfStatus: ShelfItemStatus | null } | null;
@@ -2351,9 +1824,8 @@ export type DeliveryCard = {
   lines: DeliveryLine[];
   linesSumKop: number;
   sumMatches: boolean | null;
+  // Строки без табака: без них поставку не принять.
   pendingLines: number;
-  gramsToReceive: number;
-  grams: number;
 };
 
 const DELIVERY_KINDS = ['invoice', 'manual', 'start'] as const;
@@ -2378,7 +1850,6 @@ const normalizeDeliveryLine = (value: unknown): DeliveryLine => {
     priceKop: toNullableNumber(raw.priceKop),
     sumKop: toNullableNumber(raw.sumKop),
     grams: toNullableNumber(raw.grams),
-    receivedGrams: toNullableNumber(raw.receivedGrams),
     kind: pickOne(raw.kind, ['tobacco', 'skip'] as const, 'tobacco'),
     arrived: toBoolean(raw.arrived, true),
     tobacco: tobacco
@@ -2426,9 +1897,16 @@ export const normalizeDeliveryCard = (value: unknown): DeliveryCard => {
     linesSumKop: toNumber(raw.linesSumKop, 0),
     sumMatches: typeof raw.sumMatches === 'boolean' ? raw.sumMatches : null,
     pendingLines: toNumber(raw.pendingLines, 0),
-    gramsToReceive: toNumber(raw.gramsToReceive, 0),
-    grams: toNumber(raw.grams, 0),
   };
+};
+
+// Ответ приёмки (#565): карточка и что приёмка изменила — сколько пришедших
+// табаков стояли в плане и сколько миксов открылось гостю.
+export type DeliveryAccepted = DeliveryCard & { fromPlan: number; openedMixes: number };
+
+export const normalizeDeliveryAccepted = (value: unknown): DeliveryAccepted => {
+  const raw = isRecord(value) ? value : {};
+  return { ...normalizeDeliveryCard(raw), fromPlan: toNumber(raw.fromPlan, 0), openedMixes: toNumber(raw.openedMixes, 0) };
 };
 
 export const normalizeDeliveryList = (value: unknown): DeliveryList => {
@@ -2445,13 +1923,11 @@ export const normalizeDeliveryList = (value: unknown): DeliveryList => {
       invoiceDate: toDateOnly(item.invoiceDate),
       receivedAt: toIsoString(item.receivedAt, '') || null,
       lines: toNumber(item.lines, 0),
-      grams: toNumber(item.grams, 0),
       totalKop: toNullableNumber(item.totalKop),
       createdAt: toIsoString(item.createdAt, ''),
     })),
     totals: {
       monthKop: toNumber(totals.monthKop, 0),
-      monthGrams: toNumber(totals.monthGrams, 0),
       drafts: toNumber(totals.drafts, 0),
       suppliers: toNumber(totals.suppliers, 0),
       memoryItems: toNumber(totals.memoryItems, 0),
@@ -2506,3 +1982,98 @@ export const normalizeCatalogIdeas = (value: unknown): CatalogIdeas => {
     likeFastMoving: normalizeCatalogIdeaList(raw.likeFastMoving),
   };
 };
+
+// --- Дашборд (#520): выборы гостей, ответ /staff/dashboard/choices ------------
+// Выбор — «Покурить» у микса каталога или свой микс «Намиксуй». Даты — дни
+// «2026-11-04» по поясу backend.
+
+export type GuestChoicesPreset = '7d' | '30d' | '90d' | 'all';
+export type GuestChoicesPeriod = { key: GuestChoicesPreset } | { key: 'custom'; from: string; to: string };
+export type GuestChoicesBucket = 'day' | 'week';
+export type GuestChoicesTimelineRow = { date: string; catalog: number; own: number };
+export type GuestTobaccoStock = 'in' | 'out' | 'off-shelf';
+export type GuestTopTobacco = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+  choices: number;
+  stock: GuestTobaccoStock | null;
+  trial: boolean;
+};
+// status = null у удалённого микса.
+export type GuestTopMix = { mixId: string | null; mixName: string; choices: number; avgRating: number | null; status: MixStatus | null };
+export type GuestProfileShare = { key: string; label: string; share: number };
+
+export type GuestChoices = {
+  period: { key: GuestChoicesPreset | 'custom'; from: string; to: string; days: number; bucket: GuestChoicesBucket };
+  kpi: { choices: number; ownMixes: number; mixesChosen: number; mixesOnShowcase: number; avgRating: number | null; ratingsCount: number };
+  timeline: GuestChoicesTimelineRow[];
+  topTobaccos: GuestTopTobacco[];
+  topMixes: GuestTopMix[];
+  profiles: GuestProfileShare[];
+  signals: {
+    outPopular: Array<{ tobaccoId: string; name: string }>;
+    hiddenMixes: Array<{ mixId: string; mixName: string }>;
+    emptyRails: Array<{ railId: string; name: string }>;
+  };
+};
+
+const recordsOf = (value: unknown) => (Array.isArray(value) ? value.filter(isRecord) : []);
+const markOf = <T extends string>(value: unknown, marks: readonly T[]): T | null => marks.find((mark) => mark === value) ?? null;
+
+export const normalizeGuestChoices = (value: unknown): GuestChoices => {
+  const raw = recordOf(value);
+  const period = recordOf(raw.period);
+  const kpi = recordOf(raw.kpi);
+  const signals = recordOf(raw.signals);
+  return {
+    period: {
+      key: pickOne(period.key, ['7d', '30d', '90d', 'all', 'custom'] as const, '30d'),
+      from: toDay(period.from),
+      to: toDay(period.to),
+      days: toNumber(period.days, 0),
+      bucket: pickOne(period.bucket, ['day', 'week'] as const, 'day'),
+    },
+    kpi: {
+      choices: toNumber(kpi.choices, 0),
+      ownMixes: toNumber(kpi.ownMixes, 0),
+      mixesChosen: toNumber(kpi.mixesChosen, 0),
+      mixesOnShowcase: toNumber(kpi.mixesOnShowcase, 0),
+      avgRating: toNullableNumber(kpi.avgRating),
+      ratingsCount: toNumber(kpi.ratingsCount, 0),
+    },
+    timeline: recordsOf(raw.timeline).map((row) => ({
+      date: toDay(row.date),
+      catalog: toNumber(row.catalog, 0),
+      own: toNumber(row.own, 0),
+    })),
+    topTobaccos: recordsOf(raw.topTobaccos).map((row) => ({
+      tobaccoId: String(row.tobaccoId ?? ''),
+      manufacturer: String(row.manufacturer ?? ''),
+      name: String(row.name ?? ''),
+      choices: toNumber(row.choices, 0),
+      stock: markOf(row.stock, ['in', 'out', 'off-shelf'] as const),
+      trial: row.trial === true,
+    })),
+    topMixes: recordsOf(raw.topMixes).map((row) => ({
+      mixId: toNullableString(row.mixId),
+      mixName: String(row.mixName ?? ''),
+      choices: toNumber(row.choices, 0),
+      avgRating: toNullableNumber(row.avgRating),
+      status: markOf(row.status, ['visible', 'substituted', 'hidden', 'blocked'] as const),
+    })),
+    profiles: recordsOf(raw.profiles).map((row) => ({
+      key: String(row.key ?? ''),
+      label: String(row.label ?? row.key ?? ''),
+      share: toNumber(row.share, 0),
+    })),
+    signals: {
+      outPopular: recordsOf(signals.outPopular).map((row) => ({ tobaccoId: String(row.tobaccoId ?? ''), name: String(row.name ?? '') })),
+      hiddenMixes: recordsOf(signals.hiddenMixes).map((row) => ({ mixId: String(row.mixId ?? ''), mixName: String(row.mixName ?? '') })),
+      emptyRails: recordsOf(signals.emptyRails).map((row) => ({ railId: String(row.railId ?? ''), name: String(row.name ?? '') })),
+    },
+  };
+};
+
+export const guestChoicesQuery = (period: GuestChoicesPeriod) =>
+  period.key === 'custom' ? `from=${period.from}&to=${period.to}` : `period=${period.key}`;

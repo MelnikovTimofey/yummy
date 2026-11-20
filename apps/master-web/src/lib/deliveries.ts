@@ -1,4 +1,4 @@
-import { formatCount, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
+import { formatCount, type DeliveryAccepted, type DeliveryCard, type DeliveryLine, type DeliveryListItem } from '../contracts';
 
 // Чистая логика экрана «Поставки» (#212): подписи разбора, сверка суммы,
 // деньги и даты. Решения о сопоставлении принимает backend, здесь — только
@@ -59,6 +59,11 @@ export const lineMatchHint = (line: DeliveryLine) => {
       return withNew('');
   }
 };
+
+// «из плана» (#565): строка черновика закрывает табак, который ждёт в плане.
+// После приёмки табак уже «Есть», поэтому у принятой поставки метки нет.
+export const fromPlan = (line: Pick<DeliveryLine, 'kind' | 'tobacco'>, draft: boolean) =>
+  draft && line.kind === 'tobacco' && line.tobacco?.shelfStatus === 'plan';
 
 export const summarizeLines = (lines: DeliveryLine[]) => {
   const summary = { memory: 0, catalog: 0, suggest: 0, none: 0, skip: 0, manual: 0 };
@@ -185,7 +190,7 @@ const formatLongDay = (value: string | null | undefined, now: Date) => {
   return date.getFullYear() === now.getFullYear() ? day : `${day} ${date.getFullYear()}`;
 };
 
-export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => {
+const headlineParts = (card: DeliveryCard, now: Date) => {
   const parts: string[] = [];
   if (card.invoiceDate) parts.push(`Счёт от ${formatLongDay(card.invoiceDate, now)}`);
   else if (card.kind === 'invoice') parts.push(`Загружен ${formatLongDay(card.createdAt, now)}`);
@@ -193,8 +198,37 @@ export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => 
   if (card.status === 'received' && card.receivedAt) {
     parts.push(`${card.kind === 'start' ? 'Принят' : 'принята'} ${formatLongDay(card.receivedAt, now)}`);
   }
+  return parts;
+};
+
+export const deliveryHeadline = (card: DeliveryCard, now: Date = new Date()) => {
+  const parts = headlineParts(card, now);
   const head = parts.length ? `${parts.join(', ')}.` : '';
   return card.status === 'draft' ? `${head} Принимайте поставку, когда товар придёт.`.trim() : head;
+};
+
+// --- телефон (#540, #shot=deliveries, delivery) ---------------------------------
+
+const supplierName = (kind: DeliveryListItem['kind'], name: string | null | undefined) =>
+  name ?? (kind === 'start' ? 'Стартовый приход' : 'Без поставщика');
+
+const lineCount = (count: number) => formatCount(count, ['строка', 'строки', 'строк']);
+
+export const deliveryListCard = (item: DeliveryListItem) => ({
+  title: supplierName(item.kind, item.supplier),
+  sub: [formatDay(item.invoiceDate ?? item.createdAt), item.number ? `счёт ${item.number}` : ''].filter(Boolean).join(', '),
+  lines: lineCount(item.lines),
+  sum: formatMoney(item.totalKop),
+});
+
+// Шапка телефона — «Счёт 1201», поставщик и даты — в теле карточки.
+export const deliveryPhoneHead = (card: DeliveryCard, now: Date = new Date()) => {
+  const sub = headlineParts(card, now).join(', ');
+  return {
+    title: card.kind === 'start' ? 'Стартовый приход' : card.number ? `Счёт ${card.number}` : 'Поставка без номера',
+    name: supplierName(card.kind, card.supplier?.name),
+    sub: sub ? `${sub[0].toLowerCase()}${sub.slice(1)}` : '',
+  };
 };
 
 export const deliveryStatusTag = (item: Pick<DeliveryListItem, 'kind' | 'status'>): { tone: TagTone; text: string } => {
@@ -226,36 +260,41 @@ const linesPrepositional = (count: number) => {
   return `${count} ${mod10 === 1 && mod100 !== 11 ? 'строке' : 'строках'}`;
 };
 
-// Строка без табака или без граммов не даёт принять поставку (pendingLines backend).
+// Строка без табака не даёт принять поставку (pendingLines backend); граммы не нужны (#518).
 export const acceptLabel = (pending: number) =>
-  pending ? `Выберите табак или граммы в ${linesPrepositional(pending)}` : 'Принять поставку';
+  pending ? `Выберите табак в ${linesPrepositional(pending)}` : 'Принять поставку';
 
-export const acceptedToastTitle = (grams: number) => `Принято: ${formatWeight(grams)} на полке`;
+// Принятый счёт возвращает пришедшие табаки в «Есть» (#518): считаем разные табаки.
+export const tobaccosToReceive = (lines: Array<Pick<DeliveryLine, 'kind' | 'arrived' | 'tobacco'>>) =>
+  new Set(lines.filter((line) => line.kind === 'tobacco' && line.arrived && line.tobacco).map((line) => line.tobacco!.id)).size;
 
-// --- граммы прихода --------------------------------------------------------------
+const tobaccos = (count: number) => formatCount(count, ['табак', 'табака', 'табаков']);
 
-const kilograms = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
-
-export const formatWeight = (grams: number) =>
-  grams < 1000 ? `${Math.round(grams)} г` : `${kilograms.format(Math.round(grams / 100) / 10)} кг`;
-
-// Подсказка под полем «Приход»: что написано в счёте.
-export const lineGramsHint = (line: Pick<DeliveryLine, 'qty' | 'grams' | 'receivedGrams'>) => {
-  if (line.grams === null) return line.receivedGrams === null ? 'укажите граммы' : 'указано вручную';
-  return line.qty > 1 ? `${line.qty} × ${line.grams} г по счёту` : `${line.grams} г по счёту`;
+// Главная строка нижней панели телефона: что мешает принять или что вернётся.
+export const acceptBarSummary = (card: Pick<DeliveryCard, 'pendingLines' | 'lines'>) => {
+  const back = tobaccos(tobaccosToReceive(card.lines));
+  return card.pendingLines
+    ? { warn: true, main: `Без табака: ${lineCount(card.pendingLines)}`, sub: `вернутся в наличие ${back}` }
+    : { warn: false, main: `Вернутся в наличие: ${back}`, sub: '' };
 };
 
-// Границы — как в apps/backend/src/deliveries.ts (MAX_QTY × MAX_GRAMS).
-const MAX_RECEIVED_GRAMS = 50 * 5000;
-
-// Пусто — null (сброс к «кол-во × граммы по счёту»); мусор — undefined.
-export const parseReceivedGrams = (value: string): number | null | undefined => {
-  const text = value.replace(/[\s\u00a0\u202f]/g, '');
-  if (!text) return null;
-  if (!/^\d+$/.test(text)) return undefined;
-  const grams = Number(text);
-  return grams >= 1 && grams <= MAX_RECEIVED_GRAMS ? grams : undefined;
+// Тост приёмки (#565): «Из плана пришли: 2. Открылись миксы: 2.»; часть с нулём
+// не показываем, а без плана и открытых миксов — сколько табаков снова в наличии.
+export const acceptedToast = (accepted: Pick<DeliveryAccepted, 'lines' | 'fromPlan' | 'openedMixes'>) => {
+  const parts = [
+    accepted.fromPlan ? `Из плана пришли: ${accepted.fromPlan}.` : '',
+    accepted.openedMixes ? `Открылись миксы: ${accepted.openedMixes}.` : '',
+  ].filter(Boolean);
+  if (parts.length) return { title: 'Поставка принята', text: parts.join(' ') };
+  const count = tobaccosToReceive(accepted.lines);
+  return { title: count ? `Принято: ${tobaccos(count)} в наличии` : 'Поставка принята', text: '' };
 };
+
+
+// --- приход строки -------------------------------------------------------------
+
+// Колонка «Приход»: штуки по счёту, граммов нет (#518).
+export const lineQty = (line: Pick<DeliveryLine, 'qty'>) => `${line.qty} шт.`;
 
 // --- ошибки загрузки -----------------------------------------------------------
 

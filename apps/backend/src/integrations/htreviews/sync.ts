@@ -14,11 +14,15 @@ export type HtReviewsSyncStats = {
   created: number;
   updated: number;
   skippedInactive: number;
+  detailFailed: number;
+  unlistedRefreshed: number;
+  unlistedMissing: number;
   preservedStockCount: number;
   defaultInStock: boolean;
 };
 
-const PRODUCED_STATUS = 'Выпускается';
+// Лимитку можно купить и замешать, поэтому она заводится наравне с выпускаемыми.
+const PRODUCED_STATUSES = new Set(['Выпускается', 'Лимитированный']);
 
 // Новые позиции заводим только выпускаемые, а заведённые обновляем всегда:
 // так снятие с производства доходит до productionStatus, а не застывает.
@@ -29,8 +33,12 @@ export const decideTobaccoUpsert = (
   if (exists) {
     return 'update';
   }
-  return status?.trim() === PRODUCED_STATUS ? 'create' : 'skip';
+  return PRODUCED_STATUSES.has(status?.trim() ?? '') ? 'create' : 'skip';
 };
+
+// 31.10 все 12 315 карточек ответили 500, а прогон отчитался «ok» (#498).
+export const detailFailureTooHigh = (stats: Pick<HtReviewsSyncStats, 'fetched' | 'detailFailed'>) =>
+  stats.fetched > 0 && stats.detailFailed / stats.fetched > 0.1;
 
 export const collectKnownLineUrls = (sourceUrls: Array<string | null>) => {
   const lineUrls = new Set<string>();
@@ -57,6 +65,19 @@ const loadKnownLineUrls = async (brandUrls?: string[]) => {
   return brandUrls?.length ? filterLineUrlsByBrands(lineUrls, brandUrls) : lineUrls;
 };
 
+const loadKnownTobaccoUrls = async (brandUrls?: string[]) => {
+  const records = await prisma.tobacco.findMany({
+    where: { sourceKind: 'htreviews', sourceUrl: { not: null } },
+    select: { sourceUrl: true },
+  });
+  const urls = records.flatMap((record) => (record.sourceUrl ? [record.sourceUrl] : []));
+  if (!brandUrls?.length) {
+    return urls;
+  }
+  const brands = new Set(brandUrls.map((url) => url.replace(/\/+$/, '')));
+  return urls.filter((url) => brands.has(brandUrlFromTobaccoUrl(url) ?? ''));
+};
+
 export const collectBrandUrls = (sourceUrls: Array<string | null>) => {
   const brandUrls = new Set<string>();
   for (const sourceUrl of sourceUrls) {
@@ -66,6 +87,38 @@ export const collectBrandUrls = (sourceUrls: Array<string | null>) => {
     }
   }
   return Array.from(brandUrls);
+};
+
+// Разовое сужение каталога до списка брендов (#519). Бренды полки остаются при
+// любом статусе: ночной прогон по полке продолжит их обновлять.
+export const archiveOffListTobaccos = async (brandUrls: string[], { apply }: { apply: boolean }) => {
+  const shelf = await prisma.tobacco.findMany({
+    where: { shelfItem: { isNot: null } },
+    select: { sourceUrl: true },
+  });
+  const keep = new Set([
+    ...brandUrls.map((url) => url.replace(/\/+$/, '')),
+    ...collectBrandUrls(shelf.map((record) => record.sourceUrl)),
+  ]);
+  const records = await prisma.tobacco.findMany({
+    where: {
+      archived: false,
+      sourceKind: 'htreviews',
+      sourceUrl: { not: null },
+      shelfItem: { is: null },
+      mixComponents: { none: {} },
+      analogs: { none: {} },
+      analogOf: { none: {} },
+      supplierItems: { none: {} },
+    },
+    select: { id: true, manufacturer: true, sourceUrl: true },
+    orderBy: { id: 'asc' },
+  });
+  const offList = records.filter((record) => !keep.has(brandUrlFromTobaccoUrl(record.sourceUrl ?? '') ?? ''));
+  if (apply && offList.length) {
+    await prisma.tobacco.updateMany({ where: { id: { in: offList.map((record) => record.id) } }, data: { archived: true } });
+  }
+  return offList;
 };
 
 // Бренды того, что есть в точке: inStock — кэш наличия, который ведёт полка.
@@ -185,12 +238,14 @@ export const syncHtReviewsCatalog = async (
 ): Promise<HtReviewsSyncStats> => {
   const knownLineUrls = options.knownLineUrls ?? await loadKnownLineUrls(options.brandUrls);
   logUpsertProgress(`phase=known-lines total=${knownLineUrls.length}`);
-  const snapshot = await fetchHtReviewsCatalogSnapshot({ ...options, knownLineUrls });
+  const knownTobaccoUrls = options.knownTobaccoUrls ?? await loadKnownTobaccoUrls(options.brandUrls);
+  const snapshot = await fetchHtReviewsCatalogSnapshot({ ...options, knownLineUrls, knownTobaccoUrls });
   const defaultInStock = options.defaultInStock ?? false;
 
   let created = 0;
   let updated = 0;
   let skippedInactive = 0;
+  let detailFailed = 0;
   let preservedStockCount = 0;
 
   logUpsertProgress(
@@ -203,18 +258,26 @@ export const syncHtReviewsCatalog = async (
     const existing = await findExistingRecord(item);
     const decision = decideTobaccoUpsert(item.status, Boolean(existing));
 
+    if (!item.detailLoaded && options.fetchDetails !== false) {
+      detailFailed += 1;
+    }
+
+    // Без карточки статус неизвестен: такая новинка — сбой загрузки, а не неактуальный табак.
     if (decision === 'skip') {
-      skippedInactive += 1;
+      if (item.detailLoaded) {
+        skippedInactive += 1;
+      }
     } else if (existing) {
       if (existing.inStock !== defaultInStock) {
         preservedStockCount += 1;
       }
+      // Без карточки таксономия и поля карточки пустые — оставляем сохранённые (#458).
       await prisma.tobacco.update({
         where: {
           id: existing.id,
         },
         data: {
-          ...buildUpsertData(item),
+          ...(item.detailLoaded ? buildUpsertData(item) : {}),
           ...buildStatsData(item, new Date()),
         },
       });
@@ -240,7 +303,7 @@ export const syncHtReviewsCatalog = async (
     if (processed % 50 === 0 || processed === snapshot.items.length) {
       logUpsertProgress(
         `upsert ${processed}/${snapshot.items.length} created=${created} updated=${updated}` +
-        ` skippedInactive=${skippedInactive} preservedStock=${preservedStockCount}`,
+        ` skippedInactive=${skippedInactive} detailFailed=${detailFailed} preservedStock=${preservedStockCount}`,
       );
     }
   }
@@ -250,6 +313,9 @@ export const syncHtReviewsCatalog = async (
     created,
     updated,
     skippedInactive,
+    detailFailed,
+    unlistedRefreshed: snapshot.unlistedRefreshed,
+    unlistedMissing: snapshot.unlistedMissing,
     preservedStockCount,
     defaultInStock,
   };

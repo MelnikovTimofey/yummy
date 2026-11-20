@@ -21,9 +21,10 @@ model: opus
    - `apps/aroma-web` → `npm run build`.
 3. Для UI-изменений по возможности проверяешь экран в браузере, а не только сборкой;
    если не можешь — прямо говоришь об этом.
-4. UI-срез фичи реализуешь по согласованному мокапу из issue
-   (`design/design_handoff_<slug>/`, скилл `atelier-feature-design`) и дизайн-системе
-   `.claude/skills/aroma-atelier-design/`. В PR — скриншоты рядом с экранами мокапа.
+4. UI-срез фичи реализуешь по согласованному мокапу из issue (холст Claude Design,
+   скилл `atelier-feature-design`; файлы артбордов `.dc.html` даёт бриф) и
+   дизайн-системе `.claude/skills/aroma-atelier-design/`. В PR — скриншоты рядом со
+   ссылками на артборды холста.
 
 ## Правила
 

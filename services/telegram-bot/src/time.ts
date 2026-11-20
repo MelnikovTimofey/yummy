@@ -47,27 +47,14 @@ export const buildDailyCodeLabel = (dayKey: string, sequence = 1) => {
   return sequence > 1 ? `Код на ${readable} #${sequence}` : `Код на ${readable}`;
 };
 
-export const buildNextBroadcastDelay = (
-  now = new Date(),
-  broadcastHour = 9,
-  broadcastMinute = 0,
-) => {
-  const moscowNow = toMoscowClock(now);
-  const next = new Date(Date.UTC(
-    moscowNow.getUTCFullYear(),
-    moscowNow.getUTCMonth(),
-    moscowNow.getUTCDate(),
-    broadcastHour,
-    broadcastMinute,
-    0,
-    0,
-  ));
+const ENSURE_RETRY_MS = 60_000;
+// Запас на расхождение часов бота и backend: к этому моменту код точно истёк.
+const ENSURE_MARGIN_MS = 5_000;
 
-  if (next <= moscowNow) {
-    next.setUTCDate(next.getUTCDate() + 1);
-  }
-
-  return fromMoscowClock(next).getTime() - now.getTime();
+// Новый код выпускается сразу после истечения текущего, без своего расписания (#456).
+export const buildNextEnsureDelay = (endsAt: string | undefined, now = new Date()) => {
+  const delay = endsAt ? Date.parse(endsAt) - now.getTime() : Number.NaN;
+  return delay > 0 ? delay + ENSURE_MARGIN_MS : ENSURE_RETRY_MS;
 };
 
 export const isWithinWindow = (value: Date | string, window: MoscowWindow) => {

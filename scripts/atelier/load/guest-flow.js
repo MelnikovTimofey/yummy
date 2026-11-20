@@ -94,8 +94,14 @@ const track = (name, res) => {
   return res;
 };
 
+// Доступ по коду дня (#435): у каждого VU свой, выдаётся на verify в начале визита.
+let accessToken = null;
+
 const request = (method, path, body, { token, name = `${method} ${path.split('?')[0]}` } = {}) => {
   const headers = body === undefined ? {} : { ...JSON_HEADERS };
+  if (accessToken) {
+    headers['x-atelier-access'] = accessToken;
+  }
   if (token) {
     headers.authorization = `Bearer ${token}`;
   }
@@ -209,8 +215,10 @@ const forYouMixes = (forYou) => {
 };
 
 export default function () {
+  accessToken = null;
   const access = send('POST', '/guest/access-code/verify', { code: CODE });
-  if (access.status !== 200) {
+  accessToken = readJson(access, 'accessToken');
+  if (!accessToken) {
     return;
   }
 

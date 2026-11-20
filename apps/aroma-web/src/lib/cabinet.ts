@@ -1,5 +1,6 @@
 import { verdictForScore } from './mixer/bowl';
 import { verdictLabel } from './mixer/copy';
+import type { ComponentSubstitute } from './substitute';
 
 // История и избранное гостя (#244). Типы повторяют контракт backend
 // (apps/backend/src/types.ts, раздел кабинета гостя).
@@ -14,8 +15,11 @@ export type GuestMixRef = { kind: 'catalog'; mixId: string | null } | { kind: 'c
 export type GuestCabinetComponent = {
   tobaccoId: string;
   manufacturer: string;
+  // С #626; у собранного до него и у старого backend поля нет.
+  lineName?: string;
   name: string;
   proportion: number;
+  substitute?: ComponentSubstitute;
 };
 
 export type GuestCabinetCard = {
@@ -89,6 +93,10 @@ export const rowNote = (item: GuestCabinetItem) =>
 
 // Удалённый или скрытый мастером микс приглушён и не открывается.
 export const rowOpens = (item: GuestCabinetItem) => item.status.kind !== 'deleted' && item.card !== null;
+
+// Фото вкуса (#592): у собранного гостем микса flavors нет, остаётся глиф.
+export const rowPhotoMix = (item: GuestCabinetItem) =>
+  item.ref.kind === 'catalog' && item.ref.mixId && item.card ? { id: item.ref.mixId, flavors: item.card.flavors } : null;
 
 export const smokeBlockReason = (status: GuestMixStatus) =>
   status.kind === 'unavailable' ? `Сейчас нет: ${status.missing}.` : null;

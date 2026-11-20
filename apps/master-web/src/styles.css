@@ -860,10 +860,6 @@ p {
   position: relative;
 }
 
-.ops-filter-groups {
-  gap: 10px;
-}
-
 .ops-table-shell {
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
 }
@@ -2242,6 +2238,188 @@ input[type="checkbox"] {
   }
 }
 
+/* «Рейлы» на телефоне (#338, #341, #shot=rails, rail-stat, rail-new):
+   карточки вместо таблицы, в редакторе метки под названием, миксы
+   добавляются из шторки. */
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  /* Раздел уже назван в верхней панели: h1 только для экранного диктора. */
+  .rails-page__header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rails-page { gap: 12px; padding: 0 0 24px; }
+
+  .m-topbar__text-btn.m-rails-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+  }
+
+  .m-rail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+  .m-rail-card {
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .m-rail-card[data-inactive] { opacity: 0.62; }
+
+  .m-rail-card__open {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .m-rail-card__name {
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+
+  .m-rail-card:has(.m-rail-card__more) .m-rail-card__name { padding-right: 32px; }
+
+  .m-rail-card__desc,
+  .m-rail-card__mixes {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: var(--fs-base);
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+
+  .m-rail-card__desc { margin-top: -4px; }
+  .m-rail-card__mixes { color: var(--text-faint); }
+  .m-rail-card__mixes [data-state='hidden'] { text-decoration: line-through; }
+
+  .m-rail-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+  }
+
+  .m-rail-card__tags { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+  .m-rail-card__count { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .m-rail-card__more {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  /* Шапка редактора: название на всю ширину, метки и пояснение под ним. */
+  .drawer__head.rail-drawer__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+
+  .rail-drawer__head-copy { display: contents; }
+  .rail-drawer__title { grid-column: 1; grid-row: 1; align-self: center; overflow-wrap: anywhere; }
+  .rail-drawer__head-meta { grid-column: 1 / -1; grid-row: 2; }
+  .rail-drawer__lock { grid-column: 1 / -1; grid-row: 3; margin: 0; line-height: 1.4; }
+
+  .rail-drawer__close {
+    grid-column: 2;
+    grid-row: 1;
+    width: 40px;
+    height: 40px;
+    margin: -4px -8px 0 0;
+  }
+
+  .rail-drawer__body { grid-template-columns: minmax(0, 1fr); }
+
+  /* Статистический рейл: название и пояснение уже в шапке. */
+  .rail-drawer[data-locked] .rail-drawer__field--text { display: none; }
+
+  /* Перетаскивание пальцем не работает: порядок — стрелками. */
+  .rail-drawer__mix-grip { display: none; }
+  .rail-drawer__mix-row { grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; cursor: default; }
+  /* Метка «блокирован» уходит строкой над стрелками, а не сжимает название. */
+  .rail-drawer__mix-actions { flex-wrap: wrap; justify-content: flex-end; gap: 4px 0; max-width: 108px; }
+  .rail-drawer__mix-actions .icon-btn { width: 36px; height: 36px; }
+  .rail-drawer[data-locked] .rail-drawer__mix-actions .icon-btn { display: none; }
+
+  .empty.rail-drawer__empty {
+    display: grid;
+    gap: 6px;
+    padding: 22px 16px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--r-lg);
+    font-size: var(--fs-md);
+  }
+
+  .rail-drawer__empty b {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .rail-drawer__add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 48px;
+    margin-top: 8px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-lg);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .drawer__foot.rail-drawer__foot { flex-wrap: wrap; padding-bottom: calc(12px + var(--safe-bottom)); }
+  .rail-drawer__foot-actions .btn { height: 40px; }
+
+  .rail-picker-sheet__title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-xl);
+    font-weight: 500;
+  }
+
+  .rail-picker-sheet .input { height: 44px; }
+  .rail-picker-sheet .rail-drawer__picker { max-height: none; overflow: visible; }
+  .rail-picker-sheet .rail-drawer__picker-row { min-height: 56px; }
+}
+
 @media (max-width: 1100px) {
   .shell--master-workspace {
     grid-template-columns: 1fr;
@@ -2371,54 +2549,6 @@ input[type="checkbox"] {
   flex-direction: column;
 }
 
-.tobaccos-list__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  flex-wrap: wrap;
-}
-
-.tobaccos-list__search {
-  flex: 1 1 280px;
-  min-width: 220px;
-  background: transparent;
-  border: 0;
-  height: 30px;
-  padding: 0 4px;
-  box-shadow: none;
-}
-
-.tobaccos-list__search:focus-within {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.tobaccos-list__filters {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tobaccos-list__chip-filter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.tobaccos-list__chip-filter-label {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-right: 4px;
-}
-
 /* --- Filter chip (toolbar + brand pills) ----------------------------- */
 
 .filter-chip {
@@ -2471,6 +2601,149 @@ input[type="checkbox"] {
   background: oklch(0 0 0 / 0.18);
   color: var(--text-primary);
 }
+
+/* --- Панель фильтров (#464, design/design_handoff_master_filters) ------ */
+
+.filter-chip__count[data-zero] { color: var(--text-faint); }
+.filter-chip__chevron { flex: none; color: var(--text-muted); }
+.filter-chip[data-open] { border-color: var(--border-strong); background: var(--bg-elevated); color: var(--text-primary); }
+
+.filter-bar {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+}
+
+.filter-bar__row { display: flex; align-items: center; gap: 8px; }
+.filter-bar__row + .filter-bar__row { padding-top: 8px; border-top: 1px solid var(--border-subtle); }
+.filter-bar__search { flex: 0 1 260px; min-width: 180px; }
+.filter-bar__chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; flex: 1; }
+
+.filter-reset {
+  height: 20px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.filter-reset:hover { color: var(--text-primary); }
+
+.attr-filter,
+.sort-pill { position: relative; display: inline-flex; }
+
+.attr-filter__panel,
+.sort-pill__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.attr-filter__panel { width: 260px; }
+.attr-filter__search { height: 28px; margin-bottom: 4px; }
+.attr-filter__list { display: grid; gap: 2px; max-height: 264px; overflow-y: auto; }
+
+.attr-filter__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.attr-filter__option:hover { background: var(--bg-overlay); color: var(--text-primary); }
+.attr-filter__option input { margin: 0; accent-color: var(--accent); }
+.attr-filter__option span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attr-filter__empty { margin: 0; padding: 6px 8px; font-size: var(--fs-sm); color: var(--text-faint); }
+
+.attr-filter__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.sort-pill__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sort-pill__trigger:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.sort-pill__list { left: auto; right: 0; min-width: 180px; }
+
+.sort-pill__list button {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sort-pill__list button:hover { background: var(--bg-overlay); color: var(--text-primary); }
+.sort-pill__list button[aria-selected="true"] { background: var(--accent-soft); color: var(--text-primary); }
+
+.filters-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.filters-button[data-active] { border-color: var(--accent-border); background: var(--accent-soft); color: var(--text-primary); }
+.filters-button[data-active] .filter-chip__count { background: var(--accent); color: var(--accent-fg); }
+
+.sheet-choice { display: grid; gap: 8px; }
+.sheet-choice h3 { margin: 0; font-family: var(--font-meta); font-size: var(--fs-sm); font-weight: 500; color: var(--text-muted); }
+.sheet-choice__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sheet-choice__chips .filter-chip { height: 34px; padding: 0 12px; font-size: var(--fs-md); }
+/* 16 px — иначе iOS увеличивает страницу при фокусе в поле. */
+.input.sheet-choice__search { height: 40px; font-size: 16px; }
 
 /* --- Table inside .tobaccos-list: нейтральная палитра ----------------- */
 
@@ -2525,62 +2798,128 @@ input[type="checkbox"] {
   font-size: var(--fs-sm);
 }
 
-/* --- «Ещё фильтры» — details-кнопка в строке под чипами Каталога и Миксов */
-
-.tobaccos-list .inventory-extra-filters,
-.mixes-list .inventory-extra-filters {
-  border: 0;
-  border-top: 1px solid var(--border-subtle);
-  border-radius: 0;
-  padding: 6px 12px;
-  background: transparent;
-}
-
-.tobaccos-list .inventory-extra-filters__trigger,
-.mixes-list .inventory-extra-filters__trigger {
-  height: 26px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.tobaccos-list .inventory-extra-filters__trigger:hover,
-.mixes-list .inventory-extra-filters__trigger:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.inventory-extra-filters__chevron {
-  flex: none;
-  transition: transform 120ms ease;
-}
-
-.inventory-extra-filters[open] .inventory-extra-filters__chevron {
-  transform: rotate(180deg);
-}
-
-.tobaccos-list .inventory-extra-filters__count,
-.mixes-list .inventory-extra-filters__count {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.mixes-list .inventory-filter-groups,
-.tobaccos-list .inventory-filter-groups {
-  padding: 8px 12px 12px;
-  background: transparent;
-  border: 0;
-}
-
 /* --- Batch bar inside .tobaccos-list -------------------------------- */
 
 .tobaccos-list .inventory-batch-bar {
   background: var(--accent-soft);
-  border-top: 1px solid var(--accent-border);
+  border-bottom: 1px solid var(--accent-border);
   border-radius: 0;
   padding: 10px 12px;
+}
+
+/* --- Каталог на телефоне (#540, #shot=catalog, catalog-select): карточки
+       вместо таблицы, выбор как на «Полке». ----------------------------- */
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .tobaccos-page.tobaccos-page--phone { padding: 0; gap: 10px; }
+
+  .m-catalog-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  /* Последняя карточка не прячется под панелью выбранных. */
+  .m-catalog-list[data-picking] { padding-bottom: 72px; }
+
+  .m-catalog-card {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+    cursor: pointer;
+  }
+
+  .m-catalog-card[data-picked] { border-color: var(--accent-border); background: var(--accent-soft); }
+
+  .m-catalog-card__head { display: flex; align-items: flex-start; gap: 12px; }
+  .m-catalog-card__head .shelf-select { flex: 0 0 auto; width: 22px; height: 22px; margin-top: 1px; border-radius: 6px; }
+
+  .m-catalog-card__copy { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 2px; overflow-wrap: anywhere; }
+
+  .m-catalog-card__name {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .m-catalog-card__archived { margin: 2px 0; }
+
+  .m-catalog-card__brand {
+    font-family: var(--font-meta);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .m-catalog-card__flavors { font-size: var(--fs-base); line-height: 1.4; color: var(--text-muted); }
+
+  .m-catalog-card__btn,
+  .m-catalog-bulk__main {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-md);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .m-catalog-card__btn:disabled,
+  .m-catalog-bulk__main:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .m-catalog-card__actions { flex: 0 0 auto; display: flex; gap: 4px; }
+  .m-catalog-card__btn[data-variant="ghost"] { border-color: transparent; color: var(--text-secondary); }
+
+  .icon-btn.m-catalog-card__menu { flex: 0 0 auto; width: 40px; height: 40px; margin: -8px -10px -8px 0; }
+
+  .m-catalog-card__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+  }
+
+  .m-catalog-card__foot .shelf-status[data-tone="in"] { color: var(--text-secondary); }
+  .m-catalog-card__foot .shelf-status[data-tone="none"] i { box-sizing: border-box; border: 1px solid var(--text-muted); background: transparent; }
+
+  .m-catalog-empty { display: grid; justify-items: center; padding: 24px 0; }
+
+  .m-catalog-bulk {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(56px + var(--safe-bottom) + 8px);
+    z-index: 44;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 14px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r-lg);
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--fs-md);
+  }
+
+  .m-catalog-bulk b { flex: 1; min-width: 0; font-weight: 500; }
+  .m-catalog-bulk__main { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+  .icon-btn.m-catalog-bulk__more { width: 40px; height: 40px; }
+
+  /* «Готово» в режиме выбора — тихая кнопка без рамки, как в мокапе. */
+  .m-topbar__text-btn[data-variant="ghost"] { border-color: transparent; color: var(--text-secondary); }
 }
 
 /* Mixes page — обёртка без .card, padding/header/stats как у tobaccos. */
@@ -2605,60 +2944,6 @@ input[type="checkbox"] {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.mixes-list__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  flex-wrap: wrap;
-}
-
-.mixes-list__search {
-  flex: 1 1 280px;
-  min-width: 220px;
-  background: transparent;
-  border: 0;
-  height: 30px;
-  padding: 0 4px;
-  box-shadow: none;
-  position: relative;
-}
-
-.mixes-list__search:focus-within {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.mixes-list__filters {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.mixes-list__profiles {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.mixes-list__profiles-label {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-right: 4px;
-}
-
-.mixes-list__profiles-reset {
-  color: var(--text-muted);
 }
 
 /* --- Table inside .mixes-list: нейтральная палитра ------------------- */
@@ -2977,6 +3262,135 @@ input[type="checkbox"] {
   font-size: var(--fs-sm);
 }
 
+/* «Доступ» и код смены на телефоне (#337, #shot=access, #shot=more): всё в столбик,
+   операторы и сотрудники карточками. */
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .access-page { gap: 10px; padding: 0 0 24px; }
+  /* h1 скрыт для диктора (#342), пустая шапка не отодвигает код смены. */
+  .access-page > .master-page-header { padding: 0; margin-bottom: -10px; }
+
+  .m-code {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r-lg);
+    background: var(--accent-soft);
+  }
+
+  .m-code__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+  .m-code__caps {
+    font-family: var(--font-meta);
+    font-size: var(--caps-size);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .m-code__status,
+  .m-access-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    font-size: var(--fs-base);
+    color: var(--text-secondary);
+  }
+
+  .m-code__status i,
+  .m-access-status i { width: 7px; height: 7px; border-radius: var(--r-pill); background: var(--success); flex: 0 0 auto; }
+  .m-code__status[data-active="false"] i { background: var(--text-muted); }
+  .m-access-status[data-tone="warn"] i { background: var(--warning); }
+  .m-access-status[data-tone="err"] { color: var(--danger); }
+  .m-access-status[data-tone="err"] i { background: var(--danger); }
+  .m-access-status[data-tone="unknown"] i { background: var(--text-muted); }
+
+  .m-code__value {
+    font-size: 44px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  .m-code__value[data-empty] { font-size: var(--fs-xl); letter-spacing: 0; color: var(--text-muted); }
+
+  .m-code .m-code__copy { height: 40px; padding: 0 14px; background: transparent; border-color: var(--border-default); font-weight: 400; }
+
+  .m-code__bar { height: 4px; border-radius: var(--r-pill); background: var(--border-subtle); overflow: hidden; }
+  .m-code__bar i { display: block; height: 100%; background: var(--accent); transition: width var(--dur-slow) var(--ease-standard); }
+  .m-code__bar i[data-urgency="soon"] { background: var(--warning); }
+  .m-code__bar i[data-urgency="expired"] { background: var(--danger); }
+
+  .m-code__line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-code__error { margin: 0; }
+
+  .m-code .m-code__rotate { justify-self: start; height: 40px; padding: 0; background: transparent; border-color: transparent; color: var(--text-secondary); font-weight: 400; }
+
+  .m-access-section { display: grid; gap: 10px; }
+
+  .m-access-section__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+
+  .m-access-section__title {
+    margin: 0 2px;
+    font-family: var(--font-serif);
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .m-access-section .m-access-section__add { height: 40px; padding: 0 14px; background: transparent; border-color: var(--border-default); font-weight: 400; }
+
+  .m-access-section__note { margin: 0 2px; color: var(--text-muted); }
+
+  .m-access-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+  .m-access-card {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .m-access-card[data-off] .m-access-card__main,
+  .m-access-card[data-off] .m-access-card__foot > span { opacity: 0.62; }
+
+  .m-access-card__head { display: flex; align-items: flex-start; gap: 10px; }
+  .m-access-card__main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .m-access-card__title { font-size: var(--fs-lg); font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+  .m-access-card__sub { font-size: var(--fs-base); line-height: 1.4; color: var(--text-muted); overflow-wrap: anywhere; }
+
+  .m-access-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 20px;
+    font-size: var(--fs-base);
+    color: var(--text-muted);
+  }
+
+  .m-access-card .m-access-card__more { width: 40px; height: 40px; margin: -8px -8px 0 0; }
+  .m-access-card .m-access-card__edit { height: 40px; margin: -8px -10px -8px auto; color: var(--text-secondary); font-weight: 400; }
+
+  /* Переключатель мелкий, а цель касания — 40 px. */
+  .m-access-card .toggle { margin-top: 2px; }
+  .m-access-card .toggle::after { content: ''; position: absolute; inset: -11px -6px; }
+}
+
 .operator-dialog__role-switch {
   display: flex;
   gap: 6px;
@@ -3127,13 +3541,6 @@ input[type="checkbox"] {
   font-size: 0.84rem;
 }
 
-.inventory-filter-groups {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px;
-}
-
 .inventory-cell__chips,
 .inventory-batch-bar__actions {
   display: flex;
@@ -3175,7 +3582,6 @@ input[type="checkbox"] {
   vertical-align: middle;
   border-bottom: 1px solid var(--accent-border);
 }
-
 
 .inventory-table tbody td .inventory-cell {
   gap: 4px;
@@ -3220,7 +3626,7 @@ input[type="checkbox"] {
 }
 
 .inventory-table--redesign .inventory-table__stock {
-  width: 132px;
+  width: 188px;
 }
 
 .inventory-table--redesign .inventory-table__mixes {
@@ -4303,27 +4709,6 @@ input[type="checkbox"] {
   min-width: min(100%, 220px);
 }
 
-.ops-filter-select__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.ops-filter-select__title {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.ops-filter-select__clear {
-  color: var(--text-muted);
-}
-
-.ops-filter-select__clear:hover {
-  color: var(--text-primary);
-}
-
 .ops-filter-select__trigger {
   min-height: 36px;
   width: 100%;
@@ -4731,6 +5116,26 @@ input[type="checkbox"] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Полка у табака в составе (#566, #shot=mix-edit). */
+.mix-builder__component-shelf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+
+.mix-builder__shelf-none {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.mix-builder__plan-hint {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--text-muted);
 }
 
 .mix-builder__prop-input {
@@ -5291,6 +5696,32 @@ input[type="checkbox"] {
   line-height: 1.35;
 }
 
+.mix-status {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.mix-status small {
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.inline-link {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  background: none;
+  font: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.inline-link:hover {
+  color: var(--text-primary);
+}
+
 .mixes-cell__components {
   gap: 8px;
 }
@@ -5306,6 +5737,16 @@ input[type="checkbox"] {
   gap: 4px;
 }
 
+.mixes-cell__author {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .mixes-cell__metric {
   display: inline-flex;
   align-items: center;
@@ -5319,6 +5760,248 @@ input[type="checkbox"] {
   font-size: 11px;
   color: var(--muted-foreground);
   margin-left: 2px;
+}
+
+/* Миксы на телефоне (#540, #shot=mixes, mix-edit, mix-library): карточки вместо
+   таблицы, конструктор в одну колонку, сумма и сохранение в нижней панели. */
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .mixes-list:has(> .m-mix-list) { border: 0; border-radius: 0; background: transparent; overflow: visible; }
+  .m-mix-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+  .m-mix-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 6px;
+    padding: 12px 6px 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .m-mix-card[data-status='hidden'] { opacity: 0.62; }
+
+  .m-mix-card__open {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .m-mix-card__title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .m-mix-card__title b { font-size: var(--fs-md); font-weight: 500; line-height: 1.3; color: var(--text-primary); }
+
+  .m-mix-card__ratio {
+    flex: 0 0 auto;
+    font-family: var(--font-meta);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-mix-card__parts {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: var(--fs-sm);
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+
+  .icon-btn.m-mix-card__more { width: 40px; height: 40px; align-self: start; margin-top: -6px; }
+
+  .m-mix-card__foot {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    padding-right: 8px;
+  }
+
+  .m-mix-card__foot .mix-status { min-width: 0; }
+
+  .m-mix-card__stats {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-mix-card__stats span { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* Конструктор: своя шапка и нижняя панель, меню разделов скрыто (App.tsx). */
+  .mix-builder--phone {
+    gap: 14px;
+    height: auto;
+    padding-bottom: calc(68px + var(--safe-bottom));
+  }
+
+  .mix-builder__phone-top { padding-left: 4px; }
+
+  .mix-builder__phone-card,
+  .mix-builder__phone-composition { display: grid; gap: 10px; min-width: 0; }
+
+  .mix-builder--phone .mix-builder__title-input { width: 100%; font-size: 26px; }
+
+  .mix-builder--phone .mix-builder__description-input {
+    padding: 10px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    background: var(--bg-raised);
+    line-height: 1.4;
+  }
+
+  .mix-builder__phone-visibility {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 48px;
+    padding: 0 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    font-size: var(--fs-md);
+  }
+
+  .mix-builder__phone-visibility > span { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .mix-builder__phone-meta { margin: 0; font-family: var(--font-meta); font-size: var(--fs-xs); letter-spacing: 0.06em; color: var(--text-muted); }
+
+  .mix-builder__phone-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+
+  .mix-builder--phone .mix-builder__presets { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .mix-builder--phone .mix-builder__preset { flex: 0 0 auto; min-height: 36px; padding: 0 12px; }
+
+  .mix-builder__phone-component {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 6px 10px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .mix-builder__phone-component[data-missing] { border-color: var(--danger-border); }
+
+  .mix-builder__phone-component-who { display: grid; gap: 2px; min-width: 0; }
+  .mix-builder__phone-component-who b { display: flex; align-items: center; gap: 8px; font-size: var(--fs-md); font-weight: 500; overflow-wrap: anywhere; }
+  .mix-builder__phone-component-who span { font-size: var(--fs-sm); color: var(--text-muted); }
+
+  .mix-builder__phone-step {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+
+  .mix-builder__phone-step button {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .mix-builder__phone-step input {
+    width: 44px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-inline: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-primary);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    appearance: textfield;
+  }
+
+  .mix-builder__phone-step input::-webkit-inner-spin-button,
+  .mix-builder__phone-step input::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
+
+  .icon-btn.mix-builder__phone-remove { width: 36px; height: 40px; color: var(--text-muted); }
+
+  .mix-builder__phone-note { grid-column: 1 / -1; margin: 0; font-size: var(--fs-sm); line-height: 1.35; }
+  .mix-builder__phone-note[data-tone='warning'] { color: var(--warning); }
+  .mix-builder__phone-note[data-tone='danger'] { color: var(--danger); }
+  .mix-builder__phone-shelf { display: flex; align-items: center; gap: 8px; }
+
+  .mix-builder__phone-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-lg);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--fs-md);
+    cursor: pointer;
+  }
+
+  .mix-builder__phone-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px calc(10px + var(--safe-bottom));
+    border-top: 1px solid var(--border-subtle);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+  }
+
+  .mix-builder__phone-sum { display: grid; flex: 1; gap: 1px; min-width: 0; margin: 0; font-size: var(--fs-sm); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .mix-builder__phone-sum b { font-size: var(--fs-md); font-weight: 500; color: var(--text-primary); }
+  .mix-builder__phone-sum[data-warn] b { color: var(--warning); }
+  .mix-builder__phone-bar .btn { height: 44px; padding: 0 18px; }
+
+  /* Библиотека табаков шторкой снизу. */
+  .bottom-sheet.mix-builder__library-sheet { display: flex; flex-direction: column; height: calc(100dvh - 64px); }
+  .mix-builder__library-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 8px; }
+  .mix-builder__library-sheet-head h2 { margin: 0; font-family: var(--font-serif); font-size: 20px; font-weight: 500; }
+  .mix-builder__library-sheet .mix-builder__library { flex: 1; min-height: 0; padding: 0; border: 0; background: transparent; }
+  .mix-builder__library-sheet .mix-builder__library-item { min-height: 56px; }
+}
+
+/* Повёрнутый телефон (#540, #shot=land-mixes, land-mix-edit): карточки в две
+   колонки, у конструктора карточка микса слева, состав справа. */
+@media (min-width: 641px) and (max-height: 500px) and (pointer: coarse) {
+  .m-mix-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .mix-builder--phone {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 16px;
+  }
+
+  .mix-builder--phone > :not(.mix-builder__phone-card, .mix-builder__phone-composition) { grid-column: 1 / -1; }
+  .mix-builder--phone > .mix-builder__phone-card { grid-column: 1; }
+  .mix-builder--phone > .mix-builder__phone-composition { grid-column: 2; grid-row: span 3; }
+  .mix-builder--phone > .mix-builder__profile,
+  .mix-builder--phone > .mix-builder__memberships { grid-column: 1; }
 }
 
 /* =====================================================================
@@ -5405,14 +6088,15 @@ input[type="checkbox"] {
    primitives). Старые .master-stats-row* классы удалены. */
 
 /* =====================================================================
-   DashboardView — Дашборд смены под mockup _standalone_ § DashboardPlaceholder.
-   page-header + stats (4 cells) + 2 cards (Топ миксов / Сигналы).
+   Дашборд (#520) — выборы гостей по design/design_handoff_guest_analytics
+   (#shot=month, quarter, calendar, mobile, edge-few). Графики — recharts
+   через components/ui/chart.tsx, цвета рядов — --chart-1 и --chart-5.
    ===================================================================== */
 
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   padding: 5px 12px 60px;
   max-width: 1480px;
   margin: 0 auto;
@@ -5428,132 +6112,412 @@ input[type="checkbox"] {
   color: var(--text-primary);
 }
 
-.dashboard-page__columns {
+.dashboard-page .master-page-header { padding-bottom: 6px; }
+
+.dash-period {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-range {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-seg button { padding: 6px 12px; }
+
+.dash-body {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 16px;
+  gap: 12px;
+  transition: opacity 120ms ease;
+}
+
+.dashboard-page[aria-busy="true"] .dash-body { opacity: 0.6; }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
 @media (max-width: 960px) {
-  .dashboard-page__columns {
-    grid-template-columns: 1fr;
-  }
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-.dashboard-page__card {
-  background: var(--bg-raised);
+.dash-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-lg);
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+  background: linear-gradient(180deg, var(--bg-raised), var(--bg-base));
 }
 
-.dashboard-page__heading {
-  margin: 2px 0 8px;
+.dash-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dash-card h2 {
+  margin: 0;
   font-family: var(--font-serif);
   font-weight: 500;
-  font-size: 22px;
-  line-height: 1.15;
+  font-size: 20px;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 
-.dashboard-page__rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
+.dash-card__note { font-size: var(--fs-xs); color: var(--text-muted); }
 
-.dashboard-page__row {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
+.dash-card .empty { padding: 0; text-align: left; }
 
-.dashboard-page__row:last-child {
-  border-bottom: 0;
-}
-
-.dashboard-page__rank {
-  font-family: var(--font-meta);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  color: var(--text-faint);
-  letter-spacing: 0.04em;
-}
-
-.dashboard-page__row-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dashboard-page__row-name {
-  font-weight: 500;
-  font-size: var(--fs-md);
-  color: var(--text-primary);
-}
-
-.dashboard-page__row-meta {
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  color: var(--text-muted);
-}
-
-.dashboard-page__row-metrics {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dashboard-page__metric {
-  display: inline-flex;
-  align-items: center;
+/* Выборов нет — одна карточка вместо графиков. */
+.dash-few {
+  justify-items: center;
   gap: 4px;
-  font-family: var(--font-meta);
-  font-weight: 500;
+  padding: 52px 16px;
+  text-align: center;
   font-size: var(--fs-sm);
   color: var(--text-muted);
+}
+
+.dash-few b {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+/* --- Графики (components/ui/chart.tsx) ------------------------------- */
+
+.chart {
+  display: flex;
+  justify-content: center;
+  font-size: var(--fs-xs);
+}
+
+.chart .recharts-cartesian-axis-tick text {
+  fill: var(--text-faint);
+  font-family: var(--font-meta);
+  font-size: 10.5px;
   font-variant-numeric: tabular-nums;
 }
 
-.dashboard-page__signals {
+.chart .recharts-cartesian-grid line { stroke: var(--border-subtle); }
+.chart .recharts-surface,
+.chart .recharts-sector { outline: none; }
+
+.chart-tooltip {
+  display: grid;
+  gap: 6px;
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+  font-size: 12px;
+}
+
+.chart-tooltip__label { font-weight: 500; color: var(--text-primary); }
+
+.chart-tooltip__row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.chart-tooltip__row i { width: 10px; height: 10px; border-radius: 2px; }
+
+.chart-tooltip__row em {
+  font-style: normal;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+
+.dash-timeline { height: 210px; }
+.dash-timeline[data-phone] { height: 150px; }
+
+/* --- Популярные табаки и миксы: столбцы с подписью внутри ------------- */
+
+.dash-bars {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  gap: 7px;
 }
 
-.dashboard-page__signal {
+.dash-bar {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 10px;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+}
+
+.dash-bar__track { position: relative; height: 28px; }
+
+/* Нейтральная заливка: бордо только у динамики, двадцать бордовых полос
+   спорили бы с правилом одного акцента. */
+.dash-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.dash-bar__label {
+  position: absolute;
+  inset: 0 8px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.dash-bar__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.dash-bar__label small {
+  flex-shrink: 0;
+  font-family: var(--font-meta);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dash-bar__rating { flex-shrink: 0; font-size: 12px; color: var(--text-secondary); }
+
+.dash-bar > em {
+  font-style: normal;
+  text-align: right;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-bar__label .tag { flex-shrink: 0; height: 20px; padding: 0 7px; }
+
+.dash-bars__all { justify-self: start; }
+
+/* --- Вкусы: кольцо и доли ------------------------------------------- */
+
+.dash-flavors {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.dash-donut { position: relative; }
+
+.dash-donut__center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.dash-donut__center b {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-donut__center span { font-size: 11px; color: var(--text-muted); }
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .dash-donut__center b { font-size: 20px; }
+}
+
+.dash-shares {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.dash-shares li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.dash-shares i { width: 10px; height: 10px; border-radius: var(--r-pill); }
+
+.dash-shares em {
+  font-style: normal;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Сигналы --------------------------------------------------------- */
+
+.dash-signals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-md);
-  background: var(--bg-base);
 }
 
-.dashboard-page__signal-icon {
-  color: var(--warning);
+.dash-signal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
-/* Пустое состояние карточки — обычная строка под заголовком, без рамки и центровки. */
-.dashboard-page__card .empty {
+.dash-signal:last-child { border-bottom: 0; }
+.dash-signal > span { flex: 1; min-width: 0; line-height: 1.4; }
+.dash-signal > svg { flex: 0 0 auto; color: var(--text-muted); }
+.dash-signal[data-kind="out"] > svg { color: var(--danger); }
+
+/* --- Календарь «Даты» ------------------------------------------------ */
+
+.dash-calendar {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.dash-calendar__months { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.dash-calendar__months[data-months="2"] { grid-template-columns: 1fr 1fr; }
+.dash-calendar__month { display: grid; gap: 8px; }
+
+.dash-calendar__title {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+}
+
+.dash-calendar__title h3 {
+  margin: 0;
+  text-align: center;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.dash-calendar__title .icon-btn:disabled { opacity: 0.35; cursor: default; }
+
+.dash-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  gap: 2px 0;
+  font-size: 12px;
+  text-align: center;
+}
+
+.dash-calendar__weekday,
+.dash-calendar__day {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-calendar__weekday { font-size: 11px; color: var(--text-faint); }
+
+.dash-calendar__day {
   padding: 0;
-  text-align: left;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+button.dash-calendar__day:hover:not(:disabled) { color: var(--text-primary); }
+.dash-calendar__day:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; border-radius: 6px; }
+.dash-calendar__day[data-outside],
+.dash-calendar__day:disabled { color: var(--text-faint); opacity: 0.5; cursor: default; }
+.dash-calendar__day[data-state="in"] { background: var(--accent-soft); color: var(--text-primary); }
+.dash-calendar__day[data-state="edge"] { background: var(--accent); color: var(--accent-fg); border-radius: 6px; }
+
+.dash-calendar__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 26px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* --- Телефон (#shot=mobile): период чипами, плитки 2×2 --------------- */
+
+.dash-phone-head {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.dash-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dash-chips > * { flex: 0 0 auto; }
+
+.dash-phone-head .dash-calendar { top: 44px; left: 0; right: auto; }
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .dashboard-page { padding: 0 0 24px; gap: 10px; }
+  .dashboard-page .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-page .stat__value { font-size: 24px; }
+  .dash-card { padding: 14px; }
+  .dash-flavors { gap: 12px; }
 }
 
 /* Ожидания (#397, приёмы #394): скелет строк с дымкой, знак «Дым», знак на
@@ -5719,10 +6683,9 @@ button[aria-busy="true"]:disabled {
 }
 
 /* =====================================================================
-   Полка (#211, #306) — по design/design_handoff_inventory и
-   design/design_handoff_inventory_grams (#shot=shelf, shelf-left,
-   shelf-menu, shelf-receipt, shelf-writeoff, shelf-undo, shelf-drawer,
-   edge-more, edge-check, edge-few).
+   Полка (#211, #518) — по design/design_handoff_inventory и
+   design/design_handoff_shelf_status (#shot=shelf, shelf-out, shelf-bulk,
+   card, card-in, mobile-shelf, edge-search-empty).
    ===================================================================== */
 
 .shelf-page {
@@ -5738,14 +6701,11 @@ button[aria-busy="true"]:disabled {
 .shelf-faint { color: var(--text-faint); }
 .shelf-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-[data-tone="warning"].shelf-num,
-.shelf-until small[data-tone="warning"] { color: var(--warning); }
-[data-tone="danger"].shelf-num,
-.shelf-until small[data-tone="danger"] { color: var(--danger); }
-[data-tone="faint"].shelf-num,
-.shelf-until small[data-tone="faint"] { color: var(--text-faint); }
-[data-tone="warning"].shelf-toast { color: var(--warning); }
-.shelf-until small[data-tone="muted"] { color: var(--text-muted); }
+[data-tone="warning"].shelf-num { color: var(--warning); }
+[data-tone="danger"].shelf-num { color: var(--danger); }
+[data-tone="faint"].shelf-num { color: var(--text-faint); }
+[data-tone="success"].shelf-num { color: var(--success); }
+[data-tone="muted"].shelf-num { color: var(--text-muted); }
 
 .shelf-toolbar {
   display: flex;
@@ -5758,8 +6718,6 @@ button[aria-busy="true"]:disabled {
   background: var(--bg-raised);
 }
 
-.shelf-toolbar__search { flex: 0 1 220px; min-width: 180px; }
-
 .shelf-toolbar__chips {
   display: flex;
   align-items: center;
@@ -5768,58 +6726,6 @@ button[aria-busy="true"]:disabled {
   flex: 1;
 }
 
-.shelf-sort .select-input {
-  height: 26px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  border-color: var(--border-subtle);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-}
-
-/* --- Панель фильтров ------------------------------------------------- */
-
-.shelf-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-  padding: 14px 16px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-}
-
-.shelf-filters__group { display: grid; gap: 6px; align-content: start; }
-
-.shelf-filters__group h4 {
-  margin: 0 0 2px;
-  font-family: var(--font-meta);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.shelf-check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.shelf-check input { accent-color: var(--accent); margin: 0; }
-.shelf-check__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.shelf-check em {
-  margin-left: auto;
-  font-style: normal;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.shelf-filters__more,
 .shelf-link {
   justify-self: start;
   padding: 0;
@@ -5832,10 +6738,7 @@ button[aria-busy="true"]:disabled {
   cursor: pointer;
 }
 
-.shelf-filters__more:hover,
 .shelf-link:hover { color: var(--text-primary); }
-
-.shelf-filters__reset { align-self: flex-start; }
 
 /* --- Таблица полки --------------------------------------------------- */
 
@@ -5848,7 +6751,7 @@ button[aria-busy="true"]:disabled {
 
 .shelf-table {
   width: 100%;
-  min-width: 1224px;
+  min-width: 1180px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -5879,10 +6782,10 @@ button[aria-busy="true"]:disabled {
 .shelf-table tbody tr:hover { background: var(--bg-elevated); }
 .shelf-table tbody tr[data-active="true"] { background: var(--accent-soft); }
 .shelf-table .shelf-table__num { text-align: right; }
-.shelf-table__note { font-size: var(--fs-xs); }
-.shelf-table__rate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .shelf-table__empty { display: grid; justify-items: center; gap: 10px; margin: 12px; }
 .shelf-table__empty p { margin: 0; }
+.shelf-table__empty b { font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-primary); }
 
 .shelf-table__actions {
   display: inline-flex;
@@ -5903,14 +6806,18 @@ button[aria-busy="true"]:disabled {
 }
 
 .shelf-name span {
+  font-family: var(--font-meta);
   font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.shelf-name--receipt b { font-weight: 400; font-size: var(--fs-sm); }
+/* Линейка в подписи «бренд, линейка» и в однострочном имени (#624). */
+.shelf-line { font-style: normal; color: var(--text-secondary); }
 
 /* Метка «проба» рядом с названием (#329, #shot=shelf): табак впервые пришёл за 60 дней.
    Вне .shelf-name — длинное название обрезается, а метка остаётся видна. */
@@ -5923,43 +6830,30 @@ button[aria-busy="true"]:disabled {
   font-size: var(--fs-sm);
 }
 
-.shelf-until { display: grid; gap: 1px; }
-.shelf-until small { font-size: var(--fs-xs); }
+/* --- Наличие, приход, «держим» (#518, #shot=shelf) -------------------- */
 
-/* --- Остаток: полоса и граммы (#306) -------------------------------- */
+.shelf-two { display: grid; gap: 1px; min-width: 0; line-height: 1.25; }
 
-.shelf-level { display: inline-grid; grid-template-columns: 56px minmax(0, auto); align-items: center; gap: 8px; min-width: 0; }
-
-.shelf-level__bar {
-  position: relative;
-  height: 6px;
-  overflow: hidden;
-  box-sizing: border-box;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-pill);
-  background: var(--bg-base);
-}
-
-.shelf-level__bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill); background: var(--text-secondary); }
-.shelf-level__bar[data-tone="low"] i { background: var(--warning); }
-.shelf-level__bar[data-tone="crit"] i { background: var(--danger); }
-
-.shelf-level__copy { display: grid; min-width: 0; line-height: 1.2; }
-.shelf-level__copy b { font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.shelf-level__copy b[data-tone="danger"] { color: var(--danger); }
-.shelf-level__copy b[data-tone="faint"] { color: var(--text-faint); }
-
-.shelf-level__copy small {
-  overflow: hidden;
+.shelf-two small {
+  font-family: var(--font-meta);
   font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-faint);
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.shelf-level--lg { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-.shelf-level--lg .shelf-level__bar { height: 8px; }
-.shelf-level--lg .shelf-level__copy b { font-size: var(--fs-lg); }
+.shelf-status { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.shelf-status i { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 999px; background: var(--success); }
+.shelf-status[data-tone="out"] { color: var(--danger); }
+.shelf-status[data-tone="out"] i { background: var(--danger); }
+.shelf-status[data-tone="stop"] i { background: var(--text-muted); }
+.shelf-status[data-tone="plan"] i { box-sizing: border-box; border: 1px solid var(--text-muted); background: transparent; }
+
+.shelf-table__keep { color: var(--text-muted); }
+.shelf-table__keep span { display: inline-flex; }
 
 /* --- Меню строки ----------------------------------------------------- */
 
@@ -5986,8 +6880,6 @@ button[aria-busy="true"]:disabled {
   color: var(--text-primary);
 }
 
-.shelf-menu__label small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
-
 .shelf-menu__item {
   display: flex;
   align-items: center;
@@ -6011,83 +6903,9 @@ button[aria-busy="true"]:disabled {
 
 .shelf-menu__sep { height: 1px; margin: 4px 0; background: var(--border-subtle); }
 
-.shelf-menu.shelf-menu--wide { width: 380px; padding: 8px; }
 .shelf-menu__item.shelf-menu__item--danger { color: var(--danger); }
 
-/* --- «Сколько осталось?», приход и списание (#306) ------------------- */
-
-.shelf-fracs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 2px 4px 6px; }
-
-.shelf-frac {
-  display: grid;
-  place-items: center;
-  height: 48px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-  background: var(--bg-raised);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 16px;
-  line-height: 1.1;
-  cursor: pointer;
-}
-
-.shelf-frac small { font-size: 10.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.shelf-frac:hover:not(:disabled),
-.shelf-frac:focus-visible { border-color: var(--accent-border); background: var(--accent-soft); outline: none; }
-.shelf-frac:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.shelf-exact { display: flex; align-items: center; gap: 6px; padding: 4px; }
-.shelf-exact label { flex: 1; font-size: var(--fs-sm); color: var(--text-secondary); }
-
-.shelf-grams {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 30px;
-  padding: 0 8px;
-  box-sizing: border-box;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-  background: var(--bg-base);
-  color: var(--text-faint);
-  font-size: var(--fs-sm);
-}
-
-.shelf-grams[data-on],
-.shelf-grams:focus-within { border-color: var(--accent); }
-
-.shelf-grams input {
-  width: 52px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  outline: none;
-}
-
-.shelf-grams input::placeholder { color: var(--text-faint); }
-
-.shelf-note { margin: 0; padding: 2px 8px 4px; font-size: var(--fs-xs); line-height: 1.4; color: var(--text-muted); }
-
-.shelf-form { display: grid; gap: 8px; padding: 2px 4px 4px; }
-.shelf-form .shelf-note { padding: 0; }
-
-.shelf-form__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-}
-
-.shelf-form .text-input { height: 30px; padding: 0 10px; border-radius: var(--r-sm); font-size: var(--fs-sm); }
-.shelf-form__actions { display: flex; justify-content: flex-end; gap: 6px; }
+/* --- Заметка к стопу -------------------------------------------------- */
 
 .shelf-card__stop-note .text-input {
   height: 30px;
@@ -6095,7 +6913,6 @@ button[aria-busy="true"]:disabled {
   border-radius: var(--r-sm);
   font-size: var(--fs-sm);
 }
-
 
 /* --- Тост «Закончилась» и отмена -------------------------------------- */
 
@@ -6141,13 +6958,12 @@ button[aria-busy="true"]:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-
 /* --- Выбор нескольких табаков (#333, #shot=shelf-bulk) -------------- */
 
 .shelf-table th.shelf-table__check,
 .shelf-table td.shelf-table__check { padding: 0 0 0 16px; }
 
-.shelf-check {
+.shelf-select {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -6165,10 +6981,10 @@ button[aria-busy="true"]:disabled {
 }
 
 /* Попасть пальцем и мышью проще, чем в квадрат 16 px. */
-.shelf-check::before { content: ''; position: absolute; inset: -8px; }
-.shelf-check[aria-checked="true"],
-.shelf-check[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); }
-.shelf-check:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.shelf-select::before { content: ''; position: absolute; inset: -8px; }
+.shelf-select[aria-checked="true"],
+.shelf-select[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); }
+.shelf-select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .shelf-table tbody tr[data-selected] { background: var(--accent-soft); }
 .shelf-page[data-selecting] { padding-bottom: 72px; }
@@ -6204,16 +7020,6 @@ button[aria-busy="true"]:disabled {
 }
 
 .shelf-bulk .btn .kbd { margin-left: 6px; }
-.shelf-bulk__keep { position: relative; display: inline-flex; }
-
-.shelf-menu.shelf-bulk__menu {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 6px);
-  width: 300px;
-}
-
-.shelf-bulk__menu .shelf-menu__item { display: grid; justify-items: start; gap: 2px; }
 
 /* Ошибка действия возвращает выделение — тост над панелью, а не под ней. */
 .shelf-bulk ~ .shelf-toast { bottom: 84px; }
@@ -6260,45 +7066,66 @@ button[aria-busy="true"]:disabled {
 
 .shelf-card__body { display: grid; gap: 18px; align-content: start; padding: 16px 22px 28px; }
 
-.shelf-card__level { display: grid; gap: 10px; }
-.shelf-card__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.shelf-card__section { display: grid; gap: 8px; }
 
-.shelf-card__left {
+/* Наличие одной кнопкой (#shot=card): «Есть» или «Закончился <дата>». */
+.shelf-state {
   display: grid;
-  gap: 2px;
-  padding: 8px;
+  grid-template-columns: 1fr 1fr;
   border: 1px solid var(--border-default);
-  border-radius: var(--r-lg);
-  background: var(--bg-elevated);
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
 
-/* «Хватит до», остаток, расход, цена — список «подпись: значение», не плитки (#364). */
-.shelf-card__facts { display: grid; margin: 0; border-top: 1px solid var(--border-subtle); }
+.shelf-state button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
 
-.shelf-card__fact {
+.shelf-state button + button { border-left: 1px solid var(--border-default); }
+.shelf-state button:hover:not(:disabled) { color: var(--text-primary); }
+.shelf-state button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.shelf-state button[aria-pressed="true"] { background: var(--accent-soft); color: var(--text-primary); cursor: default; }
+.shelf-state button:disabled { opacity: 0.55; cursor: not-allowed; }
+.shelf-state i { width: 7px; height: 7px; border-radius: 999px; background: var(--success); }
+.shelf-state button[data-tone="out"] i { background: var(--danger); }
+.shelf-state button[data-tone="plan"] i { box-sizing: border-box; border: 1px solid var(--text-muted); background: transparent; }
+
+/* «В миксах» и «Приходы»: строка «слева что, справа подпись». */
+.shelf-card-list {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 12px;
-  padding: 8px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+}
+
+.shelf-card-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-subtle);
   font-size: var(--fs-sm);
-}
-
-.shelf-card__fact dt { color: var(--text-muted); }
-.shelf-card__fact dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; min-width: 0; }
-
-.shelf-card__fact b {
-  font-weight: 500;
-  font-size: var(--fs-md);
   color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
 }
 
-.shelf-card__fact b.shelf-faint { color: var(--text-faint); }
-.shelf-card__fact small { font-size: var(--fs-xs); color: var(--text-muted); }
-
-.shelf-card__section { display: grid; gap: 8px; }
+.shelf-card-list__item:last-child { border-bottom: 0; }
+.shelf-card-list__note { font-size: var(--fs-xs); color: var(--text-muted); text-align: right; }
+.shelf-card-list__note[data-tone="danger"] { color: var(--danger); }
+.shelf-card-mix__name { border-bottom-color: transparent; color: var(--text-primary); text-align: left; }
+.shelf-card-mix__name:hover { border-bottom-color: var(--border-default); }
 
 .shelf-card__h3 {
   margin: 0;
@@ -6309,69 +7136,6 @@ button[aria-busy="true"]:disabled {
 }
 
 .shelf-card__note { margin: 0; font-size: var(--fs-sm); }
-
-.shelf-history { border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
-
-.shelf-history__item {
-  display: grid;
-  grid-template-columns: 48px 62px minmax(0, 1fr) 28px;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.shelf-history__item:last-child { border-bottom: 0; }
-.shelf-history__date { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.shelf-history__grams { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.shelf-history__grams[data-tone="plus"] { color: var(--success); }
-.shelf-history__grams[data-tone="zero"] { color: var(--danger); }
-.shelf-history__copy { display: grid; gap: 1px; min-width: 0; }
-.shelf-history__copy b { font-weight: 500; font-size: var(--fs-sm); }
-.shelf-history__copy span { font-size: var(--fs-xs); color: var(--text-muted); }
-.shelf-history__actions { position: relative; }
-
-.shelf-history__menu.shelf-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  width: 240px;
-}
-
-.shelf-card__bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  height: 116px;
-  padding: 8px 4px 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.shelf-card__bar {
-  flex: 1;
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-  align-content: end;
-  height: 100%;
-}
-
-.shelf-card__bar i {
-  display: block;
-  width: 100%;
-  max-width: 56px;
-  border-radius: 3px 3px 0 0;
-  background: var(--chart-1);
-}
-
-.shelf-card__bar[data-partial] i {
-  border: 1px solid var(--chart-1);
-  border-bottom: 0;
-  background: repeating-linear-gradient(135deg, var(--chart-1) 0 4px, transparent 4px 8px);
-}
-
-.shelf-card__bar span { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.shelf-card__bar small { font-size: 10.5px; color: var(--text-faint); }
 
 .shelf-card__setting {
   display: flex;
@@ -6386,10 +7150,122 @@ button[aria-busy="true"]:disabled {
 .shelf-card__setting small { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
 
 .shelf-card__stop-note { display: flex; gap: 8px; }
-.shelf-card__mix { font-size: var(--fs-sm); }
+
+/* Аналоги (#482) — по design/design_handoff_tobacco_analogs (#shot=shelf, shelf-analogs, shelf-suggest). */
+
+.shelf-analogs { display: grid; gap: 1px; min-width: 0; line-height: 1.25; }
+.shelf-analogs__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.shelf-analogs__item[data-off] { color: var(--text-faint); }
+.shelf-analogs__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.shelf-sub-mark { display: inline-flex; flex: none; color: var(--text-muted); }
+
+.shelf-analog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+}
+.shelf-analog-list > li { border-bottom: 1px solid var(--border-subtle); }
+.shelf-analog-list > li:last-child { border-bottom: 0; }
+
+.shelf-analog {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px 8px 12px;
+}
+.shelf-analog__n { font-family: var(--font-meta); font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.shelf-analog__name { display: grid; gap: 1px; min-width: 0; text-align: left; }
+.shelf-analog__name small {
+  font-family: var(--font-meta);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.shelf-analog__name b {
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shelf-analog__stock { font-size: var(--fs-sm); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.shelf-analog__stock[data-off] { color: var(--danger); }
+.shelf-analog__actions { display: inline-flex; gap: 2px; }
+
+.shelf-similar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px 8px 12px;
+}
+.shelf-similar__flavors { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.shelf-analog-search { display: grid; gap: 6px; }
+.shelf-analog-search__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-base);
+  color: var(--text-muted);
+}
+.shelf-analog-search__field input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  outline: none;
+}
+.shelf-analog-search__field:focus-within { border-color: var(--border-strong); }
+.shelf-analog-search__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  display: grid;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+}
+.shelf-analog-search__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.shelf-analog-search__option:hover,
+.shelf-analog-search__option:focus-visible { background: var(--bg-elevated); }
 
 /* Каталог: колонка «Полка» вместо тумблера наличия (#211). */
 .inventory-shelf-cell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.inventory-shelf-actions { display: inline-flex; gap: 4px; white-space: nowrap; }
 
 /* =====================================================================
    Поставки (#212) — по design/design_handoff_inventory (#shot=deliveries,
@@ -6462,7 +7338,7 @@ button[aria-busy="true"]:disabled {
 .deliv-raw--skip { opacity: 0.5; }
 
 .deliv-match { display: grid; gap: 3px; min-width: 0; }
-.deliv-match small { display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--fs-xs); color: var(--text-faint); }
+.deliv-match small { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-faint); }
 .deliv-match b { font-weight: 500; }
 
 .deliv-select {
@@ -6493,28 +7369,6 @@ button[aria-busy="true"]:disabled {
 
 .deliv-link { font-size: inherit; color: var(--text-secondary); }
 .deliv-link:disabled { opacity: 0.5; cursor: progress; }
-
-.deliv-grams { display: inline-flex; align-items: center; gap: 4px; }
-.deliv-grams[data-state="off"] { opacity: 0.45; }
-
-.deliv-grams__input {
-  width: 72px;
-  height: 28px;
-  padding: 0 6px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--fs-md);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.deliv-grams__input:hover { border-color: var(--border-default); }
-.deliv-grams__input:focus { outline: none; border-color: var(--accent); }
-.deliv-grams__input[data-tone="warn"] { border-color: var(--warning); }
-.deliv-match small.deliv-warn { color: var(--warning); }
 
 /* --- Нижняя панель приёмки -------------------------------------------- */
 
@@ -6597,8 +7451,7 @@ button[aria-busy="true"]:disabled {
 /* --- Короткие формы ----------------------------------------------------- */
 
 .deliv-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.deliv-form-row--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.deliv-form-narrow { max-width: 140px; }
+
 .deliv-form-results { display: grid; gap: 1px; max-height: 220px; overflow-y: auto; margin-top: -8px; padding: 4px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); background: var(--bg-raised); }
 
 .deliv-chosen {
@@ -6614,6 +7467,160 @@ button[aria-busy="true"]:disabled {
   font-size: var(--fs-sm);
 }
 
+/* --- Телефон (#540, #shot=deliveries, delivery): счета и строки счёта
+       карточками, своя шапка карточки счёта, компактная панель приёмки. --- */
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .shelf-page.deliv-page--phone { padding: 0; gap: 10px; }
+
+  .m-deliv-actions { display: flex; gap: 8px; }
+  .m-deliv-actions .btn { height: 44px; padding: 0 16px; font-size: 15px; }
+  .m-deliv-actions .btn[data-variant="primary"] { flex: 1; }
+
+  .m-deliv-meta {
+    margin: -4px 0 0;
+    font-family: var(--font-meta);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-deliv-list,
+  .m-deliv-lines { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+  .m-deliv-card {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .m-deliv-card:active { background: var(--bg-elevated); }
+  .m-deliv-card:focus-visible { outline: none; border-color: var(--accent); }
+
+  .m-deliv-card__head,
+  .m-deliv-head { display: flex; align-items: flex-start; gap: 10px; }
+
+  .m-deliv-card__copy,
+  .m-deliv-head__copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
+
+  .m-deliv-card__copy b { font-size: 16px; font-weight: 500; line-height: 1.3; }
+  .m-deliv-head__copy b { font-size: 18px; font-weight: 500; line-height: 1.3; }
+
+  .m-deliv-card__copy > span,
+  .m-deliv-head__copy > span { font-size: 13px; line-height: 1.4; color: var(--text-muted); }
+
+  .m-deliv-card__foot { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text-muted); }
+
+  /* Шапка карточки счёта со стрелкой назад заменяет шапку раздела. */
+  .shell--master-workspace:has(.m-deliv-top) > .m-topbar:not(.m-deliv-top) { display: none; }
+  .m-topbar.m-deliv-top { gap: 6px; padding-left: 4px; }
+  .m-deliv-top .m-topbar__title { margin: 0; }
+
+  .m-deliv-sum {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+
+  .m-deliv-sum > * { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 10px 12px; }
+  .m-deliv-sum > * + * { border-left: 1px solid var(--border-subtle); }
+  .m-deliv-sum span { font-family: var(--font-meta); font-size: var(--fs-xs); letter-spacing: 0.06em; color: var(--text-muted); }
+  .m-deliv-sum b { font-size: 16px; font-weight: 500; white-space: nowrap; }
+
+  .m-deliv-sum__when { position: relative; cursor: pointer; }
+  .m-deliv-sum__when:focus-within { box-shadow: inset 0 0 0 1px var(--accent); }
+
+  .m-deliv-sum__date {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    font-size: 16px;
+    cursor: pointer;
+    color-scheme: dark;
+  }
+
+  .m-deliv-line {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+  }
+
+  .m-deliv-line[data-warn] { border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
+  .m-deliv-line[data-match="skip"] { opacity: 0.62; }
+
+  .m-deliv-line__head { display: flex; align-items: flex-start; gap: 10px; }
+  .m-deliv-line__copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .m-deliv-line__raw { font-size: 13px; line-height: 1.4; color: var(--text-muted); overflow-wrap: anywhere; }
+
+  /* Касание по табаку открывает выбор: цель выше текста за счёт полей. */
+  .m-deliv-line__tobacco {
+    justify-self: start;
+    margin: -8px 0;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  span.m-deliv-line__tobacco { margin: 0; padding: 0; cursor: default; }
+  .m-deliv-line__tobacco b { font-weight: 500; }
+  .m-deliv-line__tobacco .shelf-faint { font-size: 14px; }
+  .m-deliv-line__tobacco:disabled { opacity: 0.6; cursor: progress; }
+
+  .m-deliv-line__hint { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; font-size: var(--fs-xs); color: var(--text-faint); }
+  .m-deliv-line__hint .deliv-link { min-height: 36px; padding: 0 4px; }
+
+  .m-deliv-line__nums { display: grid; justify-items: end; gap: 2px; font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+
+  .m-deliv-line__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .m-deliv-line__end { display: inline-flex; align-items: center; gap: 4px; }
+  .m-deliv-line__arrived { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+  .icon-btn.m-deliv-line__menu { width: 36px; height: 36px; margin-right: -8px; }
+
+  .m-deliv-line__acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .m-deliv-line__acts .btn { height: 40px; }
+
+  /* Как панель конструктора микса: во всю ширину, прямо над нижним меню. */
+  .deliv-footbar.m-deliv-bar {
+    bottom: calc(57px + var(--safe-bottom));
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin: 0 -12px;
+    padding: 10px 14px;
+    border: 0;
+    border-top: 1px solid var(--border-subtle);
+    border-radius: 0;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    box-shadow: none;
+  }
+  .m-deliv-bar__summary { flex: 1; min-width: 0; display: grid; gap: 1px; margin: 0; font-size: 13px; color: var(--text-muted); }
+  .m-deliv-bar__summary b { font-size: 16px; font-weight: 500; color: var(--text-primary); }
+  .m-deliv-bar__summary b.deliv-warn { color: var(--warning); }
+  .m-deliv-bar .btn { height: 44px; padding: 0 18px; font-size: 15px; }
+}
+
 /* Седьмая вкладка («Поставки») не помещается в шапку на 1280 px вместе с
    подписью палитры: бренд и подпись больше не переносятся, а на узких
    десктопах от палитры остаются иконка и ⌘K (aria-label у кнопки остаётся). */
@@ -6625,8 +7632,9 @@ button[aria-busy="true"]:disabled {
 }
 
 /* =====================================================================
-   «К заказу», настройки полки (#213) — по design/design_handoff_inventory
-   (#shot=reorder; настройки — README §7).
+   Переключатель «Полка, К заказу» и вид «К заказу» (#518) — по
+   design/design_handoff_shelf_status (#shot=order, order-copied,
+   mobile-order, edge-order-empty).
    ===================================================================== */
 
 .shelf-seg {
@@ -6668,27 +7676,20 @@ button[aria-busy="true"]:disabled {
   font-weight: 600;
 }
 
-.shelf-head-menu { position: relative; display: inline-flex; }
+/* На телефоне — во всю ширину над списком (#shot=mobile-order). */
+.shelf-seg.shelf-seg--phone { display: grid; grid-template-columns: 1fr 1fr; }
+.shelf-seg.shelf-seg--phone button { justify-content: center; height: 38px; font-size: 14px; }
 
-.shelf-menu.shelf-menu--head {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  width: 280px;
-}
+.shelf-order-page { display: grid; gap: 12px; }
 
-.reorder { display: grid; gap: 12px; }
-.reorder__empty { margin: 0; }
-.reorder__hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
-
-.reorder-group {
+.shelf-order {
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-lg);
   background: var(--bg-raised);
-  overflow-x: auto;
+  overflow: hidden;
 }
 
-.reorder-group__head {
+.shelf-order__head {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -6696,26 +7697,14 @@ button[aria-busy="true"]:disabled {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.reorder-group__head h2 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: 17px;
-  color: var(--text-primary);
-}
+.shelf-order__head h2 { margin: 0; font-family: var(--font-serif); font-size: 18px; font-weight: 500; color: var(--text-primary); }
+.shelf-order__meta { flex: 1; font-size: 13px; color: var(--text-muted); }
+.shelf-order__head .btn { margin-left: auto; }
 
-.reorder-group__caption { flex: 1; font-size: var(--fs-sm); color: var(--text-muted); }
+.shelf-order__table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 
-.reorder-table {
-  width: 100%;
-  min-width: 720px;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: var(--fs-sm);
-}
-
-.reorder-table th {
-  height: 34px;
+.shelf-order__table th {
+  height: 30px;
   padding: 0 16px;
   text-align: left;
   font-family: var(--font-meta);
@@ -6728,205 +7717,80 @@ button[aria-busy="true"]:disabled {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.reorder-table td {
-  height: 44px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-}
-
-.reorder-table tbody tr:last-child td { border-bottom: 0; }
-
-/* «закончится до следующей поставки» под названием (#325). */
-.reorder-why { display: block; font-size: var(--fs-xs); color: var(--text-faint); }
-.reorder-table td:has(.reorder-why) { padding-top: 6px; padding-bottom: 6px; }
-
-/* Плашка интервала поставок над «К заказу» (#325, #shot=reorder, edge-interval). */
-.reorder-interval {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-}
-
-.reorder-interval > svg { flex-shrink: 0; color: var(--text-muted); }
-.reorder-interval__text { flex: 1; min-width: 0; }
-.reorder-interval b { color: var(--text-primary); font-weight: 500; }
-.reorder-interval b[data-tone="success"] { color: var(--success); }
-.reorder-interval b[data-tone="danger"] { color: var(--danger); }
-
-.reorder-copied {
-  display: grid;
-  gap: 8px;
-  padding: 16px 18px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-}
-
-.reorder-copied h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; }
-.reorder-copied__hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
-
-.reorder-copied pre {
-  margin: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-md);
-  background: var(--bg-base);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  user-select: all;
-}
-
-/* =====================================================================
-   «Закупка» (#327–#331) — третий вид «Полки» по
-   design/design_handoff_purchase_analytics (#shot=purchase-base,
-   purchase-fast, purchase-trials, purchase-idle, purchase-profiles,
-   edge-no-budget, edge-few). «В приложении» — бледнее: справочно.
-   ===================================================================== */
-
-.purchase { display: grid; gap: 12px; }
-.purchase-budget-wrap { display: grid; gap: 8px; }
-
-.purchase-hint { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
-.purchase-warn { color: var(--warning); }
-
-.purchase-toolbar .shelf-toolbar__chips { flex: 1; }
-
-.purchase-section { display: grid; gap: 10px; }
-.purchase-section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.purchase-section__head h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 20px; color: var(--text-primary); }
-.purchase-section__head p { margin: 2px 0 0; max-width: 80ch; font-size: var(--fs-sm); color: var(--text-muted); }
-.purchase-frozen { font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; }
-.purchase-frozen b { font-weight: 500; color: var(--text-primary); }
-
-.purchase-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-
-.purchase-table-shell {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-  overflow-x: auto;
-}
-
-.purchase-table {
-  width: 100%;
-  min-width: 960px;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: var(--fs-md);
-}
-
-.purchase-table th {
-  height: 34px;
-  padding: 0 12px;
-  text-align: left;
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.purchase-table td {
-  height: 46px;
-  padding: 6px 12px;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-}
-
-.purchase-table tbody tr:last-child td { border-bottom: 0; }
-.purchase-table td.shelf-faint { color: var(--text-faint); }
-.purchase-table [data-align="center"] { text-align: center; }
-
-.purchase-app,
-.purchase-table .purchase-app { color: var(--text-faint); }
-.purchase-flag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); }
-.purchase-flag[data-tone="warning"] { color: var(--warning); }
-.purchase-flag[data-tone="faint"] { color: var(--text-faint); }
-.purchase-danger { color: var(--danger); }
-.purchase-stack { display: grid; gap: 1px; }
-.purchase-stack small { font-size: var(--fs-xs); color: var(--text-faint); }
-
-[data-tone="success"].shelf-num { color: var(--success); }
-[data-tone="muted"].shelf-num { color: var(--text-muted); }
-
-.purchase-verdict { font-size: var(--fs-sm); line-height: 1.35; color: var(--text-secondary); }
-.purchase-verdict[data-tone="muted"] { color: var(--text-muted); }
-.purchase-verdict[data-tone="faint"] { color: var(--text-faint); }
-
-.purchase-profiles {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-lg);
-  background: var(--bg-raised);
-}
-
-.purchase-prof {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) 220px;
-  gap: 14px;
-  align-items: center;
+.shelf-order__table td {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-subtle);
   font-size: var(--fs-sm);
   color: var(--text-primary);
 }
 
-.purchase-prof:last-child { border-bottom: 0; }
+.shelf-order__table tbody tr:last-child td { border-bottom: 0; }
+.shelf-order__table td[data-tone="muted"],
+.shelf-order__table td.shelf-order__arrived { color: var(--text-muted); }
+.shelf-order__table td[data-tone="faint"] { color: var(--text-faint); }
+.shelf-order__out,
+.shelf-order__table td.shelf-order__out { color: var(--danger); }
+.shelf-order__planned,
+.shelf-order__table td.shelf-order__planned { color: var(--text-muted); }
+/* План старше месяца (#563). */
+.shelf-order__planned[data-stale],
+.shelf-order__table td.shelf-order__planned[data-stale] { color: var(--warning); }
+.shelf-order__table td.shelf-order__actions { padding-top: 4px; padding-bottom: 4px; }
+.shelf-order__actions .icon-btn { margin-left: auto; }
 
-.purchase-prof--head {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-faint);
+.shelf-order__copy {
+  margin: 0 16px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-base);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
 }
 
-.purchase-prof__name { display: inline-flex; align-items: center; gap: 8px; }
-.purchase-prof__flag { display: grid; gap: 4px; justify-items: start; }
-
-.purchase-bars { display: grid; gap: 4px; }
-
-.purchase-bar {
-  display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) 44px;
-  gap: 8px;
+.shelf-order-notkept {
+  display: flex;
   align-items: center;
-  font-size: var(--fs-xs);
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
-.purchase-bar i { display: block; height: 8px; border-radius: 4px; }
-.purchase-bar i[data-kind="shelf"] { background: var(--text-faint); }
-.purchase-bar i[data-kind="app"] { box-sizing: border-box; border: 1px dashed var(--text-faint); }
-.purchase-bar b { font-weight: 400; text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.purchase-bar--app { opacity: 0.6; }
+.shelf-order-notkept > span { flex: 1; min-width: 0; }
+.shelf-order-notkept > svg { flex-shrink: 0; }
 
-.purchase-few {
+.shelf-order-empty {
   display: grid;
-  gap: 12px;
-  justify-items: start;
-  padding: 24px 0;
+  gap: 6px;
+  justify-items: center;
+  padding: 56px 24px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  text-align: center;
 }
 
-.purchase-few h2 { margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 22px; color: var(--text-primary); }
-.purchase-few p { margin: 0; max-width: 64ch; line-height: 1.5; color: var(--text-muted); }
+.shelf-order-empty h2 { margin: 0; font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--text-primary); }
+.shelf-order-empty p { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
-/* «Зашло / Не зашло» (#329): в «Закупке», в карточке и на телефоне. */
+/* Телефон: группы без рамки, строки — карточками. */
+.shelf-page--phone .shelf-order { border: 0; border-radius: 0; background: transparent; overflow: visible; }
+.shelf-page--phone .shelf-order__head { padding: 4px 2px 8px; border-bottom: 0; }
+.shelf-page--phone .shelf-order__head h2 { font-size: 17px; }
+.shelf-page--phone .shelf-order__copy { margin: 8px 0 0; }
+.shelf-order__cards { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.shelf-order__cards .shelf-name b { white-space: normal; }
+.shelf-order__cards .shelf-order__out,
+.shelf-order__cards .shelf-order__planned { font-size: 13px; }
+.shelf-order__mixes { color: var(--text-muted); }
+
+/* «Зашло / Не зашло» (#329): в карточке и на телефоне. */
 .trial-mark {
   display: inline-flex;
   flex-shrink: 0;
@@ -6966,6 +7830,9 @@ button[aria-busy="true"]:disabled {
 .shelf-trial__row--head { justify-content: flex-start; }
 .shelf-trial__muted { color: var(--text-muted); }
 
+/* Подсказка после «Зашло» (#shot=card-trial-yes): строка настройки в рамке акцента. */
+.shelf-trial__suggest { padding: 10px 12px; border: 1px solid var(--accent-border); border-radius: var(--r-md); }
+
 /* Полоса «Проба · как зашла?» на телефоне (#shot=mobile-trial). */
 .m-shelf-card__trial {
   grid-column: 1 / -1;
@@ -6981,156 +7848,17 @@ button[aria-busy="true"]:disabled {
   color: var(--text-primary);
 }
 
-/* =====================================================================
-   Дашборд: блок «Полка» (#213) — по #shot=dashboard.
-   ===================================================================== */
-
-.shelf-dash__columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-
-@media (max-width: 960px) {
-  .shelf-dash__columns { grid-template-columns: 1fr; }
-}
-
-.shelf-dash__forecast { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); }
-
-.shelf-dash__forecast b {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: 34px;
-  line-height: 1.1;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.shelf-dash__forecast span { font-size: var(--fs-sm); color: var(--text-muted); }
-
-.shelf-dash__total {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: 34px;
-  line-height: 1.1;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.shelf-dash__subhead {
-  margin: 8px 0 0;
-  font-family: var(--font-meta);
+/* Аналоги в карточке телефона: в строку, подпись слева. */
+.m-shelf-card__analogs {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
   font-size: var(--fs-sm);
-  font-weight: 500;
   color: var(--text-muted);
 }
-
-.shelf-dash__ending { list-style: none; margin: 0; padding: 0; display: grid; }
-.shelf-dash__ending li + li { border-top: 1px solid var(--border-subtle); }
-
-.shelf-dash__ending-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--fs-sm);
-  text-align: left;
-  cursor: pointer;
-}
-
-.shelf-dash__ending-row:hover > span:first-child { text-decoration: underline; text-underline-offset: 3px; }
-.shelf-dash__ending-row:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--r-sm); }
-
-.shelf-dash__spend { display: grid; gap: 10px; }
-
-.shelf-dash__spend-row {
-  display: grid;
-  grid-template-columns: minmax(0, 140px) 1fr 100px;
-  gap: 10px;
-  align-items: center;
-  font-size: var(--fs-sm);
-}
-
-.shelf-dash__spend-row > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.shelf-dash__spend-row i { display: block; height: 8px; border-radius: 4px; background: var(--chart-2); }
-.shelf-dash__spend-row > span:last-child { text-align: right; }
-
-/* «Деньги» против бюджета (#326, #shot=dashboard): полоса «потрачено», отметка базы. */
-.shelf-dash__budget { display: grid; gap: 8px; }
-.shelf-dash__meter {
-  position: relative;
-  height: 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 5px;
-  background: var(--bg-base);
-}
-.shelf-dash__meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px 0 0 5px; background: var(--chart-1); }
-.shelf-dash__meter em { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text-primary); }
-.shelf-dash__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-xs); color: var(--text-muted); }
-.shelf-dash__legend span { display: inline-flex; align-items: center; gap: 6px; }
-.shelf-dash__legend b { font-weight: 500; font-variant-numeric: tabular-nums; }
-.shelf-dash__legend b[data-tone="success"] { color: var(--success); }
-.shelf-dash__legend b[data-tone="danger"] { color: var(--danger); }
-.shelf-dash__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--chart-1); }
-.shelf-dash__swatch--base { width: 2px; background: var(--text-primary); }
-
-.shelf-dash__invite {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-  padding: 10px 14px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-}
-.shelf-dash__invite > span { flex: 1; min-width: 0; }
-.shelf-dash__invite b { color: var(--text-primary); font-weight: 500; }
-.shelf-dash__note { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
-
-.shelf-dash__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
-.shelf-dash__kv div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
-.shelf-dash__kv span { font-family: var(--font-meta); font-size: var(--fs-sm); color: var(--text-faint); }
-.shelf-dash__kv b { font-weight: 500; font-size: 17px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.shelf-dash__kv small { font-size: var(--fs-xs); color: var(--text-muted); }
-
-.shelf-dash__weeks { display: flex; align-items: flex-end; gap: 12px; height: 150px; padding-top: 8px; }
-
-.shelf-dash__bar {
-  flex: 1;
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-  align-content: end;
-  height: 100%;
-}
-
-.shelf-dash__bar i {
-  display: block;
-  width: 100%;
-  max-width: 90px;
-  border-radius: 3px 3px 0 0;
-  background: var(--chart-1);
-}
-
-.shelf-dash__bar--partial i {
-  background: repeating-linear-gradient(135deg, var(--chart-1) 0 4px, transparent 4px 8px);
-  border: 1px solid var(--chart-1);
-  border-bottom: 0;
-}
-
-.shelf-dash__bar span { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.shelf-dash__bar-labels { display: flex; gap: 12px; }
-.shelf-dash__bar-labels span { flex: 1; text-align: center; font-size: 10.5px; color: var(--text-faint); }
+.m-shelf-card__analogs .shelf-analogs { display: flex; flex-wrap: wrap; gap: 2px 10px; }
 
 /* =====================================================================
    Каталог → «Идеи для закупки» и колонки htreviews (#214) — по
@@ -7363,6 +8091,7 @@ button[aria-busy="true"]:disabled {
 .m-more__user {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 8px;
   margin: 0;
   font-size: var(--fs-sm);
@@ -7374,38 +8103,45 @@ button[aria-busy="true"]:disabled {
   color: var(--text-faint);
 }
 
-.m-more__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+/* Разделы плиткой в две колонки под кодом смены (#337, #shot=more). */
+.m-more__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .m-more__item {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
-  min-height: 52px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-md);
-  background: transparent;
-  color: var(--text-secondary);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
 
-.m-more__item > span { display: grid; gap: 1px; }
-.m-more__item b { font-weight: 500; font-size: var(--fs-md); color: var(--text-primary); }
-.m-more__item small { font-size: var(--fs-xs); color: var(--text-muted); }
-.m-more__item[aria-current="page"] { border-color: var(--border-default); background: var(--bg-raised); box-shadow: inset 2px 0 0 var(--accent); }
-.m-more__item--exit { border-top: 1px solid var(--border-subtle); border-radius: 0; padding-top: 12px; }
+.m-more__item svg { flex: 0 0 auto; color: var(--text-secondary); }
+.m-more__item[aria-current="page"] { border-color: var(--accent-border); background: var(--bg-raised); }
+
+/* Повёрнутый телефон: лист низкий, разделы в три колонки. */
+@media (max-height: 500px) and (pointer: coarse) {
+  .m-more__grid { grid-template-columns: repeat(3, 1fr); }
+}
 
 /* --- Полка: поиск, чипы, карточки ------------------------------------- */
 
 .shelf-page.shelf-page--phone { padding: 0; gap: 10px; }
 
-.m-shelf-search { display: flex; gap: 8px; }
+.m-shelf-search,
+.m-list-search { display: flex; gap: 8px; }
 
 /* 16 px — иначе iOS увеличивает страницу при фокусе в поле. */
-.input.m-shelf-search__field {
+.input.m-shelf-search__field,
+.input.m-list-search__field {
   flex: 1;
+  min-width: 0;
   height: 42px;
   padding: 0 12px;
   border-radius: var(--r-md);
@@ -7413,40 +8149,12 @@ button[aria-busy="true"]:disabled {
   font-size: 16px;
 }
 
-.m-shelf-search__filters {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 42px;
-  height: 42px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
+/* Поле сжимается, а не выдавливает «Фильтры» за экран при широком шрифте. */
+.m-shelf-search__field input,
+.m-list-search__field input { min-width: 0; width: 100%; }
 
-.m-shelf-search__filters[data-active="true"] { border-color: var(--accent-border); background: var(--accent-soft); color: var(--text-primary); }
-
-.m-shelf-search__badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  display: grid;
-  place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-family: var(--font-meta);
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.m-shelf-chips {
+.m-shelf-chips,
+.m-list-chips {
   display: flex;
   gap: 6px;
   margin: 0 -12px;
@@ -7456,18 +8164,18 @@ button[aria-busy="true"]:disabled {
   scrollbar-width: none;
 }
 
-.m-shelf-chips::-webkit-scrollbar { display: none; }
-.m-shelf-chips .filter-chip { flex: 0 0 auto; height: 34px; padding: 0 12px; border-radius: var(--r-pill); }
-
-.m-shelf-summary { margin: 0; font-size: var(--fs-xs); color: var(--text-faint); }
+.m-shelf-chips::-webkit-scrollbar,
+.m-list-chips::-webkit-scrollbar { display: none; }
+.m-shelf-chips .filter-chip,
+.m-list-chips .filter-chip { flex: 0 0 auto; height: 34px; padding: 0 12px; }
 
 .m-shelf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 
 .m-shelf-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 10px 12px;
+  align-items: center;
+  gap: 6px 12px;
   padding: 12px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-lg);
@@ -7485,46 +8193,30 @@ button[aria-busy="true"]:disabled {
 
 .m-shelf-card__name b { white-space: normal; font-size: var(--fs-md); }
 
-.m-shelf-card__primary {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--accent-border);
-  border-radius: var(--r-md);
-  background: var(--accent-soft);
-  color: var(--text-primary);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.m-shelf-card__primary:disabled { opacity: 0.45; cursor: not-allowed; }
-.m-shelf-card__rate { display: grid; gap: 1px; justify-items: end; font-size: var(--fs-sm); text-align: right; }
-.m-shelf-card__rate small { font-size: var(--fs-xs); }
-
 .m-shelf-card__meta {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  font-size: 13px;
 }
 
-.m-shelf-card__acts { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.m-shelf-card__acts .m-shelf-card__primary { width: 100%; }
-
-.m-shelf-card__left {
+.m-shelf-card__btn,
+.m-shelf-bulk__act {
   min-height: 40px;
   padding: 0 14px;
   border: 1px solid var(--border-default);
   border-radius: var(--r-md);
   background: transparent;
   color: var(--text-primary);
-  font-size: var(--fs-sm);
+  font: inherit;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.m-shelf-card__left:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.m-shelf-card__until { justify-items: end; text-align: right; font-size: 13px; }
+.m-shelf-card__btn:disabled,
+.m-shelf-bulk__act:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Режим выбора на телефоне (#333, #shot=mobile-bulk). */
 .m-topbar__text-btn {
@@ -7540,7 +8232,7 @@ button[aria-busy="true"]:disabled {
   cursor: pointer;
 }
 
-.m-shelf-list[data-picking] { padding-bottom: 120px; }
+.m-shelf-list[data-picking] { padding-bottom: 168px; }
 .m-shelf-list[data-picking] .m-shelf-card { cursor: pointer; }
 .m-shelf-card[data-picked] { border-color: var(--accent-border); background: var(--accent-soft); }
 .m-shelf-card__pick { display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 2px; }
@@ -7572,9 +8264,9 @@ button[aria-busy="true"]:disabled {
 
 .m-shelf-bulk__empty:disabled { opacity: 0.45; cursor: not-allowed; }
 .m-shelf-bulk__acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.m-shelf-bulk ~ .shelf-toast { bottom: calc(56px + var(--safe-bottom) + 128px); }
+.m-shelf-bulk ~ .shelf-toast { bottom: calc(56px + var(--safe-bottom) + 176px); }
 
-/* --- Шторка «Сколько осталось?» --------------------------------------- */
+/* --- Шапка шторки действий -------------------------------------------- */
 
 .m-mark-sheet__head { display: grid; gap: 4px; }
 
@@ -7590,85 +8282,7 @@ button[aria-busy="true"]:disabled {
   line-height: 1.2;
 }
 
-.m-mark-sheet__line { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
-.m-mark-sheet__marks { display: grid; gap: 8px; }
-
-.m-mark-sheet__h3 {
-  margin: 0;
-  font-family: var(--font-meta);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.m-mark-sheet__fracs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-
-.m-mark-sheet__frac {
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  height: 56px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  color: var(--text-primary);
-  font-size: 20px;
-  line-height: 1.1;
-  cursor: pointer;
-}
-
-.m-mark-sheet__frac small { font-size: 10px; color: var(--text-faint); }
-.m-mark-sheet__frac:active:not(:disabled),
-.m-mark-sheet__frac[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
-.m-mark-sheet__frac:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.m-mark-sheet__hint { margin: 0; font-size: 12px; color: var(--text-faint); }
-
-.m-mark-sheet__marks label.m-mark-sheet__h3 { margin-top: 6px; }
-.m-mark-sheet__exact { display: flex; align-items: center; gap: 8px; }
-
-/* 16 px и больше — иначе iOS увеличивает страницу при фокусе в поле. */
-.m-mark-sheet__exact .shelf-grams { flex: 1; height: 46px; padding: 0 12px; border-radius: var(--r-md); font-size: 18px; }
-.m-mark-sheet__exact .shelf-grams input { flex: 1; width: auto; text-align: left; }
-
-.m-mark-sheet__save {
-  height: 46px;
-  padding: 0 16px;
-  border: 1px solid var(--accent-border);
-  border-radius: var(--r-md);
-  background: var(--accent);
-  color: var(--accent-fg);
-  font: inherit;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.m-mark-sheet__save:disabled { border-color: var(--border-default); background: transparent; color: var(--text-faint); cursor: not-allowed; }
-
-.m-actions .shelf-form { gap: 14px; padding: 0; }
-.m-actions .shelf-form__row { font-size: var(--fs-md); }
-.m-actions .shelf-grams { height: 44px; font-size: 16px; }
-.m-actions .shelf-grams input { width: 80px; }
-.m-actions .shelf-form .text-input { height: 44px; font-size: 16px; }
-.m-actions .shelf-form__actions .btn { height: 44px; padding: 0 18px; }
-
-.m-mark-sheet__empty {
-  height: 50px;
-  border: 1px solid var(--danger-border);
-  border-radius: var(--r-md);
-  background: var(--danger-soft);
-  color: var(--text-primary);
-  font-size: 15px;
-  cursor: pointer;
-}
-
 /* --- Шторка фильтров -------------------------------------------------- */
-
-.m-filters-sheet .shelf-filters { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0; border: 0; background: transparent; }
-.m-filters-sheet .shelf-check { min-height: 36px; font-size: var(--fs-md); }
-
-.m-filters-sheet__sort { display: grid; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
-.m-filters-sheet__sort .select-input { height: 42px; font-size: 16px; }
 
 .m-filters-sheet__actions {
   position: sticky;
@@ -7708,7 +8322,7 @@ button[aria-busy="true"]:disabled {
 .m-actions__item:disabled { opacity: 0.45; cursor: not-allowed; }
 .m-actions__item .shelf-faint { font-size: var(--fs-xs); }
 .m-actions__item--sep { margin-top: 4px; border-top: 1px solid var(--border-subtle); border-radius: 0; }
-
+.m-actions__item.m-actions__item--danger { color: var(--danger); }
 
 .shelf-card__head-actions { display: flex; gap: 4px; margin-right: -10px; }
 .shelf-card__head-actions .icon-btn { width: 44px; height: 44px; }
@@ -7801,6 +8415,31 @@ button[aria-busy="true"]:disabled {
 
   /* Панель приёмки поставки прилипает над нижней навигацией, а не под ней. */
   .deliv-footbar { bottom: calc(56px + var(--safe-bottom) + 8px); }
+
+  /* Раздел уже назван в шапке телефона (#342): крупный h1 и подзаголовок
+     остаются только для экранного диктора, мета и действия видны. */
+  .master-page-header__title,
+  .master-page-header__subtitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Поле мельче 16 px iOS увеличивает при фокусе и не возвращает (#339).
+     Специфичность выше классов полей; крупное поле названия микса не трогаем. */
+  :root :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], .mix-builder__title-input), select, textarea) {
+    font-size: 16px;
+  }
+
+  /* Боковые панели на всю ширину (#341): иначе слева полоска фона. */
+  [data-slot='sheet-content'][data-side='right'] {
+    width: 100% !important;
+    max-width: 100vw !important;
+    border-left: 0;
+  }
 }
 
 /* =====================================================================

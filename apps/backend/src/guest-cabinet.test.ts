@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { config } from './config';
 import { createGuestToken } from './auth';
 import { prisma } from './db';
@@ -96,6 +96,7 @@ test.describe('guest cabinet: history and favorites', () => {
       components: mix.components.map((item) => ({
         tobaccoId: item.tobaccoId,
         manufacturer: item.tobacco.manufacturer,
+        lineName: item.tobacco.lineName,
         name: item.tobacco.name,
         proportion: item.proportion,
       })),

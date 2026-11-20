@@ -175,6 +175,8 @@ const PROFILE_CHARACTER: Record<string, Partial<Character>> = {
   tobacco: { dense: 1 },
   floral_herbal: { fresh: 0.4, dense: 0.2 },
   perfume: { sweet: 0.3, dense: 0.4 },
+  beverage: { sweet: 0.4, fresh: 0.3 },
+  gastro: { dense: 0.6 },
 };
 
 // Шкала htreviews (parser.ts) плюс словесные формы из карточек производителей.
@@ -281,6 +283,7 @@ export const loadMixer = async () => {
       return {
         id: item.id,
         manufacturer: item.manufacturer,
+        lineName: item.lineName,
         name: item.name,
         flavorProfiles: item.flavorProfiles,
         flavors: item.flavors,
@@ -450,6 +453,7 @@ export const recordCustomMixSmoke = async (
     components: components.map(({ tobacco, proportion }) => ({
       tobaccoId: tobacco.id,
       manufacturer: tobacco.manufacturer,
+      lineName: tobacco.lineName,
       name: tobacco.name,
       proportion,
     })),

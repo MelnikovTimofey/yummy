@@ -1,0 +1,34 @@
+version: 2
+
+# Свежую версию пакета берём не раньше чем через неделю: угнанные релизы обычно
+# снимают за первые дни. Обновления безопасности приходят без задержки.
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /apps/backend
+      - /apps/aroma-web
+      - /apps/master-web
+      - /services/telegram-bot
+      - /tests/smoke
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns:
+          - '*'

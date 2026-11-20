@@ -17,6 +17,8 @@ const expectedKeys = [
     'tobacco',
     'floral_herbal',
     'perfume',
+    'beverage',
+    'gastro',
   ].map((profile) => `take.base.${profile}`),
   'take.accent.classic',
   'take.accent.confident',

@@ -33,6 +33,8 @@ export const config = {
   // Бот входа гостей (#239). Без него кнопка входа в кабинет не показывается.
   guestLoginBotUsername: process.env.ATELIER_GUEST_LOGIN_BOT_USERNAME?.trim().replace(/^@/, '') || null,
   guestTokenTtlDays: parsePort(process.env.ATELIER_GUEST_TOKEN_TTL_DAYS, 90),
+  // Срок доступа гостя по коду дня — продуктовое правило (PRD §8.2), а не настройка окружения.
+  guestAccessTtlHours: 6,
   // Гостевая запись (оценки, «Покурить») с одного IP за 5 минут; на нагрузочный прогон — поднять.
   guestWriteLimit: parsePort(process.env.ATELIER_GUEST_WRITE_LIMIT, 60),
   corsOrigins: parseOrigins(process.env.ATELIER_CORS_ORIGINS),

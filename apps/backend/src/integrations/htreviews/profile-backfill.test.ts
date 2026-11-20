@@ -54,3 +54,32 @@ test('профили микса собираются объединением п
 test('микс без профилей у табаков сохраняет колонку как есть', () => {
   assert.deepEqual(planMixProfileBackfill([{ id: 'c', flavorProfiles: ['sweet'], componentProfiles: [[], []] }]), []);
 });
+
+// Напитки и гастрономия: новая таксономия только добавляет профили, поэтому
+// табак, чьи профили — подмножество новых, считаем посчитанным синком.
+
+test('табак без категории получает beverage/gastro, напиток — доп. категорию', () => {
+  const plan = planTobaccoProfileBackfill([
+    { id: 'cola', flavorProfiles: [], rawSourceTags: ['Кола'] },
+    { id: 'corn', flavorProfiles: [], rawSourceTags: ['Кукуруза'] },
+    { id: 'mojito', flavorProfiles: [], rawSourceTags: ['Мохито'] },
+    { id: 'lime-mojito', flavorProfiles: ['citrus'], rawSourceTags: ['Лайм', 'Мохито'] },
+  ]);
+  assert.deepEqual(plan.updates, [
+    { id: 'cola', from: [], to: ['beverage'] },
+    { id: 'corn', from: [], to: ['gastro'] },
+    { id: 'mojito', from: [], to: ['beverage', 'minty'] },
+    { id: 'lime-mojito', from: ['citrus'], to: ['beverage', 'citrus', 'minty'] },
+  ]);
+  assert.deepEqual(plan.curated, []);
+});
+
+test('напиток со склеенными профилями до #182 пересчитывается, а не уходит в курацию', () => {
+  const plan = planTobaccoProfileBackfill([
+    { id: 'orange-soda', flavorProfiles: ['citrus', 'fruity', 'sour'], rawSourceTags: ['Апельсин', 'Газировка'] },
+  ]);
+  assert.deepEqual(plan.updates, [
+    { id: 'orange-soda', from: ['citrus', 'fruity', 'sour'], to: ['beverage', 'citrus'] },
+  ]);
+  assert.deepEqual(plan.curated, []);
+});

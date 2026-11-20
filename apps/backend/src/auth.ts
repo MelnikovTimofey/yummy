@@ -148,6 +148,44 @@ export const verifyGuestToken = (token: string): string | null => {
   }
 };
 
+// Доступ по коду дня (#435): анонимный, без учётки — только срок. Свой kind,
+// чтобы токен кабинета или staff доступом не считался.
+type GuestAccessTokenPayload = {
+  kind: 'access';
+  expiresAt: number;
+};
+
+export const GUEST_ACCESS_HEADER = 'x-atelier-access';
+
+export const createGuestAccessToken = (ttlHours = config.guestAccessTtlHours) => {
+  const payload: GuestAccessTokenPayload = {
+    kind: 'access',
+    expiresAt: Math.floor(Date.now() / 1000) + ttlHours * 60 * 60,
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  return { token: `${encodedPayload}.${sign(encodedPayload)}`, expiresAt: new Date(payload.expiresAt * 1000) };
+};
+
+export const verifyGuestAccessToken = (token: string) => {
+  const [encodedPayload, signature] = token.split('.');
+  if (!encodedPayload || !signature) {
+    return false;
+  }
+
+  const expected = Buffer.from(sign(encodedPayload));
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encodedPayload)) as Partial<GuestAccessTokenPayload>;
+    return payload.kind === 'access' && typeof payload.expiresAt === 'number' && payload.expiresAt > Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+};
+
 export const resolveStaffUser = async (
   login: string,
   password: string,

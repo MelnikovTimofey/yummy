@@ -81,6 +81,25 @@ test('filterCatalogMixes находит бренд по русскому наз�
   assert.deepEqual(search('блэк бёрн'), ['Лимонад']);
 });
 
+// Неточное совпадение (#522): транслит, раскладка, опечатки; точные — выше похожих.
+test('filterCatalogMixes находит по неточному совпадению, точные — первыми', () => {
+  const mixes = [
+    mix('Ягодный пунш', { flavors: ['клубника', 'малина'] }),
+    mix('Летний сад', { components: [{ name: 'Klubnika', manufacturer: 'Хулиган' }] }),
+    mix('Космокола', { flavors: ['кола'] }),
+    mix('Дымный вечер', { description: 'Клубника со сливками' }),
+  ];
+  const search = (query: string) => names(filterCatalogMixes(mixes, { ...noFilter, query }));
+
+  assert.deepEqual(search('клубн'), ['Дымный вечер', 'Летний сад', 'Ягодный пунш']);
+  assert.deepEqual(search('klubnika'), ['Летний сад', 'Ягодный пунш']);
+  assert.deepEqual(search('hooligan'), ['Летний сад']);
+  assert.deepEqual(search('rke,ybrf'), ['Летний сад', 'Ягодный пунш']);
+  assert.deepEqual(search('клубинка'), ['Летний сад', 'Ягодный пунш']);
+  // «Кола-лайм» — с начала слова, «Космокола» — внутри слова, вопреки алфавиту.
+  assert.deepEqual(names(filterCatalogMixes([mix('Космокола'), mix('Кола-лайм')], { ...noFilter, query: 'кола' })), ['Кола-лайм', 'Космокола']);
+});
+
 test('filterCatalogMixes находит микс по подписи характера, не путая её со вкусами', () => {
   const mixes = [
     mix('Космокола', { flavorProfiles: ['berry', 'fresh'], flavors: ['черника'] }),

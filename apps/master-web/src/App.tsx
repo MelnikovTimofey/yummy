@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { AccessView } from '@/components/access/access-view';
 import { LoginScreen } from '@/components/auth/login-screen';
 import { requestJson } from '@/lib/api-client';
@@ -8,10 +8,9 @@ import { useDailyCode } from '@/hooks/use-daily-code';
 import { useMixes } from '@/hooks/use-mixes';
 import { useRails } from '@/hooks/use-rails';
 import { useShelf } from '@/hooks/use-shelf';
-import { useShelfDashboard } from '@/hooks/use-shelf-dashboard';
+import { shelfState } from '@/lib/shelf';
+import { useGuestChoices } from '@/hooks/use-guest-choices';
 import { useCatalogIdeas } from '@/hooks/use-catalog-ideas';
-import { ShelfMobileHeadMenu } from '@/components/shelf/shelf-mobile';
-import { ShelfSettingsDialog } from '@/components/shelf/shelf-settings-dialog';
 import { ShelfView, type ShelfMode } from '@/components/shelf/shelf-view';
 import { useIsPhone } from '@/hooks/use-is-phone';
 import { useDeliveries } from '@/hooks/use-deliveries';
@@ -21,7 +20,6 @@ import { useTelegramOperators } from '@/hooks/use-telegram-operators';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { ShelfDashboardBlock } from '@/components/dashboard/shelf-dashboard-block';
 import { InventoryView, type CatalogBatchAction, type CatalogView, type InventoryEditorInput } from '@/components/inventory/inventory-view';
 import { CatalogIdeasView } from '@/components/inventory/catalog-ideas-view';
 import { MixCatalogView } from '@/components/mixes/mix-catalog-view';
@@ -45,13 +43,12 @@ import { SearchableEntitySelect } from '@/components/ui/searchable-entity-select
 import {
   AuditEventRecord,
   DailyAccessCodeRecord,
-  DashboardSummary,
-  DashboardWindowKey,
   InventoryFilterKey,
   InventoryListFilters,
   InventoryListMeta,
   InventoryListSort,
   InventoryTobacco,
+  MissingTobacco,
   MixRecord,
   RailRecord,
   StaffAccountRecord,
@@ -67,8 +64,6 @@ import {
   formatRailType,
   formatTelegramAutomationHealth,
   normalizeAuditEventRecord,
-  normalizeDashboardSummary,
-  DEFAULT_SHELF_SETTINGS,
   normalizeInventoryBatchResponse,
   normalizeInventoryListResponse,
   normalizeDailyAccessCodeRecord,
@@ -109,28 +104,6 @@ const storeToken = (token: string) => {
 };
 
 
-const readSummaryCards = (summary: DashboardSummary | null) => {
-  if (!summary) {
-    return [
-      { label: 'Всего табаков', value: 0 },
-      { label: 'В наличии', value: 0 },
-      { label: 'Нажатия «Покурить»', value: 0 },
-      { label: 'Оценок гостей', value: 0 },
-      { label: 'Миксов без наличия', value: 0 },
-      { label: 'Пустых активных рейлов', value: 0 },
-    ];
-  }
-
-  return [
-    { label: 'Всего табаков', value: summary.totalTobaccos },
-    { label: 'В наличии', value: summary.inStockCount },
-    { label: 'Нажатия «Покурить»', value: summary.smokeCtaTotal },
-    { label: 'Оценок гостей', value: summary.ratingsTotal },
-    { label: 'Миксов без наличия', value: summary.ops.blockedByInventoryCount },
-    { label: 'Пустых активных рейлов', value: summary.ops.emptyActiveRailsCount },
-  ];
-};
-
 const resolveRailMixSummary = (rail: RailRecord, mixes: MixRecord[]) => {
   if (rail.mixes.length) {
     return rail.mixes.map((mix) => mix.name).join(', ');
@@ -156,17 +129,13 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dashboard');
   const isPhone = useIsPhone();
   const [shelfMode, setShelfMode] = useState<ShelfMode>('shelf');
-  const [shelfSettingsOpen, setShelfSettingsOpen] = useState(false);
   // Выбранные табаки на полке (#333); на телефоне [] — режим выбора без отметок.
   const [shelfSelection, setShelfSelection] = useState<string[] | null>(null);
-  // «Указать» бюджет на дашборде (#326): настройки полки поверх дашборда.
-  const [budgetSettingsOpen, setBudgetSettingsOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   // Вернулись на полку — снова полка, а не «К заказу» (как до выноса режима в App).
   useEffect(() => {
     if (activeTab === 'shelf') return;
     setShelfMode('shelf');
-    setShelfSettingsOpen(false);
   }, [activeTab]);
   // Сменили вид или раздел — выделение на полке сбрасывается.
   useEffect(() => setShelfSelection(null), [activeTab, shelfMode]);
@@ -178,32 +147,32 @@ export const App = () => {
   const [inventory, setInventory] = useState<InventoryTobacco[]>([]);
   const shelf = useShelf(token);
   const deliveries = useDeliveries(token);
-  const shelfDashboard = useShelfDashboard(token);
+  const guestChoices = useGuestChoices(token);
   const [catalogView, setCatalogView] = useState<CatalogView>('all');
   const catalogIdeas = useCatalogIdeas(token, (tobaccoId) => shelf.add(tobaccoId, 'plan'));
-  // Табак из «Заканчивается» на дашборде: «Полка» откроет его карточку.
+  // Табак, который «Нет: X» в «Миксах» открывает на «Полке».
   const [pendingShelfCard, setPendingShelfCard] = useState('');
+  const [pendingCatalogCard, setPendingCatalogCard] = useState('');
   // Счёт, выбранный на «Полке»: его разбирает вкладка «Поставки».
   const [pendingInvoice, setPendingInvoice] = useState<File | null>(null);
   const shelfStatuses = useMemo(
     () => new Map((shelf.view?.rows ?? []).map((row) => [row.tobacco.id, row.shelfStatus === 'plan' ? 'plan' : 'active'] as const)),
     [shelf.view],
   );
+  const shelfStates = useMemo(() => new Map((shelf.view?.rows ?? []).map((row) => [row.tobacco.id, shelfState(row)])), [shelf.view]);
+  // «Каталог» на телефоне (#540, #shot=catalog-select): режим выбора и «+» из верхней панели.
+  const [catalogPickMode, setCatalogPickMode] = useState(false);
+  const [catalogCreateRequested, setCatalogCreateRequested] = useState(false);
+  useEffect(() => setCatalogPickMode(false), [activeTab, catalogView]);
   const mixes = useMixes({
     token,
     onAfterSubmit: () => setActiveTab('mixes'),
     onRefreshSiblings: async (nextToken: string) => {
-      await Promise.all([
-        loadSummary(nextToken, dashboardWindow),
-        rails.reload(nextToken),
-      ]);
+      await rails.reload(nextToken);
     },
   });
   const refreshRailSiblings = async (nextToken: string) => {
-    await Promise.all([
-      loadSummary(nextToken, dashboardWindow),
-      mixes.loadMixes(nextToken),
-    ]);
+    await mixes.loadMixes(nextToken);
   };
   const rails = useRails({
     onAfterSubmit: () => setActiveTab('rails'),
@@ -229,11 +198,8 @@ export const App = () => {
     setInventorySort(next);
   };
   const [selectedInventoryIds, setSelectedInventoryIds] = useState<string[]>([]);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [dashboardWindow, setDashboardWindow] = useState<DashboardWindowKey>('14d');
   const [inventoryStatus, setInventoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [inventoryError, setInventoryError] = useState('');
-  const [summaryError, setSummaryError] = useState('');
   const [toggleId, setToggleId] = useState('');
   const [inventoryBatchAction, setInventoryBatchAction] = useState<'' | CatalogBatchAction>('');
   const [inventorySaveStatus, setInventorySaveStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -280,26 +246,21 @@ export const App = () => {
     }
   };
 
-  const loadSummary = async (nextToken: string, windowKey: DashboardWindowKey = dashboardWindow) => {
-    setSummaryError('');
-
-    try {
-      const response = await requestJson<unknown>(`/staff/dashboard/summary?window=${windowKey}`, {}, nextToken);
-      setSummary(normalizeDashboardSummary(response));
-    } catch (cause) {
-      setSummary(null);
-      setSummaryError(cause instanceof Error ? cause.message : 'Не удалось загрузить сводку');
-    }
+  // Наличие меняют полка, поставки и каталог. Миксы и рейлы перечитывают его
+  // при входе на свою вкладку: залп из пяти запросов при каждом уходе с полки
+  // спорил за два ядра сервера с экраном, на который пришёл мастер (#511).
+  // Дашборд перечитывается при каждом входе: выборы гостей идут весь день.
+  const staleInventoryTabsRef = useRef(new Set<WorkspaceTab>());
+  const markInventoryChanged = () => {
+    staleInventoryTabsRef.current = new Set<WorkspaceTab>(['mixes', 'rails']);
   };
-
-  const refreshInventoryDependents = async (nextToken: string) => {
-    await Promise.allSettled([
-      loadSummary(nextToken, dashboardWindow),
-      shelf.reload(nextToken),
-      mixes.loadMixes(nextToken),
-      mixes.loadMixTobaccos(nextToken),
-      rails.reloadCatalog(nextToken),
-    ]);
+  const reloadStaleInventory = (nextToken: string, tab: WorkspaceTab) => {
+    if (!staleInventoryTabsRef.current.delete(tab)) return;
+    if (tab === 'mixes') {
+      void mixes.loadMixes(nextToken);
+      void mixes.loadMixTobaccos(nextToken);
+    }
+    if (tab === 'rails') void rails.reloadCatalog(nextToken);
   };
 
 
@@ -326,9 +287,16 @@ export const App = () => {
     if (activeTab === 'catalog') void loadInventory(token);
     if (activeTab === 'catalog' && catalogView === 'ideas') void catalogIdeas.reload(token);
     if (activeTab === 'shelf') void shelf.reload(token);
-    if (activeTab === 'dashboard') void shelfDashboard.reload(token);
+    if (activeTab === 'dashboard') void guestChoices.reload(token);
+    // Код смены мог загрузить лист «Ещё» (#337) — сотрудники и операторы грузятся сами по себе.
+    if (activeTab === 'access' && dailyCode.status === 'idle') void dailyCode.reload(token);
+    if (activeTab === 'access' && staff.status === 'idle') {
+      void staff.reload(token, user.role);
+      void telegramOps.reload(token, user.role);
+    }
     // Приёмка поставки тоже меняет наличие для гостя.
-    if (previous === 'shelf' || previous === 'deliveries') void refreshInventoryDependents(token);
+    if (previous === 'shelf' || previous === 'deliveries') markInventoryChanged();
+    reloadStaleInventory(token, activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -450,18 +418,17 @@ export const App = () => {
         }
 
         setUser(profile.user);
+        // Сервер на двух ядрах: залп из всех запросов разом держал первый экран
+        // полторы секунды (#506). Сначала — дашборд, с которого открывается
+        // Мастер; миксы и рейлы фоном, по ним ищет Cmd+K; каталог и доступ —
+        // при открытии своих вкладок.
         await Promise.all([
-          loadInventory(token),
           shelf.reload(token),
-          shelfDashboard.reload(token),
-          loadSummary(token, dashboardWindow),
-          mixes.reload(token),
-          rails.reload(token),
-          dailyCode.reload(token),
-          staff.reload(token, profile.user.role),
-          telegramOps.reload(token, profile.user.role),
+          guestChoices.reload(token),
         ]);
         setStatus('ready');
+        void mixes.reload(token);
+        void rails.reload(token);
       } catch {
         storeToken('');
         setToken('');
@@ -489,42 +456,13 @@ export const App = () => {
         method: 'POST',
         body: JSON.stringify({ login, password }),
       });
-      const response = await requestJson<unknown>('/staff/auth/me', {}, auth.accessToken);
-      const profile = readEntityPayload<{ user: StaffUser }>(response);
-
-      if (!profile?.user) {
-        throw new Error('Не удалось подтвердить профиль');
-      }
-
+      // Профиль и данные загрузит hydrate по новому токену.
       storeToken(auth.accessToken);
       setToken(auth.accessToken);
-      setUser(profile.user);
-      await Promise.all([
-        loadInventory(auth.accessToken),
-        shelf.reload(auth.accessToken),
-        shelfDashboard.reload(auth.accessToken),
-        loadSummary(auth.accessToken, dashboardWindow),
-        mixes.reload(auth.accessToken),
-        rails.reload(auth.accessToken),
-        dailyCode.reload(auth.accessToken),
-        staff.reload(auth.accessToken, profile.user.role),
-        telegramOps.reload(auth.accessToken, profile.user.role),
-      ]);
-      setStatus('ready');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Не удалось войти');
       setStatus('error');
     }
-  };
-
-  const onSelectDashboardWindow = async (windowKey: DashboardWindowKey) => {
-    setDashboardWindow(windowKey);
-
-    if (!token || !user) {
-      return;
-    }
-
-    await loadSummary(token, windowKey);
   };
 
   const refreshInventorySurface = async (
@@ -615,7 +553,7 @@ export const App = () => {
     staff.reset();
     telegramOps.reset();
     shelf.reset();
-    shelfDashboard.reset();
+    guestChoices.reset();
     catalogIdeas.reset();
     setCatalogView('all');
     setPendingShelfCard('');
@@ -629,8 +567,6 @@ export const App = () => {
     commitInventorySort(defaultInventoryListResponse.sort);
     setInventoryMeta(defaultInventoryListResponse.meta);
     setSelectedInventoryIds([]);
-    setSummary(null);
-    setDashboardWindow('14d');
     setStatus('idle');
     setError('');
     setPassword('');
@@ -638,7 +574,6 @@ export const App = () => {
     setWhatsNewOpen(false);
     setInventoryStatus('idle');
     setInventoryError('');
-    setSummaryError('');
     setToggleId('');
     setInventoryBatchAction('');
   };
@@ -656,9 +591,9 @@ export const App = () => {
 
     try {
       await action();
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : fallback);
@@ -670,6 +605,21 @@ export const App = () => {
 
   const onAddToShelf = (item: InventoryTobacco) =>
     runCatalogShelfAction(item, () => shelf.add(item.id), 'Не удалось поставить табак на полку');
+
+  const onAddToPlan = (item: InventoryTobacco) =>
+    runCatalogShelfAction(item, () => shelf.add(item.id, 'plan'), 'Не удалось добавить табак в план');
+
+  // «В план» из редактора микса (#566): статус гостя не меняется, а у Мастера микс
+  // может перейти из «Блокирован» в «Ждут план», поэтому список миксов перечитывается.
+  const onPlanMixTobacco = async (item: InventoryTobacco) => {
+    await shelf.add(item.id, 'plan');
+    if (token) void mixes.loadMixes(token);
+  };
+
+  const onUndoMixPlan = async (item: InventoryTobacco) => {
+    await shelf.remove(item.id);
+    if (token) void mixes.loadMixes(token);
+  };
 
   const onRemoveFromShelf = (item: InventoryTobacco) =>
     runCatalogShelfAction(item, () => shelf.remove(item.id), 'Не удалось убрать табак с полки');
@@ -701,9 +651,9 @@ export const App = () => {
         },
         token,
       );
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось обновить архив');
@@ -740,9 +690,9 @@ export const App = () => {
         setInventoryError(`Часть позиций не обновилась: ${failed.join(', ')}`);
       }
       setSelectedInventoryIds([]);
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryBatchAction('');
       return;
     }
@@ -764,9 +714,9 @@ export const App = () => {
         setInventoryError(`Часть позиций не обновилась: ${batch.skippedIds.join(', ')}`);
       }
       setSelectedInventoryIds([]);
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventoryStatus('ready');
     } catch (cause) {
       setInventoryError(cause instanceof Error ? cause.message : 'Не удалось выполнить массовое действие');
@@ -829,9 +779,9 @@ export const App = () => {
         token,
       );
 
-      const dependentRefresh = refreshInventoryDependents(token);
+      markInventoryChanged();
+      void shelf.reload(token);
       await loadInventory(token, inventoryFilters, inventorySort);
-      void dependentRefresh;
       setInventorySaveStatus('ready');
     } catch (cause) {
       setInventorySaveError(cause instanceof Error ? cause.message : 'Не удалось сохранить табак');
@@ -881,43 +831,43 @@ export const App = () => {
 
 
 
+  // «Нет: X» в «Миксах»: карточка табака с полки, а если на полке его нет — из каталога.
+  const onOpenMissingTobacco = (tobacco: MissingTobacco) => {
+    if (tobacco.onShelf) {
+      setPendingShelfCard(tobacco.tobaccoId);
+      setActiveTab('shelf');
+      return;
+    }
+    const nextFilters: InventoryListFilters = {
+      ...defaultInventoryListResponse.filters,
+      options: inventoryFiltersRef.current.options,
+      search: `${tobacco.manufacturer} ${tobacco.name}`,
+      archived: 'all',
+    };
+    commitInventoryFilters(nextFilters);
+    setPendingCatalogCard(tobacco.tobaccoId);
+    setCatalogView('all');
+    setActiveTab('catalog');
+    void refreshInventorySurface(nextFilters, inventorySortRef.current, 1);
+  };
+
   const renderDashboard = () => (
     <DashboardView
-      summary={summary}
-      summaryError={summaryError}
-      onNavigate={(tab) => setActiveTab(tab === 'inventory' ? 'shelf' : tab)}
-      shelfBlock={
-        <>
-          <ShelfDashboardBlock
-            data={shelfDashboard.data}
-            status={shelfDashboard.status}
-            error={shelfDashboard.error}
-            bowlGrams={shelf.view?.settings.bowlGrams ?? DEFAULT_SHELF_SETTINGS.bowlGrams}
-            leadDays={shelf.view?.settings.leadDays ?? DEFAULT_SHELF_SETTINGS.leadDays}
-            onOpenTobacco={(tobaccoId) => {
-              setPendingShelfCard(tobaccoId);
-              setActiveTab('shelf');
-            }}
-            onSetBudget={() => setBudgetSettingsOpen(true)}
-          />
-          {/* Без загруженной полки настройки неизвестны — по умолчанию их не перезаписываем. */}
-          {budgetSettingsOpen && shelf.view ? (
-            <ShelfSettingsDialog
-              settings={shelf.view.settings}
-              interval={shelf.view.interval}
-              horizon={shelf.view.horizon}
-              onSave={async (settings) => {
-                const saved = await shelf.saveSettings(settings);
-                if (token) await shelfDashboard.reload(token);
-                return saved;
-              }}
-              onClose={() => setBudgetSettingsOpen(false)}
-            />
-          ) : null}
-        </>
-      }
+      data={guestChoices.data}
+      period={guestChoices.period}
+      status={guestChoices.status}
+      error={guestChoices.error}
+      onPeriodChange={(period) => void guestChoices.load(period)}
+      onSignal={(kind) => {
+        if (kind === 'out') setShelfMode('order');
+        setActiveTab(kind === 'out' ? 'shelf' : kind === 'hidden' ? 'mixes' : 'rails');
+      }}
     />
   );
+
+  // Отметка из профиля табака («Добавить в выбор») тоже включает режим выбора.
+  const catalogPicking =
+    isPhone && activeTab === 'catalog' && catalogView === 'all' && (catalogPickMode || selectedInventoryIds.length > 0);
 
   const renderInventory = () => (
     <InventoryView
@@ -932,6 +882,10 @@ export const App = () => {
       pendingRowId={toggleId}
       pendingBatchAction={inventoryBatchAction}
       shelfStatuses={shelfStatuses}
+      shelfStates={shelfStates}
+      picking={catalogPicking}
+      createRequested={catalogCreateRequested}
+      onCreateOpened={() => setCatalogCreateRequested(false)}
       onSearchChange={onInventorySearchChange}
       onStockChange={(value) => void onInventoryStockChange(value)}
       onArchivedChange={(value) => void onInventoryArchivedChange(value)}
@@ -941,8 +895,10 @@ export const App = () => {
       onPageChange={onInventoryPageChange}
       onPageSizeChange={(pageSize) => void onInventoryPageSizeChange(pageSize)}
       onToggleSelection={onToggleInventorySelection}
+      onSetSelection={setSelectedInventoryIds}
       onToggleSelectAll={onToggleSelectAllInventory}
       onAddToShelf={(item) => void onAddToShelf(item)}
+      onAddToPlan={(item) => void onAddToPlan(item)}
       onRemoveFromShelf={(item) => void onRemoveFromShelf(item)}
       onArchiveTobacco={(item, archived) => void onArchiveTobacco(item, archived)}
       onRunBatchAction={(action) => void onRunInventoryBatch(action)}
@@ -957,6 +913,8 @@ export const App = () => {
         if (view === 'ideas' && token) void catalogIdeas.reload(token);
       }}
       ideas={<CatalogIdeasView ideas={catalogIdeas} shelfStatuses={shelfStatuses} />}
+      openCardId={pendingCatalogCard}
+      onCardOpened={() => setPendingCatalogCard('')}
     />
   );
 
@@ -966,11 +924,6 @@ export const App = () => {
       mode={shelfMode}
       onModeChange={setShelfMode}
       onGoCatalog={() => setActiveTab('catalog')}
-      onOpenIdeas={() => {
-        // Смена вкладки сама перечитает идеи.
-        setCatalogView('ideas');
-        setActiveTab('catalog');
-      }}
       onOpenInCatalog={(row) => {
         setCatalogView('all');
         setActiveTab('catalog');
@@ -981,8 +934,6 @@ export const App = () => {
         setPendingInvoice(file);
         setActiveTab('deliveries');
       }}
-      settingsOpen={shelfSettingsOpen}
-      onSettingsOpenChange={setShelfSettingsOpen}
       openCardId={pendingShelfCard}
       onCardOpened={() => setPendingShelfCard('')}
       selection={shelfSelection}
@@ -996,9 +947,7 @@ export const App = () => {
       pendingFile={pendingInvoice}
       onPendingFileTaken={() => setPendingInvoice(null)}
       onOpenShelf={() => setActiveTab('shelf')}
-      onAccepted={() => {
-        if (token) void refreshInventoryDependents(token);
-      }}
+      onAccepted={markInventoryChanged}
     />
   );
 
@@ -1010,6 +959,9 @@ export const App = () => {
           editor={mixes.mixEditor}
           tobaccos={mixes.mixTobaccos}
           componentTobaccos={mixes.mixComponentTobaccos}
+          shelfStatuses={shelfStatuses}
+          onAddToPlan={onPlanMixTobacco}
+          onUndoPlan={onUndoMixPlan}
           onSearchTobaccos={mixes.searchMixTobaccos}
           saveStatus={mixes.mixSaveStatus}
           saveError={mixes.mixSaveError}
@@ -1045,9 +997,15 @@ export const App = () => {
         onCopyMix={onCopyMix}
         onToggleMixAvailable={(mix) => void mixes.onToggleMixAvailable(mix)}
         onDeleteMix={(mix) => void mixes.onDeleteMix(mix)}
+        onOpenTobacco={onOpenMissingTobacco}
         rowPendingId={mixes.mixRowPendingId}
       />
     );
+  };
+
+  const onCreateRail = () => {
+    rails.onResetRailEditor();
+    rails.setRailEditorSheetOpen(true);
   };
 
   const renderRails = () => (
@@ -1058,10 +1016,7 @@ export const App = () => {
         railsStatus={rails.railsStatus}
         railsError={rails.railsError}
         activeEditorId={rails.railEditor.id}
-        onCreateRail={() => {
-          rails.onResetRailEditor();
-          rails.setRailEditorSheetOpen(true);
-        }}
+        onCreateRail={onCreateRail}
         onOpenRail={(rail) => {
           rails.onSelectRail(rail);
           rails.setRailEditorSheetOpen(true);
@@ -1172,8 +1127,8 @@ export const App = () => {
     };
     const openWhatsNewAction = (action: WhatsNewAction) => {
       closeWhatsNew();
-      // «Закупка» — только на десктопе: на телефоне — полка.
-      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'reorder' : action.view === 'purchase' && !isPhone ? 'purchase' : 'shelf');
+      // «Закупки» больше нет (#518): старые выпуски с ней открывают полку.
+      if (action.tab === 'shelf') setShelfMode(action.view === 'reorder' ? 'order' : 'shelf');
       if (action.tab === 'catalog') {
         setCatalogView(action.view === 'ideas' ? 'ideas' : 'all');
         // Смена вкладки сама перечитает идеи; уже в каталоге — перечитываем здесь.
@@ -1239,36 +1194,62 @@ export const App = () => {
 
     // Режим выбора на телефоне (#shot=mobile-bulk): «Выбрано N» и «Готово» в верхней панели.
     const shelfPicking = isPhone && activeTab === 'shelf' && shelfSelection !== null;
+    // Конструктор микса на телефоне (#540) — свой экран: назад в шапке, сохранение
+    // в нижней панели вместо меню разделов.
+    const mixEditing = isPhone && activeTab === 'mixes' && mixes.mixesScreen !== 'catalog';
 
     return (
       <main className="shell shell--master shell--master-workspace" id="main-content">
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
-        {isPhone ? (
+        {mixEditing ? null : isPhone ? (
           <MobileTopBar
-            title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab, shelfMode)}
+            title={shelfPicking ? `Выбрано ${formatMetricValue(shelfSelection.length)}` : mobileTitleFor(activeTab)}
             action={
               shelfPicking ? (
                 <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection(null)}>
                   Готово
                 </button>
-              ) : activeTab === 'shelf' ? (
+              ) : activeTab === 'shelf' && shelfMode === 'shelf' ? (
+                <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
+                  Выбрать
+                </button>
+              ) : activeTab === 'mixes' ? (
+                <button type="button" className="m-topbar__text-btn" onClick={mixes.onStartCreate}>
+                  Новый микс
+                </button>
+              ) : activeTab === 'rails' ? (
+                <button type="button" className="m-topbar__text-btn m-rails-new" onClick={onCreateRail}>
+                  <Plus size={15} aria-hidden />
+                  Новый
+                </button>
+              ) : catalogPicking ? (
+                <button
+                  type="button"
+                  className="m-topbar__text-btn"
+                  data-variant="ghost"
+                  onClick={() => {
+                    setCatalogPickMode(false);
+                    setSelectedInventoryIds([]);
+                  }}
+                >
+                  Готово
+                </button>
+              ) : activeTab === 'catalog' ? (
                 <>
-                  {shelfMode === 'shelf' ? (
-                    <button type="button" className="m-topbar__text-btn" onClick={() => setShelfSelection([])}>
-                      Выбрать
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     className="icon-btn m-topbar__action"
-                    aria-label="К заказу"
-                    aria-pressed={shelfMode === 'reorder'}
-                    onClick={() => setShelfMode(shelfMode === 'reorder' ? 'shelf' : 'reorder')}
+                    aria-label="Новый табак"
+                    onClick={() => setCatalogCreateRequested(true)}
                   >
-                    <ShoppingCart size={18} strokeWidth={1.8} aria-hidden />
+                    <Plus size={20} aria-hidden />
                   </button>
-                  <ShelfMobileHeadMenu onSettings={() => setShelfSettingsOpen(true)} />
+                  {catalogView === 'all' ? (
+                    <button type="button" className="m-topbar__text-btn" onClick={() => setCatalogPickMode(true)}>
+                      Выбрать
+                    </button>
+                  ) : null}
                 </>
               ) : null
             }
@@ -1296,7 +1277,7 @@ export const App = () => {
           </div>
         </section>
 
-        {isPhone ? (
+        {isPhone && !mixEditing ? (
           <MobileNav
             activeTab={activeTab}
             onTabChange={(tab) => {
@@ -1307,6 +1288,12 @@ export const App = () => {
             userRoleLabel={formatRoleLabel(user.role)}
             onSignOut={onSignOut}
             whatsNew={whatsNew}
+            shiftCode={{
+              dailyCodes: dailyCode.dailyCodes,
+              status: dailyCode.status,
+              error: dailyCode.error,
+              onLoad: () => void dailyCode.reload(token),
+            }}
           />
         ) : null}
 

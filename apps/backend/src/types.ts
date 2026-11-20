@@ -1,17 +1,19 @@
 import type {
-  DashboardSummary,
   IntroCard,
   InventoryBatchResult,
   InventoryListResult,
   InventoryTobaccoView,
   MixListResult,
+  MixSubstituteView,
   MixView,
   RailType,
   RailView,
+  StaffMixView,
   StaffRailView,
 } from './state';
 import type { AuditEventView } from './audit';
 import type { CatalogIdeas } from './catalog-ideas';
+import type { ShelfCard } from './shelf';
 import type {
   DailyAccessCodeView,
   StaffAccountView,
@@ -30,6 +32,9 @@ export type GuestAccessSuccess = {
   message: string;
   issuedAt: string;
   nextStep: 'intro' | 'onboarding';
+  // Идёт в заголовке x-atelier-access на всех гостевых запросах (#435).
+  accessToken: string;
+  expiresAt: string;
 };
 
 export type GuestIntroCardsResponse = {
@@ -85,6 +90,7 @@ export type GuestMixerPaletteResponse = {
   tobaccos: Array<{
     id: string;
     manufacturer: string;
+    lineName: string;
     name: string;
     flavorProfiles: string[];
     flavors: string[];
@@ -197,8 +203,10 @@ export type GuestMixRef =
 export type GuestCabinetComponent = {
   tobaccoId: string;
   manufacturer: string;
+  lineName: string;
   name: string;
   proportion: number;
+  substitute?: MixSubstituteView;
 };
 
 // Карточка из строки кабинета: у каталожного — текущий микс (null у удалённого
@@ -280,11 +288,21 @@ export type StaffAuthResponse = {
   };
 };
 
+// PUT /staff/shelf/:tobaccoId/analogs — полный порядок аналогов табака, без него самого.
+// Новый аналог получает этот табак в конец своего списка, убранный теряет его.
+export type StaffShelfAnalogsRequest = {
+  analogs: string[];
+};
+
+// unblockedMixes — миксы, которые из «блокирован» стали «с заменой», для тоста.
+export type StaffShelfAnalogsResponse = {
+  item: ShelfCard;
+  unblockedMixes: Array<{ id: string; name: string }>;
+};
+
 export type StaffMixesResponse = {
   items: MixView[];
 } & MixListResult;
-
-export type StaffDashboardSummaryResponse = DashboardSummary;
 
 export type StaffInventoryResponse = InventoryListResult;
 
@@ -382,7 +400,7 @@ export type StaffAuditEventsResponse = {
 };
 
 export type StaffMixMutationResponse = {
-  item: MixView;
+  item: StaffMixView;
 };
 
 export type StaffRailMutationResponse = {

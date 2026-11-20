@@ -2,8 +2,11 @@ import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import type { Tobacco } from './catalog';
 import { getDailyCodeWindow } from './daily-code';
 import { prisma } from './db';
+import { authorIdOf, loadMixAuthors, type MixAuthor } from './mix-author';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
+import { awaitsPlan, loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
+import { matchSearch, prepareSearchQuery, prepareSearchTarget, searchRank, type SearchTarget } from './search-match';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
 
@@ -15,14 +18,33 @@ export type IntroCard = {
   bullets: string[];
 };
 
+export type TobaccoRef = {
+  tobaccoId: string;
+  manufacturer: string;
+  name: string;
+};
+
+// Табак с полки вместо закончившегося компонента (PRD §6.2 п.1); пропорция — у компонента.
+export type MixSubstituteView = TobaccoRef & { lineName: string; flavors: string[] };
+
+// onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
+// planned — табак в плане (#566).
+export type MissingTobaccoView = TobaccoRef & { onShelf: boolean; planned: boolean };
+
+export type MixGuestStatus = 'visible' | 'substituted' | 'hidden' | 'blocked';
+
+export type MixSubstitutionView = { from: TobaccoRef; to: TobaccoRef };
+
 export type MixComponentView = {
   id: string;
   tobaccoId: string;
   name: string;
   manufacturer: string;
+  lineName: string;
   flavors: string[];
   proportion: number;
   sortOrder: number;
+  substitute?: MixSubstituteView;
 };
 
 export type MixRailMembershipView = {
@@ -46,6 +68,10 @@ export type MixView = {
   smokeCtaCount: number;
   available: boolean;
   guestVisible: boolean;
+  // Правило доступности с аналогами (analogs.ts). У микса с заменой guestVisible = true.
+  status: MixGuestStatus;
+  substitution: MixSubstitutionView | null;
+  missing: MissingTobaccoView[];
   createdAt: string;
   updatedAt: string;
   railMemberships: MixRailMembershipView[];
@@ -72,61 +98,6 @@ export type StaffRailView = RailView & {
 export type SmokeCtaEvent = {
   mixId: string | null;
   createdAt: string;
-};
-
-export type DashboardWindowKey = '7d' | '14d' | '30d';
-
-export type DashboardWindow = {
-  key: DashboardWindowKey;
-  label: string;
-  days: number;
-  startsAt: string;
-  endsAt: string;
-};
-
-export type DashboardBreakdownItem = {
-  key: string;
-  label: string;
-  total: number;
-  inStockCount: number;
-  outOfStockCount: number;
-};
-
-export type DashboardMixMetric = {
-  mixId: string;
-  mixName: string;
-  smokeCtaCount: number;
-  avgRating: number;
-  ratingsCount: number;
-};
-
-export type DashboardRatingDistributionItem = {
-  value: number;
-  count: number;
-};
-
-export type DashboardActivityPoint = {
-  date: string;
-  smokeCtaCount: number;
-  ratingsCount: number;
-};
-
-export type DashboardBlockedMix = {
-  mixId: string;
-  mixName: string;
-  missingComponents: string[];
-  railNames: string[];
-  smokeCtaCount: number;
-};
-
-export type DashboardRailHealthItem = {
-  railId: string;
-  name: string;
-  type: RailType;
-  active: boolean;
-  totalMixCount: number;
-  visibleMixCount: number;
-  hiddenMixCount: number;
 };
 
 export type InventoryStockFilter = 'all' | 'in-stock' | 'out-of-stock';
@@ -203,7 +174,7 @@ export type TobaccoInput = {
 
 export type TobaccoPatch = Partial<TobaccoInput>;
 
-export type MixStatusFilter = 'all' | 'guest-visible' | 'hidden' | 'blocked';
+export type MixStatusFilter = 'all' | 'guest-visible' | 'substituted' | 'hidden' | 'awaiting-plan' | 'blocked';
 
 export type MixRailFilter = 'all' | 'in-rails' | 'without-rails';
 
@@ -219,14 +190,17 @@ export type MixListQuery = {
   flavorProfiles?: string[];
   flavors?: string[];
   flavorTags?: string[];
+  authors?: string[];
   sort?: MixSortField;
   direction?: MixSortDirection;
   page?: number;
   pageSize?: number;
 };
 
+export type StaffMixView = MixView & { author: MixAuthor | null };
+
 export type MixListResult = {
-  items: MixView[];
+  items: StaffMixView[];
   filters: {
     search: string;
     status: MixStatusFilter;
@@ -235,11 +209,13 @@ export type MixListResult = {
     flavorProfiles: string[];
     flavors: string[];
     flavorTags: string[];
+    authors: string[];
     options: {
       manufacturers: string[];
       flavorProfiles: string[];
       flavors: string[];
       flavorTags: string[];
+      authors: string[];
     };
   };
   sort: {
@@ -250,7 +226,9 @@ export type MixListResult = {
     totalItems: number;
     filteredItems: number;
     guestVisibleCount: number;
+    substitutedCount: number;
     hiddenCount: number;
+    awaitingPlanCount: number;
     blockedCount: number;
     inRailsCount: number;
     withoutRailsCount: number;
@@ -306,36 +284,6 @@ export type InventoryBatchResult = {
   skippedIds: string[];
   processedCount: number;
   items: InventoryTobaccoView[];
-};
-
-export type DashboardSummary = {
-  window: DashboardWindow;
-  inventory: {
-    total: number;
-    inStockCount: number;
-    outOfStockCount: number;
-    manufacturers: DashboardBreakdownItem[];
-    flavorProfiles: DashboardBreakdownItem[];
-    topFlavors: DashboardBreakdownItem[];
-  };
-  product: {
-    smokeCtaTotal: number;
-    ratingsTotal: number;
-    avgGuestRating: number;
-    topMixes: DashboardMixMetric[];
-    topRatedMixes: DashboardMixMetric[];
-    ratingDistribution: DashboardRatingDistributionItem[];
-    activity: DashboardActivityPoint[];
-  };
-  ops: {
-    guestVisibleMixesCount: number;
-    hiddenMixesCount: number;
-    blockedByInventoryCount: number;
-    activeRailsCount: number;
-    emptyActiveRailsCount: number;
-    blockedMixes: DashboardBlockedMix[];
-    railHealth: DashboardRailHealthItem[];
-  };
 };
 
 export type MixInput = {
@@ -550,13 +498,7 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 48) || 'item';
 
-const dashboardWindowConfig: Record<DashboardWindowKey, { label: string; days: number }> = {
-  '7d': { label: '7 дней', days: 7 },
-  '14d': { label: '14 дней', days: 14 },
-  '30d': { label: '30 дней', days: 30 },
-};
-
-const flavorProfileLabels: Record<string, string> = {
+export const flavorProfileLabels: Record<string, string> = {
   sweet: 'Сладкие',
   sour: 'Кислые',
   spicy: 'Пряные',
@@ -569,6 +511,8 @@ const flavorProfileLabels: Record<string, string> = {
   citrus: 'Цитрусовые',
   berry: 'Ягодные',
   perfume: 'Парфюмные',
+  beverage: 'Напитки',
+  gastro: 'Гастро',
 };
 
 const serializeList = (items: string[]) => JSON.stringify(unique(items.map((item) => item.trim()).filter(Boolean)));
@@ -592,9 +536,6 @@ const parseList = (value: string | null | undefined) => {
   }
 };
 
-const isDashboardWindowKey = (value: string): value is DashboardWindowKey =>
-  value === '7d' || value === '14d' || value === '30d';
-
 const isInventoryStockFilter = (value: string): value is InventoryStockFilter =>
   value === 'all' || value === 'in-stock' || value === 'out-of-stock';
 
@@ -602,92 +543,6 @@ const isInventorySortField = (value: string): value is InventorySortField =>
   value === 'stock' || value === 'name' || value === 'manufacturer' || value === 'updatedAt' || value === 'dependentMixes';
 
 const isInventorySortDirection = (value: string): value is InventorySortDirection => value === 'asc' || value === 'desc';
-
-export const normalizeDashboardWindowKey = (value: unknown): DashboardWindowKey => {
-  if (typeof value !== 'string') {
-    return '14d';
-  }
-
-  return isDashboardWindowKey(value) ? value : '14d';
-};
-
-const startOfDay = (value: Date) => {
-  const next = new Date(value);
-  next.setHours(0, 0, 0, 0);
-  return next;
-};
-
-const endOfDay = (value: Date) => {
-  const next = new Date(value);
-  next.setHours(23, 59, 59, 999);
-  return next;
-};
-
-const toDayKey = (value: Date) => {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
-const buildDashboardWindow = (key: DashboardWindowKey) => {
-  const config = dashboardWindowConfig[key];
-  const endsAtDate = endOfDay(new Date());
-  const startsAtDate = startOfDay(new Date());
-  startsAtDate.setDate(startsAtDate.getDate() - (config.days - 1));
-
-  return {
-    key,
-    label: config.label,
-    days: config.days,
-    startsAtDate,
-    endsAtDate,
-    startsAt: startsAtDate.toISOString(),
-    endsAt: endsAtDate.toISOString(),
-  };
-};
-
-const buildInventoryBreakdown = (
-  values: Array<{
-    key: string;
-    label: string;
-    inStock: boolean;
-  }>,
-): DashboardBreakdownItem[] => {
-  const stats = new Map<string, DashboardBreakdownItem>();
-
-  for (const value of values) {
-    const current = stats.get(value.key) ?? {
-      key: value.key,
-      label: value.label,
-      total: 0,
-      inStockCount: 0,
-      outOfStockCount: 0,
-    };
-
-    current.total += 1;
-    if (value.inStock) {
-      current.inStockCount += 1;
-    } else {
-      current.outOfStockCount += 1;
-    }
-
-    stats.set(value.key, current);
-  }
-
-  return [...stats.values()].sort((left, right) => {
-    if (right.total !== left.total) {
-      return right.total - left.total;
-    }
-
-    if (right.inStockCount !== left.inStockCount) {
-      return right.inStockCount - left.inStockCount;
-    }
-
-    return left.label.localeCompare(right.label, 'ru');
-  });
-};
 
 const mapIntroCardRecord = (record: {
   id: string;
@@ -820,7 +675,7 @@ const getMixFlavorShape = (components: Array<{ tobacco: { flavorProfiles: string
   flavorTags: unique(components.flatMap((item) => parseList(item.tobacco.flavorTags))),
 });
 
-const mapMixView = (record: {
+const mapMixView = (context: RuleContext) => (record: {
   id: string;
   name: string;
   description: string;
@@ -836,15 +691,9 @@ const mapMixView = (record: {
     tobaccoId: string;
     proportion: number;
     sortOrder: number;
-    tobacco: {
-      id: string;
-      name: string;
-      manufacturer: string;
+    tobacco: RuleTobaccoRecord & {
       flavorProfiles: string;
-      flavors: string;
       flavorTags: string;
-      inStock: boolean;
-      archived: boolean;
     };
   }>;
   railMixes: Array<{
@@ -863,8 +712,11 @@ const mapMixView = (record: {
   const avgRating = ratingsCount
     ? Number((record.ratings.reduce((sum, item) => sum + item.value, 0) / ratingsCount).toFixed(1))
     : Number(record.baseAvgRating.toFixed(1));
-  const guestVisible =
-    record.available && record.components.every((item) => item.tobacco.inStock && !item.tobacco.archived);
+  const availability = resolveMixAvailability(
+    record.available,
+    record.components.map((item) => toRuleComponent(item.tobacco, context)),
+  );
+  const guestVisible = availability.status === 'visible' || availability.status === 'substituted';
   const railMemberships = record.railMixes.map((item) => ({
     id: item.rail.id,
     name: item.rail.name,
@@ -885,15 +737,20 @@ const mapMixView = (record: {
       tobaccoId: item.tobacco.id,
       name: item.tobacco.name,
       manufacturer: item.tobacco.manufacturer,
+      lineName: item.tobacco.lineName,
       flavors: parseList(item.tobacco.flavors),
       proportion: item.proportion,
       sortOrder: item.sortOrder,
+      ...(availability.substitute?.tobaccoId === item.tobacco.id ? { substitute: availability.substitute.to } : {}),
     })),
     avgRating,
     ratingsCount,
     smokeCtaCount: record._count.smokeEvents,
     available: record.available,
     guestVisible,
+    status: availability.status,
+    substitution: availability.substitution,
+    missing: availability.missing,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     railMemberships,
@@ -903,44 +760,47 @@ const mapMixView = (record: {
 };
 
 const fetchMixViews = async () => {
-  const records = await prisma.mix.findMany({
-    include: {
-      components: {
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          tobacco: true,
+  const [records, context] = await Promise.all([
+    prisma.mix.findMany({
+      include: {
+        components: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            tobacco: true,
+          },
         },
-      },
-      railMixes: {
-        include: {
-          rail: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              active: true,
+        railMixes: {
+          include: {
+            rail: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                active: true,
+              },
             },
           },
         },
-      },
-      ratings: {
-        select: {
-          value: true,
+        ratings: {
+          select: {
+            value: true,
+          },
+        },
+        _count: {
+          select: {
+            smokeEvents: true,
+          },
         },
       },
-      _count: {
-        select: {
-          smokeEvents: true,
-        },
-      },
-    },
-  });
+    }),
+    loadRuleContext(),
+  ]);
 
-  return records.map(mapMixView);
+  return records.map(mapMixView(context));
 };
 
 const normalizeMixStatusFilter = (value: unknown): MixStatusFilter => {
-  if (value === 'guest-visible' || value === 'hidden' || value === 'blocked') {
+  if (value === 'guest-visible' || value === 'substituted' || value === 'hidden' || value === 'awaiting-plan' || value === 'blocked') {
     return value;
   }
 
@@ -970,11 +830,15 @@ const normalizeMixSortDirection = (value: unknown): MixSortDirection => {
 const matchesMixStatus = (mix: MixView, status: MixStatusFilter) => {
   switch (status) {
     case 'guest-visible':
-      return mix.guestVisible;
+      return mix.status === 'visible';
+    case 'substituted':
+      return mix.status === 'substituted';
     case 'hidden':
-      return !mix.available;
+      return mix.status === 'hidden';
+    case 'awaiting-plan':
+      return awaitsPlan(mix);
     case 'blocked':
-      return mix.available && !mix.guestVisible;
+      return mix.status === 'blocked' && !awaitsPlan(mix);
     case 'all':
     default:
       return true;
@@ -1099,6 +963,18 @@ const resolveInventorySelections = (options: string[], selected: string[]) => {
   return options.filter((item) => selected.includes(normalizeToken(item)));
 };
 
+// Значение не из списка вариантов (набрано руками или пришло ссылкой) раскрывается
+// в похожие варианты (#522). Если похожих нет — остаётся как есть и ничего не находит.
+const expandInventorySelections = (options: string[], selected: string[]) =>
+  unique(selected.flatMap((value) => {
+    if (options.some((option) => normalizeToken(option) === value)) {
+      return [value];
+    }
+
+    const similar = options.filter((option) => matchSearch(value, [option]) !== null).map(normalizeToken);
+    return similar.length ? similar : [value];
+  }));
+
 const matchesInventorySelection = (values: string[], selected: string[]) => {
   if (!selected.length) {
     return true;
@@ -1128,10 +1004,81 @@ const inventoryMixSort = (left: InventoryDependentMixView, right: InventoryDepen
   return left.name.localeCompare(right.name, 'ru');
 };
 
-const buildInventoryTobaccoView = (
-  tobacco: ReturnType<typeof mapTobacco>,
+// Фильтрам, поиску и сортировке каталога хватает этих колонок. Тяжёлые
+// description, rawSourceTags и imageUrl на одиннадцати тысячах табаков съедали
+// большую часть ответа, поэтому они дочитываются только для строк страницы (#502).
+// Сырой SQL, а не findMany: на всём каталоге движок Prisma разбирает строки
+// вдвое дольше, чем идёт сам запрос.
+const scanInventoryTobaccos = () => prisma.$queryRaw<InventoryScanRecord[]>`
+  SELECT "id", "name", "manufacturer", "lineName", "officialStrength", "communityStrength",
+         "flavorProfiles", "flavors", "flavorTags", "inStock", "archived", "updatedAt"
+  FROM "Tobacco"
+`;
+
+type InventoryScanRecord = {
+  id: string;
+  name: string;
+  manufacturer: string;
+  lineName: string;
+  officialStrength: string | null;
+  communityStrength: string | null;
+  flavorProfiles: string;
+  flavors: string;
+  flavorTags: string;
+  inStock: boolean;
+  archived: boolean;
+  updatedAt: Date;
+};
+
+// Нормализованные ключи поиска считаются один раз на табак, пока его поля не
+// изменились: каталог читается целиком на каждый запрос, а транслит и слова на
+// одиннадцати тысячах табаков дороже самого сравнения (#522).
+const inventorySearchTargets = new Map<string, { key: string; target: SearchTarget }>();
+
+type InventorySearchable = Pick<
+  InventoryTobaccoView,
+  'id' | 'name' | 'manufacturer' | 'lineName' | 'officialStrength' | 'communityStrength' | 'flavorProfiles' | 'flavors' | 'flavorTags'
+> & { dependentMixes: Array<{ name: string }> };
+
+const inventorySearchTarget = (item: InventorySearchable) => {
+  const fields = [
+    item.name,
+    item.manufacturer,
+    item.lineName,
+    item.officialStrength ?? '',
+    item.communityStrength ?? '',
+    ...item.flavorProfiles,
+    ...item.flavors,
+    ...item.flavorTags,
+    ...item.dependentMixes.map((mix) => mix.name),
+  ];
+  const key = fields.join('\u0001');
+  const cached = inventorySearchTargets.get(item.id);
+  if (cached?.key === key) {
+    return cached.target;
+  }
+
+  const target = prepareSearchTarget(fields);
+  inventorySearchTargets.set(item.id, { key, target });
+  return target;
+};
+
+const mapInventoryScanRecord = (record: InventoryScanRecord) => ({
+  ...record,
+  flavorProfiles: parseList(record.flavorProfiles),
+  flavors: parseList(record.flavors),
+  flavorTags: parseList(record.flavorTags),
+  updatedAt: record.updatedAt.toISOString(),
+});
+
+// Один коллатор на весь модуль: localeCompare(…, 'ru') на каждое сравнение
+// втрое медленнее при сортировке всего каталога.
+const ruCollator = new Intl.Collator('ru');
+
+const buildInventoryTobaccoView = <T extends { id: string }>(
+  tobacco: T,
   allMixes: MixView[],
-): InventoryTobaccoView => {
+) => {
   const dependentMixes = allMixes
     .filter((mix) => mix.componentIds.includes(tobacco.id))
     .map((mix) => ({
@@ -1152,9 +1099,11 @@ const buildInventoryTobaccoView = (
   };
 };
 
+type InventorySortable = Pick<InventoryTobaccoView, 'name' | 'manufacturer' | 'updatedAt' | 'dependentMixCount' | 'inStock'>;
+
 const inventoryTobaccoSort = (
-  left: InventoryTobaccoView,
-  right: InventoryTobaccoView,
+  left: InventorySortable,
+  right: InventorySortable,
   field: InventorySortField,
   direction: InventorySortDirection,
 ) => {
@@ -1164,14 +1113,14 @@ const inventoryTobaccoSort = (
 
   switch (field) {
     case 'name': {
-      const result = left.name.localeCompare(right.name, 'ru');
+      const result = ruCollator.compare(left.name, right.name);
       if (result !== 0) {
         return result * multiplier;
       }
       break;
     }
     case 'manufacturer': {
-      const manufacturerResult = left.manufacturer.localeCompare(right.manufacturer, 'ru');
+      const manufacturerResult = ruCollator.compare(left.manufacturer, right.manufacturer);
       if (manufacturerResult !== 0) {
         return manufacturerResult * multiplier;
       }
@@ -1199,7 +1148,7 @@ const inventoryTobaccoSort = (
     }
   }
 
-  return left.name.localeCompare(right.name, 'ru');
+  return ruCollator.compare(left.name, right.name);
 };
 
 const validateMixComponents = async (componentIds: string[]) => {
@@ -1465,9 +1414,7 @@ const wipeStorage = async (tx: StorageTx) => {
   await tx.mixComponent.deleteMany();
   await tx.rail.deleteMany();
   await tx.mix.deleteMany();
-  await tx.stockEntry.deleteMany();
   await tx.shelfItem.deleteMany();
-  await tx.shelfSettings.deleteMany();
   await tx.deliveryLine.deleteMany();
   await tx.delivery.deleteMany();
   await tx.supplierItem.deleteMany();
@@ -1691,45 +1638,39 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
   await ensureAppState();
 
   const [records, mixes] = await Promise.all([
-    prisma.tobacco.findMany(),
+    scanInventoryTobaccos(),
     fetchMixViews(),
   ]);
 
-  const items = records.map((record) => buildInventoryTobaccoView(mapTobacco(record), mixes));
+  const items = records.map((record) => buildInventoryTobaccoView(mapInventoryScanRecord(record), mixes));
   const search = typeof query.search === 'string' ? query.search.trim() : '';
   // Точная выборка по id (редактор микса резолвит табаки своих компонентов с
   // полными данными). Exact-match, без normalizeToken — id чувствителен к регистру.
   const ids = new Set((query.ids ?? []).map((id) => id.trim()).filter(Boolean));
   const stock = normalizeInventoryStockFilter(query.stock);
   const archived = normalizeInventoryArchivedFilter(query.archived);
-  const manufacturers = normalizeInventorySelections(query.manufacturers);
-  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
-  const flavors = normalizeInventorySelections(query.flavors);
-  const flavorTags = normalizeInventorySelections(query.flavorTags);
+  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort(ruCollator.compare);
+  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort(ruCollator.compare);
+  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort(ruCollator.compare);
+  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort(ruCollator.compare);
+  const manufacturers = expandInventorySelections(manufacturerOptions, normalizeInventorySelections(query.manufacturers));
+  const flavorProfiles = expandInventorySelections(flavorProfileOptions, normalizeInventorySelections(query.flavorProfiles));
+  const flavors = expandInventorySelections(flavorOptions, normalizeInventorySelections(query.flavors));
+  const flavorTags = expandInventorySelections(flavorTagOptions, normalizeInventorySelections(query.flavorTags));
   const sort = normalizeInventorySortField(query.sort);
   const direction = normalizeInventorySortDirection(query.direction);
   const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
-  const searchTokens = search
-    .split(/\s+/)
-    .map(normalizeToken)
-    .filter(Boolean);
+  const searchQuery = prepareSearchQuery(search);
+  const searchRanks = new Map<string, number>();
 
-  // Выборка по всем фильтрам, кроме наличия: по ней считаются счётчики чипов
-  // наличия, иначе выбранный чип обнулял соседний (#103).
-  const stockScopeItems = items
+  // Выборка по всем фильтрам, кроме наличия и архива: по ней считаются счётчики
+  // чипов статуса, иначе выбранный чип обнулял соседние (#103, #472).
+  const statusScopeItems = items
     .filter((item) => {
       // Явный набор id игнорирует остальные фильтры: нужно вернуть именно эти
       // табаки (в т.ч. архивные/без наличия), чтобы резолвить компоненты микса.
       if (ids.size) {
         return ids.has(item.id);
-      }
-
-      if (archived === 'active' && item.archived) {
-        return false;
-      }
-
-      if (archived === 'archived' && !item.archived) {
-        return false;
       }
 
       if (!matchesInventorySelection([item.manufacturer], manufacturers)) {
@@ -1748,31 +1689,33 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
         return false;
       }
 
-      if (!searchTokens.length) {
+      if (!searchQuery) {
         return true;
       }
 
-      const haystack = [
-        item.name,
-        item.manufacturer,
-        item.lineName,
-        item.officialStrength ?? '',
-        item.communityStrength ?? '',
-        ...item.flavorProfiles,
-        ...item.flavors,
-        ...item.flavorTags,
-        ...item.dependentMixes.map((mix) => mix.name),
-      ]
-        .map(normalizeToken)
-        .join(' ');
+      const rank = searchRank(searchQuery, inventorySearchTarget(item));
+      if (rank === null) {
+        return false;
+      }
 
-      return searchTokens.every((token) => haystack.includes(token));
+      searchRanks.set(item.id, rank);
+      return true;
     });
 
-  const filteredItems = stockScopeItems
+  const activeScopeItems = statusScopeItems.filter((item) => !item.archived);
+
+  const filteredItems = statusScopeItems
     .filter((item) => {
       if (ids.size) {
         return true;
+      }
+
+      if (archived === 'active' && item.archived) {
+        return false;
+      }
+
+      if (archived === 'archived' && !item.archived) {
+        return false;
       }
 
       if (stock === 'in-stock') {
@@ -1781,21 +1724,24 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
 
       return stock === 'out-of-stock' ? !item.inStock : true;
     })
-    .sort((left, right) => inventoryTobaccoSort(left, right, sort, direction));
+    // При поиске точные совпадения выше похожих, внутри групп — выбранная сортировка.
+    .sort((left, right) =>
+      (searchRanks.get(left.id) ?? 0) - (searchRanks.get(right.id) ?? 0)
+      || inventoryTobaccoSort(left, right, sort, direction));
 
   const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
   const requestedPage = paginationEnabled ? normalizeStaffPage(query.page) : 1;
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
   const page = Math.min(requestedPage, totalPages);
   const start = (page - 1) * pageSize;
-  const paginatedItems = filteredItems.slice(start, start + pageSize);
-
-  const manufacturerOptions = unique(items.map((item) => item.manufacturer)).sort((left, right) => left.localeCompare(right, 'ru'));
-  const flavorProfileOptions = unique(items.flatMap((item) => item.flavorProfiles)).sort((left, right) =>
-    left.localeCompare(right, 'ru'),
-  );
-  const flavorOptions = unique(items.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru'));
-  const flavorTagOptions = unique(items.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru'));
+  const pageSlice = filteredItems.slice(start, start + pageSize);
+  const pageRecords = await prisma.tobacco.findMany({ where: { id: { in: pageSlice.map((item) => item.id) } } });
+  const pageRecordById = new Map(pageRecords.map((record) => [record.id, record]));
+  // Табак, удалённый между двумя запросами, просто выпадает со страницы.
+  const paginatedItems: InventoryTobaccoView[] = pageSlice.flatMap((item) => {
+    const record = pageRecordById.get(item.id);
+    return record ? [{ ...item, ...mapTobacco(record) }] : [];
+  });
 
   return {
     items: paginatedItems,
@@ -1821,9 +1767,9 @@ export const getInventoryTobaccos = async (query: InventoryListQuery = {}): Prom
     meta: {
       totalItems: items.length,
       filteredItems: filteredItems.length,
-      inStockCount: stockScopeItems.filter((item) => item.inStock).length,
-      outOfStockCount: stockScopeItems.filter((item) => !item.inStock).length,
-      archivedCount: items.filter((item) => item.archived).length,
+      inStockCount: activeScopeItems.filter((item) => item.inStock).length,
+      outOfStockCount: activeScopeItems.filter((item) => !item.inStock).length,
+      archivedCount: statusScopeItems.filter((item) => item.archived).length,
       inMixesCount: items.filter((item) => item.dependentMixCount > 0).length,
       page,
       pageSize,
@@ -2108,9 +2054,7 @@ export const getGuestCatalogMixes = async (filters?: { profiles?: string[]; flav
     });
 };
 
-const buildMostSelectedRail = async (): Promise<RailView> => {
-  const mixes = await getAvailableMixCatalog();
-
+const buildMostSelectedRail = (mixes: MixView[]): RailView => {
   const ranked = mixes
     .filter((mix) => mix.guestVisible && mix.smokeCtaCount > 0)
     .sort((left, right) => {
@@ -2138,9 +2082,7 @@ const buildMostSelectedRail = async (): Promise<RailView> => {
   };
 };
 
-const buildTopRatedRail = async (): Promise<RailView> => {
-  const mixes = await getAvailableMixCatalog();
-
+const buildTopRatedRail = (mixes: MixView[]): RailView => {
   const ranked = mixes
     .filter((mix) => mix.guestVisible && mix.ratingsCount > 0)
     .sort((left, right) => {
@@ -2172,7 +2114,7 @@ const buildTopRatedRail = async (): Promise<RailView> => {
   };
 };
 
-const buildStatisticalRails = async (): Promise<RailView[]> => [await buildMostSelectedRail(), await buildTopRatedRail()];
+const buildStatisticalRails = (mixes: MixView[]): RailView[] => [buildMostSelectedRail(mixes), buildTopRatedRail(mixes)];
 
 const statisticalRailReadOnlyReason = 'Статистический рейл формируется автоматически и доступен только для просмотра.';
 
@@ -2182,9 +2124,9 @@ const toStaffRailView = (rail: RailView): StaffRailView => ({
   readOnlyReason: rail.type === 'statistical' ? statisticalRailReadOnlyReason : '',
 });
 
-const buildRailViews = async (guestOnly: boolean) => {
-  await ensureAppState();
-
+// Миксы читаются один раз на запрос и общие для статистических и редакторских рейлов:
+// правило доступности с аналогами (#479) считается на каждую выборку.
+const buildRails = async (guestOnly: boolean) => {
   const [mixes, rails] = await Promise.all([
     getAvailableMixCatalog(),
     prisma.rail.findMany({
@@ -2210,7 +2152,7 @@ const buildRailViews = async (guestOnly: boolean) => {
 
   const mixMap = new Map(mixes.map((mix) => [mix.id, mix]));
 
-  return rails
+  const editorial = rails
     .filter((rail) => !rail.isSystem)
     .map((rail) => {
       const type = isRailType(rail.type) ? rail.type : 'prepared';
@@ -2231,28 +2173,25 @@ const buildRailViews = async (guestOnly: boolean) => {
         isSystem: rail.isSystem,
       } satisfies RailView;
     });
+
+  return [...buildStatisticalRails(mixes), ...editorial];
 };
 
-export const getGuestHomeRails = async () => {
-  const rails = [...(await buildStatisticalRails()), ...(await buildRailViews(true))];
-  return rails.filter((rail) => rail.mixes.length > 0);
-};
+export const getGuestHomeRails = async () => (await buildRails(true)).filter((rail) => rail.mixes.length > 0);
 
 export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListResult> => {
   await ensureAppState();
 
   const search = typeof query.search === 'string' ? query.search.trim() : '';
-  const normalizedSearch = normalizeToken(search);
+  const searchQuery = prepareSearchQuery(search);
+  const searchRanks = new Map<string, number>();
   const status = normalizeMixStatusFilter(query.status);
   const railState = normalizeMixRailFilter(query.railState);
-  const manufacturers = normalizeInventorySelections(query.manufacturers);
-  const flavorProfiles = normalizeInventorySelections(query.flavorProfiles);
-  const flavors = normalizeInventorySelections(query.flavors);
-  const flavorTags = normalizeInventorySelections(query.flavorTags);
   const sortField = normalizeMixSortField(query.sort);
   const sortDirection = normalizeMixSortDirection(query.direction);
   const paginationEnabled = query.page !== undefined || query.pageSize !== undefined;
-  const allItems = await getAvailableMixCatalog();
+  const [catalog, authorById] = await Promise.all([getAvailableMixCatalog(), loadMixAuthors()]);
+  const allItems: StaffMixView[] = catalog.map((mix) => ({ ...mix, author: authorById.get(mix.id) ?? null }));
 
   const options = {
     manufacturers: unique(allItems.flatMap((item) => item.components.map((component) => component.manufacturer))).sort((left, right) =>
@@ -2260,34 +2199,53 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     flavorProfiles: unique(allItems.flatMap((item) => item.flavorProfiles)).sort((left, right) => left.localeCompare(right, 'ru')),
     flavors: unique(allItems.flatMap((item) => item.flavors)).sort((left, right) => left.localeCompare(right, 'ru')),
     flavorTags: unique(allItems.flatMap((item) => item.flavorTags)).sort((left, right) => left.localeCompare(right, 'ru')),
+    authors: unique(allItems.flatMap((item) => (item.author ? [item.author.name] : []))).sort((left, right) => left.localeCompare(right, 'ru')),
   };
 
+  const selections = (key: keyof typeof options, values: string[] | undefined) =>
+    resolveInventorySelections(options[key], expandInventorySelections(options[key], normalizeInventorySelections(values)));
   const resolvedFilters = {
-    manufacturers: resolveInventorySelections(options.manufacturers, manufacturers),
-    flavorProfiles: resolveInventorySelections(options.flavorProfiles, flavorProfiles),
-    flavors: resolveInventorySelections(options.flavors, flavors),
-    flavorTags: resolveInventorySelections(options.flavorTags, flavorTags),
+    manufacturers: selections('manufacturers', query.manufacturers),
+    flavorProfiles: selections('flavorProfiles', query.flavorProfiles),
+    flavors: selections('flavors', query.flavors),
+    flavorTags: selections('flavorTags', query.flavorTags),
+    authors: selections('authors', query.authors),
   };
 
-  const filteredItems = allItems
-    .filter((mix) => matchesMixStatus(mix, status))
+  // Все фильтры, кроме статуса: по этой выборке считаются чипы статуса (#472).
+  const statusScopeItems = allItems
     .filter((mix) => matchesMixRailState(mix, railState))
-    .filter((mix) =>
-      !normalizedSearch
-      || [
+    .filter((mix) => {
+      if (!searchQuery) {
+        return true;
+      }
+
+      // Описание — только точной подстрокой: опечатки в длинном тексте дают шум.
+      const rank = searchRank(searchQuery, prepareSearchTarget([
         mix.name,
-        mix.description,
         ...mix.flavorProfiles,
         ...mix.flavors,
         ...mix.flavorTags,
         ...mix.components.flatMap((component) => [component.name, component.manufacturer, ...component.flavors]),
         ...mix.railMemberships.map((membership) => membership.name),
-      ].some((value) => normalizeToken(value).includes(normalizedSearch)))
+      ], [mix.description]));
+      if (rank === null) {
+        return false;
+      }
+
+      searchRanks.set(mix.id, rank);
+      return true;
+    })
     .filter((mix) => matchesInventorySelection(mix.components.map((component) => component.manufacturer), resolvedFilters.manufacturers))
     .filter((mix) => matchesInventorySelection(mix.flavorProfiles, resolvedFilters.flavorProfiles))
     .filter((mix) => matchesInventorySelection(mix.flavors, resolvedFilters.flavors))
     .filter((mix) => matchesInventorySelection(mix.flavorTags, resolvedFilters.flavorTags))
-    .sort((left, right) => mixViewSortBy(left, right, sortField, sortDirection));
+    .filter((mix) => matchesInventorySelection(mix.author ? [mix.author.name] : [], resolvedFilters.authors));
+  const filteredItems = statusScopeItems
+    .filter((mix) => matchesMixStatus(mix, status))
+    .sort((left, right) =>
+      (searchRanks.get(left.id) ?? 0) - (searchRanks.get(right.id) ?? 0)
+      || mixViewSortBy(left, right, sortField, sortDirection));
 
   const pageSize = paginationEnabled ? normalizeStaffPageSize(query.pageSize) : Math.max(filteredItems.length, 1);
   const requestedPage = paginationEnabled ? normalizeStaffPage(query.page) : 1;
@@ -2306,6 +2264,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
       flavorProfiles: resolvedFilters.flavorProfiles,
       flavors: resolvedFilters.flavors,
       flavorTags: resolvedFilters.flavorTags,
+      authors: resolvedFilters.authors,
       options,
     },
     sort: {
@@ -2315,9 +2274,11 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
     meta: {
       totalItems: allItems.length,
       filteredItems: filteredItems.length,
-      guestVisibleCount: filteredItems.filter((item) => item.guestVisible).length,
-      hiddenCount: filteredItems.filter((item) => !item.available).length,
-      blockedCount: filteredItems.filter((item) => item.available && !item.guestVisible).length,
+      guestVisibleCount: statusScopeItems.filter((item) => item.status === 'visible').length,
+      substitutedCount: statusScopeItems.filter((item) => item.status === 'substituted').length,
+      hiddenCount: statusScopeItems.filter((item) => item.status === 'hidden').length,
+      awaitingPlanCount: statusScopeItems.filter((item) => awaitsPlan(item)).length,
+      blockedCount: statusScopeItems.filter((item) => matchesMixStatus(item, 'blocked')).length,
       inRailsCount: filteredItems.filter((item) => item.railCount > 0).length,
       withoutRailsCount: filteredItems.filter((item) => item.railCount === 0).length,
       page,
@@ -2329,7 +2290,7 @@ export const getStaffMixes = async (query: MixListQuery = {}): Promise<MixListRe
   };
 };
 
-export const createMix = async (payload: Partial<MixInput>) => {
+export const createMix = async (payload: Partial<MixInput>, authorLogin?: string) => {
   await ensureAppState();
 
   const validated = await validateMixInput(payload);
@@ -2338,6 +2299,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
   }
 
   const id = await nextMixId(validated.name);
+  const authorId = authorLogin ? await authorIdOf(authorLogin) : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.mix.create({
@@ -2350,6 +2312,7 @@ export const createMix = async (payload: Partial<MixInput>) => {
         flavorTags: serializeList(validated.flavorTags),
         available: validated.available,
         baseAvgRating: validated.baseAvgRating,
+        authorId,
       },
     });
 
@@ -2472,7 +2435,7 @@ export const deleteRail = async (id: string) => {
 };
 
 export const getStaffRails = async (): Promise<StaffRailView[]> => {
-  return [...(await buildStatisticalRails()), ...(await buildRailViews(false))].map(toStaffRailView);
+  return (await buildRails(false)).map(toStaffRailView);
 };
 
 export const createRail = async (payload: Partial<RailInput>) => {
@@ -2578,11 +2541,21 @@ export const updateRail = async (id: string, payload: RailPatch) => {
   return (await getStaffRails()).find((rail) => rail.id === id) ?? null;
 };
 
-export const recordSmokeCtaEvent = async (mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles'>, guestId: string | null = null) => {
+export const recordSmokeCtaEvent = async (
+  mix: Pick<MixView, 'id' | 'name' | 'flavorProfiles' | 'substitution'>,
+  guestId: string | null = null,
+) => {
   await ensureAppState();
 
   const event = await prisma.smokeCtaEvent.create({
-    data: { mixId: mix.id, guestId, mixName: mix.name, mixProfiles: mix.flavorProfiles },
+    data: {
+      mixId: mix.id,
+      guestId,
+      mixName: mix.name,
+      mixProfiles: mix.flavorProfiles,
+      substitutedFromId: mix.substitution?.from.tobaccoId ?? null,
+      substitutedToId: mix.substitution?.to.tobaccoId ?? null,
+    },
   });
 
   return {
@@ -2713,311 +2686,5 @@ export const getSmokeCtaSummary = async () => {
   return {
     smokeCtaTotal: events.length,
     topMixes,
-  };
-};
-
-export const getDashboardSummary = async (windowKey: DashboardWindowKey = '14d'): Promise<DashboardSummary> => {
-  await ensureAppState();
-
-  const window = buildDashboardWindow(windowKey);
-  const [inventoryRecords, mixes, rails, smokeEvents, ratingEvents, blockedMixRecords] = await Promise.all([
-    prisma.tobacco.findMany({
-      orderBy: [{ manufacturer: 'asc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        manufacturer: true,
-        name: true,
-        flavorProfiles: true,
-        flavors: true,
-        inStock: true,
-      },
-    }),
-    getAvailableMixCatalog(),
-    getStaffRails(),
-    prisma.smokeCtaEvent.findMany({
-      where: {
-        createdAt: {
-          gte: window.startsAtDate,
-          lte: window.endsAtDate,
-        },
-      },
-      select: {
-        mixId: true,
-        createdAt: true,
-      },
-    }),
-    prisma.mixRating.findMany({
-      where: {
-        createdAt: {
-          gte: window.startsAtDate,
-          lte: window.endsAtDate,
-        },
-      },
-      select: {
-        mixId: true,
-        value: true,
-        createdAt: true,
-      },
-    }),
-    prisma.mix.findMany({
-      where: {
-        available: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        components: {
-          orderBy: { sortOrder: 'asc' },
-          select: {
-            tobacco: {
-              select: {
-                name: true,
-                inStock: true,
-              },
-            },
-          },
-        },
-        railMixes: {
-          select: {
-            rail: {
-              select: {
-                name: true,
-                active: true,
-              },
-            },
-          },
-        },
-      },
-    }),
-  ]);
-
-  const smokeCounts = smokeEvents.reduce<Record<string, number>>((acc, event) => {
-    if (event.mixId) acc[event.mixId] = (acc[event.mixId] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const ratingStats = ratingEvents.reduce<Record<string, { sum: number; count: number }>>((acc, event) => {
-    const current = acc[event.mixId] ?? { sum: 0, count: 0 };
-    current.sum += event.value;
-    current.count += 1;
-    acc[event.mixId] = current;
-    return acc;
-  }, {});
-
-  const activityByDay = new Map<string, DashboardActivityPoint>();
-  for (let dayOffset = 0; dayOffset < window.days; dayOffset += 1) {
-    const current = startOfDay(window.startsAtDate);
-    current.setDate(window.startsAtDate.getDate() + dayOffset);
-    const date = toDayKey(current);
-    activityByDay.set(date, {
-      date,
-      smokeCtaCount: 0,
-      ratingsCount: 0,
-    });
-  }
-
-  for (const event of smokeEvents) {
-    const key = toDayKey(event.createdAt);
-    const current = activityByDay.get(key);
-    if (current) {
-      current.smokeCtaCount += 1;
-    }
-  }
-
-  for (const event of ratingEvents) {
-    const key = toDayKey(event.createdAt);
-    const current = activityByDay.get(key);
-    if (current) {
-      current.ratingsCount += 1;
-    }
-  }
-
-  const manufacturers = buildInventoryBreakdown(
-    inventoryRecords.map((item) => ({
-      key: item.manufacturer,
-      label: item.manufacturer,
-      inStock: item.inStock,
-    })),
-  );
-
-  const flavorProfiles = buildInventoryBreakdown(
-    inventoryRecords.flatMap((item) =>
-      parseList(item.flavorProfiles).map((profile) => ({
-        key: profile,
-        label: flavorProfileLabels[profile] ?? profile,
-        inStock: item.inStock,
-      })),
-    ),
-  );
-
-  const topFlavors = buildInventoryBreakdown(
-    inventoryRecords.flatMap((item) =>
-      parseList(item.flavors).map((flavor) => ({
-        key: flavor,
-        label: flavor,
-        inStock: item.inStock,
-      })),
-    ),
-  ).slice(0, 8);
-
-  const topMixes = mixes
-    .map((mix) => ({
-      mixId: mix.id,
-      mixName: mix.name,
-      smokeCtaCount: smokeCounts[mix.id] ?? 0,
-      avgRating: mix.avgRating,
-      ratingsCount: mix.ratingsCount,
-    }))
-    .filter((item) => item.smokeCtaCount > 0)
-    .sort((left, right) => {
-      if (right.smokeCtaCount !== left.smokeCtaCount) {
-        return right.smokeCtaCount - left.smokeCtaCount;
-      }
-
-      if (right.avgRating !== left.avgRating) {
-        return right.avgRating - left.avgRating;
-      }
-
-      if (right.smokeCtaCount !== left.smokeCtaCount) {
-        return right.smokeCtaCount - left.smokeCtaCount;
-      }
-
-      return left.mixName.localeCompare(right.mixName, 'ru');
-    })
-    .slice(0, 5);
-
-  const topRatedMixes = mixes
-    .map((mix) => {
-      const stats = ratingStats[mix.id];
-      const avgRating = stats ? Number((stats.sum / stats.count).toFixed(1)) : 0;
-
-      return {
-        mixId: mix.id,
-        mixName: mix.name,
-        smokeCtaCount: smokeCounts[mix.id] ?? 0,
-        avgRating,
-        ratingsCount: stats?.count ?? 0,
-      };
-    })
-    .filter((item) => item.ratingsCount > 0)
-    .sort((left, right) => {
-      if (right.avgRating !== left.avgRating) {
-        return right.avgRating - left.avgRating;
-      }
-
-      if (right.ratingsCount !== left.ratingsCount) {
-        return right.ratingsCount - left.ratingsCount;
-      }
-
-      if (right.smokeCtaCount !== left.smokeCtaCount) {
-        return right.smokeCtaCount - left.smokeCtaCount;
-      }
-
-      return left.mixName.localeCompare(right.mixName, 'ru');
-    })
-    .slice(0, 5);
-
-  const ratingDistribution: DashboardRatingDistributionItem[] = [5, 4, 3, 2, 1].map((value) => ({
-    value,
-    count: ratingEvents.filter((item) => item.value === value).length,
-  }));
-
-  const blockedMixes = blockedMixRecords
-    .map((mix) => {
-      const missingComponents = mix.components
-        .filter((component) => !component.tobacco.inStock)
-        .map((component) => component.tobacco.name);
-
-      return {
-        mixId: mix.id,
-        mixName: mix.name,
-        missingComponents,
-        railNames: unique(
-          mix.railMixes
-            .filter((item) => item.rail.active)
-            .map((item) => item.rail.name),
-        ),
-        smokeCtaCount: smokeCounts[mix.id] ?? 0,
-      } satisfies DashboardBlockedMix;
-    })
-    .filter((mix) => mix.missingComponents.length > 0)
-    .sort((left, right) => {
-      if (right.smokeCtaCount !== left.smokeCtaCount) {
-        return right.smokeCtaCount - left.smokeCtaCount;
-      }
-
-      if (right.missingComponents.length !== left.missingComponents.length) {
-        return right.missingComponents.length - left.missingComponents.length;
-      }
-
-      return left.mixName.localeCompare(right.mixName, 'ru');
-    })
-    .slice(0, 5);
-
-  const railHealth = rails
-    .map((rail) => {
-      const visibleMixCount = rail.mixes.filter((mix) => mix.guestVisible).length;
-
-      return {
-        railId: rail.id,
-        name: rail.name,
-        type: rail.type,
-        active: rail.active,
-        totalMixCount: rail.mixIds.length,
-        visibleMixCount,
-        hiddenMixCount: Math.max(rail.mixIds.length - visibleMixCount, 0),
-      } satisfies DashboardRailHealthItem;
-    })
-    .sort((left, right) => {
-      if (left.active !== right.active) {
-        return left.active ? -1 : 1;
-      }
-
-      if (left.hiddenMixCount !== right.hiddenMixCount) {
-        return right.hiddenMixCount - left.hiddenMixCount;
-      }
-
-      return left.name.localeCompare(right.name, 'ru');
-    });
-
-  const totalRatingsValue = ratingEvents.reduce((sum, item) => sum + item.value, 0);
-
-  return {
-    window: {
-      key: window.key,
-      label: window.label,
-      days: window.days,
-      startsAt: window.startsAt,
-      endsAt: window.endsAt,
-    },
-    inventory: {
-      total: inventoryRecords.length,
-      inStockCount: inventoryRecords.filter((item) => item.inStock).length,
-      outOfStockCount: inventoryRecords.filter((item) => !item.inStock).length,
-      manufacturers: manufacturers.slice(0, 6),
-      flavorProfiles: flavorProfiles.slice(0, 6),
-      topFlavors,
-    },
-    product: {
-      smokeCtaTotal: smokeEvents.length,
-      ratingsTotal: ratingEvents.length,
-      avgGuestRating: ratingEvents.length ? Number((totalRatingsValue / ratingEvents.length).toFixed(1)) : 0,
-      topMixes,
-      topRatedMixes,
-      ratingDistribution,
-      activity: [...activityByDay.values()],
-    },
-    ops: {
-      guestVisibleMixesCount: mixes.filter((mix) => mix.guestVisible).length,
-      hiddenMixesCount: mixes.filter((mix) => !mix.available).length,
-      blockedByInventoryCount: mixes.filter((mix) => mix.available && !mix.guestVisible).length,
-      activeRailsCount: railHealth.filter((rail) => rail.active).length,
-      // Статистический рейл пуст, пока гости не выбирают и не оценивают: мастеру тут нечего чинить.
-      emptyActiveRailsCount: railHealth.filter(
-        (rail) => rail.active && rail.type !== 'statistical' && rail.visibleMixCount === 0,
-      ).length,
-      blockedMixes,
-      railHealth: railHealth.slice(0, 6),
-    },
   };
 };

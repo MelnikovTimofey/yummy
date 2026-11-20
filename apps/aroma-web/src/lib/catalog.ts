@@ -1,4 +1,5 @@
 import { profileLabelMap } from './profile-labels';
+import { matchSearch, rankBySearch } from './search-match';
 
 type CatalogMix = {
   name: string;
@@ -17,10 +18,9 @@ export type CatalogFilter = {
 
 const byRu = (left: string, right: string) => left.localeCompare(right, 'ru');
 
-export const normalizeSearchText = (text: string) => text.trim().toLowerCase().replace(/ё/g, 'е');
-
 // Как гости пишут латинские бренды прода по-русски (#187). Бренды из Каталога прода на 2026-10-19;
-// кириллические (Сарма, База, Северный, Кобра, Хулиган) находятся и так.
+// кириллические (Сарма, База, Северный, Кобра, Хулиган) находятся и так. Транслит
+// и опечатки (#522) покрывают часть списка, но не созвучия вроде «масхэв».
 const brandAliases: Record<string, string[]> = {
   musthave: ['масхэв', 'мастхэв', 'масхев', 'мастхев', 'маст хэв'],
   darkside: ['дарксайд', 'дарк сайд'],
@@ -44,37 +44,36 @@ const brandAliases: Record<string, string[]> = {
   afzal: ['афзал'],
 };
 
-const matchesQuery = (mix: CatalogMix, query: string) =>
-  normalizeSearchText(
-    [
-      mix.name,
-      mix.description,
-      ...mix.flavors,
-      ...mix.flavorProfiles.map((profile) => profileLabelMap[profile] ?? ''),
-      ...mix.components.flatMap((component) => [
-        component.name,
-        component.manufacturer,
-        ...(brandAliases[component.manufacturer.toLowerCase()] ?? []),
-      ]),
-    ].join(' '),
-  ).includes(query);
+// Поиск — по неточному совпадению (#522); описание — только точной подстрокой.
+const searchFields = (mix: CatalogMix) => [
+  mix.name,
+  ...mix.flavors,
+  ...mix.flavorProfiles.map((profile) => profileLabelMap[profile] ?? ''),
+  ...mix.components.flatMap((component) => [
+    component.name,
+    component.manufacturer,
+    ...(brandAliases[component.manufacturer.toLowerCase()] ?? []),
+  ]),
+];
 
 // Внутри характеров и внутри вкусов — «или», между ними и с текстом — «и».
-// Сортировки нет (#181): у «Покурить» и оценок пока нет данных, поэтому порядок — по алфавиту.
-export const filterCatalogMixes = <T extends CatalogMix>(mixes: T[], { query, profiles, flavors }: CatalogFilter): T[] => {
-  const normalizedQuery = normalizeSearchText(query);
-  return mixes
-    .filter((mix) => mix.available)
-    .filter((mix) => !normalizedQuery || matchesQuery(mix, normalizedQuery))
-    .filter((mix) => !profiles.length || mix.flavorProfiles.some((profile) => profiles.includes(profile)))
-    .filter((mix) => !flavors.length || mix.flavors.some((flavor) => flavors.includes(flavor)))
-    .sort((left, right) => byRu(left.name, right.name));
-};
+// Сортировки нет (#181): у «Покурить» и оценок пока нет данных, поэтому порядок — по алфавиту,
+// при поиске точные совпадения выше похожих.
+export const filterCatalogMixes = <T extends CatalogMix>(mixes: T[], { query, profiles, flavors }: CatalogFilter): T[] =>
+  rankBySearch(
+    mixes
+      .filter((mix) => mix.available)
+      .filter((mix) => !profiles.length || mix.flavorProfiles.some((profile) => profiles.includes(profile)))
+      .filter((mix) => !flavors.length || mix.flavors.some((flavor) => flavors.includes(flavor)))
+      .sort((left, right) => byRu(left.name, right.name)),
+    query,
+    searchFields,
+    (mix) => [mix.description],
+  );
 
 export const flavorsMatchedFirst = (flavors: string[], query: string, selectedFlavors: string[]) => {
-  const normalizedQuery = normalizeSearchText(query);
   const isMatch = (flavor: string) =>
-    selectedFlavors.includes(flavor) || (normalizedQuery !== '' && normalizeSearchText(flavor).includes(normalizedQuery));
+    selectedFlavors.includes(flavor) || (query.trim() !== '' && matchSearch(query, [flavor]) !== null);
   return [...flavors.filter(isMatch), ...flavors.filter((flavor) => !isMatch(flavor))];
 };
 

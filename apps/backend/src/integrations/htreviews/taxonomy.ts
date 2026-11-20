@@ -19,6 +19,7 @@ const FRUITY_TAGS = new Set([
   'джекфрут',
   'инжир',
   'кактус',
+  'карамбола',
   'кивано',
   'киви',
   'кокос',
@@ -28,6 +29,7 @@ const FRUITY_TAGS = new Set([
   'манго',
   'мандарин',
   'маракуйя',
+  'мангостин',
   'марула',
   'нектарин',
   'облепиха',
@@ -41,10 +43,12 @@ const FRUITY_TAGS = new Set([
   'финик',
   'фрукты',
   'хурма',
+  'чернослив',
   'яблоко',
 ]);
 
 const BERRY_TAGS = new Set([
+  'асаи',
   'барбарис',
   'брусника',
   'бузина',
@@ -60,10 +64,13 @@ const BERRY_TAGS = new Set([
   'крыжовник',
   'малина',
   'морошка',
+  'рябина',
   'смородина',
   'черная смородина',
   'черника',
+  'черемуха',
   'черешня',
+  'шиповник',
   'ягоды',
 ]);
 
@@ -83,6 +90,7 @@ const MINTY_TAGS = new Set(['мята', 'ментол', 'холодок', 'эв�
 const FLORAL_HERBAL_TAGS = new Set([
   'базилик',
   'древесный',
+  'елка',
   'жасмин',
   'зеленый чай',
   'кипарис',
@@ -115,6 +123,7 @@ const DESSERT_TAGS = new Set([
   'выпечка',
   'десерт',
   'зефир',
+  'злаки',
   'жвачка',
   'ириска',
   'йогурт',
@@ -136,12 +145,15 @@ const DESSERT_TAGS = new Set([
   'печенье',
   'пирог',
   'попкорн',
+  'семечки',
   'пончик',
   'пряник',
   'сгущенка',
   'сливочный',
   'тирамису',
   'фисташки',
+  'халва',
+  'хлеб',
   'чизкейк',
   'шоколад',
 ]);
@@ -154,6 +166,7 @@ const SPICY_TAGS = new Set([
   'карри',
   'кашмир',
   'корица',
+  'лакрица',
   'перец',
   'пряности',
   'специи',
@@ -164,7 +177,9 @@ const TOBACCO_TAGS = new Set(['табачный', 'сигара']);
 const PERFUME_TAGS = new Set(['парфюм']);
 
 const BEVERAGE_TAGS = new Set([
+  'абсент',
   'алкоголь',
+  'амаретто',
   'апероль',
   'байкал',
   'бейлис',
@@ -176,6 +191,7 @@ const BEVERAGE_TAGS = new Set([
   'гуарана',
   'дайкири',
   'джин',
+  'кайпиринья',
   'квас',
   'кофе',
   'кола',
@@ -187,6 +203,7 @@ const BEVERAGE_TAGS = new Set([
   'маргарита',
   'мастика',
   'мохито',
+  'орчата',
   'пиво',
   'пина колада',
   'портвейн',
@@ -202,6 +219,32 @@ const BEVERAGE_TAGS = new Set([
   'шампанское',
   'энергетик',
 ]);
+
+// Напиток со своим характером получает вторую категорию рядом с beverage.
+// Не через MINTY_TAGS и т. п.: те добавляют мета-теги (мохито — не «охлаждающий»).
+const BEVERAGE_ACCENT_PROFILES: Record<string, string> = {
+  мохито: 'minty',
+  лимончелло: 'citrus',
+  лимонад: 'citrus',
+  маргарита: 'citrus',
+  дайкири: 'citrus',
+  кайпиринья: 'citrus',
+  апероль: 'citrus',
+  'пина колада': 'fruity',
+  сангрия: 'fruity',
+  сидр: 'fruity',
+  космополитен: 'berry',
+  бейлис: 'dessert',
+  амаретто: 'dessert',
+  кофе: 'dessert',
+  орчата: 'dessert',
+  глинтвейн: 'spicy',
+  мастика: 'spicy',
+  самбука: 'spicy',
+  джин: 'floral_herbal',
+  абсент: 'floral_herbal',
+  байкал: 'floral_herbal',
+};
 
 const RARE_TAGS = new Set([
   'бекон',
@@ -299,11 +342,20 @@ export const buildTaxonomyCandidate = (rawTags: string[]): TaxonomyCandidate => 
     }
 
     if (includesTag(tag, BEVERAGE_TAGS)) {
+      // Чай уже цветочно-травяной: напитком-категорией его не делаем.
+      if (!includesTag(tag, FLORAL_HERBAL_TAGS)) {
+        flavorProfiles.add('beverage');
+      }
+      const accent = BEVERAGE_ACCENT_PROFILES[tag];
+      if (accent) {
+        flavorProfiles.add(accent);
+      }
       flavorTags.add('напитки');
       matchedSourceTags.add(tag);
     }
 
     if (includesTag(tag, RARE_TAGS)) {
+      flavorProfiles.add('gastro');
       flavorTags.add('редкие');
       matchedSourceTags.add(tag);
     }

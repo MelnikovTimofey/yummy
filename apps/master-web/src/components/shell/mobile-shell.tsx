@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { LogOut, Sparkles } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { ShiftCode } from '@/components/access/shift-code';
+import type { AccessLoadStatus } from '@/components/access/types';
+import { resolveCurrentDailyCode, type DailyAccessCodeRecord } from '@/contracts';
 import { MOBILE_MORE_TABS, MOBILE_NAV, mobileNavItemFor, openSection } from './mobile-nav';
 import type { WorkspaceTab } from './workspace-tabs';
 
@@ -23,11 +26,18 @@ type MobileNavProps = {
   onSignOut: () => void;
   // Пункт «Что нового» в «Ещё» (#226); нет выпусков — нет пункта.
   whatsNew: { unseen: boolean; onOpen: () => void } | null;
+  // Код смены сверху «Ещё» (#337, #shot=more): грузится при первом открытии листа.
+  shiftCode: { dailyCodes: DailyAccessCodeRecord[]; status: AccessLoadStatus; error: string; onLoad: () => void };
 };
 
-export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onSignOut, whatsNew }: MobileNavProps) => {
+export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onSignOut, whatsNew, shiftCode }: MobileNavProps) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const active = mobileNavItemFor(activeTab);
+
+  const openMore = () => {
+    setMoreOpen(true);
+    if (shiftCode.status === 'idle') shiftCode.onLoad();
+  };
 
   return (
     <>
@@ -40,7 +50,7 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
             data-active={active === item.id}
             aria-current={active === item.id ? 'page' : undefined}
             aria-expanded={item.id === 'more' ? moreOpen : undefined}
-            onClick={() => (item.id === 'more' ? setMoreOpen(true) : openSection(item.id, onTabChange))}
+            onClick={() => (item.id === 'more' ? openMore() : openSection(item.id, onTabChange))}
           >
             {item.label}
             {item.id === 'more' && whatsNew?.unseen ? <span className="wn-dot m-nav__dot" aria-hidden="true" /> : null}
@@ -50,11 +60,12 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
 
       {moreOpen ? (
         <BottomSheet label="Ещё разделы" onClose={() => setMoreOpen(false)} className="m-more">
-          <p className="m-more__user">
-            {userName}
-            {userRoleLabel.toLocaleLowerCase('ru-RU') !== userName.toLocaleLowerCase('ru-RU') ? <span>{userRoleLabel}</span> : null}
-          </p>
-          <ul className="m-more__list">
+          <ShiftCode
+            currentDailyCode={resolveCurrentDailyCode(shiftCode.dailyCodes)}
+            status={shiftCode.status}
+            error={shiftCode.error}
+          />
+          <ul className="m-more__grid">
             {MOBILE_MORE_TABS.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -69,44 +80,46 @@ export const MobileNav = ({ activeTab, onTabChange, userName, userRoleLabel, onS
                     }}
                   >
                     <Icon size={18} strokeWidth={1.8} aria-hidden />
-                    <span>
-                      <b>{tab.label}</b>
-                    </span>
+                    {tab.label}
                   </button>
                 </li>
               );
             })}
+            {whatsNew ? (
+              <li>
+                <button
+                  type="button"
+                  className="m-more__item"
+                  aria-label={whatsNew.unseen ? 'Что нового, есть непрочитанное' : 'Что нового'}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    whatsNew.onOpen();
+                  }}
+                >
+                  <Sparkles size={18} strokeWidth={1.8} aria-hidden />
+                  Что нового
+                  {whatsNew.unseen ? <span className="wn-dot m-more__dot" aria-hidden="true" /> : null}
+                </button>
+              </li>
+            ) : null}
+            <li>
+              <button
+                type="button"
+                className="m-more__item"
+                onClick={() => {
+                  setMoreOpen(false);
+                  onSignOut();
+                }}
+              >
+                <LogOut size={18} strokeWidth={1.8} aria-hidden />
+                Выйти
+              </button>
+            </li>
           </ul>
-          {whatsNew ? (
-            <button
-              type="button"
-              className="m-more__item"
-              aria-label={whatsNew.unseen ? 'Что нового, есть непрочитанное' : 'Что нового'}
-              onClick={() => {
-                setMoreOpen(false);
-                whatsNew.onOpen();
-              }}
-            >
-              <Sparkles size={18} strokeWidth={1.8} aria-hidden />
-              <span>
-                <b>Что нового</b>
-              </span>
-              {whatsNew.unseen ? <span className="wn-dot m-more__dot" aria-hidden="true" /> : null}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="m-more__item m-more__item--exit"
-            onClick={() => {
-              setMoreOpen(false);
-              onSignOut();
-            }}
-          >
-            <LogOut size={18} strokeWidth={1.8} aria-hidden />
-            <span>
-              <b>Выйти</b>
-            </span>
-          </button>
+          <p className="m-more__user">
+            {userName}
+            {userRoleLabel.toLocaleLowerCase('ru-RU') !== userName.toLocaleLowerCase('ru-RU') ? <span>{userRoleLabel}</span> : null}
+          </p>
         </BottomSheet>
       ) : null}
     </>

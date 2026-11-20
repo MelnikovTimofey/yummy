@@ -18,11 +18,10 @@ test('разделы из «Ещё» подсвечивают пункт «Ещ�
   assert.equal(mobileNavItemFor('access'), 'more');
 });
 
-test('заголовок верхней панели — раздел, на полке в режиме «К заказу» — «К заказу»', () => {
-  assert.equal(mobileTitleFor('shelf', 'shelf'), 'Полка');
-  assert.equal(mobileTitleFor('shelf', 'reorder'), 'К заказу');
-  assert.equal(mobileTitleFor('dashboard', 'reorder'), 'Дашборд');
-  assert.equal(mobileTitleFor('rails', 'shelf'), 'Рейлы');
+test('заголовок верхней панели — раздел; «К заказу» переключается на самой полке (#518)', () => {
+  assert.equal(mobileTitleFor('shelf'), 'Полка');
+  assert.equal(mobileTitleFor('dashboard'), 'Дашборд');
+  assert.equal(mobileTitleFor('rails'), 'Рейлы');
 });
 
 test('раздел из нижней навигации открывается с начала, а не на прокрутке прошлого (#334)', () => {

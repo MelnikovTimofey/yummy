@@ -144,6 +144,23 @@ const tobaccos = [
     flavorTags: ['fruity'],
     inStock: false,
   },
+  {
+    id: 'tobacco-lime-spark',
+    manufacturer: 'Ателье Reserve',
+    name: 'Lime Spark',
+    description: 'Кислый лайм с газировкой.',
+    flavorProfiles: ['citrus', 'fresh'],
+    flavors: ['лайм', 'лимон'],
+    flavorTags: ['fresh'],
+    inStock: false,
+  },
+] as const;
+
+// Аналоги (#478): Lime Spark закончился, Citrus Breeze на полке закрывает его в «Лаймовом тонике».
+// Связь взаимная — по строке на сторону.
+const tobaccoAnalogs = [
+  { tobaccoId: 'tobacco-lime-spark', analogId: 'tobacco-citrus-breeze', sortOrder: 0 },
+  { tobaccoId: 'tobacco-citrus-breeze', analogId: 'tobacco-lime-spark', sortOrder: 0 },
 ] as const;
 
 const mixes = [
@@ -197,6 +214,16 @@ const mixes = [
     available: true,
     baseAvgRating: 4.4,
   },
+  {
+    id: 'mix-lime-tonic',
+    name: 'Лаймовый тоник',
+    description: 'Лайм и мята, сейчас с заменой лайма на цитрус с полки.',
+    flavorProfiles: ['citrus', 'fresh'],
+    flavors: ['лайм', 'мята'],
+    flavorTags: ['fresh'],
+    available: true,
+    baseAvgRating: 4.3,
+  },
 ] as const;
 
 const mixComponents = [
@@ -210,6 +237,8 @@ const mixComponents = [
   { mixId: 'mix-amber-bazaar', tobaccoId: 'tobacco-desert-honey', proportion: 45, sortOrder: 1 },
   { mixId: 'mix-peach-mirage', tobaccoId: 'tobacco-peach-silk', proportion: 70, sortOrder: 0 },
   { mixId: 'mix-peach-mirage', tobaccoId: 'tobacco-mint-veil', proportion: 30, sortOrder: 1 },
+  { mixId: 'mix-lime-tonic', tobaccoId: 'tobacco-lime-spark', proportion: 60, sortOrder: 0 },
+  { mixId: 'mix-lime-tonic', tobaccoId: 'tobacco-mint-veil', proportion: 40, sortOrder: 1 },
 ] as const;
 
 const rails = [
@@ -364,6 +393,8 @@ async function main() {
   });
 
   await prisma.$transaction((tx) => startShelfFromStock(tx, new Date()));
+
+  await prisma.tobaccoAnalog.createMany({ data: [...tobaccoAnalogs], skipDuplicates: true });
 
   await prisma.mix.createMany({
     data: mixes.map((mix) => ({

@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildApp } from './app';
+import { buildGuestApp as buildApp } from './test-app';
 import { mixes as seedMixes, tobaccos as seedTobaccos } from './catalog';
 import { prisma } from './db';
-import { bookOf } from './shelf';
 import { resetAppState } from './state';
 
 const loginStaff = async (app: ReturnType<typeof buildApp>) => {
@@ -171,6 +170,61 @@ test('staff inventory stock counters ignore the stock filter itself', async () =
   }
 });
 
+// Архив — статус в одном ряду с наличием (#464): счётчики ряда не зависят от
+// того, какой статус выбран, но учитывают поиск и атрибуты (#472).
+test('staff inventory status counters ignore the archived filter and follow search', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const get = async (url: string) => {
+    const response = await app.inject({ method: 'GET', url, headers: { authorization: `Bearer ${token}` } });
+    assert.equal(response.statusCode, 200);
+    const { meta } = response.json() as { meta: { inStockCount: number; outOfStockCount: number; archivedCount: number } };
+    return { inStockCount: meta.inStockCount, outOfStockCount: meta.outOfStockCount, archivedCount: meta.archivedCount };
+  };
+
+  try {
+    await app.inject({
+      method: 'PATCH',
+      url: '/staff/inventory/tobaccos/tobacco-peach-silk',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { archived: true },
+    });
+
+    const active = await get('/staff/inventory/tobaccos');
+    const archived = await get('/staff/inventory/tobaccos?archived=archived');
+    assert.deepEqual(archived, active);
+    assert.equal(active.archivedCount, 1);
+
+    const searched = await get(`/staff/inventory/tobaccos?archived=archived&search=${encodeURIComponent('Mint Veil')}`);
+    assert.equal(searched.archivedCount, 0);
+    assert.equal(searched.inStockCount + searched.outOfStockCount, 1);
+  } finally {
+    await app.close();
+  }
+});
+
+// Счётчики статусов миксов не зависят от выбранного статуса (#472).
+test('staff mix status counters ignore the status filter itself', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+  const get = async (status: string) => {
+    const response = await app.inject({ method: 'GET', url: `/staff/mixes?status=${status}`, headers: { authorization: `Bearer ${token}` } });
+    assert.equal(response.statusCode, 200);
+    const { meta } = response.json() as { meta: { guestVisibleCount: number; hiddenCount: number; blockedCount: number } };
+    return { guestVisibleCount: meta.guestVisibleCount, hiddenCount: meta.hiddenCount, blockedCount: meta.blockedCount };
+  };
+
+  try {
+    const all = await get('all');
+    assert.ok(all.guestVisibleCount > 0 && all.blockedCount > 0);
+    for (const status of ['guest-visible', 'hidden', 'blocked']) {
+      assert.deepEqual(await get(status), all, `счётчики при status=${status}`);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
 test('staff inventory list paginates filtered results', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
@@ -204,6 +258,64 @@ test('staff inventory list paginates filtered results', async () => {
     assert.equal(body.meta.totalPages, Math.ceil(seedTobaccos.length / 2));
     assert.equal(body.meta.hasNextPage, true);
     assert.equal(body.meta.hasPreviousPage, true);
+  } finally {
+    await app.close();
+  }
+});
+
+// Каталог фильтруется по узкой выборке колонок, а карточки страницы дочитываются
+// отдельно (#502): строки страницы должны прийти целиком и в порядке сортировки.
+test('staff inventory page rows carry full cards in sort order', async () => {
+  const app = buildApp();
+  const token = await loginStaff(app);
+
+  try {
+    const [, second] = [...seedTobaccos].sort((left, right) => left.name.localeCompare(right.name, 'ru'));
+    await prisma.tobacco.update({
+      where: { id: second.id },
+      data: {
+        description: 'Сочный и плотный',
+        country: 'Россия',
+        productionStatus: 'Выпускается',
+        rating: 4.5,
+        ratingsCount: 12,
+        viewsCount: 340,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/staff/inventory/tobaccos?page=1&pageSize=3&sort=name&direction=asc',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = response.json() as {
+      items: Array<{
+        id: string;
+        description: string | null;
+        country: string | null;
+        productionStatus: string | null;
+        rating: number | null;
+        ratingsCount: number | null;
+        viewsCount: number | null;
+      }>;
+    };
+
+    const expectedIds = [...seedTobaccos]
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .slice(0, 3)
+      .map((item) => item.id);
+    assert.deepEqual(body.items.map((item) => item.id), expectedIds);
+    const card = body.items[1];
+    assert.equal(card?.description, 'Сочный и плотный');
+    assert.equal(card?.country, 'Россия');
+    assert.equal(card?.productionStatus, 'Выпускается');
+    assert.equal(card?.rating, 4.5);
+    assert.equal(card?.ratingsCount, 12);
+    assert.equal(card?.viewsCount, 340);
   } finally {
     await app.close();
   }
@@ -540,36 +652,26 @@ test('batch archive and unarchive toggle archived state', async () => {
   await app.close();
 });
 
-test('empty statistical rails do not count as empty active rails on the dashboard', async () => {
+test('empty statistical rails are not an empty-rail signal on the dashboard', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
 
   const dashboard = await app.inject({
     method: 'GET',
-    url: '/staff/dashboard/summary?window=7d',
+    url: '/staff/dashboard/choices?period=7d',
     headers: {
       authorization: `Bearer ${token}`,
     },
   });
 
   assert.equal(dashboard.statusCode, 200);
-  const dashboardBody = dashboard.json() as {
-    ops: {
-      emptyActiveRailsCount: number;
-      railHealth: Array<{ railId: string; visibleMixCount: number }>;
-    };
-  };
-
-  assert.equal(
-    dashboardBody.ops.railHealth.find((rail) => rail.railId === 'rail-statistical-top')?.visibleMixCount,
-    0,
-  );
-  assert.equal(dashboardBody.ops.emptyActiveRailsCount, 0);
+  const { signals } = dashboard.json() as { signals: { emptyRails: Array<{ railId: string }> } };
+  assert.equal(signals.emptyRails.some((rail) => rail.railId === 'rail-statistical-top'), false);
 
   await app.close();
 });
 
-test('smoke CTA events are recorded in dashboard summary', async () => {
+test('smoke CTA events and guest ratings reach the dashboard', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
 
@@ -624,7 +726,7 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
 
   const dashboard = await app.inject({
     method: 'GET',
-    url: '/staff/dashboard/summary?window=7d',
+    url: '/staff/dashboard/choices?period=7d',
     headers: {
       authorization: `Bearer ${token}`,
     },
@@ -633,77 +735,27 @@ test('smoke CTA events are recorded in dashboard summary', async () => {
   assert.equal(dashboard.statusCode, 200);
 
   const dashboardBody = dashboard.json() as {
-    window: { key: string; days: number };
-    inventory: {
-      total: number;
-      inStockCount: number;
-      outOfStockCount: number;
-      manufacturers: Array<{ label: string; total: number }>;
-      flavorProfiles: Array<{ key: string; label: string; total: number }>;
-    };
-    product: {
-      smokeCtaTotal: number;
-      ratingsTotal: number;
-      avgGuestRating: number;
-      topMixes: Array<{ mixId: string; mixName: string; smokeCtaCount: number; avgRating: number }>;
-      topRatedMixes: Array<{ mixId: string; mixName: string; avgRating: number; ratingsCount: number }>;
-      ratingDistribution: Array<{ value: number; count: number }>;
-      activity: Array<{ date: string; smokeCtaCount: number; ratingsCount: number }>;
-    };
-    ops: {
-      blockedByInventoryCount: number;
-      blockedMixes: Array<{ mixId: string; mixName: string; missingComponents: string[] }>;
-      railHealth: Array<{ railId: string; totalMixCount: number }>;
-    };
+    period: { key: string; days: number };
+    kpi: { choices: number; ownMixes: number; mixesChosen: number; avgRating: number | null; ratingsCount: number };
+    signals: { hiddenMixes: Array<{ mixId: string; mixName: string }> };
   };
 
-  assert.equal(dashboardBody.window.key, '7d');
-  assert.equal(dashboardBody.window.days, 7);
-  assert.equal(dashboardBody.inventory.total, seedTobaccos.length);
-  assert.equal(dashboardBody.product.smokeCtaTotal, 3);
-  assert.equal(dashboardBody.product.ratingsTotal, 2);
-  assert.equal(dashboardBody.product.avgGuestRating, 4);
-  assert.deepEqual(dashboardBody.product.topMixes[0], {
-    mixId: 'mix-citrus-scout',
-    mixName: 'Цитрусовый караван',
-    smokeCtaCount: 2,
-    avgRating: 5,
-    ratingsCount: 1,
-  });
-  assert.deepEqual(dashboardBody.product.topRatedMixes[0], {
-    mixId: 'mix-citrus-scout',
-    mixName: 'Цитрусовый караван',
-    smokeCtaCount: 2,
-    avgRating: 5,
-    ratingsCount: 1,
-  });
-  assert.equal(dashboardBody.inventory.manufacturers[0]?.label, 'Ателье Reserve');
-  assert.equal(dashboardBody.inventory.flavorProfiles.some((item) => item.label === 'Свежие'), true);
-  assert.equal(dashboardBody.product.ratingDistribution.find((item) => item.value === 5)?.count, 1);
-  assert.equal(dashboardBody.ops.blockedByInventoryCount, 1);
-  assert.equal(dashboardBody.ops.blockedMixes[0]?.mixId, 'mix-peach-mirage');
-  assert.equal(dashboardBody.ops.blockedMixes[0]?.mixName, 'Персиковый мираж');
-  assert.deepEqual(dashboardBody.ops.blockedMixes[0]?.missingComponents, ['Peach Silk']);
-  assert.equal(dashboardBody.ops.railHealth[0]?.railId, 'rail-statistical-top');
-  assert.equal(dashboardBody.product.activity.length, 7);
-  assert.equal(
-    dashboardBody.product.activity.reduce((sum, item) => sum + item.smokeCtaCount, 0),
-    3,
-  );
-  assert.equal(
-    dashboardBody.product.activity.reduce((sum, item) => sum + item.ratingsCount, 0),
-    2,
-  );
+  assert.equal(dashboardBody.period.key, '7d');
+  assert.equal(dashboardBody.period.days, 7);
+  assert.equal(dashboardBody.kpi.choices, 3);
+  assert.equal(dashboardBody.kpi.ownMixes, 0);
+  assert.equal(dashboardBody.kpi.mixesChosen, 2);
+  assert.equal(dashboardBody.kpi.ratingsCount, 2);
+  assert.equal(dashboardBody.kpi.avgRating, 4);
+  assert.deepEqual(dashboardBody.signals.hiddenMixes, [{ mixId: 'mix-peach-mirage', mixName: 'Персиковый мираж' }]);
 
   await app.close();
 });
 
 // Переходный режим до экрана «Полка» (#210): старые эндпоинты «Табаков» пишут
 // наличие через полку, и кэш inStock всегда совпадает с правилом полки.
-const entriesOf = (tobaccoId: string) =>
-  prisma.stockEntry.findMany({ where: { shelfItem: { tobaccoId } }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] });
-
-const book = async (tobaccoId: string) => bookOf(await entriesOf(tobaccoId));
+const outAt = async (tobaccoId: string) =>
+  (await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId }, select: { outAt: true } })).outAt;
 
 const assertAvailabilityMatchesShelf = async () => {
   const tobaccos = await prisma.tobacco.findMany({ include: { shelfItem: true } });
@@ -711,12 +763,12 @@ const assertAvailabilityMatchesShelf = async () => {
     const expected = !tobacco.archived
       && tobacco.shelfItem?.status === 'active'
       && !tobacco.shelfItem.stopped
-      && (await book(tobacco.id)) > 0;
+      && !tobacco.shelfItem.outAt;
     assert.equal(tobacco.inStock, expected, tobacco.id);
   }
 };
 
-test('тумблер наличия старого экрана переводится в остаток полки', async () => {
+test('тумблер наличия старого экрана переводится в «Закончился» полки', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
   const patch = (id: string, payload: Record<string, unknown>) =>
@@ -727,32 +779,31 @@ test('тумблер наличия старого экрана переводи
       payload,
     });
 
-  // «Есть» для табака не с полки — на полку с приходом типичной фасовки бренда, без поставки.
+  // «Есть» для табака не с полки — на полку в работу, «Есть».
   assert.equal((await patch('tobacco-peach-silk', { inStock: true })).statusCode, 200);
   const peach = await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'tobacco-peach-silk' } });
-  assert.equal(peach.status, 'active');
-  assert.deepEqual((await entriesOf('tobacco-peach-silk')).map((entry) => [entry.kind, entry.grams, entry.deliveryId]), [['receipt', 200, null]]);
+  assert.deepEqual([peach.status, peach.outAt], ['active', null]);
 
   // «Нет» — «Закончился», запись на полке остаётся.
   const off = await patch('tobacco-mint-veil', { inStock: false });
   assert.equal((off.json() as { item: { inStock: boolean } }).item.inStock, false);
-  assert.equal(await book('tobacco-mint-veil'), 0);
+  const mintOut = await outAt('tobacco-mint-veil');
+  assert.ok(mintOut);
   assert.equal((await prisma.shelfItem.findUniqueOrThrow({ where: { tobaccoId: 'tobacco-mint-veil' } })).status, 'active');
 
-  // Снова «есть» — новый приход поверх «Закончился».
-  await patch('tobacco-mint-veil', { inStock: true });
-  assert.equal(await book('tobacco-mint-veil'), 200);
-  const entries = (await entriesOf('tobacco-mint-veil')).length;
-
   // Повтор того же значения ничего не меняет.
-  await patch('tobacco-mint-veil', { inStock: true, name: 'Mint Veil' });
-  assert.equal((await entriesOf('tobacco-mint-veil')).length, entries);
+  await patch('tobacco-mint-veil', { inStock: false, name: 'Mint Veil' });
+  assert.deepEqual(await outAt('tobacco-mint-veil'), mintOut);
+
+  // Снова «есть» — «Закончился» снят.
+  await patch('tobacco-mint-veil', { inStock: true });
+  assert.equal(await outAt('tobacco-mint-veil'), null);
 
   await assertAvailabilityMatchesShelf();
   await app.close();
 });
 
-test('архив снимает наличие, не трогая полку; из архива наличие возвращается по остатку', async () => {
+test('архив снимает наличие, не трогая полку; из архива наличие возвращается по полке', async () => {
   const app = buildApp();
   const token = await loginStaff(app);
   const batch = (ids: string[], action: string) =>
@@ -764,7 +815,7 @@ test('архив снимает наличие, не трогая полку; и
     });
 
   await batch(['tobacco-mint-veil', 'tobacco-berry-oasis'], 'archive');
-  assert.ok((await book('tobacco-mint-veil')) > 0);
+  assert.equal(await outAt('tobacco-mint-veil'), null);
   await assertAvailabilityMatchesShelf();
 
   const back = await batch(['tobacco-mint-veil'], 'unarchive');
@@ -773,10 +824,10 @@ test('архив снимает наличие, не трогая полку; и
   await assertAvailabilityMatchesShelf();
 
   await batch(['tobacco-mint-veil', 'tobacco-peach-silk'], 'set-out-of-stock');
-  assert.equal(await book('tobacco-mint-veil'), 0);
+  assert.ok(await outAt('tobacco-mint-veil'));
   await batch(['tobacco-mint-veil', 'tobacco-peach-silk'], 'set-in-stock');
-  assert.ok((await book('tobacco-mint-veil')) > 0);
-  assert.ok((await book('tobacco-peach-silk')) > 0);
+  assert.equal(await outAt('tobacco-mint-veil'), null);
+  assert.equal(await outAt('tobacco-peach-silk'), null);
   await assertAvailabilityMatchesShelf();
   await app.close();
 });
@@ -796,7 +847,7 @@ test('новая карточка в наличии сразу встаёт на
   const absent = (await create('Lime Ghost', false)).json() as { item: { id: string; inStock: boolean } };
 
   assert.equal(stocked.item.inStock, true);
-  assert.deepEqual((await entriesOf(stocked.item.id)).map((entry) => [entry.kind, entry.grams]), [['receipt', 250]]);
+  assert.equal(await outAt(stocked.item.id), null);
   assert.equal(absent.item.inStock, false);
   assert.equal(await prisma.shelfItem.count({ where: { tobaccoId: absent.item.id } }), 0);
   await assertAvailabilityMatchesShelf();
