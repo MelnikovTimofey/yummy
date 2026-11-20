@@ -889,6 +889,35 @@ test('Aroma master card opens with a flavour photo header', async ({ page }) => 
   await expect(page.locator('.aroma-smoke-confirmation-title')).toBeVisible();
 });
 
+// Фото вкуса на карте табака в Миксере (#611). Колода не обязана начинаться
+// с узнанного вкуса, поэтому карты без фото пропускаются кнопкой «Дальше».
+const openMixer = async (page: Page) => {
+  await enterCatalog(page);
+  await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Миксер', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Намиксуй', level: 1 })).toBeVisible();
+  await expect(page.locator('.mixer-card[data-pos="0"]')).toBeVisible();
+};
+
+test('Aroma mixer tobacco card shows a flavour photo', async ({ page }) => {
+  await openMixer(page);
+  const top = page.locator('.mixer-card[data-pos="0"]');
+  const photo = top.locator('img.mixer-card-photo');
+  await expect(async () => {
+    if (!(await photo.count())) await page.getByRole('button', { name: 'Дальше', exact: true }).click({ timeout: 1_000 });
+    await expect(photo).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [250], timeout: 15_000 });
+  await expect(photo).toHaveAttribute('src', /^\/photos\/.+-reel\.webp$/);
+  await expectLoaded(photo);
+  await expect(top.locator('.mixer-card-name')).toBeVisible();
+});
+
+test('Aroma mixer cards fall back to the plain card when a photo does not load', async ({ page }) => {
+  await page.route('**/photos/**', (route) => route.abort());
+  await openMixer(page);
+  await expect(page.locator('.mixer-card[data-pos="0"] .mixer-card-name')).toBeVisible();
+  await expect(page.locator('.mixer-card img.mixer-card-photo')).toHaveCount(0);
+});
+
 test('Aroma reel plays its scene over a flavour photo', async ({ page }) => {
   await enterCatalog(page);
   await page.getByRole('navigation', { name: 'Гостевая навигация' }).getByRole('button', { name: 'Рилсы', exact: true }).click();

@@ -1,5 +1,6 @@
-import type { CSSProperties, PointerEvent, Ref } from 'react';
+import { useState, type CSSProperties, type PointerEvent, type Ref } from 'react';
 
+import { mixPhotoSrc, pickMixPhoto } from '@/lib/mix-photo';
 import { getProfileColor } from '@/lib/profile-color';
 import { profileLabelMap } from '@/lib/profile-labels';
 import type { PaletteTobacco } from '@/lib/mixer/types';
@@ -40,12 +41,19 @@ export function TobaccoCard({
 }) {
   const top = position === 0;
   const color = getProfileColor(tobacco.flavorProfiles[0]);
+  // Фото вкуса табака (#611) по тем же правилам, что у миксов; вертикальное, на всю карту.
+  // Не загрузилось — карта без фото, как раньше.
+  const photo = pickMixPhoto(tobacco);
+  const src = photo ? mixPhotoSrc(photo, 'reel') : null;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const withPhoto = Boolean(src) && failedSrc !== src;
 
   return (
     <div
       ref={cardRef}
       className={entrance && top ? `mixer-card mixer-card-${entrance}` : 'mixer-card'}
       data-pos={position}
+      data-photo={withPhoto ? '' : undefined}
       style={{ '--pc': color } as CSSProperties}
       {...(top
         ? {
@@ -59,6 +67,12 @@ export function TobaccoCard({
           }
         : { 'aria-hidden': true })}
     >
+      {src && withPhoto ? (
+        <>
+          <img className="mixer-card-photo" src={src} alt="" draggable={false} onError={() => setFailedSrc(src)} />
+          <span className="mixer-card-scrim" aria-hidden />
+        </>
+      ) : null}
       {top ? (
         <>
           <span className="mixer-stamp mixer-stamp-take" aria-hidden>
