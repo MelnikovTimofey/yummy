@@ -92,7 +92,7 @@ import { mixPhotoSrc, pickMixPhoto } from '@/lib/mix-photo';
 import { cn } from '@/lib/utils';
 import { profileLabelMap, profileOptions } from '@/lib/profile-labels';
 import { applyGuestRating } from '@/lib/rating';
-import { forYouPage, recsPage, reelFeed, RECS_ON_SCREEN, type RecsPage } from '@/lib/reel-feed';
+import { forYouPage, newReelSeed, recsPage, reelFeed, RECS_ON_SCREEN, type RecsPage } from '@/lib/reel-feed';
 import { dedupeRails, railKindIcon, railOpenLabel } from '@/lib/showcase';
 import { readSubstitute, showSubstitute } from '@/lib/substitute';
 
@@ -1436,6 +1436,8 @@ export const App = () => {
     loadId: number;
   }>({ status: 'idle', items: [], continues: false, error: '', loadId: 0 });
   const [reelIndex, setReelIndex] = useState(0);
+  // Каталог в ленте перемешивается при каждом открытии: зерно ближайшего открытия.
+  const [reelSeed, setReelSeed] = useState(newReelSeed);
   const [reelSwiped, setReelSwiped] = useState(false);
   // Миксы, на которые smoke-cta ответил 404: табак кончился, пока гость листал.
   const [goneReels, setGoneReels] = useState<string[]>([]);
@@ -2291,7 +2293,7 @@ export const App = () => {
               : null;
   // Рилсы после Подбора — для тизера в его конце и кадра при дотягивании.
   const continuation =
-    shownRecs?.shown.length && catalogStatus === 'ready' ? reelFeed(shownRecs, catalogSourceMixes) : null;
+    shownRecs?.shown.length && catalogStatus === 'ready' ? reelFeed(shownRecs, catalogSourceMixes, reelSeed) : null;
 
   // Лента продолжает Подбор (#349) — из тизера и из панели одна и та же.
   // Устаревший «Для вас» пересобирается тем же запросом, что сделал бы Подбор.
@@ -2299,6 +2301,8 @@ export const App = () => {
   const openReels = async () => {
     const loadId = reels.loadId + 1;
     const page = recsMode === 'for-you' && signedIn && forYou.stale ? null : shownRecs;
+    const seed = reelSeed;
+    setReelSeed(newReelSeed());
     setReelIndex(0);
     setReelSwiped(false);
     setReelChoice(null);
@@ -2311,7 +2315,7 @@ export const App = () => {
         page ?? fetchPage(),
         catalogStatus === 'ready' ? catalogSourceMixes : fetchCatalogMixes(),
       ]);
-      const items = reelFeed(shown, catalog);
+      const items = reelFeed(shown, catalog, seed);
       setReels((current) =>
         current.loadId === loadId
           ? { status: 'ready', items, continues: shown.shown.length > 0, error: '', loadId }
