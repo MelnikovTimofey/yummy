@@ -90,6 +90,7 @@ export type GuestMixerPaletteResponse = {
   tobaccos: Array<{
     id: string;
     manufacturer: string;
+    lineName: string;
     name: string;
     flavorProfiles: string[];
     flavors: string[];
@@ -202,6 +203,7 @@ export type GuestMixRef =
 export type GuestCabinetComponent = {
   tobaccoId: string;
   manufacturer: string;
+  lineName: string;
   name: string;
   proportion: number;
   substitute?: MixSubstituteView;

@@ -10,6 +10,7 @@ import type { ShelfSimilarView } from './shelf';
 export type RuleTobacco = {
   id: string;
   manufacturer: string;
+  lineName: string;
   name: string;
   flavors: string[];
   inStock: boolean;
@@ -32,7 +33,7 @@ export type MixAvailability = {
   missing: MissingTobaccoView[];
 };
 
-export type RuleTobaccoRecord = { id: string; manufacturer: string; name: string; flavors: string; inStock: boolean; archived: boolean };
+export type RuleTobaccoRecord = { id: string; manufacturer: string; lineName: string; name: string; flavors: string; inStock: boolean; archived: boolean };
 
 // Аналоги и полка для правила: два запроса параллельно с выборкой миксов, без чтения
 // каталога и без запроса на микс. Связей аналогов сотни, позиций полки — сотни.
@@ -50,7 +51,7 @@ export const loadRuleContext = async (
       orderBy: { sortOrder: 'asc' },
       select: {
         tobaccoId: true,
-        analog: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } },
+        analog: { select: { id: true, manufacturer: true, lineName: true, name: true, flavors: true, inStock: true, archived: true } },
       },
     }),
     client.shelfItem.findMany({ select: { tobaccoId: true, status: true } }),
@@ -75,6 +76,7 @@ const parseFlavors = (value: string): string[] => {
 const toRuleTobacco = (tobacco: RuleTobaccoRecord, shelfStatus: string | undefined): RuleTobacco => ({
   id: tobacco.id,
   manufacturer: tobacco.manufacturer,
+  lineName: tobacco.lineName,
   name: tobacco.name,
   flavors: parseFlavors(tobacco.flavors),
   inStock: tobacco.inStock,
@@ -117,7 +119,7 @@ export const resolveMixAvailability = (available: boolean, components: RuleCompo
   return {
     status: 'substituted',
     substitution: { from: refOf(gap.tobacco), to: refOf(analog) },
-    substitute: { tobaccoId: gap.tobacco.id, to: { ...refOf(analog), flavors: analog.flavors } },
+    substitute: { tobaccoId: gap.tobacco.id, to: { ...refOf(analog), lineName: analog.lineName, flavors: analog.flavors } },
     missing,
   };
 };

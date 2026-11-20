@@ -7,6 +7,7 @@ import { awaitsPlan, resolveMixAvailability, type RuleComponent, type RuleTobacc
 const tobacco = (id: string, overrides: Partial<RuleTobacco> = {}): RuleTobacco => ({
   id,
   manufacturer: 'Darkside',
+  lineName: '',
   name: id,
   flavors: [],
   inStock: true,
@@ -39,7 +40,7 @@ test('не хватает одного, аналог в наличии — ми�
   const result = resolveMixAvailability(true, [component(cola), component(lemonblast, [lemonShock, lemonFresh])]);
   assert.equal(result.status, 'substituted');
   assert.deepEqual(result.substitution, { from: ref(lemonblast), to: ref(lemonShock) });
-  assert.deepEqual(result.substitute, { tobaccoId: 'lemonblast', to: { ...ref(lemonShock), flavors: ['лимон'] } });
+  assert.deepEqual(result.substitute, { tobaccoId: 'lemonblast', to: { ...ref(lemonShock), lineName: '', flavors: ['лимон'] } });
   assert.deepEqual(result.missing, [{ ...ref(lemonblast), onShelf: true, planned: false }]);
 });
 

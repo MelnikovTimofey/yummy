@@ -616,7 +616,7 @@ const mixStatuses = async (tx: Tx, tobaccoIds: string[]) => {
       id: true,
       components: {
         orderBy: { sortOrder: 'asc' },
-        select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true } } },
+        select: { tobacco: { select: { id: true, manufacturer: true, lineName: true, name: true, flavors: true, inStock: true, archived: true } } },
       },
     },
   });

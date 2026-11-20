@@ -25,7 +25,7 @@ export type TobaccoRef = {
 };
 
 // Табак с полки вместо закончившегося компонента (PRD §6.2 п.1); пропорция — у компонента.
-export type MixSubstituteView = TobaccoRef & { flavors: string[] };
+export type MixSubstituteView = TobaccoRef & { lineName: string; flavors: string[] };
 
 // onShelf — куда ведёт «Нет: X»: в карточку полки или, если на полке табака нет, каталога.
 // planned — табак в плане (#566).
@@ -40,6 +40,7 @@ export type MixComponentView = {
   tobaccoId: string;
   name: string;
   manufacturer: string;
+  lineName: string;
   flavors: string[];
   proportion: number;
   sortOrder: number;
@@ -736,6 +737,7 @@ const mapMixView = (context: RuleContext) => (record: {
       tobaccoId: item.tobacco.id,
       name: item.tobacco.name,
       manufacturer: item.tobacco.manufacturer,
+      lineName: item.tobacco.lineName,
       flavors: parseList(item.tobacco.flavors),
       proportion: item.proportion,
       sortOrder: item.sortOrder,
