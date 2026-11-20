@@ -12,9 +12,9 @@ const outDir = join(root, 'public/photos');
 const cacheDir = join(tmpdir(), 'aroma-mix-photos');
 const sources = JSON.parse(readFileSync(join(root, 'photos/sources.json'), 'utf8'));
 
-// Размеры @2x/@3x под места из канона: строка 44 и герой 64, постер Витрины 156×92,
+// Размеры @2x/@3x под места из канона: строка 44 и герой 64, постер Витрины 236×150 (берёт sheet),
 // шапка листа 390×240, рилс 390×844.
-const SIZES = { 132: [132, 132], poster: [312, 184], sheet: [780, 480], reel: [780, 1688] };
+const SIZES = { 132: [132, 132], sheet: [780, 480], reel: [780, 1688] };
 const QUALITY = 60;
 
 mkdirSync(outDir, { recursive: true });

@@ -3104,7 +3104,7 @@ export const App = () => {
     }
 
     // Полки по образцу Okko (#175): заголовок с шевроном открывает подборку,
-    // под ним лента постеров, около двух на ширину экрана.
+    // под ним лента крупных постеров со вкусами, около полутора на экран (#614).
     return (
       <section className="aroma-showcase">
         <MixerInvite onOpen={() => openMixer('showcase')} />
@@ -3127,9 +3127,9 @@ export const App = () => {
                   onClick={openRail}
                   aria-label={railOpenLabel(rail)}
                 >
-                  <KindIcon className="aroma-showcase-rail-icon" size={16} strokeWidth={1.8} aria-hidden />
+                  <KindIcon className="aroma-showcase-rail-icon" size={15} strokeWidth={1.8} aria-hidden />
                   <span className="aroma-showcase-rail-title">{rail.name}</span>
-                  <ChevronRight className="aroma-showcase-rail-chevron" size={22} strokeWidth={1.8} aria-hidden />
+                  <ChevronRight className="aroma-showcase-rail-chevron" size={20} strokeWidth={1.8} aria-hidden />
                 </button>
               </h2>
 

@@ -11,12 +11,14 @@ type ShowcaseCardProps = {
   onClick: () => void;
 };
 
-// Постер полки Витрины. С фото вкуса (#592) фото на всю карточку, затемнение
-// снизу под название, подкраски профилями и глифа нет. Без фото или если файл
-// не загрузился — прежний постер: глиф и пятна цветов профиля.
+// Постер полки Витрины (#614, вариант A): 236×150, около полутора на экран, под
+// названием — вкусы. С фото вкуса (#592) фото на всю карточку, затемнение снизу
+// под текст, подкраски профилями и глифа нет. Без фото или если файл не
+// загрузился — глиф и пятна цветов профиля. Фото размера sheet: прежний poster (312×184)
+// на ретине для такой карточки мыльный.
 export function ShowcaseCard({ mix, onClick }: ShowcaseCardProps) {
   const photo = pickMixPhoto(mix);
-  const src = photo ? mixPhotoSrc(photo, "poster") : null;
+  const src = photo ? mixPhotoSrc(photo, "sheet") : null;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const withPhoto = src !== null && failedSrc !== src;
   const [firstProfile, secondProfile = firstProfile] = mix.flavorProfiles;
@@ -39,18 +41,21 @@ export function ShowcaseCard({ mix, onClick }: ShowcaseCardProps) {
           className="aroma-showcase-card-img"
           src={src}
           alt=""
-          width={156}
-          height={92}
+          width={236}
+          height={150}
           loading="lazy"
           decoding="async"
           onError={() => setFailedSrc(src)}
         />
       ) : null}
       <span className="aroma-showcase-card-top">
-        {withPhoto ? <span /> : <ProfileGlyph profiles={mix.flavorProfiles} size={28} />}
+        {withPhoto ? <span /> : <ProfileGlyph profiles={mix.flavorProfiles} size={36} />}
         {mix.ratingsCount > 0 ? <RatingPill rating={mix.avgRating} style={{ padding: "2px 7px", fontSize: 10.5 }} /> : null}
       </span>
-      <span className="aroma-showcase-card-name">{mix.name}</span>
+      <span className="aroma-showcase-card-bottom">
+        <span className="aroma-showcase-card-name">{mix.name}</span>
+        {mix.flavors.length ? <span className="aroma-showcase-card-flavors">{mix.flavors.slice(0, 3).join(", ")}</span> : null}
+      </span>
       <span className="aroma-showcase-card-signature">
         <SignatureBar profiles={mix.flavorProfiles} height={2} />
       </span>
