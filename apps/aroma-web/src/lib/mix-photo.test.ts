@@ -226,3 +226,11 @@ test('pickMixPhoto: пиво и благовония — база, вкус ва
   assert.equal(ingredientOf(['ладан', 'холодок']), 'incense');
   assert.equal(byName('Грибы со сметаной', ['грибы']), 'mushroom');
 });
+
+// Парфюм (#630): флаконы без надписей, отдельно от благовоний.
+test('pickMixPhoto: парфюм — флакон, не благовония', () => {
+  for (const flavor of ['парфюм', 'духи', 'одеколон', 'кашмир', 'мускус', 'амбра']) assert.equal(ingredientOf([flavor]), 'perfume', flavor);
+  assert.equal(ingredientOf(['сандал']), 'incense');
+  assert.equal(ingredientOf(['парфюм', 'бергамот']), 'perfume');
+  assert.equal(ingredientOf(['мускус', 'персик']), 'peach');
+});
