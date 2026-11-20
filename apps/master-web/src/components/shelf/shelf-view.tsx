@@ -26,15 +26,18 @@ import {
   emptyToast,
   filterShelfRows,
   formatNumber,
+  formatShelfLine,
   keepToast,
   removeToast,
   resolveShelfShortcut,
   restockLabel,
   restockToast,
   shelfCounts,
+  shelfLineOptions,
   shelfRowAction,
   shelfRowMenu,
   sortShelfRows,
+  withShelfBrands,
   type ShelfFilters,
   type ShelfSortKey,
   type ShelfStatusKey,
@@ -195,13 +198,25 @@ export const ShelfView = ({
   const activeFilters = countActiveShelfFilters(filters);
   const filterOptions = useMemo(() => buildShelfFilterOptions(rows), [rows]);
   // Одни и те же атрибуты — списками на десктопе и чипами в шторке телефона.
+  const lineOptions = shelfLineOptions(rows, filters.brands);
   const attributes = [
     {
       title: 'Бренд',
       options: filterOptions.brands.map((option) => option.value),
       selected: filters.brands,
-      onChange: (brands: string[]) => setFilters({ ...filters, brands }),
+      onChange: (brands: string[]) => setFilters(withShelfBrands(filters, brands)),
     },
+    ...(lineOptions.length
+      ? [
+          {
+            title: 'Линейка',
+            options: lineOptions,
+            selected: filters.lines,
+            formatOption: (key: string) => formatShelfLine(key, filters.brands),
+            onChange: (lines: string[]) => setFilters({ ...filters, lines }),
+          },
+        ]
+      : []),
     {
       title: 'Характер',
       options: filterOptions.profiles.map((option) => option.value),
