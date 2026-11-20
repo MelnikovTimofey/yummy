@@ -132,7 +132,7 @@ export const awaitsPlan = (mix: Pick<MixAvailability, 'status' | 'missing'>) =>
 export const SIMILAR_LIMIT = 5;
 
 type SimilarSource = { tobaccoId: string; flavorProfiles: string[]; flavors: string[] };
-type SimilarCandidate = SimilarSource & { manufacturer: string; name: string };
+type SimilarCandidate = SimilarSource & { manufacturer: string; lineName: string; name: string };
 
 export const rankSimilar = (target: SimilarSource, candidates: SimilarCandidate[], exclude: Set<string>): ShelfSimilarView[] => {
   const keys = tasteKeys(target);
@@ -145,6 +145,7 @@ export const rankSimilar = (target: SimilarSource, candidates: SimilarCandidate[
     .map(({ candidate }) => ({
       tobaccoId: candidate.tobaccoId,
       manufacturer: candidate.manufacturer,
+      lineName: candidate.lineName,
       name: candidate.name,
       flavors: candidate.flavors,
     }));
