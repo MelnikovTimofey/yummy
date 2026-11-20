@@ -46,11 +46,11 @@ const arrival = (patch: Partial<ShelfArrival> = {}): ShelfArrival => ({
   ...patch,
 });
 
-const row = (patch: Partial<ShelfRow> & { name?: string; brand?: string; profiles?: string[]; strength?: string | null } = {}): ShelfRow => {
-  const { name = 'Raspberries', brand = 'Black Burn', profiles = ['berry'], strength = 'Средняя', ...rest } = patch;
+const row = (patch: Partial<ShelfRow> & { name?: string; brand?: string; line?: string; profiles?: string[]; strength?: string | null } = {}): ShelfRow => {
+  const { name = 'Raspberries', brand = 'Black Burn', line = '', profiles = ['berry'], strength = 'Средняя', ...rest } = patch;
   return {
     ...normalizeShelfRow({
-      tobacco: { id: `${brand}-${name}`, manufacturer: brand, name, flavorProfiles: profiles, officialStrength: strength },
+      tobacco: { id: `${brand}-${name}`, manufacturer: brand, lineName: line, name, flavorProfiles: profiles, officialStrength: strength },
       lastArrival: arrival(),
     }),
     ...rest,
@@ -200,6 +200,7 @@ test('planStateLabel: наличие в карточке плана с дато�
 test('«Убрать из плана» и «Убрать с полки»: тост и отмена с прежней датой плана (#562)', () => {
   assert.deepEqual(removeToast(row({ shelfStatus: 'plan', plannedAt: PLANNED })), { title: 'Black Burn Raspberries', text: 'Убран из плана.' });
   assert.deepEqual(removeToast(row()), { title: 'Black Burn Raspberries', text: 'Убран с полки, история осталась.' });
+  assert.equal(removeToast(row({ brand: 'Trofimoff’s', line: 'Trofimoff’s Terror', name: 'Baileys' })).title, 'Trofimoff’s Terror Baileys');
   assert.deepEqual(restoreShelfBody(row({ shelfStatus: 'plan', plannedAt: PLANNED })), {
     tobaccoId: 'Black Burn-Raspberries',
     status: 'plan',

@@ -1492,9 +1492,9 @@ export type ShelfArrival = {
 
 // Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
 // пока сам табак закончился.
-export type ShelfAnalog = TobaccoRef & { inStock: boolean; substituting: boolean };
+export type ShelfAnalog = TobaccoRef & { lineName: string; inStock: boolean; substituting: boolean };
 
-export type ShelfSimilar = TobaccoRef & { flavors: string[] };
+export type ShelfSimilar = TobaccoRef & { lineName: string; flavors: string[] };
 
 export type ShelfRow = {
   tobacco: ShelfTobacco;
@@ -1577,6 +1577,7 @@ export const normalizeShelfRow = (value: unknown): ShelfRow => {
     trialMarkedAt: toIsoString(raw.trialMarkedAt, '') || null,
     analogs: (Array.isArray(raw.analogs) ? raw.analogs : []).filter(isRecord).map((analog) => ({
       ...normalizeMixTobaccoRef(analog),
+      lineName: String(analog.lineName ?? ''),
       inStock: toBoolean(analog.inStock, false),
       substituting: toBoolean(analog.substituting, false),
     })),
@@ -1602,6 +1603,7 @@ export const normalizeShelfCard = (value: unknown): ShelfCard => {
     })),
     similar: (Array.isArray(record.similar) ? record.similar : []).filter(isRecord).map((item) => ({
       ...normalizeMixTobaccoRef(item),
+      lineName: String(item.lineName ?? ''),
       flavors: uniqueStrings(toStringList(item.flavors)),
     })),
     arrivals: (Array.isArray(record.arrivals) ? record.arrivals : []).filter(isRecord).map(normalizeShelfArrival),

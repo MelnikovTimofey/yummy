@@ -40,6 +40,8 @@ import {
   type ShelfStatusKey,
 } from '@/lib/shelf';
 import { analogToastText } from '@/lib/shelf-analogs';
+import { tobaccoFullName } from '@/lib/tobacco-line';
+import { ShelfBrand } from './shelf-brand';
 import {
   bulkEmptyToast,
   bulkKeepToast,
@@ -86,8 +88,7 @@ type ShelfViewProps = {
 type Toast = ShelfToastData;
 type ToastInput = Omit<Toast, 'id'>;
 
-const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
-const tobaccoName = (tobacco: ShelfTobaccoRef) => `${tobacco.manufacturer} ${tobacco.name}`;
+const fullName = (row: ShelfRow) => tobaccoFullName(row.tobacco);
 
 const isField = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
@@ -397,7 +398,7 @@ export const ShelfView = ({
       try {
         await shelf.update(tobacco.id, { trialVerdict });
       } catch (cause) {
-        notify({ title: tobaccoName(tobacco), text: describeShelfError(cause), error: true });
+        notify({ title: tobaccoFullName(tobacco), text: describeShelfError(cause), error: true });
       }
     },
     [notify, shelf],
@@ -867,7 +868,9 @@ export const ShelfView = ({
                             <span className="shelf-name-row">
                               <span className="shelf-name">
                                 <b>{row.tobacco.name}</b>
-                                <span>{row.tobacco.manufacturer}</span>
+                                <span>
+                                  <ShelfBrand tobacco={row.tobacco} />
+                                </span>
                               </span>
                               {row.trial ? <span className="tag shelf-trial-tag">проба</span> : null}
                             </span>

@@ -4,6 +4,8 @@ import type { ShelfOrder, ShelfOrderGroup, ShelfOrderPlanLine } from '@/contract
 import { groupMeta, groupTitle, isStalePlan, notKeptText, orderCopyText, orderMixes, planCopyText, planMixes } from '@/lib/order';
 import { formatShelfDate } from '@/lib/shelf';
 import { RowsSkeleton } from '@/components/ui/loading';
+import { tobaccoFullName } from '@/lib/tobacco-line';
+import { ShelfBrand, ShelfOneLineName } from './shelf-brand';
 
 // «К заказу» (#518, #shot=order, order-copied, mobile-order, edge-order-empty):
 // закончились и держим постоянно, группами по поставщику последнего счёта.
@@ -24,7 +26,7 @@ const groupKey = (group: ShelfOrderGroup) => group.supplier?.id ?? '';
 // У групп ключ — id поставщика, у плана своего поставщика нет.
 const PLAN_KEY = 'plan';
 
-const planName = (line: ShelfOrderPlanLine) => `${line.tobacco.manufacturer} ${line.tobacco.name}`;
+const planName = (line: ShelfOrderPlanLine) => tobaccoFullName(line.tobacco);
 
 export const ShelfOrderView = ({ order, error, phone, onShowNotKept, menuId, pendingId, onOpenMenu }: ShelfOrderViewProps) => {
   const [copied, setCopied] = useState<string | null>(null);
@@ -53,7 +55,9 @@ export const ShelfOrderView = ({ order, error, phone, onShowNotKept, menuId, pen
             <li key={line.tobacco.id} className="m-shelf-card" data-tobacco-id={line.tobacco.id}>
               <span className="shelf-name">
                 <b>{line.tobacco.name}</b>
-                <span>{line.tobacco.manufacturer}</span>
+                <span>
+                  <ShelfBrand tobacco={line.tobacco} />
+                </span>
               </span>
               <span className="shelf-order__planned shelf-num" data-stale={isStalePlan(line.plannedAt) || undefined}>
                 с {formatShelfDate(line.plannedAt)}
@@ -86,7 +90,9 @@ export const ShelfOrderView = ({ order, error, phone, onShowNotKept, menuId, pen
               const open = menuId === line.tobacco.id;
               return (
                 <tr key={line.tobacco.id} data-tobacco-id={line.tobacco.id}>
-                  <td>{planName(line)}</td>
+                  <td>
+                    <ShelfOneLineName tobacco={line.tobacco} />
+                  </td>
                   <td className="shelf-order__planned shelf-num" data-stale={isStalePlan(line.plannedAt) || undefined}>
                     {formatShelfDate(line.plannedAt)}
                   </td>
@@ -175,7 +181,9 @@ export const ShelfOrderView = ({ order, error, phone, onShowNotKept, menuId, pen
                     <li key={line.tobacco.id} className="m-shelf-card" data-tobacco-id={line.tobacco.id}>
                       <span className="shelf-name">
                         <b>{line.tobacco.name}</b>
-                        <span>{line.tobacco.manufacturer}</span>
+                        <span>
+                          <ShelfBrand tobacco={line.tobacco} />
+                        </span>
                       </span>
                       <span className="shelf-order__out shelf-num">{formatShelfDate(line.outAt)}</span>
                       {line.mixes.hidden ? <span className="m-shelf-card__meta shelf-order__mixes">{mixes.text}</span> : null}
@@ -205,7 +213,7 @@ export const ShelfOrderView = ({ order, error, phone, onShowNotKept, menuId, pen
                     return (
                       <tr key={line.tobacco.id} data-tobacco-id={line.tobacco.id}>
                         <td>
-                          {line.tobacco.manufacturer} {line.tobacco.name}
+                          <ShelfOneLineName tobacco={line.tobacco} />
                         </td>
                         <td className="shelf-order__out shelf-num">{formatShelfDate(line.outAt)}</td>
                         <td data-tone={mixes.tone}>{mixes.text}</td>

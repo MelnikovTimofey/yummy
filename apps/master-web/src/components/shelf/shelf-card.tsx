@@ -15,6 +15,8 @@ import {
   suggestKeepStocked,
   trialArrival,
 } from '@/lib/shelf';
+import { tobaccoFullName } from '@/lib/tobacco-line';
+import { ShelfBrand } from './shelf-brand';
 import { ShelfAnalogsSections, ShelfCardMixes, type AnalogChange } from './shelf-analogs';
 import { ShelfActionsSheet } from './shelf-mobile';
 import type { ShelfRowActions } from './shelf-row-menu';
@@ -120,7 +122,7 @@ export const ShelfCard = ({
                 <button
                   type="button"
                   className="icon-btn"
-                  aria-label={`Действия: ${row.tobacco.manufacturer} ${row.tobacco.name}`}
+                  aria-label={`Действия: ${tobaccoFullName(row.tobacco)}`}
                   aria-expanded={actionsOpen}
                   onClick={() => setActionsOpen(true)}
                 >
@@ -136,7 +138,9 @@ export const ShelfCard = ({
               </button>
             )}
           </div>
-          <SheetDescription className="shelf-card__brand">{row.tobacco.manufacturer}</SheetDescription>
+          <SheetDescription className="shelf-card__brand">
+            <ShelfBrand tobacco={row.tobacco} />
+          </SheetDescription>
           <div className="shelf-card__links">
             {row.tobacco.flavorProfiles.map((profile) => (
               <ProfileTag key={profile} profile={profile} />

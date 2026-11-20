@@ -975,21 +975,21 @@ test('аналоги (#478): нормализаторы читают замен�
   assert.equal(awaiting.filters.status, 'awaiting-plan');
   assert.equal(awaiting.meta.awaitingPlanCount, 3);
 
-  const row = normalizeShelfRow({ ...rawRow, analogs: [{ ...lemonShock, inStock: true, substituting: true }, { tobaccoId: 't-lf' }] });
+  const row = normalizeShelfRow({ ...rawRow, analogs: [{ ...lemonShock, lineName: 'Black Burn', inStock: true, substituting: true }, { tobaccoId: 't-lf' }] });
   assert.deepEqual(row.analogs, [
-    { ...lemonShock, inStock: true, substituting: true },
-    { tobaccoId: 't-lf', manufacturer: '', name: '', inStock: false, substituting: false },
+    { ...lemonShock, lineName: 'Black Burn', inStock: true, substituting: true },
+    { tobaccoId: 't-lf', manufacturer: '', lineName: '', name: '', inStock: false, substituting: false },
   ]);
 
   const response = normalizeShelfAnalogsResponse({
     item: {
       ...rawRow,
-      similar: [{ tobaccoId: 't-sb', manufacturer: 'Sebero', name: 'Barberry', flavors: ['барбарис'] }],
+      similar: [{ tobaccoId: 't-sb', manufacturer: 'Sebero', lineName: 'Sebero Classic', name: 'Barberry', flavors: ['барбарис'] }],
       mixes: [{ id: 'mix-rb', name: 'Рутбир с лимоном', status: 'substituted', substitution: { from: lemonblast, to: lemonShock } }],
     },
     unblockedMixes: [{ id: 'mix-rb', name: 'Рутбир с лимоном' }],
   });
-  assert.deepEqual(response.item.similar, [{ tobaccoId: 't-sb', manufacturer: 'Sebero', name: 'Barberry', flavors: ['барбарис'] }]);
+  assert.deepEqual(response.item.similar, [{ tobaccoId: 't-sb', manufacturer: 'Sebero', lineName: 'Sebero Classic', name: 'Barberry', flavors: ['барбарис'] }]);
   assert.deepEqual(response.item.mixes[0], {
     id: 'mix-rb',
     name: 'Рутбир с лимоном',

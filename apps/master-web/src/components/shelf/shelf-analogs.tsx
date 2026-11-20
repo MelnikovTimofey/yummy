@@ -3,6 +3,7 @@ import { ArrowDown, ArrowLeftRight, ArrowUp, Search, X } from 'lucide-react';
 import type { InventoryTobacco, ShelfAnalog, ShelfCard, ShelfRow, TobaccoRef } from '@/contracts';
 import { cardMixState, describeShelfError } from '@/lib/shelf';
 import { analogCell, analogStock, moveAnalog, withoutAnalog } from '@/lib/shelf-analogs';
+import { ShelfBrand } from './shelf-brand';
 
 // Столбец «Аналоги» на полке и строка в карточке телефона: закончившиеся приглушены,
 // у аналога, который сейчас стоит в миксах вместо табака, значок замены.
@@ -95,7 +96,9 @@ const AnalogSearch = ({
                 }}
               >
                 <span className="shelf-analog__name">
-                  <small>{item.manufacturer}</small>
+                  <small>
+                    <ShelfBrand tobacco={item} />
+                  </small>
                   <b>{item.name}</b>
                 </span>
                 {item.inStock ? null : <span className="shelf-faint">нет в наличии</span>}
@@ -148,7 +151,9 @@ export const ShelfAnalogsSections = ({
                 <li key={item.tobaccoId} className="shelf-analog">
                   <span className="shelf-analog__n">{index + 1}</span>
                   <span className="shelf-analog__name">
-                    <small>{item.manufacturer}</small>
+                    <small>
+                    <ShelfBrand tobacco={item} />
+                  </small>
                     <b>{item.name}</b>
                   </span>
                   <span className="shelf-analog__stock" data-off={!item.inStock || undefined}>
@@ -206,7 +211,9 @@ export const ShelfAnalogsSections = ({
             {similar.map((item) => (
               <li key={item.tobaccoId} className="shelf-similar">
                 <span className="shelf-analog__name">
-                  <small>{item.manufacturer}</small>
+                  <small>
+                    <ShelfBrand tobacco={item} />
+                  </small>
                   <b>{item.name}</b>
                 </span>
                 <span className="shelf-similar__flavors">{item.flavors.join(', ')}</span>

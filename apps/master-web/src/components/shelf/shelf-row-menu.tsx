@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ShelfRow } from '@/contracts';
 import { shelfRowMenu } from '@/lib/shelf';
+import { tobaccoFullName } from '@/lib/tobacco-line';
 
 export type ShelfRowActions = {
   onToggleStop: (row: ShelfRow) => void;
@@ -25,7 +26,7 @@ export const ShelfRowMenu = ({ row, anchor, actions, onClose }: ShelfRowMenuProp
   const ref = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const items = shelfRowMenu(row);
-  const name = `${row.tobacco.manufacturer} ${row.tobacco.name}`;
+  const name = tobaccoFullName(row.tobacco);
 
   useLayoutEffect(() => {
     const place = () => {

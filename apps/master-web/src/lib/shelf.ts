@@ -1,5 +1,6 @@
 import type { MixStatus, MixSubstitution, ShelfArrival, ShelfRow, ShelfTrialVerdict } from '../contracts';
 import { rankBySearch } from './search-match';
+import { tobaccoFullName } from './tobacco-line';
 
 // Чистая логика экрана «Полка» (#211, #518): фильтры, сортировка, подписи. Полка
 // небольшая (сотни строк), поэтому всё считается в браузере по загруженным строкам.
@@ -248,7 +249,7 @@ export const restockToast = (row: ShelfRow, fromPlan = false) => ({
 });
 
 export const removeToast = (row: ShelfRow) => ({
-  title: `${row.tobacco.manufacturer} ${row.tobacco.name}`,
+  title: tobaccoFullName(row.tobacco),
   text: row.shelfStatus === 'plan' ? 'Убран из плана.' : 'Убран с полки, история осталась.',
 });
 

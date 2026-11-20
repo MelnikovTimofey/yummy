@@ -1,4 +1,5 @@
 import type { ShelfAnalog } from '@/contracts';
+import { tobaccoFullName } from './tobacco-line';
 
 // Аналоги табака на «Полке» (#482, PRD §9.3 п.6): порядок в списке — порядок замены.
 
@@ -14,7 +15,7 @@ export const moveAnalog = (ids: string[], index: number, delta: -1 | 1) => {
 export const analogCell = (analogs: ShelfAnalog[]) => ({
   head: analogs.slice(0, 2),
   rest: Math.max(0, analogs.length - 2),
-  title: analogs.map((item) => `${item.manufacturer} ${item.name}`).join(', '),
+  title: analogs.map(tobaccoFullName).join(', '),
 });
 
 export const withoutAnalog = (ids: string[], id: string) => ids.filter((item) => item !== id);

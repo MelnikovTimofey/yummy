@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { normalizeShelfOrder } from '../contracts';
 import { groupMeta, groupTitle, isStalePlan, notKeptText, orderCopyText, orderCount, orderMixes, planCopyText, planMixes } from './order';
 
-const line = (manufacturer: string, name: string, mixes = { total: 0, hidden: 0, substituted: 0 }) => ({
-  tobacco: { id: `${manufacturer}-${name}`, manufacturer, lineName: '', name },
+const line = (manufacturer: string, name: string, mixes = { total: 0, hidden: 0, substituted: 0 }, lineName = '') => ({
+  tobacco: { id: `${manufacturer}-${lineName}-${name}`, manufacturer, lineName, name },
   outAt: '2026-11-03T09:00:00',
   mixes,
   lastArrival: null,
@@ -17,11 +17,11 @@ const order = normalizeShelfOrder({
   ],
   notKept: [
     { tobaccoId: 'a', manufacturer: 'Хулиган', name: 'POOL', outAt: '2026-10-28T09:00:00' },
-    { tobaccoId: 'b', manufacturer: 'Сарма', name: 'Ромашковое варенье', outAt: '2026-10-20T09:00:00' },
+    { tobaccoId: 'b', manufacturer: 'Сарма', lineName: 'Сарма Крепкая', name: 'Ромашковое варенье', outAt: '2026-10-20T09:00:00' },
   ],
   plan: [
     { tobacco: { id: 'p1', manufacturer: 'Musthave', lineName: '', name: 'Pineapple Rings' }, plannedAt: '2026-09-12T09:00:00', mixes: { total: 1, hidden: 1, substituted: 0 } },
-    { tobacco: { id: 'p2', manufacturer: 'Bonche', lineName: '', name: 'Clover Club' }, plannedAt: '2026-11-11T09:00:00', mixes: { total: 2, hidden: 2, substituted: 0 } },
+    { tobacco: { id: 'p2', manufacturer: 'Sebero', lineName: 'Sebero Black', name: 'Pineapple' }, plannedAt: '2026-11-11T09:00:00', mixes: { total: 2, hidden: 2, substituted: 0 } },
   ],
 });
 
@@ -42,6 +42,22 @@ test('orderCopyText: заявка — только названия «Бренд
   assert.equal(orderCopyText(order.groups[0]), 'Black Burn Cane Mint\nSebero Лимонная шипучка');
 });
 
+test('orderCopyText: у каждого табака линейка — поставщик отличит Terror от Burley (#624)', () => {
+  const none = { total: 0, hidden: 0, substituted: 0 };
+  const group = normalizeShelfOrder({
+    groups: [{
+      supplier: null,
+      lastDeliveryAt: null,
+      lines: [
+        line('Trofimoff’s', 'Baileys', none, 'Trofimoff’s Terror'),
+        line('Trofimoff’s', 'Baileys', none, 'Trofimoff’s Burley'),
+        line('Musthave', 'Pineapple Rings', none, 'Основная'),
+      ],
+    }],
+  }).groups[0];
+  assert.equal(orderCopyText(group), 'Trofimoff’s Terror Baileys\nTrofimoff’s Burley Baileys\nMusthave Pineapple Rings');
+});
+
 test('orderMixes: сколько миксов скрыто у гостя, закрыт аналогом или нет в миксах', () => {
   assert.deepEqual(orderMixes({ total: 6, hidden: 2, substituted: 4 }), { text: '2 из 6 скрыты у гостя', tone: 'default' });
   assert.deepEqual(orderMixes({ total: 1, hidden: 1, substituted: 0 }), { text: '1 микс скрыт у гостя', tone: 'default' });
@@ -52,7 +68,7 @@ test('orderMixes: сколько миксов скрыто у гостя, зак
 });
 
 test('notKeptText: закончились, но не держим, — одной строкой', () => {
-  assert.equal(notKeptText(order.notKept), 'Ещё 2 закончились, их не держим постоянно: Хулиган POOL, Сарма Ромашковое варенье.');
+  assert.equal(notKeptText(order.notKept), 'Ещё 2 закончились, их не держим постоянно: Хулиган POOL, Сарма Крепкая Ромашковое варенье.');
   assert.equal(
     notKeptText(order.notKept.slice(0, 1)),
     'Ещё 1 закончился, его не держим постоянно: Хулиган POOL.',
@@ -71,7 +87,7 @@ test('planMixes: сколько миксов ждут табак из плана
 });
 
 test('planCopyText: список плана — только названия построчно', () => {
-  assert.equal(planCopyText(order.plan), 'Musthave Pineapple Rings\nBonche Clover Club');
+  assert.equal(planCopyText(order.plan), 'Musthave Pineapple Rings\nSebero Black Pineapple');
 });
 
 test('isStalePlan: в плане больше 30 дней', () => {
