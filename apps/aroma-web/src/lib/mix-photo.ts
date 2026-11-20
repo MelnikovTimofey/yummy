@@ -5,7 +5,7 @@
 //
 // Правило: первый яркий вкус (фрукт, ягода, десерт, специя, кола, конфеты, мята) в
 // названии (#610), затем первый по порядку flavors; нет ярких — первая база во flavors
-// (сливки, чай, лёд, табак, ром, травы, цветы, хвоя); flavors пустые — первая рисуемая
+// (сливки, чай, лёд, табак, травы, цветы, хвоя, вино, коктейль, ром); flavors пустые — первая рисуемая
 // категория (#615); ничего не узнано — null, на месте фото остаётся ProfileGlyph.
 
 export type MixPhotoSize = '132' | 'sheet' | 'reel';
@@ -22,25 +22,25 @@ type Ingredient = { id: string; words: string[]; variants: number; base?: true }
 export const INGREDIENTS: Ingredient[] = [
   { id: 'chocolate', words: ['шоколад', 'какао'], variants: 1 },
   // Ананас выше колы: «Пина колада» и в названии, и во flavors — ананас.
-  { id: 'pineapple', words: ['ананас', 'колад'], variants: 1 },
-  { id: 'cola', words: ['кола', 'газиров', 'лимонад', 'энергетик', 'байкал', 'рутбир'], variants: 1 },
+  { id: 'pineapple', words: ['ананас', 'колад'], variants: 2 },
+  { id: 'cola', words: ['кола', 'газиров', 'лимонад', 'энергетик', 'байкал', 'рутбир'], variants: 2 },
   { id: 'mint', words: ['мят', 'ментол', 'мохито', 'эвкалипт'], variants: 3 },
   { id: 'lemon', words: ['лимон', 'юдзу'], variants: 2 },
   { id: 'lime', words: ['лайм'], variants: 1 },
   { id: 'grapefruit', words: ['грейпфрут', 'помело'], variants: 1 },
-  { id: 'orange', words: ['апельсин', 'мандарин', 'цитрус', 'клементин'], variants: 1 },
+  { id: 'orange', words: ['апельсин', 'мандарин', 'цитрус', 'клементин'], variants: 2 },
   { id: 'strawberry', words: ['клубник', 'земляник'], variants: 3 },
   { id: 'raspberry', words: ['малин'], variants: 1 },
   { id: 'blueberry', words: ['черник', 'голубик'], variants: 1 },
   { id: 'cherry', words: ['вишн', 'черешн'], variants: 2 },
   { id: 'grape', words: ['виноград'], variants: 2 },
   { id: 'currant', words: ['смородин'], variants: 1 },
-  { id: 'forest-berries', words: ['ягод', 'ежевик', 'клюкв', 'барбарис', 'крыжовник', 'брусник', 'облепих', 'ирг', 'княженик', 'черемух', 'асаи'], variants: 1 },
+  { id: 'forest-berries', words: ['ягод', 'ежевик', 'клюкв', 'барбарис', 'крыжовник', 'брусник', 'облепих', 'ирг', 'княженик', 'черемух', 'асаи'], variants: 3 },
   { id: 'mango', words: ['манго'], variants: 2 },
   { id: 'passionfruit', words: ['маракуй', 'гуав', 'папай'], variants: 1 },
-  { id: 'peach', words: ['персик', 'абрикос', 'нектарин'], variants: 1 },
+  { id: 'peach', words: ['персик', 'абрикос', 'нектарин'], variants: 2 },
   { id: 'melon', words: ['дын'], variants: 1 },
-  { id: 'watermelon', words: ['арбуз'], variants: 1 },
+  { id: 'watermelon', words: ['арбуз'], variants: 2 },
   { id: 'apple', words: ['яблок'], variants: 1 },
   { id: 'pear', words: ['груш'], variants: 1 },
   { id: 'banana', words: ['банан'], variants: 1 },
@@ -48,21 +48,41 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'coconut', words: ['кокос'], variants: 1 },
   { id: 'lychee', words: ['личи'], variants: 1 },
   { id: 'pomegranate', words: ['гранат'], variants: 1 },
+  { id: 'fig', words: ['инжир', 'финик'], variants: 2 },
+  { id: 'dragonfruit', words: ['питахай', 'питай', 'драгонфрут'], variants: 1 },
+  { id: 'cactus', words: ['кактус', 'опунци'], variants: 2 },
+  { id: 'popcorn', words: ['попкорн'], variants: 1 },
+  { id: 'corn', words: ['кукуруз'], variants: 1 },
+  { id: 'tomato', words: ['томат', 'помидор'], variants: 2 },
+  { id: 'cucumber', words: ['огур'], variants: 1 },
+  { id: 'chili', words: ['перец', 'перц', 'чили', 'халапень'], variants: 2 },
   { id: 'vanilla', words: ['ванил'], variants: 1 },
   { id: 'caramel', words: ['карамел', 'ирис'], variants: 1 },
   { id: 'coffee', words: ['кофе'], variants: 1 },
   { id: 'nuts', words: ['орех', 'фисташ', 'миндал', 'фундук', 'арахис', 'халв'], variants: 1 },
   { id: 'honey', words: ['мед', 'кленов'], variants: 1 },
   { id: 'cinnamon', words: ['кориц', 'специ', 'кардамон', 'имбир', 'бадьян', 'гвоздик', 'анис'], variants: 1 },
-  { id: 'candy', words: ['жвачк', 'бабл', 'леденц', 'мармелад', 'конфет'], variants: 1 },
+  { id: 'bubblegum', words: ['жвачк', 'бабл'], variants: 1 },
+  { id: 'candy', words: ['леденц', 'мармелад', 'конфет'], variants: 1 },
   { id: 'pastry', words: ['печень', 'пирог', 'кекс', 'вафл', 'чизкейк', 'булочк', 'торт', 'круассан', 'тирамису'], variants: 1 },
   { id: 'cream', words: ['сливоч', 'сливк', 'молок', 'молоч', 'морожен', 'йогурт', 'бейлис', 'сгущ'], variants: 2, base: true },
+  // Слива ниже сливок: «слив» сидит внутри «сливочного» и «сливок».
+  { id: 'plum', words: ['слив', 'алыч'], variants: 2 },
   { id: 'tea', words: ['чай', 'бергамот'], variants: 1, base: true },
   { id: 'ice', words: ['холод', 'лед', 'ледян', 'морозн', 'бустер'], variants: 1, base: true },
-  { id: 'tobacco', words: ['табак', 'табачн', 'сигар'], variants: 1, base: true },
+  { id: 'tobacco', words: ['табак', 'табачн', 'сигар'], variants: 2, base: true },
   { id: 'flowers', words: ['цветоч', 'роза', 'розов', 'жасмин', 'лаванд', 'бузин', 'фиалк', 'ромашк'], variants: 1, base: true },
   { id: 'herbs', words: ['базилик', 'тархун', 'травян', 'чабрец', 'розмарин', 'шалфей', 'лемонграсс'], variants: 1, base: true },
   { id: 'pine', words: ['хвой', 'можжевел', 'сосн', 'кедр'], variants: 1, base: true },
+  // Напитки — база: «шампанское, клубника» — клубника. Вино ниже винограда: «виноград»
+  // начинается с «вино».
+  { id: 'wine', words: ['вино', 'винн', 'шампан', 'глинтвейн', 'сангри', 'просекко'], variants: 5, base: true },
+  {
+    id: 'cocktail',
+    words: ['коктейл', 'маргарит', 'апероль', 'спритц', 'куба либре', 'текил', 'абсент', 'водк', 'космопол', 'амаретт', 'мартини', 'негрони', 'алкогол'],
+    variants: 3,
+    base: true,
+  },
   // Ром последним: «ром» сидит внутри «ромашки».
   { id: 'rum', words: ['ром', 'коньяк', 'виски', 'джин'], variants: 1, base: true },
 ];
