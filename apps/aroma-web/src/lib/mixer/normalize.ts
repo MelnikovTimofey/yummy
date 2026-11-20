@@ -20,6 +20,7 @@ const normalizeTobacco = (item: unknown): PaletteTobacco | null => {
   return {
     id: text(item.id),
     manufacturer: text(item.manufacturer),
+    lineName: text(item.lineName),
     name: text(item.name) || text(item.id),
     flavorProfiles: strings(item.flavorProfiles),
     flavors: strings(item.flavors),

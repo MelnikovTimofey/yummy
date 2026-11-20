@@ -5,15 +5,22 @@ import { readSubstitute, showSubstitute } from './substitute';
 // Замена в составе у гостя (#483, PRD §8.7 п.2): стоит табак с полки, пропорция — исходная.
 
 test('компонент с заменой: бренд и название с полки, пропорция своя, отмечен', () => {
-  const component = { id: 'lemonblast', manufacturer: 'Darkside', name: 'Lemonblast', proportion: 30 };
-  const substitute = readSubstitute({ tobaccoId: 'lemon-shock', manufacturer: 'Black Burn', name: 'Lemon Shock', flavors: ['лимон'] });
+  const component = { id: 'lemonblast', manufacturer: 'Darkside', lineName: 'Core', name: 'Lemonblast', proportion: 30 };
+  const substitute = readSubstitute({ tobaccoId: 'lemon-shock', manufacturer: 'Black Burn', lineName: 'Основная', name: 'Lemon Shock', flavors: ['лимон'] });
   assert.deepEqual(showSubstitute(component, substitute), {
     id: 'lemonblast',
     manufacturer: 'Black Burn',
+    lineName: 'Основная',
     name: 'Lemon Shock',
     proportion: 30,
     substituted: true,
   });
+});
+
+test('замена без линейки (backend до #626) — пустая линейка, а не линейка исходного табака', () => {
+  const component = { manufacturer: 'Darkside', lineName: 'Core', name: 'Lemonblast', proportion: 30 };
+  const substitute = readSubstitute({ tobaccoId: 'lemon-shock', manufacturer: 'Black Burn', name: 'Lemon Shock' });
+  assert.equal(showSubstitute(component, substitute).lineName, '');
 });
 
 test('без замены компонент как есть', () => {

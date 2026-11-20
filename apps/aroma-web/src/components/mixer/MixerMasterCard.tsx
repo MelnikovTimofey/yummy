@@ -1,7 +1,7 @@
-import { ProfileGlyph, SignatureBar } from '@/components/aroma';
+import { MakerLine, ProfileGlyph, SignatureBar } from '@/components/aroma';
 import './mixer.css';
 
-export type MasterCardComponent = { id: string; manufacturer: string; name: string; proportion: number };
+export type MasterCardComponent = { id: string; manufacturer: string; lineName: string; name: string; proportion: number };
 export type MixerSmoke = { name: string; profiles: string[]; components: MasterCardComponent[]; harmony: number | null };
 
 // Карточка для мастера после «Покурить» — в той же подаче, что у миксов
@@ -52,7 +52,7 @@ export function MixerMasterCard({
                 style={{ background: `var(--composition-${index + 1})` }}
                 aria-hidden
               />
-              <span className="aroma-mix-sheet-comp-maker">{component.manufacturer}</span>
+              <MakerLine manufacturer={component.manufacturer} lineName={component.lineName} />
               <span className="aroma-mix-sheet-comp-name">{component.name}</span>
               <span className="aroma-mix-sheet-comp-share">{`${component.proportion}%`}</span>
             </li>

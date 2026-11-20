@@ -15,6 +15,8 @@ export type GuestMixRef = { kind: 'catalog'; mixId: string | null } | { kind: 'c
 export type GuestCabinetComponent = {
   tobaccoId: string;
   manufacturer: string;
+  // С #626; у собранного до него и у старого backend поля нет.
+  lineName?: string;
   name: string;
   proportion: number;
   substitute?: ComponentSubstitute;
