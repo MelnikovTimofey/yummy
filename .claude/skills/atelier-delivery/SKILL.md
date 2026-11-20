@@ -57,9 +57,10 @@ rail view → каталог → передача выбранного микс�
 Дисциплина: не смешивать broad-редизайн, смену продуктовой семантики и multi-screen
 переписывание в одном срезе.
 
-UI обеих поверхностей — по согласованному мокапу из issue (`design/design_handoff_<slug>/`,
-`atelier-feature-design`) и дизайн-системе `.claude/skills/aroma-atelier-design/`;
-токены — только из `packages/design-tokens/`.
+UI обеих поверхностей — по согласованному мокапу из issue (холст Claude Design,
+`atelier-feature-design`; до 2026-11-20 — `design/design_handoff_<slug>/`) и
+дизайн-системе `.claude/skills/aroma-atelier-design/`; токены — только из
+`packages/design-tokens/`.
 
 Проверки: `cd apps/aroma-web && npm run build`; ручной smoke затронутого этапа
 (фиксировать URL, viewport, этап, что именно проверено); Playwright-smoke, когда

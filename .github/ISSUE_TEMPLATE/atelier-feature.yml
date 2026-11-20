@@ -78,6 +78,8 @@ body:
         - значения токенов — `packages/design-tokens/` (правятся только там,
           в приложения раскладываются `node packages/design-tokens/sync.mjs`);
         - описание системы, компоненты и UI-киты — `.claude/skills/aroma-atelier-design/`;
+        - мокапы — холст Claude Design на системе «Арома Ателье, Film Noir»
+          (`packages/design-tokens/claude-design/`);
         - один акцент-бордо `#8E2F3C`, monospace в системе нет, эмодзи не используются.
 
         Для `apps/master-web` дополнительно:
@@ -130,4 +132,4 @@ body:
         - label: "Задача затрагивает public contract"
         - label: "Задача меняет process/workflow/docs rules"
         - label: "Можно делать как локальный bounded slice без cross-app rewrite"
-        - label: "Это UI-срез: нужен мокап, согласованный владельцем (`design/design_handoff_<slug>/`, скилл `atelier-feature-design`)"
+        - label: "Это UI-срез: нужен мокап на холсте Claude Design, согласованный владельцем (скилл `atelier-feature-design`)"
