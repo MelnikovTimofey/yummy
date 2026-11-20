@@ -283,6 +283,7 @@ export const loadMixer = async () => {
       return {
         id: item.id,
         manufacturer: item.manufacturer,
+        lineName: item.lineName,
         name: item.name,
         flavorProfiles: item.flavorProfiles,
         flavors: item.flavors,
@@ -452,6 +453,7 @@ export const recordCustomMixSmoke = async (
     components: components.map(({ tobacco, proportion }) => ({
       tobaccoId: tobacco.id,
       manufacturer: tobacco.manufacturer,
+      lineName: tobacco.lineName,
       name: tobacco.name,
       proportion,
     })),

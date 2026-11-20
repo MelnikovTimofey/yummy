@@ -47,8 +47,8 @@ test.describe('custom mix smoke event', () => {
 
     const stored = await storedEvent(body.id);
     assert.deepEqual(stored.components, [
-      { tobaccoId: 'tobacco-citrus-breeze', manufacturer: 'Ателье Reserve', name: 'Citrus Breeze', proportion: 60 },
-      { tobaccoId: 'tobacco-mint-veil', manufacturer: 'Ателье Reserve', name: 'Mint Veil', proportion: 40 },
+      { tobaccoId: 'tobacco-citrus-breeze', manufacturer: 'Ателье Reserve', lineName: '', name: 'Citrus Breeze', proportion: 60 },
+      { tobaccoId: 'tobacco-mint-veil', manufacturer: 'Ателье Reserve', lineName: '', name: 'Mint Veil', proportion: 40 },
     ]);
     assert.equal(stored.signature, body.signature);
     assert.equal(stored.harmony, body.harmony);
@@ -179,7 +179,7 @@ test.describe('custom mix smoke event', () => {
 
     const stored = await storedEvent(body.id);
     assert.deepEqual(stored.components, [
-      { tobaccoId: created.id, manufacturer: 'Тест', name: 'Разовый', proportion: 100 },
+      { tobaccoId: created.id, manufacturer: 'Тест', lineName: '', name: 'Разовый', proportion: 100 },
     ]);
   });
 

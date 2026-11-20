@@ -13,7 +13,8 @@ const MAX_LIMIT = 100;
 
 const asStringList = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
 
-type SnapshotComponent = { tobaccoId: string; manufacturer: string; name: string; proportion: number };
+// lineName — с #626; у событий раньше него поля нет.
+type SnapshotComponent = { tobaccoId: string; manufacturer: string; lineName?: string; name: string; proportion: number };
 
 const asComponents = (value: unknown): SnapshotComponent[] =>
   Array.isArray(value) ? value.filter((item): item is SnapshotComponent => typeof item?.tobaccoId === 'string') : [];
@@ -53,7 +54,7 @@ const loadMixes = async (ids: string[]) => {
             tobaccoId: true,
             proportion: true,
             tobacco: {
-              select: { id: true, manufacturer: true, name: true, flavors: true, inStock: true, archived: true },
+              select: { id: true, manufacturer: true, lineName: true, name: true, flavors: true, inStock: true, archived: true },
             },
           },
         },
@@ -128,6 +129,7 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
     components: mix.components.map((item) => ({
       tobaccoId: item.tobaccoId,
       manufacturer: item.tobacco.manufacturer,
+      lineName: item.tobacco.lineName,
       name: item.tobacco.name,
       proportion: item.proportion,
       ...(mix.rule.substitute?.tobaccoId === item.tobaccoId ? { substitute: mix.rule.substitute.to } : {}),
@@ -157,7 +159,7 @@ const buildItems = async (guestId: string, catalog: CatalogRow[], custom: Custom
       card: {
         description: '',
         flavors: [],
-        components: components.map(({ tobaccoId, manufacturer, name, proportion }) => ({ tobaccoId, manufacturer, name, proportion })),
+        components: components.map(({ tobaccoId, manufacturer, lineName, name, proportion }) => ({ tobaccoId, manufacturer, lineName: lineName ?? '', name, proportion })),
         harmony: row.harmony,
         madeAt: row.createdAt.toISOString(),
       },

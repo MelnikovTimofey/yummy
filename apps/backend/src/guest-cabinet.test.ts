@@ -96,6 +96,7 @@ test.describe('guest cabinet: history and favorites', () => {
       components: mix.components.map((item) => ({
         tobaccoId: item.tobaccoId,
         manufacturer: item.tobacco.manufacturer,
+        lineName: item.tobacco.lineName,
         name: item.tobacco.name,
         proportion: item.proportion,
       })),
