@@ -21,14 +21,14 @@ test('pickMixPhoto: нет ярких — первая база', () => {
   assert.equal(ingredientOf(['чай', 'холодок']), 'tea');
   assert.equal(ingredientOf(['холодок', 'сливочный']), 'ice');
   assert.equal(ingredientOf(['сигара', 'ром']), 'tobacco');
-  assert.equal(ingredientOf(['грибы', 'ром']), 'rum');
+  assert.equal(ingredientOf(['гастрономия', 'ром']), 'rum');
   assert.equal(ingredientOf(['чабрец', 'роза']), 'herbs');
   assert.equal(ingredientOf(['хвойный', 'вишня']), 'cherry');
 });
 
 test('pickMixPhoto: ничего не узнано или flavors пустые — null', () => {
   assert.equal(pickMixPhoto({ id: 'm', flavors: [] }), null);
-  assert.equal(pickMixPhoto({ id: 'm', flavors: ['грибы', 'парфюм'] }), null);
+  assert.equal(pickMixPhoto({ id: 'm', flavors: ['гастрономия', 'кислый'] }), null);
 });
 
 // Пробелы на полке и в каталоге (аудит 2026-11-20): вкусы, которые узнаются
@@ -68,7 +68,7 @@ test('pickMixPhoto: flavors пустые — фото по первой рису
 });
 
 test('pickMixPhoto: категория не перебивает flavors и название', () => {
-  assert.equal(byProfiles(['berry'], ['грибы']), null);
+  assert.equal(byProfiles(['berry'], ['гастрономия']), null);
   assert.equal(byProfiles(['berry'], ['лимон']), 'lemon');
   assert.equal(byProfiles(['berry'], [], 'Арбузный рай'), 'watermelon');
 });
@@ -208,4 +208,21 @@ test('pickMixPhoto: вино и коктейль — база, фрукт важ
   assert.equal(ingredientOf(['маргарита', 'лайм']), 'lime');
   assert.equal(ingredientOf(['глинтвейн', 'холодок']), 'wine');
   assert.equal(byName('Шампанское', ['шампанское']), 'wine');
+});
+
+// Третья партия (#630): грибы, пиво, благовония. Парфюм без фото, пока нет флакона без марки.
+test('pickMixPhoto: грибы, пиво, благовония', () => {
+  const cases: Array<[string, string]> = [
+    ['грибы', 'mushroom'], ['шампиньоны', 'mushroom'], ['трюфель', 'mushroom'],
+    ['пиво', 'beer'], ['стаут', 'beer'],
+    ['ладан', 'incense'], ['благовония', 'incense'], ['сандал', 'incense'], ['пачули', 'incense'], ['древесный', 'incense'],
+  ];
+  for (const [flavor, expected] of cases) assert.equal(ingredientOf([flavor]), expected, flavor);
+});
+
+test('pickMixPhoto: пиво и благовония — база, вкус важнее', () => {
+  assert.equal(ingredientOf(['сандал', 'вишня']), 'cherry');
+  assert.equal(ingredientOf(['пиво', 'лайм']), 'lime');
+  assert.equal(ingredientOf(['ладан', 'холодок']), 'incense');
+  assert.equal(byName('Грибы со сметаной', ['грибы']), 'mushroom');
 });
