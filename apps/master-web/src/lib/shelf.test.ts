@@ -14,6 +14,7 @@ import {
   emptyToast,
   filterShelfRows,
   formatShelfDate,
+  formatShelfLine,
   keepToast,
   matchShelfStatus,
   nextTrialVerdict,
@@ -24,6 +25,7 @@ import {
   restockLabel,
   restockToast,
   shelfCounts,
+  shelfLineOptions,
   shelfRowAction,
   shelfRowMenu,
   shelfState,
@@ -31,6 +33,7 @@ import {
   sortShelfRows,
   suggestKeepStocked,
   trialArrival,
+  withShelfBrands,
 } from './shelf';
 
 const OUT = '2026-11-03T09:00:00';
@@ -141,9 +144,50 @@ test('buildShelfFilterOptions считает варианты по всей по
   assert.deepEqual(options.strengths, [{ value: 'Средняя', count: 2 }, { value: '', count: 1 }]);
 });
 
+const lineRows = () => [
+  row({ brand: 'Sebero', line: 'Sebero Black', name: 'Pineapple' }),
+  row({ brand: 'Sebero', line: 'SEBERO Black', name: 'Strawberry' }),
+  row({ brand: 'Sebero', line: 'Sebero Classic', name: 'Pineapple' }),
+  row({ brand: 'Sebero', line: '', name: 'Мармеладные красные мишки' }),
+  row({ brand: 'DARKSIDE', line: 'Core', name: 'Lemonblast' }),
+  row({ brand: 'DARKSIDE', line: 'Xperience', name: 'Supernova' }),
+  row({ brand: 'Musthave', line: 'Основная', name: 'Pineapple Rings' }),
+  row({ brand: 'Musthave', line: 'Undercoal', name: 'Kiwi' }),
+];
+
+test('shelfLineOptions: линейки выбранных брендов, без пустой и «Основной»; без бренда — нет (#625)', () => {
+  const rows = lineRows();
+  assert.deepEqual(shelfLineOptions(rows, []), []);
+  const sebero = shelfLineOptions(rows, ['Sebero']);
+  assert.deepEqual(sebero.map((key) => formatShelfLine(key, ['Sebero'])), ['Black', 'Classic']);
+  const both = ['Sebero', 'DARKSIDE'];
+  assert.deepEqual(shelfLineOptions(rows, both).map((key) => formatShelfLine(key, both)), ['DARKSIDE Core', 'DARKSIDE Xperience', 'Sebero Black', 'Sebero Classic']);
+  // У Musthave одна линейка с подписью — фильтра нет.
+  assert.deepEqual(shelfLineOptions(rows, ['Musthave']), []);
+});
+
+test('filterShelfRows: «Линейка» оставляет только выбранные линейки (#625)', () => {
+  const rows = lineRows();
+  const [black] = shelfLineOptions(rows, ['Sebero']);
+  const names = filterShelfRows(rows, { query: '', status: 'all', filters: { ...EMPTY_SHELF_FILTERS, brands: ['Sebero'], lines: [black] } })
+    .map((item) => `${item.tobacco.lineName} ${item.tobacco.name}`);
+  assert.deepEqual(names, ['Sebero Black Pineapple', 'SEBERO Black Strawberry']);
+});
+
+test('withShelfBrands: снятый бренд уносит свои линейки из выбора (#625)', () => {
+  const rows = lineRows();
+  const lines = shelfLineOptions(rows, ['Sebero', 'DARKSIDE']).filter((key) => /Black|Core/.test(key));
+  const filters = { ...EMPTY_SHELF_FILTERS, brands: ['Sebero', 'DARKSIDE'], lines };
+  const next = withShelfBrands(filters, ['Sebero']);
+  assert.deepEqual(next.brands, ['Sebero']);
+  assert.deepEqual(next.lines.map((key) => formatShelfLine(key, ['Sebero'])), ['Black']);
+  assert.deepEqual(withShelfBrands(filters, []).lines, []);
+});
+
 test('countActiveShelfFilters считает выбранные значения атрибутов', () => {
   assert.equal(countActiveShelfFilters(EMPTY_SHELF_FILTERS), 0);
   assert.equal(countActiveShelfFilters({ ...EMPTY_SHELF_FILTERS, brands: ['A', 'B'], mixes: 'with' }), 3);
+  assert.equal(countActiveShelfFilters({ ...EMPTY_SHELF_FILTERS, brands: ['A'], lines: ['A Black'] }), 2);
 });
 
 test('сортировка полки: по наличию, по названию, по приходу', () => {

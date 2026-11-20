@@ -1,6 +1,6 @@
 import type { MixStatus, MixSubstitution, ShelfArrival, ShelfRow, ShelfTrialVerdict } from '../contracts';
 import { rankBySearch } from './search-match';
-import { tobaccoFullName } from './tobacco-line';
+import { lineLabel, tobaccoFullName } from './tobacco-line';
 
 // Чистая логика экрана «Полка» (#211, #518): фильтры, сортировка, подписи. Полка
 // небольшая (сотни строк), поэтому всё считается в браузере по загруженным строкам.
@@ -49,6 +49,8 @@ export const SHELF_SORT_OPTIONS: Array<[ShelfSortKey, string]> = [
 
 export type ShelfFilters = {
   brands: string[];
+  // Ключи shelfLineOptions: бренд и линейка по правилу подписи (#625).
+  lines: string[];
   profiles: string[];
   // '' — крепость не указана.
   strengths: string[];
@@ -57,6 +59,7 @@ export type ShelfFilters = {
 
 export const EMPTY_SHELF_FILTERS: ShelfFilters = {
   brands: [],
+  lines: [],
   profiles: [],
   strengths: [],
   mixes: '',
@@ -64,6 +67,32 @@ export const EMPTY_SHELF_FILTERS: ShelfFilters = {
 
 const strengthOf = (row: ShelfRow) =>
   row.tobacco.officialStrength?.trim() || row.tobacco.communityStrength?.trim() || '';
+
+// «Sebero Black» и «SEBERO Black» из htreviews — одна линейка «Black» по правилу подписи.
+const LINE_SEP = '\u001f';
+const lineKeyOf = (row: ShelfRow) => {
+  const line = lineLabel(row.tobacco.manufacturer, row.tobacco.lineName);
+  return line ? `${row.tobacco.manufacturer}${LINE_SEP}${line}` : '';
+};
+const brandOfLine = (key: string) => key.split(LINE_SEP)[0];
+
+// «Линейка» (#625): только у выбранных брендов и только когда линеек больше одной.
+export const shelfLineOptions = (rows: ShelfRow[], brands: string[]): string[] => {
+  const keys = [...new Set(rows.filter((row) => brands.includes(row.tobacco.manufacturer)).map(lineKeyOf).filter(Boolean))];
+  return keys.length > 1 ? keys.sort((a, b) => a.localeCompare(b, 'ru')) : [];
+};
+
+// Один бренд — «Black», несколько — «Sebero Black».
+export const formatShelfLine = (key: string, brands: string[]) => {
+  const [brand, line = ''] = key.split(LINE_SEP);
+  return brands.length > 1 ? `${brand} ${line}` : line;
+};
+
+export const withShelfBrands = (filters: ShelfFilters, brands: string[]): ShelfFilters => ({
+  ...filters,
+  brands,
+  lines: filters.lines.filter((key) => brands.includes(brandOfLine(key))),
+});
 
 // Поиск — по неточному совпадению (#522): точные выше похожих, внутри групп —
 // порядок rows, поэтому сортировать строки нужно до отбора.
@@ -74,6 +103,7 @@ export const filterShelfRows = (
   const narrowed = rows.filter((row) => {
     if (!matchShelfStatus(row, status)) return false;
     if (filters.brands.length && !filters.brands.includes(row.tobacco.manufacturer)) return false;
+    if (filters.lines.length && !filters.lines.includes(lineKeyOf(row))) return false;
     if (filters.profiles.length && !row.tobacco.flavorProfiles.some((profile) => filters.profiles.includes(profile))) return false;
     if (filters.strengths.length && !filters.strengths.includes(strengthOf(row))) return false;
     if (filters.mixes === 'with' && row.mixCount === 0) return false;
@@ -101,6 +131,7 @@ export const buildShelfFilterOptions = (rows: ShelfRow[]) => ({
 
 export const countActiveShelfFilters = (filters: ShelfFilters) =>
   filters.brands.length
+  + filters.lines.length
   + filters.profiles.length
   + filters.strengths.length
   + Number(Boolean(filters.mixes));
