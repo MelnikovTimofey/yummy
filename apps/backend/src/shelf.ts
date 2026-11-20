@@ -89,14 +89,14 @@ const loadMixes = async (client: Tx, tobaccoIds: string[]) =>
     select: { tobaccoId: true, mix: { select: { id: true, name: true } } },
   });
 
-type AnalogRecord = { id: string; manufacturer: string; name: string; inStock: boolean; archived: boolean };
+type AnalogRecord = { id: string; manufacturer: string; lineName: string; name: string; inStock: boolean; archived: boolean };
 
 // Аналоги табаков полки в их порядке замены (#480) — один запрос на все строки.
 const loadAnalogs = async (client: Tx, tobaccoIds: string[]) => {
   const links = await client.tobaccoAnalog.findMany({
     where: { tobaccoId: { in: tobaccoIds } },
     orderBy: { sortOrder: 'asc' },
-    select: { tobaccoId: true, analog: { select: { id: true, manufacturer: true, name: true, inStock: true, archived: true } } },
+    select: { tobaccoId: true, analog: { select: { id: true, manufacturer: true, lineName: true, name: true, inStock: true, archived: true } } },
   });
   const byTobacco = new Map<string, AnalogRecord[]>();
   for (const link of links) byTobacco.set(link.tobaccoId, [...(byTobacco.get(link.tobaccoId) ?? []), link.analog]);
@@ -112,6 +112,7 @@ const analogViews = (self: { inStock: boolean; archived: boolean }, analogs: Ana
   return analogs.map((analog) => ({
     tobaccoId: analog.id,
     manufacturer: analog.manufacturer,
+    lineName: analog.lineName,
     name: analog.name,
     inStock: readyOf(analog),
     substituting: analog === standIn,
@@ -186,9 +187,9 @@ export type ShelfTobaccoView = {
 
 // Аналог в порядке замены у этого табака (#478); substituting — стоит заменой в миксах,
 // пока сам табак закончился.
-export type ShelfAnalogView = TobaccoRef & { inStock: boolean; substituting: boolean };
+export type ShelfAnalogView = TobaccoRef & { lineName: string; inStock: boolean; substituting: boolean };
 
-export type ShelfSimilarView = TobaccoRef & { flavors: string[] };
+export type ShelfSimilarView = TobaccoRef & { lineName: string; flavors: string[] };
 
 export type ShelfRow = {
   tobacco: ShelfTobaccoView;
@@ -347,11 +348,12 @@ const cardMixes = async (tobaccoId: string): Promise<ShelfCard['mixes']> => {
 const similarCandidates = async () => {
   const shelf = await prisma.shelfItem.findMany({
     where: { status: 'active', tobacco: { inStock: true, archived: false } },
-    select: { tobacco: { select: { id: true, manufacturer: true, name: true, flavorProfiles: true, flavors: true } } },
+    select: { tobacco: { select: { id: true, manufacturer: true, lineName: true, name: true, flavorProfiles: true, flavors: true } } },
   });
   return shelf.map(({ tobacco }) => ({
     tobaccoId: tobacco.id,
     manufacturer: tobacco.manufacturer,
+    lineName: tobacco.lineName,
     name: tobacco.name,
     flavorProfiles: parseList(tobacco.flavorProfiles),
     flavors: parseList(tobacco.flavors),
