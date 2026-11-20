@@ -6816,6 +6816,9 @@ button[aria-busy="true"]:disabled {
   text-overflow: ellipsis;
 }
 
+/* Линейка в подписи «бренд, линейка» и в однострочном имени (#624). */
+.shelf-line { font-style: normal; color: var(--text-secondary); }
+
 /* Метка «проба» рядом с названием (#329, #shot=shelf): табак впервые пришёл за 60 дней.
    Вне .shelf-name — длинное название обрезается, а метка остаётся видна. */
 .shelf-name-row { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }

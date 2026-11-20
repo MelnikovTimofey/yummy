@@ -1,6 +1,8 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { ShelfRow, ShelfTrialVerdict } from '@/contracts';
 import { restockLabel, shelfRowAction, shelfRowMenu } from '@/lib/shelf';
+import { tobaccoFullName } from '@/lib/tobacco-line';
+import { ShelfBrand } from './shelf-brand';
 import { ShelfCheck } from './shelf-bulk';
 import { ShelfAnalogsCell } from './shelf-analogs';
 import type { ShelfRowActions } from './shelf-row-menu';
@@ -10,7 +12,7 @@ import { TrialMark } from './shelf-trial-mark';
 // «Полка» на телефоне (#215, #518, #shot=mobile-shelf): мастер у стойки жмёт
 // «Закончился» или «Вернуть» одним касанием.
 
-const fullName = (row: ShelfRow) => `${row.tobacco.manufacturer} ${row.tobacco.name}`;
+const fullName = (row: ShelfRow) => tobaccoFullName(row.tobacco);
 
 type ShelfMobileListProps = {
   rows: ShelfRow[];
@@ -55,13 +57,17 @@ export const ShelfMobileList = ({
               <ShelfCheck checked={isPicked} label={`Выбрать ${fullName(row)}`} onToggle={() => onPick(row)} />
               <span className="shelf-name">
                 <b>{row.tobacco.name}</b>
-                <span>{row.tobacco.manufacturer}</span>
+                <span>
+                  <ShelfBrand tobacco={row.tobacco} />
+                </span>
               </span>
             </span>
           ) : (
             <button type="button" className="m-shelf-card__name shelf-name" onClick={() => onOpenCard(row)}>
               <b>{row.tobacco.name}</b>
-              <span>{row.tobacco.manufacturer}</span>
+              <span>
+                <ShelfBrand tobacco={row.tobacco} />
+              </span>
             </button>
           )}
           {action === 'empty' ? (
@@ -117,7 +123,9 @@ export const ShelfActionsSheet = ({ row, actions, onClose }: { row: ShelfRow; ac
     <BottomSheet label={`Действия: ${fullName(row)}`} onClose={onClose} className="m-actions">
       <div className="m-mark-sheet__head">
         <h2 className="m-mark-sheet__title">{row.tobacco.name}</h2>
-        <p className="m-mark-sheet__brand">{row.tobacco.manufacturer}</p>
+        <p className="m-mark-sheet__brand">
+          <ShelfBrand tobacco={row.tobacco} />
+        </p>
       </div>
       <div className="m-actions__list">
         {row.shelfStatus === 'plan' ? (

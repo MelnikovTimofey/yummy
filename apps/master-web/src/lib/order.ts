@@ -7,6 +7,7 @@ import {
   type ShelfOrderPlanLine,
 } from '../contracts';
 import { formatNumber, formatShelfDate } from './shelf';
+import { tobaccoFullName } from './tobacco-line';
 
 // «К заказу» (#518, design/design_handoff_shelf_status, #shot=order, order-copied,
 // mobile-order): закончились и держим постоянно. Сколько заказать, пишет мастер.
@@ -21,12 +22,10 @@ export const groupTitle = (group: ShelfOrderGroup) => group.supplier?.name ?? '�
 export const groupMeta = (group: ShelfOrderGroup) =>
   group.lastDeliveryAt ? `последний счёт ${formatShelfDate(group.lastDeliveryAt)}` : null;
 
-const tobaccoName = (tobacco: { manufacturer: string; name: string }) => `${tobacco.manufacturer} ${tobacco.name}`;
+// Заявка поставщику — только названия с линейкой (#624), объём мастер допишет сам.
+export const orderCopyText = (group: ShelfOrderGroup) => group.lines.map((line) => tobaccoFullName(line.tobacco)).join('\n');
 
-// Заявка поставщику — только названия, объём мастер допишет сам.
-export const orderCopyText = (group: ShelfOrderGroup) => group.lines.map((line) => tobaccoName(line.tobacco)).join('\n');
-
-export const planCopyText = (plan: ShelfOrderPlanLine[]) => plan.map((line) => tobaccoName(line.tobacco)).join('\n');
+export const planCopyText = (plan: ShelfOrderPlanLine[]) => plan.map((line) => tobaccoFullName(line.tobacco)).join('\n');
 
 const hiddenWord = (count: number) => (count % 10 === 1 && count % 100 !== 11 ? 'скрыт' : 'скрыты');
 
@@ -60,7 +59,7 @@ const NOT_KEPT_NAMES = 5;
 // Закончились, но не держим постоянно: в заявку не идут, одной строкой под группами.
 export const notKeptText = (notKept: ShelfOrderNotKept[]) => {
   const one = notKept.length % 10 === 1 && notKept.length % 100 !== 11;
-  const names = notKept.slice(0, NOT_KEPT_NAMES).map(tobaccoName).join(', ');
+  const names = notKept.slice(0, NOT_KEPT_NAMES).map(tobaccoFullName).join(', ');
   const rest = notKept.length > NOT_KEPT_NAMES ? ` и ещё ${formatNumber(notKept.length - NOT_KEPT_NAMES)}` : '';
   return `Ещё ${formatNumber(notKept.length)} ${one ? 'закончился, его' : 'закончились, их'} не держим постоянно: ${names}${rest}.`;
 };
