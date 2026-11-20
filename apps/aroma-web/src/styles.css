@@ -1775,6 +1775,8 @@ select:focus-visible {
 
 .aroma-mix-sheet-photo-text .aroma-mix-sheet-title {
   font-size: 28px;
+  /* Не теснее ~1.33: line-clamp режет по строке, и хвосты «р», «у», «ф» срезаются (#292, #296). */
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
