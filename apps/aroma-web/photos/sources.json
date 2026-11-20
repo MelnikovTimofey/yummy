@@ -753,5 +753,51 @@
       "x": 0.5,
       "y": 0.5
     }
+  },
+  {
+    "ingredient": "mushroom",
+    "variant": 1,
+    "unsplash": "photo-1652088063505-d6d4d390b295",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "mushroom",
+    "variant": 2,
+    "unsplash": "photo-1504545102780-26774c1bb073",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "incense",
+    "variant": 1,
+    "unsplash": "photo-1762541115443-d83816da748c",
+    "focus": {
+      "x": 0.55,
+      "y": 0.72
+    },
+    "zoom": 1.4
+  },
+  {
+    "ingredient": "beer",
+    "variant": 1,
+    "unsplash": "photo-1618183479302-1e0aa382c36b",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  {
+    "ingredient": "beer",
+    "variant": 2,
+    "unsplash": "photo-1608742598121-15038a8db33c",
+    "focus": {
+      "x": 0.5,
+      "y": 0.5
+    }
   }
 ]
