@@ -30,7 +30,7 @@
     "pdfjs-dist": "4.10.38"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
+    "@types/node": "^26.6.6",
     "prisma": "^5.22.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
