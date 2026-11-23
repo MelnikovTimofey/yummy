@@ -181,6 +181,14 @@ export const RailEditor = ({
         className="rails-surface__sheet rail-drawer"
         showCloseButton={false}
         data-locked={locked || undefined}
+        // Radix отдаёт вложенной шторке верхний слой отложенным эффектом: Esc в
+        // первые миллисекунды после «Добавить микс» доставался редактору и
+        // закрывал его вместе с черновиком (#657).
+        onEscapeKeyDown={(event) => {
+          if (!pickerOpen) return;
+          event.preventDefault();
+          setPickerOpen(false);
+        }}
       >
         <header className="drawer__head rail-drawer__head">
           <div className="rail-drawer__head-copy">
