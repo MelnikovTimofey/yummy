@@ -30,11 +30,6 @@ updates:
         applies-to: security-updates
         patterns:
           - '*'
-    # TypeScript 7 удалил moduleResolution node10 — без миграции tsconfig сборка падает.
-    ignore:
-      - dependency-name: typescript
-        update-types:
-          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
