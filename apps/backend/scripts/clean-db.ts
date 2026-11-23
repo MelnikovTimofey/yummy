@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { countDemoContent, wipeDemoContent } from '../src/demo-clean';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
@@ -14,58 +15,10 @@ const confirmed =
 const maskDatabaseUrl = (url: string | undefined) =>
   url?.replace(/:[^:@/]*@/, ':***@') ?? '<no DATABASE_URL>';
 
-// Демо-контент и каталоги: всё это пересобирается при заливке прод-табаков
-// (sync:htreviews) и работе приложения. Удаляем в FK-безопасном порядке: сначала
-// дети, потом родители. Операционные данные (staff, daily-коды, intro-карточки,
-// telegram-операторы, аудит) НЕ трогаем — иначе будет нечем логиниться и тестировать.
-const targets = [
-  { label: 'избранное гостей', run: () => prisma.guestFavorite.deleteMany() },
-  { label: 'smoke-события', run: () => prisma.smokeCtaEvent.deleteMany() },
-  { label: 'рейтинги миксов', run: () => prisma.mixRating.deleteMany() },
-  { label: 'связи рейл↔микс', run: () => prisma.railMix.deleteMany() },
-  { label: 'состав миксов', run: () => prisma.mixComponent.deleteMany() },
-  { label: 'рейлы', run: () => prisma.rail.deleteMany() },
-  { label: 'миксы', run: () => prisma.mix.deleteMany() },
-  { label: 'отметки банок', run: () => prisma.packMark.deleteMany() },
-  { label: 'банки', run: () => prisma.pack.deleteMany() },
-  { label: 'полка', run: () => prisma.shelfItem.deleteMany() },
-  { label: 'строки поставок', run: () => prisma.deliveryLine.deleteMany() },
-  { label: 'поставки', run: () => prisma.delivery.deleteMany() },
-  { label: 'артикулы поставщиков', run: () => prisma.supplierItem.deleteMany() },
-  { label: 'поставщики', run: () => prisma.supplier.deleteMany() },
-  { label: 'табаки', run: () => prisma.tobacco.deleteMany() },
-  { label: 'каталог профилей вкуса', run: () => prisma.flavorProfileCatalog.deleteMany() },
-  { label: 'каталог вкусов', run: () => prisma.flavorCatalog.deleteMany() },
-  { label: 'каталог мета-тегов', run: () => prisma.flavorTagCatalog.deleteMany() },
-  { label: 'source-tag маппинги', run: () => prisma.sourceTagMapping.deleteMany() },
-] as const;
-
-const counts = async () => ({
-  'избранное гостей': await prisma.guestFavorite.count(),
-  'smoke-события': await prisma.smokeCtaEvent.count(),
-  'рейтинги миксов': await prisma.mixRating.count(),
-  'связи рейл↔микс': await prisma.railMix.count(),
-  'состав миксов': await prisma.mixComponent.count(),
-  рейлы: await prisma.rail.count(),
-  миксы: await prisma.mix.count(),
-  'отметки банок': await prisma.packMark.count(),
-  банки: await prisma.pack.count(),
-  полка: await prisma.shelfItem.count(),
-  'строки поставок': await prisma.deliveryLine.count(),
-  поставки: await prisma.delivery.count(),
-  'артикулы поставщиков': await prisma.supplierItem.count(),
-  поставщики: await prisma.supplier.count(),
-  табаки: await prisma.tobacco.count(),
-  'каталог профилей вкуса': await prisma.flavorProfileCatalog.count(),
-  'каталог вкусов': await prisma.flavorCatalog.count(),
-  'каталог мета-тегов': await prisma.flavorTagCatalog.count(),
-  'source-tag маппинги': await prisma.sourceTagMapping.count(),
-});
-
 const main = async () => {
   console.log(`[clean-db] target DB: ${maskDatabaseUrl(process.env.DATABASE_URL)}`);
 
-  const before = await counts();
+  const before = await countDemoContent(prisma);
   console.log('[clean-db] текущее наполнение (будет удалено):');
   console.table(before);
 
@@ -90,12 +43,12 @@ const main = async () => {
     return;
   }
 
-  for (const target of targets) {
-    const { count } = await target.run();
-    console.log(`[clean-db] удалено «${target.label}»: ${count}`);
+  const deleted = await wipeDemoContent(prisma);
+  for (const [label, count] of Object.entries(deleted)) {
+    console.log(`[clean-db] удалено «${label}»: ${count}`);
   }
 
-  const after = await counts();
+  const after = await countDemoContent(prisma);
   console.log('[clean-db] наполнение после очистки:');
   console.table(after);
   console.log('[clean-db] готово. Теперь можно заливать прод-табаки: npm run sync:htreviews');
