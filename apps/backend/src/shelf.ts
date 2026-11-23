@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from './generated/prisma/client';
 import type { AuditAction } from './audit';
 import type { StaffUser } from './auth';
 import type { MixGuestStatus, MixSubstitutionView, TobaccoRef } from './state';
