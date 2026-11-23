@@ -24,6 +24,7 @@ import { AttributeFilter, FilterChip, FilterReset, FiltersButton, SheetChoice, S
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { SortableHeader } from '@/components/shell/sortable-header';
+import { flipSortDirection } from '@/components/shell/table-sort';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { MixStatusCell } from './mix-status';
 import { MixPhoneCard } from './mix-phone-card';
@@ -299,7 +300,13 @@ export const MixCatalogView = ({
               ))}
               {narrowed ? <FilterReset onClick={resetFilters} /> : null}
             </div>
-            <SortPill value={sort.field} options={sortPillOptions(MIX_SORTS)} onChange={changeSort} />
+            <SortPill
+              value={sort.field}
+              options={sortPillOptions(MIX_SORTS)}
+              onChange={changeSort}
+              direction={sort.direction}
+              onDirectionToggle={() => onSortChange(flipSortDirection(sort))}
+            />
           </div>
         </div>
       )}

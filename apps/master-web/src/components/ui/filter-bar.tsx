@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
+import { sortDirectionLabel, type SortDirection } from '@/components/shell/table-sort';
 import { formatMetricValue } from '@/contracts';
 import { attributeChipLabel } from '@/lib/filters';
 import { rankBySearch } from '@/lib/search-match';
@@ -126,16 +127,18 @@ type SortPillProps<Key extends string> = {
   value: Key;
   options: Array<[Key, string]>;
   onChange: (next: Key) => void;
+  // Серверная сортировка (#79): на пилюле только поле, направление — мини-кнопкой рядом.
+  direction?: SortDirection;
+  onDirectionToggle?: () => void;
 };
 
-export const SortPill = <Key extends string>({ value, options, onChange }: SortPillProps<Key>) => {
+export const SortPill = <Key extends string>({ value, options, onChange, direction, onDirectionToggle }: SortPillProps<Key>) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const listId = useId();
   useDismiss(open, rootRef, () => setOpen(false));
   const current = options.find(([key]) => key === value)?.[1] ?? 'Сортировка';
-
-  return (
+  const pill = (
     <span className="sort-pill" ref={rootRef}>
       <button
         type="button"
@@ -167,6 +170,18 @@ export const SortPill = <Key extends string>({ value, options, onChange }: SortP
           ))}
         </div>
       ) : null}
+    </span>
+  );
+  if (!direction || !onDirectionToggle) return pill;
+
+  const label = sortDirectionLabel(direction);
+  const Arrow = direction === 'asc' ? ArrowUp : ArrowDown;
+  return (
+    <span className="sort-control">
+      {pill}
+      <button type="button" className="sort-direction" aria-label={label} title={label} onClick={onDirectionToggle}>
+        <Arrow size={14} aria-hidden />
+      </button>
     </span>
   );
 };

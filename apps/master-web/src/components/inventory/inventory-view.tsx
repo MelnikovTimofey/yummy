@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { MasterPageHeader } from '@/components/shell/master-page-header';
 import { ProfileTag } from '@/components/ui/profile-tag';
 import { SortableHeader } from '@/components/shell/sortable-header';
+import { flipSortDirection } from '@/components/shell/table-sort';
 import { formatHtRating, formatViews } from '@/lib/catalog-ideas';
 import { rankBySearch } from '@/lib/search-match';
 import { useDragSelect } from '@/hooks/use-drag-select';
@@ -1462,7 +1463,13 @@ export const InventoryView = ({
               ))}
               {narrowed ? <FilterReset onClick={resetFilters} /> : null}
             </div>
-            <SortPill value={sort.field} options={sortPillOptions(CATALOG_SORTS)} onChange={changeSort} />
+            <SortPill
+              value={sort.field}
+              options={sortPillOptions(CATALOG_SORTS)}
+              onChange={changeSort}
+              direction={sort.direction}
+              onDirectionToggle={() => onSortChange(flipSortDirection(sort))}
+            />
           </div>
         </div>
       )}

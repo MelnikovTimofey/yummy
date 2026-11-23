@@ -29,3 +29,11 @@ export const ariaSortFor = <F extends string>(current: SortState<F>, field: F) =
 
   return current.direction === 'asc' ? ('ascending' as const) : ('descending' as const);
 };
+
+export const flipSortDirection = <F extends string>(current: SortState<F>): SortState<F> => ({
+  field: current.field,
+  direction: current.direction === 'asc' ? 'desc' : 'asc',
+});
+
+export const sortDirectionLabel = (direction: SortDirection) =>
+  `Направление сортировки: ${direction === 'asc' ? 'по возрастанию' : 'по убыванию'}`;
