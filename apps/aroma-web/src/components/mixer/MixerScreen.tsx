@@ -167,19 +167,26 @@ export function MixerScreen({
     say('turn.base');
   };
 
-  const load = async () => {
+  const load = async (isCurrent = () => true) => {
     setPhase('loading');
     try {
       const next = await fetchMixerPalette();
+      if (!isCurrent()) return;
       setPalette(next);
       begin(next.tobaccos);
     } catch {
-      setPhase('error');
+      if (isCurrent()) setPhase('error');
     }
   };
 
+  // Устаревший ответ палитры не раскладывает колоду второй раз: иначе карты
+  // пересоздаются под пальцем гостя (в dev StrictMode запрос уходит дважды, #474).
   useEffect(() => {
-    void load();
+    let current = true;
+    void load(() => current);
+    return () => {
+      current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

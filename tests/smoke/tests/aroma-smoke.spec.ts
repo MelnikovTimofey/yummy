@@ -129,8 +129,6 @@ test('Aroma onboarding shows how many mixes stand behind the current choice', as
 // мастера. Сценарий не зависит от конкретных табаков: берёт верхнюю карту
 // каждой колоды, а если штриха в наличии нет — пропускает ход.
 test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card', async ({ page }) => {
-  // Запас на добор чаши после 409: каждый возврат на ход — ещё несколько карт.
-  test.setTimeout(60_000);
   await page.goto('/');
 
   await page.getByLabel('Код мастера').fill(guestAccessCode);
@@ -163,32 +161,24 @@ test('Aroma guest mixes a bowl in «Намиксуй» and gets the master card'
   await take.click();
   await expect(page.getByText('Ход 3 из 3')).toBeVisible();
 
-  // Штрих необязателен: берём верхнюю карту, а без штриха в наличии — «Без
-  // штриха». Табак из чаши может закончиться и на раскрытии: master-smoke в
-  // соседнем воркере отмечает «Закончился» первые строки Полки. Тогда оценка
-  // или «Покурить» получают 409, и Миксер возвращает гостя на ход этого табака,
-  // поэтому чаша добирается заново, пока не откроется карточка для мастера.
-  const withoutTwist = page.getByRole('button', { name: 'Без штриха' });
+  // Штрих необязателен: берём верхнюю карту, а без штриха в наличии — «Без штриха».
+  if (await take.isEnabled()) {
+    await take.click();
+  } else {
+    await page.getByRole('button', { name: 'Без штриха' }).click();
+  }
+
+  // Раскрытие с готовой оценкой: имя, доли, «Покурить».
+  await expect(page.getByText(/^(Похоже на: .+, \d+%|Похожих миксов в каталоге нет\.)$/)).toBeVisible();
   const nameField = page.getByLabel('Название микса');
-  const similar = page.getByText(/^(Похоже на: .+, \d+%|Похожих миксов в каталоге нет\.)$/);
+  await expect(nameField).not.toHaveValue('');
+  const mixName = (await nameField.inputValue()).trim();
+  await expect(page.getByRole('heading', { name: 'Гармония', level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Доли', level: 2 })).toBeVisible();
+  await expect(page.getByRole('slider').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Покурить' }).click();
   const masterCard = page.getByText('Покажите мастеру', { exact: true });
-  let mixName = '';
-  await expect(async () => {
-    if (await similar.isVisible()) {
-      // Раскрытие с готовой оценкой: имя, доли, «Покурить».
-      mixName = (await nameField.inputValue()).trim();
-      expect(mixName).not.toBe('');
-      await expect(page.getByRole('heading', { name: 'Гармония', level: 2 })).toBeVisible({ timeout: 1_000 });
-      await expect(page.getByRole('heading', { name: 'Доли', level: 2 })).toBeVisible({ timeout: 1_000 });
-      await expect(page.getByRole('slider').first()).toBeVisible({ timeout: 1_000 });
-      await page.getByRole('button', { name: 'Покурить' }).click({ timeout: 1_000 });
-    } else if ((await take.isVisible()) && (await take.isEnabled())) {
-      await take.click({ timeout: 1_000 });
-    } else if ((await withoutTwist.isVisible()) && (await withoutTwist.isEnabled())) {
-      await withoutTwist.click({ timeout: 1_000 });
-    }
-    await expect(masterCard).toBeVisible({ timeout: 1_000 });
-  }).toPass({ intervals: [250], timeout: 20_000 });
+  await expect(masterCard).toBeVisible();
 
   // Карточка для мастера открывается и при сбое аналитического события.
   await expect(page.getByText(/^Собран гостем/)).toBeVisible();
@@ -217,14 +207,7 @@ test('Aroma showcase shows a skeleton instead of loading text', async ({ page })
   });
   await page.route('**/guest/home/rails', async (route) => {
     await held;
-    // master-smoke идёт параллельно на той же БД и на доли секунды отмечает табаки
-    // закончившимися — тогда рейлы пусты. Ждём, пока он отменит отметку.
-    let response = await route.fetch();
-    for (let attempt = 0; attempt < 10 && !((await response.json()) as { items: unknown[] }).items.length; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      response = await route.fetch();
-    }
-    await route.fulfill({ response });
+    await route.continue();
   });
   await page.goto('/');
 
@@ -616,18 +599,9 @@ test('Aroma reels feed swipes to the next mix and returns after «Покурит
   await expect(activeName).not.toHaveText(firstName);
   await expect(page.getByText('Листайте вверх')).toHaveCount(0);
 
-  // master-smoke идёт параллельно на той же БД и на доли секунды отмечает
-  // табаки Полки закончившимися: тогда «Покурить» получает 404 и CTA рилса
-  // гаснет. Листаем к следующему миксу и пробуем снова.
-  const reel = page.locator('.reel', { has: page.locator('.reel-reveal') });
-  const choose = reel.getByRole('button', { name: 'Покурить' });
-  let mixName = '';
-  await expect(async () => {
-    if (await choose.isDisabled({ timeout: 1_000 })) await page.mouse.wheel(0, box.height);
-    mixName = (await reel.locator('.reel-name').innerText({ timeout: 1_000 })).trim();
-    await choose.click({ timeout: 1_000 });
-    await expect(page.getByText('Покажите мастеру')).toBeVisible({ timeout: 1_000 });
-  }).toPass({ intervals: [250], timeout: 20_000 });
+  const mixName = (await activeName.innerText()).trim();
+  await page.locator('.reel', { has: page.locator('.reel-reveal') }).getByRole('button', { name: 'Покурить' }).click();
+  await expect(page.getByText('Покажите мастеру')).toBeVisible();
   await expect(page.getByRole('heading', { name: mixName, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Готово' }).click();
 
@@ -734,12 +708,7 @@ test('Aroma mix with a substitute shows the shelf tobacco with a mark', async ({
   const MIX = 'mix-lime-tonic';
   let seeded = true;
   await page.route('**/guest/catalog/mixes*', async (route) => {
-    // master-smoke параллельно на доли секунды отмечает табаки закончившимися.
-    let response = await route.fetch();
-    for (let attempt = 0; attempt < 10 && !(await response.text()).includes(MIX); attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      response = await route.fetch();
-    }
+    const response = await route.fetch();
     seeded = (await response.text()).includes(MIX);
     await route.fulfill({ response });
   });
@@ -773,8 +742,7 @@ test('Aroma mix with a substitute shows the shelf tobacco with a mark', async ({
 });
 
 // «На экран «Домой»» (#587): плашка один раз после «Готово» на карточке для мастера,
-// тихая ссылка в «Кабинете» и шторка с шагами. Событие «Покурить» подменено:
-// master-smoke параллельно отмечает табаки закончившимися, и запрос может получить 404.
+// тихая ссылка в «Кабинете» и шторка с шагами.
 const enterCatalog = async (page: Page) => {
   await page.goto('/');
   await page.getByLabel('Код мастера').fill(guestAccessCode);
@@ -792,7 +760,6 @@ const smokeFirstCatalogMix = async (page: Page) => {
 };
 
 test('Aroma offers «На экран «Домой»» once after the first «Готово»', async ({ page }) => {
-  await page.route('**/guest/events/smoke-cta', (route) => route.fulfill({ json: { ok: true } }));
   await enterCatalog(page);
 
   const plate = page.getByRole('region', { name: 'На экран «Домой»' });
@@ -874,10 +841,8 @@ test('Aroma mix sheet opens with a flavour photo header', async ({ page }) => {
   await expect(sheet.getByRole('button', { name: 'Покурить' })).toBeVisible();
 });
 
-// Фото вкуса и на карточке для мастера (#592). Событие «Покурить» подменено:
-// master-smoke параллельно отмечает табаки закончившимися, и запрос может получить 404.
+// Фото вкуса и на карточке для мастера (#592).
 test('Aroma master card opens with a flavour photo header', async ({ page }) => {
-  await page.route('**/guest/events/smoke-cta', (route) => route.fulfill({ json: { ok: true } }));
   await enterCatalog(page);
   await page.locator('.aroma-catalog-list button.mix-row').first().click();
   await page.getByRole('dialog').getByRole('button', { name: 'Покурить' }).click();
