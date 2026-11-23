@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/prisma-client';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const env = (value: string | undefined, fallback = '') => value?.trim() || fallback;
 

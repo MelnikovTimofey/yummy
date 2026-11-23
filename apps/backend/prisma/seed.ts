@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '../src/generated/prisma/client';
+import { createPrismaClient } from '../src/prisma-client';
 import { getDailyCodeWindow } from '../src/daily-code';
 import { startShelfFromStock } from '../src/shelf';
 import { wipeStorage } from '../src/storage-wipe';
@@ -14,7 +15,7 @@ if (process.env.NODE_ENV === 'production') {
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const createSecretHash = (secret: string, salt: string) =>
   crypto.scryptSync(secret, salt, 64).toString('hex');

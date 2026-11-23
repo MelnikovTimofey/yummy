@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from './generated/prisma/client';
 
 // `npm run db:clean` (#115) перед заливкой прод-табаков: каталог и демо-контент.
 // В отличие от wipeStorage (#391) операционные данные остаются — иначе после

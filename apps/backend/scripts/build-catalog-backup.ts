@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/prisma-client';
 import { assignRails, parsePool, parseRails, type PoolEntry, type PoolMix } from '../src/editorial-rails';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 // ---------------------------------------------------------------------------
 // Назначение: собрать редакторский слой Арома Ателье поверх уже залитого

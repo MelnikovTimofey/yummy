@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
 import { countDemoContent, wipeDemoContent } from '../src/demo-clean';
+import { createPrismaClient } from '../src/prisma-client';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 // Подтверждение обязательно: операция необратима и может быть направлена на любую БД
 // из DATABASE_URL. Без флага скрипт работает в режиме превью и ничего не удаляет.
