@@ -2719,6 +2719,23 @@ input[type="checkbox"] {
 .sort-pill__list button:hover { background: var(--bg-overlay); color: var(--text-primary); }
 .sort-pill__list button[aria-selected="true"] { background: var(--accent-soft); color: var(--text-primary); }
 
+.sort-control { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+
+.sort-direction {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.sort-direction:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
 .filters-button {
   display: inline-flex;
   align-items: center;

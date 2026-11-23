@@ -6,6 +6,7 @@ import { authorIdOf, loadMixAuthors, type MixAuthor } from './mix-author';
 import { createSecretHash } from './auth';
 import { setStockedLegacy, startShelfFromStock, syncAvailability } from './shelf';
 import { awaitsPlan, loadRuleContext, resolveMixAvailability, toRuleComponent, type RuleContext, type RuleTobaccoRecord } from './analogs';
+import { wipeStorage } from './storage-wipe';
 import { matchSearch, prepareSearchQuery, prepareSearchTarget, searchRank, type SearchTarget } from './search-match';
 
 export type RailType = 'statistical' | 'prepared' | 'curated';
@@ -1402,32 +1403,6 @@ const nextRailId = async (name: string) => {
 };
 
 type StorageTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
-const wipeStorage = async (tx: StorageTx) => {
-  await tx.guestLoginCode.deleteMany();
-  await tx.guestFavorite.deleteMany();
-  await tx.smokeCtaEvent.deleteMany();
-  await tx.customMixSmokeEvent.deleteMany();
-  await tx.mixRating.deleteMany();
-  await tx.guestAccount.deleteMany();
-  await tx.railMix.deleteMany();
-  await tx.mixComponent.deleteMany();
-  await tx.rail.deleteMany();
-  await tx.mix.deleteMany();
-  await tx.shelfItem.deleteMany();
-  await tx.deliveryLine.deleteMany();
-  await tx.delivery.deleteMany();
-  await tx.supplierItem.deleteMany();
-  await tx.supplier.deleteMany();
-  await tx.tobacco.deleteMany();
-  await tx.introCard.deleteMany();
-  await tx.dailyAccessCode.deleteMany();
-  await tx.telegramRecipient.deleteMany();
-  await tx.telegramOperator.deleteMany();
-  await tx.telegramAutomationState.deleteMany();
-  await tx.auditEvent.deleteMany();
-  await tx.staffAccount.deleteMany();
-};
 
 const insertOperationalState = async (
   tx: StorageTx,

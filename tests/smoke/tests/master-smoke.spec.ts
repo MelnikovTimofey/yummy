@@ -113,8 +113,14 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
 
   // Пилюля «По …» и заголовок колонки меняют одну сортировку.
   await expect(page.getByRole('button', { name: 'Сортировка: По наличию' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Направление сортировки: по убыванию' })).toBeVisible();
   await page.getByRole('columnheader', { name: 'Табак' }).getByRole('button').click();
   await expect(page.getByRole('button', { name: 'Сортировка: По названию' })).toBeVisible();
+  // Направление — мини-кнопкой рядом с пилюлей (#79): поле остаётся прежним.
+  await page.getByRole('button', { name: 'Направление сортировки: по возрастанию' }).click();
+  await expect(page.getByRole('button', { name: 'Направление сортировки: по убыванию' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сортировка: По названию' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Табак' })).toHaveAttribute('aria-sort', 'descending');
 
   await openWorkspace(page, 'Миксы');
   const statusChips = page.getByRole('group', { name: 'Статус микса' });
@@ -128,6 +134,7 @@ test('Master admin smoke covers catalog shelf batch flow, mixes editor, rails re
   await expect(page.getByRole('group', { name: 'Рейлы', exact: true }).getByRole('checkbox')).toHaveCount(2);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Сортировка: По спросу' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Направление сортировки: по убыванию' })).toBeVisible();
   const mixRow = await pinFirstMixRow(page);
   const mixName = await readMixName(mixRow);
   // Row-click открывает редактор (drawer-pattern из mockup'а Master).
