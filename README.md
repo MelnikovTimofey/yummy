@@ -163,7 +163,7 @@ Statistical-рейлы backend синтезирует на лету — их г�
 
 ### Без Docker (нативно)
 
-Требования: Node.js 20+, npm 10+, локально доступный Postgres 16 (или
+Требования: Node.js 24+, npm 11+, локально доступный Postgres 16 (или
 поднять только БД через docker: `cd apps/backend && npm run db:start`).
 
 ```bash
