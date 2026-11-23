@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { getDailyCodeWindow } from '../src/daily-code';
 import { startShelfFromStock } from '../src/shelf';
+import { wipeStorage } from '../src/storage-wipe';
 
 // Seed стирает персонал, коды, миксы и аудит и заводит admin/admin с кодом 1234 —
 // на проде это потеря данных и открытая учётка (#415).
@@ -287,26 +288,13 @@ const railMixes = [
   { railId: 'rail-curated-evening-choice', mixId: 'mix-amber-bazaar', sortOrder: 0 },
 ] as const;
 
-async function main() {
+// Одна транзакция: упавший seed не оставляет БД полупустой (#391).
+const seed = async (tx: Prisma.TransactionClient) => {
   const currentCodeWindow = getDailyCodeWindow();
 
-  await prisma.guestFavorite.deleteMany();
-  await prisma.smokeCtaEvent.deleteMany();
-  await prisma.mixRating.deleteMany();
-  await prisma.railMix.deleteMany();
-  await prisma.mixComponent.deleteMany();
-  await prisma.rail.deleteMany();
-  await prisma.mix.deleteMany();
-  await prisma.tobacco.deleteMany();
-  await prisma.introCard.deleteMany();
-  await prisma.dailyAccessCode.deleteMany();
-  await prisma.telegramRecipient.deleteMany();
-  await prisma.telegramOperator.deleteMany();
-  await prisma.telegramAutomationState.deleteMany();
-  await prisma.auditEvent.deleteMany();
-  await prisma.staffAccount.deleteMany();
+  await wipeStorage(tx);
 
-  await prisma.staffAccount.createMany({
+  await tx.staffAccount.createMany({
     data: staffAccounts.map((account) => ({
       id: account.id,
       login: account.login,
@@ -319,7 +307,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.dailyAccessCode.createMany({
+  await tx.dailyAccessCode.createMany({
     data: dailyAccessCodes.map((code) => ({
       id: code.id,
       codeValue: code.code,
@@ -333,11 +321,11 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.telegramRecipient.createMany({
+  await tx.telegramRecipient.createMany({
     data: telegramRecipients,
   });
 
-  await prisma.telegramOperator.createMany({
+  await tx.telegramOperator.createMany({
     data: [
       {
         id: 'telegram-operator-anna',
@@ -367,7 +355,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.introCard.createMany({
+  await tx.introCard.createMany({
     data: introCards.map((card) => ({
       id: card.id,
       step: card.step,
@@ -378,7 +366,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.tobacco.createMany({
+  await tx.tobacco.createMany({
     data: tobaccos.map((tobacco) => ({
       id: tobacco.id,
       manufacturer: tobacco.manufacturer,
@@ -392,11 +380,11 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.$transaction((tx) => startShelfFromStock(tx, new Date()));
+  await startShelfFromStock(tx, new Date());
 
-  await prisma.tobaccoAnalog.createMany({ data: [...tobaccoAnalogs], skipDuplicates: true });
+  await tx.tobaccoAnalog.createMany({ data: [...tobaccoAnalogs], skipDuplicates: true });
 
-  await prisma.mix.createMany({
+  await tx.mix.createMany({
     data: mixes.map((mix) => ({
       id: mix.id,
       name: mix.name,
@@ -410,7 +398,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.mixComponent.createMany({
+  await tx.mixComponent.createMany({
     data: mixComponents.map((component) => ({
       mixId: component.mixId,
       tobaccoId: component.tobaccoId,
@@ -420,7 +408,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.rail.createMany({
+  await tx.rail.createMany({
     data: rails.map((rail) => ({
       id: rail.id,
       name: rail.name,
@@ -432,7 +420,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.railMix.createMany({
+  await tx.railMix.createMany({
     data: railMixes.map((railMix) => ({
       railId: railMix.railId,
       mixId: railMix.mixId,
@@ -440,9 +428,10 @@ async function main() {
     })),
     skipDuplicates: true,
   });
-}
+};
 
-main()
+prisma
+  .$transaction(seed, { timeout: 60_000 })
   .then(async () => {
     await prisma.$disconnect();
   })
