@@ -5,6 +5,8 @@
 apps/*/node_modules
 apps/*/dist/
 apps/*/.env
+# Prisma Client генерируется `prisma generate` (Prisma 7, #649)
+apps/backend/src/generated/
 .env
 # локальные токены облака/деплоя (TIMEWEB_TOKEN и т.п.)
 .env.project

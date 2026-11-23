@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/prisma-client';
 import { buildTaxonomyCandidate } from '../src/integrations/htreviews/taxonomy';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 // Подтверждение обязательно: при --apply скрипт меняет каталог в БД из
 // DATABASE_URL. Без флага — режим превью (ничего не пишет). По аналогии с

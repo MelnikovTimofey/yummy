@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from './generated/prisma/client';
 import { buildGuestApp as buildApp } from './test-app';
 import { createGuestToken } from './auth';
 import { prisma } from './db';

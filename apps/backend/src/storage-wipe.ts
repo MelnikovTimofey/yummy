@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from './generated/prisma/client';
 
 // Дети раньше родителей: MixComponent, ShelfItem и Delivery держат FK с Restrict.
 // Общая очистка test-reset и prisma seed (#391): новую модель добавлять сюда.

@@ -1,22 +1,17 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './prisma-client';
 
 process.env.DATABASE_URL ??= process.env.NODE_ENV === 'test'
   ? 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=atelier_test'
   : 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
+const createClient = () =>
+  createPrismaClient(process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error']);
+
 declare global {
   // eslint-disable-next-line no-var
-  var __prismaClient: PrismaClient | undefined;
+  var __prismaClient: ReturnType<typeof createClient> | undefined;
 }
-
-const createClient = () =>
-  new PrismaClient({
-    log:
-      process.env.NODE_ENV === 'development'
-        ? ['warn', 'error']
-        : ['error'],
-  });
 
 export const prisma = globalThis.__prismaClient ?? createClient();
 

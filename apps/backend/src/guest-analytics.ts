@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from './generated/prisma/client';
 import { prisma } from './db';
 import { isTrial } from './shelf';
 import { flavorProfileLabels, getAvailableMixCatalog, type MixGuestStatus } from './state';

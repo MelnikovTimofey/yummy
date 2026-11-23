@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/prisma-client';
 import { planMixProfileBackfill, planTobaccoProfileBackfill } from '../src/integrations/htreviews/profile-backfill';
 
 process.env.DATABASE_URL ??= 'postgresql://atelier:atelier@127.0.0.1:5433/atelier?schema=public';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 // Без --apply — превью, ничего не пишет (как scripts/backfill-flavors.ts).
 const confirmed =

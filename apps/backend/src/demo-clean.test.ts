@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Prisma } from '@prisma/client';
+import { Prisma } from './generated/prisma/client';
 import { prisma } from './db';
 import { countDemoContent, demoContentModels, keptModels, wipeDemoContent } from './demo-clean';
 import { resetAppState } from './state';

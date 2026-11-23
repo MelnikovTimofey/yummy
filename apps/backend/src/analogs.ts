@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from './generated/prisma/client';
 import { tasteKeys } from './catalog-ideas';
 import { prisma } from './db';
 import type { MissingTobaccoView, MixGuestStatus, MixSubstituteView, MixSubstitutionView, TobaccoRef } from './state';

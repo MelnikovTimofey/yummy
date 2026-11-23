@@ -83,7 +83,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["sh", "-c", "npx prisma db push --skip-generate && npx tsx scripts/sync-htreviews.ts"]
+    command: ["sh", "-c", "npx prisma db push &&npx tsx scripts/sync-htreviews.ts"]
 
   telegram-bot:
     # Требует TELEGRAM_BOT_TOKEN. Запускается отдельно: `docker compose --profile bot up`.
