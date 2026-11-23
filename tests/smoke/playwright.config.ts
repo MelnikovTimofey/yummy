@@ -6,6 +6,10 @@ const masterBaseUrl = process.env.ATELIER_MASTER_URL ?? 'http://127.0.0.1:5176';
 export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
+  // Проекты ходят в одну БД, а master-smoke меняет Полку: «Закончился» на доли
+  // секунды прячет табак из рейлов, каталога и Миксера гостя. В параллельных
+  // воркерах гостевые сценарии ловили это пустой витриной и 404/409 (#474).
+  workers: 1,
   reporter: [
     ['line'],
     ['html', { open: 'never', outputFolder: '../../output/playwright/atelier-quality/html-report' }],
