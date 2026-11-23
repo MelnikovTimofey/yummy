@@ -1308,8 +1308,22 @@ test.describe('Master rails on a phone', () => {
     await page.locator('.m-topbar').getByRole('button', { name: 'Новый' }).click();
     await expect(editor.getByText('Рейл пуст')).toBeVisible();
     await expect(editor.getByText(/слева/)).toHaveCount(0);
-    await editor.getByRole('button', { name: 'Добавить микс' }).click();
     const picker = page.getByRole('dialog', { name: 'Добавить микс' });
+    // Esc в первые миллисекунды после открытия выбора закрывает только выбор, а не
+    // редактор с черновиком (#657): Radix передаёт верхний слой отложенным эффектом,
+    // поэтому Esc шлём сразу при вставке шторки в DOM, до этих эффектов.
+    await page.evaluate(() => {
+      const observer = new MutationObserver(() => {
+        if (!document.querySelector('.rail-picker-sheet')) return;
+        observer.disconnect();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+    await editor.getByRole('button', { name: 'Добавить микс' }).click();
+    await expect(picker).toBeHidden();
+    await expect(editor).toHaveAttribute('data-state', 'open');
+    await editor.getByRole('button', { name: 'Добавить микс' }).click();
     await expect(picker.getByPlaceholder('Поиск миксов')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(picker).toBeHidden();
