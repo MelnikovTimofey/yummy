@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildApp } from './app';
 import { createGuestAccessToken, createGuestToken, GUEST_ACCESS_HEADER } from './auth';
+import { config } from './config';
 import { prisma } from './db';
 import { resetAppState } from './state';
 
@@ -78,6 +79,58 @@ test('the code entry, staff and health stay open without guest access', async ()
     assert.equal((await app.inject({ method: 'POST', url: '/guest/access-code/verify', payload: { code: 'WRONG' } })).statusCode, 401);
     const login = await app.inject({ method: 'POST', url: '/staff/auth/login', payload: { login: 'atelier', password: 'atelier' } });
     assert.equal(login.statusCode, 200);
+  } finally {
+    await app.close();
+  }
+});
+
+const withoutAccessCode = async (run: () => Promise<void>) => {
+  config.guestAccessCodeRequired = false;
+  try {
+    await run();
+  } finally {
+    config.guestAccessCodeRequired = true;
+  }
+};
+
+test('the guest learns from an open endpoint whether the code is required', async () => {
+  const app = buildApp();
+  try {
+    const on = await app.inject({ method: 'GET', url: '/guest/access-code/config' });
+    assert.equal(on.statusCode, 200);
+    assert.deepEqual(on.json(), { codeRequired: true });
+
+    await withoutAccessCode(async () => {
+      const off = await app.inject({ method: 'GET', url: '/guest/access-code/config' });
+      assert.deepEqual(off.json(), { codeRequired: false });
+    });
+  } finally {
+    await app.close();
+  }
+});
+
+// Пилот в Nomad (#664): гость входит без кода, остальное — как с кодом.
+test('with the code switched off guest endpoints are open and verify needs no code', async () => {
+  const app = buildApp();
+  try {
+    await withoutAccessCode(async () => {
+      for (const [method, url] of [
+        ['GET', '/guest/intro/cards'],
+        ['GET', '/guest/catalog/mixes'],
+        ['GET', '/guest/home/rails'],
+        ['GET', '/guest/auth/telegram/config'],
+      ] as const) {
+        const response = await app.inject({ method, url });
+        assert.equal(response.statusCode, 200, `${method} ${url}`);
+      }
+
+      const verify = await app.inject({ method: 'POST', url: '/guest/access-code/verify', payload: {} });
+      assert.equal(verify.statusCode, 200);
+      assert.ok((verify.json() as { accessToken: string }).accessToken);
+    });
+
+    const closedAgain = await app.inject({ method: 'GET', url: '/guest/catalog/mixes' });
+    assert.equal(closedAgain.statusCode, 403);
   } finally {
     await app.close();
   }

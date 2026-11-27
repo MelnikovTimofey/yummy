@@ -147,7 +147,8 @@
 
 ### Guest access
 
-- `POST /guest/access-code/verify` — по коду дня выдаёт `accessToken` и `expiresAt` (6 часов от ввода).
+- `GET /guest/access-code/config` — `{ codeRequired }`; открыт всегда. `false` при `ATELIER_GUEST_ACCESS_CODE=off` (пилот в Nomad, #664).
+- `POST /guest/access-code/verify` — по коду дня выдаёт `accessToken` и `expiresAt` (6 часов от ввода); при выключенном коде выдаёт без него.
 
 Все остальные `/guest/*`, включая кабинет `/guest/me*`, требуют заголовок
 `x-atelier-access: <accessToken>`. Без него или с истёкшим токеном — `403`

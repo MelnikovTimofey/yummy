@@ -231,7 +231,11 @@ export const buildApp = () => {
   // Гостевой путь — только по коду дня (#435). 403, а не 401: на 401 клиент
   // стирает токен кабинета, а истёкший код из кабинета выкидывать не должен.
   app.addHook('onRequest', async (request, reply) => {
-    if (!request.url.startsWith('/guest/') || request.routeOptions.url === '/guest/access-code/verify') {
+    if (
+      !config.guestAccessCodeRequired ||
+      !request.url.startsWith('/guest/') ||
+      request.routeOptions.url?.startsWith('/guest/access-code/')
+    ) {
       return;
     }
     const header = request.headers[GUEST_ACCESS_HEADER];
@@ -270,6 +274,7 @@ export const buildApp = () => {
         'dashboard',
       ],
       endpoints: {
+        guestAccessConfig: 'GET /guest/access-code/config',
         guestVerify: 'POST /guest/access-code/verify',
         onboardingOptions: 'GET /guest/onboarding/options',
         onboardingRecommendations: 'POST /guest/onboarding/recommendations',
@@ -363,23 +368,26 @@ export const buildApp = () => {
     service: config.appName,
   }));
 
+  app.get('/guest/access-code/config', async () => ({ codeRequired: config.guestAccessCodeRequired }));
+
   app.post('/guest/access-code/verify', async (request, reply) => {
-    const body = request.body as { code?: string } | undefined;
-    const code = body?.code?.trim();
+    if (config.guestAccessCodeRequired) {
+      const body = request.body as { code?: string } | undefined;
+      const code = body?.code?.trim();
 
-    if (!code) {
-      return reply.status(400).send({ error: 'Code is required' } satisfies ApiError);
-    }
+      if (!code) {
+        return reply.status(400).send({ error: 'Code is required' } satisfies ApiError);
+      }
 
-    // Считаются только неверные коды: зал, вводящий верный код, лимит не тратит.
-    if (rejectOverLimit(wrongAccessCodes, request, reply, false)) {
-      return;
-    }
+      // Считаются только неверные коды: зал, вводящий верный код, лимит не тратит.
+      if (rejectOverLimit(wrongAccessCodes, request, reply, false)) {
+        return;
+      }
 
-    const dailyCode = await verifyGuestAccessCode(code);
-    if (!dailyCode) {
-      wrongAccessCodes.record(clientIp(request));
-      return reply.status(401).send({ error: 'Invalid access code' } satisfies ApiError);
+      if (!(await verifyGuestAccessCode(code))) {
+        wrongAccessCodes.record(clientIp(request));
+        return reply.status(401).send({ error: 'Invalid access code' } satisfies ApiError);
+      }
     }
 
     const access = createGuestAccessToken();
