@@ -1332,6 +1332,8 @@ export const App = () => {
   const [code, setCode] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [accessError, setAccessError] = useState('');
+  // null — ещё не спросили backend. Код дня выключается там (пилот в Nomad, #664).
+  const [codeRequired, setCodeRequired] = useState<boolean | null>(null);
 
   const [introCards, setIntroCards] = useState<IntroCard[]>([]);
   const [introStatus, setIntroStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -1469,8 +1471,29 @@ export const App = () => {
     if (access === 'expired') {
       setCode('');
       setAccessStatus('idle');
+      setCodeRequired(null);
     }
   }, [access]);
+
+  useEffect(() => {
+    if (accessGranted || codeRequired !== null) {
+      return;
+    }
+    let cancelled = false;
+    requestJson<{ codeRequired: boolean }>('/guest/access-code/config')
+      .then((result) => !cancelled && setCodeRequired(result.codeRequired !== false))
+      .catch(() => !cancelled && setCodeRequired(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [accessGranted, codeRequired]);
+
+  // Без кода истёкший вход продлевается сам: 18+ гость уже подтвердил.
+  useEffect(() => {
+    if (codeRequired === false && access === 'expired' && ageConfirmed && accessStatus === 'idle') {
+      void enterAtelier();
+    }
+  }, [codeRequired, access, ageConfirmed, accessStatus]);
 
   useEffect(() => {
     if (introSeen) {
@@ -1685,12 +1708,16 @@ export const App = () => {
       return;
     }
 
-    if (!code.trim()) {
+    if (codeRequired && !code.trim()) {
       setAccessStatus('error');
       setAccessError('Введите код доступа.');
       return;
     }
 
+    await enterAtelier();
+  };
+
+  const enterAtelier = async () => {
     setAccessStatus('loading');
     setAccessError('');
 
@@ -2527,7 +2554,12 @@ export const App = () => {
   };
 
   const renderAccessView = () => {
-    const codeReady = code.length >= 4;
+    const renewing = codeRequired === false && access === 'expired' && ageConfirmed && accessStatus !== 'error';
+    if (codeRequired === null || renewing) {
+      return <SmokeLoading label="Открываем Ателье" />;
+    }
+
+    const codeReady = !codeRequired || code.length >= 4;
     const cantSubmit = !ageConfirmed || !codeReady || accessStatus === 'loading';
 
     return (
@@ -2540,31 +2572,33 @@ export const App = () => {
           </div>
 
           <form className="aroma-access-form" onSubmit={onSubmitAccessCode}>
-            <div className="aroma-access-code-block">
-              <label htmlFor="guest-access-code" className="aroma-access-code-label">
-                Код мастера
-              </label>
-              <input
-                id="guest-access-code"
-                className="aroma-access-code-input"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete="one-time-code"
-                autoCapitalize="off"
-                spellCheck={false}
-                maxLength={4}
-                value={code}
-                onChange={(event) =>
-                  setCode(event.target.value.replace(/\D/g, '').slice(0, 4))
-                }
-              />
-              <p className="aroma-access-code-hint">
-                {access === 'expired'
-                  ? 'Время входа вышло. Код скажет мастер зала.'
-                  : 'Код скажет мастер зала. Вход открыт на 6 часов.'}
-              </p>
-            </div>
+            {codeRequired ? (
+              <div className="aroma-access-code-block">
+                <label htmlFor="guest-access-code" className="aroma-access-code-label">
+                  Код мастера
+                </label>
+                <input
+                  id="guest-access-code"
+                  className="aroma-access-code-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="one-time-code"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  maxLength={4}
+                  value={code}
+                  onChange={(event) =>
+                    setCode(event.target.value.replace(/\D/g, '').slice(0, 4))
+                  }
+                />
+                <p className="aroma-access-code-hint">
+                  {access === 'expired'
+                    ? 'Время входа вышло. Код скажет мастер зала.'
+                    : 'Код скажет мастер зала. Вход открыт на 6 часов.'}
+                </p>
+              </div>
+            ) : null}
 
             <label className="aroma-access-age">
               <button

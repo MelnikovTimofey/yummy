@@ -35,6 +35,8 @@ export const config = {
   guestTokenTtlDays: parsePort(process.env.ATELIER_GUEST_TOKEN_TTL_DAYS, 90),
   // Срок доступа гостя по коду дня — продуктовое правило (PRD §8.2), а не настройка окружения.
   guestAccessTtlHours: 6,
+  // `off` — гость входит без кода дня (пилот в Nomad, #664).
+  guestAccessCodeRequired: process.env.ATELIER_GUEST_ACCESS_CODE?.trim() !== 'off',
   // Гостевая запись (оценки, «Покурить») с одного IP за 5 минут; на нагрузочный прогон — поднять.
   guestWriteLimit: parsePort(process.env.ATELIER_GUEST_WRITE_LIMIT, 60),
   corsOrigins: parseOrigins(process.env.ATELIER_CORS_ORIGINS),

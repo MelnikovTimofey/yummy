@@ -531,6 +531,31 @@ test('Aroma shows the code screen when the backend refuses access', async ({ pag
   await expect(page.getByText('Access code required')).toHaveCount(0);
 });
 
+// Пилот в Nomad (#664): backend с ATELIER_GUEST_ACCESS_CODE=off. Smoke-стенд
+// идёт с кодом, поэтому «выключенный» ответ подменяется, а verify получает код.
+test('Aroma lets the guest in without the code when the backend switches it off', async ({ page }) => {
+  await page.route('**/guest/access-code/config', (route) => route.fulfill({ json: { codeRequired: false } }));
+  await page.route('**/guest/access-code/verify', (route) =>
+    route.continue({ postData: JSON.stringify({ code: guestAccessCode }) }),
+  );
+  await page.goto('/');
+
+  await expect(page.getByRole('button', { name: 'Войти в Ателье' })).toBeDisabled();
+  await expect(page.getByText('Код мастера')).toHaveCount(0);
+  await page.getByRole('checkbox').click();
+  await page.getByRole('button', { name: 'Войти в Ателье' }).click();
+  await expect(page.getByRole('button', { name: 'Начать подбор' })).toBeVisible();
+
+  // Истёкший вход продлевается сам: экрана входа гость больше не видит.
+  await page.evaluate(() => {
+    const stored = JSON.parse(localStorage.getItem('aroma-access') ?? '{}');
+    localStorage.setItem('aroma-access', JSON.stringify({ ...stored, expiresAt: Date.now() - 1 }));
+  });
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Начать подбор' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Войти в Ателье' })).toHaveCount(0);
+});
+
 // Ошибки backend гостю — только по-русски (#267): служебный `error` ответа на
 // экран не попадает, а сбой «Покурить» у героя виден на экране подбора.
 test('Aroma guest sees Russian errors instead of backend messages', async ({ page }) => {
